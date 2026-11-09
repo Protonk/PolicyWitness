@@ -2,7 +2,7 @@ import Foundation
 @testable import PWRunnerCore
 
 private func requestFixture() -> [String: Any] {
-    ["schema_version": PWContract.requestSchema, "specimen_id": "request-contract", "run_kind": "experiment",
+    ["contract": testRequestContract, "specimen_id": "request-contract", "run_kind": "experiment",
      "policy": ["format": "sbpl", "sbpl_source": "(version 1) (allow default)",
                 "params": ["arbitrary_parameter": "value"], "capture_compiled_profile": true,
                 "capture_nonce": "0123456789abcdef0123456789abcdef"],
@@ -27,7 +27,7 @@ private func replacing(_ node: Any, at path: [String], with value: Any) -> Any {
 }
 
 private func decodeRequest(_ object: Any) throws -> PWRunnerRunSpec {
-    try pwRunnerDecodeJSON(PWRunnerRunSpec.self, from: JSONSerialization.data(withJSONObject: object))
+    try testDecodeJSON(PWRunnerRunSpec.self, from: JSONSerialization.data(withJSONObject: object))
 }
 
 func runRequestContractTests(_ tk: TestKit) {
@@ -37,6 +37,7 @@ func runRequestContractTests(_ tk: TestKit) {
             let examples = try JSONSerialization.jsonObject(with: Data(contentsOf: url)) as! [[String: Any]]
             for example in examples {
                 var request = example["request"] as! [String: Any]
+                assertExampleContract(example, request: &request)
                 if let count = example["repeat_steps"] as? Int {
                     let step = (request["probe_plan"] as! [[String: Any]])[0]
                     request["probe_plan"] = (0..<count).map { index -> [String: Any] in
@@ -59,7 +60,7 @@ func runRequestContractTests(_ tk: TestKit) {
                     .replacingOccurrences(of: "$NONCE", with: "0123456789abcdef0123456789abcdef")
                 let failure: PWRunnerRequestFailure?
                 do {
-                    let parsed = try pwRunnerDecodeJSON(PWRunnerRunSpec.self, from: Data(text.utf8))
+                    let parsed = try testDecodeJSON(PWRunnerRunSpec.self, from: Data(text.utf8))
                     switch admitSpecimen(parsed) {
                     case .accepted: failure = nil
                     case .capacity(let capacity): failure = requestCapacityFailure(capacity, parsed: parsed)
@@ -76,7 +77,7 @@ func runRequestContractTests(_ tk: TestKit) {
                     let want = expected as! [String: Any]
                     try expectEqual(failure.code, want["code"] as? String, name)
                     try expectEqual(failure.path, want["path"] as? [String], name)
-                    try expectEqual(failure.expected_schema, want["expected_schema"] as? Int, name)
+                    try expectEqual(failure.expected_contract, want["expected_contract"] == nil ? nil : testRequestContract, name)
                     _ = try pwPorcelainEncode(failure)
                 }
             }
@@ -86,7 +87,7 @@ func runRequestContractTests(_ tk: TestKit) {
         tk.run("actor parameter refusals retain policy ownership and safe keys") {
             func request(_ params: [[String: String]]) throws -> PWRunnerRunSpec {
                 try decodeRequest([
-                    "schema_version": PWContract.requestSchema, "specimen_id": "actor-parameters",
+                    "contract": testRequestContract, "specimen_id": "actor-parameters",
                     "actors": params.enumerated().map { index, values -> [String: Any] in
                         ["actor_id": "a\(index)", "sandbox": ["mode": "apply", "policy": [
                             "format": "sbpl", "sbpl_source": "(version 1) (allow default)", "params": values]]]
@@ -150,25 +151,24 @@ func runRequestContractTests(_ tk: TestKit) {
             try expectTrue(encoded.isEqual(to: input))
         }
         tk.run("versions are gated before interpreting unknown fields") {
-            for version in Array(-1..<PWContract.requestSchema) + [PWContract.requestSchema + 1, Int.max] {
+            for version in ["test:foreign", "", "unbound"] {
                 var input = requestFixture()
-                input["schema_version"] = version
+                input["contract"] = version
                 input["future_field"] = true
                 do {
                     _ = try decodeRequest(input)
                     throw TestFailure(message: "unsupported version accepted: \(version)")
-                } catch RequestContractError.unsupportedSchema(let actual) {
-                    try expectEqual(actual, version)
-                    try expectContains(requestDecodeDiagnostic(RequestContractError.unsupportedSchema(actual)),
-                                       "expected \(PWContract.requestSchema)")
+                } catch let failure as PWRunnerRequestFailure {
+                    try expectEqual(failure.code, "unsupported_contract")
+                    try expectEqual(failure.expected_contract, testRequestContract)
                 }
             }
         }
         tk.run("wrong version types and missing required fields are explicit errors") {
             for value in ["3", true, NSNull(), 3.5] as [Any] {
-                try expectThrows { _ = try decodeRequest(replacing(requestFixture(), at: ["schema_version"], with: value)) }
+                try expectThrows { _ = try decodeRequest(replacing(requestFixture(), at: ["contract"], with: value)) }
             }
-            var input = requestFixture(); input.removeValue(forKey: "schema_version")
+            var input = requestFixture(); input.removeValue(forKey: "contract")
             try expectThrows { _ = try decodeRequest(input) }
             input = requestFixture(); input.removeValue(forKey: "probe_plan")
             try expectThrows { _ = try decodeRequest(input) }
@@ -241,5 +241,23 @@ func runRequestContractTests(_ tk: TestKit) {
                 }
             }
         }
+    }
+}
+
+let testRequestContract = "test:request"
+func testDecodeJSON<T: Decodable>(_ type: T.Type, from data: Data) throws -> T {
+    let decoder = JSONDecoder()
+    decoder.userInfo[.expectedContract] = testRequestContract
+    return try decoder.decode(type, from: data)
+}
+
+func assertExampleContract(_ example: [String: Any], request: inout [String: Any]) {
+    switch example["assertion"] as? String {
+    case "foreign": request["contract"] = "test:foreign"
+    case "number": request["contract"] = 6
+    case "fraction": request["contract"] = 6.5
+    case "null": request["contract"] = NSNull()
+    case "missing": request.removeValue(forKey: "contract")
+    default: request["contract"] = testRequestContract
     }
 }

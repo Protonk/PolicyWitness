@@ -22,7 +22,7 @@ extension CWorkerOrchestrator {
         validatorExecutablePath: String,
         validatorSpawn: @escaping ValidatorSpawnCall,
         validatorProcessCalls: @escaping (Int) -> ChildProcessCalls,
-        equipmentBundleURL: URL = Bundle.main.bundleURL
+        equipmentBundleURL: URL = Bundle.main.bundleURL, equipmentCalls: ActorEquipmentCalls = ActorEquipmentCalls()
     ) -> PWRunnerRunResult {
         let assignmentsConsistent = actorPlanAssignmentsConsistent(plan)
         let equipmentRequests = assignmentsConsistent ? plan.actors.map {
@@ -34,7 +34,7 @@ extension CWorkerOrchestrator {
                 requiredEntitlements: actor.required_entitlements)
         }
         let equipment = ActorEquipmentPreparation.bind(bundleURL: equipmentBundleURL, actors: equipmentRequests,
-            overrides: parsed._test_overrides?.actor_equipment_executable_paths ?? [:])
+            overrides: parsed._test_overrides?.actor_equipment_executable_paths ?? [:], calls: equipmentCalls)
         guard assignmentsConsistent else {
             return actorPreparationRefusal(parsed: parsed, equipment: equipment, bundleId: bundleId,
                 failure: PWRunnerPreparationFailure(stage: "resolved_plan", code: "inconsistent_assignment"))

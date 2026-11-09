@@ -12,6 +12,7 @@ from unittest.mock import patch
 ROOT = Path(__file__).resolve().parents[3]
 sys.path.insert(0, str(ROOT / 'tests/lib'))
 import porcelain
+import build_context
 import porcelain_schema
 import receipts
 import fixture_inputs
@@ -44,6 +45,18 @@ def read(raw, records=None):
 
 
 class PorcelainCodecTests(receipts.TestCase):
+    def test_constructed_readers_never_read_a_candidate_plist(self):
+        import consumer
+        from lifecycle_adapter import read_lifecycle
+        from lifecycle_oracle import check_record
+        document = {'build': {'contract': 'test:foreign'}, 'kind': 'run', 'data': {}}
+        with patch.object(build_context, 'candidate_contract', side_effect=AssertionError('unexpected app dependency')):
+            self.assertEqual(len(consumer.validate(document, build_context.TEST_CONTRACT)), 1)
+            self.assertEqual(len(check_record(document, build_context.TEST_CONTRACT)), 1)
+            for reader in (consumer.steps, consumer.lifecycle, read_lifecycle):
+                with self.assertRaisesRegex(ValueError, 'unsupported controller envelope'):
+                    reader(document, build_context.TEST_CONTRACT)
+
     def test_authored_values_preserve_width_absence_and_raw_bytes(self):
         for descriptor, kind, payload, expected in [
             ('i64', 2, struct.pack('<q', -(2**63)), -(2**63)),
@@ -125,7 +138,8 @@ class PorcelainCodecTests(receipts.TestCase):
         # Stable wire tags are authored here, not obtained from RECORDS or a writer.
         # Unsupported semantic version and incompatible rc/outcome remain evidence.
         raw = b'PWP1' + bytes.fromhex(porcelain_schema.SCHEMA_FINGERPRINT) + record(55,
-            field(1, tlv(2, struct.pack('<q', 999))),
+            field(1, record(84, field(1, tlv(4, b'test:foreign')),
+                            field(2, tlv(4, b'control')), field(3, tlv(4, b'control')))),
             field(2, tlv(4, b'authored-control')),
             field(4, tlv(2, struct.pack('<q', 0))),
             field(5, tlv(4, b'bad_request')),
@@ -133,10 +147,10 @@ class PorcelainCodecTests(receipts.TestCase):
             field(13, tlv(7, bytes(4))),
             field(17, tlv(7, bytes(4))))
         projected = porcelain.decode(raw)
-        self.assertEqual(projected, dict(schema_version=999, specimen_id='authored-control',
+        self.assertEqual(projected, dict(producer=dict(contract='test:foreign', describe='control', commit='control'), specimen_id='authored-control',
             rc=0, normalized_outcome='bad_request', pid=1234, steps=[], phases=[]))
         from consumer import validate
-        errors = validate(projected)
+        errors = validate(projected, build_context.TEST_CONTRACT)
         self.assertEqual(len(errors), 1)
         self.assertIn('unsupported runner response', errors[0])
 
@@ -169,8 +183,8 @@ class PorcelainCodecTests(receipts.TestCase):
     def test_json_host_fixture_requires_explicit_opt_in(self):
         from blackbox import envelope_skeleton
         from runner_client_capture import host_reply
-        import contract
-        value = {'schema_version': contract.RESPONSE_SCHEMA, 'normalized_outcome': 'bad_request',
+        import build_context
+        value = {'producer': build_context.producer(), 'normalized_outcome': 'bad_request',
                  'rc': 1, 'error': 'authored control', 'steps': [], 'phases': []}
         capture = envelope_skeleton(value, ok=False)['data']['runner_client']['transport']
         with self.assertRaisesRegex(ValueError, 'porcelain'):
@@ -196,13 +210,13 @@ class PorcelainRejectedCaptureTests(receipts.TestCase):
     def capture_frame(protocol=None):
         # Tags and record identities are authored, not obtained from a writer or
         # generated field table. This is a complete local clock-error capture.
-        import contract
-        protocol = contract.RUNNER_PROTOCOL if protocol is None else protocol
+        import build_context
+        protocol = build_context.TEST_CONTRACT if protocol is None else protocol
         text = lambda value: tlv(4, value.encode('utf-8'))
         signed = lambda value: tlv(2, struct.pack('<q', value))
         error = record(67, field(1, text('local')), field(2, text('clock_error')),
             field(5, text('unavailable')), field(6, tlv(1, b'\x00')), field(7, tlv(1, b'\x00')))
-        body = record(32, field(1, text('runner_client_capture')), field(2, signed(protocol)),
+        body = record(32, field(1, text('runner_client_capture')), field(2, text(protocol)),
             field(3, signed(42)), field(4, text('mach_continuous_time_ns')),
             field(5, tlv(1, b'\x00')), field(9, tlv(3, struct.pack('<Q', 1))),
             field(10, tlv(7, struct.pack('<I', 0))), field(11, text('local_error')),
@@ -223,7 +237,7 @@ class PorcelainRejectedCaptureTests(receipts.TestCase):
             submission='unknown', runner_reply_error=None)
 
     def test_raw_rejection_classification_and_delivery_precedence(self):
-        import contract
+        import build_context
         from runner_client_capture import validate_client, validate_capture
         valid = self.capture_frame()
         self.assertEqual(validate_capture(porcelain.decode(valid, 'capture')), [])
@@ -231,7 +245,7 @@ class PorcelainRejectedCaptureTests(receipts.TestCase):
         malformed = valid[:36] + b'not a complete value'
         cases = [
             ('fingerprint', self.rejected_client(unsupported, 'unsupported')),
-            ('protocol', self.rejected_client(self.capture_frame(contract.RUNNER_PROTOCOL + 1),
+            ('protocol', self.rejected_client(self.capture_frame('test:foreign'),
                                              'unsupported', parse_error=None)),
             ('malformed', self.rejected_client(malformed)),
             # Even a complete value retained as a prefix cannot be admitted when
@@ -249,7 +263,7 @@ class PorcelainRejectedCaptureTests(receipts.TestCase):
                 self.assertEqual(client, before, 'independent admission changed retained evidence')
 
     def test_raw_rejection_controls_refuse_corrupt_receipts_and_recovered_claims(self):
-        import contract
+        import build_context
         from runner_client_capture import validate_client
         valid = self.capture_frame()
         raw = valid[:4] + bytes([valid[4] ^ 1]) + valid[5:]
@@ -275,7 +289,7 @@ class PorcelainRejectedCaptureTests(receipts.TestCase):
         # A rejected capture spelled as a projected object is an authored
         # fixture form: live validation refuses it and the fixture option
         # admits the same classification.
-        decoded = porcelain.decode(self.capture_frame(contract.RUNNER_PROTOCOL + 1), 'capture')
+        decoded = porcelain.decode(self.capture_frame('test:foreign'), 'capture')
         projected = dict(self.rejected_client(b'x', 'unsupported', parse_error=None), transport=decoded,
                          stdout_bytes_received=None, stdout_bytes_retained=None)
         self.assertEqual(validate_client(projected, None, allow_fixture_json=True), [])

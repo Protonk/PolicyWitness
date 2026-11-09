@@ -1,0 +1,41 @@
+{
+  "closed_keys": {
+    "PWRunnerRunSpec": [
+      "_test_overrides",
+      "actors",
+      "contract",
+      "phases",
+      "policy",
+      "probe_plan",
+      "run_kind",
+      "specimen_id"
+    ],
+    "PWRunnerTestOverrides": [
+      "actor_equipment_executable_paths",
+      "validator_executable_path",
+      "validator_io_timeout_ms",
+      "validator_total_timeout_ms",
+      "worker_executable_path",
+      "worker_kill_before_publish_slot",
+      "worker_post_apply_hang_ms",
+      "worker_post_apply_kill_signal",
+      "worker_pre_ready_hang_ms",
+      "worker_timeout_ms"
+    ]
+  },
+  "controller_keys": {
+    "RUNNER_SELECTOR_FIELDS": [
+      "id",
+      "mode",
+      "required_entitlements",
+      "service"
+    ],
+    "SELECTOR_FIELDS": [
+      "required_entitlements",
+      "runner",
+      "runner_id",
+      "runner_mode",
+      "runner_service"
+    ]
+  }
+}

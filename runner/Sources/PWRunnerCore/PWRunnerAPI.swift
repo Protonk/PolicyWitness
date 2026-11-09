@@ -151,11 +151,32 @@ enum SandboxCheckOutcome {
     static let unsupportedOperation = "unsupported_operation"
 }
 
-// BEGIN GENERATED CONTRACT VERSIONS (docs/contract.json via docs/generate_contract.py)
-/// Wire contract versions. Edit docs/contract.json and regenerate; never edit here.
-enum PWContract {
-    static let requestSchema: Int = 6
-    static let responseSchema: Int = 30
-    static let runnerProtocol: Int = 4
+
+#if !PW_PACKAGED_BUILD
+enum PWBuildContext {
+    #if PW_UNIT_TEST_CONTEXT
+    // The unit harness selects this fixed constructed context explicitly.
+    // Ordinary SwiftPM builds remain unable to admit public requests.
+    static let contract = "test:policy-witness"
+    #else
+    static let contract = "unbound"
+    #endif
+    static let describe = "unknown"
+    static let commit = "unknown"
 }
-// END GENERATED CONTRACT VERSIONS
+#endif
+
+struct PWProducer {
+    // BEGIN GENERATED PORCELAIN PWProducer
+    var contract: String
+    var describe: String
+    var commit: String
+    // END GENERATED PORCELAIN PWProducer
+    static var current: PWProducer {
+        PWProducer(contract: PWBuildContext.contract, describe: PWBuildContext.describe, commit: PWBuildContext.commit)
+    }
+}
+
+extension CodingUserInfoKey {
+    static let expectedContract = CodingUserInfoKey(rawValue: "PolicyWitness.expectedContract")!
+}

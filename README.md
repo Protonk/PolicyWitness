@@ -42,12 +42,15 @@ executable in the app is a thin arm64 Mach-O, so it does not run on an Intel
 Mac. `Info.plist` and `meson.build` declare the minimum together. Run it from a normal
 Terminal; a sandboxed automation harness can refuse the XPC lookup.
 
+Read `build.contract` from `policy-witness --version` and replace
+`BUILD_CONTRACT` in the specimen below with that value.
+
 ```sh
 PW="/Applications/PolicyWitness.app/Contents/MacOS/policy-witness"
 
 cat > /tmp/file_read_deny.json <<'JSON'
 {
-  "schema_version": 6,
+  "contract": "BUILD_CONTRACT",
   "specimen_id": "file_read_deny",
   "policy": {
     "format": "sbpl",

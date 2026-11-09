@@ -6,7 +6,6 @@ import Darwin
 /// application/process completion. This is not a readback of kernel state.
 struct CompiledProfileCapture {
     // BEGIN GENERATED PORCELAIN CompiledProfileCapture
-    var schema_version: Int = 2
     var status: String
     var reason: String?
     var worker_pid: Int
@@ -29,7 +28,6 @@ struct CompiledProfileCapture {
 // evidence-preserving reporting. No absent context implies a stage.
 extension CompiledProfileCapture {
     var contextProblem: String? {
-        guard schema_version == 2 else { return "unsupported compiled_profile schema_version" }
         switch status {
         case "captured":
             guard producer == "worker", capture_stage == "before_apply" else {

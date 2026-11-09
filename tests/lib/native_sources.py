@@ -114,12 +114,20 @@ def parse_targets(text, root, label):
         if counts[name] > 1:
             continue
         sources = []
+        generated_contexts = 0
         for group in target['target_sources']:
             for source in group.get('sources', []):
+                # Meson's unevaluated file mode spells configure_file(command:)
+                # as `unknown`. The configured reading checks its exact path.
+                if label == 'meson.build' and source == 'unknown' and name in ('PWRunner', 'pw-runner-client'):
+                    generated_contexts += 1
+                    continue
                 try:
                     sources.append(Path(source).resolve().relative_to(root).as_posix())
                 except ValueError:
                     problems.append(f"  {label}: {name} source '{source}' is outside the repository")
+        if label == 'meson.build' and name in ('PWRunner', 'pw-runner-client') and generated_contexts > 1:
+            problems.append(f"  {label}: {name} declares more than one generated build context")
         targets[name] = sources
     return targets, problems
 
@@ -207,7 +215,7 @@ def closure_problems(builddir, root, targets, filenames, label):
     return out
 
 
-def expected(root, xpc=True):
+def expected(root, xpc=True, builddir=None):
     """Every target and exactly the files the tree holds for it."""
     root = Path(root).resolve()
     targets = {'sb_api_validator': {VALIDATOR}, 'pw-probe-runner': {WORKER}}
@@ -215,6 +223,10 @@ def expected(root, xpc=True):
         targets['PWCWorkerShim'] = {p.relative_to(root).as_posix() for p in (root / SHIM_DIR).rglob('*.c')}
         targets['pw-runner-client'] = set(SHARED_CONTRACT_SOURCES) | {CLIENT_MAIN, CLIENT_SESSION}
         targets['PWRunner'] = {p.relative_to(root).as_posix() for p in (root / CORE_DIR).rglob('*.swift')} | {SERVICE_MAIN}
+    if xpc and builddir is not None:
+        generated = (Path(builddir).resolve() / 'PWBuildContext.swift').relative_to(root).as_posix()
+        for name in ('PWRunner', 'pw-runner-client'):
+            targets[name].add(generated)
     return targets
 
 
@@ -244,7 +256,7 @@ def main():
             if Path(root).resolve() != checkout:
                 found = [f"  builddir: configured for {Path(root).resolve()}, not {checkout}; use a fresh build directory"]
             else:
-                found += problems(targets, expected(root, xpc), 'builddir')
+                found += problems(targets, expected(root, xpc, args.builddir), 'builddir')
                 found += closure_problems(args.builddir, root, targets, filenames, 'builddir')
             where = f"{args.builddir} (xpc={'true' if xpc else 'false'})"
         else:

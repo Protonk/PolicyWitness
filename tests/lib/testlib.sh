@@ -1,4 +1,5 @@
 #!/usr/bin/env bash
+export PW_CONTRACT_TEST_LIB="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 
 # Case scripts and release acceptance reach this library before Python; it
 # resolves the pinned interpreter itself, as the entry points do.
@@ -399,22 +400,18 @@ render_specimen_with_runner() {
   local mode="${PW_TEST_RUNNER_MODE:-}"
   local service="${PW_TEST_RUNNER_SERVICE:-}"
 
-  if [[ -z "${mode}" && -z "${service}" ]]; then
-    if [[ "${input_path}" != "${output_path}" ]]; then
-      mkdir -p "$(dirname "${output_path}")"
-      cp "${input_path}" "${output_path}"
-    fi
-    return 0
-  fi
-
   mkdir -p "$(dirname "${output_path}")"
-  "${PW_PYTHON}" -B -S -P - "${input_path}" "${output_path}" "${mode}" "${service}" <<'PY'
+  "${PW_PYTHON}" -B -S -P - "${input_path}" "${output_path}" "${mode}" "${service}" "${ROOT_DIR}/tests/lib" <<'PY'
 import json
 import sys
 from pathlib import Path
 
 input_path, output_path, mode, service = sys.argv[1:5]
+sys.path.insert(0, sys.argv[5])
+import build_context
 data = json.loads(Path(input_path).read_text(encoding="utf-8"))
+if "contract" not in data:
+    data = build_context.asserted_request(data)
 
 runner = data.get("runner") or {}
 if mode:

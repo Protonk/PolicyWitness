@@ -96,14 +96,14 @@ func runEnvelopeInvariantTests(_ tk: TestKit) {
             try expectEqual(decoded.steps[0].sandbox_check.missing_reason, "validator_no_verdict")
         }
     }
-    tk.group("exact response version") {
-        tk.run("the producer default is the manifest version and other versions fail admission") {
+    tk.group("exact reply producer contract") {
+        tk.run("the producer default uses the build contract and foreign contracts fail admission") {
             let fresh = PWRunnerRunResult(specimen_id: "s", rc: 1, normalized_outcome: NormalizedOutcome.badRequest,
                 error: "constructed", pid: 1, policy_format: "sbpl", steps: [])
-            try expectEqual(fresh.schema_version, PWContract.responseSchema)
+            try expectEqual(fresh.producer.contract, PWBuildContext.contract)
             try fresh.validateForReporting()
-            for version in [1, 7, 12, PWContract.responseSchema + 1] {
-                var invalid = fresh; invalid.schema_version = version
+            for version in ["test:foreign", "release:v0.0.0", ""] {
+                var invalid = fresh; invalid.producer.contract = version
                 try expectThrows { try invalid.validateForReporting() }
             }
         }

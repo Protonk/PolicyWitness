@@ -157,9 +157,7 @@ struct PWRunnerPhaseResult {
 
 struct PWRunnerRunResult {
     // BEGIN GENERATED PORCELAIN PWRunnerRunResult
-    // Response wire version. Reporting admission accepts exactly
-    // PWContract.responseSchema; docs/CONTRACT.md, "Supported versions".
-    var schema_version: Int
+    var producer: PWProducer
     var specimen_id: String
     var run_kind: String?
     var rc: Int
@@ -195,7 +193,7 @@ struct PWRunnerRunResult {
     // END GENERATED PORCELAIN PWRunnerRunResult
 
     init(
-        schema_version: Int = PWContract.responseSchema,
+        producer: PWProducer = .current,
         specimen_id: String,
         run_kind: String? = nil,
         rc: Int,
@@ -216,7 +214,7 @@ struct PWRunnerRunResult {
         reporting_failure: PWRunnerReportingFailure? = nil,
         request_failure: PWRunnerRequestFailure? = nil
     ) {
-        self.schema_version = schema_version
+        self.producer = producer
         self.specimen_id = specimen_id
         self.run_kind = run_kind
         self.rc = rc
@@ -242,8 +240,8 @@ struct PWRunnerRunResult {
     /// Degraded replies retain contradictory observations but cannot retain claims.
     func validateForReporting() throws {
         // Only the current response is reported; these are its evidence rules.
-        guard schema_version == PWContract.responseSchema else {
-            throw PWRunnerReportingValidationError(message: "unsupported response schema \(schema_version) (this reporter emits \(PWContract.responseSchema))")
+        guard producer.contract == PWBuildContext.contract else {
+            throw PWRunnerReportingValidationError(message: "unsupported producer contract")
         }
         if let failure = reporting_failure {
             // The degraded reply retains observations and withholds every comparison.

@@ -6,6 +6,7 @@ import secrets
 import sys
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[2] / 'lib'))
+import build_context
 import consumer
 from run_capture import RunCapture
 
@@ -13,7 +14,7 @@ from run_capture import RunCapture
 def main():
     pw, out_arg, fixture_arg = sys.argv[1:]
     out, fixture = Path(out_arg).resolve(), Path(fixture_arg)
-    spec = json.loads((fixture / "specimen.template.json").read_text())
+    spec = build_context.asserted_request(json.loads((fixture / "specimen.template.json").read_text()))
     spec["policy"]["sbpl_source"] = (fixture / "profile.sbpl").read_text()
     paths = []
     for _ in range(2):
@@ -56,7 +57,7 @@ def main():
             f"round {round_number}: denied write changed the file"
         assert rc == 0, f"PW exit={rc}; see {run.stdout_path}"
         envelope = run.load_json()
-        assert not consumer.validate(envelope), consumer.validate(envelope)
+        assert not consumer.validate(envelope, build_context.candidate_contract()), consumer.validate(envelope, build_context.candidate_contract())
         assert envelope["kind"] == "run" and envelope["result"]["ok"] is True
         runner = envelope["data"]["runner_result"]
         assert runner["normalized_outcome"] == "finished"

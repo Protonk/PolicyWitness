@@ -2,6 +2,7 @@
 import argparse
 import json
 import os
+import plistlib
 from pathlib import Path, PurePosixPath
 import shutil
 import stat
@@ -104,6 +105,13 @@ def accept(archive, out, *, invoke=command, inspect=artifact.inspect):
         save(out / 'inspection.json', inspection)
         if not inspection['ok']:
             raise ValueError('extracted app failed artifact inspection; see inspection.json')
+        info = plistlib.loads((app / 'Contents/Info.plist').read_bytes())
+        invoke(out / 'version', [app / 'Contents/MacOS/policy-witness', '--version'], timeout=30)
+        version = json.loads((out / 'version/stdout').read_text())
+        expected_contract = 'release:v' + info['CFBundleShortVersionString']
+        if info.get('PWContract') != expected_contract or version.get('build', {}).get('contract') != expected_contract:
+            raise ValueError('released archive does not report ' + expected_contract)
+        report['contract'] = expected_contract
         invoke(out / 'staple-validation', ['/usr/bin/xcrun', 'stapler', 'validate', '-v', app], timeout=60)
         invoke(out / 'gatekeeper', ['/usr/sbin/spctl', '-a', '-vv', '--type', 'execute', app], timeout=60)
         # The ZIP is the sole app selection. Ignore inherited PW settings rather

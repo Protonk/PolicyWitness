@@ -317,18 +317,18 @@
       ]
     },
     {
-      "id": "check_contract",
+      "id": "check_contract_stamps",
       "banners": [
-        "Checking contract versions"
+        "Checking public contract stamps"
       ],
       "variants": [
         "full",
         "partial"
       ],
-      "reads": "docs/contract.json (including the runner protocol and signed service marker), docs/architecture.json and their generated copies, docs/footprint.json and its generated document, docs/porcelain.json and its generated typed record declarations and codecs",
+      "reads": "docs/contract_surfaces.json and annotated release history, docs/architecture.json and their generated copies, docs/footprint.json and its generated document, docs/porcelain.json and its generated typed record declarations and codecs",
       "writes": "nothing",
       "refusals": [
-        "stale_contract",
+        "stale_contract_stamps",
         "stale_architecture",
         "stale_footprint",
         "stale_porcelain"
@@ -336,7 +336,7 @@
       "sources": [
         {
           "path": "build.sh",
-          "symbol": "Checking contract versions"
+          "symbol": "Checking public contract stamps"
         }
       ],
       "checks": [
@@ -386,7 +386,7 @@
         "full",
         "partial"
       ],
-      "reads": "the identity inputs and the three generated copies",
+      "reads": "the identity inputs and the three generated copies; shipped sources and build inputs through docs/build_contract.py, exact annotated release tags and whole-tree cleanliness for the public build contract",
       "writes": "nothing",
       "refusals": [
         "stale_identity"
@@ -416,7 +416,7 @@
         "partial"
       ],
       "reads": "git describe, rev-parse and rev-list, or PW_VERSION and PW_BUILD_NUMBER from the environment; the environment witness compared with the starting environment (SDKROOT supplied from before its removal)",
-      "writes": "the four stamp variables for Cargo and the plists; after admitting builddir/, controller/target/, its release/, its aarch64-apple-darwin/ and that directory's release/, and the session destination, controller/target/ when it is missing and the build session file, opened with the stamp, the three knobs, the fixed output target, the acquisition nonce and the build's witnessed starting environment as requests",
+      "writes": "the stamp variables and the computed public contract for Cargo and the plists; after admitting builddir/, controller/target/, its release/, its aarch64-apple-darwin/ and that directory's release/, and the session destination, controller/target/ when it is missing and the build session file, opened with the stamp, the three knobs, the fixed output target, the acquisition nonce and the build's witnessed starting environment as requests",
       "refusals": [
         "provenance_probe_failed",
         "lock_claim_invalid",
@@ -854,7 +854,7 @@
     {
       "id": "configure",
       "banners": [
-        "Configuring native build (meson configure, existing directory): ${MESON_OPTIONS[*]}",
+        "Configuring native build (meson setup --reconfigure, existing directory): ${MESON_OPTIONS[*]}",
         "Configuring native build (meson setup, fresh directory): ${MESON_BUILD_DIR} ${MESON_OPTIONS[*]}"
       ],
       "variants": [
@@ -862,7 +862,7 @@
         "partial"
       ],
       "reads": "whether builddir/build.ninja exists, meson.build, meson.options and the two Meson options; a fresh setup also reads CFLAGS and the other flag variables, and the compilers Meson selected",
-      "writes": "builddir/ configuration; a fresh setup publishes builddir/pw-toolchain.json atomically from the selected compilers, SDK and Rust compiler; meson configure records the two options and the policy assertions run at setup or at the regeneration the next compile triggers",
+      "writes": "builddir/ configuration; a fresh setup publishes builddir/pw-toolchain.json atomically from the selected compilers, SDK and Rust compiler; meson setup --reconfigure records the two options, recomputes the generated Swift context and runs the policy assertions",
       "refusals": [
         "meson_policy",
         "meson_target",
@@ -877,7 +877,7 @@
       "sources": [
         {
           "path": "build.sh",
-          "symbol": "Configuring native build (meson configure, existing directory): ${MESON_OPTIONS[*]}"
+          "symbol": "Configuring native build (meson setup --reconfigure, existing directory): ${MESON_OPTIONS[*]}"
         }
       ],
       "checks": [
@@ -1159,14 +1159,15 @@
         "full",
         "partial"
       ],
-      "reads": "the identity inputs and copies, the generated identity in tests/lib/contract.py and the built worker's --version report",
+      "reads": "the identity inputs and copies, the generated identity in tests/lib/contract.py and the built worker's --version report; recomputed public build contract compared with the value used for compilation",
       "writes": "nothing",
       "refusals": [
         "stale_identity_presign",
         "worker_identity_mismatch",
         "provenance_probe_failed",
         "lock_claim_invalid",
-        "cache_path_unsafe"
+        "cache_path_unsafe",
+        "public_contract_changed"
       ],
       "sources": [
         {
@@ -3171,11 +3172,11 @@
       ]
     },
     {
-      "id": "stale_contract",
-      "message": "stale <copy>; run tests/lib/python.sh docs/generate_contract.py",
+      "id": "stale_contract_stamps",
+      "message": "stale contract stamps: <copies>; run tests/lib/python.sh docs/generate_contract_stamps.py",
       "kind": "propagated",
       "steps": [
-        "check_contract"
+        "check_contract_stamps"
       ],
       "status": "1",
       "variants": [
@@ -3185,10 +3186,10 @@
       "sources": [
         {
           "path": "build.sh",
-          "symbol": "generate_contract.py"
+          "symbol": "generate_contract_stamps.py"
         },
         {
-          "path": "docs/generate_contract.py",
+          "path": "docs/generate_contract_stamps.py",
           "symbol": "stale"
         }
       ],
@@ -3201,7 +3202,7 @@
         },
         {
           "path": "tests/suites/preflight/check_build_entry.py",
-          "symbol": "test_build_refuses_stale_contract_copy_before_signing_or_creating_output",
+          "symbol": "test_build_refuses_stale_contract_stamps_copy_before_signing_or_creating_output",
           "form": "test",
           "coverage": "behavioral"
         }
@@ -3212,7 +3213,7 @@
       "message": "architecture documentation is stale",
       "kind": "propagated",
       "steps": [
-        "check_contract"
+        "check_contract_stamps"
       ],
       "status": "1",
       "variants": [
@@ -3255,7 +3256,7 @@
       "message": "stale footprint document",
       "kind": "propagated",
       "steps": [
-        "check_contract"
+        "check_contract_stamps"
       ],
       "status": "1",
       "variants": [
@@ -3298,7 +3299,7 @@
       "message": "stale porcelain output",
       "kind": "propagated",
       "steps": [
-        "check_contract"
+        "check_contract_stamps"
       ],
       "status": "1",
       "variants": [
@@ -4078,6 +4079,39 @@
           "coverage": "helper"
         }
       ]
+    },
+    {
+      "id": "public_contract_changed",
+      "message": "public build contract changed during compilation; rebuild from stable inputs",
+      "kind": "script",
+      "steps": [
+        "presign"
+      ],
+      "status": "1",
+      "variants": [
+        "full",
+        "partial"
+      ],
+      "sources": [
+        {
+          "path": "build.sh",
+          "symbol": "public build contract changed during compilation"
+        }
+      ],
+      "checks": [
+        {
+          "path": "tests/suites/source_drift/build_rules.py",
+          "symbol": "check_refusals",
+          "form": "rule",
+          "coverage": "textual"
+        },
+        {
+          "path": "tests/suites/source_drift/build_contracts.py",
+          "symbol": "test_presign_contract_guard_refuses_changed_sources",
+          "form": "test",
+          "coverage": "helper"
+        }
+      ]
     }
   ],
   "signing": [
@@ -4438,8 +4472,8 @@
     },
     {
       "id": "inv_contract_check",
-      "command": "docs/generate_contract.py --check",
-      "step": "check_contract",
+      "command": "docs/generate_contract_stamps.py --check",
+      "step": "check_contract_stamps",
       "variants": [
         "full",
         "partial"
@@ -4447,7 +4481,7 @@
       "sources": [
         {
           "path": "build.sh",
-          "symbol": "docs/generate_contract.py\" --check"
+          "symbol": "docs/generate_contract_stamps.py\" --check"
         }
       ],
       "checks": [
@@ -4462,7 +4496,7 @@
     {
       "id": "inv_architecture_check",
       "command": "docs/generate_architecture.py --check",
-      "step": "check_contract",
+      "step": "check_contract_stamps",
       "variants": [
         "full",
         "partial"
@@ -4491,7 +4525,7 @@
     {
       "id": "inv_footprint_check",
       "command": "docs/generate_footprint.py --check",
-      "step": "check_contract",
+      "step": "check_contract_stamps",
       "variants": [
         "full",
         "partial"
@@ -4520,7 +4554,7 @@
     {
       "id": "inv_porcelain_check",
       "command": "docs/generate_porcelain.py --check",
-      "step": "check_contract",
+      "step": "check_contract_stamps",
       "variants": [
         "full",
         "partial"
@@ -4860,29 +4894,6 @@
           "symbol": "test_helper_subcommands_are_the_ones_the_script_invokes",
           "form": "test",
           "coverage": "helper"
-        }
-      ]
-    },
-    {
-      "id": "inv_meson_configure",
-      "command": "meson configure",
-      "step": "configure",
-      "variants": [
-        "full",
-        "partial"
-      ],
-      "sources": [
-        {
-          "path": "build.sh",
-          "symbol": "meson configure"
-        }
-      ],
-      "checks": [
-        {
-          "path": "tests/suites/source_drift/build_rules.py",
-          "symbol": "check_invocations",
-          "form": "rule",
-          "coverage": "textual"
         }
       ]
     },
@@ -5504,6 +5515,52 @@
         {
           "path": "build.sh",
           "symbol": "/usr/bin/ditto"
+        }
+      ],
+      "checks": [
+        {
+          "path": "tests/suites/source_drift/build_rules.py",
+          "symbol": "check_invocations",
+          "form": "rule",
+          "coverage": "textual"
+        }
+      ]
+    },
+    {
+      "id": "inv_build_contract",
+      "command": "docs/build_contract.py",
+      "step": "check_identity",
+      "variants": [
+        "full",
+        "partial"
+      ],
+      "sources": [
+        {
+          "path": "build.sh",
+          "symbol": "docs/build_contract.py"
+        }
+      ],
+      "checks": [
+        {
+          "path": "tests/suites/source_drift/build_rules.py",
+          "symbol": "check_invocations",
+          "form": "rule",
+          "coverage": "textual"
+        }
+      ]
+    },
+    {
+      "id": "inv_build_contract_presign",
+      "command": "docs/build_contract.py",
+      "step": "presign",
+      "variants": [
+        "full",
+        "partial"
+      ],
+      "sources": [
+        {
+          "path": "build.sh",
+          "symbol": "docs/build_contract.py"
         }
       ],
       "checks": [

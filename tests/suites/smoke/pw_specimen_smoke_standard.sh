@@ -23,7 +23,7 @@ if [[ ! -f "${SPECIMEN_FIXTURE}" ]]; then
 fi
 
 SPECIMEN_PATH="${PW_TEST_ARTIFACTS}/specimen.json"
-cp "${SPECIMEN_FIXTURE}" "${SPECIMEN_PATH}"
+PW_TEST_RUNNER_MODE= PW_TEST_RUNNER_SERVICE= render_specimen_with_runner "${SPECIMEN_FIXTURE}" "${SPECIMEN_PATH}"
 
 RUN_STDOUT="${PW_TEST_ARTIFACTS}/policy_witness.run.stdout.json"
 RUN_STDERR="${PW_TEST_ARTIFACTS}/policy_witness.run.stderr.txt"

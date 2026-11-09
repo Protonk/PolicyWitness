@@ -10,7 +10,7 @@ import tempfile
 ROOT = Path(__file__).resolve().parents[3]
 sys.path.insert(0, str(ROOT / 'tests/lib'))
 import consumer
-from contract import REQUEST_SCHEMA
+import build_context
 from lifecycle_oracle import check_record
 from run_capture import RunCapture
 from worker_exit_witness import worker_exit_witness
@@ -103,9 +103,9 @@ def execute(pw, out, root, ownership, name, request, paths, session, *, expected
         entry['worker_exit_witnessed'], entry['witness'] = worker_exit_witness(envelope)
         save(root / 'ownership.json', ownership); save(out / 'ownership.json', ownership)
     assert rc == expected_rc, (name, rc, folder / 'capture.json')
-    errors = consumer.validate(envelope)
+    errors = consumer.validate(envelope, build_context.candidate_contract())
     assert not errors, (name, errors)
-    errors = check_record(envelope)
+    errors = check_record(envelope, build_context.candidate_contract())
     assert not errors, (name, errors)
     assert entry['worker_exit_witnessed'], entry
     return envelope, {value['path']: value for value in effects}
@@ -125,7 +125,7 @@ def run(pw, out, session=None):
             paths = [target / (boundary + '-' + kind) for boundary in boundaries for kind in ('existing', 'child')]
             for path in paths[::2]:
                 path.write_bytes(CONTENTS); path.chmod(0o600)
-            baseline = dict(schema_version=REQUEST_SCHEMA, specimen_id='directory-baseline-' + case,
+            baseline = dict(contract=build_context.candidate_contract(), specimen_id='directory-baseline-' + case,
                             policy=dict(format='sbpl', sbpl_source='(version 1)(allow default)'),
                             probe_plan=[action for boundary in boundaries for action in actions(target, boundary)])
             envelope, final = execute(pw, out, root, ownership, case + '-baseline', baseline, paths, session)
@@ -209,7 +209,7 @@ def run(pw, out, session=None):
         # Preserve the distinction between a native effect and an unpublished
         # attempt: the existing seam kills only after the new helper returned.
         target = root / 'unpublished'; target.write_bytes(CONTENTS)
-        request = dict(schema_version=REQUEST_SCHEMA, specimen_id='directory-unpublished',
+        request = dict(contract=build_context.candidate_contract(), specimen_id='directory-unpublished',
             policy=dict(format='sbpl', sbpl_source='(version 1)(allow default)'),
             probe_plan=[probe('write', 'write_fresh', target), probe('after', 'read_fresh', target)],
             _test_overrides=dict(worker_kill_before_publish_slot=0))

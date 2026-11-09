@@ -22,7 +22,7 @@ usage:
 notes:
   - runs the selected PWRunner XPC service once and prints a single JSON result to stdout
   - request.json is parsed once; the resolved request is delivered to the runner client on stdin (`--request -`), never through a temporary file
-  - --version prints a JSON envelope (kind=version) with the build stamp and the wire contract versions this build speaks; every envelope also carries the stamp under `build`"
+  - --version prints a JSON envelope (kind=version) with the build stamp and the public contract this build asserts; every envelope also carries the stamp under `build`"
     );
 }
 
@@ -42,7 +42,7 @@ pub fn run(argv: Vec<OsString>) -> i32 {
 
     if sub == "--version" || sub == "version" {
         let result = json_contract::JsonResult::new(true, 0, None, None);
-        let data = json!({"contract": json_contract::contract_versions()});
+        let data = json!({"contract": json_contract::BUILD_CONTRACT});
         return match json_contract::print_envelope("version", result, &data) {
             Ok(()) => 0,
             Err(_) => 2,

@@ -36,6 +36,7 @@ ROOT = Path(__file__).resolve().parents[3]
 sys.path.insert(0, str(ROOT / 'tests/lib'))
 sys.path.insert(0, str(ROOT / 'tests/fixtures/caller_auth'))
 import native_sources
+import build_context
 from artifact import digest, inventory, inspect, EXECUTABLES, MANIFEST, PROVENANCE
 from bundle import command, save
 from contract import WORKER_IDENTITY
@@ -431,9 +432,10 @@ def build_host(package, work, out, patches, stamp_dir, runner=ROOT / 'runner', *
                  package / 'Sources/PWCWorkerShim/PWCWorkerShim.c', '-o', shim]
     command(out / 'compile-shim', shim_argv, timeout=120)
     host = work / 'PWRunner'
+    context = build_context.write_swift_context(out / 'PWBuildContext.swift', build_context.candidate_contract())
     host_argv = ['/usr/bin/xcrun', '--sdk', 'macosx', 'swiftc', '-j', SWIFT_JOBS, *swift_flags,
                  '-target', f'arm64-apple-macosx{minimum}', '-module-cache-path', work / 'module-cache', '-o', host,
-                 *[package / p for p in compiled], *([Path(stamp['generated_path'])] if stamp else []), shim]
+                 '-D', 'PW_PACKAGED_BUILD', context, *[package / p for p in compiled], *([Path(stamp['generated_path'])] if stamp else []), shim]
     command(out / 'compile-host', host_argv, timeout=600)
     toolchain = {}
     for name, argv in (('swiftc', ['/usr/bin/xcrun', '--sdk', 'macosx', 'swiftc', '--version']),

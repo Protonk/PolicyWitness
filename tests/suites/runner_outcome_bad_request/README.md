@@ -33,6 +33,14 @@ are in `contract.py`. Every runner refusal asserts an absent subprocess and
 empty steps. Controller refusals assert no client invocation. Submitted files
 remain unchanged.
 
+`same_shape_contract` is opt-in because it builds two signed variants in isolated
+worktrees. Both trace client and worker entry; one deliberately replaces
+`open_write` truncation with append while retaining the request and reply shapes.
+Matching assertions establish the respective file effects. Foreign assertions
+leave the file unchanged and both entry traces absent. These are disclosed
+instrumented controls, not production-equivalence evidence. Source patches,
+product identities, build logs, requests, traces and cleanup ownership are retained.
+
 ## Artifacts
 
 `<run>` is the selected output directory: `tests/out/runs/default` for the

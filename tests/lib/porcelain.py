@@ -153,3 +153,34 @@ def decode(data, expected_root='reply'):
     if end != len(data):
         raise ValueError('trailing porcelain bytes')
     return value
+
+
+def decode_bound(data, expected_root, expected_contract):
+    """Admit the producer before decoding any evidence descendants."""
+    if len(data) > MAX_BYTES or len(data) < 43 or data[:4] != b'PWP1':
+        raise ValueError('malformed porcelain frame')
+    if data[4:36] != bytes.fromhex(porcelain_schema.SCHEMA_FINGERPRINT):
+        raise ValueError('unsupported porcelain schema fingerprint')
+    reader = Reader(data, porcelain_schema.RECORDS)
+    length, start = reader.number(37, len(data), 4)
+    end = start + length
+    if data[36] != 6 or end != len(data):
+        raise ValueError('malformed root record')
+    ident, cursor = reader.number(start, end, 2)
+    if ident != porcelain_schema.ROOTS[expected_root]:
+        raise ValueError('wrong root record')
+    if expected_root == 'capture':
+        tag, cursor = reader.number(cursor, end, 2)
+        if tag != 1:
+            raise ValueError('missing capture kind')
+        _, cursor = reader.value(cursor, end, 'text')
+    tag, cursor = reader.number(cursor, end, 2)
+    expected_tag = 2 if expected_root == 'capture' else 1
+    if tag != expected_tag:
+        raise ValueError('missing producer context')
+    field = porcelain_schema.RECORDS[ident]['fields'][expected_tag]
+    context, _ = reader.value(cursor, end, field['type'])
+    contract = context if expected_root == 'capture' else context.get('contract')
+    if expected_contract == 'unbound' or contract != expected_contract:
+        raise ValueError(f'unsupported producer contract {contract!r}')
+    return decode(data, expected_root)

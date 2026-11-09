@@ -12,6 +12,7 @@ import sys
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[2] / 'lib'))
+import build_context
 from run_capture import RunCapture
 
 STEPS = 256
@@ -23,7 +24,7 @@ def main():
     out = Path(directory)
     ids = [f'e{i:03d}' for i in range(STEPS)]
     specimen = {
-        'schema_version': 6, 'specimen_id': secrets.token_hex(12),
+        'contract': build_context.candidate_contract(), 'specimen_id': secrets.token_hex(12),
         'policy': {'format': 'sbpl', 'sbpl_source': '(version 1)(allow default)'},
         'probe_plan': [{'step_id': step_id,
                         'sandbox_check': {'operation': 'process-exec*', 'filter': {'kind': 'path', 'value': TARGET}},

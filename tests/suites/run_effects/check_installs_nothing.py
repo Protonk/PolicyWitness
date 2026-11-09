@@ -16,6 +16,7 @@ import sys
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[2] / 'lib'))
 sys.path.insert(0, str(Path(__file__).resolve().parent))
+import build_context
 from run_capture import RunCapture  # noqa: E402
 import effects  # noqa: E402
 
@@ -73,7 +74,7 @@ def main():
     (out / 'launchd_labels.before.json').write_text(json.dumps(launchd_labels(), indent=2) + '\n')
 
     spec = {
-        'schema_version': 6,
+        'contract': build_context.candidate_contract(),
         'specimen_id': 'run_effects_plain_run',
         'policy': {'format': 'sbpl', 'sbpl_source': '(version 1) (allow default)'},
         'probe_plan': [{

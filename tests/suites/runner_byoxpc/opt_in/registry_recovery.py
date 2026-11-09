@@ -19,6 +19,7 @@ import tempfile
 ROOT = Path(__file__).resolve().parents[4]
 sys.path[:0] = [str(ROOT / 'tests/lib'), str(ROOT / 'tests/fixtures/byoxpc'), str(ROOT / 'tests/fixtures/caller_auth')]
 import contract
+import build_context
 import session
 from bundle import command as native_command, signature as native_signature, SERVICE
 
@@ -114,11 +115,12 @@ def native_tool(label, args, *, timeout=90):
     return destination
 
 
-def verified_equipment(bundle, label):
+def verified_equipment(bundle, label, *, expected_contract=None):
     # Real source/current seal, bytes and semantic readbacks remain independent
     # of the public installer's inventory verifier. No service/worker launches.
     native_tool(label + '-seal', ['/usr/bin/codesign', '--verify', '--deep', '--strict', bundle])
-    return session.equipment_inventory(bundle, out, f'{sequence:03d}-{label}', native_command)
+    return session.equipment_inventory(bundle, out, f'{sequence:03d}-{label}', native_command,
+                                       expected_contract=expected_contract)
 
 
 def reseal_fixture(bundle, label):
@@ -147,7 +149,9 @@ def reseal_fixture(bundle, label):
     assert equipment['unsigned_worker_sha256'] == original['unsigned_worker_sha256']
     equipment_path.write_text(json.dumps(equipment, indent=2) + '\n')
     native_tool(label + '-seal', ['/usr/bin/codesign', '--force', '--options', 'runtime', '-s', '-', bundle])
-    current = verified_equipment(bundle, label + '-current')
+    # Marker-refusal controls deliberately corrupt only the service assertion.
+    # Its sealed equipment still identifies the original source build.
+    current = verified_equipment(bundle, label + '-current', expected_contract=original['contract'])
     assert current == equipment
     save(out / (label + '-inventory.json'), dict(source=original, current=current,
          retained_build_identity=True, retained_common_presign_hash=True, service_executed=False, worker_launched=False))
@@ -177,7 +181,7 @@ def prepare():
 def install(bundle, *, live=False, code=0):
     args = ['runner', 'install', '--bundle', bundle, '--identity', '-', '--allow-adhoc']
     if not live: args.append('--skip-bootstrap')
-    original = verified_equipment(bundle, 'install-source')
+    original = verified_equipment(bundle, 'install-source', expected_contract=source_equipment['contract'])
     result = command(args, code=code, label='install')
     if code != 0:
         return result
@@ -210,23 +214,22 @@ try:
     save(registry, current)
     assert data(['runner', 'status', '--service-name', service])['state'] == 'pending'
     specimen = staging / 'pending.json'
-    save(specimen, dict(schema_version=6, specimen_id='pending', policy=dict(format='sbpl', sbpl_source='(version 1)\n(allow default)'),
+    save(specimen, dict(contract=build_context.candidate_contract(), specimen_id='pending', policy=dict(format='sbpl', sbpl_source='(version 1)\n(allow default)'),
                        runner=dict(mode='byoxpc', service=service), probe_plan=[]))
     rejected = command(['run', specimen], code=2)
     assert b'external runner is pending installation' in rejected.stderr + rejected.stdout
     remove(service, skip=True)
     observations.append('skip-bootstrap completes installation; pending status and specimen rejection; pending removal')
 
-    for label, marker in [('missing', None), ('string', str(contract.RUNNER_PROTOCOL)),
-                          ('real', float(contract.RUNNER_PROTOCOL)), ('boolean', True),
-                          ('old', contract.RUNNER_PROTOCOL - 1), ('future', contract.RUNNER_PROTOCOL + 1)]:
+    for label, marker in [('missing', None), ('empty', ''), ('number', 4), ('real', 4.0),
+                          ('boolean', True), ('old', 'release:v0.3.5'), ('future', 'test:foreign')]:
         service, bundle, plist = prepare()
         info_path = bundle / 'Contents/Info.plist'
         info = plistlib.loads(info_path.read_bytes())
         if marker is None:
-            info.pop('PWRunnerProtocolVersion', None)
+            info.pop('PWContract', None)
         else:
-            info['PWRunnerProtocolVersion'] = marker
+            info['PWContract'] = marker
         info_path.write_bytes(plistlib.dumps(info))
         (out / f'protocol-marker-{label}-Info.plist').write_bytes(info_path.read_bytes())
         # Keep this a protocol-marker refusal, with valid source signatures,
@@ -247,10 +250,11 @@ try:
         assert after == before, label
         assert service_after['presence'] == 'absent', (label, service_after)
         assert not rejected.stdout, (label, rejected.stdout)
-        assert (b'upgrade and reinstall' if label in ('old', 'future')
-                else b'PWRunnerProtocolVersion must be an integer') in rejected.stderr
+        assert (b'upgrade and reinstall' if label in ('old', 'future') else
+                b'runner contract marker must be nonempty' if label == 'empty' else
+                b'PWContract must be a string') in rejected.stderr
         current = records()
-        assert not any(r['service_name'] == service for r in current['runners'] + current['pending_cleanup'])
+        assert not any(r['service_name'] == service for r in current['runners'] + [row['runner'] for row in current['pending_cleanup']])
         assert compatibility_snapshot(bundle, plist) == before
         observations.append(f'{label} protocol marker refused; unchanged filesystem and no residual service or record')
 
@@ -341,20 +345,30 @@ try:
     service, bundle, plist = prepare()
     installed = install(bundle, live=True)
     assert installed['bootstrapped'] and installed['state'] == 'installed'
-    assert installed['runner']['protocol_version'] == contract.RUNNER_PROTOCOL
+    assert installed['runner']['contract'] == build_context.candidate_contract()
     data(['runner', 'verify', '--service-name', service])
     # A constructed historical registry record on a current host proves that
     # the execution gate does not prevent inspection or owned cleanup. It does
     # not establish RPC behavior against a historical service implementation.
     current = json.loads(registry.read_text())
     historical = next(r for r in current['runners'] if r['service_name'] == service)
+    historical.pop('contract')
     historical['protocol_version'] = 1
+    historical['kind'] = 'debuggable'
+    historical['future_metadata'] = {'opaque': [True, None, {'contract': 'uninterpreted'}]}
+    historical['observations'] = {'opaque': 'runner observations'}
+    historical['cleanup_started_at_unix_ms'] = 'opaque runner timestamp'
+    for field in ('ownership', 'signature', 'entitlements'):
+        historical[field]['future_metadata'] = {'opaque': field}
+    current['future_registry'] = {'opaque': 'retained'}
+    for key in ('worker_signature', 'worker_entitlements', 'validator_signature', 'validator_entitlements'):
+        historical.pop(key, None)
     save(registry, current)
     save(out / 'historical-registry.json', current)
     before = compatibility_snapshot(bundle, plist)
     save(out / 'historical-before.json', before)
     specimen = staging / 'historical.json'
-    save(specimen, dict(schema_version=6, specimen_id='historical-registry',
+    save(specimen, dict(contract=build_context.candidate_contract(), specimen_id='historical-registry',
                        policy=dict(format='sbpl', sbpl_source='(version 1)\n(allow default)'),
                        runner=dict(mode='byoxpc', service=service), probe_plan=[]))
     rejected = json.loads(command(['run', specimen], code=2, label='historical-run').stdout)
@@ -364,20 +378,32 @@ try:
     verified = command(['runner', 'verify', '--service-name', service], code=2, label='historical-verify')
     assert b'upgrade and reinstall' in verified.stderr and not verified.stdout
     listed = records()
-    assert next(r for r in listed['runners'] if r['service_name'] == service) == historical
-    assert data(['runner', 'status', '--service-name', service]) == historical
+    # The known retired alias has always projected as its current kind. Unknown
+    # metadata is retained without becoming execution or cleanup authority.
+    projected = dict(historical, kind='byoxpc')
+    assert next(r for r in listed['runners'] if r['service_name'] == service) == projected
+    assert data(['runner', 'status', '--service-name', service]) == projected
     report = data(['runner', 'reconcile'])
     row = next(r for r in report['records'] if r['runner']['service_name'] == service)
-    assert row['recorded_state'] == 'installed' and row['runner'] == historical
+    assert row['recorded_state'] == 'installed' and row['runner'] == projected
     assert row['service']['presence'] == row['plist']['presence'] == 'present'
     assert row['service_ownership'] == row['plist_ownership'] == 'owned'
     after = compatibility_snapshot(bundle, plist)
     save(out / 'historical-after-read-commands.json', after)
     assert after == before
+    sibling, sibling_bundle, _ = prepare()
+    install(sibling_bundle)
+    remove(sibling)
+    raw = json.loads(registry.read_text())
+    assert raw['future_registry'] == current['future_registry']
+    kept = next(r for r in raw['runners'] if r['service_name'] == service)
+    assert kept == projected and 'contract' not in kept
+    observations.append('unrelated install/remove preserves opaque legacy record and registry metadata')
     observations.append('constructed protocol-1 record rejects run/verify while list/status/reconcile preserve current-host ownership')
     result = remove(service, retained=True, skip=True)
     assert result['plist_removed'] and not plist.exists()
-    assert result['retained_record']['protocol_version'] == 1
+    assert result['retained_record']['runner'] == projected
+    assert isinstance(result['retained_record']['cleanup_started_at_unix_ms'], int)
     report = data(['runner', 'reconcile'])
     row = next(r for r in report['records'] if r['runner']['service_name'] == service)
     assert row['recorded_state'] == 'pending_cleanup' and row['service']['presence'] == 'present' and row['plist']['presence'] == 'absent'
@@ -386,12 +412,12 @@ try:
     disposable = staging / 'original-test-output'
     disposable.mkdir(); save(disposable / 'receipt.json', result)
     shutil.rmtree(disposable)
-    pending = next(r for r in records()['pending_cleanup'] if r['service_name'] == service)
+    pending = next(row['runner'] for row in records()['pending_cleanup'] if row['runner']['service_name'] == service)
     assert Path(pending['bundle_path']) == bundle and pending['protocol_version'] == 1
     removed = remove(service)
     assert removed['booted_out'] and not removed.get('warnings')
     current = records()
-    assert not any(r['service_name'] == service for r in current['runners'] + current['pending_cleanup'])
+    assert not any(r['service_name'] == service for r in current['runners'] + [row['runner'] for row in current['pending_cleanup']])
     assert service_observation(service, 'historical-after-remove')['presence'] == 'absent'
     assert filesystem_entry(plist)['presence'] == 'absent'
     assert inventory(bundle) == before['bundle']
@@ -403,7 +429,7 @@ finally:
     clean = True
     try:
         current = records()
-        for record in current['runners'] + current['pending_cleanup']:
+        for record in current['runners'] + [row['runner'] for row in current['pending_cleanup']]:
             assert any(r['service'] == record['service_name'] and r['bundle_path'] == record['bundle_path'] for r in services)
             response = data(['runner', 'remove', '--service-name', record['service_name']])
             clean = clean and not response['cleanup_retained']

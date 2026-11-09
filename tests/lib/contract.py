@@ -1,15 +1,5 @@
-"""Wire contract versions for tests. Edit docs/contract.json and regenerate.
-
-Semantic response and envelope readers accept exactly these versions. Request
-admission and the worker ABI have separate contracts.
-"""
-# BEGIN GENERATED CONTRACT VERSIONS (docs/contract.json via docs/generate_contract.py)
-REQUEST_SCHEMA = 6
-RESPONSE_SCHEMA = 30
-CONTROLLER_ENVELOPE = 14
-RUNNER_PROTOCOL = 4
-# END GENERATED CONTRACT VERSIONS
+"""Generated worker ABI identity. Public identities come from candidate plists."""
 
 # BEGIN GENERATED WORKER IDENTITY (docs/generate_worker_identity.py)
-WORKER_IDENTITY = "3b174d7b067b50015615c21c21819b1a500e1a83f0d938e987d338cee9db2173"
+WORKER_IDENTITY = "4be1acb4ec613d47ce43e8490eda14166a3e0ad550326124f46efa281f5127a1"
 # END GENERATED WORKER IDENTITY

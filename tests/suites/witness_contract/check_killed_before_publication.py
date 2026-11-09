@@ -27,6 +27,7 @@ import sys
 import tempfile
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[2] / 'lib'))
+import build_context
 import consumer
 import lifecycle_oracle
 from lifecycle_adapter import read_lifecycle, summaries
@@ -67,7 +68,7 @@ def create_step(step_id, target):
 
 
 def specimen(target):
-    return {'schema_version': 6, 'specimen_id': 'killed_before_publication', 'policy': dict(POLICY),
+    return {'contract': build_context.candidate_contract(), 'specimen_id': 'killed_before_publication', 'policy': dict(POLICY),
             'probe_plan': [read_step('prefix', '/etc/hosts'), create_step('created', target),
                            read_step('after', '/etc/hosts')],
             '_test_overrides': dict(OVERRIDES)}
@@ -213,7 +214,7 @@ def main():
     check_setup(rc, seen, spec)
     print('setup: worker reaped with SIGKILL after slot 1 started and before it published', flush=True)
 
-    problems = consumer.validate(envelope)
+    problems = consumer.validate(envelope, build_context.candidate_contract())
     assert not problems, problems
     check_host_account(seen, diagnostics)
     check_completed(step(envelope, 'prefix'))
@@ -232,10 +233,10 @@ def main():
     assert after['sandbox_check']['result_source'] == 'validator' and after['comparison']['order'] == 'query_first', after
     print('reply: unpublished result withheld; prefix kept; suffix not reached', flush=True)
 
-    findings = lifecycle_oracle.check_record(envelope)
+    findings = lifecycle_oracle.check_record(envelope, build_context.candidate_contract())
     (artifacts / 'oracle_findings.json').write_text(json.dumps(findings, indent=2) + '\n', encoding='utf-8')
     assert not findings, f'oracle findings {findings}'
-    view = read_lifecycle(envelope)
+    view = read_lifecycle(envelope, build_context.candidate_contract())
     assert view['reporting'] == 'reported', (view['reporting'], view['malformed'])
     assert summaries(view) == ['completed', 'started_without_result', 'not_reached'], summaries(view)
     print('lifecycle: oracle agrees; summaries completed, started_without_result, not_reached', flush=True)

@@ -5,7 +5,7 @@ per scenario of the [failure contract's comparison record](../../FAILURE-PROPAGA
 (S01–S27 with S04 unused, B1–B7, C1, T and M01–M08), each with the inputs that produce
 it, the raw channel values a unit reader feeds to the producer, the raw fields
 a live reader asserts beside the record, and the expected `comparison` object
-at the current response schema. Expectations were reviewed against the record's
+under the current comparison reading rules. Expectations were reviewed against the record's
 rules and the independent controls named per row; they were not generated from
 the producer under test.
 
@@ -97,8 +97,9 @@ successful row compares the returned prefix with independently prepared bytes,
 and the denied row retains the failed open and absent later syscall results.
 Native consume/release events have no comparison row; their independent evidence
 and reader controls belong to `witness_contract/extensions` and
-`extension_boundaries`. The current matrix marker follows the current response
-contract, while historical captures keep their original versions.
+`extension_boundaries`. The matrix’s `schema_version` identifies only this fixture’s internal format.
+It does not assert a public producer contract. Historical captures retain their
+original bytes and metadata.
 
 `baseline_response12/` holds the verification of these rows against the
 response 12 producer that preceded the record (`ff2b192`): retained run
@@ -110,7 +111,7 @@ attempt 0 in flight at the sentinel deadline, lifecycle
 `started_without_result`) were taken from captured replies of the same
 producer; T's retained baseline is the
 `release-0.2.4-default` run of `worker_attempt_in_flight_at_deadline`.
-Acceptance at the current response schema is the `witness_contract/comparison_matrix`
+Acceptance against the candidate’s producer contract is the `witness_contract/comparison_matrix`
 case itself, whose per-run artifacts (`matrix-summary.json`, the three raw
 envelopes and `direct-controls.json`) are the receipts; the retained battery
 runs registered in `tests/RETAINED.json` carry them.

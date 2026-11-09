@@ -40,6 +40,8 @@ struct ActorCodeInspection {
 }
 
 struct ActorEquipmentCalls {
+    // Internal tests can bind separately built signed equipment explicitly.
+    var expectedContract: String = PWBuildContext.contract
     var inspectStatic: (URL) -> ActorCodeInspection = ActorEquipmentSystem.inspectStatic
     var inspectLive: (Int32) -> ActorCodeInspection = ActorEquipmentSystem.inspectLive
     var clock: () -> UInt64? = MonotonicDeadline.now
@@ -73,7 +75,7 @@ struct ActorEquipmentSecurityCalls {
 // It supplies expected signed hashes, not authority inferred from a filename.
 struct ActorEquipmentManifest: Decodable {
     var schema_version: Int
-    var runner_protocol: Int
+    var contract: String
     // The inventory file spells digests as lowercase hexadecimal; they are held
     // and reported as bytes.
     var worker_identity: Data
@@ -107,13 +109,13 @@ struct ActorEquipmentManifest: Decodable {
         }
     }
     enum CodingKeys: String, CodingKey, CaseIterable {
-        case schema_version, runner_protocol, worker_identity, unsigned_worker_sha256, workers
+        case schema_version, contract, worker_identity, unsigned_worker_sha256, workers
     }
     init(from decoder: Decoder) throws {
         try rejectUnknownRequestKeys(CodingKeys.self, from: decoder)
         let c = try decoder.container(keyedBy: CodingKeys.self)
         schema_version = try c.decode(Int.self, forKey: .schema_version)
-        runner_protocol = try c.decode(Int.self, forKey: .runner_protocol)
+        contract = try c.decode(String.self, forKey: .contract)
         guard let identity = ActorEquipmentSystem.digest(try c.decode(String.self, forKey: .worker_identity), bytes: 32),
               let unsigned = ActorEquipmentSystem.digest(try c.decode(String.self, forKey: .unsigned_worker_sha256), bytes: 32) else {
             throw ActorEquipmentProblem("incompatible equipment inventory")
@@ -121,10 +123,10 @@ struct ActorEquipmentManifest: Decodable {
         worker_identity = identity; unsigned_worker_sha256 = unsigned
         workers = try c.decode([Worker].self, forKey: .workers)
     }
-    static func decode(_ data: Data, expectedIdentity: Data) throws -> ActorEquipmentManifest {
+    static func decode(_ data: Data, expectedIdentity: Data, expectedContract: String = PWBuildContext.contract) throws -> ActorEquipmentManifest {
         guard data.count <= ActorEquipmentLimits.inventoryBytes else { throw ActorEquipmentProblem("inventory limit") }
         let value = try pwRunnerDecodeJSON(Self.self, from: data)
-        guard value.schema_version == 1, value.runner_protocol == PWContract.runnerProtocol,
+        guard value.schema_version == 1, value.contract == expectedContract,
               value.worker_identity == expectedIdentity,
               value.workers.count == 2, Set(value.workers.map { $0.role }) == Set(ActorEquipmentPreparation.roles) else {
             throw ActorEquipmentProblem("incompatible equipment inventory")
@@ -347,7 +349,7 @@ final class ActorEquipmentPreparation {
         let manifest: ActorEquipmentManifest
         do {
             inventory.sha256 = Data(SHA256.hash(data: bytes))
-            manifest = try ActorEquipmentManifest.decode(bytes, expectedIdentity: Data(PWShmLayout.abiIdentity))
+            manifest = try ActorEquipmentManifest.decode(bytes, expectedIdentity: Data(PWShmLayout.abiIdentity), expectedContract: calls.expectedContract)
             inventory.schema_version = manifest.schema_version; inventory.worker_identity = manifest.worker_identity
             inventory.unsigned_worker_sha256 = manifest.unsigned_worker_sha256; inventory.status = "verified"
         } catch {

@@ -23,7 +23,7 @@ private func equipmentFixture(_ body: (URL, ActorEquipmentCalls) throws -> Void)
             "cdhash": String(repeating: "a", count: 40), "identifier": "controlled-worker", "team_id": "TEAM",
             "entitlements_xml": equipmentEmptyXML])
     }
-    let inventory: [String: Any] = ["schema_version": 1, "runner_protocol": PWContract.runnerProtocol,
+    let inventory: [String: Any] = ["schema_version": 1, "contract": PWBuildContext.contract,
         "worker_identity": PWShmLayout.abiIdentityHex, "unsigned_worker_sha256": String(repeating: "b", count: 64), "workers": rows]
     try JSONSerialization.data(withJSONObject: inventory).write(to: resources.appendingPathComponent("worker-equipment.json"))
     // Constructed signature observations exercise interpretation and refusal.
@@ -333,7 +333,7 @@ func runActorEquipmentTests(_ tk: TestKit) {
                 ("duplicate", { value in var rows = value["workers"] as! [[String: Any]]; rows[1] = rows[0]; value["workers"] = rows }),
                 ("escaping", { value in var rows = value["workers"] as! [[String: Any]]; rows[0]["relative_path"] = "../worker"; value["workers"] = rows }),
                 ("build_identity", { $0["worker_identity"] = String(repeating: "f", count: 64) }),
-                ("protocol", { $0["runner_protocol"] = -1 }),
+                ("protocol", { $0["contract"] = "test:foreign" }),
                 ("entitled_unentitled", { value in var rows = value["workers"] as! [[String: Any]];
                     rows[1]["entitlements_xml"] = "<plist version=\"1.0\"><dict><key>permission</key><true/></dict></plist>"; value["workers"] = rows }),
                 ("unknown_field", { $0["future"] = true })]

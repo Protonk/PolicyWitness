@@ -79,22 +79,22 @@ func runReservationAdmissionTests(_ tk: TestKit) {
             stale.connectionInvalidated()
             let request = try pwRunnerEncodeJSON(PWRunnerReservationRequest(attempt_id: UUID().uuidString, lease_ms: 5000))
             var refused: PWRunnerControlReply?, grant: PWRunnerControlReply?
-            stale.reserveRunner(request) { refused = try! pwRunnerDecodeJSON(PWRunnerControlReply.self, from: $0) }
+            stale.reserveRunner(request) { refused = try! testDecodeJSON(PWRunnerControlReply.self, from: $0) }
             try expectEqual(refused?.status, "occupied")
             try expectNil(refused?.reservation_id)
             try expectEqual(timers, 0); try expectEqual(exits, 0)
-            fresh.reserveRunner(request) { grant = try! pwRunnerDecodeJSON(PWRunnerControlReply.self, from: $0) }
+            fresh.reserveRunner(request) { grant = try! testDecodeJSON(PWRunnerControlReply.self, from: $0) }
             try expectEqual(grant?.status, "granted", "idle invalidation cannot consume a different connection's fresh slot")
             try expectEqual(timers, 1)
             stale.runReservedSpecimen(Data("{".utf8), reservation: grant!.reservation_id!) { isResult, data in
-                if !isResult { refused = try! pwRunnerDecodeJSON(PWRunnerControlReply.self, from: data) }
+                if !isResult { refused = try! testDecodeJSON(PWRunnerControlReply.self, from: data) }
             }
             try expectEqual(refused?.reason, "wrong", "invalidated connection cannot submit the new owner's token")
             try expectEqual(exits, 0)
             fresh.connectionInvalidated()
             try expectEqual(exits, 1, "unused owner disconnect retires exactly once")
             fresh.connectionInvalidated()
-            fresh.reserveRunner(request) { refused = try! pwRunnerDecodeJSON(PWRunnerControlReply.self, from: $0) }
+            fresh.reserveRunner(request) { refused = try! testDecodeJSON(PWRunnerControlReply.self, from: $0) }
             try expectEqual(refused?.status, "occupied"); try expectEqual(exits, 1)
         }
         tk.run("reservation control bound and protocol gate precede specimen work") {
@@ -103,14 +103,14 @@ func runReservationAdmissionTests(_ tk: TestKit) {
                 let raw = try pwRunnerEncodeJSON(PWRunnerReservationRequest(attempt_id: UUID().uuidString, lease_ms: 1))
                 let padded = raw + Data(repeating: 32, count: size - raw.count)
                 var control: PWRunnerControlReply?
-                owner.reserveRunner(padded) { control = try! pwRunnerDecodeJSON(PWRunnerControlReply.self, from: $0) }
+                owner.reserveRunner(padded) { control = try! testDecodeJSON(PWRunnerControlReply.self, from: $0) }
                 try expectEqual(control?.status, size <= 65536 ? "granted" : "invalid_request")
                 try expectEqual(control?.reason, size <= 65536 ? nil : "control_too_large")
             }
             let owner = PWRunnerService(admission: PWRunnerAdmission(), scheduleExit: {}, scheduleExpiry: { _, _ in })
             var control: PWRunnerControlReply?
-            owner.reserveRunner(Data("{\"protocol_version\":1,\"future_body\":true}".utf8)) {
-                control = try! pwRunnerDecodeJSON(PWRunnerControlReply.self, from: $0)
+            owner.reserveRunner(Data("{\"contract\":\"test:foreign\",\"future_body\":true}".utf8)) {
+                control = try! testDecodeJSON(PWRunnerControlReply.self, from: $0)
             }
             try expectEqual(control?.status, "unsupported_protocol")
             try expectNil(control?.reservation_id)
@@ -138,7 +138,7 @@ func runReservationAdmissionTests(_ tk: TestKit) {
                 scheduleExpiry: { pending.append(($0, $1)) })
             let request = try pwRunnerEncodeJSON(PWRunnerReservationRequest(attempt_id: UUID().uuidString, lease_ms: 5000))
             var grant: PWRunnerControlReply?
-            service.reserveRunner(request) { grant = try! pwRunnerDecodeJSON(PWRunnerControlReply.self, from: $0) }
+            service.reserveRunner(request) { grant = try! testDecodeJSON(PWRunnerControlReply.self, from: $0) }
             try expectEqual(pending[0].0, 100, "short tick bounds post-sleep observation delay")
             pending.removeFirst().1()
             try expectEqual(exits, 0); try expectEqual(pending.count, 1, "early callback rearmed")
@@ -147,7 +147,7 @@ func runReservationAdmissionTests(_ tk: TestKit) {
             try expectEqual(exits, 1); try expectTrue(pending.isEmpty)
             var refused: PWRunnerControlReply?
             service.runReservedSpecimen(Data(), reservation: grant!.reservation_id!) { isResult, bytes in
-                if !isResult { refused = try! pwRunnerDecodeJSON(PWRunnerControlReply.self, from: bytes) }
+                if !isResult { refused = try! testDecodeJSON(PWRunnerControlReply.self, from: bytes) }
             }
             try expectEqual(refused?.reason, "expired"); try expectEqual(exits, 1)
         }

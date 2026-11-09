@@ -80,6 +80,8 @@ const SELECTOR_FIELDS: &[&str] = &[
     "runner_mode",
 ];
 
+const RUNNER_SELECTOR_FIELDS: &[&str] = &["id", "service", "required_entitlements", "mode"];
+
 fn selector_string<'a>(
     object: &'a serde_json::Map<String, Value>,
     key: &str,
@@ -170,7 +172,7 @@ pub fn parse_runner_selector_value(value: &Value) -> Result<RunnerSelector, Requ
         }
     };
     for key in runner.keys() {
-        if !["id", "service", "required_entitlements", "mode"].contains(&key.as_str()) {
+        if !RUNNER_SELECTOR_FIELDS.contains(&key.as_str()) {
             let name = if key.len() <= 63 {
                 format!("{key:?}")
             } else {
@@ -252,6 +254,7 @@ fn entitlements_from_manifest_value(
         value
             .map(runner_manager::entitlements_from_json)
             .unwrap_or(RunnerEntitlements {
+                extra: Default::default(),
                 raw_plist: None,
                 keys: Vec::new(),
                 granted: Vec::new(),
@@ -328,6 +331,7 @@ fn builtin_runner_target(
             entry.entitlements_error.as_ref(),
         ),
         Err(error) => RunnerEntitlements {
+            extra: Default::default(),
             raw_plist: None,
             keys: Vec::new(),
             granted: Vec::new(),
@@ -473,7 +477,7 @@ fn resolve_external_target(
     record: &RunnerRecord,
     selector: &RunnerSelector,
 ) -> Result<RunnerTarget, String> {
-    runner_manager::require_current_protocol(record.protocol_version)?;
+    runner_manager::require_current_contract(&record.contract)?;
     let record_kind = infer_record_kind(record);
     if let Some(mode) = selector.mode {
         if mode != record_kind {
@@ -560,7 +564,7 @@ mod tests {
     fn parses_runner_selector_from_nested_runner() {
         let path = temp_path();
         let payload = json!({
-            "schema_version": crate::json_contract::REQUEST_SCHEMA_VERSION,
+            "contract": crate::json_contract::BUILD_CONTRACT,
             "specimen_id": "specimen",
             "policy": {"format": "sbpl", "sbpl_source": "(version 1)\n(allow default)\n"},
             "probe_plan": [],
@@ -590,6 +594,7 @@ mod tests {
     /// Entitlements that name `keys`, each granted (present with `true`).
     fn ent(keys: &[&str]) -> RunnerEntitlements {
         RunnerEntitlements {
+            extra: Default::default(),
             raw_plist: None,
             keys: keys.iter().map(|s| s.to_string()).collect(),
             granted: keys.iter().map(|s| s.to_string()).collect(),
@@ -603,6 +608,7 @@ mod tests {
         ent_keys: &[&str],
     ) -> RunnerRecord {
         RunnerRecord {
+            extra: Default::default(),
             state: runner_manager::RunnerState::Installed,
             ownership: None,
             id: "runner-ext".to_string(),
@@ -611,8 +617,9 @@ mod tests {
             executable_path: "/opt/pw/Runner.app/Contents/MacOS/PWRunner".to_string(),
             bundle_id: Some("com.example.runner".to_string()),
             scope,
-            protocol_version: runner_manager::RUNNER_PROTOCOL_VERSION,
+            contract: runner_manager::BUILD_CONTRACT.into(),
             signature: RunnerSignature {
+                extra: Default::default(),
                 team_id: None,
                 identity: None,
                 cdhash: None,
@@ -668,6 +675,7 @@ mod tests {
 
     fn registry_of(records: Vec<RunnerRecord>) -> RunnerRegistry {
         RunnerRegistry {
+            extra: Default::default(),
             pending_cleanup: Vec::new(),
             schema_version: runner_manager::RUNNER_REGISTRY_SCHEMA_VERSION,
             runners: records,
@@ -1280,13 +1288,13 @@ mod tests {
 
     #[test]
     fn historical_protocol_records_remain_readable_but_not_executable() {
-        for version in [0, 1, runner_manager::RUNNER_PROTOCOL_VERSION + 1] {
+        for version in ["", "unbound", "test:foreign"] {
             let mut record = record_named("older", "com.example.older");
-            record.protocol_version = version;
+            record.contract = version.into();
             let registry = registry_of(vec![record]);
             let encoded = serde_json::to_string(&registry).unwrap();
             let decoded: RunnerRegistry = serde_json::from_str(&encoded).unwrap();
-            assert_eq!(decoded.runners[0].protocol_version, version);
+            assert_eq!(decoded.runners[0].contract, version);
             let error = err_of(resolve_external_target(
                 &decoded.runners[0],
                 &RunnerSelector::default(),

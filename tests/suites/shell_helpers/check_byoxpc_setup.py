@@ -9,7 +9,8 @@ import sys
 ROOT = Path(__file__).resolve().parents[3]
 sys.path.insert(0, str(ROOT / 'tests/fixtures/byoxpc'))
 from session import cleanup, command, install
-from contract import RUNNER_PROTOCOL, WORKER_IDENTITY
+from contract import WORKER_IDENTITY
+from build_context import TEST_CONTRACT
 
 
 def main():
@@ -30,7 +31,7 @@ def main():
         binary_dir = source / 'Contents/MacOS'
         binary_dir.mkdir(parents=True)
         info = {'CFBundleIdentifier': 'fixture.source', 'CFBundleExecutable': 'PWRunner',
-                'CFBundlePackageType': 'XPC!', 'PWRunnerRequireSignedCaller': True,
+                'CFBundlePackageType': 'XPC!', 'PWContract': TEST_CONTRACT, 'PWRunnerRequireSignedCaller': True,
                 'PWRunnerAllowedIdentifiers': ['pw-runner-client']}
         (source / 'Contents/Info.plist').write_bytes(plistlib.dumps(info))
         for name in ('PWRunner', 'pw-probe-runner', 'pw-probe-runner-unentitled', 'sb_api_validator'):
@@ -39,7 +40,7 @@ def main():
         client.parent.mkdir(parents=True)
         client.write_bytes(b'original client')
         worker_roles = [('selected', 'pw-probe-runner'), ('unentitled', 'pw-probe-runner-unentitled')]
-        equipment = dict(schema_version=1, runner_protocol=RUNNER_PROTOCOL, worker_identity=WORKER_IDENTITY,
+        equipment = dict(schema_version=1, contract=TEST_CONTRACT, worker_identity=WORKER_IDENTITY,
                          unsigned_worker_sha256=hashlib.sha256((binary_dir / 'pw-probe-runner').read_bytes()).hexdigest(), workers=[])
         source_entitlements = None if mode == 'no_entitlements' else {'com.apple.security.cs.allow-jit': True, 'fixture.array': ['literal', 42]}
         for role, name in worker_roles:

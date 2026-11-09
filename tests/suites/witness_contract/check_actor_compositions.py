@@ -17,7 +17,7 @@ import tempfile
 ROOT = Path(__file__).resolve().parents[3]
 sys.path.insert(0, str(ROOT / 'tests/lib'))
 from witness_capture import capture
-from contract import REQUEST_SCHEMA
+import build_context
 from consumer import validate
 from lifecycle_oracle import check_record
 from worker_exit_witness import worker_exit_witness
@@ -27,7 +27,7 @@ import extension_actors as actors
 def specimen(x, y):
     def phase(name, actor, actions):
         return dict(phase_id=name, actor_id=actor, actions=actions)
-    return dict(schema_version=REQUEST_SCHEMA, specimen_id='actor_compositions', actors=[
+    return dict(contract=build_context.candidate_contract(), specimen_id='actor_compositions', actors=[
         actors.unapplied_actor('A'), actors.unapplied_actor('D'),
         actors.apply_actor('B', actors.C_POLICY), actors.apply_actor('C', actors.C_POLICY)], phases=[
         phase('supply_x', 'A', [actors.issue('issue_x', 'tx', x),
@@ -80,8 +80,8 @@ def request_captures(spec):
 
 
 def assert_composition(envelope, runner, spec, resources, prefix, failed_actor=None):
-    assert validate(envelope) == [], validate(envelope)
-    assert check_record(envelope) == [], check_record(envelope)
+    assert validate(envelope, build_context.candidate_contract()) == [], validate(envelope, build_context.candidate_contract())
+    assert check_record(envelope, build_context.candidate_contract()) == [], check_record(envelope, build_context.candidate_contract())
     assert worker_exit_witness(envelope)[0], worker_exit_witness(envelope)
     assert runner['normalized_outcome'] == ('runner_failed' if failed_actor else 'finished'), runner.get('error')
     got_actors = {a['actor_id']: a for a in runner['actors']}
@@ -116,7 +116,8 @@ def assert_composition(envelope, runner, spec, resources, prefix, failed_actor=N
         policy = expected['sandbox'].get('policy', {})
         capture = actual.get('compiled_profile')
         if policy.get('capture_compiled_profile'):
-            assert capture['schema_version'] == 2 and capture['worker_pid'] == pids[expected['actor_id']]
+            assert 'schema_version' not in capture
+            assert capture['worker_pid'] == pids[expected['actor_id']]
             if expected['actor_id'] == failed_actor:
                 assert capture['status'] == 'unavailable' and capture.get('bytecode_b64') is None
                 assert capture.get('producer') is None and capture.get('capture_stage') is None
@@ -267,7 +268,7 @@ def main(pw, out):
                 changed = copy.deepcopy(envelope)
                 next(a for a in changed['data']['runner_result']['actors']
                      if a['actor_id'] == 'B')['compiled_profile']['producer'] = 'host'
-                errors = validate(changed)
+                errors = validate(changed, build_context.candidate_contract())
                 assert 'B: compiled_profile requires worker/before_apply context' in errors, errors
                 (out / 'capture-context-control.json').write_text(json.dumps(dict(
                     mutation='actor B compiled_profile.producer = host', errors=errors), indent=2) + '\n')

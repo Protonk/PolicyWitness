@@ -180,8 +180,9 @@ the claim tables independently of the production resolver.
 A worker reply carries the record whenever it carries `runner_subprocess`;
 omission is a contract violation (`disposition_integrity: invalid` with a
 `missing_record` issue, claims withheld). No worker means no record. The
-record's own version is the response schema; it carries no separate number,
-and readers accept exactly the current response schema.
+record inherits the admitted host reply’s producer context; it carries no
+separate contract assertion. Readers require the expected build contract before
+interpreting the reply or its lifecycle records.
 
 The account indexes every declared phase action in execution order, including
 extension consumption and release. `steps` contains ordinary query/attempt pairs;
@@ -621,24 +622,19 @@ PID uniqueness across phases is not a reader invariant: sequential children may
 reuse a PID, and the collection identity does not authenticate the validator
 executable or prove that it made a native call.
 
-### Versions
+### Producer context
 
-The record is mandatory for every worker reply at the current response
-schema, and the controller's `termination_cause`, `stop_reason`,
-`disposition_integrity` and `process_disposition` projections belong to the
-current controller envelope. `tests/lib/contract.py` carries both numbers and
-every reader gates on them exactly. Per [docs/CONTRACT.md](../docs/CONTRACT.md)
-the manifest moves with the change that produces them; a rebuilt app must never
-report a response number without carrying the shape that number names.
+The disposition record is mandatory for every current worker reply. Controller
+projections belong to their enclosing envelope. Readers admit the envelope's
+`build.contract` and the host's `producer.contract` against an independently
+supplied expected identity before interpreting either account.
 
 ## Public compatibility
 
-The response, request and controller envelope are separate public contracts;
-[docs/contract.json](../docs/contract.json) owns their version numbers. Semantic
-readers accept exactly the current numbers (see [Supported versions](#supported-versions)).
-The internal host/worker boundary instead requires the same generated source
-identity, as described in [the wire contract](../docs/CONTRACT.md#internal-hostworker-identity).
-That identity is independent of the public JSON versions.
+Requests, host replies, client captures and controller envelopes share one
+[public build contract](../docs/CONTRACT.md). Admission requires exact equality;
+unsupported received bytes remain raw and confer no observations or claims.
+The internal host/worker source identity remains an independent ABI tripwire.
 Steps carry no signal channel; a null per-step `errno` requires key presence.
 
 No outcome spelling claims a sandbox termination cause or a precise
@@ -685,7 +681,7 @@ reporting obligations and registered test owners.
 | `runner_c_worker_harness/clock_arithmetic`, `proceed_precedence`, `exec_control_states` | Production clock helpers, proceed wait and exec flow with a controlled timebase and raw counter: ceiling allowances, checked arithmetic, sample rejection and provenance, setup publications, precedence, race gates, exact exclusions and every exec timing stage | Deterministic boundaries only; not platform clock behavior, sleep or a sandbox cause |
 | Same catalog case as `runner_unit`: `WorkerClockTests.runWorkerClockTests`; Rust `run_flow::tests::worker_clock_driver_replies_cross_assembly_and_consumer` | Production C main with one substituted clock boundary through the real host driver and production orchestration with the shipped validator: setup refusal during and after policy delivery, phase-2 refusal and expiry with retained predictions, sticky provenance with independent child cleanup and local arithmetic refusals; replies cross Rust assembly, the consumer and the lifecycle oracle | Publication, transport and interpretation; companion substitutions are not native clock failures |
 | `runner_c_worker_harness/native_clock` (opt-in) | Production clock helpers in fresh processes under the original version-2 policy, bare deny-default and allow-default, beside the old `CLOCK_MONOTONIC` neighbour; retains timebase, counts, PIDs, reaps, installed disassembly and available deny records | Native applicability on the recorded machine only; actual system sleep remains untested |
-| `witness_contract/pre_apply_failure_reports_no_policy_verdict` (`check_pre_apply_failure.py`) | Real CLI, populated allowed/denied plan, pre-ready delay and worker deadline; identical un-overridden positive control | Independent attribution, lifecycle and consumer-validation groups require the current response schema; missing channels remain distinct from observed failures |
+| `witness_contract/pre_apply_failure_reports_no_policy_verdict` (`check_pre_apply_failure.py`) | Real CLI, populated allowed/denied plan, pre-ready delay and worker deadline; identical un-overridden positive control | Independent attribution, lifecycle and consumer-validation groups require the expected host producer contract; missing channels remain distinct from observed failures |
 | `runner_unit/pwrunner_core_unit_executable`: `CWorkerLifecycleTests.runCWorkerLifecycleTests` | Real host driver with test-only ABI child: completed report then cleanup SIGKILL, independent exit 17 or SIGTERM, published status-word failure then cleanup, failed kill, failed/recovered/interrupted wait, ECHILD ownership loss and poll EIO. Gated acknowledgement between samples followed by clean exit with done or fatal termination without done exercises reconciliation after confirmed reap, with a lost-ownership control. The actual subprocess assembler and binary writer preserve reports and missing status. Fixture applies no sandbox. | Driver, assembler, encoding and classifier agree; synthetic payload does not establish a native library result |
 | `runner_ready_byte_resilience/slow_compile_ready_byte_survives_sigpipe` | Real CLI with sufficient budget; lost ready byte must not prevent successful application, prediction and attempt | Successful resilience verified; delay follows compilation/capture and has sufficient sentinel budget |
 | `runner_outcome_runner_timeout/host_kills_hung_worker`, `witness_contract/worker_post_apply_hang_seam`, `runner_use_c_worker/worker_timeout_ms_honored` | Real CLI post-apply deadlines; empty, mixed and single-write plans, retained evidence and independently checked effects | Success/timeout/partial-evidence checks pass; populated pre-apply witness adds distinct absence coverage |
@@ -1058,9 +1054,10 @@ parent writes use FD-scoped SIGPIPE suppression and checked nonblocking setup.
 For the runner client and sbpl-check, the controller collects full
 `Command::output()` buffers before retaining a <!-- span limits.controller_output.binary -->272 MiB<!-- /span --> prefix per runner-client
 stream and an independent <!-- span limits.policy_helper_output.binary -->8 MiB<!-- /span --> prefix per sbpl-check stream.
-Runner-client stdout is a protocol-versioned client capture, not a synthetic
-host result. Admission first checks the complete capture/version and its state
-invariants, then the embedded bytes and the host response's independent version.
+Runner-client stdout is a client capture carrying its build contract.
+Admission first checks that assertion and the capture’s state invariants, then
+the embedded bytes and the host reply’s producer contract against the same
+expected identity. Client observations do not constitute a host result.
 `submission.state=invoked` means the client irrevocably committed to its one
 execution invocation; it does not prove receipt or execution. Before that
 decision, reservation attempts contain no specimen and may reconnect. No event
@@ -1143,7 +1140,7 @@ collected buffers. These are retention limits, not peak-memory bounds.
 `stdout_capture_error` identifies local truncation and precludes parsing the
 prefix; `stdout_parse_error` identifies malformed untruncated bytes. Helper
 `status="invalid_reply"` means parsed JSON is not a supported helper envelope
-(the helper kind, the current controller envelope version and a nonempty
+(the helper kind, the expected string `build.contract` and a nonempty
 `result.normalized_outcome`); the parsed output is retained unchanged and no
 verdict is derived from it.
 Deny plus EPERM/EACCES is a `permission_failure` observation beside a deny
@@ -1536,24 +1533,23 @@ Lifecycle limitations in the table come from the step's summary.
 | T (FIFO in flight at the deadline) | `witness_contract/worker_attempt_in_flight_at_deadline` (live, with the `a1` specimen of `tests/fixtures/disposition/`); `runner_unit` `ComparisonEvidenceTests` | OS-observed deadline, SIGKILL request and reaped signal; the lifecycle oracle |
 | M01–M07 (combined extension faults) | `witness_contract/extension_combinations` (live CLI); `runner_unit` `ComparisonEvidenceTests` (constructed comparisons) | Independent native observer records, target bytes and descriptor checks; row-specific placement, raw, comparison and cleanup assertions |
 | M08 (combined ordinary-phase faults) | `runner_unit` `PhaseProtocolTests` (production driver), `ComparisonEvidenceTests` (constructed comparison), and Rust assembly/Python consumer and lifecycle-oracle replay | Failed termination call, unconfirmed host reap, surviving validator's late EPIPE, distinct phase-local PIDs/record IDs, independently prepared fresh-read bytes and separate test cleanup |
-| Producer invariants and the shape golden | `runner_unit`: `ContractVersionTests`, `EnvelopeInvariantTests`, `OrderingTests`, `ComparisonEvidenceTests`, `ReplyFailureTests`, `DispositionResolverTests` | Constructed results; mutations must be rejected by reporting admission |
+| Producer invariants and the shape golden | `runner_unit`: `ContractShapeTests`, `EnvelopeInvariantTests`, `OrderingTests`, `ComparisonEvidenceTests`, `ReplyFailureTests`, `DispositionResolverTests` | Constructed results; mutations must be rejected by reporting admission |
 | Consumer invariants | `blackbox_e2e/checker_controls` (consumer controls, client-output control, mutation-order controls); every live blackbox, menagerie, filter and witness case through `tests/lib/consumer.py` | Mutated envelopes retained beside their rejection |
-| Controller invariants (version gate, outcomes, delivery precedence, projections) | `unit/rust.unit` (`run_flow`, `runner_client`, `dossier` tests); `integration/cli.integration` | Constructed replies of other and malformed versions; live refusals |
+| Controller invariants (producer gate, outcomes, delivery precedence, projections) | `unit/rust.unit` (`run_flow`, `runner_client`, `dossier` tests); `integration/cli.integration` | Constructed replies with foreign or malformed producer assertions; live refusals |
 | Dossier (`data.specimen`) | `witness_contract/dossier_witness`; opt-in `dossier_witness_byoxpc`; `unit/rust.unit` `dossier` tests | Independently read request bytes, hashes, imports, host sysctls and manifest entries |
 | Host invariance | `source_drift` (source rule with controls); `preflight` and `dispatcher/artifact_controls` (binary `nm -u` with a sandbox-importing control host) | Compiled control binaries |
 
 ### Supported versions
 
-Semantic readers of runner responses and controller envelopes accept exactly
-the versions in [docs/contract.json](../docs/CONTRACT.md): the Swift reply
-writer, the Rust controller (`unsupported_runner_response`,
-`malformed_runner_response`, with the reply retained and no runner-derived
-diagnostics; a delivery failure takes precedence as
-`tool_error`), and `tests/lib/consumer.py` (`unsupported`). Raw transport
-in `pw-runner-client` retains opaque host bytes; Rust separately decodes the
-capture and host reply and preserves rejected bytes without deriving claims.
-Retained test output and release acceptance artifacts keep their bytes. Request admission and the worker ABI follow their own contracts;
-the ABI's equality tripwire is independent.
+Semantic readers admit the exact producer identity described in
+[docs/CONTRACT.md](../docs/CONTRACT.md): the Swift reply writer, Rust controller
+and independent Python consumer. A foreign identity yields an unsupported
+refusal; malformed admitted data yields a malformed refusal. Rejected bytes
+remain available with no runner-derived diagnostics, and a delivery failure
+takes precedence as `tool_error`. The client retains opaque host bytes; the
+controller admits the capture and host reply independently. Historical captures
+and release acceptance artifacts retain their bytes. The worker ABI equality
+tripwire remains separate from the public build contract.
 Every run of these checks selects through `tests/run.sh` by canonical case
 identity in [the catalog](catalog.json); required skips or unrun cases prevent
 completion. Acceptance of a change selects the owners named above, release

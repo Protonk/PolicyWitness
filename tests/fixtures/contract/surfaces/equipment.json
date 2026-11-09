@@ -1,0 +1,366 @@
+{
+  "shape": {
+    "reply": {
+      "actors": "array",
+      "authority_setup": "object",
+      "equipment_bindings": "array",
+      "equipment_entitlements": "array",
+      "equipment_inventory": "object",
+      "extension_events": "array",
+      "resources": "object",
+      "transfers": "array"
+    },
+    "reply.actors[]": {
+      "actor_id": "string",
+      "application": "object",
+      "application_count": "number",
+      "applied": "boolean",
+      "equipment": "object",
+      "index": "number",
+      "launch": "object",
+      "mode": "string",
+      "owned_reap": "object",
+      "policy_format": "string",
+      "policy_received_sha256": "string",
+      "policy_sha256": "string",
+      "setup_status": "string",
+      "visits": "array"
+    },
+    "reply.actors[].application": {
+      "basis": "string",
+      "state": "string"
+    },
+    "reply.actors[].equipment": {
+      "binding_ref": "number",
+      "execution": "object",
+      "missing_requirements": "array",
+      "requested": "string",
+      "required_entitlements": "array",
+      "requirements_status": "string",
+      "resolved": "string"
+    },
+    "reply.actors[].equipment.execution": {
+      "cdhash": "string",
+      "eligible": "boolean",
+      "entitlements_ref": "number",
+      "identifier": "string",
+      "native_observations": "array",
+      "observed_at_monotonic_ns": "number",
+      "parent_pid": "number",
+      "path": "string",
+      "pid": "number",
+      "reason": "string",
+      "status": "string",
+      "team_id": "string"
+    },
+    "reply.actors[].equipment.execution.native_observations[]": {
+      "attempted": "boolean",
+      "operation": "string",
+      "osstatus": "number"
+    },
+    "reply.actors[].launch": {
+      "environment": "string",
+      "inherited_descriptors": "array",
+      "parent_pid": "number",
+      "pid": "number",
+      "standard_streams": "string"
+    },
+    "reply.actors[].owned_reap": {
+      "capture_ordinal": "number",
+      "departure_requested": "boolean",
+      "native_rc": "number",
+      "observed_ns": "number",
+      "ownership_unbroken": "boolean",
+      "pid": "number",
+      "raw_status": "number",
+      "stage": "string"
+    },
+    "reply.authority_setup": {
+      "host": "object",
+      "workers": "array"
+    },
+    "reply.authority_setup.host": {
+      "custody": "array",
+      "regions": "array",
+      "run": "object"
+    },
+    "reply.authority_setup.host.custody[]": {
+      "integrity_errors": "array",
+      "operations": "array",
+      "ownership": "object",
+      "primary_operation": "number",
+      "required": "boolean",
+      "token_index": "number",
+      "token_ref": "string"
+    },
+    "reply.authority_setup.host.custody[].operations[]": {
+      "detail": "string",
+      "errno": "number",
+      "native_kind": "string",
+      "native_rc": "number",
+      "operation": "string",
+      "role": "string",
+      "slot": "number",
+      "state": "string",
+      "value": "number"
+    },
+    "reply.authority_setup.host.custody[].ownership": {
+      "mapping": "string",
+      "private_erasure": "string"
+    },
+    "reply.authority_setup.host.regions[]": {
+      "actor_id": "string",
+      "actor_index": "number",
+      "cleanup_reference": "object",
+      "integrity_errors": "array",
+      "operations": "array",
+      "ownership": "object",
+      "primary_operation": "number",
+      "required": "boolean"
+    },
+    "reply.authority_setup.host.regions[].cleanup_reference": {
+      "host_pid": "number",
+      "kind": "string",
+      "name": "string",
+      "recovery_state": "string",
+      "session_nonce": "number"
+    },
+    "reply.authority_setup.host.regions[].operations[]": {
+      "detail": "string",
+      "errno": "number",
+      "native_kind": "string",
+      "native_rc": "number",
+      "operation": "string",
+      "role": "string",
+      "slot": "number",
+      "state": "string",
+      "value": "number"
+    },
+    "reply.authority_setup.host.regions[].ownership": {
+      "descriptor": "string",
+      "mapping": "string",
+      "object_name": "string",
+      "shared_erasure": "string"
+    },
+    "reply.authority_setup.host.run": {
+      "integrity_errors": "array",
+      "operations": "array",
+      "ownership": "object",
+      "primary_operation": "number"
+    },
+    "reply.authority_setup.host.run.operations[]": {
+      "detail": "string",
+      "errno": "number",
+      "native_kind": "string",
+      "native_rc": "number",
+      "operation": "string",
+      "role": "string",
+      "slot": "number",
+      "state": "string",
+      "value": "number"
+    },
+    "reply.authority_setup.workers[]": {
+      "actor_id": "string",
+      "actor_index": "number",
+      "integrity_errors": "array",
+      "operations": "array",
+      "ownership": "object",
+      "primary_operation": "number",
+      "publication": "string",
+      "required": "boolean"
+    },
+    "reply.authority_setup.workers[].operations[]": {
+      "detail": "string",
+      "errno": "number",
+      "native_kind": "string",
+      "native_rc": "number",
+      "operation": "string",
+      "role": "string",
+      "slot": "number",
+      "state": "string",
+      "value": "number"
+    },
+    "reply.authority_setup.workers[].ownership": {
+      "descriptor": "string",
+      "mapping": "string",
+      "shared_erasure": "string"
+    },
+    "reply.equipment_bindings[]": {
+      "cdhash": "string",
+      "entitlements_match": "boolean",
+      "entitlements_ref": "number",
+      "error": "object",
+      "expected_cdhash": "string",
+      "expected_sha256": "string",
+      "identifier": "string",
+      "implementation_identity": "string",
+      "path": "string",
+      "reason": "string",
+      "relative_path": "string",
+      "role": "string",
+      "sha256": "string",
+      "signature_osstatus": "number",
+      "source": "string",
+      "status": "string",
+      "team_id": "string"
+    },
+    "reply.equipment_bindings[].error": {
+      "code": "number",
+      "domain": "string",
+      "message": "string",
+      "operation": "string"
+    },
+    "reply.equipment_entitlements[]": {
+      "actor_id": "string",
+      "binding_ref": "number",
+      "error": "object",
+      "raw_plist": "string",
+      "source": "string",
+      "status": "string"
+    },
+    "reply.equipment_entitlements[].error": {
+      "code": "number",
+      "domain": "string",
+      "message": "string",
+      "operation": "string"
+    },
+    "reply.equipment_inventory": {
+      "error": "object",
+      "path": "string",
+      "reason": "string",
+      "schema_version": "number",
+      "seal_osstatus": "number",
+      "sha256": "string",
+      "status": "string",
+      "unsigned_worker_sha256": "string",
+      "worker_identity": "string"
+    },
+    "reply.equipment_inventory.error": {
+      "code": "number",
+      "domain": "string",
+      "message": "string",
+      "operation": "string"
+    },
+    "reply.extension_events[]": {
+      "actor_id": "string",
+      "call_boundary_observed": "boolean",
+      "delivery_ref": "string",
+      "errno": "number",
+      "extension_class": "string",
+      "family": "string",
+      "flags": "number",
+      "handle_ref": "string",
+      "lifecycle": "object",
+      "native_nonnull": "boolean",
+      "native_result": "number",
+      "operation": "string",
+      "phase_id": "string",
+      "result_published": "boolean",
+      "status": "string",
+      "step_id": "string",
+      "target": "string",
+      "token_length": "number",
+      "token_ref": "string",
+      "unavailable_reason": "string"
+    },
+    "reply.extension_events[].lifecycle": {
+      "boundary": "object",
+      "result": "object",
+      "summary": "string"
+    },
+    "reply.extension_events[].lifecycle.boundary": {
+      "answer": "string",
+      "basis": "array",
+      "reason": "string",
+      "state": "string"
+    },
+    "reply.extension_events[].lifecycle.result": {
+      "answer": "string",
+      "basis": "array",
+      "issue": "number",
+      "reason": "string",
+      "state": "string"
+    },
+    "reply.resources": {
+      "deliveries": "array",
+      "handles": "array",
+      "tokens": "array"
+    },
+    "reply.resources.deliveries[]": {
+      "delivered_length": "number",
+      "delivery_ref": "string",
+      "equality": "string",
+      "last_use_step_id": "string",
+      "recipient_actor_id": "string",
+      "source_actor_id": "string",
+      "status": "string",
+      "step_id": "string",
+      "token_ref": "string"
+    },
+    "reply.resources.handles[]": {
+      "actor_id": "string",
+      "delivery_ref": "string",
+      "handle_ref": "string",
+      "native_handle": "number",
+      "raw_equal_handles": "array",
+      "release_attempted": "boolean",
+      "release_step_id": "string",
+      "status": "string",
+      "step_id": "string"
+    },
+    "reply.resources.tokens[]": {
+      "actor_id": "string",
+      "family": "string",
+      "last_use_step_id": "string",
+      "status": "string",
+      "step_id": "string",
+      "token_length": "number",
+      "token_ref": "string"
+    },
+    "reply.test_overrides": {
+      "actor_equipment_executable_paths": "object"
+    },
+    "reply.test_overrides.actor_equipment_executable_paths": {
+      "selected": "string",
+      "unentitled": "string"
+    },
+    "reply.transfers[]": {
+      "copy_status": "string",
+      "custody_status": "string",
+      "delivery_ref": "string",
+      "equality": "string",
+      "lifecycle": "object",
+      "phase_id": "string",
+      "recipient_acknowledged": "boolean",
+      "recipient_actor_id": "string",
+      "recipient_wait": "object",
+      "request_published": "boolean",
+      "source_acknowledged": "boolean",
+      "source_actor_id": "string",
+      "status": "string",
+      "step_id": "string",
+      "token_ref": "string"
+    },
+    "reply.transfers[].lifecycle": {
+      "boundary": "object",
+      "result": "object",
+      "summary": "string"
+    },
+    "reply.transfers[].lifecycle.boundary": {
+      "answer": "string",
+      "basis": "array",
+      "state": "string"
+    },
+    "reply.transfers[].lifecycle.result": {
+      "answer": "string",
+      "basis": "array",
+      "state": "string"
+    },
+    "reply.transfers[].recipient_wait": {
+      "budget_ms": "number",
+      "clock_fault": "boolean",
+      "elapsed_ms": "number",
+      "stop": "string"
+    }
+  }
+}

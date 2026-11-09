@@ -8,7 +8,7 @@ import tempfile
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[2] / 'lib'))
 import consumer
-import contract
+import build_context
 from run_capture import RunCapture
 
 ROOT = Path(__file__).resolve().parents[3]
@@ -19,15 +19,15 @@ def run(pw, output, request):
     with RunCapture(pw, output, request, cli_args=[]) as capture:
         rc = capture.wait(timeout=30)
         envelope = capture.load_json()
-    assert not consumer.validate(envelope), consumer.validate(envelope)
+    assert not consumer.validate(envelope, build_context.candidate_contract()), consumer.validate(envelope, build_context.candidate_contract())
     runner = envelope['data']['runner_result']
-    assert runner['schema_version'] == contract.RESPONSE_SCHEMA, runner
+    assert runner['producer']['contract'] == build_context.candidate_contract(), runner
     assert runner.get('test_overrides') == request['_test_overrides'], runner
     return rc, runner
 
 
 def specimen(source, target, overrides):
-    return {'schema_version': 6, 'specimen_id': 'unfamiliar-transport',
+    return {'contract': build_context.candidate_contract(), 'specimen_id': 'unfamiliar-transport',
             'policy': {'format': 'sbpl', 'sbpl_source': source},
             'probe_plan': [{'step_id': 's', 'sandbox_check': {'operation': 'file-write-data',
                 'filter': {'kind': 'path', 'value': str(target)}},

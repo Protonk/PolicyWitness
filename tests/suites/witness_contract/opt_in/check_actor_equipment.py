@@ -15,7 +15,7 @@ sys.path[:0] = [str(HERE.parents[1]), str(HERE.parents[3] / 'lib')]
 ROOT = HERE.parents[4]
 from witness_capture import capture
 import extension_actors as actors
-from contract import REQUEST_SCHEMA
+import build_context
 from porcelain import decode as decode_porcelain
 from runner_client_capture import host_reply
 import consumer
@@ -51,7 +51,7 @@ assert not (bundle / 'Contents/MacOS/pw-extension-issuer').exists(), 'retired he
 def specimen(issuer='issuer', subject='subject', *, reversed_order=False, issuer_equipment='unentitled'):
     issuer_actor = dict(actors.unapplied_actor(issuer), equipment=issuer_equipment, required_entitlements=[])
     subject_actor = dict(actors.apply_actor(subject, actors.C_POLICY), equipment='selected', required_entitlements=[KEY])
-    return {'schema_version': REQUEST_SCHEMA, 'specimen_id': 'mixed_worker_equipment',
+    return {'contract': build_context.candidate_contract(), 'specimen_id': 'mixed_worker_equipment',
             'actors': [subject_actor, issuer_actor] if reversed_order else [issuer_actor, subject_actor],
             'phases': [
                 {'phase_id': 'baseline', 'actor_id': subject, 'actions': [actors.read_probe('before', target)]},
@@ -143,7 +143,7 @@ for role, mode in [('selected', 'apply'), ('selected', 'unapplied'),
     combination_phases.append(dict(phase_id=actor_id, actor_id=actor_id,
         actions=[actors.read_probe('read_' + actor_id, target)]))
 _, combinations = capture(pw, receipts, 'mode-equipment-combinations',
-    dict(schema_version=REQUEST_SCHEMA, specimen_id='mode_equipment_combinations',
+    dict(contract=build_context.candidate_contract(), specimen_id='mode_equipment_combinations',
          actors=combination_actors, phases=combination_phases), session_state=state)
 assert_equipment(combinations, roles)
 for actual, submitted in zip(combinations['actors'], combination_actors):
@@ -169,7 +169,7 @@ def assert_requirement_refusal(reply, key, effect):
     assert all(a.get('launch') is None and a.get('subprocess') is None for a in actual.values()), actual
     assert reply['steps'] == [] and not effect.exists(), (reply, effect)
     assert all(b['status'] == 'bound' for b in reply['equipment_bindings']), reply['equipment_bindings']
-    errors = consumer.validate(reply)
+    errors = consumer.validate(reply, build_context.candidate_contract())
     assert not errors, errors
 
 
@@ -180,7 +180,7 @@ for label, role, key in [('false', 'selected', FALSE_KEY), ('absent', 'selected'
                           ('unentitled-absent', 'unentitled', KEY)]:
     effect = targets / ('requirement-effect-' + label)
     assert not effect.exists()
-    request = dict(schema_version=REQUEST_SCHEMA, specimen_id='actor_requirement_' + label,
+    request = dict(contract=build_context.candidate_contract(), specimen_id='actor_requirement_' + label,
         actors=[dict(actors.unapplied_actor('free'), equipment=role, required_entitlements=[]),
                 dict(actors.unapplied_actor('requires'), equipment=role, required_entitlements=[key])],
         phases=[dict(phase_id='free', actor_id='free', actions=[]),
@@ -202,7 +202,7 @@ for label, role, key in [('false', 'selected', FALSE_KEY), ('absent', 'selected'
     # A host runner_failed is still a successful transport (client exit 0).
     # Decode independently first: an acquisition/transport failure has no host
     # reply and must never satisfy the actor requirement-refusal assertion.
-    direct_reply = host_reply(transport)
+    direct_reply = host_reply(transport, build_context.candidate_contract())
     assert result['returncode'] == 0 and not result['harness_timeout'], (result, transport)
     assert_requirement_refusal(direct_reply, key, effect)
     save(direct / 'host-reply.json', direct_reply)

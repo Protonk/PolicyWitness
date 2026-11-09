@@ -10,6 +10,7 @@ sys.path.insert(0, str(Path(__file__).resolve().parents[2] / "fixtures" / "exec"
 from control import TreeControl
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[2] / "lib"))
+import build_context
 from run_capture import RunCapture
 from exec_observation import assert_observation, checker_controls
 
@@ -25,7 +26,7 @@ def main():
         (out / "before.bin").write_bytes(seed)
         stderr_marker = secrets.token_hex(16)
         spec = {
-            "schema_version": 6,
+            'contract': build_context.candidate_contract(),
             "specimen_id": "exec_timeout_continuation",
             "policy": {"format": "sbpl", "sbpl_source": "(version 1)(allow default)"},
             "probe_plan": [{

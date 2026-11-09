@@ -13,6 +13,7 @@ import sys
 import tempfile
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[2] / 'lib'))
+import build_context
 from blackbox import validate_run_shape, validate_step
 from run_capture import RunCapture
 
@@ -94,7 +95,7 @@ def main():
         assert before == seeds, 'could not seed existing files'
         step_ids = [secrets.token_hex(12) for _ in paths]
         specimen = {
-            'schema_version': 6, 'specimen_id': secrets.token_hex(12),
+            'contract': build_context.candidate_contract(), 'specimen_id': secrets.token_hex(12),
             'policy': {
                 'format': 'sbpl',
                 'sbpl_source': '(version 1)(allow default)'

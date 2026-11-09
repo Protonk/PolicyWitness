@@ -9,7 +9,7 @@ from copy import deepcopy
 import json
 from pathlib import Path
 
-from lifecycle_oracle import check_record
+from lifecycle_oracle import check_fixture_record as check_record
 from consumer import validate_fixture as validate
 from blackbox import envelope_skeleton, recapture_host_reply
 from actor_evidence import validate_actor_evidence, _metadata_fits

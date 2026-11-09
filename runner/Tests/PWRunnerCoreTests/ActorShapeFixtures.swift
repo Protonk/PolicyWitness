@@ -15,7 +15,7 @@ private func actorRequest(withOpenReads: Bool = true) -> String {
         "{\"step_id\": \"\(id)\", \"sandbox_check\": {\"operation\": \"file-read-data\", \"filter\": {\"kind\": \"path\", \"value\": \"/private/etc/hosts\"}}, \"attempt\": {\"kind\": \"file\", \"action\": \"open_read\", \"target\": \"/private/etc/hosts\"}}"
     }
     return """
-    {"schema_version": \(PWContract.requestSchema), "specimen_id": "shape", "run_kind": "shape",
+    {"contract": "\(testRequestContract)", "specimen_id": "shape", "run_kind": "shape",
      "actors": [{"actor_id": "A", "sandbox": {"mode": "unapplied"}},
                 {"actor_id": "B", "sandbox": {"mode": "apply", "policy": {"format": "sbpl", "sbpl_source": "(version 1)(allow default)"}}},
                 {"actor_id": "C", "sandbox": {"mode": "apply", "policy": {"format": "sbpl", "sbpl_source": "(version 1)(allow default)"}}}],
@@ -114,7 +114,7 @@ private func failedSetupOutput(_ input: CWorkerInput, index: Int) -> CWorkerOutp
 /// Constructed scheduler outputs use the real actor assembler and disposition
 /// resolver. They establish encoded coverage, not native execution outcomes.
 func actorShapeDocuments() throws -> [PWRunnerRunResult] {
-    let parsed = try pwRunnerDecodeJSON(PWRunnerRunSpec.self, from: Data(actorRequest().utf8))
+    let parsed = try testDecodeJSON(PWRunnerRunSpec.self, from: Data(actorRequest().utf8))
     guard case .success(let plan) = normalizeActorPlan(parsed) else { throw TestFailure(message: "shape request refused") }
     let translation = try ActorTranslation(plan: plan, parsed: parsed, workerExecutablePaths: Array(repeating: "/constructed/pw-probe-runner", count: plan.actors.count))
     func visits(_ reasons: [String]) -> [ActorVisitRecord] {
@@ -537,8 +537,8 @@ func actorShapeDocuments() throws -> [PWRunnerRunResult] {
 
     // A failed native wait at the dependency boundary carries errno without
     // inventing a reap. Later cleanup cannot turn this gate into satisfied.
-    let gateRequest = try pwRunnerDecodeJSON(PWRunnerRunSpec.self, from: Data("""
-        {"schema_version": \(PWContract.requestSchema), "specimen_id":"constructed-gate-failure",
+    let gateRequest = try testDecodeJSON(PWRunnerRunSpec.self, from: Data("""
+        {"contract": "\(testRequestContract)", "specimen_id":"constructed-gate-failure",
          "actors":[{"actor_id":"A","sandbox":{"mode":"unapplied"}},
                    {"actor_id":"B","sandbox":{"mode":"apply","policy":{"format":"sbpl","sbpl_source":"(version 1)(allow default)"}}}],
          "phases":[{"phase_id":"source","actor_id":"A","actions":[]},

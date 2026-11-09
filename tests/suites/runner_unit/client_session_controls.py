@@ -8,6 +8,7 @@ ROOT = Path(__file__).resolve().parents[3]
 sys.path.insert(0, str(ROOT / 'tests/lib'))
 sys.path.insert(0, str(ROOT / 'tests/fixtures/caller_auth'))
 import native_sources
+import build_context
 from bundle import command
 
 
@@ -22,9 +23,10 @@ def main():
     assert native_sources.CLIENT_SESSION in sources
     sources += ['runner/Tests/PWRunnerClientSessionTests/main.swift']
     hashes = {p: hashlib.sha256((ROOT / p).read_bytes()).hexdigest() for p in sources}
+    context = build_context.write_swift_context(out / 'PWBuildContext.swift')
     binary = scratch / 'PWRunnerClientSessionTests'
     command(out / 'compile', ['/usr/bin/xcrun', '--sdk', 'macosx', 'swiftc', '-Onone', '-g',
-        '-target', 'arm64-apple-macosx26.0', '-module-cache-path', scratch / 'module-cache',
+        '-D', 'PW_PACKAGED_BUILD', context, '-target', 'arm64-apple-macosx26.0', '-module-cache-path', scratch / 'module-cache',
         '-o', binary, *[ROOT / p for p in sources]], timeout=180)
     (out / 'build-receipt.json').write_text(json.dumps(dict(
         sources=hashes, product_path=str(binary),

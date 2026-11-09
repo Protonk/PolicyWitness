@@ -17,7 +17,7 @@ sys.path.insert(0, str(Path(__file__).resolve().parents[2] / 'fixtures/exec'))
 from control import TreeControl, ExitObserver, process_snapshot
 sys.path.insert(0, str(Path(__file__).resolve().parents[2] / 'lib'))
 import consumer
-from contract import REQUEST_SCHEMA
+import build_context
 from run_capture import RunCapture
 from exec_observation import assert_observation
 
@@ -153,7 +153,7 @@ def main():
         target = root / 'after'
         target.write_bytes(seed)
         (out / 'before.bin').write_bytes(seed)
-        request = dict(schema_version=REQUEST_SCHEMA, specimen_id='closed_streams_leader_exit',
+        request = dict(contract=build_context.candidate_contract(), specimen_id='closed_streams_leader_exit',
             policy=dict(format='sbpl', sbpl_source='(version 1)(allow default)'), probe_plan=[
                 dict(step_id='exec', sandbox_check=dict(operation='process-exec*',
                     filter=dict(kind='path', value=helper)),
@@ -202,7 +202,7 @@ def main():
 
         # Only now read PW's claims and compare them with the independent facts.
         envelope = run.load_json()
-        errors = consumer.validate(envelope)
+        errors = consumer.validate(envelope, build_context.candidate_contract())
         assert not errors, errors
         runner = envelope['data']['runner_result']
         assert rc == 0 and runner['normalized_outcome'] == 'finished', runner

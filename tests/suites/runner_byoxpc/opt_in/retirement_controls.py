@@ -18,6 +18,7 @@ sys.path.insert(0, str(ROOT / 'tests/lib'))
 sys.path.insert(0, str(ROOT / 'tests/fixtures/caller_auth'))
 sys.path.insert(0, str(ROOT / 'tests/fixtures/byoxpc'))
 import contract
+import build_context
 import session
 from artifact import inventory
 from bundle import command, SERVICE
@@ -45,7 +46,7 @@ def specimen(name, effect=None):
         sandbox_check=dict(operation='process-exec*', filter=dict(kind='path', value='/bin/sh')),
         attempt=dict(kind='exec', action='spawn', target='/bin/sh',
                      args=['-c', 'printf x >> "$1"', 'effect', str(effect)]))]
-    return dict(schema_version=contract.REQUEST_SCHEMA, specimen_id=name,
+    return dict(contract=build_context.candidate_contract(), specimen_id=name,
         policy=dict(format='sbpl', sbpl_source='(version 1)(allow default)'), probe_plan=plan)
 
 

@@ -34,6 +34,14 @@ GIT = ['git', '-c', 'user.name=pw', '-c', 'user.email=pw@example.invalid', '-c',
 
 
 def git(repo, *args):
+    if args[:2] == ('tag', '-a') and (repo / 'docs/contract_surfaces.json').exists():
+        # Release preparation precedes the tag, as it does in the real workflow.
+        sys.path.insert(0, str(ROOT / 'docs'))
+        import generate_contract_stamps
+        for name, _, after in generate_contract_stamps.render(repo, args[2]):
+            (repo / name).write_text(after)
+        git(repo, 'add', 'docs')
+        git(repo, 'commit', '--amend', '--no-edit', '--allow-empty')
     return subprocess.run([*GIT, '-C', str(repo), *args], capture_output=True, text=True, check=True).stdout.strip()
 
 
@@ -44,13 +52,26 @@ def make_repo(work):
     subprocess.run(['git', 'init', '-q', '--bare', str(remote)], check=True)
     git(repo, 'init', '-q', '-b', 'main')
     (repo / 'README.md').write_text('fixture\n')
-    git(repo, 'add', 'README.md')
+    sys.path.insert(0, str(ROOT / 'docs'))
+    import build_contract
+    import fixture_inputs
+    fixture_inputs.copy_declared(ROOT, repo, build_contract.inputs(ROOT))
+    (repo / 'docs').mkdir(exist_ok=True)
+    (repo / 'docs/contract_surfaces.json').write_text(json.dumps(dict(surfaces=[dict(
+        id='fixture', artifact='Fixture', goldens=['docs/shape.json'], definition='docs/CONTRACT.md', checks=['fixture'])])))
+    (repo / 'docs/shape.json').write_text('{}\n')
+    region = '<!-- BEGIN GENERATED CONTRACT STAMPS -->\n<!-- END GENERATED CONTRACT STAMPS -->\n'
+    (repo / 'docs/CONTRACT.md').write_text('<!-- BEGIN CONTRACT fixture -->\nFixture definition.\n<!-- END CONTRACT fixture -->\n' + region)
+    (repo / 'docs/PolicyWitness.md').write_text(region)
+    git(repo, 'add', '.')
     git(repo, 'commit', '-q', '-m', 'initial')
     git(repo, 'remote', 'add', 'origin', str(remote))
     git(repo, 'push', '-q', 'origin', 'main')
-    (repo / 'tests').mkdir()
+    (repo / 'tests').mkdir(exist_ok=True)
     (repo / 'tests/catalog.json').write_text(json.dumps(dict(suites=dict(fixture=dict(command=['bash', 'tests/suites/fixture/run.sh'], cases=['0','1','2'])))))
     (repo / 'tests/RETAINED.json').write_text('{"schema_version": 1, "runs": []}\n')
+    git(repo, 'add', 'tests')
+    git(repo, 'commit', '--amend', '--no-edit')
     return repo
 
 
@@ -96,6 +117,17 @@ def check_preflight(out):
     assert problems == [] and stamp['version'] == '0.9.0' and stamp['tag'] == 'v0.9.0', (stamp, problems)
     assert stamp['remote_tag'] is None and stamp['head'] == git(repo, 'rev-parse', 'HEAD')
 
+    # Index flags cannot authorize notarizing modified release sources.
+    source = repo / 'controller/src/main.rs'
+    original = source.read_bytes()
+    git(repo, 'update-index', '--assume-unchanged', 'controller/src/main.rs')
+    source.write_bytes(original + b'\n// hidden release edit\n')
+    assert git(repo, 'status', '--porcelain') == ''
+    _, hidden_problems = release_preflight.inspect(repo)
+    expect_problem(hidden_problems, 'scoped sources must equal the tagged bytes')
+    source.write_bytes(original)
+    git(repo, 'update-index', '--no-assume-unchanged', 'controller/src/main.rs')
+
     git(repo, 'push', '-q', 'origin', 'v0.9.0')
     stamp, problems = release_preflight.inspect(repo)
     assert problems == [] and stamp['remote_tag'] == git(repo, 'rev-parse', 'v0.9.0'), (stamp, problems)
@@ -134,6 +166,13 @@ def check_branch_names(out):
     work = out / 'branch-names'
     work.mkdir()
     repo = make_repo(work)
+    sys.path.insert(0, str(ROOT / 'docs'))
+    import build_contract
+    import fixture_inputs
+    fixture_inputs.copy_declared(ROOT, repo,
+        build_contract.inputs(ROOT))
+    git(repo, 'add', '.')
+    git(repo, 'commit', '--amend', '--no-edit')
     git(repo, 'branch', 'master')
     git(repo, 'branch', 'doc-rework')
     source = (ROOT / 'build.sh').read_text()
@@ -145,10 +184,15 @@ def check_branch_names(out):
                '\nprintf "%s\\n" "$PW_BUILD_DESCRIBE" "$PW_BUILD_COMMIT" "$PW_VERSION" "$PW_BUILD_NUMBER"\n')
     env = {key: value for key, value in os.environ.items()
            if key not in {'PW_VERSION', 'PW_BUILD_NUMBER'}}
+    env['PW_PYTHON'] = sys.executable
     receipts = []
     for state in ('untagged', 'tagged', 'dirty'):
         if state == 'tagged':
             git(repo, 'tag', '-a', 'v0.9.1', '-m', 'branch comparison')
+            # Stamp preparation amended the fixture release commit; every
+            # compared branch must continue to name that same source tree.
+            for branch in ('main', 'master', 'doc-rework'):
+                git(repo, 'branch', '-f', branch, 'HEAD')
         elif state == 'dirty':
             (repo / 'README.md').write_text('dirty branch comparison\n')
         original = None
@@ -173,7 +217,8 @@ def check_branch_names(out):
                 assert problems == [] and describe == 'v0.9.1'
             else:
                 expect_problem(problems, 'uncommitted changes')
-                assert len(problems) == 1 and describe == 'v0.9.1-dirty'
+                expect_problem(problems, 'scoped sources must equal the tagged bytes')
+                assert len(problems) == 2 and describe == 'v0.9.1-dirty'
             observation = dict(build_stamp=build_stamp, preflight=stamp, problems=problems)
             if original is None:
                 original = observation
@@ -238,7 +283,7 @@ def make_dist(repo, *, version='0.9.0', commit=None, describe=None, attempt=True
     dist.mkdir(exist_ok=True)
     archive = dist / 'PolicyWitness.zip'
     info = dict(CFBundleShortVersionString=version, CFBundleVersion='3', PWBuildCommit=commit,
-                PWBuildDescribe=describe or f'v{version}')
+                PWBuildDescribe=describe or f'v{version}', PWContract=f'release:v{version}')
     with zipfile.ZipFile(archive, 'w') as zipped:
         zipped.writestr('PolicyWitness.app/Contents/Info.plist', plistlib.dumps(info))
         for relative, data in FIXTURE_MEMBERS.items():

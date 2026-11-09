@@ -1986,7 +1986,7 @@ mod tests {
             _ => panic!("unknown authored actor fixture {name}"),
         };
         let mut v: Value = serde_json::from_str(text).unwrap();
-        v["schema_version"] = json!(crate::json_contract::RESPONSE_SCHEMA_VERSION);
+        v["producer"] = crate::reply_fixtures::producer();
         for phase in v["phases"].as_array_mut().unwrap() {
             phase["action_ids"] = json!([]);
         }

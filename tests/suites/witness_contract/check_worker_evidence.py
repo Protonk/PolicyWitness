@@ -5,6 +5,7 @@ import sys
 import tempfile
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[2] / 'lib'))
+import build_context
 import consumer
 from run_capture import RunCapture
 
@@ -21,7 +22,7 @@ with tempfile.TemporaryDirectory(prefix='pw-evidence-', dir='/private/tmp') as t
     ]:
         target.write_bytes(b'original independent witness')
         before = target.read_bytes()
-        request = {'schema_version': 6, 'specimen_id': 'worker-evidence-' + mode,
+        request = {'contract': build_context.candidate_contract(), 'specimen_id': 'worker-evidence-' + mode,
                    'policy': {'format': 'sbpl', 'sbpl_source': source},
                    'probe_plan': [{'step_id': 'write',
                        'sandbox_check': {'operation': 'file-write-data',
@@ -32,7 +33,7 @@ with tempfile.TemporaryDirectory(prefix='pw-evidence-', dir='/private/tmp') as t
         with RunCapture(pw, out / mode, request, cli_args=[]) as capture:
             rc = capture.wait(timeout=30)
             envelope = capture.load_json()
-        assert not consumer.validate(envelope), consumer.validate(envelope)
+        assert not consumer.validate(envelope, build_context.candidate_contract()), consumer.validate(envelope, build_context.candidate_contract())
         after = target.read_bytes()
         (out / mode / 'before.bin').write_bytes(before)
         (out / mode / 'after.bin').write_bytes(after)

@@ -52,17 +52,19 @@ def binary_entitlements(bundle, out, label, invoke):
     return {name: entitlements(bundle / 'Contents/MacOS' / name, out, f'{label}-{name}', invoke) for name in HELPERS}
 
 
-def equipment_inventory(bundle, out, label, invoke):
+def equipment_inventory(bundle, out, label, invoke, *, expected_contract=None):
     """Independently bind the sealed two-role inventory to actual signed bytes."""
-    from contract import RUNNER_PROTOCOL, WORKER_IDENTITY
+    from contract import WORKER_IDENTITY
     path = bundle / 'Contents/Resources/worker-equipment.json'
     assert path.is_file() and not path.is_symlink() and path.resolve().is_relative_to(bundle.resolve()), path
     raw = path.read_bytes()
     assert len(raw) <= 1_048_576, 'equipment inventory exceeds input bound'
     value = json.loads(raw)
-    assert set(value) == {'schema_version', 'runner_protocol', 'worker_identity', 'unsigned_worker_sha256', 'workers'}, value
+    assert set(value) == {'schema_version', 'contract', 'worker_identity', 'unsigned_worker_sha256', 'workers'}, value
     assert type(value['schema_version']) is int and value['schema_version'] == 1
-    assert value['runner_protocol'] == RUNNER_PROTOCOL and value['worker_identity'] == WORKER_IDENTITY, value
+    if expected_contract is None:
+        expected_contract = plistlib.loads((bundle / 'Contents/Info.plist').read_bytes()).get('PWContract')
+    assert value['contract'] == expected_contract and value['worker_identity'] == WORKER_IDENTITY, value
     assert re.fullmatch('[0-9a-f]{64}', value['unsigned_worker_sha256'])
     assert isinstance(value['workers'], list) and len(value['workers']) == 2
     seen = set()
@@ -111,7 +113,7 @@ def session_invoke(pw, state, invoke):
 
 def registry(pw, out, label, invoke):
     data = envelope(out, label, [pw, 'runner', 'list'], invoke)
-    return data['runners'] + data.get('pending_cleanup', [])
+    return data['runners'] + [row.get('runner', row) for row in data.get('pending_cleanup', [])]
 
 
 def owned_bundle(state):

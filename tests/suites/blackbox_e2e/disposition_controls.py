@@ -235,6 +235,7 @@ def expected_fixture_controls(out):
     import copy
     sys.path.insert(0, str(ROOT / 'tests/lib'))
     import contract
+    import build_context
     import lifecycle_contract as C
     import lifecycle_oracle as O
     from lifecycle_adapter import read_lifecycle
@@ -242,22 +243,27 @@ def expected_fixture_controls(out):
     out.mkdir(parents=True, exist_ok=True)
     fixtures = ROOT / 'tests/fixtures/disposition'
     expected = json.loads((fixtures / 'current/constructed_deadline.json').read_text())
-    unsupported = {'schema_version': contract.CONTROLLER_ENVELOPE - 1,
+    expected['build']['contract'] = build_context.TEST_CONTRACT
+    expected['data']['runner_result']['producer'] = build_context.producer()
+    expected['data']['runner_client']['transport']['contract'] = build_context.TEST_CONTRACT
+    from blackbox import recapture_host_reply
+    recapture_host_reply(expected)
+    unsupported = {'build': {'contract': 'test:previous'},
                    'kind': 'run', 'data': {}}
     records = []
-    assert not O.check_record(expected), O.check_record(expected)
+    assert not O.check_fixture_record(expected), O.check_fixture_record(expected)
     assert not validate(expected), validate(expected)
     records.append({'control': 'expected_accepted', 'rejected': False})
     # Exact-version admission must refuse before the empty body produces any
     # shape or disposition findings. Each reader must reach that boundary.
     try:
-        read_lifecycle(unsupported)
+        read_lifecycle(unsupported, build_context.TEST_CONTRACT)
     except ValueError as error:
         assert 'unsupported controller envelope' in str(error), error
         adapter_error = str(error)
     else:
         raise AssertionError('lifecycle adapter interpreted an unsupported envelope')
-    refused = O.check_record(unsupported)
+    refused = O.check_fixture_record(unsupported)
     assert len(refused) == 1 and refused[0]['rule'] == 'D8', refused
     assert refused[0]['kind'] == 'unsupported_version', refused
     assert 'unsupported controller envelope' in refused[0]['detail'], refused
@@ -268,7 +274,7 @@ def expected_fixture_controls(out):
                     'findings': refused, 'errors': errors})
     loss = copy.deepcopy(expected)
     del loss['data']['runner_result']['runner_subprocess'][C.RECORD_KEY]
-    findings = O.check_record(loss)
+    findings = O.check_fixture_record(loss)
     assert any(f['kind'] == 'missing_record' for f in findings), findings
     assert any('disposition' in e for e in validate(loss))
     records.append({'control': 'current_reply_missing_record', 'rejected': True, 'findings': findings})
@@ -310,11 +316,11 @@ def expected_fixture_controls(out):
         mutated = copy.deepcopy(expected)
         change(mutated)
         (out / f'{name}.json').write_text(json.dumps(mutated, indent=2) + '\n')
-        findings = O.check_record(mutated)
+        findings = O.check_fixture_record(mutated)
         assert findings, f'{name}: accepted'
         assert any(f['rule'] == rule for f in findings), (name, rule, findings)
         records.append({'control': name, 'rejected': True, 'rule': rule, 'findings': findings})
-    assert not O.check_record(expected), 'baseline changed under mutation'
+    assert not O.check_fixture_record(expected), 'baseline changed under mutation'
     (out / 'expected-fixture-controls.json').write_text(json.dumps(records, indent=2) + '\n')
     print('disposition expected-fixture controls: ok', flush=True)
 

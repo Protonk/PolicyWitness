@@ -13,13 +13,15 @@ private func actorCorpus() throws -> [[String: Any]] {
 }
 
 private func corpusText(_ example: [String: Any]) throws -> String {
-    let encoded = try JSONSerialization.data(withJSONObject: example["request"]!)
+    var request = example["request"] as! [String: Any]
+    assertExampleContract(example, request: &request)
+    let encoded = try JSONSerialization.data(withJSONObject: request)
     return String(decoding: encoded, as: UTF8.self)
         .replacingOccurrences(of: "$EFFECT", with: "/private/tmp/request-grammar-effect")
 }
 
 private func decodeActorForm(_ text: String) throws -> PWRunnerRunSpec {
-    try pwRunnerDecodeJSON(PWRunnerRunSpec.self, from: Data(text.utf8))
+    try testDecodeJSON(PWRunnerRunSpec.self, from: Data(text.utf8))
 }
 
 /// The same gate the live host applies: capacity, then meaning.
@@ -55,14 +57,14 @@ func runActorPlanTests(_ tk: TestKit) {
     tk.group("actor form entry points") {
         tk.run("the public decoder admits the actor form and names it") {
             let example = try actorCorpus().first { $0["id"] as! String == "actors_redelegation" }!
-            let parsed = try pwRunnerDecodeJSON(PWRunnerRunSpec.self, from: Data(try corpusText(example).utf8))
+            let parsed = try testDecodeJSON(PWRunnerRunSpec.self, from: Data(try corpusText(example).utf8))
             try expectTrue(parsed.isActorForm)
             try expectNil(parsed.policy)
             try expectEqual(parsed.actors?.map { $0.actor_id }, ["A", "B", "C"])
         }
         tk.run("ordinary requests remain valid and declaration fields are unknown even when null") {
             let ordinary = """
-            {"schema_version": \(PWContract.requestSchema), "specimen_id": "ordinary",
+            {"contract": "\(testRequestContract)", "specimen_id": "ordinary",
              "policy": {"format": "sbpl", "sbpl_source": "(version 1) (allow default)"}, "probe_plan": []}
             """
             try expectNil(requestMeaningFailure(try decodeActorForm(ordinary)))
@@ -99,7 +101,7 @@ func runActorPlanTests(_ tk: TestKit) {
                     let want = expected as! [String: Any]
                     try expectEqual(failure.code, want["code"] as? String, name)
                     try expectEqual(failure.path, want["path"] as? [String], name)
-                    try expectEqual(failure.expected_schema, want["expected_schema"] as? Int, name)
+                    try expectEqual(failure.expected_contract, want["expected_contract"] == nil ? nil : testRequestContract, name)
                     _ = try pwPorcelainEncode(failure)
                 }
             }
@@ -230,7 +232,7 @@ func runActorPlanTests(_ tk: TestKit) {
         }
         tk.run("empty visits retain their actor-local position before another actor's action") {
             let text = """
-            {"schema_version": \(PWContract.requestSchema), "specimen_id": "empty_visits",
+            {"contract": "\(testRequestContract)", "specimen_id": "empty_visits",
              "actors": [{"actor_id":"A","sandbox":{"mode":"unapplied"}},
                         {"actor_id":"B","sandbox":{"mode":"unapplied"}}],
              "phases": [

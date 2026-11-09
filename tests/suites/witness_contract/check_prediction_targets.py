@@ -17,6 +17,7 @@ import sys
 import tempfile
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[2] / 'lib'))
+import build_context
 from blackbox import validate_run_shape, validate_step
 import consumer
 from run_capture import RunCapture
@@ -31,7 +32,7 @@ def main():
         seeds = [secrets.token_bytes(64) for _ in paths]
         step_ids = [secrets.token_hex(12) for _ in paths]
         base = {
-            'schema_version': 6, 'specimen_id': secrets.token_hex(12),
+            'contract': build_context.candidate_contract(), 'specimen_id': secrets.token_hex(12),
             'policy': {
                 'format': 'sbpl',
                 'sbpl_source': '(version 1)(allow default)'
@@ -104,8 +105,8 @@ def main():
             assert validator['exit_code'] == 0 and validator.get('term_signal') is None, validator
 
             planned = {step['step_id']: step for step in specimen['probe_plan']}
-            assert not consumer.validate(envelope), consumer.validate(envelope)
-            rows = consumer.steps(envelope)
+            assert not consumer.validate(envelope, build_context.candidate_contract()), consumer.validate(envelope, build_context.candidate_contract())
+            rows = consumer.steps(envelope, build_context.candidate_contract())
             for row in rows:
                 assert row['comparison']['target_relation'] == relation, row
                 assert row['comparison']['operation_relation'] == 'matched', row

@@ -585,8 +585,8 @@ expanding this document implementation into a repair.
 Maintenance follows the question's actual dependencies. Revisit a route when its
 case, checker, fixture, publication protocol, field semantics, or supported
 equipment changes. Preserve historical captures with their provenance; add a new
-capture rather than editing old observations into a current format. A schema bump
-may make current semantic readers reject a historical capture without making its
+capture rather than editing old observations into a current format. A different expected build contract, even with an unchanged shape,
+can make semantic readers reject a historical capture without making its
 raw bytes worthless. Keep that reading boundary explicit. Do not promise automatic
 refresh or let a generator choose the interpretation.
 

@@ -30,12 +30,13 @@ test -f "$PW_EXAMPLE_DIR/created"
 ```
 
 The renderer prints the complete request and does no execution. It generates
-a fresh nonce for examples that request capture. Keep the directory to inspect
+a fresh nonce for examples that request capture and asserts the selected app's
+`PWContract` from its plist. Keep the directory to inspect
 both submitted bytes and returned evidence.
 
 Reading that request teaches three boundaries:
 
-1. `schema_version` identifies PW's accepted request contract.
+1. `contract` asserts the build contract the specimen was written for.
 2. `(version 1)` inside `sbpl_source` belongs to SBPL, a nested language.
 3. `sandbox_check` and `attempt` describe independent observations. A query
    result cannot establish the attempted operation's effect. The file check
@@ -51,7 +52,7 @@ Use these corpus IDs with the same renderer:
 | --- | --- | --- |
 | `malformed_json` | JSON syntax | `invalid_json` at the root. |
 | `retired_capture_spelling` | Retired field names | `unknown_field` at `policy.capture_applied_profile`. |
-| `previous_request_version` | Previous contract | `unsupported_schema` before execution. |
+| `previous_request_version` | Previous contract | `unsupported_contract` before execution. |
 | `capture_typo` | Closed field names | `unknown_field` at `policy.capture_compiled_profiel`. |
 | `wrong_args_type` | Field types | `type_mismatch` at the attempt's `args`. |
 | `parameter_value` | Open dictionaries | Parameter names are caller data, but their values must be strings. |
@@ -63,7 +64,7 @@ Use these corpus IDs with the same renderer:
 | `unknown_filter` | Supported vocabulary | An unknown filter name refuses the specimen. |
 | `unknown_attempt` | Supported vocabulary | An unsupported second attempt prevents the first valid create from running. |
 | `over_capacity` | Admission | 257 distinct steps decode, then exceed the current <!-- span limits.probe_steps.value -->256<!-- /span -->-step capacity. |
-| `old_marker` | Version boundary | Another request contract is refused before its fields are interpreted. |
+| `foreign_contract` | Contract boundary | Another request contract is refused before its fields are interpreted. |
 | `exec_args` | Effective arguments | `exec/spawn` of `touch` consumes its argument and creates the named file. |
 | `capture` | Effective capture | Enabled capture returns a receipt with the submitted nonce. |
 | `known_unavailable_prediction` | Witness limits | A recognized excluded query reports `prediction_unavailable`; the independent create still runs. |
@@ -258,19 +259,20 @@ filesystem state, permissions, available services, or kernel behavior.
 
 ## Deciding whether the contract changes
 
-| Change | Caller impact | Contract treatment |
-| --- | --- | --- |
-| Rename a field, require a field, reject an accepted combination, or reinterpret an action | Existing requests need revision or a different meaning must be selected explicitly. | New request contract; refuse other markers. |
-| Add an optional field or a supported action while preserving existing meanings | Existing callers remain valid; users of the addition need a capable build. | The request marker can stay stable. |
-| Correct parameter transfer to honor its documented meaning | The request stays valid; observations may change. | Keep the marker and identify the implementation through build provenance. |
-| Raise a capacity limit | More specimens can execute. | Document and test the capacity separately. |
-| Lower a capacity limit | Previously runnable specimens may be refused. | An operational compatibility change even if the grammar is unchanged. |
+A shipped-source edit changes the development identity, including an optional
+addition or an implementation fix. A clean annotated release asserts the
+release identity. Public admission always requires the exact value; the tool
+does not infer compatibility from the shape or from the direction of a change.
 
-Compatibility has a direction: a newer build can preserve existing requests
-while an older build refuses a newly introduced field or action. The marker
-does not enumerate every build's capabilities. A capacity refusal never
-truncates a plan; automatically splitting one would also change which actions
-share a process. The caller decides whether to revise it or use another build.
+For a syntax or meaning change, revise the definition and its verified example,
+and review the shape golden. The derived surface table then identifies the
+release in which that surface changed. A specimen author uses those rows to
+review saved intent before asserting another build's contract.
+
+Capacity changes still need independent documentation and evidence. A capacity
+refusal never truncates a plan; automatically splitting one would change which
+actions share a process. The caller decides whether to revise the plan or use
+another build.
 
 ## Keeping the lesson honest
 

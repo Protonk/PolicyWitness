@@ -1,0 +1,41 @@
+{
+  "shape": {
+    "envelope.data": {
+      "request_failure": "object"
+    },
+    "envelope.data.request_failure": {
+      "code": "string",
+      "expected_contract": "string",
+      "path": "array"
+    },
+    "reply": {
+      "admission_failure": "object",
+      "reporting_failure": "object",
+      "request_failure": "object"
+    },
+    "reply.admission_failure": {
+      "actual": "number",
+      "field": "string",
+      "index": "number",
+      "maximum": "number",
+      "origin": "string",
+      "parameter_key": "string",
+      "step_id": "string",
+      "step_index": "number",
+      "unit": "string"
+    },
+    "reply.reporting_failure": {
+      "diagnostic": "string",
+      "evidence_retained": "boolean",
+      "origin": "string",
+      "original_error": "string",
+      "original_normalized_outcome": "string",
+      "original_rc": "number"
+    },
+    "reply.request_failure": {
+      "code": "string",
+      "expected_contract": "string",
+      "path": "array"
+    }
+  }
+}

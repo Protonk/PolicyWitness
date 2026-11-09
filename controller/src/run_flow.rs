@@ -25,7 +25,7 @@ use crate::json_contract;
 use crate::policy_check::{PolicyCheckCapture, run_policy_check};
 use crate::porcelain_admission::{self, RunnerExecutionDiagnostics};
 use crate::porcelain_records::{PWRunnerRequestFailure, PWRunnerRunResult};
-use crate::request_patch::{RequestError, parse_request, validate_request_version};
+use crate::request_patch::{RequestError, parse_request, validate_request_contract};
 use crate::runner_client::{RunnerClientRun, run_pw_runner_client};
 use crate::runner_manager::RunnerKind;
 use crate::runner_select::{
@@ -78,7 +78,7 @@ struct CompletedExecution {
 /// The version gate for a received runner reply.
 pub enum ReplyVersion {
     Supported,
-    Unsupported(i64),
+    Unsupported(String),
     Malformed(String),
 }
 
@@ -90,8 +90,12 @@ pub(crate) enum RequestFailureProjection {
 }
 
 pub(crate) fn reply_version(reply: &PWRunnerRunResult) -> ReplyVersion {
-    if reply.schema_version != i64::from(json_contract::RESPONSE_SCHEMA_VERSION) {
-        return ReplyVersion::Unsupported(reply.schema_version);
+    reply_contract(reply, json_contract::BUILD_CONTRACT)
+}
+
+pub(crate) fn reply_contract(reply: &PWRunnerRunResult, expected: &str) -> ReplyVersion {
+    if expected == "unbound" || reply.producer.contract != expected {
+        return ReplyVersion::Unsupported(reply.producer.contract.clone());
     }
     match porcelain_admission::admission_problem(reply) {
         Some(problem) => ReplyVersion::Malformed(problem),
@@ -344,8 +348,8 @@ pub(crate) fn admit_reply(
         Some(ReplyVersion::Unsupported(version)) => ReplyAdmission::Refused {
             outcome: "unsupported_runner_response",
             error: format!(
-                "runner reply carries response schema {version}; this controller reads only {}",
-                json_contract::RESPONSE_SCHEMA_VERSION
+                "runner reply carries contract {version}; this controller reads only {}",
+                json_contract::BUILD_CONTRACT
             ),
         },
         Some(ReplyVersion::Malformed(error)) => ReplyAdmission::Refused {
@@ -595,7 +599,7 @@ fn run(args: &[OsString], deps: &RunDependencies) -> Result<RunOutput, String> {
         Ok(value) => value,
         Err(error) => return refused_request(error),
     };
-    if let Err(error) = validate_request_version(&request_value) {
+    if let Err(error) = validate_request_contract(&request_value) {
         return refused_request(error);
     }
     if let Some(mode) = parsed.runner_mode_arg.as_deref() {
@@ -817,11 +821,9 @@ mod tests {
     #[test]
     fn typed_completion_preserves_native_failure_beside_finished_summary() {
         // Authored JSON is fixture input only; production receives binary records.
-        let mut reply: PWRunnerRunResult = serde_json::from_str(include_str!(
-            "../../tests/fixtures/contract/ordinary_phase_reply.json"
-        ))
-        .unwrap();
-        reply.schema_version = i64::from(json_contract::RESPONSE_SCHEMA_VERSION);
+        let mut reply: PWRunnerRunResult =
+            serde_json::from_value(crate::reply_fixtures::ordinary_template()).unwrap();
+        reply.producer = crate::porcelain_records::PWProducer::current();
         reply.steps[0].attempt.rc = -1;
         reply.steps[0].attempt.errno = Some(1);
         reply.steps[0].attempt.outcome = "open_failed".into();
@@ -1170,8 +1172,12 @@ mod tests {
             }
             let mut child = Command::new("/usr/bin/python3").args(["-B", "-c", r#"import json,sys
 sys.path.insert(0,sys.argv[1])
-from consumer import validate_fixture as validate,lifecycle
-from lifecycle_oracle import check_record
+from consumer import validate_fixture,lifecycle as live_lifecycle
+from functools import partial
+validate = partial(validate_fixture, expected_contract="test:policy-witness")
+lifecycle = partial(live_lifecycle, expected_contract="test:policy-witness")
+from lifecycle_oracle import check_record as live_check_record
+check_record = partial(live_check_record, expected_contract="test:policy-witness")
 from blackbox import recapture_host_reply
 e=json.load(sys.stdin); errors=validate(e); assert not errors,errors
 errors=check_record(e); assert not errors,errors
@@ -1352,7 +1358,9 @@ if e['data']['runner_result']['specimen_id']=='refused' and e['data']['runner_re
 import json, sys
 from copy import deepcopy
 sys.path.insert(0, sys.argv[1])
-from consumer import validate_fixture as validate, validate_shape, REPLY_SHAPE
+from consumer import validate_fixture, validate_shape, REPLY_SHAPE
+from functools import partial
+validate = partial(validate_fixture, expected_contract="test:policy-witness")
 for control in json.load(sys.stdin):
     errors = validate(control['reply'])
     assert (not errors) == control['accepted'], (control['name'], errors)
@@ -1498,8 +1506,12 @@ for control in json.load(sys.stdin):
                     "-c",
                     r#"import json,sys
 sys.path.insert(0,sys.argv[1])
-from consumer import validate_fixture as validate,lifecycle
-from lifecycle_oracle import check_record
+from consumer import validate_fixture,lifecycle as live_lifecycle
+from functools import partial
+validate = partial(validate_fixture, expected_contract="test:policy-witness")
+lifecycle = partial(live_lifecycle, expected_contract="test:policy-witness")
+from lifecycle_oracle import check_record as live_check_record
+check_record = partial(live_check_record, expected_contract="test:policy-witness")
 e=json.load(sys.stdin); errors=validate(e); assert not errors,errors
 errors=check_record(e); assert not errors,errors
 sub=e['data']['runner_result']['runner_subprocess']
@@ -1619,7 +1631,7 @@ else:
                 case["name"]
             );
             if let Ok(mut old) = typed {
-                old.schema_version -= 1;
+                old.producer.contract = "test:foreign".into();
                 assert!(matches!(reply_version(&old), ReplyVersion::Unsupported(_)));
             }
         }
@@ -1627,11 +1639,11 @@ else:
 
     #[test]
     fn reply_versions_are_gated_exactly() {
-        let current = i64::from(json_contract::RESPONSE_SCHEMA_VERSION);
+        let current = json_contract::BUILD_CONTRACT;
         let mut reply = fixture_reply(worker("finished", None));
         assert!(matches!(reply_version(&reply), ReplyVersion::Supported));
-        for other in [current - 1, current + 1, 1, 0, -1, i64::MAX] {
-            reply.schema_version = other;
+        for other in ["test:previous", "test:next", "", "unbound"] {
+            reply.producer.contract = other.into();
             match reply_version(&reply) {
                 ReplyVersion::Unsupported(version) => assert_eq!(version, other),
                 _ => panic!("{other} admitted"),
@@ -1643,10 +1655,10 @@ else:
 
     #[test]
     fn delivery_failure_takes_precedence_and_retains_the_client_frame_unread() {
-        let current = i64::from(json_contract::RESPONSE_SCHEMA_VERSION);
+        let current = json_contract::BUILD_CONTRACT;
         let reply = worker("finished", None);
         let mut unsupported = fixture_reply(reply.clone());
-        unsupported.schema_version = current + 1;
+        unsupported.producer.contract = "test:foreign".into();
         let mut broken = client_run(Some(&reply));
         broken.request_delivery = Some(RequestDelivery {
             bytes_written: 1,
@@ -1675,10 +1687,7 @@ else:
         match admit_reply(&intact, Some(&unsupported)) {
             ReplyAdmission::Refused { outcome, error } => {
                 assert_eq!(outcome, "unsupported_runner_response");
-                assert!(
-                    error.contains(&format!("response schema {}", current + 1)),
-                    "{error}"
-                );
+                assert!(error.contains("contract test:foreign"), "{error}");
                 assert!(error.contains(&format!("reads only {current}")), "{error}");
             }
             _ => panic!("unsupported version admitted"),
@@ -1715,7 +1724,7 @@ else:
 
     #[test]
     fn fallback_compilation_is_requested_only_for_an_admitted_xpc_error() {
-        let xpc_error = json!({"schema_version": json_contract::RESPONSE_SCHEMA_VERSION,
+        let xpc_error = json!({"producer": crate::reply_fixtures::producer(),
             "normalized_outcome": "xpc_error", "error": "NSCocoaErrorDomain:4099 refused", "steps": [], "phases":[], "specimen_id":"controlled", "rc":1, "pid":42});
         let failed_client = client_run(None);
         let before = serde_json::to_value(&failed_client).unwrap();
@@ -1766,7 +1775,7 @@ else:
         // Helper success, rejection and an unavailable capture leave the
         // client evidence and the controller's outcome unchanged.
         let helper_envelope = |outcome: &str| {
-            json!({"schema_version": json_contract::SCHEMA_VERSION, "kind": "sbpl_check",
+            json!({"build": {"contract": json_contract::BUILD_CONTRACT}, "kind": "sbpl_check",
                 "result": {"normalized_outcome": outcome}, "data": {}})
         };
         let captures = [
@@ -1814,7 +1823,7 @@ else:
         let text = json_contract::render_envelope("run", result, &data).unwrap();
         let wire: Value = serde_json::from_str(&text).unwrap();
         assert_eq!(wire["kind"], "run");
-        assert_eq!(wire["schema_version"], json_contract::SCHEMA_VERSION);
+        assert_eq!(wire["build"]["contract"], json_contract::BUILD_CONTRACT);
         assert_eq!(wire["result"]["ok"], false);
         assert_eq!(wire["result"]["exit_code"], 2);
         assert_eq!(wire["result"]["normalized_outcome"], "tool_error");
@@ -2095,8 +2104,8 @@ else:
             ShippedBinary,
         };
         use crate::runner_manager::{
-            RUNNER_PROTOCOL_VERSION, RUNNER_REGISTRY_SCHEMA_VERSION, RunnerEntitlements,
-            RunnerRecord, RunnerRegistry, RunnerScope, RunnerSignature, RunnerState,
+            BUILD_CONTRACT, RUNNER_REGISTRY_SCHEMA_VERSION, RunnerEntitlements, RunnerRecord,
+            RunnerRegistry, RunnerScope, RunnerSignature, RunnerState,
         };
         use std::cell::RefCell;
         use std::fs;
@@ -2223,6 +2232,7 @@ else:
 
         fn signature() -> RunnerSignature {
             RunnerSignature {
+                extra: Default::default(),
                 team_id: Some("TEAM123456".into()),
                 identity: Some("Developer ID Application: Controlled (TEAM123456)".into()),
                 cdhash: Some("ab".repeat(20)),
@@ -2233,6 +2243,7 @@ else:
 
         fn entitlements(keys: &[&str]) -> RunnerEntitlements {
             RunnerEntitlements {
+                extra: Default::default(),
                 raw_plist: Some("<plist version=\"1.0\"><dict/></plist>".into()),
                 keys: keys.iter().map(|k| k.to_string()).collect(),
                 granted: keys.iter().map(|k| k.to_string()).collect(),
@@ -2242,6 +2253,7 @@ else:
 
         fn record(bundle: &Path, keys: &[&str]) -> RunnerRecord {
             RunnerRecord {
+                extra: Default::default(),
                 state: RunnerState::Installed,
                 ownership: None,
                 id: "runner-ext".into(),
@@ -2250,7 +2262,7 @@ else:
                 executable_path: bundle.join("Contents/MacOS/PWRunner").display().to_string(),
                 bundle_id: Some(EXTERNAL_SERVICE.into()),
                 scope: RunnerScope::User,
-                protocol_version: RUNNER_PROTOCOL_VERSION,
+                contract: BUILD_CONTRACT.into(),
                 signature: signature(),
                 entitlements: entitlements(keys),
                 installed_at_unix_ms: 1,
@@ -2271,6 +2283,7 @@ else:
 
         fn registry_fixture(root: &Path, runners: Vec<RunnerRecord>) -> PathBuf {
             let registry = RunnerRegistry {
+                extra: Default::default(),
                 schema_version: RUNNER_REGISTRY_SCHEMA_VERSION,
                 runners,
                 pending_cleanup: Vec::new(),
@@ -2282,7 +2295,7 @@ else:
 
         fn request_file(root: &Path, runner: Option<Value>) -> PathBuf {
             let mut request = json!({
-                "schema_version": crate::json_contract::REQUEST_SCHEMA_VERSION, "specimen_id": "controlled",
+                "contract": crate::json_contract::BUILD_CONTRACT, "specimen_id": "controlled",
                 "policy": {"format": "sbpl", "sbpl_source": "(version 1)\n(allow default)\n"},
                 "probe_plan": [],
             });
@@ -2308,7 +2321,7 @@ else:
 
         fn controlled_reply() -> Value {
             json!({
-                "schema_version": json_contract::RESPONSE_SCHEMA_VERSION,
+                "producer": crate::reply_fixtures::producer(),
                 "normalized_outcome": "finished", "rc": 0, "pid": 77,
                 "specimen_id": "controlled", "steps": [], "phases": [],
             })
@@ -2414,14 +2427,9 @@ else:
             install_manifest(&app, ManifestState::Valid);
             let request = request_file(&root, None);
             let original: Value = serde_json::from_slice(&fs::read(&request).unwrap()).unwrap();
-            for version in [
-                json!(1),
-                json!(json_contract::REQUEST_SCHEMA_VERSION + 1),
-                json!(null),
-                json!(true),
-            ] {
+            for version in [json!(1), json!("test:foreign"), json!(null), json!(true)] {
                 let mut value = original.clone();
-                value["schema_version"] = version;
+                value["contract"] = version;
                 // These would fail if interpreted before the version gate.
                 value["runner"] = json!({"mode": "unknown-mode"});
                 value["policy"]["augments"] = json!(["unknown_augment"]);
@@ -2573,23 +2581,23 @@ else:
             install_manifest(&app, ManifestState::Valid);
             let request = request_file(&root, None);
             let args = [request.to_str().unwrap()];
-            let current = i64::from(json_contract::RESPONSE_SCHEMA_VERSION);
+            let current = json_contract::BUILD_CONTRACT;
             for (label, reply, outcome) in [
                 (
                     "previous",
-                    json!({"schema_version": current - 1, "normalized_outcome": "xpc_error",
+                    json!({"producer": {"contract":"test:previous", "describe":"test", "commit":"test"}, "normalized_outcome": "xpc_error",
                         "error": "refused", "steps": [], "phases":[], "specimen_id":"controlled", "rc":1, "pid":42}),
                     "unsupported_runner_response",
                 ),
                 (
                     "next",
-                    json!({"schema_version": current + 1, "normalized_outcome": "xpc_error",
+                    json!({"producer": {"contract":"test:next", "describe":"test", "commit":"test"}, "normalized_outcome": "xpc_error",
                         "error": "refused", "steps": [], "phases":[], "specimen_id":"controlled", "rc":1, "pid":42}),
                     "unsupported_runner_response",
                 ),
                 (
                     "string",
-                    json!({"schema_version": current.to_string(), "normalized_outcome": "xpc_error",
+                    json!({"producer": {"contract":6}, "normalized_outcome": "xpc_error",
                         "error": "refused", "steps": [], "phases":[], "specimen_id":"controlled", "rc":1, "pid":42}),
                     "malformed_runner_response",
                 ),
@@ -2611,7 +2619,7 @@ else:
                     assert_eq!(wire["data"]["runner_result"], reply, "{label}");
                 }
             }
-            let xpc_error = json!({"schema_version": current, "normalized_outcome": "xpc_error",
+            let xpc_error = json!({"producer": crate::reply_fixtures::producer(), "normalized_outcome": "xpc_error",
                 "error": "NSCocoaErrorDomain:4099 refused", "steps": [], "phases":[], "specimen_id":"controlled", "rc":1, "pid":42});
             let observed = observe_reply(&app, None, &args, xpc_error.clone());
             let (wire, exit_code) = envelope_of(&observed.output);
@@ -2668,7 +2676,7 @@ else:
                 b"(deny file-read-data)",
             );
             let request = json!({
-                "schema_version": json_contract::REQUEST_SCHEMA_VERSION,
+                "contract": json_contract::BUILD_CONTRACT,
                 "specimen_id": "actor-fallback", "runner": {"mode": "standard"},
                 "actors": [
                     {"actor_id": "zeta", "sandbox": {"mode": "apply", "policy": {
@@ -2707,7 +2715,7 @@ else:
                 let reply = match label {
                     "host-ok" => Some(controlled_reply()),
                     "host-xpc-error" => Some(json!({
-                        "schema_version": json_contract::RESPONSE_SCHEMA_VERSION,
+                        "producer": crate::reply_fixtures::producer(),
                         "normalized_outcome": "xpc_error", "error": "host body", "steps": [], "phases":[], "pid":42,"rc":1,"specimen_id":"controlled"
                     })),
                     _ => None,
@@ -2748,7 +2756,7 @@ else:
                                 crate::utils::HELPER_CAPTURE_BYTES,
                             ),
                             envelope: Some(json!({
-                                "schema_version": json_contract::SCHEMA_VERSION,
+                                "build": {"contract": json_contract::BUILD_CONTRACT},
                                 "kind": "sbpl_check",
                                 "result": {"normalized_outcome": status},
                                 "data": {"controlled_call": index}
@@ -3206,6 +3214,7 @@ else:
                 )),
                 registry_id: Some("runner-ext".into()),
                 signature: Some(RunnerSignature {
+                    extra: Default::default(),
                     team_id: Some("TEAM123456".into()),
                     identity: Some("constructed".into()),
                     cdhash: Some("ab".repeat(20)),
@@ -3213,12 +3222,14 @@ else:
                     adhoc: false,
                 }),
                 entitlements: Some(RunnerEntitlements {
+                    extra: Default::default(),
                     raw_plist: Some("<plist/>".into()),
                     keys: vec!["com.apple.security.app-sandbox".into()],
                     granted: vec!["com.apple.security.app-sandbox".into()],
                     error: Some("constructed".into()),
                 }),
                 worker_signature: Some(RunnerSignature {
+                    extra: Default::default(),
                     team_id: Some("TEAM123456".into()),
                     identity: Some("constructed".into()),
                     cdhash: Some("cd".repeat(20)),
@@ -3226,12 +3237,14 @@ else:
                     adhoc: false,
                 }),
                 worker_entitlements: Some(RunnerEntitlements {
+                    extra: Default::default(),
                     raw_plist: Some("<plist/>".into()),
                     keys: vec!["com.apple.security.cs.allow-jit".into()],
                     granted: vec!["com.apple.security.cs.allow-jit".into()],
                     error: Some("constructed".into()),
                 }),
                 validator_signature: Some(RunnerSignature {
+                    extra: Default::default(),
                     team_id: Some("TEAM123456".into()),
                     identity: Some("constructed".into()),
                     cdhash: Some("ef".repeat(20)),
@@ -3239,12 +3252,14 @@ else:
                     adhoc: false,
                 }),
                 validator_entitlements: Some(RunnerEntitlements {
+                    extra: Default::default(),
                     raw_plist: Some("<plist/>".into()),
                     keys: vec![],
                     granted: vec![],
                     error: Some("constructed".into()),
                 }),
                 unentitled_worker_signature: Some(RunnerSignature {
+                    extra: Default::default(),
                     team_id: Some("TEAM123456".into()),
                     identity: Some("constructed".into()),
                     cdhash: Some("12".repeat(20)),
@@ -3252,6 +3267,7 @@ else:
                     adhoc: false,
                 }),
                 unentitled_worker_entitlements: Some(RunnerEntitlements {
+                    extra: Default::default(),
                     raw_plist: Some("<plist/>".into()),
                     keys: vec![],
                     granted: vec![],
@@ -3325,7 +3341,7 @@ else:
                 }]),
             };
             let reply = json!({
-                "schema_version": json_contract::RESPONSE_SCHEMA_VERSION,
+                "producer": crate::reply_fixtures::producer(),
                 "normalized_outcome": "finished", "rc": 0, "pid": 42, "specimen_id":"shape", "steps": [], "phases": [],
             });
             let data = RunData {
@@ -3374,7 +3390,7 @@ else:
                     request_failure: Some(RequestFailureProjection::Runner(
                         serde_json::from_value(
                             json!({"code": "unknown_field", "path": ["policy", "typo"],
-                        "expected_schema": json_contract::REQUEST_SCHEMA_VERSION}),
+                        "expected_contract": json_contract::BUILD_CONTRACT}),
                         )
                         .unwrap(),
                     )),
@@ -3408,20 +3424,17 @@ else:
 
         /// Compare `current` with the golden at `golden_path`. Anything but `Ok`
         /// writes the candidate beside the case artifacts and fails with this
-        /// advice: review the diff, then replace the golden, bumping the manifest
-        /// first when the verdict says so.
+        /// advice: review the diff, update the affected contract definitions and
+        /// examples, then replace the golden and regenerate the surface views.
         fn check_golden(
             golden_path: &Path,
-            version_key: &str,
-            manifest_version: u64,
             current: &crate::shape::Shape,
             candidate_name: &str,
         ) -> Result<(), String> {
             let golden: Option<Value> = std::fs::read(golden_path)
                 .ok()
                 .and_then(|bytes| serde_json::from_slice(&bytes).ok());
-            let verdict =
-                crate::shape::classify(golden.as_ref(), version_key, current, manifest_version);
+            let verdict = crate::shape::classify(golden.as_ref(), current);
             if verdict == crate::shape::Verdict::Ok {
                 return Ok(());
             }
@@ -3429,7 +3442,7 @@ else:
                 .map(std::path::PathBuf::from)
                 .unwrap_or_else(std::env::temp_dir);
             let candidate_path = artifacts.join(candidate_name);
-            let candidate = serde_json::json!({ version_key: manifest_version, "shape": crate::shape::shape_to_value(current) });
+            let candidate = serde_json::json!({ "shape": crate::shape::shape_to_value(current) });
             let mut text = serde_json::to_string_pretty(&candidate).map_err(|e| e.to_string())?;
             text.push('\n');
             std::fs::write(&candidate_path, text)
@@ -3442,11 +3455,6 @@ else:
             Err(match verdict {
                 crate::shape::Verdict::Ok => unreachable!(),
                 crate::shape::Verdict::MissingGolden => format!("no shape golden; {advice}"),
-                crate::shape::Verdict::NeedsBump(detail) => {
-                    format!(
-                        "{detail}; bump {version_key} in docs/contract.json, regenerate, then {advice}"
-                    )
-                }
                 crate::shape::Verdict::Update(detail) => format!("{detail}; {advice}"),
             })
         }
@@ -3474,14 +3482,7 @@ else:
             assert!(!current.contains_key("envelope.data.runner_result"));
             let golden = Path::new(env!("CARGO_MANIFEST_DIR"))
                 .join("../tests/fixtures/contract/envelope_shape.json");
-            check_golden(
-                &golden,
-                "controller_envelope",
-                u64::from(json_contract::SCHEMA_VERSION),
-                &current,
-                "envelope_shape.candidate.json",
-            )
-            .unwrap();
+            check_golden(&golden, &current, "envelope_shape.candidate.json").unwrap();
         }
     }
 }

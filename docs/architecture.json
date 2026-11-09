@@ -1153,7 +1153,7 @@
           "kind": "record",
           "facts": {
             "Owner": "the caller",
-            "Form": "a JSON file naming the request schema"
+            "Form": "a JSON file asserting the exact build contract"
           },
           "sources": [
             {
@@ -1342,7 +1342,7 @@
           "kind": "record",
           "facts": {
             "Owner": "the opted-in worker before apply; admitted by the host for that worker or apply actor",
-            "Form": "opt-in copy of the compiled object with a nonce; CompiledProfileCapture names the worker producer and before_apply stage under its own schema_version"
+            "Form": "opt-in copy of the compiled object with a nonce; CompiledProfileCapture names the worker producer and before_apply stage under the admitted host producer context"
           },
           "sources": [
             {
@@ -1652,12 +1652,12 @@
           "from": "request_file",
           "to": "held_request",
           "kind": "guard",
-          "label": "request version gate; selector parse; augment resolution",
+          "label": "request contract gate; selector parse; augment resolution",
           "short": "version gate; selectors; augments",
           "sources": [
             {
               "path": "controller/src/request_patch.rs",
-              "symbol": "validate_request_version"
+              "symbol": "validate_request_contract"
             },
             {
               "path": "controller/src/runner_select.rs",
@@ -2183,8 +2183,8 @@
               "form": "test"
             },
             {
-              "path": "runner/Tests/PWRunnerCoreTests/ContractVersionTests.swift",
-              "symbol": "runContractVersionTests",
+              "path": "runner/Tests/PWRunnerCoreTests/ContractShapeTests.swift",
+              "symbol": "runContractShapeTests",
               "form": "test"
             }
           ],
@@ -2297,7 +2297,7 @@
           "from": "client_capture",
           "to": "envelope",
           "kind": "guard",
-          "label": "bounded binary decode and exact versions; typed coherence checks; rejected bytes retained; JSON projection borrows records",
+          "label": "producer admission and bounded binary decode; typed coherence checks; rejected bytes retained; JSON projection borrows records",
           "short": "decode; typed checks; JSON",
           "sources": [
             {
@@ -2435,21 +2435,21 @@
       "nodes": [
         {
           "id": "contract_json",
-          "label": "docs/contract.json",
+          "label": "docs/contract_surfaces.json",
           "kind": "manifest",
           "facts": {
-            "Owns": "the request, response and envelope version numbers"
+            "Owns": "the public surface scope, shape inputs, definitions and verification owners"
           },
           "sources": [
             {
-              "path": "docs/contract.json",
-              "symbol": "controller_envelope"
+              "path": "docs/contract_surfaces.json",
+              "symbol": "surfaces"
             }
           ],
           "checks": [
             {
-              "path": "tests/suites/source_drift/contract.py",
-              "symbol": "test_every_generated_copy_is_current",
+              "path": "tests/suites/source_drift/build_contracts.py",
+              "symbol": "test_pending_release_reproduces_after_tagging_and_tracks_removal",
               "form": "test"
             }
           ]
@@ -2540,21 +2540,21 @@
         },
         {
           "id": "gen_contract",
-          "label": "generate_contract.py",
+          "label": "generate_contract_stamps.py",
           "kind": "generator",
           "facts": {
-            "Owns": "the generated contract-version regions"
+            "Owns": "derived surface stamps across annotated release trees"
           },
           "sources": [
             {
-              "path": "docs/generate_contract.py",
-              "symbol": "TARGETS"
+              "path": "docs/generate_contract_stamps.py",
+              "symbol": "render"
             }
           ],
           "checks": [
             {
-              "path": "tests/suites/source_drift/contract.py",
-              "symbol": "test_every_generated_copy_is_current",
+              "path": "tests/suites/source_drift/build_contracts.py",
+              "symbol": "test_pending_release_reproduces_after_tagging_and_tracks_removal",
               "form": "test"
             }
           ]
@@ -2595,13 +2595,13 @@
           ],
           "checks": [
             {
-              "path": "tests/suites/source_drift/contract.py",
+              "path": "tests/suites/source_drift/build_contracts.py",
               "symbol": "test_identity_is_current_relocatable_and_regeneration_is_idempotent",
               "form": "test"
             },
             {
-              "path": "tests/suites/source_drift/contract.py",
-              "symbol": "test_layout_and_both_handshake_implementations_change_identity",
+              "path": "tests/suites/source_drift/build_contracts.py",
+              "symbol": "test_pending_release_reproduces_after_tagging_and_tracks_removal",
               "form": "test"
             }
           ]
@@ -2637,13 +2637,13 @@
           "sources": [
             {
               "path": "docs/CONTRACT.md",
-              "symbol": "BEGIN GENERATED CONTRACT VERSIONS"
+              "symbol": "BEGIN GENERATED CONTRACT STAMPS"
             }
           ],
           "checks": [
             {
-              "path": "tests/suites/source_drift/contract.py",
-              "symbol": "test_every_generated_copy_is_current",
+              "path": "tests/suites/source_drift/build_contracts.py",
+              "symbol": "test_pending_release_reproduces_after_tagging_and_tracks_removal",
               "form": "test"
             }
           ]
@@ -2683,7 +2683,7 @@
             },
             {
               "path": "docs/PolicyWitness.md",
-              "symbol": "BEGIN GENERATED CONTRACT VERSIONS"
+              "symbol": "BEGIN GENERATED CONTRACT STAMPS"
             }
           ],
           "checks": [
@@ -2805,7 +2805,7 @@
             },
             {
               "path": "controller/README.md",
-              "symbol": "BEGIN GENERATED CONTRACT VERSIONS"
+              "symbol": "controller/"
             }
           ],
           "checks": [
@@ -2830,7 +2830,7 @@
             },
             {
               "path": "runner/README.md",
-              "symbol": "BEGIN GENERATED CONTRACT VERSIONS"
+              "symbol": "Key files"
             }
           ],
           "checks": [
@@ -2930,12 +2930,12 @@
           "label": "PWRunnerAPI.swift",
           "kind": "source",
           "facts": {
-            "Carries": "the Swift contract versions and the outcome vocabularies"
+            "Carries": "the compiled build context and the outcome vocabularies"
           },
           "sources": [
             {
               "path": "runner/Sources/PWRunnerCore/PWRunnerAPI.swift",
-              "symbol": "PWContract"
+              "symbol": "PWBuildContext"
             },
             {
               "path": "runner/Sources/PWRunnerCore/PWRunnerAPI.swift",
@@ -2976,18 +2976,18 @@
           "label": "json_contract.rs",
           "kind": "source",
           "facts": {
-            "Carries": "the Rust contract versions; the envelope frame"
+            "Carries": "the compiled build contract and the envelope frame"
           },
           "sources": [
             {
               "path": "controller/src/json_contract.rs",
-              "symbol": "SCHEMA_VERSION"
+              "symbol": "BUILD_CONTRACT"
             }
           ],
           "checks": [
             {
-              "path": "tests/suites/source_drift/contract.py",
-              "symbol": "test_every_generated_copy_is_current",
+              "path": "tests/suites/source_drift/build_contracts.py",
+              "symbol": "test_pending_release_reproduces_after_tagging_and_tracks_removal",
               "form": "test"
             }
           ]
@@ -2997,12 +2997,12 @@
           "label": "tests/lib/contract.py",
           "kind": "source",
           "facts": {
-            "Carries": "the Python contract versions and the worker identity"
+            "Owns": "the generated worker ABI identity for independent tests"
           },
           "sources": [
             {
               "path": "tests/lib/contract.py",
-              "symbol": "CONTROLLER_ENVELOPE"
+              "symbol": "WORKER_IDENTITY"
             },
             {
               "path": "tests/lib/contract.py",
@@ -3011,12 +3011,12 @@
           ],
           "checks": [
             {
-              "path": "tests/suites/source_drift/contract.py",
-              "symbol": "test_every_generated_copy_is_current",
+              "path": "tests/suites/source_drift/build_contracts.py",
+              "symbol": "test_pending_release_reproduces_after_tagging_and_tracks_removal",
               "form": "test"
             },
             {
-              "path": "tests/suites/source_drift/contract.py",
+              "path": "tests/suites/source_drift/build_contracts.py",
               "symbol": "test_identity_is_current_relocatable_and_regeneration_is_idempotent",
               "form": "test"
             }
@@ -3100,13 +3100,13 @@
           ],
           "checks": [
             {
-              "path": "tests/suites/source_drift/contract.py",
+              "path": "tests/suites/source_drift/build_contracts.py",
               "symbol": "test_new_protocol_helpers_are_discovered_but_tests_are_not_identity_inputs",
               "form": "test"
             },
             {
-              "path": "tests/suites/source_drift/contract.py",
-              "symbol": "test_native_manifest_inputs_change_identity",
+              "path": "tests/suites/source_drift/build_contracts.py",
+              "symbol": "test_pending_release_reproduces_after_tagging_and_tracks_removal",
               "form": "test"
             }
           ]
@@ -3297,25 +3297,25 @@
         },
         {
           "id": "drift_contract",
-          "label": "source_drift contract.py",
+          "label": "source_drift build_contracts.py",
           "kind": "check",
           "facts": {
-            "Guards": "the contract and identity generators' copies"
+            "Owns": "public build identity, surface-history and worker-identity controls"
           },
           "sources": [
             {
-              "path": "tests/suites/source_drift/contract.py",
-              "symbol": "ContractVersionTests"
+              "path": "tests/suites/source_drift/build_contracts.py",
+              "symbol": "test_pending_release_reproduces_after_tagging_and_tracks_removal"
             },
             {
-              "path": "tests/suites/source_drift/contract.py",
+              "path": "tests/suites/source_drift/build_contracts.py",
               "symbol": "WorkerIdentityTests"
             }
           ],
           "checks": [
             {
               "path": "tests/suites/source_drift/run.sh",
-              "symbol": "contract_versions",
+              "symbol": "build_contracts",
               "form": "test"
             }
           ]
@@ -3824,18 +3824,18 @@
           "from": "contract_json",
           "to": "gen_contract",
           "kind": "reads",
-          "label": "version numbers",
-          "short": "versions",
+          "label": "surface definitions and shape inputs",
+          "short": "surfaces",
           "sources": [
             {
-              "path": "docs/generate_contract.py",
-              "symbol": "TARGETS"
+              "path": "docs/generate_contract_stamps.py",
+              "symbol": "render"
             }
           ],
           "checks": [
             {
-              "path": "tests/suites/source_drift/contract.py",
-              "symbol": "test_every_generated_copy_is_current",
+              "path": "tests/suites/source_drift/build_contracts.py",
+              "symbol": "test_pending_release_reproduces_after_tagging_and_tracks_removal",
               "form": "test"
             }
           ]
@@ -3845,81 +3845,18 @@
           "from": "gen_contract",
           "to": "contract_md",
           "kind": "writes",
-          "label": "version sentence and table",
-          "short": "sentence, table",
+          "label": "derived surface stamp table",
+          "short": "stamps",
           "sources": [
             {
-              "path": "docs/generate_contract.py",
-              "symbol": "TARGETS"
+              "path": "docs/generate_contract_stamps.py",
+              "symbol": "render"
             }
           ],
           "checks": [
             {
-              "path": "tests/suites/source_drift/contract.py",
-              "symbol": "test_every_generated_copy_is_current",
-              "form": "test"
-            }
-          ]
-        },
-        {
-          "id": "D3",
-          "from": "gen_contract",
-          "to": "api_swift",
-          "kind": "writes",
-          "label": "PWContract",
-          "short": "PWContract",
-          "sources": [
-            {
-              "path": "docs/generate_contract.py",
-              "symbol": "TARGETS"
-            }
-          ],
-          "checks": [
-            {
-              "path": "tests/suites/source_drift/contract.py",
-              "symbol": "test_every_generated_copy_is_current",
-              "form": "test"
-            }
-          ]
-        },
-        {
-          "id": "D4",
-          "from": "gen_contract",
-          "to": "json_contract_rs",
-          "kind": "writes",
-          "label": "SCHEMA_VERSION and the schema constants",
-          "short": "constants",
-          "sources": [
-            {
-              "path": "docs/generate_contract.py",
-              "symbol": "TARGETS"
-            }
-          ],
-          "checks": [
-            {
-              "path": "tests/suites/source_drift/contract.py",
-              "symbol": "test_every_generated_copy_is_current",
-              "form": "test"
-            }
-          ]
-        },
-        {
-          "id": "D5",
-          "from": "gen_contract",
-          "to": "contract_py",
-          "kind": "writes",
-          "label": "version constants",
-          "short": "constants",
-          "sources": [
-            {
-              "path": "docs/generate_contract.py",
-              "symbol": "TARGETS"
-            }
-          ],
-          "checks": [
-            {
-              "path": "tests/suites/source_drift/contract.py",
-              "symbol": "test_every_generated_copy_is_current",
+              "path": "tests/suites/source_drift/build_contracts.py",
+              "symbol": "test_pending_release_reproduces_after_tagging_and_tracks_removal",
               "form": "test"
             }
           ]
@@ -3929,60 +3866,18 @@
           "from": "gen_contract",
           "to": "guide",
           "kind": "writes",
-          "label": "version sentence",
-          "short": "sentence",
+          "label": "derived surface stamp table",
+          "short": "stamps",
           "sources": [
             {
-              "path": "docs/generate_contract.py",
-              "symbol": "TARGETS"
+              "path": "docs/generate_contract_stamps.py",
+              "symbol": "render"
             }
           ],
           "checks": [
             {
-              "path": "tests/suites/source_drift/contract.py",
-              "symbol": "test_every_generated_copy_is_current",
-              "form": "test"
-            }
-          ]
-        },
-        {
-          "id": "D7",
-          "from": "gen_contract",
-          "to": "runner_readme",
-          "kind": "writes",
-          "label": "version sentence",
-          "short": "sentence",
-          "sources": [
-            {
-              "path": "docs/generate_contract.py",
-              "symbol": "TARGETS"
-            }
-          ],
-          "checks": [
-            {
-              "path": "tests/suites/source_drift/contract.py",
-              "symbol": "test_every_generated_copy_is_current",
-              "form": "test"
-            }
-          ]
-        },
-        {
-          "id": "D8",
-          "from": "gen_contract",
-          "to": "controller_readme",
-          "kind": "writes",
-          "label": "version sentence",
-          "short": "sentence",
-          "sources": [
-            {
-              "path": "docs/generate_contract.py",
-              "symbol": "TARGETS"
-            }
-          ],
-          "checks": [
-            {
-              "path": "tests/suites/source_drift/contract.py",
-              "symbol": "test_every_generated_copy_is_current",
+              "path": "tests/suites/source_drift/build_contracts.py",
+              "symbol": "test_pending_release_reproduces_after_tagging_and_tracks_removal",
               "form": "test"
             }
           ]
@@ -4166,13 +4061,13 @@
           ],
           "checks": [
             {
-              "path": "tests/suites/source_drift/contract.py",
+              "path": "tests/suites/source_drift/build_contracts.py",
               "symbol": "test_new_protocol_helpers_are_discovered_but_tests_are_not_identity_inputs",
               "form": "test"
             },
             {
-              "path": "tests/suites/source_drift/contract.py",
-              "symbol": "test_native_manifest_inputs_change_identity",
+              "path": "tests/suites/source_drift/build_contracts.py",
+              "symbol": "test_pending_release_reproduces_after_tagging_and_tracks_removal",
               "form": "test"
             }
           ]
@@ -4192,13 +4087,13 @@
           ],
           "checks": [
             {
-              "path": "tests/suites/source_drift/contract.py",
+              "path": "tests/suites/source_drift/build_contracts.py",
               "symbol": "test_identity_is_current_relocatable_and_regeneration_is_idempotent",
               "form": "test"
             },
             {
-              "path": "tests/suites/source_drift/contract.py",
-              "symbol": "test_layout_and_both_handshake_implementations_change_identity",
+              "path": "tests/suites/source_drift/build_contracts.py",
+              "symbol": "test_pending_release_reproduces_after_tagging_and_tracks_removal",
               "form": "test"
             }
           ]
@@ -4218,13 +4113,13 @@
           ],
           "checks": [
             {
-              "path": "tests/suites/source_drift/contract.py",
+              "path": "tests/suites/source_drift/build_contracts.py",
               "symbol": "test_identity_is_current_relocatable_and_regeneration_is_idempotent",
               "form": "test"
             },
             {
-              "path": "tests/suites/source_drift/contract.py",
-              "symbol": "test_layout_and_both_handshake_implementations_change_identity",
+              "path": "tests/suites/source_drift/build_contracts.py",
+              "symbol": "test_pending_release_reproduces_after_tagging_and_tracks_removal",
               "form": "test"
             }
           ]
@@ -4244,13 +4139,13 @@
           ],
           "checks": [
             {
-              "path": "tests/suites/source_drift/contract.py",
+              "path": "tests/suites/source_drift/build_contracts.py",
               "symbol": "test_identity_is_current_relocatable_and_regeneration_is_idempotent",
               "form": "test"
             },
             {
-              "path": "tests/suites/source_drift/contract.py",
-              "symbol": "test_layout_and_both_handshake_implementations_change_identity",
+              "path": "tests/suites/source_drift/build_contracts.py",
+              "symbol": "test_pending_release_reproduces_after_tagging_and_tracks_removal",
               "form": "test"
             }
           ]
@@ -4566,14 +4461,14 @@
           "short": "--check",
           "sources": [
             {
-              "path": "tests/suites/source_drift/contract.py",
-              "symbol": "ContractVersionTests"
+              "path": "tests/suites/source_drift/build_contracts.py",
+              "symbol": "test_pending_release_reproduces_after_tagging_and_tracks_removal"
             }
           ],
           "checks": [
             {
               "path": "tests/suites/source_drift/run.sh",
-              "symbol": "contract_versions",
+              "symbol": "build_contracts",
               "form": "test"
             }
           ]
@@ -4587,14 +4482,14 @@
           "short": "identity controls",
           "sources": [
             {
-              "path": "tests/suites/source_drift/contract.py",
+              "path": "tests/suites/source_drift/build_contracts.py",
               "symbol": "WorkerIdentityTests"
             }
           ],
           "checks": [
             {
               "path": "tests/suites/source_drift/run.sh",
-              "symbol": "contract_versions",
+              "symbol": "build_contracts",
               "form": "test"
             }
           ]
@@ -4651,7 +4546,7 @@
           "sources": [
             {
               "path": "build.sh",
-              "symbol": "generate_contract.py"
+              "symbol": "generate_contract_stamps.py"
             }
           ],
           "checks": [

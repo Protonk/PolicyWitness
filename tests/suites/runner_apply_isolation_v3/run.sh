@@ -19,12 +19,15 @@ fi
 
 SPECIMEN_PATH="${PW_TEST_ARTIFACTS}/specimen.json"
 "${PW_PYTHON}" -B -S -P - "${SPECIMEN_PATH}" <<'PY'
+import os, sys
+sys.path.insert(0, os.environ['PW_CONTRACT_TEST_LIB'])
+import build_context
 import json
 import sys
 from pathlib import Path
 
 specimen = {
-    "schema_version": 6,
+    'contract': build_context.candidate_contract(),
     "specimen_id": "runner_apply_isolation_v3",
     "policy": {
         "format": "sbpl",
@@ -57,9 +60,10 @@ from pathlib import Path
 
 sys.path.insert(0, sys.argv[2])
 from document_versions import require_supported
+from build_context import candidate_contract
 
 env = json.loads(Path(sys.argv[1]).read_text(encoding="utf-8"))
-require_supported(env)
+require_supported(env, candidate_contract())
 if env.get("kind") != "run":
     raise SystemExit(f"expected kind=run (got {env.get('kind')!r})")
 if env.get("result", {}).get("ok") is not True:

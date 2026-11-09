@@ -20,10 +20,15 @@ FIXTURES = ROOT / "tests/fixtures/blackbox_e2e"
 CHECKER = Path(__file__).with_name("validate_run.py")
 sys.path.insert(0, str(ROOT / 'tests/lib'))
 import contract
-from blackbox import envelope_skeleton, recapture_host_reply
-from consumer import lifecycle, select, steps, validate_fixture as validate, validate_exec_observation
-from lifecycle_adapter import read_lifecycle
-from lifecycle_oracle import check_record
+import build_context
+from blackbox import bind_constructed_envelope, envelope_skeleton, recapture_host_reply
+from consumer import lifecycle as live_lifecycle, select, steps as live_steps, validate_fixture as validate, validate_exec_observation
+from functools import partial
+lifecycle = partial(live_lifecycle, expected_contract=build_context.TEST_CONTRACT)
+steps = partial(live_steps, expected_contract=build_context.TEST_CONTRACT)
+from lifecycle_adapter import read_lifecycle as live_read_lifecycle
+read_lifecycle = partial(live_read_lifecycle, expected_contract=build_context.TEST_CONTRACT)
+from lifecycle_oracle import check_fixture_record as check_record
 from path_diagnostics_contract import check_cases
 from worker_exit_witness import worker_exit_witness
 from runner_client_capture import validate_capture
@@ -31,11 +36,11 @@ from runner_client_capture import validate_capture
 
 def policy_check_controls(run):
     """Constructed captures distinguish rejected payloads from admitted helper data."""
-    base = envelope_skeleton({'schema_version': contract.RESPONSE_SCHEMA,
+    base = envelope_skeleton({'producer': build_context.producer(),
         'normalized_outcome': 'xpc_error', 'rc': 1, 'error': 'controlled XPC failure',
         'steps': [], 'phases': []}, ok=False)
     helper = {
-        'schema_version': contract.CONTROLLER_ENVELOPE, 'kind': 'sbpl_check',
+        'build': build_context.producer(), 'kind': 'sbpl_check',
         'result': {'normalized_outcome': 'ok', 'ok': True, 'exit_code': 0, 'error': None},
         'data': {'policy_format': 'sbpl', 'policy_sha256': 'f' * 64,
                  'params_present': False, 'params_count': 0,
@@ -75,12 +80,12 @@ def policy_check_controls(run):
     for name, change in [
         ('wrong_kind', lambda p: p.update(kind='another_helper')),
         ('missing_kind', lambda p: p.pop('kind')),
-        ('previous_version', lambda p: p.update(schema_version=contract.CONTROLLER_ENVELOPE - 1)),
-        ('next_version', lambda p: p.update(schema_version=contract.CONTROLLER_ENVELOPE + 1)),
-        ('string_version', lambda p: p.update(schema_version=str(contract.CONTROLLER_ENVELOPE))),
-        ('float_version', lambda p: p.update(schema_version=float(contract.CONTROLLER_ENVELOPE))),
-        ('boolean_version', lambda p: p.update(schema_version=True)),
-        ('missing_version', lambda p: p.pop('schema_version')),
+        ('previous_version', lambda p: p.update(build={"contract": "test:previous"})),
+        ('next_version', lambda p: p.update(build={"contract": "test:next"})),
+        ('integer_contract', lambda p: p.update(build={"contract": 6})),
+        ('fractional_contract', lambda p: p.update(build={"contract": 6.5})),
+        ('boolean_contract', lambda p: p.update(build={"contract": True})),
+        ('missing_contract', lambda p: p.pop('build')),
         ('missing_result', lambda p: p.pop('result')),
         ('nonobject_result', lambda p: p.update(result=[])),
         ('missing_outcome', lambda p: p['result'].pop('normalized_outcome')),
@@ -90,8 +95,8 @@ def policy_check_controls(run):
     ]:
         payload = copy.deepcopy(helper)
         change(payload)
-        # No refused body is read under the current schema, regardless of why
-        # admission failed. There is no historical helper schema here.
+        # No refused body is interpreted, regardless of why admission failed.
+        # These controls supply no historical helper reader.
         payload['data'] = {'unrecognized': {'retained': [1, False, None]}}
         rejected.append((name, payload))
     for name, payload in rejected:
@@ -199,7 +204,7 @@ def consumer_controls(artifacts, current):
 
     # Version refusal needs only a constructed frame. The version gate must
     # reject it before requiring the current envelope's fields.
-    previous = {'schema_version': contract.CONTROLLER_ENVELOPE - 1,
+    previous = {'build': {'contract': 'test:previous'},
                 'kind': 'run', 'data': {}}
     errors = validate(previous)
     assert len(errors) == 1 and 'unsupported controller envelope' in errors[0], errors
@@ -438,20 +443,20 @@ def consumer_controls(artifacts, current):
     runner(unrecorded)['runner_subprocess'].pop('disposition')
     run_host('record_required', unrecorded, rejected_by='without runner_subprocess.disposition')
 
-    # D5: versions are read exactly, before anything else.
+    # D5: producer contracts are admitted before interpreting descendants.
     for name, change, diagnostic in [
-        ('envelope_previous', lambda e: e.update(schema_version=contract.CONTROLLER_ENVELOPE - 1), 'unsupported controller envelope'),
-        ('envelope_next', lambda e: e.update(schema_version=contract.CONTROLLER_ENVELOPE + 1), 'unsupported controller envelope'),
-        ('envelope_string', lambda e: e.update(schema_version=str(contract.CONTROLLER_ENVELOPE)), 'malformed controller envelope'),
-        ('envelope_missing', lambda e: e.pop('schema_version'), 'malformed controller envelope'),
-        ('reply_previous', lambda e: runner(e).update(schema_version=contract.RESPONSE_SCHEMA - 1), 'unsupported runner response'),
-        ('reply_next', lambda e: runner(e).update(schema_version=contract.RESPONSE_SCHEMA + 1), 'unsupported runner response'),
-        ('reply_float', lambda e: runner(e).update(schema_version=float(contract.RESPONSE_SCHEMA)), 'malformed runner response'),
-        ('reply_missing', lambda e: runner(e).pop('schema_version'), 'malformed runner response'),
-        ('old_envelope_no_reply', lambda e: (e.update(schema_version=contract.CONTROLLER_ENVELOPE - 1),
+        ('envelope_previous', lambda e: e.update(build={"contract": "test:previous"}), 'unsupported controller envelope'),
+        ('envelope_next', lambda e: e.update(build={"contract": "test:next"}), 'unsupported controller envelope'),
+        ('envelope_integer', lambda e: e.update(build={"contract": 6}), 'malformed controller envelope'),
+        ('envelope_missing', lambda e: e.pop('build'), 'malformed controller envelope'),
+        ('reply_previous', lambda e: runner(e).update(producer={"contract": "test:previous"}), 'unsupported runner response'),
+        ('reply_next', lambda e: runner(e).update(producer={"contract": "test:next"}), 'unsupported runner response'),
+        ('reply_float', lambda e: runner(e).update(producer={"contract": 6.5}), 'malformed runner response'),
+        ('reply_missing', lambda e: runner(e).pop('producer'), 'malformed runner response'),
+        ('old_envelope_no_reply', lambda e: (e.update(build={"contract": "test:previous"}),
                                             e['data'].update(runner_result=None)), 'unsupported controller envelope'),
-        ('envelope_first', lambda e: (e.update(schema_version=contract.CONTROLLER_ENVELOPE - 1),
-                                      runner(e).update(schema_version=contract.RESPONSE_SCHEMA + 1)), 'unsupported controller envelope'),
+        ('envelope_first', lambda e: (e.update(build={"contract": "test:previous"}),
+                                      runner(e).update(producer={"contract": "test:next"})), 'unsupported controller envelope'),
     ]:
         broken = copy.deepcopy(current)
         change(broken)
@@ -480,7 +485,7 @@ def consumer_controls(artifacts, current):
     bare = copy.deepcopy(runner(current))
     assert not validate(bare), validate(bare)
     assert lifecycle(bare)['reporting'] == 'reported'
-    bare['schema_version'] = contract.RESPONSE_SCHEMA + 1
+    bare['producer']['contract'] = "test:next"
     errors = validate(bare)
     assert len(errors) == 1 and 'unsupported runner response' in errors[0], errors
     records.append({'control': 'bare_reply_versions', 'rejected': True})
@@ -494,7 +499,7 @@ def client_output_control(artifacts):
     client = app / 'Contents/MacOS/pw-runner-client'
     assert client.is_file(), f'shipped client missing: {client}'
     request = artifacts / 'client-request.json'
-    request.write_text(json.dumps({'schema_version': contract.REQUEST_SCHEMA, 'specimen_id': 'client-control',
+    request.write_text(json.dumps({'contract': build_context.candidate_contract(), 'specimen_id': 'client-control',
                                    'policy': {'format': 'sbpl', 'sbpl_source': '(version 1)(allow default)'},
                                    'probe_plan': []}) + '\n')
     result = subprocess.run([str(client), 'run', '--timeout-ms', '2000', '--request', '-',
@@ -505,7 +510,7 @@ def client_output_control(artifacts):
     assert result.returncode == 1, result
     from porcelain import decode
     capture = decode(result.stdout, "capture")
-    errors = validate_capture(capture)
+    errors = validate_capture(capture, build_context.candidate_contract())
     assert not errors, errors
     assert capture['terminal'] in ('xpc_timeout', 'acquisition_failed'), capture
     assert capture['submission'] == {'state': 'not_invoked'}, capture
@@ -594,7 +599,7 @@ def main():
     artifacts = Path(sys.argv[1])
     artifacts.mkdir(parents=True, exist_ok=True)
     check_cases(json.loads((ROOT / 'tests/fixtures/contract/path_diagnostics.json').read_text()))
-    baseline = json.loads((FIXTURES / "checker/current/constructed_run.json").read_text())
+    baseline = bind_constructed_envelope(json.loads((FIXTURES / "checker/current/constructed_run.json").read_text()))
     prediction_error = "fs_write_allowed: expected sandbox_check allow"
     later_attempt_error = "mach_lookup_denied: expected attempt_ok=False"
     failures = []

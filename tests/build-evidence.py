@@ -376,7 +376,7 @@ def main() -> int:
             if len(equipment_bytes) > build_equipment.INVENTORY_BYTES:
                 raise ValueError("service equipment inventory exceeds limit")
             equipment = json.loads(equipment_bytes)
-            if equipment.get("schema_version") != 1 or equipment.get("runner_protocol") != build_equipment.RUNNER_PROTOCOL:
+            if equipment.get("schema_version") != 1 or equipment.get("contract") != plistlib.loads((svc_bundle / "Contents/Info.plist").read_bytes()).get("PWContract"):
                 raise ValueError("unsupported service equipment inventory")
             expected_roles = {row["role"]: row for row in equipment["workers"]}
             if len(equipment["workers"]) != 2 or set(expected_roles) != set(build_equipment.ROLES):

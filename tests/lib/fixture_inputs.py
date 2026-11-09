@@ -25,7 +25,7 @@ import markdown_reader  # noqa: E402
 import repository_tree  # noqa: E402
 from repository_tree import directory, pattern, required  # noqa: E402
 
-GENERATORS = ('contract', 'worker_identity', 'limits', 'architecture', 'build', 'footprint', 'porcelain')
+GENERATORS = ('contract_stamps', 'worker_identity', 'limits', 'architecture', 'build', 'footprint', 'porcelain')
 # What build.sh admits and reads before its first generator check: the script, the lock front end and its Python
 # resolver, the SDK guard, the plists and entitlements it validates, and the augment profiles it inventories.
 BUILD_ENTRY = (required('tests/lib/pytest_resources.py'), required('tests/lib/pytest_support.py'), required('build.sh'), required('tests/lib/checkout_lock.py'), required('tests/lib/checkout_lock.sh'),
@@ -34,7 +34,7 @@ BUILD_ENTRY = (required('tests/lib/pytest_resources.py'), required('tests/lib/py
                required('runner/Services/PWRunner/Entitlements.plist'), pattern('runner/augments/*.sb'))
 # What the script's later steps read before the gate a build-entry control stops at: the version and provenance
 # helpers, cargo configuration and its vendored TOML reader, and the signing inventory helpers.
-BUILD_SCRIPT_HELPERS = (required('tests/lib/build_provenance.py'), required('tests/lib/cargo_config.py'),
+BUILD_SCRIPT_HELPERS = (required('docs/build_contract.py'), required('docs/source_identity.py'), required('tests/lib/build_provenance.py'), required('tests/lib/cargo_config.py'),
                         directory('tests/lib/vendor/tomli'), required('tests/lib/vendor/README.md'),
                         required('tests/lib/artifact.py'), required('tests/build-evidence.py'),
                         required('tests/lib/signer_check.py'), required('tests/lib/output_target.py'))
@@ -91,7 +91,9 @@ def build_entry_inputs(root=ROOT):
 
 
 def build_script_inputs(root=ROOT):
-    return expand(root, BUILD_ENTRY + BUILD_SCRIPT_HELPERS)
+    import build_contract
+    return sorted(set(expand(root, BUILD_ENTRY + BUILD_SCRIPT_HELPERS)) |
+                  set(build_contract.inputs(Path(root))))
 
 
 def reader_inputs(root=ROOT):

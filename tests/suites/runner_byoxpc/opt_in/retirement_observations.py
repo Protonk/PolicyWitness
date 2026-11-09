@@ -19,6 +19,7 @@ ROOT = Path(__file__).resolve().parents[4]
 sys.path.insert(0, str(ROOT / 'tests/lib'))
 sys.path.insert(0, str(ROOT / 'tests/fixtures/byoxpc'))
 import contract
+import build_context
 from consumer import validate
 from neighbor_lab import ProcessWatch, generation, process_identity, save
 from receipts import Receipts
@@ -173,7 +174,7 @@ def main(pw, directory):
             for position in range(PER_GAP):
                 index = len(records)
                 folder = out / f'{index:02d}-gap-{gap:02d}-{position:02d}'
-                specimen = dict(schema_version=contract.REQUEST_SCHEMA, specimen_id=f'retirement-{index:02d}',
+                specimen = dict(contract=build_context.candidate_contract(), specimen_id=f'retirement-{index:02d}',
                                 runner=dict(mode='byoxpc', service=service),
                                 policy=dict(format='sbpl', sbpl_source='(version 1)(allow default)'), probe_plan=[])
                 captures.append(RunCapture(pw, folder, specimen, cli_args=('--timeout-ms', REQUEST_TIMEOUT_MS)))
@@ -278,7 +279,7 @@ def main(pw, directory):
                     record['validation_errors'] = ['capture did not complete normally']
                 else:
                     envelope = capture.load_json()
-                    record['validation_errors'] = validate(envelope)
+                    record['validation_errors'] = validate(envelope, build_context.candidate_contract())
                     data = envelope.get('data', {})
                     reply = data.get('runner_result')
                     transport = (data.get('runner_client') or {}).get('transport') or {}

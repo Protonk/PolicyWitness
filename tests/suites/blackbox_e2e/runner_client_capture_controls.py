@@ -4,13 +4,14 @@ import copy
 import json
 
 import contract
+import build_context
 from blackbox import envelope_skeleton
 from runner_client_capture import validate_capture, host_reply, REPLY_BYTES
 
 
 def run_capture_controls(run):
     assert REPLY_BYTES == 96_468_992, 'independent reader must admit the current retained-reply capacity'
-    reply = {'schema_version': contract.RESPONSE_SCHEMA, 'normalized_outcome': 'bad_request',
+    reply = {'producer': build_context.producer(), 'normalized_outcome': 'bad_request',
              'rc': 1, 'error': 'constructed host reply', 'steps': [], 'phases': []}
     baseline = envelope_skeleton(reply, ok=False)
 
@@ -172,15 +173,15 @@ def run_capture_controls(run):
         client(falsely_admitted).update(transport_admission='accepted', transport_error=None)
         check('reject_' + name, falsely_admitted, 'transport admission')
 
-    for version in (contract.RUNNER_PROTOCOL - 1, contract.RUNNER_PROTOCOL + 1):
-        opaque = {'protocol_version': version, 'unrecognized': {'attempts': [False]},
+    for assertion in ("test:previous", "test:next"):
+        opaque = {'contract': assertion, 'unrecognized': {'attempts': [False]},
                   'submission': {'state': 'invoked'}, 'runner_reply': 'not current schema'}
         assert len(validate_capture(opaque)) == 1
-        rejected('version_' + str(version), opaque, 'unsupported')
+        rejected('contract_' + str(assertion), opaque, 'unsupported')
     for name, value in [('array', []), ('string', 'retained'), ('boolean', False), ('number', 2),
-                        ('version_boolean', {'protocol_version': True}),
-                        ('version_float', {'protocol_version': float(contract.RUNNER_PROTOCOL)}),
-                        ('version_string', {'protocol_version': str(contract.RUNNER_PROTOCOL)}), ('version_missing', {})]:
+                        ('contract_boolean', {'contract': True}),
+                        ('contract_float', {'contract': 6.5}),
+                        ('contract_integer', {'contract': 6}), ('contract_missing', {})]:
         rejected(name, value)
 
     faults = [
@@ -280,7 +281,7 @@ def run_capture_controls(run):
         transport_admission='delivery_failed', transport_error='delivery failed', submission='unknown')
     delivery['data']['runner_result'] = None
     check('delivery_error_precedes_admitted_looking_capture', delivery)
-    client(delivery)['transport'] = {'protocol_version': 999, 'anything': [False]}
+    client(delivery)['transport'] = {'contract': 'test:foreign', 'anything': [False]}
     check('delivery_error_precedes_unsupported_capture', delivery)
 
     for name, raw in [('empty', b''), ('not_a_frame_byte', b'\xff'), ('cut_fixture_json', b'{'),

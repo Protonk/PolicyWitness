@@ -204,9 +204,9 @@ final class PWRunnerClientSession {
     }
     private func decodeControl(_ data: Data) throws -> PWRunnerControlReply {
         guard data.count <= PWRunnerTransportLimits.controlBytes else { throw ControlFailure.tooLarge }
-        struct Version: Decodable { var protocol_version: Int }
+        struct Version: Decodable { var contract: String }
         let version = try pwRunnerDecodeJSON(Version.self, from: data)
-        guard version.protocol_version == PWContract.runnerProtocol else { throw ControlFailure.unsupported }
+        guard PWBuildContext.contract != "unbound", version.contract == PWBuildContext.contract else { throw ControlFailure.unsupported }
         let reply = try pwRunnerDecodeJSON(PWRunnerControlReply.self, from: data)
         guard reply.host_pid > 0, reply.host_pid <= Int(Int32.max),
               reply.host_instance.utf8.count == 36, UUID(uuidString: reply.host_instance) != nil else {

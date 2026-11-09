@@ -10,6 +10,7 @@ import tempfile
 
 ROOT = Path(__file__).resolve().parents[3]
 sys.path.insert(0, str(ROOT / 'tests/lib'))
+import build_context
 import consumer
 from witness_capture import capture
 
@@ -21,7 +22,7 @@ def action(identity, path, operation='file-read-data', attempt='access'):
 
 
 def run(pw, out, name, actions, overrides=None, expected_rc=0, session_state=None):
-    spec = {'schema_version': 6, 'specimen_id': name,
+    spec = {'contract': build_context.candidate_contract(), 'specimen_id': name,
             'policy': {'format': 'sbpl', 'sbpl_source': '(version 1)(allow default)'},
             'phases': [{'phase_id': f'p{i}', 'actions': a if isinstance(a, list) else [a]} for i, a in enumerate(actions)]}
     if overrides is not None:
@@ -76,7 +77,7 @@ def run_targets(pw, out, target_dir, session_state):
     def rejected(name, mutate):
         changed = copy.deepcopy(envelope)
         mutate(changed['data']['runner_result'])
-        errors = consumer.validate(changed)
+        errors = consumer.validate(changed, build_context.candidate_contract())
         assert errors, name
         return {'control': name, 'errors': errors}
 

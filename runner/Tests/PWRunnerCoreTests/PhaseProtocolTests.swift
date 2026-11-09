@@ -166,7 +166,7 @@ private func ordinaryPhaseFixture() -> PWRunnerRunResult {
     value77.association_issues = []
     value77.exit_grace_wait = value76
     let value78 = PWRunnerPhaseResult(phase_id: "p2", ordinal: 3, action_ids: ["after"], arrival_observed: true, completion_observed: true, collection_status: "collected", ordering: value74, validator_subprocess: value77)
-    let value79 = PWRunnerRunResult(schema_version: PWContract.responseSchema, specimen_id: "M01", rc: 0, normalized_outcome: "finished", pid: 94337, bundle_id: "com.policywitness.policy-witness.PWRunner", policy_format: "sbpl", policy_sha256: ActorEquipmentSystem.digest("5359b3d015c676f8987b816a94e33d436621737a450e158e37be9718ce24449a", bytes: 32)!, sandboxed_after_apply: true, steps: [value10, value20, value30], runner_subprocess: value63, phases: [value68, value73, value78])
+    let value79 = PWRunnerRunResult(specimen_id: "M01", rc: 0, normalized_outcome: "finished", pid: 94337, bundle_id: "com.policywitness.policy-witness.PWRunner", policy_format: "sbpl", policy_sha256: ActorEquipmentSystem.digest("5359b3d015c676f8987b816a94e33d436621737a450e158e37be9718ce24449a", bytes: 32)!, sandboxed_after_apply: true, steps: [value10, value20, value30], runner_subprocess: value63, phases: [value68, value73, value78])
     return value79
 }
 

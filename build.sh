@@ -223,8 +223,8 @@ echo "==> Verifying the checkout lock: ${ROOT_DIR}/tests/.checkout.lock"
 # refused, and the generator the refusal names regenerates it.
 echo "==> Checking limits documentation"
 "${PW_PYTHON}" -B -S "${ROOT_DIR}/docs/generate_limits.py" --check
-echo "==> Checking contract versions"
-"${PW_PYTHON}" -B -S "${ROOT_DIR}/docs/generate_contract.py" --check
+echo "==> Checking public contract stamps"
+"${PW_PYTHON}" -B -S "${ROOT_DIR}/docs/generate_contract_stamps.py" --check
 "${PW_PYTHON}" -B -S "${ROOT_DIR}/docs/generate_architecture.py" --check
 "${PW_PYTHON}" -B -S "${ROOT_DIR}/docs/generate_footprint.py" --check
 "${PW_PYTHON}" -B -S "${ROOT_DIR}/docs/generate_porcelain.py" --check
@@ -248,6 +248,8 @@ PW_BUILD_NUMBER="${PW_BUILD_NUMBER:-$(git -C "${ROOT_DIR}" rev-list --count HEAD
 : "${PW_BUILD_NUMBER:=0}"
 : "${PW_BUILD_DESCRIBE:=unknown}"
 : "${PW_BUILD_COMMIT:=unknown}"
+PW_BUILD_CONTRACT="$("${PW_PYTHON}" -B -S "${ROOT_DIR}/docs/build_contract.py")"
+export PW_BUILD_CONTRACT
 echo "==> Build stamp: ${PW_VERSION} (${PW_BUILD_NUMBER}) ${PW_BUILD_DESCRIBE}"
 # The session helper admits builddir/, controller/target/, its release/ and the
 # session destination before creating anything: each must be a real directory
@@ -264,6 +266,7 @@ stamp_info_plist() {
   /usr/libexec/PlistBuddy -c "Set :CFBundleVersion ${PW_BUILD_NUMBER}" "${plist}"
   /usr/libexec/PlistBuddy -c "Add :PWBuildDescribe string ${PW_BUILD_DESCRIBE}" "${plist}"
   /usr/libexec/PlistBuddy -c "Add :PWBuildCommit string ${PW_BUILD_COMMIT}" "${plist}"
+  /usr/libexec/PlistBuddy -c "Add :PWContract string ${PW_BUILD_CONTRACT}" "${plist}"
 }
 
 # The supported macOS: Info.plist declares it, meson.build pins the native
@@ -505,8 +508,8 @@ if ! "${PW_PYTHON}" -B -S -P -c 'import sys; v, m = (tuple(int(p) for p in a.spl
   exit 2
 fi
 if [[ -f "${MESON_BUILD_DIR}/build.ninja" ]]; then
-  echo "==> Configuring native build (meson configure, existing directory): ${MESON_OPTIONS[*]}"
-  meson configure "${MESON_BUILD_DIR}" "${MESON_OPTIONS[@]}"
+  echo "==> Configuring native build (meson setup --reconfigure, existing directory): ${MESON_OPTIONS[*]}"
+  meson setup --reconfigure "${MESON_BUILD_DIR}" "${ROOT_DIR}" "${MESON_OPTIONS[@]}"
 else
   echo "==> Configuring native build (meson setup, fresh directory): ${MESON_BUILD_DIR} ${MESON_OPTIONS[*]}"
   meson setup "${MESON_BUILD_DIR}" "${ROOT_DIR}" "${MESON_OPTIONS[@]}"
@@ -675,6 +678,11 @@ echo "==> Checking the assembled code against the output target: ${APP_BUNDLE}"
 # identity: a worker compiled from other identity inputs and an unchanged
 # generated constant can agree with the tree, so the binary is asked as well.
 echo "==> Checking host/worker identity again, before signing"
+CURRENT_BUILD_CONTRACT="$("${PW_PYTHON}" -B -S "${ROOT_DIR}/docs/build_contract.py")"
+if [[ "${CURRENT_BUILD_CONTRACT}" != "${PW_BUILD_CONTRACT}" ]]; then
+  echo "ERROR: public build contract changed during compilation; rebuild from stable inputs" 1>&2
+  exit 1
+fi
 "${PW_PYTHON}" -B -S "${ROOT_DIR}/docs/generate_worker_identity.py" --check
 GENERATED_WORKER_IDENTITY="$(/usr/bin/sed -nE 's/^WORKER_IDENTITY = "([0-9a-f]{64})"$/\1/p' "${ROOT_DIR}/tests/lib/contract.py")"
 "${PW_PYTHON}" -B -S "${ROOT_DIR}/tests/lib/build_provenance.py" worker-identity --root "${ROOT_DIR}" \

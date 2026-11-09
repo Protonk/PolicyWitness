@@ -128,12 +128,16 @@ def check(out):
         assert (record['state'] == 'accepted') is (mode == 'accepted')
         completed.append('notary_' + mode)
 
-    for mode in ('valid', 'missing_helper', 'stale_manifest', 'missing_staple',
+    for mode in ('valid', 'development_contract', 'foreign_binary_contract', 'missing_helper', 'stale_manifest', 'missing_staple',
                  'xpc_failure', 'skipped', 'unrun', 'selected', 'all', 'timeout', 'wrong_runner', 'mutated_app', 'corrupt_zip'):
         work = out / ('archive_' + mode)
         work.mkdir()
         source = work / 'PolicyWitness.app'
         bundle(source, Path(os.environ['PW_DISPATCHER_HOST_FIXTURE']))
+        info_path = source / 'Contents/Info.plist'
+        info = plistlib.loads(info_path.read_bytes())
+        info.update(CFBundleShortVersionString='0.9.0', PWContract='development:fixture' if mode == 'development_contract' else 'release:v0.9.0')
+        info_path.write_bytes(plistlib.dumps(info))
         if mode == 'missing_helper':
             (source / 'Contents/MacOS/pw-runner-client').unlink()
         if mode == 'stale_manifest':
@@ -185,6 +189,8 @@ def check(out):
             assert record['battery']['run_id'] == 'release-fixture' and record['battery']['elapsed_seconds'] == 12.5, record['battery']
         if mode in ('selected', 'all'):
             assert any('a selection other than the default battery' in e for e in record['errors']), record['errors']
+        if mode in ('development_contract', 'foreign_binary_contract'):
+            assert any('does not report release:v0.9.0' in error for error in record['errors']), record
         if mode == 'unrun':
             assert any('skipped or unrun cases' in e for e in record['errors']), record['errors']
         if mode == 'timeout':

@@ -356,7 +356,7 @@ evidence checks pass, including when those cases run through BYOXPC.
 | `runner_apply_isolation_v3` | Baseline | The same empty-plan application and reply contract using SBPL v3. | App and XPC. | [Suite](suites/runner_apply_isolation_v3/README.md) |
 | `runner_outcome_worker_spawn_failed` | Baseline | A nonexistent worker path retains the real spawn failure, admitted override and absence of a worker. | App and XPC. | [Suite](suites/runner_outcome_worker_spawn_failed/README.md) |
 | `runner_outcome_runner_timeout` | Baseline | Empty-plan timeout retains termination evidence, diagnostics and empty steps; populated-plan controls live elsewhere. | App and XPC. | [Suite](suites/runner_outcome_runner_timeout/README.md) |
-| `runner_outcome_bad_request` | Baseline | CLI/direct-XPC admission refusals, current accepted requests, and independent effects only for admitted plans. | App and XPC. | [Suite](suites/runner_outcome_bad_request/README.md) |
+| `runner_outcome_bad_request` | Baseline | CLI/direct-XPC admission refusals, current accepted requests, and independent effects only for admitted plans; opt-in signed same-shape intent control. | App and XPC. | [Suite](suites/runner_outcome_bad_request/README.md) |
 | `runner_ready_byte_resilience` | Baseline | A delayed ready-byte write survives a closed reader and still permits application, prediction and a clean reply. | App and XPC. | [Suite](suites/runner_ready_byte_resilience/README.md) |
 | `runner_filter_iokit_registry_entry_class` | Baseline | Unavailable prediction with retained file-open attempt evidence; does not establish IOKit enforcement. | App and XPC. | [Suite](suites/runner_filter_iokit_registry_entry_class/README.md) |
 | `runner_filter_sysctl_name` | Baseline | Unavailable prediction beside a real denied sysctl attempt; independent checker controls cover all filter callers. | App/XPC for live case; Python for controls. | [Suite](suites/runner_filter_sysctl_name/README.md) |
@@ -373,7 +373,7 @@ evidence checks pass, including when those cases run through BYOXPC.
 | `runner_use_c_worker` | Baseline | CLI-to-worker evidence, request refusals, timeout with completed effects, query planning and exec arguments/streams. | App and XPC. | [Suite](suites/runner_use_c_worker/README.md) |
 | `runner_mach_service_liveness` | Baseline | Direct Mach-service host launch stays alive; does not establish that it services a connection. | App. | [Suite](suites/runner_mach_service_liveness/README.md) |
 | `runner_byoxpc` | Opt-in | Owned external-runner installation, shared smoke/blackbox contracts, authentication, entitlements and registry recovery; bounded retirement observations separately report outcomes without a reliability acceptance claim. Cleanup verifies removal. | App, GUI launchd session and matching signing identity for installation. | [Suite](suites/runner_byoxpc/README.md) |
-| `smoke` | Baseline + opt-in | Built-app contract versions, build stamp and ordinary specimens; opt-in caller-auth checks use identical-client controls and independent effects. | App and XPC; whole-suite selection also needs a matching signing identity. | [Suite](suites/smoke/README.md) |
+| `smoke` | Baseline + opt-in | Built-app contract identity, build stamp and ordinary specimens; opt-in caller-auth checks use identical-client controls and independent effects. | App and XPC; whole-suite selection also needs a matching signing identity. | [Suite](suites/smoke/README.md) |
 | `blackbox_e2e` | Baseline | Complete correlated envelopes and separate prediction/attempt assertions; independent checker and build-comparison controls. | App/XPC for live cases; controls have separate equipment. | [Suite](suites/blackbox_e2e/README.md) |
 | `blackbox_menagerie` | Baseline | Local PAWL policy fixtures, evidence correlation and annotated canonicalization mismatches; checker controls run independently. | App/XPC for live cases; Python for validation controls. | [Suite](suites/blackbox_menagerie/README.md) |
 | `sbpl_allowdeny_consistency` | Baseline | Independent file snapshots across restored seeds and reversed policy bindings, then JSON evidence checks. Mach steps establish presence only. | App and XPC. | [Suite](suites/sbpl_allowdeny_consistency/README.md) |
@@ -452,8 +452,8 @@ only the order diagnostic may change, preserving actual step failures without
 inventing others. Diagnostic order is unconstrained.
 The filter suites use the `unavailable_prediction.py` CLI adapter, supplying
 step identity, operation, filter value and a supported file-open, denied-sysctl
-or allowed-mach-lookup attempt contract; the adapter accepts only the current response
-and envelope versions. Their independent controls run through
+or allowed-mach-lookup attempt contract; the adapter requires the expected build contract in both the host reply
+and controller envelope. Their independent controls run through
 [runner_filter_sysctl_name](suites/runner_filter_sysctl_name/README.md) before
 its optional app check.
 

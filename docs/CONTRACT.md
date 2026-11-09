@@ -1,199 +1,68 @@
-# PolicyWitness wire contracts
+# PolicyWitness public contracts
 
-[contract.json](contract.json) owns the request, response, controller-envelope and runner-protocol
-version numbers. `tests/lib/python.sh docs/generate_contract.py` copies the numbers into the code
-and documents listed below; `--check` verifies the copies without writing. The
-build runs the check before compiling. Nothing reads the JSON at run time; the
-controller embeds it at compile time so `policy-witness --version` can report it.
+The public contract is the release. Saved specimens assert `contract`; every
+independently arriving envelope, host reply and client capture names its
+producer. Admission is exact. There is no negotiation, implicit acceptance,
+historical translation or bypass.
 
-<!-- BEGIN GENERATED CONTRACT VERSIONS (docs/contract.json via docs/generate_contract.py) -->
-Current wire contracts: request schema 6, response schema 30, controller envelope 14, runner protocol 4. Each number is a separate contract. `docs/contract.json` owns these numbers; the internal host/worker boundary uses a generated source identity.
-<!-- END GENERATED CONTRACT VERSIONS -->
+A clean tree at exactly one annotated `vX.Y.Z` tag emits `release:vX.Y.Z`.
+Other packaged builds emit `development:<sha256>` over the shipped source and
+build inputs. The digest includes on-disk contents and paths, so shipped-input
+edits change it. Ordinary documentation and test edits do not change that digest.
+A dirty release tree is a development build. Release admission also compares actual scoped source bytes with the tag’s blobs; Git index flags cannot hide edited inputs. The source scope uses declared language/resource suffixes and explicit build helpers equally in Git checkouts and source copies. Incidental executables and OS files are excluded. Direct Cargo and SwiftPM builds
+are `unbound` and refuse public requests and packaged peer checks.
+`--version`, the envelope `build.contract`, and app/service `PWContract` report
+the compiled identity. Describe and commit remain provenance, not admission keys.
 
-<!-- BEGIN GENERATED CONTRACT TABLE -->
-| Contract | Version | Generated copies |
+To reuse a specimen with another release, inspect the surface rows changed since
+its asserted release, revisit the corresponding definitions and change the
+assertion yourself. PolicyWitness never rewrites a user's specimen. Reinstall
+external runners from the current app when its contract changes.
+
+## Surface stamps
+
+The manifest [contract_surfaces.json](contract_surfaces.json) defines the scope.
+The transport golden includes the complete binary record identity, including
+host-reply field tags, native widths and presentation rules. Transport and
+installation goldens include reservation limits and the overall client
+allowance, with their counting, effects and controls.
+The generator hashes canonical shape goldens and each delimited normative region
+across reachable annotated release tags. A new or changed surface is stamped
+`unreleased` until release preparation; removed surfaces retain a removal row.
+Stamps are navigation aids and are never asserted or used for admission.
+
+<!-- BEGIN GENERATED CONTRACT STAMPS -->
+| Surface | User artifact | Last changed |
 | --- | --- | --- |
-| request schema (`request_schema`) | 6 | [`requestSchema`](../runner/Sources/PWRunnerCore/PWRunnerAPI.swift); [`REQUEST_SCHEMA_VERSION`](../controller/src/json_contract.rs); [`REQUEST_SCHEMA`](../tests/lib/contract.py) |
-| response schema (`response_schema`) | 30 | [`responseSchema`](../runner/Sources/PWRunnerCore/PWRunnerAPI.swift); [`RESPONSE_SCHEMA_VERSION`](../controller/src/json_contract.rs); [`RESPONSE_SCHEMA`](../tests/lib/contract.py) |
-| controller envelope (`controller_envelope`) | 14 | [`SCHEMA_VERSION`](../controller/src/json_contract.rs); [`CONTROLLER_ENVELOPE`](../tests/lib/contract.py) |
-| runner protocol (`runner_protocol`) | 4 | [`runnerProtocol`](../runner/Sources/PWRunnerCore/PWRunnerAPI.swift); [`RUNNER_PROTOCOL_VERSION`](../controller/src/json_contract.rs); [`RUNNER_PROTOCOL`](../tests/lib/contract.py); [`PWRunnerProtocolVersion`](../runner/Services/PWRunner/Info.plist) |
-<!-- END GENERATED CONTRACT TABLE -->
+| `actors` | Phases and actors | v0.3.6 |
+| `dossier` | Specimen dossier | v0.3.6 |
+| `envelope` | Controller and helper envelopes | v0.3.6 |
+| `equipment` | Actor evidence and equipment | v0.3.6 |
+| `installation` | Runner installation and reservation | v0.3.6 |
+| `lifecycle` | Disposition and lifecycle evidence | v0.3.6 |
+| `policy` | SBPL, params, augments and imports | v0.3.6 |
+| `probes` | Probe steps | v0.3.6 |
+| `profile` | Compiled-profile receipt | v0.3.6 |
+| `refusals` | Exit classification and structured refusals | v0.3.6 |
+| `request` | Saved specimen and runner selection | v0.3.6 |
+| `steps` | Reply steps and comparison | v0.3.6 |
+| `transport` | Client capture and transport | v0.3.6 |
+<!-- END GENERATED CONTRACT STAMPS -->
 
-## What each number identifies
+When annotated release history is unavailable, `--check` validates the current
+inputs and agreement between the two tables, but explicitly reports that stamp
+derivation was not checked. Regeneration refuses to erase existing release
+stamps without history. Release preflight requires annotated history and a full
+derivation; `--check --require-history` requests the same completeness.
 
-- **Request schema**: the specimen JSON the controller hands the runner
-  (`PWRunnerRunSpec`). The marker identifies the accepted input contract,
-  independently of implementation revisions. Both controller and runner
-  require the current value before interpreting the request. The reply carries
-  its own response version; it does not echo the request version.
-- **Response schema**: the runner reply (`PWRunnerRunResult`). It tells a
-  reader which rules apply; `tests/lib/consumer.py` and the controller accept
-  exactly this number. `steps[].comparison` records the attempt channel's
-  classified observation, the submitted-scope relations, the order PW
-  established and the planner's exclusion or lifecycle limitations.
-- **Controller envelope**: the top-level JSON that `policy-witness` prints.
-  The controller projects the typed runner reply inside it without version coercion.
-  `data.specimen` is the dossier: request path, policy augmentation and
-  imports, host facts, runner and app provenance, and hashes of any selected
-  binary the app manifest does not describe; the projected runner reply, the
-  client transport capture holding the received host bytes, and diagnostics
-  stay beside it. The same number versions the
-  **envelope frame**: the outer object every controller-family binary prints
-  (`kind`, `schema_version`, `generated_at_unix_ms`, `build`, `result`,
-  `data`). It is rendered by [json_contract.rs](../controller/src/json_contract.rs),
-  which `sbpl-check` includes by `#[path]`. The frame also appears on the
-  helper envelope retained unchanged at `data.policy_check.envelope`.
-- **Runner protocol**: reservation RPC/control messages and the
-  `runner_client_capture` printed by the Swift client. The client acquires an
-  effect-free reservation on one connection before invoking execution on that
-  same connection. Its capture distinguishes acquisition, submission and reply
-  receipt; it is admitted before any embedded host response. The protocol is
-  mandatory, with no legacy execution fallback. The service's signed plist
-  advertises the version, while an admitted RPC response establishes actual
-  protocol participation.
+## Normative surfaces
 
-## Supported versions
+### Saved specimen and runner selection
 
-### Typed response transport
-
-[porcelain.json](porcelain.json) owns response and client-capture record
-structure. `generate_porcelain.py` emits the Swift writers and stored fields,
-Rust owned records/readers/JSON projection, and the structural tables read by a
-separately written Python reader. All three derive from the one schema, so
-they cannot disagree with each other about structure; none of them checks the
-schema itself. Request and reservation JSON and validator NDJSON retain their
-own boundaries. JSON reply fixtures are test inputs; production reply ingestion
-is binary and public JSON is projected from typed records.
-
-A frame is `PWP1`, the SHA-256 of the schema's wire identity, and one
-root value. Values have a one-byte kind, four-byte little-endian payload length,
-and payload. Kinds are boolean, signed integer, unsigned integer, UTF-8 text,
-bytes, record, list, ordered string map and a declared variant. Integers occupy
-eight bytes; readers enforce each field's native signedness and width. Digests
-travel as their bytes, and a reference from one equipment row to another is an
-unsigned index into the table it names. Enumerated values such as outcomes,
-states and reasons travel as text, as do the names a request chose (step,
-phase, actor, token, delivery and handle names); their vocabularies and
-associations are checked by semantic admission, not by the frame. Records
-begin with a two-byte identity and contain strictly increasing nonzero two-byte
-field tags followed by values. Lists/maps begin with a four-byte count; map keys
-are unique and sorted by UTF-8 bytes. Variants begin with a two-byte case tag.
-Optional fields are absent, never filled with fabricated defaults.
-
-Readers reject unsupported fingerprints, unknown tags/records/cases, missing
-required fields, incorrect kinds, invalid text, impossible lengths/counts,
-duplicates and trailing data. The [primitive reader](../controller/src/porcelain.rs)
-enforces byte and nesting budgets and charges decoded collection slots, strings
-and bytes against one logical-storage budget per frame. These are not physical
-peak-memory bounds. The client capture and the host reply it carries are
-separate frames, each read under its own budget. The host writer bounds a reply
-by the frame limit, while the client retains at most its smaller
-[reply allowance](LIMITS.md); a larger reply arrives truncated and is refused
-as `runner_reply_truncated`. The controller collects the client's complete
-output before applying its retention cap; reading is not streamed and has no
-receiver deadline of its own.
-
-The fingerprint covers every record identity, field tag, field name, kind and
-public presentation rule, so it is exact: any edit to those, including an added
-optional field or a changed null or byte spelling, produces a different
-fingerprint. Source locations, defaults and comments are outside it. There is no negotiation and no additive compatibility at this
-layer. A controller and a host from different builds can therefore agree on
-the runner protocol and still not share a schema. That is decided only when
-the reply is read, after the host has executed the specimen: the effects have
-happened, the reply bytes are retained in the capture, and the run is refused
-as `unsupported_runner_response`. An external runner is a copy of the service
-made at installation; reinstall it from the current app when the schema moves.
-
-The public envelope projects typed records. Byte fields are carried as bytes:
-retained host reply bytes, compiled-profile bytecode and rejected validator
-context become base64, and fresh-read content and every digest (SHA-256, code
-directory hash, worker identity) become lowercase hexadecimal, only at
-presentation. Unsupported or malformed input cannot become a semantic
-claim. Structural admission establishes the declared shape;
-named validators separately check native operations, lifecycle, phase order,
-actor setup/equipment, owned endings and extension custody before projecting
-claims. Conflicting observations remain publishable with dependent claims withheld.
-
-### Version admission
-
-Semantic readers of runner responses and controller envelopes accept exactly
-the versions in [contract.json](contract.json); another version is
-unsupported. Raw transport retains the received bytes without interpreting
-unsupported records. Stored evidence keeps its bytes; current semantic readers
-reject unsupported versions. Request admission and the worker ABI follow their
-own contracts.
-
-Historical runs are retained as evidence with their original producer and build
-provenance. PW does not translate their judgments or normalize them into current
-records. Rerun the specimen with current PW to obtain usable current evidence.
-Comparisons of current-format runs, including runs on different macOS versions,
-remain useful; their worker identities need not match. Identity equality is a
-requirement between components of one worker execution, not between separate runs.
-
-Persisted runner-installation recovery is separate from run interpretation.
-An unsupported runner protocol prevents run/verify selection without preventing
-list, reconcile or owned removal of that installation. Installation admits the
-bundle's advertised protocol before publishing an operational record; run and
-verify independently admit the actual reservation response.
-The registry loader accepts the retired `machme` and `debuggable` kind spellings
-so existing owned launchd jobs can still be listed and removed. Removing those
-aliases would make the registry unreadable and strand cleanup. New runner-kind
-input accepts `standard` and `byoxpc`; the recovery aliases do not admit any
-historical run format. Current accepted request spellings retain their own
-input contract.
-
-A reader checks a version before interpreting its record. The controller first
-admits the client's complete capture and its protocol, then the embedded host
-response independently. Missing or invalid client capture leaves submission
-unknown and never authorizes replay. For a public envelope, missing or
-noninteger version fields are malformed and other integer versions are
-unsupported; the envelope version is checked first, then any nonnull runner
-reply. An unsupported document yields one version error, with no downstream
-shape errors and no recovered claims; `tests/lib/consumer.py` reports
-`unsupported`.
-
-The controller decides a host reply in two steps. A frame naming another
-schema fingerprint is `unsupported_runner_response`, and host bytes that are
-not one complete frame of the current schema are `malformed_runner_response`;
-in both cases `runner_result` is null and the received bytes stay in the
-client capture. A decoded reply carrying another response version is
-`unsupported_runner_response`, and one that fails structural admission is
-`malformed_runner_response`; both keep the decoded record's projection in
-`runner_result` and withhold every runner-derived diagnostic.
-
-The controller and the consumer read the numbers through generated copies of
-this manifest, so a bump touches the manifest, the generated copies and the
-fixtures that carry the number. Exactly one check, in the default `smoke`
-suite, compares a built app against the manifest values; it is the check that
-a build carries the numbers this repository believes it does.
-
-## When a number moves
-
-For responses and envelopes, bump a number when the rules for reading change:
-a field removed, its type or meaning changed, or a new requirement placed on
-readers. An added field alone
-does not require a bump. An absent field means unknown, never false. An
-additive contract change may also carry a bump, recorded in
-[contract.json](contract.json).
-
-Enforcing an already specified invariant, including rejecting impossible
-producer combinations, does not change the valid-document contract. Such a
-repair needs controls for the rejected combinations and preserved valid inputs.
-A genuine change to field meaning or the rules a reader must apply still requires
-the corresponding version bump.
-
-The generated sentence above is the one place that states the current numbers;
-describe current behavior without repeating them in prose.
+<!-- BEGIN CONTRACT request -->
+The request root requires a string `contract` exactly equal to the running build identity. Missing, null, nonstring and foreign assertions refuse before selectors, augments, helpers or children. Unknown fields are refused after this gate. `runner`, aliases and required entitlements select one installed or bundled runner. Example: a foreign assertion plus an invalid runner selector reports the contract refusal and starts no client.
 
 ## Accepted input contract
-
-The request marker names the shapes and meanings described in
-[the specimen format](PolicyWitness.md#specimen-format), not a runner build.
-`schema_version` must be an integer-valued JSON number equal to the current
-request schema. Other values are rejected explicitly with the expected value;
-there is no older-request adapter or version negotiation. The controller checks
-before runner selection or augment resolution; the XPC service independently
-checks before worker or validator creation.
 
 The existing Swift `Codable` types remain the parser. Their `CodingKeys` also
 define the accepted fields of every request object: the root, policy, each
@@ -228,14 +97,13 @@ Known operation/filter pairs excluded from prediction still produce explicit
 Operation names passed to `sandbox_check` remain OS queries; the validator can
 report `unsupported_operation`. Query and attempt scopes need not match.
 
-Changes fall into four categories:
-
-| Change | Contract consequence |
-| --- | --- |
-| Replace the `probe_plan` array with an object, require a new field, remove an accepted spelling, or refuse an accepted combination | Callers must change their requests; use a new request contract value and reject unsupported values explicitly. |
-| Change what `action: "open_read"` does | A new action spelling or request contract is required; do not reinterpret the same request as a different operation. |
-| Add an optional field or action while preserving existing requests and meanings | The request value can stay stable. Older builds reject unknown fields and unsupported actions explicitly; acceptance by a newer build does not promise acceptance by an older one. |
-| Fix parameter transfer or another implementation defect to honor the documented request | Keep the request value; build provenance identifies the implementation and results can change. |
+Every shipped-source change changes a development contract. A clean annotated
+release binds all public surfaces to that release. Additions, removals, meaning
+changes and implementation fixes therefore require the specimen author to
+review and assert the selected build's identity. Keep the affected normative
+definition, verified examples and shape goldens current so the release stamp
+table identifies the surfaces to review. There is no separate request counter
+or compatibility exception for optional additions.
 
 [Runtime admission limits](LIMITS.md) are separate from this syntax and meaning.
 For example, a structurally valid plan can exceed the worker's step capacity;
@@ -253,42 +121,57 @@ promise identical sandbox observations across builds or macOS versions.
 The [developer lesson](REQUEST-GRAMMAR.md) works through the same specimens
 used by Swift decoding/validation tests and signed CLI/direct-XPC controls.
 
-### Structured request refusals
+<!-- END CONTRACT request -->
 
-Malformed JSON, request versions, selectors, augments, field structure and
-meaning, and capacity refusals report `bad_request`; the controller exits 1.
-Unreadable request files, unavailable runner installations and transport failures
-remain tool/execution failures. The controller exposes `data.request_failure`;
-when the runner refuses the request, this is an unchanged copy of the runner's
-`request_failure`. It is optional additive response/envelope information: absence
-means no structured diagnostic was supplied, never that execution succeeded.
+### SBPL, params, augments and imports
 
-The record has `code` and `path`, plus `expected_schema` for version-field
-refusals. `path` is an array of object keys and decimal array positions, with
-`[]` naming the root. It is `null` when the full location cannot be reported:
-at most eight components of at most 63 UTF-8 bytes each are echoed. Refused
-parameter keys are also withheld. Human-readable `error` is supplementary;
-consumers use the code and path without parsing that prose.
+<!-- BEGIN CONTRACT policy -->
+A policy supplies SBPL source and optional string parameters. Named augments are resolved by the controller in memory before submission; direct XPC refuses unresolved augments. Imports and hashes describe the held policy input and its closure. Example: a missing augment refuses before worker creation and leaves the input file unchanged.
+<!-- END CONTRACT policy -->
 
-| Codes | Meaning |
-| --- | --- |
-| `invalid_json` | The request could not be parsed as JSON. |
-| `unsupported_schema` | The request marker names another contract. |
-| `unknown_field`, `missing_field`, `missing_value`, `type_mismatch`, `invalid_value` | The named input is unknown, absent, null where required, mistyped or invalid. |
-| `unsupported_policy_format`, `missing_policy_source` | The policy's structural prerequisites are absent. |
-| `unknown_filter_kind`, `missing_filter_value`, `empty_operation` | A sandbox query cannot be formed from the request. |
-| `unsupported_attempt`, `relative_exec_target`, `duplicate_step_id` | The plan cannot be carried out with its submitted meaning. |
-| `invalid_termination_dependency` | A phase names an unknown source actor, itself, or a source whose final visit is not earlier than the dependent phase; the path identifies `phases`, its index, `after_termination`, `actor_id`. |
-| `inapplicable_field`, `invalid_capture_nonce` | A supplied field cannot take effect or satisfy its prerequisites. |
-| `conflicting_selector`, `unresolved_augments`, `augment_unavailable` | Controller-owned instructions conflict, remain unresolved at XPC, or name unavailable fragments. |
-| `admission_refused` | Capacity or native-string admission failed; `admission_failure` retains the field, actual count, maximum and applicable positions. |
+### Probe steps
 
-These refusals contain no steps or child-process observations. The XPC host
-itself may have launched to decode a request. Capacity checks precede meaning
-checks; diagnostics identify one refusal, not an exhaustive list of defects.
-Retain unfamiliar codes as unclassified refusals rather than guessing their cause.
+<!-- BEGIN CONTRACT probes -->
+Each probe step has a unique step ID, a sandbox query and an attempt. Supported attempt actions and filter kinds are closed vocabularies. Predictions are observations distinct from attempts and do not establish enforcement agreement. Example: file `open_write` opens with truncation; a same-shape foreign build assertion prevents that operation.
+<!-- END CONTRACT probes -->
+
+### Phases and actors
+
+<!-- BEGIN CONTRACT actors -->
+A specimen uses either the ordinary single-worker form or named actors and phases. Every sandboxed process is fresh; an actor applies its policy once. Phases name the active actor and preserve action order. Extension transfer and consumption use explicit owned records. Example: a phase naming a nonexistent actor is refused before children.
+<!-- END CONTRACT actors -->
+
+### Controller and helper envelopes
+
+<!-- BEGIN CONTRACT envelope -->
+Every envelope carries `kind`, `generated_at_unix_ms`, `build`, `result` and `data`. `build.contract` identifies its producer. Readers admit it before semantic fields. Nested helper envelopes have independent build context. Unsupported received bytes remain available without inferred claims. Example: a foreign helper envelope claiming compilation cannot supply a successful policy-check status.
+<!-- END CONTRACT envelope -->
+
+### Specimen dossier
+
+<!-- BEGIN CONTRACT dossier -->
+The dossier records the held request path, policy provenance, imports, selected runner, host context and observed binary inventory. Unknown observations remain unknown. The submitted serialization and fallback compiler use the same held input. Example: changing the source file after admission does not change the held submission.
+<!-- END CONTRACT dossier -->
+
+### Reply steps and comparison
+
+<!-- BEGIN CONTRACT steps -->
+A host reply carries `producer.contract`, `producer.describe` and `producer.commit`. Admission is exact before interpreting steps. Comparisons relate query and attempt observations; permission-shaped failures do not prove a sandbox cause. `query_first` requires the collection/release evidence chain. Example: a foreign host reply inside a current envelope yields one unsupported diagnostic without recovered comparisons.
+<!-- END CONTRACT steps -->
+
+### Disposition and lifecycle evidence
+
+<!-- BEGIN CONTRACT lifecycle -->
+Lifecycle claims depend on native progress, collection and termination observations. Unknown or contradictory observations withhold dependent claims. An exit request is not proof of reap; successful return alone is not an effect witness. Example: an unreaped worker remains unconfirmed even after a successful termination request.
+<!-- END CONTRACT lifecycle -->
+
+### Actor evidence and equipment
+
+<!-- BEGIN CONTRACT equipment -->
+Actor evidence binds observations to the named process and service-sealed equipment. The worker ABI identity remains independent of the public build identity. Worker entitlements are read from the selected binary. Example: an equipment hash mismatch prevents use of the claimed equipment.
 
 ## Actor evidence ownership
+
 
 Actor execution has no declaration reply or singular worker projection.
 `actors[]` owns each launch, subprocess, application assessment and equipment
@@ -352,7 +235,149 @@ A present dependent timestamp must not precede the source reap. Reached failed
 gates withhold activation, collection and release even if cleanup later
 observes reap.
 
+<!-- END CONTRACT equipment -->
+
+### Compiled-profile receipt
+
+<!-- BEGIN CONTRACT profile -->
+A compiled-profile receipt inherits its admitted host reply context. It has no independent schema marker. Status, nonce, worker binding, stage, byte count and digest must be consistent; a detached receipt grants no producer context. Example: a wrong nonce refuses the receipt even inside a current reply.
+<!-- END CONTRACT profile -->
+
+### Client capture and transport
+
+<!-- BEGIN CONTRACT transport -->
+Client capture and reservation messages carry a string `contract`. The capture and embedded host frame are independently admitted. The binary shape fingerprint guards decoding and is not a public compatibility identity. Reservation and submission failures never authorize replay after an uncertain invocation. Example: a foreign live peer behind a matching registry entry receives no specimen submission.
+<!-- END CONTRACT transport -->
+
+### Exit classification and structured refusals
+
+<!-- BEGIN CONTRACT refusals -->
+Request refusals use `bad_request`, bounded diagnostic paths and distinct missing/type/unsupported codes. Contract failures include `expected_contract`; foreign output is unsupported, malformed output remains malformed. Delivery failure takes precedence over interpreting a reply. Example: an old `schema_version`-only specimen reports missing `contract`, not an unknown-field error.
+### Structured request refusals
+
+Malformed JSON, request contract assertions, selectors, augments, field structure and
+meaning, and capacity refusals report `bad_request`; the controller exits 1.
+Unreadable request files, unavailable runner installations and transport failures
+remain tool/execution failures. The controller exposes `data.request_failure`;
+when the runner refuses the request, this is an unchanged copy of the runner's
+`request_failure`. It is optional additive response/envelope information: absence
+means no structured diagnostic was supplied, never that execution succeeded.
+
+The record has `code` and `path`, plus `expected_contract` for contract-field
+refusals. `path` is an array of object keys and decimal array positions, with
+`[]` naming the root. It is `null` when the full location cannot be reported:
+at most eight components of at most 63 UTF-8 bytes each are echoed. Refused
+parameter keys are also withheld. Human-readable `error` is supplementary;
+consumers use the code and path without parsing that prose.
+
+| Codes | Meaning |
+| --- | --- |
+| `invalid_json` | The request could not be parsed as JSON. |
+| `unsupported_contract` | The request marker names another contract. |
+| `unknown_field`, `missing_field`, `missing_value`, `type_mismatch`, `invalid_value` | The named input is unknown, absent, null where required, mistyped or invalid. |
+| `unsupported_policy_format`, `missing_policy_source` | The policy's structural prerequisites are absent. |
+| `unknown_filter_kind`, `missing_filter_value`, `empty_operation` | A sandbox query cannot be formed from the request. |
+| `unsupported_attempt`, `relative_exec_target`, `duplicate_step_id` | The plan cannot be carried out with its submitted meaning. |
+| `invalid_termination_dependency` | A phase names an unknown source actor, itself, or a source whose final visit is not earlier than the dependent phase; the path identifies `phases`, its index, `after_termination`, `actor_id`. |
+| `inapplicable_field`, `invalid_capture_nonce` | A supplied field cannot take effect or satisfy its prerequisites. |
+| `conflicting_selector`, `unresolved_augments`, `augment_unavailable` | Controller-owned instructions conflict, remain unresolved at XPC, or name unavailable fragments. |
+| `admission_refused` | Capacity or native-string admission failed; `admission_failure` retains the field, actual count, maximum and applicable positions. |
+
+These refusals contain no steps or child-process observations. The XPC host
+itself may have launched to decode a request. Capacity checks precede meaning
+checks; diagnostics identify one refusal, not an exhaustive list of defects.
+Retain unfamiliar codes as unclassified refusals rather than guessing their cause.
+
+<!-- END CONTRACT refusals -->
+
+### Runner installation and reservation
+
+<!-- BEGIN CONTRACT installation -->
+Install admits service `PWContract` before signing or launchd mutation and rechecks after signing. Registry and live-peer identities must both match for execution. Records without a contract remain listable, reconcilable and removable under the existing ownership rules. Example: an owned legacy record cannot execute but can be removed after observed absence.
+Unknown record, ownership, signature, entitlements and registry metadata survives unrelated writes and pending cleanup as opaque data. A pending cleanup entry contains a nested `runner` record, `cleanup_started_at_unix_ms`, and `observations`; the reader also accepts historical flattened entries. Publication requires a lossless read-back before atomic replacement. It never establishes execution compatibility or ownership. Known retired kind aliases project as their current kind.
+<!-- END CONTRACT installation -->
+
+<!-- BEGIN CONTRACT transport_encoding -->
+## Typed response transport
+
+
+[porcelain.json](porcelain.json) owns response and client-capture record
+structure. `generate_porcelain.py` emits the Swift writers and stored fields,
+Rust owned records/readers/JSON projection, and the structural tables read by a
+separately written Python reader. All three derive from the one schema, so
+they cannot disagree with each other about structure; none of them checks the
+schema itself. Request and reservation JSON and validator NDJSON retain their
+own boundaries. JSON reply fixtures are test inputs; production reply ingestion
+is binary and public JSON is projected from typed records.
+
+A frame is `PWP1`, the SHA-256 of the schema's wire identity, and one
+root value. Values have a one-byte kind, four-byte little-endian payload length,
+and payload. Kinds are boolean, signed integer, unsigned integer, UTF-8 text,
+bytes, record, list, ordered string map and a declared variant. Integers occupy
+eight bytes; readers enforce each field's native signedness and width. Digests
+travel as their bytes, and a reference from one equipment row to another is an
+unsigned index into the table it names. Enumerated values such as outcomes,
+states and reasons travel as text, as do the names a request chose (step,
+phase, actor, token, delivery and handle names); their vocabularies and
+associations are checked by semantic admission, not by the frame. Records
+begin with a two-byte identity and contain strictly increasing nonzero two-byte
+field tags followed by values. Lists/maps begin with a four-byte count; map keys
+are unique and sorted by UTF-8 bytes. Variants begin with a two-byte case tag.
+Optional fields are absent, never filled with fabricated defaults.
+
+Readers reject unsupported fingerprints, unknown tags/records/cases, missing
+required fields, incorrect kinds, invalid text, impossible lengths/counts,
+duplicates and trailing data. The [primitive reader](../controller/src/porcelain.rs)
+enforces byte and nesting budgets and charges decoded collection slots, strings
+and bytes against one logical-storage budget per frame. These are not physical
+peak-memory bounds. The client capture and the host reply it carries are
+separate frames, each read under its own budget. The host writer bounds a reply
+by the frame limit, while the client retains at most its smaller
+[reply allowance](LIMITS.md); a larger reply arrives truncated and is refused
+as `runner_reply_truncated`. The controller collects the client's complete
+output before applying its retention cap; reading is not streamed and has no
+receiver deadline of its own.
+
+The fingerprint covers every record identity, field tag, field name, kind and
+public presentation rule, so it is exact: any edit to those, including an added
+optional field or a changed null or byte spelling, produces a different
+fingerprint. Source locations, defaults and comments are outside it. There is no negotiation and no additive compatibility at this
+layer. The public build contract is checked during reservation before execution. The binary fingerprint remains a structural decoder check; it supplies no independent compatibility permission.
+
+The public envelope projects typed records. Byte fields are carried as bytes:
+retained host reply bytes, compiled-profile bytecode and rejected validator
+context become base64, and fresh-read content and every digest (SHA-256, code
+directory hash, worker identity) become lowercase hexadecimal, only at
+presentation. Unsupported or malformed input cannot become a semantic
+claim. Structural admission establishes the declared shape;
+named validators separately check native operations, lifecycle, phase order,
+actor setup/equipment, owned endings and extension custody before projecting
+claims. Conflicting observations remain publishable with dependent claims withheld.
+
+
+<!-- END CONTRACT transport_encoding -->
+
+## Maintaining the contract
+
+Edit schema-owned record declarations in `docs/porcelain.json` and regenerate
+with `tests/lib/python.sh docs/generate_porcelain.py`. Review shape changes,
+update their goldens and keep each normative definition and verified example
+current. No public schema counter is maintained. Run
+`tests/lib/python.sh docs/generate_contract_stamps.py`; `--check` verifies
+freshness without writing when annotated history is available, and reports the
+verification limit otherwise. Use `--check --require-history` for a complete
+derivation check. Prepare the table with `--release vX.Y.Z` before
+committing and tagging; on the tagged tree ordinary `--check` must reproduce it.
+
+The registry, provenance and other infrastructure format markers, validator
+NDJSON marker and worker ABI identity retain their separate purposes. Historical
+captures keep their bytes and are rejected if their producer is unsupported.
+Authored request templates carry no identity; the harness asserts the independently
+inspected candidate at submission. Constructed response tests supply an explicit
+producer context.
+
 ## Internal host/worker identity
+
 
 The XPC host and its bundle-local `pw-probe-runner` use an exact SHA-256
 source identity, generated by
@@ -366,7 +391,7 @@ owns the sequence of checks and signatures.
 
 The digest covers sorted repository-relative paths and file contents, each
 length-framed: all `.c`, `.h` and `.swift` files under
-`controller/tools/pw_probe_runner/` and `runner/Sources/`, plus the generator,
+`controller/tools/pw_probe_runner/` and `runner/Sources/`, plus the generator and its shared `source_identity.py` walker,
 `build.sh`, `meson.build`, `meson.options` and `runner/Package.swift`.
 Generated identity region bodies are excluded to avoid self-reference.
 Discovery includes new helpers automatically when they are ordinary files
@@ -399,75 +424,18 @@ The external runner XPC protocol, JSON request and public envelope, and binary
 response contracts retain their own boundaries. Validator diagnostic JSON keeps
 its own contract; it is consumed independently of this memory interface.
 
+
 ## Shape goldens
 
-Three goldens under `tests/fixtures/contract/` notice a change that nobody
-acknowledged, and two of them are the readers' allowlists.
-`response_shape.json` records, per object path, every key the runner reply
-can carry in public presentation and its JSON type, independently projected by
-the Python binary reader from the encoded documents of
-`replyShapeDocuments()` in `ContractVersionTests` (the field-complete reply
-fixture, its degraded reply, and production-shaped worker accounts resolved by
-the real builders); `runner_unit` compares the current collection with it.
-`envelope_shape.json` records the same for the controller envelope, from the
-field-complete `kind: "run"` envelope a Rust unit test renders with every
-optional object populated; the reply inside it is opaque to that golden because
-the reply golden owns it, and the nested helper envelopes it carries
-(`data.policy_check.envelope`) is
-compared with the helper's own emitted shape by its unit tests.
-The envelope shape check distinguishes added fields (no bump needed), removed
-or changed-type fields (bump first), and a manifest that already moved while
-its golden is behind. The reply shape check reports any difference from its
-golden without classifying it; whether the change needs a response-schema bump
-is the reviewer's decision under [the rule above](#when-a-number-moves). Either
-difference writes a candidate into the case's artifacts.
-Replacing the golden with the reviewed candidate is the acknowledgement, and
-that diff is what reviewers watch.
-
-`abi_layout.txt` is the compiled harvest of every size, offset and layout constant
-in the worker ABI header; `runner_abi_layout` compares the current harvest with
-it. Layout changes fail the case and require reviewing the compiled geometry
-candidate, with no ordinal bump. The source identity is checked separately and
-is excluded from the layout golden, so protocol-only edits create no layout
-acknowledgement chore.
-
-The two shape goldens are the allowlists `tests/lib/consumer.py` reads
-documents against: an unknown key at a recorded path is an error naming the
-path, a present key must carry the golden's type (a recorded `null` constrains
-nothing), and absence is allowed. A key appears in a golden because a producer
-emitted it, so a new field reaches the readers only through the fixture that
-records it. These response-shape checks in Python readers and golden comparisons
-are separate from the closed request decoding described above.
-
-For `data.policy_check`, the consumer validates the capture wrapper and applies
-helper admission to its nested `envelope`. Admission requires `kind: "sbpl_check"`,
-the envelope frame's exact current integer version and a nonempty string
-`result.normalized_outcome`. An admitted envelope must have its outcome copied
-into capture `status`, and its body is checked against the current helper shape.
-Rejected parsed output under `status: "invalid_reply"` is opaque retained
-evidence, including arrays and scalars; the current helper shape does not apply
-to it. Transport failures may carry a null envelope. There is no interpretation
-of historical helper schemas.
+Shape goldens record public keys and their JSON types. Producer controls collect
+the current shape and write a candidate when it differs. Review the difference,
+update the golden and keep its normative definition and example current.
+Missing or mistyped required fields still fail semantic admission. There is no
+separate version-bump classifier.
 
 ## Build stamp
 
-The app version is a coordinate, not a contract, and nobody edits it. build.sh
-derives it from git: `CFBundleShortVersionString` is the nearest `v*` tag,
-`CFBundleVersion` the commit count, and `PWBuildDescribe`/`PWBuildCommit` the
-exact source, with `-dirty` when the tree had uncommitted changes. The same four
-values reach the controller at compile time and appear as `build` in every
-envelope, and `policy-witness --version` prints them beside the contract
-versions. Cutting a release is one annotated tag; the stamp then moves on every
-commit for free, while the contract numbers move only under the rule above.
-`PW_VERSION` and `PW_BUILD_NUMBER` override the derived values for builds made
-outside a git checkout.
-
-## Changing a number
-
-Edit [contract.json](contract.json), run `tests/lib/python.sh docs/generate_contract.py`
-from the repository root, and commit the regenerated copies with the change
-that needs them. `git log -- docs/contract.json` is the history of contract
-changes. `source_drift` verifies the copies and exercises both generators;
-`runner_unit` and the Rust unit tests compare compiled JSON versions with the
-manifest. `runner_abi_layout` compares compiled C layout and identity with Swift
-and the generated identity, independently of the JSON version manifest.
+Every envelope carries `build.contract`, `build.describe`, `build.commit`,
+`build.version` and `build.number`. Contract is the exact admission identity;
+the remaining fields describe the build. Only an annotated release tag on a
+clean tree can produce a release contract.

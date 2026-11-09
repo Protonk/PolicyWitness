@@ -258,7 +258,7 @@ fn cmd_runner_install(args: &[OsString]) -> Result<i32, String> {
             bundle_path.display()
         )
     })?;
-    runner_manager::require_current_protocol(bundle_info.protocol_version)?;
+    runner_manager::require_current_contract(&bundle_info.contract)?;
     if bundle_info.package_type.as_deref() != Some("XPC!") {
         return Err(format!(
             "external runners require CFBundlePackageType=XPC! in Info.plist (got {:?})",
@@ -363,8 +363,8 @@ fn cmd_runner_install(args: &[OsString]) -> Result<i32, String> {
     }
     runner_manager::codesign_verify(&sign_target)?;
     let signed_info = read_bundle_info(&bundle_path)?;
-    runner_manager::require_current_protocol(signed_info.protocol_version)?;
-    if signed_info.protocol_version != bundle_info.protocol_version
+    runner_manager::require_current_contract(&signed_info.contract)?;
+    if signed_info.contract != bundle_info.contract
         || signed_info.bundle_id != bundle_info.bundle_id
         || signed_info.executable != bundle_info.executable
         || signed_info.package_type != bundle_info.package_type
@@ -409,8 +409,10 @@ fn cmd_runner_install(args: &[OsString]) -> Result<i32, String> {
         kind,
     );
     let record = RunnerRecord {
+        extra: Default::default(),
         state: RunnerState::Pending,
         ownership: Some(RunnerOwnership {
+            extra: Default::default(),
             plist_path: plist_path.to_string_lossy().into_owned(),
             launchd_domain: runner_manager::launchctl_target(scope)?,
             owner_uid: runner_manager::current_uid_string()?
@@ -424,7 +426,7 @@ fn cmd_runner_install(args: &[OsString]) -> Result<i32, String> {
         executable_path: executable_path.display().to_string(),
         bundle_id,
         scope,
-        protocol_version: signed_info.protocol_version,
+        contract: signed_info.contract,
         signature,
         entitlements,
         installed_at_unix_ms: now_unix_ms(),
@@ -529,7 +531,7 @@ const RUNNER_VERIFY_DEFAULT_TIMEOUT_MS: u64 = 5_000;
 /// The fixed verification specimen: an allow-all policy with no probe steps.
 fn verify_request() -> Value {
     json!({
-        "schema_version": crate::json_contract::REQUEST_SCHEMA_VERSION,
+        "contract": crate::json_contract::BUILD_CONTRACT,
         "specimen_id": "runner_verify",
         "run_kind": "runner_verify",
         "policy": {
@@ -623,7 +625,7 @@ fn cmd_runner_verify(args: &[OsString]) -> Result<i32, String> {
             return Err("external runners cannot be built-in kinds".to_string());
         }
     };
-    runner_manager::require_current_protocol(record.protocol_version)?;
+    runner_manager::require_current_contract(&record.contract)?;
     let (client, runner_result) =
         run_pw_runner_client(&record.service_name, &held, timeout_ms, &connection)?;
     let (runner_pid, outcome, exit_code, error) =
@@ -948,10 +950,7 @@ mod verify_tests {
     #[test]
     fn verification_request_is_the_fixed_allow_all_specimen() {
         let request = verify_request();
-        assert_eq!(
-            request["schema_version"],
-            crate::json_contract::REQUEST_SCHEMA_VERSION
-        );
+        assert_eq!(request["contract"], crate::json_contract::BUILD_CONTRACT);
         assert_eq!(request["probe_plan"], json!([]));
         assert_eq!(request["run_kind"], "runner_verify");
         assert_eq!(request["specimen_id"], "runner_verify");
@@ -979,7 +978,7 @@ mod verify_tests {
 
     #[test]
     fn verification_projects_only_current_replies() {
-        let current = i64::from(crate::json_contract::RESPONSE_SCHEMA_VERSION);
+        let current = crate::json_contract::BUILD_CONTRACT;
         let mut reply: PWRunnerRunResult =
             serde_json::from_value(crate::reply_fixtures::worker("finished", None)).unwrap();
         reply.pid = 77;
@@ -991,8 +990,8 @@ mod verify_tests {
             project_verify_typed_reply(Some(&reply)),
             (Some(77), "finished".into())
         );
-        for other in [current - 1, current + 1] {
-            reply.schema_version = other;
+        for other in ["test:previous", "test:next"] {
+            reply.producer.contract = other.into();
             assert_eq!(
                 project_verify_typed_reply(Some(&reply)),
                 (None, "unsupported_runner_response".into())

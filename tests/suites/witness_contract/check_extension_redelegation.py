@@ -25,7 +25,7 @@ import tempfile
 ROOT = Path(__file__).resolve().parents[3]
 sys.path.insert(0, str(ROOT / 'tests/lib'))
 from witness_capture import capture  # noqa: E402
-from contract import REQUEST_SCHEMA  # noqa: E402
+import build_context
 import extension_actors  # noqa: E402
 from worker_exit_witness import worker_exit_witness  # noqa: E402
 from consumer import validate  # noqa: E402
@@ -71,8 +71,8 @@ def read_outcome(runner, step_id, expected):
 
 def apparatus_complete(envelope, runner, spec, policies):
     """The witnessing assertions every run of this case must satisfy."""
-    assert validate(envelope) == [], validate(envelope)
-    assert check_record(envelope) == [], check_record(envelope)
+    assert validate(envelope, build_context.candidate_contract()) == [], validate(envelope, build_context.candidate_contract())
+    assert check_record(envelope, build_context.candidate_contract()) == [], check_record(envelope, build_context.candidate_contract())
     assert runner['execution_form'] == 'actors', runner.get('execution_form')
     witnessed, reason = worker_exit_witness(envelope)
     assert witnessed, reason
@@ -178,7 +178,7 @@ def with_control_reads(spec, control):
 
 def contrast_specs(target, control):
     """Narrow public contrasts: each omits or weakens one link of the principal shape."""
-    base = lambda name, **kw: with_control_reads(extension_actors.redelegation_specimen(target, schema_version=REQUEST_SCHEMA,
+    base = lambda name, **kw: with_control_reads(extension_actors.redelegation_specimen(target, contract=build_context.candidate_contract(),
                                                                                              specimen_id=name, **kw), control)
     specs = {}
     spec = base('contrast_omit_b_consume')
@@ -220,7 +220,7 @@ with scratch_directory() as scratch:
     report['target'] = {'path': str(target), 'sha256': sha256(CONTENTS), 'device': identity.st_dev, 'inode': identity.st_ino}
 
     # ---- Principal specimen.
-    spec = with_control_reads(extension_actors.redelegation_specimen(target, schema_version=REQUEST_SCHEMA), control)
+    spec = with_control_reads(extension_actors.redelegation_specimen(target, contract=build_context.candidate_contract()), control)
     envelope, runner = capture(pw, out, 'principal', spec, session_state=SESSION)
     pids = apparatus_complete(envelope, runner, spec, {'B': extension_actors.B_POLICY, 'C': extension_actors.C_POLICY})
     principal = chain(runner, pids)
@@ -238,7 +238,7 @@ with scratch_directory() as scratch:
     # ---- Positive calibration: a simple supported allowance must exercise the
     # real issue, transfer, consume and fresh-access path on this host.
     calibration_spec = {
-        'schema_version': REQUEST_SCHEMA, 'specimen_id': 'extension_calibration',
+        'contract': build_context.candidate_contract(), 'specimen_id': 'extension_calibration',
         'actors': [extension_actors.unapplied_actor('A'), extension_actors.apply_actor('B', extension_actors.C_POLICY)],
         'phases': [
             {'phase_id': 'b_before', 'actor_id': 'B', 'actions': [extension_actors.read_probe('b_read_before', target)]},

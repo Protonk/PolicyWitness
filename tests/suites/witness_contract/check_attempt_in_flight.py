@@ -39,6 +39,7 @@ import sys
 import tempfile
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[2] / 'lib'))
+import build_context
 import lifecycle_contract as C
 from lifecycle_contract import HOST_SENTINEL_DEADLINE
 import lifecycle_oracle
@@ -80,7 +81,7 @@ def read_step(step_id, target):
 
 
 def specimen(specimen_id, plan, overrides):
-    return {'schema_version': 6, 'specimen_id': specimen_id, 'policy': dict(POLICY),
+    return {'contract': build_context.candidate_contract(), 'specimen_id': specimen_id, 'policy': dict(POLICY),
             'probe_plan': plan, '_test_overrides': dict(overrides)}
 
 
@@ -277,10 +278,10 @@ def check_wave2(name, envelope, expected_summaries, artifacts):
     The oracle reads the record under the contract manifest's exact version;
     another version is its own finding, not a behavioral failure.
     """
-    findings = lifecycle_oracle.check_record(envelope)
+    findings = lifecycle_oracle.check_record(envelope, build_context.candidate_contract())
     (artifacts / 'oracle_findings.json').write_text(json.dumps(findings, indent=2) + '\n', encoding='utf-8')
     assert not findings, f'{name}: oracle findings {findings}'
-    view = read_lifecycle(envelope)
+    view = read_lifecycle(envelope, build_context.candidate_contract())
     assert view['reporting'] == 'reported', (name, view['reporting'], view['malformed'])
     assert summaries(view) == expected_summaries, (name, summaries(view), expected_summaries)
     return view

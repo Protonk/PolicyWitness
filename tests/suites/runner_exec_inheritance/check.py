@@ -9,6 +9,8 @@ import sys
 import tempfile
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[2] / 'fixtures' / 'exec'))
+sys.path.insert(0, str(Path(__file__).resolve().parents[2] / 'lib'))
+import build_context
 from inspection import ENV_KEY, parse_report, assert_clean
 
 
@@ -22,7 +24,7 @@ def run_cli(pw, helper, out):
         'attempt': {'kind': 'exec', 'action': 'spawn', 'target': helper,
                     'args': ['--inspect', f'{nonce}-{i}', '--read-fd', str(canary_fd)]},
     } for i in range(3)]
-    specimen = {'schema_version': 6, 'specimen_id': 'exec_inheritance',
+    specimen = {'contract': build_context.candidate_contract(), 'specimen_id': 'exec_inheritance',
                 'policy': {'format': 'sbpl', 'sbpl_source': '(version 1)(allow default)'},
                 'probe_plan': plan}
     request = out / 'specimen.json'

@@ -6,9 +6,9 @@ and invoked by the BYOXPC runner suite.
 ## Invariants
 
 - Runs the CLI against small fixtures using the runner selected by the suite.
-- The specimen checks compare the built app's response schema with
-  `docs/contract.json`, its worker identity with the generated source identity,
-  and the envelope build stamp with the app's Info.plist.
+- The specimen checks compare the public contract across the app plist,
+  `--version`, envelope, reply and capture, keeping the independent worker ABI
+  identity comparison.
 - `runner_caller_auth` first exercises the selected, unmodified app and inspects
   its signing arrangement, then uses its real client in disposable, signed app
   copies under `/private/tmp`. A same-team client with a disallowed identifier
@@ -23,7 +23,7 @@ and invoked by the BYOXPC runner suite.
 - Specimen smoke scripts exit 0 and produce `result.ok=true`.
 - Caller-auth success requires both positive file effects and bounded negative
   responses with marker bytes preserved through fixture process cleanup.
-  Rejected clients retain protocol-2 acquisition errors until the bounded
+  Rejected clients retain client-capture acquisition errors until the bounded
   overall deadline, with no submission or host reply. Native rejection-route
   diagnostics must identify the target service; missing-service lookup errors,
   truncated diagnostics and a timeout without those observations remain
@@ -61,8 +61,9 @@ matching Developer ID signing identity. The ordinary specimen checks alone are:
 tests/run.sh --case smoke/specimen_file_read_deny --case smoke/specimen_file_read_deny_standard
 ```
 
-The caller-auth checker also requires the current response schema from both
-successful XPC replies and real client-generated XPC errors. No returned step
-carries a signal or drift key; rejected calls retain empty steps and absent
-subprocess metadata alongside the existing authorization and file-effect
-controls.
+The caller-auth checker requires the expected producer contract on successful
+XPC replies and the client capture’s matching contract on both success and
+rejection. Rejected calls retain acquisition errors with no submission or host
+result; they do not manufacture host steps or subprocess metadata. Successful
+reply steps carry no signal or drift key. Authorization diagnostics and
+independent file effects are checked separately.

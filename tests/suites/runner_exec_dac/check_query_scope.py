@@ -12,6 +12,7 @@ import sys
 import tempfile
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[2] / 'lib'))
+import build_context
 from run_capture import RunCapture
 import consumer
 
@@ -88,15 +89,15 @@ def main():
                               'sandbox_check': {'operation': 'process-exec*',
                                                 'filter': {'kind': 'path', 'value': str(helper)}},
                               'attempt': {'kind': 'exec', 'action': 'spawn', 'target': str(other)}})
-            spec = {'schema_version': 6, 'specimen_id': 'native-exec-' + name,
+            spec = {'contract': build_context.candidate_contract(), 'specimen_id': 'native-exec-' + name,
                     'policy': {'format': 'sbpl', 'sbpl_source': '(version 1)' + policy},
                     'probe_plan': steps}
             with RunCapture(pw, out / name, spec, cli_args=[]) as run:
                 rc = run.wait(timeout=30)
                 envelope = run.load_json()
             runner = envelope['data']['runner_result']
-            assert not consumer.validate(envelope), consumer.validate(envelope)
-            consumer_evidence[name] = consumer.steps(envelope)
+            assert not consumer.validate(envelope, build_context.candidate_contract()), consumer.validate(envelope, build_context.candidate_contract())
+            consumer_evidence[name] = consumer.steps(envelope, build_context.candidate_contract())
             assert rc == 0 and envelope['result']['ok'] is True, (name, envelope)
             assert runner['normalized_outcome'] == 'finished'
             assert runner.get('test_overrides') is None

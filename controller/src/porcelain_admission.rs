@@ -1287,12 +1287,6 @@ fn policy_read_issues(
 }
 
 pub(crate) fn admission_problem(reply: &PWRunnerRunResult) -> Option<String> {
-    if reply.schema_version != i64::from(crate::json_contract::RESPONSE_SCHEMA_VERSION) {
-        return Some(format!(
-            "unsupported response schema {}",
-            reply.schema_version
-        ));
-    }
     if let Some(problem) = reply_geometry(reply) {
         return Some(problem.into());
     }
@@ -1303,7 +1297,7 @@ pub(crate) fn admission_problem(reply: &PWRunnerRunResult) -> Option<String> {
             .flatten()
             .filter_map(|a| a.compiled_profile.as_ref()),
     ) {
-        if c.schema_version != 2 || !matches!(c.status.as_str(), "captured" | "unavailable") {
+        if !matches!(c.status.as_str(), "captured" | "unavailable") {
             return Some("unsupported or malformed compiled_profile".into());
         }
         if (c.status == "captured"
@@ -1807,11 +1801,10 @@ mod tests {
     // Authored public fixtures enter Deserialize only in these controls. Runtime
     // admission receives generated binary-decoded records, never this adapter.
     pub(super) fn ordinary() -> PWRunnerRunResult {
-        let mut reply: PWRunnerRunResult = serde_json::from_str(include_str!(
-            "../../tests/fixtures/contract/ordinary_phase_reply.json"
-        ))
-        .expect("authored typed ordinary fixture");
-        reply.schema_version = i64::from(crate::json_contract::RESPONSE_SCHEMA_VERSION);
+        let mut reply: PWRunnerRunResult =
+            serde_json::from_value(crate::reply_fixtures::ordinary_template())
+                .expect("authored typed ordinary fixture");
+        reply.producer = crate::porcelain_records::PWProducer::current();
         reply
     }
     pub(super) fn actors() -> PWRunnerRunResult {
@@ -2563,10 +2556,7 @@ mod tests {
     }
     #[test]
     fn typed_shared_evidence_type_corpus() {
-        let baseline: serde_json::Value = serde_json::from_str(include_str!(
-            "../../tests/fixtures/contract/ordinary_phase_reply.json"
-        ))
-        .unwrap();
+        let baseline = crate::reply_fixtures::ordinary_template();
         let rows: Vec<serde_json::Value> = serde_json::from_str(include_str!(
             "../../tests/fixtures/contract/evidence_types.json"
         ))
@@ -2721,7 +2711,6 @@ mod tests {
     #[test]
     fn typed_profile_context_gate_includes_actor_captures_and_degradation() {
         let capture = CompiledProfileCapture {
-            schema_version: 2,
             status: "captured".into(),
             reason: None,
             worker_pid: 7001,
@@ -2751,7 +2740,7 @@ mod tests {
                 });
             }
             assert!(admission_problem(&reply).is_none());
-            for mutation in ["stage", "version", "unavailable_context"] {
+            for mutation in ["stage", "unavailable_context"] {
                 let mut changed = reply.clone();
                 let c = changed.actors.as_mut().unwrap()[0]
                     .compiled_profile
@@ -2759,7 +2748,6 @@ mod tests {
                     .unwrap();
                 match mutation {
                     "stage" => c.capture_stage = None,
-                    "version" => c.schema_version = 1,
                     "unavailable_context" => c.status = "unavailable".into(),
                     _ => unreachable!(),
                 }
@@ -3290,6 +3278,16 @@ mod tests {
             assert_eq!(d.disposition_issues.len(), 1);
             assert_eq!(d.disposition_issues[0].kind, "reply_capacity");
             assert_eq!(r, before);
+        }
+    }
+}
+
+impl crate::porcelain_records::PWProducer {
+    pub(crate) fn current() -> Self {
+        Self {
+            contract: crate::json_contract::BUILD_CONTRACT.into(),
+            describe: option_env!("PW_BUILD_DESCRIBE").unwrap_or("unknown").into(),
+            commit: option_env!("PW_BUILD_COMMIT").unwrap_or("unknown").into(),
         }
     }
 }

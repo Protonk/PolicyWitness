@@ -177,10 +177,10 @@ func runClientSessionControls() throws -> Int {
             }
         }
         let f = SessionFixture(); f.start()
-        f.connections[0].reservedReply?(Data("{\"protocol_version\":1,\"unknown_future_payload\":true}".utf8))
+        f.connections[0].reservedReply?(Data("{\"contract\":\"test:foreign\",\"unknown_future_payload\":true}".utf8))
         try check(f.frame.error?.reason == "unsupported_protocol" && f.connections[0].submissions == 0, "version admitted before inner shape")
         let bad = SessionFixture(); bad.start()
-        bad.connections[0].reservedReply?(Data("{\"protocol_version\":\(PWContract.runnerProtocol),\"unknown_future_payload\":true}".utf8))
+        bad.connections[0].reservedReply?(Data("{\"contract\":\"\(PWBuildContext.contract)\",\"unknown_future_payload\":true}".utf8))
         try check(bad.frame.error?.reason == "invalid_control", "known version requires valid body")
         let pid = SessionFixture(); pid.start()
         let overRange = PWRunnerControlReply(status: "granted", attempt_id: pid.connections[0].reservationRequest!.attempt_id,

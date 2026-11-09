@@ -189,12 +189,17 @@ rebuilt never supplies them.
 
 ## Release procedure
 
-Run commands from the repository root, outside an automation sandbox, at a clean
-checkout of the release commit. Tag first: `build.sh` derives the version it
-stamps from the nearest `v*` tag, so a build made before tagging is stamped with
-the previous version. `tests/lib/release_preflight.py` refuses a release from an
-untagged or dirty tree, from a lightweight tag, when the remote already holds a
-different tag of that name, or when `dist/archive/<tag>/` already exists.
+Run commands from the repository root, outside an automation sandbox. First
+render and review the pending surface stamps, then include them with the
+complete reviewed release change in one commit and create the annotated tag.
+For the v0.3.6 cutover, that commit includes the implementation, new generators,
+tests and documentation together. Build from that clean tagged tree: only this state emits
+`release:vX.Y.Z`; an untagged or dirty build emits a development contract.
+`tests/lib/release_preflight.py` refuses an untagged or dirty tree, a lightweight
+or ambiguous release tag, scoped bytes that differ from the tag even when the
+Git index hides the edit, stale surface tables or remaining `unreleased` rows,
+a remote holding a different tag of that name, or an existing
+`dist/archive/<tag>/`.
 It also refuses added or rewritten sites in the committed
 [prose baseline](../tests/fixtures/docs/prose_baseline.json) and added or rewritten
 entries in the committed [build baseline](../tests/fixtures/docs/build_baseline.json),
@@ -202,11 +207,19 @@ compared with the nearest preceding annotated release tag. A preceding release
 without a baseline is recorded as such; `--report` turns growth refusals into warnings.
 
 ```sh
-git tag -a v0.2.4 -m "PolicyWitness 0.2.4"
+tests/lib/python.sh docs/generate_contract_stamps.py --release v0.3.6
+git status --short
+git diff
+# After checking that the tree contains only the intended release change:
+git add -A
+git diff --cached
+git commit -m "Adopt release-stamped contracts for v0.3.6"
+git tag -a v0.3.6 -m "PolicyWitness 0.3.6"
+tests/lib/python.sh docs/generate_contract_stamps.py --check
 make release NOTARY_KEYCHAIN_PROFILE=entitlement-jail IDENTITY='Developer ID Application: YOUR NAME (TEAMID)' RELEASE_NOTES=/path/to/notes.md
 # transcribe the measured footprint rows from the archive (below), then:
-git commit tests/RETAINED.json docs/footprint.json docs/FOOTPRINT.md -m "Retain the 0.2.4 release evidence"
-make publish VERSION=0.2.4
+git commit tests/RETAINED.json docs/footprint.json docs/FOOTPRINT.md -m "Retain the 0.3.6 release evidence"
+make publish VERSION=0.3.6
 ```
 
 `make release` runs the preflight, then the `make notarize` chain below (a
@@ -505,8 +518,9 @@ recorded output and stop; retrying that individual command is a manual decision.
 
 `bash tests/accept-release.sh PATH/TO/PolicyWitness.zip` requires an explicit ZIP.
 It records the hash, checks archive layout, and extracts with `ditto` under
-`/private/tmp`. It checks the extracted app's signatures and manifest, validates
-its staple, assesses Gatekeeper, and runs the default battery against the
+`/private/tmp`. It checks the extracted app's signatures and manifest, requires
+that its plist and extracted `--version` report `release:<tag>` for its version,
+validates its staple, assesses Gatekeeper, and runs the default battery against the
 extracted app through `tests/run.sh` with no selectors, the one test interface
 under its ordinary selection and accounting. The battery must pass with no
 skipped or unrun cases, no harness errors and an unchanged app, and its two

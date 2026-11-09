@@ -1,5 +1,4 @@
 {
-  "schema_version": 30,
   "specimen_id": "reply-\"\u00e9\"",
   "run_kind": "unit",
   "rc": 1,
@@ -10,7 +9,6 @@
   "policy_format": "sbpl",
   "policy_sha256": "abababababababababababababababababababababababababababababababab",
   "compiled_profile": {
-    "schema_version": 2,
     "status": "captured",
     "producer": "worker",
     "capture_stage": "before_apply",
@@ -280,8 +278,7 @@
     "path": [
       "policy",
       "format"
-    ],
-    "expected_schema": 4
+    ]
   },
   "test_overrides": {
     "worker_executable_path": "/constructed/worker",

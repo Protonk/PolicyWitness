@@ -1,23 +1,29 @@
 //! The envelope frame: the outer JSON object every controller-family binary
-//! prints (`kind`, `schema_version`, `generated_at_unix_ms`, `build`, `result`,
+//! prints (`kind`, `generated_at_unix_ms`, `build`, `result`,
 //! `data`). `policy-witness` uses this file as a module; `sbpl-check`
 //! includes it by `#[path]`, so one frame
-//! and one version (`SCHEMA_VERSION`) cover the family. The frame and generated
+//! and one build contract cover the family. The frame and generated
 //! record projections emit deterministic fields without a semantic JSON tree.
 
 use serde::Serialize;
+
+#[cfg(not(test))]
+pub const BUILD_CONTRACT: &str = match option_env!("PW_BUILD_CONTRACT") {
+    Some(value) => {
+        if value.is_empty() {
+            "unbound"
+        } else {
+            value
+        }
+    }
+    None => "unbound",
+};
+#[cfg(test)]
+pub const BUILD_CONTRACT: &str = "test:policy-witness";
+
+#[cfg(test)]
 use serde_json::Value;
 use std::time::{SystemTime, UNIX_EPOCH};
-
-// BEGIN GENERATED CONTRACT VERSIONS (docs/contract.json via docs/generate_contract.py)
-pub const SCHEMA_VERSION: u32 = 14;
-/// The accepted request contract, independent of implementation revisions.
-pub const REQUEST_SCHEMA_VERSION: u32 = 6;
-/// The one runner response schema this controller reads; any other version is refused.
-pub const RESPONSE_SCHEMA_VERSION: u32 = 30;
-/// Required reservation RPC and client capture protocol.
-pub const RUNNER_PROTOCOL_VERSION: u32 = 4;
-// END GENERATED CONTRACT VERSIONS
 
 #[derive(Serialize, Clone)]
 pub struct JsonResult {
@@ -55,30 +61,24 @@ impl JsonResult {
 
 /// The build stamp says which code produced an envelope. build.sh derives it
 /// from git (nearest `v*` tag, commit count, `git describe --dirty`, commit
-/// hash) and passes it to cargo; a plain `cargo build` reads "unknown". It is a
-/// coordinate, not a contract: the contract numbers say how to read the JSON.
+/// hash) and passes it to cargo beside the exact build contract. A plain
+/// `cargo build` has unknown provenance and an unbound contract.
 #[derive(Serialize)]
 struct BuildStamp {
     commit: &'static str,
+    contract: &'static str,
     describe: &'static str,
     number: &'static str,
     version: &'static str,
 }
 fn build_stamp() -> BuildStamp {
     BuildStamp {
+        contract: BUILD_CONTRACT.into(),
         commit: option_env!("PW_BUILD_COMMIT").unwrap_or("unknown"),
         describe: option_env!("PW_BUILD_DESCRIBE").unwrap_or("unknown"),
         number: option_env!("PW_BUILD_NUMBER").unwrap_or("unknown"),
         version: option_env!("PW_BUILD_VERSION").unwrap_or("unknown"),
     }
-}
-
-/// The wire contract versions this build was made with, embedded from
-/// docs/contract.json at compile time for `policy-witness --version`.
-pub fn contract_versions() -> Value {
-    let manifest: Value =
-        serde_json::from_str(include_str!("../../docs/contract.json")).unwrap_or(Value::Null);
-    manifest.get("versions").cloned().unwrap_or(Value::Null)
 }
 
 fn now_unix_ms() -> u64 {
@@ -96,7 +96,6 @@ struct Envelope<'a, T: Serialize> {
     generated_at_unix_ms: u64,
     kind: &'a str,
     result: JsonResult,
-    schema_version: u32,
 }
 
 pub fn render_envelope<T: Serialize>(
@@ -110,7 +109,6 @@ pub fn render_envelope<T: Serialize>(
         generated_at_unix_ms: now_unix_ms(),
         kind,
         result,
-        schema_version: SCHEMA_VERSION,
     };
     let text = serde_json::to_string_pretty(&envelope)
         .map_err(|e| format!("failed to encode JSON: {e}"))?;
@@ -185,7 +183,6 @@ mod tests {
             "\"generated_at_unix_ms\"",
             "\"kind\"",
             "\"result\"",
-            "\"schema_version\"",
         ];
         let mut last = 0usize;
         for key in keys {
@@ -208,7 +205,7 @@ mod tests {
         );
 
         let parsed: serde_json::Value = serde_json::from_str(&text).expect("parse");
-        assert_eq!(parsed["schema_version"], SCHEMA_VERSION);
+        assert_eq!(parsed["build"]["contract"], BUILD_CONTRACT);
     }
 }
 
@@ -228,15 +225,12 @@ mod build_stamp_tests {
     }
 
     #[test]
-    fn embedded_contract_versions_match_the_manifest_keys() {
-        let versions = contract_versions();
-        for key in ["request_schema", "response_schema", "controller_envelope"] {
-            assert!(versions[key].is_u64(), "contract.{key} must be an integer");
-        }
-        assert_eq!(
-            versions["controller_envelope"].as_u64(),
-            Some(u64::from(SCHEMA_VERSION))
-        );
+    fn public_identity_is_in_the_build_frame() {
+        let value: Value =
+            serde_json::from_str(&render_envelope("version", tests_result_ok(), &()).unwrap())
+                .unwrap();
+        assert_eq!(value["build"]["contract"], BUILD_CONTRACT);
+        assert!(value.get("schema_version").is_none());
     }
 
     fn tests_result_ok() -> JsonResult {
@@ -250,22 +244,5 @@ mod build_stamp_tests {
             stderr: None,
             stdout: None,
         }
-    }
-}
-
-#[cfg(test)]
-mod contract_manifest {
-    // docs/contract.json owns the envelope version; the generated constant
-    // above is text, so compare the compiled value with the manifest.
-    #[test]
-    fn envelope_schema_version_matches_contract_manifest() {
-        let manifest: serde_json::Value =
-            serde_json::from_str(include_str!("../../docs/contract.json"))
-                .expect("docs/contract.json parses");
-        assert_eq!(
-            manifest["versions"]["controller_envelope"].as_u64(),
-            Some(u64::from(super::SCHEMA_VERSION)),
-            "SCHEMA_VERSION disagrees with docs/contract.json controller_envelope"
-        );
     }
 }

@@ -8,6 +8,7 @@ import sys
 import tempfile
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[2] / 'lib'))
+import build_context
 from run_capture import RunCapture
 
 
@@ -20,7 +21,7 @@ def main():
         for path in (allowed, denied):
             path.write_bytes(secrets.token_bytes(32))
         spec = {
-            "schema_version": 6,
+            'contract': build_context.candidate_contract(),
             "specimen_id": "live_worker_identity",
             "policy": {"format": "sbpl", "sbpl_source":
                        '(version 1)(allow default)(deny file-read-data (literal (param "TARGET")))',

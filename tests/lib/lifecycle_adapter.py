@@ -7,7 +7,7 @@ calls no production code; tests/lib/lifecycle_oracle.py does the checking.
 `read_lifecycle(envelope)` returns:
 
     {'reporting': 'reported' | 'not_reported' | 'no_worker' | 'no_runner_reply' | 'malformed',
-     'schema_version': int | None,
+     'contract': str | None,
      'record': the raw record or None,
      'questions': {name: {'state', 'answer'?, 'value'?, 'reason'?, 'issue'?, 'basis', 'recognized', 'raw'}},
      'steps': [{'index', 'step_id', 'slot', 'attempt_support', 'questions': {...}}],
@@ -68,9 +68,9 @@ def _claim(name, raw, malformed, where):
     return claim
 
 
-def read_lifecycle(envelope):
-    require_supported(envelope)
-    view = {'reporting': None, 'schema_version': None, 'record': None, 'questions': {}, 'steps': [],
+def read_lifecycle(envelope, expected_contract):
+    require_supported(envelope, expected_contract)
+    view = {'reporting': None, 'contract': None, 'record': None, 'questions': {}, 'steps': [],
             'issues': [], 'projections': {}, 'malformed': []}
     data = envelope.get('data') if isinstance(envelope, dict) else None
     runner = data.get('runner_result') if isinstance(data, dict) else None
@@ -81,7 +81,7 @@ def read_lifecycle(envelope):
     if not isinstance(runner, dict):
         view['reporting'] = 'no_runner_reply'
         return view
-    view['schema_version'] = runner.get('schema_version')
+    view['contract'] = (runner.get('producer') or {}).get('contract')
     view['projections']['error'] = runner.get('error')
     sub = runner.get('runner_subprocess')
     steps = ordered_actions(runner)

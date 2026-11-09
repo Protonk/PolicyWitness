@@ -154,10 +154,10 @@ removes scratch on success or failure. Test correctness does not depend on
 Desktop/Documents privacy consent.
 
 The shared checker requires the six-field comparison record, submitted attempt
-kind/action and host path provenance on every step at the current response
-schema. `checker_controls` exercises the consumer directly: a synthetic
-current-version envelope passes; another or malformed version is reported as
-`unsupported` with no downstream errors; an unknown key at a recorded path and
+kind/action and host path provenance on every step of an admitted host reply.
+`checker_controls` exercises the consumer directly: an envelope with the
+expected producer contracts passes; a foreign string assertion is `unsupported`,
+while a missing or non-string assertion is `malformed`, without downstream errors; an unknown key at a recorded path and
 a present key of another type are rejected under each shape golden
 (`tests/fixtures/contract/envelope_shape.json`, `response_shape.json`);
 each limitation outside the vocabulary, a record that contradicts its raw
@@ -165,7 +165,7 @@ fields and a `query_first` claim without its chain are rejected; a missing
 service produces a client capture with no invocation or host reply; and the ordering of a successful unlink against
 its query is read from `order` alone.
 
-Constructed protocol-2 client controls independently check version-first
+Constructed client controls independently check contract-first
 admission, ordered reservation attempts, bounded observations, exact base64
 host bytes, invocation without replay, and transport/host separation. Rejected
 or incomplete client frames project unknown submission. These controls author
@@ -181,7 +181,7 @@ Constructed policy-check captures cover the same current helper admission gate
 as the controller. Rejected parsed payloads remain unchanged and opaque under
 `invalid_reply`; wrapper fields still receive shape checks. Admitted helper
 envelopes receive current-shape checks and must agree with the capture's copied
-outcome, including unfamiliar outcomes. Previous versions and malformed replies
+outcome, including unfamiliar outcomes. Foreign producer contracts and malformed replies
 are constructed inputs, without historical helper fixtures or schema readers.
 
 Lifecycle projections select only execution diagnostic fields.

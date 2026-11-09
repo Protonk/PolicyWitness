@@ -34,15 +34,13 @@ func runCompiledProfileCaptureTests(_ tk: TestKit) {
                     done: done, exitCode: exit, termSignal: signal, source: source, params: params, nonce: nonce)
             }
         }
-        tk.run("context contract is checked before binary reporting") {
+        tk.run("capture status, producer and stage are checked before binary reporting") {
             try read(fixture()).validateForReporting()
             try read(fixture(), done: false).validateForReporting()
-            var future = read(fixture()); future.schema_version = 7
-            try expectThrows { try future.validateForReporting() }
-            future = read(fixture()); future.status = "future"
+            var future = read(fixture()); future.status = "future"
             try expectThrows { try future.validateForReporting() }
             var captured = read(fixture())
-            try expectEqual(captured.schema_version, 2)
+            try expectEqual(captured.status, "captured")
             try expectEqual(captured.producer, "worker")
             try expectEqual(captured.capture_stage, "before_apply")
             captured.capture_stage = "after_apply"

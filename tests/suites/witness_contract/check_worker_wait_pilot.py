@@ -73,6 +73,8 @@ STAGED_ROLES = {HOST: 'host', SERVICE_MACOS / 'pw-probe-runner': 'worker', SERVI
 WORKERS = dict(stamps='pw-probe-runner-stamps', plain='pw-probe-runner-plain')
 
 
+import build_context
+
 def load_module(name, path):
     spec = importlib.util.spec_from_file_location(name, path)
     module = importlib.util.module_from_spec(spec)
@@ -253,7 +255,7 @@ def cell_request(cell, targets):
                 dict(form='ordinary', phases=[dict(eligible=0)],
                      zero_eligible_form='static prediction-unavailable pair iokit-open-service + iokit_registry_entry_class; attempts match O64'))
     if cell == 'O2P':
-        request = dict(schema_version=6, specimen_id='', policy=dict(format='sbpl', sbpl_source='(version 1)(allow default)'),
+        request = dict(contract=build_context.candidate_contract(), specimen_id='', policy=dict(format='sbpl', sbpl_source='(version 1)(allow default)'),
                        phases=[dict(phase_id=f'p{p}', actions=[step(path, 'open_read', f'p{p}s{i}') for i, path in enumerate(files[8 * p:8 * p + 8])])
                                for p in range(2)])
         return request, dict(form='ordinary', phases=[dict(eligible=8), dict(eligible=8)])
@@ -541,8 +543,8 @@ def validate(directory, receipt):
         envelope = json.loads((directory / 'run.json').read_text())
         runner = envelope['data']['runner_result']
         if runner['normalized_outcome'] != 'finished': problems.append('outcome_' + str(runner['normalized_outcome']))
-        details['consumer'] = consumer.validate(envelope)
-        details['lifecycle_oracle'] = check_record(envelope)
+        details['consumer'] = consumer.validate(envelope, build_context.candidate_contract())
+        details['lifecycle_oracle'] = check_record(envelope, build_context.candidate_contract())
         if details['consumer']: problems.append('consumer')
         if details['lifecycle_oracle']: problems.append('lifecycle_oracle')
         if runner.get('test_overrides') is not None: problems.append('test_overrides_present')

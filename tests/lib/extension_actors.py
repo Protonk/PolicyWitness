@@ -56,12 +56,12 @@ def unapplied_actor(actor_id):
     return {'actor_id': actor_id, 'equipment': 'unentitled', 'sandbox': {'mode': 'unapplied'}}
 
 
-def redelegation_specimen(target, *, schema_version, specimen_id='extension_redelegation',
+def redelegation_specimen(target, *, contract, specimen_id='extension_redelegation',
                           b_policy=B_POLICY, c_policy=C_POLICY):
     """The plan's principal request with the test-owned target substituted."""
     target = str(target)
     return {
-        'schema_version': schema_version, 'specimen_id': specimen_id,
+        'contract': contract, 'specimen_id': specimen_id,
         'actors': [unapplied_actor('A'), apply_actor('B', b_policy), apply_actor('C', c_policy)],
         'phases': [
             {'phase_id': 'b_before', 'actor_id': 'B', 'actions': [read_probe('b_read_before', target)]},

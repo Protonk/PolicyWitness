@@ -36,12 +36,22 @@ Set a convenience variable, adjusting the path to wherever `PolicyWitness.app` i
 PW="/Applications/PolicyWitness.app/Contents/MacOS/policy-witness"
 ```
 
+Read the installed build’s contract:
+
+```sh
+"$PW" --version
+```
+
+Copy `build.contract` from that output and replace `BUILD_CONTRACT` in the
+JSON below before creating the specimen file. The placeholder itself is not an
+accepted contract.
+
 Create a specimen:
 
 ```sh
 cat > /tmp/pw_specimen_file_read_deny.json <<'JSON'
 {
-  "schema_version": 6,
+  "contract": "BUILD_CONTRACT",
   "specimen_id": "file_read_deny",
   "policy": {
     "format": "sbpl",
@@ -156,11 +166,12 @@ In general, no. Using old releases of PolicyWitness, including and especially co
 
 ## Specimen format
 
+<!-- BEGIN CONTRACT request_form -->
 ### Top-level shape
 
 Top-level fields:
 
-- `schema_version`: integer-valued number equal to the current request schema
+- `contract`: string exactly equal to the current build contract
 - `specimen_id`: string
 - `run_kind`: string (optional)
 - `policy`: object, the ordinary form's single policy. The
@@ -174,7 +185,7 @@ Minimal skeleton (copy/paste):
 
 ```json
 {
-  "schema_version": 6,
+  "contract": "BUILD_CONTRACT",
   "specimen_id": "skeleton",
   "runner": { "mode": "standard" },
   "policy": { "format": "sbpl", "sbpl_source": "(version 1) (allow default)" },
@@ -191,6 +202,9 @@ Notes:
   apply (the validator child is only spawned when there are probes
   to query).
 
+<!-- END CONTRACT request_form -->
+
+<!-- BEGIN CONTRACT actors_phases -->
 ### Ordered phases
 
 Use `probe_plan` for one query collection followed by its attempts. It becomes
@@ -203,7 +217,7 @@ the phase array itself must be nonempty.
 
 ```json
 {
-  "schema_version": 6,
+  "contract": "BUILD_CONTRACT",
   "specimen_id": "two_reads",
   "policy": { "format": "sbpl", "sbpl_source": "(version 1) (allow default)" },
   "phases": [
@@ -237,6 +251,9 @@ Worker loss or an expired worker release wait stops further progression.
 At most <!-- span limits.phase_count.value -->8<!-- /span --> phases and <!-- span limits.probe_steps.value -->256<!-- /span --> total actions fit one specimen; phases do not multiply the action or query allowance. The
 [limits](#limits) describe cumulative collection and per-phase wait bounds.
 
+<!-- END CONTRACT actors_phases -->
+
+<!-- BEGIN CONTRACT actors_extensions -->
 ### Sandbox extensions
 
 Extension specimens use actors. Start with an unapplied issuer using `unentitled` equipment and a subject using `selected` equipment under its submitted policy. Equipment selects the signed worker copy; sandbox mode selects whether that process applies an SBPL policy. An unapplied actor may still inherit restrictions. A worker's signing readback does not establish its effective authority.
@@ -249,7 +266,7 @@ PW_EXTENSION_DIR=$(mktemp -d /private/tmp/pw-extension.XXXXXX)
 printf 'extension witness\n' > "$PW_EXTENSION_DIR/target"
 cat > "$PW_EXTENSION_DIR/request.json" <<JSON
 {
-  "schema_version": 6,
+  "contract": "BUILD_CONTRACT",
   "specimen_id": "extension_lifecycle",
   "actors": [
     {"actor_id": "issuer", "equipment": "unentitled", "sandbox": {"mode": "unapplied"}},
@@ -303,7 +320,7 @@ T="$PW_ACTOR_DIR/target"
 READ='"sandbox_check": {"operation": "file-read-data", "filter": {"kind": "path", "value": "'"$T"'"}}, "attempt": {"kind": "file", "action": "read_fresh", "target": "'"$T"'"}'
 cat > "$PW_ACTOR_DIR/request.json" <<JSON
 {
-  "schema_version": 6,
+  "contract": "BUILD_CONTRACT",
   "specimen_id": "extension_redelegation",
   "actors": [
     {"actor_id": "A", "equipment": "unentitled", "sandbox": {"mode": "unapplied"}},
@@ -468,6 +485,9 @@ extension events stay outside the query/attempt comparison.
 
 <!-- END COPIED EXTENSION COVERAGE -->
 
+<!-- END CONTRACT actors_extensions -->
+
+<!-- BEGIN CONTRACT request_admission -->
 ### Try an accepted request and a refusal
 
 This specimen asks a sandbox query and attempts to create an empty file. Use a
@@ -479,7 +499,7 @@ PW="/Applications/PolicyWitness.app/Contents/MacOS/policy-witness"
 PW_EXAMPLE_DIR=$(mktemp -d /private/tmp/pw-input.XXXXXX)
 cat > "$PW_EXAMPLE_DIR/request.json" <<JSON
 {
-  "schema_version": 6,
+  "contract": "BUILD_CONTRACT",
   "specimen_id": "request-grammar",
   "policy": {
     "format": "sbpl",
@@ -577,18 +597,22 @@ A refusal identifies one problem. Correct it and rerun; another problem may
 then be reported. `bad_request` exits 1 and executes no probe steps. Missing or
 unreadable files and unavailable runners have their own failure outcomes.
 
-The request's `schema_version` names its accepted shapes and meanings. It is
-separate from `(version 1)` in the SBPL source and from the app's build number.
-Removing a field, requiring a new one, or changing an action's meaning requires
-a revised contract and corresponding request changes. Review those changes
-before replacing an unsupported marker with the current one.
+The request's `contract` asserts the exact producer identity it was written for.
+Read the value from `policy-witness --version` (`build.contract`) and replace
+`BUILD_CONTRACT` in the examples before running them. A clean annotated release
+uses `release:vX.Y.Z`; a development build uses `development:<digest>`. Review
+the public surface table before changing an existing specimen's assertion.
+Missing, malformed and foreign assertions are refused before any runner selection,
+policy augmentation, helper invocation or worker creation.
 
-An implementation correction that honors the documented instruction can keep
-the marker and the same request, even when observations change. Additions can
-also preserve the marker: existing requests remain valid, while older builds
-can refuse newly added fields or actions. Capacity and observations can vary
-across builds and macOS versions sharing a marker.
+Implementation fixes and additions change a development build’s identity, and
+each release has its own identity. Review the changed surface rows before
+updating a specimen’s assertion. Identical assertions do not promise identical
+sandbox observations across macOS versions or runs.
 
+<!-- END CONTRACT request_admission -->
+
+<!-- BEGIN CONTRACT policy_input -->
 ### Policy
 
 SBPL source:
@@ -606,11 +630,14 @@ resolves them against the system profile search path. `(param "NAME")`
 substitution uses values from `policy.params`. `string-append` of param
 references is supported by the compiler.
 
+<!-- END CONTRACT policy_input -->
+
+<!-- BEGIN CONTRACT profile -->
 ### Compiled-object receipt (opt-in)
 
 An SBPL policy may set `capture_compiled_profile: true` and a fresh per-application
 `capture_nonce` (32 lowercase hexadecimal characters). The runner adds
-`data.runner_result.compiled_profile`, with its own `schema_version: 2`. A
+`data.runner_result.compiled_profile`, with the admitted reply's producer context. A
 `status: "captured"` receipt requires `producer: "worker"` and
 `capture_stage: "before_apply"`. It contains `worker_pid`, `request_nonce`, `profile_type`,
 `bytecode_length`, `bytecode_b64`, `bytecode_sha256`, `source_length`,
@@ -644,6 +671,9 @@ ordering. Embedded NUL inputs cannot qualify as matching complete requested inpu
 the nonce and worker identity to their own request and compare actual decoded
 bytecode with any independently retained expected object.
 
+<!-- END CONTRACT profile -->
+
+<!-- BEGIN CONTRACT policy_tools -->
 ### SBPL check (`sbpl-check`)
 
 `sbpl-check` is a host-side SBPL compiler. The C worker exercises the
@@ -718,7 +748,7 @@ The remaining `data` fields are input and host facts:
 
 In the controller's fallback capture, `data.policy_check.status` is either a
 transport status or the helper's `normalized_outcome` copied exactly from a
-supported envelope (the helper kind, the current controller envelope version
+supported envelope (the helper kind, the current helper producer contract
 and a nonempty outcome string). The transport statuses, in precedence order,
 are `unavailable` (the helper could not be launched or the request was not
 delivered), `capture_error` (truncated stdout, never parsed), `parse_error`
@@ -846,6 +876,9 @@ Shipped augments:
   Specimens that probe file-read denial cannot be composed with
   `exec_baseline`.
 
+<!-- END CONTRACT policy_tools -->
+
+<!-- BEGIN CONTRACT probes -->
 ### Probe plan steps
 
 Each step has:
@@ -871,6 +904,8 @@ Example:
   "attempt": { "kind": "file", "action": "open_read", "target": "/etc/hosts" }
 }
 ```
+
+<!-- END CONTRACT probes -->
 
 ## Limits
 
@@ -1166,33 +1201,32 @@ actor may exec.
 
 <!-- END COPIED LIMITS -->
 
+<!-- BEGIN CONTRACT envelope -->
 ## Output envelope
 
 Every envelope carries a top-level `build` object naming the code that produced
 it: `version` (nearest `v*` git tag), `number` (commit count), `describe` and
-`commit`. The same values are stamped into the app's Info.plist. This is a
-coordinate for correlating evidence with source. The contract versions below
-identify compatibility.
+`commit`, plus `contract`, the exact producer identity used for admission.
+The same values are stamped into the app’s Info.plist. The descriptive build
+coordinates correlate evidence with source; readers admit by `contract`.
 
-### Shape and schema_version
+### Shape and producer contract
 
-<!-- BEGIN GENERATED CONTRACT VERSIONS (docs/contract.json via docs/generate_contract.py) -->
-Current wire contracts: request schema 6, response schema 30, controller envelope 14, runner protocol 4. Each number is a separate contract. `docs/contract.json` owns these numbers; the internal host/worker boundary uses a generated source identity.
-<!-- END GENERATED CONTRACT VERSIONS -->
 
-The runner reply's JSON projection carries the response `schema_version` and
+The runner reply's JSON projection carries its `producer` context and
 holds `normalized_outcome`, `steps`, `runner_subprocess`, `phases`
 and the policy identity (`specimen_id`, `policy_format`, `policy_sha256`). It is
 readable on its own. The controller envelope is what `policy-witness run`
-prints: its `schema_version` is the controller envelope, `result` summarizes
+prints: its `build.contract` identifies the producer, `result` summarizes
 the run, and `data` carries that projection as `runner_result` beside the
 specimen dossier (`specimen`), the client transport (`runner_client`), the
 fallback compilation (`policy_check`), the controller's projections
 (`runner_sandbox_diagnostics`) and `timeout_ms`. Readers that interpret either
-document accept exactly the current numbers; another version is reported as
-unsupported, with the bytes retained (see [CONTRACT.md](CONTRACT.md)).
-`pw-runner-client` emits a binary `runner_client_capture` at the current
-runner protocol. It carries acquisition and submission observations and the
+document require the expected build contract. A foreign string is unsupported;
+a missing or non-string assertion is malformed. Refused bytes remain available
+(see [CONTRACT.md](CONTRACT.md)).
+`pw-runner-client` emits a binary `runner_client_capture` carrying the same
+build contract. It carries acquisition and submission observations and the
 received host bytes, rather than manufacturing host results for client errors.
 
 The XPC host stays unsandboxed and spawns a sandboxed attempt worker plus a
@@ -1272,6 +1306,9 @@ whose spawn produced a child. Its absence or null means structured exec evidence
 is unavailable, including valid replies from producers without this field; it
 establishes no cleanup, EOF or reap fact. See [Structured exec observations](#structured-exec-observations).
 
+<!-- END CONTRACT envelope -->
+
+<!-- BEGIN CONTRACT lifecycle -->
 ### Top-level fields
 
 Reply fields beyond `pid` / `runner_subprocess`:
@@ -1445,10 +1482,13 @@ names the missing result and does not say whether the operation ran. The
 or `conflicting`, and its `boundary` and `result` claims carry the supporting
 observations or the reason the
 question is unresolved, projected from
-[the worker disposition record](#shape-and-schema_version). A completed
+[the worker disposition record](#shape-and-producer-contract). A completed
 attempt's `rc` is PW attempt status. For `read_fresh`, the separate
 `attempt.fresh_read` fields retain native open, fstat, read and close returns.
 
+<!-- END CONTRACT lifecycle -->
+
+<!-- BEGIN CONTRACT transport -->
 ### Receiver evidence
 
 `phases[].validator_subprocess` names the phase it served (`phase_id` and `ordinal`,
@@ -1503,7 +1543,7 @@ retained byte counts, and a truncation flag. Only a reply accepted before the
 deadline can populate it. The capture retains a prefix up to the documented
 limit; an incomplete body cannot become `runner_result`. A complete typed host
 body is projected as `runner_result` and independently admitted under the
-response schema before its meaning is used. Client transport failures do not
+producer contract before its meaning is used. Client transport failures do not
 create synthetic host results. The helper writes this versioned binary capture to
 stdout, including when no host reply arrived. The controller presents its retained
 byte fields as base64 in public JSON. Rejected client frames retain bounded exact
@@ -1527,6 +1567,9 @@ received diagnostic without a native return retains `result_source="validator"`,
 with a missing reason. Use `result_source` and `native_rc` to distinguish a
 received diagnostic, a native failure and a missing reply.
 
+<!-- END CONTRACT transport -->
+
+<!-- BEGIN CONTRACT dossier -->
 ### The specimen dossier
 
 `data.specimen` is present on every `kind: "run"` envelope, including
@@ -1605,6 +1648,9 @@ jq '.data.specimen | {request_path, policy: {augmentation: .policy.augmentation.
 jq '[.data.specimen.policy.augmentation.applied_sha256, .data.runner_result.policy_sha256]' run.json
 ```
 
+<!-- END CONTRACT dossier -->
+
+<!-- BEGIN CONTRACT equipment -->
 ### Extension and fresh-read output
 
 The lifecycle [example](#sandbox-extensions) returns these records under
@@ -1686,6 +1732,9 @@ the aggregate outcome. Missing publication supplies no `fresh_write` object.
 The returned byte count and metadata do not substitute for independently read
 contents or establish crash durability.
 
+<!-- END CONTRACT equipment -->
+
+<!-- BEGIN CONTRACT steps -->
 ### Per-step shape
 
 The runner echoes step results with additional context:
@@ -1960,6 +2009,9 @@ Capture the sandbox_check argument quickly:
 jq '.data.runner_result.steps[].sandbox_check | {filter_value, filter_type_id, outcome, path_diagnostics}' run.json
 ```
 
+<!-- END CONTRACT steps -->
+
+<!-- BEGIN CONTRACT refusals -->
 ### normalized_outcome catalog
 
 `data.runner_result.normalized_outcome` values the runner can produce
@@ -2054,6 +2106,9 @@ The controller's own outcomes (`tool_error`, client capture refusals,
 `result.normalized_outcome` and are documented in the
 [controller README](../controller/README.md#output-contract).
 
+<!-- END CONTRACT refusals -->
+
+<!-- BEGIN CONTRACT operations -->
 ## What PolicyWitness understands
 
 ### Filter kinds the runner predicts
@@ -2226,6 +2281,8 @@ also leave descendants alive. Exceptional cleanup targets the owned group;
 descendants that leave it are not contained. The host supervises the worker,
 not the exec descendants.
 
+<!-- END CONTRACT operations -->
+
 ## Operating
 
 ### Common flags
@@ -2279,6 +2336,7 @@ Common decode errors (quick fixes)
   install a BYOXPC runner with the entitlements
   you need and select it via `runner.id` or `runner.service`.
 
+<!-- BEGIN CONTRACT installation -->
 ## External runners (BYOXPC)
 
 For `run` and `runner verify`, one client acquires a reservation before sending
@@ -2298,17 +2356,19 @@ deadline can expire after the grant but before submission.
 observations, the acquisition stop reason, submission state, terminal event
 and host reply bytes accepted before the deadline. Host PID/instance values in a grant are
 peer-reported identities, not kernel-generation receipts. Reservation credentials
-are omitted. The controller admits the capture's protocol and state invariants
+are omitted. The controller admits the capture's build contract and state invariants
 before reading the host result. Missing or inadmissible capture means submission
 unknown, never known nonexecution. `runner_result` is null without a decoded
 host reply, and no client error is represented as a host execution observation.
 
-External runners must advertise the current runner protocol in their signed
-bundle and participate in its reservation RPC. Install rejects missing or
-unsupported advertisements; run and verify independently check the actual
-protocol response. Old registry records remain available for list, reconcile
-and removal, but cannot be selected for execution. Remove and reinstall an
-updated runner to use it; there is no automatic legacy execution fallback.
+External runners must advertise the controller’s exact build contract as
+`PWContract` in their signed bundle and participate in reservation. Install
+rejects missing or foreign contracts; run and verify independently check the
+live peer’s contract. A development build’s contract changes when any scoped
+source bytes change, so rebuild and reinstall its external runner after such
+a change. Registry records without a matching contract remain available for
+list, reconcile and removal, but cannot be selected for execution. There is no
+automatic legacy execution fallback.
 
 
 Use this when you need entitlements that are not in the built-in runner.
@@ -2474,7 +2534,7 @@ Quick smoke request (save as `/tmp/pw_byoxpc_smoke.json`):
 
 ```json
 {
-  "schema_version": 6,
+  "contract": "BUILD_CONTRACT",
   "specimen_id": "byoxpc_smoke",
   "policy": {
     "format": "sbpl",
@@ -2505,7 +2565,10 @@ $PW runner remove --id runner-<id>
 
 External runners install a launchd background item. `runner remove` first moves
 the record from `runners` to durable `pending_cleanup`, then checks ownership
-before bootout or plist removal. It retires recovery only after verifying both
+before bootout or plist removal. Each cleanup entry has a nested `runner`, a
+`cleanup_started_at_unix_ms` timestamp and an `observations` array. Unknown
+runner, ownership, signature and entitlement metadata stays inside the retained
+record and supplies no cleanup authority. It retires recovery only after verifying both
 service and plist absence, waiting up to a second for launchd to finish tearing
 the job down after a bootout. Failed or uncertain cleanup reports `data.warnings`
 and `data.cleanup_retained: true`, with the retained record. Retrying the same
@@ -2555,3 +2618,29 @@ Registry location:
 ```
 ~/Library/Application Support/PolicyWitness/runners.json
 ```
+
+<!-- END CONTRACT installation -->
+
+## Public contract surfaces
+
+The release is the public contract unit. Review rows changed since the release
+your specimen asserts before changing its `contract`. Stamps guide review;
+admission compares the complete build contract exactly.
+
+<!-- BEGIN GENERATED CONTRACT STAMPS -->
+| Surface | User artifact | Last changed |
+| --- | --- | --- |
+| `actors` | Phases and actors | v0.3.6 |
+| `dossier` | Specimen dossier | v0.3.6 |
+| `envelope` | Controller and helper envelopes | v0.3.6 |
+| `equipment` | Actor evidence and equipment | v0.3.6 |
+| `installation` | Runner installation and reservation | v0.3.6 |
+| `lifecycle` | Disposition and lifecycle evidence | v0.3.6 |
+| `policy` | SBPL, params, augments and imports | v0.3.6 |
+| `probes` | Probe steps | v0.3.6 |
+| `profile` | Compiled-profile receipt | v0.3.6 |
+| `refusals` | Exit classification and structured refusals | v0.3.6 |
+| `request` | Saved specimen and runner selection | v0.3.6 |
+| `steps` | Reply steps and comparison | v0.3.6 |
+| `transport` | Client capture and transport | v0.3.6 |
+<!-- END GENERATED CONTRACT STAMPS -->

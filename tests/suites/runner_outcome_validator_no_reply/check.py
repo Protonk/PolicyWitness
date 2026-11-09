@@ -9,6 +9,7 @@ import time
 
 ROOT = Path(__file__).resolve().parents[3]
 sys.path.insert(0, str(ROOT / 'tests/lib'))
+import build_context
 import consumer
 import contract
 from run_capture import RunCapture
@@ -31,7 +32,7 @@ def main():
                     filter=dict(kind='path', value=str(path))),
                     attempt=dict(kind='file', action='open_write', target=str(path)))
                 for i, path in enumerate(paths)]
-        spec = dict(schema_version=6, specimen_id='validator-io-deadline',
+        spec = dict(contract=build_context.candidate_contract(), specimen_id='validator-io-deadline',
                     policy=dict(format='sbpl', sbpl_source='(version 1)(allow default)'), probe_plan=plan,
                     _test_overrides=dict(validator_executable_path=str(validator), validator_io_timeout_ms=500))
         started = time.monotonic()
@@ -45,7 +46,7 @@ def main():
         elapsed_ms = round((time.monotonic() - started) * 1000)
     runner = envelope['data']['runner_result']
     assert rc == 1 and envelope['result']['ok'] is False, envelope['result']
-    assert runner['schema_version'] == contract.RESPONSE_SCHEMA and runner['normalized_outcome'] == 'validator_no_reply', runner
+    assert runner['normalized_outcome'] == 'validator_no_reply', runner
     assert '500 ms I/O deadline' in runner['error'], runner['error']
     assert runner['test_overrides'] == spec['_test_overrides'], runner
     worker, v = runner['runner_subprocess'], runner['phases'][0]['validator_subprocess']
@@ -63,7 +64,7 @@ def main():
     assert second['comparison']['order'] == 'unestablished' and second['comparison']['observation'] == 'succeeded', second
     assert second['sandbox_check']['missing_reason'] == 'validator_no_verdict', second
     assert all(s['attempt']['outcome'] == 'ok' for s in runner['steps']), runner['steps']
-    errors = consumer.validate(envelope)
+    errors = consumer.validate(envelope, build_context.candidate_contract())
     assert not errors, errors
     (out / 'timing.json').write_text(json.dumps(dict(cli_elapsed_ms=elapsed_ms, validator_io_timeout_ms=500,
         worker_proceed_observed=True, worker_proceed_failure=False), indent=2) + '\n')

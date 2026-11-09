@@ -27,7 +27,7 @@ private func actorServiceBundle() -> URL {
 private func checkedActorSchedule(_ source: ActorScheduleInput, plan: ActorPlan) throws -> (ActorScheduleOutcome, ActorEquipmentPreparation) {
     let equipment = ActorEquipmentPreparation.bind(bundleURL: actorServiceBundle(), actors: plan.actors.map {
         ActorEquipmentRequest(actorID: $0.id, index: $0.index, requested: $0.equipment, requiredEntitlements: $0.requiredEntitlements)
-    })
+    }, calls: signedEquipmentCalls())
     try expectNil(equipment.failure, "signed equipment refused")
     var input = source
     input.didSetUp = { index, pid in equipment.inspect(actorIndex: index, pid: pid, ownershipConfirmed: true) }
@@ -48,13 +48,21 @@ private func attachObservedEquipment(_ reply: inout PWRunnerRunResult, _ equipme
     }
 }
 
+private func signedEquipmentCalls() -> ActorEquipmentCalls {
+    let info = try! Data(contentsOf: actorServiceBundle().appendingPathComponent("Contents/Info.plist"))
+    let value = try! PropertyListSerialization.propertyList(from: info, format: nil) as! [String: Any]
+    return ActorEquipmentCalls(expectedContract: value["PWContract"] as! String)
+}
+
 private func corpusRequest(_ id: String, effect: String) throws -> PWRunnerRunSpec {
     let url = repoRoot().appendingPathComponent("tests/fixtures/request_contract/examples.json")
     let corpus = try JSONSerialization.jsonObject(with: Data(contentsOf: url)) as! [[String: Any]]
     let example = corpus.first { $0["id"] as! String == id }!
-    let encoded = try JSONSerialization.data(withJSONObject: example["request"]!)
+    var request = example["request"] as! [String: Any]
+    assertExampleContract(example, request: &request)
+    let encoded = try JSONSerialization.data(withJSONObject: request)
     let text = String(decoding: encoded, as: UTF8.self).replacingOccurrences(of: "$EFFECT", with: effect)
-    return try pwRunnerDecodeJSON(PWRunnerRunSpec.self, from: Data(text.utf8))
+    return try testDecodeJSON(PWRunnerRunSpec.self, from: Data(text.utf8))
 }
 
 private func freshEffect() throws -> String {
@@ -92,7 +100,7 @@ func runActorReplyTests(_ tk: TestKit) {
             defer { close(fd); name.withCString { _ = shm_unlink($0) } }
             let parsed = try corpusRequest("actors_redelegation", effect: freshEffect())
             let reply = CWorkerOrchestrator.run(parsed: parsed, policyHash: Data(), bundleId: "test",
-                workerExecutablePath: equipment("pw-probe-runner"), validatorExecutablePath: equipment("sb_api_validator"), equipmentBundleURL: actorServiceBundle())
+                workerExecutablePath: equipment("pw-probe-runner"), validatorExecutablePath: equipment("sb_api_validator"), equipmentBundleURL: actorServiceBundle(), equipmentCalls: signedEquipmentCalls())
             try expectTrue(reply.rc != 0)
             try expectTrue(reply.error?.contains("authority setup") == true, reply.error ?? "")
             try expectTrue(reply.actors!.allSatisfy { $0.launch == nil && $0.subprocess == nil && $0.setup_status == "launch_refused" })
@@ -175,7 +183,7 @@ func runActorReplyTests(_ tk: TestKit) {
             try expectNil(CWorkerOrchestrator.admissionFailure(for: parsed))
             try expectNil(requestMeaningFailure(parsed))
             let reply = CWorkerOrchestrator.run(parsed: parsed, policyHash: Data(), bundleId: "test",
-                workerExecutablePath: equipment("pw-probe-runner"), validatorExecutablePath: equipment("sb_api_validator"), equipmentBundleURL: actorServiceBundle())
+                workerExecutablePath: equipment("pw-probe-runner"), validatorExecutablePath: equipment("sb_api_validator"), equipmentBundleURL: actorServiceBundle(), equipmentCalls: signedEquipmentCalls())
             try expectEqual(reply.execution_form, "actors")
             try expectNil(reply.policy_sha256)
             try expectNil(reply.policy_format)
@@ -311,15 +319,15 @@ func runActorReplyTests(_ tk: TestKit) {
             guard workerPresent else { throw TestFailure(message: "required equipment: pw-probe-runner missing; run make build") }
             let effect = try freshEffect()
             let text = """
-            {"schema_version": \(PWContract.requestSchema), "specimen_id": "actors-failure",
+            {"contract": "\(testRequestContract)", "specimen_id": "actors-failure",
              "actors": [{"actor_id": "good", "sandbox": {"mode": "apply", "policy": {"format": "sbpl", "sbpl_source": "(version 1)(deny default)"}}},
                         {"actor_id": "broken", "sandbox": {"mode": "apply", "policy": {"format": "sbpl", "sbpl_source": "(version 1)(bogus"}}}],
              "phases": [{"phase_id": "g", "actor_id": "good", "actions": [{"step_id": "read", "sandbox_check": {"operation": "file-read-data", "filter": {"kind": "path", "value": "\(effect)"}}, "attempt": {"kind": "file", "action": "read_fresh", "target": "\(effect)"}}]},
                         {"phase_id": "b", "actor_id": "broken", "actions": [{"step_id": "never", "sandbox_check": {"operation": "file-read-data", "filter": {"kind": "path", "value": "\(effect)"}}, "attempt": {"kind": "file", "action": "read_fresh", "target": "\(effect)"}}]}]}
             """
-            let parsed = try pwRunnerDecodeJSON(PWRunnerRunSpec.self, from: Data(text.utf8))
+            let parsed = try testDecodeJSON(PWRunnerRunSpec.self, from: Data(text.utf8))
             let reply = CWorkerOrchestrator.run(parsed: parsed, policyHash: Data(), bundleId: nil,
-                workerExecutablePath: equipment("pw-probe-runner"), validatorExecutablePath: equipment("sb_api_validator"), equipmentBundleURL: actorServiceBundle())
+                workerExecutablePath: equipment("pw-probe-runner"), validatorExecutablePath: equipment("sb_api_validator"), equipmentBundleURL: actorServiceBundle(), equipmentCalls: signedEquipmentCalls())
             try expectEqual(reply.normalized_outcome, NormalizedOutcome.runnerFailed)
             try expectTrue(reply.error?.hasPrefix("actor broken:") == true, reply.error ?? "")
             let actors = reply.actors ?? []

@@ -1,0 +1,12 @@
+{
+  "closed_keys": {
+    "PWRunnerPolicySpec": [
+      "augments",
+      "capture_compiled_profile",
+      "capture_nonce",
+      "format",
+      "params",
+      "sbpl_source"
+    ]
+  }
+}

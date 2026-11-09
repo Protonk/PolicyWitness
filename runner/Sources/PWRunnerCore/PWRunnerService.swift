@@ -134,7 +134,7 @@ private func pwRunnerReportData(_ result: PWRunnerRunResult,
             diagnostic = String(describing: error)
         }
         var failed = result
-        failed.schema_version = PWContract.responseSchema
+        failed.producer = .current
         failed.rc = 1
         failed.normalized_outcome = NormalizedOutcome.runnerReportingFailed
         failed.error = "runner host could not encode its result: \(diagnostic)"
@@ -182,7 +182,7 @@ private struct PWMinimalPorcelainReply: PWPorcelainWritable {
     func porcelainWrite() throws -> Data {
         typealias Tag = PWRunnerRunResult.PorcelainTag
         var w = PWPorcelainRecordWriter(Self.porcelainRecordID)
-        try w.field(Tag.schema_version, PWContract.responseSchema)
+        try w.field(Tag.producer, PWProducer.current)
         try w.field(Tag.specimen_id, original.specimen_id)
         try w.field(Tag.run_kind, original.run_kind)
         try w.field(Tag.rc, 1)
@@ -205,9 +205,6 @@ func requestDecodeFailure(_ error: Error) -> PWRunnerRequestFailure {
     let path: [String]
     switch error {
     case let failure as PWRunnerRequestFailure: return failure
-    case RequestContractError.unsupportedSchema:
-        return PWRunnerRequestFailure(code: "unsupported_schema", path: ["schema_version"],
-            expected_schema: PWContract.requestSchema)
     case RequestContractError.unresolvedAugments(let keys):
         let location = keys.isEmpty ? ["policy"] : keys.map { $0.intValue.map(String.init) ?? $0.stringValue }
         return PWRunnerRequestFailure(code: "unresolved_augments", path: location + ["augments"])
@@ -221,7 +218,7 @@ func requestDecodeFailure(_ error: Error) -> PWRunnerRequestFailure {
     default: return PWRunnerRequestFailure(code: "invalid_json", path: nil)
     }
     return PWRunnerRequestFailure(code: code, path: path,
-        expected_schema: path == ["schema_version"] ? PWContract.requestSchema : nil)
+        expected_contract: path == ["contract"] ? PWBuildContext.contract : nil)
 }
 
 /// Report the category and bounded path, never arbitrary decoder prose/input.
@@ -230,8 +227,6 @@ func requestDecodeDiagnostic(_ error: Error) -> String {
     let path: [CodingKey]
     switch error {
     case let failure as PWRunnerRequestFailure: return failure.description
-    case RequestContractError.unsupportedSchema(let version):
-        return "request decode failed: unsupported request schema \(version) (expected \(PWContract.requestSchema))"
     case RequestContractError.unresolvedAugments(let keys):
         let location = keys.isEmpty ? "policy" : keys.map { $0.intValue.map { "[\($0)]" } ?? $0.stringValue }.joined(separator: ".")
         return "request decode failed: \(location).augments must be resolved by the controller before XPC delivery"
@@ -295,11 +290,11 @@ final class PWRunnerService: NSObject, PWRunnerProtocol {
         guard request.count <= PWRunnerTransportLimits.controlBytes else {
             reply(control("invalid_request", reason: "control_too_large")); return
         }
-        struct Version: Decodable { var protocol_version: Int }
+        struct Version: Decodable { var contract: String }
         guard let version = try? pwRunnerDecodeJSON(Version.self, from: request) else {
             reply(control("invalid_request", reason: "malformed_control")); return
         }
-        guard version.protocol_version == PWContract.runnerProtocol else {
+        guard PWBuildContext.contract != "unbound", version.contract == PWBuildContext.contract else {
             reply(control("unsupported_protocol", reason: "unsupported_protocol")); return
         }
         guard let parsed = try? pwRunnerDecodeJSON(PWRunnerReservationRequest.self, from: request),

@@ -11,6 +11,7 @@ import time
 ROOT = Path(__file__).resolve().parents[3]
 sys.path.insert(0, str(ROOT / 'tests/lib'))
 sys.path.insert(0, str(ROOT / 'tests/fixtures/validator'))
+import build_context
 from run_capture import RunCapture
 import consumer
 from gate import Gate, install_bridge
@@ -29,7 +30,7 @@ def step(path, action, name):
 
 
 def specimen(plan, policy='(version 1)(allow default)', overrides=None):
-    result = dict(schema_version=6, specimen_id=secrets.token_hex(12),
+    result = dict(contract=build_context.candidate_contract(), specimen_id=secrets.token_hex(12),
                   policy=dict(format='sbpl', sbpl_source=policy), probe_plan=plan)
     if overrides: result['_test_overrides'] = overrides
     return result
@@ -48,7 +49,7 @@ def envelope(run, rc, spec, outcome='finished'):
     assert runner['normalized_outcome'] == outcome, runner
     assert runner.get('test_overrides') == spec.get('_test_overrides'), runner
     assert runner['runner_subprocess']['exit_code'] == 0, runner
-    errors = consumer.validate(value)
+    errors = consumer.validate(value, build_context.candidate_contract())
     assert not errors, errors
     assert [s['step_id'] for s in runner['steps']] == [s['step_id'] for s in spec['probe_plan']]
     return runner

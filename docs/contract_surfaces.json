@@ -1,0 +1,200 @@
+{
+  "surfaces": [
+    {
+      "id": "request",
+      "artifact": "Saved specimen and runner selection",
+      "goldens": [
+        "tests/fixtures/contract/surfaces/request.json",
+        "tests/fixtures/request_contract/examples.json"
+      ],
+      "definition": "docs/CONTRACT.md",
+      "checks": [
+        "failure_boundaries"
+      ],
+      "definitions": [
+        "docs/PolicyWitness.md#request_form",
+        "docs/PolicyWitness.md#request_admission",
+        "docs/PolicyWitness.md#installation"
+      ]
+    },
+    {
+      "id": "policy",
+      "artifact": "SBPL, params, augments and imports",
+      "goldens": [
+        "tests/fixtures/contract/surfaces/policy.json"
+      ],
+      "definition": "docs/CONTRACT.md",
+      "checks": [
+        "integration"
+      ],
+      "definitions": [
+        "docs/PolicyWitness.md#policy_input",
+        "docs/PolicyWitness.md#policy_tools"
+      ]
+    },
+    {
+      "id": "probes",
+      "artifact": "Probe steps",
+      "goldens": [
+        "tests/fixtures/contract/surfaces/probes.json"
+      ],
+      "definition": "docs/CONTRACT.md",
+      "checks": [
+        "witness_contract"
+      ],
+      "definitions": [
+        "docs/PolicyWitness.md#probes",
+        "docs/PolicyWitness.md#operations"
+      ]
+    },
+    {
+      "id": "actors",
+      "artifact": "Phases and actors",
+      "goldens": [
+        "tests/fixtures/contract/surfaces/actors.json"
+      ],
+      "definition": "docs/CONTRACT.md",
+      "checks": [
+        "runner_unit"
+      ],
+      "definitions": [
+        "docs/PolicyWitness.md#actors_phases",
+        "docs/PolicyWitness.md#actors_extensions"
+      ]
+    },
+    {
+      "id": "envelope",
+      "artifact": "Controller and helper envelopes",
+      "goldens": [
+        "tests/fixtures/contract/surfaces/envelope.json"
+      ],
+      "definition": "docs/CONTRACT.md",
+      "checks": [
+        "unit"
+      ],
+      "definitions": [
+        "docs/PolicyWitness.md#envelope"
+      ]
+    },
+    {
+      "id": "dossier",
+      "artifact": "Specimen dossier",
+      "goldens": [
+        "tests/fixtures/contract/surfaces/dossier.json"
+      ],
+      "definition": "docs/CONTRACT.md",
+      "checks": [
+        "witness_contract"
+      ],
+      "definitions": [
+        "docs/PolicyWitness.md#dossier"
+      ]
+    },
+    {
+      "id": "steps",
+      "artifact": "Reply steps and comparison",
+      "goldens": [
+        "tests/fixtures/contract/surfaces/steps.json",
+        "tests/fixtures/comparison/matrix.json"
+      ],
+      "definition": "docs/CONTRACT.md",
+      "checks": [
+        "failure_boundaries"
+      ],
+      "definitions": [
+        "docs/PolicyWitness.md#steps",
+        "docs/PolicyWitness.md#operations"
+      ]
+    },
+    {
+      "id": "lifecycle",
+      "artifact": "Disposition and lifecycle evidence",
+      "goldens": [
+        "tests/fixtures/contract/surfaces/lifecycle.json",
+        "tests/fixtures/disposition/current/constructed_deadline.json"
+      ],
+      "definition": "docs/CONTRACT.md",
+      "checks": [
+        "runner_unit"
+      ],
+      "definitions": [
+        "docs/PolicyWitness.md#lifecycle"
+      ]
+    },
+    {
+      "id": "equipment",
+      "artifact": "Actor evidence and equipment",
+      "goldens": [
+        "tests/fixtures/contract/surfaces/equipment.json"
+      ],
+      "definition": "docs/CONTRACT.md",
+      "checks": [
+        "runner_byoxpc"
+      ],
+      "definitions": [
+        "docs/PolicyWitness.md#equipment",
+        "docs/PolicyWitness.md#lifecycle"
+      ]
+    },
+    {
+      "id": "profile",
+      "artifact": "Compiled-profile receipt",
+      "goldens": [
+        "tests/fixtures/contract/surfaces/profile.json",
+        "tests/fixtures/contract/compiled_profile.json"
+      ],
+      "definition": "docs/CONTRACT.md",
+      "checks": [
+        "failure_boundaries"
+      ],
+      "definitions": [
+        "docs/PolicyWitness.md#profile"
+      ]
+    },
+    {
+      "id": "transport",
+      "artifact": "Client capture and transport",
+      "goldens": [
+        "tests/fixtures/contract/surfaces/transport.json"
+      ],
+      "definition": "docs/CONTRACT.md",
+      "checks": [
+        "runner_byoxpc"
+      ],
+      "definitions": [
+        "docs/PolicyWitness.md#transport",
+        "docs/CONTRACT.md#transport_encoding"
+      ]
+    },
+    {
+      "id": "refusals",
+      "artifact": "Exit classification and structured refusals",
+      "goldens": [
+        "tests/fixtures/contract/surfaces/refusals.json",
+        "tests/fixtures/request_contract/examples.json"
+      ],
+      "definition": "docs/CONTRACT.md",
+      "checks": [
+        "runner_outcome_bad_request"
+      ],
+      "definitions": [
+        "docs/PolicyWitness.md#refusals",
+        "docs/PolicyWitness.md#request_admission"
+      ]
+    },
+    {
+      "id": "installation",
+      "artifact": "Runner installation and reservation",
+      "goldens": [
+        "tests/fixtures/contract/surfaces/installation.json"
+      ],
+      "definition": "docs/CONTRACT.md",
+      "checks": [
+        "runner_byoxpc"
+      ],
+      "definitions": [
+        "docs/PolicyWitness.md#installation"
+      ]
+    }
+  ]
+}

@@ -1,1246 +1,1246 @@
 {
-  "response_schema" : 30,
-  "shape" : {
-    "reply" : {
-      "actors" : "array",
-      "admission_failure" : "object",
-      "authority_setup" : "object",
-      "bundle_id" : "string",
-      "compiled_profile" : "object",
-      "equipment_bindings" : "array",
-      "equipment_entitlements" : "array",
-      "equipment_inventory" : "object",
-      "error" : "string",
-      "execution_form" : "string",
-      "extension_events" : "array",
-      "normalized_outcome" : "string",
-      "phases" : "array",
-      "pid" : "number",
-      "policy_format" : "string",
-      "policy_sha256" : "string",
-      "preparation_failure" : "object",
-      "rc" : "number",
-      "reporting_failure" : "object",
-      "request_failure" : "object",
-      "resources" : "object",
-      "run_kind" : "string",
-      "runner_subprocess" : "object",
-      "sandboxed_after_apply" : "boolean",
-      "schedule" : "object",
-      "schema_version" : "number",
-      "specimen_id" : "string",
-      "steps" : "array",
-      "test_overrides" : "object",
-      "transfers" : "array"
-    },
-    "reply.actors[]" : {
-      "actor_id" : "string",
-      "application" : "object",
-      "application_count" : "number",
-      "applied" : "boolean",
-      "compiled_profile" : "object",
-      "equipment" : "object",
-      "index" : "number",
-      "launch" : "object",
-      "mode" : "string",
-      "owned_reap" : "object",
-      "policy_format" : "string",
-      "policy_received_sha256" : "string",
-      "policy_sha256" : "string",
-      "setup_status" : "string",
-      "subprocess" : "object",
-      "visits" : "array"
-    },
-    "reply.actors[].application" : {
-      "basis" : "string",
-      "state" : "string"
-    },
-    "reply.actors[].compiled_profile" : {
-      "bytecode_b64" : "string",
-      "bytecode_length" : "number",
-      "bytecode_sha256" : "string",
-      "capture_stage" : "string",
-      "parameter_count" : "number",
-      "params_sha256" : "string",
-      "producer" : "string",
-      "profile_type" : "number",
-      "reason" : "string",
-      "request_nonce" : "string",
-      "schema_version" : "number",
-      "source_length" : "number",
-      "source_sha256" : "string",
-      "status" : "string",
-      "worker_pid" : "number"
-    },
-    "reply.actors[].equipment" : {
-      "binding_ref" : "number",
-      "execution" : "object",
-      "missing_requirements" : "array",
-      "requested" : "string",
-      "required_entitlements" : "array",
-      "requirements_status" : "string",
-      "resolved" : "string"
-    },
-    "reply.actors[].equipment.execution" : {
-      "cdhash" : "string",
-      "eligible" : "boolean",
-      "entitlements_ref" : "number",
-      "identifier" : "string",
-      "native_observations" : "array",
-      "observed_at_monotonic_ns" : "number",
-      "parent_pid" : "number",
-      "path" : "string",
-      "pid" : "number",
-      "reason" : "string",
-      "status" : "string",
-      "team_id" : "string"
-    },
-    "reply.actors[].equipment.execution.native_observations[]" : {
-      "attempted" : "boolean",
-      "operation" : "string",
-      "osstatus" : "number"
-    },
-    "reply.actors[].launch" : {
-      "environment" : "string",
-      "inherited_descriptors" : "array",
-      "parent_pid" : "number",
-      "pid" : "number",
-      "standard_streams" : "string"
-    },
-    "reply.actors[].owned_reap" : {
-      "capture_ordinal" : "number",
-      "departure_requested" : "boolean",
-      "native_rc" : "number",
-      "observed_ns" : "number",
-      "ownership_unbroken" : "boolean",
-      "pid" : "number",
-      "raw_status" : "number",
-      "stage" : "string"
-    },
-    "reply.actors[].subprocess" : {
-      "cleanup_trigger" : "string",
-      "collection_basis" : "string",
-      "disposition" : "object",
-      "done_observed" : "boolean",
-      "exit_code" : "number",
-      "exit_grace_wait" : "object",
-      "exit_requested" : "boolean",
-      "grace_end" : "string",
-      "partial_steps" : "boolean",
-      "pid" : "number",
-      "policy_transfer_error" : "object",
-      "policy_transfer_timeout" : "object",
-      "poll_stop_reason" : "string",
-      "ready_byte_received" : "boolean",
-      "ready_wait" : "object",
-      "reaped" : "boolean",
-      "term_signal" : "number",
-      "termination_request" : "object",
-      "wait_errors" : "array",
-      "worker_evidence" : "object"
-    },
-    "reply.actors[].subprocess.disposition" : {
-      "issues" : "array",
-      "questions" : "object",
-      "steps" : "array"
-    },
-    "reply.actors[].subprocess.disposition.issues[]" : {
-      "detail" : "string",
-      "kind" : "string",
-      "observations" : "array",
-      "question" : "string",
-      "rule" : "string",
-      "step_index" : "number"
-    },
-    "reply.actors[].subprocess.disposition.questions" : {
-      "cleanup_trigger" : "object",
-      "collection_basis" : "object",
-      "final_status" : "object",
-      "grace_end" : "object",
-      "kill_request_and_result" : "object",
-      "progress_association" : "object",
-      "stop_reason" : "object"
-    },
-    "reply.actors[].subprocess.disposition.questions.cleanup_trigger" : {
-      "answer" : "string",
-      "basis" : "array",
-      "reason" : "string",
-      "state" : "string"
-    },
-    "reply.actors[].subprocess.disposition.questions.collection_basis" : {
-      "answer" : "string",
-      "basis" : "array",
-      "state" : "string"
-    },
-    "reply.actors[].subprocess.disposition.questions.final_status" : {
-      "answer" : "string",
-      "basis" : "array",
-      "reason" : "string",
-      "state" : "string",
-      "value" : "number"
-    },
-    "reply.actors[].subprocess.disposition.questions.grace_end" : {
-      "answer" : "string",
-      "basis" : "array",
-      "reason" : "string",
-      "state" : "string"
-    },
-    "reply.actors[].subprocess.disposition.questions.kill_request_and_result" : {
-      "answer" : "string",
-      "basis" : "array",
-      "reason" : "string",
-      "state" : "string",
-      "value" : "object"
-    },
-    "reply.actors[].subprocess.disposition.questions.kill_request_and_result.value" : {
-      "errno" : "number",
-      "rc" : "number",
-      "signal" : "number"
-    },
-    "reply.actors[].subprocess.disposition.questions.progress_association" : {
-      "answer" : "string",
-      "basis" : "array",
-      "reason" : "string",
-      "state" : "string",
-      "value" : "number"
-    },
-    "reply.actors[].subprocess.disposition.questions.stop_reason" : {
-      "answer" : "string",
-      "basis" : "array",
-      "state" : "string"
-    },
-    "reply.actors[].subprocess.disposition.steps[]" : {
-      "attempt_support" : "string",
-      "index" : "number",
-      "questions" : "object",
-      "slot" : "string",
-      "step_id" : "string"
-    },
-    "reply.actors[].subprocess.disposition.steps[].questions" : {
-      "step_boundary_reached" : "object",
-      "step_requested_operation_applicability" : "object",
-      "step_result_published" : "object"
-    },
-    "reply.actors[].subprocess.disposition.steps[].questions.step_boundary_reached" : {
-      "answer" : "string",
-      "basis" : "array",
-      "reason" : "string",
-      "state" : "string"
-    },
-    "reply.actors[].subprocess.disposition.steps[].questions.step_requested_operation_applicability" : {
-      "answer" : "string",
-      "basis" : "array",
-      "state" : "string"
-    },
-    "reply.actors[].subprocess.disposition.steps[].questions.step_result_published" : {
-      "answer" : "string",
-      "basis" : "array",
-      "issue" : "number",
-      "reason" : "string",
-      "state" : "string"
-    },
-    "reply.actors[].subprocess.exit_grace_wait" : {
-      "budget_ms" : "number",
-      "clock_fault" : "boolean",
-      "elapsed_ms" : "number",
-      "stop" : "string"
-    },
-    "reply.actors[].subprocess.policy_transfer_error" : {
-      "bytes_expected" : "number",
-      "bytes_written" : "number",
-      "errno" : "number"
-    },
-    "reply.actors[].subprocess.policy_transfer_timeout" : {
-      "budget_ms" : "number",
-      "bytes_expected" : "number",
-      "bytes_written" : "number",
-      "elapsed_ms" : "number"
-    },
-    "reply.actors[].subprocess.ready_wait" : {
-      "budget_ms" : "number",
-      "clock_fault" : "boolean",
-      "elapsed_ms" : "number",
-      "native_errno" : "number",
-      "stop" : "string"
-    },
-    "reply.actors[].subprocess.termination_request" : {
-      "errno" : "number",
-      "rc" : "number",
-      "signal" : "number"
-    },
-    "reply.actors[].subprocess.wait_errors[]" : {
-      "errno" : "number",
-      "rc" : "number",
-      "stage" : "string"
-    },
-    "reply.actors[].subprocess.worker_evidence" : {
-      "abi_identity" : "string",
-      "diagnostic" : "object",
-      "failure" : "object",
-      "failure_publication" : "number",
-      "failure_state" : "string",
-      "policy_read" : "object",
-      "progress" : "object",
-      "readiness" : "object"
-    },
-    "reply.actors[].subprocess.worker_evidence.diagnostic" : {
-      "length" : "number",
-      "state" : "number",
-      "status" : "string",
-      "text" : "string"
-    },
-    "reply.actors[].subprocess.worker_evidence.failure" : {
-      "code" : "number",
-      "detail" : "number",
-      "errno" : "number",
-      "index" : "number",
-      "native_kind" : "number",
-      "native_result" : "number",
-      "operation" : "number"
-    },
-    "reply.actors[].subprocess.worker_evidence.policy_read" : {
-      "bytes_expected" : "number",
-      "bytes_received" : "number"
-    },
-    "reply.actors[].subprocess.worker_evidence.progress" : {
-      "index" : "number",
-      "operation" : "number",
-      "raw" : "number",
-      "stage" : "number"
-    },
-    "reply.actors[].subprocess.worker_evidence.readiness" : {
-      "errno" : "number",
-      "rc" : "number"
-    },
-    "reply.admission_failure" : {
-      "actual" : "number",
-      "field" : "string",
-      "index" : "number",
-      "maximum" : "number",
-      "origin" : "string",
-      "parameter_key" : "string",
-      "step_id" : "string",
-      "step_index" : "number",
-      "unit" : "string"
-    },
-    "reply.authority_setup" : {
-      "host" : "object",
-      "workers" : "array"
-    },
-    "reply.authority_setup.host" : {
-      "custody" : "array",
-      "regions" : "array",
-      "run" : "object"
-    },
-    "reply.authority_setup.host.custody[]" : {
-      "disposition" : "string",
-      "integrity_errors" : "array",
-      "operations" : "array",
-      "ownership" : "object",
-      "primary_operation" : "number",
-      "required" : "boolean",
-      "token_index" : "number",
-      "token_ref" : "string"
-    },
-    "reply.authority_setup.host.custody[].operations[]" : {
-      "detail" : "string",
-      "errno" : "number",
-      "native_kind" : "string",
-      "native_rc" : "number",
-      "operation" : "string",
-      "role" : "string",
-      "slot" : "number",
-      "state" : "string",
-      "value" : "number"
-    },
-    "reply.authority_setup.host.custody[].ownership" : {
-      "mapping" : "string",
-      "private_erasure" : "string"
-    },
-    "reply.authority_setup.host.regions[]" : {
-      "actor_id" : "string",
-      "actor_index" : "number",
-      "cleanup_reference" : "object",
-      "disposition" : "string",
-      "integrity_errors" : "array",
-      "operations" : "array",
-      "ownership" : "object",
-      "primary_operation" : "number",
-      "required" : "boolean"
-    },
-    "reply.authority_setup.host.regions[].cleanup_reference" : {
-      "host_pid" : "number",
-      "kind" : "string",
-      "name" : "string",
-      "recovery_state" : "string",
-      "session_nonce" : "number"
-    },
-    "reply.authority_setup.host.regions[].operations[]" : {
-      "detail" : "string",
-      "errno" : "number",
-      "native_kind" : "string",
-      "native_rc" : "number",
-      "operation" : "string",
-      "role" : "string",
-      "slot" : "number",
-      "state" : "string",
-      "value" : "number"
-    },
-    "reply.authority_setup.host.regions[].ownership" : {
-      "descriptor" : "string",
-      "mapping" : "string",
-      "object_name" : "string",
-      "shared_erasure" : "string"
-    },
-    "reply.authority_setup.host.run" : {
-      "disposition" : "string",
-      "integrity_errors" : "array",
-      "operations" : "array",
-      "ownership" : "object",
-      "primary_operation" : "number"
-    },
-    "reply.authority_setup.host.run.operations[]" : {
-      "detail" : "string",
-      "errno" : "number",
-      "native_kind" : "string",
-      "native_rc" : "number",
-      "operation" : "string",
-      "role" : "string",
-      "slot" : "number",
-      "state" : "string",
-      "value" : "number"
-    },
-    "reply.authority_setup.host.run.ownership" : {
-
-    },
-    "reply.authority_setup.workers[]" : {
-      "actor_id" : "string",
-      "actor_index" : "number",
-      "disposition" : "string",
-      "integrity_errors" : "array",
-      "operations" : "array",
-      "ownership" : "object",
-      "primary_operation" : "number",
-      "publication" : "string",
-      "required" : "boolean"
-    },
-    "reply.authority_setup.workers[].operations[]" : {
-      "detail" : "string",
-      "errno" : "number",
-      "native_kind" : "string",
-      "native_rc" : "number",
-      "operation" : "string",
-      "role" : "string",
-      "slot" : "number",
-      "state" : "string",
-      "value" : "number"
-    },
-    "reply.authority_setup.workers[].ownership" : {
-      "descriptor" : "string",
-      "mapping" : "string",
-      "shared_erasure" : "string"
-    },
-    "reply.compiled_profile" : {
-      "bytecode_b64" : "string",
-      "bytecode_length" : "number",
-      "bytecode_sha256" : "string",
-      "capture_stage" : "string",
-      "parameter_count" : "number",
-      "params_sha256" : "string",
-      "producer" : "string",
-      "profile_type" : "number",
-      "reason" : "string",
-      "request_nonce" : "string",
-      "schema_version" : "number",
-      "source_length" : "number",
-      "source_sha256" : "string",
-      "status" : "string",
-      "worker_pid" : "number"
-    },
-    "reply.equipment_bindings[]" : {
-      "cdhash" : "string",
-      "entitlements_match" : "boolean",
-      "entitlements_ref" : "number",
-      "error" : "object",
-      "expected_cdhash" : "string",
-      "expected_sha256" : "string",
-      "identifier" : "string",
-      "implementation_identity" : "string",
-      "path" : "string",
-      "reason" : "string",
-      "relative_path" : "string",
-      "role" : "string",
-      "sha256" : "string",
-      "signature_osstatus" : "number",
-      "source" : "string",
-      "status" : "string",
-      "team_id" : "string"
-    },
-    "reply.equipment_bindings[].error" : {
-      "code" : "number",
-      "domain" : "string",
-      "message" : "string",
-      "operation" : "string"
-    },
-    "reply.equipment_entitlements[]" : {
-      "actor_id" : "string",
-      "binding_ref" : "number",
-      "error" : "object",
-      "raw_plist" : "string",
-      "source" : "string",
-      "status" : "string"
-    },
-    "reply.equipment_entitlements[].error" : {
-      "code" : "number",
-      "domain" : "string",
-      "message" : "string",
-      "operation" : "string"
-    },
-    "reply.equipment_inventory" : {
-      "error" : "object",
-      "path" : "string",
-      "reason" : "string",
-      "schema_version" : "number",
-      "seal_osstatus" : "number",
-      "sha256" : "string",
-      "status" : "string",
-      "unsigned_worker_sha256" : "string",
-      "worker_identity" : "string"
-    },
-    "reply.equipment_inventory.error" : {
-      "code" : "number",
-      "domain" : "string",
-      "message" : "string",
-      "operation" : "string"
-    },
-    "reply.extension_events[]" : {
-      "actor_id" : "string",
-      "call_boundary_observed" : "boolean",
-      "delivery_ref" : "string",
-      "errno" : "number",
-      "extension_class" : "string",
-      "family" : "string",
-      "flags" : "number",
-      "handle_ref" : "string",
-      "lifecycle" : "object",
-      "native_nonnull" : "boolean",
-      "native_result" : "number",
-      "operation" : "string",
-      "phase_id" : "string",
-      "result_published" : "boolean",
-      "status" : "string",
-      "step_id" : "string",
-      "target" : "string",
-      "token_length" : "number",
-      "token_ref" : "string",
-      "unavailable_reason" : "string"
-    },
-    "reply.extension_events[].lifecycle" : {
-      "boundary" : "object",
-      "result" : "object",
-      "summary" : "string"
-    },
-    "reply.extension_events[].lifecycle.boundary" : {
-      "answer" : "string",
-      "basis" : "array",
-      "reason" : "string",
-      "state" : "string"
-    },
-    "reply.extension_events[].lifecycle.result" : {
-      "answer" : "string",
-      "basis" : "array",
-      "issue" : "number",
-      "reason" : "string",
-      "state" : "string"
-    },
-    "reply.phases[]" : {
-      "action_ids" : "array",
-      "activation_observation" : "object",
-      "actor_id" : "string",
-      "actor_visit" : "number",
-      "arrival_observed" : "boolean",
-      "collection_status" : "string",
-      "completion_observed" : "boolean",
-      "ordering" : "object",
-      "ordinal" : "number",
-      "phase_id" : "string",
-      "termination_gate" : "object",
-      "validator_spawn_failure" : "object",
-      "validator_subprocess" : "object",
-      "visit_timing" : "object"
-    },
-    "reply.phases[].activation_observation" : {
-      "capture_ordinal" : "number",
-      "observed_ns" : "number"
-    },
-    "reply.phases[].ordering" : {
-      "collection_closed_before_proceed" : "boolean",
-      "proceed_observed" : "boolean",
-      "proceed_set" : "boolean",
-      "protocol_violations" : "array",
-      "validator_disposition" : "string",
-      "worker_lifetime_established" : "boolean"
-    },
-    "reply.phases[].termination_gate" : {
-      "activation_eligible" : "boolean",
-      "capture_ordinal" : "number",
-      "condition" : "string",
-      "observation" : "object",
-      "outcome" : "string",
-      "source_actor_id" : "string",
-      "source_final_phase_id" : "string",
-      "wait" : "object"
-    },
-    "reply.phases[].termination_gate.observation" : {
-      "capture_ordinal" : "number"
-    },
-    "reply.phases[].termination_gate.wait" : {
-      "budget_ms" : "number",
-      "clock_fault" : "boolean",
-      "elapsed_ms" : "number",
-      "native_errno" : "number",
-      "stop" : "string"
-    },
-    "reply.phases[].validator_spawn_failure" : {
-      "diagnostic" : "string",
-      "executable_path" : "string",
-      "operation" : "string",
-      "origin" : "string",
-      "return_code" : "number"
-    },
-    "reply.phases[].validator_subprocess" : {
-      "association_issues" : "array",
-      "decode_fault" : "object",
-      "exit_code" : "number",
-      "exit_grace_wait" : "object",
-      "expected_step_ids" : "array",
-      "io_error" : "string",
-      "ordinal" : "number",
-      "phase_id" : "string",
-      "pid" : "number",
-      "probe_bytes_expected" : "number",
-      "probe_bytes_written" : "number",
-      "read_error" : "string",
-      "reaped" : "boolean",
-      "records" : "array",
-      "stdout_bytes_received" : "number",
-      "stdout_collection_stop" : "string",
-      "term_signal" : "number",
-      "termination_request" : "object",
-      "wait_errors" : "array"
-    },
-    "reply.phases[].validator_subprocess.association_issues[]" : {
-      "count" : "number",
-      "kind" : "string",
-      "origin" : "string",
-      "step_id" : "string"
-    },
-    "reply.phases[].validator_subprocess.decode_fault" : {
-      "byte_offset" : "number",
-      "context_b64" : "string",
-      "context_truncated" : "boolean",
-      "frame_bytes" : "number",
-      "kind" : "string",
-      "message" : "string",
-      "origin" : "string",
-      "retained_bytes" : "number"
-    },
-    "reply.phases[].validator_subprocess.exit_grace_wait" : {
-      "budget_ms" : "number",
-      "clock_fault" : "boolean",
-      "elapsed_ms" : "number",
-      "excluded_ms" : "number",
-      "native_errno" : "number",
-      "stop" : "string"
-    },
-    "reply.phases[].validator_subprocess.records[]" : {
-      "errno" : "number",
-      "error" : "string",
-      "filter_type" : "string",
-      "filter_type_id" : "number",
-      "filter_value" : "string",
-      "operation" : "string",
-      "outcome" : "string",
-      "raw_line" : "string",
-      "rc" : "number",
-      "step_id" : "string"
-    },
-    "reply.phases[].validator_subprocess.termination_request" : {
-      "errno" : "number",
-      "rc" : "number",
-      "signal" : "number"
-    },
-    "reply.phases[].validator_subprocess.wait_errors[]" : {
-      "errno" : "number",
-      "rc" : "number",
-      "stage" : "string"
-    },
-    "reply.phases[].visit_timing" : {
-      "activation_to_arrival_ms" : "number",
-      "arrival_to_release_ms" : "number",
-      "collection_ms" : "number",
-      "release_to_completion_ms" : "number"
-    },
-    "reply.preparation_failure" : {
-      "actor_id" : "string",
-      "binding_ref" : "number",
-      "code" : "string",
-      "reason" : "string",
-      "stage" : "string"
-    },
-    "reply.reporting_failure" : {
-      "diagnostic" : "string",
-      "evidence_retained" : "boolean",
-      "origin" : "string",
-      "original_error" : "string",
-      "original_normalized_outcome" : "string",
-      "original_rc" : "number"
-    },
-    "reply.request_failure" : {
-      "code" : "string",
-      "expected_schema" : "number",
-      "path" : "array"
-    },
-    "reply.resources" : {
-      "deliveries" : "array",
-      "handles" : "array",
-      "tokens" : "array"
-    },
-    "reply.resources.deliveries[]" : {
-      "delivered_length" : "number",
-      "delivery_ref" : "string",
-      "equality" : "string",
-      "last_use_step_id" : "string",
-      "recipient_actor_id" : "string",
-      "source_actor_id" : "string",
-      "status" : "string",
-      "step_id" : "string",
-      "token_ref" : "string"
-    },
-    "reply.resources.handles[]" : {
-      "actor_id" : "string",
-      "delivery_ref" : "string",
-      "handle_ref" : "string",
-      "native_handle" : "number",
-      "raw_equal_handles" : "array",
-      "release_attempted" : "boolean",
-      "release_step_id" : "string",
-      "status" : "string",
-      "step_id" : "string"
-    },
-    "reply.resources.tokens[]" : {
-      "actor_id" : "string",
-      "family" : "string",
-      "last_use_step_id" : "string",
-      "status" : "string",
-      "step_id" : "string",
-      "token_length" : "number",
-      "token_ref" : "string"
-    },
-    "reply.runner_subprocess" : {
-      "cleanup_trigger" : "string",
-      "collection_basis" : "string",
-      "disposition" : "object",
-      "done_observed" : "boolean",
-      "exit_code" : "number",
-      "exit_grace_wait" : "object",
-      "exit_requested" : "boolean",
-      "grace_end" : "string",
-      "partial_steps" : "boolean",
-      "pid" : "number",
-      "policy_transfer_error" : "object",
-      "policy_transfer_timeout" : "object",
-      "poll_stop_reason" : "string",
-      "ready_byte_received" : "boolean",
-      "ready_wait" : "object",
-      "reaped" : "boolean",
-      "sentinel_wait" : "object",
-      "term_signal" : "number",
-      "termination_request" : "object",
-      "wait_errors" : "array",
-      "worker_evidence" : "object"
-    },
-    "reply.runner_subprocess.disposition" : {
-      "issues" : "array",
-      "questions" : "object",
-      "steps" : "array"
-    },
-    "reply.runner_subprocess.disposition.issues[]" : {
-      "detail" : "string",
-      "kind" : "string",
-      "observations" : "array",
-      "question" : "string",
-      "rule" : "string",
-      "step_index" : "number"
-    },
-    "reply.runner_subprocess.disposition.questions" : {
-      "cleanup_trigger" : "object",
-      "collection_basis" : "object",
-      "final_status" : "object",
-      "grace_end" : "object",
-      "kill_request_and_result" : "object",
-      "progress_association" : "object",
-      "stop_reason" : "object"
-    },
-    "reply.runner_subprocess.disposition.questions.cleanup_trigger" : {
-      "answer" : "string",
-      "basis" : "array",
-      "reason" : "string",
-      "state" : "string"
-    },
-    "reply.runner_subprocess.disposition.questions.collection_basis" : {
-      "answer" : "string",
-      "basis" : "array",
-      "state" : "string"
-    },
-    "reply.runner_subprocess.disposition.questions.final_status" : {
-      "answer" : "string",
-      "basis" : "array",
-      "reason" : "string",
-      "state" : "string",
-      "value" : "number"
-    },
-    "reply.runner_subprocess.disposition.questions.grace_end" : {
-      "answer" : "string",
-      "basis" : "array",
-      "reason" : "string",
-      "state" : "string"
-    },
-    "reply.runner_subprocess.disposition.questions.kill_request_and_result" : {
-      "answer" : "string",
-      "basis" : "array",
-      "reason" : "string",
-      "state" : "string",
-      "value" : "object"
-    },
-    "reply.runner_subprocess.disposition.questions.kill_request_and_result.value" : {
-      "errno" : "number",
-      "rc" : "number",
-      "signal" : "number"
-    },
-    "reply.runner_subprocess.disposition.questions.progress_association" : {
-      "answer" : "string",
-      "basis" : "array",
-      "reason" : "string",
-      "state" : "string",
-      "value" : "number"
-    },
-    "reply.runner_subprocess.disposition.questions.stop_reason" : {
-      "answer" : "string",
-      "basis" : "array",
-      "state" : "string"
-    },
-    "reply.runner_subprocess.disposition.steps[]" : {
-      "attempt_support" : "string",
-      "index" : "number",
-      "questions" : "object",
-      "slot" : "string",
-      "step_id" : "string"
-    },
-    "reply.runner_subprocess.disposition.steps[].questions" : {
-      "step_boundary_reached" : "object",
-      "step_requested_operation_applicability" : "object",
-      "step_result_published" : "object"
-    },
-    "reply.runner_subprocess.disposition.steps[].questions.step_boundary_reached" : {
-      "answer" : "string",
-      "basis" : "array",
-      "reason" : "string",
-      "state" : "string"
-    },
-    "reply.runner_subprocess.disposition.steps[].questions.step_requested_operation_applicability" : {
-      "answer" : "string",
-      "basis" : "array",
-      "state" : "string"
-    },
-    "reply.runner_subprocess.disposition.steps[].questions.step_result_published" : {
-      "answer" : "string",
-      "basis" : "array",
-      "issue" : "number",
-      "reason" : "string",
-      "state" : "string"
-    },
-    "reply.runner_subprocess.exit_grace_wait" : {
-      "budget_ms" : "number",
-      "clock_fault" : "boolean",
-      "elapsed_ms" : "number",
-      "excluded_ms" : "number",
-      "native_errno" : "number",
-      "stop" : "string"
-    },
-    "reply.runner_subprocess.policy_transfer_error" : {
-      "bytes_expected" : "number",
-      "bytes_written" : "number",
-      "errno" : "number"
-    },
-    "reply.runner_subprocess.policy_transfer_timeout" : {
-      "budget_ms" : "number",
-      "bytes_expected" : "number",
-      "bytes_written" : "number",
-      "elapsed_ms" : "number"
-    },
-    "reply.runner_subprocess.ready_wait" : {
-      "budget_ms" : "number",
-      "clock_fault" : "boolean",
-      "elapsed_ms" : "number",
-      "excluded_ms" : "number",
-      "native_errno" : "number",
-      "stop" : "string"
-    },
-    "reply.runner_subprocess.sentinel_wait" : {
-      "budget_ms" : "number",
-      "clock_fault" : "boolean",
-      "elapsed_ms" : "number",
-      "excluded_ms" : "number",
-      "native_errno" : "number",
-      "stop" : "string"
-    },
-    "reply.runner_subprocess.termination_request" : {
-      "errno" : "number",
-      "rc" : "number",
-      "signal" : "number"
-    },
-    "reply.runner_subprocess.wait_errors[]" : {
-      "errno" : "number",
-      "rc" : "number",
-      "stage" : "string"
-    },
-    "reply.runner_subprocess.worker_evidence" : {
-      "abi_identity" : "string",
-      "diagnostic" : "object",
-      "failure" : "object",
-      "failure_publication" : "number",
-      "failure_state" : "string",
-      "policy_read" : "object",
-      "progress" : "object",
-      "readiness" : "object"
-    },
-    "reply.runner_subprocess.worker_evidence.diagnostic" : {
-      "length" : "number",
-      "state" : "number",
-      "status" : "string",
-      "text" : "string"
-    },
-    "reply.runner_subprocess.worker_evidence.failure" : {
-      "code" : "number",
-      "detail" : "number",
-      "errno" : "number",
-      "index" : "number",
-      "native_kind" : "number",
-      "native_result" : "number",
-      "operation" : "number"
-    },
-    "reply.runner_subprocess.worker_evidence.policy_read" : {
-      "bytes_expected" : "number",
-      "bytes_received" : "number"
-    },
-    "reply.runner_subprocess.worker_evidence.progress" : {
-      "index" : "number",
-      "operation" : "number",
-      "raw" : "number",
-      "stage" : "number"
-    },
-    "reply.runner_subprocess.worker_evidence.readiness" : {
-      "errno" : "number",
-      "rc" : "number"
-    },
-    "reply.schedule" : {
-      "cancelled" : "string",
-      "collection_budget_ms" : "number",
-      "execution_wait" : "object",
-      "lifetime_budget_ms" : "number",
-      "setup_wait" : "object"
-    },
-    "reply.schedule.execution_wait" : {
-      "budget_ms" : "number",
-      "clock_fault" : "boolean",
-      "elapsed_ms" : "number",
-      "excluded_ms" : "number",
-      "stop" : "string"
-    },
-    "reply.schedule.setup_wait" : {
-      "budget_ms" : "number",
-      "clock_fault" : "boolean",
-      "elapsed_ms" : "number",
-      "stop" : "string"
-    },
-    "reply.steps[]" : {
-      "actor_id" : "string",
-      "attempt" : "object",
-      "comparison" : "object",
-      "phase_id" : "string",
-      "sandbox_check" : "object",
-      "step_id" : "string"
-    },
-    "reply.steps[].attempt" : {
-      "child_exit_code" : "number",
-      "child_pid" : "number",
-      "child_term_signal" : "number",
-      "errno" : "number",
-      "error" : "string",
-      "exec_observation" : "object",
-      "fresh_read" : "object",
-      "fresh_write" : "object",
-      "lifecycle" : "object",
-      "missing_reason" : "string",
-      "observed_path" : "string",
-      "outcome" : "string",
-      "path_diagnostics" : "object",
-      "rc" : "number",
-      "requested_action" : "string",
-      "requested_kind" : "string",
-      "requested_path" : "string",
-      "result_source" : "string",
-      "stderr" : "string",
-      "stdout" : "string"
-    },
-    "reply.steps[].attempt.exec_observation" : {
-      "cleanup" : "object",
-      "collection" : "object",
-      "reap" : "object"
-    },
-    "reply.steps[].attempt.exec_observation.cleanup" : {
-      "group_request" : "object",
-      "leader_fallback" : "object",
-      "state" : "string"
-    },
-    "reply.steps[].attempt.exec_observation.cleanup.group_request" : {
-      "errno" : "number",
-      "rc" : "number",
-      "signal" : "number",
-      "target" : "number"
-    },
-    "reply.steps[].attempt.exec_observation.cleanup.leader_fallback" : {
-      "errno" : "number",
-      "rc" : "number",
-      "signal" : "number",
-      "target" : "number"
-    },
-    "reply.steps[].attempt.exec_observation.collection" : {
-      "clock_fault" : "number",
-      "deadline_kind" : "string",
-      "leader_exit_observed" : "boolean",
-      "poll_errno" : "number",
-      "stderr" : "object",
-      "stdout" : "object",
-      "stop_reason" : "string",
-      "waitid_errno" : "number"
-    },
-    "reply.steps[].attempt.exec_observation.collection.stderr" : {
-      "eof" : "boolean",
-      "poll_revents" : "number",
-      "read_errno" : "number"
-    },
-    "reply.steps[].attempt.exec_observation.collection.stdout" : {
-      "eof" : "boolean",
-      "poll_revents" : "number",
-      "read_errno" : "number"
-    },
-    "reply.steps[].attempt.exec_observation.reap" : {
-      "clock_fault" : "number",
-      "last_wait" : "object",
-      "stop_reason" : "string"
-    },
-    "reply.steps[].attempt.exec_observation.reap.last_wait" : {
-      "errno" : "number",
-      "rc" : "number",
-      "status" : "number"
-    },
-    "reply.steps[].attempt.fresh_read" : {
-      "close_errno" : "number",
-      "close_rc" : "number",
-      "content_hex" : "string",
-      "identity" : "object",
-      "open_errno" : "number",
-      "open_rc" : "number",
-      "read_errno" : "number",
-      "read_rc" : "number",
-      "stat_errno" : "number",
-      "stat_rc" : "number"
-    },
-    "reply.steps[].attempt.fresh_read.identity" : {
-      "device" : "number",
-      "gid" : "number",
-      "inode" : "number",
-      "mode" : "number",
-      "uid" : "number"
-    },
-    "reply.steps[].attempt.fresh_write" : {
-      "close_errno" : "number",
-      "close_rc" : "number",
-      "open_errno" : "number",
-      "open_rc" : "number",
-      "opened_stat" : "object",
-      "preopen_stat" : "object",
-      "truncate_errno" : "number",
-      "truncate_rc" : "number",
-      "truncated_stat" : "object",
-      "write_errno" : "number",
-      "write_rc" : "number",
-      "written_stat" : "object"
-    },
-    "reply.steps[].attempt.fresh_write.opened_stat" : {
-      "errno" : "number",
-      "identity" : "object",
-      "rc" : "number",
-      "size" : "number"
-    },
-    "reply.steps[].attempt.fresh_write.opened_stat.identity" : {
-      "device" : "number",
-      "gid" : "number",
-      "inode" : "number",
-      "mode" : "number",
-      "uid" : "number"
-    },
-    "reply.steps[].attempt.fresh_write.preopen_stat" : {
-      "errno" : "number",
-      "identity" : "object",
-      "rc" : "number",
-      "size" : "number"
-    },
-    "reply.steps[].attempt.fresh_write.preopen_stat.identity" : {
-      "device" : "number",
-      "gid" : "number",
-      "inode" : "number",
-      "mode" : "number",
-      "uid" : "number"
-    },
-    "reply.steps[].attempt.fresh_write.truncated_stat" : {
-      "errno" : "number",
-      "identity" : "object",
-      "rc" : "number",
-      "size" : "number"
-    },
-    "reply.steps[].attempt.fresh_write.truncated_stat.identity" : {
-      "device" : "number",
-      "gid" : "number",
-      "inode" : "number",
-      "mode" : "number",
-      "uid" : "number"
-    },
-    "reply.steps[].attempt.fresh_write.written_stat" : {
-      "errno" : "number",
-      "identity" : "object",
-      "rc" : "number",
-      "size" : "number"
-    },
-    "reply.steps[].attempt.fresh_write.written_stat.identity" : {
-      "device" : "number",
-      "gid" : "number",
-      "inode" : "number",
-      "mode" : "number",
-      "uid" : "number"
-    },
-    "reply.steps[].attempt.lifecycle" : {
-      "boundary" : "object",
-      "result" : "object",
-      "summary" : "string"
-    },
-    "reply.steps[].attempt.lifecycle.boundary" : {
-      "answer" : "string",
-      "basis" : "array",
-      "reason" : "string",
-      "state" : "string"
-    },
-    "reply.steps[].attempt.lifecycle.result" : {
-      "answer" : "string",
-      "basis" : "array",
-      "issue" : "number",
-      "reason" : "string",
-      "state" : "string"
-    },
-    "reply.steps[].attempt.path_diagnostics" : {
-      "input" : "string",
-      "observer" : "string",
-      "parent_realpath_resolved" : "string",
-      "realpath_resolved" : "string",
-      "same_as_input" : "array",
-      "stage" : "string"
-    },
-    "reply.steps[].comparison" : {
-      "limitations" : "array",
-      "observation" : "string",
-      "observation_basis" : "string",
-      "operation_relation" : "string",
-      "order" : "string",
-      "target_relation" : "string"
-    },
-    "reply.steps[].sandbox_check" : {
-      "errno" : "number",
-      "error" : "string",
-      "filter_kind" : "string",
-      "filter_type_id" : "number",
-      "filter_value" : "string",
-      "missing_reason" : "string",
-      "native_rc" : "number",
-      "operation" : "string",
-      "outcome" : "string",
-      "path_diagnostics" : "object",
-      "pid" : "number",
-      "rc" : "number",
-      "result_source" : "string"
-    },
-    "reply.steps[].sandbox_check.path_diagnostics" : {
-      "firmlink_resolved" : "string",
-      "input" : "string",
-      "observer" : "string",
-      "realpath_resolved" : "string",
-      "same_as_input" : "array",
-      "stage" : "string"
-    },
-    "reply.test_overrides" : {
-      "actor_equipment_executable_paths" : "object",
-      "validator_executable_path" : "string",
-      "validator_io_timeout_ms" : "number",
-      "validator_total_timeout_ms" : "number",
-      "worker_executable_path" : "string",
-      "worker_kill_before_publish_slot" : "number",
-      "worker_post_apply_hang_ms" : "number",
-      "worker_post_apply_kill_signal" : "number",
-      "worker_pre_ready_hang_ms" : "number",
-      "worker_timeout_ms" : "number"
-    },
-    "reply.test_overrides.actor_equipment_executable_paths" : {
-      "selected" : "string",
-      "unentitled" : "string"
-    },
-    "reply.transfers[]" : {
-      "copy_status" : "string",
-      "custody_status" : "string",
-      "delivery_ref" : "string",
-      "equality" : "string",
-      "lifecycle" : "object",
-      "phase_id" : "string",
-      "recipient_acknowledged" : "boolean",
-      "recipient_actor_id" : "string",
-      "recipient_wait" : "object",
-      "request_published" : "boolean",
-      "source_acknowledged" : "boolean",
-      "source_actor_id" : "string",
-      "status" : "string",
-      "step_id" : "string",
-      "token_ref" : "string"
-    },
-    "reply.transfers[].lifecycle" : {
-      "boundary" : "object",
-      "result" : "object",
-      "summary" : "string"
-    },
-    "reply.transfers[].lifecycle.boundary" : {
-      "answer" : "string",
-      "basis" : "array",
-      "state" : "string"
-    },
-    "reply.transfers[].lifecycle.result" : {
-      "answer" : "string",
-      "basis" : "array",
-      "state" : "string"
-    },
-    "reply.transfers[].recipient_wait" : {
-      "budget_ms" : "number",
-      "clock_fault" : "boolean",
-      "elapsed_ms" : "number",
-      "stop" : "string"
+  "shape": {
+    "reply": {
+      "actors": "array",
+      "admission_failure": "object",
+      "authority_setup": "object",
+      "bundle_id": "string",
+      "compiled_profile": "object",
+      "equipment_bindings": "array",
+      "equipment_entitlements": "array",
+      "equipment_inventory": "object",
+      "error": "string",
+      "execution_form": "string",
+      "extension_events": "array",
+      "normalized_outcome": "string",
+      "phases": "array",
+      "pid": "number",
+      "policy_format": "string",
+      "policy_sha256": "string",
+      "preparation_failure": "object",
+      "producer": "object",
+      "rc": "number",
+      "reporting_failure": "object",
+      "request_failure": "object",
+      "resources": "object",
+      "run_kind": "string",
+      "runner_subprocess": "object",
+      "sandboxed_after_apply": "boolean",
+      "schedule": "object",
+      "specimen_id": "string",
+      "steps": "array",
+      "test_overrides": "object",
+      "transfers": "array"
+    },
+    "reply.actors[]": {
+      "actor_id": "string",
+      "application": "object",
+      "application_count": "number",
+      "applied": "boolean",
+      "compiled_profile": "object",
+      "equipment": "object",
+      "index": "number",
+      "launch": "object",
+      "mode": "string",
+      "owned_reap": "object",
+      "policy_format": "string",
+      "policy_received_sha256": "string",
+      "policy_sha256": "string",
+      "setup_status": "string",
+      "subprocess": "object",
+      "visits": "array"
+    },
+    "reply.actors[].application": {
+      "basis": "string",
+      "state": "string"
+    },
+    "reply.actors[].compiled_profile": {
+      "bytecode_b64": "string",
+      "bytecode_length": "number",
+      "bytecode_sha256": "string",
+      "capture_stage": "string",
+      "parameter_count": "number",
+      "params_sha256": "string",
+      "producer": "string",
+      "profile_type": "number",
+      "reason": "string",
+      "request_nonce": "string",
+      "source_length": "number",
+      "source_sha256": "string",
+      "status": "string",
+      "worker_pid": "number"
+    },
+    "reply.actors[].equipment": {
+      "binding_ref": "number",
+      "execution": "object",
+      "missing_requirements": "array",
+      "requested": "string",
+      "required_entitlements": "array",
+      "requirements_status": "string",
+      "resolved": "string"
+    },
+    "reply.actors[].equipment.execution": {
+      "cdhash": "string",
+      "eligible": "boolean",
+      "entitlements_ref": "number",
+      "identifier": "string",
+      "native_observations": "array",
+      "observed_at_monotonic_ns": "number",
+      "parent_pid": "number",
+      "path": "string",
+      "pid": "number",
+      "reason": "string",
+      "status": "string",
+      "team_id": "string"
+    },
+    "reply.actors[].equipment.execution.native_observations[]": {
+      "attempted": "boolean",
+      "operation": "string",
+      "osstatus": "number"
+    },
+    "reply.actors[].launch": {
+      "environment": "string",
+      "inherited_descriptors": "array",
+      "parent_pid": "number",
+      "pid": "number",
+      "standard_streams": "string"
+    },
+    "reply.actors[].owned_reap": {
+      "capture_ordinal": "number",
+      "departure_requested": "boolean",
+      "native_rc": "number",
+      "observed_ns": "number",
+      "ownership_unbroken": "boolean",
+      "pid": "number",
+      "raw_status": "number",
+      "stage": "string"
+    },
+    "reply.actors[].subprocess": {
+      "cleanup_trigger": "string",
+      "collection_basis": "string",
+      "disposition": "object",
+      "done_observed": "boolean",
+      "exit_code": "number",
+      "exit_grace_wait": "object",
+      "exit_requested": "boolean",
+      "grace_end": "string",
+      "partial_steps": "boolean",
+      "pid": "number",
+      "policy_transfer_error": "object",
+      "policy_transfer_timeout": "object",
+      "poll_stop_reason": "string",
+      "ready_byte_received": "boolean",
+      "ready_wait": "object",
+      "reaped": "boolean",
+      "term_signal": "number",
+      "termination_request": "object",
+      "wait_errors": "array",
+      "worker_evidence": "object"
+    },
+    "reply.actors[].subprocess.disposition": {
+      "issues": "array",
+      "questions": "object",
+      "steps": "array"
+    },
+    "reply.actors[].subprocess.disposition.issues[]": {
+      "detail": "string",
+      "kind": "string",
+      "observations": "array",
+      "question": "string",
+      "rule": "string",
+      "step_index": "number"
+    },
+    "reply.actors[].subprocess.disposition.questions": {
+      "cleanup_trigger": "object",
+      "collection_basis": "object",
+      "final_status": "object",
+      "grace_end": "object",
+      "kill_request_and_result": "object",
+      "progress_association": "object",
+      "stop_reason": "object"
+    },
+    "reply.actors[].subprocess.disposition.questions.cleanup_trigger": {
+      "answer": "string",
+      "basis": "array",
+      "reason": "string",
+      "state": "string"
+    },
+    "reply.actors[].subprocess.disposition.questions.collection_basis": {
+      "answer": "string",
+      "basis": "array",
+      "state": "string"
+    },
+    "reply.actors[].subprocess.disposition.questions.final_status": {
+      "answer": "string",
+      "basis": "array",
+      "reason": "string",
+      "state": "string",
+      "value": "number"
+    },
+    "reply.actors[].subprocess.disposition.questions.grace_end": {
+      "answer": "string",
+      "basis": "array",
+      "reason": "string",
+      "state": "string"
+    },
+    "reply.actors[].subprocess.disposition.questions.kill_request_and_result": {
+      "answer": "string",
+      "basis": "array",
+      "reason": "string",
+      "state": "string",
+      "value": "object"
+    },
+    "reply.actors[].subprocess.disposition.questions.kill_request_and_result.value": {
+      "errno": "number",
+      "rc": "number",
+      "signal": "number"
+    },
+    "reply.actors[].subprocess.disposition.questions.progress_association": {
+      "answer": "string",
+      "basis": "array",
+      "reason": "string",
+      "state": "string",
+      "value": "number"
+    },
+    "reply.actors[].subprocess.disposition.questions.stop_reason": {
+      "answer": "string",
+      "basis": "array",
+      "state": "string"
+    },
+    "reply.actors[].subprocess.disposition.steps[]": {
+      "attempt_support": "string",
+      "index": "number",
+      "questions": "object",
+      "slot": "string",
+      "step_id": "string"
+    },
+    "reply.actors[].subprocess.disposition.steps[].questions": {
+      "step_boundary_reached": "object",
+      "step_requested_operation_applicability": "object",
+      "step_result_published": "object"
+    },
+    "reply.actors[].subprocess.disposition.steps[].questions.step_boundary_reached": {
+      "answer": "string",
+      "basis": "array",
+      "reason": "string",
+      "state": "string"
+    },
+    "reply.actors[].subprocess.disposition.steps[].questions.step_requested_operation_applicability": {
+      "answer": "string",
+      "basis": "array",
+      "state": "string"
+    },
+    "reply.actors[].subprocess.disposition.steps[].questions.step_result_published": {
+      "answer": "string",
+      "basis": "array",
+      "issue": "number",
+      "reason": "string",
+      "state": "string"
+    },
+    "reply.actors[].subprocess.exit_grace_wait": {
+      "budget_ms": "number",
+      "clock_fault": "boolean",
+      "elapsed_ms": "number",
+      "stop": "string"
+    },
+    "reply.actors[].subprocess.policy_transfer_error": {
+      "bytes_expected": "number",
+      "bytes_written": "number",
+      "errno": "number"
+    },
+    "reply.actors[].subprocess.policy_transfer_timeout": {
+      "budget_ms": "number",
+      "bytes_expected": "number",
+      "bytes_written": "number",
+      "elapsed_ms": "number"
+    },
+    "reply.actors[].subprocess.ready_wait": {
+      "budget_ms": "number",
+      "clock_fault": "boolean",
+      "elapsed_ms": "number",
+      "native_errno": "number",
+      "stop": "string"
+    },
+    "reply.actors[].subprocess.termination_request": {
+      "errno": "number",
+      "rc": "number",
+      "signal": "number"
+    },
+    "reply.actors[].subprocess.wait_errors[]": {
+      "errno": "number",
+      "rc": "number",
+      "stage": "string"
+    },
+    "reply.actors[].subprocess.worker_evidence": {
+      "abi_identity": "string",
+      "diagnostic": "object",
+      "failure": "object",
+      "failure_publication": "number",
+      "failure_state": "string",
+      "policy_read": "object",
+      "progress": "object",
+      "readiness": "object"
+    },
+    "reply.actors[].subprocess.worker_evidence.diagnostic": {
+      "length": "number",
+      "state": "number",
+      "status": "string",
+      "text": "string"
+    },
+    "reply.actors[].subprocess.worker_evidence.failure": {
+      "code": "number",
+      "detail": "number",
+      "errno": "number",
+      "index": "number",
+      "native_kind": "number",
+      "native_result": "number",
+      "operation": "number"
+    },
+    "reply.actors[].subprocess.worker_evidence.policy_read": {
+      "bytes_expected": "number",
+      "bytes_received": "number"
+    },
+    "reply.actors[].subprocess.worker_evidence.progress": {
+      "index": "number",
+      "operation": "number",
+      "raw": "number",
+      "stage": "number"
+    },
+    "reply.actors[].subprocess.worker_evidence.readiness": {
+      "errno": "number",
+      "rc": "number"
+    },
+    "reply.admission_failure": {
+      "actual": "number",
+      "field": "string",
+      "index": "number",
+      "maximum": "number",
+      "origin": "string",
+      "parameter_key": "string",
+      "step_id": "string",
+      "step_index": "number",
+      "unit": "string"
+    },
+    "reply.authority_setup": {
+      "host": "object",
+      "workers": "array"
+    },
+    "reply.authority_setup.host": {
+      "custody": "array",
+      "regions": "array",
+      "run": "object"
+    },
+    "reply.authority_setup.host.custody[]": {
+      "disposition": "string",
+      "integrity_errors": "array",
+      "operations": "array",
+      "ownership": "object",
+      "primary_operation": "number",
+      "required": "boolean",
+      "token_index": "number",
+      "token_ref": "string"
+    },
+    "reply.authority_setup.host.custody[].operations[]": {
+      "detail": "string",
+      "errno": "number",
+      "native_kind": "string",
+      "native_rc": "number",
+      "operation": "string",
+      "role": "string",
+      "slot": "number",
+      "state": "string",
+      "value": "number"
+    },
+    "reply.authority_setup.host.custody[].ownership": {
+      "mapping": "string",
+      "private_erasure": "string"
+    },
+    "reply.authority_setup.host.regions[]": {
+      "actor_id": "string",
+      "actor_index": "number",
+      "cleanup_reference": "object",
+      "disposition": "string",
+      "integrity_errors": "array",
+      "operations": "array",
+      "ownership": "object",
+      "primary_operation": "number",
+      "required": "boolean"
+    },
+    "reply.authority_setup.host.regions[].cleanup_reference": {
+      "host_pid": "number",
+      "kind": "string",
+      "name": "string",
+      "recovery_state": "string",
+      "session_nonce": "number"
+    },
+    "reply.authority_setup.host.regions[].operations[]": {
+      "detail": "string",
+      "errno": "number",
+      "native_kind": "string",
+      "native_rc": "number",
+      "operation": "string",
+      "role": "string",
+      "slot": "number",
+      "state": "string",
+      "value": "number"
+    },
+    "reply.authority_setup.host.regions[].ownership": {
+      "descriptor": "string",
+      "mapping": "string",
+      "object_name": "string",
+      "shared_erasure": "string"
+    },
+    "reply.authority_setup.host.run": {
+      "disposition": "string",
+      "integrity_errors": "array",
+      "operations": "array",
+      "ownership": "object",
+      "primary_operation": "number"
+    },
+    "reply.authority_setup.host.run.operations[]": {
+      "detail": "string",
+      "errno": "number",
+      "native_kind": "string",
+      "native_rc": "number",
+      "operation": "string",
+      "role": "string",
+      "slot": "number",
+      "state": "string",
+      "value": "number"
+    },
+    "reply.authority_setup.host.run.ownership": {},
+    "reply.authority_setup.workers[]": {
+      "actor_id": "string",
+      "actor_index": "number",
+      "disposition": "string",
+      "integrity_errors": "array",
+      "operations": "array",
+      "ownership": "object",
+      "primary_operation": "number",
+      "publication": "string",
+      "required": "boolean"
+    },
+    "reply.authority_setup.workers[].operations[]": {
+      "detail": "string",
+      "errno": "number",
+      "native_kind": "string",
+      "native_rc": "number",
+      "operation": "string",
+      "role": "string",
+      "slot": "number",
+      "state": "string",
+      "value": "number"
+    },
+    "reply.authority_setup.workers[].ownership": {
+      "descriptor": "string",
+      "mapping": "string",
+      "shared_erasure": "string"
+    },
+    "reply.compiled_profile": {
+      "bytecode_b64": "string",
+      "bytecode_length": "number",
+      "bytecode_sha256": "string",
+      "capture_stage": "string",
+      "parameter_count": "number",
+      "params_sha256": "string",
+      "producer": "string",
+      "profile_type": "number",
+      "reason": "string",
+      "request_nonce": "string",
+      "source_length": "number",
+      "source_sha256": "string",
+      "status": "string",
+      "worker_pid": "number"
+    },
+    "reply.equipment_bindings[]": {
+      "cdhash": "string",
+      "entitlements_match": "boolean",
+      "entitlements_ref": "number",
+      "error": "object",
+      "expected_cdhash": "string",
+      "expected_sha256": "string",
+      "identifier": "string",
+      "implementation_identity": "string",
+      "path": "string",
+      "reason": "string",
+      "relative_path": "string",
+      "role": "string",
+      "sha256": "string",
+      "signature_osstatus": "number",
+      "source": "string",
+      "status": "string",
+      "team_id": "string"
+    },
+    "reply.equipment_bindings[].error": {
+      "code": "number",
+      "domain": "string",
+      "message": "string",
+      "operation": "string"
+    },
+    "reply.equipment_entitlements[]": {
+      "actor_id": "string",
+      "binding_ref": "number",
+      "error": "object",
+      "raw_plist": "string",
+      "source": "string",
+      "status": "string"
+    },
+    "reply.equipment_entitlements[].error": {
+      "code": "number",
+      "domain": "string",
+      "message": "string",
+      "operation": "string"
+    },
+    "reply.equipment_inventory": {
+      "error": "object",
+      "path": "string",
+      "reason": "string",
+      "schema_version": "number",
+      "seal_osstatus": "number",
+      "sha256": "string",
+      "status": "string",
+      "unsigned_worker_sha256": "string",
+      "worker_identity": "string"
+    },
+    "reply.equipment_inventory.error": {
+      "code": "number",
+      "domain": "string",
+      "message": "string",
+      "operation": "string"
+    },
+    "reply.extension_events[]": {
+      "actor_id": "string",
+      "call_boundary_observed": "boolean",
+      "delivery_ref": "string",
+      "errno": "number",
+      "extension_class": "string",
+      "family": "string",
+      "flags": "number",
+      "handle_ref": "string",
+      "lifecycle": "object",
+      "native_nonnull": "boolean",
+      "native_result": "number",
+      "operation": "string",
+      "phase_id": "string",
+      "result_published": "boolean",
+      "status": "string",
+      "step_id": "string",
+      "target": "string",
+      "token_length": "number",
+      "token_ref": "string",
+      "unavailable_reason": "string"
+    },
+    "reply.extension_events[].lifecycle": {
+      "boundary": "object",
+      "result": "object",
+      "summary": "string"
+    },
+    "reply.extension_events[].lifecycle.boundary": {
+      "answer": "string",
+      "basis": "array",
+      "reason": "string",
+      "state": "string"
+    },
+    "reply.extension_events[].lifecycle.result": {
+      "answer": "string",
+      "basis": "array",
+      "issue": "number",
+      "reason": "string",
+      "state": "string"
+    },
+    "reply.phases[]": {
+      "action_ids": "array",
+      "activation_observation": "object",
+      "actor_id": "string",
+      "actor_visit": "number",
+      "arrival_observed": "boolean",
+      "collection_status": "string",
+      "completion_observed": "boolean",
+      "ordering": "object",
+      "ordinal": "number",
+      "phase_id": "string",
+      "termination_gate": "object",
+      "validator_spawn_failure": "object",
+      "validator_subprocess": "object",
+      "visit_timing": "object"
+    },
+    "reply.phases[].activation_observation": {
+      "capture_ordinal": "number",
+      "observed_ns": "number"
+    },
+    "reply.phases[].ordering": {
+      "collection_closed_before_proceed": "boolean",
+      "proceed_observed": "boolean",
+      "proceed_set": "boolean",
+      "protocol_violations": "array",
+      "validator_disposition": "string",
+      "worker_lifetime_established": "boolean"
+    },
+    "reply.phases[].termination_gate": {
+      "activation_eligible": "boolean",
+      "capture_ordinal": "number",
+      "condition": "string",
+      "observation": "object",
+      "outcome": "string",
+      "source_actor_id": "string",
+      "source_final_phase_id": "string",
+      "wait": "object"
+    },
+    "reply.phases[].termination_gate.observation": {
+      "capture_ordinal": "number"
+    },
+    "reply.phases[].termination_gate.wait": {
+      "budget_ms": "number",
+      "clock_fault": "boolean",
+      "elapsed_ms": "number",
+      "native_errno": "number",
+      "stop": "string"
+    },
+    "reply.phases[].validator_spawn_failure": {
+      "diagnostic": "string",
+      "executable_path": "string",
+      "operation": "string",
+      "origin": "string",
+      "return_code": "number"
+    },
+    "reply.phases[].validator_subprocess": {
+      "association_issues": "array",
+      "decode_fault": "object",
+      "exit_code": "number",
+      "exit_grace_wait": "object",
+      "expected_step_ids": "array",
+      "io_error": "string",
+      "ordinal": "number",
+      "phase_id": "string",
+      "pid": "number",
+      "probe_bytes_expected": "number",
+      "probe_bytes_written": "number",
+      "read_error": "string",
+      "reaped": "boolean",
+      "records": "array",
+      "stdout_bytes_received": "number",
+      "stdout_collection_stop": "string",
+      "term_signal": "number",
+      "termination_request": "object",
+      "wait_errors": "array"
+    },
+    "reply.phases[].validator_subprocess.association_issues[]": {
+      "count": "number",
+      "kind": "string",
+      "origin": "string",
+      "step_id": "string"
+    },
+    "reply.phases[].validator_subprocess.decode_fault": {
+      "byte_offset": "number",
+      "context_b64": "string",
+      "context_truncated": "boolean",
+      "frame_bytes": "number",
+      "kind": "string",
+      "message": "string",
+      "origin": "string",
+      "retained_bytes": "number"
+    },
+    "reply.phases[].validator_subprocess.exit_grace_wait": {
+      "budget_ms": "number",
+      "clock_fault": "boolean",
+      "elapsed_ms": "number",
+      "excluded_ms": "number",
+      "native_errno": "number",
+      "stop": "string"
+    },
+    "reply.phases[].validator_subprocess.records[]": {
+      "errno": "number",
+      "error": "string",
+      "filter_type": "string",
+      "filter_type_id": "number",
+      "filter_value": "string",
+      "operation": "string",
+      "outcome": "string",
+      "raw_line": "string",
+      "rc": "number",
+      "step_id": "string"
+    },
+    "reply.phases[].validator_subprocess.termination_request": {
+      "errno": "number",
+      "rc": "number",
+      "signal": "number"
+    },
+    "reply.phases[].validator_subprocess.wait_errors[]": {
+      "errno": "number",
+      "rc": "number",
+      "stage": "string"
+    },
+    "reply.phases[].visit_timing": {
+      "activation_to_arrival_ms": "number",
+      "arrival_to_release_ms": "number",
+      "collection_ms": "number",
+      "release_to_completion_ms": "number"
+    },
+    "reply.preparation_failure": {
+      "actor_id": "string",
+      "binding_ref": "number",
+      "code": "string",
+      "reason": "string",
+      "stage": "string"
+    },
+    "reply.producer": {
+      "commit": "string",
+      "contract": "string",
+      "describe": "string"
+    },
+    "reply.reporting_failure": {
+      "diagnostic": "string",
+      "evidence_retained": "boolean",
+      "origin": "string",
+      "original_error": "string",
+      "original_normalized_outcome": "string",
+      "original_rc": "number"
+    },
+    "reply.request_failure": {
+      "code": "string",
+      "expected_contract": "string",
+      "path": "array"
+    },
+    "reply.resources": {
+      "deliveries": "array",
+      "handles": "array",
+      "tokens": "array"
+    },
+    "reply.resources.deliveries[]": {
+      "delivered_length": "number",
+      "delivery_ref": "string",
+      "equality": "string",
+      "last_use_step_id": "string",
+      "recipient_actor_id": "string",
+      "source_actor_id": "string",
+      "status": "string",
+      "step_id": "string",
+      "token_ref": "string"
+    },
+    "reply.resources.handles[]": {
+      "actor_id": "string",
+      "delivery_ref": "string",
+      "handle_ref": "string",
+      "native_handle": "number",
+      "raw_equal_handles": "array",
+      "release_attempted": "boolean",
+      "release_step_id": "string",
+      "status": "string",
+      "step_id": "string"
+    },
+    "reply.resources.tokens[]": {
+      "actor_id": "string",
+      "family": "string",
+      "last_use_step_id": "string",
+      "status": "string",
+      "step_id": "string",
+      "token_length": "number",
+      "token_ref": "string"
+    },
+    "reply.runner_subprocess": {
+      "cleanup_trigger": "string",
+      "collection_basis": "string",
+      "disposition": "object",
+      "done_observed": "boolean",
+      "exit_code": "number",
+      "exit_grace_wait": "object",
+      "exit_requested": "boolean",
+      "grace_end": "string",
+      "partial_steps": "boolean",
+      "pid": "number",
+      "policy_transfer_error": "object",
+      "policy_transfer_timeout": "object",
+      "poll_stop_reason": "string",
+      "ready_byte_received": "boolean",
+      "ready_wait": "object",
+      "reaped": "boolean",
+      "sentinel_wait": "object",
+      "term_signal": "number",
+      "termination_request": "object",
+      "wait_errors": "array",
+      "worker_evidence": "object"
+    },
+    "reply.runner_subprocess.disposition": {
+      "issues": "array",
+      "questions": "object",
+      "steps": "array"
+    },
+    "reply.runner_subprocess.disposition.issues[]": {
+      "detail": "string",
+      "kind": "string",
+      "observations": "array",
+      "question": "string",
+      "rule": "string",
+      "step_index": "number"
+    },
+    "reply.runner_subprocess.disposition.questions": {
+      "cleanup_trigger": "object",
+      "collection_basis": "object",
+      "final_status": "object",
+      "grace_end": "object",
+      "kill_request_and_result": "object",
+      "progress_association": "object",
+      "stop_reason": "object"
+    },
+    "reply.runner_subprocess.disposition.questions.cleanup_trigger": {
+      "answer": "string",
+      "basis": "array",
+      "reason": "string",
+      "state": "string"
+    },
+    "reply.runner_subprocess.disposition.questions.collection_basis": {
+      "answer": "string",
+      "basis": "array",
+      "state": "string"
+    },
+    "reply.runner_subprocess.disposition.questions.final_status": {
+      "answer": "string",
+      "basis": "array",
+      "reason": "string",
+      "state": "string",
+      "value": "number"
+    },
+    "reply.runner_subprocess.disposition.questions.grace_end": {
+      "answer": "string",
+      "basis": "array",
+      "reason": "string",
+      "state": "string"
+    },
+    "reply.runner_subprocess.disposition.questions.kill_request_and_result": {
+      "answer": "string",
+      "basis": "array",
+      "reason": "string",
+      "state": "string",
+      "value": "object"
+    },
+    "reply.runner_subprocess.disposition.questions.kill_request_and_result.value": {
+      "errno": "number",
+      "rc": "number",
+      "signal": "number"
+    },
+    "reply.runner_subprocess.disposition.questions.progress_association": {
+      "answer": "string",
+      "basis": "array",
+      "reason": "string",
+      "state": "string",
+      "value": "number"
+    },
+    "reply.runner_subprocess.disposition.questions.stop_reason": {
+      "answer": "string",
+      "basis": "array",
+      "state": "string"
+    },
+    "reply.runner_subprocess.disposition.steps[]": {
+      "attempt_support": "string",
+      "index": "number",
+      "questions": "object",
+      "slot": "string",
+      "step_id": "string"
+    },
+    "reply.runner_subprocess.disposition.steps[].questions": {
+      "step_boundary_reached": "object",
+      "step_requested_operation_applicability": "object",
+      "step_result_published": "object"
+    },
+    "reply.runner_subprocess.disposition.steps[].questions.step_boundary_reached": {
+      "answer": "string",
+      "basis": "array",
+      "reason": "string",
+      "state": "string"
+    },
+    "reply.runner_subprocess.disposition.steps[].questions.step_requested_operation_applicability": {
+      "answer": "string",
+      "basis": "array",
+      "state": "string"
+    },
+    "reply.runner_subprocess.disposition.steps[].questions.step_result_published": {
+      "answer": "string",
+      "basis": "array",
+      "issue": "number",
+      "reason": "string",
+      "state": "string"
+    },
+    "reply.runner_subprocess.exit_grace_wait": {
+      "budget_ms": "number",
+      "clock_fault": "boolean",
+      "elapsed_ms": "number",
+      "excluded_ms": "number",
+      "native_errno": "number",
+      "stop": "string"
+    },
+    "reply.runner_subprocess.policy_transfer_error": {
+      "bytes_expected": "number",
+      "bytes_written": "number",
+      "errno": "number"
+    },
+    "reply.runner_subprocess.policy_transfer_timeout": {
+      "budget_ms": "number",
+      "bytes_expected": "number",
+      "bytes_written": "number",
+      "elapsed_ms": "number"
+    },
+    "reply.runner_subprocess.ready_wait": {
+      "budget_ms": "number",
+      "clock_fault": "boolean",
+      "elapsed_ms": "number",
+      "excluded_ms": "number",
+      "native_errno": "number",
+      "stop": "string"
+    },
+    "reply.runner_subprocess.sentinel_wait": {
+      "budget_ms": "number",
+      "clock_fault": "boolean",
+      "elapsed_ms": "number",
+      "excluded_ms": "number",
+      "native_errno": "number",
+      "stop": "string"
+    },
+    "reply.runner_subprocess.termination_request": {
+      "errno": "number",
+      "rc": "number",
+      "signal": "number"
+    },
+    "reply.runner_subprocess.wait_errors[]": {
+      "errno": "number",
+      "rc": "number",
+      "stage": "string"
+    },
+    "reply.runner_subprocess.worker_evidence": {
+      "abi_identity": "string",
+      "diagnostic": "object",
+      "failure": "object",
+      "failure_publication": "number",
+      "failure_state": "string",
+      "policy_read": "object",
+      "progress": "object",
+      "readiness": "object"
+    },
+    "reply.runner_subprocess.worker_evidence.diagnostic": {
+      "length": "number",
+      "state": "number",
+      "status": "string",
+      "text": "string"
+    },
+    "reply.runner_subprocess.worker_evidence.failure": {
+      "code": "number",
+      "detail": "number",
+      "errno": "number",
+      "index": "number",
+      "native_kind": "number",
+      "native_result": "number",
+      "operation": "number"
+    },
+    "reply.runner_subprocess.worker_evidence.policy_read": {
+      "bytes_expected": "number",
+      "bytes_received": "number"
+    },
+    "reply.runner_subprocess.worker_evidence.progress": {
+      "index": "number",
+      "operation": "number",
+      "raw": "number",
+      "stage": "number"
+    },
+    "reply.runner_subprocess.worker_evidence.readiness": {
+      "errno": "number",
+      "rc": "number"
+    },
+    "reply.schedule": {
+      "cancelled": "string",
+      "collection_budget_ms": "number",
+      "execution_wait": "object",
+      "lifetime_budget_ms": "number",
+      "setup_wait": "object"
+    },
+    "reply.schedule.execution_wait": {
+      "budget_ms": "number",
+      "clock_fault": "boolean",
+      "elapsed_ms": "number",
+      "excluded_ms": "number",
+      "stop": "string"
+    },
+    "reply.schedule.setup_wait": {
+      "budget_ms": "number",
+      "clock_fault": "boolean",
+      "elapsed_ms": "number",
+      "stop": "string"
+    },
+    "reply.steps[]": {
+      "actor_id": "string",
+      "attempt": "object",
+      "comparison": "object",
+      "phase_id": "string",
+      "sandbox_check": "object",
+      "step_id": "string"
+    },
+    "reply.steps[].attempt": {
+      "child_exit_code": "number",
+      "child_pid": "number",
+      "child_term_signal": "number",
+      "errno": "number",
+      "error": "string",
+      "exec_observation": "object",
+      "fresh_read": "object",
+      "fresh_write": "object",
+      "lifecycle": "object",
+      "missing_reason": "string",
+      "observed_path": "string",
+      "outcome": "string",
+      "path_diagnostics": "object",
+      "rc": "number",
+      "requested_action": "string",
+      "requested_kind": "string",
+      "requested_path": "string",
+      "result_source": "string",
+      "stderr": "string",
+      "stdout": "string"
+    },
+    "reply.steps[].attempt.exec_observation": {
+      "cleanup": "object",
+      "collection": "object",
+      "reap": "object"
+    },
+    "reply.steps[].attempt.exec_observation.cleanup": {
+      "group_request": "object",
+      "leader_fallback": "object",
+      "state": "string"
+    },
+    "reply.steps[].attempt.exec_observation.cleanup.group_request": {
+      "errno": "number",
+      "rc": "number",
+      "signal": "number",
+      "target": "number"
+    },
+    "reply.steps[].attempt.exec_observation.cleanup.leader_fallback": {
+      "errno": "number",
+      "rc": "number",
+      "signal": "number",
+      "target": "number"
+    },
+    "reply.steps[].attempt.exec_observation.collection": {
+      "clock_fault": "number",
+      "deadline_kind": "string",
+      "leader_exit_observed": "boolean",
+      "poll_errno": "number",
+      "stderr": "object",
+      "stdout": "object",
+      "stop_reason": "string",
+      "waitid_errno": "number"
+    },
+    "reply.steps[].attempt.exec_observation.collection.stderr": {
+      "eof": "boolean",
+      "poll_revents": "number",
+      "read_errno": "number"
+    },
+    "reply.steps[].attempt.exec_observation.collection.stdout": {
+      "eof": "boolean",
+      "poll_revents": "number",
+      "read_errno": "number"
+    },
+    "reply.steps[].attempt.exec_observation.reap": {
+      "clock_fault": "number",
+      "last_wait": "object",
+      "stop_reason": "string"
+    },
+    "reply.steps[].attempt.exec_observation.reap.last_wait": {
+      "errno": "number",
+      "rc": "number",
+      "status": "number"
+    },
+    "reply.steps[].attempt.fresh_read": {
+      "close_errno": "number",
+      "close_rc": "number",
+      "content_hex": "string",
+      "identity": "object",
+      "open_errno": "number",
+      "open_rc": "number",
+      "read_errno": "number",
+      "read_rc": "number",
+      "stat_errno": "number",
+      "stat_rc": "number"
+    },
+    "reply.steps[].attempt.fresh_read.identity": {
+      "device": "number",
+      "gid": "number",
+      "inode": "number",
+      "mode": "number",
+      "uid": "number"
+    },
+    "reply.steps[].attempt.fresh_write": {
+      "close_errno": "number",
+      "close_rc": "number",
+      "open_errno": "number",
+      "open_rc": "number",
+      "opened_stat": "object",
+      "preopen_stat": "object",
+      "truncate_errno": "number",
+      "truncate_rc": "number",
+      "truncated_stat": "object",
+      "write_errno": "number",
+      "write_rc": "number",
+      "written_stat": "object"
+    },
+    "reply.steps[].attempt.fresh_write.opened_stat": {
+      "errno": "number",
+      "identity": "object",
+      "rc": "number",
+      "size": "number"
+    },
+    "reply.steps[].attempt.fresh_write.opened_stat.identity": {
+      "device": "number",
+      "gid": "number",
+      "inode": "number",
+      "mode": "number",
+      "uid": "number"
+    },
+    "reply.steps[].attempt.fresh_write.preopen_stat": {
+      "errno": "number",
+      "identity": "object",
+      "rc": "number",
+      "size": "number"
+    },
+    "reply.steps[].attempt.fresh_write.preopen_stat.identity": {
+      "device": "number",
+      "gid": "number",
+      "inode": "number",
+      "mode": "number",
+      "uid": "number"
+    },
+    "reply.steps[].attempt.fresh_write.truncated_stat": {
+      "errno": "number",
+      "identity": "object",
+      "rc": "number",
+      "size": "number"
+    },
+    "reply.steps[].attempt.fresh_write.truncated_stat.identity": {
+      "device": "number",
+      "gid": "number",
+      "inode": "number",
+      "mode": "number",
+      "uid": "number"
+    },
+    "reply.steps[].attempt.fresh_write.written_stat": {
+      "errno": "number",
+      "identity": "object",
+      "rc": "number",
+      "size": "number"
+    },
+    "reply.steps[].attempt.fresh_write.written_stat.identity": {
+      "device": "number",
+      "gid": "number",
+      "inode": "number",
+      "mode": "number",
+      "uid": "number"
+    },
+    "reply.steps[].attempt.lifecycle": {
+      "boundary": "object",
+      "result": "object",
+      "summary": "string"
+    },
+    "reply.steps[].attempt.lifecycle.boundary": {
+      "answer": "string",
+      "basis": "array",
+      "reason": "string",
+      "state": "string"
+    },
+    "reply.steps[].attempt.lifecycle.result": {
+      "answer": "string",
+      "basis": "array",
+      "issue": "number",
+      "reason": "string",
+      "state": "string"
+    },
+    "reply.steps[].attempt.path_diagnostics": {
+      "input": "string",
+      "observer": "string",
+      "parent_realpath_resolved": "string",
+      "realpath_resolved": "string",
+      "same_as_input": "array",
+      "stage": "string"
+    },
+    "reply.steps[].comparison": {
+      "limitations": "array",
+      "observation": "string",
+      "observation_basis": "string",
+      "operation_relation": "string",
+      "order": "string",
+      "target_relation": "string"
+    },
+    "reply.steps[].sandbox_check": {
+      "errno": "number",
+      "error": "string",
+      "filter_kind": "string",
+      "filter_type_id": "number",
+      "filter_value": "string",
+      "missing_reason": "string",
+      "native_rc": "number",
+      "operation": "string",
+      "outcome": "string",
+      "path_diagnostics": "object",
+      "pid": "number",
+      "rc": "number",
+      "result_source": "string"
+    },
+    "reply.steps[].sandbox_check.path_diagnostics": {
+      "firmlink_resolved": "string",
+      "input": "string",
+      "observer": "string",
+      "realpath_resolved": "string",
+      "same_as_input": "array",
+      "stage": "string"
+    },
+    "reply.test_overrides": {
+      "actor_equipment_executable_paths": "object",
+      "validator_executable_path": "string",
+      "validator_io_timeout_ms": "number",
+      "validator_total_timeout_ms": "number",
+      "worker_executable_path": "string",
+      "worker_kill_before_publish_slot": "number",
+      "worker_post_apply_hang_ms": "number",
+      "worker_post_apply_kill_signal": "number",
+      "worker_pre_ready_hang_ms": "number",
+      "worker_timeout_ms": "number"
+    },
+    "reply.test_overrides.actor_equipment_executable_paths": {
+      "selected": "string",
+      "unentitled": "string"
+    },
+    "reply.transfers[]": {
+      "copy_status": "string",
+      "custody_status": "string",
+      "delivery_ref": "string",
+      "equality": "string",
+      "lifecycle": "object",
+      "phase_id": "string",
+      "recipient_acknowledged": "boolean",
+      "recipient_actor_id": "string",
+      "recipient_wait": "object",
+      "request_published": "boolean",
+      "source_acknowledged": "boolean",
+      "source_actor_id": "string",
+      "status": "string",
+      "step_id": "string",
+      "token_ref": "string"
+    },
+    "reply.transfers[].lifecycle": {
+      "boundary": "object",
+      "result": "object",
+      "summary": "string"
+    },
+    "reply.transfers[].lifecycle.boundary": {
+      "answer": "string",
+      "basis": "array",
+      "state": "string"
+    },
+    "reply.transfers[].lifecycle.result": {
+      "answer": "string",
+      "basis": "array",
+      "state": "string"
+    },
+    "reply.transfers[].recipient_wait": {
+      "budget_ms": "number",
+      "clock_fault": "boolean",
+      "elapsed_ms": "number",
+      "stop": "string"
     }
   }
 }

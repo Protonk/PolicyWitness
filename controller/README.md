@@ -17,7 +17,7 @@ See [AGENTS.md](AGENTS.md) for working guidance and the
 | Area | Sources and responsibility |
 | --- | --- |
 | CLI and orchestration | [main.rs](src/main.rs), [cli.rs](src/cli.rs), [run_flow.rs](src/run_flow.rs): dispatch, run preparation and envelope assembly. |
-| Requests | [request_patch.rs](src/request_patch.rs): parsing, version admission and structured refusals; [runner_select.rs](src/runner_select.rs): selector validation and runner resolution; [augments.rs](src/augments.rs): named policy augmentation. |
+| Requests | [request_patch.rs](src/request_patch.rs): parsing, contract admission and structured refusals; [runner_select.rs](src/runner_select.rs): selector validation and runner resolution; [augments.rs](src/augments.rs): named policy augmentation. |
 | Reply transport and interpretation | [runner_client.rs](src/runner_client.rs): one Swift-client invocation and separate client/host capture admission; [porcelain_admission.rs](src/porcelain_admission.rs): typed worker/actor admission and projection; [json_contract.rs](src/json_contract.rs): envelope rendering. |
 | Provenance | [dossier.rs](src/dossier.rs), [evidence.rs](src/evidence.rs), [digest.rs](src/digest.rs), [host_facts.rs](src/host_facts.rs): specimen records, manifest lookup, hashes and host facts. |
 | Policy inspection | [policy_check.rs](src/policy_check.rs): independent compile-check capture; [sbpl_imports.rs](src/sbpl_imports.rs) and [sbpl_lex.rs](src/sbpl_lex.rs): bounded import scan and lexer, shared with `sbpl-check`. |
@@ -36,7 +36,7 @@ The [runner README](../runner/README.md) describes their implementation.
 
 The controller uses the app's `Contents/MacOS/pw-runner-client` Swift helper for
 `NSXPCConnection` wiring. Rust owns orchestration and capture, and consumes the
-host's reply without directly managing its workers or validator. Both worker variants have independent observed-path/hash/baseline provenance. After version admission, the controller checks native publication,
+host's reply without directly managing its workers or validator. Both worker variants have independent observed-path/hash/baseline provenance. After contract admission, the controller checks native publication,
 local-reference association, fresh-read consistency and phase collection evidence
 before exposing derived disposition claims. The binary reader validates
 schema-owned field shapes before these semantic checks. The independent test
@@ -52,10 +52,11 @@ policy-witness runner <command> [options]
 policy-witness --version
 ```
 
-`--version` (or `version`) prints a `kind="version"` envelope with wire versions
-in `data.contract`. Every envelope's `build` object carries the git-derived
-`version`, `number`, `describe` and `commit`. `build.sh` stamps the same values
-into the app and service Info.plists; a plain `cargo build` reports `unknown`.
+`--version` (or `version`) prints a `kind="version"` envelope with the public
+identity in `data.contract` and `build.contract`. Every envelope also carries
+`version`, `number`, `describe` and `commit` as provenance. The app and service
+plists advertise the same identity as `PWContract`. A plain Cargo build is
+`unbound` and refuses public requests and packaged peers.
 The [build-stamp contract](../docs/CONTRACT.md#build-stamp) defines these fields.
 
 `--timeout-ms` controls the runner RPC. `PW_VERIFY_EVIDENCE=1` adds manifest hash verification under
@@ -77,7 +78,7 @@ The [build-stamp contract](../docs/CONTRACT.md#build-stamp) defines these fields
    waiting worker, closes collection, then releases attempts and joins the
    observations into its reply. It omits the validator when no queries are
    eligible; refusals and earlier failures can stop before either child exists.
-4. Admit the client capture, then the host reply version, complete execution
+4. Admit the client capture, then the host reply contract, complete execution
    evidence, and print a single `kind="run"` JSON envelope to stdout.
 
 The validator uses batch NDJSON and `SANDBOX_CHECK_NO_REPORT` for every query,
@@ -120,17 +121,14 @@ evidence. The built-in selection control uses an app root without an Info.plist.
 
 ### Output contract
 
-<!-- BEGIN GENERATED CONTRACT VERSIONS (docs/contract.json via docs/generate_contract.py) -->
-Current wire contracts: request schema 6, response schema 30, controller envelope 14, runner protocol 4. Each number is a separate contract. `docs/contract.json` owns these numbers; the internal host/worker boundary uses a generated source identity.
-<!-- END GENERATED CONTRACT VERSIONS -->
 
 The [output reference](../docs/PolicyWitness.md#output-envelope) owns field
 definitions, including the [specimen dossier](../docs/PolicyWitness.md#the-specimen-dossier)
 and [comparison records](../docs/PolicyWitness.md#reading-a-comparison-record).
 The controller keeps the received host bytes in the client capture and
-interprets the decoded reply only after admitting its exact response version.
+interprets the decoded reply only after admitting its exact producer contract.
 A host frame naming another schema fingerprint, or a decoded reply carrying
-another response version, produces `unsupported_runner_response`. Host bytes
+another producer contract, produces `unsupported_runner_response`. Host bytes
 that are not one complete typed record, or a decoded record that fails
 structural admission, produce `malformed_runner_response`. Each exits 1 and
 withholds runner-derived diagnostics; `data.runner_result` holds the decoded
@@ -138,7 +136,7 @@ record's projection when decoding succeeded and is null otherwise.
 Request-delivery failure takes precedence as `tool_error`, leaving any captured
 reply uninterpreted.
 
-`data.runner_client.transport` retains the versioned client capture: acquisition
+`data.runner_client.transport` retains the client capture with its producer contract: acquisition
 attempts, submission decision, structured transport errors and exact host reply
 bytes. Client-reported host identity is not an independently observed kernel
 generation. Capture admission precedes host-response admission. Missing,
@@ -269,7 +267,10 @@ Install, remove and validate hold an OS advisory lock beside the registry
 across modifications and launchd actions; competing modifiers fail as busy.
 The stable `.lock` file remains in place. Atomic rename publishes complete old
 or new registries to unlocked list/status/verify/reconcile readers. List exposes
-both collections; status/verify report pending installation, which specimen
+both collections; cleanup entries nest the retained `runner` beside their
+timestamp and observations, and the reader accepts the historical flattened
+form. Serialization must survive a lossless read-back before publication.
+Unknown nested metadata stays opaque. Status/verify report pending installation, which specimen
 selection refuses.
 
 Remove accepts either collection, rechecks executable/plist ownership, and

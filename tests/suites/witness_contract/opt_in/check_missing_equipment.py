@@ -14,7 +14,7 @@ import sys
 HERE = Path(__file__).resolve()
 sys.path[:0] = [str(HERE.parents[1]), str(HERE.parents[3] / 'lib')]
 from witness_capture import capture
-from contract import REQUEST_SCHEMA
+import build_context
 sys.path[:0] = [str(HERE.parents[3] / 'fixtures/byoxpc'), str(HERE.parents[3] / 'fixtures/caller_auth')]
 import session
 from bundle import command, save
@@ -40,7 +40,7 @@ selected.rename(backup)
 try:
     assert not selected.exists() and hashlib.sha256(backup.read_bytes()).hexdigest() == original
     assert hashlib.sha256(unentitled.read_bytes()).hexdigest() == other
-    request = {'schema_version': REQUEST_SCHEMA, 'specimen_id': 'missing_selected_equipment',
+    request = {'contract': build_context.candidate_contract(), 'specimen_id': 'missing_selected_equipment',
                'actors': [{'actor_id': 'subject', 'equipment': 'selected', 'sandbox': {'mode': 'unapplied'}}],
                'phases': [{'phase_id': 'main', 'actor_id': 'subject', 'actions': []}]}
     _, reply = capture(pw, receipts, 'refused', request, expected_rc=1, session_state=state)

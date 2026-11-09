@@ -1,0 +1,37 @@
+{
+  "closed_keys": {
+    "PWRunnerActor": [
+      "actor_id",
+      "equipment",
+      "required_entitlements",
+      "sandbox"
+    ],
+    "PWRunnerActorSandbox": [
+      "mode",
+      "policy"
+    ],
+    "PWRunnerAfterTermination": [
+      "actor_id"
+    ],
+    "PWRunnerExtensionAction": [
+      "extension",
+      "step_id"
+    ],
+    "PWRunnerExtensionOperation": [
+      "authority",
+      "delivery_ref",
+      "family",
+      "handle_ref",
+      "operation",
+      "recipient",
+      "target",
+      "token_ref"
+    ],
+    "PWRunnerPhase": [
+      "actions",
+      "actor_id",
+      "after_termination",
+      "phase_id"
+    ]
+  }
+}

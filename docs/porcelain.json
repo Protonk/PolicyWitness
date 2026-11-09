@@ -10,14 +10,6 @@
       "source": "runner/Sources/PWRunnerCore/PWRunnerProfileCapture.swift",
       "fields": [
         {
-          "name": "schema_version",
-          "swift_name": "schema_version",
-          "swift_type": "Int",
-          "mutable": true,
-          "default": "2",
-          "tag": 1
-        },
-        {
           "name": "status",
           "swift_name": "status",
           "swift_type": "String",
@@ -1780,11 +1772,11 @@
           "tag": 1
         },
         {
-          "name": "protocol_version",
-          "swift_name": "protocol_version",
-          "swift_type": "Int",
+          "name": "contract",
+          "swift_name": "contract",
+          "swift_type": "String",
           "mutable": true,
-          "default": "PWContract.runnerProtocol",
+          "default": "PWBuildContext.contract",
           "tag": 2
         },
         {
@@ -3381,9 +3373,9 @@
           "tag": 2
         },
         {
-          "name": "expected_schema",
-          "swift_name": "expected_schema",
-          "swift_type": "Int?",
+          "name": "expected_contract",
+          "swift_name": "expected_contract",
+          "swift_type": "String?",
           "mutable": true,
           "json_null": false,
           "tag": 3
@@ -3424,15 +3416,11 @@
       "source": "runner/Sources/PWRunnerCore/PWRunnerReply.swift",
       "fields": [
         {
-          "name": "schema_version",
-          "swift_name": "schema_version",
-          "swift_type": "Int",
+          "name": "producer",
+          "swift_name": "producer",
+          "swift_type": "PWProducer",
           "mutable": true,
-          "tag": 1,
-          "doc": [
-            "// Response wire version. Reporting admission accepts exactly",
-            "// PWContract.responseSchema; docs/CONTRACT.md, \"Supported versions\"."
-          ]
+          "tag": 1
         },
         {
           "name": "specimen_id",
@@ -5437,6 +5425,34 @@
         }
       ],
       "source": "runner/Sources/PWRunnerCore/PWRunnerDisposition.swift"
+    },
+    {
+      "name": "PWProducer",
+      "source": "runner/Sources/PWRunnerCore/PWRunnerAPI.swift",
+      "id": 84,
+      "fields": [
+        {
+          "name": "contract",
+          "swift_name": "contract",
+          "swift_type": "String",
+          "mutable": true,
+          "tag": 1
+        },
+        {
+          "name": "describe",
+          "swift_name": "describe",
+          "swift_type": "String",
+          "mutable": true,
+          "tag": 2
+        },
+        {
+          "name": "commit",
+          "swift_name": "commit",
+          "swift_type": "String",
+          "mutable": true,
+          "tag": 3
+        }
+      ]
     }
   ],
   "variants": {

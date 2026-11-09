@@ -10,11 +10,12 @@ import sys
 import tempfile
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[2] / 'lib'))
+import build_context
 from run_capture import RunCapture
 
 
 def specimen():
-    return {'schema_version': 6, 'specimen_id': 'failure-boundaries',
+    return {'contract': build_context.candidate_contract(), 'specimen_id': 'failure-boundaries',
             'policy': {'format': 'sbpl', 'sbpl_source': '(version 1)(allow default)'},
             'probe_plan': [{'step_id': 's', 'sandbox_check': {'operation': 'file-read-data',
                 'filter': {'kind': 'path', 'value': '/etc/hosts'}},

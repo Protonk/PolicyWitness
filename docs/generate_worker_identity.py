@@ -16,11 +16,15 @@ import hashlib
 import sys
 from pathlib import Path
 
+# importlib callers do not necessarily put docs on sys.path.
+sys.path.insert(0, str(Path(__file__).resolve().parent))
+from source_identity import source_paths as walk_sources
+
 ROOT = Path(__file__).resolve().parents[1]
 BEGIN = "BEGIN GENERATED WORKER IDENTITY (docs/generate_worker_identity.py)"
 END = "END GENERATED WORKER IDENTITY"
 SOURCE_DIRS = ("controller/tools/pw_probe_runner", "runner/Sources")
-SOURCE_FILES = ("docs/generate_worker_identity.py", "build.sh", "meson.build", "meson.options",
+SOURCE_FILES = ("docs/generate_worker_identity.py", "docs/source_identity.py", "build.sh", "meson.build", "meson.options",
                 "runner/Package.swift")
 TARGETS = ("controller/tools/pw_probe_runner/pw_probe_runner_abi.h",
            "runner/Sources/PWRunnerCore/CWorker.swift", "tests/lib/contract.py")
@@ -36,24 +40,7 @@ def bounds(text):
 
 
 def source_paths(root):
-    """Every digest input. The walk covers ordinary files beneath the two
-    directories and refuses a symlink there, because the compiler would follow
-    it to bytes this digest never sees; the build separately checks that the
-    compiler consumed nothing in the repository beyond these paths."""
-    paths = set(SOURCE_FILES)
-    for directory in SOURCE_DIRS:
-        found = set()
-        for p in (root / directory).rglob("*"):
-            if p.is_symlink():
-                raise ValueError(f"symlink under identity sources: {p.relative_to(root).as_posix()}; "
-                                 "the digest covers ordinary files beneath its directories")
-            if p.suffix in (".c", ".h", ".swift") and p.is_file():
-                found.add(p.relative_to(root).as_posix())
-        if not found:
-            raise ValueError(f"missing protocol sources: {directory}")
-        paths.update(found)
-    return sorted(paths)
-
+    return walk_sources(root, SOURCE_DIRS, SOURCE_FILES, (".c", ".h", ".swift"))
 
 def identity(root):
     digest = hashlib.sha256(b"PolicyWitness host/worker source identity\0")

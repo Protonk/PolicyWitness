@@ -14,6 +14,7 @@ import sys
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[2] / 'lib'))
 sys.path.insert(0, str(Path(__file__).resolve().parent))
+import build_context
 from run_capture import RunCapture  # noqa: E402
 import effects  # noqa: E402
 
@@ -55,7 +56,7 @@ def policy_for(denied_operation, target):
 
 def specimen_for(name, action, target, denied_operation):
     return {
-        'schema_version': 6,
+        'contract': build_context.candidate_contract(),
         'specimen_id': f'run_effects_{name}',
         'policy': {'format': 'sbpl', 'sbpl_source': policy_for(denied_operation, target)},
         'probe_plan': [{

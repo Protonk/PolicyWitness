@@ -19,6 +19,7 @@ from pathlib import Path
 sys.path.insert(0, str(Path(__file__).resolve().parents[2] / 'lib'))
 import consumer
 import contract
+import build_context
 from run_capture import RunCapture
 
 SERVICE_REL = 'Contents/XPCServices/PWRunner.xpc/Contents/MacOS/PWRunner'
@@ -83,7 +84,7 @@ class Witness:
         self.temp_before = temp_request_files()
 
     def specimen(self, name, *, policy=None, plan=None, overrides=None):
-        request = {'schema_version': contract.REQUEST_SCHEMA, 'specimen_id': 'dossier-' + name,
+        request = {'contract': build_context.candidate_contract(), 'specimen_id': 'dossier-' + name,
                    'policy': policy if policy is not None else {'format': 'sbpl', 'sbpl_source': SOURCE},
                    'probe_plan': plan if plan is not None else []}
         if self.byoxpc:
@@ -115,7 +116,7 @@ class Witness:
     # ---- shared assertions --------------------------------------------------
 
     def common(self, envelope, name):
-        errors = consumer.validate(envelope)
+        errors = consumer.validate(envelope, build_context.candidate_contract())
         assert not errors, (name, errors)
         data = envelope['data']
         specimen = data['specimen']

@@ -21,7 +21,7 @@ facts; a summary or requested signal must not replace an observed effect.
 For request or evidence changes, update affected admission, producers, transport,
 independent readers, fixtures and documentation together. Follow the
 [wire contract](../docs/CONTRACT.md) and
-[evidence contract](../tests/FAILURE-PROPAGATION-CONTRACT.md) for versions and
+[evidence contract](../tests/FAILURE-PROPAGATION-CONTRACT.md) for producer admission and
 claim ownership. Edit generator inputs and regenerate through the
 [owning tools](../tests/suites/source_drift/README.md#generator-contracts).
 Native source additions/moves require the Meson target; identity/layout changes

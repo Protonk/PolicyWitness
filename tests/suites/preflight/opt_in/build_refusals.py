@@ -49,8 +49,7 @@ FORWARD = ROOT / 'tests/fixtures/build_refusals/forward.py'
 WRONG_WORKER = ROOT / 'tests/fixtures/build_refusals/wrong_worker.c'
 WRAPPED = ('cargo', 'meson', 'ninja', 'codesign', 'cp', 'echo')
 VARIANTS = {'full': '1', 'partial': '0'}
-IDENTITY_INPUT = 'runner/Package.swift'   # a digest input Meson never compiles
-VALIDATOR_SOURCE = 'controller/tools/sb_api_validator/sb_api_validator.c'   # compiled, but not a digest input
+VALIDATOR_SOURCE = 'controller/tools/sb_api_validator/sb_api_validator.c'   # compiled, outside the worker identity
 RUST_BIN_SOURCE = 'controller/src/bin/sbpl-check.rs'
 TREE_INPUTS = ('Info.plist', 'PolicyWitness.entitlements', 'runner/augments', 'runner/Services/PWRunner',
                'runner/Services/PWRunner/Info.plist', 'runner/Services/PWRunner/Entitlements.plist')
@@ -1558,7 +1557,7 @@ def control_ninja_old(co, variant):
 
 def control_meson_policy(co, variant):
     """A configured directory departing from the fixed policy: the buildtype label, reached only through the levels it is
-    derived from, and one ordinary option of the same assertion family. The regeneration the compile triggers refuses by name."""
+    derived from, and one ordinary option of the same assertion family. Reconfiguration refuses by name before compilation."""
     if not (co.builddir / 'build.ninja').exists():
         # Earlier fresh-mode controls can leave no configured directory; a valid build configures and stamps one.
         passing(co, co.build('meson_policy-prime', variant), variant)
@@ -1575,8 +1574,8 @@ def control_meson_policy(co, variant):
             restored = co.meson('configure', str(co.builddir), *restore)
             assert restored.returncode == 0, restored.stdout + restored.stderr
         check(build, 1, message, where='output',
-              present=('Configuring native build (meson configure, existing directory)', 'Compiling native executables'),
-              absent=('Checking the configured native source lists', 'Assembling app bundle'))
+              present=('Configuring native build (meson setup --reconfigure, existing directory)',),
+              absent=('Compiling native executables', 'Checking the configured native source lists', 'Assembling app bundle'))
         no_calls(build, 'codesign', 'cp')
         preserved(build)
     return build
@@ -1630,12 +1629,14 @@ def control_missing_native_output(co, variant):
 
 
 def control_stale_identity_presign(co, variant):
-    """An identity input edited after compile and before signing, without regeneration."""
-    source = co.root / IDENTITY_INPUT
+    """A worker-only identity input edited after compile, without regeneration."""
+    # A shipped source edit reaches the earlier public-contract guard. Change
+    # this generator's own bytes to isolate the worker-identity recheck.
+    source = co.root / 'docs/generate_worker_identity.py'
     original = source.read_bytes()
     try:
         build = co.build('stale_identity_presign', variant,
-                         hooks=[hook('edit-identity-input', 'meson', [append(source, '\n// pw_control\n')], first='compile')])
+                         hooks=[hook('edit-identity-input', 'meson', [append(source, '\n# pw_control\n')], first='compile')])
     finally:
         source.write_bytes(original)
     check(build, 1, 'generate_worker_identity.py',
@@ -1791,7 +1792,8 @@ def control_fresh_sequence(co, variant):
     assert first.record['configuration']['build_directories']['builddir'] == dict(state='created', replaced_by_fresh_mode=True, stamp='published')
     reused = co.build('sequence-2-reuse', 'partial', env=env)
     passing(co, reused, 'partial')
-    assert reused.stamp == first.stamp and reused.calls('meson', 'configure') and not reused.calls('meson', 'setup')
+    assert reused.stamp == first.stamp and not reused.calls('meson', 'configure')
+    assert [r['args'][:2] for r in reused.calls('meson', 'setup')] == [['setup', '--reconfigure']]
     assert all(j['fresh'] is True for j in reused.judgments().values())
     assert reused.record['configuration']['build_directories']['builddir']['state'] == 'reused'
     assert reused.record['configuration']['build_directories']['builddir']['stamp'] == 'validated'
@@ -1850,7 +1852,8 @@ def control_fresh_sequence(co, variant):
          dict(held_by_descendant_after_parent_killed=held_after_kill, released_after_descendant_exit=True))
     retried = co.build('sequence-13-retry', 'partial', env=env)
     passing(co, retried, 'partial')
-    assert retried.stamp == interrupted.stamp and retried.calls('meson', 'configure')
+    assert retried.stamp == interrupted.stamp
+    assert [r['args'][:2] for r in retried.calls('meson', 'setup')] == [['setup', '--reconfigure']]
     # A compile failure is retried under the validated configuration; the stamp is neither rewritten nor adopted anew.
     source = co.root / VALIDATOR_SOURCE
     original = source.read_bytes()
@@ -1868,7 +1871,8 @@ def control_fresh_sequence(co, variant):
     shutil.rmtree(co.target)
     cargo_only = co.build('sequence-16-cargo-cache-removed', 'partial', env=env)
     passing(co, cargo_only, 'partial')
-    assert all(j['fresh'] is False for j in cargo_only.judgments().values()) and cargo_only.calls('meson', 'configure')
+    assert all(j['fresh'] is False for j in cargo_only.judgments().values())
+    assert [r['args'][:2] for r in cargo_only.calls('meson', 'setup')] == [['setup', '--reconfigure']]
     assert cargo_only.record['configuration']['build_directories']['cargo_target_release']['state'] == 'created'
     assert cargo_only.record['configuration']['build_directories']['cargo_release']['state'] == 'reused'
     shutil.rmtree(co.builddir)
@@ -1932,6 +1936,12 @@ def control_release_entrypoints_enforce_fresh_mode(co, variant):
     with tempfile.TemporaryDirectory(prefix='pw-make-fresh-', dir='/private/tmp') as temporary:
         repo = Path(temporary) / 'repo'
         repo.mkdir()
+        sys.path.insert(0, str(ROOT / 'docs'))
+        import build_contract
+        import generate_contract_stamps
+        import fixture_inputs
+        fixture_inputs.copy_declared(ROOT, repo, sorted(set(build_contract.inputs(ROOT)) |
+                                                       set(generate_contract_stamps.input_paths(ROOT))))
         for name in ('Makefile', 'tests/lib/sdk_guard.sh', 'tests/lib/python_start.sh', 'tests/lib/python.sh',
                      'tests/lib/release_preflight.py', 'tests/fixtures/docs/prose_baseline.json', 'tests/fixtures/docs/build_baseline.json'):
             target = repo / name
@@ -1941,6 +1951,8 @@ def control_release_entrypoints_enforce_fresh_mode(co, variant):
         script = repo / 'build.sh'
         script.write_text('#!/usr/bin/env bash\nprintf \'{"PW_FRESH_BUILD": "%s", "IDENTITY": "%s"}\' "${PW_FRESH_BUILD-unset}" "${IDENTITY:-}" > build-invocation.json\nexit 97\n')
         script.chmod(0o755)
+        for name, _, after in generate_contract_stamps.render(repo, 'v0.0.1'):
+            (repo / name).write_text(after)
         (repo / 'dist').mkdir()
         git = ['git', '-C', str(repo), '-c', 'user.name=Control', '-c', 'user.email=control@example.invalid', '-c', 'commit.gpgsign=false', '-c', 'tag.gpgsign=false']
         subprocess.run([*git, 'init', '-q'], check=True)
@@ -1995,10 +2007,16 @@ def control_release_battery(co, variant):
         packages, _ = pytest_packages.target(ROOT)
         shutil.copytree(packages, fresh.root / packages.relative_to(ROOT))
         git = ['git', '-C', str(fresh.root), '-c', 'user.name=Control',
-               '-c', 'user.email=control@example.invalid', '-c', 'commit.gpgsign=false']
+               '-c', 'user.email=control@example.invalid', '-c', 'commit.gpgsign=false',
+               '-c', 'tag.gpgsign=false']
+        sys.path.insert(0, str(ROOT / 'docs'))
+        import generate_contract_stamps
+        for name, _, after in generate_contract_stamps.render(fresh.root, 'v0.0.0'):
+            (fresh.root / name).write_text(after)
         subprocess.run([*git, 'init', '-q'], check=True)
         subprocess.run([*git, 'add', '.'], check=True)
         subprocess.run([*git, 'commit', '-qm', 'rehearsal source snapshot'], check=True)
+        subprocess.run([*git, 'tag', '-a', 'v0.0.0', '-m', 'rehearsal release'], check=True)
         build = fresh.build('release-battery', 'full', fresh='1')
         passing(fresh, build, 'full')
         acceptance = fresh.root / 'tests/out/release-acceptance/live-battery'
@@ -2939,7 +2957,7 @@ def _without_self_checks(text):
     Their banners stay. Each of those checks compares a document or a digest with
     the script, so a mutated script fails one of them before any guard runs."""
     names = SELF_CHECK_RE.findall(text)
-    assert sorted(names) == sorted(('limits', 'contract', 'architecture', 'footprint', 'porcelain',
+    assert sorted(names) == sorted(('limits', 'contract_stamps', 'architecture', 'footprint', 'porcelain',
                                    'build', 'worker_identity', 'worker_identity')), names
     return SELF_CHECK_RE.sub('', text)
 

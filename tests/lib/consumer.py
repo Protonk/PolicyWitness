@@ -24,6 +24,7 @@ import json
 from pathlib import Path
 
 import contract
+import build_context
 import lifecycle_contract
 from lifecycle_adapter import read_lifecycle, summaries
 from document_versions import is_envelope, version_errors, require_supported as _gate
@@ -269,13 +270,13 @@ def _json_type(value):
     return 'object'
 
 
-def _validate_policy_check_reply(capture, path, shape, errors):
+def _validate_policy_check_reply(capture, path, shape, errors, expected_contract):
     """Admit only the current helper frame; keep rejected JSON opaque."""
     reply, status = capture['envelope'], capture.get('status')
     outcome = None
     if isinstance(reply, dict) and reply.get('kind') == 'sbpl_check' and \
-            type(reply.get('schema_version')) is int and \
-            reply['schema_version'] == contract.CONTROLLER_ENVELOPE:
+            isinstance(reply.get('build'), dict) and \
+            reply['build'].get('contract') == expected_contract:
         result = reply.get('result')
         candidate = result.get('normalized_outcome') if isinstance(result, dict) else None
         if isinstance(candidate, str) and candidate:
@@ -287,10 +288,10 @@ def _validate_policy_check_reply(capture, path, shape, errors):
         return
     if status != outcome:
         errors.append('data.policy_check.status differs from the admitted helper outcome')
-    validate_shape(reply, path, shape, errors)
+    validate_shape(reply, path, shape, errors, expected_contract)
 
 
-def validate_shape(value, path, shape, errors):
+def validate_shape(value, path, shape, errors, expected_contract=None):
     """Check one object and everything under it against the golden for its path.
 
     An unknown key is an error naming the path. A present, non-null key must
@@ -312,7 +313,7 @@ def validate_shape(value, path, shape, errors):
             # unsupported captures remain opaque, even to shape traversal.
             continue
         if child_path == 'envelope.data.policy_check.envelope':
-            _validate_policy_check_reply(value, child_path, shape, errors)
+            _validate_policy_check_reply(value, child_path, shape, errors, expected_contract)
             continue
         actual = _json_type(child)
         if child is not None and allowed[key] != 'null' and actual != allowed[key]:
@@ -320,12 +321,12 @@ def validate_shape(value, path, shape, errors):
             continue
         rerooted = _REROOTED.get(child_path)
         if rerooted is not None:
-            validate_shape(child, rerooted[1], rerooted[0], errors)
+            validate_shape(child, rerooted[1], rerooted[0], errors, expected_contract)
         elif isinstance(child, dict):
-            validate_shape(child, child_path, shape, errors)
+            validate_shape(child, child_path, shape, errors, expected_contract)
         elif isinstance(child, list):
             for item in child:
-                validate_shape(item, child_path + '[]', shape, errors)
+                validate_shape(item, child_path + '[]', shape, errors, expected_contract)
 
 
 # ---------------------------------------------------------------------------
@@ -537,8 +538,8 @@ def _validate_step(runner, step, failed_reporting):
 def _validate_capture(capture):
     errors = []
     if capture is not None:
-        if not isinstance(capture, dict) or type(capture.get('schema_version')) is not int or capture['schema_version'] != 2:
-            errors.append('unsupported or malformed compiled_profile schema_version')
+        if not isinstance(capture, dict):
+            errors.append('malformed compiled_profile')
         elif capture.get('status') == 'captured':
             if capture.get('producer') != 'worker' or capture.get('capture_stage') != 'before_apply':
                 errors.append('compiled_profile requires worker/before_apply context')
@@ -845,7 +846,7 @@ def _validate_ordering(runner, phase):
     return errors
 
 
-def _validate_envelope(document, *, allow_fixture_json=False):
+def _validate_envelope(document, expected_contract, *, allow_fixture_json=False):
     errors = []
     data = document.get('data')
     if not isinstance(data, dict):
@@ -887,7 +888,7 @@ def _validate_envelope(document, *, allow_fixture_json=False):
         app = specimen.get('app_provenance')
         if app is not None and (not isinstance(app, dict) or set(app) != {'evidence_manifest_path', 'evidence_verify'}):
             errors.append('data.specimen.app_provenance carries keys other than the manifest path and verify report')
-    errors.extend(validate_client(data.get('runner_client'), data.get('runner_result'), allow_fixture_json=allow_fixture_json))
+    errors.extend(validate_client(data.get('runner_client'), data.get('runner_result'), expected_contract, allow_fixture_json=allow_fixture_json))
     diagnostics = data.get('runner_sandbox_diagnostics')
     if diagnostics is not None and not isinstance(diagnostics, dict):
         errors.append('data.runner_sandbox_diagnostics is not an object')
@@ -896,14 +897,14 @@ def _validate_envelope(document, *, allow_fixture_json=False):
     return errors
 
 
-def validate(document, *, allow_fixture_json=False):
+def validate(document, expected_contract, *, allow_fixture_json=False):
     """The single version error, or every shape and record error of a supported document."""
-    errors = version_errors(document)
+    errors = version_errors(document, expected_contract)
     if errors:
         return errors
     if is_envelope(document):
-        validate_shape(document, 'envelope', ENVELOPE_SHAPE, errors)
-        errors.extend(_validate_envelope(document, allow_fixture_json=allow_fixture_json))
+        validate_shape(document, 'envelope', ENVELOPE_SHAPE, errors, expected_contract)
+        errors.extend(_validate_envelope(document, expected_contract, allow_fixture_json=allow_fixture_json))
         runner = _reply(document)
         if runner is not None:
             errors.extend(_validate_reply(runner))
@@ -917,9 +918,9 @@ def validate(document, *, allow_fixture_json=False):
 # Accessors
 # ---------------------------------------------------------------------------
 
-def steps(document):
+def steps(document, expected_contract):
     """The reply's steps, after the version gate; [] when the envelope has no reply."""
-    _gate(document)
+    _gate(document, expected_contract)
     runner = _reply(document)
     if runner is None:
         return []
@@ -976,18 +977,18 @@ ABSENT = _Absent()
 select.ABSENT = ABSENT
 
 
-def lifecycle(document):
+def lifecycle(document, expected_contract):
     """The registered lifecycle account of a supported document."""
-    _gate(document)
+    _gate(document, expected_contract)
     envelope = document if is_envelope(document) else {
-        'schema_version': contract.CONTROLLER_ENVELOPE, 'kind': 'run', 'data': {'runner_result': document}}
-    view = read_lifecycle(envelope)
+        'build': {'contract': expected_contract}, 'kind': 'run', 'data': {'runner_result': document}}
+    view = read_lifecycle(envelope, expected_contract)
     return {'reporting': view['reporting'], 'summaries': summaries(view), 'record': view['record'],
             'malformed': view['malformed'],
             'projections': {k: view['projections'].get(k) for k in
                             ('process_disposition', 'termination_cause', 'stop_reason', 'disposition_integrity')}}
 
 
-def validate_fixture(document):
+def validate_fixture(document, expected_contract=build_context.TEST_CONTRACT):
     """Opt in to authored JSON host-byte fixtures; never use for a live capture."""
-    return validate(document, allow_fixture_json=True)
+    return validate(document, expected_contract, allow_fixture_json=True)

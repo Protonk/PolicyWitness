@@ -924,8 +924,8 @@ PW_APP_DIR=/path/to/candidate.app PW_TEST_OUT_DIR=tests/out/runs/retirement-cand
   fresh acquisition before submission. Lost execution replies and lost helper
   captures cannot cause replay. Independent append effects, request hashes,
   boundary traces and kernel generations establish the controlled observations.
-  Old execution selectors and unsupported protocol replies cannot execute. A
-  reply whose response-schema marker alone is altered after one real execution
+  Old execution selectors and foreign-contract replies cannot execute. A
+  reply whose host producer contract alone is altered after one real execution
   is refused as `unsupported_runner_response` with the opaque reply preserved
   and no replay.
 - **Limits:** Trace IO/gates perturb timing; a controlled error code does not
@@ -989,3 +989,11 @@ finalizer failures. Changes to shared ownership admission also need dispatcher
 retention/cancellation and preflight build-refusal/release-reader controls.
 Never infer a completed run from passing item reports without complete accounting
 and justified terminal command ownership.
+
+## Release contract admission
+
+Run `runner_outcome_bad_request/same_shape_contract` for the source-identity
+intent boundary. It builds signed truncate and append controls with equal public
+shapes, checks both current assertions and both cross-build refusals, and observes
+file contents plus client and worker entry traces independently. The default
+accepted-input case covers direct XPC refusal before child creation.

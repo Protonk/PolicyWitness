@@ -90,6 +90,10 @@ if get_option('xpc')
   swift_flags = ['-j', '1', '-module-cache-path', meson.current_build_dir() / 'swift-module-cache']
   swift_flags += get_option('inspection') ? ['-Onone', '-g'] : ['-O']
   swift_flags += swift_target
+  swift_flags += ['-D', 'PW_PACKAGED_BUILD']
+  build_context = configure_file(output: 'PWBuildContext.swift',
+    command: ['/opt/homebrew/opt/python@3.14/bin/python3.14', '-B', '-S',
+      meson.current_source_dir() / 'docs/build_contract.py', '--swift-stdout'], capture: true)
 
   # The C shim the host links. build.sh compiled it with a bare `clang -c`,
   # which buildtype=plain and warning_level=0 reproduce; it is not a product.
@@ -119,6 +123,8 @@ if get_option('xpc')
     'runner/Sources/PWRunnerCore/PWRunnerProfileCapture.swift',
     'runner/Sources/PWRunnerCore/PWRunnerReply.swift',
   )
+
+  pwrunner_contract += [build_context]
 
   # build.sh named this output pw-runner-client, which is not a Swift module
   # identifier, so swiftc fell back to the module name `main`; keep it.

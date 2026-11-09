@@ -102,74 +102,25 @@ pub fn shape_to_value(shape: &Shape) -> Value {
 pub enum Verdict {
     Ok,
     MissingGolden,
-    /// A key was removed or changed type under an unchanged number.
-    NeedsBump(String),
-    /// Additive, nullable or already-bumped: replace the golden after review.
+    /// Review the changed shape and update its golden.
     Update(String),
 }
 
-/// The Swift reader's classification: removed or retyped keys need a bump
-/// unless the manifest already moved; added keys and nullable refinements are
-/// acknowledged by replacing the golden.
-pub fn classify(
-    golden: Option<&Value>,
-    version_key: &str,
-    current: &Shape,
-    manifest_version: u64,
-) -> Verdict {
-    let Some(recorded) = golden
-        .and_then(|g| g.get(version_key))
-        .and_then(Value::as_u64)
-    else {
+/// A changed shape requires review of its golden and normative definition.
+pub fn classify(golden: Option<&Value>, current: &Shape) -> Verdict {
+    let Some(recorded) = golden.and_then(|g| g.get("shape")) else {
         return Verdict::MissingGolden;
     };
-    let golden_shape = golden
-        .and_then(|g| g.get("shape"))
-        .map(shape_from_value)
-        .unwrap_or_default();
-    if golden_shape == *current && recorded == manifest_version {
-        return Verdict::Ok;
+    let expected = shape_from_value(recorded);
+    if expected == *current {
+        Verdict::Ok
+    } else {
+        Verdict::Update(
+            same_shape(&expected, current)
+                .err()
+                .unwrap_or_else(|| "nullable field shape changed".into()),
+        )
     }
-    let mut removed = Vec::new();
-    let mut changed = Vec::new();
-    let mut added = Vec::new();
-    for (path, keys) in &golden_shape {
-        for (key, kind) in keys {
-            match current.get(path).and_then(|k| k.get(key)) {
-                None => removed.push(format!("{path}.{key}")),
-                Some(now) if now != kind && now != "null" && kind != "null" => {
-                    changed.push(format!("{path}.{key}: {kind} -> {now}"))
-                }
-                Some(_) => {}
-            }
-        }
-    }
-    for (path, keys) in current {
-        for key in keys.keys() {
-            if golden_shape.get(path).and_then(|k| k.get(key)).is_none() {
-                added.push(format!("{path}.{key}"));
-            }
-        }
-    }
-    if !removed.is_empty() || !changed.is_empty() {
-        let detail = format!("reading rules changed (removed: {removed:?}; changed: {changed:?})");
-        return if manifest_version <= recorded {
-            Verdict::NeedsBump(detail)
-        } else {
-            Verdict::Update(format!("{detail}; the manifest already moved"))
-        };
-    }
-    if recorded != manifest_version {
-        return Verdict::Update(format!(
-            "golden records {version_key} {recorded}; manifest says {manifest_version}"
-        ));
-    }
-    if !added.is_empty() {
-        return Verdict::Update(format!(
-            "shape gained fields {added:?}; additive, no bump needed"
-        ));
-    }
-    Verdict::Update("nullable fields changed their recorded type; no bump needed".to_string())
 }
 
 /// The golden's entries at and under `prefix`, re-rooted at `root`, so a
@@ -283,55 +234,21 @@ mod tests {
     }
 
     #[test]
-    fn classification_separates_additive_breaking_and_unacknowledged_changes() {
-        let base = shape(&[
-            ("e", &[("a", "number"), ("b", "null")]),
-            ("e.o", &[("k", "string")]),
-        ]);
-        let golden = |s: &Shape, version: u64| json!({"shape": shape_to_value(s), "v": version});
-        assert_eq!(classify(None, "v", &base, 8), Verdict::MissingGolden);
-        assert_eq!(
-            classify(Some(&golden(&base, 8)), "v", &base, 8),
-            Verdict::Ok
-        );
-        let mut added = base.clone();
-        added
-            .get_mut("e")
-            .unwrap()
-            .insert("c".into(), "string".into());
-        assert!(
-            matches!(classify(Some(&golden(&base, 8)), "v", &added, 8), Verdict::Update(d) if d.contains("no bump needed"))
-        );
-        let mut removed = base.clone();
-        removed.get_mut("e").unwrap().remove("a");
-        assert!(matches!(
-            classify(Some(&golden(&base, 8)), "v", &removed, 8),
-            Verdict::NeedsBump(_)
-        ));
-        assert!(
-            matches!(classify(Some(&golden(&base, 8)), "v", &removed, 9), Verdict::Update(d) if d.contains("already moved"))
-        );
-        let mut retyped = base.clone();
-        retyped
-            .get_mut("e")
-            .unwrap()
-            .insert("a".into(), "string".into());
-        assert!(matches!(
-            classify(Some(&golden(&base, 8)), "v", &retyped, 8),
-            Verdict::NeedsBump(_)
-        ));
-        let mut nullable = base.clone();
-        nullable
-            .get_mut("e")
-            .unwrap()
-            .insert("b".into(), "object".into());
-        assert!(
-            matches!(classify(Some(&golden(&base, 8)), "v", &nullable, 8), Verdict::Update(d) if d.contains("nullable"))
-        );
-        assert!(matches!(
-            classify(Some(&golden(&base, 7)), "v", &base, 8),
-            Verdict::Update(_)
-        ));
+    fn changed_shapes_require_review_without_a_revision_counter() {
+        let base = shape(&[("root", &[("key", "number")])]);
+        let golden = json!({"shape":shape_to_value(&base)});
+        assert_eq!(classify(None, &base), Verdict::MissingGolden);
+        assert_eq!(classify(Some(&golden), &base), Verdict::Ok);
+        for changed in [
+            shape(&[("root", &[])]),
+            shape(&[("root", &[("key", "string")])]),
+            shape(&[("root", &[("key", "number"), ("added", "string")])]),
+        ] {
+            assert!(matches!(
+                classify(Some(&golden), &changed),
+                Verdict::Update(_)
+            ));
+        }
     }
 
     #[test]

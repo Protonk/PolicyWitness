@@ -7,6 +7,7 @@ import sys
 import tempfile
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[2] / 'lib'))
+import build_context
 from run_capture import RunCapture
 import consumer
 
@@ -20,7 +21,7 @@ def main():
         target.write_bytes(seed)
         ids = [secrets.token_hex(8), secrets.token_hex(8)]
         base = {
-            'schema_version': 6, 'specimen_id': secrets.token_hex(12),
+            'contract': build_context.candidate_contract(), 'specimen_id': secrets.token_hex(12),
             'policy': {'format': 'sbpl', 'sbpl_source': '(version 1)(allow default)'
                        '(deny file-write-data (literal (param "BLOCKED")))',
                        'params': {'BLOCKED': str(target)}},
@@ -93,8 +94,8 @@ def main():
             assert diag['process_disposition'] == ('signaled' if signaled else 'clean_exit'), diag
             # The self-signal was not a host cleanup: the record projects no cause.
             assert diag['termination_cause'] == ('unknown' if signaled else None), diag
-            assert not consumer.validate(envelope), consumer.validate(envelope)
-            rows = consumer.steps(envelope)
+            assert not consumer.validate(envelope, build_context.candidate_contract()), consumer.validate(envelope, build_context.candidate_contract())
+            rows = consumer.steps(envelope, build_context.candidate_contract())
             # Permission failures by errno against a different query operation.
             failed = consumer.select(rows, observation='permission_failure', observation_basis='permission_errno',
                                      operation_relation='different', target_relation='same_submitted')

@@ -2,7 +2,6 @@ import Foundation
 import Darwin
 
 enum RequestContractError: Error {
-    case unsupportedSchema(Int)
     case unknownField([CodingKey])
     /// The policy object's location; the controller resolves augments there.
     case unresolvedAugments([CodingKey])
@@ -15,15 +14,15 @@ struct PWRunnerRequestFailure: Error, CustomStringConvertible {
     // BEGIN GENERATED PORCELAIN PWRunnerRequestFailure
     var code: String
     var path: [String]?
-    var expected_schema: Int?
+    var expected_contract: String?
     // END GENERATED PORCELAIN PWRunnerRequestFailure
 
-    init(code: String, path: [String]?, expected_schema: Int? = nil) {
+    init(code: String, path: [String]?, expected_contract: String? = nil) {
         self.code = code
         self.path = path.flatMap { parts in
             parts.count <= 8 && parts.allSatisfy({ $0.utf8.count <= 63 }) ? parts : nil
         }
-        self.expected_schema = expected_schema
+        self.expected_contract = expected_contract
     }
 
 
@@ -42,7 +41,7 @@ struct PWRunnerRequestFailure: Error, CustomStringConvertible {
             "invalid_capture_nonce": "capture_compiled_profile requires a fresh 32-character lowercase hex capture_nonce",
             "relative_exec_target": "exec target must be absolute",
         ]
-        let detail = expected_schema.map { " (expected \($0))" }
+        let detail = expected_contract.map { " (expected \($0))" }
             ?? explanations[code].map { ": \($0)" } ?? ""
         return "request refused: \(code) at \(location)\(detail)"
     }
@@ -50,7 +49,7 @@ struct PWRunnerRequestFailure: Error, CustomStringConvertible {
 
 struct PWRunnerRunSpec: Codable {
     // The request contract and its admission rules: docs/CONTRACT.md.
-    var schema_version: Int
+    var contract: String
     var specimen_id: String
     var run_kind: String?
     /// The legacy form's one policy; absent in the actor form, where each
@@ -83,7 +82,7 @@ struct PWRunnerRunSpec: Codable {
     var _test_overrides: PWRunnerTestOverrides?
 
     init(
-        schema_version: Int = PWContract.requestSchema,
+        contract: String = PWBuildContext.contract,
         specimen_id: String,
         run_kind: String? = nil,
         policy: PWRunnerPolicySpec?,
@@ -92,7 +91,7 @@ struct PWRunnerRunSpec: Codable {
         actors: [PWRunnerActor]? = nil,
         _test_overrides: PWRunnerTestOverrides? = nil
     ) {
-        self.schema_version = schema_version
+        self.contract = contract
         self.specimen_id = specimen_id
         self.run_kind = run_kind
         self.policy = policy
@@ -103,26 +102,24 @@ struct PWRunnerRunSpec: Codable {
     }
 
     enum CodingKeys: String, CodingKey, CaseIterable {
-        case schema_version, specimen_id, run_kind, policy, probe_plan, phases, actors, _test_overrides
+        case contract, specimen_id, run_kind, policy, probe_plan, phases, actors, _test_overrides
     }
 
     init(from decoder: Decoder) throws {
         let c = try decoder.container(keyedBy: CodingKeys.self)
-        do { schema_version = try c.decode(Int.self, forKey: .schema_version) }
-        catch {
-            // Foundation wraps its private integer-conversion error as a root
-            // JSON error outside this initializer. Identify numeric values here
-            // so a fractional/oversized marker keeps its actual field location.
-            guard let number = try? c.decode(Double.self, forKey: .schema_version), number.isFinite else { throw error }
-            if number == Double(PWContract.requestSchema) {
-                schema_version = PWContract.requestSchema
-            } else {
-                throw PWRunnerRequestFailure(code: number.rounded(.towardZero) == number ? "unsupported_schema" : "type_mismatch",
-                    path: ["schema_version"], expected_schema: PWContract.requestSchema)
-            }
+        let expected = decoder.userInfo[.expectedContract] as? String ?? PWBuildContext.contract
+        guard c.contains(.contract) else {
+            throw PWRunnerRequestFailure(code: "missing_field", path: ["contract"], expected_contract: expected)
         }
-        guard schema_version == PWContract.requestSchema else {
-            throw RequestContractError.unsupportedSchema(schema_version)
+        guard try !c.decodeNil(forKey: .contract) else {
+            throw PWRunnerRequestFailure(code: "missing_value", path: ["contract"], expected_contract: expected)
+        }
+        guard let asserted = try? c.decode(String.self, forKey: .contract) else {
+            throw PWRunnerRequestFailure(code: "type_mismatch", path: ["contract"], expected_contract: expected)
+        }
+        contract = asserted
+        guard expected != "unbound", contract == expected else {
+            throw PWRunnerRequestFailure(code: "unsupported_contract", path: ["contract"], expected_contract: expected)
         }
         try rejectUnknownRequestKeys(CodingKeys.self, from: decoder)
         specimen_id = try c.decode(String.self, forKey: .specimen_id)
@@ -149,7 +146,7 @@ struct PWRunnerRunSpec: Codable {
 
     func encode(to encoder: Encoder) throws {
         var c = encoder.container(keyedBy: CodingKeys.self)
-        try c.encode(schema_version, forKey: .schema_version)
+        try c.encode(contract, forKey: .contract)
         try c.encode(specimen_id, forKey: .specimen_id)
         try c.encodeIfPresent(run_kind, forKey: .run_kind)
         try c.encodeIfPresent(policy, forKey: .policy)

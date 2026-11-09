@@ -12,6 +12,7 @@ import time
 ROOT = Path(__file__).resolve().parents[4]
 sys.path.insert(0, str(ROOT / 'tests/lib'))
 import contract
+import build_context
 from consumer import validate
 from porcelain import decode as decode_porcelain
 from runner_client_capture import validate_capture
@@ -33,7 +34,7 @@ effects.mkdir()
 def launch(name, hang=0, direct=False, timeout=30000):
     effect = effects / name
     assert not effect.exists(), 'refusing reused effect path'
-    spec = dict(schema_version=contract.REQUEST_SCHEMA, specimen_id=name,
+    spec = dict(contract=build_context.candidate_contract(), specimen_id=name,
         runner=dict(mode='byoxpc', service=service),
         policy=dict(format='sbpl', sbpl_source='(version 1)(allow default)'),
         probe_plan=[dict(step_id='create', sandbox_check=dict(operation='process-exec*',
@@ -53,7 +54,7 @@ def receive(process, name, code, direct=False):
     assert process.wait(timeout=40) == code, name
     doc = (decode_porcelain((out/(name+'.pwp')).read_bytes(), 'capture') if direct
            else json.loads((out/(name+'.json')).read_text()))
-    problems = validate_capture(doc) if direct else validate(doc)
+    problems = validate_capture(doc, build_context.candidate_contract()) if direct else validate(doc, build_context.candidate_contract())
     assert not problems, problems
     return doc if direct else doc['data']['runner_result']
 

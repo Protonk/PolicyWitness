@@ -25,7 +25,7 @@ import tempfile
 ROOT = Path(__file__).resolve().parents[3]
 sys.path.insert(0, str(ROOT / 'tests/lib'))
 from witness_capture import capture  # noqa: E402
-from contract import REQUEST_SCHEMA  # noqa: E402
+import build_context
 import extension_actors  # noqa: E402
 from worker_exit_witness import worker_exit_witness  # noqa: E402
 
@@ -74,7 +74,7 @@ def distributed(name, actor_count, target, actions=AGGREGATE_ACTIONS, phase_coun
         phases.append({'phase_id': f'p{index}', 'actor_id': actor,
                        'actions': [read(f's{step + k}', target) for k in range(count)]})
         step += count
-    return {'schema_version': REQUEST_SCHEMA, 'specimen_id': name, 'actors': actors, 'phases': phases}
+    return {'contract': build_context.candidate_contract(), 'specimen_id': name, 'actors': actors, 'phases': phases}
 
 
 def with_bystanders(spec, count, target):
@@ -204,7 +204,7 @@ with tempfile.TemporaryDirectory(prefix='pw-actor-timing-', dir='/private/tmp') 
     shortfalls += [('limits_workload', s) for s in result['margin_shortfalls']]
 
     # ---- The principal shape and the calibration with five further live actors.
-    principal = with_bystanders(extension_actors.redelegation_specimen(target, schema_version=REQUEST_SCHEMA,
+    principal = with_bystanders(extension_actors.redelegation_specimen(target, contract=build_context.candidate_contract(),
                                                                        specimen_id='redelegation_eight'), 5, target)
     result, runner = run('redelegation_eight', principal)
     events = {e['step_id']: e for e in runner['extension_events']}
@@ -221,7 +221,7 @@ with tempfile.TemporaryDirectory(prefix='pw-actor-timing-', dir='/private/tmp') 
     shortfalls += [('redelegation_eight', s) for s in result['margin_shortfalls']]
 
     calibration = {
-        'schema_version': REQUEST_SCHEMA, 'specimen_id': 'calibration_eight',
+        'contract': build_context.candidate_contract(), 'specimen_id': 'calibration_eight',
         'actors': [extension_actors.unapplied_actor('A'), extension_actors.apply_actor('B', extension_actors.C_POLICY)],
         'phases': [
             {'phase_id': 'b_before', 'actor_id': 'B', 'actions': [read('b_read_before', target)]},

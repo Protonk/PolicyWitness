@@ -12,6 +12,7 @@ import sys
 import tempfile
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[2] / 'lib'))
+import build_context
 from blackbox import validate_step
 from run_capture import RunCapture
 
@@ -112,7 +113,7 @@ def check_cli(variant, pw, out):
             policy['sbpl_source'] += '(deny file-write-data (literal (param "BLOCKED")))'
             policy['params'] = {'BLOCKED': str(paths[1])}
         specimen = {
-            'schema_version': 6, 'specimen_id': secrets.token_hex(12),
+            'contract': build_context.candidate_contract(), 'specimen_id': secrets.token_hex(12),
             'policy': policy, 'probe_plan': plan,
             # The hang starts after every slot is durable, before done. Leave
             # ample room beyond the worker deadline and its 1-second reap grace

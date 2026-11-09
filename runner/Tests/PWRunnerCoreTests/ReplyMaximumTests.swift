@@ -22,6 +22,7 @@ private let stringPolicy: [String: Int?] = [
     "filter_type": 63, "signal": nil, "stdout_collection_stop": nil, "question": nil,
     "request_nonce": nil, "bytecode_sha256": nil, "source_sha256": nil, "params_sha256": nil,
     "producer": nil, "capture_stage": nil,
+    "contract": nil, "expected_contract": nil, "describe": nil, "commit": nil,
     "abi_identity": nil, "code": nil, "collection_status": nil,
     "original_normalized_outcome": nil, "unavailable_reason": nil,
     "detail": nil, "observations": nil, "rule": nil, "original_error": 8191,

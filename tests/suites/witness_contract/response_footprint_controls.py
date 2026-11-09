@@ -29,7 +29,10 @@ def host_fixture():
     def value(kind, payload): return bytes([kind]) + struct.pack('<I', len(payload)) + payload
     def field(tag, kind, payload): return struct.pack('<H', tag) + value(kind, payload)
     payload = struct.pack('<H', 55)
-    payload += field(1, 2, struct.pack('<q', 999))
+    producer = struct.pack('<H', 84)
+    for tag, text in [(1, b'test:fixture'), (2, b'constructed'), (3, b'constructed')]:
+        producer += field(tag, 4, text)
+    payload += field(1, 6, producer)
     payload += field(2, 4, b'independent footprint control')
     payload += field(4, 2, struct.pack('<q', 0))
     payload += field(5, 4, b'constructed')
@@ -188,13 +191,13 @@ def main():
     host=host_fixture(); envelope=b'{"outer":true}\n'; encoded=base64.b64encode(host).decode()
     reply=dict(data_base64=encoded,bytes_received=len(host),bytes_retained=len(host),truncated=False)
     client=dict(stdout_truncated=False,stderr_truncated=False,stdout_parse_error=None,stdout_capture_error=None,
-                stdout_bytes_received=200,stdout_bytes_retained=200,stderr_bytes_received=5,stderr_bytes_retained=5,capture_limit_bytes=300)
+                stdout_bytes_received=512,stdout_bytes_retained=512,stderr_bytes_received=5,stderr_bytes_retained=5,capture_limit_bytes=1024)
     sizes=dict(host_received_bytes=len(host),host_retained_bytes=len(host),computed_transport_artifact_sha256=hashlib.sha256(host).hexdigest(),
                hash_scope='computed transport artifact; no producer hash supplied',
                host_retention_bytes=92 * 1024 * 1024, binary_frame_limit_bytes=128 * 1024 * 1024,
                host_format='PWP1 typed binary', base64_scope='public JSON projection of retained raw host bytes',
-               base64_characters=len(encoded),client_stdout_received_bytes=200,client_stdout_retained_bytes=200,
-               client_stderr_received_bytes=5,client_stderr_retained_bytes=5,client_allowance_bytes=300,
+               base64_characters=len(encoded),client_stdout_received_bytes=512,client_stdout_retained_bytes=512,
+               client_stderr_received_bytes=5,client_stderr_retained_bytes=5,client_allowance_bytes=1024,
                final_envelope_bytes=len(envelope),authority_bytes_in_reply_payload=False)
     check=lambda value:check_sizes(value[0],value[1],client,host,envelope)
     check((sizes,reply))

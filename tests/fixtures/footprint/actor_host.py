@@ -11,6 +11,7 @@ import sys
 ROOT = Path(__file__).resolve().parents[3]
 sys.path.insert(0, str(ROOT / 'tests/lib'))
 sys.path.insert(0, str(ROOT / 'tests/fixtures/caller_auth'))
+import build_context
 from artifact import inventory, digest, inspect
 from bundle import command, save
 
@@ -47,8 +48,9 @@ class ActorHostFixture:
         obj = scratch / 'shim.o'
         command(self.out / 'compile-shim', ['/usr/bin/xcrun','clang','-arch','arm64','-mmacosx-version-min=26.0','-c',package / 'Sources/PWCWorkerShim/PWCWorkerShim.c','-o',obj])
         host = scratch / 'PWRunner'
+        context = build_context.write_swift_context(self.out / 'PWBuildContext.swift', build_context.candidate_contract(self.source_app))
         command(self.out / 'compile-host', ['/usr/bin/xcrun','swiftc','-j','2','-Onone','-g','-target','arm64-apple-macosx26.0','-module-cache-path',scratch / 'module-cache','-o',host,
-            *[package / p for p in sources],hook,package / entry,obj], timeout=180)
+            '-D','PW_PACKAGED_BUILD',context,*[package / p for p in sources],hook,package / entry,obj], timeout=180)
         command(self.out / 'copy', ['/usr/bin/ditto',self.source_app,self.app])
         unchanged = [SERVICE / 'Contents/MacOS' / name for name in ('pw-probe-runner','pw-probe-runner-unentitled','sb_api_validator')] + [EQUIPMENT]
         hashes = {str(p): digest(self.app / p) for p in unchanged}

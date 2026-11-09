@@ -1,18 +1,6 @@
 import Foundation
 @testable import PWRunnerCore
 
-// docs/contract.json is the only hand-edited copy of the wire contract
-// versions. The generated Swift copies are text; this compares the compiled
-// values against the manifest so a stale or hand-edited region cannot ship.
-private struct ContractManifest: Decodable {
-    struct Versions: Decodable {
-        let request_schema: Int
-        let response_schema: Int
-        let controller_envelope: Int
-    }
-    let versions: Versions
-}
-
 func repositoryRoot() -> URL {
     URL(fileURLWithPath: #filePath).deletingLastPathComponent()
         .deletingLastPathComponent().deletingLastPathComponent().deletingLastPathComponent()
@@ -164,14 +152,10 @@ func replyShapeDocuments() throws -> [PWRunnerRunResult] {
     return documents
 }
 
-func runContractVersionTests(_ tk: TestKit) {
+func runContractShapeTests(_ tk: TestKit) {
     let root = repositoryRoot()
-    tk.group("Wire contract versions") {
-        tk.run("compiled Swift constants agree with docs/contract.json") {
-            let manifest = try JSONDecoder().decode(ContractManifest.self,
-                from: Data(contentsOf: root.appendingPathComponent("docs/contract.json")))
-            try expectEqual(PWContract.requestSchema, manifest.versions.request_schema)
-            try expectEqual(PWContract.responseSchema, manifest.versions.response_schema)
+    tk.group("Worker identity and reply shapes") {
+        tk.run("worker identity bytes agree with their hex presentation") {
             try expectEqual(PWShmLayout.abiIdentity.count, PWShmLayout.abiIdentityBytes)
             try expectEqual(PWShmLayout.abiIdentity.map { String(format: "%02x", $0) }.joined(),
                             PWShmLayout.abiIdentityHex)

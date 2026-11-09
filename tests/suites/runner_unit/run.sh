@@ -29,7 +29,7 @@ test_build_fixture "${ROOT_DIR}/tests/fixtures/worker_lifecycle/build.sh" \
   "${PW_LIFECYCLE_WORKER_FIXTURE}" "${PW_TEST_ARTIFACTS}/lifecycle-fixture-build.log"
 
 set +e
-swift run --jobs 2 --scratch-path "${PW_TEST_SCRATCH}/swift" --package-path "${PACKAGE_DIR}" PWRunnerCoreTests >"${RUN_LOG}" 2>&1
+swift run -Xswiftc -DPW_UNIT_TEST_CONTEXT --jobs 2 --scratch-path "${PW_TEST_SCRATCH}/swift" --package-path "${PACKAGE_DIR}" PWRunnerCoreTests >"${RUN_LOG}" 2>&1
 RC=$?
 set -e
 

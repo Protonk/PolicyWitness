@@ -89,15 +89,18 @@ user-scope installation proves skipped bootout retains the running service after
 plist removal and that recovery works without original diagnostic output.
 Every uniquely owned service and plist must be absent before staging is deleted.
 
-The same case submits missing, string, real, boolean, old and future protocol
-markers through public installation. It retains before/after bundle inventories,
+The same case submits missing, empty, nonstring and foreign `PWContract`
+values through public installation. It retains before/after bundle inventories,
 registry and lock observations, and launchctl receipts to establish refusal with
 unchanged files and no residual service, plist or registry record. These endpoint
 observations do not establish that no transient activity occurred. A current live
-installation supplies a constructed protocol-1 registry record: run and verify
-refuse it, list/status/reconcile still inspect it, and removal recovers its owned
-service through pending cleanup without changing the protocol back. This tests
-historical registry compatibility on the current host, not historical host RPC.
+installation supplies a constructed legacy registry record without `contract`,
+with a retired kind alias and absent helper metadata: run and verify refuse it,
+list/status/reconcile still inspect it, and removal recovers its owned service
+through pending cleanup without repairing its contract. Opaque runner keys
+that collide with cleanup field names, plus unknown ownership/signature/entitlement
+fields, survive unrelated saves and the pending cleanup transition. This tests historical
+registry recovery on the current host, not historical host RPC.
 
 Rust unit controls separately exercise the production removal transaction with
 supplied launchd observations: bootout/unlink failures, unknown/unowned state,
@@ -168,12 +171,12 @@ abandonment, lost acquisition replies followed by fresh acquisition, and lost
 execution replies after a real worker completed one append. A copied helper
 terminated before stdout publication leaves submission unknown in the controller;
 independent traces establish one helper and one execution invocation. Legacy
-selectors and unsupported protocol replies cannot reach specimen execution.
-One arrangement alters only the top-level response-schema marker of the encoded
-reply after a real execution under the current protocol: the shipped controller
+selectors and foreign-contract replies cannot reach specimen execution.
+One arrangement alters only the host producer contract of the encoded
+reply after a real execution under the current contract: the shipped controller
 reports `unsupported_runner_response`, preserves the opaque reply, requests no
 fallback compilation, and the trace, effect and request count establish one
-execution and no replay. Restoring the marker yields the valid current reply.
+execution and no replay. Restoring the producer contract yields the valid current reply.
 This needs no historical signed runner and claims no historical-host
 interoperability.
 

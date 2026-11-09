@@ -8,6 +8,7 @@ import sys
 import tempfile
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[2] / 'lib'))
+import build_context
 import consumer
 from run_capture import RunCapture
 
@@ -20,7 +21,7 @@ def main():
         helper = Path(work) / "helper"
         shutil.copyfile("/usr/bin/true", helper)
         spec = {
-            "schema_version": 6,
+            'contract': build_context.candidate_contract(),
             "specimen_id": "execute_permission_control",
             "policy": {"format": "sbpl", "sbpl_source": "(version 1)(allow default)"},
             "probe_plan": [{
@@ -53,7 +54,7 @@ def main():
     steps = {}
     for name, (direct, rc, envelope) in records.items():
         assert rc == 0 and envelope["result"]["ok"] is True, (name, rc, envelope)
-        assert not consumer.validate(envelope), (name, consumer.validate(envelope))
+        assert not consumer.validate(envelope, build_context.candidate_contract()), (name, consumer.validate(envelope, build_context.candidate_contract()))
         runner = envelope["data"]["runner_result"]
         assert runner["normalized_outcome"] == "finished"
         assert runner.get("test_overrides") is None

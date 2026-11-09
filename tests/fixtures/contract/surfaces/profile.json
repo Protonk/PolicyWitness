@@ -1,0 +1,42 @@
+{
+  "shape": {
+    "reply": {
+      "compiled_profile": "object"
+    },
+    "reply.actors[]": {
+      "compiled_profile": "object"
+    },
+    "reply.actors[].compiled_profile": {
+      "bytecode_b64": "string",
+      "bytecode_length": "number",
+      "bytecode_sha256": "string",
+      "capture_stage": "string",
+      "parameter_count": "number",
+      "params_sha256": "string",
+      "producer": "string",
+      "profile_type": "number",
+      "reason": "string",
+      "request_nonce": "string",
+      "source_length": "number",
+      "source_sha256": "string",
+      "status": "string",
+      "worker_pid": "number"
+    },
+    "reply.compiled_profile": {
+      "bytecode_b64": "string",
+      "bytecode_length": "number",
+      "bytecode_sha256": "string",
+      "capture_stage": "string",
+      "parameter_count": "number",
+      "params_sha256": "string",
+      "producer": "string",
+      "profile_type": "number",
+      "reason": "string",
+      "request_nonce": "string",
+      "source_length": "number",
+      "source_sha256": "string",
+      "status": "string",
+      "worker_pid": "number"
+    }
+  }
+}

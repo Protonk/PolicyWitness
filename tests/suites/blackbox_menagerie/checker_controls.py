@@ -15,7 +15,7 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parents[3]
 BASELINE = ROOT / "tests/fixtures/blackbox_e2e/checker/current/constructed_run.json"
 sys.path.insert(0, str(ROOT / 'tests/lib'))
-from blackbox import recapture_host_reply
+from blackbox import bind_constructed_envelope, recapture_host_reply
 
 
 def constructed_missing_path_baseline():
@@ -25,7 +25,7 @@ def constructed_missing_path_baseline():
     Every changed operation, native-shaped result, relation and query association
     below is authored control input, not an observed filesystem or Mach effect.
     """
-    baseline = json.loads(BASELINE.read_text())
+    baseline = bind_constructed_envelope(json.loads(BASELINE.read_text()))
     runner = baseline['data']['runner_result']
     runner['specimen_id'] = 'constructed_missing_path_controls'
     runner['policy_sha256'] = 'a' * 64
@@ -329,7 +329,7 @@ def main():
           expected=expected, suites=("blackbox_e2e",), status=1)
     # The document version is read exactly: another reply version is one error.
     broken, _ = mutate()
-    broken["data"]["runner_result"]["schema_version"] += 1
+    broken["data"]["runner_result"]["producer"]["contract"] = "test:foreign"
     check("unsupported_reply_version", broken, ("unsupported runner response",), status=1)
 
     if failures:

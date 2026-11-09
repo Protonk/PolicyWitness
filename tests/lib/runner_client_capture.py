@@ -11,7 +11,7 @@ import json
 import re
 import uuid
 
-import contract
+import build_context
 import porcelain
 import porcelain_schema
 
@@ -119,18 +119,18 @@ def _control(value, path, errors, expected=None):
             errors.append(path + ' invalid reservation refusal')
 
 
-def validate_capture(value):
-    """Return errors, gating the protocol version before any child field."""
+def validate_capture(value, expected_contract=build_context.TEST_CONTRACT):
+    """Return errors, gating the producer contract before any child field."""
     if not isinstance(value, dict):
         return ['malformed runner client capture: not an object']
-    version = value.get('protocol_version')
-    if type(version) is not int:
-        return ['malformed runner client capture: protocol_version is not an integer']
-    if version != contract.RUNNER_PROTOCOL:
-        return [f'unsupported runner client capture: protocol_version {version}']
+    version = value.get('contract')
+    if not isinstance(version, str):
+        return ['malformed runner client capture: contract is not a string']
+    if expected_contract == "unbound" or version != expected_contract:
+        return [f'unsupported runner client capture: contract {version}']
     value = deepcopy(value)
     errors = []
-    _object(value, ('kind', 'protocol_version', 'client_pid', 'clock', 'clock_available', 'timeout_ms', 'attempts',
+    _object(value, ('kind', 'contract', 'client_pid', 'clock', 'clock_available', 'timeout_ms', 'attempts',
                     'acquisition_stop', 'submission', 'terminal'),
             ('error', 'runner_reply', 'submission_refusal', 'started_continuous_ns',
              'deadline_continuous_ns', 'ended_continuous_ns'), 'capture', errors)
@@ -318,7 +318,7 @@ def validate_capture(value):
     return errors
 
 
-def _raw_rejection(value, client, errors):
+def _raw_rejection(value, client, errors, expected_contract):
     """Validate the receipt wrapper without admitting anything inside its bytes."""
     if set(value) != {'format', 'data_base64'} or value.get('format') != 'porcelain':
         errors.append('rejected raw capture requires exactly format=porcelain and data_base64')
@@ -347,7 +347,7 @@ def _raw_rejection(value, client, errors):
     return raw, complete
 
 
-def _raw_rejection_admission(raw):
+def _raw_rejection_admission(raw, expected_contract):
     """Independent structure/version classification; decoded claims never escape."""
     if (len(raw) <= porcelain.MAX_BYTES and len(raw) >= 36 and raw[:4] == b'PWP1'
             and raw[4:36] != bytes.fromhex(porcelain_schema.SCHEMA_FINGERPRINT)):
@@ -355,15 +355,15 @@ def _raw_rejection_admission(raw):
         # captures. A plausible body cannot change an unsupported fingerprint.
         return 'unsupported', ['unsupported porcelain schema fingerprint']
     try:
-        decoded = porcelain.decode(raw, 'capture')
+        decoded = porcelain.decode_bound(raw, 'capture', expected_contract)
     except ValueError as error:
-        return 'malformed', ['malformed porcelain capture: ' + str(error)]
-    capture_errors = validate_capture(decoded)
+        return ('unsupported' if str(error).startswith('unsupported ') else 'malformed'), [str(error)]
+    capture_errors = validate_capture(decoded, expected_contract)
     return ('unsupported' if capture_errors and capture_errors[0].startswith('unsupported ')
             else 'malformed' if capture_errors else 'accepted'), capture_errors
 
 
-def validate_client(client, runner, *, allow_fixture_json=False):
+def validate_client(client, runner, expected_contract=build_context.TEST_CONTRACT, *, allow_fixture_json=False):
     """Check controller admission/projection without interpreting rejected bodies."""
     if client is None:
         return [] if runner is None else ['host result requires an accepted runner client capture']
@@ -387,14 +387,14 @@ def validate_client(client, runner, *, allow_fixture_json=False):
     if not allow_fixture_json and capture is None and _integer(client.get('stdout_bytes_retained'), 1):
         errors.append('received retained client bytes require a raw rejection or admitted capture')
     raw_rejected = isinstance(capture, dict) and ('format' in capture or 'data_base64' in capture)
-    raw, complete_raw = _raw_rejection(capture, client, errors) if raw_rejected else (None, False)
+    raw, complete_raw = _raw_rejection(capture, client, errors, expected_contract) if raw_rejected else (None, False)
     outer_failed = (client.get('stdout_truncated') is True or
                     client.get('stdout_parse_error') is not None or
                     client.get('stdout_capture_error') is not None)
     if delivery_failed:
         expected, capture_errors = 'delivery_failed', []
     elif raw_rejected:
-        expected, capture_errors = (_raw_rejection_admission(raw) if complete_raw else ('malformed', []))
+        expected, capture_errors = (_raw_rejection_admission(raw, expected_contract) if complete_raw else ('malformed', []))
         if expected == 'accepted':
             errors.append('complete valid capture cannot be represented as rejected raw bytes')
     elif outer_failed:
@@ -407,7 +407,7 @@ def validate_client(client, runner, *, allow_fixture_json=False):
         # transport beside received bytes is not a controller projection.
         expected, capture_errors = ('malformed' if _integer(received, 1) else 'missing'), []
     else:
-        capture_errors = validate_capture(capture)
+        capture_errors = validate_capture(capture, expected_contract)
         expected = ('unsupported' if capture_errors and capture_errors[0].startswith('unsupported ')
                     else 'malformed' if capture_errors else 'accepted')
         # The controller projects a typed capture only after admitting it; a
@@ -437,7 +437,7 @@ def validate_client(client, runner, *, allow_fixture_json=False):
             errors.append('client observations cannot supply a host result or host-byte diagnostics')
         return errors
     try:
-        parsed = host_reply(capture, allow_fixture_json=allow_fixture_json)
+        parsed = host_reply(capture, expected_contract, allow_fixture_json=allow_fixture_json)
     except ValueError:
         if runner is not None or not isinstance(reply_error, str) or not reply_error:
             errors.append('unreadable host bytes require null host result and a host-byte diagnostic')
@@ -450,9 +450,9 @@ def validate_client(client, runner, *, allow_fixture_json=False):
     return errors
 
 
-def host_reply(value, *, allow_fixture_json=False):
+def host_reply(value, expected_contract=build_context.TEST_CONTRACT, *, allow_fixture_json=False):
     """Parse exact admitted complete host bytes, without reading host semantics."""
-    errors = validate_capture(value)
+    errors = validate_capture(value, expected_contract)
     if errors:
         raise ValueError(errors[0])
     if value['terminal'] != 'runner_reply':
@@ -466,6 +466,6 @@ def host_reply(value, *, allow_fixture_json=False):
             def invalid_constant(text):
                 raise ValueError('non-JSON numeric constant ' + text)
             return json.loads(raw.decode('utf-8'), parse_constant=invalid_constant)
-        return porcelain.decode(raw, 'reply')
+        return porcelain.decode_bound(raw, 'reply', expected_contract)
     except (UnicodeDecodeError, ValueError, binascii.Error) as error:
         raise ValueError('host reply bytes are not admitted porcelain: ' + str(error)) from error

@@ -284,7 +284,7 @@ compiled-value and behavioral checks establish implementation agreement.
 - **G4. Citations resolve.** Every citation names a repository-relative file
   that exists and a symbol that occurs in it.
 - **G5. Check citations have a form and a definition.** Every check citation
-  in every manifest carries a form. A `test` is defined in the cited file, in
+  in the architecture, build, limits and footprint manifests carries a form. A `test` is defined in the cited file, in
   that file's language; a `rule` is a drift-rule function; a `control` is a
   fixture, golden, helper or compiled C control a test compares against.
   Worker-capability rows may have an empty check list, rendered as source-only
@@ -321,7 +321,11 @@ For G9 and G11, distinguish implementation of the mechanism from its prose
 coverage. The baseline records sites outside each mechanism; coverage is
 complete when the baseline's entries for that invariant are empty.
 
-G1 through G8, G10 and G11 have complete coverage in this scan. G9 has a
+G1 through G8, G10 and G11 have complete coverage within the mechanisms
+described above. The surface manifest’s `checks` entries name catalog suites
+that own verification; they are validated as suite names, not G5 assertion
+citations. Their presence does not establish a defined assertion or coverage
+of the surface’s behavior. G9 has a
 working mechanism and partial prose coverage: the remaining sites live in
 [prose_baseline.json](../../fixtures/docs/prose_baseline.json). The case reports
 entries per invariant, zero included. Convert a site to a span or a symbol-form link and remove
@@ -488,7 +492,7 @@ public command, or the explicit `PW_TEST_OUT_DIR`.
 - `<run>/suites/source_drift/runner_source_manifests_agree/artifacts/planner-controls/isolation-controls.json`
 - `<run>/suites/source_drift/runner_source_manifests_agree/artifacts/planner-controls/host-invariance-controls.json`
 - `<run>/suites/source_drift/limits_documentation/artifacts/limits.log`
-- `<run>/suites/source_drift/contract_versions/artifacts/contract.log`
+- `<run>/suites/source_drift/build_contracts/artifacts/contract.log`
 - `<run>/suites/source_drift/architecture_documentation/artifacts/architecture.log`
 - `<run>/suites/source_drift/build_documentation/artifacts/build-rules.log`, `build-rules-results.json` and `build.log`
 - `<run>/suites/source_drift/<case>/artifacts/<module>-receipts.json` for each unittest module
@@ -568,15 +572,18 @@ not compare production constants: those checks belong to `runner_abi_layout`,
 [documentation guidance](../../../docs/AGENTS.md#editing-limits-and-shared-guide-content)
 and [limit-change verification guidance](../../AGENTS.md#verify-a-limit-change).
 
-The `contract_versions` case checks [docs/contract.json](../../../docs/contract.json)
-against every generated copy in code and documents and exercises the real generator in
-a disposable checkout with changed, stale, broken-marker and malformed inputs.
-The controls that drive the unchanged build script to its early refusals,
-including the stale contract copy, the native builder check and the make
-entry, are `preflight/build_entry_controls`. Compiled values are compared elsewhere: `runner_abi_layout` (C), `runner_unit` (Swift) and the Rust unit tests.
+The `build_contracts` case checks development source digests, clean annotated
+release identity against actual tagged bytes (including index-hidden edits), incidental-file exclusion, Swift context agreement, environment-override refusal and the pre-signing source guard.
+It exercises derived surface stamps in disposable tagged repositories: pending
+release rendering, tagged reproduction, golden and normative edits, unrelated
+prose and retained removal rows, stamped source copies and no-tags clones, and independent reservation/selector, reservation-limit and host-wire surface mutations. Full stamp verification requires reachable annotated release history. The uniform generator controls establish
+read-only checking, idempotence and output ownership. Surface shape goldens are
+recollected with `docs/generate_contract_stamps.py --refresh-shapes` and reviewed.
+The early build-refusal controls, including stale stamp tables, the native
+builder check and the make entry, are `preflight/build_entry_controls`.
 See [docs/CONTRACT.md](../../../docs/CONTRACT.md).
 
-The `contract_versions` case also checks the generated host/worker source
+The `build_contracts` case also checks the generated host/worker source
 identity and exercises relocation, deterministic regeneration, stale generated values, malformed
 markers, automatic helper discovery, layout edits and both handshake edits.
 The identity changes on protocol implementation edits even when geometry does
@@ -648,7 +655,7 @@ copied checkout establishes that discovery dispatches an entry point, a suite
 script, a wrapper and a newly added script to their checks, each named once.
 Its shell inventory is the pruned test-shell scope described under the
 invariants, checked against a fixture of its own. Runtime preservation and contained resolver refusals belong to
-`preflight/build_provenance_controls` and `contract_versions`.
+`preflight/build_provenance_controls` and `build_contracts`.
 
 ### Porcelain structural reader
 

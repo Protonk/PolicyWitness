@@ -21,6 +21,8 @@ from actor_host import ActorHostFixture
 import consumer
 
 
+import build_context
+
 def extension(name, operation, **fields):
     return dict(step_id=name, extension=dict(operation=operation, **fields))
 
@@ -35,14 +37,14 @@ def actor_specimen(target, marker, count=None):
         phases=[dict(phase_id='hold',actor_id='a0',actions=actions if count==1 else actions[:1])]
         if count==3:
             phases += [dict(phase_id='later'+str(i),actor_id='a'+str(i),actions=[actions[i]]) for i in (1,2)]
-        return dict(schema_version=6,specimen_id=secrets.token_hex(8),actors=actors,phases=phases),0
+        return dict(contract=build_context.candidate_contract(),specimen_id=secrets.token_hex(8),actors=actors,phases=phases),0
     phases=[
         ('issue','issuer',[extension('issueT','issue',family='file',authority='read',target=str(target),token_ref='T'),extension('sendD1','transfer',token_ref='T',recipient='subject',delivery_ref='D1')]),
         ('consume','subject',[extension('consumeH1','consume',delivery_ref='D1',handle_ref='H1')]),
         ('hold','subject',[probe('knownread',target),step(marker,'open_write','marker'),extension('consumeH2','consume',delivery_ref='D1',handle_ref='H2'),extension('releaseH1','release',handle_ref='H1'),extension('releaseH2','release',handle_ref='H2')]),
         ('latertransfer','issuer',[extension('sendD2','transfer',token_ref='T',recipient='subject',delivery_ref='D2')]),
         ('laterconsume','subject',[extension('consumeH3','consume',delivery_ref='D2',handle_ref='H3'),extension('releaseH3','release',handle_ref='H3')])]
-    return dict(schema_version=6,specimen_id=secrets.token_hex(8),actors=[actor('issuer','unapplied'),actor('subject','apply')],phases=[dict(phase_id=n,actor_id=a,actions=x) for n,a,x in phases]),2
+    return dict(contract=build_context.candidate_contract(),specimen_id=secrets.token_hex(8),actors=[actor('issuer','unapplied'),actor('subject','apply')],phases=[dict(phase_id=n,actor_id=a,actions=x) for n,a,x in phases]),2
 
 
 def actor_inbound_dense_specimen(target, tokens=32, copies=2):
@@ -55,7 +57,7 @@ def actor_inbound_dense_specimen(target, tokens=32, copies=2):
     last=f'D{tokens*copies:02d}'
     hold=[probe('knownread',target),extension('consumeH1','consume',delivery_ref='D01',handle_ref='H1'),extension('consumeH2','consume',delivery_ref=last,handle_ref='H2'),
           extension('releaseH1','release',handle_ref='H1'),extension('releaseH2','release',handle_ref='H2')]
-    return dict(schema_version=6,specimen_id=secrets.token_hex(8),actors=[actor('issuer','unapplied'),actor('subject','apply')],
+    return dict(contract=build_context.candidate_contract(),specimen_id=secrets.token_hex(8),actors=[actor('issuer','unapplied'),actor('subject','apply')],
                 phases=[dict(phase_id='issue',actor_id='issuer',actions=issues+sends),dict(phase_id='hold',actor_id='subject',actions=hold)])
 
 
@@ -279,7 +281,7 @@ class HeldWorkload:
                 self.exits.watch(self.gate.pid,generation(validator))
                 for _ in range(ready['queries']): self.gate.query(); self.gate.emit()
                 self.gate.finish()
-        rc=self.run.wait(timeout=20); value=self.run.load_json(); assert rc==0 and not consumer.validate(value),value
+        rc=self.run.wait(timeout=20); value=self.run.load_json(); assert rc==0 and not consumer.validate(value, build_context.candidate_contract()),value
         runner=value['data']['runner_result']; assert runner['normalized_outcome']=='finished',runner
         assert all(s['attempt']['outcome']=='ok' for s in runner['steps']),runner
         if not self.actor_host:

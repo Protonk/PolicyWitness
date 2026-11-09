@@ -1,7 +1,7 @@
 """Live mandatory-reservation controls using disclosed copied-source gates.
 
 Production admission, orchestration and native effects remain in the copied
-host. One arrangement alters only the outgoing response-schema marker after a
+host. One arrangement alters only the outgoing host producer contract after a
 real execution, so the shipped controller meets an unsupported reply from the
 current XPC protocol. Independent drivers author wrong/stale/cross-connection calls. The shipped
 client supplies recovery/no-replay observations; one disclosed copied client
@@ -28,6 +28,7 @@ ROOT = Path(__file__).resolve().parents[4]
 sys.path[:0] = [str(ROOT / 'tests/lib'), str(ROOT / 'tests/fixtures/caller_auth'),
                str(ROOT / 'tests/fixtures/byoxpc')]
 import contract
+import build_context
 import native_sources
 import session
 from artifact import digest, inventory, inspect, MANIFEST
@@ -129,7 +130,7 @@ def build_host(scratch, out):
     save(out / 'instrumentation.json', dict(
         source_membership=sources, host_exit_delay_ms=50, gate_watchdog_seconds=20,
         gates=['encoded grant/occupied control before invocation', 'execution reply after worker reap', 'retirement closure before exit(0)',
-               'outgoing response-schema marker alteration after encoding'],
+               'outgoing host producer contract alteration after encoding'],
         unchanged_worker_identity_intentional=True,
         generated_worker_identity=contract.WORKER_IDENTITY,
         fixture_compiler_target='arm64-apple-macosx26.0', fixture_swift_optimization='-Onone',
@@ -143,8 +144,9 @@ def build_host(scratch, out):
         obj = build / (name + '.o'); objects.append(obj)
         command(out / ('compile-' + name), ['/usr/bin/xcrun', '--sdk', 'macosx', 'clang',
             '-target', 'arm64-apple-macosx26.0', '-Wall', '-Wextra', '-Werror', '-c', source, '-o', obj], timeout=60)
+    context = build_context.write_swift_context(copied / 'PWBuildContext.swift', build_context.candidate_contract())
     host = build / 'PWRunner'
-    command(out / 'compile-host', ['/usr/bin/xcrun', '--sdk', 'macosx', 'swiftc', '-Onone', '-g',
+    command(out / 'compile-host', ['/usr/bin/xcrun', '--sdk', 'macosx', 'swiftc', '-Onone', '-g', '-D', 'PW_PACKAGED_BUILD', context,
         '-target', 'arm64-apple-macosx26.0',
         '-module-cache-path', build / 'module-cache', '-o', host,
         *[copied / p for p in sources], copied / 'F2Trace.swift', copied / 'ReservationTrace.swift', *objects], timeout=180)
@@ -229,8 +231,9 @@ def build_callers(app, scratch, out, identity):
         backup = out / 'original-client-sources' / relative
         backup.parent.mkdir(parents=True, exist_ok=True); shutil.copy2(original, backup)
     trace = copied / 'ReservationClientTrace.swift'; shutil.copy2(FIXTURES / trace.name, trace)
+    context = build_context.write_swift_context(copied / 'PWBuildContext.swift', build_context.candidate_contract())
     client = build / 'pw-runner-client'
-    command(out / 'compile-client', ['/usr/bin/xcrun', '--sdk', 'macosx', 'swiftc', '-module-name', 'main',
+    command(out / 'compile-client', ['/usr/bin/xcrun', '--sdk', 'macosx', 'swiftc', '-module-name', 'main', '-D', 'PW_PACKAGED_BUILD', context,
         '-target', 'arm64-apple-macosx26.0', '-module-cache-path', build / 'module-cache',
         *[copied / relative for relative in sources], trace, '-o', client], timeout=120)
     sign(client, identity, source_id, out / 'sign-client')
@@ -282,7 +285,7 @@ class Driver:
         self.event('open-' + connection, 'opened')
 
     def reserve(self, tag='grant', connection='owner', lease_ms=5000):
-        self.send('reserve', tag, connection, lease_ms=lease_ms, protocol_version=contract.RUNNER_PROTOCOL)
+        self.send('reserve', tag, connection, lease_ms=lease_ms, contract=build_context.candidate_contract())
         return self.event(tag, 'control_reply')
 
 
@@ -348,13 +351,11 @@ class ReservationArrangement(Arrangement):
             record['end_ns'] = time.monotonic_ns(); save(folder / 'record.json', record)
         raw = (folder / 'stdout').read_bytes()
         value = json.loads(raw) if record['public'] else decode_porcelain(raw, 'capture')
-        problems = validate(value) if record['public'] else validate_capture(value)
-        if unsupported is None:
-            assert not problems, problems
-        else:
-            # The reader refuses the preserved reply by version and reads nothing else.
-            assert problems == [f'unsupported runner response: schema_version {unsupported} '
-                                f'(this reader accepts {contract.RESPONSE_SCHEMA})'], problems
+        problems = validate(value, build_context.candidate_contract()) if record['public'] else validate_capture(value, build_context.candidate_contract())
+        assert not problems, problems
+        if unsupported:
+            # Classify the refusal by its structured outcome, not decoder prose.
+            assert value['result']['normalized_outcome'] == 'unsupported_runner_response', value['result']
         save(folder / 'validated.json', value)
         return value
 
@@ -412,7 +413,7 @@ class ReservationArrangement(Arrangement):
         driver.send('submit', 'execute', credential='grant', request=str(path))
         received = driver.event('execute', 'host_reply')
         reply = decode_porcelain(base64.b64decode(received['data_base64'], validate=True), 'reply')
-        assert not validate(reply) and reply['normalized_outcome'] == 'finished', reply
+        assert not validate(reply, build_context.candidate_contract()) and reply['normalized_outcome'] == 'finished', reply
         self.one_execution(name)
         assert generation(self.event(name, 'admission_claimed')['host']) == generation(owner)
         gate = self.control_gate('exit')
@@ -534,27 +535,30 @@ class ReservationArrangement(Arrangement):
             assert client['submission'] == 'not_invoked' and client['transport']['terminal'] == 'protocol_error'
             assert client['transport']['error']['reason'] == 'unsupported_protocol'
             assert value['data']['runner_result'] is None
-            assert self.events(kind='legacy_protocol_control_substituted')
+            assert self.events(kind='foreign_contract_control_substituted')
             self.no_execution(name)
-            for peer in self.events(kind='legacy_protocol_control_substituted'):
+            for peer in self.events(kind='foreign_contract_control_substituted'):
                 self.no_host_execution(peer['host'])
 
     def old_response(self):
         # One real execution under the current protocol; only the reply's
-        # top-level response-schema marker is altered before the XPC reply.
+        # top-level host producer contract is altered before the XPC reply.
         name = 'f2-control-old-response'
-        value = self.receive(self.launch(name), unsupported=contract.RESPONSE_SCHEMA - 1)
+        value = self.receive(self.launch(name), unsupported=True)
         assert self.requests[-1]['returncode'] == 1, self.requests[-1]
         assert value['result']['normalized_outcome'] == 'unsupported_runner_response', value['result']
         client = value['data']['runner_client']
         assert client['submission'] == 'invoked' and client['transport_admission'] == 'accepted', client
         assert client['transport']['terminal'] == 'runner_reply', client['transport']
-        preserved = value['data']['runner_result']
-        assert preserved['schema_version'] == contract.RESPONSE_SCHEMA - 1, preserved['schema_version']
+        assert value['data']['runner_result'] is None, value
+        received = base64.b64decode(client['transport']['runner_reply']['data_base64'], validate=True)
+        preserved = decode_porcelain(received, 'reply')
+        foreign = preserved['producer']['contract']
+        assert foreign != build_context.candidate_contract(), foreign
         assert value['data']['policy_check'] is None, 'refused reply requested a fallback compilation'
         altered = self.event(name, 'outgoing_marker_altered')
         assert altered['equal_after_restoring_marker'] is True
-        assert altered['original_marker'] == contract.RESPONSE_SCHEMA and altered['altered_marker'] == preserved['schema_version']
+        assert altered['original_marker'] == build_context.candidate_contract() and altered['altered_marker'] == foreign
         encoded = self.event(name, 'reply_encoded')
         assert encoded['reply_sha256'] == altered['original_sha256'] and encoded['reply_format'] == 'porcelain' and encoded['result_outcome'] == 'finished', (encoded, altered)
         # The opaque reply is the real execution's reply: restoring the marker
@@ -563,15 +567,15 @@ class ReservationArrangement(Arrangement):
         assert len(received) == altered['altered_bytes']
         assert sha256(received).hexdigest() == altered['altered_sha256']
         offset, length = altered['byte_offset'], altered['byte_length']
-        assert offset == 50 and length == 8
-        assert int.from_bytes(received[offset:offset + length], 'little', signed=True) == preserved['schema_version']
-        restored_bytes = (received[:offset] + altered['original_marker'].to_bytes(length, 'little', signed=True)
+        assert offset == 59 and length == len(foreign.encode())
+        assert received[offset:offset + length].decode() == foreign
+        restored_bytes = (received[:offset] + altered['original_marker'].encode()
                           + received[offset + length:])
         assert len(restored_bytes) == altered['original_bytes']
         assert sha256(restored_bytes).hexdigest() == encoded['reply_sha256']
         restored = decode_porcelain(restored_bytes, 'reply')
-        assert restored == dict(preserved, schema_version=altered['original_marker'])
-        assert not validate(restored), validate(restored)
+        assert restored == dict(preserved, producer=dict(preserved['producer'], contract=altered['original_marker']))
+        assert not validate(restored, build_context.candidate_contract()), validate(restored, build_context.candidate_contract())
         (self.out / 'old-response-received.pwp').write_bytes(received)
         (self.out / 'old-response-restored.pwp').write_bytes(restored_bytes)
         assert restored['normalized_outcome'] == 'finished' and restored['steps'][0]['attempt']['outcome'] == 'ok', restored['steps']
@@ -579,7 +583,7 @@ class ReservationArrangement(Arrangement):
         assert len(self.events(name, 'request_received')) == 1, 'execution was replayed'
         assert not self.events(name, 'outgoing_marker_unaltered')
         save(self.out / 'old-response.json', dict(controller_outcome=value['result']['normalized_outcome'],
-            controller_exit=self.requests[-1]['returncode'], preserved_marker=preserved['schema_version'],
+            controller_exit=self.requests[-1]['returncode'], preserved_marker=foreign,
             alteration=altered, encoded=encoded, one_execution=True, replayed=False,
             historical_host_interoperability_claimed=False))
 

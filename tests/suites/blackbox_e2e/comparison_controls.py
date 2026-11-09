@@ -13,7 +13,7 @@ from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[3]
 sys.path.insert(0, str(ROOT / 'tests/lib'))
-from blackbox import recapture_host_reply
+from blackbox import bind_constructed_envelope, recapture_host_reply
 BASE = ROOT / 'tests/fixtures/blackbox_e2e/checker/current/constructed_run.json'
 COMPARER = ROOT / 'tests/lib/envelope_compare.py'
 
@@ -34,7 +34,7 @@ def remove_field(document, path):
 
 def main():
     out = Path(sys.argv[1])
-    original = json.loads(BASE.read_text())
+    original = bind_constructed_envelope(json.loads(BASE.read_text()))
     names = sorted(p.name for p in (ROOT / 'tests/fixtures/pw_runner').glob('*.json'))
     assert names
     results = []

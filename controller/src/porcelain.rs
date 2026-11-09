@@ -140,11 +140,13 @@ impl<'a> RecordReader<'a> {
 #[derive(Debug, PartialEq)]
 pub enum FrameError {
     UnsupportedSchema,
+    UnsupportedContract(String),
     Malformed(String),
 }
 impl std::fmt::Display for FrameError {
     fn fmt(&self, f: &mut std::fmt::Formatter) -> std::fmt::Result {
         match self {
+            Self::UnsupportedContract(value) => write!(f, "unsupported producer contract {value}"),
             Self::UnsupportedSchema => f.write_str("unsupported porcelain schema"),
             Self::Malformed(problem) => f.write_str(problem),
         }
@@ -165,6 +167,58 @@ pub fn decode<T: WireRead>(data: &[u8]) -> Result<T, FrameError> {
         value.decode()
     })()
     .map_err(FrameError::Malformed)
+}
+
+/// Read only the root producer context before decoding its descendants.
+/// A foreign producer cannot turn malformed descendant bytes into shape claims.
+pub fn decode_bound<T: WireRead>(
+    data: &[u8],
+    capture: bool,
+    expected: &str,
+) -> Result<T, FrameError> {
+    if data.len() > LIMIT || data.get(..4) != Some(b"PWP1") || data.len() < 36 {
+        return Err(FrameError::Malformed("invalid porcelain frame".into()));
+    }
+    if data[4..36] != crate::porcelain_records::FINGERPRINT {
+        return Err(FrameError::UnsupportedSchema);
+    }
+    let budget = Cell::new(LIMIT);
+    let contract = (|| -> Result<String, String> {
+        let mut frame = Cursor::new(&data[36..], 0, &budget)?;
+        let root = frame.value()?;
+        frame.finish()?;
+        if root.kind != 6 {
+            return Err("root is not a record".into());
+        }
+        let id = if capture {
+            crate::porcelain_records::CAPTURE_RECORD_ID
+        } else {
+            crate::porcelain_records::REPLY_RECORD_ID
+        };
+        let mut record = RecordReader::new(root.data, id, 1, &budget)?;
+        if capture {
+            let (tag, _) = record.next()?.ok_or("missing capture kind")?;
+            if tag != 1 {
+                return Err("missing capture kind".into());
+            }
+        }
+        let (tag, context) = record.next()?.ok_or("missing producer context")?;
+        if tag != if capture { 2 } else { 1 } {
+            return Err("missing producer context".into());
+        }
+        if capture {
+            context.decode()
+        } else {
+            Ok(context
+                .decode::<crate::porcelain_records::PWProducer>()?
+                .contract)
+        }
+    })()
+    .map_err(FrameError::Malformed)?;
+    if expected == "unbound" || contract != expected {
+        return Err(FrameError::UnsupportedContract(contract));
+    }
+    decode(data)
 }
 pub fn variant<'a>(
     data: &'a [u8],

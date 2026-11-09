@@ -14,15 +14,15 @@ use std::path::{Path, PathBuf};
 use std::process::{Command, Stdio};
 
 pub const RUNNER_REGISTRY_SCHEMA_VERSION: u32 = 1;
-pub use crate::json_contract::RUNNER_PROTOCOL_VERSION;
+pub use crate::json_contract::BUILD_CONTRACT;
 
 /// Execution compatibility is separate from registry readability and cleanup.
-pub fn require_current_protocol(version: u32) -> Result<(), String> {
-    if version == RUNNER_PROTOCOL_VERSION {
+pub fn require_current_contract(version: &str) -> Result<(), String> {
+    if !version.is_empty() && version != "unbound" && version == BUILD_CONTRACT {
         Ok(())
     } else {
         Err(format!(
-            "runner advertises protocol {version}; this client requires protocol {RUNNER_PROTOCOL_VERSION}; upgrade and reinstall the runner"
+            "runner advertises contract {version}; this client requires contract {BUILD_CONTRACT}; upgrade and reinstall the runner"
         ))
     }
 }
@@ -88,6 +88,8 @@ impl RunnerScope {
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct RunnerSignature {
+    #[serde(flatten)]
+    pub extra: BTreeMap<String, Value>,
     pub team_id: Option<String>,
     pub identity: Option<String>,
     pub cdhash: Option<String>,
@@ -97,6 +99,8 @@ pub struct RunnerSignature {
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct RunnerEntitlements {
+    #[serde(flatten)]
+    pub extra: BTreeMap<String, Value>,
     pub raw_plist: Option<String>,
     /// Every key the plist names, whatever its value.
     pub keys: Vec<String>,
@@ -117,19 +121,73 @@ pub enum RunnerState {
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct RunnerOwnership {
+    #[serde(flatten)]
+    pub extra: BTreeMap<String, Value>,
     pub plist_path: String,
     pub launchd_domain: String,
     pub owner_uid: u32,
     pub plist_sha256: String,
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize)]
 pub struct PendingCleanup {
-    #[serde(flatten)]
     pub runner: RunnerRecord,
     pub cleanup_started_at_unix_ms: u64,
-    #[serde(default)]
     pub observations: Vec<Value>,
+    #[serde(flatten)]
+    pub extra: BTreeMap<String, Value>,
+}
+
+impl<'de> Deserialize<'de> for PendingCleanup {
+    fn deserialize<D: serde::Deserializer<'de>>(deserializer: D) -> Result<Self, D::Error> {
+        // Read both the historical flattened form and the isolated runner form.
+        // Only the latter is written: opaque runner keys cannot collide with
+        // cleanup observations or acquire authority as cleanup state. Recognize
+        // legacy top-level identity first: an opaque key named runner in an
+        // old record must not replace the known cleanup target.
+        #[derive(Deserialize)]
+        #[serde(untagged)]
+        enum Stored {
+            Legacy {
+                cleanup_started_at_unix_ms: u64,
+                #[serde(default)]
+                observations: Vec<Value>,
+                #[serde(flatten)]
+                runner: RunnerRecord,
+            },
+            Nested {
+                runner: RunnerRecord,
+                cleanup_started_at_unix_ms: u64,
+                #[serde(default)]
+                observations: Vec<Value>,
+                #[serde(flatten)]
+                extra: BTreeMap<String, Value>,
+            },
+        }
+        Ok(match Stored::deserialize(deserializer)? {
+            Stored::Nested {
+                runner,
+                cleanup_started_at_unix_ms,
+                observations,
+                extra,
+            } => Self {
+                runner,
+                cleanup_started_at_unix_ms,
+                observations,
+                extra,
+            },
+            Stored::Legacy {
+                runner,
+                cleanup_started_at_unix_ms,
+                observations,
+            } => Self {
+                runner,
+                cleanup_started_at_unix_ms,
+                observations,
+                extra: BTreeMap::new(),
+            },
+        })
+    }
 }
 
 pub const EQUIPMENT_INVENTORY_BYTES: usize = 1_048_576;
@@ -140,7 +198,7 @@ const EMPTY_ENTITLEMENTS_XML: &str = "<?xml version=\"1.0\" encoding=\"UTF-8\"?>
 #[serde(deny_unknown_fields)]
 pub struct WorkerEquipmentInventory {
     pub schema_version: u32,
-    pub runner_protocol: u32,
+    pub contract: String,
     pub worker_identity: String,
     pub unsigned_worker_sha256: String,
     pub workers: Vec<WorkerEquipmentEntry>,
@@ -168,7 +226,7 @@ fn equipment_hex(value: &str, length: usize) -> bool {
 impl WorkerEquipmentInventory {
     pub fn validate(&self) -> Result<(), String> {
         if self.schema_version != 1
-            || self.runner_protocol != RUNNER_PROTOCOL_VERSION
+            || self.contract != BUILD_CONTRACT
             || !equipment_hex(&self.worker_identity, 64)
             || !equipment_hex(&self.unsigned_worker_sha256, 64)
             || self.workers.len() != 2
@@ -377,6 +435,10 @@ fn refresh_equipment_inventory(
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct RunnerRecord {
+    /// Preserve retired and future metadata through unrelated writes and cleanup.
+    /// These values never establish execution compatibility or ownership.
+    #[serde(flatten)]
+    pub extra: BTreeMap<String, Value>,
     #[serde(default)]
     pub state: RunnerState,
     #[serde(default)]
@@ -387,7 +449,8 @@ pub struct RunnerRecord {
     pub executable_path: String,
     pub bundle_id: Option<String>,
     pub scope: RunnerScope,
-    pub protocol_version: u32,
+    #[serde(default, skip_serializing_if = "String::is_empty")]
+    pub contract: String,
     pub signature: RunnerSignature,
     pub entitlements: RunnerEntitlements,
     pub installed_at_unix_ms: u64,
@@ -425,6 +488,8 @@ pub struct RunnerRecord {
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct RunnerRegistry {
+    #[serde(flatten)]
+    pub extra: BTreeMap<String, Value>,
     pub schema_version: u32,
     pub runners: Vec<RunnerRecord>,
     #[serde(default)]
@@ -481,6 +546,7 @@ pub fn launchd_plist_path(service_name: &str, scope: RunnerScope) -> Result<Path
 pub fn load_registry(path: &Path) -> Result<RunnerRegistry, String> {
     if !path.exists() {
         return Ok(RunnerRegistry {
+            extra: Default::default(),
             schema_version: RUNNER_REGISTRY_SCHEMA_VERSION,
             runners: Vec::new(),
             pending_cleanup: Vec::new(),
@@ -534,6 +600,11 @@ pub fn save_registry(path: &Path, registry: &RunnerRegistry) -> Result<(), Strin
     }
     let text = serde_json::to_vec_pretty(registry)
         .map_err(|e| format!("failed to encode registry JSON: {e}"))?;
+    let readback: RunnerRegistry = serde_json::from_slice(&text)
+        .map_err(|e| format!("refusing unreadable registry JSON: {e}"))?;
+    if serde_json::to_vec_pretty(&readback).map_err(|e| e.to_string())? != text {
+        return Err("refusing registry JSON that loses metadata on read-back".into());
+    }
     let temporary = path.with_file_name(format!(
         ".{}.{}.tmp",
         path.file_name()
@@ -630,6 +701,7 @@ pub fn entitlements_from_json(value: &Value) -> RunnerEntitlements {
         _ => (Vec::new(), Vec::new()),
     };
     RunnerEntitlements {
+        extra: Default::default(),
         raw_plist: None,
         keys,
         granted,
@@ -753,6 +825,7 @@ pub fn entitlements_from_codesign(target: &Path) -> RunnerEntitlements {
         Ok(out) => out,
         Err(err) => {
             return RunnerEntitlements {
+                extra: Default::default(),
                 raw_plist: None,
                 keys: Vec::new(),
                 granted: Vec::new(),
@@ -763,6 +836,7 @@ pub fn entitlements_from_codesign(target: &Path) -> RunnerEntitlements {
     if !out.status.success() {
         let stderr = String::from_utf8_lossy(&out.stderr).trim().to_string();
         return RunnerEntitlements {
+            extra: Default::default(),
             raw_plist: None,
             keys: Vec::new(),
             granted: Vec::new(),
@@ -771,6 +845,7 @@ pub fn entitlements_from_codesign(target: &Path) -> RunnerEntitlements {
     }
     if out.stdout.len() > EQUIPMENT_ENTITLEMENT_BYTES {
         return RunnerEntitlements {
+            extra: Default::default(),
             raw_plist: None,
             keys: Vec::new(),
             granted: Vec::new(),
@@ -780,6 +855,7 @@ pub fn entitlements_from_codesign(target: &Path) -> RunnerEntitlements {
     // codesign writes nothing for a signature that carries no entitlements.
     if out.stdout.iter().all(u8::is_ascii_whitespace) {
         return RunnerEntitlements {
+            extra: Default::default(),
             raw_plist: None,
             keys: Vec::new(),
             granted: Vec::new(),
@@ -793,6 +869,7 @@ pub fn entitlements_from_codesign(target: &Path) -> RunnerEntitlements {
             ent
         }
         Err(err) => RunnerEntitlements {
+            extra: Default::default(),
             raw_plist: String::from_utf8(out.stdout).ok(),
             keys: Vec::new(),
             granted: Vec::new(),
@@ -830,6 +907,7 @@ pub fn codesign_metadata(target: &Path) -> Result<RunnerSignature, String> {
         }
     }
     Ok(RunnerSignature {
+        extra: Default::default(),
         team_id,
         identity,
         cdhash,
@@ -923,6 +1001,7 @@ pub struct ValidateFailure {
 
 fn unreadable_signature() -> RunnerSignature {
     RunnerSignature {
+        extra: Default::default(),
         team_id: None,
         identity: None,
         cdhash: None,
@@ -973,6 +1052,7 @@ pub fn validate_record(
                 return (
                     unreadable_signature(),
                     RunnerEntitlements {
+                        extra: Default::default(),
                         raw_plist: None,
                         keys: Vec::new(),
                         granted: Vec::new(),
@@ -1466,6 +1546,7 @@ pub fn remove_record(
     if let Some(index) = registry.runners.iter().position(&matches) {
         let record = registry.runners.remove(index);
         registry.pending_cleanup.push(PendingCleanup {
+            extra: Default::default(),
             runner: record,
             cleanup_started_at_unix_ms: crate::utils::now_unix_ms(),
             observations: Vec::new(),
@@ -1700,7 +1781,7 @@ mod tests {
             "sha256":"a".repeat(64),"cdhash":"b".repeat(40),"identifier":"worker",
             "team_id":null,"entitlements_xml":EMPTY_ENTITLEMENTS_XML})
         };
-        let value = json!({"schema_version":1,"runner_protocol":RUNNER_PROTOCOL_VERSION,
+        let value = json!({"schema_version":1,"contract":BUILD_CONTRACT,
             "worker_identity":"c".repeat(64),"unsigned_worker_sha256":"d".repeat(64),
             "workers":[row("selected",crate::app_layout::BUNDLE_WORKER_REL),
                        row("unentitled",crate::app_layout::BUNDLE_UNENTITLED_WORKER_REL)]});
@@ -1716,7 +1797,7 @@ mod tests {
         escaped.workers[0].relative_path = "../worker".into();
         assert!(escaped.validate().is_err());
         let mut future = inventory.clone();
-        future.runner_protocol += 1;
+        future.contract = "test:foreign".into();
         assert!(future.validate().is_err());
         let mut oversized = inventory.clone();
         oversized.workers[0].entitlements_xml = "x".repeat(EQUIPMENT_ENTITLEMENT_BYTES + 1);
@@ -1734,6 +1815,7 @@ mod tests {
         let future = json!({"schema_version":999,"future_field":{"opaque":[true,7]}});
         let mut record = recovery_record();
         record.ownership = Some(RunnerOwnership {
+            extra: Default::default(),
             plist_path: "/private/tmp/owned.plist".into(),
             launchd_domain: "gui/501".into(),
             owner_uid: 501,
@@ -1756,7 +1838,7 @@ mod tests {
         let mut record: RunnerRecord = serde_json::from_value(json!({
             "id": "runner-v", "service_name": "com.example.v", "bundle_path": "/v/Runner.xpc",
             "executable_path": "/v/Runner.xpc/Contents/MacOS/PWRunner", "bundle_id": "com.example.v",
-            "scope": "user", "protocol_version": RUNNER_PROTOCOL_VERSION,
+            "scope": "user", "contract": BUILD_CONTRACT,
             "signature": {"team_id": null, "identity": null, "cdhash": null, "valid": true, "adhoc": true},
             "entitlements": {"raw_plist": null, "keys": [], "error": null},
             "installed_at_unix_ms": 0, "kind": "byoxpc"
@@ -1765,6 +1847,7 @@ mod tests {
         let good = |path: &Path| {
             Ok((
                 RunnerSignature {
+                    extra: Default::default(),
                     team_id: Some("TEAM".into()),
                     identity: Some(path.display().to_string()),
                     cdhash: None,
@@ -1882,7 +1965,7 @@ mod tests {
             "runners": [{
                 "id": "runner-old", "service_name": "com.example.old", "bundle_path": "/old/Runner.xpc",
                 "executable_path": "/old/Runner.xpc/Contents/MacOS/PWRunner", "bundle_id": "com.example.old",
-                "scope": "user", "protocol_version": RUNNER_PROTOCOL_VERSION,
+                "scope": "user", "contract": BUILD_CONTRACT,
                 "signature": {"team_id": null, "identity": null, "cdhash": null, "valid": true, "adhoc": true},
                 "entitlements": {"raw_plist": null, "keys": [], "error": null},
                 "installed_at_unix_ms": 0, "kind": "byoxpc"
@@ -2077,6 +2160,109 @@ mod tests {
     }
 
     #[test]
+    fn legacy_metadata_survives_unrelated_writes_and_pending_cleanup() {
+        let fixture = RegistryFixture::new();
+        let path = fixture.path();
+        let opaque = json!({"future": [true, null, {"contract": "opaque"}]});
+        let mut legacy = serde_json::to_value(recovery_record()).unwrap();
+        legacy["kind"] = json!("debuggable");
+        legacy["future_metadata"] = opaque.clone();
+        legacy["observations"] = opaque.clone();
+        legacy["cleanup_started_at_unix_ms"] = json!("opaque runner metadata");
+        legacy["signature"]["future_signature"] = opaque.clone();
+        legacy["entitlements"]["future_entitlements"] = opaque.clone();
+        legacy["ownership"] = json!({"plist_path":"/unused", "launchd_domain":"gui/0",
+            "owner_uid":0, "plist_sha256":"opaque", "future_ownership":opaque});
+        fs::write(
+            &path,
+            serde_json::to_vec(&json!({"schema_version": 1,
+            "runners": [legacy], "future_registry": opaque}))
+            .unwrap(),
+        )
+        .unwrap();
+        let mut registry = load_registry(&path).unwrap();
+        assert!(require_current_contract(&registry.runners[0].contract).is_err());
+        assert_eq!(registry.runners[0].kind, Some(RunnerKind::Byoxpc));
+        let mut unrelated = recovery_record();
+        unrelated.id = "unrelated".into();
+        registry.runners.push(unrelated);
+        save_registry(&path, &registry).unwrap();
+        let raw: Value = serde_json::from_slice(&fs::read(&path).unwrap()).unwrap();
+        assert_eq!(raw["future_registry"], opaque);
+        assert_eq!(raw["runners"][0]["future_metadata"], opaque);
+        assert_eq!(raw["runners"][0]["protocol_version"], 1);
+        assert!(raw["runners"][0].get("contract").is_none());
+        registry.pending_cleanup.push(PendingCleanup {
+            extra: Default::default(),
+            runner: registry.runners.remove(0),
+            cleanup_started_at_unix_ms: 2,
+            observations: vec![json!({"observed": "unknown"})],
+        });
+        save_registry(&path, &registry).unwrap();
+        let reloaded = load_registry(&path).unwrap();
+        assert_eq!(reloaded.extra["future_registry"], opaque);
+        assert_eq!(
+            reloaded.pending_cleanup[0].runner.extra["future_metadata"],
+            opaque
+        );
+        assert_eq!(
+            reloaded.pending_cleanup[0].runner.extra["protocol_version"],
+            1
+        );
+        assert_eq!(
+            reloaded.pending_cleanup[0].observations,
+            registry.pending_cleanup[0].observations
+        );
+        let retained = &reloaded.pending_cleanup[0].runner;
+        assert_eq!(retained.extra["observations"], opaque);
+        assert_eq!(
+            retained.extra["cleanup_started_at_unix_ms"],
+            "opaque runner metadata"
+        );
+        assert_eq!(retained.signature.extra["future_signature"], opaque);
+        assert_eq!(retained.entitlements.extra["future_entitlements"], opaque);
+        assert_eq!(
+            retained.ownership.as_ref().unwrap().extra["future_ownership"],
+            opaque
+        );
+    }
+
+    #[test]
+    fn historical_flattened_cleanup_remains_readable_and_rewrites_with_nested_runner() {
+        let mut flat = serde_json::to_value(recovery_record()).unwrap();
+        flat["cleanup_started_at_unix_ms"] = json!(42);
+        flat["observations"] = json!([{"presence":"unknown"}]);
+        flat["future_runner"] = json!({"preserved":true});
+        let mut opaque_runner = serde_json::to_value(recovery_record()).unwrap();
+        opaque_runner["service_name"] = json!("unowned-opaque-service");
+        flat["runner"] = opaque_runner.clone();
+        let cleanup: PendingCleanup = serde_json::from_value(flat).unwrap();
+        assert_eq!(cleanup.cleanup_started_at_unix_ms, 42);
+        assert_ne!(cleanup.runner.service_name, "unowned-opaque-service");
+        assert_eq!(cleanup.runner.extra["runner"], opaque_runner);
+        assert_eq!(
+            cleanup.runner.extra["future_runner"],
+            json!({"preserved":true})
+        );
+        let nested = serde_json::to_value(&cleanup).unwrap();
+        assert_eq!(nested["runner"]["future_runner"], json!({"preserved":true}));
+        assert!(nested.get("service_name").is_none());
+        assert_eq!(nested["observations"], json!([{"presence":"unknown"}]));
+    }
+
+    #[test]
+    fn registry_save_refuses_duplicate_known_metadata_before_publication() {
+        let fixture = RegistryFixture::new();
+        let path = fixture.path();
+        let mut registry = load_registry(&path).unwrap();
+        save_registry(&path, &registry).unwrap();
+        let before = fs::read(&path).unwrap();
+        registry.extra.insert("schema_version".into(), json!(1));
+        assert!(save_registry(&path, &registry).is_err());
+        assert_eq!(before, fs::read(&path).unwrap());
+    }
+
+    #[test]
     fn atomic_registry_replace_preserves_old_open_readers_and_failed_write() {
         let fixture = RegistryFixture::new();
         let path = fixture.path();
@@ -2114,12 +2300,14 @@ mod tests {
     #[test]
     fn pending_cleanup_conflicts_with_service_bundle_and_executable() {
         let mut registry = RunnerRegistry {
+            extra: Default::default(),
             schema_version: 1,
             runners: vec![],
             pending_cleanup: vec![],
         };
         let record = recovery_record();
         registry.pending_cleanup.push(PendingCleanup {
+            extra: Default::default(),
             runner: record.clone(),
             cleanup_started_at_unix_ms: 1,
             observations: vec![],
@@ -2250,6 +2438,7 @@ mod tests {
             ),
         };
         record.ownership = Some(RunnerOwnership {
+            extra: Default::default(),
             plist_path: "/owned.plist".into(),
             launchd_domain: "gui/501".into(),
             owner_uid: 501,

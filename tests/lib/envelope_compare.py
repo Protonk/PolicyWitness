@@ -31,6 +31,7 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parents[2]
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 import consumer
+import build_context
 
 FIXTURES = ROOT / 'tests/fixtures/pw_runner'
 CONTROLLER = 'Contents/MacOS/policy-witness'
@@ -75,7 +76,10 @@ VOLATILE = {
         'data.runner_client.transport.runner_reply.bytes_retained',
     ),
 }
-STAMPS = ('build.commit', 'build.describe', 'build.number', 'build.version')
+STAMPS = ('build.commit', 'build.describe', 'build.number', 'build.version', 'build.contract',
+          'data.runner_result.producer.contract', 'data.runner_result.producer.describe',
+          'data.runner_result.producer.commit', 'data.runner_client.transport.contract',
+          'data.runner_client.transport.attempts[].control.contract')
 IDENTITY = 'data.runner_result.runner_subprocess.worker_evidence.abi_identity'
 GENERIC_INDEX = re.compile(r'\[\d+\]')
 
@@ -147,17 +151,21 @@ def client_argument_class(path, candidate, baseline):
 def run_fixtures(app, out):
     out.mkdir(parents=True)
     controller = Path(app) / CONTROLLER
+    expected_contract = build_context.candidate_contract(app)
     results = {}
     for fixture in sorted(FIXTURES.glob('*.json')):
         name = fixture.stem
         started = time.monotonic()
-        result = subprocess.run([str(controller), 'run', str(fixture)], capture_output=True, text=True, timeout=600)
+        request = out / f'{name}.request.json'
+        request.write_text(json.dumps(build_context.asserted_request(json.loads(fixture.read_text()), app)) + '\n')
+        result = subprocess.run([str(controller), 'run', str(request)], capture_output=True, text=True, timeout=600)
         (out / f'{name}.json').write_text(result.stdout)
         (out / f'{name}.stderr').write_text(result.stderr)
         results[name] = dict(fixture=str(fixture), returncode=result.returncode,
                              elapsed_seconds=round(time.monotonic() - started, 3), stdout_bytes=len(result.stdout))
         (out / f'{name}.run.json').write_text(json.dumps(results[name], indent=2) + '\n')
-    (out / 'runs.json').write_text(json.dumps(dict(app=str(app), controller=str(controller), fixtures=results), indent=2) + '\n')
+    (out / 'runs.json').write_text(json.dumps(dict(app=str(app), controller=str(controller), contract=expected_contract,
+                                                fixtures=results), indent=2) + '\n')
     return results
 
 
@@ -188,8 +196,10 @@ def compare(candidate_dir, baseline_dir, *, across_builds=False, expect_identity
         for side, directory in (('candidate', candidate_dir), ('baseline', baseline_dir)):
             try:
                 documents[side] = json.loads((Path(directory) / f'{name}.json').read_text())
-                entry['validation'][side] = consumer.validate(documents[side], allow_fixture_json=allow_fixture_json)
-            except (OSError, ValueError) as error:
+                expected_contract = (build_context.TEST_CONTRACT if allow_fixture_json else
+                    json.loads((Path(directory) / 'runs.json').read_text())['contract'])
+                entry['validation'][side] = consumer.validate(documents[side], expected_contract, allow_fixture_json=allow_fixture_json)
+            except (OSError, ValueError, KeyError) as error:
                 entry['validation'][side] = [f'unreadable envelope: {error}']
         if any(entry['validation'].values()) or len(documents) != 2:
             entry['ok'] = False
@@ -205,7 +215,7 @@ def compare(candidate_dir, baseline_dir, *, across_builds=False, expect_identity
             if path == IDENTITY:
                 continue  # checked below
             klass = classify(path, candidate, baseline)
-            if klass is None and across_builds and path in STAMPS:
+            if klass is None and across_builds and GENERIC_INDEX.sub('[]', path) in STAMPS:
                 klass = 'stamp'
             if klass is None:
                 entry['unexplained'].append(record)

@@ -31,7 +31,7 @@ sys.path[:0] = [str(HERE.parents[1]), str(HERE.parents[3] / 'lib')]
 ROOT = HERE.parents[4]
 from witness_capture import capture  # noqa: E402
 import extension_actors  # noqa: E402
-from contract import REQUEST_SCHEMA  # noqa: E402
+import build_context
 from worker_exit_witness import worker_exit_witness  # noqa: E402
 sys.path[:0] = [str(ROOT / 'tests/fixtures/byoxpc'), str(ROOT / 'tests/fixtures/caller_auth')]
 import session  # noqa: E402
@@ -103,7 +103,7 @@ read = extension_actors.read_probe
 
 
 def request(name, override):
-    spec = {'schema_version': REQUEST_SCHEMA, 'specimen_id': name,
+    spec = {'contract': build_context.candidate_contract(), 'specimen_id': name,
             'actors': [dict(extension_actors.unapplied_actor('R'), equipment='selected')],
             'phases': [{'phase_id': 'reads', 'actor_id': 'R',
                         'actions': [read('owned_target', target), read('system_file', AVAILABLE)]}]}

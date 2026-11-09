@@ -10,7 +10,7 @@ import tempfile
 
 ROOT = Path(__file__).resolve().parents[3]
 sys.path.insert(0, str(ROOT / 'tests/lib'))
-from contract import REQUEST_SCHEMA, RESPONSE_SCHEMA
+import build_context
 from run_capture import RunCapture
 from request_examples import CORPUS, examples, materialize
 from porcelain import decode as decode_porcelain
@@ -34,7 +34,7 @@ def main():
         service = plistlib.load(stream)['CFBundleIdentifier']
     with tempfile.TemporaryDirectory(prefix='pw-request-contract-', dir='/private/tmp') as directory:
         effect = Path(directory) / 'created'
-        base = dict(schema_version=REQUEST_SCHEMA, specimen_id='input-contract',
+        base = dict(contract=build_context.candidate_contract(), specimen_id='input-contract',
                     policy=dict(format='sbpl', sbpl_source='(version 1) (allow default)'),
                     probe_plan=[dict(step_id='create',
                         sandbox_check=dict(operation='file-write-create', filter=dict(kind='path', value=str(effect))),
@@ -64,7 +64,7 @@ def main():
                 if (specimen.get('policy') or {}).get('capture_compiled_profile'):
                     assert runner['compiled_profile']['request_nonce'] == specimen['policy']['capture_nonce'], runner
                     assert runner['compiled_profile']['producer'] == 'worker' and runner['compiled_profile']['capture_stage'] == 'before_apply', runner
-                    assert runner['compiled_profile']['schema_version'] == 2 and runner['sandboxed_after_apply'] is True, runner
+                    assert runner['sandboxed_after_apply'] is True, runner
                 else:
                     assert runner.get('compiled_profile') is None, runner
                 effect.unlink()
@@ -87,7 +87,10 @@ def main():
         (out / 'examples.json').write_bytes(CORPUS.read_bytes())
         for example in examples():
             specimen = materialize(example, effect, secrets.token_hex(16))
-            expected = example['expected']
+            expected = copy.deepcopy(example['expected'])
+            for diagnostic in expected.values():
+                if diagnostic and diagnostic.get('expected_contract') is True:
+                    diagnostic['expected_contract'] = build_context.candidate_contract()
             cli('lesson-cli-' + example['id'], specimen, accepted=expected['cli'] is None,
                 failure=expected['cli'], raw=example.get('raw_request'), prediction=example.get('prediction'))
             specimen = materialize(example, effect, secrets.token_hex(16))
@@ -100,7 +103,7 @@ def main():
                                         stdout=stdout, stderr=stderr, timeout=20)
             assert request.read_bytes() == original, example['id']
             assert result.returncode == 0, example['id']
-            reply = host_reply(decode_porcelain((case / 'capture.pwp').read_bytes(), 'capture'))
+            reply = host_reply(decode_porcelain((case / 'capture.pwp').read_bytes(), 'capture'), build_context.candidate_contract())
             observed = effect.is_file()
             (case / 'effect.json').write_text(json.dumps(dict(observed=observed, expected=expected['xpc'] is None)) + '\n')
             if expected['xpc'] is None:
@@ -112,7 +115,7 @@ def main():
                 if (specimen.get('policy') or {}).get('capture_compiled_profile'):
                     assert reply['compiled_profile']['request_nonce'] == specimen['policy']['capture_nonce'], reply
                     assert reply['compiled_profile']['producer'] == 'worker' and reply['compiled_profile']['capture_stage'] == 'before_apply', reply
-                    assert reply['compiled_profile']['schema_version'] == 2 and reply['sandboxed_after_apply'] is True, reply
+                    assert reply['sandboxed_after_apply'] is True, reply
                 else:
                     assert reply.get('compiled_profile') is None, reply
                 effect.unlink()
@@ -141,10 +144,12 @@ def main():
         cli('selector_nested', dict(base, runner=dict(mode='standard', required_entitlements=[])), accepted=True)
         cli('selector_null_option', dict(base, runner=None), accepted=True, args=['--runner-mode', 'standard'])
 
-        for i, version in enumerate([1, 2, REQUEST_SCHEMA + 1, None, '3', True, 3.5]):
-            cli(f'version-{i}', changed(base, ['schema_version'], version), error='expected')
-        missing = copy.deepcopy(base); del missing['schema_version']
-        cli('missing_version', missing, error='schema_version')
+        for i, version in enumerate([1, 2, "test:foreign", None, '3', True, 3.5]):
+            cli(f'version-{i}', changed(base, ['contract'], version), error='expected')
+        missing = copy.deepcopy(base); del missing['contract']
+        cli('missing_contract', missing, error='contract')
+        legacy = dict(missing, schema_version=6, runner={'misspelled': True})
+        cli('old_marker_only', legacy, error='contract', failure=dict(code='missing_field', path=['contract'], expected_contract=build_context.candidate_contract()))
         paths = [[], ['policy'], ['probe_plan', 0], ['probe_plan', 0, 'sandbox_check'],
                  ['probe_plan', 0, 'sandbox_check', 'filter'], ['probe_plan', 0, 'attempt']]
         for i, path in enumerate(paths):
@@ -163,7 +168,8 @@ def main():
         # that only the controller can honor; the CLI's validation is insufficient.
         for name, specimen, error in [
             ('direct_current', base, None),
-            ('direct_version', changed(base, ['schema_version'], 1), 'unsupported request schema'),
+            ('direct_old_marker', legacy, 'missing_field'),
+            ('direct_foreign', changed(base, ['contract'], 'test:foreign'), 'unsupported_contract'),
             ('direct_unknown', changed(base, ['policy', 'capture_compiled_profiel'], True), 'capture_compiled_profiel'),
             ('direct_selector', dict(base, runner=dict(mode='standard')), 'runner'),
             ('direct_augment', changed(base, ['policy', 'augments'], ['exec_baseline']), 'policy.augments'),
@@ -174,13 +180,15 @@ def main():
                 result = subprocess.run([str(client), 'run', '--timeout-ms', '10000', service, str(request)],
                                         stdout=stdout, stderr=stderr, timeout=20)
             assert result.returncode == 0, name
-            reply = host_reply(decode_porcelain((case / 'capture.pwp').read_bytes(), 'capture'))
-            assert reply['schema_version'] == RESPONSE_SCHEMA, reply
+            reply = host_reply(decode_porcelain((case / 'capture.pwp').read_bytes(), 'capture'), build_context.candidate_contract())
+            assert reply['producer']['contract'] == build_context.candidate_contract(), reply
             if error is None:
                 assert reply['normalized_outcome'] == 'finished' and effect.is_file(), reply
                 effect.unlink()
             else:
                 assert reply['normalized_outcome'] == 'bad_request' and error in reply['error'], reply
+                if name in ('direct_old_marker', 'direct_foreign'):
+                    assert reply['request_failure'] == dict(code=error, path=['contract'], expected_contract=build_context.candidate_contract()), reply
                 assert reply.get('runner_subprocess') is None and reply['steps'] == [], reply
                 assert not effect.exists(), name
     print('current requests execute; invalid versions, unknown fields and malformed intent refuse before attempts')

@@ -11,6 +11,7 @@ from bundle import CLIENT, SERVICE, candidate, cleanup_processes, command, diges
 sys.path.insert(0, str(Path(__file__).resolve().parents[2] / 'lib'))
 import consumer
 import contract
+import build_context
 from blackbox import validate_step
 from porcelain import decode as decode_porcelain
 from runner_client_capture import validate_capture, host_reply
@@ -23,7 +24,7 @@ def call(fixture, work, label, *, authorized=False, service=None):
     seed = secrets.token_bytes(64)
     target.write_bytes(seed)
     (out / 'before.bin').write_bytes(seed)
-    spec = {'schema_version': contract.REQUEST_SCHEMA, 'specimen_id': secrets.token_hex(16),
+    spec = {'contract': build_context.candidate_contract(), 'specimen_id': secrets.token_hex(16),
             'policy': {'format': 'sbpl', 'sbpl_source': '(version 1)(allow default)'},
             'probe_plan': [{'step_id': secrets.token_hex(16),
                            'sandbox_check': {'operation': 'file-write-data',
@@ -38,12 +39,12 @@ def call(fixture, work, label, *, authorized=False, service=None):
     after = target.read_bytes()
     (out / 'after.bin').write_bytes(after)
     capture = decode_porcelain((out / 'client/stdout').read_bytes(), 'capture')
-    assert not validate_capture(capture), validate_capture(capture)
+    assert not validate_capture(capture, build_context.candidate_contract()), validate_capture(capture, build_context.candidate_contract())
     # Client transport observations carry no synthetic host result. Only exact
     # received host bytes are admitted under the response schema.
-    result = host_reply(capture) if capture['terminal'] == 'runner_reply' else None
+    result = host_reply(capture, build_context.candidate_contract()) if capture['terminal'] == 'runner_reply' else None
     if capture['terminal'] == 'runner_reply':
-        assert not consumer.validate(result), consumer.validate(result)
+        assert not consumer.validate(result, build_context.candidate_contract()), consumer.validate(result, build_context.candidate_contract())
     observation = {'command': meta, 'capture': capture, 'result': result, 'specimen': spec,
                    'service': service or fixture['service'], 'changed': after != seed,
                    'nonempty': bool(after), 'client_sha256': digest(client)}

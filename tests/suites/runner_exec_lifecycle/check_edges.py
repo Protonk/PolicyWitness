@@ -11,6 +11,7 @@ import time
 sys.path.insert(0, str(Path(__file__).resolve().parents[2] / 'fixtures/exec'))
 from control import TreeControl, ExitObserver, process_snapshot
 sys.path.insert(0, str(Path(__file__).resolve().parents[2] / 'lib'))
+import build_context
 import consumer
 from run_capture import RunCapture
 from exec_observation import assert_observation
@@ -36,7 +37,7 @@ def main():
             return dict(step_id=name, sandbox_check=dict(operation='file-write-data',
                 filter=dict(kind='path', value=str(target))),
                 attempt=dict(kind='file', action='open_write', target=str(target)))
-        request = dict(schema_version=6, specimen_id=mode,
+        request = dict(contract=build_context.candidate_contract(), specimen_id=mode,
             policy=dict(format='sbpl', sbpl_source='(version 1)(allow default)'), probe_plan=[
                 write_step('before', before),
                 dict(step_id='exec', sandbox_check=dict(operation='process-exec*',
@@ -91,7 +92,7 @@ def main():
         (out / 'observations.json').write_text(json.dumps(dict(pids=pids, groups=groups,
             exited=sorted(control.exited), elapsed=run.elapsed_seconds), indent=2))
         envelope = run.load_json()
-        assert not consumer.validate(envelope), consumer.validate(envelope)
+        assert not consumer.validate(envelope, build_context.candidate_contract()), consumer.validate(envelope, build_context.candidate_contract())
         runner = envelope['data']['runner_result']
         first, middle, last = runner['steps']
         assert first['attempt']['outcome'] == 'ok'

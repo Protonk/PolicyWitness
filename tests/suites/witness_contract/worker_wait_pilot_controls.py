@@ -1690,7 +1690,7 @@ class Reached(Exception):
 
 
 def stager_identity_controls(out):
-    """The stager's identity rules on a constructed candidate app and source tree, stopped before any copy or signature."""
+    """Identity rules on a constructed app and tree, stopped before worker substitution or signing."""
     spec = importlib.util.spec_from_file_location('worker_wait_host_stamps', HOST_STAMPS)
     stamps = importlib.util.module_from_spec(spec); spec.loader.exec_module(stamps)
     base = out / 'constructed-stager'
@@ -1699,7 +1699,7 @@ def stager_identity_controls(out):
     (tree / 'tests/lib').mkdir(parents=True)
     contract = tree / 'tests/lib/contract.py'
     declared, other = 'ab' * 32, 'cd' * 32
-    contract.write_text(f'RUNNER_PROTOCOL = 1\nWORKER_IDENTITY = "{declared}"\n')
+    contract.write_text(f'WORKER_IDENTITY = "{declared}"\n')
     assert stamps.tree_worker_identity(tree) == declared
     for text in ('', f'WORKER_IDENTITY = "{declared}"\nWORKER_IDENTITY = "{other}"\n', f"WORKER_IDENTITY = '{declared}'\n",
                  f'WORKER_IDENTITY = "{declared[:-1]}"\n'):
@@ -1732,6 +1732,11 @@ def stager_identity_controls(out):
     def reached(tree, receipts):
         raise Reached()
     kept, stamps.tree_commit = stamps.tree_commit, reached
+    # These identity controls never install or sign a runner. Classify their
+    # owned output as durable so a temporary source checkout reaches the same
+    # identity boundary; this does not exercise staging-path admission.
+    volatile = stamps._volatile
+    stamps._volatile = lambda path: not path.is_relative_to(base)
     try:
         refused = attempt('equipment-mismatch', other, declared)
         assert refused.startswith(f'app equipment identity {other} is not') and declared in refused, refused
@@ -1740,10 +1745,12 @@ def stager_identity_controls(out):
         assert attempt('agreeing', declared, declared) == 'reached'
     finally:
         stamps.tree_commit = kept
+        stamps._volatile = volatile
     shutil.rmtree(base)
     return ['stager identity read from a tree\'s contract.py text; malformed, missing or duplicated constants refused',
             'candidate stager refuses an app whose equipment identity differs from its tree\'s',
-            'candidate stager refuses a stamp worker reporting another identity', 'agreeing identities reach the source-tree record']
+            'candidate stager refuses a stamp worker reporting another identity',
+            'agreeing identities reach the source-tree record; staging-path classification is constructed']
 
 
 def main(out):

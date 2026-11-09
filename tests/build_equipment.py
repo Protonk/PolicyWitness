@@ -14,7 +14,7 @@ import subprocess
 import sys
 
 sys.path.insert(0, str(Path(__file__).resolve().parent / 'lib'))
-from contract import RUNNER_PROTOCOL
+
 
 INVENTORY_BYTES = 1_048_576
 ENTITLEMENT_BYTES = 65_536
@@ -63,7 +63,7 @@ def main():
     args = parser.parse_args()
     if not re.fullmatch('[0-9a-f]{64}', args.worker_identity):
         raise ValueError('invalid generated worker identity')
-    manifest = dict(schema_version=1, runner_protocol=RUNNER_PROTOCOL, worker_identity=args.worker_identity,
+    manifest = dict(schema_version=1, contract=plistlib.loads((args.bundle / "Contents/Info.plist").read_bytes())["PWContract"], worker_identity=args.worker_identity,
                     unsigned_worker_sha256=hashlib.sha256(args.unsigned_worker.read_bytes()).hexdigest(),
                     workers=[signed_worker(args.bundle, role, path) for role, path in ROLES.items()])
     data = (json.dumps(manifest, indent=2, sort_keys=True) + '\n').encode()

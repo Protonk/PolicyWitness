@@ -9,6 +9,8 @@ from pathlib import Path
 from validate_run import validate_run
 
 
+import build_context
+
 def load_manifest(path: Path):
     data = json.loads(path.read_text(encoding="utf-8"))
     cases = data.get("cases") or []
@@ -153,7 +155,7 @@ def main():
 
     steps = substitute(case.get("steps") or [], mapping)
     specimen = {
-        "schema_version": 6,
+        'contract': build_context.candidate_contract(),
         "specimen_id": case["case_id"],
         "policy": policy_spec,
         # Expectations belong to the independent checker, never to the runner.

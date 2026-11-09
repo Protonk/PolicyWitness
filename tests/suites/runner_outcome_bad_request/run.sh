@@ -31,6 +31,9 @@ fi
 
 SPECIMEN_PATH="${PW_TEST_ARTIFACTS}/specimen_decode.json"
 "${PW_PYTHON}" -B -S -P - "${SPECIMEN_PATH}" <<'PY'
+import os, sys
+sys.path.insert(0, os.environ['PW_CONTRACT_TEST_LIB'])
+import build_context
 import json
 import sys
 from pathlib import Path
@@ -39,7 +42,7 @@ from pathlib import Path
 # controller forwards untouched. Missing the required specimen_id field so
 # the Swift PWRunnerRunSpec decoder rejects it.
 spec = {
-    "schema_version": 6,
+    'contract': build_context.candidate_contract(),
     "policy": {
         "format": "sbpl",
         "sbpl_source": "(version 1) (allow default)",
@@ -115,12 +118,15 @@ test_step "run" "probe step with kind=path but empty value — expect bad_reques
 
 SPECIMEN_PATH="${PW_TEST_ARTIFACTS}/specimen_filter.json"
 "${PW_PYTHON}" -B -S -P - "${SPECIMEN_PATH}" <<'PY'
+import os, sys
+sys.path.insert(0, os.environ['PW_CONTRACT_TEST_LIB'])
+import build_context
 import json
 import sys
 from pathlib import Path
 
 spec = {
-    "schema_version": 6,
+    'contract': build_context.candidate_contract(),
     "specimen_id": "missing_required_filter_value_probe",
     "policy": {
         "format": "sbpl",

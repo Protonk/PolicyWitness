@@ -22,6 +22,7 @@ from copy import deepcopy
 import itertools
 
 import contract
+import build_context
 import lifecycle_contract as C
 from lifecycle_adapter import read_lifecycle
 from document_versions import version_errors
@@ -300,7 +301,7 @@ def build_record(claims, steps, issues, step_ids, obs):
     }
 
 
-def build_envelope(obs, schema_version=contract.RESPONSE_SCHEMA, envelope_version=contract.CONTROLLER_ENVELOPE):
+def build_envelope(obs, producer_contract=build_context.TEST_CONTRACT, envelope_contract=build_context.TEST_CONTRACT):
     """A contract-valid envelope for normalized observations; a fixture, not a live result."""
     claims, steps, issues = expected_claims(obs)
     projections = expected_projections(claims, steps, obs)
@@ -349,13 +350,13 @@ def build_envelope(obs, schema_version=contract.RESPONSE_SCHEMA, envelope_versio
                                            'order': 'unestablished', 'limitations': limitations}})
     clauses = expected_error_clauses(claims)
     error = '; '.join(clauses) if clauses else None
-    runner = {'schema_version': schema_version, 'specimen_id': 'constructed', 'rc': 0 if error is None else 1,
+    runner = {'producer': build_context.producer(producer_contract), 'specimen_id': 'constructed', 'rc': 0 if error is None else 1,
               'normalized_outcome': 'runner_timeout' if clauses else 'finished', 'error': error, 'pid': 4242,
               'policy_format': 'sbpl', 'sandboxed_after_apply': True, 'steps': reply_steps, 'runner_subprocess': sub}
     diagnostics = {'process_disposition': projections['process_disposition'],
                    'termination_cause': projections['termination_cause'], 'stop_reason': projections['stop_reason'],
                    'disposition_integrity': 'valid', 'disposition_issues': []}
-    return {'schema_version': envelope_version, 'kind': 'run', 'result': {'ok': error is None},
+    return {'build': {'contract': envelope_contract}, 'kind': 'run', 'result': {'ok': error is None},
             'data': {'runner_result': runner, 'runner_sandbox_diagnostics': diagnostics}}
 
 
@@ -470,11 +471,11 @@ def actor_view(envelope, actor, diagnostics):
     # validate them once on the whole reply, never as singular worker facts.
     view['_actor_view'] = True
     own = next((d for d in diagnostics if isinstance(d, dict) and d.get('actor_id') == actor_id), None)
-    return {'schema_version': envelope.get('schema_version'), 'kind': envelope.get('kind'),
+    return {'build': envelope.get('build'), 'kind': envelope.get('kind'),
             'data': {'runner_result': view, 'runner_sandbox_diagnostics': own}}
 
 
-def check_actor_records(envelope):
+def check_actor_records(envelope, expected_contract):
     """The actor form: every actor's subprocess record is checked as its own
     worker against its own steps and projection; the aggregate projection must
     be `per_actor` (or `no_worker`) and valid only when every actor's is."""
@@ -508,7 +509,7 @@ def check_actor_records(envelope):
             continue
         if own.get('disposition_integrity') != 'valid':
             all_valid = False
-        for finding in check_record(view):
+        for finding in check_record(view, expected_contract):
             finding = dict(finding)
             finding['detail'] = f'actor {actor.get("actor_id")!r}: ' + str(finding.get('detail'))
             findings.append(finding)
@@ -521,9 +522,9 @@ def check_actor_records(envelope):
     return findings
 
 
-def check_record(envelope):
+def check_record(envelope, expected_contract):
     """Findings for one envelope; empty means the record and projections satisfy the contract."""
-    errors = version_errors(envelope)
+    errors = version_errors(envelope, expected_contract)
     if errors:
         error = errors[0]
         kind = 'unsupported_version' if error.startswith('unsupported') else 'malformed_version'
@@ -531,8 +532,8 @@ def check_record(envelope):
     data = envelope.get('data')
     runner = data.get('runner_result') if isinstance(data, dict) else None
     if isinstance(runner, dict) and runner.get('execution_form') == 'actors':
-        return check_actor_records(envelope)
-    view = read_lifecycle(envelope)
+        return check_actor_records(envelope, expected_contract)
+    view = read_lifecycle(envelope, expected_contract)
     findings = []
     proj = view['projections']
     data = envelope.get('data')
@@ -875,6 +876,11 @@ def _property_checks():
     return checked
 
 
+
+
+def check_fixture_record(envelope):
+    return check_record(envelope, build_context.TEST_CONTRACT)
+
 def self_check():
     C.self_check()
     properties = _property_checks()
@@ -886,7 +892,7 @@ def self_check():
         assert expected_projections(claims, steps, example.observations) == example.projections, \
             (example.name, expected_projections(claims, steps, example.observations))
         envelope = build_envelope(example.observations)
-        accepted = check_record(envelope)
+        accepted = check_fixture_record(envelope)
         assert not accepted, (example.name, accepted)
         degraded = deepcopy(envelope)
         runner = degraded['data']['runner_result']
@@ -897,20 +903,20 @@ def self_check():
         runner['error'] = 'runner host could not encode its result: constructed control'
         for step in runner['steps']:
             step['comparison'] = None
-        assert not check_record(degraded), (example.name, check_record(degraded))
+        assert not check_fixture_record(degraded), (example.name, check_fixture_record(degraded))
         # Another response version is refused before any claim is read, even
         # when its record would be accepted under the current version.
-        other = build_envelope(example.observations, schema_version=contract.RESPONSE_SCHEMA - 1)
-        refused = check_record(other)
+        other = build_envelope(example.observations, producer_contract="test:foreign")
+        refused = check_fixture_record(other)
         assert refused and refused[0]['kind'] == 'unsupported_version', (example.name, refused)
         without = build_envelope(example.observations)
         del without['data']['runner_result']['runner_subprocess'][C.RECORD_KEY]
         without['data']['runner_sandbox_diagnostics'].update(process_disposition='withheld', termination_cause=C.CAUSE_UNKNOWN,
                                                              stop_reason=None, disposition_integrity='invalid')
-        missing = check_record(without)
+        missing = check_fixture_record(without)
         assert any(f['kind'] == 'missing_record' for f in missing), (example.name, missing)
         for name, rule, mutated in _mutations(example):
-            findings = check_record(mutated)
+            findings = check_fixture_record(mutated)
             assert findings, (example.name, name, 'accepted')
             assert any(f['rule'] == rule for f in findings), (example.name, name, rule, findings)
     total = 0
@@ -919,7 +925,7 @@ def self_check():
         for claim in list(claims.values()) + [c for st in steps for c in st.values()]:
             assert claim['state'] in C.CLAIM_STATES, (labels, claim)
         expected_projections(claims, steps, obs)
-        findings = check_record(build_envelope(obs))
+        findings = check_fixture_record(build_envelope(obs))
         invalid_basis = obs['collection_basis'] == 'after_confirmed_reap' and obs['reaped'] is not True
         if invalid_basis:
             assert any(f['kind'] == 'invalid_collection_basis' for f in findings), (labels, findings)

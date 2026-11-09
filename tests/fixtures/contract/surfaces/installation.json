@@ -1,0 +1,93 @@
+{
+  "closed_keys": {
+    "ActorEquipmentManifest": [
+      "contract",
+      "schema_version",
+      "unsigned_worker_sha256",
+      "worker_identity",
+      "workers"
+    ],
+    "ActorEquipmentManifest.Worker": [
+      "cdhash",
+      "entitlements_xml",
+      "identifier",
+      "relative_path",
+      "role",
+      "sha256",
+      "team_id"
+    ]
+  },
+  "reservation_keys": {
+    "PWRunnerControlReply": [
+      "attempt_id",
+      "contract",
+      "host_instance",
+      "host_pid",
+      "lease_ms",
+      "reason",
+      "reservation_id",
+      "status"
+    ],
+    "PWRunnerReservationRequest": [
+      "attempt_id",
+      "contract",
+      "lease_ms"
+    ]
+  },
+  "reservation_limits": {
+    "client_rpc_wait": {
+      "control": "Flag `--timeout-ms`, floored at 1 ms; values above this default are permitted.",
+      "counting": "One absolute client allowance, including helper launch/stdin delivery, reservation acquisition and the execution reply wait. Direct helper invocation starts after reading input.",
+      "effect": "Overall expiry reports xpc_timeout with the captured submission state. Acquisition may stop earlier at its attempt bound. Expiry after invocation does not establish nonexecution or cancel host work; worker/validator budgets remain separate.",
+      "unit": "milliseconds",
+      "value": 240000
+    },
+    "reservation_attempts": {
+      "control": "Fixed.",
+      "counting": "Every opened acquisition attempt, including transport failures and occupied replies.",
+      "effect": "Exhaustion ends acquisition explicitly at attempt_limit with no submission; it can precede the overall timeout. Every attempted acquisition stays in the capture.",
+      "unit": "items",
+      "value": 256
+    },
+    "reservation_lease": {
+      "control": "Fixed. No renewal.",
+      "counting": "Requested unused lease, capped by the host; the client requests no more than its remaining allowance.",
+      "effect": "Expiry or owner disconnect retires the unused host. Submission checks expiry atomically and an old timer cannot terminate execution.",
+      "unit": "milliseconds",
+      "value": 5000
+    },
+    "reservation_retry_delay": {
+      "control": "Fixed minimum.",
+      "counting": "Minimum delay between a failed/occupied attempt and another connection, within the remaining allowance.",
+      "effect": "No delay after a successful grant. Scheduling may take longer; neither waiting nor progress renews the deadline.",
+      "unit": "milliseconds",
+      "value": 100
+    },
+    "reservation_rpc_wait": {
+      "control": "Fixed per-attempt ceiling.",
+      "counting": "Maximum wait for one reserve reply, also bounded by the original overall client deadline.",
+      "effect": "Expiry abandons and invalidates that connection; acquisition may continue without submitting a specimen.",
+      "unit": "milliseconds",
+      "value": 5000
+    }
+  },
+  "serde_records": {
+    "CleanupReport": "runner_id: String, service_name: String, plist_path: String, booted_out: bool, plist_removed: bool, cleanup_retained: bool, #[serde(skip_serializing_if = \"Option::is_none\")] retained_record: Option<PendingCleanup>, #[serde(skip_serializing_if = \"Vec::is_empty\")] warnings: Vec<String>,",
+    "PendingCleanup": "pub runner: RunnerRecord, pub cleanup_started_at_unix_ms: u64, pub observations: Vec<Value>, #[serde(flatten)] pub extra: BTreeMap<String, Value>,",
+    "PlistObservation": "pub presence: Presence, pub config: Option<Value>, pub sha256: Option<String>, pub owner_uid: Option<u32>, pub regular: bool, pub error: Option<String>,",
+    "RunnerEntitlements": "#[serde(flatten)] pub extra: BTreeMap<String, Value>, pub raw_plist: Option<String>, pub keys: Vec<String>, #[serde(default)] pub granted: Vec<String>, pub error: Option<String>,",
+    "RunnerInstallData": "state: RunnerState, loaded: runner_manager::ServiceObservation, runner: RunnerRecord, plist_path: String, bootstrapped: bool,",
+    "RunnerNotFoundData": "#[serde(skip_serializing_if = \"Option::is_none\")] requested_id: Option<String>, #[serde(skip_serializing_if = \"Option::is_none\")] requested_service_name: Option<String>,",
+    "RunnerOwnership": "#[serde(flatten)] pub extra: BTreeMap<String, Value>, pub plist_path: String, pub launchd_domain: String, pub owner_uid: u32, pub plist_sha256: String,",
+    "RunnerProvenance": "runner_kind: String, runner_registry_id: Option<String>, runner_service_name: String, runner_bundle_id: Option<String>, runner_bundle_path: Option<String>, runner_executable_path: Option<String>, runner_signature: Option<RunnerSignature>, runner_entitlements: Option<RunnerEntitlements>, runner_worker_signature: Option<RunnerSignature>, runner_worker_entitlements: Option<RunnerEntitlements>, runner_validator_signature: Option<RunnerSignature>, runner_validator_entitlements: Option<RunnerEntitlements>, runner_unentitled_worker_signature: Option<RunnerSignature>, runner_unentitled_worker_entitlements: Option<RunnerEntitlements>,",
+    "RunnerRecord": "#[serde(flatten)] pub extra: BTreeMap<String, Value>, #[serde(default)] pub state: RunnerState, #[serde(default)] pub ownership: Option<RunnerOwnership>, pub id: String, pub service_name: String, pub bundle_path: String, pub executable_path: String, pub bundle_id: Option<String>, pub scope: RunnerScope, #[serde(default, skip_serializing_if = \"String::is_empty\")] pub contract: String, pub signature: RunnerSignature, pub entitlements: RunnerEntitlements, pub installed_at_unix_ms: u64, #[serde(default, skip_serializing_if = \"Option::is_none\")] pub kind: Option<RunnerKind>, #[serde(default, skip_serializing_if = \"Option::is_none\")] pub worker_signature: Option<RunnerSignature>, #[serde(default, skip_serializing_if = \"Option::is_none\")] pub worker_entitlements: Option<RunnerEntitlements>, #[serde(default, skip_serializing_if = \"Option::is_none\")] pub unentitled_worker_signature: Option<RunnerSignature>, #[serde(default, skip_serializing_if = \"Option::is_none\")] pub unentitled_worker_entitlements: Option<RunnerEntitlements>, #[serde(default, skip_serializing_if = \"Option::is_none\")] pub unentitled_worker_sha256: Option<String>, #[serde(default, skip_serializing_if = \"Option::is_none\")] pub worker_equipment_inventory: Option<Value>, #[serde(default, skip_serializing_if = \"Option::is_none\")] pub source_worker_equipment_inventory: Option<Value>, #[serde(default, skip_serializing_if = \"Option::is_none\")] pub validator_signature: Option<RunnerSignature>, #[serde(default, skip_serializing_if = \"Option::is_none\")] pub validator_entitlements: Option<RunnerEntitlements>, #[serde(default, skip_serializing_if = \"Option::is_none\")] pub issuer_signature: Option<RunnerSignature>, #[serde(default, skip_serializing_if = \"Option::is_none\")] pub issuer_entitlements: Option<RunnerEntitlements>,",
+    "RunnerRegistry": "#[serde(flatten)] pub extra: BTreeMap<String, Value>, pub schema_version: u32, pub runners: Vec<RunnerRecord>, #[serde(default)] pub pending_cleanup: Vec<PendingCleanup>,",
+    "RunnerSignature": "#[serde(flatten)] pub extra: BTreeMap<String, Value>, pub team_id: Option<String>, pub identity: Option<String>, pub cdhash: Option<String>, pub valid: bool, pub adhoc: bool,",
+    "RunnerValidateData": "updated: usize, missing: usize, invalid: usize, failures: Vec<runner_manager::ValidateFailure>,",
+    "RunnerVerifyData": "runner_client: Option<RunnerClientRun>, runner_result: Option<PWRunnerRunResult>, state: RunnerState, runner_id: Option<String>, service_name: String, runner_pid: Option<i64>, normalized_outcome: String,",
+    "ServiceObservation": "pub presence: Presence, pub executable_path: Option<String>, pub error: Option<String>,",
+    "ValidateFailure": "pub runner_id: String, pub service_name: String, pub binary: String, pub error: String,",
+    "WorkerEquipmentEntry": "pub role: String, pub relative_path: String, pub sha256: String, pub cdhash: String, pub identifier: String, pub team_id: Option<String>, pub entitlements_xml: String,",
+    "WorkerEquipmentInventory": "pub schema_version: u32, pub contract: String, pub worker_identity: String, pub unsigned_worker_sha256: String, pub workers: Vec<WorkerEquipmentEntry>,"
+  }
+}

@@ -4,7 +4,6 @@
     "phase": "execution",
     "lesson": "Acceptance is witnessed by a newly created file.",
     "request": {
-      "schema_version": 6,
       "specimen_id": "request-grammar",
       "policy": {
         "format": "sbpl",
@@ -34,11 +33,10 @@
     }
   },
   {
-    "id": "integral_version",
+    "id": "current_contract",
     "phase": "structure",
-    "lesson": "An integer-valued JSON number can be written with a decimal point.",
+    "lesson": "The harness asserts the candidate build contract at submission.",
     "request": {
-      "schema_version": 6,
       "specimen_id": "request-grammar",
       "policy": {
         "format": "sbpl",
@@ -72,7 +70,6 @@
     "phase": "structure",
     "lesson": "Optional null means absent.",
     "request": {
-      "schema_version": 6,
       "specimen_id": "request-grammar",
       "policy": {
         "format": "sbpl",
@@ -110,7 +107,6 @@
     "phase": "structure",
     "lesson": "Unknown field names cannot silently remove a requested observation.",
     "request": {
-      "schema_version": 6,
       "specimen_id": "request-grammar",
       "policy": {
         "format": "sbpl",
@@ -157,7 +153,6 @@
     "phase": "structure",
     "lesson": "Retired capture vocabulary is refused before execution.",
     "request": {
-      "schema_version": 6,
       "specimen_id": "request-grammar",
       "policy": {
         "format": "sbpl",
@@ -204,7 +199,6 @@
     "phase": "structure",
     "lesson": "Recognized optional fields still have types.",
     "request": {
-      "schema_version": 6,
       "specimen_id": "request-grammar",
       "policy": {
         "format": "sbpl",
@@ -255,7 +249,6 @@
     "phase": "structure",
     "lesson": "Parameter names are open data; their values must be strings.",
     "request": {
-      "schema_version": 6,
       "specimen_id": "request-grammar",
       "policy": {
         "format": "sbpl",
@@ -306,7 +299,6 @@
     "phase": "meaning",
     "lesson": "Arguments have meaning only for exec/spawn.",
     "request": {
-      "schema_version": 6,
       "specimen_id": "request-grammar",
       "policy": {
         "format": "sbpl",
@@ -357,7 +349,6 @@
     "phase": "meaning",
     "lesson": "A capture nonce requires capture to be enabled.",
     "request": {
-      "schema_version": 6,
       "specimen_id": "request-grammar",
       "policy": {
         "format": "sbpl",
@@ -404,7 +395,6 @@
     "phase": "meaning",
     "lesson": "The none filter takes no value, including an empty string.",
     "request": {
-      "schema_version": 6,
       "specimen_id": "request-grammar",
       "policy": {
         "format": "sbpl",
@@ -456,7 +446,6 @@
     "phase": "meaning",
     "lesson": "An unknown filter name refuses the whole specimen.",
     "request": {
-      "schema_version": 6,
       "specimen_id": "request-grammar",
       "policy": {
         "format": "sbpl",
@@ -508,7 +497,6 @@
     "phase": "meaning",
     "lesson": "A bad later attempt prevents the earlier valid create from executing.",
     "request": {
-      "schema_version": 6,
       "specimen_id": "request-grammar",
       "policy": {
         "format": "sbpl",
@@ -571,7 +559,6 @@
     "phase": "meaning",
     "lesson": "Joining evidence requires distinct step IDs.",
     "request": {
-      "schema_version": 6,
       "specimen_id": "request-grammar",
       "policy": {
         "format": "sbpl",
@@ -634,7 +621,6 @@
     "phase": "capacity",
     "lesson": "The grammar admits an array that this worker cannot accommodate.",
     "request": {
-      "schema_version": 6,
       "specimen_id": "request-grammar",
       "policy": {
         "format": "sbpl",
@@ -675,11 +661,10 @@
     "repeat_steps": 257
   },
   {
-    "id": "old_marker",
+    "id": "foreign_contract",
     "phase": "version",
     "lesson": "Another request contract is refused before its fields are interpreted.",
     "request": {
-      "schema_version": 3,
       "specimen_id": "request-grammar",
       "policy": {
         "format": "sbpl",
@@ -705,27 +690,27 @@
     },
     "expected": {
       "cli": {
-        "code": "unsupported_schema",
+        "code": "unsupported_contract",
         "path": [
-          "schema_version"
+          "contract"
         ],
-        "expected_schema": 6
+        "expected_contract": true
       },
       "xpc": {
-        "code": "unsupported_schema",
+        "code": "unsupported_contract",
         "path": [
-          "schema_version"
+          "contract"
         ],
-        "expected_schema": 6
+        "expected_contract": true
       }
-    }
+    },
+    "assertion": "foreign"
   },
   {
     "id": "malformed_json",
     "phase": "syntax",
     "lesson": "JSON syntax is checked before request structure.",
     "request": {
-      "schema_version": 6,
       "specimen_id": "request-grammar",
       "policy": {
         "format": "sbpl",
@@ -759,14 +744,13 @@
         "path": []
       }
     },
-    "raw_request": "{\"schema_version\":4"
+    "raw_request": "{\"contract\":"
   },
   {
     "id": "selector",
     "phase": "boundary",
     "lesson": "The controller consumes runner selection; direct XPC refuses it.",
     "request": {
-      "schema_version": 6,
       "specimen_id": "request-grammar",
       "policy": {
         "format": "sbpl",
@@ -808,7 +792,6 @@
     "phase": "boundary",
     "lesson": "Malformed controller input has the same refusal record shape.",
     "request": {
-      "schema_version": 6,
       "specimen_id": "request-grammar",
       "policy": {
         "format": "sbpl",
@@ -860,7 +843,6 @@
     "phase": "boundary",
     "lesson": "The controller resolves fragments; direct XPC refuses unresolved intent.",
     "request": {
-      "schema_version": 6,
       "specimen_id": "request-grammar",
       "policy": {
         "format": "sbpl",
@@ -903,7 +885,6 @@
     "phase": "execution",
     "lesson": "An exec argument is consumed: touch creates the named file.",
     "request": {
-      "schema_version": 6,
       "specimen_id": "request-grammar",
       "policy": {
         "format": "sbpl",
@@ -940,7 +921,6 @@
     "phase": "execution",
     "lesson": "Enabled capture returns the submitted nonce with its receipt.",
     "request": {
-      "schema_version": 6,
       "specimen_id": "request-grammar",
       "policy": {
         "format": "sbpl",
@@ -976,7 +956,6 @@
     "phase": "execution",
     "lesson": "A known excluded query preserves its unavailable observation and the independent attempt.",
     "request": {
-      "schema_version": 6,
       "specimen_id": "request-grammar",
       "policy": {
         "format": "sbpl",
@@ -1007,11 +986,10 @@
     "prediction": "prediction_unavailable"
   },
   {
-    "id": "fractional_version",
+    "id": "fractional_contract",
     "phase": "structure",
-    "lesson": "The version field must be an integer-valued number.",
+    "lesson": "The contract assertion must be a string; a fractional number is malformed.",
     "request": {
-      "schema_version": 6.5,
       "specimen_id": "request-grammar",
       "policy": {
         "format": "sbpl",
@@ -1039,25 +1017,25 @@
       "cli": {
         "code": "type_mismatch",
         "path": [
-          "schema_version"
+          "contract"
         ],
-        "expected_schema": 6
+        "expected_contract": true
       },
       "xpc": {
         "code": "type_mismatch",
         "path": [
-          "schema_version"
+          "contract"
         ],
-        "expected_schema": 6
+        "expected_contract": true
       }
-    }
+    },
+    "assertion": "fraction"
   },
   {
-    "id": "null_version",
+    "id": "null_contract",
     "phase": "structure",
-    "lesson": "The version field must be an integer-valued number.",
+    "lesson": "The contract assertion must be a string; null is malformed.",
     "request": {
-      "schema_version": null,
       "specimen_id": "request-grammar",
       "policy": {
         "format": "sbpl",
@@ -1085,25 +1063,25 @@
       "cli": {
         "code": "missing_value",
         "path": [
-          "schema_version"
+          "contract"
         ],
-        "expected_schema": 6
+        "expected_contract": true
       },
       "xpc": {
         "code": "missing_value",
         "path": [
-          "schema_version"
+          "contract"
         ],
-        "expected_schema": 6
+        "expected_contract": true
       }
-    }
+    },
+    "assertion": "null"
   },
   {
     "id": "selector_conflict",
     "phase": "meaning",
     "lesson": "Conflicting selection instructions are request errors before registry lookup.",
     "request": {
-      "schema_version": 6,
       "specimen_id": "request-grammar",
       "policy": {
         "format": "sbpl",
@@ -1149,7 +1127,6 @@
     "phase": "syntax",
     "lesson": "A malformed root cannot become a default request.",
     "request": {
-      "schema_version": 6,
       "specimen_id": "request-grammar",
       "policy": {
         "format": "sbpl",
@@ -1190,7 +1167,6 @@
     "phase": "structure",
     "lesson": "A malformed root cannot become a default request.",
     "request": {
-      "schema_version": 6,
       "specimen_id": "request-grammar",
       "policy": {
         "format": "sbpl",
@@ -1231,7 +1207,6 @@
     "phase": "structure",
     "lesson": "Fractional integers are field type errors, including test-seam inputs.",
     "request": {
-      "schema_version": 6,
       "specimen_id": "request-grammar",
       "policy": {
         "format": "sbpl",
@@ -1280,7 +1255,6 @@
     "phase": "meaning",
     "lesson": "An ordinary paired action can be authored in an explicit phase.",
     "request": {
-      "schema_version": 6,
       "specimen_id": "request-grammar",
       "policy": {
         "format": "sbpl",
@@ -1319,7 +1293,6 @@
     "phase": "structure",
     "lesson": "Choose exactly one plan form.",
     "request": {
-      "schema_version": 6,
       "specimen_id": "request-grammar",
       "policy": {
         "format": "sbpl",
@@ -1385,7 +1358,6 @@
     "phase": "meaning",
     "lesson": "An explicit phase sequence is nonempty.",
     "request": {
-      "schema_version": 6,
       "specimen_id": "request-grammar",
       "policy": {
         "format": "sbpl",
@@ -1413,7 +1385,6 @@
     "phase": "meaning",
     "lesson": "Phase identities must be nonempty.",
     "request": {
-      "schema_version": 6,
       "specimen_id": "request-grammar",
       "policy": {
         "format": "sbpl",
@@ -1466,7 +1437,6 @@
     "phase": "meaning",
     "lesson": "Phase identities are unique even for empty phases.",
     "request": {
-      "schema_version": 6,
       "specimen_id": "request-grammar",
       "policy": {
         "format": "sbpl",
@@ -1523,7 +1493,6 @@
     "phase": "meaning",
     "lesson": "Action identities are unique across the complete sequence.",
     "request": {
-      "schema_version": 6,
       "specimen_id": "request-grammar",
       "policy": {
         "format": "sbpl",
@@ -1600,7 +1569,6 @@
     "phase": "structure",
     "lesson": "Every ordinary action retains the required query/attempt pair.",
     "request": {
-      "schema_version": 6,
       "specimen_id": "request-grammar",
       "policy": {
         "format": "sbpl",
@@ -1650,7 +1618,6 @@
     "phase": "structure",
     "lesson": "Every ordinary action retains the required query/attempt pair.",
     "request": {
-      "schema_version": 6,
       "specimen_id": "request-grammar",
       "policy": {
         "format": "sbpl",
@@ -1702,7 +1669,6 @@
     "phase": "structure",
     "lesson": "Phase object fields are closed.",
     "request": {
-      "schema_version": 6,
       "specimen_id": "request-grammar",
       "policy": {
         "format": "sbpl",
@@ -1756,7 +1722,6 @@
     "phase": "capacity",
     "lesson": "The ninth phase exceeds bounded publication storage.",
     "request": {
-      "schema_version": 6,
       "specimen_id": "request-grammar",
       "policy": {
         "format": "sbpl",
@@ -1837,7 +1802,6 @@
     "phase": "capacity",
     "lesson": "Phase identities occupy at most 63 UTF-8 bytes.",
     "request": {
-      "schema_version": 6,
       "specimen_id": "request-grammar",
       "policy": {
         "format": "sbpl",
@@ -1890,7 +1854,6 @@
     "phase": "capacity",
     "lesson": "Phase identities cannot contain NUL.",
     "request": {
-      "schema_version": 6,
       "specimen_id": "request-grammar",
       "policy": {
         "format": "sbpl",
@@ -1943,7 +1906,6 @@
     "phase": "meaning",
     "lesson": "An unsupported action refuses the entire phase sequence before any effects.",
     "request": {
-      "schema_version": 6,
       "specimen_id": "request-grammar",
       "policy": {
         "format": "sbpl",
@@ -2000,7 +1962,6 @@
     "phase": "capacity",
     "lesson": "Phase identity bounds count UTF-8 bytes without truncation.",
     "request": {
-      "schema_version": 6,
       "specimen_id": "request-grammar",
       "policy": {
         "format": "sbpl",
@@ -2039,7 +2000,6 @@
     "phase": "capacity",
     "lesson": "Phase identity bounds count UTF-8 bytes without truncation.",
     "request": {
-      "schema_version": 6,
       "specimen_id": "request-grammar",
       "policy": {
         "format": "sbpl",
@@ -2047,7 +2007,7 @@
       },
       "phases": [
         {
-          "phase_id": "éééééééééééééééééééééééééééééééx",
+          "phase_id": "\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9x",
           "actions": [
             {
               "step_id": "create",
@@ -2078,7 +2038,6 @@
     "phase": "capacity",
     "lesson": "Phase identity bounds count UTF-8 bytes without truncation.",
     "request": {
-      "schema_version": 6,
       "specimen_id": "request-grammar",
       "policy": {
         "format": "sbpl",
@@ -2086,7 +2045,7 @@
       },
       "phases": [
         {
-          "phase_id": "éééééééééééééééééééééééééééééééé",
+          "phase_id": "\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9",
           "actions": [
             {
               "step_id": "create",
@@ -2131,7 +2090,6 @@
     "phase": "capacity",
     "lesson": "Eight ordered phases fit the fixed publication capacity.",
     "request": {
-      "schema_version": 6,
       "specimen_id": "request-grammar",
       "policy": {
         "format": "sbpl",
@@ -2198,7 +2156,6 @@
     "phase": "capacity",
     "lesson": "The total action cap applies across phases.",
     "request": {
-      "schema_version": 6,
       "specimen_id": "request-grammar",
       "policy": {
         "format": "sbpl",
@@ -2238,7 +2195,6 @@
     "phase": "capacity",
     "lesson": "The total action cap applies across phases.",
     "request": {
-      "schema_version": 6,
       "specimen_id": "request-grammar",
       "policy": {
         "format": "sbpl",
@@ -2288,7 +2244,6 @@
     "phase": "execution",
     "lesson": "Exclusive creation writes a fixed byte on a fresh descriptor and records each native result separately.",
     "request": {
-      "schema_version": 6,
       "specimen_id": "request-grammar",
       "policy": {
         "format": "sbpl",
@@ -2322,7 +2277,6 @@
     "phase": "execution",
     "lesson": "Fresh writing has a separate action spelling; an earlier ordinary create supplies the existing file.",
     "request": {
-      "schema_version": 6,
       "specimen_id": "request-grammar",
       "policy": {
         "format": "sbpl",
@@ -2371,7 +2325,6 @@
     "phase": "version",
     "lesson": "The previous request contract is unsupported.",
     "request": {
-      "schema_version": 5,
       "specimen_id": "request-grammar",
       "policy": {
         "format": "sbpl",
@@ -2397,27 +2350,27 @@
     },
     "expected": {
       "cli": {
-        "code": "unsupported_schema",
+        "code": "unsupported_contract",
         "path": [
-          "schema_version"
+          "contract"
         ],
-        "expected_schema": 6
+        "expected_contract": true
       },
       "xpc": {
-        "code": "unsupported_schema",
+        "code": "unsupported_contract",
         "path": [
-          "schema_version"
+          "contract"
         ],
-        "expected_schema": 6
+        "expected_contract": true
       }
-    }
+    },
+    "assertion": "foreign"
   },
   {
     "id": "actors_redelegation",
     "phase": "execution",
     "lesson": "The principal three-actor re-delegation request normalizes with its references owned by their producers.",
     "request": {
-      "schema_version": 6,
       "specimen_id": "request-grammar",
       "actors": [
         {
@@ -2657,7 +2610,6 @@
     "phase": "structure",
     "lesson": "The actor form carries no top-level policy.",
     "request": {
-      "schema_version": 6,
       "specimen_id": "request-grammar",
       "actors": [
         {
@@ -2890,7 +2842,6 @@
     "phase": "structure",
     "lesson": "The actor form uses phases, not probe_plan.",
     "request": {
-      "schema_version": 6,
       "specimen_id": "request-grammar",
       "actors": [
         {
@@ -3120,7 +3071,6 @@
     "phase": "structure",
     "lesson": "Legacy declarations do not mix with actors.",
     "request": {
-      "schema_version": 6,
       "specimen_id": "request-grammar",
       "actors": [
         {
@@ -3355,7 +3305,6 @@
     "phase": "structure",
     "lesson": "Actors require explicit phases.",
     "request": {
-      "schema_version": 6,
       "specimen_id": "request-grammar",
       "actors": [
         {
@@ -3406,7 +3355,6 @@
     "phase": "meaning",
     "lesson": "Phases must be nonempty.",
     "request": {
-      "schema_version": 6,
       "specimen_id": "request-grammar",
       "actors": [
         {
@@ -3458,7 +3406,6 @@
     "phase": "meaning",
     "lesson": "At least one actor is required.",
     "request": {
-      "schema_version": 6,
       "specimen_id": "request-grammar",
       "actors": [],
       "phases": [
@@ -3660,7 +3607,6 @@
     "phase": "meaning",
     "lesson": "Actor identifiers are nonempty.",
     "request": {
-      "schema_version": 6,
       "specimen_id": "request-grammar",
       "actors": [
         {
@@ -3893,7 +3839,6 @@
     "phase": "meaning",
     "lesson": "Actor identifiers are unique.",
     "request": {
-      "schema_version": 6,
       "specimen_id": "request-grammar",
       "actors": [
         {
@@ -4126,7 +4071,6 @@
     "phase": "meaning",
     "lesson": "Only apply and unapplied sandbox modes exist.",
     "request": {
-      "schema_version": 6,
       "specimen_id": "request-grammar",
       "actors": [
         {
@@ -4361,7 +4305,6 @@
     "phase": "meaning",
     "lesson": "An unapplied actor carries no policy.",
     "request": {
-      "schema_version": 6,
       "specimen_id": "request-grammar",
       "actors": [
         {
@@ -4600,7 +4543,6 @@
     "phase": "meaning",
     "lesson": "An apply actor needs its policy.",
     "request": {
-      "schema_version": 6,
       "specimen_id": "request-grammar",
       "actors": [
         {
@@ -4831,7 +4773,6 @@
     "phase": "meaning",
     "lesson": "Each apply actor policy has the legacy policy meaning rules.",
     "request": {
-      "schema_version": 6,
       "specimen_id": "request-grammar",
       "actors": [
         {
@@ -5068,7 +5009,6 @@
     "phase": "entry",
     "lesson": "Direct XPC refuses unresolved augments inside an actor policy.",
     "request": {
-      "schema_version": 6,
       "specimen_id": "request-grammar",
       "actors": [
         {
@@ -5320,7 +5260,6 @@
     "phase": "structure",
     "lesson": "Actor objects are closed.",
     "request": {
-      "schema_version": 6,
       "specimen_id": "request-grammar",
       "actors": [
         {
@@ -5556,7 +5495,6 @@
     "phase": "meaning",
     "lesson": "Every phase names its actor.",
     "request": {
-      "schema_version": 6,
       "specimen_id": "request-grammar",
       "actors": [
         {
@@ -5788,7 +5726,6 @@
     "phase": "meaning",
     "lesson": "A phase names a declared actor.",
     "request": {
-      "schema_version": 6,
       "specimen_id": "request-grammar",
       "actors": [
         {
@@ -6021,7 +5958,6 @@
     "phase": "meaning",
     "lesson": "Every declared actor owns at least one phase.",
     "request": {
-      "schema_version": 6,
       "specimen_id": "request-grammar",
       "actors": [
         {
@@ -6067,7 +6003,6 @@
     "phase": "meaning",
     "lesson": "A transfer names a declared recipient.",
     "request": {
-      "schema_version": 6,
       "specimen_id": "request-grammar",
       "actors": [
         {
@@ -6306,7 +6241,6 @@
     "phase": "meaning",
     "lesson": "Only the file family is implemented.",
     "request": {
-      "schema_version": 6,
       "specimen_id": "request-grammar",
       "actors": [
         {
@@ -6545,7 +6479,6 @@
     "phase": "meaning",
     "lesson": "Authority is read or read_write; raw class names are refused.",
     "request": {
-      "schema_version": 6,
       "specimen_id": "request-grammar",
       "actors": [
         {
@@ -6784,7 +6717,6 @@
     "phase": "meaning",
     "lesson": "Issue targets are absolute paths passed as submitted.",
     "request": {
-      "schema_version": 6,
       "specimen_id": "request-grammar",
       "actors": [
         {
@@ -7023,7 +6955,6 @@
     "phase": "meaning",
     "lesson": "An issue names its token output, not a handle.",
     "request": {
-      "schema_version": 6,
       "specimen_id": "request-grammar",
       "actors": [
         {
@@ -7263,7 +7194,6 @@
     "phase": "meaning",
     "lesson": "A transfer names the delivery it creates.",
     "request": {
-      "schema_version": 6,
       "specimen_id": "request-grammar",
       "actors": [
         {
@@ -7501,7 +7431,6 @@
     "phase": "meaning",
     "lesson": "Actor consumption names a delivery, never a token.",
     "request": {
-      "schema_version": 6,
       "specimen_id": "request-grammar",
       "actors": [
         {
@@ -7740,7 +7669,6 @@
     "phase": "meaning",
     "lesson": "A transfer follows its token issue.",
     "request": {
-      "schema_version": 6,
       "specimen_id": "request-grammar",
       "actors": [
         {
@@ -7979,7 +7907,6 @@
     "phase": "meaning",
     "lesson": "Every use follows its syntactic producer.",
     "request": {
-      "schema_version": 6,
       "specimen_id": "request-grammar",
       "actors": [
         {
@@ -8218,7 +8145,6 @@
     "phase": "meaning",
     "lesson": "B cannot transfer A's token.",
     "request": {
-      "schema_version": 6,
       "specimen_id": "request-grammar",
       "actors": [
         {
@@ -8457,7 +8383,6 @@
     "phase": "meaning",
     "lesson": "C cannot consume B's delivery.",
     "request": {
-      "schema_version": 6,
       "specimen_id": "request-grammar",
       "actors": [
         {
@@ -8696,7 +8621,6 @@
     "phase": "meaning",
     "lesson": "Consumption names an existing delivery.",
     "request": {
-      "schema_version": 6,
       "specimen_id": "request-grammar",
       "actors": [
         {
@@ -8935,7 +8859,6 @@
     "phase": "meaning",
     "lesson": "Release happens in the consuming actor only.",
     "request": {
-      "schema_version": 6,
       "specimen_id": "request-grammar",
       "actors": [
         {
@@ -9174,7 +9097,6 @@
     "phase": "meaning",
     "lesson": "At most one release per handle reference.",
     "request": {
-      "schema_version": 6,
       "specimen_id": "request-grammar",
       "actors": [
         {
@@ -9418,7 +9340,6 @@
     "phase": "meaning",
     "lesson": "References are single-assignment across the resource namespace.",
     "request": {
-      "schema_version": 6,
       "specimen_id": "request-grammar",
       "actors": [
         {
@@ -9657,7 +9578,6 @@
     "phase": "meaning",
     "lesson": "A handle reference cannot reuse a delivery reference.",
     "request": {
-      "schema_version": 6,
       "specimen_id": "request-grammar",
       "actors": [
         {
@@ -9896,7 +9816,6 @@
     "phase": "meaning",
     "lesson": "An extension-participating actor cannot exec, even in an earlier phase.",
     "request": {
-      "schema_version": 6,
       "specimen_id": "request-grammar",
       "actors": [
         {
@@ -10133,7 +10052,6 @@
     "phase": "execution",
     "lesson": "An actor outside the extension chain may exec.",
     "request": {
-      "schema_version": 6,
       "specimen_id": "request-grammar",
       "actors": [
         {
@@ -10404,7 +10322,6 @@
     "phase": "execution",
     "lesson": "A transfer to the sending actor uses the same validation path.",
     "request": {
-      "schema_version": 6,
       "specimen_id": "request-grammar",
       "actors": [
         {
@@ -10653,7 +10570,6 @@
     "phase": "execution",
     "lesson": "A delivery can be consumed more than once with distinct handles.",
     "request": {
-      "schema_version": 6,
       "specimen_id": "request-grammar",
       "actors": [
         {
@@ -10901,7 +10817,6 @@
     "phase": "meaning",
     "lesson": "References are nonempty.",
     "request": {
-      "schema_version": 6,
       "specimen_id": "request-grammar",
       "actors": [
         {
@@ -11140,7 +11055,6 @@
     "phase": "meaning",
     "lesson": "Step IDs are unique across the whole specimen.",
     "request": {
-      "schema_version": 6,
       "specimen_id": "request-grammar",
       "actors": [
         {
@@ -11377,7 +11291,6 @@
     "phase": "capacity",
     "lesson": "Eight actors fit, each owning a phase.",
     "request": {
-      "schema_version": 6,
       "specimen_id": "request-grammar",
       "actors": [
         {
@@ -11498,7 +11411,6 @@
     "phase": "capacity",
     "lesson": "A ninth actor exceeds the actor capacity.",
     "request": {
-      "schema_version": 6,
       "specimen_id": "request-grammar",
       "actors": [
         {
@@ -11584,7 +11496,6 @@
     "phase": "capacity",
     "lesson": "Sixteen phases fit the actor form.",
     "request": {
-      "schema_version": 6,
       "specimen_id": "request-grammar",
       "actors": [
         {
@@ -11703,7 +11614,6 @@
     "phase": "capacity",
     "lesson": "A seventeenth phase exceeds the actor-form phase capacity.",
     "request": {
-      "schema_version": 6,
       "specimen_id": "request-grammar",
       "actors": [
         {
@@ -11821,7 +11731,6 @@
     "phase": "capacity",
     "lesson": "Thirty-two issues fit.",
     "request": {
-      "schema_version": 6,
       "specimen_id": "request-grammar",
       "actors": [
         {
@@ -12185,7 +12094,6 @@
     "phase": "capacity",
     "lesson": "A thirty-third issue exceeds the issue capacity.",
     "request": {
-      "schema_version": 6,
       "specimen_id": "request-grammar",
       "actors": [
         {
@@ -12556,7 +12464,6 @@
     "phase": "capacity",
     "lesson": "Sixty-four deliveries fit.",
     "request": {
-      "schema_version": 6,
       "specimen_id": "request-grammar",
       "actors": [
         {
@@ -13186,7 +13093,6 @@
     "phase": "capacity",
     "lesson": "A sixty-fifth delivery exceeds the delivery capacity.",
     "request": {
-      "schema_version": 6,
       "specimen_id": "request-grammar",
       "actors": [
         {
@@ -13822,7 +13728,6 @@
     "phase": "capacity",
     "lesson": "Sixty-four consumes fit.",
     "request": {
-      "schema_version": 6,
       "specimen_id": "request-grammar",
       "actors": [
         {
@@ -14397,7 +14302,6 @@
     "phase": "capacity",
     "lesson": "A sixty-fifth consume exceeds the handle capacity.",
     "request": {
-      "schema_version": 6,
       "specimen_id": "request-grammar",
       "actors": [
         {
@@ -14977,7 +14881,6 @@
     "phase": "capacity",
     "lesson": "Sixty-four releases fit, one per handle.",
     "request": {
-      "schema_version": 6,
       "specimen_id": "request-grammar",
       "actors": [
         {
@@ -16000,7 +15903,6 @@
     "phase": "capacity",
     "lesson": "256 actions fit the shared action capacity.",
     "request": {
-      "schema_version": 6,
       "specimen_id": "request-grammar",
       "actors": [
         {
@@ -19869,7 +19771,6 @@
     "phase": "capacity",
     "lesson": "A 257th action exceeds the shared action capacity.",
     "request": {
-      "schema_version": 6,
       "specimen_id": "request-grammar",
       "actors": [
         {
@@ -23763,7 +23664,6 @@
     "phase": "capacity",
     "lesson": "A 63-byte actor id fits.",
     "request": {
-      "schema_version": 6,
       "specimen_id": "request-grammar",
       "actors": [
         {
@@ -24003,7 +23903,6 @@
     "phase": "capacity",
     "lesson": "A 64-byte actor id exceeds the identifier capacity.",
     "request": {
-      "schema_version": 6,
       "specimen_id": "request-grammar",
       "actors": [
         {
@@ -24236,7 +24135,6 @@
     "phase": "capacity",
     "lesson": "A 1,023-byte issue target fits.",
     "request": {
-      "schema_version": 6,
       "specimen_id": "request-grammar",
       "actors": [
         {
@@ -24476,7 +24374,6 @@
     "phase": "capacity",
     "lesson": "A 1,024-byte issue target exceeds the target capacity.",
     "request": {
-      "schema_version": 6,
       "specimen_id": "request-grammar",
       "actors": [
         {
@@ -24715,7 +24612,6 @@
     "phase": "admission",
     "lesson": "The rejected value names its exact actor and keeps a dotted parameter key as one path segment; the earlier file action never executes.",
     "request": {
-      "schema_version": 6,
       "specimen_id": "actor_parameter_value_nul",
       "actors": [
         {
@@ -24822,7 +24718,6 @@
     "phase": "admission",
     "lesson": "The rejected value names its exact actor and keeps a dotted parameter key as one path segment; the earlier file action never executes.",
     "request": {
-      "schema_version": 6,
       "specimen_id": "actor_parameter_value_bytes",
       "actors": [
         {
@@ -24846,7 +24741,7 @@
               "format": "sbpl",
               "sbpl_source": "(version 1) (allow default)",
               "params": {
-                "K.dot": "éééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééxx"
+                "K.dot": "\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9xx"
               }
             }
           }
@@ -24929,7 +24824,6 @@
     "phase": "execution",
     "lesson": "Parameter key and value bounds count UTF-8 bytes; exact bounds retain a file effect.",
     "request": {
-      "schema_version": 6,
       "specimen_id": "actor_parameter_exact_bytes",
       "actors": [
         {
@@ -24940,7 +24834,7 @@
               "format": "sbpl",
               "sbpl_source": "(version 1) (allow default)",
               "params": {
-                "éééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééx": "éééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééx"
+                "\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9x": "\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9x"
               }
             }
           }
@@ -24998,7 +24892,6 @@
     "phase": "admission",
     "lesson": "A rejected key precedes its rejected value and is omitted from the diagnostic path; the earlier file action never executes.",
     "request": {
-      "schema_version": 6,
       "specimen_id": "actor_parameter_key_bytes",
       "actors": [
         {
@@ -25022,7 +24915,7 @@
               "format": "sbpl",
               "sbpl_source": "(version 1) (allow default)",
               "params": {
-                "éééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééxx": "bad\u0000value"
+                "\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9xx": "bad\u0000value"
               }
             }
           }
@@ -25073,7 +24966,6 @@
     "phase": "admission",
     "lesson": "A rejected key precedes its rejected value and is omitted from the diagnostic path; the earlier file action never executes.",
     "request": {
-      "schema_version": 6,
       "specimen_id": "actor_parameter_key_nul",
       "actors": [
         {
@@ -25148,7 +25040,6 @@
     "phase": "admission",
     "lesson": "A valid 64-byte parameter key remains available in the admission record, while the separate 63-byte diagnostic component bound withholds the whole path.",
     "request": {
-      "schema_version": 6,
       "specimen_id": "actor_parameter_path_bound",
       "actors": [
         {
@@ -25241,7 +25132,6 @@
     "phase": "admission",
     "lesson": "Actor frontier removed extensions null.",
     "request": {
-      "schema_version": 6,
       "specimen_id": "request-grammar",
       "policy": {
         "format": "sbpl",
@@ -25286,7 +25176,6 @@
     "phase": "admission",
     "lesson": "Actor frontier removed extensions empty array.",
     "request": {
-      "schema_version": 6,
       "specimen_id": "request-grammar",
       "policy": {
         "format": "sbpl",
@@ -25331,7 +25220,6 @@
     "phase": "admission",
     "lesson": "Actor frontier removed extensions array.",
     "request": {
-      "schema_version": 6,
       "specimen_id": "request-grammar",
       "policy": {
         "format": "sbpl",
@@ -25381,7 +25269,6 @@
     "phase": "admission",
     "lesson": "Actor frontier removed issuer override null.",
     "request": {
-      "schema_version": 6,
       "specimen_id": "request-grammar",
       "policy": {
         "format": "sbpl",
@@ -25430,7 +25317,6 @@
     "phase": "admission",
     "lesson": "Actor frontier removed issuer override path.",
     "request": {
-      "schema_version": 6,
       "specimen_id": "request-grammar",
       "policy": {
         "format": "sbpl",
@@ -25479,7 +25365,6 @@
     "phase": "admission",
     "lesson": "Actor frontier actor equipment null.",
     "request": {
-      "schema_version": 6,
       "specimen_id": "request-grammar",
       "actors": [
         {
@@ -25734,7 +25619,6 @@
     "phase": "admission",
     "lesson": "Actor frontier actor equipment unknown.",
     "request": {
-      "schema_version": 6,
       "specimen_id": "request-grammar",
       "actors": [
         {
@@ -25989,7 +25873,6 @@
     "phase": "admission",
     "lesson": "Actor frontier actor equipment number.",
     "request": {
-      "schema_version": 6,
       "specimen_id": "request-grammar",
       "actors": [
         {
@@ -26244,7 +26127,6 @@
     "phase": "admission",
     "lesson": "Actor frontier actor equipment boolean.",
     "request": {
-      "schema_version": 6,
       "specimen_id": "request-grammar",
       "actors": [
         {
@@ -26499,7 +26381,6 @@
     "phase": "execution",
     "lesson": "Actor frontier actor equipment selected.",
     "request": {
-      "schema_version": 6,
       "specimen_id": "request-grammar",
       "actors": [
         {
@@ -26740,7 +26621,6 @@
     "phase": "execution",
     "lesson": "Actor frontier actor equipment unentitled.",
     "request": {
-      "schema_version": 6,
       "specimen_id": "request-grammar",
       "actors": [
         {
@@ -26981,7 +26861,6 @@
     "phase": "execution",
     "lesson": "Actor frontier actor requirements empty list.",
     "request": {
-      "schema_version": 6,
       "specimen_id": "request-grammar",
       "actors": [
         {
@@ -27222,7 +27101,6 @@
     "phase": "admission",
     "lesson": "Actor frontier actor requirements null.",
     "request": {
-      "schema_version": 6,
       "specimen_id": "request-grammar",
       "actors": [
         {
@@ -27477,7 +27355,6 @@
     "phase": "admission",
     "lesson": "Actor frontier actor requirements number.",
     "request": {
-      "schema_version": 6,
       "specimen_id": "request-grammar",
       "actors": [
         {
@@ -27732,7 +27609,6 @@
     "phase": "admission",
     "lesson": "Actor frontier actor requirements entry type.",
     "request": {
-      "schema_version": 6,
       "specimen_id": "request-grammar",
       "actors": [
         {
@@ -27991,7 +27867,6 @@
     "phase": "admission",
     "lesson": "Actor frontier actor requirements empty.",
     "request": {
-      "schema_version": 6,
       "specimen_id": "request-grammar",
       "actors": [
         {
@@ -28250,7 +28125,6 @@
     "phase": "admission",
     "lesson": "Actor frontier actor requirements duplicate.",
     "request": {
-      "schema_version": 6,
       "specimen_id": "request-grammar",
       "actors": [
         {
@@ -28510,7 +28384,6 @@
     "phase": "admission",
     "lesson": "Actor frontier actor requirements over.",
     "request": {
-      "schema_version": 6,
       "specimen_id": "request-grammar",
       "actors": [
         {
@@ -28831,7 +28704,6 @@
     "phase": "admission",
     "lesson": "Actor frontier actor requirements key over.",
     "request": {
-      "schema_version": 6,
       "specimen_id": "request-grammar",
       "actors": [
         {
@@ -29090,7 +28962,6 @@
     "phase": "admission",
     "lesson": "Actor frontier actor requirements key unicode over.",
     "request": {
-      "schema_version": 6,
       "specimen_id": "request-grammar",
       "actors": [
         {
@@ -29099,7 +28970,7 @@
             "mode": "unapplied"
           },
           "required_entitlements": [
-            "éééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééé"
+            "\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9"
           ]
         },
         {
@@ -29349,7 +29220,6 @@
     "phase": "admission",
     "lesson": "Actor frontier actor requirements key nul.",
     "request": {
-      "schema_version": 6,
       "specimen_id": "request-grammar",
       "actors": [
         {
@@ -29608,7 +29478,6 @@
     "phase": "admission",
     "lesson": "Actor frontier actor gate null.",
     "request": {
-      "schema_version": 6,
       "specimen_id": "request-grammar",
       "actors": [
         {
@@ -29863,7 +29732,6 @@
     "phase": "admission",
     "lesson": "Actor frontier actor gate unknown.",
     "request": {
-      "schema_version": 6,
       "specimen_id": "request-grammar",
       "actors": [
         {
@@ -30122,7 +29990,6 @@
     "phase": "admission",
     "lesson": "Actor frontier actor gate self.",
     "request": {
-      "schema_version": 6,
       "specimen_id": "request-grammar",
       "actors": [
         {
@@ -30381,7 +30248,6 @@
     "phase": "admission",
     "lesson": "Actor frontier actor gate not prior.",
     "request": {
-      "schema_version": 6,
       "specimen_id": "request-grammar",
       "actors": [
         {
@@ -30640,7 +30506,6 @@
     "phase": "admission",
     "lesson": "Actor frontier actor gate unknown key.",
     "request": {
-      "schema_version": 6,
       "specimen_id": "request-grammar",
       "actors": [
         {
@@ -30900,7 +30765,6 @@
     "phase": "admission",
     "lesson": "Actor frontier consume removed operand null.",
     "request": {
-      "schema_version": 6,
       "specimen_id": "request-grammar",
       "actors": [
         {
@@ -31161,7 +31025,6 @@
     "phase": "admission",
     "lesson": "Actor frontier consume removed operand.",
     "request": {
-      "schema_version": 6,
       "specimen_id": "request-grammar",
       "actors": [
         {
@@ -31422,7 +31285,6 @@
     "phase": "admission",
     "lesson": "Actor frontier consume extra null.",
     "request": {
-      "schema_version": 6,
       "specimen_id": "request-grammar",
       "actors": [
         {
@@ -31683,7 +31545,6 @@
     "phase": "admission",
     "lesson": "Actor frontier actor global worker override.",
     "request": {
-      "schema_version": 6,
       "specimen_id": "request-grammar",
       "actors": [
         {
@@ -31938,7 +31799,6 @@
     "phase": "execution",
     "lesson": "Actor frontier actor token ref exact.",
     "request": {
-      "schema_version": 6,
       "specimen_id": "request-grammar",
       "actors": [
         {
@@ -32178,7 +32038,6 @@
     "phase": "execution",
     "lesson": "Actor frontier actor token ref unicode exact.",
     "request": {
-      "schema_version": 6,
       "specimen_id": "request-grammar",
       "actors": [
         {
@@ -32262,14 +32121,14 @@
                 "family": "file",
                 "authority": "read",
                 "target": "$EFFECT",
-                "token_ref": "éééééééééééééééééééééééééééééééx"
+                "token_ref": "\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9x"
               }
             },
             {
               "step_id": "a_to_b",
               "extension": {
                 "operation": "transfer",
-                "token_ref": "éééééééééééééééééééééééééééééééx",
+                "token_ref": "\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9x",
                 "recipient": "B",
                 "delivery_ref": "db"
               }
@@ -32418,7 +32277,6 @@
     "phase": "admission",
     "lesson": "Actor frontier actor token ref over.",
     "request": {
-      "schema_version": 6,
       "specimen_id": "request-grammar",
       "actors": [
         {
@@ -32678,7 +32536,6 @@
     "phase": "admission",
     "lesson": "Actor frontier actor token ref unicode over.",
     "request": {
-      "schema_version": 6,
       "specimen_id": "request-grammar",
       "actors": [
         {
@@ -32762,14 +32619,14 @@
                 "family": "file",
                 "authority": "read",
                 "target": "$EFFECT",
-                "token_ref": "éééééééééééééééééééééééééééééééé"
+                "token_ref": "\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9"
               }
             },
             {
               "step_id": "a_to_b",
               "extension": {
                 "operation": "transfer",
-                "token_ref": "éééééééééééééééééééééééééééééééé",
+                "token_ref": "\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9",
                 "recipient": "B",
                 "delivery_ref": "db"
               }
@@ -32938,7 +32795,6 @@
     "phase": "execution",
     "lesson": "Actor frontier actor handle ref exact.",
     "request": {
-      "schema_version": 6,
       "specimen_id": "request-grammar",
       "actors": [
         {
@@ -33178,7 +33034,6 @@
     "phase": "execution",
     "lesson": "Actor frontier actor handle ref unicode exact.",
     "request": {
-      "schema_version": 6,
       "specimen_id": "request-grammar",
       "actors": [
         {
@@ -33285,7 +33140,7 @@
               "extension": {
                 "operation": "consume",
                 "delivery_ref": "db",
-                "handle_ref": "éééééééééééééééééééééééééééééééx"
+                "handle_ref": "\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9x"
               }
             }
           ]
@@ -33380,7 +33235,7 @@
               "step_id": "b_release",
               "extension": {
                 "operation": "release",
-                "handle_ref": "éééééééééééééééééééééééééééééééx"
+                "handle_ref": "\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9x"
               }
             }
           ]
@@ -33418,7 +33273,6 @@
     "phase": "admission",
     "lesson": "Actor frontier actor handle ref over.",
     "request": {
-      "schema_version": 6,
       "specimen_id": "request-grammar",
       "actors": [
         {
@@ -33678,7 +33532,6 @@
     "phase": "admission",
     "lesson": "Actor frontier actor handle ref unicode over.",
     "request": {
-      "schema_version": 6,
       "specimen_id": "request-grammar",
       "actors": [
         {
@@ -33785,7 +33638,7 @@
               "extension": {
                 "operation": "consume",
                 "delivery_ref": "db",
-                "handle_ref": "éééééééééééééééééééééééééééééééé"
+                "handle_ref": "\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9"
               }
             }
           ]
@@ -33880,7 +33733,7 @@
               "step_id": "b_release",
               "extension": {
                 "operation": "release",
-                "handle_ref": "éééééééééééééééééééééééééééééééé"
+                "handle_ref": "\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9"
               }
             }
           ]
@@ -33938,7 +33791,6 @@
     "phase": "admission",
     "lesson": "Actor frontier actor issue authority null.",
     "request": {
-      "schema_version": 6,
       "specimen_id": "request-grammar",
       "actors": [
         {
@@ -34198,7 +34050,6 @@
     "phase": "admission",
     "lesson": "Actor frontier actor issue authority unknown.",
     "request": {
-      "schema_version": 6,
       "specimen_id": "request-grammar",
       "actors": [
         {
@@ -34458,7 +34309,6 @@
     "phase": "admission",
     "lesson": "Actor frontier actor issue authority empty.",
     "request": {
-      "schema_version": 6,
       "specimen_id": "request-grammar",
       "actors": [
         {
@@ -34718,7 +34568,6 @@
     "phase": "admission",
     "lesson": "Actor frontier actor issue authority boolean.",
     "request": {
-      "schema_version": 6,
       "specimen_id": "request-grammar",
       "actors": [
         {
@@ -34978,7 +34827,6 @@
     "phase": "admission",
     "lesson": "Actor frontier actor issue authority number.",
     "request": {
-      "schema_version": 6,
       "specimen_id": "request-grammar",
       "actors": [
         {
@@ -35238,7 +35086,6 @@
     "phase": "admission",
     "lesson": "Actor frontier actor issue raw token.",
     "request": {
-      "schema_version": 6,
       "specimen_id": "request-grammar",
       "actors": [
         {
@@ -35499,7 +35346,6 @@
     "phase": "admission",
     "lesson": "Actor frontier actor issue raw extension class.",
     "request": {
-      "schema_version": 6,
       "specimen_id": "request-grammar",
       "actors": [
         {

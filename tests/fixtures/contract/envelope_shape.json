@@ -1,16 +1,15 @@
 {
-  "controller_envelope": 14,
   "shape": {
     "envelope": {
       "build": "object",
       "data": "object",
       "generated_at_unix_ms": "number",
       "kind": "string",
-      "result": "object",
-      "schema_version": "number"
+      "result": "object"
     },
     "envelope.build": {
       "commit": "string",
+      "contract": "string",
       "describe": "string",
       "number": "string",
       "version": "string"
@@ -50,11 +49,11 @@
       "data": "object",
       "generated_at_unix_ms": "number",
       "kind": "string",
-      "result": "object",
-      "schema_version": "number"
+      "result": "object"
     },
     "envelope.data.actor_policy_checks[].policy_check.envelope.build": {
       "commit": "string",
+      "contract": "string",
       "describe": "string",
       "number": "string",
       "version": "string"
@@ -118,11 +117,11 @@
       "data": "object",
       "generated_at_unix_ms": "number",
       "kind": "string",
-      "result": "object",
-      "schema_version": "number"
+      "result": "object"
     },
     "envelope.data.policy_check.envelope.build": {
       "commit": "string",
+      "contract": "string",
       "describe": "string",
       "number": "string",
       "version": "string"
@@ -167,7 +166,7 @@
     },
     "envelope.data.request_failure": {
       "code": "string",
-      "expected_schema": "number",
+      "expected_contract": "string",
       "path": "array"
     },
     "envelope.data.runner_client": {
@@ -202,11 +201,11 @@
       "client_pid": "number",
       "clock": "string",
       "clock_available": "boolean",
+      "contract": "string",
       "deadline_continuous_ns": "number",
       "ended_continuous_ns": "number",
       "error": "object",
       "kind": "string",
-      "protocol_version": "number",
       "runner_reply": "object",
       "started_continuous_ns": "number",
       "submission": "object",

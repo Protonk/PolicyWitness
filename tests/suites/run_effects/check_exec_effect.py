@@ -13,6 +13,7 @@ import tempfile
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[2] / 'lib'))
 sys.path.insert(0, str(Path(__file__).resolve().parent))
+import build_context
 from run_capture import RunCapture  # noqa: E402
 import effects  # noqa: E402
 
@@ -22,7 +23,7 @@ def specimen_for(name, helper, marker, allow_write):
     if allow_write:
         policy += f'(allow file-write* (literal "{marker}"))\n'
     return {
-        'schema_version': 6,
+        'contract': build_context.candidate_contract(),
         'specimen_id': f'run_effects_exec_{name}',
         'policy': {'format': 'sbpl', 'sbpl_source': policy, 'augments': ['exec_baseline']},
         'probe_plan': [{

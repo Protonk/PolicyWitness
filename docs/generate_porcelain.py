@@ -177,6 +177,9 @@ def rust(schema, fingerprint):
              'use serde::Serialize;', '#[cfg(test)] use serde::Deserialize;', 'use serde::ser::SerializeMap;',
              'use crate::porcelain::{WireRead, RecordReader};',
              'pub const FINGERPRINT: [u8; 32] = [' + ', '.join(str(n) for n in bytes.fromhex(fingerprint)) + '];']
+    ids = {record['name']: record['id'] for record in schema['records']}
+    for root, name in schema['roots'].items():
+        lines.append(f'pub const {root.upper()}_RECORD_ID: u16 = {ids[name]};')
     for name, cases in schema['variants'].items():
         lines += ['#[derive(Clone, Debug, PartialEq, Serialize)]', '#[cfg_attr(test, derive(Deserialize))]', '#[serde(untagged)]', f'pub enum {name} {{']
         lines += [f'    {case["name"]}({rust_type(shape(case["type"]))}),' for case in cases.values()]

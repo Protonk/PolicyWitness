@@ -12,7 +12,7 @@ LOG_PATH="${PW_TEST_ARTIFACTS}/cargo-test-integration.log"
 
 test_step "cargo_test_integration" "cargo test --test cli_contract"
 set +e
-cargo test --manifest-path "${ROOT_DIR}/controller/Cargo.toml" --test cli_contract >"${LOG_PATH}" 2>&1
+env -u PW_BUILD_CONTRACT cargo test --manifest-path "${ROOT_DIR}/controller/Cargo.toml" --test cli_contract >"${LOG_PATH}" 2>&1
 status=$?
 set -e
 

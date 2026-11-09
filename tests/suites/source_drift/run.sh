@@ -55,15 +55,15 @@ if test_selected "${PW_TEST_ID}"; then
   test_pass "footprint manifest and tables agree; malformed and stale inputs are rejected" "{\"log\":\"${RUN_LOG}\"}"
 fi
 
-PW_TEST_ID="contract_versions"
+PW_TEST_ID="build_contracts"
 if test_selected "${PW_TEST_ID}"; then
   test_begin "${PW_TEST_SUITE}" "${PW_TEST_ID}"
-  test_step contract "check generated contract copies, generator controls and manifest validation"
+  test_step contract "check public build identity, derived stamps and worker identity controls"
   RUN_LOG="${PW_TEST_ARTIFACTS}/contract.log"
-  if ! "${PW_PYTHON}" -B -S "${ROOT_DIR}/tests/suites/source_drift/contract.py" >"${RUN_LOG}" 2>&1; then
-    test_fail "contract version controls failed" "{\"log\":\"${RUN_LOG}\"}"
+  if ! "${PW_PYTHON}" -B -S "${ROOT_DIR}/tests/suites/source_drift/build_contracts.py" >"${RUN_LOG}" 2>&1; then
+    test_fail "build contract controls failed" "{\"log\":\"${RUN_LOG}\"}"
   fi
-  test_pass "contract manifest and every generated copy agree; generator and build controls pass" "{\"log\":\"${RUN_LOG}\"}"
+  test_pass "public build identities, derived surface stamps and worker identity controls pass" "{\"log\":\"${RUN_LOG}\"}"
 fi
 
 PW_TEST_ID="architecture_documentation"

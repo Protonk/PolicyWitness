@@ -68,6 +68,11 @@ class Tools:
             return
         if argv[0] == '/usr/sbin/spctl':
             return
+        if argv[1:] == ['--version']:
+            assert str(argv[0]).startswith('/private/tmp/pw-release-'), argv
+            contract = 'test:foreign' if self.mode == 'foreign_binary_contract' else 'release:v0.9.0'
+            stdout.write_text(json.dumps(dict(build=dict(contract=contract))))
+            return
         if argv[0] != 'bash':
             raise AssertionError(f'unexpected release command: {argv}')
         # The one test interface with no selectors: the default battery, nothing narrower.

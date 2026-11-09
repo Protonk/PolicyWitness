@@ -9,6 +9,7 @@ import sys
 ROOT = Path(__file__).resolve().parents[4]
 sys.path.insert(0, str(ROOT / 'tests/lib'))
 import contract
+import build_context
 from consumer import validate
 
 pw, directory = sys.argv[1:]
@@ -18,7 +19,7 @@ state = json.loads((out / 'session.json').read_text())
 assert state['registry_path'] is None
 service = state['service_name']
 verified = json.loads((out / 'verify-connection/stdout').read_text())
-assert verified['kind'] == 'runner_verify' and verified['schema_version'] == contract.CONTROLLER_ENVELOPE, verified
+assert verified['kind'] == 'runner_verify' and verified['build']['contract'] == build_context.candidate_contract(), verified
 assert verified['result']['ok'] is True and verified['result']['normalized_outcome'] == 'finished', verified['result']
 assert verified['data']['normalized_outcome'] == 'finished', verified['data']
 assert verified['data']['runner_result']['normalized_outcome'] == 'finished', verified['data']['runner_result']
@@ -33,7 +34,7 @@ assert str(plist) == state['plist_path'] and plist.is_file()
 assert plistlib.loads(plist.read_bytes())['Label'] == service
 assert (Path.home() / 'Library/Application Support/PolicyWitness/runners.json').is_file()
 effect = out / 'effect'
-spec = dict(schema_version=contract.REQUEST_SCHEMA, specimen_id='default-location',
+spec = dict(contract=build_context.candidate_contract(), specimen_id='default-location',
             runner=dict(mode='byoxpc', service=service),
             policy=dict(format='sbpl', sbpl_source='(version 1)(allow default)'),
             probe_plan=[dict(step_id='create', sandbox_check=dict(operation='file-write-create',
@@ -46,5 +47,5 @@ result = subprocess.run([pw, 'run', str(path)], capture_output=True, timeout=60)
 (out / 'run.stderr').write_bytes(result.stderr)
 assert result.returncode == 0, result.stderr
 doc = json.loads(result.stdout)
-assert not validate(doc), validate(doc)
+assert not validate(doc, build_context.candidate_contract()), validate(doc, build_context.candidate_contract())
 assert doc['data']['runner_result']['normalized_outcome'] == 'finished' and effect.exists()

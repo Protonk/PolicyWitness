@@ -15,6 +15,7 @@ import uuid
 
 ROOT = Path(__file__).resolve().parents[3]
 sys.path.insert(0, str(ROOT / 'tests/lib'))
+import build_context
 import consumer
 from lifecycle_oracle import check_record
 from check_extensions import probe, intervention, specimen, lifecycle_events
@@ -191,8 +192,8 @@ def run_case(pw, out, name, issuer_mode=0, worker_mode=None, row=None):
         assert cleanup_known, 'unconfirmed native child cleanup; observer ownership retained'
         assert target.read_bytes() == contents, 'independent target bytes changed'
         assert runner['test_overrides']['actor_equipment_executable_paths']==spec['_test_overrides']['actor_equipment_executable_paths']
-        assert consumer.validate(envelope)==[],consumer.validate(envelope)
-        assert check_record(envelope)==[],check_record(envelope)
+        assert consumer.validate(envelope, build_context.candidate_contract())==[],consumer.validate(envelope, build_context.candidate_contract())
+        assert check_record(envelope, build_context.candidate_contract())==[],check_record(envelope, build_context.candidate_contract())
         for role,path,actor_id,pid_key in (('unentitled',issuer,'issuer','issuer_pid'),
                                            ('selected',worker,'subject','worker_pid')):
             position,binding=next((i,b) for i,b in enumerate(runner['equipment_bindings']) if b['role']==role and b['source']=='test_override')

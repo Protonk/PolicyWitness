@@ -23,6 +23,7 @@ import tempfile
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[2] / 'lib'))
+import build_context
 import consumer
 import extension_actors as actor_actions
 from run_capture import RunCapture
@@ -66,7 +67,7 @@ def specimen(targets, queries, *, denied=False, exec_args=None, large_filter=Fal
         steps.append(dict(step_id=sid, sandbox_check=dict(
             operation='sysctl-read' if large_filter else 'file-read-data',
             filter=dict(kind='sysctl_name' if large_filter else 'path', value=query)), attempt=attempt))
-    return dict(schema_version=6, specimen_id=secrets.token_hex(12),
+    return dict(contract=build_context.candidate_contract(), specimen_id=secrets.token_hex(12),
                 policy=dict(format='sbpl', sbpl_source='(version 1)(allow default)' +
                             ('(deny file-read-data)' if denied else '')),
                 probe_plan=steps)
@@ -116,7 +117,7 @@ def actor_maximum(ordinary, *, write=False):
     assert {actor['actor_id']: sum(len(p['actions']) for p in phases if p['actor_id'] == actor['actor_id'])
             for actor in actors} == {f'{role}{pair}': count for pair in range(4)
                                      for role, count in (('issuer', 24), ('subject', 40))}
-    return dict(schema_version=6, specimen_id=secrets.token_hex(12), actors=actors, phases=phases)
+    return dict(contract=build_context.candidate_contract(), specimen_id=secrets.token_hex(12), actors=actors, phases=phases)
 
 
 def request_steps(request):
@@ -127,7 +128,7 @@ def check_reply(runner, request, *, denied=False, exec_args=None, large_filter=F
     assert runner['normalized_outcome'] == 'finished', runner['normalized_outcome']
     assert runner.get('admission_failure') is None, runner.get('admission_failure')
     assert [step['step_id'] for step in runner['steps']] == [step['step_id'] for step in request_steps(request)]
-    errors = consumer.validate(runner)
+    errors = consumer.validate(runner, build_context.candidate_contract())
     assert not errors, errors
     if 'phases' in request:
         assert len(runner['phases']) == len(request['phases'])
@@ -265,7 +266,7 @@ def check_refused(runner, *, field='sandbox_check.filter.value', maximum=QUERY_F
     assert failure['step_id'] == IDS[step_index], failure
     assert runner.get('runner_subprocess') is None and (runner.get('phases') or [{}])[0].get('validator_subprocess') is None, runner
     assert runner['steps'] == [], runner
-    errors = consumer.validate(runner)
+    errors = consumer.validate(runner, build_context.candidate_contract())
     assert not errors, errors
 
 

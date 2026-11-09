@@ -12,6 +12,7 @@ import json
 import sys
 from pathlib import Path
 
+import build_context
 import consumer
 from blackbox import validate_run_shape, validate_step
 
@@ -59,7 +60,7 @@ def validate_run(run, step_id, operation, filter_value, attempt_contract, *, all
     # The planning exclusion and the attempt are independent channels: the
     # record names the exclusion and claims no order, and the attempt keeps
     # its own observation beside it.
-    step = consumer.select(consumer.steps(run), step_id=step_id)[0]
+    step = consumer.select(consumer.steps(run, build_context.TEST_CONTRACT if allow_fixture_json else build_context.candidate_contract()), step_id=step_id)[0]
     comparison = step["comparison"]
     if comparison["order"] != "unestablished" or "query_plan:prediction_unavailable_pair" not in comparison["limitations"]:
         errors.append(f"{step_id}: planning exclusion must carry order=unestablished and the pair limitation")

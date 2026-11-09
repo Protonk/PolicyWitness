@@ -55,10 +55,10 @@ final class Driver {
         if operation == "reserve" {
             // The harness records the requested protocol in commands.json.
             // This independent RPC driver does not link the production parser.
-            guard let version = value["protocol_version"] as? Int else {
-                throw NSError(domain: "driver.missing_protocol_version", code: 1)
+            guard let version = value["contract"] as? String else {
+                throw NSError(domain: "driver.missing_contract", code: 1)
             }
-            let request: [String: Any] = ["protocol_version": version,
+            let request: [String: Any] = ["contract": version,
                 "attempt_id": UUID().uuidString, "lease_ms": value["lease_ms"] as? Int ?? 5000]
             let data = try JSONSerialization.data(withJSONObject: request)
             (proxy as! ReservationProtocol).reserveRunner(data) { bytes in

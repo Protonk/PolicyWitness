@@ -20,12 +20,15 @@ fi
 # open/path control. The policy text is the only difference.
 for name in specimen neighbour; do
   "${PW_PYTHON}" -B -S -P - "${PW_TEST_ARTIFACTS}/${name}.json" "${name}" <<'PY'
+import os, sys
+sys.path.insert(0, os.environ['PW_CONTRACT_TEST_LIB'])
+import build_context
 import json, sys
 from pathlib import Path
 policy = {"specimen": "(version 2)\n(deny default)\n(allow file-read-data)",
           "neighbour": "(version 2)\n(allow default)"}[sys.argv[2]]
 spec = {
-    "schema_version": 6,
+    'contract': build_context.candidate_contract(),
     "specimen_id": "witness_contract_verdicts" if sys.argv[2] == "specimen" else "witness_contract_verdicts_allow_default",
     "policy": {"format": "sbpl", "sbpl_source": policy},
     "probe_plan": [{

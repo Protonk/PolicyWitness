@@ -1,5 +1,4 @@
 {
-  "schema_version": 6,
   "specimen_id": "sysctl_read",
   "policy": {
     "format": "sbpl",

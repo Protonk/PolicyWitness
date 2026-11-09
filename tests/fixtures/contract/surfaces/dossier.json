@@ -1,0 +1,202 @@
+{
+  "shape": {
+    "envelope.data": {
+      "specimen": "object"
+    },
+    "envelope.data.specimen": {
+      "actors": "array",
+      "app_provenance": "object",
+      "binaries": "object",
+      "host": "object",
+      "policy": "object",
+      "request_path": "string",
+      "runner_provenance": "object"
+    },
+    "envelope.data.specimen.actors[]": {
+      "actor_id": "string",
+      "mode": "string",
+      "policy": "object"
+    },
+    "envelope.data.specimen.actors[].policy": {
+      "augmentation": "object",
+      "imports": "object"
+    },
+    "envelope.data.specimen.actors[].policy.augmentation": {
+      "applied": "array",
+      "applied_sha256": "string",
+      "error": "string",
+      "original_sha256": "string",
+      "status": "string"
+    },
+    "envelope.data.specimen.actors[].policy.imports": {
+      "closure_sha256": "string",
+      "cycle": "array",
+      "exceeded": "string",
+      "failure": "string",
+      "records": "array",
+      "status": "string"
+    },
+    "envelope.data.specimen.actors[].policy.imports.records[]": {
+      "error": "string",
+      "mtime_unix": "number",
+      "name": "string",
+      "resolved_path": "string",
+      "sha256": "string",
+      "size_bytes": "number"
+    },
+    "envelope.data.specimen.app_provenance": {
+      "evidence_manifest_path": "string",
+      "evidence_verify": "object"
+    },
+    "envelope.data.specimen.app_provenance.evidence_verify": {
+      "checked": "number",
+      "manifest_path": "string",
+      "mismatches": "array",
+      "notes": "array",
+      "ok": "boolean",
+      "schema_version": "number"
+    },
+    "envelope.data.specimen.app_provenance.evidence_verify.mismatches[]": {
+      "actual_sha256": "string",
+      "error": "string",
+      "expected_sha256": "string",
+      "id": "string",
+      "rel_path": "string"
+    },
+    "envelope.data.specimen.binaries": {
+      "service": "object",
+      "unentitled_worker": "object",
+      "validator": "object",
+      "worker": "object"
+    },
+    "envelope.data.specimen.binaries.service": {
+      "actual_sha256": "string",
+      "baseline_sha256": "string",
+      "path": "string",
+      "reason": "string",
+      "verification": "string"
+    },
+    "envelope.data.specimen.binaries.unentitled_worker": {
+      "actual_sha256": "string",
+      "baseline_sha256": "string",
+      "path": "string",
+      "reason": "string",
+      "verification": "string"
+    },
+    "envelope.data.specimen.binaries.validator": {
+      "actual_sha256": "string",
+      "baseline_sha256": "string",
+      "path": "string",
+      "reason": "string",
+      "verification": "string"
+    },
+    "envelope.data.specimen.binaries.worker": {
+      "actual_sha256": "string",
+      "baseline_sha256": "string",
+      "path": "string",
+      "reason": "string",
+      "verification": "string"
+    },
+    "envelope.data.specimen.host": {
+      "arch": "string",
+      "kernel_release": "string",
+      "macos_build": "string",
+      "macos_version": "string"
+    },
+    "envelope.data.specimen.policy": {
+      "augmentation": "object",
+      "imports": "object"
+    },
+    "envelope.data.specimen.policy.augmentation": {
+      "applied": "array",
+      "applied_sha256": "string",
+      "error": "string",
+      "original_sha256": "string",
+      "status": "string"
+    },
+    "envelope.data.specimen.policy.imports": {
+      "closure_sha256": "string",
+      "cycle": "array",
+      "exceeded": "string",
+      "failure": "string",
+      "records": "array",
+      "status": "string"
+    },
+    "envelope.data.specimen.policy.imports.records[]": {
+      "error": "string",
+      "mtime_unix": "number",
+      "name": "string",
+      "resolved_path": "string",
+      "sha256": "string",
+      "size_bytes": "number"
+    },
+    "envelope.data.specimen.runner_provenance": {
+      "runner_bundle_id": "string",
+      "runner_bundle_path": "string",
+      "runner_entitlements": "object",
+      "runner_executable_path": "string",
+      "runner_kind": "string",
+      "runner_registry_id": "string",
+      "runner_service_name": "string",
+      "runner_signature": "object",
+      "runner_unentitled_worker_entitlements": "object",
+      "runner_unentitled_worker_signature": "object",
+      "runner_validator_entitlements": "object",
+      "runner_validator_signature": "object",
+      "runner_worker_entitlements": "object",
+      "runner_worker_signature": "object"
+    },
+    "envelope.data.specimen.runner_provenance.runner_entitlements": {
+      "error": "string",
+      "granted": "array",
+      "keys": "array",
+      "raw_plist": "string"
+    },
+    "envelope.data.specimen.runner_provenance.runner_signature": {
+      "adhoc": "boolean",
+      "cdhash": "string",
+      "identity": "string",
+      "team_id": "string",
+      "valid": "boolean"
+    },
+    "envelope.data.specimen.runner_provenance.runner_unentitled_worker_entitlements": {
+      "error": "string",
+      "granted": "array",
+      "keys": "array",
+      "raw_plist": "string"
+    },
+    "envelope.data.specimen.runner_provenance.runner_unentitled_worker_signature": {
+      "adhoc": "boolean",
+      "cdhash": "string",
+      "identity": "string",
+      "team_id": "string",
+      "valid": "boolean"
+    },
+    "envelope.data.specimen.runner_provenance.runner_validator_entitlements": {
+      "error": "string",
+      "granted": "array",
+      "keys": "array",
+      "raw_plist": "string"
+    },
+    "envelope.data.specimen.runner_provenance.runner_validator_signature": {
+      "adhoc": "boolean",
+      "cdhash": "string",
+      "identity": "string",
+      "team_id": "string",
+      "valid": "boolean"
+    },
+    "envelope.data.specimen.runner_provenance.runner_worker_entitlements": {
+      "error": "string",
+      "granted": "array",
+      "keys": "array",
+      "raw_plist": "string"
+    },
+    "envelope.data.specimen.runner_provenance.runner_worker_signature": {
+      "adhoc": "boolean",
+      "cdhash": "string",
+      "identity": "string",
+      "team_id": "string",
+      "valid": "boolean"
+    }
+  }
+}

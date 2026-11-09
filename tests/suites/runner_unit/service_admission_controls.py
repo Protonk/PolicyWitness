@@ -32,7 +32,7 @@ for name,anchor,replacement,reason in mutations:
     text=fixed.replace(anchor,replacement) if anchor else fixed
     service.write_text(text); (out/(name+'.swift')).write_text(text)
     with (out/(name+'.log')).open('w') as log:
-        run=subprocess.run([*SWIFT,'run','--jobs','2','--package-path',str(package),'--scratch-path',str(scratch),'PWRunnerCoreTests'],stdout=log,stderr=log,timeout=120)
+        run=subprocess.run([*SWIFT,'run','-Xswiftc','-DPW_UNIT_TEST_CONTEXT','--jobs','2','--package-path',str(package),'--scratch-path',str(scratch),'PWRunnerCoreTests'],stdout=log,stderr=log,timeout=120)
     log=(out/(name+'.log')).read_text()
     assert '[host single use admission]' in log and 'tests passed' in log, (name,'build/equipment failure')
     if reason:

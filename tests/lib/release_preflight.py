@@ -135,8 +135,8 @@ def inspect(root, *, remote='origin', dist='dist'):
                  version=match.group(1) if match else '0.0.0',
                  build_number=git(root, 'rev-list', '--count', 'HEAD'), tag=None, remote_tag=None)
     problems = []
-    if git(root, 'status', '--porcelain', '--untracked-files=no'):
-        problems.append('working tree has uncommitted changes to tracked files')
+    if git(root, 'status', '--porcelain', '--untracked-files=all'):
+        problems.append('working tree has uncommitted changes or untracked files')
     tag = git(root, 'describe', '--tags', '--exact-match', '--match', 'v[0-9]*', 'HEAD', check=False)
     if tag is None:
         problems.append(f'HEAD is not at a release tag; build.sh would stamp {describe}')
@@ -146,6 +146,10 @@ def inspect(root, *, remote='origin', dist='dist'):
         problems.append(f'{tag} is not a v<major>.<minor>.<patch> tag')
     if git(root, 'cat-file', '-t', tag) != 'tag':
         problems.append(f'{tag} is a lightweight tag; release tags are annotated')
+    release_tags = [value for value in (git(root, 'tag', '--points-at', 'HEAD') or '').splitlines()
+                    if RELEASE_TAG.fullmatch(value) and git(root, 'cat-file', '-t', 'refs/tags/' + value) == 'tag']
+    if len(release_tags) > 1:
+        problems.append('ambiguous release: multiple annotated release tags at HEAD')
     listing = git(root, 'ls-remote', '--tags', remote, f'refs/tags/{tag}', check=False)
     if listing is None:
         problems.append(f'cannot query {remote} for {tag}')
@@ -160,6 +164,24 @@ def inspect(root, *, remote='origin', dist='dist'):
     problems.extend(baseline_problems)
     stamp['build_baseline'], build_problems = inspect_build_baseline(root, tag)
     problems.extend(build_problems)
+    sys.path.insert(0, str(root / 'docs'))
+    import generate_contract_stamps
+    import build_contract
+    try:
+        stamp['contract'] = build_contract.identity(root)
+        if stamp['contract'] != 'release:' + tag:
+            problems.append('build contract is not release:' + tag + '; scoped sources must equal the tagged bytes')
+    except (ValueError, OSError) as error:
+        problems.append(f'build contract: {error}')
+    try:
+        if not generate_contract_stamps.release_tags(root):
+            raise ValueError('release history unavailable; fetch annotated release tags')
+        if any(before != after for _, before, after in generate_contract_stamps.render(root)):
+            problems.append('contract surface stamps are stale')
+        if any(value['stamp'] == 'unreleased' for value in generate_contract_stamps.stamps(root).values()):
+            problems.append('contract surfaces remain unreleased')
+    except (ValueError, OSError) as error:
+        problems.append(f'contract stamps: {error}')
     archive = root / dist / 'archive' / tag
     if archive.exists():
         problems.append(f'{archive} already exists; a version is released once')

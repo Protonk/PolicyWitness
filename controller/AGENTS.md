@@ -5,7 +5,7 @@ and external-runner registry. These rules supplement the [root guidance](../AGEN
 
 ## Find the relevant contract
 
-- Use the [wire contract](../docs/CONTRACT.md) for versioning and shape ownership,
+- Use the [wire contract](../docs/CONTRACT.md) for producer admission and shape ownership,
   the [request grammar](../docs/REQUEST-GRAMMAR.md) for admission, and the
   [user guide](../docs/PolicyWitness.md) for public field meanings.
 - For native helpers under `tools/`, runner behavior or test seams, also read
@@ -19,7 +19,7 @@ and external-runner registry. These rules supplement the [root guidance](../AGEN
 
 ## Preserve the controller boundaries
 
-Admit the request version before interpreting controller options or augments.
+Admit the request contract before interpreting controller options or augments.
 Validate selectors, including shadowed aliases, resolve policy changes in
 memory, and remove controller-owned fields before delivery. Keep one held
 serialization for the client and fallback compiler; never reread or mutate the
@@ -28,8 +28,8 @@ tied to the selected source. If a helper gains an environmental read or process
 launch, update [the run inventory](README.md#what-a-run-reads-and-launches) and
 its orchestration controls.
 
-Gate replies before interpreting versioned fields. Preserve rejected received
-bytes and transport diagnostics without coercing versions or recovering
+Gate replies before interpreting fields under an admitted producer. Preserve rejected received
+bytes and transport diagnostics without coercing producer identities or recovering
 semantic claims from unsupported bodies. Keep request-delivery failures ahead
 of reply interpretation. A successful write is not proof of receipt; an
 independent fallback compile is not evidence of worker progress.
@@ -50,10 +50,9 @@ to the selected worker's read-back.
 
 For request or evidence changes, trace affected admission, transport, assembly,
 independent consumers, fixtures, shape goldens and documentation. Use the
-[contract evolution rules](../docs/CONTRACT.md#when-a-number-moves) to decide
-version changes. Update owning inputs and regenerate through the
+[contract evolution rules](../docs/CONTRACT.md#maintaining-the-contract) to maintain definitions, examples and shape goldens. Update owning inputs and regenerate through the
 [generator contracts](../tests/suites/source_drift/README.md#generator-contracts);
-do not hand-edit generated versions, limits, layouts or worker identity.
+do not hand-edit generated contracts, limits, layouts or worker identity.
 Native source additions/moves also require the owning Meson target.
 
 Keep the README's CLI block synchronized with [cli.rs](src/cli.rs).

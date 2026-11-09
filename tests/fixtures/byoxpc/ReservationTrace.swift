@@ -34,10 +34,10 @@ enum ReservationTrace {
     }
     static func legacyControl() -> Data? {
         guard armed, gates["reservation"]?.contains("legacy_control") == true else { return nil }
-        F2Trace.event(nil, "legacy_protocol_control_substituted")
-        // A protocol-1 control peer, not a synthetic execution result. The
-        // installed marker remains current so this reaches the RPC boundary.
-        return try! JSONSerialization.data(withJSONObject: ["protocol_version": 1, "legacy": true])
+        F2Trace.event(nil, "foreign_contract_control_substituted")
+        // A foreign build contract in a reservation reply. The installed
+        // contract remains current so this reaches the live RPC boundary.
+        return try! JSONSerialization.data(withJSONObject: ["contract": "test:foreign", "legacy": true])
     }
     static func gate(_ request: F2Request, _ boundary: String) {
         guard armed, gates["reservation"]?.contains(boundary) == true, let directory else { return }
@@ -61,7 +61,7 @@ enum ReservationTrace {
     private static func sha(_ data: Data) -> String {
         SHA256.hash(data: data).map { String(format: "%02x", $0) }.joined()
     }
-    /// Change only the eight-byte signed schema field in a real binary reply.
+    /// Change only the contract UTF-8 bytes in a real binary reply.
     /// This narrow wire-fault fixture does not decode or rebuild the reply.
     static func outgoingReply(_ request: F2Request, _ data: Data) -> Data {
         guard armed, gates["reservation"]?.contains("old_response") == true, let directory else { return data }
@@ -73,31 +73,34 @@ enum ReservationTrace {
             guard offset >= 0, width <= 8, offset <= bytes.count, width <= bytes.count - offset else { return nil }
             return (0..<width).reduce(UInt64(0)) { $0 | (UInt64(bytes[offset + $1]) << (8 * $1)) }
         }
-        // PWP1 + 32-byte fingerprint, record TLV, record ID, first field.
-        // Require the current producer's exact framing and schema field kind;
-        // do not search nested records or arbitrary payload bytes for a match.
-        let offset = 50
-        guard bytes.count >= offset + 8, Array(bytes.prefix(4)) == [0x50, 0x57, 0x50, 0x31],
+        // PWP1, reply record, producer field, producer record, contract field.
+        let offset = 59
+        let marker = PWBuildContext.contract
+        let length = marker.utf8.count
+        guard length > 0, bytes.count >= offset + length,
+              Array(bytes.prefix(4)) == [0x50, 0x57, 0x50, 0x31],
               Array(bytes[4..<36]) == PWPorcelainSchema.fingerprint,
               bytes[36] == 6, unsigned(37, 4) == UInt64(bytes.count - 41),
               unsigned(41, 2) == UInt64(PWRunnerRunResult.porcelainRecordID),
-              unsigned(43, 2) == UInt64(PWRunnerRunResult.PorcelainTag.schema_version),
-              bytes[45] == 2, unsigned(46, 4) == 8,
-              unsigned(offset, 8) == UInt64(PWContract.responseSchema), PWContract.responseSchema > 0 else {
-            F2Trace.event(request, "outgoing_marker_unaltered", ["reason": "unexpected binary schema field"]); return data
+              unsigned(43, 2) == UInt64(PWRunnerRunResult.PorcelainTag.producer),
+              bytes[45] == 6, unsigned(50, 2) == UInt64(PWProducer.porcelainRecordID),
+              unsigned(52, 2) == UInt64(PWProducer.PorcelainTag.contract),
+              bytes[54] == 4, unsigned(55, 4) == UInt64(length),
+              Array(bytes[offset..<(offset + length)]) == Array(marker.utf8) else {
+            F2Trace.event(request, "outgoing_marker_unaltered", ["reason": "unexpected producer contract field"]); return data
         }
-        let marker = PWContract.responseSchema
         var candidate = data
-        for index in 0..<8 { candidate[offset + index] = UInt8(truncatingIfNeeded: UInt64(marker - 1) >> (8 * index)) }
+        candidate[offset] = candidate[offset] == 120 ? 121 : 120
+        let foreign = String(decoding: candidate[offset..<(offset + length)], as: UTF8.self)
         var restored = candidate
-        restored.replaceSubrange(offset..<(offset + 8), with: data[offset..<(offset + 8)])
+        restored.replaceSubrange(offset..<(offset + length), with: data[offset..<(offset + length)])
         guard restored == data, candidate != data else {
             F2Trace.event(request, "outgoing_marker_unaltered", ["reason": "byte restoration failed"]); return data
         }
         F2Trace.event(request, "outgoing_marker_altered", ["original_marker": marker,
-            "altered_marker": marker - 1, "original_bytes": data.count, "altered_bytes": candidate.count,
+            "altered_marker": foreign, "original_bytes": data.count, "altered_bytes": candidate.count,
             "original_sha256": sha(data), "altered_sha256": sha(candidate),
-            "byte_offset": offset, "byte_length": 8, "equal_after_restoring_marker": true])
+            "byte_offset": offset, "byte_length": length, "equal_after_restoring_marker": true])
         return candidate
     }
     static func beforeExit() {

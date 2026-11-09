@@ -18,7 +18,7 @@ import tempfile
 ROOT = Path(__file__).resolve().parents[3]
 sys.path.insert(0, str(ROOT / 'tests/lib'))
 from witness_capture import capture  # noqa: E402
-from contract import REQUEST_SCHEMA  # noqa: E402
+import build_context
 import extension_actors  # noqa: E402
 
 pw, directory = sys.argv[1:]
@@ -39,7 +39,7 @@ record = {
 
 
 def request(specimen_id, source, target):
-    return {'schema_version': REQUEST_SCHEMA, 'specimen_id': specimen_id,
+    return {'contract': build_context.candidate_contract(), 'specimen_id': specimen_id,
             'policy': {'format': 'sbpl', 'sbpl_source': source},
             'probe_plan': [extension_actors.read_probe('baseline_read', target)]}
 

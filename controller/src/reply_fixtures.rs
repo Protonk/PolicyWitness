@@ -210,7 +210,7 @@ pub(crate) fn reply_with(outcome: &str, signal: Option<i32>, steps: Vec<Value>) 
         })
         .collect();
     let ok = outcome == "finished";
-    json!({"schema_version": json_contract::RESPONSE_SCHEMA_VERSION, "specimen_id": "controlled",
+    json!({"producer": crate::reply_fixtures::producer(), "specimen_id": "controlled",
         "run_kind": null, "rc": if ok { 0 } else { 1 }, "normalized_outcome": outcome,
         "error": if ok { Value::Null } else { json!("controlled worker failure") },
         "pid": 9999, "bundle_id": "controlled.service", "policy_format": "sbpl",
@@ -236,4 +236,19 @@ pub(crate) fn reporting_failed(mut runner: Value) -> Value {
         step["comparison"] = Value::Null;
     }
     runner
+}
+
+pub(crate) fn producer() -> Value {
+    json!({"contract": json_contract::BUILD_CONTRACT, "describe": "unit", "commit": "unit"})
+}
+
+pub(crate) fn ordinary_template() -> Value {
+    let mut value: Value = serde_json::from_str(include_str!(
+        "../../tests/fixtures/contract/ordinary_phase_reply.json"
+    ))
+    .unwrap();
+    assert!(value.get("schema_version").is_none());
+    assert!(value.get("producer").is_none());
+    value["producer"] = producer();
+    value
 }

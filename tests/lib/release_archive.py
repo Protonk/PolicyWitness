@@ -198,6 +198,8 @@ def archive_locked(attempt, *, dist, root, notes):
     tag = f'v{version}'
     if not re.fullmatch(r'\d+\.\d+\.\d+', version):
         problems.append(f'ZIP stamps version {version!r}')
+    if info.get('PWContract') != 'release:' + tag:
+        problems.append(f'ZIP contract must be release:{tag}')
     commit = git(root, 'rev-parse', f'{tag}^{{commit}}')
     if commit is None:
         problems.append(f'no local tag {tag}')

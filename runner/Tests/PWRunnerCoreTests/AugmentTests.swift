@@ -16,14 +16,14 @@ func runAugmentTests(_ tk: TestKit) {
         tk.run("absent field decodes as nil") {
             let json = #"{"format":"sbpl","sbpl_source":"(version 1)\n"}"#
             let data = Data(json.utf8)
-            let spec = try pwRunnerDecodeJSON(PWRunnerPolicySpec.self, from: data)
+            let spec = try testDecodeJSON(PWRunnerPolicySpec.self, from: data)
             try expectNil(spec.augments)
         }
 
         tk.run("explicit null decodes as nil") {
             let json = #"{"format":"sbpl","sbpl_source":"(version 1)\n","augments":null}"#
             let data = Data(json.utf8)
-            let spec = try pwRunnerDecodeJSON(PWRunnerPolicySpec.self, from: data)
+            let spec = try testDecodeJSON(PWRunnerPolicySpec.self, from: data)
             try expectNil(spec.augments)
         }
 
@@ -35,7 +35,7 @@ func runAugmentTests(_ tk: TestKit) {
             )
             let data = try pwRunnerEncodeJSON(spec)
             do {
-                _ = try pwRunnerDecodeJSON(PWRunnerPolicySpec.self, from: data)
+                _ = try testDecodeJSON(PWRunnerPolicySpec.self, from: data)
                 throw TestFailure(message: "unresolved augments accepted")
             } catch RequestContractError.unresolvedAugments { }
         }

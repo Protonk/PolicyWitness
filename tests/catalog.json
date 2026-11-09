@@ -158,8 +158,8 @@
           "description": "Limits inventory, copied questions and guide agree; standalone, staging, stale-input and link controls pass"
         },
         {
-          "id": "contract_versions",
-          "description": "Contract version manifest and every generated copy agree; generator, stale-copy and build-refusal controls pass"
+          "id": "build_contracts",
+          "description": "Build identities, derived surface stamps and generated worker identity agree; generator, stale-copy and build-refusal controls pass"
         },
         {
           "id": "architecture_documentation",
@@ -560,6 +560,23 @@
         {
           "id": "accepted_input_contract",
           "description": "Current requests execute; invalid versions, unknown fields and malformed intent refuse before attempts"
+        },
+        {
+          "id": "same_shape_contract",
+          "description": "Two signed same-shape truncate/append builds refuse foreign assertions before independently traced client or worker launch",
+          "default": false,
+          "requires": [
+            "app",
+            "identity",
+            "cargo",
+            "meson",
+            "clang",
+            "swift"
+          ],
+          "command": [
+            "bash",
+            "tests/suites/runner_outcome_bad_request/opt_in/same_shape_contract.sh"
+          ]
         }
       ]
     },
@@ -2167,7 +2184,7 @@
         },
         {
           "id": "reservation_controls",
-          "description": "Controlled reservation lifetime, acquisition reply loss, execution reply loss, helper capture loss and an altered outgoing response-schema marker after one real execution, with independent effects and no replay",
+          "description": "Controlled reservation lifetime, acquisition reply loss, execution reply loss, helper capture loss and an altered outgoing host producer contract after one real execution, with independent effects and no replay",
           "default": false,
           "requires": [
             "app",
@@ -2364,6 +2381,7 @@
         "preflight/translated_build_refusal_controls",
         "preflight/build_toolchain_switch_controls",
         "runner_exec_inheritance/mutation_controls",
+        "runner_outcome_bad_request/same_shape_contract",
         "smoke/runner_caller_auth",
         "runner_byoxpc/runner_auth_external",
         "runner_byoxpc/runner_install",

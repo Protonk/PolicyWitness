@@ -45,7 +45,6 @@ run_happy_default_allow() {
   local specimen="${PW_TEST_ARTIFACTS}/specimen.json"
   cat >"${specimen}" <<'EOF'
 {
-  "schema_version": 6,
   "specimen_id": "use_c_worker_happy",
   "policy": {
     "format": "sbpl",
@@ -61,6 +60,7 @@ run_happy_default_allow() {
   }]
 }
 EOF
+  render_specimen_with_runner "${specimen}" "${specimen}"
 
   local run_stdout="${PW_TEST_ARTIFACTS}/run.json"
   set +e
@@ -78,8 +78,9 @@ EOF
 import json, sys
 sys.path.insert(0, sys.argv[2])
 import consumer
+import build_context
 env = json.loads(open(sys.argv[1]).read())
-assert not consumer.validate(env), consumer.validate(env)
+assert not consumer.validate(env, build_context.candidate_contract()), consumer.validate(env, build_context.candidate_contract())
 r = env["data"]["runner_result"]
 
 # Envelope shape: both subprocess records + override mirrored back.
@@ -130,7 +131,6 @@ run_bare_deny_default() {
   local specimen="${PW_TEST_ARTIFACTS}/specimen.json"
   cat >"${specimen}" <<'EOF'
 {
-  "schema_version": 6,
   "specimen_id": "use_c_worker_deny_default",
   "policy": {
     "format": "sbpl",
@@ -146,6 +146,7 @@ run_bare_deny_default() {
   }]
 }
 EOF
+  render_specimen_with_runner "${specimen}" "${specimen}"
 
   local run_stdout="${PW_TEST_ARTIFACTS}/run.json"
   set +e
@@ -207,7 +208,6 @@ run_prediction_unavailable_pair() {
   local specimen="${PW_TEST_ARTIFACTS}/specimen.json"
   cat >"${specimen}" <<'EOF'
 {
-  "schema_version": 6,
   "specimen_id": "use_c_worker_prediction_unavailable",
   "policy": {
     "format": "sbpl",
@@ -223,6 +223,7 @@ run_prediction_unavailable_pair() {
   }]
 }
 EOF
+  render_specimen_with_runner "${specimen}" "${specimen}"
 
   local run_stdout="${PW_TEST_ARTIFACTS}/run.json"
   set +e
@@ -280,7 +281,6 @@ run_duplicate_step_id_rejected() {
   local specimen="${PW_TEST_ARTIFACTS}/specimen.json"
   cat >"${specimen}" <<'EOF'
 {
-  "schema_version": 6,
   "specimen_id": "use_c_worker_dup_step_id",
   "policy": {"format": "sbpl", "sbpl_source": "(version 1)(allow default)"},
   "probe_plan": [
@@ -289,6 +289,7 @@ run_duplicate_step_id_rejected() {
   ]
 }
 EOF
+  render_specimen_with_runner "${specimen}" "${specimen}"
 
   local run_stdout="${PW_TEST_ARTIFACTS}/run.json"
   set +e
@@ -335,7 +336,6 @@ run_unsupported_attempt_rejected() {
   local specimen="${PW_TEST_ARTIFACTS}/specimen.json"
   cat >"${specimen}" <<'EOF'
 {
-  "schema_version": 6,
   "specimen_id": "use_c_worker_mixed_attempt_support",
   "policy": {"format": "sbpl", "sbpl_source": "(version 1)(deny default)(allow file-read*)"},
   "probe_plan": [
@@ -348,6 +348,7 @@ run_unsupported_attempt_rejected() {
   ]
 }
 EOF
+  render_specimen_with_runner "${specimen}" "${specimen}"
 
   local run_stdout="${PW_TEST_ARTIFACTS}/run.json"
   set +e
@@ -408,7 +409,6 @@ run_sandbox_check_pid_matches_worker() {
   local specimen="${PW_TEST_ARTIFACTS}/specimen.json"
   cat >"${specimen}" <<'EOF'
 {
-  "schema_version": 6,
   "specimen_id": "use_c_worker_sb_pid",
   "policy": {"format": "sbpl", "sbpl_source": "(version 1)(allow default)"},
   "probe_plan": [
@@ -417,6 +417,7 @@ run_sandbox_check_pid_matches_worker() {
   ]
 }
 EOF
+  render_specimen_with_runner "${specimen}" "${specimen}"
 
   local run_stdout="${PW_TEST_ARTIFACTS}/run.json"
   set +e
@@ -469,7 +470,6 @@ run_access_failure_classified() {
   local specimen="${PW_TEST_ARTIFACTS}/specimen.json"
   cat >"${specimen}" <<'EOF'
 {
-  "schema_version": 6,
   "specimen_id": "use_c_worker_access_failed",
   "policy": {"format": "sbpl", "sbpl_source": "(version 1)(allow default)(deny file-read-data (subpath \"/private/etc\"))"},
   "probe_plan": [{
@@ -479,6 +479,7 @@ run_access_failure_classified() {
   }]
 }
 EOF
+  render_specimen_with_runner "${specimen}" "${specimen}"
 
   local run_stdout="${PW_TEST_ARTIFACTS}/run.json"
   set +e
@@ -543,7 +544,6 @@ run_exec_attempt_without_baseline_fails_cleanly() {
   local specimen="${PW_TEST_ARTIFACTS}/specimen.json"
   cat >"${specimen}" <<'EOF'
 {
-  "schema_version": 6,
   "specimen_id": "use_c_worker_exec_unaugmented",
   "policy": {"format": "sbpl", "sbpl_source": "(version 1)(deny default)"},
   "probe_plan": [{
@@ -553,6 +553,7 @@ run_exec_attempt_without_baseline_fails_cleanly() {
   }]
 }
 EOF
+  render_specimen_with_runner "${specimen}" "${specimen}"
 
   local run_stdout="${PW_TEST_ARTIFACTS}/run.json"
   set +e
@@ -659,9 +660,12 @@ run_exec_attempt_with_baseline_succeeds() {
 
   local specimen="${PW_TEST_ARTIFACTS}/specimen.json"
   "${PW_PYTHON}" -B -S -P - "${specimen}" "${EXEC_FIXTURE_BIN}" <<'PY'
+import os, sys
+sys.path.insert(0, os.environ['PW_CONTRACT_TEST_LIB'])
+import build_context
 import json, sys
 spec = {
-  "schema_version": 6,
+  'contract': build_context.candidate_contract(),
   "specimen_id": "use_c_worker_exec_baseline_succeeds",
   "policy": {
     "format": "sbpl",
@@ -759,9 +763,12 @@ run_exec_attempt_args_and_stderr_round_trip() {
 
   local specimen="${PW_TEST_ARTIFACTS}/specimen.json"
   "${PW_PYTHON}" -B -S -P - "${specimen}" "${EXEC_FIXTURE_BIN}" <<'PY'
+import os, sys
+sys.path.insert(0, os.environ['PW_CONTRACT_TEST_LIB'])
+import build_context
 import json, secrets, sys
 spec = {
-  "schema_version": 6,
+  'contract': build_context.candidate_contract(),
   "specimen_id": "use_c_worker_exec_args_stderr",
   "policy": {
     "format": "sbpl",
@@ -845,9 +852,12 @@ run_exec_attempt_stdout_truncation_marker() {
 
   local specimen="${PW_TEST_ARTIFACTS}/specimen.json"
   "${PW_PYTHON}" -B -S -P - "${specimen}" "${EXEC_FIXTURE_BIN}" <<'PY'
+import os, sys
+sys.path.insert(0, os.environ['PW_CONTRACT_TEST_LIB'])
+import build_context
 import json, sys
 spec = {
-  "schema_version": 6,
+  'contract': build_context.candidate_contract(),
   "specimen_id": "use_c_worker_exec_truncation",
   "policy": {
     "format": "sbpl",
@@ -928,7 +938,6 @@ run_sandbox_check_unsupported_operation_diagnostic() {
   local specimen="${PW_TEST_ARTIFACTS}/specimen.json"
   cat >"${specimen}" <<'EOF'
 {
-  "schema_version": 6,
   "specimen_id": "unsupported_operation_repro",
   "policy": {"format": "sbpl", "sbpl_source": "(version 1) (allow default)"},
   "probe_plan": [
@@ -945,6 +954,7 @@ run_sandbox_check_unsupported_operation_diagnostic() {
   ]
 }
 EOF
+  render_specimen_with_runner "${specimen}" "${specimen}"
 
   local run_stdout="${PW_TEST_ARTIFACTS}/run.json"
   set +e
@@ -1040,7 +1050,6 @@ run_sandbox_check_path_unresolved_prediction_unavailable() {
   local specimen="${PW_TEST_ARTIFACTS}/specimen.json"
   cat >"${specimen}" <<'EOF'
 {
-  "schema_version": 6,
   "specimen_id": "path_unresolved_repro",
   "policy": {
     "format": "sbpl",
@@ -1060,6 +1069,7 @@ run_sandbox_check_path_unresolved_prediction_unavailable() {
   ]
 }
 EOF
+  render_specimen_with_runner "${specimen}" "${specimen}"
 
   local run_stdout="${PW_TEST_ARTIFACTS}/run.json"
   set +e

@@ -8,6 +8,20 @@
       "source": "dcc843b8835ac9154151f9567543dc8b754c2407",
       "app_inventory": "before.json",
       "release": "v0.3.5"
+    },
+    {
+      "path": "runs/release-contracts-doc-review-26",
+      "run_id": "20261109T181445Z_edc64c42",
+      "reason": "Complementary targeted documentation/test sweep on build 25: 23 cases pass, including 601 native tests and opt-in reservation checks. Its generator failure is replaced by the complete passing preflight/release rehearsal in run 31; the earlier replacement is preserved there.",
+      "source": null,
+      "app_inventory": "artifact-integrity/before.json"
+    },
+    {
+      "path": "runs/release-contracts-release-preflight-31",
+      "run_id": "20261109T200553Z_d5eadc66",
+      "reason": "Complete build-refusal validation: 88 controls and sequences, 16 guard-bypass demonstrations, and a tagged synthetic-release default battery with all 229 cases passing. Carries original review checkpoints and selected superseded failure/replacement receipts. Controlled Apple responses in the rehearsal do not establish notarization.",
+      "source": null,
+      "app_inventory": "artifact-integrity/before.json"
     }
   ]
 }

@@ -14,7 +14,7 @@ pub struct RequestFailure {
     pub code: String,
     pub path: Option<Vec<String>>,
     #[serde(skip_serializing_if = "Option::is_none")]
-    pub expected_schema: Option<u32>,
+    pub expected_contract: Option<String>,
 }
 
 #[derive(Debug, Clone)]
@@ -30,8 +30,8 @@ impl RequestError {
                 code: code.into(),
                 path: (path.len() <= 8 && path.iter().all(|part| part.len() <= 63))
                     .then(|| path.iter().map(|part| (*part).into()).collect()),
-                expected_schema: (path == ["schema_version"])
-                    .then_some(crate::json_contract::REQUEST_SCHEMA_VERSION),
+                expected_contract: (path == ["contract"])
+                    .then(|| crate::json_contract::BUILD_CONTRACT.into()),
             },
             message: message.into(),
         }
@@ -66,30 +66,35 @@ pub fn parse_request(text: &str) -> Result<Value, RequestError> {
     Ok(value)
 }
 
-/// The marker identifies the accepted input language, not a build revision.
+/// The assertion binds the request to the exact public build contract.
 /// Check it before interpreting controller-owned options or named augments.
-pub fn validate_request_version(value: &Value) -> Result<(), RequestError> {
-    let expected = crate::json_contract::REQUEST_SCHEMA_VERSION;
-    match value.get("schema_version") {
-        Some(Value::Number(version)) if version.as_f64().is_some_and(|v| v.fract() == 0.0) => {
-            if version.as_f64() == Some(f64::from(expected)) {
-                Ok(())
-            } else {
-                Err(RequestError::new(
-                    "unsupported_schema",
-                    &["schema_version"],
-                    format!("unsupported request schema {version} (expected {expected})"),
-                ))
-            }
+pub fn validate_request_contract(value: &Value) -> Result<(), RequestError> {
+    validate_contract(value, crate::json_contract::BUILD_CONTRACT)
+}
+
+pub fn validate_contract(value: &Value, expected: &str) -> Result<(), RequestError> {
+    let failure = |code, message: String| {
+        let mut error = RequestError::new(code, &["contract"], message);
+        error.failure.expected_contract = Some(expected.into());
+        error
+    };
+    match value.get("contract") {
+        Some(Value::String(contract))
+            if !expected.is_empty() && expected != "unbound" && contract == expected =>
+        {
+            Ok(())
         }
-        other => Err(RequestError::new(
+        Some(Value::String(_)) => Err(failure(
+            "unsupported_contract",
+            format!("unsupported request contract (expected {expected})"),
+        )),
+        other => Err(failure(
             match other {
                 None => "missing_field",
                 Some(Value::Null) => "missing_value",
                 _ => "type_mismatch",
             },
-            &["schema_version"],
-            format!("schema_version must be an integer (expected {expected})"),
+            format!("contract must be a string (expected {expected})"),
         )),
     }
 }
@@ -219,19 +224,20 @@ mod tests {
     }
 
     #[test]
-    fn request_version_is_an_exact_value_not_an_implementation_range() {
-        let current = crate::json_contract::REQUEST_SCHEMA_VERSION;
-        for version in [json!(current), json!(f64::from(current))] {
-            assert!(validate_request_version(&json!({"schema_version": version})).is_ok());
+    fn request_contract_is_exact_and_required() {
+        let current = "test:current";
+        assert!(validate_contract(&json!({"contract":current}), current).is_ok());
+        for (value, code) in [
+            (json!({}), "missing_field"),
+            (json!({"schema_version":6}), "missing_field"),
+            (json!({"contract":null}), "missing_value"),
+            (json!({"contract":6}), "type_mismatch"),
+            (json!({"contract":"test:foreign"}), "unsupported_contract"),
+        ] {
+            let error = validate_contract(&value, current).unwrap_err();
+            assert_eq!(error.failure.code, code);
+            assert_eq!(error.failure.expected_contract.as_deref(), Some(current));
         }
-        for version in [json!(-1), json!(0), json!(1), json!(2), json!(current + 1)] {
-            let error = validate_request_version(&json!({"schema_version": version})).unwrap_err();
-            assert!(error.message.contains("unsupported request schema"));
-            assert!(error.message.contains(&format!("expected {current}")));
-        }
-        for version in [json!(null), json!(true), json!("3"), json!(3.5), json!([])] {
-            assert!(validate_request_version(&json!({"schema_version": version})).is_err());
-        }
-        assert!(validate_request_version(&json!({})).is_err());
+        assert!(validate_contract(&json!({"contract":"unbound"}), "unbound").is_err());
     }
 }

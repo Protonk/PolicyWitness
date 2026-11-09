@@ -56,8 +56,8 @@ def region_ownership(root, name):
     gen = module('owner_' + name, root / f'docs/generate_{name}.py')
     if name == 'porcelain':
         return gen.ownership(root)
-    if name == 'contract':
-        return {p: [(a, b) for a, b, _ in rs] for p, rs in gen.TARGETS.items()}, set()
+    if name == 'contract_stamps':
+        return {p: [(gen.BEGIN, gen.END)] for p in gen.OUTPUTS}, set()
     if name == 'worker_identity':
         regions = {}
         for p in gen.TARGETS:
@@ -365,12 +365,14 @@ class GeneratorContractTests(receipts.TestCase):
                 if name == 'worker_identity':
                     path = root / 'controller/tools/pw_probe_runner/pw_probe_runner.c'
                     path.write_text(path.read_text() + '\n/* identity property control */\n')
+                elif name == 'contract_stamps':
+                    path = root / 'docs/CONTRACT.md'
+                    path.write_text(path.read_text().replace('<!-- BEGIN CONTRACT request -->',
+                        '<!-- BEGIN CONTRACT request -->\nNormative property control.'))
                 else:
                     path = root / f'docs/{name}.json'
                     data = json.loads(path.read_text())
-                    if name == 'contract':
-                        data['versions']['response_schema'] += 1
-                    elif name == 'limits':
+                    if name == 'limits':
                         data['limits'][0]['value'] += 1
                     elif name == 'footprint':
                         data['rows'][0]['title'] += ' property control'
@@ -382,11 +384,18 @@ class GeneratorContractTests(receipts.TestCase):
                         data['graphs'][0]['nodes'][0]['label'] += ' property control'
                     path.write_text(json.dumps(data))
                 before = self.snapshot(root)
-                result = self.command(root, name, *(['--skip-svg'] if name in ('architecture', 'build') else []))
+                result = self.command(root, name, *(['--skip-svg'] if name in ('architecture', 'build') else ['--release', 'v9.0.0'] if name == 'contract_stamps' else []))
                 self.assertEqual(result.returncode, 0, result.stderr)
                 after = self.snapshot(root)
                 self.assertNotEqual(before, after)
                 self.assertEqual(changed_outside(before, after, regions, whole), [])
+                # Repeat the identical command before changing any input or
+                # generator. Equal bytes alone would miss an unnecessary rewrite.
+                modified = {path: (root / path).stat().st_mtime_ns for path in after}
+                repeated = self.command(root, name, *(['--skip-svg'] if name in ('architecture', 'build') else ['--release', 'v9.0.0'] if name == 'contract_stamps' else []))
+                self.assertEqual(repeated.returncode, 0, repeated.stderr)
+                self.assertEqual(self.snapshot(root), after)
+                self.assertEqual({path: (root / path).stat().st_mtime_ns for path in after}, modified)
                 # A real command that corrupts bytes past its END marker must fail the property.
                 target = next(iter(regions))
                 script = root / f'docs/generate_{name}.py'
@@ -394,7 +403,7 @@ class GeneratorContractTests(receipts.TestCase):
                     'code = main()\n    target = ROOT / ' + repr(target) +
                     '\n    target.write_text(target.read_text() + "x")\n    sys.exit(code)'))
                 before = self.snapshot(root)
-                result = self.command(root, name, *(['--skip-svg'] if name in ('architecture', 'build') else []))
+                result = self.command(root, name, *(['--skip-svg'] if name in ('architecture', 'build') else ['--release', 'v9.0.0'] if name == 'contract_stamps' else []))
                 self.assertEqual(result.returncode, 0, result.stderr)
                 self.assertEqual(changed_outside(before, self.snapshot(root), regions, whole), [target])
 
@@ -786,12 +795,17 @@ class GeneratorContractTests(receipts.TestCase):
                         '-c', 'tag.gpgsign=false', *args], capture_output=True, text=True)
                     self.assertEqual(result.returncode, 0, result.stderr)
                     return result.stdout
+                import generate_contract_stamps as stamps
+                import build_contract
+                fixture_inputs.copy_declared(ROOT, root, sorted(set(stamps.input_paths(ROOT)) | set(build_contract.inputs(ROOT))))
                 def commit(rows, tag):
                     path = root / BASELINE_NAME
                     if rows is not None:
                         path.parent.mkdir(parents=True, exist_ok=True)
                         path.write_text(json.dumps(dict(schema_version=1, entries=rows)))
                     (root / 'version').write_text(tag)
+                    for name, _, after in stamps.render(root, tag):
+                        (root / name).write_text(after)
                     git('add', '.')
                     git('commit', '-qm', tag)
                     git('tag', '-a', tag, '-m', tag)
@@ -912,9 +926,7 @@ class GeneratorContractTests(receipts.TestCase):
             'porcelain': ['docs/porcelain.json', 'docs/generate_porcelain.py',
                           'runner/Sources/PWRunnerCore/PWPorcelainRecords.swift',
                           'controller/src/porcelain_records.rs', 'tests/lib/porcelain_schema.py'],
-            'contract': ['docs/contract.json', 'docs/generate_contract.py', 'docs/CONTRACT.md', 'tests/lib/contract.py',
-                         'controller/src/json_contract.rs', 'runner/Sources/PWRunnerCore/PWRunnerAPI.swift',
-                         'runner/Services/PWRunner/Info.plist'],
+            'contract_stamps': ['docs/contract_surfaces.json', 'docs/generate_contract_stamps.py', 'docs/CONTRACT.md', 'docs/PolicyWitness.md'],
             'worker_identity': ['docs/generate_worker_identity.py', 'build.sh', 'meson.build', 'meson.options', 'runner/Package.swift',
                                 'controller/tools/pw_probe_runner/pw_probe_runner.c', 'controller/tools/pw_probe_runner/pw_probe_runner_abi.h',
                                 'runner/Sources/PWRunnerCore/CWorker.swift', 'tests/lib/contract.py'],

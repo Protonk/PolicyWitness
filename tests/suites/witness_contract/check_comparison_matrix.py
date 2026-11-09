@@ -26,6 +26,7 @@ import tempfile
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[2] / 'lib'))
+import build_context
 import consumer
 from run_capture import RunCapture
 
@@ -191,7 +192,7 @@ def check_effects(specimen_rows, before, root, failures):
 
 def run_specimen(pw, out, name, root):
     spec = FIXTURE['specimens'][name]
-    request = {'schema_version': 6, 'specimen_id': spec['specimen_id'],
+    request = {'contract': build_context.candidate_contract(), 'specimen_id': spec['specimen_id'],
                'policy': {'format': 'sbpl', 'sbpl_source': expand(spec['policy'], root)},
                'probe_plan': expand(spec['probe_plan'], root)}
     if spec.get('test_overrides'):
@@ -217,14 +218,14 @@ def main():
                     direct_controls(root, out)
                 rc, envelope = run_specimen(pw, out, name, root)
                 restore_modes(root)
-                errors = consumer.validate(envelope)
+                errors = consumer.validate(envelope, build_context.candidate_contract())
                 if errors:
                     failures.append(f'{name}: consumer validation: {errors}')
                     continue
                 check_expected(name, envelope, FIXTURE['specimens'][name]['expected'], root, failures)
                 assert all(r.get('coverage', 'live') in ('live', 'constructed') for r in FIXTURE['rows'])
                 rows = [r for r in FIXTURE['rows'] if r['specimen'] == name and r.get('coverage', 'live') == 'live']
-                steps = consumer.steps(envelope)
+                steps = consumer.steps(envelope, build_context.candidate_contract())
                 by_id = {s.get('step_id'): s for s in steps}
                 for row in rows:
                     step = by_id.get(row['step_id'])

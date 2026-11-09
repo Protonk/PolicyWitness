@@ -85,10 +85,10 @@ func replyFixture() throws -> PWRunnerRunResult {
     value43.exit_grace_wait = value42
     let value44 = PWRunnerPhaseResult(phase_id: "main", ordinal: 1, action_ids: ["s"], arrival_observed: true, completion_observed: true, collection_status: "collected", ordering: value35, validator_subprocess: value43)
     let value45 = PWRunnerTestOverrides(worker_executable_path: "/constructed/worker", worker_timeout_ms: 1000, validator_executable_path: "/constructed/validator", validator_io_timeout_ms: 50, validator_total_timeout_ms: 100, worker_post_apply_hang_ms: 0, worker_post_apply_kill_signal: 9, worker_pre_ready_hang_ms: 0, worker_kill_before_publish_slot: 1)
-    let value46 = CompiledProfileCapture(schema_version: 2, status: "captured", reason: "constructed", worker_pid: 42, producer: "worker", capture_stage: "before_apply", request_nonce: "ffffffffffffffffffffffffffffffff", profile_type: 0, bytecode_length: 3, bytecode_sha256: ActorEquipmentSystem.digest("ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff", bytes: 32)!, bytecode: Data([0, 0, 0]), source_sha256: ActorEquipmentSystem.digest("ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff", bytes: 32)!, source_length: 11, params_sha256: ActorEquipmentSystem.digest("ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff", bytes: 32)!, parameter_count: 1)
+    let value46 = CompiledProfileCapture(status: "captured", reason: "constructed", worker_pid: 42, producer: "worker", capture_stage: "before_apply", request_nonce: "ffffffffffffffffffffffffffffffff", profile_type: 0, bytecode_length: 3, bytecode_sha256: ActorEquipmentSystem.digest("ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff", bytes: 32)!, bytecode: Data([0, 0, 0]), source_sha256: ActorEquipmentSystem.digest("ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff", bytes: 32)!, source_length: 11, params_sha256: ActorEquipmentSystem.digest("ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff", bytes: 32)!, parameter_count: 1)
     let value47 = PWRunnerAdmissionFailure(origin: "runner_host", field: "constructed", actual: 2, maximum: 1, unit: "items", step_id: "s", step_index: 0, parameter_key: "K", index: 0)
-    let value48 = PWRunnerRequestFailure(code: "unsupported_policy_format", path: ["policy", "format"], expected_schema: 4)
-    let value49 = PWRunnerRunResult(schema_version: PWContract.responseSchema, specimen_id: "reply-\"é\"", run_kind: "unit", rc: 1, normalized_outcome: "runner_failed", error: "original cleanup fault", pid: 42, bundle_id: "test.bundle", policy_format: "sbpl", policy_sha256: Data(repeating: 0xab, count: 32), sandboxed_after_apply: true, steps: [value9], runner_subprocess: value34, phases: [value44], test_overrides: value45, compiled_profile: value46, admission_failure: value47, request_failure: value48)
+    let value48 = PWRunnerRequestFailure(code: "unsupported_policy_format", path: ["policy", "format"], expected_contract: testRequestContract)
+    let value49 = PWRunnerRunResult(specimen_id: "reply-\"é\"", run_kind: "unit", rc: 1, normalized_outcome: "runner_failed", error: "original cleanup fault", pid: 42, bundle_id: "test.bundle", policy_format: "sbpl", policy_sha256: Data(repeating: 0xab, count: 32), sandboxed_after_apply: true, steps: [value9], runner_subprocess: value34, phases: [value44], test_overrides: value45, compiled_profile: value46, admission_failure: value47, request_failure: value48)
     return value49
 }
 
@@ -166,7 +166,7 @@ func runReplyFailureTests(_ tk: TestKit) {
                 try expectEqual(degraded.runner_subprocess?.reaped, false)
                 try expectNil(degraded.runner_subprocess?.exit_code)
                 var expected = result
-                expected.schema_version = degraded.schema_version
+                expected.producer = degraded.producer
                 expected.rc = degraded.rc
                 expected.normalized_outcome = degraded.normalized_outcome
                 expected.error = degraded.error
@@ -265,12 +265,12 @@ func runReplyFailureTests(_ tk: TestKit) {
     tk.group("host reply failure contract") {
         tk.run("malformed request diagnostics do not echo unbounded dictionary keys") {
             let key = String(repeating: "é", count: 32_768)
-            let malformed: [String: Any] = ["schema_version": PWContract.requestSchema, "specimen_id": "decode",
+            let malformed: [String: Any] = ["contract": testRequestContract, "specimen_id": "decode",
                 "policy": ["format": "sbpl", "sbpl_source": "(version 1)", "params": [key: [1, 2]]],
                 "probe_plan": []]
             let data = try JSONSerialization.data(withJSONObject: malformed)
             do {
-                _ = try pwRunnerDecodeJSON(PWRunnerRunSpec.self, from: data)
+                _ = try testDecodeJSON(PWRunnerRunSpec.self, from: data)
                 throw TestFailure(message: "malformed parameter value decoded")
             } catch let error as DecodingError {
                 let diagnostic = requestDecodeDiagnostic(error)
@@ -329,7 +329,7 @@ func runReplyFailureTests(_ tk: TestKit) {
                 catch is PWRunnerReportingValidationError { }
                 let bytes = pwRunnerPorcelainReplyData(result)
                 let decoded = try reportedReply(result)
-                try expectEqual(decoded.schema_version, PWContract.responseSchema)
+                try expectEqual(decoded.producer.contract, PWBuildContext.contract)
                 try expectEqual(decoded.normalized_outcome, NormalizedOutcome.runnerReportingFailed)
                 try expectEqual(decoded.rc, 1)
                 try expectContains(decoded.error ?? "", "runner host could not encode")
@@ -368,12 +368,12 @@ func runReplyFailureTests(_ tk: TestKit) {
                 catch is PWRunnerReportingValidationError { }
             }
         }
-        tk.run("another response number is rejected before binary writing") {
-            for version in [PWContract.responseSchema - 1, PWContract.responseSchema + 1, 4] {
-                var result = try replyFixture(); result.schema_version = version
+        tk.run("a foreign producer contract is rejected before binary writing") {
+            for version in ["test:foreign", "release:v0.0.0", ""] {
+                var result = try replyFixture(); result.producer.contract = version
                 try expectThrows { try result.validateForReporting() }
                 let degraded = try reportedReply(result)
-                try expectEqual(degraded.schema_version, PWContract.responseSchema)
+                try expectEqual(degraded.producer.contract, PWBuildContext.contract)
                 try expectEqual(degraded.normalized_outcome, NormalizedOutcome.runnerReportingFailed)
             }
         }

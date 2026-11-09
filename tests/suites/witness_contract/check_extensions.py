@@ -9,7 +9,7 @@ ROOT = Path(__file__).resolve().parents[3]
 sys.path.insert(0, str(ROOT / 'tests/lib'))
 sys.path.insert(0, str(ROOT / 'docs'))
 import markdown_reader  # noqa: E402
-from contract import REQUEST_SCHEMA
+import build_context
 from witness_capture import capture
 
 
@@ -39,7 +39,7 @@ def specimen(target, phases, *, authority='read', policy=None, terminate_issuer=
     if terminate_issuer:
         dependent=next(p for p in ordered if any(a.get('extension',{}).get('operation')=='consume' for a in p['actions']))
         dependent['after_termination']={'actor_id':'issuer'}
-    return {'schema_version':REQUEST_SCHEMA,'specimen_id':'extensions',
+    return {'contract':build_context.candidate_contract(),'specimen_id':'extensions',
         'actors':[{'actor_id':'issuer','equipment':'unentitled','sandbox':{'mode':'unapplied'}},
                   {'actor_id':'subject','equipment':'selected','sandbox':{'mode':'apply','policy':{'format':'sbpl','sbpl_source':policy}}}],
         'phases':ordered}
@@ -118,6 +118,8 @@ def run_targets(pw, out, target_dir, session_state):
     assert len(fences) == 1, f'expected one fenced example writing the extension request; found {len(fences)}'
     example = fences[0].split(heredoc, 1)[1].split('\nJSON\n', 1)[0]
     request = json.loads(example.replace('$PW_EXTENSION_DIR/target', str(target)))
+    assert request['contract'] == 'BUILD_CONTRACT'
+    request['contract'] = build_context.candidate_contract()
     _, documented = capture(pw, out, 'guide_example', request, session_state=session_state)
     assert_issuance(documented)
     consumed, released = lifecycle_events(documented)
@@ -178,7 +180,7 @@ def run_targets(pw, out, target_dir, session_state):
         if name == 'intervention_only_phases':
             assert all(p['collection_status']=='not_needed' for p in reply['phases'] if p['phase_id'] in ('p0','p2','issuer_final'))
 
-    ordinary={'schema_version':REQUEST_SCHEMA,'specimen_id':'ordinary_without_authority',
+    ordinary={'contract':build_context.candidate_contract(),'specimen_id':'ordinary_without_authority',
               'policy':{'format':'sbpl','sbpl_source':'(version 1)(allow default)'},
               'probe_plan':[probe('ordinary',target)]}
     _, reply=capture(pw,out,'ordinary_without_authority',ordinary,session_state=session_state)

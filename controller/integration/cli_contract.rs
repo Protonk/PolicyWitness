@@ -63,15 +63,93 @@ fn require_sbpl_check_bin() -> PathBuf {
     path
 }
 
+fn candidate_contract() -> String {
+    let output = Command::new("/usr/bin/plutil")
+        .args([
+            "-extract",
+            "PWContract",
+            "raw",
+            "-expect",
+            "string",
+            "-o",
+            "-",
+        ])
+        .arg(app_path().join("Contents/Info.plist"))
+        .output()
+        .expect("inspect candidate plist");
+    assert!(output.status.success(), "candidate plist contract missing");
+    let value = String::from_utf8(output.stdout).expect("UTF-8 contract");
+    let value = value.strip_suffix('\n').unwrap_or(&value).to_owned();
+    assert!(!value.is_empty() && value != "unbound");
+    value
+}
+
 fn run_pw(bin: &Path, args: &[&str]) -> Output {
-    Command::new(bin)
+    let mut args: Vec<String> = args.iter().map(|value| (*value).into()).collect();
+    let mut submitted = None;
+    if args.first().map(String::as_str) == Some("run")
+        && args.len() > 1
+        && Path::new(&args[1]).starts_with(repo_root().join("tests/fixtures"))
+    {
+        let mut value: serde_json::Value =
+            serde_json::from_slice(&std::fs::read(&args[1]).unwrap()).unwrap();
+        assert!(value.get("contract").is_none() && value.get("schema_version").is_none());
+        value["contract"] = candidate_contract().into();
+        static NEXT: std::sync::atomic::AtomicU64 = std::sync::atomic::AtomicU64::new(0);
+        let file = env::temp_dir().join(format!(
+            "pw-contract-request-{}-{}.json",
+            std::process::id(),
+            NEXT.fetch_add(1, std::sync::atomic::Ordering::Relaxed)
+        ));
+        use std::io::Write;
+        std::fs::OpenOptions::new()
+            .write(true)
+            .create_new(true)
+            .open(&file)
+            .unwrap()
+            .write_all(&serde_json::to_vec(&value).unwrap())
+            .unwrap();
+        args[1] = file.to_string_lossy().into_owned();
+        submitted = Some(file);
+    }
+    let output = Command::new(bin)
         .args(args)
         .output()
-        .unwrap_or_else(|err| panic!("failed to run {}: {err}", bin.display()))
+        .unwrap_or_else(|err| panic!("failed to run {}: {err}", bin.display()));
+    if let Some(file) = submitted {
+        std::fs::remove_file(file).unwrap();
+    }
+    output
 }
 
 #[test]
-fn version_flag_reports_build_stamp_and_contract_versions() {
+fn plain_cargo_build_cannot_admit_public_requests() {
+    if !integration_enabled() {
+        return;
+    }
+    let bin = Path::new(env!("CARGO_BIN_EXE_policy-witness"));
+    let version = run_pw(bin, &["--version"]);
+    let envelope: serde_json::Value = serde_json::from_slice(&version.stdout).unwrap();
+    assert_eq!(envelope["build"]["contract"], "unbound");
+    let request = env::temp_dir().join(format!("pw-unbound-{}.json", std::process::id()));
+    std::fs::write(&request, br#"{"contract":"unbound","runner":false}"#).unwrap();
+    let output = run_pw(bin, &["run", request.to_str().unwrap()]);
+    std::fs::remove_file(request).unwrap();
+    let envelope: serde_json::Value = serde_json::from_slice(&output.stdout).unwrap();
+    assert_eq!(output.status.code(), Some(1));
+    assert_eq!(
+        envelope["data"]["request_failure"]["code"],
+        "unsupported_contract"
+    );
+    assert_eq!(
+        envelope["data"]["request_failure"]["expected_contract"],
+        "unbound"
+    );
+    assert!(envelope["data"]["runner_client"].is_null());
+}
+
+#[test]
+fn version_flag_reports_build_stamp_and_contract() {
     if !integration_enabled() {
         return;
     }
@@ -93,11 +171,9 @@ fn version_flag_reports_build_stamp_and_contract_versions() {
             "build.{key} = {value:?}"
         );
     }
-    let manifest: serde_json::Value = serde_json::from_str(
-        &std::fs::read_to_string(repo_root().join("docs/contract.json")).expect("read manifest"),
-    )
-    .expect("parse manifest");
-    assert_eq!(envelope["data"]["contract"], manifest["versions"]);
+    assert_eq!(envelope["data"]["contract"], candidate_contract());
+    assert_eq!(envelope["build"]["contract"], candidate_contract());
+    assert!(envelope.get("schema_version").is_none());
 }
 
 #[test]
@@ -519,7 +595,7 @@ fn sandbox_check_path_diagnostics_lists_forms_equal_to_input() {
     std::fs::write(
         &specimen,
         serde_json::json!({
-            "schema_version": 6, "specimen_id": "same-as-input",
+            "contract": candidate_contract(), "specimen_id": "same-as-input",
             "policy": {"format": "sbpl", "sbpl_source": "(version 1)(allow default)"},
             "probe_plan": [{"step_id": "s",
                 "sandbox_check": {"operation": "file-read-data", "filter": {"kind": "path", "value": target}},
@@ -582,7 +658,7 @@ fn path_diagnostics_preserves_native_unicode_spelling() {
     std::fs::write(
         &request,
         serde_json::json!({
-            "schema_version": 6, "specimen_id": "unicode-path",
+            "contract": candidate_contract(), "specimen_id": "unicode-path",
             "policy": {"format": "sbpl", "sbpl_source": "(version 1)(allow default)"},
             "probe_plan": [{"step_id": "unicode", "sandbox_check": {
                 "operation": "file-read-data", "filter": {"kind": "path", "value": submitted}},
@@ -772,8 +848,8 @@ fn augment_applied_records_the_applied_augmentation() {
     // hashes; the hash difference proves the controller actually
     // appended bytes regardless of what those bytes grant.
     let tmp = std::env::temp_dir().join(format!("pw-augment-applied-{}.json", std::process::id()));
-    let request = r#"{
-        "schema_version": 6,
+    let request = serde_json::json!({
+        "contract": candidate_contract(),
         "specimen_id": "augment_applied",
         "policy": {
             "format": "sbpl",
@@ -781,7 +857,8 @@ fn augment_applied_records_the_applied_augmentation() {
             "augments": ["exec_baseline"]
         },
         "probe_plan": []
-    }"#;
+    })
+    .to_string();
     std::fs::write(&tmp, request).expect("write augment request");
 
     let out = run_pw(&bin, &["run", tmp.to_str().expect("tmp path utf8")]);
@@ -877,8 +954,8 @@ fn unknown_augment_short_circuits_to_bad_request() {
     let bin = require_pw_bin();
 
     let tmp = std::env::temp_dir().join(format!("pw-augment-unknown-{}.json", std::process::id()));
-    let request = r#"{
-        "schema_version": 6,
+    let request = serde_json::json!({
+        "contract": candidate_contract(),
         "specimen_id": "augment_unknown",
         "policy": {
             "format": "sbpl",
@@ -886,7 +963,8 @@ fn unknown_augment_short_circuits_to_bad_request() {
             "augments": ["this_augment_definitely_does_not_exist_42"]
         },
         "probe_plan": []
-    }"#;
+    })
+    .to_string();
     std::fs::write(&tmp, request).expect("write augment request");
 
     let out = run_pw(&bin, &["run", tmp.to_str().expect("tmp path utf8")]);
@@ -966,8 +1044,8 @@ fn invalid_augment_name_rejected_as_bad_request() {
     let tmp = std::env::temp_dir().join(format!("pw-augment-invalid-{}.json", std::process::id()));
     // "../etc/passwd" is the canonical traversal attempt; the resolver
     // must reject it for shape, not for whether the file exists.
-    let request = r#"{
-        "schema_version": 6,
+    let request = serde_json::json!({
+        "contract": candidate_contract(),
         "specimen_id": "augment_invalid",
         "policy": {
             "format": "sbpl",
@@ -975,7 +1053,8 @@ fn invalid_augment_name_rejected_as_bad_request() {
             "augments": ["../etc/passwd"]
         },
         "probe_plan": []
-    }"#;
+    })
+    .to_string();
     std::fs::write(&tmp, request).expect("write augment request");
 
     let out = run_pw(&bin, &["run", tmp.to_str().expect("tmp path utf8")]);
@@ -990,6 +1069,8 @@ fn invalid_augment_name_rejected_as_bad_request() {
             .and_then(|v| v.as_str()),
         Some("bad_request")
     );
+    assert_eq!(envelope["data"]["request_failure"]["code"], "invalid_value");
+    assert!(envelope["data"]["runner_client"].is_null());
 }
 
 #[test]

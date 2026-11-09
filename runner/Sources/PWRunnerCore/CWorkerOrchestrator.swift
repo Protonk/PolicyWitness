@@ -45,11 +45,11 @@ enum CWorkerOrchestrator {
         bundleId: String?,
         workerExecutablePath: String,
         validatorExecutablePath: String,
-        equipmentBundleURL: URL = Bundle.main.bundleURL
+        equipmentBundleURL: URL = Bundle.main.bundleURL, equipmentCalls: ActorEquipmentCalls = ActorEquipmentCalls()
     ) -> PWRunnerRunResult {
         run(parsed: parsed, policyHash: policyHash, bundleId: bundleId,
             workerExecutablePath: workerExecutablePath, validatorExecutablePath: validatorExecutablePath,
-            validatorSpawn: nativeValidatorSpawn, equipmentBundleURL: equipmentBundleURL)
+            validatorSpawn: nativeValidatorSpawn, equipmentBundleURL: equipmentBundleURL, equipmentCalls: equipmentCalls)
     }
 
     // Tests substitute native validator launch or child-process calls; worker
@@ -62,7 +62,7 @@ enum CWorkerOrchestrator {
         validatorExecutablePath: String,
         validatorSpawn: @escaping ValidatorSpawnCall,
         validatorProcessCalls: @escaping (Int) -> ChildProcessCalls = { _ in ChildProcessCalls() },
-        equipmentBundleURL: URL = Bundle.main.bundleURL
+        equipmentBundleURL: URL = Bundle.main.bundleURL, equipmentCalls: ActorEquipmentCalls = ActorEquipmentCalls()
     ) -> PWRunnerRunResult {
         switch admitSpecimen(parsed) {
         case .capacity(let refused):
@@ -72,7 +72,7 @@ enum CWorkerOrchestrator {
         case .accepted(let admitted):
             return run(admitted: admitted, policyHash: policyHash, bundleId: bundleId,
                 workerExecutablePath: workerExecutablePath, validatorExecutablePath: validatorExecutablePath,
-                validatorSpawn: validatorSpawn, validatorProcessCalls: validatorProcessCalls, equipmentBundleURL: equipmentBundleURL)
+                validatorSpawn: validatorSpawn, validatorProcessCalls: validatorProcessCalls, equipmentBundleURL: equipmentBundleURL, equipmentCalls: equipmentCalls)
         }
     }
 
@@ -80,12 +80,12 @@ enum CWorkerOrchestrator {
                     workerExecutablePath: String, validatorExecutablePath: String,
                     validatorSpawn: @escaping ValidatorSpawnCall = nativeValidatorSpawn,
                     validatorProcessCalls: @escaping (Int) -> ChildProcessCalls = { _ in ChildProcessCalls() },
-                    equipmentBundleURL: URL = Bundle.main.bundleURL) -> PWRunnerRunResult {
+                    equipmentBundleURL: URL = Bundle.main.bundleURL, equipmentCalls: ActorEquipmentCalls = ActorEquipmentCalls()) -> PWRunnerRunResult {
         let parsed = admitted.request
         if let plan = admitted.actorPlan {
             return runActors(parsed: parsed, plan: plan, bundleId: bundleId, workerExecutablePath: workerExecutablePath,
                 validatorExecutablePath: validatorExecutablePath, validatorSpawn: validatorSpawn,
-                validatorProcessCalls: validatorProcessCalls, equipmentBundleURL: equipmentBundleURL)
+                validatorProcessCalls: validatorProcessCalls, equipmentBundleURL: equipmentBundleURL, equipmentCalls: equipmentCalls)
         }
         guard let policy = parsed.policy else {
             return requestRefusalReply(parsed: parsed,

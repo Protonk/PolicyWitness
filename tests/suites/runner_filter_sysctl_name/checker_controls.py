@@ -5,7 +5,7 @@ Keep inputs, expected statuses and diagnostics independent of the checker and
 production code. Each caller's arguments are repeated deliberately so a generic
 contract passing in another suite cannot substitute for checking these adapters.
 Every control is a current-contract document: the record names the planning
-exclusion, the attempt keeps its own observation, and the version is read exactly.
+exclusion, the attempt keeps its own observation, and the producer contract is admitted before reading descendants.
 """
 import copy
 import json
@@ -17,6 +17,7 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parents[3]
 sys.path.insert(0, str(ROOT / 'tests/lib'))
 import contract
+import build_context
 from blackbox import envelope_skeleton
 
 CHECKER = ROOT / "tests/lib/unavailable_prediction.py"
@@ -69,7 +70,7 @@ def current_reply(step_id, operation, value, sysctl, mach=False):
                                               "realpath_resolved": "/private/etc/hosts",
                                               "parent_realpath_resolved": "/private/etc/hosts"}
     reply = {
-        "schema_version": contract.RESPONSE_SCHEMA, "normalized_outcome": "finished", "rc": 0, "error": None,
+        "producer": build_context.producer(), "normalized_outcome": "finished", "rc": 0, "error": None,
         "policy_format": "sbpl", "sandboxed_after_apply": True, "pid": 1234, "specimen_id": "control",
         "runner_subprocess": {"pid": 1234, "reaped": True, "exit_code": 0, "term_signal": None, "partial_steps": False,
                               "disposition": {"questions": {}, "steps": [], "issues": []},
@@ -128,17 +129,17 @@ def main():
             return envelope, envelope["data"]["runner_result"]["steps"][0]
 
         check("valid_nullable_evidence", baseline, status=0, authored_host=False)
-        # The version is read exactly: other and malformed versions are one error.
-        for label, version in (("previous", contract.RESPONSE_SCHEMA - 1), ("next", contract.RESPONSE_SCHEMA + 1),
-                               ("null", None), ("string", str(contract.RESPONSE_SCHEMA)),
-                               ("float", float(contract.RESPONSE_SCHEMA)), ("boolean", True)):
+        # Contract admission distinguishes foreign strings from malformed assertions.
+        for label, assertion in (("previous", "test:previous"), ("next", "test:next"),
+                               ("null", None), ("integer", 6),
+                               ("float", 6.5), ("boolean", True)):
             changed, _ = mutate()
-            changed["data"]["runner_result"]["schema_version"] = version
-            expected = "unsupported runner response" if type(version) is int and not isinstance(version, bool) else "malformed runner response"
-            check("version_" + label, changed, (expected,))
+            changed["data"]["runner_result"]["producer"]["contract"] = assertion
+            expected = "unsupported runner response" if isinstance(assertion, str) else "malformed runner response"
+            check("contract_" + label, changed, (expected,))
         changed, _ = mutate()
-        changed["schema_version"] = contract.CONTROLLER_ENVELOPE + 1
-        check("version_envelope_next", changed, ("unsupported controller envelope",), authored_host=False)
+        changed["build"]["contract"] = "test:next"
+        check("contract_envelope_foreign", changed, ("unsupported controller envelope",), authored_host=False)
         changed, step = mutate()
         del step["comparison"]["order"]
         check("missing_order", changed, ("invalid comparison.order",))

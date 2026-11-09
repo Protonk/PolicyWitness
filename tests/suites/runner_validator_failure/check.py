@@ -10,6 +10,7 @@ import sys
 import tempfile
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[2] / 'lib'))
+import build_context
 from run_capture import RunCapture
 import consumer
 
@@ -84,7 +85,7 @@ def check_cli(case, out, pw):
                 ('file-write-data', 'file-write-data', 'file-read-data'),
                 ('open_write', 'open_write', 'access'))]
         specimen = {
-            'schema_version': 6, 'specimen_id': f'validator_failure_{case}',
+            'contract': build_context.candidate_contract(), 'specimen_id': f'validator_failure_{case}',
             'policy': {'format': 'sbpl', 'sbpl_source': '(version 1)(allow default)'
                        '(deny file-write-data (literal (param "NO_WRITE")))'
                        '(deny file-read-data (literal (param "NO_READ")))',
@@ -103,8 +104,8 @@ def check_cli(case, out, pw):
             assert after[1:] == seeds[1:], 'denied write/access changed the protected files'
             envelope = run.load_json()
             runner = envelope['data']['runner_result']
-            assert not consumer.validate(envelope), consumer.validate(envelope)
-            rows = consumer.steps(envelope)
+            assert not consumer.validate(envelope, build_context.candidate_contract()), consumer.validate(envelope, build_context.candidate_contract())
+            rows = consumer.steps(envelope, build_context.candidate_contract())
             ids = [s['step_id'] for s in plan]
             # The two answered queries keep their order; the unanswered one is a
             # synthetic gap beside a completed permission failure.

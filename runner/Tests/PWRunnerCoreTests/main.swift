@@ -50,8 +50,8 @@ runLimitsContractTests(tk)
 // Host-only query and attempt-label bounds: constructed at-limit/over-limit strings
 // and the orchestrator's refusal before any process work.
 runQueryAdmissionTests(tk)
-// Wire contract versions in docs/contract.json against the generated Swift copies.
-runContractVersionTests(tk)
+// Public shape goldens and the independent worker ABI identity.
+runContractShapeTests(tk)
 // Closed request objects, exact input version, lossless fields and separate admission limits.
 runRequestContractTests(tk)
 // The actor form's draft contract: public refusal until wiring, the normalizer's

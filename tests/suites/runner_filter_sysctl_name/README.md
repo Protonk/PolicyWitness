@@ -12,7 +12,7 @@ and EPERM or EACCES in `errno`.
 
 The four `runner_filter_*` suites call `tests/lib/unavailable_prediction.py`
 with their expected step ID, operation, filter value and attempt contract. The
-adapter accepts only the current response and envelope versions. It uses `tests/lib/blackbox.py` to require a successful run envelope, SBPL
+adapter requires the expected build contract in both the envelope and host reply. It uses `tests/lib/blackbox.py` to require a successful run envelope, SBPL
 policy format, exact step identity/count, and evidence fields with their documented types.
 An unavailable prediction has integer `rc=-1`, explicitly null `filter_type_id`
 and `errno`, and the comparison carries the planner's `query_plan:*`
@@ -39,8 +39,8 @@ malformed envelopes and broken attempts must fail with relevant diagnostics.
 Combined faults must report both channels.
 
 Positive controls carry the comparison record and submitted-attempt evidence;
-removing those fields must fail. Another, absent, null or non-integer response
-or envelope version is reported as unsupported. Each of the four caller
+removing those fields must fail. A foreign string contract in the reply or
+envelope is unsupported; an absent, null or non-string assertion is malformed. Each of the four caller
 contracts runs through the checker CLI.
 
 These controls need only Python 3 and run in the default battery through this

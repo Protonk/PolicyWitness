@@ -418,7 +418,7 @@ func runOrderingTests(_ tk: TestKit) {
             }
         }
     }
-    tk.group("ordering eligibility and response-8 encoding") {
+    tk.group("ordering eligibility and typed reply encoding") {
         // A constructed collection names the plan it served, as the host's does.
         let plan = [ValidatorProbe(stepId: "s", operation: "file-read-data", filterType: "PATH", filterValue: "/etc/hosts")]
         let validator = ValidatorOutput(validatorPid: 7, verdicts: [orderingVerdict()], reaped: true, expectedProbes: plan)
@@ -452,7 +452,7 @@ func runOrderingTests(_ tk: TestKit) {
                     continue
                 }
                 try envelope.validateForReporting()
-                try expectEqual(envelope.schema_version, PWContract.responseSchema)
+                try expectEqual(envelope.producer.contract, PWBuildContext.contract)
                 try expectEqual(envelope.steps[0].comparison?.order, missing == "none" ? "query_first" : "unestablished", missing)
                 try expectEqual(envelope.phases.first?.ordering != nil, missing != "worker")
             }

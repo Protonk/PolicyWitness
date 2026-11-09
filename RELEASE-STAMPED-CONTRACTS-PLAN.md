@@ -1,9 +1,15 @@
 # Release-stamped contracts
 
-Status: proposed; investigation and implementation plan. No implementation
-changes have been made for this plan. It replaces the de-schema plan this file
-held before its rename; `git log --follow` reaches that text and its wider
-inventory of build, test and publication counters.
+Status: independent-review repairs implemented and validated. The complete
+build-refusal rehearsal passes, including 88 controls and sequences, 16 bypass
+demonstrations and all 229 cases in a tagged synthetic-release default battery.
+The annotated `v0.3.5` release is the comparison baseline; `v0.3.6` is the
+single-commit cutover. Actual notarization and archive acceptance follow the
+release commit/tag. Publication remains a separate step.
+
+Review progress and retained evidence are recorded in the
+[implementation review checkpoint](records/2026-11-09-release-stamped-contracts-review.md).
+The user review is complete; release preparation stops before `make publish`.
 
 ## Basis
 
@@ -27,9 +33,9 @@ The plan follows [planning guidance](CONTRIBUTING.md#planning-a-change).
 
 ## Problem
 
-[docs/contract.json](docs/contract.json) owns four counters: request schema,
+the former `docs/contract.json` owns four counters: request schema,
 response schema, controller envelope and runner protocol.
-[generate_contract.py](docs/generate_contract.py) copies them into Swift, Rust,
+the former `docs/generate_contract.py` copies them into Swift, Rust,
 Python, a plist and four documents, and the build refuses a stale copy. Every
 semantic reader requires exact equality, so the numbers never bought
 compatibility. What they cost is a duty: between releases every change to a
@@ -96,13 +102,18 @@ Compute the identity in one helper shared with the worker identity's walker in
 symlink refusal. The scope is the shipped source and its build inputs:
 `controller/src`, `controller/tools`, `runner/Sources`, `runner/Clients`,
 `build.sh`, `meson.build`, `meson.options`, `runner/Package.swift`,
-`controller/Cargo.toml` and `controller/Cargo.lock`. Hash every regular file
-beneath the scope as it is on disk, sorted by path with length framing, so two
-dirty trees at one HEAD differ and a documentation or test edit does not move
-the identity. A code edit does, and a code edit is what can change meaning.
+`controller/Cargo.toml` and `controller/Cargo.lock`. Discover declared source-language and bundled-resource suffixes beneath the
+scope, plus the explicit build and Evidence helper inputs in `docs/build_contract.py`.
+Hash their complete on-disk bytes, sorted by path with length framing.
+Development trees with different scoped bytes have different identities;
+identical scoped bytes have the same digest regardless of commit or dirty
+state. Comments and embedded tests inside scoped files count, as do the
+explicit Evidence helpers. Documentation and standalone tests outside that
+scope do not change the digest.
 
 The release form requires `git describe --tags --exact-match --match 'v[0-9]*'`
-to succeed and `git status --porcelain` to be empty. Everything else is
+to succeed and `git status --porcelain` to be empty, with the scoped path set and
+actual bytes also equal to the tag’s blobs regardless of index flags. Everything else is
 `development:<digest>`. The `build` object keeps `describe` and `commit` and
 may carry `base_release` for orientation; nothing admits by it.
 
@@ -254,8 +265,8 @@ from the generator list in [fixture_inputs.py](tests/lib/fixture_inputs.py),
 adding the stamp generator in its place. Delete `Verdict::NeedsBump` and its
 branches in [shape.rs](controller/src/shape.rs) and `run_flow.rs`,
 `classifyShapeChange` and its tests in
-[ContractVersionTests.swift](runner/Tests/PWRunnerCoreTests/ContractVersionTests.swift),
-and the version parts of [source_drift/contract.py](tests/suites/source_drift/contract.py),
+[ContractShapeTests.swift](runner/Tests/PWRunnerCoreTests/ContractShapeTests.swift),
+and the version parts of the former `source_drift/contract.py`,
 keeping its worker-identity and architecture checks under a name that no longer
 claims a version manifest. Rewrite `docs/CONTRACT.md` around the identity, the
 assertion and the generated stamp table; its "when a number moves" rules become
@@ -267,16 +278,17 @@ regenerate the build account.
 
 ## Implementation sequence
 
-Each stage is a reviewable change. The work must not be released between
-stages 1 and 2, and no battery result from the hybrid state is evidence for
-the final contract.
+These stages organize implementation and review within one cutover commit.
+Complete all three, render the v0.3.6 surface stamps, and stage the entire
+reviewed change before committing and tagging. No intermediate hybrid state
+is released or supplies acceptance evidence for the final contract.
 
 1. **Build context.** The shared helper, `build.sh`, `build.rs`, the generated
    Swift source, `PWContract` in both plists, `--version` and `build.contract`.
    Numbered admission stays authoritative; the identity is provenance only and
    is labeled so. Verify: clean build at a tag yields the release form; one
-   commit after the tag, a dirty tree and a second dirty tree at the same HEAD
-   yield three distinct development identities; a plain Cargo build is
+   commit after the tag and dirty trees use the development form. Equal scoped
+   bytes retain an equal digest; distinct scoped bytes change it; a plain Cargo build is
    `unbound`; the plist, `--version` and envelope agree.
 2. **Public cutover, one change.** D2 through D5 and D7 together: request
    admission in both languages, reply producer and degraded encoder, envelope
@@ -287,8 +299,7 @@ the final contract.
 3. **Surfaces and stamps.** D6: the manifest, per-surface goldens, guide
    regions and examples, the generator with `--check` and `--release`, the
    preflight requirements, and the rendered table. This stage may be prepared
-   alongside stage 1 but lands after stage 2 so `docs/CONTRACT.md` is rewritten
-   once. The first release after it carries every row stamped with that
+   alongside stage 1 and integrated with stage 2 in the same cutover commit. The first release after it carries every row stamped with that
    release, which is the truthful statement about the surfaces' first
    derivation.
 

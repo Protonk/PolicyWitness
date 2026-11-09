@@ -46,6 +46,7 @@ pub struct RunnerClientRun {
 pub enum ReplyRefusal {
     Truncated,
     UnsupportedSchema,
+    UnsupportedContract,
     Malformed,
 }
 
@@ -259,7 +260,8 @@ pub(crate) fn decode_base64(text: &str) -> Result<Vec<u8>, String> {
 fn validate_capture(value: &Capture) -> Result<(), String> {
     require(
         value.kind == "runner_client_capture"
-            && value.protocol_version == i64::from(crate::json_contract::RUNNER_PROTOCOL_VERSION),
+            && value.contract == crate::json_contract::BUILD_CONTRACT
+            && value.contract != "unbound",
         "invalid client capture identity",
     )?;
     require(
@@ -613,7 +615,9 @@ impl RunnerClientRun {
             return Some((
                 match error.refusal {
                     ReplyRefusal::Truncated => "runner_reply_truncated",
-                    ReplyRefusal::UnsupportedSchema => "unsupported_runner_response",
+                    ReplyRefusal::UnsupportedSchema | ReplyRefusal::UnsupportedContract => {
+                        "unsupported_runner_response"
+                    }
                     ReplyRefusal::Malformed => "malformed_runner_response",
                 },
                 error.message.clone(),
@@ -698,21 +702,26 @@ fn parse_runner_client_output(
         if retained.is_empty() {
             return Err(("missing", "runner client produced no capture".into()));
         }
-        let capture: Capture = crate::porcelain::decode(retained).map_err(|error| {
-            let status = match error {
-                FrameError::UnsupportedSchema => "unsupported",
-                FrameError::Malformed(_) => "malformed",
-            };
-            let error = error.to_string();
-            run.output.stdout_parse_error = Some(error.clone());
-            (status, error)
-        })?;
-        if capture.protocol_version != i64::from(crate::json_contract::RUNNER_PROTOCOL_VERSION) {
+        let capture: Capture =
+            crate::porcelain::decode_bound(retained, true, crate::json_contract::BUILD_CONTRACT)
+                .map_err(|error| {
+                    let status = match error {
+                        FrameError::UnsupportedSchema | FrameError::UnsupportedContract(_) => {
+                            "unsupported"
+                        }
+                        FrameError::Malformed(_) => "malformed",
+                    };
+                    let error = error.to_string();
+                    run.output.stdout_parse_error = Some(error.clone());
+                    (status, error)
+                })?;
+        if capture.contract != crate::json_contract::BUILD_CONTRACT || capture.contract == "unbound"
+        {
             return Err((
                 "unsupported",
                 format!(
-                    "client capture protocol {} is unsupported",
-                    capture.protocol_version
+                    "client capture contract {} is unsupported",
+                    capture.contract
                 ),
             ));
         }
@@ -731,7 +740,11 @@ fn parse_runner_client_output(
                             .into(),
                     )
                 } else {
-                    match crate::porcelain::decode::<PWRunnerRunResult>(&raw.data) {
+                    match crate::porcelain::decode_bound::<PWRunnerRunResult>(
+                        &raw.data,
+                        false,
+                        crate::json_contract::BUILD_CONTRACT,
+                    ) {
                         Ok(reply) => return Some(reply),
                         // The host frame names another schema: a version
                         // refusal, with its bytes retained in the capture.
@@ -740,6 +753,10 @@ fn parse_runner_client_output(
                             "runner reply frame names an unsupported porcelain schema; \
                              this controller reads only the schema it was built with"
                                 .into(),
+                        ),
+                        Err(FrameError::UnsupportedContract(value)) => (
+                            ReplyRefusal::UnsupportedContract,
+                            format!("runner reply has foreign contract {value}"),
                         ),
                         Err(FrameError::Malformed(error)) => (
                             ReplyRefusal::Malformed,
@@ -892,7 +909,7 @@ fn encode_base64(bytes: &[u8]) -> String {
 #[cfg(test)]
 pub(crate) fn test_capture_bytes(reply: Option<&[u8]>) -> Value {
     let mut value = serde_json::json!({
-        "kind":"runner_client_capture", "protocol_version":crate::json_contract::RUNNER_PROTOCOL_VERSION,
+        "kind":"runner_client_capture", "contract":crate::json_contract::BUILD_CONTRACT,
         "client_pid":123, "clock":"mach_continuous_time_ns", "clock_available":true, "started_continuous_ns":1000000000u64,
         "deadline_continuous_ns":61000000000u64, "ended_continuous_ns":1005000000u64, "timeout_ms":60000,
         "attempts":[{"ordinal":1,"attempt_id":"11111111-1111-4111-8111-111111111111",
@@ -1087,7 +1104,14 @@ mod binary_tests {
             &[
                 (
                     1,
-                    signed(i64::from(crate::json_contract::RESPONSE_SCHEMA_VERSION)),
+                    record(
+                        84,
+                        &[
+                            (1, text(crate::json_contract::BUILD_CONTRACT)),
+                            (2, text("unit")),
+                            (3, text("unit")),
+                        ],
+                    ),
                 ),
                 (2, text("typed\0é")),
                 (4, signed(1)),
@@ -1098,7 +1122,7 @@ mod binary_tests {
             ],
         ))
     }
-    fn capture(host: Option<&[u8]>, protocol: i64, client_pid: i64, received: i64) -> Vec<u8> {
+    fn capture(host: Option<&[u8]>, protocol: &str, client_pid: i64, received: i64) -> Vec<u8> {
         let control = record(
             34,
             &[
@@ -1124,7 +1148,7 @@ mod binary_tests {
         let submission = record(60, &[(1, text("invoked")), (2, unsigned(2))]);
         let mut fields = vec![
             (1, text("runner_client_capture")),
-            (2, signed(protocol)),
+            (2, text(protocol)),
             (3, signed(client_pid)),
             (4, text("mach_continuous_time_ns")),
             (5, boolean(true)),
@@ -1194,8 +1218,50 @@ mod binary_tests {
             }),
         )
     }
-    fn protocol() -> i64 {
-        i64::from(crate::json_contract::RUNNER_PROTOCOL_VERSION)
+    fn protocol() -> &'static str {
+        crate::json_contract::BUILD_CONTRACT
+    }
+
+    #[test]
+    fn producer_gate_precedes_malformed_descendants_and_keeps_raw_bytes() {
+        let make_host = |contract: &str| {
+            frame(record(
+                crate::porcelain_records::REPLY_RECORD_ID,
+                &[
+                    (
+                        1,
+                        record(
+                            84,
+                            &[
+                                (1, text(contract)),
+                                (2, text("control")),
+                                (3, text("control")),
+                            ],
+                        ),
+                    ),
+                    (2, signed(99)), // specimen_id has the wrong kind, after producer context.
+                ],
+            ))
+        };
+        let foreign = make_host("test:foreign");
+        let (run, reply) = parse(
+            capture(Some(&foreign), protocol(), 123, foreign.len() as i64),
+            None,
+        );
+        assert!(reply.is_none());
+        assert_eq!(
+            run.runner_reply_error.as_ref().unwrap().refusal,
+            ReplyRefusal::UnsupportedContract
+        );
+        let Some(TransportCapture::Typed(carrier)) = run.transport else {
+            panic!("capture missing")
+        };
+        assert_eq!(carrier.runner_reply.unwrap().data, foreign);
+        let current = make_host(protocol());
+        assert!(matches!(
+            crate::porcelain::decode_bound::<PWRunnerRunResult>(&current, false, protocol()),
+            Err(FrameError::Malformed(_))
+        ));
     }
 
     #[test]
@@ -1306,7 +1372,7 @@ mod binary_tests {
 
     #[test]
     fn unsupported_protocol_and_delivery_failure_preserve_boundaries() {
-        let (run, reply) = parse(capture(None, protocol() + 1, 123, 0), None);
+        let (run, reply) = parse(capture(None, "test:foreign", 123, 0), None);
         assert_eq!(run.transport_admission, "unsupported");
         assert_eq!(run.submission, "unknown");
         assert!(reply.is_none());

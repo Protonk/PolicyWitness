@@ -39,22 +39,22 @@ enum PWContinuousClock {
 }
 
 struct PWRunnerReservationRequest: Codable {
-    var protocol_version: Int = PWContract.runnerProtocol
+    var contract: String = PWBuildContext.contract
     var attempt_id: String
     var lease_ms: Int
-    enum CodingKeys: String, CodingKey, CaseIterable { case protocol_version, attempt_id, lease_ms }
+    enum CodingKeys: String, CodingKey, CaseIterable { case contract, attempt_id, lease_ms }
     init(attempt_id: String, lease_ms: Int) { self.attempt_id = attempt_id; self.lease_ms = lease_ms }
     init(from decoder: Decoder) throws {
         try rejectUnknownRequestKeys(CodingKeys.self, from: decoder)
         let c = try decoder.container(keyedBy: CodingKeys.self)
-        protocol_version = try c.decode(Int.self, forKey: .protocol_version)
+        contract = try c.decode(String.self, forKey: .contract)
         attempt_id = try c.decode(String.self, forKey: .attempt_id)
         lease_ms = try c.decode(Int.self, forKey: .lease_ms)
     }
 }
 
 struct PWRunnerControlReply: Codable {
-    var protocol_version: Int = PWContract.runnerProtocol
+    var contract: String = PWBuildContext.contract
     var status: String
     var attempt_id: String?
     var host_pid: Int
@@ -63,7 +63,7 @@ struct PWRunnerControlReply: Codable {
     var lease_ms: Int?
     var reason: String?
     enum CodingKeys: String, CodingKey, CaseIterable {
-        case protocol_version, status, attempt_id, host_pid, host_instance, reservation_id, lease_ms, reason
+        case contract, status, attempt_id, host_pid, host_instance, reservation_id, lease_ms, reason
     }
     init(status: String, attempt_id: String? = nil, host_pid: Int = Int(getpid()), host_instance: String,
          reservation_id: String? = nil, lease_ms: Int? = nil, reason: String? = nil) {
@@ -74,7 +74,7 @@ struct PWRunnerControlReply: Codable {
     init(from decoder: Decoder) throws {
         try rejectUnknownRequestKeys(CodingKeys.self, from: decoder)
         let c = try decoder.container(keyedBy: CodingKeys.self)
-        protocol_version = try c.decode(Int.self, forKey: .protocol_version)
+        contract = try c.decode(String.self, forKey: .contract)
         status = try c.decode(String.self, forKey: .status)
         attempt_id = try c.decodeIfPresent(String.self, forKey: .attempt_id)
         host_pid = try c.decode(Int.self, forKey: .host_pid)
@@ -172,7 +172,7 @@ struct PWRunnerReplyCapture {
 struct PWRunnerClientCapture {
     // BEGIN GENERATED PORCELAIN PWRunnerClientCapture
     var kind: String = "runner_client_capture"
-    var protocol_version: Int = PWContract.runnerProtocol
+    var contract: String = PWBuildContext.contract
     var client_pid: Int = Int(getpid())
     var clock: String = "mach_continuous_time_ns"
     var clock_available: Bool = true

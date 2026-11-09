@@ -14,6 +14,7 @@ sys.path.insert(0, str(Path(__file__).resolve().parents[2] / 'fixtures' / 'exec'
 from control import ExitObserver, TreeControl, process_snapshot
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[2] / 'lib'))
+import build_context
 from run_capture import RunCapture
 from blackbox import validate_run_shape, validate_step, recapture_host_reply
 
@@ -37,7 +38,8 @@ def envelope_errors(envelope, witness, *, allow_fixture_json=False):
         if allowed:
             expected['errno'] = None
         expected_steps.append(expected)
-    common_errors, matched = validate_run_shape(envelope, expected_steps, allow_fixture_json=allow_fixture_json)
+    common_errors, matched = validate_run_shape(envelope, expected_steps,
+        allow_fixture_json=allow_fixture_json, expected_contract=spec['contract'])
     errors = [f"{witness['label']}: {error}" for error in common_errors]
 
     def equal(field, actual, expected):
@@ -289,7 +291,7 @@ def main():
                     path.write_bytes(seed)
                 marker = secrets.token_hex(16)
                 spec = {
-                    'schema_version': 6, 'specimen_id': secrets.token_hex(16),
+                    'contract': build_context.candidate_contract(), 'specimen_id': secrets.token_hex(16),
                     'runner': {'mode': 'standard'},
                     'policy': {'format': 'sbpl', 'sbpl_source':
                                '(version 1)(allow default)(deny file-write-data (literal (param "TARGET")))',

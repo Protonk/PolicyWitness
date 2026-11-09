@@ -63,17 +63,18 @@ if build["describe"] != info.get("PWBuildDescribe") or build["commit"] != info.g
 assert env.get("result", {}).get("ok") is True
 
 runner = env.get("data", {}).get("runner_result") or {}
-# The one exact contract check: a built app must report the numbers in
-# docs/contract.json. Every other suite asserts the minimum it depends on.
+# Independently inspect the candidate, then compare every producer report.
 sys.path.insert(0, sys.argv[2])
 import contract
+import build_context
+import subprocess
+expected = build_context.candidate_contract(Path(sys.argv[3]).parents[1])
+version = json.loads(subprocess.check_output([str(Path(sys.argv[3]).parent / 'MacOS/policy-witness'), '--version']))
 transport = (env.get("data", {}).get("runner_client") or {}).get("transport") or {}
-if transport.get("protocol_version") != contract.RUNNER_PROTOCOL:
-    raise SystemExit(f"built app reports runner protocol {transport.get('protocol_version')!r}; "
-                     f"docs/contract.json says {contract.RUNNER_PROTOCOL}")
-if runner.get("schema_version") != contract.RESPONSE_SCHEMA:
-    raise SystemExit(f"built app reports response schema {runner.get('schema_version')!r}; "
-                     f"docs/contract.json says {contract.RESPONSE_SCHEMA}")
+assert version['build']['contract'] == expected
+assert build['contract'] == expected
+assert transport['contract'] == expected
+assert runner['producer']['contract'] == expected
 evidence = (runner.get("runner_subprocess") or {}).get("worker_evidence") or {}
 if evidence.get("abi_identity") != contract.WORKER_IDENTITY:
     raise SystemExit(f"built app reports worker ABI {evidence.get('abi_identity')!r}; "

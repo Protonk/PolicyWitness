@@ -1,0 +1,23 @@
+{
+  "closed_keys": {
+    "PWRunnerAttempt": [
+      "action",
+      "args",
+      "kind",
+      "target"
+    ],
+    "PWRunnerProbeStep": [
+      "attempt",
+      "sandbox_check",
+      "step_id"
+    ],
+    "PWRunnerSandboxCheck": [
+      "filter",
+      "operation"
+    ],
+    "PWRunnerSandboxFilter": [
+      "kind",
+      "value"
+    ]
+  }
+}

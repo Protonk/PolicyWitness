@@ -21,6 +21,7 @@ sys.path.insert(0, str(ROOT / 'tests/lib'))
 import native_sources
 from check_ordering import held_effects, save
 from bundle import command, cleanup_processes
+import build_context
 from artifact import digest, inventory, inspect, MANIFEST
 from contract import WORKER_IDENTITY
 
@@ -109,7 +110,7 @@ def meson_host_sources(out):
     return core, entry[0]
 
 
-def build_host(package, work, out):
+def build_host(package, work, out, app):
     objects = []
     for name in ('PWCWorkerShim',):
         obj = work / (name + '.o'); objects.append(obj)
@@ -118,9 +119,10 @@ def build_host(package, work, out):
     # Follow the production source inventory; the reader has already refused divergence from the tree.
     sources, entry = meson_host_sources(out)
     host = work / 'PWRunner'
+    context = build_context.write_swift_context(out / 'PWBuildContext.swift', build_context.candidate_contract(app))
     command(out / 'compile-host', ['/usr/bin/xcrun', '--sdk', 'macosx', 'swiftc', '-j', '2', '-Onone', '-g',
         '-module-cache-path', work / 'module-cache', '-o', host,
-        *[package / p for p in sources], package / entry, *objects], timeout=180)
+        '-D', 'PW_PACKAGED_BUILD', context, *[package / p for p in sources], package / entry, *objects], timeout=180)
     return host
 
 
@@ -234,7 +236,7 @@ def main():
             baseline = dict(variant='baseline', driver=driver(package, base, out / 'lifecycle', False),
                             harness=harness_control(out / 'harness', worker, base, False))
             # Rebuild the unmodified service as the positive control for the host recipe.
-            host = build_host(package, work, base)
+            host = build_host(package, work, base, app)
             candidate = signed_copy(app, work, base, identity, worker, host)
             baseline['cli'] = cli_control(candidate, base, out / 'bridge', out / 'helper', False)
             summaries.append(baseline); save(out / 'mutations.json', summaries)
@@ -252,7 +254,7 @@ def main():
             (mutant / 'CWorker.swift').write_text(patched)
             (package / 'Sources/PWRunnerCore/CWorker.swift').write_text(patched)
             result = dict(variant='host_bypass', driver=driver(package, mutant, out / 'lifecycle', True))
-            host = build_host(package, work, mutant)
+            host = build_host(package, work, mutant, app)
             candidate = signed_copy(app, work, mutant, identity, worker, host)
             result['cli'] = cli_control(candidate, mutant, out / 'bridge', out / 'helper', True)
             summaries.append(result); save(out / 'mutations.json', summaries)

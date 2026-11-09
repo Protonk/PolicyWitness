@@ -46,12 +46,12 @@ func runFreshWriteEvidenceTests(_ tk: TestKit) {
         func request(_ authority: Any?) -> [String: Any] {
             var operation: [String: Any] = ["operation": "issue", "family": "file", "token_ref": "token", "target": "/private/tmp"]
             if let authority { operation["authority"] = authority }
-            return ["schema_version": PWContract.requestSchema, "specimen_id": "authority",
+            return ["contract": testRequestContract, "specimen_id": "authority",
                 "actors": [["actor_id": "issuer", "sandbox": ["mode": "unapplied"]]],
                 "phases": [["phase_id": "p", "actor_id": "issuer", "actions": [["step_id": "issue", "extension": operation]]]]]
         }
         func decode(_ value: [String: Any]) throws -> PWRunnerRunSpec {
-            try pwRunnerDecodeJSON(PWRunnerRunSpec.self, from: JSONSerialization.data(withJSONObject: value))
+            try testDecodeJSON(PWRunnerRunSpec.self, from: JSONSerialization.data(withJSONObject: value))
         }
         tk.run("actor issue requires explicit read or read_write authority") {
             for value in ["read", "read_write"] {

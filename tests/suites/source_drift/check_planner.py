@@ -324,7 +324,8 @@ def meson_scenarios(repo):
             "    pwrunner_contract, files('runner/Sources/PWRunnerCore/CWorkerDisposition.swift', 'runner/Clients/PWRunnerClient/main.swift', 'runner/Clients/PWRunnerClient/PWRunnerClientSession.swift'),"),
          ["  meson.build: pw-runner-client has 'runner/Sources/PWRunnerCore/CWorkerDisposition.swift' which the tree does not expect"]),
         ('meson-host-target-missing', original.replace("executable('PWRunner',", "executable('PWRunnerRenamed',"),
-         ["  meson.build: unexpected target 'PWRunnerRenamed'", "  meson.build: no 'PWRunner' target"]),
+         ["  meson.build: PWRunnerRenamed source 'unknown' is outside the repository",
+          "  meson.build: unexpected target 'PWRunnerRenamed'", "  meson.build: no 'PWRunner' target"]),
         ('meson-shim-target-missing', original.replace("static_library('PWCWorkerShim',", "static_library('PWCWorkerShimRenamed',"),
          ["  meson.build: unexpected target 'PWCWorkerShimRenamed'", "  meson.build: no 'PWCWorkerShim' target"]),
         # A dead declaration with the complete list beside a live one missing a

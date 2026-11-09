@@ -4,6 +4,7 @@ import copy
 import json
 from pathlib import Path
 import secrets
+import build_context
 
 CORPUS = Path(__file__).resolve().parents[1] / 'fixtures/request_contract/examples.json'
 
@@ -23,7 +24,13 @@ def materialize(example, effect, nonce):
         if value == '$NONCE':
             return nonce
         return value
-    specimen = substitute(example['request'])
+    specimen = build_context.asserted_request(substitute(example['request']))
+    assertion = example.get('assertion')
+    if assertion == 'foreign': specimen['contract'] = 'test:foreign'
+    elif assertion == 'number': specimen['contract'] = 6
+    elif assertion == 'fraction': specimen['contract'] = 6.5
+    elif assertion == 'null': specimen['contract'] = None
+    elif assertion == 'missing': specimen.pop('contract')
     if 'repeat_steps' in example:
         step = specimen['probe_plan'][0]
         specimen['probe_plan'] = [dict(copy.deepcopy(step), step_id=f's{i}')

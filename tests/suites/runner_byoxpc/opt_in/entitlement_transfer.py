@@ -10,6 +10,7 @@ import tempfile
 ROOT = Path(__file__).resolve().parents[4]
 sys.path.insert(0, str(ROOT / 'tests/lib'))
 import contract
+import build_context
 from consumer import validate
 
 KEY = 'com.apple.security.cs.allow-jit'
@@ -26,7 +27,7 @@ def run(name, service, target, *, required=None, code=0):
     runner = dict(mode='byoxpc', service=service)
     if required is not None:
         runner['required_entitlements'] = required
-    spec = dict(schema_version=contract.REQUEST_SCHEMA, specimen_id=name, runner=runner,
+    spec = dict(contract=build_context.candidate_contract(), specimen_id=name, runner=runner,
                 policy=dict(format='sbpl', sbpl_source=policy),
                 probe_plan=[dict(step_id='write', sandbox_check=dict(operation='file-write-data', filter=dict(kind='path', value=str(target))),
                                  attempt=dict(kind='file', action='open_write', target=str(target)))])
@@ -38,7 +39,7 @@ def run(name, service, target, *, required=None, code=0):
     (out / (name + '.stderr')).write_bytes(result.stderr)
     assert result.returncode == code, (name, result.returncode, result.stderr)
     doc = json.loads(result.stdout)
-    assert not validate(doc), validate(doc)
+    assert not validate(doc, build_context.candidate_contract()), validate(doc, build_context.candidate_contract())
     receipts[name] = dict(exit=result.returncode, outcome=doc['result']['normalized_outcome'],
                           before=before.hex(), after=target.read_bytes().hex())
     return doc

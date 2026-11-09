@@ -23,8 +23,10 @@ def check(archive, out):
     archive, out = archive.resolve(), out.absolute()
     before = artifact.digest(archive)
     calls = []
+    extracted = None
 
     def invoke(directory, argv, **kwargs):
+        nonlocal extracted
         command = list(map(str, argv))
         calls.append(command)
         if command[:3] == ['/usr/bin/xcrun', 'stapler', 'validate'] or command[0] == '/usr/sbin/spctl':
@@ -35,7 +37,11 @@ def check(archive, out):
                 argv=command, timeout_seconds=kwargs['timeout'], elapsed_seconds=0,
                 returncode=0, timed_out=False, interrupted=False, controlled=True))
             return
-        assert command[0] in ('/usr/bin/ditto', 'bash'), command
+        if command[:4] == ['/usr/bin/ditto', '-x', '-k', str(archive)]:
+            assert len(command) == 5 and extracted is None, command
+            extracted = Path(command[4]) / 'PolicyWitness.app'
+        version = None if extracted is None else [str(extracted / 'Contents/MacOS/policy-witness'), '--version']
+        assert command[0] in ('/usr/bin/ditto', 'bash') or command == version, command
         if command[0] == 'bash':
             assert command == ['bash', str(ROOT / 'tests/run.sh')], command
         return release_commands.command(directory, argv, **kwargs)

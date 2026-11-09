@@ -13,6 +13,7 @@ import sys
 import tempfile
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[2] / 'lib'))
+import build_context
 from blackbox import validate_step
 from run_capture import RunCapture
 from lifecycle_contract import CAUSE_LABELS
@@ -78,8 +79,8 @@ def no_cause_claim(envelope):
 
 
 def common_evidence(envelope, rc, specimen, failure):
-    assert not consumer.validate(envelope), consumer.validate(envelope)
-    rows = consumer.steps(envelope)
+    assert not consumer.validate(envelope, build_context.candidate_contract()), consumer.validate(envelope, build_context.candidate_contract())
+    rows = consumer.steps(envelope, build_context.candidate_contract())
     ids = [s['step_id'] for s in specimen['probe_plan']]
     if failure:
         # No query ran and no attempt published: both channels are synthetic,
@@ -204,7 +205,7 @@ def main():
         paths = [Path(work) / secrets.token_hex(12) for _ in range(2)]
         seeds = [secrets.token_bytes(64) for _ in paths]
         specimen = {
-            'schema_version': 6, 'specimen_id': secrets.token_hex(12),
+            'contract': build_context.candidate_contract(), 'specimen_id': secrets.token_hex(12),
             'policy': {'format': 'sbpl', 'sbpl_source': '(version 1)(allow default)'
                        '(deny file-write-data (literal (param "BLOCKED")))',
                        'params': {'BLOCKED': str(paths[1])}},
@@ -265,7 +266,7 @@ def main():
                 check('pre_apply.outcome_attribution', outcome)
                 check('pre_apply.library_result_attribution', no_library_result)
             runner = envelope['data']['runner_result']
-            observations[name] = {'schema_version': runner.get('schema_version'),
+            observations[name] = {'producer': runner.get('producer'),
                                   'validator_subprocess': (runner.get('phases') or [{}])[0].get('validator_subprocess'),
                                   'predictions': [s.get('sandbox_check') for s in runner.get('steps', [])]}
             (out / 'prediction_observations.json').write_text(json.dumps(observations, indent=2) + '\n')
@@ -287,7 +288,7 @@ def main():
             assert runner.get('runner_subprocess') is None and (runner.get('phases') or [{}])[0].get('validator_subprocess') is None, runner
             assert 'ordering' not in runner, runner
             assert all(s['comparison']['order'] == 'unestablished' for s in runner['steps']), runner
-            assert not consumer.validate(value), consumer.validate(value)
+            assert not consumer.validate(value, build_context.candidate_contract()), consumer.validate(value, build_context.candidate_contract())
 
     assert all(result['passed'] for result in results), 'contract failures retained in assertions.json'
 

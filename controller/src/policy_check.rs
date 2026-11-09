@@ -10,7 +10,7 @@ use serde_json::Value;
 use std::process::Command;
 
 use crate::app_layout::resolve_contents_macos_tool;
-use crate::json_contract::SCHEMA_VERSION;
+use crate::json_contract::BUILD_CONTRACT;
 use crate::utils::{TextOutputCapture, capture_json_output, run_with_stdin};
 
 /// The helper envelope kind the capture reads.
@@ -41,15 +41,15 @@ impl PolicyCheckCapture {
     }
 }
 
-/// The outcome of a supported helper envelope: the helper kind, the current
-/// integer envelope version and a nonempty string outcome. Anything else is
-/// not interpreted; the version is checked before the outcome is read.
+/// The outcome of a supported helper envelope: the helper kind, the expected
+/// string build.contract and a nonempty string outcome. Anything else is
+/// not interpreted; the producer contract is checked before the outcome is read.
 fn supported_outcome(env: &Value) -> Option<String> {
     if env.get("kind").and_then(Value::as_str) != Some(HELPER_KIND) {
         return None;
     }
-    let version = env.get("schema_version")?;
-    if !version.is_u64() || version.as_u64() != Some(u64::from(SCHEMA_VERSION)) {
+    if BUILD_CONTRACT == "unbound" || env.get("build")?.get("contract")?.as_str()? != BUILD_CONTRACT
+    {
         return None;
     }
     env.get("result")
@@ -120,8 +120,8 @@ mod tests {
     /// A current helper envelope in the frame the helper prints.
     fn helper_envelope(outcome: Value, exit_code: i64, compile: Value) -> Value {
         json!({
-            "schema_version": SCHEMA_VERSION, "kind": HELPER_KIND, "generated_at_unix_ms": 1,
-            "build": {"version": "0", "number": "0", "describe": "test", "commit": "0"},
+            "kind": HELPER_KIND, "generated_at_unix_ms": 1,
+            "build": {"contract": BUILD_CONTRACT, "version": "0", "number": "0", "describe": "test", "commit": "0"},
             "result": {"ok": exit_code == 0, "rc": null, "exit_code": exit_code,
                 "normalized_outcome": outcome, "errno": null, "error": null,
                 "stderr": null, "stdout": null},
@@ -174,7 +174,7 @@ mod tests {
 
     #[test]
     fn unsupported_or_incomplete_envelopes_are_invalid_replies_retained_unchanged() {
-        let current = i64::from(SCHEMA_VERSION);
+        let current = BUILD_CONTRACT;
         let mut cases: Vec<(&str, Value)> = Vec::new();
         let mut wrong_kind = helper_envelope(json!("ok"), 0, json!(null));
         wrong_kind["kind"] = json!("run");
@@ -184,23 +184,26 @@ mod tests {
         cases.push(("missing kind", no_kind));
         for (label, version) in [
             ("missing version", Value::Null),
-            ("string version", json!(current.to_string())),
-            ("float version", json!(current as f64)),
-            ("previous version", json!(current - 1)),
-            ("next version", json!(current + 1)),
-            ("negative version", json!(-current)),
+            ("numeric contract", json!(6)),
+            ("boolean contract", json!(true)),
+            ("previous version", json!("test:previous")),
+            ("next version", json!("test:next")),
+            ("negative version", json!("")),
         ] {
             let mut envelope = helper_envelope(json!("ok"), 0, json!(null));
             if version.is_null() {
-                envelope.as_object_mut().unwrap().remove("schema_version");
+                envelope["build"]
+                    .as_object_mut()
+                    .unwrap()
+                    .remove("contract");
             } else {
-                envelope["schema_version"] = version;
+                envelope["build"]["contract"] = version;
             }
             cases.push((label, envelope));
         }
         // An old-version envelope that says it compiled earns no recovered success.
         let mut old_compiled = helper_envelope(json!("ok"), 0, json!(null));
-        old_compiled["schema_version"] = json!(current - 1);
+        old_compiled["build"]["contract"] = json!("test:previous");
         old_compiled["data"]["compiled"] = json!(true);
         cases.push(("old version with compiled: true", old_compiled));
         for (label, outcome) in [

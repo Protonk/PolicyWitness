@@ -21,7 +21,7 @@ executable; it does not build the shipped service bundle.
 
 | Area | Sources and responsibility |
 | --- | --- |
-| Shared wire entry | [PWRunnerAPI.swift](Sources/PWRunnerCore/PWRunnerAPI.swift): XPC protocol, wire constants and versions; [PWRunnerCoding.swift](Sources/PWRunnerCore/PWRunnerCoding.swift): closed-object key checking and JSON encoding/decoding. These and the wire families below compile in host and client. |
+| Shared wire entry | [PWRunnerAPI.swift](Sources/PWRunnerCore/PWRunnerAPI.swift): XPC protocol, wire constants and build context; [PWRunnerCoding.swift](Sources/PWRunnerCore/PWRunnerCoding.swift): closed-object key checking and JSON encoding/decoding. These and the wire families below compile in host and client. |
 | Requests and extensions | [PWRunnerRequest.swift](Sources/PWRunnerCore/PWRunnerRequest.swift): ordinary requests, phases, overrides and refusal records; [PWRunnerExtension.swift](Sources/PWRunnerCore/PWRunnerExtension.swift): actor interventions, native event/fresh-file records and local validity rules. |
 | Attempt and path evidence | [PWRunnerAttemptEvidence.swift](Sources/PWRunnerCore/PWRunnerAttemptEvidence.swift): native attempt records and local read/write/exec validity; [PWRunnerPathEvidence.swift](Sources/PWRunnerCore/PWRunnerPathEvidence.swift): identities and path forms. |
 | Prediction and step evidence | [PWRunnerPredictionEvidence.swift](Sources/PWRunnerCore/PWRunnerPredictionEvidence.swift): native query and validator records and association; [PWRunnerStepEvidence.swift](Sources/PWRunnerCore/PWRunnerStepEvidence.swift): step/comparison/ordering records and ordered-query eligibility. |
@@ -176,11 +176,8 @@ describe these bounds and remaining cleanup limitations.
 
 ## Specimen inputs
 
-<!-- BEGIN GENERATED CONTRACT VERSIONS (docs/contract.json via docs/generate_contract.py) -->
-Current wire contracts: request schema 6, response schema 30, controller envelope 14, runner protocol 4. Each number is a separate contract. `docs/contract.json` owns these numbers; the internal host/worker boundary uses a generated source identity.
-<!-- END GENERATED CONTRACT VERSIONS -->
 
-The runner consumes `PWRunnerRunSpec`: the accepted request version, SBPL
+The runner consumes `PWRunnerRunSpec`: the accepted request contract, SBPL
 source and optional parameters, and exactly one of `probe_plan` or `phases`.
 An ordinary action always has a submitted query and attempt. Phase IDs are
 unique and nonempty; step IDs are unique across the entire specimen. Codable types and
@@ -243,7 +240,7 @@ comparison precedence remain separate from this evidence. The
 [exec field account](../docs/PolicyWitness.md#structured-exec-observations) defines
 all conditional fields and residual descendant lifetime limits.
 
-Readers and reporting validation require the current response version. If
+Readers and reporting validation require the current producer contract. If
 reporting admission or the ordinary binary write fails, the service returns
 `runner_reporting_failed`, preserving available observations and withholding
 comparisons. If that also fails, `evidence_retained: false` marks the minimal

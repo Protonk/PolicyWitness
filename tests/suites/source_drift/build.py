@@ -71,6 +71,8 @@ class BuildDocumentationTests(receipts.TestCase):
             destination.parent.mkdir(parents=True)
             original = b'previous inventory must remain unchanged\n'
             destination.write_bytes(original)
+            import plistlib
+            (bundle / 'Contents/Info.plist').write_bytes(plistlib.dumps({'PWContract': 'test:equipment'}))
             unsigned = root / 'worker'
             unsigned.write_bytes(b'controlled common worker input')
             cases = [
@@ -287,8 +289,8 @@ class BuildDocumentationTests(receipts.TestCase):
         self.assertEqual(generator.invocation_problems(manifest, model), [])
         cases = [
             ('reordered banner', generator.banner_problems,
-             SCRIPT.replace('echo "==> Checking limits documentation"\n"${PW_PYTHON}" -B -S "${ROOT_DIR}/docs/generate_limits.py" --check\necho "==> Checking contract versions"',
-                            'echo "==> Checking contract versions"\n"${PW_PYTHON}" -B -S "${ROOT_DIR}/docs/generate_limits.py" --check\necho "==> Checking limits documentation"', 1),
+             SCRIPT.replace('echo "==> Checking limits documentation"\n"${PW_PYTHON}" -B -S "${ROOT_DIR}/docs/generate_limits.py" --check\necho "==> Checking public contract stamps"',
+                            'echo "==> Checking public contract stamps"\n"${PW_PYTHON}" -B -S "${ROOT_DIR}/docs/generate_limits.py" --check\necho "==> Checking limits documentation"', 1),
              'banner order: position 2'),
             ('removed banner', generator.banner_problems, self.mutated('echo "==> Compiling native executables"\n', ''), 'banner order'),
             ('banner variant moved', generator.banner_problems,
@@ -476,8 +478,8 @@ class BuildDocumentationTests(receipts.TestCase):
         script = root / 'build.sh'
         original = script.read_text()
         reordered = SCRIPT.replace(
-            'echo "==> Checking limits documentation"\n"${PW_PYTHON}" -B -S "${ROOT_DIR}/docs/generate_limits.py" --check\necho "==> Checking contract versions"',
-            'echo "==> Checking contract versions"\n"${PW_PYTHON}" -B -S "${ROOT_DIR}/docs/generate_limits.py" --check\necho "==> Checking limits documentation"', 1)
+            'echo "==> Checking limits documentation"\n"${PW_PYTHON}" -B -S "${ROOT_DIR}/docs/generate_limits.py" --check\necho "==> Checking public contract stamps"',
+            'echo "==> Checking public contract stamps"\n"${PW_PYTHON}" -B -S "${ROOT_DIR}/docs/generate_limits.py" --check\necho "==> Checking limits documentation"', 1)
         self.assertNotEqual(reordered, original)
         # The knob mutation must keep every cited symbol present, or the manifest load itself becomes the precondition.
         knob_changed = lambda text: text.replace('    0|1) ;;', '    0|1|2) ;;', 1)

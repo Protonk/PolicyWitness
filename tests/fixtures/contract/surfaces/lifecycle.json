@@ -1,0 +1,575 @@
+{
+  "shape": {
+    "reply": {
+      "phases": "array",
+      "runner_subprocess": "object",
+      "sandboxed_after_apply": "boolean",
+      "schedule": "object"
+    },
+    "reply.actors[]": {
+      "subprocess": "object"
+    },
+    "reply.actors[].subprocess": {
+      "cleanup_trigger": "string",
+      "collection_basis": "string",
+      "disposition": "object",
+      "done_observed": "boolean",
+      "exit_code": "number",
+      "exit_grace_wait": "object",
+      "exit_requested": "boolean",
+      "grace_end": "string",
+      "partial_steps": "boolean",
+      "pid": "number",
+      "policy_transfer_error": "object",
+      "policy_transfer_timeout": "object",
+      "poll_stop_reason": "string",
+      "ready_byte_received": "boolean",
+      "ready_wait": "object",
+      "reaped": "boolean",
+      "term_signal": "number",
+      "termination_request": "object",
+      "wait_errors": "array",
+      "worker_evidence": "object"
+    },
+    "reply.actors[].subprocess.disposition": {
+      "issues": "array",
+      "questions": "object",
+      "steps": "array"
+    },
+    "reply.actors[].subprocess.disposition.issues[]": {
+      "detail": "string",
+      "kind": "string",
+      "observations": "array",
+      "question": "string",
+      "rule": "string",
+      "step_index": "number"
+    },
+    "reply.actors[].subprocess.disposition.questions": {
+      "cleanup_trigger": "object",
+      "collection_basis": "object",
+      "final_status": "object",
+      "grace_end": "object",
+      "kill_request_and_result": "object",
+      "progress_association": "object",
+      "stop_reason": "object"
+    },
+    "reply.actors[].subprocess.disposition.questions.cleanup_trigger": {
+      "answer": "string",
+      "basis": "array",
+      "reason": "string",
+      "state": "string"
+    },
+    "reply.actors[].subprocess.disposition.questions.collection_basis": {
+      "answer": "string",
+      "basis": "array",
+      "state": "string"
+    },
+    "reply.actors[].subprocess.disposition.questions.final_status": {
+      "answer": "string",
+      "basis": "array",
+      "reason": "string",
+      "state": "string",
+      "value": "number"
+    },
+    "reply.actors[].subprocess.disposition.questions.grace_end": {
+      "answer": "string",
+      "basis": "array",
+      "reason": "string",
+      "state": "string"
+    },
+    "reply.actors[].subprocess.disposition.questions.kill_request_and_result": {
+      "answer": "string",
+      "basis": "array",
+      "reason": "string",
+      "state": "string",
+      "value": "object"
+    },
+    "reply.actors[].subprocess.disposition.questions.kill_request_and_result.value": {
+      "errno": "number",
+      "rc": "number",
+      "signal": "number"
+    },
+    "reply.actors[].subprocess.disposition.questions.progress_association": {
+      "answer": "string",
+      "basis": "array",
+      "reason": "string",
+      "state": "string",
+      "value": "number"
+    },
+    "reply.actors[].subprocess.disposition.questions.stop_reason": {
+      "answer": "string",
+      "basis": "array",
+      "state": "string"
+    },
+    "reply.actors[].subprocess.disposition.steps[]": {
+      "attempt_support": "string",
+      "index": "number",
+      "questions": "object",
+      "slot": "string",
+      "step_id": "string"
+    },
+    "reply.actors[].subprocess.disposition.steps[].questions": {
+      "step_boundary_reached": "object",
+      "step_requested_operation_applicability": "object",
+      "step_result_published": "object"
+    },
+    "reply.actors[].subprocess.disposition.steps[].questions.step_boundary_reached": {
+      "answer": "string",
+      "basis": "array",
+      "reason": "string",
+      "state": "string"
+    },
+    "reply.actors[].subprocess.disposition.steps[].questions.step_requested_operation_applicability": {
+      "answer": "string",
+      "basis": "array",
+      "state": "string"
+    },
+    "reply.actors[].subprocess.disposition.steps[].questions.step_result_published": {
+      "answer": "string",
+      "basis": "array",
+      "issue": "number",
+      "reason": "string",
+      "state": "string"
+    },
+    "reply.actors[].subprocess.exit_grace_wait": {
+      "budget_ms": "number",
+      "clock_fault": "boolean",
+      "elapsed_ms": "number",
+      "stop": "string"
+    },
+    "reply.actors[].subprocess.policy_transfer_error": {
+      "bytes_expected": "number",
+      "bytes_written": "number",
+      "errno": "number"
+    },
+    "reply.actors[].subprocess.policy_transfer_timeout": {
+      "budget_ms": "number",
+      "bytes_expected": "number",
+      "bytes_written": "number",
+      "elapsed_ms": "number"
+    },
+    "reply.actors[].subprocess.ready_wait": {
+      "budget_ms": "number",
+      "clock_fault": "boolean",
+      "elapsed_ms": "number",
+      "native_errno": "number",
+      "stop": "string"
+    },
+    "reply.actors[].subprocess.termination_request": {
+      "errno": "number",
+      "rc": "number",
+      "signal": "number"
+    },
+    "reply.actors[].subprocess.wait_errors[]": {
+      "errno": "number",
+      "rc": "number",
+      "stage": "string"
+    },
+    "reply.actors[].subprocess.worker_evidence": {
+      "abi_identity": "string",
+      "diagnostic": "object",
+      "failure": "object",
+      "failure_publication": "number",
+      "failure_state": "string",
+      "policy_read": "object",
+      "progress": "object",
+      "readiness": "object"
+    },
+    "reply.actors[].subprocess.worker_evidence.diagnostic": {
+      "length": "number",
+      "state": "number",
+      "status": "string",
+      "text": "string"
+    },
+    "reply.actors[].subprocess.worker_evidence.failure": {
+      "code": "number",
+      "detail": "number",
+      "errno": "number",
+      "index": "number",
+      "native_kind": "number",
+      "native_result": "number",
+      "operation": "number"
+    },
+    "reply.actors[].subprocess.worker_evidence.policy_read": {
+      "bytes_expected": "number",
+      "bytes_received": "number"
+    },
+    "reply.actors[].subprocess.worker_evidence.progress": {
+      "index": "number",
+      "operation": "number",
+      "raw": "number",
+      "stage": "number"
+    },
+    "reply.actors[].subprocess.worker_evidence.readiness": {
+      "errno": "number",
+      "rc": "number"
+    },
+    "reply.authority_setup.host.custody[]": {
+      "disposition": "string"
+    },
+    "reply.authority_setup.host.regions[]": {
+      "disposition": "string"
+    },
+    "reply.authority_setup.host.run": {
+      "disposition": "string"
+    },
+    "reply.authority_setup.workers[]": {
+      "disposition": "string"
+    },
+    "reply.phases[]": {
+      "action_ids": "array",
+      "activation_observation": "object",
+      "actor_id": "string",
+      "actor_visit": "number",
+      "arrival_observed": "boolean",
+      "collection_status": "string",
+      "completion_observed": "boolean",
+      "ordering": "object",
+      "ordinal": "number",
+      "phase_id": "string",
+      "termination_gate": "object",
+      "validator_spawn_failure": "object",
+      "validator_subprocess": "object",
+      "visit_timing": "object"
+    },
+    "reply.phases[].activation_observation": {
+      "capture_ordinal": "number",
+      "observed_ns": "number"
+    },
+    "reply.phases[].ordering": {
+      "collection_closed_before_proceed": "boolean",
+      "proceed_observed": "boolean",
+      "proceed_set": "boolean",
+      "protocol_violations": "array",
+      "validator_disposition": "string",
+      "worker_lifetime_established": "boolean"
+    },
+    "reply.phases[].termination_gate": {
+      "activation_eligible": "boolean",
+      "capture_ordinal": "number",
+      "condition": "string",
+      "observation": "object",
+      "outcome": "string",
+      "source_actor_id": "string",
+      "source_final_phase_id": "string",
+      "wait": "object"
+    },
+    "reply.phases[].termination_gate.observation": {
+      "capture_ordinal": "number"
+    },
+    "reply.phases[].termination_gate.wait": {
+      "budget_ms": "number",
+      "clock_fault": "boolean",
+      "elapsed_ms": "number",
+      "native_errno": "number",
+      "stop": "string"
+    },
+    "reply.phases[].validator_spawn_failure": {
+      "diagnostic": "string",
+      "executable_path": "string",
+      "operation": "string",
+      "origin": "string",
+      "return_code": "number"
+    },
+    "reply.phases[].validator_subprocess": {
+      "association_issues": "array",
+      "decode_fault": "object",
+      "exit_code": "number",
+      "exit_grace_wait": "object",
+      "expected_step_ids": "array",
+      "io_error": "string",
+      "ordinal": "number",
+      "phase_id": "string",
+      "pid": "number",
+      "probe_bytes_expected": "number",
+      "probe_bytes_written": "number",
+      "read_error": "string",
+      "reaped": "boolean",
+      "records": "array",
+      "stdout_bytes_received": "number",
+      "stdout_collection_stop": "string",
+      "term_signal": "number",
+      "termination_request": "object",
+      "wait_errors": "array"
+    },
+    "reply.phases[].validator_subprocess.association_issues[]": {
+      "count": "number",
+      "kind": "string",
+      "origin": "string",
+      "step_id": "string"
+    },
+    "reply.phases[].validator_subprocess.decode_fault": {
+      "byte_offset": "number",
+      "context_b64": "string",
+      "context_truncated": "boolean",
+      "frame_bytes": "number",
+      "kind": "string",
+      "message": "string",
+      "origin": "string",
+      "retained_bytes": "number"
+    },
+    "reply.phases[].validator_subprocess.exit_grace_wait": {
+      "budget_ms": "number",
+      "clock_fault": "boolean",
+      "elapsed_ms": "number",
+      "excluded_ms": "number",
+      "native_errno": "number",
+      "stop": "string"
+    },
+    "reply.phases[].validator_subprocess.records[]": {
+      "errno": "number",
+      "error": "string",
+      "filter_type": "string",
+      "filter_type_id": "number",
+      "filter_value": "string",
+      "operation": "string",
+      "outcome": "string",
+      "raw_line": "string",
+      "rc": "number",
+      "step_id": "string"
+    },
+    "reply.phases[].validator_subprocess.termination_request": {
+      "errno": "number",
+      "rc": "number",
+      "signal": "number"
+    },
+    "reply.phases[].validator_subprocess.wait_errors[]": {
+      "errno": "number",
+      "rc": "number",
+      "stage": "string"
+    },
+    "reply.phases[].visit_timing": {
+      "activation_to_arrival_ms": "number",
+      "arrival_to_release_ms": "number",
+      "collection_ms": "number",
+      "release_to_completion_ms": "number"
+    },
+    "reply.runner_subprocess": {
+      "cleanup_trigger": "string",
+      "collection_basis": "string",
+      "disposition": "object",
+      "done_observed": "boolean",
+      "exit_code": "number",
+      "exit_grace_wait": "object",
+      "exit_requested": "boolean",
+      "grace_end": "string",
+      "partial_steps": "boolean",
+      "pid": "number",
+      "policy_transfer_error": "object",
+      "policy_transfer_timeout": "object",
+      "poll_stop_reason": "string",
+      "ready_byte_received": "boolean",
+      "ready_wait": "object",
+      "reaped": "boolean",
+      "sentinel_wait": "object",
+      "term_signal": "number",
+      "termination_request": "object",
+      "wait_errors": "array",
+      "worker_evidence": "object"
+    },
+    "reply.runner_subprocess.disposition": {
+      "issues": "array",
+      "questions": "object",
+      "steps": "array"
+    },
+    "reply.runner_subprocess.disposition.issues[]": {
+      "detail": "string",
+      "kind": "string",
+      "observations": "array",
+      "question": "string",
+      "rule": "string",
+      "step_index": "number"
+    },
+    "reply.runner_subprocess.disposition.questions": {
+      "cleanup_trigger": "object",
+      "collection_basis": "object",
+      "final_status": "object",
+      "grace_end": "object",
+      "kill_request_and_result": "object",
+      "progress_association": "object",
+      "stop_reason": "object"
+    },
+    "reply.runner_subprocess.disposition.questions.cleanup_trigger": {
+      "answer": "string",
+      "basis": "array",
+      "reason": "string",
+      "state": "string"
+    },
+    "reply.runner_subprocess.disposition.questions.collection_basis": {
+      "answer": "string",
+      "basis": "array",
+      "state": "string"
+    },
+    "reply.runner_subprocess.disposition.questions.final_status": {
+      "answer": "string",
+      "basis": "array",
+      "reason": "string",
+      "state": "string",
+      "value": "number"
+    },
+    "reply.runner_subprocess.disposition.questions.grace_end": {
+      "answer": "string",
+      "basis": "array",
+      "reason": "string",
+      "state": "string"
+    },
+    "reply.runner_subprocess.disposition.questions.kill_request_and_result": {
+      "answer": "string",
+      "basis": "array",
+      "reason": "string",
+      "state": "string",
+      "value": "object"
+    },
+    "reply.runner_subprocess.disposition.questions.kill_request_and_result.value": {
+      "errno": "number",
+      "rc": "number",
+      "signal": "number"
+    },
+    "reply.runner_subprocess.disposition.questions.progress_association": {
+      "answer": "string",
+      "basis": "array",
+      "reason": "string",
+      "state": "string",
+      "value": "number"
+    },
+    "reply.runner_subprocess.disposition.questions.stop_reason": {
+      "answer": "string",
+      "basis": "array",
+      "state": "string"
+    },
+    "reply.runner_subprocess.disposition.steps[]": {
+      "attempt_support": "string",
+      "index": "number",
+      "questions": "object",
+      "slot": "string",
+      "step_id": "string"
+    },
+    "reply.runner_subprocess.disposition.steps[].questions": {
+      "step_boundary_reached": "object",
+      "step_requested_operation_applicability": "object",
+      "step_result_published": "object"
+    },
+    "reply.runner_subprocess.disposition.steps[].questions.step_boundary_reached": {
+      "answer": "string",
+      "basis": "array",
+      "reason": "string",
+      "state": "string"
+    },
+    "reply.runner_subprocess.disposition.steps[].questions.step_requested_operation_applicability": {
+      "answer": "string",
+      "basis": "array",
+      "state": "string"
+    },
+    "reply.runner_subprocess.disposition.steps[].questions.step_result_published": {
+      "answer": "string",
+      "basis": "array",
+      "issue": "number",
+      "reason": "string",
+      "state": "string"
+    },
+    "reply.runner_subprocess.exit_grace_wait": {
+      "budget_ms": "number",
+      "clock_fault": "boolean",
+      "elapsed_ms": "number",
+      "excluded_ms": "number",
+      "native_errno": "number",
+      "stop": "string"
+    },
+    "reply.runner_subprocess.policy_transfer_error": {
+      "bytes_expected": "number",
+      "bytes_written": "number",
+      "errno": "number"
+    },
+    "reply.runner_subprocess.policy_transfer_timeout": {
+      "budget_ms": "number",
+      "bytes_expected": "number",
+      "bytes_written": "number",
+      "elapsed_ms": "number"
+    },
+    "reply.runner_subprocess.ready_wait": {
+      "budget_ms": "number",
+      "clock_fault": "boolean",
+      "elapsed_ms": "number",
+      "excluded_ms": "number",
+      "native_errno": "number",
+      "stop": "string"
+    },
+    "reply.runner_subprocess.sentinel_wait": {
+      "budget_ms": "number",
+      "clock_fault": "boolean",
+      "elapsed_ms": "number",
+      "excluded_ms": "number",
+      "native_errno": "number",
+      "stop": "string"
+    },
+    "reply.runner_subprocess.termination_request": {
+      "errno": "number",
+      "rc": "number",
+      "signal": "number"
+    },
+    "reply.runner_subprocess.wait_errors[]": {
+      "errno": "number",
+      "rc": "number",
+      "stage": "string"
+    },
+    "reply.runner_subprocess.worker_evidence": {
+      "abi_identity": "string",
+      "diagnostic": "object",
+      "failure": "object",
+      "failure_publication": "number",
+      "failure_state": "string",
+      "policy_read": "object",
+      "progress": "object",
+      "readiness": "object"
+    },
+    "reply.runner_subprocess.worker_evidence.diagnostic": {
+      "length": "number",
+      "state": "number",
+      "status": "string",
+      "text": "string"
+    },
+    "reply.runner_subprocess.worker_evidence.failure": {
+      "code": "number",
+      "detail": "number",
+      "errno": "number",
+      "index": "number",
+      "native_kind": "number",
+      "native_result": "number",
+      "operation": "number"
+    },
+    "reply.runner_subprocess.worker_evidence.policy_read": {
+      "bytes_expected": "number",
+      "bytes_received": "number"
+    },
+    "reply.runner_subprocess.worker_evidence.progress": {
+      "index": "number",
+      "operation": "number",
+      "raw": "number",
+      "stage": "number"
+    },
+    "reply.runner_subprocess.worker_evidence.readiness": {
+      "errno": "number",
+      "rc": "number"
+    },
+    "reply.schedule": {
+      "cancelled": "string",
+      "collection_budget_ms": "number",
+      "execution_wait": "object",
+      "lifetime_budget_ms": "number",
+      "setup_wait": "object"
+    },
+    "reply.schedule.execution_wait": {
+      "budget_ms": "number",
+      "clock_fault": "boolean",
+      "elapsed_ms": "number",
+      "excluded_ms": "number",
+      "stop": "string"
+    },
+    "reply.schedule.setup_wait": {
+      "budget_ms": "number",
+      "clock_fault": "boolean",
+      "elapsed_ms": "number",
+      "stop": "string"
+    }
+  }
+}

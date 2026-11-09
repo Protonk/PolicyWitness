@@ -4,7 +4,9 @@ use serde::Serialize;
 #[cfg(test)] use serde::Deserialize;
 use serde::ser::SerializeMap;
 use crate::porcelain::{WireRead, RecordReader};
-pub const FINGERPRINT: [u8; 32] = [72, 242, 109, 148, 203, 19, 141, 216, 125, 227, 148, 11, 111, 5, 0, 90, 8, 170, 15, 51, 207, 207, 250, 142, 135, 4, 161, 1, 8, 252, 101, 156];
+pub const FINGERPRINT: [u8; 32] = [128, 1, 62, 91, 115, 66, 232, 77, 182, 17, 119, 128, 72, 131, 101, 94, 61, 96, 188, 55, 11, 240, 164, 170, 27, 198, 20, 83, 160, 100, 226, 36];
+pub const REPLY_RECORD_ID: u16 = 55;
+pub const CAPTURE_RECORD_ID: u16 = 32;
 #[derive(Clone, Debug, PartialEq, Serialize)]
 #[cfg_attr(test, derive(Deserialize))]
 #[serde(untagged)]
@@ -27,7 +29,6 @@ impl WireRead for PWDispositionValue {
 #[cfg_attr(test, derive(Deserialize))]
 #[cfg_attr(test, serde(deny_unknown_fields))]
 pub struct CompiledProfileCapture {
-    pub schema_version: i64,
     pub status: String,
     pub reason: Option<String>,
     pub worker_pid: i64,
@@ -51,7 +52,6 @@ impl WireRead for CompiledProfileCapture {
     const KIND: u8 = 6;
     fn read_payload(data: &[u8], depth: usize, budget: &std::cell::Cell<usize>) -> Result<Self, String> {
         let mut __pw_reader = RecordReader::new(data, 1, depth, budget)?;
-        let mut schema_version: Option<i64> = None;
         let mut status: Option<String> = None;
         let mut reason: Option<String> = None;
         let mut worker_pid: Option<i64> = None;
@@ -68,7 +68,6 @@ impl WireRead for CompiledProfileCapture {
         let mut parameter_count: Option<i64> = None;
         while let Some((__pw_tag, __pw_value)) = __pw_reader.next()? {
             match __pw_tag {
-                1 => schema_version = Some(__pw_value.decode()?),
                 2 => status = Some(__pw_value.decode()?),
                 3 => reason = Some(__pw_value.decode()?),
                 4 => worker_pid = Some(__pw_value.decode()?),
@@ -87,7 +86,6 @@ impl WireRead for CompiledProfileCapture {
             }
         }
         Ok(Self {
-            schema_version: schema_version.ok_or("missing CompiledProfileCapture.schema_version")?,
             status: status.ok_or("missing CompiledProfileCapture.status")?,
             reason,
             worker_pid: worker_pid.ok_or("missing CompiledProfileCapture.worker_pid")?,
@@ -118,7 +116,6 @@ impl Serialize for CompiledProfileCapture {
         if self.profile_type.is_some() { map.serialize_entry("profile_type", &self.profile_type)?; }
         if self.reason.is_some() { map.serialize_entry("reason", &self.reason)?; }
         if self.request_nonce.is_some() { map.serialize_entry("request_nonce", &self.request_nonce)?; }
-        map.serialize_entry("schema_version", &self.schema_version)?;
         if self.source_length.is_some() { map.serialize_entry("source_length", &self.source_length)?; }
         if self.source_sha256.is_some() { map.serialize_entry("source_sha256", &self.source_sha256.as_deref().map(crate::porcelain::Hex))?; }
         map.serialize_entry("status", &self.status)?;
@@ -1742,7 +1739,7 @@ impl Serialize for PWRunnerAuthoritySetup {
 #[cfg_attr(test, serde(deny_unknown_fields))]
 pub struct PWRunnerClientCapture {
     pub kind: String,
-    pub protocol_version: i64,
+    pub contract: String,
     pub client_pid: i64,
     pub clock: String,
     pub clock_available: bool,
@@ -1763,7 +1760,7 @@ impl WireRead for PWRunnerClientCapture {
     fn read_payload(data: &[u8], depth: usize, budget: &std::cell::Cell<usize>) -> Result<Self, String> {
         let mut __pw_reader = RecordReader::new(data, 32, depth, budget)?;
         let mut kind: Option<String> = None;
-        let mut protocol_version: Option<i64> = None;
+        let mut contract: Option<String> = None;
         let mut client_pid: Option<i64> = None;
         let mut clock: Option<String> = None;
         let mut clock_available: Option<bool> = None;
@@ -1781,7 +1778,7 @@ impl WireRead for PWRunnerClientCapture {
         while let Some((__pw_tag, __pw_value)) = __pw_reader.next()? {
             match __pw_tag {
                 1 => kind = Some(__pw_value.decode()?),
-                2 => protocol_version = Some(__pw_value.decode()?),
+                2 => contract = Some(__pw_value.decode()?),
                 3 => client_pid = Some(__pw_value.decode()?),
                 4 => clock = Some(__pw_value.decode()?),
                 5 => clock_available = Some(__pw_value.decode()?),
@@ -1801,7 +1798,7 @@ impl WireRead for PWRunnerClientCapture {
         }
         Ok(Self {
             kind: kind.ok_or("missing PWRunnerClientCapture.kind")?,
-            protocol_version: protocol_version.ok_or("missing PWRunnerClientCapture.protocol_version")?,
+            contract: contract.ok_or("missing PWRunnerClientCapture.contract")?,
             client_pid: client_pid.ok_or("missing PWRunnerClientCapture.client_pid")?,
             clock: clock.ok_or("missing PWRunnerClientCapture.clock")?,
             clock_available: clock_available.ok_or("missing PWRunnerClientCapture.clock_available")?,
@@ -1827,11 +1824,11 @@ impl Serialize for PWRunnerClientCapture {
         map.serialize_entry("client_pid", &self.client_pid)?;
         map.serialize_entry("clock", &self.clock)?;
         map.serialize_entry("clock_available", &self.clock_available)?;
+        map.serialize_entry("contract", &self.contract)?;
         if self.deadline_continuous_ns.is_some() { map.serialize_entry("deadline_continuous_ns", &self.deadline_continuous_ns)?; }
         if self.ended_continuous_ns.is_some() { map.serialize_entry("ended_continuous_ns", &self.ended_continuous_ns)?; }
         if self.error.is_some() { map.serialize_entry("error", &self.error)?; }
         map.serialize_entry("kind", &self.kind)?;
-        map.serialize_entry("protocol_version", &self.protocol_version)?;
         if self.runner_reply.is_some() { map.serialize_entry("runner_reply", &self.runner_reply)?; }
         if self.started_continuous_ns.is_some() { map.serialize_entry("started_continuous_ns", &self.started_continuous_ns)?; }
         map.serialize_entry("submission", &self.submission)?;
@@ -3197,7 +3194,7 @@ impl Serialize for PWRunnerReportingFailure {
 pub struct PWRunnerRequestFailure {
     pub code: String,
     pub path: Option<Vec<String>>,
-    pub expected_schema: Option<i64>,
+    pub expected_contract: Option<String>,
 }
 impl WireRead for PWRunnerRequestFailure {
     const KIND: u8 = 6;
@@ -3205,19 +3202,19 @@ impl WireRead for PWRunnerRequestFailure {
         let mut __pw_reader = RecordReader::new(data, 53, depth, budget)?;
         let mut code: Option<String> = None;
         let mut path: Option<Vec<String>> = None;
-        let mut expected_schema: Option<i64> = None;
+        let mut expected_contract: Option<String> = None;
         while let Some((__pw_tag, __pw_value)) = __pw_reader.next()? {
             match __pw_tag {
                 1 => code = Some(__pw_value.decode()?),
                 2 => path = Some(__pw_value.decode()?),
-                3 => expected_schema = Some(__pw_value.decode()?),
+                3 => expected_contract = Some(__pw_value.decode()?),
                 _ => return Err("unknown field tag".into()),
             }
         }
         Ok(Self {
             code: code.ok_or("missing PWRunnerRequestFailure.code")?,
             path,
-            expected_schema,
+            expected_contract,
         })
     }
 }
@@ -3225,7 +3222,7 @@ impl Serialize for PWRunnerRequestFailure {
     fn serialize<S: serde::Serializer>(&self, serializer: S) -> Result<S::Ok, S::Error> {
         let mut map = serializer.serialize_map(None)?;
         map.serialize_entry("code", &self.code)?;
-        if self.expected_schema.is_some() { map.serialize_entry("expected_schema", &self.expected_schema)?; }
+        if self.expected_contract.is_some() { map.serialize_entry("expected_contract", &self.expected_contract)?; }
         map.serialize_entry("path", &self.path)?;
         map.end()
     }
@@ -3273,7 +3270,7 @@ impl Serialize for PWRunnerResourceTables {
 #[cfg_attr(test, derive(Deserialize))]
 #[cfg_attr(test, serde(deny_unknown_fields))]
 pub struct PWRunnerRunResult {
-    pub schema_version: i64,
+    pub producer: PWProducer,
     pub specimen_id: String,
     pub run_kind: Option<String>,
     pub rc: i64,
@@ -3309,7 +3306,7 @@ impl WireRead for PWRunnerRunResult {
     const KIND: u8 = 6;
     fn read_payload(data: &[u8], depth: usize, budget: &std::cell::Cell<usize>) -> Result<Self, String> {
         let mut __pw_reader = RecordReader::new(data, 55, depth, budget)?;
-        let mut schema_version: Option<i64> = None;
+        let mut producer: Option<PWProducer> = None;
         let mut specimen_id: Option<String> = None;
         let mut run_kind: Option<String> = None;
         let mut rc: Option<i64> = None;
@@ -3341,7 +3338,7 @@ impl WireRead for PWRunnerRunResult {
         let mut authority_setup: Option<PWRunnerAuthoritySetup> = None;
         while let Some((__pw_tag, __pw_value)) = __pw_reader.next()? {
             match __pw_tag {
-                1 => schema_version = Some(__pw_value.decode()?),
+                1 => producer = Some(__pw_value.decode()?),
                 2 => specimen_id = Some(__pw_value.decode()?),
                 3 => run_kind = Some(__pw_value.decode()?),
                 4 => rc = Some(__pw_value.decode()?),
@@ -3375,7 +3372,7 @@ impl WireRead for PWRunnerRunResult {
             }
         }
         Ok(Self {
-            schema_version: schema_version.ok_or("missing PWRunnerRunResult.schema_version")?,
+            producer: producer.ok_or("missing PWRunnerRunResult.producer")?,
             specimen_id: specimen_id.ok_or("missing PWRunnerRunResult.specimen_id")?,
             run_kind,
             rc: rc.ok_or("missing PWRunnerRunResult.rc")?,
@@ -3428,6 +3425,7 @@ impl Serialize for PWRunnerRunResult {
         if self.policy_format.is_some() { map.serialize_entry("policy_format", &self.policy_format)?; }
         if self.policy_sha256.is_some() { map.serialize_entry("policy_sha256", &self.policy_sha256.as_deref().map(crate::porcelain::Hex))?; }
         if self.preparation_failure.is_some() { map.serialize_entry("preparation_failure", &self.preparation_failure)?; }
+        map.serialize_entry("producer", &self.producer)?;
         map.serialize_entry("rc", &self.rc)?;
         if self.reporting_failure.is_some() { map.serialize_entry("reporting_failure", &self.reporting_failure)?; }
         if self.request_failure.is_some() { map.serialize_entry("request_failure", &self.request_failure)?; }
@@ -3436,7 +3434,6 @@ impl Serialize for PWRunnerRunResult {
         if self.runner_subprocess.is_some() { map.serialize_entry("runner_subprocess", &self.runner_subprocess)?; }
         if self.sandboxed_after_apply.is_some() { map.serialize_entry("sandboxed_after_apply", &self.sandboxed_after_apply)?; }
         if self.schedule.is_some() { map.serialize_entry("schedule", &self.schedule)?; }
-        map.serialize_entry("schema_version", &self.schema_version)?;
         map.serialize_entry("specimen_id", &self.specimen_id)?;
         map.serialize_entry("steps", &self.steps)?;
         if self.test_overrides.is_some() { map.serialize_entry("test_overrides", &self.test_overrides)?; }
@@ -5085,6 +5082,45 @@ impl Serialize for PWDispositionStepQuestions {
         if self.step_boundary_reached.is_some() { map.serialize_entry("step_boundary_reached", &self.step_boundary_reached)?; }
         if self.step_requested_operation_applicability.is_some() { map.serialize_entry("step_requested_operation_applicability", &self.step_requested_operation_applicability)?; }
         if self.step_result_published.is_some() { map.serialize_entry("step_result_published", &self.step_result_published)?; }
+        map.end()
+    }
+}
+#[derive(Clone, Debug, PartialEq)]
+#[cfg_attr(test, derive(Deserialize))]
+#[cfg_attr(test, serde(deny_unknown_fields))]
+pub struct PWProducer {
+    pub contract: String,
+    pub describe: String,
+    pub commit: String,
+}
+impl WireRead for PWProducer {
+    const KIND: u8 = 6;
+    fn read_payload(data: &[u8], depth: usize, budget: &std::cell::Cell<usize>) -> Result<Self, String> {
+        let mut __pw_reader = RecordReader::new(data, 84, depth, budget)?;
+        let mut contract: Option<String> = None;
+        let mut describe: Option<String> = None;
+        let mut commit: Option<String> = None;
+        while let Some((__pw_tag, __pw_value)) = __pw_reader.next()? {
+            match __pw_tag {
+                1 => contract = Some(__pw_value.decode()?),
+                2 => describe = Some(__pw_value.decode()?),
+                3 => commit = Some(__pw_value.decode()?),
+                _ => return Err("unknown field tag".into()),
+            }
+        }
+        Ok(Self {
+            contract: contract.ok_or("missing PWProducer.contract")?,
+            describe: describe.ok_or("missing PWProducer.describe")?,
+            commit: commit.ok_or("missing PWProducer.commit")?,
+        })
+    }
+}
+impl Serialize for PWProducer {
+    fn serialize<S: serde::Serializer>(&self, serializer: S) -> Result<S::Ok, S::Error> {
+        let mut map = serializer.serialize_map(None)?;
+        map.serialize_entry("commit", &self.commit)?;
+        map.serialize_entry("contract", &self.contract)?;
+        map.serialize_entry("describe", &self.describe)?;
         map.end()
     }
 }

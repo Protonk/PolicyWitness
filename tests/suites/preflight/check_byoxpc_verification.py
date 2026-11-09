@@ -19,18 +19,20 @@ import tempfile
 
 ROOT = Path(__file__).resolve().parents[3]
 sys.path.insert(0, str(ROOT / 'tests/fixtures/caller_auth'))
+sys.path.insert(0, str(ROOT / 'tests/lib'))
+import build_context
 from bundle import SERVICE, command, inventory, save, signature
 from build_receipt import record_build
 from porcelain_fixture import decode_fixture
 
 HELPERS = {'worker': 'Contents/MacOS/pw-probe-runner', 'unentitled_worker': 'Contents/MacOS/pw-probe-runner-unentitled'}
 CODE_PAGE_OFFSET = 4096
-INVENTORY_FAULTS = ('missing', 'duplicate_role', 'wrong_path', 'wrong_hash', 'wrong_protocol',
+INVENTORY_FAULTS = ('missing', 'duplicate_role', 'wrong_path', 'wrong_hash', 'wrong_contract',
                     'unknown_field', 'wrong_identity', 'escaping_path', 'substituted_path',
                     'resigned_stale_hash', 'nonempty_unentitled', 'wrong_cdhash', 'wrong_team', 'wrong_identifier')
 
 
-def build_binding_probe(out):
+def build_binding_probe(out, app):
     """Retain copied source/commands; put SwiftPM products in case scratch."""
     scratch_root = os.environ.get('PW_TEST_SCRATCH')
     assert scratch_root, 'binding probe requires dispatcher-owned PW_TEST_SCRATCH'
@@ -39,6 +41,8 @@ def build_binding_probe(out):
     receipt.mkdir()
     package = receipt / 'package'
     shutil.copytree(ROOT / 'runner/Sources', package / 'Sources')
+    build_context.write_swift_context(package / 'Sources/PWRunnerCore/PWBuildContext.swift',
+                                      build_context.candidate_contract(app))
     source = package / 'Sources/EquipmentBindingProbe'
     source.mkdir()
     shutil.copyfile(ROOT / 'tests/suites/preflight/equipment_binding_probe.swift', source / 'main.swift')
@@ -47,7 +51,7 @@ def build_binding_probe(out):
         'let package = Package(name: "EquipmentBindingProbe", platforms: [.macOS("26.0")], targets: [\n'
         '    .target(name: "PWCWorkerShim"),\n'
         '    .target(name: "PWRunnerCore", dependencies: ["PWCWorkerShim"],\n'
-        '            swiftSettings: [.unsafeFlags(["-enable-testing"])]),\n'
+        '            swiftSettings: [.define("PW_PACKAGED_BUILD"), .unsafeFlags(["-enable-testing"])]),\n'
         '    .executableTarget(name: "EquipmentBindingProbe", dependencies: ["PWRunnerCore"])])\n')
     command(receipt / 'build', ['swift', 'build', '--jobs', '2', '--package-path', package,
             '--scratch-path', scratch, '--product', 'EquipmentBindingProbe'], timeout=300)
@@ -59,7 +63,7 @@ def main(app, out, pw):
     before = inventory(app)
     save(out / 'source-before.json', before)
     observations = {}
-    binding_probe = build_binding_probe(out)
+    binding_probe = build_binding_probe(out, app)
     with tempfile.TemporaryDirectory(prefix='pw-byoxpc-verify-', dir='/private/tmp') as temporary:
         staging = Path(temporary).resolve()
         home = staging / 'home'
@@ -196,7 +200,7 @@ def main(app, out, pw):
                 'wrong_cdhash': 'selected equipment differs from its sealed inventory',
                 'wrong_team': 'unentitled equipment differs from its sealed inventory',
                 'wrong_identifier': 'selected equipment differs from its sealed inventory',
-                'wrong_protocol': 'unsupported or malformed worker equipment inventory',
+                'wrong_contract': 'unsupported or malformed worker equipment inventory',
                 'unknown_field': 'unknown field',
                 'escaping_path': 'invalid selected equipment inventory row',
                 'substituted_path': 'invalid selected equipment inventory row',
@@ -228,7 +232,7 @@ def main(app, out, pw):
                         selected_row['cdhash'] = ('0' if old[0] != '0' else '1') + old[1:]
                     elif fault == 'wrong_team': rows_by_role['unentitled']['team_id'] = 'WRONGTEAM'
                     elif fault == 'wrong_identifier': selected_row['identifier'] += '.substituted'
-                    elif fault == 'wrong_protocol': equipment['runner_protocol'] += 1
+                    elif fault == 'wrong_contract': equipment['contract'] = 'test:foreign'
                     elif fault == 'unknown_field': equipment['unknown'] = True
                     elif fault == 'wrong_identity':
                         # Well-formed but incompatible, not a syntax-error surrogate.

@@ -18,6 +18,7 @@ fn main() {
     // variables; without them (plain `cargo build`) every value reads "unknown".
     // Declaring them here makes cargo rebuild when only the stamp changed.
     for name in [
+        "PW_BUILD_CONTRACT",
         "PW_BUILD_VERSION",
         "PW_BUILD_NUMBER",
         "PW_BUILD_DESCRIBE",
@@ -25,5 +26,4 @@ fn main() {
     ] {
         println!("cargo:rerun-if-env-changed={name}");
     }
-    println!("cargo:rerun-if-changed=../docs/contract.json");
 }

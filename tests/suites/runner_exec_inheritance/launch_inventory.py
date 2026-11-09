@@ -11,6 +11,7 @@ import sys
 import time
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[2] / 'lib'))
+import build_context
 from run_capture import RunCapture
 
 
@@ -52,7 +53,7 @@ def observe(pw, out, boundary):
     flag = '--pre-ready-hang-ms' if pre else '--post-apply-hang-ms'
     # Both workers run the same empty allow-default plan. The seam is the
     # only difference; no wrapper replaces or instruments the signed worker.
-    specimen = dict(schema_version=6, specimen_id='launch_inventory_' + boundary,
+    specimen = dict(contract=build_context.candidate_contract(), specimen_id='launch_inventory_' + boundary,
                     policy=dict(format='sbpl', sbpl_source='(version 1)(allow default)'),
                     probe_plan=[], _test_overrides={key: 20000})
     run = RunCapture(pw, out, specimen,

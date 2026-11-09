@@ -1,26 +1,23 @@
-"""Version gates shared by semantic readers of envelopes and runner replies."""
-import contract
-
-
-def _version_error(label, value, expected):
-    if type(value) is not int:
-        return f'malformed {label}: schema_version {value!r} is not an integer'
-    if value != expected:
-        return f'unsupported {label}: schema_version {value} (this reader accepts {expected})'
-    return None
-
+"""Exact producer admission before semantic reading."""
 
 def is_envelope(document):
-    """A controller envelope carries `kind` and `data`; a bare reply carries `steps`."""
     return isinstance(document, dict) and 'data' in document and 'steps' not in document
 
 
-def version_errors(document):
-    """One error for the first unsupported or malformed version, else []."""
+def _error(label, context, expected):
+    value = context.get('contract') if isinstance(context, dict) else None
+    if not isinstance(value, str):
+        return f'malformed {label}: missing or nonstring contract'
+    if expected == 'unbound' or value != expected:
+        return f'unsupported {label}: contract {value!r} (expected {expected!r})'
+    return None
+
+
+def version_errors(document, expected_contract):
     if not isinstance(document, dict):
         return ['document is not an object']
     if is_envelope(document):
-        error = _version_error('controller envelope', document.get('schema_version'), contract.CONTROLLER_ENVELOPE)
+        error = _error('controller envelope', document.get('build'), expected_contract)
         if error:
             return [error]
         data = document.get('data')
@@ -29,13 +26,13 @@ def version_errors(document):
             return []
         if not isinstance(runner, dict):
             return ['malformed runner reply: data.runner_result is not an object']
-        error = _version_error('runner response', runner.get('schema_version'), contract.RESPONSE_SCHEMA)
-        return [error] if error else []
-    error = _version_error('runner response', document.get('schema_version'), contract.RESPONSE_SCHEMA)
+        error = _error('runner response', runner.get('producer'), expected_contract)
+    else:
+        error = _error('runner response', document.get('producer'), expected_contract)
     return [error] if error else []
 
 
-def require_supported(document):
-    errors = version_errors(document)
+def require_supported(document, expected_contract):
+    errors = version_errors(document, expected_contract)
     if errors:
         raise ValueError(errors[0])

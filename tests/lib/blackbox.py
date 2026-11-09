@@ -9,6 +9,7 @@ import base64
 import json
 
 import contract
+import build_context
 from consumer import validate
 
 
@@ -30,6 +31,26 @@ def recapture_host_reply(envelope):
     return envelope
 
 
+def bind_constructed_envelope(template):
+    """Supply an explicit test context to an authored, identity-free template."""
+    from copy import deepcopy
+    result = deepcopy(template)
+    runner = result['data'].get('runner_result')
+    capture = (result['data'].get('runner_client') or {}).get('transport')
+    if 'schema_version' in result or 'contract' in result.get('build', {}):
+        raise ValueError('constructed envelope template carries an identity')
+    result['build']['contract'] = build_context.TEST_CONTRACT
+    if runner is not None:
+        if 'schema_version' in runner or 'producer' in runner:
+            raise ValueError('constructed host template carries an identity')
+        runner['producer'] = build_context.producer()
+    if capture is not None:
+        if 'protocol_version' in capture or 'contract' in capture:
+            raise ValueError('constructed capture template carries an identity')
+        capture['contract'] = build_context.TEST_CONTRACT
+    return recapture_host_reply(result)
+
+
 def envelope_skeleton(runner, *, ok=True, timeout_ms=240000):
     """A current-contract `kind: run` envelope around a constructed reply.
 
@@ -37,11 +58,13 @@ def envelope_skeleton(runner, *, ok=True, timeout_ms=240000):
     data skeleton (D2) so the full document validator can read it. The dossier
     it carries says nothing was selected; it is not a live observation.
     """
+    if isinstance(runner, dict) and 'producer' not in runner:
+        runner = dict(runner, producer=build_context.producer())
     reason = 'constructed control: no runner was selected'
     binary = {'path': None, 'actual_sha256': None, 'baseline_sha256': None,
               'verification': 'unavailable', 'reason': reason}
     envelope = {
-        'schema_version': contract.CONTROLLER_ENVELOPE, 'kind': 'run',
+        'build': build_context.producer(), 'kind': 'run',
         'result': {'ok': ok, 'rc': None, 'exit_code': 0 if ok else 1,
                    'normalized_outcome': (runner or {}).get('normalized_outcome'), 'errno': None,
                    'error': None, 'stderr': None, 'stdout': None},
@@ -61,7 +84,7 @@ def envelope_skeleton(runner, *, ok=True, timeout_ms=240000):
                               'transport_admission': 'accepted', 'transport_error': None,
                               'submission': 'invoked', 'runner_reply_error': None,
                               'transport': {
-                                  'kind': 'runner_client_capture', 'protocol_version': contract.RUNNER_PROTOCOL,
+                                  'kind': 'runner_client_capture', 'contract': build_context.TEST_CONTRACT,
                                   'client_pid': 123, 'clock': 'mach_continuous_time_ns', 'clock_available': True,
                                   'started_continuous_ns': 1000000000,
                                   'deadline_continuous_ns': 1000000000 + timeout_ms * 1000000,
@@ -86,13 +109,14 @@ def envelope_skeleton(runner, *, ok=True, timeout_ms=240000):
 
 def validate_run_shape(run, expected_steps, *, policy_format=None,
                        require_sandboxed_after_apply=False, require_policy_sha256=False,
-                       allow_fixture_json=False):
+                       allow_fixture_json=False, expected_contract=None):
     """Return (errors, [(actual_step, expected_step), ...]) in received order.
 
     Match by ID even after an order error, so subsequent diagnostics name the
     right expectation. Never collapse duplicate returned IDs into a dictionary.
-    The whole document is validated under the current contract; another
-    version yields its one version error beside the step diagnostics.
+    The whole document is validated under the supplied contract, or the
+    candidate/test-fixture context for ordinary live/authored inputs. Mutations
+    of live captures can retain their original independently asserted context.
     """
     errors = []
     if not isinstance(run, dict):
@@ -142,7 +166,9 @@ def validate_run_shape(run, expected_steps, *, policy_format=None,
             errors.append(f"runner.steps[{index}]: unexpected step_id={step_id!r}")
             continue
         matched.append((step, by_id[step_id]))
-    errors.extend(validate(run, allow_fixture_json=allow_fixture_json))
+    if expected_contract is None:
+        expected_contract = build_context.TEST_CONTRACT if allow_fixture_json else build_context.candidate_contract()
+    errors.extend(validate(run, expected_contract, allow_fixture_json=allow_fixture_json))
     return errors, matched
 
 

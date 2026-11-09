@@ -5,6 +5,7 @@ import secrets
 import sys
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[2] / 'lib'))
+import build_context
 from run_capture import RunCapture
 import consumer
 
@@ -15,7 +16,7 @@ def main():
     target = out / ('unlink-' + secrets.token_hex(8))
     target.write_bytes(b'independent unlink witness\n')
     spec = {
-        'schema_version': 6, 'specimen_id': 'removed-target-prediction',
+        'contract': build_context.candidate_contract(), 'specimen_id': 'removed-target-prediction',
         'policy': {'format': 'sbpl', 'sbpl_source': '(version 1) (allow default)'},
         'probe_plan': [{
             'step_id': 'read',
@@ -71,7 +72,7 @@ def main():
                                      'comparison': comparison,
                                      'later_resolution': prediction.get('path_diagnostics')}
     assert recorded['unlink']['later_resolution']['realpath_resolved'] is None, recorded['unlink']
-    errors = consumer.validate(envelope)
+    errors = consumer.validate(envelope, build_context.candidate_contract())
     assert not errors, errors
     (out / 'prediction-observation.json').write_text(json.dumps(recorded, indent=2) + '\n')
     print('removed target retains native ' + '/'.join(recorded[s]['prediction'] for s in ('read', 'unlink'))

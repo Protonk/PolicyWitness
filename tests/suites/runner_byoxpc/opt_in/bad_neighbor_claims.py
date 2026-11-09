@@ -18,6 +18,7 @@ ROOT = Path(__file__).resolve().parents[4]
 sys.path.insert(0, str(ROOT / 'tests/lib'))
 sys.path.insert(0, str(ROOT / 'tests/fixtures/byoxpc'))
 import contract
+import build_context
 from consumer import validate
 from porcelain import decode as decode_porcelain
 from runner_client_capture import validate_capture, host_reply
@@ -98,7 +99,7 @@ def checker_controls():
 
 
 def specimen(name, effect, hang, runner):
-    spec = dict(schema_version=contract.REQUEST_SCHEMA, specimen_id=name,
+    spec = dict(contract=build_context.candidate_contract(), specimen_id=name,
         policy=dict(format='sbpl', sbpl_source='(version 1)(allow default)'),
         probe_plan=[dict(step_id='create', sandbox_check=dict(operation='process-exec*',
             filter=dict(kind='path', value='/bin/sh')), attempt=dict(kind='exec', action='spawn', target='/bin/sh', args=['-c', 'printf x >> "$1"', 'effect', str(effect)]))])
@@ -142,11 +143,11 @@ def finish(process, record):
     raw_bytes = (folder / 'stdout').read_bytes()
     raw = decode_porcelain(raw_bytes, 'capture') if record['direct'] else json.loads(raw_bytes)
     if record['direct']:
-        assert not validate_capture(raw), validate_capture(raw)
+        assert not validate_capture(raw, build_context.candidate_contract()), validate_capture(raw, build_context.candidate_contract())
         transport = raw
-        reply = host_reply(raw) if raw.get('runner_reply') else None
+        reply = host_reply(raw, build_context.candidate_contract()) if raw.get('runner_reply') else None
     else:
-        assert not validate(raw), validate(raw)
+        assert not validate(raw, build_context.candidate_contract()), validate(raw, build_context.candidate_contract())
         reply = raw['data']['runner_result']
         record['final_client'] = raw['data']['runner_client']
         transport = raw['data']['runner_client']['transport']

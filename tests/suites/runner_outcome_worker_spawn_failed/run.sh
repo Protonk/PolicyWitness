@@ -25,13 +25,16 @@ FAKE_WORKER="/nonexistent/policy-witness-worker-not-real"
 
 SPECIMEN_PATH="${PW_TEST_ARTIFACTS}/specimen.json"
 PW_FAKE_WORKER="${FAKE_WORKER}" "${PW_PYTHON}" -B -S -P - "${SPECIMEN_PATH}" <<'PY'
+import os, sys
+sys.path.insert(0, os.environ['PW_CONTRACT_TEST_LIB'])
+import build_context
 import json
 import os
 import sys
 from pathlib import Path
 
 specimen = {
-    "schema_version": 6,
+    'contract': build_context.candidate_contract(),
     "specimen_id": "worker_spawn_failed_probe",
     "policy": {
         "format": "sbpl",

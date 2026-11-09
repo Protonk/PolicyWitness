@@ -30,7 +30,8 @@ from repository_tree import directory, required  # noqa: E402
 CONFIGURED_INPUTS = (required('meson.build'), required('meson.options'),
                      directory('controller/tools/pw_probe_runner', ('.c', '.h')),
                      directory('controller/tools/sb_api_validator', ('.c', '.h')), directory('runner/Sources'),
-                     required('tests/lib/native_sources.py'), required('docs/generate_worker_identity.py'))
+                     required('tests/lib/native_sources.py'), required('docs/generate_worker_identity.py'),
+                     required('docs/source_identity.py'), required('build.sh'), required('runner/Package.swift'))
 
 
 def launch(argv, cwd, timeout, launches, step):

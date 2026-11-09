@@ -20,10 +20,13 @@ fi
 # retired instrumentation field from being silently dropped and re-accepted.
 SPECIMEN_PATH="${PW_TEST_ARTIFACTS}/specimen.json"
 "${PW_PYTHON}" -B -S -P - "${SPECIMEN_PATH}" <<'PY'
+import os, sys
+sys.path.insert(0, os.environ['PW_CONTRACT_TEST_LIB'])
+import build_context
 import json, sys
 from pathlib import Path
 spec = {
-    "schema_version": 6,
+    'contract': build_context.candidate_contract(),
     "specimen_id": "witness_contract_instrumentation_rejected",
     "policy": {"format": "sbpl", "sbpl_source": "(version 1) (allow default)"},
     "probe_plan": [],

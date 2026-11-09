@@ -16,6 +16,7 @@ import time
 
 ROOT = Path(__file__).resolve().parents[3]
 sys.path.insert(0, str(ROOT / 'tests/lib'))
+import build_context
 import consumer
 import porcelain
 from run_capture import RunCapture
@@ -41,7 +42,7 @@ def specimen():
     steps = [dict(step_id=f'r{i:03d}',
                   sandbox_check=dict(operation='file-read-data', filter=dict(kind='path', value='/etc/hosts')),
                   attempt=dict(kind='file', action='open_read', target='/etc/hosts')) for i in range(256)]
-    return dict(schema_version=6, specimen_id='porcelain_output_dense_read',
+    return dict(contract=build_context.candidate_contract(), specimen_id='porcelain_output_dense_read',
                 policy=dict(format='sbpl', sbpl_source='(version 1) (allow default)'),
                 phases=[dict(phase_id=f'p{i}', actions=steps[i * 32:(i + 1) * 32]) for i in range(8)])
 
@@ -57,7 +58,7 @@ def complete(pw, out, request):
     after = Path('/etc/hosts').read_bytes()
     save(out / 'read-target-after.json', dict(path='/etc/hosts', bytes=len(after), sha256=digest(after)))
     require(before == after, 'independently read target changed during the positive run')
-    errors = consumer.validate(document)
+    errors = consumer.validate(document, build_context.candidate_contract())
     save(out / 'complete/consumer.json', dict(errors=errors))
     require(not errors, f'independent consumer rejected complete reply: {errors}')
     require(document['result']['ok'] is True, 'positive public result is not successful')

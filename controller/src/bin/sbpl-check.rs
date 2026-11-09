@@ -633,7 +633,7 @@ mod tests {
 
     fn assert_verdict(wire: &Value, outcome: &str, exit_code: i64) {
         assert_eq!(wire["kind"], "sbpl_check");
-        assert_eq!(wire["schema_version"], json_contract::SCHEMA_VERSION);
+        assert_eq!(wire["build"]["contract"], json_contract::BUILD_CONTRACT);
         assert_eq!(wire["result"]["normalized_outcome"], outcome, "{wire}");
         assert_eq!(wire["result"]["exit_code"], exit_code, "{wire}");
         assert_eq!(wire["result"]["ok"], exit_code == 0, "{wire}");

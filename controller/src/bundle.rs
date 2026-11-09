@@ -12,44 +12,41 @@ pub struct BundleInfo {
     pub bundle_id: String,
     pub executable: String,
     pub package_type: Option<String>,
-    pub protocol_version: u32,
+    pub contract: String,
 }
 
-/// `Print` alone cannot distinguish the integer 2 from the string "2".
-/// Ask plutil to enforce the plist type before parsing its decimal output.
-fn protocol_marker(plist: &Path) -> Result<u32, String> {
+/// Ask plutil to enforce the plist string type before exact contract admission.
+fn contract_marker(plist: &Path) -> Result<String, String> {
     let output = Command::new("/usr/bin/plutil")
         .args([
             "-extract",
-            "PWRunnerProtocolVersion",
+            "PWContract",
             "raw",
             "-expect",
-            "integer",
+            "string",
             "-o",
             "-",
         ])
         .arg(plist)
         .output()
-        .map_err(|error| format!("cannot read runner protocol marker: {error}"))?;
+        .map_err(|error| format!("cannot read runner contract marker: {error}"))?;
     if !output.status.success() {
         return Err(format!(
-            "PWRunnerProtocolVersion must be an integer: {}{}",
+            "PWContract must be a string: {}{}",
             String::from_utf8_lossy(&output.stdout),
             String::from_utf8_lossy(&output.stderr)
         ));
     }
-    parse_protocol_marker(&output.stdout)
+    parse_contract_marker(&output.stdout)
 }
 
-fn parse_protocol_marker(bytes: &[u8]) -> Result<u32, String> {
-    let text = std::str::from_utf8(bytes)
-        .map_err(|_| "runner protocol marker is not UTF-8")?
-        .trim();
-    if text.is_empty() || !text.bytes().all(|byte| byte.is_ascii_digit()) {
-        return Err("runner protocol marker must be a nonnegative integer".into());
+fn parse_contract_marker(bytes: &[u8]) -> Result<String, String> {
+    let raw = std::str::from_utf8(bytes).map_err(|_| "runner contract marker is not UTF-8")?;
+    let text = raw.strip_suffix('\n').unwrap_or(raw);
+    if text.is_empty() {
+        return Err("runner contract marker must be nonempty".into());
     }
-    text.parse()
-        .map_err(|_| "runner protocol marker is outside the supported integer range".into())
+    Ok(text.to_owned())
 }
 
 pub fn read_bundle_info(bundle_path: &Path) -> Result<BundleInfo, String> {
@@ -60,12 +57,12 @@ pub fn read_bundle_info(bundle_path: &Path) -> Result<BundleInfo, String> {
     let bundle_id = plist_key_string(&plist, "CFBundleIdentifier")?;
     let executable = plist_key_string(&plist, "CFBundleExecutable")?;
     let package_type = plist_key_string(&plist, "CFBundlePackageType").ok();
-    let protocol_version = protocol_marker(&plist)?;
+    let contract = contract_marker(&plist)?;
     Ok(BundleInfo {
         bundle_id,
         executable,
         package_type,
-        protocol_version,
+        contract,
     })
 }
 
@@ -74,7 +71,7 @@ mod tests {
     use super::*;
 
     #[test]
-    fn protocol_marker_requires_an_actual_plist_integer() {
+    fn contract_marker_requires_an_actual_plist_string() {
         let root = std::env::temp_dir().join(format!(
             "pw-protocol-plist-{}-{}",
             std::process::id(),
@@ -86,32 +83,16 @@ mod tests {
         std::fs::create_dir(&root).unwrap();
         let path = root.join("Info.plist");
         for (label, value, accepted) in [
-            (
-                "integer",
-                "<key>PWRunnerProtocolVersion</key><integer>2</integer>",
-                true,
-            ),
-            (
-                "string",
-                "<key>PWRunnerProtocolVersion</key><string>2</string>",
-                false,
-            ),
-            (
-                "real",
-                "<key>PWRunnerProtocolVersion</key><real>2</real>",
-                false,
-            ),
-            (
-                "boolean",
-                "<key>PWRunnerProtocolVersion</key><true/>",
-                false,
-            ),
+            ("string", "<key>PWContract</key><integer>2</integer>", false),
+            ("string", "<key>PWContract</key><string>2</string>", true),
+            ("real", "<key>PWContract</key><real>2</real>", false),
+            ("boolean", "<key>PWContract</key><true/>", false),
             ("missing", "", false),
         ] {
             std::fs::write(&path, format!("<?xml version=\"1.0\" encoding=\"UTF-8\"?><plist version=\"1.0\"><dict>{value}</dict></plist>")).unwrap();
-            let observed = protocol_marker(&path);
+            let observed = contract_marker(&path);
             if accepted {
-                assert_eq!(observed.unwrap(), 2, "{label}");
+                assert_eq!(observed.unwrap(), "2", "{label}");
             } else {
                 assert!(observed.is_err(), "{label} was admitted as {observed:?}");
             }
@@ -120,17 +101,14 @@ mod tests {
     }
 
     #[test]
-    fn protocol_marker_integer_range_is_explicit() {
-        assert_eq!(parse_protocol_marker(b"2\n").unwrap(), 2);
-        for bad in [
-            b"".as_slice(),
-            b"2.0",
-            b"-1",
-            b"true",
-            b"\"2\"",
-            b"4294967296",
-        ] {
-            assert!(parse_protocol_marker(bad).is_err(), "{bad:?}");
+    fn contract_marker_preserves_exact_string_bytes() {
+        assert_eq!(parse_contract_marker(b"2\n").unwrap(), "2");
+        assert_eq!(
+            parse_contract_marker(b" test:context \n").unwrap(),
+            " test:context "
+        );
+        for bad in [b"".as_slice(), b"\xff"] {
+            assert!(parse_contract_marker(bad).is_err(), "{bad:?}");
         }
     }
 }

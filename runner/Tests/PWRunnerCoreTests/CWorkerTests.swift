@@ -786,7 +786,6 @@ func runCWorkerTests(_ tk: TestKit) {
             for step in wire { _ = try pwPorcelainEncode(step) }
             try expectEqual(wire.first?.attempt.outcome, AttemptOutcome.ok)
             try expectEqual(wire.last?.attempt.outcome, AttemptOutcome.ok)
-            try expectTrue(PWContract.responseSchema >= 11)
             // Constructed producer rows establish forwarding/classification,
             // separately from native cleanup controls. Unknown diagnostic prose
             // must not couple child status to attempt success.
