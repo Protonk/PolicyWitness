@@ -21,9 +21,11 @@ constant in the policy owner. No environment variable, command-line option,
 Makefile variable, tracked or untracked file, marker inside a run, directory
 name or output location changes what is kept, and no command accepts a keep or
 exclude list. Anyone may leave other evidence under `tests/out`; `make prune
-APPLY=1` and the release checkpoint remove it once it is completed, and the
-tools offer no way to exempt it. `APPLY` and the targeted `--unfinished <name>`
-choose whether and what to delete; neither retains anything.
+APPLY=1` and pruning after archival remove unprotected managed output once it
+is inactive and has no unresolved resource cleanup, whether completed, failed
+or interrupted. Missing or malformed completion evidence does not retain a
+run. `APPLY` chooses preview or deletion; there is no per-run deletion selector
+or unfinished-output exception.
 
 Support the current release workflow without maintaining deprecated operating
 paths across versions. Remove obsolete readers, writers, fixtures and wrappers
@@ -145,9 +147,9 @@ Require new local releases to increase numerically. Preflight refuses a target
 at or below the newest complete local archive; the archiver repeats the check
 under the checkout lock before exposing a new archive. Thus `0.3.7` after
 `0.4.0` is refused before build/notarization, rather than accepted with
-immediately unprotected acceptance output. The release checkpoint takes no
-archive argument: it always reads the newest complete archive, so cleanup
-cannot be started from an older release and needs no refusal for that.
+immediately unprotected acceptance output. Pruning takes no archive argument:
+it always reads the newest complete archive, so cleanup cannot be started from
+an older release and needs no refusal for that.
 
 The window always retains its newest complete archive, so that archive supplies
 the released-once guard for every version expired by this policy. Keep the
@@ -187,28 +189,28 @@ still inside the window after the next release.
 Provide one planner for archive retention and disposable test output, exposed
 through a read-only preview and an explicit apply operation. Use it after
 successful archival in `make release` and for independent catch-up pruning.
-An ordinary test run does not trigger a sweep. Share classification and
-protection while keeping the entry points' unfinished-output rules explicit:
-
-| Entry point | Unfinished-output rule |
-| --- | --- |
-| `make prune` / `tests/run.sh --prune`, including `--apply` | Preserve interrupted and ambiguous output. Clean eligible completed output and expired release material only. |
-| Explicit `--unfinished <name>` | Retain the existing targeted operation for one owned unfinished direct run, subject to protection and resource checks; do not broaden it into a sweep. |
-| Successful release checkpoint | May retire owned unfinished output only when it started before that release battery, after ownership and resource checks. Newer unfinished work stays. |
-
-Explicit catch-up pruning does not borrow an old release's timestamp to gain
-checkpoint deletion powers. Identify the entry-point mode in the preview and
-journal. Update `make prune` and its documented archive-cleanup scope together
-with that integration.
+An ordinary test run does not trigger a sweep. Release cleanup is successful
+archival followed by the same prune apply operation as `make prune APPLY=1`.
+There is no release-specific cleanup mode, battery-start cutoff, minimum age or
+per-run confirmation. Remove `--unfinished <name>`, its targeted helper and
+associated messages and tests. Preview and journal need no entry-point mode.
+Update `make prune` and its documented archive-cleanup scope with this change.
 
 The plan names kept, eligible and blocked paths, with identities and reasons.
 It covers expired archive directories, positively linked attempt directories
 and pointer files, older unpacked acceptance directories, and eligible managed
-development output. All completed managed development runs, including failures,
-are eligible; there is no newest-run exception. Unfinished output follows the
-entry-point rules above. Active acceptance, unresolved pytest ownership,
-pending BYOXPC cleanup, redirects and unknown ownership remain blocked. The
-pruner never settles machine resources by deleting their receipts.
+development output. Every unprotected managed run is eligible once inactive
+and free of resource-cleanup obligations, including interrupted runs and runs
+with ambiguous completion evidence. Validate managed ownership independently
+of completion: a missing or malformed `run.json` is not a retention reason,
+but a missing, foreign or invalid owner is a blocker. Establish inactivity
+through the existing checkout and acceptance lifetime locks and resource
+ownership guards, not a timestamp or the absence of a terminal summary.
+Active acceptance, unresolved pytest ownership, pending BYOXPC cleanup,
+redirects and unknown ownership remain blocked. Report their concrete reasons;
+after they are resolved, the next ordinary prune removes eligible output
+without a special command. The pruner never settles machine resources by
+deleting their receipts.
 
 Apply takes the existing stable `tests/.checkout.lock`, reloads the policy and
 inventory, and rechecks each target's identity and bytes. It records a durable
@@ -359,15 +361,15 @@ outputs, not expired archives selected by a filename or embedded old version.
 
 | Owner | Work |
 | --- | --- |
-| [retention.py](tests/lib/retention.py), [checkout_lock.py](tests/lib/checkout_lock.py), [test_cli.py](tests/lib/test_cli.py), [release_accept.py](tests/lib/release_accept.py) | Make retention the policy/cleanup owner, move run ownership helpers out, replace index-derived protection and remove manual-pin output without replacing the lock protocol. |
+| [retention.py](tests/lib/retention.py), [checkout_lock.py](tests/lib/checkout_lock.py), [test_cli.py](tests/lib/test_cli.py), [release_accept.py](tests/lib/release_accept.py) | Make retention the policy/cleanup owner, move run ownership helpers out, replace index-derived protection and remove manual-pin output without replacing the lock protocol. Remove the targeted unfinished-run interface and output-replacement messages directing users to it; ordinary prune covers inactive owned runs regardless of completion. |
 | [release_archive.py](tests/lib/release_archive.py), [release_runs.py](tests/lib/release_runs.py), [execution_contract.py](tests/lib/execution_contract.py) | Require current records and independently captured execution contracts; remove legacy packing/admission and contract-free verification. Publish the complete archive atomically, remove index writes, preserve archive-to-acceptance binding and isolate temporary storage inspection. |
 | [release_preflight.py](tests/lib/release_preflight.py), [publication helper](tests/lib/release_publish.py) | Enforce release ordering from the newest complete archive, preserve destination-collision checks, check footprint provenance freshness and refuse publication without a complete archive. |
-| [release_rotate.py](tests/lib/release_rotate.py), [release_cleanup.py](tests/lib/release_cleanup.py), [Makefile](Makefile) | Consolidate cleanup into retention and remove the old modules and callers without compatibility wrappers. Preserve entry-point deletion limits and implement resumable archive retirement without permanent per-version markers, archive-held receipts or an archive argument. Refuse a distribution root other than the checkout's `dist/`. |
+| [release_rotate.py](tests/lib/release_rotate.py), [release_cleanup.py](tests/lib/release_cleanup.py), [Makefile](Makefile) | Consolidate cleanup into retention and remove the old modules and callers without compatibility wrappers. Use the same pruning operation after archival and explicitly; remove the battery-start cutoff and entry-point modes. Implement resumable archive retirement without permanent per-version markers, archive-held receipts or an archive argument. Refuse a distribution root other than the checkout's `dist/`. |
 | [Dispatcher fixtures](tests/fixtures/dispatcher/repository.py), [retention controls](tests/suites/dispatcher/check_retention.py), [release rotation controls](tests/suites/preflight/check_release_rotation.py), [publication controls](tests/suites/preflight/check_release_publish.py) | Replace handwritten-index fixtures with independent release inventories and migrate release fixtures to captured current contracts. Remove historical allowlist sidecars and obsolete pin/index assertions while retaining ownership, integrity and filesystem boundaries. |
 | [Live release-battery fixture](tests/fixtures/release/live_battery.py), [pytest integration controls](tests/suites/dispatcher/pytest_integration.py) | Derive acceptance protection without the real index. Split downgraded-format and missing-contract controls, remove positive historical-producer acceptance, and preserve native family and unresolved-resource assertions. |
 | [Source drift rules](tests/suites/source_drift/check.py), [planner mutation controls](tests/suites/source_drift/check_planner.py) | Keep the bare/default battery and `--prune` routing restrictions coherent with the Makefile. Preserve mutation sensitivity when the prune recipe changes. |
 | [Preflight wrapper](tests/suites/preflight/run.sh), [catalog](tests/catalog.json) | Replace step text and descriptions promising pins, newest-development retention or index retirement. |
-| [SIGNING.md](docs/SIGNING.md), [BUILD.md](docs/BUILD.md), [distribution README](dist/README.md), [distribution rules](dist/AGENTS.md), [test README](tests/README.md), [test rules](tests/AGENTS.md), [preflight reference](tests/suites/preflight/README.md) | Describe the window, single unpacked acceptance, lock holders, explicit/checkpoint cleanup limits, the no-knob rule and recovery. Remove indefinite retention, manual pins, the non-release pin allowance and preserved-copy guidance and historical bundle-verification promises; distinguish current release-record schema 2 from portable bundle schema 3. |
+| [SIGNING.md](docs/SIGNING.md), [BUILD.md](docs/BUILD.md), [distribution README](dist/README.md), [distribution rules](dist/AGENTS.md), [test README](tests/README.md), [test rules](tests/AGENTS.md), [preflight reference](tests/suites/preflight/README.md) | Describe the window, single unpacked acceptance, lock holders, uniform pruning of inactive owned output, the no-knob rule and recovery. Remove indefinite retention, manual pins, targeted unfinished cleanup, the non-release pin allowance and preserved-copy guidance and historical bundle-verification promises; distinguish current release-record schema 2 from portable bundle schema 3. |
 | [Footprint manifest](docs/footprint.json), [FOOTPRINT.md](docs/FOOTPRINT.md), [documentation rules](docs/AGENTS.md) | Move transcription to the next release preparation, preserve receipt attribution and explain that provenance freshness does not verify measured values. |
 
 Also update affected catalog descriptions, fixture input declarations, release
@@ -381,16 +383,17 @@ whose owning inputs actually change.
 
 Use disposable fixture repositories through the existing dispatcher. Retire
 tests whose only purpose was handwritten-index syntax, arbitrary pins or index
-replacement. Keep independent byte inventories and real child-process failure
-controls for the mechanisms that survive.
+replacement, targeted unfinished deletion or the release-only cutoff. Keep
+independent byte inventories and real child-process failure controls for the
+mechanisms that survive.
 
 | Proposition | Required observation |
 | --- | --- |
 | The window is exact | Inventories with zero through six releases retain at most four complete archives; five-to-four and six-to-four transitions select the right versions. Test numeric ordering across `0.3.9`/`0.3.10` and a minor-version boundary. Failed attempts and incomplete archives never displace a release. |
 | Release order and released-once checks survive pruning | With expired archive paths completely absent, current preflight and direct archival refuse expired tags using the newest retained archive. `0.3.7` after `0.4.0` and an existing destination are refused. Expiry never removes the newest archive; unreadable history is not treated as empty. |
 | Only current acceptance and an actual handoff are protected | Dispatcher replacement and pruning refuse overlaps with current acceptance. Accepted unarchived attempts matching the final ZIP protect their recorded acceptance; foreign hashes, ambiguity and changed owners cannot manufacture protection or deletion authority. Older acceptance and settled development output become eligible, even the newest development run. |
-| Entry-point powers remain distinct | Ordinary explicit prune preserves interrupted/ambiguous runs regardless of age; targeted `--unfinished` affects only its named eligible run; a release checkpoint alone uses the battery-start cutoff. Active, pending-resource and unknown-ownership blockers belong to the shared classification and are exercised once, not per entry point. |
-| Retention has no knobs | Pruning accepts no retention argument and reads no retention setting. A completed run stays eligible whatever its name, its contents, the environment or a leftover `tests/RETAINED.json` naming it. Archiving and cleanup refuse a distribution root other than the checkout's `dist/`. |
+| Incompletion does not retain output | Ordinary prune apply removes inactive owned runs with completed, failed, missing or malformed completion summaries, including runs newer than the latest release battery and runs in a checkout with no archives. Active locks, unresolved resources and unknown owners block deletion; after a real activity/resource blocker clears, the next ordinary prune removes the run without an unfinished selector. Release cleanup invokes this same operation. Exercise shared blockers once, not per entry point. |
+| Retention has no knobs | Pruning accepts no retention argument and reads no retention setting. An inactive owned run without resource obligations stays eligible regardless of completion status, name, unrelated marker contents, environment or a leftover `tests/RETAINED.json` naming it. Archiving and cleanup refuse a distribution root other than the checkout's `dist/`. |
 | Linked copies are selected by evidence | Matching pointers, superseded assets and known attempt receipts expire together. Similar names, unrelated files, tracked historical fixtures, the current app and remote assets are untouched. |
 | Historical inspection is bounded | Recognized schema-1 storage can be classified without passing current semantic acceptance; malformed identities, hashes, layouts and redirects block mutation. Surviving archive bytes remain unchanged. Its retirement test requires no remaining legacy archive or dependent transaction. |
 | Current evidence requires its captured contract | Schema-3 fixtures verify with independently captured contracts, including a valid contract with no pytest families. Missing producer or bundle contracts and schema-2 downgrades fail at their respective boundaries. Fully repacked semantic deletions still reach family/ownership verification. A later checkout catalog does not replace a retained archive's captured contract. |
@@ -420,9 +423,10 @@ replaces its recovery path. Implement the policy, callers, fixtures and
 documentation together, then:
 
 1. Refresh the local inventory under the new preview. The two old pins are
-   ordinary development runs to it: eligible when completed, blocked only by
-   the ownership and resource checks every run gets. Confirm the preview
-   reports no old journal or quarantine blocker.
+   ordinary development runs to it: eligible once inactive and free of resource
+   obligations, regardless of completion. Apply the ownership and resource
+   checks every run gets. Confirm the preview reports no old journal or
+   quarantine blocker.
 2. Review the computed window. With the observed inventory one transaction
    retires `v0.2.7` through `v0.3.2` and retains `v0.3.3` through `v0.3.6`.
 3. Apply through the new helper when no build, battery or acceptance is active.
@@ -433,10 +437,12 @@ documentation together, then:
    remaining archives' inventories are unchanged.
 
 Completion means the tracked manual index and its live consumers are gone,
-one policy without knobs governs replacement and cleanup, the ordinary reader and writer have
-no legacy-format or missing-contract path, the old cleanup modules and wrappers
-are gone, and the required controls pass. The local migration has either reached
-the declared window or names each unresolved ownership/resource blocker.
+one policy without knobs governs replacement and cleanup, and release cleanup
+uses ordinary pruning with no unfinished-output exception. The ordinary reader
+and writer have no legacy-format or missing-contract path, the old cleanup
+modules and wrappers are gone, and the required controls pass. The local
+migration has either reached the declared window or names each unresolved
+ownership/resource blocker.
 Future successful archival enforces the same window; footprint transcription
 happens in the next release preparation, with no required post-tag
 retention/footprint commit. Retire the temporary historical machinery when its
