@@ -38,7 +38,7 @@ collects the complete and interrupted outcomes. Run through
 
 ## Footprint observations
 
-The opt-in `held_phase_footprint` case repeats matched ordinary and actor holds
+The default `held_phase_footprint` case repeats matched ordinary and actor holds
 at declared intervals. An acknowledged validator bridge holds collection while
 external generation-qualified samples record worker CPU and apparatus demand.
 Selected effects remain absent until release. Actor variants include the
@@ -57,7 +57,7 @@ their busy-worker requirement and historical meaning. Neither reader by itself
 establishes a matched improvement or converts artificial holds into production
 hold durations.
 
-The opt-in `response_footprint` case samples fresh shipped controllers handling a
+The default `response_footprint` case samples fresh shipped controllers handling a
 small known-byte read, the fixed-action independent-query and phased pair, the
 control-character exec workload and the existing actor maximum read workload.
 The existing maximum-reply checker retains action, transfer, equipment, resource

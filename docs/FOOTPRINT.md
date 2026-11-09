@@ -68,7 +68,11 @@ without changing their original identities or cleanup ownership.
 The generator and the footprint drift case verify the manifest's structure,
 its citations and the freshness of the rendered copy. Nothing verifies that a
 row's numbers agree with a receipt. A row changes only when someone reruns its
-case and transcribes the new receipt.
+case and transcribes the new receipt. The three measurement cases are default
+battery members, so each release's acceptance battery produces receipts for
+every measured row on the released binaries; the
+[release procedure](SIGNING.md#release-procedure) transcribes them after
+packaging and names that release archive here.
 
 ## Using the rows as a baseline
 

@@ -7,7 +7,7 @@ PolicyWitness, before the envelope is decoded.
 
 ## Aftermath footprint
 
-The opt-in `aftermath_footprint` case inventories ordinary and actor runs at
+The `aftermath_footprint` case inventories ordinary and actor runs at
 baseline, CLI return and independently observed resource ending. It repeats the
 completion path and separately holds a post-invocation timeout. Required workers
 have generation-qualified inspection and independent process-exit watches.
@@ -100,6 +100,6 @@ public command, or the explicit `PW_TEST_OUT_DIR`.
 ./tests/run.sh --suite run_effects
 ```
 
-Baseline cases are included in the default battery; `aftermath_footprint` is opt-in. The live cases need the built app and XPC;
+Every case is in the default battery. `aftermath_footprint` signs a disposable actor host, so it also needs Swift, Meson and a Developer ID identity matching the app's team, and it declares `runner_exec_lifecycle/closed_streams_leader_exit` as a dependency. The live cases need the built app and XPC;
 the exec case also needs the macOS C toolchain; the controls need only
 Python 3.

@@ -48,15 +48,15 @@ separate admission outcomes. None of these paths permits execution replay.
 ## Evidence contract coverage
 
 The footprint cases cover apparatus accounting at three distinct boundaries.
-Opt-in `witness_contract/held_phase_footprint` requires repeated, externally
+Default `witness_contract/held_phase_footprint` requires repeated, externally
 sampled worker CPU intervals while an acknowledged collection gate is held,
-selected-effect guards and metadata-only actor authority observations. Opt-in
+selected-effect guards and metadata-only actor authority observations. Default
 `witness_contract/response_footprint` preserves exact transported host bytes,
 separate host/client/envelope counts, full ordinary and actor workload evidence,
 and generation-qualified controller resident/physical-footprint samples.
 `unit/rust.unit` independently asserts scalar overlap at receiver/rendering
 boundaries; its test-process receipt does not locate a production sample in a
-decoder stage. Opt-in `run_effects/aftermath_footprint` inventories repeated
+decoder stage. Default `run_effects/aftermath_footprint` inventories repeated
 completion and held post-invocation timeout paths before harness interventions,
 with independent required-worker exit observations.
 
@@ -284,7 +284,8 @@ controlled error codes do not attribute historical failures.
 
 ## Worker resource challenge observations
 
-The opt-in `runner_exec_lifecycle/closed_streams_leader_exit` case combines
+The opt-in `runner_exec_lifecycle/closed_streams_leader_exit` case, which the
+default battery also selects as a dependency of `run_effects/aftermath_footprint`, combines
 leader exit with closed output streams and checks whether a same-group
 child remains responsive after the completed reply. Independent fixture
 cleanup follows the survival observation. `runner_exec_inheritance/closed_worker_stderr`

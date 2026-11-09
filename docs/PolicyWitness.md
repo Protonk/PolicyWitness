@@ -163,7 +163,9 @@ Top-level fields:
 - `schema_version`: integer-valued number equal to the current request schema
 - `specimen_id`: string
 - `run_kind`: string (optional)
-- `policy`: object
+- `policy`: object, the ordinary form's single policy. The
+  [actor form](#actors-issue-inside-the-sandbox-and-re-delegate) supplies
+  `actors` (array) instead and carries neither `policy` nor `probe_plan`.
 - Exactly one non-null plan form: `probe_plan` (array of paired steps) or
   `phases` (ordered array of phase objects)
 - `runner`: object (optional; select runner mode and external runners)
@@ -887,7 +889,7 @@ Numeric capacity refusals carry `data.runner_result.admission_failure`, which na
 where available and `origin: "runner_host"`. Find that field in the "Refusal
 names" column of the Specimen admission table; the row says what was measured
 and which location fields are reported. To check a specimen before submitting
-it, compare it with the same rows. Meaning refusals such as `repeated_consume`
+it, compare it with the same rows. Meaning refusals such as `duplicate_step_id`
 use `request_failure`; not every refusal supplies numeric counts. Its path is
 retained whole or withheld as null under the diagnostic bounds below.
 
@@ -1275,8 +1277,8 @@ establishes no cleanup, EOF or reap fact. See [Structured exec observations](#st
 Reply fields beyond `pid` / `runner_subprocess`:
 
 - `execution_form` — `single_worker` or `actors`. An actor-form reply has no
-  `runner_subprocess`, `policy_sha256`, `sandboxed_after_apply` or
-  `extensions`; each actor carries its own.
+  `runner_subprocess`, `policy_sha256` or `sandboxed_after_apply`; each actor
+  carries its own subprocess record, policy hashes and application account.
 - `actors[]` — one record per actor in request order: `actor_id`, `index`,
   `mode`, `setup_status` (`applied`, `unapplied_declared`, `setup_failed`,
   `exited_before_setup`, `setup_timeout`, `launch_refused`,

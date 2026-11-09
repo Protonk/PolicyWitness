@@ -34,14 +34,16 @@ they do not exhaust the verification relevant to a change.
 | BYOXPC dossier records, native extension execution, phase handling, worker equipment signing or provenance | [Dossier witness](#byoxpc-dossier-witness) and [extension and phase witness](#byoxpc-extension-and-phase-witness). |
 | Built-in or external caller authorization; host admission/exit, client re-acquisition or launchd throttle | [Built-in caller authentication](#built-in-caller-authentication), [external caller authentication](#runner_auth_external) and [occupied-claim attribution](#byoxpc-occupied-claim-attribution), including session-cleanup and registry triggers. |
 | Build, toolchain, signing or artifact inspection | [Signed-artifact controls](#signed-artifact-controls), [build guards](#build-guard-controls), [build refusals](#build-refusal-controls), [translated-build refusals](#translated-build-refusal-controls) and [toolchain-switch controls](#build-toolchain-switch-controls). Their individual triggers and equipment conditions apply. |
-| Worker wait demand, response representation/retention, observer accounting or post-run resource endings | [Footprint observations](#footprint-observations), including separate default checker/sensitivity controls and opt-in native observations. Held-phase timing decomposition uses the [worker wait pilot](#worker-wait-pilot). |
+| Worker wait demand, response representation/retention, observer accounting or post-run resource endings | [Footprint observations](#footprint-observations), including the default checker/sensitivity controls and the default native observations. Held-phase timing decomposition uses the [worker wait pilot](#worker-wait-pilot). |
 | Native file-extension authority, call representation, issuer lifetime or allocation assumptions; experiment or checker changes | [Native sandbox-extension experiment](#native-sandbox-extensions). |
 
 ## Footprint observations
 
 - **Cases:** `witness_contract/held_phase_footprint`,
   `witness_contract/response_footprint` and `run_effects/aftermath_footprint`.
-  All are opt-in. Applicable ABI agreement is declared in the catalog. Default cases separately
+  All are default battery members, so a release's acceptance battery produces
+  the receipts behind the measured rows of the [footprint account](../docs/FOOTPRINT.md).
+  Applicable ABI agreement is declared in the catalog. Separate default cases
   cover checker validity and native observer sensitivity.
 - **Question:** Observe held-worker CPU demand, response representation overlap
   and fresh-controller memory, and state remaining after completion or an
@@ -50,9 +52,9 @@ they do not exhaust the verification relevant to a change.
 - **Conditions:** Use a fresh dispatcher output and an unsandboxed macOS shell
   with the signed app, XPC and native inspection access. Clang builds owned
   observer/bridge/exec fixtures; actor host fixtures also need Swift and Meson. Held actor and aftermath runs sign a disposable
-  host; provide a matching Developer ID identity, with `IDENTITY` required by
-  the aftermath wrapper. The held wrapper also supports the documented BYOXPC
-  identity selection. No fixture replaces bytes in the inspected app.
+  host with a Developer ID identity matching the app's team: `PW_BYOXPC_IDENTITY`
+  or `IDENTITY` names it, otherwise the keychain is searched. No fixture
+  replaces bytes in the inspected app.
 - **Required observations:** Held phases preserve declared repetitions, matched
   controls, selected-effect guards, generation-qualified CPU deltas, actual
   intervals and release observations. Response retains all named workloads,

@@ -124,10 +124,6 @@ struct PWRunnerRunSpec: Codable {
         guard schema_version == PWContract.requestSchema else {
             throw RequestContractError.unsupportedSchema(schema_version)
         }
-        // The entry-point control: until the actor form is wired into both
-        // production entry points, `actors` is refused as today, before any
-        // other field is interpreted. Draft tests opt in through userInfo.
-
         try rejectUnknownRequestKeys(CodingKeys.self, from: decoder)
         specimen_id = try c.decode(String.self, forKey: .specimen_id)
         run_kind = try c.decodeIfPresent(String.self, forKey: .run_kind)

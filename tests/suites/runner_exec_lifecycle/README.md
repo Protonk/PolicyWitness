@@ -66,7 +66,8 @@ All process/effect observations precede JSON interpretation.
 ## Same-group descendant after normal completion
 
 The opt-in `closed_streams_leader_exit` case characterizes a current observation
-limit. It closes both helper processes' captured streams, asks the leader to
+limit. The default battery also selects it, as a declared dependency of
+`run_effects/aftermath_footprint`. It closes both helper processes' captured streams, asks the leader to
 exit without waiting for its child, and waits for the public CLI to finish.
 Before reading PW's JSON or releasing the fixture, the test requires the child
 to answer a ping with its original process identity and process group. It also

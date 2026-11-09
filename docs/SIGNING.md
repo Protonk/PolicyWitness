@@ -204,7 +204,8 @@ without a baseline is recorded as such; `--report` turns growth refusals into wa
 ```sh
 git tag -a v0.2.4 -m "PolicyWitness 0.2.4"
 make release NOTARY_KEYCHAIN_PROFILE=entitlement-jail IDENTITY='Developer ID Application: YOUR NAME (TEAMID)' RELEASE_NOTES=/path/to/notes.md
-git commit tests/RETAINED.json -m "Retain the 0.2.4 release evidence"
+# transcribe the measured footprint rows from the archive (below), then:
+git commit tests/RETAINED.json docs/footprint.json docs/FOOTPRINT.md -m "Retain the 0.2.4 release evidence"
 make publish VERSION=0.2.4
 ```
 
@@ -231,7 +232,19 @@ the completed archive by rename. The attempt's receipts end up under
 `evidence/`, with a `<attempt>.archived` pointer under `dist/evidence/`.
 The acceptance working directory, battery inside, is added to `tests/RETAINED.json`.
 Finally, `tests/lib/release_rotate.py` removes eligible older working test output
-as described below. Commit the resulting retention index change.
+as described below.
+
+The default battery includes the three footprint measurement cases
+(`witness_contract/response_footprint`, `witness_contract/held_phase_footprint`
+and `run_effects/aftermath_footprint`), so the archived acceptance holds the
+receipts behind every measured row of [FOOTPRINT](FOOTPRINT.md), taken on the
+released binaries. After `make release`, transcribe those rows into
+[footprint.json](footprint.json) from the case artifacts inside
+`evidence/test-runs/runs.tar.gz` (`acceptance/tests/suites/<suite>/<case>/artifacts/`),
+name that archive in FOOTPRINT's provenance section, regenerate, and commit the
+footprint change together with the retention index. The tagged commit cannot
+contain its own measurements, so the commit after the tag carries them. With
+the rows citing the release archive, no measured row depends on an explicit pin.
 The build, acceptance (with its battery), archiving and rotation each hold the
 checkout lock for their own duration; `make release` holds no outer lock, so
 run no other build or battery in the checkout while it runs. The notarization

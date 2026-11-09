@@ -27,7 +27,8 @@ its opt-in members. Case scripts refuse to start outside the dispatcher;
 `--case SUITE/ID` runs one case, and `make test` is the default battery against
 the distribution app.
 
-The default battery needs a signed app. Build through the
+The default battery needs a signed app and a Developer ID identity matching its
+team. Build through the
 [signed pipeline](../docs/BUILD.md) when the selected app is absent or stale;
 offline selections need only their listed equipment. Do not modify the inspected
 app or regenerate its evidence to conceal changed bytes. Build fixtures and

@@ -14,7 +14,7 @@ Numeric capacity refusals carry `data.runner_result.admission_failure`, which na
 where available and `origin: "runner_host"`. Find that field in the "Refusal
 names" column of the Specimen admission table; the row says what was measured
 and which location fields are reported. To check a specimen before submitting
-it, compare it with the same rows. Meaning refusals such as `repeated_consume`
+it, compare it with the same rows. Meaning refusals such as `duplicate_step_id`
 use `request_failure`; not every refusal supplies numeric counts. Its path is
 retained whole or withheld as null under the diagnostic bounds below.
 

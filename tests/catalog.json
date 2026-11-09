@@ -1256,7 +1256,6 @@
             "meson",
             "identity"
           ],
-          "default": false,
           "depends_on": [
             "witness_contract/footprint_observer_controls",
             "run_effects/checker_controls",
@@ -2014,7 +2013,6 @@
             "app",
             "clang"
           ],
-          "default": false,
           "depends_on": [
             "runner_abi_layout/c_swift_layout_agreement",
             "witness_contract/footprint_observer_controls",
@@ -2066,7 +2064,6 @@
             "meson",
             "identity"
           ],
-          "default": false,
           "depends_on": [
             "runner_abi_layout/c_swift_layout_agreement",
             "witness_contract/footprint_observer_controls",
@@ -2408,9 +2405,6 @@
         "runner_exec_lifecycle/closed_streams_leader_exit",
         "runner_exec_inheritance/closed_worker_stderr",
         "dispatcher/pytest_controls",
-        "witness_contract/held_phase_footprint",
-        "witness_contract/response_footprint",
-        "run_effects/aftermath_footprint",
         "witness_contract/worker_wait_pilot",
         "witness_contract/worker_wait_cost"
       ]
