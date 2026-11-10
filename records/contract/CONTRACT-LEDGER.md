@@ -33,6 +33,7 @@ artifacts are named by path without links, under the records link rule.
 | 2026-11-10 | 4 | The validator comparison returned thirteen inferred candidates. A run of them through all three readers was started in a disposable worktree. |
 | 2026-11-10 | 4 | Maintainer's comment on `R-07` recorded. Coordinator read the controller's projection and opened `R-34` (the scope of "dependent") and `R-35` (`per_actor` missing from the guide's vocabulary). |
 | 2026-11-10 | 4 | The run of the validator candidates returned and is deposited under `records/contract/validators/`. Final judgments diverge on twelve of thirteen candidates. `R-36` opened. The experiment's worktree and branch were removed. |
+| 2026-11-10 | 4 | Maintainer's position on `R-36` recorded, with a correction to the coordinator's "same bytes" wording. The disputed definitions and scopes are drafted for review in `records/contract/validators/DEFINITIONS-AND-SCOPES.md`. The position also adds to the stage 5 direction: definitions, applicability, obligations. |
 
 ## Artifacts
 
@@ -571,6 +572,12 @@ membership and references as authoring inputs; their substance is rendered
 so the document tells the developer what each surface contains. Reading
 JSON is not to be a prerequisite for discovering what the document covers.
 
+**Added by the maintainer's position on `R-36`, 2026-11-10.** The contract's
+shape has three parts with a purpose each: named definitions establish what
+the records mean; explicit applicability establishes which rules govern
+ordinary, preparation-failure and reporting-failure replies; obligations
+establish what each component checks and what it does on failure.
+
 **Run by the coordinator on 2026-11-10**, in a scratch clone of `ec88e53f`
 made with no tags, since deleted. Grade: run.
 
@@ -677,9 +684,10 @@ Established by a read-only comparison and then a run, both delegated, on
 table and its list of divergences, not all of its per-reply sections.
 
 **Grade.** Run, as an experiment: in a disposable worktree at `35226316`
-(product source as at `a7d9b320`), with temporary test code only, each reply
-built once in Swift, encoded, and the same bytes decoded for the Rust and
-Python readers. These were direct invocations, not runs of the catalog
+(product source as at `a7d9b320`), with temporary test code only. Each reply
+was built once as a typed Swift record, which S judged; it was then encoded
+to the binary reply format and decoded by the Rust reader, and R judged the
+decoded record and P its JSON presentation. These were direct invocations, not runs of the catalog
 cases, and establish nothing about the battery. The worktree has been
 removed; the patch reproduces the test code.
 
@@ -719,8 +727,12 @@ What the run settles:
 - **Skipping the partition on presence or on validity changes the
   diagnostic only.** No reply was found on which that difference alone
   changes a final judgment, as the maintainer expected.
-- **Final judgments do diverge**, on twelve of the thirteen candidates, in
-  every direction: the harness reader accepts replies both product readers
+- **Final judgments do diverge**, in every direction. Twelve candidates
+  were compared across all three readers and the judgments differed on
+  each. The thirteenth, a JSON null, could not be put to S and differed
+  between R and P. This shows that the three definitions of validity
+  differ; it does not show how often production emits such replies.
+  The directions: the harness reader accepts replies both product readers
   object to; the host's self-check accepts replies the controller and the
   harness reader object to; the controller alone objects to one; the
   harness reader alone objects to three.
@@ -743,5 +755,5 @@ Recorded here and not pursued.
 
 | Row | Claims | References | Strain | Sits in | Disposition | Status |
 | --- | --- | --- | --- | --- | --- | --- |
-| R-36 | `K-198-1` to `K-202-1`; the general actor-table checks | `R-14`; the run above | Three hand-written validators reach different final judgments on the same reply, in every direction. The host can emit a reply its own check accepts and the controller flags. The harness reader, which tests use to judge product output, accepts some replies both product readers object to and objects to some both accept. No corpus of constructed replies passes through all three. | Repository | **For the maintainer**: whether three hand-written validators are necessary; and for each divergence, which reader is right. The coordinator proposes nothing until that is decided, beyond keeping the experiment's patch so a shared corpus could start from it. | Awaiting maintainer |
+| R-36 | `K-198-1` to `K-202-1`; the general actor-table checks | `R-14`; the run above; maintainer's position of 2026-11-10 | Three hand-written validators reach different final judgments on the same reply, in every direction. The three roles are legitimate and may respond differently to a violation. The strain is that each defines validity on its own authority: where they assess the same requirement over equivalent information, a difference needs a reason grounded in the contract, and the contract supplies none. | Repository, and text that does not define the records | **Maintainer's position:** keep the finding; do not settle the architecture by counting validators; make the disputed meanings and scopes explicit before choosing which implementation to change. Not thirteen separate rulings: a definition should settle a family of cases and establish a public rule whose reach determines each reader's obligations. The reporting-failure reply is the most consequential: what it promises, which requirements still apply, and what a consumer may conclude from retained records. Generating the three from one implementation is set aside. A common corpus would test stated commitments across implementations, after the definitions. Drafted for review: `records/contract/validators/DEFINITIONS-AND-SCOPES.md`, with six definitions, an applicability table and the present obligations. | Draft awaiting maintainer's review |
 
