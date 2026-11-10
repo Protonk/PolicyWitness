@@ -498,7 +498,8 @@ preservation as an action is an authoring choice. The meaning of an
 existing outcome is established from source and stated. Neither waits for a
 decision. The surfaces and the placement of the internal identity are
 likewise carried as working choices; the surface names get a last look
-before the stage one release makes them permanent.
+before the unpublished stage one release makes them permanent in release
+history.
 
 Two findings from the gate reading are behavioral commitments and are in
 the register for the maintainer:

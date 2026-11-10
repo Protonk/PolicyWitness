@@ -15,10 +15,10 @@ this outline draws on. Register rows are cited below as `R-nn`.
 
 | Stage | What it does | Changes product behavior | Ends with |
 | --- | --- | --- | --- |
-| One | Restructures the contract so that it is a complete and truthful account of the implementation as it is, including the parts we do not want | No | A release |
+| One | Restructures the contract so that it is a complete and truthful account of the implementation as it is, including the parts we do not want | No | An unpublished `v0.3.7` release |
 | Two | Resolves behavioral gaps against the intended public commitments | Where a change is decided | Every known gap resolved, including evidence gaps |
-| Three | Settles the contract on the changed implementation | No | A release |
-| Four | Settles the guide's explanations and user workflows against the contract | No | A guide with checked user tasks and explicit validation limits |
+| Three | Settles the contract on the changed implementation | No | A settled contract ready for the guide work |
+| Four | Settles the guide's explanations and user workflows against the contract | No | The complete `v0.3.8` release, ready for publication after the full plan |
 
 The order carries the method. Writing the contract truthfully against the
 current implementation exposes commitments that need review. An awkward
@@ -26,6 +26,20 @@ qualification is a reason to investigate, not proof of a defect: a case split
 may express a necessary distinction. Stage two draws on those findings and
 the intended public meanings. Stage three settles the account of the resulting
 behavior.
+
+**Release checkpoints and publication.** The releases deliberately exercise
+the complete build, acceptance, packaging, guide staging and version-locking
+arrangement, so disagreements between those parts are found in practice.
+Follow the [release procedure](SIGNING.md#release-procedure) through tagging
+and archival at the end of stage one and again at the end of stage four.
+Keep the tags and release assets unpublished until all four stages are complete;
+publication is a separate step from creating these releases.
+
+The sequence is the existing `v0.3.6`, the stage-one `v0.3.7`, and the completed
+`v0.3.8`. Preserve each version's contract and shape snapshot in release history.
+The next published contract is the completed `v0.3.8`, with that three-version
+history available, including the intermediate tag. Each checkpoint stages the
+guide belonging to its own build; the final release includes the settled guide.
 
 ## Terms
 
@@ -67,8 +81,9 @@ behavior.
   paragraph, not left out.
 - **Surface names are fixed at the end of stage one.** A surface that
   existed at a release and later disappears keeps a removal row in the
-  surface table permanently. Stage one ends in a release, so later stages
-  change what a surface contains and leave its name alone.
+  surface table permanently. The unpublished stage-one release enters this
+  history, so later stages change what a surface contains and leave its name
+  alone.
 - **The guide stays out of the surfaces' definitions** from stage one on.
 - **A disagreement between contract and implementation is never settled by
   assumption.** Which side changes is decided by the maintainer, on the
@@ -307,8 +322,9 @@ for uniformity's sake is a sign that it belongs on a parent, or nowhere.
 **Drafting tests.** Apply these while writing the related surfaces. The
 behavioral decisions belong to stage two; stage one supplies the surrounding
 definitions and dependencies needed to judge them. State current behavior
-and the unresolved commitment in each Known gap. Publishing that account
-does not approve the behavior as the intended guarantee.
+and the unresolved commitment in each Known gap. Recording that account
+in the stage-one release does not approve the behavior as the intended
+guarantee.
 
 - *Failed termination dependencies (`R-37`).* Read the accounts of
   dependencies, scheduling and cleanup together. They must explain what
@@ -350,7 +366,8 @@ every public field has a field node; the baseline of free-text items is
 recorded; the generator's checks and the drift suite pass; the change has been
 reviewed against the register; an isolated reader has read the new document
 and the prompted answers have been checked against evidence as well as the
-baseline reading; a release has been cut, with the Known gap paragraphs in it.
+baseline reading; `v0.3.7` has been built, accepted and archived with its guide
+and Known gap paragraphs, and remains unpublished.
 
 ## Stage two: resolve the gaps
 
@@ -442,7 +459,8 @@ disposition and every evidence gap is closed or has an explicitly accepted
 limitation; every rule has
 graded support or that evidence limitation; the definitions, applicability and
 obligations are structured facts, with any free-text item that remains
-accepted by the maintainer; the checks pass; a release has been cut.
+accepted by the maintainer; the checks pass. The settled contract proceeds to
+stage four; no release is cut at this boundary.
 
 ## Stage four: settle the guide
 
@@ -469,16 +487,24 @@ edited again after each of the stages before it.
   was executed and what was only read. Use available repository scenarios;
   the unavailable consumer repository's profile collection is a validation
   limit, not evidence of compatibility and not a prerequisite to this stage.
+- The final release checkpoint: prepare `v0.3.8` with the settled contract
+  and guide, run release acceptance and archive them together. Verify the
+  identities and guide in the packaged artifacts and the contract's history
+  against the `v0.3.6`, `v0.3.7` and `v0.3.8` snapshots. Preserve the intermediate
+  tag when making that history available at publication.
 
 **Does not belong in this stage.**
 
 - A wholesale redesign of the guide's organization. Local moves needed for
   a complete explanation belong in this stage.
-- Changes to the contract or the product. A disagreement found here goes
-  back to the stage that owns it.
+- Changes to public rules or product behavior. A disagreement found here
+  goes back to the stage that owns it. Release stamping and packaging belong
+  to the final checkpoint.
 
 **Exit.** Each guide section has been read against the contract; the user
-tasks have recorded outcomes and validation limits; the checks pass.
+tasks have recorded outcomes and validation limits; the checks pass;
+`v0.3.8` has been accepted and archived with the settled guide. The full plan
+is complete before publication proceeds.
 
 ## Decisions still open
 
@@ -489,12 +515,11 @@ tasks have recorded outcomes and validation limits; the checks pass.
   definitions before confirming them; the present outline does not settle
   those boundaries.
 - **What an ordinary build requires of the contract's check** (`R-29`).
-- **Whether stage four ends in a release.** The guide ships beside the
-  release.
 - **Review across the migration releases.** Rewriting all surface inputs
   can move every stamp even without behavior changes. Decide how a specimen
   author will distinguish migration changes from behavioral changes across
-  stages one to three. This does not change what a stamp hashes.
+  stages one to four in the final publication. This does not change what a
+  stamp hashes.
 - **Public presentation of evidence.** Decide how the rendered document
   exposes evidence grades and execution scope. Public limits on a commitment
   and gaps in its support must remain visible; detailed evidence metadata
