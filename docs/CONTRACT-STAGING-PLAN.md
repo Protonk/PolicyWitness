@@ -194,8 +194,8 @@ implementation as it stands.
   orienting; nothing explains how to read the document. The body is
   organized by public operation, including runner management, and within
   an operation by accepted input, the acting component's account, and the
-  controller's assessment. The controller's findings name the host
-  assertions they bear on.
+  controller's assessment. The account of controller findings distinguishes
+  the records inspected from the conclusions affected.
 - *Surfaces.* The surfaces are redrawn to fit that shape. This is required,
   not permitted: fitting the new document into the old surfaces would turn
   the stage into a puzzle. The names chosen here are final.
@@ -267,6 +267,27 @@ for uniformity's sake is a sign that it belongs on a parent, or nowhere.
    empty.
 5. The surfaces, drafted one at a time against the claim inventory and the
    register.
+
+**Drafting tests.** Apply these while writing the related surfaces. The
+behavioral decisions belong to stage two; stage one supplies the surrounding
+definitions and dependencies needed to judge them. State current behavior
+and the unresolved commitment in each Known gap. Publishing that account
+does not approve the behavior as the intended guarantee.
+
+- *Failed termination dependencies (`R-37`).* Read the accounts of
+  dependencies, scheduling and cleanup together. They must explain what
+  stops after a failed evaluated gate, what observations can still be
+  collected, and what cleanup still does. Use that account to identify
+  what continued execution of other phases would need to preserve or
+  promise. Keep the choice between global cancellation and continued
+  execution open while drafting.
+- *Reliance after a controller finding (`R-38`).* Trace the relationships
+  from evidence to host assertions to controller conclusions. The account
+  must make clear what a finding means for reliance on the output, including
+  where the current output cannot identify the affected assertion or the
+  scope of withholding. A phase or actor identifier alone does not settle
+  those dependencies. Establish them before choosing a diagnostic shape
+  or changing which conclusions a finding withholds.
 
 **Hands to stage two.** The known gaps with their kinds and supporting
 evidence, and the definitions or commitments each proposed change affects.
