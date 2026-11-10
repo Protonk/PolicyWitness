@@ -14,6 +14,12 @@ this outline draws on. Register rows are cited below as `R-nn`. The ledger
 is also the working record of the stages: where the work stands, what has
 been decided and what waits for the maintainer.
 
+Stage-one execution records: the
+[coverage map](../records/contract/CONTRACT-COVERAGE-MAP.md),
+[authoring trial](../records/contract/CONTRACT-SPIKE-RESULT.md),
+[migration inventory](../records/contract/CONTRACT-MIGRATION-INVENTORY.md) and
+[generator guarantees](../records/contract/CONTRACT-GENERATOR-GUARANTEES.md).
+
 ## The stages
 
 | Stage | What it does | Changes product behavior | Ends with |

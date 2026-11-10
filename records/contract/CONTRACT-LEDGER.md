@@ -13,9 +13,12 @@ sections hold and when they are updated; a check-in reads them first.
 ## Standing
 
 Stage one started on 2026-11-10 at `8dfb1152`. Coverage reconciliation,
-the authoring spike and the migration dependency inventory are in progress
-as independent delegated tasks. The current contract remains authoritative
-until the coordinated switch. Their records are
+the authoring spike and the migration dependency inventory are complete.
+The empty nineteen-surface skeleton rendered separately at 66 lines and
+138 words, with no authored body or fields. Identity and shared definitions
+were drafted first and independently reviewed; the other surfaces are now
+being drafted. The current contract remains authoritative until the
+coordinated switch. The preparatory records are
 `CONTRACT-COVERAGE-MAP.md`, `CONTRACT-SPIKE-RESULT.md` and
 `CONTRACT-MIGRATION-INVENTORY.md` in this directory.
 
@@ -30,9 +33,26 @@ an editing-order error, not an environment or product failure. These are
 local disposable development runs. New tree support modules are still being
 built separately and are not exercised by these checks.
 
-Next: review those returns, establish the generator's failing controls,
-and build the complete empty surface skeleton beside the current contract.
-No surface drafting precedes reconciliation of its inputs.
+The first production model/reader control run found two errors in the new
+controls: an incomplete nested node path, and a supposed missing symbol that
+appeared literally in its fixture source. Corrected controls passed all 48
+items in `tests/out/runs/contract-tree-readers-fixed-20261110`.
+All ten source-drift cases then passed in
+`tests/out/runs/contract-tree-source-drift-20261110`. The new history-backend
+controls were added after that run's build-contract case; their first run,
+`tests/out/runs/contract-tree-history-20261110`, refused because the constructed
+tree's cited fixture source had not been copied. That test-input omission is
+fixed; all 54 items passed in
+`tests/out/runs/contract-tree-history-input-20261110`. This includes actual
+disposable Git releases in both retained layouts, before/after-tag equality,
+permanent removal rows and history-loss refusals. No signing or runtime-product
+failure occurred in these generator controls.
+
+Next: complete and independently review the surfaces, finish the history and
+rendering guarantees, then switch the dependent generator consumers together.
+The default entry point still checks the legacy contract; draft preview is
+explicit and leaves that document intact. The release backend is being tested
+separately before activation.
 
 Readiness checks found clean `main`, annotated history through `v0.3.6`,
 local archives `v0.3.3` through `v0.3.6`, and the Developer ID identity
@@ -50,6 +70,29 @@ evidence and unresolved items. The maintainer made its use optional; the
 existing register and cross-references make it useful without introducing
 another decision record. Review material will be brought forward explicitly
 at the required pauses. This changes no product commitment.
+
+**Released representation.** Keep the original manifest/region reader for
+`v0.3.6`. Tree-authored releases carry a generated canonical public snapshot,
+their own canonical shapes and the release-history dependency list. Current
+checks derive that snapshot from the single authored tree; historical checks
+read the released snapshot and shapes, independently of later authoring
+syntax. The snapshot is a generated view, not a second authored hierarchy.
+This preserves the public account and its inputs while making the historical
+check's claim explicit: retained public representation, not reparsing old
+authoring syntax. The dependency list preserves the need for earlier tags
+even when every surface changes in the representation migration. The legacy
+reader's thirteen actual `v0.3.6` digests matched in the recorded read-only
+calculation. Integrated controls are still being completed. Reversal before
+the first new release replaces this reader design and its tests; after a
+release its reader must remain available.
+
+**Identity review.** The independent review found that a definition of closed
+vocabularies incorrectly implied whole-record refusal for every unfamiliar
+value. It now states that the responsible boundary identifies the value as
+invalid and defines its consequence; semantic findings can retain the report.
+This is a text correction grounded in the separate admission and assessment
+paths. The other reviewed build-identity distinctions matched the source and
+read checks; no execution credit came from that review.
 
 **R-06: outcome owner.** Add
 `compiled_profile_labels_determine_the_public_admission_outcome` to the
