@@ -133,6 +133,7 @@ name one another by path.
 | [CONTRACT-MAINTAINER-NOTES.md](CONTRACT-MAINTAINER-NOTES.md) | Maintainer | Close readings supplied in stage 4, verbatim. |
 | [GUIDE-RESULT-ACCOUNT-DRAFT.md](GUIDE-RESULT-ACCOUNT-DRAFT.md) | Coordinator | A proposed consolidation of the guide's account of a run's result, for review. Changes nothing. |
 | `validators/` | Delegated passes | For `R-14`: a comparison of the three hand-written validators on preparation-failure replies, the run of its candidates, and the temporary test code as a patch. |
+| [CONTRACT-STRUCTURE-PROPOSAL.md](CONTRACT-STRUCTURE-PROPOSAL.md) | Coordinator | Proposed table of contents, surfaces and one worked section for the restructured contract, for the staging plan in `docs/CONTRACT-STAGING-PLAN.md`. |
 | [CONTRACT-LEDGER.md](CONTRACT-LEDGER.md) | Coordinator | Stage log, acceptance record, join table, divergences, coverage, strain register. |
 | [CONTRACT-CLAIMS.md](CONTRACT-CLAIMS.md) and `claims/`, the **inventory** | Coordinator, from delegated passes | Stage 3. One row per claim, with its kind, mechanism and owner. |
 | Later readings and review notes | Their authors | Stage 7. |
