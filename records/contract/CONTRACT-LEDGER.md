@@ -30,6 +30,8 @@ artifacts are named by path without links, under the records link rule.
 | 2026-11-10 | 4 | Maintainer supplied a third close reading, of C:3-56, C:100-106 and C:430-434, with a direction for stage 5: the contract is to be generated and remain the public account. Coordinator ran the stamp generator in a tagless scratch clone and opened rows `R-21` to `R-32`. Finding from the run: regeneration with `--release` and no history rewrites every stamp. |
 | 2026-11-10 | 4 | Maintainer asked for a consolidated account of a run's result in the guide, with `R-20` kept open. Drafted for review in `records/contract/GUIDE-RESULT-ACCOUNT-DRAFT.md` as `R-33`. The draft's placement would move text between the guide's `envelope`, `refusals` and `lifecycle` regions. |
 | 2026-11-10 | 4 | Maintainer's comment on `R-14` recorded and the row corrected. A delegated read-only comparison of the three validators on preparation-failure and reporting-failure replies was started, to establish where their final judgments diverge. |
+| 2026-11-10 | 4 | The validator comparison returned thirteen inferred candidates. A run of them through all three readers was started in a disposable worktree. |
+| 2026-11-10 | 4 | Maintainer's comment on `R-07` recorded. Coordinator read the controller's projection and opened `R-34` (the scope of "dependent") and `R-35` (`per_actor` missing from the guide's vocabulary). |
 
 ## Artifacts
 
@@ -534,7 +536,7 @@ reads):
 
 | Row | Claims | References | Strain | Sits in | Proposed disposition | Status |
 | --- | --- | --- | --- | --- | --- | --- |
-| R-07 | `K-165-2` | Reading; `F-07`; answer 7 | "Withhold dependent claims" has no referent: which output is withheld, and how that is represented. The example beside it does name two observations and the resulting assessment. | Text. Repository for one question: three renderings of withholding in two fields. | **Rewrite**: say what a claim is here and where its status appears, by field and value. **Maintainer:** whether three renderings are necessary. | Awaiting maintainer |
+| R-07 | `K-165-2` | Reading; maintainer's comment of 2026-11-10 on this row; `F-07`; answer 7; the section "Withholding, as implemented" below | "Withhold dependent claims" has no referent, and the host's and the controller's words for the same missing evidence differ without a stated difference in meaning: the host's claim is `unresolved`, the controller's summary is `unconfirmed`. | Text, and repository vocabulary | **Rewrite**, proposed: one table giving each controller value and the host state it comes from. **Maintainer:** whether `unconfirmed` should exist beside `unresolved` and `inapplicable`, given that it renames and merges them; changing a public value is a change of shape. | Awaiting maintainer |
 | R-08 | `K-171-2` | Reading; `L-23`; `F-10` | "The worker ABI identity remains independent of the public build identity" interrupts the equipment association and does not say independent in what respect. Their source scopes overlap. | Text, and placement | **Rewrite**: say what each identity governs and that neither substitutes for the other, at the place where the internal identity is described (C:379-425 already has most of it), and remove it here. | Awaiting maintainer |
 | R-09 | `K-171-1` | Reading; `L-23` | "Binds observations to the named process and service-sealed equipment" covers three operations that establish different things: checking packaged equipment, inspecting a running process, validating reported associations. | Text | **Rewrite**: state what the association asserts, then how the inventory, binding and entitlement fields represent it. | Awaiting maintainer |
 | R-10 | `K-176-1`, `K-176-2` | Reading; `F-12`; `A-D11` | The actor records are introduced by denying a "declaration reply" and a "singular worker projection", neither defined anywhere. | Text (residue) | **Rewrite**: remove the denial; keep the positive statement about `actors[]`. | Awaiting maintainer |
@@ -613,4 +615,81 @@ Opened by the maintainer's note of 2026-11-10 on `R-20`, kept in
 | Row | Claims | References | Strain | Sits in | Disposition | Status |
 | --- | --- | --- | --- | --- | --- | --- |
 | R-33 | The guide's `envelope` and `refusals` regions, G:1207-1294 and G:2017-2109 | Maintainer's note; `R-20`; `R-07`; `R-19`; `F-07` | The guide explains one ordinary result in five places about 730 lines apart. It has no sentence saying which component supplies `data.runner_result`, `data.runner_sandbox_diagnostics` and `result`, though the controller README does. The definition tying `finished` to `result.ok` and exit 0 is far from the sentence saying the controller's findings do not change the outcome. | Text of the guide, and its placement | **Rewrite**: one contiguous account under the output-envelope introduction, with the outcome catalog adjacent, consolidating the existing passages and not adding a summary beside them. Maintainer's direction. Drafted in `records/contract/GUIDE-RESULT-ACCOUNT-DRAFT.md`; the guide is unchanged. `R-20` stays open: the draft describes the present behavior and marks the sentences that depend on it. | Draft awaiting maintainer's review |
+
+### Withholding, as implemented
+
+For `R-07`, `R-34` and `R-35`. Source read by the coordinator on 2026-11-10
+(`controller/src/porcelain_admission.rs`, `project` and
+`execution_diagnostics`; `runner/Sources/PWRunnerCore/CWorkerDisposition.swift`
+for the host's states). Nothing run for this section; the test named below
+passed in run `tests/out/runs/contract-c243`.
+
+**Is `unconfirmed` another judgment or a rename?** A rename that also merges.
+The host's `final_status` claim has one of four states. For a worker's
+record that passed the controller's validation, the controller's
+`process_disposition` is chosen from that state alone:
+
+| Host's `final_status` claim | Controller's `process_disposition` |
+| --- | --- |
+| `supported`, answer `exit_code`, value 0 | `clean_exit` |
+| `supported`, answer `exit_code`, other value | `nonzero_exit` |
+| `supported`, answer `signal` | `signaled` |
+| `conflicting` | `conflicting` |
+| `unresolved` | `unconfirmed` |
+| `inapplicable` | `unconfirmed` |
+| anything else | `unrecognized` |
+
+Three further values do not come from the host's claim: `withheld`, when
+the controller's own validation of the record finds an issue; `no_worker`;
+and `per_actor`, the top-level value in the actor form.
+
+**What "withheld" covers.** Only the controller's own disposition fields,
+at the level where the finding was made.
+
+- A finding inside one worker's disposition record withholds that worker's
+  `process_disposition`. In the actor form each actor is projected
+  separately, from its own record and its own actions; the top-level
+  `disposition_integrity` is `valid` only if every actor's is.
+- A finding by the reply-level validators sets the top-level
+  `process_disposition` to `withheld`. The per-actor entries are not
+  changed by it. A default test,
+  `typed_invalid_actor_account_keeps_independent_actor_endings`, asserts a
+  top-level `withheld` with an `actor_evidence` issue beside an actor still
+  projected as `clean_exit`.
+- Nothing in the host's report is withheld or altered by the controller:
+  not the host's claims, not a step's `comparison`, not the outcome.
+  `result.ok` is unaffected (`R-20`).
+
+There is no record of which conclusion depends on which observation. The
+overall `withheld` does not govern the assessments beneath it.
+
+| Row | Claims | References | Strain | Sits in | Disposition | Status |
+| --- | --- | --- | --- | --- | --- | --- |
+| R-34 | `K-165-2`, `K-352-*` to `K-355-*` | Maintainer's comment on `R-07`; the section above; `R-19`; `R-20` | "Dependent claims" promises that a missing or contradictory observation prevents the conclusions that require it. What is implemented is narrower and differently shaped: the controller withholds its own disposition at the level of the finding, leaves assessments beneath that level standing, and leaves the host's claims visible. A consumer cannot tell from the text which conclusions a finding invalidates, which stay independently supported, or whether a top-level `withheld` governs the per-actor ones. It does not. | Text. Repository for the question of intent. | **Rewrite**, proposed: say exactly which fields are withheld, at which level, by which kind of finding, and what stays. **Which side is right**, for the maintainer: whether a reply-level finding beside a standing per-actor `clean_exit` is the intended meaning of "dependent". The test's name suggests it is deliberate. | Awaiting maintainer |
+| R-35 | Guide G:1276-1277; `K-165-2` | Coordinator, while reading for `R-07` | `process_disposition` can be `per_actor`. The guide's list of its values omits it, and so does the contract. Only the controller README mentions it. The coordinator's guide draft copied the incomplete list. | Text of the guide | **Rewrite**, proposed: add the value where the field's vocabulary is given, with the actor form's per-actor entries. The draft is corrected to say so. | Awaiting maintainer |
+
+### R-14: where the three validators' judgments diverge
+
+A delegated read-only comparison returned on 2026-11-10. It is a reading;
+nothing in it has been run. Its file is in the coordinator's scratch space
+and will be deposited with the results of the run.
+
+- The three readers implement the same partition rule. They differ in how
+  they decompose it, in their diagnostics and in when they skip it. The
+  difference between skipping on presence and skipping on validity changes
+  only the diagnostic: the Python reader adds a partition error to a reply
+  all three object to.
+- Of 41 conditions on a preparation-failure reply, 29 are applied by all
+  three readers, 9 by two, 1 by one and 2 by none. The Python reader has no
+  explicit check of host regions, custody, phase arrival or completion;
+  custody and completion are caught indirectly, region rows and arrival are
+  not.
+- Thirteen candidate replies were identified on which final judgments would
+  differ. All are inferred.
+- No corpus of constructed replies goes through all three readers, and the
+  shared corpus contains no valid preparation-failure reply. The three
+  valid ones are Swift test fixtures judged by the Swift reader only.
+
+A run of the thirteen candidates through all three readers was started in a
+disposable worktree on 2026-11-10, with temporary test code only.
 

@@ -262,10 +262,14 @@ unless marked.
 2. **The region moves.** Whether `runner_subprocess` and disposition detail
    may leave the `envelope` surface for `lifecycle`, and whether four
    surfaces reading `unreleased` is acceptable for this change.
-3. **Per-actor findings.** The controller README says per-actor endings
-   remain separately supported or withheld. The draft does not describe
-   the actor form's diagnostics; that needs a reading of its own before it
-   is written.
+3. **Per-actor findings.** The draft does not yet describe the actor
+   form. Read since: in the actor form the top-level `process_disposition`
+   is `per_actor`, a value the guide's present list omits and this draft
+   copied without; each actor has its own entry; the top-level integrity
+   is `valid` only if every actor's is; and a reply-level finding sets the
+   top level to `withheld` without changing the per-actor entries. The
+   ledger's section "Withholding, as implemented" has the detail (`R-34`,
+   `R-35`). The account needs a paragraph for this once `R-34` is decided.
 4. **The contract's own passages.** C:165 and C:351-355 state the same
    relationship more briefly (`R-07`, `R-19`). They should be rewritten to
    agree with this account, and that is not drafted here.
