@@ -26,6 +26,7 @@ artifacts are named by path without links, under the records link rule.
 | 2026-11-09 | 6 | Maintainer decided `R-01` to `R-05`. Change made and committed at `a7d9b320`, ahead of the structure stage at the maintainer's direction; mechanically verified. Outstanding for it: stage 7 review and reading, `R-06`, and a rebuild before any app-dependent case. |
 | 2026-11-09 | 3 | Six further owner-finding passes started, covering every unit not yet inventoried, with the four-slot brief. |
 | 2026-11-09 | 3 | The six passes returned 238 rows. The inventory now has 332 rows over every unit: 240 owned, 45 sourced, 32 split, 15 unowned, as the passes state them. Of the 238 rows asked, the sentence does not state who acts in 159, the boundary in 165, or the consequence in 133. Stage 3's exit condition is met; nothing in it has been run. Stage 4 proceeds by the maintainer's focus items and by the sources the plan names. |
+| 2026-11-10 | 4 | Maintainer supplied a second close reading, of C:165-236 and C:351-355. Coordinator read the source it turns on and opened register rows `R-07` to `R-20`, all proposals. `R-06` also still awaits the maintainer. |
 
 ## Artifacts
 
@@ -463,3 +464,85 @@ read, with no test of that step for this cause. Recorded as `R-06`.
 | R-04 | `K-243-8` | Maintainer's reading; `L-30` | "A detached receipt grants no producer context": a changed subject, a verb for something no code path does, and one name for two fields. | Text | **Rewrite**, explaining the two `producer` fields by their qualified locations. Both names stay. Maintainer's decision. | Changed at `a7d9b320`; as above |
 | R-05 | `K-243-9` | Maintainer's reading; `F-05`; `F-06`; `A-29`; silence 4; answers 6 and 8 | The example stated a rule nothing performed and merged two different nonce failures. The journal writer, asked, expected "a request-aware acceptance step to refuse that receipt" and would rely on an example's behavior without checking it. | Text | **Rewrite**: replaced by a case the controller rejects, with its owning check. The source comment's "refuses publication" now names what is withheld and what is published. Maintainer's decision. | Changed at `a7d9b320`; as above |
 | R-06 | New example at C:243 | Coordinator | No test asserts that a receipt-label violation yields the outcome `malformed_runner_response`; the owning test stops at "not admitted". | Repository: a missing check | **Proposed: eliminate**, by asserting the outcome in the existing test. Outside the scope the maintainer set for this change. | Awaiting maintainer |
+
+### C:165-236 and C:351-355, lifecycle, equipment and the publication rule
+
+Opened by the maintainer's close reading of 2026-11-10, kept verbatim in
+`records/contract/CONTRACT-MAINTAINER-NOTES.md`. No disposition here is
+decided. Each is the coordinator's proposal and awaits the maintainer.
+
+**What the coordinator read first-hand on 2026-11-10** (source read; nothing
+run), on the points the reading turns on:
+
+- **Success does not follow integrity.** `controller/src/run_flow.rs`,
+  `complete_execution`: `ok` is `runner_outcome == "finished"` and the exit
+  code is 0 or 1 from that alone. The controller's diagnostics are computed
+  just before and do not enter it. A controller test asserts exit code 0
+  together with `disposition_integrity: "invalid"`,
+  `process_disposition: "withheld"` and `termination_cause: "unknown"`, and
+  that `data.runner_result` round-trips equal to the host's reply.
+- **Where the controller's findings appear.**
+  `controller/src/porcelain_admission.rs`, `execution_diagnostics`: any issue
+  from the reply's validators sets `process_disposition: "withheld"`,
+  `termination_cause: "unknown"` and `disposition_integrity: "invalid"` and
+  appends the issues, in `data.runner_sandbox_diagnostics`. The host's
+  records in `data.runner_result` are published as received, including a
+  field the finding contradicts.
+- **A refused reply keeps its decoded record.** `run_flow.rs`: "A decoded
+  reply stays in the envelope on every refusal; nothing interprets it before
+  admission."
+- **A degraded reply is checked differently.** With `reporting_failure`
+  present the controller checks the shape of the degradation itself, and the
+  same test shows no `phase_collection` issue is raised for it.
+- **Ordinals.** The counter is a field of the host's record for each child
+  process (`runner/Sources/PWRunnerCore/CWorker.swift`,
+  `nextCaptureOrdinal`). An actor's activation takes the next value of its
+  own process's counter (`ActorSession.swift`, `activate`). A gate takes the
+  next value of the source's counter (`ActorScheduler.swift`). The host
+  keeps every counter; the worker does not.
+
+**Taken from inventory rows, not re-read by the coordinator** (delegated
+reads):
+
+- "Withhold" is rendered three ways, by where the problem is found
+  (`K-165-2`): the host emits a disposition `state` of `unresolved` or
+  `conflicting`; the controller projects those to `process_disposition`
+  `unconfirmed` or `conflicting`; and any validator issue overwrites the
+  projection with `withheld`.
+- The "partition" is the rule that the set of all phases' action
+  identifiers equals the set of step identifiers plus extension-event
+  identifiers (`K-202-1`). Three hand-written readers skip it under
+  different conditions: the controller and the host's self-check when a
+  `preparation_failure` is present, the Python reader only when it is valid.
+  With `reporting_failure` present neither the host's self-check nor the
+  controller evaluates it.
+- For the first clause of C:180-181, the host loads the worker's decision
+  word with an acquire load and reads operation cells separately; a decision
+  without a failed or rejected primary cell is recorded as an integrity
+  error and no cell is created (`K-180-1`). Nothing in source or
+  documentation is called a "scheduling summary".
+- Nothing prevents an actor bound to an override row from being matched,
+  eligible and run (`K-188-1`; report `F-15`).
+- The terminal-failure list behind `not_attempted` is hand-copied in Swift,
+  Rust and Python, and the Python reader has no application precedence check
+  (`K-205-1` and its neighbors).
+- Whether a setup timeout can coexist with an observed application, both
+  reported, has not been traced to a source or a check.
+
+| Row | Claims | References | Strain | Sits in | Proposed disposition | Status |
+| --- | --- | --- | --- | --- | --- | --- |
+| R-07 | `K-165-2` | Reading; `F-07`; answer 7 | "Withhold dependent claims" has no referent: which output is withheld, and how that is represented. The example beside it does name two observations and the resulting assessment. | Text. Repository for one question: three renderings of withholding in two fields. | **Rewrite**: say what a claim is here and where its status appears, by field and value. **Maintainer:** whether three renderings are necessary. | Awaiting maintainer |
+| R-08 | `K-171-2` | Reading; `L-23`; `F-10` | "The worker ABI identity remains independent of the public build identity" interrupts the equipment association and does not say independent in what respect. Their source scopes overlap. | Text, and placement | **Rewrite**: say what each identity governs and that neither substitutes for the other, at the place where the internal identity is described (C:379-425 already has most of it), and remove it here. | Awaiting maintainer |
+| R-09 | `K-171-1` | Reading; `L-23` | "Binds observations to the named process and service-sealed equipment" covers three operations that establish different things: checking packaged equipment, inspecting a running process, validating reported associations. | Text | **Rewrite**: state what the association asserts, then how the inventory, binding and entitlement fields represent it. | Awaiting maintainer |
+| R-10 | `K-176-1`, `K-176-2` | Reading; `F-12`; `A-D11` | The actor records are introduced by denying a "declaration reply" and a "singular worker projection", neither defined anywhere. | Text (residue) | **Rewrite**: remove the denial; keep the positive statement about `actors[]`. | Awaiting maintainer |
+| R-11 | `K-180-1`, `K-181-1` | Reading; `F-15`; `A-21`; `A-D12` | "An acquired decision does not publish another cell, and a scheduling summary does not replace any actor's facts." The first clause has a mechanism the sentence does not give; the second names no field and no operation. Two readers took opposite meanings from it. | Text | **Rewrite**: remove the sentence once the records and their consequences are described. If a concrete case replaces it, the maintainer's candidate (a setup timeout beside an observed application, both reported) first needs a source and an owning check. | Awaiting maintainer |
+| R-12 | `K-188-1` | Reading; `F-15` | Override rows "cannot establish packaged selection" limits what a row establishes, not whether the override runs, and the text does not let a reader tell which. | Text | **Rewrite**: tie the statement to the named fields and say plainly that it concerns what the row shows. | Awaiting maintainer |
+| R-13 | `K-194-1`, `K-194-2` | Reading; `F-18` | Runtime inspection failure cancelling activation while keeping earlier observations is a behavior of its own, placed as a qualification to the entitlement fields. | Text, and placement | **Rewrite**: give it its own statement with actor, boundary and consequence. No signed-product check reaches it (`F-18`); recorded for the maintainer. | Awaiting maintainer |
+| R-14 | `K-198-1` to `K-202-1` | Reading; `F-07`; `F-15`; `A-24` | Preparation failure is explained through an undefined normal case. "Observation arrays" are not identified, and actor and equipment records do remain. "Complete observation partition" is not stated in recognizable terms. "Sole exception" leaves out reporting-failure replies. | Text. Repository: three readers skip the rule under different conditions. | **Rewrite**: state the normal rule in terms of declared action identities and their observation records, name the arrays, and state both exceptions. **Maintainer:** whether the readers' different conditions are intended. | Awaiting maintainer |
+| R-15 | `K-204-1` to `K-210-*` | Reading; `L-27`; `F-18` | The application states are given through exclusions without positive meanings, and "closed state/basis pairs" restricts a set the reader is never shown. | Text. Repository: the list behind `not_attempted` is hand-copied in three languages. | **Rewrite**: define the four states positively, then the exclusions; give the pairs or say where they are. **Maintainer:** whether the pair set belongs in the contract, and whether three hand-written copies are necessary. | Awaiting maintainer |
+| R-16 | `K-212-1` to `K-228-*` | Reading; `L-28`; answer 3 | The purpose of the termination dependency is implicit: the gate decides whether the dependent phase may activate, collect queries and release attempts, so "a satisfied gate additionally requires" reads as record consistency only. | Text | **Rewrite**: open with the decision the gate governs. | Awaiting maintainer |
+| R-17 | `K-215-1` | Reading; `F-15`; `A-26`; answer 3 | "These ordinals are local to the source actor process" is too broad after the sentence on phase activation, and hides that the host keeps the counters. | Text | **Rewrite**: the host keeps one observation sequence per actor; an actor's activations, its reap and the gates that refer to it use that sequence; a dependent actor's activation uses its own. | Awaiting maintainer |
+| R-18 | `K-230-*` to `K-236-*` | Reading; `L-29` | "Native facts may retain absent source timestamps" and the sentences after it present three consequences of failures at different moments as qualifications to "native facts". | Text | **Rewrite** in order of occurrence: missing source timestamps; a clock failure after the dependent activation is stored; a cleanup reap after a failed gate. | Awaiting maintainer |
+| R-19 | `K-351-*` to `K-355-*`, and every "requires" in C:168-238 | Reading; `F-07`; silence 5; answer 7 | The rule that governs the equipment region's requirements is 115 lines later, under the transport heading. "Unsupported or malformed input cannot become a semantic claim" covers four different consequences: bytes and diagnostics kept when decoding fails; a decoded record kept when admission fails; observations kept with integrity issues when later checks find contradictions; and a host reporting failure handled on its own path. | Text, and placement | **Rewrite**: state the four cases by boundary and consequence, and put the publication rule where the requirements are read. Throughout, name the speaker: the host reports, the record carries, the controller checks, the consumer may conclude. | Awaiting maintainer |
+| R-20 | `K-165-2`, `K-352-*` | Reading; `F-07`; coordinator's source reading above | `result.ok` and the exit code follow the host's `finished` outcome and nothing else. A consumer can see success, a host field asserting something, and a controller finding that withholds it, in one envelope. A default test asserts that combination. | Repository, and text that does not say so | **Which side is right**, for the maintainer: state the combination plainly and keep the behavior, or make success reflect the controller's findings. | Awaiting maintainer |
+
