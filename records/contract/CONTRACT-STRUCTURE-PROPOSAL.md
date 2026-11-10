@@ -130,6 +130,11 @@ ambiguous.
 Covers; Records; Definitions; Rules; Known gaps; Example. A part is written
 only if it has something to say that no other part says.
 
+The two worked sections below are written out in full to test the model on
+dense subjects. They show what a rule needs, not how long a section should
+be: at their density the whole document would run well past the size at
+which `docs/CONTRACT-STAGING-PLAN.md` asks for a report to the maintainer.
+
 ## Worked example: a termination gate
 
 Chosen because it has an ordering commitment, a produced record and a
@@ -499,12 +504,17 @@ existing outcome is established from source and stated. Neither waits for a
 decision. The surfaces and the placement of the internal identity are
 likewise carried as working choices; the surface names get a last look
 before the unpublished stage one release makes them permanent in release
-history.
+history. The staging plan says who takes that look and who settles each
+open row.
 
 Two findings from the gate reading are behavioral commitments and are in
-the register for the maintainer:
+the register:
 
 - **`R-37`, the reach of a failed gate.** The host cancels every later
-  phase of every actor, not only the dependent phase.
+  phase of every actor, not only the dependent phase. The maintainer's;
+  global cancellation is kept and stated until the maintainer rules.
 - **`R-38`, gate findings without a subject.** Gate checks emit no
   structured phase or actor reference identifying the affected assertion.
+  A reference added beside the existing fields is the executor's to make
+  in stage two. Which conclusions a finding affects stays with the
+  maintainer, as `R-34` does.

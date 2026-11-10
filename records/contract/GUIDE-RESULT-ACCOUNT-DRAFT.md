@@ -6,6 +6,12 @@ consolidation around the guide's output-envelope introduction, recorded as
 register row `R-33` in `records/contract/CONTRACT-LEDGER.md`. Sibling
 artifacts are named by path without links, under the records link rule.
 
+**Use.** Stage four of `docs/CONTRACT-STAGING-PLAN.md` applies this draft
+against the settled contract. The placement follows the maintainer's
+direction recorded in `R-33`, and the maintainer reads the result with the
+settled contract before the final checkpoint. "Open points" at the end says
+who settles each.
+
 The behavioral question in row `R-20` stays open. The draft text describes
 what the product does now, so that the behavior can be judged. Sentences that
 would change if `R-20` were decided the other way are marked **[R-20]**.
@@ -57,8 +63,10 @@ account refers to them.
 ### What the placement does to contract surfaces
 
 The guide's text sits in hashed regions, so placement is also a statement
-about surfaces. Three things follow, and they are the maintainer's to
-decide.
+about surfaces. Three things follow while the guide's regions are part of
+the surfaces' definitions. Stage one of the staging plan takes them out.
+From then on moving this text moves no stamp, and none of the three needs a
+decision.
 
 - The catalog is the guide's `refusals` region. A region is found by its
   markers, wherever they are, so the region can move with its text. Moving
@@ -255,25 +263,32 @@ unless marked.
 | `unsupported_runner_response` and `malformed_runner_response` causes | `controller/README.md`, "Output contract" | Document read, not traced |
 | A denied `open` is an ordinary finished result | The guide's present statement that attempts can fail in a finished run | Illustration; not tied to a named case |
 
-## Open points for review
+## Open points
 
-1. **R-20.** The draft makes the present combination readable in one
-   passage. It does not argue for keeping it.
-2. **The region moves.** Whether `runner_subprocess` and disposition detail
-   may leave the `envelope` surface for `lifecycle`, and whether four
-   surfaces reading `unreleased` is acceptable for this change.
-3. **Per-actor findings.** The draft does not yet describe the actor
+1. **R-20.** The maintainer's. The draft makes the present combination
+   readable in one passage. It does not argue for keeping it. Until the
+   maintainer rules, the marked sentences stand as written.
+2. **The region moves.** Settled by stage one, which takes the guide's
+   regions out of the surfaces' definitions. Before that, the question was
+   whether `runner_subprocess` and disposition detail may leave the
+   `envelope` surface for `lifecycle`, and whether four surfaces reading
+   `unreleased` is acceptable for this change.
+3. **Per-actor findings.** The executor's, in stage four. The draft does
+   not yet describe the actor
    form. Read since: in the actor form the top-level `process_disposition`
    is `per_actor`, a value the guide's present list omits and this draft
    copied without; each actor has its own entry; the top-level integrity
    is `valid` only if every actor's is; and a reply-level finding sets the
    top level to `withheld` without changing the per-actor entries. The
    ledger's section "Withholding, as implemented" has the detail (`R-34`,
-   `R-35`). The account needs a paragraph for this once `R-34` is decided.
-4. **The contract's own passages.** C:165 and C:351-355 state the same
+   `R-35`). The paragraph describes that scope as implemented, which is
+   kept until the maintainer rules on `R-34`.
+4. **The contract's own passages.** The executor's, in stage one. C:165
+   and C:351-355 state the same
    relationship more briefly (`R-07`, `R-19`). They should be rewritten to
    agree with this account, and that is not drafted here.
-5. **"Controller" and "host" as the guide's words.** The draft names the
+5. **"Controller" and "host" as the guide's words.** The executor's, in
+   stage four. The draft names the
    component that supplies each public assessment and uses no function
    names. Whether the guide's reader already has those two words, from its
    earlier sections, has not been checked.

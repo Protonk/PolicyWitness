@@ -6,6 +6,49 @@ accepted from each reader, which parts of the contract have been covered, and
 what became of each finding. The plan says how each part is filled. Sibling
 artifacts are named by path without links, under the records link rule.
 
+It is also the working record of the four stages in
+`docs/CONTRACT-STAGING-PLAN.md`. That outline says what the next three
+sections hold and when they are updated; a check-in reads them first.
+
+## Standing
+
+Stage one has not started and nothing is in motion. The staging plan was
+revised for delegated execution on 2026-11-10; "Review for delegated
+execution" below says what changed and on what readings it rests.
+
+Last check: `env -u PYTHONOPTIMIZE
+PW_TEST_OUT_DIR=tests/out/runs/contract-dispatch-plan-20261110 tests/run.sh
+--suite source_drift` passed all ten cases on the revised documents (run
+`20261110T193138Z_ee6bc76c`). It checks documentation and generator
+contracts only, and its output is local and disposable.
+
+Next: stage one's first steps. Steps one, two and four do not depend on one
+another and can be handed out together.
+
+## Decisions
+
+None yet. An entry gives the distinction, what was chosen and the commitment
+it makes, the evidence with its grade, and what a reversal would undo. The
+costliest to reverse come first.
+
+## For the maintainer
+
+What only the maintainer can settle. Work proceeds on everything else, and
+on these with the stated arrangement kept. "Open rows and who settles them",
+under the strain register, gives the evidence found for each row.
+
+| Item | The distinction | Why it matters | Kept meanwhile |
+| --- | --- | --- | --- |
+| `R-20` | Success as "the host reported `finished`", against success that also reflects the controller's findings. | It sets `result.ok` and the exit status for every caller. | Success follows the host's outcome alone; the combination is stated. |
+| `R-37` | A failed gate stops the dependent phase, against ending the rest of the schedule. | It decides which later observations a specimen can still produce. | Global cancellation, stated. |
+| `R-36`, the reporting-failure reply | A degraded reply held only to the form of its degradation, against one that must also keep each retained record's association with its actor and phase. | It decides what a consumer may conclude from retained records. The host cannot add checks to its degraded path without falling to the minimal reply. | Only the form is checked; the contract states what is and is not promised. |
+| `R-07`, `R-34` | Whether `unconfirmed` stays beside the host's `unresolved` and `inapplicable`; whether a reply-level finding withholds the per-actor conclusions. | Each changes a public value or what a published conclusion means, with no additive form. | Both as implemented, with the mapping and the scope stated. |
+| `R-29`, an ordinary build | A build from a source copy without release history passes a narrower stamp check, against requiring history. | Requiring it stops builds from source copies. | The narrower check passes and says so. |
+| `R-15`, one source | Three hand-written copies of a rule held together by a check, against generating them from one table. | Generation removes the independence that exposed `R-36`. | Three copies, with a check across them. |
+| What ships | A release archives the guide and not the contract. After stage one the guide's surface table names surfaces defined only in the contract. | A reader holding only the release cannot follow the table to a definition. | The table stays in the guide and the archive's contents are unchanged. |
+| The reading before `v0.3.8` | The final checkpoint is cut after the maintainer has read the settled contract and ruled on this list, or has said to cut without that. | A change to shipped source after the final archive needs another release. | Stage four proceeds; the final tag waits. |
+| `v0.3.7` at publication | Published as a release, against only its tag pushed. | `make publish` pushes one tag, and a clone with `main` and the earlier tags but without `v0.3.7` fails the stamp check. | Nothing is pushed; notes are drafted for both versions. |
+
 ## Stage log
 
 | Date | Stage | Event |
@@ -40,6 +83,8 @@ artifacts are named by path without links, under the records link rule.
 | 2026-11-10 | — | Maintainer's second review of the structure proposal recorded. Third version written: three kinds of rule (acts, reports, checks); the reach of a consequence as reads, decides, prevents or withholds, and leaves; four relationships with a defined expression; and a second worked example, a termination gate, read in source by the coordinator. Reading for it found that a failed gate cancels every later phase of every actor, which the contract does not say; and that a controller finding carries no reference to the gate it concerns. |
 | 2026-11-10 | — | Maintainer's third review recorded. It sets what is brought to the maintainer: behavioral commitments, and a grouping only when it hides a distinction a consumer needs, presented as the distinction, why it matters and the commitment that would change. The working taxonomy and the meaning of an existing outcome are the coordinator's to settle from source. Outcome meanings for the gate are now stated in the proposal. `R-37` and `R-38` opened for the two commitments the gate reading found. |
 | 2026-11-10 | — | Authoring model settled with the maintainer: the contract is a generated tree, authored as Markdown under `docs/contract/`, with structured facts beside prose, subordination carrying subsidiary relationships, derived views, and a baseline of free-text items that only shrinks. Written into `docs/CONTRACT-STAGING-PLAN.md`, with stage one's first steps. The examination plan's stages 5 to 8 are marked superseded. Standing by; nothing is in motion. |
+| 2026-11-10 | — | Maintainer's direction: the staging plan is to be carried out largely by an executor, with periodic check-ins; both release checkpoints are run by the executor and failed attempts are expected; points waiting on the maintainer are opened to the executor's judgment or listed. The rendered contract is expected at 600 to 700 lines, 800 needs no intervention, and more than that is reported before `v0.3.8`. Staging plan revised accordingly. Four delegated read-only readings informed it; they are summarized under "Review for delegated execution" and not deposited. Open register rows sorted by who settles them. |
+| 2026-11-10 | — | Shown the size arithmetic under "Review for delegated execution", the maintainer withdrew the 600 to 700 line expectation: a rendered contract of roughly 1,700 to 2,200 lines is fine, and only a total past 2,200 lines is reported before `v0.3.8`. The staging plan carries that figure; the size question left the maintainer's list. |
 
 ### Review after the coordinator handoff
 
@@ -74,6 +119,118 @@ tests/run.sh --suite source_drift` completed all ten selected cases, all
 passing, without system sleep. This checks the documentation and existing
 generator contracts; it is not execution evidence for the worked examples.
 The run is disposable development evidence under the normal retention rules.
+
+### Review for delegated execution
+
+Made on 2026-11-10 on the tree at `8c6eb734`, at the maintainer's direction
+recorded in the stage log. The staging plan now carries: who decides what;
+this ledger's three head sections; conditions for handing work out; the
+release checkpoints, with what a failed attempt is for and how it is
+retried; drafting beside the present contract and switching in one commit;
+the stamp history across source layouts; a size expectation; and a sorting
+of the stage-two candidates. The structure proposal, the definitions sheet
+and the guide draft were brought into line. Product behavior and the
+published contract were not changed.
+
+**Grade.** Four delegated readings, made in parallel. Nothing was built,
+tested, tagged or submitted; read-only generator checks, git queries and
+counting scripts were run. The coordinator then read first-hand the stamp
+generator's `surface_hash`, `release_tags`, `stamps`, `render` and `check`,
+the Makefile's `notarize` and `release` targets, release preflight's
+`inspect`, the two identity scopes, the harness's generator lookup and the
+catalog entry for `preflight/build_refusal_controls`, and looked at the
+storage schema of each local archive. Every other statement below is a
+delegated reading. Verify before relying on it.
+
+**The release checkpoints.**
+
+- The version comes from the nearest tag (`build.sh`); no file is bumped.
+  FOOTPRINT already names the `v0.3.6` archive, so the next transcription
+  falls due when `v0.3.8` is prepared.
+- `make release` runs the strict preflight, a fresh build, one notarization
+  submission, stapling, acceptance (the default battery against the app
+  extracted from the final ZIP, with output nested under
+  `tests/out/release-acceptance/`), the strict preflight again, the archive
+  by rename, and pruning. A dirty tree after acceptance stops it before the
+  archive.
+- After `generate_contract_stamps.py --release` and until the tag exists,
+  the stamp check reports stale stamps and the build refuses.
+- `release_preflight.py --report` evaluates nothing on an untagged tree.
+  `make notarize` on an untagged tree spends a submission and stops before
+  the battery, because the app reports a development contract.
+- Every failure before the archive rename leaves the commit and the local
+  tag, and preflight's checks permit a retry under the same number. Once
+  `dist/archive/<tag>/` exists the number is spent.
+- Precedent for recreating a tag: `v0.3.4`. The unarchived attempt
+  `dist/evidence/20261031T022350Z-lsw7xveb` records accepted notarization
+  and failed acceptance for a build one commit before the present tag
+  target `0289d9ae`, whose message gives the cause: acceptance nests the
+  battery one directory deeper, which carried a helper path past a length
+  check. No document describes retagging. `tests/AGENTS.md` says to
+  preserve release tags, and `dist/AGENTS.md` forbids rebuilding a tag to
+  represent a published ZIP.
+- The release helpers changed in four commits after `v0.3.6`, so `v0.3.7`
+  is their first release run. Release preflight imports the stamp generator
+  by name on a path reached only at a tagged commit.
+- Local archives run from `v0.3.3`, in storage schema 1, to `v0.3.6`, in
+  schema 3. Archiving `v0.3.7` expires `v0.3.3`.
+- `make publish` pushes only the tag it publishes and checks no order.
+- The opt-in control `preflight/build_refusal_controls` uses the stamp
+  generator's interface and is outside the default battery.
+- The drift suite accepts an added prose-baseline entry; preflight refuses
+  growth against the preceding tag. The baseline has seven entries, three
+  of them inside the guide's `profile` and `installation` regions.
+
+**What the generated contract collides with.** A first pass at stage one's
+step four.
+
+- The stamp generator requires one marker pair for each surface in
+  `docs/CONTRACT.md` and in each named guide region, and its shape
+  collection writes the thirteen surface names into Python.
+- Bound to the generator's interface or to the markers:
+  `tests/lib/fixture_inputs.py`; in `tests/suites/source_drift/`,
+  `build_contracts.py` (seven stamp tests) and `generators.py`; in
+  `tests/suites/preflight/`, `check_build_entry.py`,
+  `check_release_publish.py` and `opt_in/build_refusals.py`;
+  `tests/lib/release_preflight.py`. Mutation controls patch the `request`
+  and `profile` markers, `surfaces/profile.json` and the table header. One
+  control still passes if its marker patch becomes a no-op.
+- Accounts: `docs/build.json` (a step, a refusal and an invariant for the
+  stamp check), `docs/architecture.json` (four nodes, six edges, and one
+  test cited on eleven rows), `docs/SIGNING.md` and the drift suite's
+  README.
+- Links into `docs/CONTRACT.md`: seven are checked, among them
+  `controller/AGENTS.md#maintaining-the-contract`. Four are not scanned:
+  `controller/README.md#build-stamp`, two in `runner/README.md` and one in
+  `tests/suites/runner_abi_layout/README.md`.
+- 2,059 of the guide's 2,648 lines sit inside surface regions. Three copied
+  regions nest inside them, one from `docs/EXTENSIONS.md` and two from
+  `tests/FAILURE-PROPAGATION-CONTRACT.md`.
+- `docs/markdown_reader.py` gives a flat list of headings. It has no
+  heading tree, no heading attributes, no keyed lines and no emitter, and
+  its section lookup refuses duplicate titles. `docs/generator_common.py`
+  has a citation form that suits owners.
+- `docs/contract/` and a generator under `docs/` are outside both
+  identities. `build.sh` is inside both.
+- The existing baseline code compares exact entries. A count by kind is a
+  comparison the repository does not yet have.
+- The guide's copy of the surface table is written by the stamp generator.
+  The release archive holds the guide and not the contract.
+
+**Size.**
+
+- Today: 441 lines and about 4,100 words in the contract, 232 of the lines
+  inside surface regions. The guide's regions add 2,059 lines and about
+  17,000 words.
+- Public fields: 558 distinct names, about 970 counting one for each field
+  of each record type. The host report has 563 in 78 records, the client
+  capture 43, the request and selectors about 65, the controller's envelope
+  about 170 and the registry records about 90. No single definition file
+  covers the request, envelope and registry fields.
+- The two worked sections are 293 lines for 36 of the 332 claim rows.
+- With a row for every field and rules at about a dozen lines each, the
+  leanest rendering comes to between about 1,700 and 2,200 lines. The rule
+  count is a guess until the guide's regions are inventoried.
 
 ## Artifacts
 
@@ -410,8 +567,44 @@ inputs even where a related register row exists.
 ## Strain register
 
 Stage 4. The plan names the sources of rows and the dispositions. A
-disposition marked "proposed" is the coordinator's and awaits the
-maintainer.
+disposition marked "proposed" is the coordinator's. It is a starting point
+for whoever settles the row, not a prescription.
+
+### Open rows and who settles them
+
+Sorted on 2026-11-10 under "Who decides what" in
+`docs/CONTRACT-STAGING-PLAN.md`. Every row not yet closed is in this table,
+and the table governs whatever the row's own Status cell says; "Stage 5"
+there means stage one of the staging plan. "Intent" is what a delegated reading
+of source, tests and history found: *argued* (a test asserts the behavior or
+a document states it), *present* (never argued for), or *defect* (contrary
+to a rule stated elsewhere). A dash means the row is a matter of text.
+
+| Rows | Stage | Settled by | Intent found | Done, or kept meanwhile |
+| --- | --- | --- | --- | --- |
+| `R-06` | One | Executor | — | Assert the outcome in the existing test. |
+| `R-08` to `R-13`, `R-16` to `R-19`, `R-21`, `R-22`, `R-24` to `R-28`, `R-32` | One | Executor | — | Rewritten in the restructure. |
+| `R-23`, `R-30`, `R-31` | One | Executor, on the maintainer's direction | — | The three removals, and the rewrites around them. |
+| `R-14` | One, then two with `R-36` | Executor | — | State the partition positively, and both cases in which it is not applied. |
+| `R-07`, the mapping | One | Executor | Argued: a controller test asserts `unresolved` gives `unconfirmed` with integrity `valid`, and `tests/FAILURE-PROPAGATION-CONTRACT.md` states it. The host's resolver does not emit `inapplicable` for `final_status`, so that arm is not reached from the present producer. | State the table of host states and controller values, with `per_actor`. |
+| `R-07`, whether `unconfirmed` stays | Two | Maintainer | The word predates the host's states. | Kept. |
+| `R-15`, the states and the pair set | One | Executor | The eleven state and basis pairs agree in the Swift, Rust and Python copies and appear in no document. | Define the four states positively and print the pairs. |
+| `R-15`, a check across the copies | Two | Executor | Present. The harness reader lacks the precedence check the other two make. | Add the check and the harness reader's precedence check. |
+| `R-15`, one source for the copies | Two | Maintainer | `tests/AGENTS.md` asks that consumers stay independent of the production classifier. | Kept: three copies. |
+| `R-20` | Two | Maintainer | Argued, with no reason recorded: two controller tests assert exit 0 beside a withheld disposition, and the controller README, the guide and `tests/FAILURE-PROPAGATION-CONTRACT.md` state it. The rule is older than the integrity projection. | Kept; the combination is stated. |
+| `R-29`, the check without history | Two | Maintainer | Argued: `test_stamped_source_copy_and_no_tags_clone_validate_without_erasing_stamps`, and `records/2026-11-09-release-stamped-contracts-review.md`. | Kept; the exit status and the narrower result are stated. |
+| `R-29`, `--release` without history | One | Executor | Defect against C:54-55. Several test fixtures rely on the permissive path and need another route. | Repaired in the replacement generator. |
+| `R-33` | Four | Executor, on the maintainer's direction | — | Apply the draft against the settled contract. |
+| `R-34`, the scope as implemented | One | Executor | Argued: `typed_invalid_actor_account_keeps_independent_actor_endings`, the harness's lifecycle oracle and the controller README. | State the fields, the level and the kind of finding. |
+| `R-34`, whether a reply-level finding withholds per-actor conclusions | Two | Maintainer | As above. | Kept. |
+| `R-35` | One for the contract, four for the guide | Executor | — | Add `per_actor` where the value set is given. |
+| `R-36`, definitions 1 to 5 | Two | Executor | Each is determinable from what the host assembles; `records/contract/validators/DEFINITIONS-AND-SCOPES.md` has the readings. | Written from the assembler. A reader that departs is brought to the definition or given a reason the contract states. |
+| `R-36`, what a reporting-failure reply promises now | Two | Executor | Argued for the host and the controller: the degraded path skips the ordinary checks "so a reported conflict is never lost". The harness reader's further checks are argued for receipts only. | State what is promised: the form of the degradation, and the records as assembled, with no promise of consistency or association. |
+| `R-36`, association required on a reporting-failure reply | Two | Maintainer | The host falls to the minimal reply if its degraded reply fails its own check. | Kept: not required. |
+| `R-36`, the corpus | Two, after the definitions | Executor | — | Built on `records/contract/validators/RUN.patch` or afresh. |
+| `R-37` | Two | Maintainer | Present. No test read asserts the scope, and `docs/EXTENSIONS.md` and the guide say a failed dependency "withholds that phase". | Kept: global cancellation, stated. |
+| `R-38`, a reference to the phase or actor | Two | Executor | Present. No controller-originated finding carries a structured reference. The maintainer's first review of the structure asks that findings identify the assertions they affect. | Add an optional reference beside the existing optional fields; the envelope goldens move with it. |
+| `R-38`, which conclusions a finding affects | Two | Maintainer, with `R-34` | — | Kept. |
 
 ### C:243, the compiled-profile paragraph
 
@@ -526,13 +719,14 @@ read, with no test of that step for this cause. Recorded as `R-06`.
 | R-03 | `K-243-3` to `K-243-7` | Maintainer's reading; `F-06`; `A-29`; answers 2 and 8 | A list of six nouns standing for several relations with different owners and consequences, omitting the source and parameter comparisons and the conditions for `captured`. | Text | **Rewrite**, stating each rule with its owner and consequence, what the controller does not compare, and the consumer's own comparison. The existing division of responsibility is intended and preserved. Maintainer's decision. | Changed at `a7d9b320`; as above |
 | R-04 | `K-243-8` | Maintainer's reading; `L-30` | "A detached receipt grants no producer context": a changed subject, a verb for something no code path does, and one name for two fields. | Text | **Rewrite**, explaining the two `producer` fields by their qualified locations. Both names stay. Maintainer's decision. | Changed at `a7d9b320`; as above |
 | R-05 | `K-243-9` | Maintainer's reading; `F-05`; `F-06`; `A-29`; silence 4; answers 6 and 8 | The example stated a rule nothing performed and merged two different nonce failures. The journal writer, asked, expected "a request-aware acceptance step to refuse that receipt" and would rely on an example's behavior without checking it. | Text | **Rewrite**: replaced by a case the controller rejects, with its owning check. The source comment's "refuses publication" now names what is withheld and what is published. Maintainer's decision. | Changed at `a7d9b320`; as above |
-| R-06 | New example at C:243 | Coordinator | No test asserts that a receipt-label violation yields the outcome `malformed_runner_response`; the owning test stops at "not admitted". | Repository: a missing check | **Proposed: eliminate**, by asserting the outcome in the existing test. Outside the scope the maintainer set for this change. | Awaiting maintainer |
+| R-06 | New example at C:243 | Coordinator | No test asserts that a receipt-label violation yields the outcome `malformed_runner_response`; the owning test stops at "not admitted". | Repository: a missing check | **Proposed: eliminate**, by asserting the outcome in the existing test. Outside the scope the maintainer set for this change. | Open; see the sorting |
 
 ### C:165-236 and C:351-355, lifecycle, equipment and the publication rule
 
 Opened by the maintainer's close reading of 2026-11-10, kept verbatim in
 `records/contract/CONTRACT-MAINTAINER-NOTES.md`. No disposition here is
-decided. Each is the coordinator's proposal and awaits the maintainer.
+decided. Each is the coordinator's proposal; the sorting above says who
+settles it.
 
 **What the coordinator read first-hand on 2026-11-10** (source read; nothing
 run), on the points the reading turns on:
@@ -594,20 +788,20 @@ reads):
 
 | Row | Claims | References | Strain | Sits in | Proposed disposition | Status |
 | --- | --- | --- | --- | --- | --- | --- |
-| R-07 | `K-165-2` | Reading; maintainer's comment of 2026-11-10 on this row; `F-07`; answer 7; the section "Withholding, as implemented" below | "Withhold dependent claims" has no referent, and the host's and the controller's words for the same missing evidence differ without a stated difference in meaning: the host's claim is `unresolved`, the controller's summary is `unconfirmed`. | Text, and repository vocabulary | **Rewrite**, proposed: one table giving each controller value and the host state it comes from. **Maintainer:** whether `unconfirmed` should exist beside `unresolved` and `inapplicable`, given that it renames and merges them; changing a public value is a change of shape. | Awaiting maintainer |
-| R-08 | `K-171-2` | Reading; `L-23`; `F-10` | "The worker ABI identity remains independent of the public build identity" interrupts the equipment association and does not say independent in what respect. Their source scopes overlap. | Text, and placement | **Rewrite**: say what each identity governs and that neither substitutes for the other, at the place where the internal identity is described (C:379-425 already has most of it), and remove it here. | Awaiting maintainer |
-| R-09 | `K-171-1` | Reading; `L-23` | "Binds observations to the named process and service-sealed equipment" covers three operations that establish different things: checking packaged equipment, inspecting a running process, validating reported associations. | Text | **Rewrite**: state what the association asserts, then how the inventory, binding and entitlement fields represent it. | Awaiting maintainer |
-| R-10 | `K-176-1`, `K-176-2` | Reading; `F-12`; `A-D11` | The actor records are introduced by denying a "declaration reply" and a "singular worker projection", neither defined anywhere. | Text (residue) | **Rewrite**: remove the denial; keep the positive statement about `actors[]`. | Awaiting maintainer |
-| R-11 | `K-180-1`, `K-181-1` | Reading; `F-15`; `A-21`; `A-D12` | "An acquired decision does not publish another cell, and a scheduling summary does not replace any actor's facts." The first clause has a mechanism the sentence does not give; the second names no field and no operation. Two readers took opposite meanings from it. | Text | **Rewrite**: remove the sentence once the records and their consequences are described. If a concrete case replaces it, the maintainer's candidate (a setup timeout beside an observed application, both reported) first needs a source and an owning check. | Awaiting maintainer |
-| R-12 | `K-188-1` | Reading; `F-15` | Override rows "cannot establish packaged selection" limits what a row establishes, not whether the override runs, and the text does not let a reader tell which. | Text | **Rewrite**: tie the statement to the named fields and say plainly that it concerns what the row shows. | Awaiting maintainer |
-| R-13 | `K-194-1`, `K-194-2` | Reading; `F-18` | Runtime inspection failure cancelling activation while keeping earlier observations is a behavior of its own, placed as a qualification to the entitlement fields. | Text, and placement | **Rewrite**: give it its own statement with actor, boundary and consequence. No signed-product check reaches it (`F-18`); recorded for the maintainer. | Awaiting maintainer |
+| R-07 | `K-165-2` | Reading; maintainer's comment of 2026-11-10 on this row; `F-07`; answer 7; the section "Withholding, as implemented" below | "Withhold dependent claims" has no referent, and the host's and the controller's words for the same missing evidence differ without a stated difference in meaning: the host's claim is `unresolved`, the controller's summary is `unconfirmed`. | Text, and repository vocabulary | **Rewrite**, proposed: one table giving each controller value and the host state it comes from. **Maintainer:** whether `unconfirmed` should exist beside `unresolved` and `inapplicable`, given that it renames and merges them; changing a public value is a change of shape. | Open; see the sorting |
+| R-08 | `K-171-2` | Reading; `L-23`; `F-10` | "The worker ABI identity remains independent of the public build identity" interrupts the equipment association and does not say independent in what respect. Their source scopes overlap. | Text, and placement | **Rewrite**: say what each identity governs and that neither substitutes for the other, at the place where the internal identity is described (C:379-425 already has most of it), and remove it here. | Open; see the sorting |
+| R-09 | `K-171-1` | Reading; `L-23` | "Binds observations to the named process and service-sealed equipment" covers three operations that establish different things: checking packaged equipment, inspecting a running process, validating reported associations. | Text | **Rewrite**: state what the association asserts, then how the inventory, binding and entitlement fields represent it. | Open; see the sorting |
+| R-10 | `K-176-1`, `K-176-2` | Reading; `F-12`; `A-D11` | The actor records are introduced by denying a "declaration reply" and a "singular worker projection", neither defined anywhere. | Text (residue) | **Rewrite**: remove the denial; keep the positive statement about `actors[]`. | Open; see the sorting |
+| R-11 | `K-180-1`, `K-181-1` | Reading; `F-15`; `A-21`; `A-D12` | "An acquired decision does not publish another cell, and a scheduling summary does not replace any actor's facts." The first clause has a mechanism the sentence does not give; the second names no field and no operation. Two readers took opposite meanings from it. | Text | **Rewrite**: remove the sentence once the records and their consequences are described. If a concrete case replaces it, the maintainer's candidate (a setup timeout beside an observed application, both reported) first needs a source and an owning check. | Open; see the sorting |
+| R-12 | `K-188-1` | Reading; `F-15` | Override rows "cannot establish packaged selection" limits what a row establishes, not whether the override runs, and the text does not let a reader tell which. | Text | **Rewrite**: tie the statement to the named fields and say plainly that it concerns what the row shows. | Open; see the sorting |
+| R-13 | `K-194-1`, `K-194-2` | Reading; `F-18` | Runtime inspection failure cancelling activation while keeping earlier observations is a behavior of its own, placed as a qualification to the entitlement fields. | Text, and placement | **Rewrite**: give it its own statement with actor, boundary and consequence. No signed-product check reaches it (`F-18`); recorded for the maintainer. | Open; see the sorting |
 | R-14 | `K-198-1` to `K-202-1` | Reading; maintainer's comment of 2026-11-10 on this row; `F-07`; `F-15`; `A-24` | The passage gives an exception to a rule it never states. The rule, positively: the actions declared in the phases correspond exactly to the step records and extension-event records, with uniqueness and ordering requirements. Stated that way it also separates having a record for an action from having evidence that the action ran. "Observation arrays are empty" is neither specific nor safe: a preparation-failure reply holds a mixture of declarations, evidence of the failure, and empty execution records, and the phrase does not let a reader tell them apart. "Sole exception" is inaccurate: a reporting-failure reply is not held to the partition either, and the two cases mean different things. After a preparation failure a declared plan has no execution records because nothing launched; after a reporting failure records may remain whose consistency was not established. | Text. Repository: three hand-written validators with different conditions. At the initial review, divergence in final judgments was not established. The subsequent comparison and experiment are recorded under R-36: the skip condition changes diagnostics, while other differences change judgments. The coordinator's earlier wording, that they "skip the rule under different conditions", claimed more than was known: the controller and the host's self-check flag an invalid preparation-failure record separately, so that difference may change only which diagnostic appears. The Python reader's lack of explicit checks on host regions, custody and phase arrival and completion is the more concrete difference. | **Rewrite**, proposed: state the partition rule positively where replies are explained; describe a preparation-failure reply by its three categories of record; state both cases in which the rule is not applied, with what each means. **Evidence now available:** the source comparison and candidate experiment are complete under R-36. Definitions and applicability still need to settle the intended common rules. | Comparison complete; wording and intended rules open with R-36 |
-| R-15 | `K-204-1` to `K-210-*` | Reading; `L-27`; `F-18` | The application states are given through exclusions without positive meanings, and "closed state/basis pairs" restricts a set the reader is never shown. | Text. Repository: the list behind `not_attempted` is hand-copied in three languages. | **Rewrite**: define the four states positively, then the exclusions; give the pairs or say where they are. **Maintainer:** whether the pair set belongs in the contract, and whether three hand-written copies are necessary. | Awaiting maintainer |
-| R-16 | `K-212-1` to `K-228-*` | Reading; `L-28`; answer 3 | The purpose of the termination dependency is implicit: the gate decides whether the dependent phase may activate, collect queries and release attempts, so "a satisfied gate additionally requires" reads as record consistency only. | Text | **Rewrite**: open with the decision the gate governs. | Awaiting maintainer |
-| R-17 | `K-215-1` | Reading; `F-15`; `A-26`; answer 3 | "These ordinals are local to the source actor process" is too broad after the sentence on phase activation, and hides that the host keeps the counters. | Text | **Rewrite**: the host keeps one observation sequence per actor; an actor's activations, its reap and the gates that refer to it use that sequence; a dependent actor's activation uses its own. | Awaiting maintainer |
-| R-18 | `K-230-*` to `K-236-*` | Reading; `L-29` | "Native facts may retain absent source timestamps" and the sentences after it present three consequences of failures at different moments as qualifications to "native facts". | Text | **Rewrite** in order of occurrence: missing source timestamps; a clock failure after the dependent activation is stored; a cleanup reap after a failed gate. | Awaiting maintainer |
-| R-19 | `K-351-*` to `K-355-*`, and every "requires" in C:168-238 | Reading; `F-07`; silence 5; answer 7 | The rule that governs the equipment region's requirements is 115 lines later, under the transport heading. "Unsupported or malformed input cannot become a semantic claim" covers four different consequences: bytes and diagnostics kept when decoding fails; a decoded record kept when admission fails; observations kept with integrity issues when later checks find contradictions; and a host reporting failure handled on its own path. | Text, and placement | **Rewrite**: state the four cases by boundary and consequence, and put the publication rule where the requirements are read. Throughout, name the speaker: the host reports, the record carries, the controller checks, the consumer may conclude. | Awaiting maintainer |
-| R-20 | `K-165-2`, `K-352-*` | Reading; `F-07`; coordinator's source reading above | `result.ok` and the exit code follow the host's `finished` outcome and nothing else. A consumer can see success, a host field asserting something, and a controller finding that withholds it, in one envelope. A default test asserts that combination. | Repository, and text that does not say so | **Which side is right**, for the maintainer: state the combination plainly and keep the behavior, or make success reflect the controller's findings. | Awaiting maintainer |
+| R-15 | `K-204-1` to `K-210-*` | Reading; `L-27`; `F-18` | The application states are given through exclusions without positive meanings, and "closed state/basis pairs" restricts a set the reader is never shown. | Text. Repository: the list behind `not_attempted` is hand-copied in three languages. | **Rewrite**: define the four states positively, then the exclusions; give the pairs or say where they are. **Maintainer:** whether the pair set belongs in the contract, and whether three hand-written copies are necessary. | Open; see the sorting |
+| R-16 | `K-212-1` to `K-228-*` | Reading; `L-28`; answer 3 | The purpose of the termination dependency is implicit: the gate decides whether the dependent phase may activate, collect queries and release attempts, so "a satisfied gate additionally requires" reads as record consistency only. | Text | **Rewrite**: open with the decision the gate governs. | Open; see the sorting |
+| R-17 | `K-215-1` | Reading; `F-15`; `A-26`; answer 3 | "These ordinals are local to the source actor process" is too broad after the sentence on phase activation, and hides that the host keeps the counters. | Text | **Rewrite**: the host keeps one observation sequence per actor; an actor's activations, its reap and the gates that refer to it use that sequence; a dependent actor's activation uses its own. | Open; see the sorting |
+| R-18 | `K-230-*` to `K-236-*` | Reading; `L-29` | "Native facts may retain absent source timestamps" and the sentences after it present three consequences of failures at different moments as qualifications to "native facts". | Text | **Rewrite** in order of occurrence: missing source timestamps; a clock failure after the dependent activation is stored; a cleanup reap after a failed gate. | Open; see the sorting |
+| R-19 | `K-351-*` to `K-355-*`, and every "requires" in C:168-238 | Reading; `F-07`; silence 5; answer 7 | The rule that governs the equipment region's requirements is 115 lines later, under the transport heading. "Unsupported or malformed input cannot become a semantic claim" covers four different consequences: bytes and diagnostics kept when decoding fails; a decoded record kept when admission fails; observations kept with integrity issues when later checks find contradictions; and a host reporting failure handled on its own path. | Text, and placement | **Rewrite**: state the four cases by boundary and consequence, and put the publication rule where the requirements are read. Throughout, name the speaker: the host reports, the record carries, the controller checks, the consumer may conclude. | Open; see the sorting |
+| R-20 | `K-165-2`, `K-352-*` | Reading; `F-07`; coordinator's source reading above | `result.ok` and the exit code follow the host's `finished` outcome and nothing else. A consumer can see success, a host field asserting something, and a controller finding that withholds it, in one envelope. A default test asserts that combination. | Repository, and text that does not say so | **Which side is right**, for the maintainer: state the combination plainly and keep the behavior, or make success reflect the controller's findings. | Open; see the sorting |
 
 ### C:3-56, C:100-106 and C:430-434, identity, stamps and shape goldens
 
@@ -658,15 +852,15 @@ goldens and nothing about behavior (`surface_hash`).
 
 | Row | Claims | References | Strain | Sits in | Disposition | Status |
 | --- | --- | --- | --- | --- | --- | --- |
-| R-21 | `K-3-1` | Reading; `F-10`; `A-01` | "The public contract is the release" is definitive before either term is explained. Development builds have contracts too, and an identity names a contract without stating what it commits to. | Text | **Rewrite**, proposed: open with what the contract governs and how a specimen or a received artifact identifies it. | Awaiting maintainer |
-| R-22 | `K-3-2`, `K-4-*`, `K-5-1` | Reading; `F-10`; `A-D02`; `R-04` | "Assert `contract`" and "names its producer" are different relationships put side by side. "Producer" suggests a process identity or an authenticated origin; the value compared is the reported build contract. "Admission is exact" does not say which values are compared. | Text | **Rewrite**, proposed: the specimen names the contract it requests; a received artifact reports the contract of the build that produced it; state the two values compared at each admission. | Awaiting maintainer |
+| R-21 | `K-3-1` | Reading; `F-10`; `A-01` | "The public contract is the release" is definitive before either term is explained. Development builds have contracts too, and an identity names a contract without stating what it commits to. | Text | **Rewrite**, proposed: open with what the contract governs and how a specimen or a received artifact identifies it. | Open; see the sorting |
+| R-22 | `K-3-2`, `K-4-*`, `K-5-1` | Reading; `F-10`; `A-D02`; `R-04` | "Assert `contract`" and "names its producer" are different relationships put side by side. "Producer" suggests a process identity or an authenticated origin; the value compared is the reported build contract. "Admission is exact" does not say which values are compared. | Text | **Rewrite**, proposed: the specimen names the contract it requests; a received artifact reports the contract of the build that produced it; state the two values compared at each admission. | Open; see the sorting |
 | R-23 | `K-5-2` to `K-6-*` | Reading; `F-09`; `F-12`; `A-D15`; answer 15 | "There is no negotiation, implicit acceptance, historical translation or bypass." | Text | **Rewrite: remove.** Maintainer's direction. The positive rule states that a matching assertion is required and what a mismatch does; historical evidence handling is described where it happens. | Direction given; not yet changed |
-| R-24 | `K-8-*` to `K-15-*` | Reading; `F-11`; `A-D03` | Forms of identity, their derivation and where they are reported are combined, and where the identity is reported comes after suffixes, index flags and incidental files. | Text, and placement | **Rewrite**, proposed: first the forms and where a person holding an application reads its identity; derivation separately, as what a builder needs. | Awaiting maintainer |
-| R-25 | `K-17-1` to `K-19-*` | Reading; `F-03`; `F-01`; answers 5 and 12 | "Revisit the corresponding definitions" has no dependable destination. Changing the assertion is presented as the step, when it follows a decision the review may go against. The procedure has no baseline for a specimen asserting a development identity. | Text, and structure | **Rewrite**, proposed, once stage 5 settles where definitions are reached from: the review decides whether the selected contract suits the specimen; changing the string supplies the admission condition only. | Awaiting maintainer |
+| R-24 | `K-8-*` to `K-15-*` | Reading; `F-11`; `A-D03` | Forms of identity, their derivation and where they are reported are combined, and where the identity is reported comes after suffixes, index flags and incidental files. | Text, and placement | **Rewrite**, proposed: first the forms and where a person holding an application reads its identity; derivation separately, as what a builder needs. | Open; see the sorting |
+| R-25 | `K-17-1` to `K-19-*` | Reading; `F-03`; `F-01`; answers 5 and 12 | "Revisit the corresponding definitions" has no dependable destination. Changing the assertion is presented as the step, when it follows a decision the review may go against. The procedure has no baseline for a specimen asserting a development identity. | Text, and structure | **Rewrite**, proposed, once stage 5 settles where definitions are reached from: the review decides whether the selected contract suits the specimen; changing the string supplies the admission condition only. | Open; see the sorting |
 | R-26 | `K-24-1` | Reading; `F-01`; `F-04` | "The manifest defines the scope" delegates before saying which scope: the public commitments, each surface's membership, or the inputs whose change moves a stamp. | Text, and structure | **Structure**, per the direction above: the document renders what each surface contains; the manifest is an authoring input. | Stage 5 |
-| R-27 | `K-25-1`, `K-26-1` | Reading | The sentences on transport and installation goldens name maintenance artifacts and what they contain, not the requirements a reader needs. | Text, and structure | **Rewrite**, proposed: give the definitions and their reach; move the account of the artifacts to where maintenance is described. | Awaiting maintainer |
-| R-28 | `K-29-1` to `K-32-1`, the table | Reading; `F-03`; silence 2; answer 5 | "Last changed" has no precise object. The machinery records changes to the definition text and golden inputs and does not discover implementation changes, so the table depends on a maintenance responsibility the text does not state. | Text | **Rewrite**, proposed: say what the column records and state the responsibility plainly. | Awaiting maintainer |
-| R-29 | `K-52-1` to `K-56-1` | Reading; `L-07`; `F-12`; the run above | Without history `--check` exits 0 on a narrower result, and "explicitly reports" is left to carry the difference. "The two tables" are not identified. Preserving stamps is not verifying them. And the stated protection does not hold when `--release` is given. | Text, and repository | **Rewrite**, proposed: state the exit status and the narrower result, name the tables, separate preservation from verification. **Maintainer:** what an ordinary build from a source copy requires of this check; and whether regeneration with `--release` and no history should refuse. | Awaiting maintainer |
+| R-27 | `K-25-1`, `K-26-1` | Reading | The sentences on transport and installation goldens name maintenance artifacts and what they contain, not the requirements a reader needs. | Text, and structure | **Rewrite**, proposed: give the definitions and their reach; move the account of the artifacts to where maintenance is described. | Open; see the sorting |
+| R-28 | `K-29-1` to `K-32-1`, the table | Reading; `F-03`; silence 2; answer 5 | "Last changed" has no precise object. The machinery records changes to the definition text and golden inputs and does not discover implementation changes, so the table depends on a maintenance responsibility the text does not state. | Text | **Rewrite**, proposed: say what the column records and state the responsibility plainly. | Open; see the sorting |
+| R-29 | `K-52-1` to `K-56-1` | Reading; `L-07`; `F-12`; the run above | Without history `--check` exits 0 on a narrower result, and "explicitly reports" is left to carry the difference. "The two tables" are not identified. Preserving stamps is not verifying them. And the stated protection does not hold when `--release` is given. | Text, and repository | **Rewrite**, proposed: state the exit status and the narrower result, name the tables, separate preservation from verification. **Maintainer:** what an ordinary build from a source copy requires of this check; and whether regeneration with `--release` and no history should refuse. | Open; see the sorting |
 | R-30 | `K-100-*` to `K-106-*` | Reading; `F-13`; `F-12`; `A-10` | "Review and assert" joins a human judgment to an enforced comparison. The next sentence turns to maintainers, and its "so" carries the dependency of the table on their upkeep. | Text | **Rewrite**, proposed: separate what the application establishes from what the review must; state the maintenance dependency as one. **Remove** "There is no separate request counter or compatibility exception for optional additions": maintainer's direction. | Partly direction given; not yet changed |
 | R-31 | `K-430-1` to `K-433-2` | Reading; `L-48`; the source read above | Shape goldens record keys and JSON types; the text does not keep that apart from values, relationships and behavior. It omits that a difference fails the check. "Update the golden" assumes the review's outcome. "Still fail semantic admission" names a mechanism without identifying it. | Text | **Rewrite**, proposed: a shape difference fails a check and writes a candidate; the review decides which side is corrected; required fields are enforced by readers and decoders, separately. **Remove** "There is no separate version-bump classifier": maintainer's direction. | Partly direction given; not yet changed |
 | R-32 | All of the above | Reading | The passages attend to maintaining contract artifacts and leave the reader's route, from the identity they observe to the commitments they act under, implicit. | Structure | **Stage 5**: the route is the organizing requirement for the opening of the rewritten document. | Stage 5 |
@@ -729,8 +923,8 @@ overall `withheld` does not govern the assessments beneath it.
 
 | Row | Claims | References | Strain | Sits in | Disposition | Status |
 | --- | --- | --- | --- | --- | --- | --- |
-| R-34 | `K-165-2`, `K-352-*` to `K-355-*` | Maintainer's comment on `R-07`; the section above; `R-19`; `R-20` | "Dependent claims" promises that a missing or contradictory observation prevents the conclusions that require it. What is implemented is narrower and differently shaped: the controller withholds its own disposition at the level of the finding, leaves assessments beneath that level standing, and leaves the host's claims visible. A consumer cannot tell from the text which conclusions a finding invalidates, which stay independently supported, or whether a top-level `withheld` governs the per-actor ones. It does not. | Text. Repository for the question of intent. | **Rewrite**, proposed: say exactly which fields are withheld, at which level, by which kind of finding, and what stays. **Which side is right**, for the maintainer: whether a reply-level finding beside a standing per-actor `clean_exit` is the intended meaning of "dependent". The test's name suggests it is deliberate. | Awaiting maintainer |
-| R-35 | Guide G:1276-1277; `K-165-2` | Coordinator, while reading for `R-07` | `process_disposition` can be `per_actor`. The guide's list of its values omits it, and so does the contract. Only the controller README mentions it. The coordinator's guide draft copied the incomplete list. | Text of the guide | **Rewrite**, proposed: add the value where the field's vocabulary is given, with the actor form's per-actor entries. The draft is corrected to say so. | Awaiting maintainer |
+| R-34 | `K-165-2`, `K-352-*` to `K-355-*` | Maintainer's comment on `R-07`; the section above; `R-19`; `R-20` | "Dependent claims" promises that a missing or contradictory observation prevents the conclusions that require it. What is implemented is narrower and differently shaped: the controller withholds its own disposition at the level of the finding, leaves assessments beneath that level standing, and leaves the host's claims visible. A consumer cannot tell from the text which conclusions a finding invalidates, which stay independently supported, or whether a top-level `withheld` governs the per-actor ones. It does not. | Text. Repository for the question of intent. | **Rewrite**, proposed: say exactly which fields are withheld, at which level, by which kind of finding, and what stays. **Which side is right**, for the maintainer: whether a reply-level finding beside a standing per-actor `clean_exit` is the intended meaning of "dependent". The test's name suggests it is deliberate. | Open; see the sorting |
+| R-35 | Guide G:1276-1277; `K-165-2` | Coordinator, while reading for `R-07` | `process_disposition` can be `per_actor`. The guide's list of its values omits it, and so does the contract. Only the controller README mentions it. The coordinator's guide draft copied the incomplete list. | Text of the guide | **Rewrite**, proposed: add the value where the field's vocabulary is given, with the actor form's per-actor entries. The draft is corrected to say so. | Open; see the sorting |
 
 ### R-14: where the three validators' judgments diverge
 
@@ -822,6 +1016,6 @@ record). Nothing run.
 
 | Row | Claims | References | Strain | Sits in | For the maintainer | Status |
 | --- | --- | --- | --- | --- | --- | --- |
-| R-37 | `K-234-*` to `K-236-*` | `records/contract/CONTRACT-STRUCTURE-PROPOSAL.md`, the gate example; `R-16`; `R-18` | When an evaluated gate fails, the host withholds the dependent phase and skips every later phase, whichever actor owns it. A gate left `not_reached` by an unavailable actor is not itself a failed evaluation that cancels the rest. C:234-236 does not state the global cancellation scope. | Text that understates, and the repository for whether this reach is intended | **The distinction:** stopping the dependent phase, against ending the run's remaining schedule. **Why it matters:** it decides which later observations a specimen can still produce after a dependency fails. **The commitment at stake:** retain and state global cancellation, or define which later phases remain eligible and change the scheduler accordingly. | Awaiting maintainer |
-| R-38 | `K-352-*` to `K-355-*`; controller gate findings | The gate example; `R-20`; `R-34`; `R-36`; `porcelain_actor.rs::require`; `porcelain_admission.rs::IntegrityIssue` | Gate checks emit `actor_evidence` issues containing a kind and detail sentence without a structured phase or actor reference. The host's gate remains published unchanged. Other lifecycle issues can carry rule, question, step index and observation fields, so the absence of context is not universal. | Repository: the subject of a gate finding. Text that promises withholding of "dependent claims". | **The distinction:** an overall integrity finding, against one identifying the assertion and its dependencies. **Why it matters:** the gate finding has no machine-readable association to the affected gate. **The commitment at stake:** whether findings should identify their subjects, together with a defined scope for the conclusions affected. A subject reference alone would not settle which other conclusions remain supported. | Awaiting maintainer |
+| R-37 | `K-234-*` to `K-236-*` | `records/contract/CONTRACT-STRUCTURE-PROPOSAL.md`, the gate example; `R-16`; `R-18` | When an evaluated gate fails, the host withholds the dependent phase and skips every later phase, whichever actor owns it. A gate left `not_reached` by an unavailable actor is not itself a failed evaluation that cancels the rest. C:234-236 does not state the global cancellation scope. | Text that understates, and the repository for whether this reach is intended | **The distinction:** stopping the dependent phase, against ending the run's remaining schedule. **Why it matters:** it decides which later observations a specimen can still produce after a dependency fails. **The commitment at stake:** retain and state global cancellation, or define which later phases remain eligible and change the scheduler accordingly. | Open; see the sorting |
+| R-38 | `K-352-*` to `K-355-*`; controller gate findings | The gate example; `R-20`; `R-34`; `R-36`; `porcelain_actor.rs::require`; `porcelain_admission.rs::IntegrityIssue` | Gate checks emit `actor_evidence` issues containing a kind and detail sentence without a structured phase or actor reference. The host's gate remains published unchanged. Other lifecycle issues can carry rule, question, step index and observation fields, so the absence of context is not universal. | Repository: the subject of a gate finding. Text that promises withholding of "dependent claims". | **The distinction:** an overall integrity finding, against one identifying the assertion and its dependencies. **Why it matters:** the gate finding has no machine-readable association to the affected gate. **The commitment at stake:** whether findings should identify their subjects, together with a defined scope for the conclusions affected. A subject reference alone would not settle which other conclusions remain supported. | Open; see the sorting |
 

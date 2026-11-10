@@ -7,6 +7,15 @@ validators, and make the disputed meanings and scopes explicit before
 choosing which implementation to change. It decides nothing. Sibling
 artifacts are named by path without links, under the records link rule.
 
+**Who settles these.** `docs/CONTRACT-STAGING-PLAN.md` sorts them in stage
+two. A definition of what the host assembles is a reading of existing
+behavior, and the executor writes it; "What the host assembles" below gives
+a first reading for each. A reader that departs from a definition is
+brought to it or given a reason the contract states. What a
+reporting-failure reply promises as it stands is likewise a reading.
+Whether such a reply must also keep the association of its retained records
+is the maintainer's, and until the maintainer rules it is not required.
+
 It is organized the way the maintainer described the contract's intended
 shape: **definitions** say what the records mean; **applicability** says
 which rules govern an ordinary reply, a preparation-failure reply and a
@@ -151,6 +160,53 @@ identities, none repeats, declared order agrees with record order for each
 kind, and each record belongs to the phase it names. The readers differ in
 when they skip it, which changes diagnostics and not judgments. It is
 listed here because the public text never states it.
+
+## What the host assembles
+
+A delegated reading of the host's source on 2026-11-10, for the question
+each definition leaves open about production. The coordinator has not
+re-read it. It says what the present host builds. What a reader must check
+when handed a record the host would not build is a separate commitment.
+
+1. **Preparation failure.** One site sets the record: the function
+   `actorPreparationRefusal` in
+   `runner/Sources/PWRunnerCore/ActorOrchestration.swift`. Every call
+   returns before the scheduler runs. The reply is built from the admitted
+   request: no steps and no extension events; every actor `launch_refused`
+   with no launch or subprocess record; every phase `not_reached`, with
+   arrival and completion false and no ordering record; no transfers or
+   resource rows; the host's run `not_attempted`. The host's setup record
+   is constructed with its run scope only, so no region or custody row is
+   produced. Equipment inventory, bindings and entitlements remain. This
+   settles the fact left open under definition 1: as produced, a
+   preparation-failure reply has no region row, arrival or proceed flag.
+2. **Which replies carry it.** The same site sets the execution form to
+   the actor form on the line before. A degraded re-issue copies the
+   record, so one reply can carry both.
+3. **Identifier.** Reply identities are copied from the admitted request or
+   from the plan built from it. `docs/limits.json` gives step, phase and
+   actor identities the same byte bound. The emptiness and duplicate checks
+   were read. The site that enforces the byte bound was not, nor whether it
+   precedes actor execution on a direct XPC request.
+4. **Absent, null, empty.** Only the two actor-form builders pass
+   `extension_events`, always as a list, which may be empty. The ordinary
+   form leaves the field absent. Production receives binary records and the
+   controller's JSON reader is compiled for tests only, so a JSON null is
+   not a production input.
+5. **An actor's visits.** `visits` is built from the plan by appending the
+   index of each submitted phase, and from the request's phases in a
+   preparation refusal. It is the declared list. The guide's "the phase
+   ordinals it was activated in" is the sentence to correct.
+6. **The reporting-failure reply.** The degraded reply is the original with
+   its summary fields replaced and its comparisons removed. A source
+   comment in `runner/Sources/PWRunnerCore/PWRunnerReply.swift` gives the
+   reason the ordinary checks are skipped: "so a reported conflict is never
+   lost". If the degraded reply fails the host's own check, the host falls
+   to the minimal reply with `evidence_retained: false`
+   (`runner/Sources/PWRunnerCore/PWRunnerService.swift`). An ordinary rule
+   added to the host's check of a degraded reply would therefore discard
+   the evidence that reply exists to keep. The controller could flag such a
+   reply without that consequence.
 
 ## Applicability in dispute
 
