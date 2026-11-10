@@ -172,17 +172,19 @@ The runner host, when the wait ends. `outcome` is one of eight values.
   | S5 | final activation `capture_ordinal < ` reap `capture_ordinal`, and final activation `observed_ns ≤` reap `observed_ns` |
   | S6 | the wait's clock was usable throughout, and its elapsed time `≤` its budget |
 
-- **otherwise** the host reports the first that applies:
+- **otherwise** the host reports one of these. Each value has one meaning;
+  the last column lists what gives rise to it, where that helps a reader
+  find the supporting record.
 
-  | `outcome` | When |
-  | --- | --- |
-  | `source_unavailable` | S1 fails, or S5 fails. |
-  | `execution_allowance_exhausted` | The run had no time left when the gate was reached. |
-  | `clock_unavailable` | A clock reading failed or went backwards, or S4 fails, or the elapsed time could not be measured. |
-  | `timed_out` | The budget ran out before a reap, or the elapsed time exceeded it. |
-  | `ownership_lost` | The host's ownership of the source was broken, or its wait failed. |
-  | `source_departure_requested` | S3 fails: the host had asked the source to exit. |
-  | `not_reached` | The gate was not evaluated: the schedule was cancelled earlier, or the actor that runs `p` could not run. No wait took place. *Open: that this is the value the host writes was taken from what the controller accepts, not read in the host.* |
+  | `outcome` | Meaning | Arises when |
+  | --- | --- | --- |
+  | `source_unavailable` | The required order, the source's final activation and then its termination, was not established. | S1 fails: no final activation was recorded for the source. Or S5 fails: the reap does not follow the final activation in the source's sequence or in time. |
+  | `execution_allowance_exhausted` | The run had no time left when the gate was reached, so the host did not wait. | |
+  | `clock_unavailable` | The timing evidence needed to establish the gate was unavailable or unusable. | A clock reading failed or went backwards during the wait; S4 fails; or the wait's elapsed time could not be measured. `wait.clock_fault` and the presence of each `observed_ns` show which. |
+  | `timed_out` | The source's termination was not observed within the allowance. | No reap before the budget ran out; or a reap was observed and the wait had by then run past its budget. In the second case `observation` is present. |
+  | `ownership_lost` | The host could no longer treat the source's termination as its own observation. | Its ownership of the source process was broken, or its wait for the source failed (S2). |
+  | `source_departure_requested` | The host had asked the source to exit, so its termination would not be natural. | S3 fails. |
+  | `not_reached` | The gate was not evaluated and no wait took place. | The schedule was cancelled earlier, or the actor that runs `p` could not run. *Open: that this is the value the host writes was taken from what the controller accepts, not read in the host.* |
 
 - The gate's own `capture_ordinal` is the next value in `s`'s sequence,
   taken when the wait ends. `observation.capture_ordinal` is the reap's.
@@ -280,11 +282,15 @@ asserts, has not been settled.
   conditions, one dependency and three effects cover every rule here. What
   stayed in plain sentences is the description of the wait and the meaning
   of each outcome.
-- **What did not fit neatly.** The outcome table maps several different
-  causes to one value (`clock_unavailable` has three). That is the
-  implementation's own shape. Whether the contract should commit to the
-  causes or only to the values is a decision the form exposes and does not
-  make.
+- **An outcome value gets one meaning, stated from the branches that
+  produce it.** Several causes arriving at one value is not a strain when
+  the value's meaning covers them, as "the timing evidence needed to
+  establish the gate was unavailable or unusable" covers
+  `clock_unavailable`. In this section no grouping hides a distinction a
+  reader needs: where the causes differ, another reported field shows
+  which. A grouping that did hide one would go to the maintainer as a
+  concrete distinction, with why it matters and what commitment would
+  change.
 
 ## The receipt, restated in this model
 
@@ -302,13 +308,21 @@ The receipt's controller rule is the case the second review pointed at: it
 reads three fields of one receipt and decides the admission of the whole
 report.
 
-## Still for review
+## What goes to the maintainer, and what does not
 
-1. Whether three kinds of rule are the right set. "Preserves", as in
-   keeping received bytes available, is written here as **acts**.
-2. Whether the four relationships are the right ones to fix first, and
-   whether the two closed lists (relations, effect verbs) are right.
-3. Whether the contract commits to the causes of an outcome or only to its
-   values.
-4. From the earlier versions: whether the internal host and worker identity
-   leaves the contract, and whether nineteen surfaces stand.
+Following the maintainer's direction of 2026-11-10. The three kinds of rule
+are a working model, adjusted as the material gives reason; writing
+preservation as an action is an authoring choice. The meaning of an
+existing outcome is established from source and stated. Neither waits for a
+decision. The surfaces and the placement of the internal identity are
+likewise carried as working choices; the surface names get a last look
+before the stage one release makes them permanent.
+
+Two findings from the gate reading are behavioral commitments and are in
+the register for the maintainer:
+
+- **`R-37`, the reach of a failed gate.** The host cancels every later
+  phase of every actor, not only the dependent phase.
+- **`R-38`, findings without a subject.** A controller finding names no
+  phase, actor or record, so a reader cannot tell which of the host's
+  assertions it concerns.

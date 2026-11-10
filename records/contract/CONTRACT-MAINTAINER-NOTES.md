@@ -227,3 +227,15 @@ The revision moves in the intended direction. The organization by operation, sep
 The expected growth also deserves attention. A longer contract is reasonable when it absorbs essential definitions from the guide. But the worked section repeats meaning across the field table, production statement, conditions and concluding explanation; some “What it supports” cells merely restate the field’s meaning. Definitions and explicit relationships should do reusable work. A uniform template is useful insofar as its parts clarify the commitment, rather than creating something to fill in for every field.
 
 Before settling the template, another worked example would help: one involving an execution or ordering commitment and consequences that cross record boundaries. A termination gate might serve both purposes. That would show whether the form handles the wider contract as well as the receipt’s validation rules.
+
+## Third review of the proposed contract structure (2026-11-10)
+
+On the third version. It also sets what is brought to the maintainer.
+
+Use the three kinds of rule as a working model, and adjust them when the material gives you a reason to. Classifying preservation as an action is an authoring decision you can make. What matters is what PolicyWitness preserves, under which conditions, and what remains dependable afterward. I am not treating the three categories as exhaustive or final; their usefulness will become clearer through drafting.
+
+On outcomes, “causes or values” does not seem like the right decision to put to the maintainer. Outcome values need defined meanings, and you have read the branches needed to propose those meanings. For example, `clock_unavailable` covers both failures while reading time and missing timestamps needed to establish the dependency. “The timing evidence required to establish the gate was unavailable or unusable” might describe that family more accurately than “the clock failed.” Establish the common meaning from the source and state it, with distinctions where they affect interpretation. Several causes mapping to one value is not inherently a strain.
+
+A maintainer decision arises if that grouping conceals a distinction consumers need. Then bring back the concrete distinction, why it matters, and the commitment that would change if PolicyWitness exposed it. Describing the current grouping accurately is work you can carry forward without first obtaining a choice between enumerating branches and documenting an unexplained value.
+
+The newly established cancellation scope and the finding without an identifiable subject are substantial discoveries. They show why explicit reach matters. Those are the kinds of behavioral commitments that warrant maintainer attention; the working taxonomy and a defensible definition of an existing outcome need not wait for it.

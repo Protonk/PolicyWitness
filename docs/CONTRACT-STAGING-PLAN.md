@@ -188,6 +188,10 @@ belong to this stage.
 - What the stamp check certifies without release history, and regeneration
   for a release without it (`R-29`).
 - Rules implemented by hand more than once (`R-15`).
+- How far a failed termination dependency reaches: the dependent phase, or
+  the rest of the schedule (`R-37`).
+- Whether a finding of the controller's names the assertion it concerns
+  (`R-38`).
 - Rules with no owning check that stage one could only carry as gaps.
 
 **Does not belong in this stage.**
