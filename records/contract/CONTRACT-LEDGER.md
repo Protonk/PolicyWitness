@@ -18,6 +18,8 @@ artifacts are named by path without links, under the records link rule.
 | 2026-11-09 | 2 | Traces accepted at `d1ca3cd9`. The first hand-over of the adjudication task did not complete; it was sent again in a shorter form: Part 1 entries, Part 2 divergences, Part 3 findings against both journals, Part 4 four lists. That form, not the earlier task text, is what the adjudication follows. |
 | 2026-11-09 | 2 | Close-out and adjudication delivered and accepted; acceptance record below. The adjudication classes no journal item as a mistaken reading, so the reply step has nothing to send. Remaining in stage 2: the optional questions to the journal writer (three unclear items, fourteen silences). |
 | 2026-11-09 | 3 | Plan rewritten around the cycle used for the limits, footprint, architecture and build documents: claim inventory with owners, strain register, structure decision, fix and write, read again. Two read-only history passes informed it; their returns are summarized in the plan's first section and are not deposited. Stage 3 has not started. |
+| 2026-11-09 | 3 | Maintainer's direction for stages 3 and 4: whether machinery is necessary is the maintainer's judgment and cannot be predicted from the coordinator's seat, so mechanisms are described literally and not screened. The plan carries this. |
+| 2026-11-09 | 3 | First four owner-finding passes returned: 94 rows covering the thirteen examples, C:168-236, C:165 and C:243. Assembled into `records/contract/CONTRACT-CLAIMS.md` and `records/contract/claims/`. 68 owned, 11 sourced, 11 split, 4 unowned, as the passes state them. Nothing was run. Not yet inventoried: U01, U02, U16 to U20, and the non-example text of U03 to U09 and U13 to U15. |
 
 ## Artifacts
 

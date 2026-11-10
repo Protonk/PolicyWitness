@@ -131,7 +131,7 @@ name one another by path.
 | [ISOLATED-BASELINE-JOURNAL.md](ISOLATED-BASELINE-JOURNAL.md), the **baseline** | Isolated reader | Entries `B-01`–`B-40` and a close-out with uncertainties `U1`–`U61`. Contract only; a reread. |
 | [CONTRACT-ADJUDICATION.md](CONTRACT-ADJUDICATION.md) | Report writer | Entries `A-01`–`A-52` on the journal, `A-D01`–`A-D20` on the divergences, a table of findings against both journals, and four lists. |
 | [CONTRACT-LEDGER.md](CONTRACT-LEDGER.md) | Coordinator | Stage log, acceptance record, join table, divergences, coverage, strain register. |
-| `CONTRACT-CLAIMS.md`, the **inventory** | Coordinator | Stage 3. One row per claim, with its kind and owner. |
+| [CONTRACT-CLAIMS.md](CONTRACT-CLAIMS.md) and `claims/`, the **inventory** | Coordinator, from delegated passes | Stage 3. One row per claim, with its kind, mechanism and owner. |
 | Later readings and review notes | Their authors | Stage 7. |
 
 A reader's artifact is accepted by a commit and not edited afterward; a
@@ -145,7 +145,7 @@ need in the ledger first.
 | `C:N`, `C:N-M` | Lines of `docs/CONTRACT.md` at the baseline |
 | `G:N` | Lines of `docs/PolicyWitness.md` at the same commit |
 | `U01`–`U20` | Units, above |
-| `K-001`… | Claims in the inventory |
+| `K-<line>-<n>` | Claims in the inventory, by the first contract line of the claim |
 | `R-01`… | Rows of the strain register |
 | † | Rests on a delegated pass and was not re-read by whoever cites it |
 
@@ -223,7 +223,8 @@ inventory's header.
 | `residue` | a former mechanism is recalled or denied | None |
 
 **Row.** Each row has: an ID; the unit and lines; the claim, quoted or
-closely paraphrased; its kind; `sources` as path and symbol; `checks` as
+closely paraphrased; its kind; the *mechanism*; `sources` as path and
+symbol; `checks` as
 path, symbol and form (`test`, `rule` or `control`), with whether the check
 runs in the default battery; an evidence grade from the table below; the
 owner status; and the references that bear on it (`L`, `F`, `A`, `D`, `U`).
@@ -231,6 +232,12 @@ owner status; and the references that bear on it (`L`, `F`, `A`, `D`, `U`).
 [docs/limits.json](../../docs/limits.json) and
 [docs/architecture.json](../../docs/architecture.json), so a row can be
 promoted into a manifest if stage 5 decides on one.
+
+**Mechanism.** What the repository does that makes the claim true, described
+literally and in order: every component, file and process that takes part,
+which of them decides, and whether the same rule is implemented in more than
+one place. The account does not judge the machinery. It is written so that
+someone who has not read the code can judge it.
 
 **Owner status.**
 
@@ -270,8 +277,12 @@ tool calls. A pass records what it read and what it did not find. The
 coordinator integrates the returns and marks each row's grade. Nothing is
 run in this stage unless a row's status turns on it.
 
-**Output.** `CONTRACT-CLAIMS.md`: a header stating the kinds and any
-amendment, then one table per unit.
+**Output.** `CONTRACT-CLAIMS.md` is the index: how the rows were made,
+coverage, counts by kind and status, and one table per unit. The rows
+themselves are in `claims/`, one file per unit, because a mechanism account
+runs to several hundred words. A pass writes its rows to a scratch file and
+returns only a summary; the coordinator assembles the files without
+rewriting the rows.
 
 **Exit.** Every substantive sentence of every unit is covered by a row. The
 inventory's header gives counts by kind and owner status for each unit.
@@ -325,6 +336,14 @@ needs.
   `PW_TEST_OUT_DIR=tests/out/runs/<name>` and is cited as local, disposable
   evidence. The report's section 9 lists experiments its author identified
   and did not run.
+
+**Whose judgment.** Whether the machinery behind a sentence is necessary is
+the maintainer's judgment, and what will look wrong to the maintainer cannot
+be predicted from the coordinator's seat. The coordinator therefore does not
+screen mechanisms for reasonableness. The register is reviewed with the
+maintainer from the mechanism accounts themselves, including the rows the
+coordinator would call "not a strain"; that disposition is proposed by the
+coordinator and confirmed by the maintainer.
 
 **Which side is right.** Never assumed. Where text and repository disagree,
 the row records what the text says; what the repository does and at what
@@ -560,6 +579,7 @@ what becomes of this directory.
 ## Decisions reserved for the maintainer
 
 - The questions sent to the journal writer.
+- Whether the machinery behind a claim is necessary.
 - Which side changes when contract and repository disagree.
 - Whether a seam in the repository is intended: footnote or eliminate.
 - The structure of the rewritten contract, including any new manifest or
