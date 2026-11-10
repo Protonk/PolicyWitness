@@ -210,3 +210,20 @@ This is a workable proposal. The main questions concern what makes the document 
 8. **Draw a firmer boundary with the guide.** “Rules and definitions here; field-by-field explanation there” leaves room to move essential meaning out of the contract again. A field’s meaning, the significance of its absence and the conclusions its values support belong in the authoritative account. The guide can explain how to use those commitments through examples, workflows and interpretation. A compact field table is useful, but keys and types alone do not make the contract self-contained.
 
 One small thing I particularly like: the worked example distinguishes what its owning test actually asserts from the outcome the prose describes. Naming that limit gives us something concrete to review. That precision should carry through the supporting evidence, whatever its eventual presentation.
+
+## Second review of the proposed contract structure (2026-11-10)
+
+On the second version of `records/contract/CONTRACT-STRUCTURE-PROPOSAL.md`.
+The third version answers it.
+
+The revision moves in the intended direction. The organization by operation, separation of production from interpretation, and fuller definitions are useful improvements. Before fixing the rule template, I think three points need further consideration.
+
+1. **The form must accommodate commitments beyond validation.** Requiring every condition to compare two named things, and every “applies when” to describe interpretation, fits the receipt validators. Other commitments concern creating a fresh worker, preserving records, ordering operations or handling an uncertain submission. Production itself carries obligations. Distinguishing production from interpretation should make both clearer; it should not restrict what qualifies as a rule. The template needs room for these different commitments.
+
+2. **“Bears on” needs to distinguish the object inspected from the reach of the consequence.** The worked controller rule says it concerns “the receipt only,” yet failure refuses the entire report. These describe different scopes. We need to distinguish what is checked, which object’s admission or assessment is affected, which conclusions become unavailable, and which records or independently supported assessments remain. A reference to the inspected receipt does not establish all those relationships. This is central to giving “dependent claims” a precise meaning.
+
+3. **Some machine-readable meaning needs to influence the model now.** Stable identifiers and labelled paragraphs make content addressable, but do not establish that it can later become structured data without reinterpretation. Some relationships should already have a defined expression: the objects governed, the operands of a condition, a dependency, and the scope of a failure effect. We can leave serialization and generator choices until later. A few representative relationships would establish the pattern without requiring a complete schema now.
+
+The expected growth also deserves attention. A longer contract is reasonable when it absorbs essential definitions from the guide. But the worked section repeats meaning across the field table, production statement, conditions and concluding explanation; some “What it supports” cells merely restate the field’s meaning. Definitions and explicit relationships should do reusable work. A uniform template is useful insofar as its parts clarify the commitment, rather than creating something to fill in for every field.
+
+Before settling the template, another worked example would help: one involving an execution or ordering commitment and consequences that cross record boundaries. A termination gate might serve both purposes. That would show whether the form handles the wider contract as well as the receipt’s validation rules.
