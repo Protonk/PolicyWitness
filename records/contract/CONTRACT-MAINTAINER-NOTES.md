@@ -148,3 +148,13 @@ For R-20 specifically, the consolidated passage must make the current combinatio
 Consolidate the existing explanations so the guide has one complete account, rather than adding another summary alongside the scattered versions. A local draft showing the proposed placement and resulting text would make this reviewable.
 
 Keep the behavioral decision in R-20 open. Making the current semantics easy to understand will let us judge whether they are the semantics we want; it does not itself approve retaining them.
+
+## R-14, the observation partition and preparation failure (2026-11-10)
+
+R-14 introduces an exception to a rule it has never made intelligible. “Complete observation partition” means that the declared actions correspond exactly to the step and extension-event records, with associated uniqueness and ordering requirements. That is useful information about reading a reply. Here it appears only as something preparation failure is excused from satisfying. The wording also obscures the distinction between having a record for an action and having evidence that the action ran.
+
+“Observation arrays are empty” is neither sufficiently specific nor a safe general description. Actor and phase records remain, and equipment records can retain actual findings from the failed preparation. The reply contains a mixture of declarations, failure evidence and empty execution records. Calling some unspecified subset “observation arrays” leaves the reader unable to distinguish those categories.
+
+“Sole exception” is also inaccurate: reporting-failure replies bypass the normal partition check too. These cases have different meanings. Preparation failure can leave a declared plan without execution records because nothing launched; reporting failure can retain records whose consistency could not be established. The paragraph’s account of completeness does not accommodate both.
+
+The three validators’ different conditions are concerning, but “presence versus validity” does not yet establish different acceptance: Swift and Rust separately flag an invalid preparation-failure record, so the difference may concern which diagnostics appear. Python’s omission of explicit checks on host regions, custody and phase arrival/completion is a more concrete discrepancy. We currently have differing implementations without an established account of where their final judgments diverge.
