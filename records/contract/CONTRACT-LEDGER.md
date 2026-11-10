@@ -13,7 +13,8 @@ artifacts are named by path without links, under the records link rule.
 | 2026-11-09 | 1 | Report accepted at `c87bfd80`, journal at `214dddd7`. Acceptance record below. Its shortfalls were settled by the maintainer's statements. |
 | 2026-11-09 | 2 | Tasks reworked with the maintainer: trace deposit, narrowed adjudication, widened close-out, reply step, isolated baseline reading. Join table built. |
 | 2026-11-09 | 2 | Baseline reading done by an isolated reader and accepted at `f6c2dda6`. Acceptance record, join table, divergences and coverage updated below. That reader has been dismissed, so no question can be put to it. |
-| 2026-11-09 | 2 | Outstanding from step 2 of the plan's order of work: the report writer's trace deposit and adjudication, and the journal writer's close-out. The divergence list is ready for the report writer. |
+| 2026-11-09 | 2 | Report writer's task (trace deposit, then adjudication) and journal writer's close-out handed over by the maintainer; both in progress. The report writer was told to judge uncertainties from what exists if the close-out has not arrived. |
+| 2026-11-09 | 2 | Relayed from the report writer: the delegated passes' briefs and returns are still available verbatim in that session's subagent transcripts and are being extracted directly, not retyped. Check the traces file's own statement of this at acceptance. |
 
 ## Artifacts
 

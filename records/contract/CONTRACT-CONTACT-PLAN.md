@@ -400,6 +400,10 @@ document the contract links to. Do not inspect implementation or tests.
 close-out block, citing journal entries by their section numbers. Your commit changes nothing
 but that file.
 
+**One addition to the carried terms.** Say where the meaning you used for a
+term came from the repository guidance you had read and not from the
+contract.
+
 **Done when** every "What remains uncertain?" paragraph in the journal has
 been accounted for, including those that say nothing consequential remains.
 
