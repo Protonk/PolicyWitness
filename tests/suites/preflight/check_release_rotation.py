@@ -229,9 +229,13 @@ def windows(out):
     unrelated = repo / 'dist/evidence/unrelated'; unrelated.mkdir()
     (unrelated / 'file').write_text('unassociated')
     before_unrelated = artifact.inventory(unrelated)
+    loose = repo / 'dist/evidence/.DS_Store'; loose.write_bytes(b'finder')
     result = retention.prune(repo, apply=True)
     assert not linked.exists() and artifact.inventory(unrelated) == before_unrelated
     assert any('unassociated' in row['reason'] for row in result['failures'])
+    # A file that is neither an attempt nor a pointer is reported, kept and not a failure.
+    assert loose.read_bytes() == b'finder' and 'dist/evidence/.DS_Store' in result['unmanaged']
+    assert all(row['path'] != 'dist/evidence/.DS_Store' for row in result['failures'])
     assert sorted((p.name for p in (repo / 'dist/archive').iterdir()), key=retention.version) == ['v' + v for v in versions[-4:]]
     assert not historical.exists() and retention.pending(repo) is None, 'last historical storage obligation did not expire'
     assert [p.exists() for _,p in entries] == [False]*5 + [True]

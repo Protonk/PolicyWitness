@@ -202,6 +202,8 @@ routing. Preview writes nothing and reports a held checkout lock. Ordinary
 apply removes inactive completed, failed, interrupted and malformed-completion
 runs, including output named by an obsolete index or containing a keep marker.
 Missing or changed ownership and redirects remain blocked and byte-preserved.
+A standalone file outside every owned run is reported and kept without failing
+the apply.
 Ownership changes after preview are rechecked. Invalid selector combinations,
 removed options and invalid `APPLY` values refuse before delegation.
 

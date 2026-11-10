@@ -274,14 +274,18 @@ required independently of completion. Active acceptance has its own lifetime
 lock. Unknown ownership, redirects, unresolved pytest resources and pending
 BYOXPC cleanup block deletion and are reported. After those obligations clear,
 ordinary pruning handles the output. There is no unfinished-run selector, age
-cutoff, newest-development exception or keep list. Standalone files and unknown
-output are reported without following redirects or inventing ownership.
+cutoff, newest-development exception or keep list. Unknown output is reported
+without following redirects or inventing ownership. A standalone file outside
+every owned run, such as a Finder `.DS_Store`, is reported as `keep: unmanaged`
+and does not block the apply. Closed pytest ownership records are retired once
+their output directory is gone.
 
 The same operation runs after successful release archival. It retains the four
 newest complete archives in numeric version order and removes expired archives,
 their positively linked attempt copies and `.archived` pointers. Surviving
 archive bytes are unchanged. Unassociated attempt material is reported for
-inspection. Failed or incomplete releases cannot advance the window. Git tags
+inspection and blocks the apply; a file under `dist/evidence/` that is neither
+an attempt directory nor a pointer is listed as `unmanaged` and does not. Failed or incomplete releases cannot advance the window. Git tags
 and published assets are outside cleanup.
 
 A transaction stages exact inventoried targets under `tests/out/.retention/`

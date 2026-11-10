@@ -288,6 +288,7 @@ class Integration:
         self.run(root,'recover-again',args=('--recover-ownership','settled','--apply'))
         self.run(root,'prune-after',args=('--prune','--apply'))
         require(not out.exists(),'closed unprotected output not pruned')
+        require(not (root/'tests/out/pytest-owners/settled').exists(),'closed ownership outlived its pruned output')
         self.note('post-command pre-closure recovery admits independent work and protects output until closure')
 
     def deaths(self):

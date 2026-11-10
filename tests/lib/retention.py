@@ -211,11 +211,15 @@ def working_output(root):
     base = real(root / 'tests/out')
     blocked = []
     found = []
+    loose = []
     def visit(path):
         try:
             real(path)
             if not path.is_dir():
-                raise ValueError('unmanaged standalone output')
+                # A file outside every owned run was never a deletion target:
+                # report it, but it is not an obstacle to this cleanup.
+                loose.append(path)
+                return
             if os.path.lexists(path / 'owner.json'):
                 owner = ownership.valid_owner(path)
                 found.append((path, owner))
@@ -234,17 +238,20 @@ def working_output(root):
         for child in base.iterdir():
             if child.name not in ('.retention', '.release-rotation', 'pytest-owners'):
                 visit(child)
-    return found, blocked
+    return found, blocked, loose
 
 
 def linked_attempts(root, expired, kept):
     """Use archived pointer destinations, release stamps, hashes or submission IDs."""
     base = real(distribution(root) / 'evidence')
-    selected, blocked = [], []
+    selected, blocked, loose = [], [], []
     all_records = expired + kept
     for path in sorted(base.iterdir()) if base.exists() else []:
         try:
             real(path)
+            if path.is_file() and path.suffix != '.archived':
+                loose.append(path)  # Neither an attempt nor a pointer: reported, never a target.
+                continue
             tags = set()
             if path.is_file() and path.suffix == '.archived':
                 destination = Path(path.read_text().strip())
@@ -300,7 +307,7 @@ def linked_attempts(root, expired, kept):
                 blocked.append(dict(path=str(path.relative_to(root)), reason='unassociated release evidence'))
         except (OSError, ValueError, KeyError, TypeError) as exc:
             blocked.append(dict(path=str(path.relative_to(root)), reason=str(exc)))
-    return selected, blocked
+    return selected, blocked, loose
 
 
 def plan(root, *, busy=False):
@@ -308,7 +315,7 @@ def plan(root, *, busy=False):
     found = archives(root, verify=True)
     kept, expired = found[-ARCHIVE_COUNT:], found[:-ARCHIVE_COUNT]
     protected = protected_paths(root, found)
-    selected, blocked = linked_attempts(root, expired, kept)
+    selected, blocked, unmanaged = linked_attempts(root, expired, kept)
     selected += [candidate(root, row['path'], 'archive') for row in expired]
     rows = []
     missing = []
@@ -316,9 +323,11 @@ def plan(root, *, busy=False):
         relative = found[-1]['manifest']['runs']['acceptance']['retained']['path']
         if not (root / 'tests/out' / relative).exists():
             missing.append('tests/out/' + relative)
-    working, unknown = working_output(root)
+    working, unknown, loose = working_output(root)
     blocked += unknown
     rows += [dict(path=str(Path(row['path']).relative_to('tests/out')), disposition='keep: blocked', reason=row['reason']) for row in unknown]
+    rows += [dict(path=str(path.relative_to(root / 'tests/out')), disposition='keep: unmanaged', reason='standalone file') for path in loose]
+    unmanaged += loose
     for path, owner in working:
         try:
             if ownership.retained_overlap(path, protected):
@@ -340,7 +349,8 @@ def plan(root, *, busy=False):
             rows.append(dict(path=str(path.relative_to(root / 'tests/out')), disposition='keep: blocked', reason=str(exc)))
     return dict(schema_version=1, kept=[r['record']['tag'] for r in kept],
                 protected=[str(p.relative_to(root)) for p in protected], targets=selected,
-                blocked=blocked, runs=rows, missing_acceptance=missing)
+                blocked=blocked, unmanaged=[str(p.relative_to(root)) for p in unmanaged],
+                runs=rows, missing_acceptance=missing)
 
 
 def target_path(root, relative):
@@ -449,9 +459,6 @@ def apply_journal(root, directory):
             ownership.sync_directory(directory)
         elif row['state'] != 'deleting':
             raise ValueError('quarantine disappeared before deletion')
-        # Never retire a replacement's ownership at the original path.
-        if row['kind'] == 'run' and not source.exists():
-            pytest_resources.retire_closed(root, source)
         row['state'] = 'removed'
         ownership.atomic_json(receipt, journal)
     journal['state'] = 'complete'
@@ -464,6 +471,13 @@ def apply_journal(root, directory):
     return [row['path'] for row in rows]
 
 
+def retire_ownership(root):
+    # A replacement at an original path keeps its ownership: only closed records
+    # whose output is absent are retired, including an acceptance's nested battery.
+    import pytest_resources
+    pytest_resources.retire_closed(root)
+
+
 def prune(root, *, apply=False):
     root = real(root)
     with ownership.checkout_lock(root, preview=not apply, purpose='disposal') as busy:
@@ -474,6 +488,7 @@ def prune(root, *, apply=False):
             if not apply:
                 return dict(apply=False, checkout_busy=busy, pending=str(directory), runs=[], removed=[], failures=[])
             removed += apply_journal(root, directory)
+            retire_ownership(root)
             return dict(apply=True, checkout_busy=False, resumed=True, removed=removed, runs=[], failures=[])
         result = plan(root, busy=bool(busy) if not apply else False)
         if apply and result['targets']:
@@ -486,6 +501,8 @@ def prune(root, *, apply=False):
                            state='staging', targets=result['targets'])
             ownership.atomic_json(directory / 'journal.json', journal)
             removed += apply_journal(root, directory)
+        if apply:
+            retire_ownership(root)
         result.update(apply=apply, checkout_busy=bool(busy) if not apply else False, removed=removed,
                       failures=result['blocked'] if apply else [])
         # Inventories live only in the transaction, not in the console report.

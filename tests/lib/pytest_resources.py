@@ -242,11 +242,12 @@ def recover(root, run_id, *, apply=False):
     return report
 
 
-def retire_closed(root, out):
+def retire_closed(root):
+    """Remove closed ownership runs whose output directories no longer exist."""
     for run in base(root).iterdir() if base(root).exists() else ():
         paths = record_paths(root, run.name) if run.is_dir() else []
         records = [validate(root, p) for p in paths]
-        if records and all(r['out'] == str(out) and disposition(r) == 'closed' for r in records):
+        if records and all(disposition(r) == 'closed' and not os.path.lexists(r['out']) for r in records):
             shutil.rmtree(run)
 
 

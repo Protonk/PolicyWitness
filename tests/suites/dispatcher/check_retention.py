@@ -210,6 +210,17 @@ class Controls:
         fresh = self.fixture('prune-without-lock')
         self.call(fresh, ['--prune'], readonly=True)
         require(not (fresh / 'tests/.checkout.lock').exists(), 'preview created a lock file')
+        # A file outside every owned run is reported and kept without failing the apply.
+        loose = self.fixture('prune-loose-file')
+        (loose / 'tests/out/kept/link').unlink()
+        (loose / 'tests/out/runs').mkdir()
+        (loose / 'tests/out/runs/.DS_Store').write_bytes(b'finder')
+        self.call(loose, output='tests/out/runs/done')
+        report = json.loads(self.call(loose, ['--prune', '--apply']).stdout)
+        rows = {r['path']: r['disposition'] for r in report['runs']}
+        require(report['removed'] == ['tests/out/runs/done'] and not report['failures'], f'loose files failed an apply: {report}')
+        require(rows['runs/.DS_Store'] == rows['kept/bytes'] == 'keep: unmanaged', f'loose files were not reported: {rows}')
+        require((loose / 'tests/out/runs/.DS_Store').read_bytes() == b'finder' and (loose / 'tests/out/kept/bytes').exists(), 'loose file changed')
         repo = self.fixture('pruning')
         base = repo / 'tests/out'
         names = ('passed', 'failed', 'interrupted', 'ambiguous', 'formerly-pinned')
