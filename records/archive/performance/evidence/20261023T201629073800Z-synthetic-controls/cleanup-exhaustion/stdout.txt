@@ -1,2 +1,0 @@
-{"run_dir": "/Users/raccoon/Desktop/Security/PolicyWitness/records/performance/runs/20261023T201629073800Z-cleanup-exhaustion", "planned": 3}
-{"run_dir": "/Users/raccoon/Desktop/Security/PolicyWitness/records/performance/runs/20261023T201629073800Z-cleanup-exhaustion", "exit_status": 3, "stop_reason": "manifest_exhausted"}
