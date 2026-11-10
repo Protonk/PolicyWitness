@@ -373,8 +373,13 @@ Offline release controls also exercise the release procedure's decision points.
   mismatch without touching the distribution, and on
   success must move the attempt, write the checksums and provenance record,
   pack and verify complete test evidence with portable summaries, and retain
-  the acceptance run with the default battery nested inside it. The battery
-  must be a passing default-selection run against the extracted app whose
+  the acceptance run with the default battery nested inside it.
+  Missing, renamed and extra executable controls bind
+  matching ZIP/provenance bytes, acceptance hashes and battery inventories;
+  new archival refuses the layout without changing evidence. Disabling only
+  that check admits each control, and restoring it still permits verification
+  of the retained archive against its own layout. The battery must be a
+  passing default-selection run against the extracted app whose
   recorded inventory equals a fresh extraction of the ZIP in full: a changed
   file hash and a single changed mode bit are each refused by name, as are a
   failed, skipped, selected or mutated battery. Selection checks include the

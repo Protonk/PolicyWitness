@@ -265,9 +265,10 @@ def fixture_record(build):
 
 
 def make_dist(repo, *, version='0.9.0', commit=None, describe=None, attempt=True, record=True,
-              battery_change=None, inventory_change=None):
+              battery_change=None, inventory_change=None, layout_change=None):
     """A distribution with an accepted attempt. The acceptance carries the nested default
-    battery; battery_change mutates its run.json and inventory_change the tested inventory."""
+    battery; battery_change mutates its run.json and inventory_change the tested inventory.
+    layout_change edits members and provenance before binding the acceptance receipts."""
     # Rotation controls import this fixture directly, without this module's
     # main(). Prepare its independent Mach-O members for every entrypoint.
     if FIXTURE_MEMBERS is None:
@@ -280,12 +281,15 @@ def make_dist(repo, *, version='0.9.0', commit=None, describe=None, attempt=True
     archive = dist / 'PolicyWitness.zip'
     info = dict(CFBundleShortVersionString=version, CFBundleVersion='3', PWBuildCommit=commit,
                 PWBuildDescribe=describe or f'v{version}', PWContract=f'release:v{version}')
+    members, provenance = dict(FIXTURE_MEMBERS), copy.deepcopy(FIXTURE_RECORD)
+    if layout_change is not None:
+        layout_change(members, provenance)
     with zipfile.ZipFile(archive, 'w') as zipped:
         zipped.writestr('PolicyWitness.app/Contents/Info.plist', plistlib.dumps(info))
-        for relative, data in FIXTURE_MEMBERS.items():
+        for relative, data in members.items():
             zipped.writestr('PolicyWitness.app/' + relative, data)
         if record:
-            zipped.writestr('PolicyWitness.app/Contents/Resources/Evidence/provenance.json', json.dumps(FIXTURE_RECORD))
+            zipped.writestr('PolicyWitness.app/Contents/Resources/Evidence/provenance.json', json.dumps(provenance))
     (dist / 'PolicyWitness.md').write_text(f'# guide {version}\n')
     # The working app is build B by now: a later build whose record must never reach the archive of A's accepted ZIP.
     working = dist / 'PolicyWitness.app/Contents/Resources/Evidence'
@@ -372,6 +376,57 @@ def reject_release(archive, needle):
         assert needle in str(exc), (archive.name, exc)
     else:
         raise AssertionError(f'{archive.name}: verification passed')
+
+
+def check_archive_layout(out):
+    # Repair every input around the changed executable set: ZIP members,
+    # provenance, acceptance hashes and the nested battery's exact inventory.
+    # These controls must reach the new-archive layout check alone.
+    for mode in ('missing', 'renamed', 'extra'):
+        work = out / ('layout-' + mode); work.mkdir()
+        repo = make_repo(work)
+        git(repo, 'tag', '-a', 'v0.9.0', '-m', 'fixture layout control')
+        def change(members, record):
+            original = 'Contents/MacOS/sbpl-check'
+            replacement = 'Contents/MacOS/other-helper'
+            data = members[original]
+            output = copy.deepcopy(next(r for r in record['outputs'] if r['rel_path']==original))
+            signature = copy.deepcopy(next(r for r in record['signing']['nested'] if r['rel_path']==original))
+            if mode != 'extra':
+                del members[original]
+                record['outputs'] = [r for r in record['outputs'] if r['rel_path'] != original]
+                record['signing']['nested'] = [r for r in record['signing']['nested'] if r['rel_path'] != original]
+            if mode != 'missing':
+                members[replacement] = data
+                output['rel_path'] = signature['rel_path'] = replacement
+                output.pop('cargo')  # The added native path is not a declared Cargo target.
+                record['outputs'].append(output)
+                record['signing']['nested'].append(signature)
+        dist, attempt = make_dist(repo, layout_change=change)
+        provenance = release_archive.build_provenance
+        raw, _ = provenance.read_zip_record(dist / 'PolicyWitness.zip')
+        assert json.loads(raw)['configuration']['knobs']['BUILD_XPC'] == '0'
+        acceptance = repo / 'tests/out/release-acceptance/run-0-9-0'
+        before = {p: artifact.inventory(p) for p in (dist, acceptance)}
+        try:
+            release_archive.archive(attempt, dist=dist, root=repo)
+        except ValueError as exc:
+            assert str(exc).startswith('accepted ZIP provenance: new release requires the current build layout: record.outputs'), (mode, exc)
+            assert '; battery' not in str(exc), (mode, exc)
+        else:
+            raise AssertionError(f'{mode} executable layout was archived')
+        assert all(artifact.inventory(p)==inventory for p,inventory in before.items()), mode
+        assert not (dist / 'archive').exists() and attempt.is_dir()
+        # Disable only the new default-layout check. Successful archival proves
+        # no unrelated inconsistency supplied the refusal above; the original
+        # reader still validates every ZIP member and provenance fact.
+        original_check = provenance.record_shape_problems
+        with patch.object(provenance, 'record_shape_problems', side_effect=lambda record, **kwargs:
+                          original_check(record, **kwargs) if kwargs else []):
+            archived = release_archive.archive(attempt, dist=dist, root=repo)
+        # After restoring the checker, retained archives still use their own
+        # observed layout, even when that differs from this checkout's layout.
+        release_runs.verify_release(archived)
 
 
 def check_archive(out):
@@ -721,6 +776,7 @@ def main(out):
     out.mkdir(parents=True, exist_ok=True)
     check_preflight(out)
     check_branch_names(out)
+    check_archive_layout(out)
     repo, dest, notes = check_archive(out)
     check_publish(out, repo, dest, notes)
     print('release publish controls passed: tag preflight, archive assembly with retention, and '

@@ -154,6 +154,11 @@ def archive_locked(attempt, *, dist, root, notes):
     record_bytes, controller_hash, seal_facts, final_inventory = None, None, None, None
     try:
         record_bytes, controller_hash = build_provenance.read_zip_record(final)
+        # New releases must use this checkout's layout. The portable reader
+        # separately permits a retained archive's captured executable layout.
+        layout_problems = build_provenance.record_shape_problems(json.loads(record_bytes))
+        if layout_problems:
+            raise ValueError('new release requires the current build layout: ' + '; '.join(layout_problems))
         with extracted_final(final) as extracted:
             seal_facts = outer_seal_facts(extracted)
             final_inventory = inventory(extracted)

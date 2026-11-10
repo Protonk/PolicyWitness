@@ -293,7 +293,10 @@ Provenance verification derives the executable inventory from the ZIP's actual
 Mach-O members, excluding debug companions by file type. It checks every named
 output's hashes, load commands and signature facts against those bytes, without
 requiring the current checkout's executable names. Current-build validation
-continues to require the current build layout.
+and new archive creation additionally require the current checkout's executable
+layout for the declared build variant. New archival refuses missing, renamed
+or extra executables even when the ZIP and provenance agree with each other;
+rereading a retained archive continues to use its own observed layout.
 
 Successful archival is followed by ordinary pruning, the same operation as
 `make prune APPLY=1`. It keeps the four newest complete local archives in
