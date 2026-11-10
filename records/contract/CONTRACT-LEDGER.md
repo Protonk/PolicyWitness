@@ -15,6 +15,9 @@ artifacts are named by path without links, under the records link rule.
 | 2026-11-09 | 2 | Baseline reading done by an isolated reader and accepted at `f6c2dda6`. Acceptance record, join table, divergences and coverage updated below. That reader has been dismissed, so no question can be put to it. |
 | 2026-11-09 | 2 | Report writer's task (trace deposit, then adjudication) and journal writer's close-out handed over by the maintainer; both in progress. The report writer was told to judge uncertainties from what exists if the close-out has not arrived. |
 | 2026-11-09 | 2 | Relayed from the report writer: the delegated passes' briefs and returns are still available verbatim in that session's subagent transcripts and are being extracted directly, not retyped. Check the traces file's own statement of this at acceptance. |
+| 2026-11-09 | 2 | Traces accepted at `d1ca3cd9`. The first hand-over of the adjudication task did not complete; it was sent again in a shorter form: Part 1 entries, Part 2 divergences, Part 3 findings against both journals, Part 4 four lists. That form, not the earlier task text, is what the adjudication follows. |
+| 2026-11-09 | 2 | Close-out and adjudication delivered and accepted; acceptance record below. The adjudication classes no journal item as a mistaken reading, so the reply step has nothing to send. Remaining in stage 2: the optional questions to the journal writer (three unclear items, fourteen silences). |
+| 2026-11-09 | 3 | Plan rewritten around the cycle used for the limits, footprint, architecture and build documents: claim inventory with owners, strain register, structure decision, fix and write, read again. Two read-only history passes informed it; their returns are summarized in the plan's first section and are not deposited. Stage 3 has not started. |
 
 ## Artifacts
 
@@ -22,10 +25,10 @@ artifacts are named by path without links, under the records link rule.
 | --- | --- | --- | --- |
 | Report writer's report | `records/contract/CONTRACT-FIRST-READER-REPORT.md` | `c87bfd80` | Commit `298c1805`, blob `bfd2eded…` (stated in its section 1.1) |
 | Journal writer's journal | `records/contract/FRESH-ENCOUNTER-JOURNAL.md` | `214dddd7` | Not stated in the journal. The maintainer states it is the version the report writer read. |
-| Report writer's traces | `records/contract/CONTRACT-REPORT-TRACES.md` | not yet delivered | |
+| Report writer's traces | `records/contract/CONTRACT-REPORT-TRACES.md` | `d1ca3cd9` | Cites the contract and guide at `298c1805`, as the report does |
 | Isolated reader's baseline | `records/contract/ISOLATED-BASELINE-JOURNAL.md` | `f6c2dda6` | Not stated. Supplied by the maintainer as pasted raw Markdown; the reader counted 441 lines and its line references agree with the baseline. |
-| Journal writer's addenda | `records/contract/FRESH-ENCOUNTER-ADDENDA.md` | not yet delivered | |
-| Adjudication | `records/contract/CONTRACT-ADJUDICATION.md` | not yet delivered | |
+| Journal writer's addenda | `records/contract/FRESH-ENCOUNTER-ADDENDA.md` | committed by the coordinator with this ledger update | The baseline contract; the close-out says it reopened the journal and the contract only |
+| Adjudication | `records/contract/CONTRACT-ADJUDICATION.md` | committed by the coordinator with this ledger update | The baseline contract |
 
 `docs/CONTRACT.md`, `docs/contract_surfaces.json` and `docs/PolicyWitness.md`
 have the same blobs at `v0.3.6`, `298c1805`, `c87bfd80`, `214dddd7` and at the
@@ -129,6 +132,56 @@ What this changes:
   close-out instead.
 - Hand-over order is not controlled for later isolated readings either. The
   ledger records what happened for each.
+
+### Traces
+
+Checked for structure on 2026-11-09; not read through.
+
+- One section for each of the five passes, each with the brief, the return,
+  what the report writer read first-hand at the time, and what is now known
+  to be wrong.
+- The file states that every brief and return is verbatim, copied by script
+  from the session's subagent transcripts, and that the transcripts
+  themselves are not deposited.
+- It states that it is second-hand throughout. A return's own labels
+  (OBSERVED, INFERRED, HYPOTHESIS) are the pass's.
+
+### Close-out (addenda)
+
+Checked for structure on 2026-11-09; parts 1 and the opening of part 3 read.
+
+- All five parts are present. Part 2 has a subsection for each of the 52
+  journal sections.
+- Reading conditions it adds to the journal's own account: raw Markdown in a
+  terminal with line numbers, so region markers were visible; one forward
+  pass in five windows (C:1-160, 161-245, 246-325, 326-385, 386-441), with
+  entries written between windows, not after each passage; no earlier
+  passage reopened during that pass.
+- It says the root guidance "had already supplied a conceptual outline" of
+  fresh processes, the host and worker split, the collection and release
+  barrier, effects needing more than a return code, and limits on
+  attributing sandbox cause; and that its part 3 marks where that mattered.
+
+### Adjudication
+
+Checked against the task's done criteria on 2026-11-09; conventions, Part 3
+and Part 4 read, Parts 1 and 2 sampled.
+
+- 52 entries on the journal, 20 on the divergences, 19 rows of findings
+  against both journals, four lists. Complete.
+- It opened no source and ran no test. Technical support is carried from the
+  report with its † marks. Uncertainties were traced by a search of
+  repository documentation only.
+- Its own summary: no journal inference is a mistaken reading; of 69 marked
+  inferences, 67 are supported and two were invited by the text (`A-21` (b),
+  `A-29` (a)); one referral the reader relied on does not land (`A-23`);
+  eighteen faithfully restated statements in fifteen entries take a class
+  from the report's verdict (nine implementation discrepancies, five
+  unsupported claims, four unresolved); one baseline reading is classed
+  mistaken, with a caveat (`A-D04`).
+- Part 4 lists fourteen silences, three unclear journal items and ten report
+  corrections, and says nothing in its inputs shows a statement of fact in
+  the report to be wrong.
 
 ## Join table
 
@@ -253,38 +306,39 @@ conditions (guidance or none; first pass or reread), and each is one sample.
 ## Coverage record
 
 The first five columns were filled at acceptance from the line ranges each
-artifact cites. The last two are filled after adjudication.
+artifact cites. Adjudication entries carry the journal's numbers. The last
+column is filled in stage 4 with the register rows for the unit, or "none".
 
-| Unit | Lines | Report | Journal | Baseline | Adjudicated | Result |
+| Unit | Lines | Report | Journal | Baseline | Adjudicated | Strains |
 | --- | --- | --- | --- | --- | --- | --- |
-| U01 | 1–20 | `L-01`–`L-04` | `J-01`–`J-03` | `B-01` | | |
-| U02 | 22–56 | `L-05`–`L-07` | `J-04`–`J-05` | `B-02`–`B-03` | | |
-| U03 | 60–124 | `L-08`–`L-15` | `J-06`–`J-12` | `B-04`–`B-09` | | |
-| U04 | 126–130 | `L-16` | `J-13` | `B-10` | | |
-| U05 | 132–136 | `L-17` | `J-14` | `B-10` | | |
-| U06 | 138–142 | `L-18` | `J-15` | `B-11` | | |
-| U07 | 144–148 | `L-19` | `J-16` | `B-12` | | |
-| U08 | 150–154 | `L-20` | `J-17` | `B-13` | | |
-| U09 | 156–160 | `L-21` | `J-18` | `B-14` | | |
-| U10 | 162–166 | `L-22` | `J-19` | `B-15` | | |
-| U11 | 168–238 | `L-23`–`L-29` | `J-20`–`J-28` | `B-15`–`B-21` | | |
-| U12 | 240–244 | `L-30` | `J-29` | `B-22` | | |
-| U13 | 246–250 | `L-31` | `J-30` | `B-23` | | |
-| U14 | 252–291 | `L-32`–`L-36` | `J-31`–`J-35` | `B-24`–`B-26` | | |
-| U15 | 293–298 | `L-37` | `J-36`–`J-37` | `B-27` | | |
-| U16 | 300–358 | `L-38`–`L-42` | `J-38`–`J-43` | `B-28`–`B-32` | | |
-| U17 | 360–377 | `L-43` | `J-44`–`J-45` | `B-33`–`B-34` | | |
-| U18 | 379–425 | `L-44`–`L-47` | `J-46`–`J-50` | `B-35`–`B-38` | | |
-| U19 | 428–434 | `L-48` (first paragraph) | `J-51` | `B-39` | | |
-| U20 | 436–441 | `L-48` (second paragraph) | `J-52` | `B-40` | | |
+| U01 | 1–20 | `L-01`–`L-04` | `J-01`–`J-03` | `B-01` | `A-01`–`A-03` | |
+| U02 | 22–56 | `L-05`–`L-07` | `J-04`–`J-05` | `B-02`–`B-03` | `A-04`–`A-05` | |
+| U03 | 60–124 | `L-08`–`L-15` | `J-06`–`J-12` | `B-04`–`B-09` | `A-06`–`A-12` | |
+| U04 | 126–130 | `L-16` | `J-13` | `B-10` | `A-13` | |
+| U05 | 132–136 | `L-17` | `J-14` | `B-10` | `A-14` | |
+| U06 | 138–142 | `L-18` | `J-15` | `B-11` | `A-15` | |
+| U07 | 144–148 | `L-19` | `J-16` | `B-12` | `A-16` | |
+| U08 | 150–154 | `L-20` | `J-17` | `B-13` | `A-17` | |
+| U09 | 156–160 | `L-21` | `J-18` | `B-14` | `A-18` | |
+| U10 | 162–166 | `L-22` | `J-19` | `B-15` | `A-19` | |
+| U11 | 168–238 | `L-23`–`L-29` | `J-20`–`J-28` | `B-15`–`B-21` | `A-20`–`A-28` | |
+| U12 | 240–244 | `L-30` | `J-29` | `B-22` | `A-29` | |
+| U13 | 246–250 | `L-31` | `J-30` | `B-23` | `A-30` | |
+| U14 | 252–291 | `L-32`–`L-36` | `J-31`–`J-35` | `B-24`–`B-26` | `A-31`–`A-35` | |
+| U15 | 293–298 | `L-37` | `J-36`–`J-37` | `B-27` | `A-36`–`A-37` | |
+| U16 | 300–358 | `L-38`–`L-42` | `J-38`–`J-43` | `B-28`–`B-32` | `A-38`–`A-43` | |
+| U17 | 360–377 | `L-43` | `J-44`–`J-45` | `B-33`–`B-34` | `A-44`–`A-45` | |
+| U18 | 379–425 | `L-44`–`L-47` | `J-46`–`J-50` | `B-35`–`B-38` | `A-46`–`A-50` | |
+| U19 | 428–434 | `L-48` (first paragraph) | `J-51` | `B-39` | `A-51` | |
+| U20 | 436–441 | `L-48` (second paragraph) | `J-52` | `B-40` | `A-52` | |
 
 The report, the journal and the baseline each cover all twenty units. No
 coverage gap is recorded.
 
-## Findings
+## Strain register
 
-No rows yet. Rows are created in stage 3, after adjudication, from the
-sources the plan names.
+Stage 4. No rows yet. The plan names the sources of rows and the
+dispositions.
 
-| Row | Units | Sources | Finding | Class | Decision and reason | Status |
+| Row | Claims | References | Strain | Sits in | Disposition and reason | Status |
 | --- | --- | --- | --- | --- | --- | --- |
