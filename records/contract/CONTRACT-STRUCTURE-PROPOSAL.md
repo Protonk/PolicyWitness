@@ -10,6 +10,12 @@ worked example, a termination gate. Serialization and generators are still
 deferred. Sibling artifacts are named by path without links, under the
 records link rule.
 
+**Status.** The maintainer accepted the direction on 2026-11-10. How the
+document is authored and generated, as a tree of nodes with structured
+facts beside prose, is set out in `docs/CONTRACT-STAGING-PLAN.md`, which
+governs. This file remains the source for the table of contents, the
+surfaces, the model of a rule and the two worked sections.
+
 ## Table of contents (unchanged)
 
 ```

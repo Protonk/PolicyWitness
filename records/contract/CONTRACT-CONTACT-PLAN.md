@@ -10,6 +10,17 @@ write the document again, and read it again.
 The objective is not a shorter contract or a quota of defects. "This sentence
 is necessary, correct and owned" is a result, and the plan records it as one.
 
+**This plan's later stages are superseded.** The examination ran through its
+readings, its claim inventory and the opening of its strain register. The
+maintainer then set a different course for acting on what it found, in
+[docs/CONTRACT-STAGING-PLAN.md](../../docs/CONTRACT-STAGING-PLAN.md): four
+stages, with the contract rewritten as a generated tree. Stages 5 to 8
+below, and the dispositions listed under stage 4, describe the earlier
+intention and are kept for the record. Two things in them are still used:
+the register itself, which the staging plan draws its candidates from, and
+the task text for an isolated reader under stage 7, which later readings
+reuse.
+
 **Where the work stands** is recorded in
 [CONTRACT-LEDGER.md](CONTRACT-LEDGER.md), not here. A coordinator taking over
 reads the ledger's stage log first, then the stage it names in this plan.

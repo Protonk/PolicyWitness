@@ -38,8 +38,13 @@ structure, not a second rewrite.
   already use this form, with an index.
 - **Surface.** A named part of the contract with its own stamp in the
   surface table.
-- **Claim row.** A record tying one rule in the contract to the source that
-  implements it and the check that would fail if it were false.
+- **Node.** One item of the contract's source: a surface, a subject, a
+  definition, a field, a rule, a condition, an outcome, an effect, a known
+  gap or an example. The contract is a tree of nodes.
+- **Owner.** The source that implements a rule and the check that would
+  fail if the rule were false, recorded beneath the node they support.
+- **Free-text item.** A condition, dependency or effect written as a
+  sentence and not yet as an expression.
 
 ## Rules that hold across all stages
 
@@ -69,8 +74,87 @@ structure, not a second rewrite.
   is present is another, and does not depend on what the current producer
   emits.
 - **Evidence is graded.** A claim rests on a run, a check that was read, or
-  source that was read, and its row says which. Agreement among generated
+  source that was read, and its owner says which. Agreement among generated
   artifacts, or among implementations, is not correctness.
+
+## The contract's source and generator
+
+`docs/CONTRACT.md` is generated. Its source lives in `docs/contract/`,
+which also holds the generator and the guidance for maintaining both. The
+model is built in stage one and firmed up in stage three.
+
+**One hierarchy.** The contract is a tree, authored as Markdown, one file
+for each surface. A heading is a node, with a type and an identifier taken
+from its path. There is no separate manifest whose structure has to be
+kept in step with the document's.
+
+**The tree's shape carries the relationships.** A relationship that is
+subsidiary to another is written beneath it, not added as one more
+attribute on every item.
+
+| A node of type | Holds |
+| --- | --- |
+| surface | subjects: a record, an input, or a part of an operation |
+| subject | definitions, fields and rules |
+| rule | its conditions, its outcomes and its effect |
+| effect | what it prevents or withholds, and what it leaves standing |
+| any of these | a known gap, an example, or an owner |
+
+What is stated on a node holds for the nodes beneath it unless they say
+otherwise. Who acts, at which boundary, and which kinds of report a rule
+applies to are each stated once, at the level they belong to.
+
+A rule is one of three kinds: a component acts, reports or checks. The
+kinds and the node types are a working set, adjusted as drafting gives
+reason.
+
+**Structured facts sit under their node, beside its prose.** They are a few
+keyed lines in a constrained form. A sketch, not a syntax:
+
+```
+### The host activates only through a satisfied gate   {gate.activation: acts}
+who: runner host        where: execution
+requires: report.phases[p].termination_gate.outcome = satisfied
+
+When a gate is not satisfied the host does not activate the phase...
+
+#### Otherwise   {effect}
+cancels: every later phase in the schedule
+leaves: records reported before the gate
+```
+
+**Four relationships have a defined expression**, written the same way
+wherever they occur: a reference to an object, as a path into a defined
+record; a condition, as an object, a relation from a closed list, and an
+object or a literal; a dependency, as an assertion or action and the
+conditions it requires; and an effect, as a component, a verb from a closed
+list, an object, and what the effect prevents and leaves.
+
+**The generator assembles the document.** It parses the source with the
+repository's Markdown reader, passes prose through, and renders each node's
+structured facts in one uniform form. It builds field tables by joining the
+record definitions with each field node's authored meaning. It derives the
+views that would otherwise be written by hand: the surface table, which
+rules apply to which kind of report, an index of the controller's findings
+with what each reads and leaves, and the index of known gaps. It computes a
+surface's stamp from that surface's source and its goldens.
+
+**Sanding down is a ratchet.** Any item may begin as free text and later
+become an expression. The generator counts free-text items by kind in a
+baseline that may shrink and may not grow, as the prose baseline already
+does for other documents. As items firm up, derived views take the place of
+prose summaries, and prose that only restated them is removed.
+
+**Checks the tree makes cheap.** Nodes nest legally. Identifiers are
+unique and references resolve. An object path written as an expression
+exists in the record definitions. Every public field has a field node.
+Every owner's source and check exist. Every example has an owner. The
+generated document is current.
+
+**What the generator does not do.** It evaluates no condition, compares no
+implementations and decides no validity. It parses, assembles, derives
+views and checks references. There is one generator, built on the
+repository's shared generator code.
 
 ## Stage one: restructure against the current implementation
 
@@ -92,18 +176,16 @@ implementation as it stands.
   not permitted: fitting the new document into the old surfaces would turn
   the stage into a puzzle. The names chosen here are final.
 - *Self-containment.* The guide's regions leave the surfaces' definitions.
-  What each surface contains is rendered in the contract; reading the
-  manifest is not a prerequisite for knowing what the document covers.
+  What each surface contains is rendered in the contract; nobody has to
+  open its source to know what the document covers.
 - *Particulars, in sentences, as separate parts.* Every rule states who
   acts, where, when it applies, each condition as its own identified item,
   and the consequence. The parts are fixed in stage one so that stage three
   can hold the same content as data without rewriting it. A rule is not
   written as one paragraph that runs its conditions together.
 - *Maintenance leaves the document.* The contract has no section on its own
-  upkeep. A `docs/contract/` directory, with its own description and
-  working rules, is the home for maintenance guidance and for the
-  contract's authoring inputs and generators. How much moves there in this
-  stage is settled with the machinery.
+  upkeep. `docs/contract/` gets a description of its contents and working
+  rules for changing and regenerating them.
 - *Removals.* Sentences that deny or recall a former mechanism, and
   instructions addressed to maintainers inside normative text, are removed
   or moved. The maintainer has already directed three removals (`R-23`,
@@ -111,17 +193,15 @@ implementation as it stands.
 - *Known gaps.* Each behavior stage two is expected to change is stated as
   it is now, in a Known gap paragraph. The candidates are listed under
   stage two.
-- *Machinery, by reuse only.* One new section in the existing surface
-  manifest holding claim rows at the level of the rule: an identifier, the
-  rule's kind, the reply kinds it applies to, its sources, its checks, and
-  a known-gap flag. The existing citation checks applied to those rows.
-  Markers in the prose tying each passage to its row, with a check that
-  markers and rows correspond one to one. A named owning check for each
-  example. The existing Known gap index check extended to this document.
-  The stamp generator following the new surfaces.
-- *Owners.* A row's source and check are read by whoever records them. A
-  rule with no check either gets one or is carried as a known gap. Adding
-  a test that gives a true rule an owner belongs here; `R-06` is one.
+- *The source tree and its generator*, as described above: the tree, the
+  node types and their nesting, structured facts beside prose, the
+  generator with its derived views and its checks, and the first baseline
+  of free-text items. The existing stamp generator and surface manifest
+  are replaced or moved as the tree requires; the build's accounts of them
+  change with them.
+- *Owners.* An owner's source and check are read by whoever records them.
+  A rule with no check either gets one or carries a known gap. Adding a
+  test that gives a true rule an owner belongs here; `R-06` is one.
 - *Text-only strains.* Register rows whose strain sits in the text are
   resolved by the restructure.
 - *Minimal guide corrections.* A guide sentence that contradicts the
@@ -131,21 +211,45 @@ implementation as it stands.
 
 - Any change to what the product does: validation, outcomes, field names or
   values. Comment corrections and added tests are allowed; behavior is not.
-- Rules encoded as data, a corpus run across the validators, or rendering of
-  definitions from rows. These would encode the implementation we intend to
-  change.
-- New generators, new output formats or new kinds of check.
+- Rule semantics in the generator, or a corpus run across the validators.
+  These would encode the implementation we intend to change.
+- Turning every item into an expression. An item may stay free text and be
+  counted; the baseline is driven down in stage three.
+- A second generator, or a second hierarchy beside the tree.
 - Careful prose for a passage that stands under a Known gap. It gets the
   minimal true statement.
 
-**Guard against overbuilding.** If the new manifest section, the markers and
-their checks were deleted, the contract's prose would be unchanged.
+**Guard against overbuilding.** The structure has to do work. A structured
+fact is added to a node only when it feeds a check or a derived view, or
+replaces a sentence. An attribute that would be filled in on every node
+for uniformity's sake is a sign that it belongs on a parent, or nowhere.
+
+**First steps, in order.**
+
+1. A spike, outside the repository's tracked files, on the two sections
+   already worked through in the
+   [structure proposal](../records/contract/CONTRACT-STRUCTURE-PROPOSAL.md):
+   the compiled-profile receipt and the termination gate. It settles
+   whether the source reads well to an author, whether the output reads
+   like the worked sections, and how much of a constrained form the parser
+   needs.
+2. The list of what the generator must guarantee by the end of this stage,
+   each written as a check that fails.
+3. An inventory of everything that refers to the present stamp generator,
+   surface manifest and region markers: the build script, the build and
+   architecture accounts, the drift suite, release preflight and the build
+   identity's scope.
+4. The generator and the tree's skeleton, with every surface present and
+   empty.
+5. The surfaces, drafted one at a time against the claim inventory and the
+   register.
 
 **Hands to stage two.** The list of Known gaps, and the list of rules whose
 particulars needed a case split to state.
 
-**Exit.** Every passage has a row; every row is owned or is a known gap;
-the generators' checks and the drift suite pass; the change has been
+**Exit.** Every rule has an owner or carries a known gap; every public
+field has a field node; the baseline of free-text items is recorded; the
+generator's checks and the drift suite pass; the change has been
 reviewed against the register; an isolated reader has read the new document
 and the result has been compared with the baseline reading; a release has
 been cut, with the Known gap paragraphs in it.
@@ -213,13 +317,12 @@ trace of having first been written for another.
 - *Revision.* Passages that carried a Known gap or a case split are
   rewritten with care. A gap confirmed as intended becomes an ordinary
   statement.
-- *A machine-readable form.* The definitions, applicability and obligations
-  have a machine-readable representation in the finished contract, and the
-  particulars move from sentences into tables, trees or another structure.
-  The form is chosen here; the parts it holds were fixed in stage one.
-- *Rules as data, where it earns its place.* Applicability and obligations
-  may move into the manifest, and parts of the document may be rendered
-  from rows. Each such step is weighed as new machinery.
+- *Firming up.* Free-text items become expressions until the definitions,
+  applicability and obligations are held as structured facts in the tree.
+  That is the machine-readable representation of the finished contract.
+  Derived views take over from the prose summaries they make redundant.
+- *More from the generator, where it earns its place.* A further derived
+  view or check is weighed as new machinery.
 - *Checks that depend on settled rules*, such as naming the cross-validator
   corpus as an owner.
 - *Reading.* An isolated reader reads the settled document, and the result
@@ -233,8 +336,9 @@ trace of having first been written for another.
 - The guide.
 
 **Exit.** No Known gap remains that the maintainer has not confirmed as
-intended; every row is owned; the definitions, applicability and
-obligations are machine-readable; the checks pass; a release has been cut.
+intended; every rule is owned; the definitions, applicability and
+obligations are structured facts, with any free-text item that remains
+accepted by the maintainer; the checks pass; a release has been cut.
 
 ## Stage four: edit the guide
 
@@ -263,7 +367,12 @@ checks pass.
 
 ## Decisions still open
 
-- **The new surfaces and their names.** Needed at the start of stage one.
+- **The surface names, before the stage one release.** The structure
+  proposal's surfaces are the working set. The names become permanent at
+  that release, so they are confirmed then.
+- **What the surface table means once a surface is stamped from its source
+  in the tree.**
+- **What an ordinary build requires of the contract's check** (`R-29`).
 - **Whether the consolidation drafted for `R-33` is within a heavy edit.**
   The [draft](../records/contract/GUIDE-RESULT-ACCOUNT-DRAFT.md) moves
   three passages of the guide next to one another. That may count as
@@ -277,10 +386,13 @@ checks pass.
 
 - A claim inventory covering every line of the present contract, with a
   literal account of the mechanism behind each sentence. It follows the old
-  sentences, so stage one regroups it into rule-level rows. Its rows are
+  sentences, so stage one regroups it under the tree's rules. Its rows are
   readings by delegated passes; nothing in it was run, and a share of its
   rows have a source but no check, more than one answer, or no owner.
 - A strain register with the maintainer's close readings and decisions.
+- A [structure proposal](../records/contract/CONTRACT-STRUCTURE-PROPOSAL.md)
+  with the document's table of contents, its surfaces, the model of a rule,
+  and two sections worked through in that model.
 - A baseline reading of the present contract by a reader given nothing
   else, for comparison with later readings.
 - An observed account of where the three validators' judgments differ, with
