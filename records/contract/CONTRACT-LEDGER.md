@@ -32,6 +32,7 @@ artifacts are named by path without links, under the records link rule.
 | 2026-11-10 | 4 | Maintainer's comment on `R-14` recorded and the row corrected. A delegated read-only comparison of the three validators on preparation-failure and reporting-failure replies was started, to establish where their final judgments diverge. |
 | 2026-11-10 | 4 | The validator comparison returned thirteen inferred candidates. A run of them through all three readers was started in a disposable worktree. |
 | 2026-11-10 | 4 | Maintainer's comment on `R-07` recorded. Coordinator read the controller's projection and opened `R-34` (the scope of "dependent") and `R-35` (`per_actor` missing from the guide's vocabulary). |
+| 2026-11-10 | 4 | The run of the validator candidates returned and is deposited under `records/contract/validators/`. Final judgments diverge on twelve of thirteen candidates. `R-36` opened. The experiment's worktree and branch were removed. |
 
 ## Artifacts
 
@@ -670,26 +671,77 @@ overall `withheld` does not govern the assessments beneath it.
 
 ### R-14: where the three validators' judgments diverge
 
-A delegated read-only comparison returned on 2026-11-10. It is a reading;
-nothing in it has been run. Its file is in the coordinator's scratch space
-and will be deposited with the results of the run.
+Established by a read-only comparison and then a run, both delegated, on
+2026-11-10. Deposited as `records/contract/validators/COMPARISON.md`,
+`RUN.md` and `RUN.patch`. The coordinator has read the run's method, its
+table and its list of divergences, not all of its per-reply sections.
 
-- The three readers implement the same partition rule. They differ in how
-  they decompose it, in their diagnostics and in when they skip it. The
-  difference between skipping on presence and skipping on validity changes
-  only the diagnostic: the Python reader adds a partition error to a reply
-  all three object to.
-- Of 41 conditions on a preparation-failure reply, 29 are applied by all
-  three readers, 9 by two, 1 by one and 2 by none. The Python reader has no
-  explicit check of host regions, custody, phase arrival or completion;
-  custody and completion are caught indirectly, region rows and arrival are
-  not.
-- Thirteen candidate replies were identified on which final judgments would
-  differ. All are inferred.
-- No corpus of constructed replies goes through all three readers, and the
-  shared corpus contains no valid preparation-failure reply. The three
-  valid ones are Swift test fixtures judged by the Swift reader only.
+**Grade.** Run, as an experiment: in a disposable worktree at `35226316`
+(product source as at `a7d9b320`), with temporary test code only, each reply
+built once in Swift, encoded, and the same bytes decoded for the Rust and
+Python readers. These were direct invocations, not runs of the catalog
+cases, and establish nothing about the battery. The worktree has been
+removed; the patch reproduces the test code.
 
-A run of the thirteen candidates through all three readers was started in a
-disposable worktree on 2026-11-10, with temporary test code only.
+**Readers.** S is the host's self-check (`validateForReporting`). R is the
+controller (`execution_diagnostics`). P is the test harness's reader
+(`consumer.validate_fixture`).
+
+**Controls.** The three valid preparation-failure replies the Swift tests
+construct were accepted by all three readers.
+
+**From the reading.** The three implement the same partition rule. Of 41
+conditions on a preparation-failure reply, 29 are applied by all three, 9
+by two, 1 by one and 2 by none.
+
+**Observed.** Each row is a valid preparation-failure reply with one
+change, unless it says otherwise. Every clean observation matched the
+comparison's prediction.
+
+| Change | S | R | P |
+| --- | --- | --- | --- |
+| A well-formed host region row (D1) | objects | objects | **accepts** |
+| A phase marked as arrived (D2) | objects | objects | **accepts** |
+| An ordinary reply with a `preparation_failure` added (D11) | objects | objects | **accepts** |
+| A phase given an ordering record with proceed set (D3) | **accepts** | objects | objects |
+| A declared action identity that is empty or over the bound (D4) | **accepts** | objects | objects |
+| `extension_events` absent (D5) | **accepts** | objects | objects |
+| A phase's `actor_visit` wrong (D7) | **accepts** | objects | objects |
+| An actor's `visits` empty (D8) | **accepts** | objects | objects |
+| An actor's `index` not its position (D10) | **accepts** | objects | objects |
+| An actor's `visits` with one extra entry (D9) | **accepts** | objects | **accepts** |
+| A `phase_id` that is empty or over the bound (D6) | **accepts** | **accepts** | objects |
+| A degraded reply with an actor-table defect (D12) | **accepts** | **accepts** | objects |
+| JSON `"preparation_failure": null` on a valid actor reply (D13) | not asked | **accepts** | objects |
+
+What the run settles:
+
+- **Skipping the partition on presence or on validity changes the
+  diagnostic only.** No reply was found on which that difference alone
+  changes a final judgment, as the maintainer expected.
+- **Final judgments do diverge**, on twelve of the thirteen candidates, in
+  every direction: the harness reader accepts replies both product readers
+  object to; the host's self-check accepts replies the controller and the
+  harness reader object to; the controller alone objects to one; the
+  harness reader alone objects to three.
+- **The Python reader does not check host region rows or phase arrival** on
+  a preparation-failure reply, confirming the maintainer's point. Its
+  missing custody and completion checks are covered indirectly.
+- **Every objection by the controller was a flag, not a refusal.** For all
+  101 replies run, admission passed and `data.runner_result` would be
+  published; the objection appeared as an `actor_evidence` issue.
+- D6 to D10 do not depend on preparation failure. The same changes to any
+  actor-form reply would read the same way. The general checks were not
+  compared exhaustively, so these are examples, not a census.
+
+Not observed: S could not be asked about a JSON null. The degraded reply
+for D12 was built in test code, not by the host's own path.
+
+Incidental: two unmodified Swift shape fixtures, which are built for shape
+coverage, were accepted by S and objected to by P, and one of them by R.
+Recorded here and not pursued.
+
+| Row | Claims | References | Strain | Sits in | Disposition | Status |
+| --- | --- | --- | --- | --- | --- | --- |
+| R-36 | `K-198-1` to `K-202-1`; the general actor-table checks | `R-14`; the run above | Three hand-written validators reach different final judgments on the same reply, in every direction. The host can emit a reply its own check accepts and the controller flags. The harness reader, which tests use to judge product output, accepts some replies both product readers object to and objects to some both accept. No corpus of constructed replies passes through all three. | Repository | **For the maintainer**: whether three hand-written validators are necessary; and for each divergence, which reader is right. The coordinator proposes nothing until that is decided, beyond keeping the experiment's patch so a shared corpus could start from it. | Awaiting maintainer |
 
