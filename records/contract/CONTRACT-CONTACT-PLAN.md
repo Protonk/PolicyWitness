@@ -130,6 +130,7 @@ name one another by path.
 | [FRESH-ENCOUNTER-ADDENDA.md](FRESH-ENCOUNTER-ADDENDA.md), the **addenda** | Journal writer | The journal's close-out; later, answers. Append-only. |
 | [ISOLATED-BASELINE-JOURNAL.md](ISOLATED-BASELINE-JOURNAL.md), the **baseline** | Isolated reader | Entries `B-01`–`B-40` and a close-out with uncertainties `U1`–`U61`. Contract only; a reread. |
 | [CONTRACT-ADJUDICATION.md](CONTRACT-ADJUDICATION.md) | Report writer | Entries `A-01`–`A-52` on the journal, `A-D01`–`A-D20` on the divergences, a table of findings against both journals, and four lists. |
+| [CONTRACT-MAINTAINER-NOTES.md](CONTRACT-MAINTAINER-NOTES.md) | Maintainer | Close readings supplied in stage 4, verbatim. |
 | [CONTRACT-LEDGER.md](CONTRACT-LEDGER.md) | Coordinator | Stage log, acceptance record, join table, divergences, coverage, strain register. |
 | [CONTRACT-CLAIMS.md](CONTRACT-CLAIMS.md) and `claims/`, the **inventory** | Coordinator, from delegated passes | Stage 3. One row per claim, with its kind, mechanism and owner. |
 | Later readings and review notes | Their authors | Stage 7. |
@@ -239,6 +240,14 @@ which of them decides, and whether the same rule is implemented in more than
 one place. The account does not judge the machinery. It is written so that
 someone who has not read the code can judge it.
 
+A contract sentence that states a rule owes its reader four things, and the
+account supplies each or says the sentence leaves it out: **who acts**;
+**what is compared with what**; **at which boundary**, meaning where in a
+run and on which side of which hand-over; and **with what consequence**,
+meaning what is refused, withheld, flagged or published, and what a consumer
+observes. Where a list of nouns stands in for several rules, the account
+separates them. Where one name is used for two things, it says so.
+
 **Owner status.**
 
 - `owned`: a source implements the claim, and a check was read and its
@@ -314,6 +323,12 @@ where it sits; the disposition; the reason; the status.
 **Telling text from repository.** These are aids, used as far as a row
 needs.
 
+- *Four things owed.* Does the sentence say who acts, what is compared with
+  what, at which boundary, and with what consequence? The maintainer's
+  reading of C:243 in the notes is the worked case: verbs that sound like
+  rules, a noun list covering five relations with two owners, one name for
+  two things, and an example that does not demonstrate the distinction it is
+  there for.
 - *Outside knowledge.* Three readings exist at three levels: contract only,
   contract with guidance, contract with the implementation. A strain that
   disappears with guidance means the sentence leans on project knowledge. A
