@@ -18,7 +18,7 @@ this outline draws on. Register rows are cited below as `R-nn`.
 | One | Restructures the contract so that it is a complete and truthful account of the implementation as it is, including the parts we do not want | No | A release |
 | Two | Resolves behavioral gaps against the intended public commitments | Where a change is decided | Every known gap resolved, including evidence gaps |
 | Three | Settles the contract on the changed implementation | No | A release |
-| Four | Edits and locally consolidates the guide to agree with the settled contract | No | A guide that explains the contract it ships beside |
+| Four | Settles the guide's explanations and user workflows against the contract | No | A guide with checked user tasks and explicit validation limits |
 
 The order carries the method. Writing the contract truthfully against the
 current implementation exposes commitments that need review. An awkward
@@ -40,15 +40,23 @@ behavior.
   behavior whose intended commitment needs a decision. An evidence gap
   states what has not been established or tested. Missing evidence does not
   itself imply that the product should change; an unverified behavior is
-  not presented as an established commitment. Each gap identifies its kind.
+  not presented as an established commitment. An unresolved meaning records
+  a promise whose scope cannot yet be stated. Preserve that question until
+  its meaning is established or its removal is decided; ambiguity alone is
+  not a reason to delete a commitment. These labels are not an exhaustive
+  taxonomy.
 - **Surface.** A named part of the contract with its own stamp in the
   surface table.
 - **Node.** One item of the contract's source: a surface, a subject, a
   definition, a field, a rule, a condition, an outcome, an effect, a known
   gap or an example. The contract is a tree of nodes.
 - **Owner.** Supporting source and a named check, with the assertion that
-  check makes, its limits and its evidence grade, recorded beneath the
-  supported node. A cited check need not cover every part of the rule.
+  check makes, its execution context, limits and evidence grade, recorded
+  beneath the supported node. Constructed records, injected dependencies,
+  fixture processes and integrated product runs establish different things.
+  A cited check need not cover every part of the rule. Crediting execution
+  also names the run and source/build it exercised; release credit identifies
+  the case in that release's acceptance, not merely its suite in the catalog.
 - **Free-text item.** A condition, dependency or effect written as a
   sentence and not yet as an expression.
 
@@ -75,7 +83,9 @@ behavior.
   limit on its commitment, not as a duty of the person reading the output.
 - **Meaning lives in the contract.** A field's meaning, the significance of
   its absence and what its values support are in the contract. The guide
-  explains how to use those commitments.
+  explains how to use those commitments. Definitions also state the limits
+  of a successful value's meaning, beside that value. Those limits are not
+  failure effects or dispensable descriptions of negative space.
 - **Production and interpretation are stated apart.** Where PolicyWitness
   produces a record is one commitment. What it checks whenever that record
   is present is another, and does not depend on what the current producer
@@ -114,8 +124,11 @@ referenced definition under each dependent rule.
 Shared context may be stated on a parent. The spike defines which properties
 inherit, how an override works and how the effective value is rendered. An
 example or evidence citation does not become an obligation through nesting.
-Applicability combines run state, admission state and record presence as the
-rule requires; a parent default must not silently widen a child's reach.
+Applicability combines entry path, recipient, run state, admission state
+and record presence as the rule requires; a parent default must not silently
+widen a child's reach. A direct host caller does not receive the controller's
+assessment. The inventory establishes which entry paths and shipped helpers
+the contract covers and what each promises.
 
 A rule is one of three kinds: a component acts, reports or checks. The
 kinds and the node types are a working set, adjusted as drafting gives
@@ -142,6 +155,11 @@ records, fields, actions and events; conditions on them; dependencies; and
 effects with their scope. The proposal's relations and verbs are a working
 vocabulary. The spike must express presence tests, comparisons, conjunctions
 and conditional requirements, including bound actor and phase references.
+It must also express check order and refusal precedence across surfaces;
+neither follows from nesting or a list of prerequisites. Value sets state
+whether admitted values are closed or open; displayed lists separately state
+whether they are exhaustive or illustrative. The relevant boundary defines
+what unfamiliar values establish or cause.
 Failure effects distinguish retained records from assessments that remain
 supported. Unsupported expressions stay explicitly free text; placing prose
 under a key does not make its relationships machine-readable.
@@ -172,8 +190,11 @@ prose summaries, and prose that only restated them is removed.
 **Checks the tree makes cheap.** Nodes nest legally. Identifiers are
 unique and references resolve. An object path written as an expression
 exists in the record definitions. Every public field has a field node.
-Every owner's source and check exist. Every example has an owner. The
-generated document is current.
+Every owner's source and check exist. Every example has graded support or
+an explicit evidence gap; lack of an integrated test does not by itself
+justify dropping a useful example. The generated document is current.
+These checks establish consistency and reference integrity, not that a
+cited check exercises the claim or passed in a release.
 
 **What the generator does not do.** It evaluates no condition, compares no
 implementations and decides no validity. It parses, assembles, derives
@@ -200,8 +221,12 @@ implementation as it stands.
   not permitted: fitting the new document into the old surfaces would turn
   the stage into a puzzle. The names chosen here are final.
 - *Self-containment.* The guide's regions leave the surfaces' definitions.
-  What each surface contains is rendered in the contract; nobody has to
-  open its source to know what the document covers.
+  First account for every commitment in those regions, including rules,
+  value sets, defaults, interpretation limits and examples. Map each to its
+  destination or an explicit disposition, with unresolved claims retained
+  as gaps. Removing a region from the hash inputs must not silently retire
+  its commitments. What each surface contains is rendered in the contract;
+  nobody has to open its source to know what the document covers.
 - *Particulars, in sentences, as separate parts.* Every rule states who
   acts, where, when it applies, each condition as its own identified item,
   and the consequence. Representative relationships are structured in stage
@@ -215,8 +240,8 @@ implementation as it stands.
   or moved. The maintainer has already directed three removals (`R-23`,
   `R-30`, `R-31`).
 - *Known gaps.* Current behavior under review and limits of the supporting
-  evidence are recorded with their respective gap kinds. The behavioral
-  candidates are listed under stage two.
+  evidence, together with unresolved meanings, are recorded explicitly.
+  The behavioral candidates are listed under stage two.
 - *The source tree and its generator*, as described above: the tree, the
   node types and their nesting, structured facts beside prose, the
   generator with its derived views and its checks, and the first baseline
@@ -250,23 +275,34 @@ for uniformity's sake is a sign that it belongs on a parent, or nowhere.
 
 **First steps, in order.**
 
-1. A spike, outside the repository's tracked files, on the two sections
+1. Reconcile the drafting inputs before drafting surfaces or removing guide
+   regions. Inventory the guide regions named by `docs/contract_surfaces.json`
+   alongside `CONTRACT.md`. Complete the ledger's coverage record from the
+   report's findings and line-by-line verdicts, the adjudication's unresolved
+   items, corrections and silences, and the reader's answers. Each concern
+   has a register reference or an explicit disposition; "not examined" is
+   distinct from "examined, no strain". Preserve sound meanings as well as
+   defects. The resulting map records old location, meaning, evidence grade
+   and destination or unresolved question; a field inventory alone does not
+   establish coverage.
+2. A spike, outside the repository's tracked files, on the two sections
    already worked through in the
    [structure proposal](../records/contract/CONTRACT-STRUCTURE-PROPOSAL.md):
    the compiled-profile receipt and the termination gate. It settles
    whether the source reads well to an author, whether the output reads
    like the worked sections, and how much of a constrained form the parser
-   needs.
-2. The list of what the generator must guarantee by the end of this stage,
+   needs. Exercise recipient-specific reach, a successful value's limits,
+   an open vocabulary and cross-surface refusal precedence as well.
+3. The list of what the generator must guarantee by the end of this stage,
    each written as a check that fails.
-3. An inventory of everything that refers to the present stamp generator,
+4. An inventory of everything that refers to the present stamp generator,
    surface manifest and region markers: the build script, the build and
    architecture accounts, the drift suite, release preflight and the build
    identity's scope.
-4. The generator and the tree's skeleton, with every surface present and
+5. The generator and the tree's skeleton, with every surface present and
    empty.
-5. The surfaces, drafted one at a time against the claim inventory and the
-   register.
+6. The surfaces, drafted one at a time against the reconciled inputs and
+   the register.
 
 **Drafting tests.** Apply these while writing the related surfaces. The
 behavioral decisions belong to stage two; stage one supplies the surrounding
@@ -288,20 +324,38 @@ does not approve the behavior as the intended guarantee.
   scope of withholding. A phase or actor identifier alone does not settle
   those dependencies. Establish them before choosing a diagnostic shape
   or changing which conclusions a finding withholds.
+- *Entry paths and boundary order (`F-08`, `F-09`, `A-D04`).* Account for
+  command-line parsing, controller admission and direct XPC separately;
+  distinguish selector errors from request refusals and decode-time rules
+  from later capacity checks. Locate `sbpl-check --request` and
+  `_test_overrides` in the coverage map, with their actual admission and
+  instrumentation limits. Removing the "no bypass" sentence does not
+  dispose of these questions.
+
+**Reading and truth checks.** Read the rendered document as well as its
+source. Reuse the adjudication's fourteen silences and the situation questions
+in the journal addenda as prompts after an unprompted reading, recording the
+two separately. Compare the answers with the implementation evidence and its
+limits, not just with the intended reading. A faithful restatement of a false
+sentence is a truth failure. Source reads, executed checks and untested
+consequences keep their grades; reader confidence supplies no execution evidence.
 
 **Hands to stage two.** The known gaps with their kinds and supporting
 evidence, and the definitions or commitments each proposed change affects.
 
-**Exit.** Every rule has an owner or carries a known gap; every public
-field has a field node; the baseline of free-text items is recorded; the
-generator's checks and the drift suite pass; the change has been
+**Exit.** The coverage map accounts for the contract and all incorporated
+guide regions, including rules and value sets; report and adjudication items
+have dispositions. Every rule and example has graded support or a known gap;
+every public field has a field node; the baseline of free-text items is
+recorded; the generator's checks and the drift suite pass; the change has been
 reviewed against the register; an isolated reader has read the new document
-and the result has been compared with the baseline reading; a release has
-been cut, with the Known gap paragraphs in it.
+and the prompted answers have been checked against evidence as well as the
+baseline reading; a release has been cut, with the Known gap paragraphs in it.
 
 ## Stage two: resolve the gaps
 
-**Aim.** Resolve the behavioral decisions and establish missing evidence.
+**Aim.** Settle unresolved meanings, resolve the behavioral decisions and
+establish missing evidence.
 Necessary distinctions remain explicit even when they require case splits.
 
 **Gate.** Each change names the public commitment it establishes or repairs,
@@ -350,8 +404,9 @@ Simpler prose alone does not justify changing behavior.
 - Renaming a surface.
 
 **Exit.** Behavioral gaps have been resolved by a change or a decision to
-retain the behavior. Evidence gaps have the missing support or an explicit
-maintainer decision accepting the stated limitation. Calling behavior intended
+retain the behavior. Unresolved meanings have a stated scope or an explicit
+decision retiring the commitment. Evidence gaps have the missing support or
+an explicit maintainer decision accepting the stated limitation. Calling behavior intended
 does not supply missing evidence. Each disposition is recorded.
 
 ## Stage three: settle the contract
@@ -382,16 +437,19 @@ trace of having first been written for another.
 - New surface names.
 - The guide.
 
-**Exit.** Every behavioral gap has a recorded disposition and every evidence
-gap is closed or has an explicitly accepted limitation; every rule has
+**Exit.** Every behavioral gap and unresolved meaning has a recorded
+disposition and every evidence gap is closed or has an explicitly accepted
+limitation; every rule has
 graded support or that evidence limitation; the definitions, applicability and
 obligations are structured facts, with any free-text item that remains
 accepted by the maintainer; the checks pass; a release has been cut.
 
-## Stage four: edit the guide
+## Stage four: settle the guide
 
 **Aim.** The guide agrees with the settled contract and explains it in
-terms of public fields and observable behavior.
+terms of public fields and observable behavior. Settle whether a user can
+prepare a specimen, select a runner, interpret the output and recover from
+refusals using the guide, with the supporting contract definitions available.
 
 **Why last.** The guide explains the contract. Edited earlier, it would be
 edited again after each of the stages before it.
@@ -407,6 +465,10 @@ edited again after each of the stages before it.
   Existing anchors are preserved or their callers updated.
 - The guide's shared content, edited at its sources and regenerated as the
   [documentation guidance](AGENTS.md) requires.
+- Walkthroughs of those tasks against the shipped interface, recording what
+  was executed and what was only read. Use available repository scenarios;
+  the unavailable consumer repository's profile collection is a validation
+  limit, not evidence of compatibility and not a prerequisite to this stage.
 
 **Does not belong in this stage.**
 
@@ -415,27 +477,47 @@ edited again after each of the stages before it.
 - Changes to the contract or the product. A disagreement found here goes
   back to the stage that owns it.
 
-**Exit.** Each guide section has been read against the contract; the
-checks pass.
+**Exit.** Each guide section has been read against the contract; the user
+tasks have recorded outcomes and validation limits; the checks pass.
 
 ## Decisions still open
 
 - **The surface names, before the stage one release.** The structure
   proposal's surfaces are the working set. The names become permanent at
-  that release, so they are confirmed then.
+  that release, so they are confirmed then. Review the boundaries of
+  `reply`, `actor_evidence` and `diagnostics` against the unresolved stage-two
+  definitions before confirming them; the present outline does not settle
+  those boundaries.
 - **What an ordinary build requires of the contract's check** (`R-29`).
 - **Whether stage four ends in a release.** The guide ships beside the
   release.
+- **Review across the migration releases.** Rewriting all surface inputs
+  can move every stamp even without behavior changes. Decide how a specimen
+  author will distinguish migration changes from behavioral changes across
+  stages one to three. This does not change what a stamp hashes.
+- **Public presentation of evidence.** Decide how the rendered document
+  exposes evidence grades and execution scope. Public limits on a commitment
+  and gaps in its support must remain visible; detailed evidence metadata
+  remains separate from the stamped public content.
 - **For each stage two candidate, whether the implementation changes.**
   Made within stage two, definitions first.
 
 ## What the examination supplies, and its limits
 
+- The [technical report](../records/contract/CONTRACT-FIRST-READER-REPORT.md),
+  including its line-by-line verdicts, findings, sound statements and unrun
+  experiments, and the
+  [adjudication](../records/contract/CONTRACT-ADJUDICATION.md), including
+  corrections to the report and consequential questions neither reader raised.
+  These remain drafting inputs until their contents are reconciled with the
+  register; the maintainer's selected close reads do not replace them.
 - A claim inventory covering every line of the present contract, with a
   literal account of the mechanism behind each sentence. It follows the old
   sentences, so stage one regroups it under the tree's rules. Its rows are
   readings by delegated passes; nothing in it was run, and a share of its
   rows have a source but no check, more than one answer, or no owner.
+  It does not inventory the incorporated guide regions; stage one's first
+  step closes that coverage gap.
 - A strain register with the maintainer's close readings and decisions.
 - A [structure proposal](../records/contract/CONTRACT-STRUCTURE-PROPOSAL.md)
   with the document's table of contents, its surfaces, the model of a rule,

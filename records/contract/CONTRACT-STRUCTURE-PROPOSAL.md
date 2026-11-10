@@ -37,6 +37,9 @@ Nineteen surfaces: the thirteen present names and `identity`, `extensions`,
 artifacts. Each operation then states accepted input, what PolicyWitness
 does and reports, and what its assessments establish. Surface names and
 the placement of the internal identity remain working choices.
+The staging plan's entry-path inventory must account for direct XPC callers,
+shipped helpers such as `sbpl-check --request`, and instrumented requests
+before this outline is treated as complete.
 
 ## What changed from the second version
 
@@ -63,12 +66,20 @@ the records or actions it governs, and its boundary (section 2.2). The
 categories are authoring tools, not an assertion that all commitments fit
 three disjoint classes.
 
-Applicability identifies the relevant operation or run state, admission
-state, report kind and record presence. A check may require a record that
-is missing, or apply only on specified paths; presence alone is not its
+Applicability identifies the entry path and recipient as well as the
+operation or run state, admission state, report kind and record presence.
+A direct host caller receives no controller assessment. A check may require
+a record that is missing, or apply only on specified paths; presence alone is not its
 universal trigger. A producer's ability to emit a record does not determine
 a reader's obligation when it receives that record. Each rule states its
 own conditions, including any degraded-report exception.
+
+Definitions state what a value establishes and the limits of that meaning,
+including when the value succeeds. These limits belong beside the value;
+they need not be an action or a failure effect. For example, matching public
+contract identities establish the reported identity match used for admission,
+not identical builds or authenticated origin. Moving implementation detail
+to a reference must preserve the limits needed to interpret a public field.
 
 ### The reach of a consequence
 
@@ -98,8 +109,12 @@ free text remains free text until its relationships can be expressed.
    object. The initial relations are `=`, `≠`, `<`, `≤`, `present`,
    `absent`, `in`. Conjunctions and conditional requirements also need an
    explicit representation, as the gate's S and C conditions demonstrate.
+   Value sets say whether admitted values are closed or open; displayed
+   lists separately say whether they are exhaustive or illustrative.
 3. **Dependency.** `X requires C1, C2, …`: an assertion or an action, and
-   the conditions it rests on.
+   the conditions it rests on. Check order and refusal precedence also need
+   explicit relations between named actions, including across surfaces;
+   prerequisite lists and tree nesting do not specify that order.
 4. **Effect.** An action or result with named affected objects. Initial
    verbs include `refuses`, `does not`, `cancels`, `reports`, `flags` and
    `withholds`. Successful and failure effects both have a place; an effect
@@ -384,6 +399,22 @@ producer contract. It has no independent build identity. The report's
 `producer` identifies that build; the receipt's `producer` identifies the
 worker component. The receipt's fields state the host's account of a capture;
 the controller checks the subset specified below.
+
+**Request association and available comparisons.** Equality between the
+receipt's `request_nonce` and the nonce retained with a consumer's own request
+associates the receipt with that request. This is separate from establishing
+that the host compared the worker's recorded nonce. The controller does not
+perform this association for the consumer.
+
+| Available information | What a reader can compare |
+| --- | --- |
+| Receipt alone | Decode `bytecode_b64`, compare its byte count, and recompute its digest. Current readers do not perform these comparisons. |
+| Receipt and the consumer's request | Compare `request_nonce` with the nonce sent. A mismatch exposes a wrong association or altered receipt; a match does not repeat the host's capture comparison. |
+| Worker capture and the host's independent observations | The recorded PID and nonce, completion and capture status, and application and exit conditions require evidence unavailable to a receipt reader. |
+
+Whether the consumer can reconstruct the exact source and parameter inputs
+used by the host, including request preparation, remains an evidence question
+for that comparison. It is not settled by the digest fields being present.
 
 **`profile.presence` — the host reports collected capture results.** *reports*
 The runner host, during result assembly. A collected worker output contains

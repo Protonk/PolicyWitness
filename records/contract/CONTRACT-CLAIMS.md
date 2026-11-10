@@ -36,6 +36,9 @@ artifacts are named by path without links, under the records link rule.
 
 Every unit is inventoried: 332 rows over all 441 lines. The
 generated stamp table, headings and connectives have no rows.
+This is coverage of `CONTRACT.md` only. The guide regions incorporated by
+`docs/contract_surfaces.json` have not been inventoried here; stage one of
+`docs/CONTRACT-STAGING-PLAN.md` requires their coverage before migration.
 
 ## Reading the index
 

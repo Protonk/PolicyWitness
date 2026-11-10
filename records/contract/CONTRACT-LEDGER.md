@@ -363,33 +363,49 @@ conditions (guidance or none; first pass or reread), and each is one sample.
 
 The first five columns were filled at acceptance from the line ranges each
 artifact cites. Adjudication entries carry the journal's numbers. The last
-column is filled in stage 4 with the register rows for the unit, or "none".
+column indexes existing register rows by their cited contract lines. It is
+partial: reconciliation of the report and adjudication remains pending for
+every unit. "No row yet" is not a judgment that a unit has no strain. Record
+"examined, no strain" only after the reconciliation required by stage one
+of `docs/CONTRACT-STAGING-PLAN.md`.
 
 | Unit | Lines | Report | Journal | Baseline | Adjudicated | Strains |
 | --- | --- | --- | --- | --- | --- | --- |
-| U01 | 1–20 | `L-01`–`L-04` | `J-01`–`J-03` | `B-01` | `A-01`–`A-03` | |
-| U02 | 22–56 | `L-05`–`L-07` | `J-04`–`J-05` | `B-02`–`B-03` | `A-04`–`A-05` | |
-| U03 | 60–124 | `L-08`–`L-15` | `J-06`–`J-12` | `B-04`–`B-09` | `A-06`–`A-12` | |
-| U04 | 126–130 | `L-16` | `J-13` | `B-10` | `A-13` | |
-| U05 | 132–136 | `L-17` | `J-14` | `B-10` | `A-14` | |
-| U06 | 138–142 | `L-18` | `J-15` | `B-11` | `A-15` | |
-| U07 | 144–148 | `L-19` | `J-16` | `B-12` | `A-16` | |
-| U08 | 150–154 | `L-20` | `J-17` | `B-13` | `A-17` | |
-| U09 | 156–160 | `L-21` | `J-18` | `B-14` | `A-18` | |
-| U10 | 162–166 | `L-22` | `J-19` | `B-15` | `A-19` | |
-| U11 | 168–238 | `L-23`–`L-29` | `J-20`–`J-28` | `B-15`–`B-21` | `A-20`–`A-28` | |
-| U12 | 240–244 | `L-30` | `J-29` | `B-22` | `A-29` | |
-| U13 | 246–250 | `L-31` | `J-30` | `B-23` | `A-30` | |
-| U14 | 252–291 | `L-32`–`L-36` | `J-31`–`J-35` | `B-24`–`B-26` | `A-31`–`A-35` | |
-| U15 | 293–298 | `L-37` | `J-36`–`J-37` | `B-27` | `A-36`–`A-37` | |
-| U16 | 300–358 | `L-38`–`L-42` | `J-38`–`J-43` | `B-28`–`B-32` | `A-38`–`A-43` | |
-| U17 | 360–377 | `L-43` | `J-44`–`J-45` | `B-33`–`B-34` | `A-44`–`A-45` | |
-| U18 | 379–425 | `L-44`–`L-47` | `J-46`–`J-50` | `B-35`–`B-38` | `A-46`–`A-50` | |
-| U19 | 428–434 | `L-48` (first paragraph) | `J-51` | `B-39` | `A-51` | |
-| U20 | 436–441 | `L-48` (second paragraph) | `J-52` | `B-40` | `A-52` | |
+| U01 | 1–20 | `L-01`–`L-04` | `J-01`–`J-03` | `B-01` | `A-01`–`A-03` | `R-21`–`R-25`, `R-32` |
+| U02 | 22–56 | `L-05`–`L-07` | `J-04`–`J-05` | `B-02`–`B-03` | `A-04`–`A-05` | `R-26`–`R-29`, `R-32` |
+| U03 | 60–124 | `L-08`–`L-15` | `J-06`–`J-12` | `B-04`–`B-09` | `A-06`–`A-12` | `R-30`, `R-32` |
+| U04 | 126–130 | `L-16` | `J-13` | `B-10` | `A-13` | No row yet |
+| U05 | 132–136 | `L-17` | `J-14` | `B-10` | `A-14` | No row yet |
+| U06 | 138–142 | `L-18` | `J-15` | `B-11` | `A-15` | No row yet |
+| U07 | 144–148 | `L-19` | `J-16` | `B-12` | `A-16` | No row yet |
+| U08 | 150–154 | `L-20` | `J-17` | `B-13` | `A-17` | No row yet |
+| U09 | 156–160 | `L-21` | `J-18` | `B-14` | `A-18` | No row yet |
+| U10 | 162–166 | `L-22` | `J-19` | `B-15` | `A-19` | `R-07`, `R-20`, `R-34`, `R-35` |
+| U11 | 168–238 | `L-23`–`L-29` | `J-20`–`J-28` | `B-15`–`B-21` | `A-20`–`A-28` | `R-08`–`R-19`, `R-36`, `R-37` |
+| U12 | 240–244 | `L-30` | `J-29` | `B-22` | `A-29` | `R-01`–`R-06` |
+| U13 | 246–250 | `L-31` | `J-30` | `B-23` | `A-30` | No row yet |
+| U14 | 252–291 | `L-32`–`L-36` | `J-31`–`J-35` | `B-24`–`B-26` | `A-31`–`A-35` | No row yet |
+| U15 | 293–298 | `L-37` | `J-36`–`J-37` | `B-27` | `A-36`–`A-37` | No row yet |
+| U16 | 300–358 | `L-38`–`L-42` | `J-38`–`J-43` | `B-28`–`B-32` | `A-38`–`A-43` | `R-19`, `R-20`, `R-34`, `R-38` |
+| U17 | 360–377 | `L-43` | `J-44`–`J-45` | `B-33`–`B-34` | `A-44`–`A-45` | No row yet |
+| U18 | 379–425 | `L-44`–`L-47` | `J-46`–`J-50` | `B-35`–`B-38` | `A-46`–`A-50` | No row yet |
+| U19 | 428–434 | `L-48` (first paragraph) | `J-51` | `B-39` | `A-51` | `R-31`, `R-32` |
+| U20 | 436–441 | `L-48` (second paragraph) | `J-52` | `B-40` | `A-52` | No row yet |
 
 The report, the journal and the baseline each cover all twenty units. No
-coverage gap is recorded.
+unit is absent from those readings; that does not establish that every
+finding has a disposition. The claim inventory covers `CONTRACT.md` only,
+not the guide regions incorporated by the surface manifest. Those regions
+need their own coverage and destination map before migration.
+
+The reconciliation must carry `F-02` (rendered boundaries), `F-08` (open
+vocabularies, ordering and nulls), `F-14` (limits of generated structural
+agreement), `F-16` (registry preservation and read-back), and `F-17`
+(internal identity and regeneration) into explicit dispositions. They have
+no dedicated register disposition yet. Removing the denial in `R-23` also
+does not settle `F-09`'s shipped-helper and instrumented-entry-path questions.
+The adjudication's corrections, silences and unresolved meanings remain
+inputs even where a related register row exists.
 
 ## Strain register
 
