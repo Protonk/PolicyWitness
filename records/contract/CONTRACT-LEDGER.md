@@ -27,6 +27,7 @@ artifacts are named by path without links, under the records link rule.
 | 2026-11-09 | 3 | Six further owner-finding passes started, covering every unit not yet inventoried, with the four-slot brief. |
 | 2026-11-09 | 3 | The six passes returned 238 rows. The inventory now has 332 rows over every unit: 240 owned, 45 sourced, 32 split, 15 unowned, as the passes state them. Of the 238 rows asked, the sentence does not state who acts in 159, the boundary in 165, or the consequence in 133. Stage 3's exit condition is met; nothing in it has been run. Stage 4 proceeds by the maintainer's focus items and by the sources the plan names. |
 | 2026-11-10 | 4 | Maintainer supplied a second close reading, of C:165-236 and C:351-355. Coordinator read the source it turns on and opened register rows `R-07` to `R-20`, all proposals. `R-06` also still awaits the maintainer. |
+| 2026-11-10 | 4 | Maintainer supplied a third close reading, of C:3-56, C:100-106 and C:430-434, with a direction for stage 5: the contract is to be generated and remain the public account. Coordinator ran the stamp generator in a tagless scratch clone and opened rows `R-21` to `R-32`. Finding from the run: regeneration with `--release` and no history rewrites every stamp. |
 
 ## Artifacts
 
@@ -545,4 +546,60 @@ reads):
 | R-18 | `K-230-*` to `K-236-*` | Reading; `L-29` | "Native facts may retain absent source timestamps" and the sentences after it present three consequences of failures at different moments as qualifications to "native facts". | Text | **Rewrite** in order of occurrence: missing source timestamps; a clock failure after the dependent activation is stored; a cleanup reap after a failed gate. | Awaiting maintainer |
 | R-19 | `K-351-*` to `K-355-*`, and every "requires" in C:168-238 | Reading; `F-07`; silence 5; answer 7 | The rule that governs the equipment region's requirements is 115 lines later, under the transport heading. "Unsupported or malformed input cannot become a semantic claim" covers four different consequences: bytes and diagnostics kept when decoding fails; a decoded record kept when admission fails; observations kept with integrity issues when later checks find contradictions; and a host reporting failure handled on its own path. | Text, and placement | **Rewrite**: state the four cases by boundary and consequence, and put the publication rule where the requirements are read. Throughout, name the speaker: the host reports, the record carries, the controller checks, the consumer may conclude. | Awaiting maintainer |
 | R-20 | `K-165-2`, `K-352-*` | Reading; `F-07`; coordinator's source reading above | `result.ok` and the exit code follow the host's `finished` outcome and nothing else. A consumer can see success, a host field asserting something, and a controller finding that withholds it, in one envelope. A default test asserts that combination. | Repository, and text that does not say so | **Which side is right**, for the maintainer: state the combination plainly and keep the behavior, or make success reflect the controller's findings. | Awaiting maintainer |
+
+### C:3-56, C:100-106 and C:430-434, identity, stamps and shape goldens
+
+Opened by the maintainer's close reading of 2026-11-10, kept verbatim in
+`records/contract/CONTRACT-MAINTAINER-NOTES.md`. Three removals are the
+maintainer's stated direction and are marked so. Every other disposition is
+the coordinator's proposal.
+
+**The reader's task these passages serve**, in the maintainer's words: to
+let a developer establish which contract applies and find what that
+contract commits to. The rows below are read against that.
+
+**Direction for stage 5, stated in this reading.** `CONTRACT` is to be
+generated and to remain the public account a developer engages with.
+Generation changes where authors edit it and need not reduce the authority
+or completeness of what readers receive. The manifest can own surface
+membership and references as authoring inputs; their substance is rendered
+so the document tells the developer what each surface contains. Reading
+JSON is not to be a prerequisite for discovering what the document covers.
+
+**Run by the coordinator on 2026-11-10**, in a scratch clone of `ec88e53f`
+made with no tags, since deleted. Grade: run.
+
+| Command | Result |
+| --- | --- |
+| `generate_contract_stamps.py --check` | Prints "ok: contract inputs current; stamp derivation not checked (release history unavailable)". Exit 0. |
+| `--check --require-history` | Refuses. Exit 1. |
+| Regeneration with no option | Refuses: "restore annotated release tags before regenerating stamps". Exit 1. |
+| Regeneration with `--release v9.9.9` | Prints "ok: contract surface stamps current", exit 0, and rewrites both tables, replacing every `v0.3.6` stamp with `v9.9.9`. |
+
+The last line contradicts C:54-55, "Regeneration refuses to erase existing
+release stamps without history": the refusal is skipped whenever `--release`
+is given. Release preflight separately requires history; that was not run.
+
+**Read first-hand by the coordinator.** The build runs the plain `--check`
+(`build.sh`). The two tables are the ones in `docs/CONTRACT.md` and
+`docs/PolicyWitness.md` (`generate_contract_stamps.py`, `OUTPUTS`). A shape
+difference raises an assertion failure after the candidate is written, so
+the case fails (`tests/suites/runner_unit/porcelain_replies.py`,
+`replay_shapes_and_sizes`). A surface's hash covers its region text and
+goldens and nothing about behavior (`surface_hash`).
+
+| Row | Claims | References | Strain | Sits in | Disposition | Status |
+| --- | --- | --- | --- | --- | --- | --- |
+| R-21 | `K-3-1` | Reading; `F-10`; `A-01` | "The public contract is the release" is definitive before either term is explained. Development builds have contracts too, and an identity names a contract without stating what it commits to. | Text | **Rewrite**, proposed: open with what the contract governs and how a specimen or a received artifact identifies it. | Awaiting maintainer |
+| R-22 | `K-3-2`, `K-4-*`, `K-5-1` | Reading; `F-10`; `A-D02`; `R-04` | "Assert `contract`" and "names its producer" are different relationships put side by side. "Producer" suggests a process identity or an authenticated origin; the value compared is the reported build contract. "Admission is exact" does not say which values are compared. | Text | **Rewrite**, proposed: the specimen names the contract it requests; a received artifact reports the contract of the build that produced it; state the two values compared at each admission. | Awaiting maintainer |
+| R-23 | `K-5-2` to `K-6-*` | Reading; `F-09`; `F-12`; `A-D15`; answer 15 | "There is no negotiation, implicit acceptance, historical translation or bypass." | Text | **Rewrite: remove.** Maintainer's direction. The positive rule states that a matching assertion is required and what a mismatch does; historical evidence handling is described where it happens. | Direction given; not yet changed |
+| R-24 | `K-8-*` to `K-15-*` | Reading; `F-11`; `A-D03` | Forms of identity, their derivation and where they are reported are combined, and where the identity is reported comes after suffixes, index flags and incidental files. | Text, and placement | **Rewrite**, proposed: first the forms and where a person holding an application reads its identity; derivation separately, as what a builder needs. | Awaiting maintainer |
+| R-25 | `K-17-1` to `K-19-*` | Reading; `F-03`; `F-01`; answers 5 and 12 | "Revisit the corresponding definitions" has no dependable destination. Changing the assertion is presented as the step, when it follows a decision the review may go against. The procedure has no baseline for a specimen asserting a development identity. | Text, and structure | **Rewrite**, proposed, once stage 5 settles where definitions are reached from: the review decides whether the selected contract suits the specimen; changing the string supplies the admission condition only. | Awaiting maintainer |
+| R-26 | `K-24-1` | Reading; `F-01`; `F-04` | "The manifest defines the scope" delegates before saying which scope: the public commitments, each surface's membership, or the inputs whose change moves a stamp. | Text, and structure | **Structure**, per the direction above: the document renders what each surface contains; the manifest is an authoring input. | Stage 5 |
+| R-27 | `K-25-1`, `K-26-1` | Reading | The sentences on transport and installation goldens name maintenance artifacts and what they contain, not the requirements a reader needs. | Text, and structure | **Rewrite**, proposed: give the definitions and their reach; move the account of the artifacts to where maintenance is described. | Awaiting maintainer |
+| R-28 | `K-29-1` to `K-32-1`, the table | Reading; `F-03`; silence 2; answer 5 | "Last changed" has no precise object. The machinery records changes to the definition text and golden inputs and does not discover implementation changes, so the table depends on a maintenance responsibility the text does not state. | Text | **Rewrite**, proposed: say what the column records and state the responsibility plainly. | Awaiting maintainer |
+| R-29 | `K-52-1` to `K-56-1` | Reading; `L-07`; `F-12`; the run above | Without history `--check` exits 0 on a narrower result, and "explicitly reports" is left to carry the difference. "The two tables" are not identified. Preserving stamps is not verifying them. And the stated protection does not hold when `--release` is given. | Text, and repository | **Rewrite**, proposed: state the exit status and the narrower result, name the tables, separate preservation from verification. **Maintainer:** what an ordinary build from a source copy requires of this check; and whether regeneration with `--release` and no history should refuse. | Awaiting maintainer |
+| R-30 | `K-100-*` to `K-106-*` | Reading; `F-13`; `F-12`; `A-10` | "Review and assert" joins a human judgment to an enforced comparison. The next sentence turns to maintainers, and its "so" carries the dependency of the table on their upkeep. | Text | **Rewrite**, proposed: separate what the application establishes from what the review must; state the maintenance dependency as one. **Remove** "There is no separate request counter or compatibility exception for optional additions": maintainer's direction. | Partly direction given; not yet changed |
+| R-31 | `K-430-1` to `K-433-2` | Reading; `L-48`; the source read above | Shape goldens record keys and JSON types; the text does not keep that apart from values, relationships and behavior. It omits that a difference fails the check. "Update the golden" assumes the review's outcome. "Still fail semantic admission" names a mechanism without identifying it. | Text | **Rewrite**, proposed: a shape difference fails a check and writes a candidate; the review decides which side is corrected; required fields are enforced by readers and decoders, separately. **Remove** "There is no separate version-bump classifier": maintainer's direction. | Partly direction given; not yet changed |
+| R-32 | All of the above | Reading | The passages attend to maintaining contract artifacts and leave the reader's route, from the identity they observe to the commitments they act under, implicit. | Structure | **Stage 5**: the route is the organizing requirement for the opening of the rewritten document. | Stage 5 |
 

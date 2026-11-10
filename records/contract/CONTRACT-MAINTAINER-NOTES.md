@@ -68,3 +68,52 @@ C:351–355 finally says that conflicting observations remain publishable with d
 “Unsupported or malformed input cannot become a semantic claim” supplies little help. What input, at which boundary, and which claims? The actual consequences are informative: retained bytes and diagnostics when decoding fails; potentially retained decoded records when admission fails; preserved observations with integrity issues when later checks find contradictions; and distinct handling for a host reporting failure. Calling all of this “cannot become a semantic claim” hides the behavior a consumer must recognize.
 
 There is also a consequential gap between these integrity findings and overall success: `result.ok` currently follows the host’s `finished` outcome independently of the controller’s integrity findings. A consumer can therefore encounter success, a retained affirmative host field and a controller assessment withholding the associated conclusion. These passages need to make that combination intelligible. At present, the reader has to reconstruct which component is speaking, what its statement establishes, and which later qualification governs it.
+
+## C:3-56, C:100-106 and C:430-434, identity, stamps and shape goldens (2026-11-10)
+
+Claims `K-3-*` to `K-56-*`, `K-100-*` to `K-106-*` and `K-430-*` to
+`K-434-*`. Register rows `R-21` to `R-32`.
+
+I’d like to focus on C:3–56, C:100–106 and C:430–434. Taken together, these passages should let a developer establish which contract applies and find what that contract commits to. They currently give considerable attention to maintaining contract artifacts while leaving parts of that reader-facing task implicit.
+
+At C:3–6, “The public contract is the release” sounds definitive before either term has been explained. Development builds also have contracts, so “release” cannot simply mean an annotated release. More fundamentally, an identity names the applicable contract; it does not state that contract’s commitments. The opening should establish what the contract governs and how a specimen or received artifact identifies it.
+
+“Saved specimens assert `contract`” and “every independently arriving envelope, host reply and client capture names its producer” describe different relationships. The specimen names the contract it requests; the received artifacts identify the contract under which they were produced. “Names its producer” can suggest an individual process identity or authenticated origin, while the relevant admission value is the reported build contract. “Admission is exact” becomes useful once the reader knows which values are compared.
+
+I would remove “There is no negotiation, implicit acceptance, historical translation or bypass.” The positive admission rule can establish that a matching assertion is required and describe the consequence of a mismatch. Historical evidence handling has concrete behavior of its own. “Bypass” makes an especially expansive assurance without defining the routes it covers. The contract has enough work describing actual operations without enumerating imagined alternatives around them.
+
+C:8–15 combines the forms of identity, their derivation and their observable locations. The release, development and unbound forms are useful distinctions. So are `--version`, envelope metadata and bundle metadata. But the direct answer about where the identity is reported arrives after source suffixes, Git index flags and incidental files. Those details explain how a build derives an identity; they do not themselves tell someone holding an application which contract governs it.
+
+The developer needs to connect the identity reported by that application with the definitions they are reading. An account of digest construction cannot supply that connection by itself. It is worth distinguishing the information needed to identify the applicable contract from the information needed to build or adjust it.
+
+C:17–20 introduces a reasonable responsibility: review the changed surfaces before updating a specimen’s assertion. “Revisit the corresponding definitions” needs a dependable destination. The developer should be able to reach those definitions through `CONTRACT`, with their relationship to the relevant identity made clear. Changing the assertion also follows a decision: review may establish that the selected contract is unsuitable for the intended specimen. Updating the string supplies the admission condition; it does not establish that the specimen still means what its author intends.
+
+The external-runner instruction is comparatively concrete. It identifies an operational consequence of changing contracts: installed runners need replacement.
+
+At C:24, “The manifest … defines the scope” delegates an essential question before explaining what “scope” means. Is this the scope of public commitments, the membership of each surface, or the inputs whose changes move a stamp? Those are related questions, but they are not interchangeable.
+
+The intended direction is for `CONTRACT` to be generated and to remain the public account a developer engages with. Generation changes where authors edit the contract; it need not diminish the authority or completeness of the document readers receive. The manifest can own surface membership and references as authoring inputs. Their substance should be rendered in a form that tells the developer what each surface contains. Reading JSON should not be a prerequisite for discovering what this document covers.
+
+The sentences about transport and installation goldens have a similar problem. They identify maintenance artifacts containing particular information. Knowing that a golden includes field tags, native widths or reservation limits does not tell the reader what those requirements are. The reader needs the definitions, with a clear account of their reach.
+
+The surface table can provide useful navigation to those definitions. Its “Last changed” column needs a precise object, however. The machinery records changes to the specified definition text and golden inputs. It does not independently discover every implementation change that affects behavior. The table’s usefulness therefore depends on a maintenance responsibility that should be stated plainly.
+
+C:52–56 exposes a related distinction between agreement and verification. Without release history, `--check` validates current artifacts and checks that the tables in `CONTRACT.md` and `PolicyWitness.md` agree. It prints “ok: contract inputs current; stamp derivation not checked” and exits 0. Two tables can agree while carrying the same incorrect historical claim.
+
+“Check” is a reasonable name for the narrower operations actually performed. The consequential question is what successful completion certifies. If the requested operation is verification of the stamps, missing history prevents that operation from completing. A warning in the output would alert a person but leave automation with the same successful status.
+
+There is a practical reason for the existing behavior: ordinary builds invoke this command, including builds from source copies without Git history. Changing the default would change build behavior. That deserves an explicit decision about what those builds require. The prose should state the present exit behavior and the narrower result, rather than relying on “explicitly reports” to convey the distinction. It should also identify “the two tables.” Preserving existing stamps during regeneration is a separate protection; preserving them does not verify them.
+
+At C:100–106, “review and assert” joins a human judgment to an enforced comparison. The application can establish that the assertion matches. The review must establish whether the selected contract gives the specimen’s instructions and observations the meanings its author intends.
+
+The next sentence changes addressee: “Keep the affected normative definition, verified examples and shape goldens current” addresses maintainers. Its “so” carries a substantive dependency. The table identifies affected surfaces because maintainers update the material it hashes. The machinery checks agreement among those artifacts; maintaining their correspondence with behavior remains a responsibility of the project.
+
+I would remove “There is no separate request counter or compatibility exception for optional additions.” The positive identity and comparison rules can state the operative requirement without recalling a different versioning scheme.
+
+C:430–434 gives a useful bounded description of shape goldens: public keys and JSON types. It should keep that meaning distinct from permitted values, relationships and behavioral commitments. “Producer controls collect the current shape and write a candidate when it differs” omits that the difference fails the check. The candidate supports review of that failure.
+
+“Review the difference, update the golden” then assumes that updating the reference is the outcome of review. A difference may instead reveal an unintended producer change. The review decides which side needs correction. Keeping the normative definition and example current is a further task, because agreement on shape does not establish agreement on meaning.
+
+“Missing or mistyped required fields still fail semantic admission” introduces another mechanism without identifying it. Those requirements are enforced by readers and decoders, independently of the maintenance comparison. “Still” provides reassurance about a relationship the paragraph has not explained. “There is no separate version-bump classifier” can be removed.
+
+The positive account is that a shape difference fails a check and produces a candidate whose acceptance requires judgment. The generator and goldens can keep declared artifacts in agreement. The text still needs to give developers a clear route from the identity they observe to the commitments under which they act.
