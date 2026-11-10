@@ -10,16 +10,19 @@ The objective is not a shorter contract or a quota of defects. "This passage is
 necessary, correct and adequately supported" is a result, and the plan records
 it as one.
 
-Two independent readings supply the material. This plan does not perform
-either reading and does not predict what they contain. It defines how their
-artifacts are accepted, compared, filtered, acted on and re-examined, and when
-the work stops.
+Two independent readings supply the material, and both are complete. This plan
+defines how they are compared, filtered, acted on and re-examined, and when the
+work stops. It contains no finding from either reading.
+
+**Where the work stands** is recorded in
+[CONTRACT-LEDGER.md](CONTRACT-LEDGER.md), not here. A coordinator taking over
+reads the ledger's stage log first, then the stage it names in this plan.
 
 ## Contents
 
 - [Participants](#participants)
 - [Subject and baseline](#subject-and-baseline)
-- [Artifacts](#artifacts)
+- [Artifacts and references](#artifacts-and-references)
 - [Stage 1: independent examination](#stage-1-independent-examination)
 - [Stage 2: first adjudication](#stage-2-first-adjudication)
 - [Stage 3: filter findings](#stage-3-filter-findings)
@@ -33,29 +36,38 @@ the work stops.
 
 | Role | Responsibility | Does not |
 | --- | --- | --- |
-| Experienced reader | Technical examination of the contract's structure, normative claims, generation machinery, implementation connections and verification evidence. Later: adjudication (stage 2) and review of changes (stage 5). | See the fresh reader's journal before its own report is accepted. Author the changes it later reviews. |
-| Fresh reader | Sequential interpretation journal: what the reader comes to believe, which statements support each belief, what stays uncertain. Later: answers to questions (stage 2) and a targeted re-reading (stage 5). | Inspect implementation, evaluate the writing, or see the experienced reader's report, the adjudication or the ledger. |
+| Experienced reader | Wrote the technical examination. Next: adjudication (stage 2), later review of changes (stage 5). | Edit its report. Author the changes it later reviews. |
+| Fresh reader | Wrote the interpretation journal. Next: close-out and answers (stage 2), later a targeted re-reading (stage 5). | Inspect implementation, evaluate the writing, or see the report, the adjudication, the ledger or this plan. |
 | Second fresh reader | A reader with no exposure to the original contract or to any artifact of this examination. Used in stage 5 only where independence matters. | Exist before stage 5 decides it is needed. |
-| Coordinator | Executes this plan: accepts artifacts, keeps the coverage record and findings ledger, proposes filter decisions, grounds findings, authors changes, runs verification. | Relay one reader's content to the other outside the defined steps. Substitute its own reading for either reader's; its own observations enter the ledger marked as coordinator-origin. |
-| Maintainer | Decides the items listed under [Decisions reserved for the maintainer](#decisions-reserved-for-the-maintainer). | |
+| Coordinator | Executes this plan: keeps the ledger, drafts the fresh reader's questions, proposes filter decisions, grounds findings, authors changes, runs verification. | Substitute its own reading for either reader's; its own observations enter the ledger marked as coordinator-origin. |
+| Maintainer | Relays tasks to the readers and decides the items under [Decisions reserved for the maintainer](#decisions-reserved-for-the-maintainer). | |
 
-Independence here is kept by discipline, not isolation: the artifacts live in
-this directory and any participant could open them. Each artifact therefore
-states what its author read, and the coordinator records the order of
-exposure.
+The coordinator has no direct contact with the readers. The maintainer hands
+each reader its task, and the reader's output arrives as a file in this
+directory. The task sections in stage 2 are written to be handed over: the
+experienced reader may be given this whole plan; the fresh reader is given
+only the text of its own two task sections.
+
+Independence is kept by discipline, not isolation: every artifact sits in this
+directory and any participant could open it. Each task therefore says what its
+reader may open, and each output says what its author did open.
 
 ## Subject and baseline
 
-The subject is `docs/CONTRACT.md` as last changed by commit `cbf5f298`
-(441 lines). Before stage 2 and again before any revision, run
+The subject is `docs/CONTRACT.md` as last changed by commit `cbf5f298`:
+441 lines, blob `bfd2ededcfdeaf801b3f179e38886e9baa55fb7f`. Both readers read
+these bytes. Before each stage, run
 
 ```sh
-git log --oneline cbf5f298..HEAD -- docs/CONTRACT.md docs/contract_surfaces.json
+git rev-parse HEAD:docs/CONTRACT.md
+git log --oneline cbf5f298..HEAD -- docs/CONTRACT.md docs/contract_surfaces.json docs/PolicyWitness.md
 ```
 
-Other work lands in this repository while the examination runs. If the command
-prints anything, identify the affected units below and either have them
-re-examined or record that the artifacts describe the older text.
+Other work lands in this repository while the examination runs. If the blob
+differs or the log prints anything before stage 4 begins, identify the affected
+units below and either have them re-examined or record in the ledger that the
+artifacts describe the older text. From stage 4 on, the examination's own
+commits appear there; anything else is treated the same way.
 
 The coverage units follow the document's own structure. Line numbers are those
 of the baseline; the heading or region marker is the durable name.
@@ -93,112 +105,122 @@ surface as its `docs/CONTRACT.md` region together with the
 The examination's subject is the contract document; grounding a finding about
 a surface reads the companion regions as part of that surface's definition.
 
-## Artifacts
+## Artifacts and references
 
-All live in `records/contract/`. Under the
-[records link rule](../AGENTS.md), only this plan links to them.
+All artifacts live in `records/contract/`. Under the
+[records link rule](../AGENTS.md), only this plan links to them; the other
+artifacts name one another by path without a link.
 
-| Artifact | Author | Created | Changes after acceptance |
+| Artifact | Author | State | Changes after acceptance |
 | --- | --- | --- | --- |
-| Experienced reader report | Experienced reader | Stage 1 | None |
-| Fresh reader journal | Fresh reader | Stage 1 | None |
-| `CONTRACT-ADJUDICATION.md` | Experienced reader | Stage 2 | Pending entries are completed once; nothing else is rewritten |
-| `CONTRACT-READER-RESPONSES.md` | Fresh reader | Stage 2 | None |
-| `CONTRACT-LEDGER.md` (coverage record and findings ledger) | Coordinator | Stage 2, grows through stage 6 | Rows gain decisions and status; reasons are never deleted |
+| [CONTRACT-FIRST-READER-REPORT.md](CONTRACT-FIRST-READER-REPORT.md), the **report** | Experienced reader | Accepted, `c87bfd80` | None |
+| [FRESH-ENCOUNTER-JOURNAL.md](FRESH-ENCOUNTER-JOURNAL.md), the **journal** | Fresh reader | Accepted, `214dddd7` | None |
+| [CONTRACT-LEDGER.md](CONTRACT-LEDGER.md): stage log, acceptance record, coverage record, findings ledger | Coordinator | Open | Rows gain decisions and status; reasons are never deleted |
+| `FRESH-ENCOUNTER-ADDENDA.md` | Fresh reader | Stage 2 | Append-only: a committed section is not edited |
+| `CONTRACT-ADJUDICATION.md` | Experienced reader | Stage 2 | Pending items are completed once; nothing else is rewritten |
 | Second-examination notes | Each second examiner | Stage 5 | None |
 
-One report, `CONTRACT-FIRST-READER-REPORT.md`, was already committed
-(`c87bfd80`) when this plan was written. It was not opened in preparing the
-plan. Which role it fills, and the path of the other reader's artifact, are
-bound when the reports are introduced; record both paths and their accepting
-commits at the top of the ledger.
+The report's file name and title say "first reader". It is the experienced
+reader's technical examination. The fresh reader's artifact is the journal.
 
 Acceptance is a commit. An accepted artifact is not edited afterward: a
-correction is recorded in the adjudication or the ledger and points at the
-passage it corrects. `git log -- <path>` then shows that the original stands.
+correction is recorded in the adjudication, the addenda or the ledger and
+points at the passage it corrects. `git log -- <path>` then shows that the
+original stands.
 
 No other administrative artifacts are planned. If a need for one appears,
 state the need in the ledger before creating it.
 
+References used across the artifacts:
+
+| Form | Refers to |
+| --- | --- |
+| `C:N`, `C:N-M` | Lines of `docs/CONTRACT.md` at the baseline |
+| `U01`–`U20` | Coverage units, above |
+| `L-01`–`L-48` | The report's line groups (its section 6) |
+| `F-01`–`F-20` | The report's findings (its section 7) |
+| `J-01`–`J-52` | Journal entries, by the journal's own section numbers |
+| `A-01`–`A-52`, `A-S1`… | Adjudication entries; `A-nn` adjudicates `J-nn`, `A-Sn` a silence |
+| `R-01`… | Ledger rows |
+
 ## Stage 1: independent examination
 
-The two readings are already assigned; this stage only defines what the
-coordinator checks before accepting each artifact. The checks are about
-usability, not about whether the conclusions are right.
+Complete. The ledger's acceptance record gives the result of each check below
+for each artifact, and how each shortfall is handled. The criteria are kept
+here because the same checks apply to anything later accepted from a reader.
 
-**Experienced reader report** is complete and usable when:
+A reader's artifact is usable when it names the contract revision it read;
+covers every unit or says which it did not and why; can be cited entry by
+entry; says what its conclusions rest on; says what its author opened; and
+arrives in a commit that changes nothing else. The report additionally says
+what it did not verify. The journal additionally runs in document order,
+gives each belief with its supporting statement and remaining uncertainty,
+and leaves an earlier entry in place when a later one revises it.
 
-- it names the contract revision it examined;
-- every unit U01–U20 is addressed, or is listed as not examined with the
-  reason;
-- each assessment can be cited: it identifies the contract passage and has, or
-  can be given without rewriting, a stable reference (section number, heading
-  or identifier);
-- for each claim it assesses, it says what the assessment rests on and of what
-  kind: source read, test read, command run and observed, generated artifact
-  compared, or inference;
-- it states what it did not verify and why;
-- it says what the author read besides the contract and the repository, and in
-  particular that the journal was not among it;
-- its commit changes nothing but the report.
-
-**Fresh reader journal** is complete and usable when:
-
-- it names the contract revision it read;
-- its entries run in document order to the end of the contract, and any place
-  the reader stopped, skipped or went back is visible;
-- each entry gives the belief formed, the statement or statements that support
-  it (quoted or located precisely enough to find), and the reader's
-  uncertainty;
-- a belief revised later appears as a later entry, with the earlier one left in
-  place;
-- it says what else the reader opened (a linked document, for instance), so a
-  belief formed from another document can be told apart from one formed from
-  the contract;
-- its commit changes nothing but the journal.
-
-If an artifact falls short, do not repair it by hand. Record the gap against
-the affected units in the coverage record. The same reader may supply an
-addendum as a separate dated section or file, provided that happens before
-that reader is exposed to anything further. After exposure, a gap is filled in
-the next stage and labeled as post-exposure work.
-
-Journal content outside the fresh reader's role (remarks on implementation, or
-on the quality of the writing) stays in the journal. It is listed in the
-adjudication as out of role and is not adjudicated as an interpretation.
-
-**Exit:** both artifacts accepted and committed; the experienced reader's
-report was accepted before that reader received the journal; the ledger file
-exists with the artifact paths, accepting commits and an empty coverage table
-of twenty rows.
+A shortfall is not repaired by hand. It is recorded against the affected
+units. The same reader may fill it in an addendum, provided that happens
+before that reader is exposed to anything further; after exposure, the gap is
+filled in the next stage and labeled as post-exposure work.
 
 ## Stage 2: first adjudication
 
 This stage is read-only with respect to the tree. Its commits add or complete
-the adjudication, the reader responses and the ledger, nothing else.
+the adjudication, the addenda and the ledger, and nothing else.
 
-### The experienced reader's first subsequent task: adjudicate the journal
+Order of work:
+
+1. The experienced reader's task and the fresh reader's close-out start
+   together. Neither needs the other's output to begin.
+2. The coordinator accepts the close-out and passes it to the experienced
+   reader, who adjudicates the journal's uncertainties from it.
+3. The experienced reader delivers the adjudication with its "pending reader
+   response" items and its silences list.
+4. The coordinator drafts questions from those two lists. The fresh reader
+   answers.
+5. The experienced reader completes the pending items and adds an entry for
+   each silence.
+6. The coordinator fills the coverage record.
+
+### Experienced reader, first task: adjudicate the journal
 
 **Purpose.** Examine each of the fresh reader's conclusions against the
-contract text and against the technical findings the experienced reader has
-already established.
+contract text and against the technical findings the report already
+establishes, and test the report's own expectations about readers against
+what a reader actually recorded.
 
-**Inputs.** The accepted journal; the reader's own accepted report; the
-contract at the baseline; the repository, read-only.
+**May open.** The journal; the fresh reader's addenda as they arrive; the
+report; the contract at the baseline; the repository, read-only; this plan
+and the ledger.
 
-**Unit of work.** One belief or recorded uncertainty in the journal. Entries
-that state the same belief may be adjudicated once, citing every entry.
+**Begin with a declaration.** State whether the journal, or any account of
+it, was seen before this task. The report lists what its author read and the
+journal is not on the list; the declaration makes that explicit.
 
-**For each belief, answer two questions in this order.**
+**What the journal contains.** Each of its 52 entries cites a line range and
+answers three questions: what the reader now believes, what supports the
+belief, and what remains uncertain. Within an entry there are three kinds of
+item, and they are adjudicated differently:
+
+| Kind | How to recognize it | How to adjudicate |
+| --- | --- | --- |
+| Restatement | The reader says what the passage states. Most of each entry. | Once per entry. Check for drift: a restatement that is stronger, weaker, broader or narrower than the text. List each drift as its own item; otherwise record "faithful". |
+| Inference | The reader marks it: "I infer", "I expect", "I therefore", "I would not", "I do not take", and the like. | Individually. These are the reader's own conclusions and the main object of this task. |
+| Uncertainty | The "What remains uncertain?" paragraph. | From the fresh reader's close-out, which gives the end-of-document status of each. Until it arrives, leave these items open. |
+
+**For each restatement, drift and inference, answer two questions in this
+order.**
 
 1. *Reading: does the contract text support the belief?* Judge this from the
-   text alone, before consulting implementation knowledge. Cite the passage the
-   reader relied on and any other passage that bears on it.
+   text alone, before consulting implementation knowledge. Cite the passage
+   the reader relied on and any other passage that bears on it.
 2. *Grounding: where the belief tracks something the contract states, is that
-   statement established?* Answer from the accepted report, citing it. If the
-   report does not cover the point, either inspect now and label the result
-   "new inspection, post-exposure", or leave the grounding undetermined and
-   say what would determine it.
+   statement established?* Answer from the report by citing the `L-nn` verdict
+   and any `F-nn` it names, and carry forward the report's evidence class and
+   its † mark where the support rests on delegated tracing. If the report does
+   not cover the point, either inspect now and label the result "new
+   inspection, post-exposure", or leave the grounding undetermined and say
+   what would determine it. Run no experiment in this stage; the report's
+   section 9 lists experiments, and they belong to stage 4.
 
 **Then assign one class.**
 
@@ -211,8 +233,11 @@ that state the same belief may be adjudicated once, citing every entry.
 | Implementation discrepancy | The belief is a faithful reading of a contract statement that the examined source or observed behavior contradicts. |
 | Unresolved question | The reading or the grounding cannot be settled with what is available. State what would settle it. |
 
-For a recorded uncertainty, say whether the contract settles the question and
-where, or whether the contract leaves it open.
+**For each uncertainty still open at the end of the document** (from the
+close-out), say which holds: the contract settles it and the reader missed
+where; the contract defers it to a document it names; another repository
+document settles it and the contract does not point there; or nothing in the
+repository's documentation settles it.
 
 **Separating "mistaken" from "invited".** The adjudicator knows the
 implementation, and that knowledge makes text look clearer than it is. Class a
@@ -223,93 +248,168 @@ repository knowledge, the reading was invited. When in doubt, class it as
 invited and record the doubt; stage 3 can still dismiss it, but a finding
 dismissed here is lost.
 
-**Also record, in closing sections of the adjudication:**
+**Two cautions specific to this journal.**
 
-- *Silences.* For each unit, any commitment in the contract that a reader
-  needs to carry away and that no journal entry reflects. A journal shows the
-  beliefs a reader formed; it cannot show the ones the reader failed to form.
-  Keep this to commitments, in the adjudicator's judgment, not every sentence.
-- *Pending reader input.* Entries that cannot be classed without knowing more
-  precisely what the reader believed. Leave their class as "pending reader
-  response" and say what is needed.
-- *Reliance.* For each finding in the accepted report, the journal entries, if
-  any, that show the reader relying on the affected statement.
-- *Corrections.* Anything the adjudication shows to be wrong or missing in the
-  accepted report. The report is not edited.
-- *Not adjudicated.* Journal entries left out, with the reason (out of role,
-  duplicate of another entry).
+- The fresh reader read the root, `docs/` and `.tmp/` guidance before the
+  contract and says so. The root guidance states several of the project's
+  principles about evidence. Where a journal belief matches one of them, the
+  journal cannot show that the contract alone produced it; say so in the item.
+- The fresh reader followed none of the contract's links. A belief the reader
+  held back because a linked document was unread is an uncertainty, not a
+  misreading.
 
-**Output.** `CONTRACT-ADJUDICATION.md`: one identified entry (`A-01`, …) per
-belief or group, each with the journal references, the contract passage, the
-belief in the reader's words, the reading answer with its text, the grounding
-answer with its source, and the class.
+**Closing sections of the adjudication.**
 
-**Done when** every journal entry maps to an adjudication entry or to the
-not-adjudicated list, and the closing sections exist (empty ones say so).
+- *Expectations and reliance.* The report was written without the journal and
+  says, in each finding's interpretation and in the "Consequence for a fresh
+  reader" column of its section 2, what a reader will conclude. For each of
+  `F-01` to `F-19`, state the expected belief in one sentence and what the
+  journal shows: the reader **formed** it (cite `J-nn`), the reader
+  **avoided** it (cite `J-nn`), or the journal is **silent**. Also cite any
+  entry that shows the reader relying on the statement the finding concerns.
+  Do not revise the report's rating; the comparison stands beside it.
+- *Silences.* Beliefs that matter to what a reader would do and that the
+  journal neither states nor rules out. Every "silent" expectation above
+  belongs here; add any other the adjudicator judges a reader needs. For each,
+  describe a situation in which the belief would show. A journal records the
+  beliefs a reader formed; it cannot record the ones the reader failed to
+  form, and this list is how they are reached.
+- *Pending reader response.* Items that cannot be classed without knowing more
+  precisely what the reader believed. Say what is needed.
+- *Corrections.* Anything the adjudication shows to be wrong or missing in
+  the report. The report is not edited.
+- *Not adjudicated.* Journal content left out, with the reason.
 
-### The fresh reader's first subsequent task: answer questions from the text
+**Output.** `CONTRACT-ADJUDICATION.md`. One entry per journal entry, `A-nn`
+for `J-nn`, with lettered items inside it. Each item gives the belief in the
+reader's words (quoted or closely paraphrased), the reading answer with its
+text, the grounding answer with its source, and the class. An entry whose
+restatement is faithful and fully grounded, with no inference or open
+uncertainty, can be three lines.
 
-**Purpose.** Supply the two things adjudication cannot get from the journal:
-what the reader meant where an entry is ambiguous, and what the reader
-believes about commitments the journal passed over in silence.
+**Done when** all 52 journal entries have an adjudication entry; every item
+has a class or is marked pending; the declaration and the five closing
+sections exist, and an empty section says it is empty.
 
-**Entry.** The adjudication draft exists. The coordinator turns its "pending
-reader input" and "silences" lists into questions. Each question asks what the
-reader believes, or what the reader would expect or do in a described
-situation. A question does not state or imply the adjudicator's answer, does
-not mention implementation, and does not reveal how any journal entry was
-classed. If both lists are empty, record that in the ledger and skip the task.
+**After the fresh reader's answers arrive.** Complete each pending item once.
+Add an entry `A-Sn` for each silence, classed from the answer. Mark every
+item that rests on an answer as "prompted"; see how answers are weighed,
+below.
 
-**Inputs.** The questions; the reader's own journal; the contract at the
-baseline. Nothing else from this examination.
+### Fresh reader, first task: close out the journal
 
-**Output.** `CONTRACT-READER-RESPONSES.md`: for each question, the answer, the
-contract statement it rests on, whether the answer came from what the reader
-remembered of the first reading or from re-reading now, and the reader's
-uncertainty.
+This section is handed to the fresh reader as written.
 
-**How the answers are used.** The experienced reader completes the pending
-entries, and adds an entry for each silence whose answer shows a belief worth
-adjudicating. Answers are prompted beliefs. A correct prompted answer shows
-that the text can yield the belief when the reader is pointed at the topic; it
-does not show that the text yields it unprompted. Mark entries that rest on
-responses so later stages weigh them accordingly. An answer that required a
-search through the document is itself an observation about interpretive
-burden.
+**Purpose.** The journal records your understanding passage by passage. This
+task records where that understanding stood when you finished the document.
+
+**You may open** your journal and `docs/CONTRACT.md`. Do not open anything
+else in the repository, any other file in `records/contract/`, or any
+document the contract links to. Do not inspect implementation or tests, and
+do not comment on the quality of the writing or suggest changes.
+
+**Record three things.**
+
+1. *Reading conditions.* The revision of the contract you read: the output of
+   `git hash-object docs/CONTRACT.md` if the file is unchanged since, or else
+   the commit you read it at. Whether you read the raw Markdown or a rendered
+   view. Whether you read in one pass or returned to earlier passages, and
+   which. Everything you opened besides the contract.
+2. *Uncertainties.* Go through each entry's "What remains uncertain?"
+   paragraph. For each distinct uncertainty, give its status at the end of
+   the document:
+   - **answered**: a later passage settled it. Cite the lines.
+   - **deferred**: the contract points to a named document for it, which you
+     did not open. Name the document.
+   - **open**: the contract neither settles it nor says where to look.
+
+   For each deferred or open item, say what you could not do with confidence
+   because of it, if anything: for instance write or reuse a specimen, read
+   a reply or envelope, install or remove a runner.
+3. *Changes of mind.* Any belief recorded in the journal that you held
+   differently by the end of the document. Give the entry, the earlier
+   belief, the later one, and the passage that changed it. The journal itself
+   stays as it is.
+
+**Output.** A section titled "Close-out" in a new file,
+`records/contract/FRESH-ENCOUNTER-ADDENDA.md`, citing journal entries by
+their section numbers. Your commit changes nothing but that file.
+
+**Done when** every "What remains uncertain?" paragraph in the journal has
+been accounted for, including those that say nothing consequential remains.
+
+### Fresh reader, second step: answer questions from the text
+
+This section is handed to the fresh reader with the questions.
+
+**Purpose.** These questions ask about situations your journal does not
+cover, or about entries where what you believed is not clear to another
+reader. They are not a test, and a question does not mean your journal was
+wrong on the point.
+
+**You may open** your journal, your close-out and `docs/CONTRACT.md`, under
+the same limits as before.
+
+**For each question, record** your answer; the contract statement it rests
+on; whether the answer came from what you remembered of your first reading or
+from re-reading now, and how much of the document you had to search; and how
+sure you are. "The contract does not say" is an answer.
+
+**Output.** A section titled "Answers" appended to
+`records/contract/FRESH-ENCOUNTER-ADDENDA.md`. The "Close-out" section is not
+edited.
+
+### Coordinator: questions and how answers are weighed
+
+Draft one question for each silence and each pending item. A question
+describes a situation and asks what the reader believes, expects or would do.
+It does not state or imply the adjudicator's answer, does not mention
+implementation, and does not reveal how any journal entry was classed. Where
+two readings are in play, describe the situation so that neither is
+suggested. The maintainer sees the questions before they go. If both lists
+are empty, record that in the ledger and skip the step.
+
+Answers are prompted beliefs. A correct prompted answer shows that the text
+can yield the belief when the reader is pointed at the topic; it does not
+show that the text yields it unprompted. An answer that needed a search
+through the document is itself an observation about interpretive burden.
+Items that rest on answers are marked so later stages weigh them accordingly.
 
 ### Coverage record
 
-After adjudication, the coordinator fills the coverage table in the ledger,
-one row per unit:
+The ledger's coverage table already maps each unit to the report's line
+groups and the journal's entries. After adjudication the coordinator fills
+its last two columns: the adjudication entries, and the result, which is
+either "no finding: supported and established" or the ledger rows of the
+findings. A row that reads "no finding" is a conclusion of the examination,
+with references behind it, not an absence of work. The report's `F-20` and
+its section 8 are sources for those rows.
 
-| Column | Content |
-| --- | --- |
-| Unit | U01–U20 |
-| Experienced | Report reference, or "not examined: reason" |
-| Fresh | Journal entry range, or "not reached" |
-| Adjudicated | Adjudication entry IDs |
-| Result | "No finding: supported and established", or the ledger IDs of findings |
-
-A row that reads "no finding" is a conclusion of the examination, with
-references behind it, not an absence of work.
-
-**Exit:** adjudication complete with no pending entries; coverage table
-filled; both original artifacts unchanged since acceptance.
+**Exit:** the adjudication has no pending items; the coverage table is
+filled; the report and journal are unchanged since acceptance.
 
 ## Stage 3: filter findings
 
-The ledger receives one row per underlying issue, from three sources:
-adjudication entries in any class other than "supported interpretation";
-findings in the experienced reader's report, including observations about
-unnecessary complexity, misleading statements and the generation machinery
-that have no counterpart in the journal; and corrections or observations
-recorded by the coordinator. Merge rows that describe the same issue and keep
-every source reference.
+The ledger receives one row per underlying issue, from four sources:
 
-Each row carries: an ID (`F-01`, …); the units; the source references; the
-finding in one sentence; its class; the filter decision and reason; and, as
-the row advances, the candidate layer, grounding, change, second examinations
-and status. An index table plus a short block per pursued finding is enough.
+- adjudication items in any class other than "supported interpretation",
+  and silences whose answers show a belief worth a row;
+- the report's findings `F-01` to `F-19`;
+- qualifications in the report's line-group verdicts (`L-nn`) that no `F-nn`
+  carries. Sweep every verdict that is not plainly "Supported" for these;
+- uncertainties the close-out leaves open or deferred that kept the reader
+  from acting, and observations recorded by the coordinator.
+
+Merge rows that describe the same issue and keep every source reference. Each
+row carries: an ID (`R-01`, …); the units; the source references; the finding
+in one sentence; its class; the filter decision and reason; and, as the row
+advances, the candidate layer, grounding, change, second examinations and
+status. An index table plus a short block per pursued finding is enough.
+
+The report gives each finding a provisional "belongs to" layer and a
+consequence rating made before the journal existed. Both are inputs to the
+row. The decision is made here, with the adjudication's "formed, avoided or
+silent" result beside the report's rating.
 
 ### Decision procedure
 
@@ -362,8 +462,9 @@ the pursue set.
 
 ## Stage 4: ground and revise
 
-Nothing in this stage is prescribed in advance of findings. It defines how a
-pursued finding is established and how an intervention is chosen and checked.
+Nothing in this stage is prescribed in advance of the filter. It defines how
+a pursued finding is established and how an intervention is chosen and
+checked.
 
 ### Ground
 
@@ -371,13 +472,20 @@ For each pursued row, write the claim at issue as one sentence that could be
 false. Then establish it with evidence suited to the kind of claim, and record
 the evidence and its grade in the row.
 
-| Grade | Meaning |
-| --- | --- |
-| Observed | A command or case was run in this examination and the relevant observation was inspected. Record the command, source commit and output location. |
-| Test read | A test's assertion was read and traced to the connection in question, without a run in this examination. Reuse of an earlier result follows [the evidence rules](../../tests/AGENTS.md#evaluate-and-reuse-evidence). |
-| Source read | The mechanism was located and read in source. |
-| Generated agreement | Generated artifacts agree with one another or with their input. |
-| None | Nothing found. |
+| Grade | Meaning | The report calls this |
+| --- | --- | --- |
+| Run | A command or case was run in this examination and the relevant observation was inspected. Record the command, source commit and output location. | (none; the report ran four read-only checks) |
+| Retained run | A case's recorded result in a retained archive. It establishes what that build did under that commit's test sources. Say where the archive is and that it is local. | Runtime |
+| Test read | A test's assertion was read and traced to the connection in question, without a run. Reuse of an earlier result follows [the evidence rules](../../tests/AGENTS.md#evaluate-and-reuse-evidence). | Observed |
+| Source read | The mechanism was located and read in source. | Observed |
+| Delegated read | Source or test text read by a delegated pass and not re-read by the report's author. | Observed, marked † |
+| Generated agreement | Generated artifacts agree with one another or with their input. | |
+| None | Nothing found, or a conjecture awaiting an experiment. | Hypothesis |
+
+A row whose grounding rests on a delegated read is re-read by whoever grounds
+it before a change is built on it. The report's section 9 lists experiments
+its author identified and did not run; each is a candidate grounding step for
+the row it concerns, and none is required unless the row is pursued.
 
 Choose by claim:
 
@@ -469,7 +577,7 @@ interpretation-layer decision.
 ### Revise
 
 - One finding, or one tightly coupled group, per commit. The commit message
-  names the ledger IDs.
+  names the ledger rows.
 - No incidental edits. Something noticed while editing becomes a new ledger
   row.
 - Document edits follow the [root guidance](../../AGENTS.md#documentation) and
@@ -552,14 +660,19 @@ The reviewer did not author the change.
 **Purpose.** Determine whether the revised material communicates its intended
 meaning without introducing consequential new misunderstandings.
 
-The original fresh reader has read the original contract, kept a journal and
-answered questions. That reader is no longer fresh, and the two available
-readings are used for different things:
+The original fresh reader has read the original contract, kept a journal,
+closed it out and answered questions. That reader is no longer fresh, and the
+two available readings are used for different things:
 
 | Reading | By | Establishes | Does not establish |
 | --- | --- | --- | --- |
 | Targeted re-reading of the revised passages in context, journaled as before, without being told how earlier entries were classed | Original fresh reader | Whether the specific confusion that reader recorded is resolved for that reader | That the text is clear to someone meeting it for the first time |
 | Sequential reading of the whole revised contract, journaled as before | Second fresh reader, given nothing from this examination | What a new reader comes to believe from the revised text, including misunderstandings a change introduced elsewhere | That a misunderstanding absent from this journal would have appeared without the change; one reader is one sample |
+
+A second fresh reader's reading conditions are set deliberately and recorded:
+which guidance files it reads beforehand, and whether it reads raw or
+rendered text. Matching the original reader's conditions makes the two
+journals comparable.
 
 **Entry conditions for the second fresh reader.** Use one when a pursued
 finding was a reasonably invited misunderstanding with a consequence rated
@@ -588,10 +701,10 @@ of rounds is required or forbidden.
 The examination is complete when all of these hold:
 
 1. **Examination is complete.** Every unit's coverage row is filled, with any
-   gap stated and accepted by the maintainer. Both original artifacts are
+   gap stated and accepted by the maintainer. The report and journal are
    unchanged since acceptance.
 2. **Findings are adjudicated and decided.** The adjudication has no pending
-   entries. Every ledger row is in one of these states, with its reason:
+   items. Every ledger row is in one of these states, with its reason:
    dismissed; deferred, with a reopening condition; closed without change;
    changed and verified; handed off, with its destination; open question, with
    what would settle it and why that is not available now.
@@ -614,7 +727,8 @@ home that outlives this plan.
 
 ## Decisions reserved for the maintainer
 
-- Accepting a coverage gap.
+- Accepting a coverage gap or an acceptance shortfall.
+- The questions sent to the fresh reader.
 - Confirming the set of findings to pursue; dismissing an implementation
   discrepancy or unsupported claim without grounding.
 - Any interpretation-layer decision: which of two readings the contract means.
@@ -629,12 +743,14 @@ home that outlives this plan.
 
 ## When to reconsider this plan
 
-- An accepted artifact cannot be cited entry by entry, so adjudication cannot
-  map onto it.
-- The contract or the surface manifest changes on `main` during the
-  examination in a way that affects more than a few units.
+- An output from a reader cannot be cited item by item, so the next step
+  cannot map onto it.
+- The contract, the surface manifest or the guide's contract regions change
+  on `main` during the examination in a way that affects more than a few
+  units.
 - Findings point at the surface structure itself (which surfaces exist, what
   their regions contain) and not at passages within it. That is a design
-  question this procedure is too small to carry.
+  question this procedure is too small to carry; take it to the maintainer
+  before stage 4 rather than as a series of wording changes.
 - The volume of pursued findings makes one ledger file and one batch of second
   examinations unworkable.
