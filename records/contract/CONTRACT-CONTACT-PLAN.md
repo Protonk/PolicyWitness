@@ -23,7 +23,9 @@ reuse.
 
 **Where the work stands** is recorded in
 [CONTRACT-LEDGER.md](CONTRACT-LEDGER.md), not here. A coordinator taking over
-reads the ledger's stage log first, then the stage it names in this plan.
+reads the ledger's stage log, then the staging plan for ongoing work. The
+numbered examination stages below supply historical context and the retained
+reader brief; they do not restart the superseded execution sequence.
 
 ## Contents
 

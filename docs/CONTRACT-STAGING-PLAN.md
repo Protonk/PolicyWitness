@@ -16,33 +16,39 @@ this outline draws on. Register rows are cited below as `R-nn`.
 | Stage | What it does | Changes product behavior | Ends with |
 | --- | --- | --- | --- |
 | One | Restructures the contract so that it is a complete and truthful account of the implementation as it is, including the parts we do not want | No | A release |
-| Two | Changes the implementation where the stage one contract could not state a rule simply | Yes | Every known gap removed or confirmed as intended |
+| Two | Resolves behavioral gaps against the intended public commitments | Where a change is decided | Every known gap resolved, including evidence gaps |
 | Three | Settles the contract on the changed implementation | No | A release |
-| Four | Edits the user guide heavily, without restructuring it, to agree with the settled contract | No | A guide that explains the contract it ships beside |
+| Four | Edits and locally consolidates the guide to agree with the settled contract | No | A guide that explains the contract it ships beside |
 
 The order carries the method. Writing the contract truthfully against the
-current implementation is what finds the places worth changing: wherever the
-true sentence needs a case split or an awkward qualification. Stage two then
-has a list made by stage one, and stage three is a revision of a sound
-structure, not a second rewrite.
+current implementation exposes commitments that need review. An awkward
+qualification is a reason to investigate, not proof of a defect: a case split
+may express a necessary distinction. Stage two draws on those findings and
+the intended public meanings. Stage three settles the account of the resulting
+behavior.
 
 ## Terms
 
-- **Rule.** One requirement the contract states: something a component
-  checks, produces or refuses.
-- **Particulars.** The four things a rule owes its reader: who acts, what is
-  compared with what, at which boundary, and with what consequence. A rule
-  whose particulars cannot be given is not yet stated.
-- **Known gap.** A paragraph that says what is true now about behavior that
-  is expected to change. The architecture, build and worker documents
-  already use this form, with an index.
+- **Rule.** One public commitment about an action, a produced record or an
+  assessment. Its responsible component, applicability and consequences
+  are explicit.
+- **Particulars.** Who owes the behavior, when and where it applies, what
+  operation or relationship is required, and the scope of its effects.
+  Comparisons identify their operands. A rule whose particulars cannot be
+  given is not yet stated.
+- **Known gap.** A labelled unresolved item. A behavioral gap states current
+  behavior whose intended commitment needs a decision. An evidence gap
+  states what has not been established or tested. Missing evidence does not
+  itself imply that the product should change; an unverified behavior is
+  not presented as an established commitment. Each gap identifies its kind.
 - **Surface.** A named part of the contract with its own stamp in the
   surface table.
 - **Node.** One item of the contract's source: a surface, a subject, a
   definition, a field, a rule, a condition, an outcome, an effect, a known
   gap or an example. The contract is a tree of nodes.
-- **Owner.** The source that implements a rule and the check that would
-  fail if the rule were false, recorded beneath the node they support.
+- **Owner.** Supporting source and a named check, with the assertion that
+  check makes, its limits and its evidence grade, recorded beneath the
+  supported node. A cited check need not cover every part of the rule.
 - **Free-text item.** A condition, dependency or effect written as a
   sentence and not yet as an expression.
 
@@ -62,9 +68,10 @@ structure, not a second rewrite.
 - **A definition settles a family of cases.** Disputes about validity are
   resolved by stating what a record means and where the rule applies, not
   case by case and not by picking the strictest implementation.
-- **The contract binds PolicyWitness.** Every rule's subject is one of its
-  components. Accepted input is stated as what PolicyWitness accepts and
-  what it refuses, and a limit on what an output establishes is stated as a
+- **The contract binds PolicyWitness.** Every rule has a responsible
+  component and identifies the records or actions it governs. Accepted input
+  is stated as what PolicyWitness accepts and refuses, and a limit on what
+  an output establishes is stated as a
   limit on its commitment, not as a duty of the person reading the output.
 - **Meaning lives in the contract.** A field's meaning, the significance of
   its absence and what its values support are in the contract. The guide
@@ -79,9 +86,11 @@ structure, not a second rewrite.
 
 ## The contract's source and generator
 
-`docs/CONTRACT.md` is generated. Its source lives in `docs/contract/`,
-which also holds the generator and the guidance for maintaining both. The
-model is built in stage one and firmed up in stage three.
+Stage one will make `docs/CONTRACT.md` a generated document, authored under
+`docs/contract/` beside its generator and maintenance guidance. Currently
+only the stamp table is generated; the directory and full-document generator
+have not been built. The model is built in stage one and firmed up in stage
+three.
 
 **One hierarchy.** The contract is a tree, authored as Markdown, one file
 for each surface. A heading is a node, with a type and an identifier taken
@@ -90,7 +99,9 @@ kept in step with the document's.
 
 **The tree's shape carries the relationships.** A relationship that is
 subsidiary to another is written beneath it, not added as one more
-attribute on every item.
+attribute on every item. Nesting expresses ownership. Dependencies across
+subjects or surfaces use explicit references, without duplicating the
+referenced definition under each dependent rule.
 
 | A node of type | Holds |
 | --- | --- |
@@ -100,9 +111,11 @@ attribute on every item.
 | effect | what it prevents or withholds, and what it leaves standing |
 | any of these | a known gap, an example, or an owner |
 
-What is stated on a node holds for the nodes beneath it unless they say
-otherwise. Who acts, at which boundary, and which kinds of report a rule
-applies to are each stated once, at the level they belong to.
+Shared context may be stated on a parent. The spike defines which properties
+inherit, how an override works and how the effective value is rendered. An
+example or evidence citation does not become an obligation through nesting.
+Applicability combines run state, admission state and record presence as the
+rule requires; a parent default must not silently widen a child's reach.
 
 A rule is one of three kinds: a component acts, reports or checks. The
 kinds and the node types are a working set, adjusted as drafting gives
@@ -114,6 +127,7 @@ keyed lines in a constrained form. A sketch, not a syntax:
 ```
 ### The host activates only through a satisfied gate   {gate.activation: acts}
 who: runner host        where: execution
+when: a reached gate has been evaluated
 requires: report.phases[p].termination_gate.outcome = satisfied
 
 When a gate is not satisfied the host does not activate the phase...
@@ -123,12 +137,14 @@ cancels: every later phase in the schedule
 leaves: records reported before the gate
 ```
 
-**Four relationships have a defined expression**, written the same way
-wherever they occur: a reference to an object, as a path into a defined
-record; a condition, as an object, a relation from a closed list, and an
-object or a literal; a dependency, as an assertion or action and the
-conditions it requires; and an effect, as a component, a verb from a closed
-list, an object, and what the effect prevents and leaves.
+**Four relationships need defined expressions:** references to defined
+records, fields, actions and events; conditions on them; dependencies; and
+effects with their scope. The proposal's relations and verbs are a working
+vocabulary. The spike must express presence tests, comparisons, conjunctions
+and conditional requirements, including bound actor and phase references.
+Failure effects distinguish retained records from assessments that remain
+supported. Unsupported expressions stay explicitly free text; placing prose
+under a key does not make its relationships machine-readable.
 
 **The generator assembles the document.** It parses the source with the
 repository's Markdown reader, passes prose through, and renders each node's
@@ -136,8 +152,16 @@ structured facts in one uniform form. It builds field tables by joining the
 record definitions with each field node's authored meaning. It derives the
 views that would otherwise be written by hand: the surface table, which
 rules apply to which kind of report, an index of the controller's findings
-with what each reads and leaves, and the index of known gaps. It computes a
-surface's stamp from that surface's source and its goldens.
+with what each reads and leaves, and the index of known gaps.
+
+**Stamps track public content and shapes.** A surface's hash covers its
+public content, including definitions, commitments, examples and shared
+public content it incorporates, and its canonical shape goldens. Source/test citations,
+evidence grades and maintenance-only metadata are checked separately and do
+not change a public stamp on their own. The tree identifies which content
+belongs to each surface; hashing the whole authoring file would violate this
+boundary. Migration preserves the existing release-history and removal-row
+account rather than silently treating old surfaces as newly introduced.
 
 **Sanding down is a ratchet.** Any item may begin as free text and later
 become an expression. The generator counts free-text items by kind in a
@@ -180,9 +204,9 @@ implementation as it stands.
   open its source to know what the document covers.
 - *Particulars, in sentences, as separate parts.* Every rule states who
   acts, where, when it applies, each condition as its own identified item,
-  and the consequence. The parts are fixed in stage one so that stage three
-  can hold the same content as data without rewriting it. A rule is not
-  written as one paragraph that runs its conditions together.
+  and the consequence. Representative relationships are structured in stage
+  one; the model remains revisable when another commitment exposes a missing
+  distinction. Stage three need not preserve an inadequate template.
 - *Maintenance leaves the document.* The contract has no section on its own
   upkeep. `docs/contract/` gets a description of its contents and working
   rules for changing and regenerating them.
@@ -190,9 +214,9 @@ implementation as it stands.
   instructions addressed to maintainers inside normative text, are removed
   or moved. The maintainer has already directed three removals (`R-23`,
   `R-30`, `R-31`).
-- *Known gaps.* Each behavior stage two is expected to change is stated as
-  it is now, in a Known gap paragraph. The candidates are listed under
-  stage two.
+- *Known gaps.* Current behavior under review and limits of the supporting
+  evidence are recorded with their respective gap kinds. The behavioral
+  candidates are listed under stage two.
 - *The source tree and its generator*, as described above: the tree, the
   node types and their nesting, structured facts beside prose, the
   generator with its derived views and its checks, and the first baseline
@@ -200,8 +224,8 @@ implementation as it stands.
   are replaced or moved as the tree requires; the build's accounts of them
   change with them.
 - *Owners.* An owner's source and check are read by whoever records them.
-  A rule with no check either gets one or carries a known gap. Adding a
-  test that gives a true rule an owner belongs here; `R-06` is one.
+  An untested part of a rule gets a meaningful check or an evidence gap.
+  Adding a test that gives a true rule an owner belongs here; `R-06` is one.
 - *Text-only strains.* Register rows whose strain sits in the text are
   resolved by the restructure.
 - *Minimal guide corrections.* A guide sentence that contradicts the
@@ -244,8 +268,8 @@ for uniformity's sake is a sign that it belongs on a parent, or nowhere.
 5. The surfaces, drafted one at a time against the claim inventory and the
    register.
 
-**Hands to stage two.** The list of Known gaps, and the list of rules whose
-particulars needed a case split to state.
+**Hands to stage two.** The known gaps with their kinds and supporting
+evidence, and the definitions or commitments each proposed change affects.
 
 **Exit.** Every rule has an owner or carries a known gap; every public
 field has a field node; the baseline of free-text items is recorded; the
@@ -254,14 +278,14 @@ reviewed against the register; an isolated reader has read the new document
 and the result has been compared with the baseline reading; a release has
 been cut, with the Known gap paragraphs in it.
 
-## Stage two: change what is hard to state
+## Stage two: resolve the gaps
 
-**Aim.** Remove the reasons the stage one contract needed a Known gap or a
-case split.
+**Aim.** Resolve the behavioral decisions and establish missing evidence.
+Necessary distinctions remain explicit even when they require case splits.
 
-**Gate.** Each change names the contract rule it makes simpler and says
-what that rule will read afterward. A change that serves no rule does not
-belong to this stage.
+**Gate.** Each change names the public commitment it establishes or repairs,
+explains why that behavior is intended, and states the resulting rule.
+Simpler prose alone does not justify changing behavior.
 
 **Belongs in this stage.**
 
@@ -304,8 +328,10 @@ belong to this stage.
 - Editing the guide, beyond correcting a sentence a change has made false.
 - Renaming a surface.
 
-**Exit.** Every Known gap from stage one has been removed by a change or
-confirmed by the maintainer as intended, and each decision is recorded.
+**Exit.** Behavioral gaps have been resolved by a change or a decision to
+retain the behavior. Evidence gaps have the missing support or an explicit
+maintainer decision accepting the stated limitation. Calling behavior intended
+does not supply missing evidence. Each disposition is recorded.
 
 ## Stage three: settle the contract
 
@@ -315,8 +341,8 @@ trace of having first been written for another.
 **Belongs in this stage.**
 
 - *Revision.* Passages that carried a Known gap or a case split are
-  rewritten with care. A gap confirmed as intended becomes an ordinary
-  statement.
+  rewritten with care. Behavior confirmed as intended becomes an ordinary
+  statement; an accepted evidence limitation remains identified as such.
 - *Firming up.* Free-text items become expressions until the definitions,
   applicability and obligations are held as structured facts in the tree.
   That is the machine-readable representation of the finished contract.
@@ -335,8 +361,9 @@ trace of having first been written for another.
 - New surface names.
 - The guide.
 
-**Exit.** No Known gap remains that the maintainer has not confirmed as
-intended; every rule is owned; the definitions, applicability and
+**Exit.** Every behavioral gap has a recorded disposition and every evidence
+gap is closed or has an explicitly accepted limitation; every rule has
+graded support or that evidence limitation; the definitions, applicability and
 obligations are structured facts, with any free-text item that remains
 accepted by the maintainer; the checks pass; a release has been cut.
 
@@ -353,12 +380,17 @@ edited again after each of the stages before it.
 - A heavy edit of the guide's text against the settled contract, section by
   section, including its field vocabularies (`R-35`) and its account of a
   run's result (`R-33`).
+- Local consolidation to make related explanations contiguous, including
+  the result account already requested for `R-33` and drafted in
+  [the result-account proposal](../records/contract/GUIDE-RESULT-ACCOUNT-DRAFT.md).
+  Existing anchors are preserved or their callers updated.
 - The guide's shared content, edited at its sources and regenerated as the
   [documentation guidance](AGENTS.md) requires.
 
 **Does not belong in this stage.**
 
-- Restructuring the guide. Its sections stay where they are.
+- A wholesale redesign of the guide's organization. Local moves needed for
+  a complete explanation belong in this stage.
 - Changes to the contract or the product. A disagreement found here goes
   back to the stage that owns it.
 
@@ -370,13 +402,7 @@ checks pass.
 - **The surface names, before the stage one release.** The structure
   proposal's surfaces are the working set. The names become permanent at
   that release, so they are confirmed then.
-- **What the surface table means once a surface is stamped from its source
-  in the tree.**
 - **What an ordinary build requires of the contract's check** (`R-29`).
-- **Whether the consolidation drafted for `R-33` is within a heavy edit.**
-  The [draft](../records/contract/GUIDE-RESULT-ACCOUNT-DRAFT.md) moves
-  three passages of the guide next to one another. That may count as
-  restructuring.
 - **Whether stage four ends in a release.** The guide ships beside the
   release.
 - **For each stage two candidate, whether the implementation changes.**
