@@ -176,7 +176,11 @@ This stage is read-only with respect to the tree. Its commits add or complete
 the traces, the baseline, the addenda, the adjudication and the ledger, and
 nothing else.
 
-Order of work:
+Order of work. This is a default, not a protocol. Tasks and documents pass
+through the maintainer by hand, the readers' contexts converge as the stage
+goes on, and a step may run early, late or beside another. Record in the
+ledger what actually happened. A step that finds an input missing works from
+what exists and says so.
 
 1. The report writer deposits the delegated traces. This comes before
    anything else that reader does: the material is held only in its session.
@@ -237,7 +241,7 @@ item:
 | --- | --- | --- |
 | Restatement | The reader says what the passage states. Most of each entry. | Once per entry, check for drift: a restatement stronger, weaker, broader or narrower than the text. Record "faithful", or list each drift as its own item. |
 | Inference | The reader marks it: "I infer", "I expect", "I therefore", "I would not", "I do not take", and the like. | Judge each one. These are the reader's own conclusions and the main object of this task. |
-| Uncertainty | The "What remains uncertain?" paragraph. | Judge from the journal writer's close-out, which gives the end-of-document status of each. Until it arrives, leave these open. |
+| Uncertainty | The "What remains uncertain?" paragraph. | Judge from the journal writer's close-out, which gives the end-of-document status of each. If it has not arrived, judge from the journal's paragraphs and the baseline's close-out, and say so. |
 
 **For each drift and inference, answer two questions in this order.**
 
@@ -827,12 +831,10 @@ Take the absence of an old misunderstanding from a new journal together with
 the review's judgment that the inviting feature is gone. Neither alone shows
 the change worked.
 
-**Conditions for an isolated reading.** The baseline reader was given the
-document first and the task second, and had read the whole document once
-before journaling. Each stage 5 isolated reader is launched the same way: a
-new session outside the repository, the contract alone, the document handed
-over before the task text. The ledger's acceptance record for the baseline
-describes those conditions.
+**Conditions for an isolated reading.** A new session outside the repository,
+given the contract alone and the baseline task text. The order in which the
+document and the task are handed over is not controlled; the ledger records
+what happened for each reading, as it does for the baseline.
 
 A regression's correction is reviewed by the report writer and read by a new
 isolated reader under the same entry conditions; no number of rounds is

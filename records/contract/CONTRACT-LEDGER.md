@@ -126,8 +126,8 @@ What this changes:
   per-entry uncertainties and the close-out's end-of-document statuses are
   usable; evidence about first-pass effort comes from the journal writer's
   close-out instead.
-- Stage 5 isolated readers are given the document first and the task second,
-  so their journals are made the same way as this one. The plan says so.
+- Hand-over order is not controlled for later isolated readings either. The
+  ledger records what happened for each.
 
 ## Join table
 
