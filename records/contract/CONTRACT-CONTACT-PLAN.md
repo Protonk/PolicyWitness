@@ -497,9 +497,8 @@ It does not state or imply the adjudicator's answer, does not mention
 implementation, and does not reveal how any journal entry was classed. Where
 two readings are in play, describe the situation so that neither is
 suggested. The maintainer sees the questions before they go. If both lists
-are empty, record that in the ledger and skip the step. If the baseline
-reader's session is still open, the same questions may be put to it; its
-answers are recorded in the ledger as prompted and coordinator-relayed.
+are empty, record that in the ledger and skip the step. The baseline reader
+has been dismissed and cannot be asked.
 
 *Contested items.* Give the journal writer every item classed as a mistaken
 reading, with the belief, the reading answer and the quoted passage. Leave
@@ -827,6 +826,13 @@ and does not by itself hold up completion of rows already verified.
 Take the absence of an old misunderstanding from a new journal together with
 the review's judgment that the inviting feature is gone. Neither alone shows
 the change worked.
+
+**Conditions for an isolated reading.** The baseline reader was given the
+document first and the task second, and had read the whole document once
+before journaling. Each stage 5 isolated reader is launched the same way: a
+new session outside the repository, the contract alone, the document handed
+over before the task text. The ledger's acceptance record for the baseline
+describes those conditions.
 
 A regression's correction is reviewed by the report writer and read by a new
 isolated reader under the same entry conditions; no number of rounds is
