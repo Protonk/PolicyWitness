@@ -22,6 +22,9 @@ artifacts are named by path without links, under the records link rule.
 | 2026-11-09 | 3 | First four owner-finding passes returned: 94 rows covering the thirteen examples, C:168-236, C:165 and C:243. Assembled into `records/contract/CONTRACT-CLAIMS.md` and `records/contract/claims/`. 68 owned, 11 sourced, 11 split, 4 unowned, as the passes state them. Nothing was run. Not yet inventoried: U01, U02, U16 to U20, and the non-example text of U03 to U09 and U13 to U15. |
 | 2026-11-09 | 2 | Question set of fifteen (three unclear journal items, twelve situations) handed to the journal writer by the maintainer. The journal writer is to be released after answering. The report writer is retained. |
 | 2026-11-09 | 4 | Maintainer supplied a close reading of C:243, kept in `records/contract/CONTRACT-MAINTAINER-NOTES.md`. Coordinator read the cited source and opened register rows `R-01` to `R-05`. Stage 3 continues for the units not yet inventoried. |
+| 2026-11-09 | 2 | Journal writer's fifteen answers accepted at `8323f54f`. Stage 2 is complete. The journal writer can be released. |
+| 2026-11-09 | 6 | Maintainer decided `R-01` to `R-05`. Change made and committed at `a7d9b320`, ahead of the structure stage at the maintainer's direction; mechanically verified. Outstanding for it: stage 7 review and reading, `R-06`, and a rebuild before any app-dependent case. |
+| 2026-11-09 | 3 | Six further owner-finding passes started, covering every unit not yet inventoried, with the four-slot brief. |
 
 ## Artifacts
 
@@ -350,46 +353,112 @@ maintainer.
 Opened by the maintainer's close reading, kept verbatim in
 `records/contract/CONTRACT-MAINTAINER-NOTES.md`. The coordinator then read
 the source the reading describes and found it accurate on every point
-checked. Grade for the statements below: source read by the coordinator on
-2026-11-09; nothing run.
+checked.
 
-What the repository does, from that reading:
+**What the repository does.** Source read by the coordinator on 2026-11-09.
 
 - **Host, while collecting the worker's capture**
-  (`runner/Sources/PWRunnerCore/CWorker.swift`, `decodeProfileCapture`,
-  lines 678-716). In order: application succeeded; the worker completed with
-  exit 0 and no signal; the capture-completed flag is set; the worker's
-  capture status is 1; the recorded PID equals the PID being collected; the
-  recorded nonce equals the requested nonce; the profile type is 0 and the
-  length is positive and within capacity; the SHA-256 of the bytes read
-  equals the recorded digest; the recorded source length, source digest,
-  parameter count and parameter digest equal the host's own. The first
-  failure returns a receipt with `status: "unavailable"` and a `reason`
-  (for the nonce, `capture_nonce_mismatch`), with no bytecode, digest,
-  producer or stage. That receipt is published. Only when all pass is the
-  receipt `captured`, with `producer: "worker"` and
-  `capture_stage: "before_apply"`. Its `request_nonce` is the request's own
-  string, not the bytes read back.
-- **Readers of a reply** (`controller/src/porcelain_admission.rs`,
-  `admission_problem`, lines 1289-1312; the same rule in
-  `runner/Sources/PWRunnerCore/PWRunnerProfileCapture.swift`,
-  `contextProblem`). `status` must be `captured` or `unavailable`; a
+  (`runner/Sources/PWRunnerCore/CWorker.swift`, `decodeProfileCapture`). In
+  order: application succeeded; the worker exited with status 0 and no
+  signal; the capture-completed flag is set; the worker's capture status is
+  1; the recorded PID equals the PID being collected; the recorded nonce
+  equals the requested nonce; the profile type is 0 and the length is
+  positive and within capacity; the SHA-256 of the bytes read equals the
+  recorded digest; the recorded source length, source digest, parameter
+  count and parameter digest equal the host's own. The first failure
+  returns a receipt with `status: "unavailable"` and a `reason` (for the
+  nonce, `capture_nonce_mismatch`), with no bytecode, digest, producer or
+  stage. That receipt is published; the reply is not refused. Only when all
+  pass is the receipt `captured`, with `producer: "worker"` and
+  `capture_stage: "before_apply"`. Its `request_nonce` is the request's
+  string, published after the equality check.
+- **Controller, reading a reply** (`controller/src/run_flow.rs`,
+  `reply_contract`; `controller/src/porcelain_admission.rs`,
+  `admission_problem`). It compares the reply's `producer.contract` first.
+  Then, for each receipt: `status` must be `captured` or `unavailable`; a
   captured receipt must have `producer: "worker"` and
   `capture_stage: "before_apply"`; an unavailable one must have neither. A
-  violation makes the whole reply `malformed_runner_response`
-  (`controller/src/run_flow.rs`, lines 100-101 and 355-356). No reader
-  compares a nonce, PID, length or digest.
-- **Around it.** The guide, inside the hashed `profile` region, states the
-  host's rule (G:649-652) and then says "Readers require the nested receipt
-  version" (G:655). The type's source comment begins "Versioned optional
-  receipt" (`PWRunnerProfileCapture.swift`, line 4). The decoder's source
-  comment says a mismatch "refuses publication" (`CWorker.swift`, line 669),
-  which is the contract example's verb and not what the function does.
+  violation classifies the reply as `malformed_runner_response`. These are
+  the controller's only uses of receipt fields outside the generated record
+  code (checked by search).
+- **Host, before encoding its own result**
+  (`runner/Sources/PWRunnerCore/PWRunnerProfileCapture.swift`,
+  `contextProblem`; `PWRunnerService.swift`, `pwRunnerReportData`). The same
+  label rule, with a different consequence: the host re-issues its result
+  as `runner_reporting_failed` with a `reporting_failure` record. This is
+  not a refusal by a reader and is not `malformed_runner_response`.
+- **What a reader could check and does not.** Maintainer's correction of
+  2026-11-09 to the coordinator's first account, which wrongly said no
+  reader could repeat the host's comparisons.
+  - *Possible from the reply alone, not done by the current readers:*
+    compare the receipt's byte count with its decoded bytecode, and recompute
+    the bytecode digest.
+  - *Possible for a consumer holding its own request, not done by the
+    controller:* compare the request's nonce with the receipt's
+    `request_nonce`. Equality associates the receipt with that request and
+    would expose a wrong association or an altered receipt. It cannot
+    establish that the host made its comparison against the worker's
+    capture.
+  - *Not possible for any reader:* the comparisons that need the worker's
+    shared memory or the host's own observations, which are the recorded
+    PID against the collected worker, the worker's recorded nonce, the
+    completion flag and capture status, and the application and exit
+    conditions.
+  - *Not examined:* whether a consumer could recompute the source and
+    parameter digests from its request.
+
+**Decision.** Maintainer, 2026-11-09: correct the prose and comments;
+preserve the current validation behavior, the division of responsibility
+and both `producer` field names; keep the consumer's responsibility to
+associate a receipt with its own request explicit; attribute each
+consequence to its component.
+
+**Meaning statement.** After the change the passage commits to these, each
+describing existing behavior: the receipt has no contract or version field
+and is read under the contract of the reply that carries it, which the
+controller checks first; an extracted receipt does not identify its build;
+the two `producer` fields mean different things; the host publishes
+`captured` only when its listed conditions hold and otherwise withholds the
+capture data and publishes an `unavailable` receipt with a reason, without
+refusing the reply; the controller checks the labels only and classifies a
+violating reply as `malformed_runner_response`; the controller does not
+compare nonce, PID, byte count or digest; a consumer ties a receipt to its
+request by the nonce, which does not show the host compared the capture; a
+malformed `capture_nonce` is a request refusal. Withdrawn: the rule that a
+wrong nonce refuses a receipt inside a current reply, which nothing
+performed.
+
+**Change.** `a7d9b320`: the contract's `profile` paragraph (kept on one
+physical line, so the document's other line numbers are unchanged); two
+sentences of the guide's `profile` region; the doc comments on
+`CompiledProfileCapture` and above `captureNonceBytes`. Regenerated: the
+stamp table, where `profile` now reads `unreleased`, and the worker
+identity with its three copies, because the comments are in hashed Swift
+files.
+
+**Verification.** Generator checks for stamps (with history), worker
+identity, limits, porcelain and architecture pass. Run
+`tests/out/runs/contract-c243` at the tree committed as `a7d9b320`: the
+`source_drift` suite and `unit/rust.unit` pass. That output is local and
+disposable. The installed app under `dist/` predates the new worker
+identity and has not been rebuilt, so no case that needs the app has been
+run against this change.
+
+**Owner of the new example.** `controller/src/run_flow.rs`,
+`compiled_profile_context_is_gated_after_the_response_version`, in the
+default case `unit/rust.unit`, over the fixture
+`tests/fixtures/contract/compiled_profile.json`, whose `producer_future`
+case is a `captured` receipt with a producer other than `worker`. Grade:
+run, in the run above. It asserts that the reply is not admitted. It does
+not assert the outcome string: the step from "not admitted" to
+`malformed_runner_response` is the `Malformed` arm in `run_flow.rs`, source
+read, with no test of that step for this cause. Recorded as `R-06`.
 
 | Row | Claims | References | Strain | Sits in | Disposition and reason | Status |
 | --- | --- | --- | --- | --- | --- | --- |
-| R-01 | `K-243-1` | Maintainer's reading; `A-29`; `L-30` | "Inherits its admitted host reply context" names an interpretive relationship with verbs that suggest an operation. It gives no actor and no boundary, and "admitted" cannot mean the reply has passed every check, since the receipt check is part of admitting the reply. | Text | **Rewrite**, proposed. The defensible content, in the maintainer's words: the receipt carries no build identity of its own and is interpreted under the contract of its enclosing reply, whose identity is checked first. | Awaiting maintainer |
-| R-02 | `K-243-2` | Maintainer's reading; `F-12`; `F-19` | "No independent schema marker" is true if it means no separate version or contract field. The guide's hashed text says readers require a "nested receipt version", and a source comment calls the receipt "Versioned". | Text, in three places: the contract, G:655, one source comment | **Rewrite**, proposed, in all three. The guide sentence is inside the `profile` region; the comment is in shipped source. | Awaiting maintainer |
-| R-03 | `K-243-3` to `K-243-7` | Maintainer's reading; `F-06`; `A-29` | "Status, nonce, worker binding, stage, byte count and digest must be consistent" lists six nouns that stand in at least five different relations with two owners and two different consequences. The host's comparisons end in a published `unavailable` receipt; the reader's label check ends in a refused reply. The list omits the source and parameter comparisons and the conditions for `captured`. "Worker binding" is a PID comparison. | Text for the list. Repository for one question: no reader can repeat the host's comparisons, and the captured receipt's nonce is the request's own string. | **Rewrite**, proposed, stating each rule with its owner and consequence. **Maintainer decision:** whether the absence of any reader-side comparison is intended (then it is stated) or not (then it is an elimination). | Awaiting maintainer |
-| R-04 | `K-243-8` | Maintainer's reading; `L-30` | "A detached receipt grants no producer context" changes subject without saying so, uses "grants" for something no code path does, and says "producer" where the reply and the receipt each have a different thing by that name. | Text. Repository for the naming: two fields named `producer` with different meanings. | **Rewrite**, proposed: an extracted receipt does not identify the build that produced it. The duplicate name is recorded for the maintainer; renaming a field is a shape change. | Awaiting maintainer |
-| R-05 | `K-243-9` | Maintainer's reading; `F-05`; `F-06`; `A-29`; silence 4 | The example states a rule the implementation does not perform. "Wrong nonce" covers two different failures: a malformed nonce in the request, refused before any capture, and a capture nonce that differs from the requested one, which yields a published `unavailable` receipt. Neither is "refusing the receipt inside a current reply". The point the example is there to make, that a matching build identity does not excuse invalid contents, is made by a different case that does exist: a current reply whose receipt has inconsistent status, producer or stage is refused as malformed. | Text | **Which side is right**, for the maintainer: replace the example with a case that happens and has an owning check, or add the reader-side comparison the sentence describes. The coordinator proposes the first. | Awaiting maintainer |
+| R-01 | `K-243-1` | Maintainer's reading; `A-29`; `L-30`; answer 2 | "Inherits its admitted host reply context" names an interpretive relationship with verbs that suggest an operation, with no actor and no boundary. | Text | **Rewrite.** Maintainer's decision. | Changed at `a7d9b320`; mechanically verified; stage 7 review and reading outstanding |
+| R-02 | `K-243-2` | Maintainer's reading; `F-12`; `F-19` | "No independent schema marker" beside a guide sentence requiring a "nested receipt version" and a source comment calling the receipt "Versioned". | Text, in three places | **Rewrite** in all three. Maintainer's decision. | Changed at `a7d9b320`; as above |
+| R-03 | `K-243-3` to `K-243-7` | Maintainer's reading; `F-06`; `A-29`; answers 2 and 8 | A list of six nouns standing for several relations with different owners and consequences, omitting the source and parameter comparisons and the conditions for `captured`. | Text | **Rewrite**, stating each rule with its owner and consequence, what the controller does not compare, and the consumer's own comparison. The existing division of responsibility is intended and preserved. Maintainer's decision. | Changed at `a7d9b320`; as above |
+| R-04 | `K-243-8` | Maintainer's reading; `L-30` | "A detached receipt grants no producer context": a changed subject, a verb for something no code path does, and one name for two fields. | Text | **Rewrite**, explaining the two `producer` fields by their qualified locations. Both names stay. Maintainer's decision. | Changed at `a7d9b320`; as above |
+| R-05 | `K-243-9` | Maintainer's reading; `F-05`; `F-06`; `A-29`; silence 4; answers 6 and 8 | The example stated a rule nothing performed and merged two different nonce failures. The journal writer, asked, expected "a request-aware acceptance step to refuse that receipt" and would rely on an example's behavior without checking it. | Text | **Rewrite**: replaced by a case the controller rejects, with its owning check. The source comment's "refuses publication" now names what is withheld and what is published. Maintainer's decision. | Changed at `a7d9b320`; as above |
+| R-06 | New example at C:243 | Coordinator | No test asserts that a receipt-label violation yields the outcome `malformed_runner_response`; the owning test stops at "not admitted". | Repository: a missing check | **Proposed: eliminate**, by asserting the outcome in the existing test. Outside the scope the maintainer set for this change. | Awaiting maintainer |
