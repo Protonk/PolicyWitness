@@ -201,6 +201,8 @@ def candidate(root, path, kind):
         identity = {k: record[k] for k in ('tag', 'source_commit', 'sha256')}
     elif kind == 'pointer':
         identity = dict(destination=path.read_text().strip())
+    elif kind == 'metadata':
+        identity = dict(name=path.name)
     else:
         identity = dict(release_record=artifact.digest(path / 'release.json')) if (path / 'release.json').exists() else {}
     return dict(path=str(path.relative_to(root)), kind=kind, identity=identity, inventory=snapshot(path), state='planned')
@@ -304,7 +306,10 @@ def linked_attempts(root, expired, kept):
             if tags and tags <= {r['record']['tag'] for r in expired}:
                 selected.append(candidate(root, path, 'pointer' if path.is_file() else 'attempt'))
             elif not tags:
-                blocked.append(dict(path=str(path.relative_to(root)), reason='unassociated release evidence'))
+                # No archive association supplies deletion authority. This is
+                # normal for an untagged rehearsal or an attempt still underway,
+                # not a failed cleanup operation. Contradictions still refuse.
+                loose.append(path)
         except (OSError, ValueError, KeyError, TypeError) as exc:
             blocked.append(dict(path=str(path.relative_to(root)), reason=str(exc)))
     return selected, blocked, loose
@@ -319,6 +324,18 @@ def plan(root, *, busy=False):
     selected += [candidate(root, row['path'], 'archive') for row in expired]
     rows = []
     missing = []
+    # Inspect only the distribution containers, never inside a retained archive
+    # or signed app. Test-output discovery likewise stops at each owned run.
+    for parent in (distribution(root), distribution(root) / 'archive'):
+        path = parent / '.DS_Store'
+        if os.path.lexists(path):
+            try:
+                real(path)
+                if not path.is_file():
+                    raise ValueError('Finder metadata is not a regular file')
+                unmanaged.append(path)
+            except (OSError, ValueError) as exc:
+                blocked.append(dict(path=str(path.relative_to(root)), reason=str(exc)))
     if found:
         relative = found[-1]['manifest']['runs']['acceptance']['retained']['path']
         if not (root / 'tests/out' / relative).exists():
@@ -326,8 +343,19 @@ def plan(root, *, busy=False):
     working, unknown, loose = working_output(root)
     blocked += unknown
     rows += [dict(path=str(Path(row['path']).relative_to('tests/out')), disposition='keep: blocked', reason=row['reason']) for row in unknown]
-    rows += [dict(path=str(path.relative_to(root / 'tests/out')), disposition='keep: unmanaged', reason='standalone file') for path in loose]
+    rows += [dict(path=str(path.relative_to(root / 'tests/out')),
+                  disposition='delete' if path.name == '.DS_Store' and not busy else 'keep: unmanaged',
+                  reason='Finder metadata' if path.name == '.DS_Store' else 'standalone file') for path in loose]
     unmanaged += loose
+    for path in list(unmanaged):
+        if path.name == '.DS_Store':
+            unmanaged.remove(path)
+            if not path.is_file():
+                blocked.append(dict(path=str(path.relative_to(root)), reason='Finder metadata is not a regular file'))
+            elif busy:
+                blocked.append(dict(path=str(path.relative_to(root)), reason='checkout is active'))
+            else:
+                selected.append(candidate(root, path, 'metadata'))
     for path, owner in working:
         try:
             if ownership.retained_overlap(path, protected):
@@ -353,7 +381,7 @@ def plan(root, *, busy=False):
                 runs=rows, missing_acceptance=missing)
 
 
-def target_path(root, relative):
+def target_path(root, relative, *, metadata=False):
     relative = ownership.relative_path(relative)
     parts = relative.parts
     valid = (len(parts) >= 3 and parts[:2] == ('tests', 'out')
@@ -361,6 +389,10 @@ def target_path(root, relative):
              and (len(parts) > 3 or parts[2] not in CONTAINERS)
              or len(parts) == 3 and parts[:2] == ('dist', 'archive') and ownership.RELEASE_TAG.fullmatch(parts[2])
              or len(parts) == 3 and parts[:2] == ('dist', 'evidence') and ownership.RUN_ID.fullmatch(parts[2]))
+    if metadata:
+        valid = (parts[-1] == '.DS_Store' and
+                 (valid or parts in (('dist', '.DS_Store'), ('dist', 'archive', '.DS_Store'),
+                                     ('dist', 'evidence', '.DS_Store'))))
     if not valid:
         raise ValueError('invalid retention transaction target')
     return real(root / relative)
@@ -393,13 +425,16 @@ def apply_journal(root, directory):
         raise ValueError('invalid retention journal targets')
     for row in rows:
         if (not isinstance(row, dict) or not isinstance(row.get('inventory'), dict)
-                or not isinstance(row.get('path'), str) or row.get('kind') not in ('run', 'archive', 'attempt', 'pointer')):
+                or not isinstance(row.get('path'), str) or row.get('kind') not in ('run', 'archive', 'attempt', 'pointer', 'metadata')):
             raise ValueError('invalid retention journal target identity')
+        if row['kind'] == 'metadata':
+            target_path(root, row['path'], metadata=True)
+            continue
         prefix = {'run': 'tests/out/', 'archive': 'dist/archive/',
                   'attempt': 'dist/evidence/', 'pointer': 'dist/evidence/'}[row['kind']]
         if not row['path'].startswith(prefix) or row['kind'] == 'pointer' and not row['path'].endswith('.archived'):
             raise ValueError('retention journal target kind differs from its path')
-    paths = [target_path(root, row['path']) for row in rows]
+    paths = [target_path(root, row['path'], metadata=row['kind'] == 'metadata') for row in rows]
     if any(ownership.overlaps(a, b) for i,a in enumerate(paths) for b in paths[i+1:]):
         raise ValueError('overlapping retention journal targets')
     protected = protected_paths(root)
@@ -420,6 +455,8 @@ def apply_journal(root, directory):
             else:
                 if not source.exists() or snapshot(source) != row['inventory']:
                     raise ValueError('retention target changed since planning')
+                if row['kind'] == 'metadata' and not source.is_file():
+                    raise ValueError('Finder metadata is not a regular file')
                 if row['kind'] == 'run':
                     owner = ownership.valid_owner(source)
                     if owner.get('kind') == 'release_acceptance' and ownership.acceptance_busy(source):

@@ -229,13 +229,28 @@ def windows(out):
     unrelated = repo / 'dist/evidence/unrelated'; unrelated.mkdir()
     (unrelated / 'file').write_text('unassociated')
     before_unrelated = artifact.inventory(unrelated)
-    loose = repo / 'dist/evidence/.DS_Store'; loose.write_bytes(b'finder')
+    rehearsal = repo / 'dist/evidence/rehearsal'; rehearsal.mkdir()
+    (rehearsal / 'release.json').write_text(json.dumps(dict(schema_version=1, build=dict(
+        PWBuildDescribe='v0.4.1-1-g1234567', CFBundleShortVersionString='0.4.1'), submitted_sha256='e' * 64)))
+    before_rehearsal = artifact.inventory(rehearsal)
+    metadata = [repo / name / '.DS_Store' for name in ('dist', 'dist/archive', 'dist/evidence')]
+    for path in metadata: path.write_bytes(b'finder')
+    loose = repo / 'dist/evidence/operator-note'; loose.write_bytes(b'keep')
     result = retention.prune(repo, apply=True)
     assert not linked.exists() and artifact.inventory(unrelated) == before_unrelated
-    assert any('unassociated' in row['reason'] for row in result['failures'])
+    assert not result['failures'], result['failures']
+    assert {'dist/evidence/unrelated', 'dist/evidence/rehearsal'} <= set(result['unmanaged'])
+    assert artifact.inventory(rehearsal) == before_rehearsal
     # A file that is neither an attempt nor a pointer is reported, kept and not a failure.
-    assert loose.read_bytes() == b'finder' and 'dist/evidence/.DS_Store' in result['unmanaged']
-    assert all(row['path'] != 'dist/evidence/.DS_Store' for row in result['failures'])
+    assert loose.read_bytes() == b'keep' and 'dist/evidence/operator-note' in result['unmanaged']
+    assert all(not p.exists() and str(p.relative_to(repo)) in result['removed'] for p in metadata)
+    # Missing association is normal; an unreadable record is still a real blocker.
+    receipt = rehearsal / 'release.json'; saved = receipt.read_bytes()
+    receipt.write_text('{')
+    refused = retention.prune(repo, apply=True)
+    assert any(r['path']=='dist/evidence/rehearsal' for r in refused['failures'])
+    receipt.write_bytes(saved)
+    assert not retention.prune(repo, apply=True)['failures'], 'unassociated evidence permanently failed cleanup'
     assert sorted((p.name for p in (repo / 'dist/archive').iterdir()), key=retention.version) == ['v' + v for v in versions[-4:]]
     assert not historical.exists() and retention.pending(repo) is None, 'last historical storage obligation did not expire'
     assert [p.exists() for _,p in entries] == [False]*5 + [True]

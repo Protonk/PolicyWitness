@@ -34,6 +34,11 @@ non-release output regardless of completion. Unknown ownership and unresolved
 resource cleanup block deletion. There are no manual pins or retention knobs.
 The fixed archive root is this checkout's `dist/archive/`.
 
+Unassociated attempts and pointers are reported as unmanaged and kept without
+failing cleanup; association conflicts and corrupt records remain blockers.
+Regular `.DS_Store` files directly in distribution containers are disposable.
+Pruning does not search retained archives or the signed app for metadata.
+
 Interrupted cleanup is journaled under `tests/out/.retention/`; resume with
 `make prune APPLY=1`. The journal is removed on completion and surviving archives
 are unchanged. The temporary historical storage inspector classifies known

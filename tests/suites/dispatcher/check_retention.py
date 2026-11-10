@@ -210,17 +210,26 @@ class Controls:
         fresh = self.fixture('prune-without-lock')
         self.call(fresh, ['--prune'], readonly=True)
         require(not (fresh / 'tests/.checkout.lock').exists(), 'preview created a lock file')
-        # A file outside every owned run is reported and kept without failing the apply.
+        # Finder metadata is disposable; other standalone bytes are not run ownership.
         loose = self.fixture('prune-loose-file')
         (loose / 'tests/out/kept/link').unlink()
         (loose / 'tests/out/runs').mkdir()
         (loose / 'tests/out/runs/.DS_Store').write_bytes(b'finder')
+        (loose / 'tests/out/.DS_Store').write_bytes(b'finder root')
+        (loose / 'tests/out/kept/.DS_Store').write_bytes(b'finder nested')
         self.call(loose, output='tests/out/runs/done')
+        preview = json.loads(self.call(loose, ['--prune'], readonly=True).stdout)
+        metadata = {'tests/out/.DS_Store', 'tests/out/runs/.DS_Store', 'tests/out/kept/.DS_Store'}
+        require({r['path'] for r in preview['targets'] if r['kind']=='metadata'} == metadata, 'metadata preview differs')
         report = json.loads(self.call(loose, ['--prune', '--apply']).stdout)
         rows = {r['path']: r['disposition'] for r in report['runs']}
-        require(report['removed'] == ['tests/out/runs/done'] and not report['failures'], f'loose files failed an apply: {report}')
-        require(rows['runs/.DS_Store'] == rows['kept/bytes'] == 'keep: unmanaged', f'loose files were not reported: {rows}')
-        require((loose / 'tests/out/runs/.DS_Store').read_bytes() == b'finder' and (loose / 'tests/out/kept/bytes').exists(), 'loose file changed')
+        require(set(report['removed']) == metadata | {'tests/out/runs/done'} and not report['failures'], f'metadata cleanup failed: {report}')
+        require(rows['runs/.DS_Store'] == 'delete' and rows['kept/bytes'] == 'keep: unmanaged', f'loose files were not distinguished: {rows}')
+        require(all(not (loose / p).exists() for p in metadata) and (loose / 'tests/out/kept/bytes').exists(), 'wrong loose file removed')
+        (loose / 'tests/out/runs/.DS_Store').symlink_to(loose / 'tests/out/kept/bytes')
+        report = json.loads(self.call(loose, ['--prune', '--apply'], code=1).stdout)
+        require((loose / 'tests/out/runs/.DS_Store').is_symlink() and (loose / 'tests/out/kept/bytes').exists(), 'metadata cleanup followed redirect')
+        require(any(r['path']=='tests/out/runs/.DS_Store' for r in report['failures']), 'metadata redirect was not refused')
         repo = self.fixture('pruning')
         base = repo / 'tests/out'
         names = ('passed', 'failed', 'interrupted', 'ambiguous', 'formerly-pinned')

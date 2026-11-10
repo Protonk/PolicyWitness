@@ -403,8 +403,10 @@ Offline release controls also exercise the release procedure's decision points.
   identities, assets and inventories while refusing malformed or relabeled data.
   Inventories from empty through six releases establish the four-release
   window, numeric patch/minor ordering, exact surviving archive bytes and
-  removal of expired pointers and positively linked attempts. Current preflight
-  and direct archival reject old versions after their archive paths expire.
+  removal of expired pointers and positively linked attempts.
+  Unassociated attempts and untagged rehearsals remain byte-identical and do
+  not fail apply; regular Finder metadata in distribution containers is removed.
+  Current preflight and direct archival reject old versions after their archive paths expire.
   Footprint provenance checks distinguish current, stale and wrong run identities.
   The current acceptance and accepted unarchived handoff remain protected;
   wrong ZIP hashes, changed owners and ambiguous attempts cannot manufacture
