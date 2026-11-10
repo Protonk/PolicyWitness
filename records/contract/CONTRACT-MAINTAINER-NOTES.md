@@ -117,3 +117,34 @@ C:430–434 gives a useful bounded description of shape goldens: public keys and
 “Missing or mistyped required fields still fail semantic admission” introduces another mechanism without identifying it. Those requirements are enforced by readers and decoders, independently of the maintenance comparison. “Still” provides reassurance about a relationship the paragraph has not explained. “There is no separate version-bump classifier” can be removed.
 
 The positive account is that a shape difference fails a check and produces a candidate whose acceptance requires judgment. The generator and goldens can keep declared artifacts in agreement. The text still needs to give developers a clear route from the identity they observe to the commitments under which they act.
+
+## R-20 and the guide's account of a result (2026-11-10)
+
+Register row `R-33`. Draft in
+`records/contract/GUIDE-RESULT-ACCOUNT-DRAFT.md`.
+
+R-20 exposes a problem in the guide’s organization as well as an unresolved decision about success.
+
+The controller README gives a more direct account of responsibility than the user guide: CLI status follows the admitted runner outcome; the received reply is preserved; the controller separately validates evidence and produces diagnostics. A user should be able to learn those relationships from the guide without visiting an implementation reference. The guide needs that clarity in terms of public fields and observable behavior.
+
+The relevant explanations are also separated by hundreds of lines. G:1218–1294 introduces the envelope, integrity findings and reporting failure. G:2024–2041 defines `finished`, connects it to `result.ok` and exit 0, and describes the failure outcomes. Understanding one ordinary result requires assembling these passages across unrelated material. These are parts of one explanation, and they should be readable together.
+
+I propose a moderate consolidation around the guide’s output-envelope introduction. That contiguous account should establish:
+
+1. **What each part of the output represents.** `data.runner_result` contains the host’s report. `data.runner_sandbox_diagnostics` contains the controller’s findings about its evidence. The outer `result` and CLI exit status classify the run according to the documented outcome rules.
+
+2. **What success means.** Define `finished` beside the explanation of `result.ok` and exit 0. State whose assessment supplies that outcome and how the controller uses it. The distinction between successful harness execution and successful individual attempts belongs here.
+
+3. **How integrity findings qualify the reported evidence.** Explain where invalidity and withheld claims appear, which received fields remain visible, and how these findings affect—or currently do not affect—the outer result and exit status.
+
+4. **What reporting failure preserves.** Explain `runner_reporting_failed`, retained observations, omitted comparisons and the minimal reply alongside the ordinary result, so a reader can distinguish the available forms of evidence.
+
+The `normalized_outcome` catalog should be adjacent to this account. Detailed descriptions of native observations, lifecycle records and individual attempt kinds can remain in their respective sections, with references from this introduction. A reader interpreting the top-level result should not have to traverse those details to discover what success certifies.
+
+The README’s terseness is useful because it identifies the relationships directly. The guide can then give the additional explanation a user needs. Copying function names into the guide would contribute little; explaining which component supplied each public assessment would contribute a great deal.
+
+For R-20 specifically, the consolidated passage must make the current combination legible: a host reports `finished`, the controller reports invalid evidence and withholds a disposition claim, and the command nevertheless reports `result.ok: true` and exits 0. That combination should be understandable from one passage. Its explanation should not depend on finding “These fields do not change `normalized_outcome`” far from the definition connecting that outcome to success.
+
+Consolidate the existing explanations so the guide has one complete account, rather than adding another summary alongside the scattered versions. A local draft showing the proposed placement and resulting text would make this reviewable.
+
+Keep the behavioral decision in R-20 open. Making the current semantics easy to understand will let us judge whether they are the semantics we want; it does not itself approve retaining them.

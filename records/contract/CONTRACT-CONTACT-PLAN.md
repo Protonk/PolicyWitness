@@ -131,6 +131,7 @@ name one another by path.
 | [ISOLATED-BASELINE-JOURNAL.md](ISOLATED-BASELINE-JOURNAL.md), the **baseline** | Isolated reader | Entries `B-01`–`B-40` and a close-out with uncertainties `U1`–`U61`. Contract only; a reread. |
 | [CONTRACT-ADJUDICATION.md](CONTRACT-ADJUDICATION.md) | Report writer | Entries `A-01`–`A-52` on the journal, `A-D01`–`A-D20` on the divergences, a table of findings against both journals, and four lists. |
 | [CONTRACT-MAINTAINER-NOTES.md](CONTRACT-MAINTAINER-NOTES.md) | Maintainer | Close readings supplied in stage 4, verbatim. |
+| [GUIDE-RESULT-ACCOUNT-DRAFT.md](GUIDE-RESULT-ACCOUNT-DRAFT.md) | Coordinator | A proposed consolidation of the guide's account of a run's result, for review. Changes nothing. |
 | [CONTRACT-LEDGER.md](CONTRACT-LEDGER.md) | Coordinator | Stage log, acceptance record, join table, divergences, coverage, strain register. |
 | [CONTRACT-CLAIMS.md](CONTRACT-CLAIMS.md) and `claims/`, the **inventory** | Coordinator, from delegated passes | Stage 3. One row per claim, with its kind, mechanism and owner. |
 | Later readings and review notes | Their authors | Stage 7. |

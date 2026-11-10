@@ -28,6 +28,7 @@ artifacts are named by path without links, under the records link rule.
 | 2026-11-09 | 3 | The six passes returned 238 rows. The inventory now has 332 rows over every unit: 240 owned, 45 sourced, 32 split, 15 unowned, as the passes state them. Of the 238 rows asked, the sentence does not state who acts in 159, the boundary in 165, or the consequence in 133. Stage 3's exit condition is met; nothing in it has been run. Stage 4 proceeds by the maintainer's focus items and by the sources the plan names. |
 | 2026-11-10 | 4 | Maintainer supplied a second close reading, of C:165-236 and C:351-355. Coordinator read the source it turns on and opened register rows `R-07` to `R-20`, all proposals. `R-06` also still awaits the maintainer. |
 | 2026-11-10 | 4 | Maintainer supplied a third close reading, of C:3-56, C:100-106 and C:430-434, with a direction for stage 5: the contract is to be generated and remain the public account. Coordinator ran the stamp generator in a tagless scratch clone and opened rows `R-21` to `R-32`. Finding from the run: regeneration with `--release` and no history rewrites every stamp. |
+| 2026-11-10 | 4 | Maintainer asked for a consolidated account of a run's result in the guide, with `R-20` kept open. Drafted for review in `records/contract/GUIDE-RESULT-ACCOUNT-DRAFT.md` as `R-33`. The draft's placement would move text between the guide's `envelope`, `refusals` and `lifecycle` regions. |
 
 ## Artifacts
 
@@ -602,4 +603,13 @@ goldens and nothing about behavior (`surface_hash`).
 | R-30 | `K-100-*` to `K-106-*` | Reading; `F-13`; `F-12`; `A-10` | "Review and assert" joins a human judgment to an enforced comparison. The next sentence turns to maintainers, and its "so" carries the dependency of the table on their upkeep. | Text | **Rewrite**, proposed: separate what the application establishes from what the review must; state the maintenance dependency as one. **Remove** "There is no separate request counter or compatibility exception for optional additions": maintainer's direction. | Partly direction given; not yet changed |
 | R-31 | `K-430-1` to `K-433-2` | Reading; `L-48`; the source read above | Shape goldens record keys and JSON types; the text does not keep that apart from values, relationships and behavior. It omits that a difference fails the check. "Update the golden" assumes the review's outcome. "Still fail semantic admission" names a mechanism without identifying it. | Text | **Rewrite**, proposed: a shape difference fails a check and writes a candidate; the review decides which side is corrected; required fields are enforced by readers and decoders, separately. **Remove** "There is no separate version-bump classifier": maintainer's direction. | Partly direction given; not yet changed |
 | R-32 | All of the above | Reading | The passages attend to maintaining contract artifacts and leave the reader's route, from the identity they observe to the commitments they act under, implicit. | Structure | **Stage 5**: the route is the organizing requirement for the opening of the rewritten document. | Stage 5 |
+
+### The guide's account of a result
+
+Opened by the maintainer's note of 2026-11-10 on `R-20`, kept in
+`records/contract/CONTRACT-MAINTAINER-NOTES.md`.
+
+| Row | Claims | References | Strain | Sits in | Disposition | Status |
+| --- | --- | --- | --- | --- | --- | --- |
+| R-33 | The guide's `envelope` and `refusals` regions, G:1207-1294 and G:2017-2109 | Maintainer's note; `R-20`; `R-07`; `R-19`; `F-07` | The guide explains one ordinary result in five places about 730 lines apart. It has no sentence saying which component supplies `data.runner_result`, `data.runner_sandbox_diagnostics` and `result`, though the controller README does. The definition tying `finished` to `result.ok` and exit 0 is far from the sentence saying the controller's findings do not change the outcome. | Text of the guide, and its placement | **Rewrite**: one contiguous account under the output-envelope introduction, with the outcome catalog adjacent, consolidating the existing passages and not adding a summary beside them. Maintainer's direction. Drafted in `records/contract/GUIDE-RESULT-ACCOUNT-DRAFT.md`; the guide is unchanged. `R-20` stays open: the draft describes the present behavior and marks the sentences that depend on it. | Draft awaiting maintainer's review |
 
