@@ -160,7 +160,7 @@ Rows in `records/contract/claims/U11.md`. 48 owned, 8 sourced, 5 split, 2 unowne
 | `K-190-2` | C:190-191 | shape | `equipment_entitlements` contains independently associated static and live XML read-backs. | owned | 4 | 2 (opt-in among them) |
 | `K-191-1` | C:191-192 | evidence | Every actor's requirements are evaluated separately using boolean true keys. | owned | 4 | 6 (opt-in among them) |
 | `K-192-1` | C:192-193 | evidence | Requirements are evaluated with boolean true keys "including in the live read-back. | owned | 4 | 1 |
-| `K-193-1` | C:193 | referral | Bounds and reserve geometry belong to [LIMITS](LIMITS.md). | split | 4 | 2 |
+| `K-193-1` | C:193 | referral | Bounds and reserve geometry belong to `[LIMITS](LIMITS.md)`. | split | 4 | 2 |
 | `K-194-1` | C:194 | evidence | Runtime inspection failure cancels all scheduled activation. | owned | 5 | 2 |
 | `K-194-2` | C:194-195 | evidence | Runtime inspection failure "retains any already published setup/application facts. | owned | 3 | 1 |
 | `K-195-1` | C:195-196 | denial | Runtime inspection failure "is not a before-launch `preparation_failure`. | owned | 5 | 2 |
