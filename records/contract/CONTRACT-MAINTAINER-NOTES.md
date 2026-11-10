@@ -185,3 +185,28 @@ This gives our proposed contract shape a concrete purpose. Named definitions est
 One qualification to Fable’s summary: “the same bytes” is shorthand for a Swift record passed through binary encoding, Rust decoding and JSON presentation. The thirteenth candidate concerns JSON null handling, and Swift was not tested on it. The run report states these limits (`records/contract/validators/RUN.md`). The twelve cases compared across all three still establish substantial disagreement; they do not establish how often production emits such replies.
 
 My position would be: **retain the finding, resist deciding the architecture by counting validators, and make the disputed meanings and scopes explicit before choosing which implementation to change.**
+
+## Review of the proposed contract structure (2026-11-10)
+
+On the first version of `records/contract/CONTRACT-STRUCTURE-PROPOSAL.md`.
+The second version answers it.
+
+This is a workable proposal. The main questions concern what makes the document authoritative and how its structure makes the commitments explicit.
+
+1. **Let definitions do the orienting.** I would remove “How to read this contract” as a section. Definitions of the components, records, boundaries and states give readers the knowledge they need directly. Some proposed section 2 material belongs in those definitions; “how a rule is written” describes the writer’s method. Once terms are defined, consistent prose and structured presentation should be readable through ordinary practice.
+
+2. **Keep the direction of obligation clear.** The contract binds PolicyWitness. Request constraints describe the conditions under which it commits to act, including its commitment to particular refusals when those conditions fail. “The caller must supply X” can obscure that second obligation. This does not make “what you send” a bad heading. The distinction is between defining accepted input and assigning the user responsibility for making the system behave correctly. It matters equally when consumers encounter defective output: the contract must specify what PolicyWitness supplies and what its assessments establish.
+
+3. **Preserve the basic trio.** “What you send,” “what the host reports” and “what the controller adds” distinguish submitted intent, the host’s account and the controller’s assessment. Those are useful organizing distinctions. Relationships across the three must remain explicit: the controller’s findings must identify which host assertions they affect, for example. Separating the speakers should make their interaction easier to understand.
+
+4. **Avoid treating runners as an exceptional final subject.** Runner selection belongs with accepted inputs; reservation and submission belong with their boundaries; installation, inspection and removal are public operations whose outcomes PolicyWitness reports. Appending runners to a narrative about one run feels awkward. The structure needs to accommodate all public operations, including runner management. That may require broadening the trio slightly. The commitments themselves should remain explicit wherever they belong.
+
+5. **Keep document maintenance out of the contract.** I do not want a “Maintaining this document” appendix. A `docs/contract/` directory would give authoring inputs, generators and maintenance guidance a natural home. Its README can explain the contents, and its AGENTS guidance can govern changes and regeneration. The public `docs/CONTRACT.md` can remain the obvious entry point. Its generated status does not create a reason to teach its maintenance workflow to its readers.
+
+6. **Make the structure reach inside the rules.** The worked section’s “host decides the receipt” still bundles numerous conditions into one paragraph. A rule can require several conditions, but those conditions, their scope and their consequences should be individually identifiable. I want the definitions, applicability and obligations to have a machine-readable representation in the finished contract. We can defer the choice of machinery while making that requirement influence the document’s shape now. Headings over dense prose will not get us there.
+
+7. **Distinguish production from interpretation when defining applicability.** The receipt example marks preparation-failure applicability as unknown because it is unclear whether the host can produce a receipt there. But whether a record occurs on the normal production path and what a reader must check when that record is present are different questions. A rule’s reach cannot depend implicitly on what the current producer happens to emit. The applicability model needs to express both commitments separately.
+
+8. **Draw a firmer boundary with the guide.** “Rules and definitions here; field-by-field explanation there” leaves room to move essential meaning out of the contract again. A field’s meaning, the significance of its absence and the conclusions its values support belong in the authoritative account. The guide can explain how to use those commitments through examples, workflows and interpretation. A compact field table is useful, but keys and types alone do not make the contract self-contained.
+
+One small thing I particularly like: the worked example distinguishes what its owning test actually asserts from the outcome the prose describes. Naming that limit gives us something concrete to review. That precision should carry through the supporting evidence, whatever its eventual presentation.

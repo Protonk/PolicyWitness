@@ -57,6 +57,17 @@ structure, not a second rewrite.
 - **A definition settles a family of cases.** Disputes about validity are
   resolved by stating what a record means and where the rule applies, not
   case by case and not by picking the strictest implementation.
+- **The contract binds PolicyWitness.** Every rule's subject is one of its
+  components. Accepted input is stated as what PolicyWitness accepts and
+  what it refuses, and a limit on what an output establishes is stated as a
+  limit on its commitment, not as a duty of the person reading the output.
+- **Meaning lives in the contract.** A field's meaning, the significance of
+  its absence and what its values support are in the contract. The guide
+  explains how to use those commitments.
+- **Production and interpretation are stated apart.** Where PolicyWitness
+  produces a record is one commitment. What it checks whenever that record
+  is present is another, and does not depend on what the current producer
+  emits.
 - **Evidence is graded.** A claim rests on a run, a check that was read, or
   source that was read, and its row says which. Agreement among generated
   artifacts, or among implementations, is not correctness.
@@ -69,20 +80,30 @@ implementation as it stands.
 
 **Belongs in this stage.**
 
-- *Shape.* The document opens with the reader's route: how a specimen or a
-  received artifact identifies its contract, and where that contract's
-  commitments are. Its body is organized as definitions of what the records
-  mean, applicability of each rule to the kinds of reply (ordinary,
-  preparation failure, reporting failure), and obligations: what each
-  component checks and what it does on failure.
+- *Shape.* The document opens with the contract identity: how a specimen or
+  a received artifact identifies its contract. Definitions of the
+  components, boundaries, artifacts and kinds of report follow, and do the
+  orienting; nothing explains how to read the document. The body is
+  organized by public operation, including runner management, and within
+  an operation by accepted input, the acting component's account, and the
+  controller's assessment. The controller's findings name the host
+  assertions they bear on.
 - *Surfaces.* The surfaces are redrawn to fit that shape. This is required,
   not permitted: fitting the new document into the old surfaces would turn
   the stage into a puzzle. The names chosen here are final.
 - *Self-containment.* The guide's regions leave the surfaces' definitions.
   What each surface contains is rendered in the contract; reading the
   manifest is not a prerequisite for knowing what the document covers.
-- *Particulars, in prose.* Every rule states its four particulars in
-  sentences. Structured forms wait for stage three.
+- *Particulars, in sentences, as separate parts.* Every rule states who
+  acts, where, when it applies, each condition as its own identified item,
+  and the consequence. The parts are fixed in stage one so that stage three
+  can hold the same content as data without rewriting it. A rule is not
+  written as one paragraph that runs its conditions together.
+- *Maintenance leaves the document.* The contract has no section on its own
+  upkeep. A `docs/contract/` directory, with its own description and
+  working rules, is the home for maintenance guidance and for the
+  contract's authoring inputs and generators. How much moves there in this
+  stage is settled with the machinery.
 - *Removals.* Sentences that deny or recall a former mechanism, and
   instructions addressed to maintainers inside normative text, are removed
   or moved. The maintainer has already directed three removals (`R-23`,
@@ -188,9 +209,10 @@ trace of having first been written for another.
 - *Revision.* Passages that carried a Known gap or a case split are
   rewritten with care. A gap confirmed as intended becomes an ordinary
   statement.
-- *Structure for the particulars.* The four particulars move from prose
-  into tables, trees or another structure, wherever that makes a rule
-  easier to find and compare.
+- *A machine-readable form.* The definitions, applicability and obligations
+  have a machine-readable representation in the finished contract, and the
+  particulars move from sentences into tables, trees or another structure.
+  The form is chosen here; the parts it holds were fixed in stage one.
 - *Rules as data, where it earns its place.* Applicability and obligations
   may move into the manifest, and parts of the document may be rendered
   from rows. Each such step is weighed as new machinery.
@@ -207,7 +229,8 @@ trace of having first been written for another.
 - The guide.
 
 **Exit.** No Known gap remains that the maintainer has not confirmed as
-intended; every row is owned; the checks pass; a release has been cut.
+intended; every row is owned; the definitions, applicability and
+obligations are machine-readable; the checks pass; a release has been cut.
 
 ## Stage four: edit the guide
 

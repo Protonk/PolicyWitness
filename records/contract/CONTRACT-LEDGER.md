@@ -36,6 +36,7 @@ artifacts are named by path without links, under the records link rule.
 | 2026-11-10 | 4 | Maintainer's position on `R-36` recorded, with a correction to the coordinator's "same bytes" wording. The disputed definitions and scopes are drafted for review in `records/contract/validators/DEFINITIONS-AND-SCOPES.md`. The position also adds to the stage 5 direction: definitions, applicability, obligations. |
 | 2026-11-10 | — | The maintainer set a four-stage course: restructure the contract against the current implementation, change what is hard to state, settle the contract, edit the guide. Outlined in `docs/CONTRACT-STAGING-PLAN.md` (`d98303a9`). The examination's stage 4 register feeds it; no further close reading is planned. |
 | 2026-11-10 | — | Proposed structure for the restructured contract, with a worked section, in `records/contract/CONTRACT-STRUCTURE-PROPOSAL.md`, for review before stage one is drafted. |
+| 2026-11-10 | — | Maintainer reviewed the structure proposal in eight points, recorded in the notes. Second version written: no reading-instructions section, body by public operation with the trio inside each, no maintenance appendix, rules with separately identified conditions, production and interpretation stated apart, field meaning in the contract. The staging plan in `docs/` carries the same points. |
 
 ## Artifacts
 
