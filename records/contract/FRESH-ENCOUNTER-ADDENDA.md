@@ -444,3 +444,215 @@ The following are the closest changes in the specificity of my understanding. Ea
 | §46 | The host/worker pair uses generated exact source identity, checked before compilation/signing, with input scope and runtime handshake not yet described. | I could name the covered files/discovery rules and the header checks, mismatch behavior, and reporting limitation. The hash still did not authenticate behavior or artifacts. | C 392–420, recorded in §§47–49. |
 
 Several apparent contrasts did **not** change my mind: accepting historical flattened registry records at C 297 did not weaken public identity admission; optional diagnostic information at C 263–264 did not create additive compatibility; matching source bytes at C 416 did not become compiled-layout or authenticity proof; and an `observed` application state at C 207–208 did not become a success claim. The journal already kept those boundaries or expressly reserved the unanswered point. No entry has been edited to incorporate the later material.
+
+
+# Answers
+
+“C” continues to identify lines of `docs/CONTRACT.md`; journal section numbers refer to the accepted journal. Neither that journal nor the preceding Close-out is revised by these answers.
+
+For this task I first searched the two accepted artifacts for the three named entries and related terms. I then reread C 198–244 and 379–425, followed by C 1–197, 245–378, and 426–441. Collectively that covered all 441 contract lines. The per-answer search accounts below identify which passages did the work within that shared reread; they do not claim that I opened only those passages. No linked document, implementation, test, or other repository file was opened. “Remembered” identifies a belief already present in the first journal, now also reinforced by the close-out; it does not claim an uncontaminated memory experiment. Applications to the new situations are identified as reasoning done now.
+
+## 1. Direct source-test builds and identity regeneration
+
+**Answer.** I understood the updated C, Swift, and test identity copies to be produced by `docs/generate_worker_identity.py`, invoked through the given `tests/lib/python.sh` command after an input edit. My mental sequence was regeneration followed by compilation using the regenerated copies. I did not mean that an ordinary freshness check silently rewrites them: I explicitly understood those checks to be nonwriting.
+
+I had not settled who invokes the generator on the direct source-test path. “Direct source-test builds regenerate the same way” made me expect that path to use the same regeneration mechanism, but I had not distinguished a source-test build/setup command invoking it from the person preparing the build invoking it beforehand. I cannot now report that I had understood automatic regeneration at a particular hook. The text identifies the writer and the after-edit requirement; it delegates the detailed check/signature sequence to the build account. Before compilation consumes the copies is my inference about the required ordering, rather than a separately specified direct-build hook.
+
+**Contract basis.** C 382–384 names the generator. C 385–388 says the build checks copies before compilation and before signing, never writes them, and gives the regeneration and nonwriting-check commands. C 389–390 says direct source-test builds regenerate the same way and assigns the detailed sequence to the build account.
+
+**Reading and search.** The generator/check distinction was remembered from Journal §46. I returned directly to the internal-identity passage, displayed as C 379–425, with C 382–390 decisive. The later full-document reread supplied no more precise direct-build invoker. Recognizing that I had left that invoker unspecified is a clarification now, not a newly recalled automatic-build mechanism.
+
+**Confidence.** High about which generator produces the copies and the nonwriting nature of checks. Moderate about the inferred before-consumption ordering. I did not have a definite belief about manual versus automatic invocation or its exact hook.
+
+## 2. Who accepts a compiled-profile receipt, and when?
+
+**Answer.** I meant the software reading and interpreting an arrived host reply and its receipt. My concrete picture was a controller-side response reader deciding whether the receipt could be used or presented as compiled-profile evidence. I was not referring to the worker accepting a request nonce before applying the policy, or to the host deciding whether to launch the worker.
+
+The point was response interpretation: first establish the host reply's producer context, then assess the receipt before accepting its evidentiary content. That does not locate the check at a precise worker-lifecycle moment or say that all cleanup has finished. Nor had I assigned it to a named module or decided whether every outside consumer repeats it. “Controller-side reader” was my inference about the ordinary product path; the more general belief was that whoever accepts the receipt as evidence needs more than a matching producer identity.
+
+**Contract basis.** C 243 says the receipt inherits its admitted host-reply context, requires consistency among its fields, and is refused for a wrong nonce even inside a current reply. C 159 places host admission before interpretation of reply contents. C 347–355 describes projection from typed records and semantic checking before claims. By contrast, C 90–91 concerns the earlier request's capture/nonce prerequisites.
+
+**Reading and search.** The distinction between host admission and receipt consistency was remembered from Journal §29. The question about the accepting actor was more specific than the belief I had recorded. I reread C 240–244, then related it to C 147–159 and 347–355 during the shared full reread. Those passages support the response-reading stage without naming one definitive implementation component.
+
+**Confidence.** High about the distinction between request admission and accepting returned receipt evidence. Moderate about the controller-side picture. Low confidence in any more precise allocation or lifecycle timing, which I had not established.
+
+## 3. Which ordinals share a sequence in the A-to-phase-B dependency?
+
+**Answer.** Let D be the actor active in dependent phase B. The reading I carried, extended to this example, is:
+
+- A's activation observation and A's owned reap belong to A's process-associated observation sequence.
+- The gate's `observation.capture_ordinal` is a reference to A's owned-reap ordinal, not a new event ordinal.
+- I took the gate's own later `capture_ordinal` to be comparable with that A-owned reap. Combined with the final-activation rule, I understood an A-associated order of final activation, owned reap, then gate closure.
+- B's activation observation belongs to the sequence for its active actor D. I did not take its ordinal to be numerically comparable with A's ordinals, or with the gate ordinal I had associated with A. The stated cross-actor time constraint is instead that a present dependent activation timestamp must not precede A's reap timestamp.
+
+Thus I did not mean that all four event ordinals live in one global sequence. I also did not mean that A itself necessarily increments every A-associated capture ordinal: a process-associated observation sequence is not a statement about which process writes each observation.
+
+The first journal explicitly records local scope and the later gate ordinal, but does not spell out B's assignment. That last assignment, and the explicit four-way mapping here, are my application of that reading now. The gate's association with A is an inference from the required comparison, not an independently enumerated counter definition in the text.
+
+**Contract basis.** C 212–216 introduces reap/activation observations and says the ordinals are local to the source actor process. C 217–220 makes the gate observation reference that reap and requires a later gate capture ordinal. C 220–224 orders final activation, owned reap, and closure and requires source timestamps. C 230–234 separately discusses dependent activation and its timestamp. C 281 excludes a dependency on the phase's own active source actor and constrains the source's final visit.
+
+**Reading and search.** I remembered Journal §26's local-versus-global distinction. I reread C 212–236 directly for this mapping, and checked the dependency restriction at C 281 during the full reread. I did not find another passage that explicitly enumerates the namespaces of all four ordinals. The detailed mapping is reasoning now, not a claim that I originally worked through this precise example.
+
+**Confidence.** High that I did not read a global process counter and that the gate observation references A's reap. Moderate about the full mapping, especially assigning the gate's own counter to the A-associated sequence; I would not claim the prose separately specifies its storage or writer.
+
+## 4. Binding text, machinery, maintainers, and Typed response transport
+
+**Answer.** I took the opening identity/admission rules and the behavioral claims in the normative regions as product commitments. That includes their qualifications, negative guarantees, refusal examples, and evidence requirements. Explanations of generators, hashing, shared records, and readers describe machinery, but their concrete assertions about what readers reject or what a build checks also led me to expect that behavior.
+
+Instructions such as edit the schema, regenerate, review goldens, and prepare a release table address maintainers. I did not read that change in audience as making surrounding behavioral statements optional. The internal host/worker section, although outside the earlier surface regions, also states concrete behavior I expected the product to exhibit.
+
+Because I read raw Markdown, the `BEGIN CONTRACT ...` and matching `END CONTRACT ...` comments gave me the most concrete boundary for a delimited surface region. Heading level alone did not: the request and equipment regions themselves contain additional headings. A closing marker ends that region; I did not take it to end all binding claims in the rest of the document.
+
+I took C 300–358 to be normative transport material in its own `transport_encoding` region, elaborating typed response/capture transport. It is not inside the installation region, which ends at C 298, and its explicit structural rejection and projection rules were promises I relied on. I associated it substantively with the `transport` surface. I did not establish exactly how the manifest maps the differently named `transport_encoding` region to a stamp-table row; the document says the manifest owns that scope, and I did not open it.
+
+**Contract basis.** C 3–20 gives the opening obligations. C 24–32 assigns scope to the manifest and describes hashing delimited normative regions. C 58–63 and the paired markers through C 298 identify the surface regions. C 300 and 358 delimit `transport_encoding`; C 328–355 contains its reader and projection requirements. C 360–370 and 430–434 address maintenance. C 382–420 gives internal identity behavior and limitations outside those earlier regions.
+
+**Reading and search.** I remembered treating transport as substantive in Journal §§38–43 and maintenance separately in §§44 and 51. The question about exactly which stamped surface owns `transport_encoding` required a fresh look at the markers and table. I used the full-document reread, especially C 22–58, the region boundaries through C 358, and the later headings. I did not consult the manifest.
+
+**Confidence.** High about the visible region boundaries, the product commitments I took from transport, and the maintenance audience. Moderate about mapping `transport_encoding` to the `transport` stamp; that association was an inference, not a checked manifest fact.
+
+## 5. Reusing release X when Y's probes stamp predates X
+
+**Answer.** Before changing the assertion, I would inspect Y's surface rows changed since X, revisit the corresponding definitions, and decide whether the specimen still expresses the intended request under Y. Relevant changes may be in request admission, policy, equipment, transport, or another surface even if `probes` has no newer stamp. I would then deliberately change the specimen to assert Y's exact contract. If using an external runner, I would follow the stated reinstallation requirement when the app contract changes.
+
+I would read the older `probes` stamp as saying that no newer change to that tracked surface's normative region/shape has been recorded since before X. It gives me no flagged probe-surface change to review in that interval. I would continue to rely on the unchanged described probe semantics, subject to the rest of Y's contract.
+
+I would not conclude that probe implementation bytes, all interacting surfaces, or observed sandbox results must be identical between X and Y. The stamps are navigation aids, implementation fixes still require identity acceptance, and observations are not promised identical across builds or macOS versions. An unchanged probe row does not make X's assertion admissible to Y.
+
+**Contract basis.** C 17–20 supplies review, manual assertion changes, and external-runner reinstallation. C 24–32 defines what stamps track and denies them an admission role. C 100–106 includes implementation fixes in required build-identity review. C 116–119 limits cross-build/OS observation guarantees. C 63 still requires exact request identity.
+
+**Reading and search.** The review procedure and stamp/admission distinction were remembered from Journal §§3–4 and 10–12. Applying them to a probes row older than X is reasoning now. Within the shared full reread I used C 17–32, 63, and 100–119; no additional source was needed.
+
+**Confidence.** High about the required manual acceptance and the lack of an identical-observation guarantee. High about reading the table as a report of tracked last change, while not treating it as an independent implementation comparison.
+
+## 6. What “verified examples” meant to me
+
+**Answer.** I took it to indicate that maintainers are expected to keep examples supported by verification and aligned with the normative definitions and shape goldens. For an individual “Example:” sentence, I therefore read its stated behavior as an intended, concrete contract assertion, not as a speculative scenario. The expectation that each such example has supporting verification was an inference from the maintenance language, not something I established by tracing a particular test.
+
+Yes: for understanding the product or writing a caller against the stated conditions, I would rely on the behavior an example explicitly describes without personally running a check first. For example, I would rely on the foreign-contract gate preventing the truncating operation described at C 135. That is reliance on the contract, not a claim that I have verified the installed artifact.
+
+The word does not tell me the exact test, date, platform, release artifact, or breadth of verification for any particular sentence. I would not turn it into an assertion that I know every “Example:” was exercised end to end in a particular release, or that an observation will reproduce on every macOS version.
+
+**Contract basis.** C 103–105 and 362–365 require normative definitions, verified examples, and goldens to stay current; C 430–434 repeats the definition/example maintenance relationship. C 121–122 relates the named developer lesson to particular decoding/validation and signed controls, but does not map every “Example:” sentence to a control. C 63 and 135 support the example of preventing truncation. C 118–119 limits identical-observation expectations.
+
+**Reading and search.** I remembered the maintenance responsibility recorded in Journal §§10 and 44 and the concrete examples treated as claims throughout the journal. The question about verification of any one example is new. I checked C 100–122, 362–365, and 430–434 and looked through the whole contract for a more specific per-example verification statement; I did not find one.
+
+**Confidence.** High that I treated examples as behavior I could rely on under their stated conditions. Moderate about inferring supporting verification for every individually labeled example. I cannot attest to the verification history of any one sentence.
+
+## 7. A satisfied gate with no source final-activation timestamp
+
+**Answer.** I did not read a current producer identity as a guarantee that no contradictory observation can reach my program. Such material can reach a reader as received bytes or as retained conflicting observations. The contract expressly permits conflicts to remain publishable. But the combination in the question cannot establish a valid satisfied-gate claim: the required source timestamp is absent.
+
+I would distinguish a received field reporting “satisfied” from a semantically admitted conclusion that the dependency was satisfied. In a product projection of admitted claims, I expect the dependent claim to be withheld. If the product instead presents that combination as an admitted satisfaction claim, that would not meet the stated rule. The contract does not tell me exactly whether this case rejects a whole reply, retains a raw state while withholding another claim, or produces a particular diagnostic. It does not promise a named error field for this example.
+
+An independent reply reader can identify the inconsistency by checking that a satisfied gate has both source final-activation and owned-reap timestamps, along with the other gate conditions. A matching contract or structural fingerprint is not that check. If my program consumes only an already validated product projection, I expect the product's semantic checks to have excluded the unsupported claim; the text does not give me a complete field-level recipe for recognizing that disposition. I therefore cannot promise that the program will find a particular ready-made “wrong” flag.
+
+**Contract basis.** C 220–226 requires both source timestamps and the remaining satisfaction conditions. C 230–231 says absent source times cannot satisfy the dependency. C 165 withholds dependent lifecycle claims for unknown or contradictory observations. C 319–322 and 351–355 distinguish structure from semantic admission and allow conflicting observations to remain published with claims withheld. C 147 and 347–350 allow retained received bytes without making them valid claims.
+
+**Reading and search.** The timestamp requirement and withheld-claim principle were remembered from Journal §§27–28 and 43. The distinction between what can arrive at this program and what it can accept is an application now. I compared C 212–236 with C 147–165 and 304–355, and used the rest of the full reread to look for a specific failure disposition. I found no exact diagnostic mapping for this case.
+
+**Confidence.** High that the described evidence cannot justify satisfaction, and high that current identity is insufficient. Moderate about which representation can reach a particular consumer, because the consumer's position and the precise rejection/projection shape are not specified.
+
+## 8. A receipt with a nonce different from the one sent
+
+**Answer.** Yes, the wrong value can arrive as received receipt material; matching the current host contract does not make it acceptable for my request. I expect a request-aware acceptance step to refuse that receipt as evidence for the capture I asked for. I do not expect an accepted successful receipt for my request merely because its producer is current.
+
+What I can predict about the reply is that the receipt must not be treated as valid for that request. I cannot name the exact status/code, say that its bytecode is necessarily removed, or say that the entire host reply is necessarily rejected. The sentence “a wrong nonce refuses the receipt” does not give those presentation details. In particular, I would not automatically expect `request_failure.code: invalid_capture_nonce`: that code is described among request refusals, whereas this situation concerns a received receipt's correspondence to an earlier request.
+
+My program needs the nonce it actually sent to establish that correspondence. An otherwise self-consistent receipt cannot establish that external relationship by itself. If my program is an independent receipt reader, I would compare the received nonce with the saved expected nonce before accepting the receipt. That is my inference about what it means for my program to accept this evidence, not an express instruction in the text to duplicate a check that some specified request-aware product reader has already completed. The contract does not allocate that request-aware comparison precisely enough for me to assume every upstream projection already performed it. If I rely on an already admitted receipt, that reliance must include admission for my request's nonce, not just host identity admission.
+
+**Contract basis.** C 90–91 establishes request capture/nonce prerequisites. C 243 requires receipt consistency and expressly refuses a wrong nonce inside a current reply. C 159 supplies the independent host-admission step. C 347–355 distinguishes retained material and structural shape from accepted claims. C 258–264 and 282 place `invalid_capture_nonce` in the request-refusal discussion.
+
+**Reading and search.** The invalid-receipt conclusion was remembered from Journal §29. The allocation of the request comparison and the exact output shape were not established there. I reread C 90–91, 240–244, 258–284, and 347–355 within the shared full scan. This question required reasoning now about the program's saved request context; I found no receipt-specific output-code rule or definitive allocation of the check.
+
+**Confidence.** High that the wrong nonce cannot support accepting the receipt for the sent request. High that independent acceptance needs a comparison to that request. Moderate about the expected upstream rejection point, and low about any exact projected failure spelling or retained payload shape.
+
+## 9. Equal release contracts on apps, and an equal contract on a runner
+
+**Answer.** For the two apps, I know that the reported public admission identity is the same and names the same release. Taking the reports as products of the described build process, both claim release builds from a clean tree at the named annotated tag, with scoped source bytes checked against that tag's blobs. Within the same release/tag history, I take them to assert the same release-bound public surfaces.
+
+I do not take equality of that release label to establish byte-for-byte equality of the installed apps, signatures, entitlements, compiler/SDK, machine environment, or runtime observations. The label is not itself a digest of the complete installed package. Nor does it independently authenticate its own report or resolve the identity of a tag in an otherwise unspecified release history. Describe, commit, version, and number remain descriptive fields; matching `contract` alone is not a stated equality check on all those fields. I would still honor the separate binary-fingerprint, worker-identity, equipment, and entitlement checks instead of treating the public string as their result.
+
+For a runner, equality tells me that its reported public identity passes that equality requirement. It does not by itself establish that both the registry record and the actual live peer match, that the selected worker has required entitlements/equipment, that a particular request passes other admission checks, or that an attempt will succeed or exhibit a particular sandbox outcome. A claim in a registry record is specifically insufficient when the live peer is foreign. If I have actually obtained the matching live peer's report, that resolves the live-identity part, but not the other requirements.
+
+**Contract basis.** C 8–15 and 438–441 define release production/reporting and distinguish descriptive metadata. C 100–106 binds surfaces to the release; C 118–119 disclaims identical observations across builds/OS versions. C 171 and 183–193 separately require equipment and entitlement associations. C 249 and 296 require live-peer as well as registry identity. C 341–345 and 422–425 preserve separate contract boundaries. C 416–420 expressly limits the internal source hash's guarantees; I do not transfer stronger guarantees from that internal identity to the public release label.
+
+**Reading and search.** I remembered the identity/provenance distinction, independent peer checks, and observation limits from Journal §§2, 12, 20, 30, 36, 42, and 49–52. The equal-installed-app scenario required combining them now. I revisited C 8–15, 100–119, 171–193, 249, 296, 341–345, 416–425, and 438–441 as part of the full reread. No package-authenticity or package-byte-equality promise was supplied there.
+
+**Confidence.** High about the public equality requirement and the separate checks. High that identical runtime observations or installed-package bytes do not follow from the label. Moderate about a shared source baseline unless the two reports are understood within the same authentic release/tag history; the string alone does not establish that background.
+
+## 10. What I took `_test_overrides` to be
+
+**Answer.** I took it to be a request object for explicit testing or instrumentation overrides. The underscore and name suggested intended use by maintainers and test harnesses, but I did not read them as an access-control rule. Because it appears among accepted request objects, I took a request author who knows its accepted fields to be able to express it subject to admission rules. I saw no stated privileged-user requirement, build-mode restriction, or blanket prohibition on an ordinary caller using that object. That is an inference from its placement, not a documented authorization matrix.
+
+I did not know its field inventory or exactly what it could change. The actor-equipment discussion separately says explicitly instrumented overrides are distinguishable from packaged roles and carry `unverified_fixture` identity. That gave me a concrete understanding that overrides can affect the equipment whose evidence a run produces, without establishing packaged selection. It does not explicitly say that all such equipment overrides are supplied through `_test_overrides`, or enumerate other capabilities of that object. I did not infer permission to bypass contract checks, fake any arbitrary observation, or alter every native outcome.
+
+**Contract basis.** C 67–75 includes `_test_overrides` among closed request objects and separately mentions the actor equipment override map. C 188–190 describes instrumented equipment overrides and their attribution limit. C 3–6 and 63 preserve exact public admission; no override exception is stated.
+
+**Reading and search.** The testing/instrumentation interpretation was remembered from Journal §7 and the carried-terms discussion in Close-out; Journal §22 supplied the equipment distinction. The precise “who may use it” question was not resolved in the first pass. I reread C 67–75 and 183–193 and checked the full contract for further restrictions or field definitions. I found no complete authorization or capability specification.
+
+**Confidence.** High that it is a recognized, closed request object. Moderate about intended test/instrumentation use and the inference that its name does not itself restrict callers. Low about its full effects or any unstated mode restrictions.
+
+## 11. Is the request-failure code table exhaustive?
+
+**Answer.** I would treat it as the documented code meanings, not as permission to write an exhaustive switch with no unknown-code case. The contract does not expressly tell me that these are all codes any admitted reply can contain; more decisively, it tells me what to do with unfamiliar codes.
+
+My code would preserve an unfamiliar code and its supplied diagnostic context as an unclassified refusal. It would not guess a cause, turn it into success, parse supplementary error prose to invent a classification, or assume that an unfamiliar code itself proves a foreign producer. Producer admission and interpretation of a refusal code are separate steps. Even if the table happened to cover the currently emitted set, the stated unknown-code handling would still govern my reader.
+
+**Contract basis.** C 273–284 provides the table. C 289 explicitly says to retain unfamiliar codes as unclassified refusals rather than guessing their cause. C 266–271 instructs consumers to use code/path without parsing the error prose; C 263–264 also denies success inference from absent structured diagnostics.
+
+**Reading and search.** This answer was remembered directly from Journal §35, supported by §§32–34. The necessary local lookup was C 263–289; the shared full-document reread did not change it. The distinction between documented meanings and an exhaustive implementation switch is an application now of the explicit unfamiliar-code instruction.
+
+**Confidence.** High about reader behavior. I do not claim to know whether the table in fact lists every code emitted by this build.
+
+## 12. Reusing a development-asserting specimen with a release
+
+**Answer.** I cannot literally apply “surface rows changed since its asserted release” when the assertion is `development:<sha256>`: it names no asserted release to use as the comparison baseline. The contract gives no algorithm for turning that development digest into a release baseline, and the target's release stamps alone do not describe every difference from that development build.
+
+The parts I can apply are deliberate author review of the target contract and manual replacement of the assertion with the target's exact release identity, plus external-runner reinstallation when applicable. I would review the target definitions relevant to the specimen and decide whether they still express what I intend. If I independently knew the development build's baseline and differences, I could use that knowledge to guide comparison, but the contract does not derive it from the digest for me. Without such a baseline, I could not claim that a release-to-release stamp comparison had covered the development-to-release change.
+
+Even if the development build's relevant source happened to match the eventual release, its development assertion is not automatically accepted by the release. Changing the assertion is still the author's acceptance decision. This is my adaptation of the general reuse responsibility, not a fully specified development-to-release procedure found in the text.
+
+**Contract basis.** C 8–13 defines the different identity forms. C 17–20 states the release-oriented reuse procedure and no-rewrite rule. C 29–32 derives stamps from annotated release history and excludes them from admission. C 63 requires exact identity, while C 100–106 requires review of the selected build's identity for shipped-source changes.
+
+**Reading and search.** Manual reuse and development exactness were remembered from Journal §§2–4 and 10. The missing release baseline in this situation is reasoning now. I reread C 8–32, 63, and 100–106 and searched the rest of the contract by reading it for a development-specific reuse provision; none was supplied.
+
+**Confidence.** High that the original development assertion does not match a release and that the stated procedure lacks that baseline conversion. Moderate about my adapted review approach, which is an inference about author responsibility rather than a separately mandated sequence.
+
+## 13. What controller exit status 1 establishes
+
+**Answer.** By ordinary command-line convention I would treat it as an unsuccessful invocation. From this contract alone, I cannot classify the cause from that number. The explicit rule is that the listed `bad_request` refusals make the controller exit 1; it does not give the converse rule that every exit 1 is one of those refusals, or provide a complete controller exit-code table.
+
+The script cannot infer from status 1 alone that JSON was malformed, the contract was foreign, the runner was unavailable, transport failed, or a sandbox denied an operation. It also cannot infer the request-refusal guarantee of no step/child observations unless it first establishes that this was such a refusal. I would inspect the returned classification and, when present, `data.request_failure.code` and `.path`. Absence of that optional record would not establish success or select a particular alternative cause.
+
+**Contract basis.** C 258–259 maps the listed request refusals to `bad_request` and exit 1. C 260–264 distinguishes tool/execution failures and makes structured diagnostics optional. C 266–271 gives their interpretation rules. C 286–289 describes request-refusal observations and diagnostic limitations, not a consequence of the integer 1 by itself. C 159 independently forbids assigning sandbox cause from permission-shaped failure alone.
+
+**Reading and search.** I remembered the one explicit controller exit value and the unprovided tool-failure statuses from Journal §32 and Close-out's §32 accounting. The inverse-inference question is new. I checked C 255–289 and looked through the full contract for a complete exit mapping; I found none. I kept worker exit 4 and runner `rc: 1` statements separate from a controller exit-code taxonomy.
+
+**Confidence.** High that status 1 does not identify a particular cause under the stated mapping. Calling the invocation unsuccessful uses ordinary exit-status convention as well as the failure context; the contract itself gives only the stated category-to-exit mapping.
+
+## 14. Does the runner receive the request file's exact bytes?
+
+**Answer.** I would not expect a byte-for-byte preservation guarantee. The controller parses and preprocesses a request: it removes selection fields and can resolve and remove augment instructions before XPC delivery. The dossier section speaks of a submitted serialization of held input, not a promise to forward the original file's serialization unchanged.
+
+Consequently, a property of the file's whitespace or key order is not something I can rely on reaching the runner. In transformed requests, at least some submitted content necessarily differs. For an otherwise unchanged request, the contract does not specify the emitted key order, whitespace, or canonicalization, so I cannot say that its bytes must always differ either. The no-rewrite promise concerns the user's file, and the held-input promise prevents a later source-file edit from changing the admitted submission; neither promises byte-identical transport.
+
+**Contract basis.** C 67–75 identifies decoding and field semantics. C 81–85 removes selection fields, resolves source fragments, and strips the augment list before submission. C 129 specifies in-memory augmentation and an unchanged input file in the refusal example. C 153 identifies held input and submitted serialization. C 19 says the user's specimen is never rewritten.
+
+**Reading and search.** Preprocessing and held-input stability were remembered from Journal §§3, 8, 13, and 17. The distinction between held input and original JSON byte layout is an application now. I revisited C 17–19, 67–85, 129, and 153 within the full reread; I found no whitespace/key-order forwarding rule elsewhere.
+
+**Confidence.** High that byte preservation cannot be assumed and that preprocessing can change submitted content. I do not claim a particular serialization format beyond what the contract states.
+
+## 15. How broadly I read “no bypass”
+
+**Answer.** I read it as applying to the public admission boundaries the document describes. For request files, my concrete belief covered the submission/run path and its pre-execution selection, augmentation, and helper work. I did not extend it into a claim that every shipped tool that merely opens or examines a request file must perform the same admission before doing anything with those bytes.
+
+It also was not “the run path only” in the sense of excluding output readers: the opening sentence expressly includes independently arriving envelopes, host replies, and client captures, and their later sections require their own admission. Reading unsupported bytes for diagnostics or retaining them is different from admitting their contents as claims. Likewise, an unasserted authored test template is not yet an admitted submitted request.
+
+I therefore understood no alternate identity, translation, or override route to obtaining public execution or semantic acceptance under these rules. I had not formed a belief about every standalone file-reading/checking utility, and the contract does not enumerate their admission boundaries here. If a tool presents its input as a public request, I expect the request gate to apply; mere file access alone does not establish that role. I cannot use this sentence to decide the behavior of an otherwise unspecified shipped command.
+
+**Contract basis.** C 3–6 states the exact-admission/no-bypass rule in the context of specimens and independently arriving producer records. C 13 refers to public requests and packaged peer checks. C 63 gives the early request gate before selectors, augments, helpers, or children. C 147, 159, and 249 describe independent output/capture admission; C 147 and 374 retain unsupported bytes without granting semantic use. C 375–377 distinguishes authored templates from identity-asserting submission.
+
+**Reading and search.** The strong public-admission rule was remembered from Journal §§1, 6, 16, 18, and 30. The all-shipped-tools-versus-run-path distinction was not one I had explicitly decided in the first journal. I worked it through now using C 3–20, 63, 147–159, 249, and 372–377, and the full-document scan for an exhaustive tool-scope statement. I found no such inventory or universal rule triggered merely by opening a file.
+
+**Confidence.** High about no bypass at the expressly described public boundaries. Moderate about the inferred scope for an unspecified standalone tool; the text does not let me assign every shipped command to a boundary.
