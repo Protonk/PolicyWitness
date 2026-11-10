@@ -25,6 +25,7 @@ artifacts are named by path without links, under the records link rule.
 | 2026-11-09 | 2 | Journal writer's fifteen answers accepted at `8323f54f`. Stage 2 is complete. The journal writer can be released. |
 | 2026-11-09 | 6 | Maintainer decided `R-01` to `R-05`. Change made and committed at `a7d9b320`, ahead of the structure stage at the maintainer's direction; mechanically verified. Outstanding for it: stage 7 review and reading, `R-06`, and a rebuild before any app-dependent case. |
 | 2026-11-09 | 3 | Six further owner-finding passes started, covering every unit not yet inventoried, with the four-slot brief. |
+| 2026-11-09 | 3 | The six passes returned 238 rows. The inventory now has 332 rows over every unit: 240 owned, 45 sourced, 32 split, 15 unowned, as the passes state them. Of the 238 rows asked, the sentence does not state who acts in 159, the boundary in 165, or the consequence in 133. Stage 3's exit condition is met; nothing in it has been run. Stage 4 proceeds by the maintainer's focus items and by the sources the plan names. |
 
 ## Artifacts
 
