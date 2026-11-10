@@ -1,7 +1,8 @@
 import Foundation
 import Darwin
 
-/// Versioned optional receipt for the exact compiler result supplied to apply.
+/// Optional receipt for the exact compiler result supplied to apply. It has no
+/// version or contract field; the enclosing reply identifies the producing build.
 /// `captured` requires a complete, checksum-verified worker capture and successful
 /// application/process completion. This is not a readback of kernel state.
 struct CompiledProfileCapture {

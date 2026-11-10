@@ -49,8 +49,8 @@ import CryptoKit
 /// rather than a runtime shm misalignment.
 enum PWShmLayout {
     // BEGIN GENERATED WORKER IDENTITY (docs/generate_worker_identity.py)
-    static let abiIdentityHex = "4be1acb4ec613d47ce43e8490eda14166a3e0ad550326124f46efa281f5127a1"
-    static let abiIdentity: [UInt8] = [0x4b, 0xe1, 0xac, 0xb4, 0xec, 0x61, 0x3d, 0x47, 0xce, 0x43, 0xe8, 0x49, 0x0e, 0xda, 0x14, 0x16, 0x6a, 0x3e, 0x0a, 0xd5, 0x50, 0x32, 0x61, 0x24, 0xf4, 0x6e, 0xfa, 0x28, 0x1f, 0x51, 0x27, 0xa1]
+    static let abiIdentityHex = "cf69b790b31daa5e867d7878cf019dc5917ce58b8226111ee72db2c609222f26"
+    static let abiIdentity: [UInt8] = [0xcf, 0x69, 0xb7, 0x90, 0xb3, 0x1d, 0xaa, 0x5e, 0x86, 0x7d, 0x78, 0x78, 0xcf, 0x01, 0x9d, 0xc5, 0x91, 0x7c, 0xe5, 0x8b, 0x82, 0x26, 0x11, 0x1e, 0xe7, 0x2d, 0xb2, 0xc6, 0x09, 0x22, 0x2f, 0x26]
     // END GENERATED WORKER IDENTITY
 
     static let abiMagic: UInt32 = 0x50574944
@@ -666,8 +666,9 @@ func consumedParamsDigest(_ params: [CWorkerParam]) -> Data {
     return sha256Digest(pairs.reduce(le(params.count), +))
 }
 
-/// Called only for an opted-in run. A checksum, PID or actual-consumed-input
-/// mismatch refuses publication instead of falling back to source-only identity.
+/// Called only for an opted-in run. A nonce, PID, extent, checksum or
+/// actual-consumed-input mismatch withholds the capture data and publishes an
+/// `unavailable` receipt with the reason; nothing falls back to source-only identity.
 func captureNonceBytes(_ nonce: String?) -> Data? {
     guard let nonce, nonce.utf8.count == 32,
         nonce.utf8.allSatisfy({ (48...57).contains($0) || (97...102).contains($0) }) else { return nil }

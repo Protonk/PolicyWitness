@@ -42,7 +42,7 @@ Stamps are navigation aids and are never asserted or used for admission.
 | `lifecycle` | Disposition and lifecycle evidence | v0.3.6 |
 | `policy` | SBPL, params, augments and imports | v0.3.6 |
 | `probes` | Probe steps | v0.3.6 |
-| `profile` | Compiled-profile receipt | v0.3.6 |
+| `profile` | Compiled-profile receipt | unreleased |
 | `refusals` | Exit classification and structured refusals | v0.3.6 |
 | `request` | Saved specimen and runner selection | v0.3.6 |
 | `steps` | Reply steps and comparison | v0.3.6 |
@@ -240,7 +240,7 @@ observes reap.
 ### Compiled-profile receipt
 
 <!-- BEGIN CONTRACT profile -->
-A compiled-profile receipt inherits its admitted host reply context. It has no independent schema marker. Status, nonce, worker binding, stage, byte count and digest must be consistent; a detached receipt grants no producer context. Example: a wrong nonce refuses the receipt even inside a current reply.
+A compiled-profile receipt has no contract or version field of its own. It is read under the contract of the host reply that carries it: the controller checks that reply's `producer.contract` before it reads the receipt, and a receipt taken out of its reply does not identify the build that produced it. The reply's `producer` record identifies the build that produced the reply; the receipt's `producer` field names the worker as the producer of the capture. The host decides the receipt while it collects the worker's capture, before the reply exists. It publishes `status: "captured"`, with `producer: "worker"` and `capture_stage: "before_apply"`, only when all of these hold: application succeeded and the worker exited with status 0 and no signal; the worker reports a completed capture; the capture's recorded process identifier is that of the worker being collected; its recorded nonce equals the request's `capture_nonce`; its profile type is the expected one and its byte count is positive and within the capture capacity; the SHA-256 of the bytes read equals the recorded digest; and the recorded source and parameter identities equal those the host supplied. When one fails, the host withholds the capture data and publishes `status: "unavailable"` with a `reason` and with neither `producer` nor `capture_stage`. The reply is not refused on that account. The controller checks the receipt's labels only: `status` is `captured` or `unavailable`, a captured receipt carries exactly those producer and stage values, and an unavailable receipt carries neither. It classifies a reply that fails this check as `malformed_runner_response`. The controller does not compare the receipt's nonce, process identifier, byte count or digest. A consumer that needs to tie a receipt to its own request compares the receipt's `request_nonce` with the nonce it sent; equality associates the two and does not establish that the host compared the worker's capture. A malformed `capture_nonce` is a request refusal, made before any capture. Example: a reply from the current build whose `captured` receipt names a producer other than `worker` is classified `malformed_runner_response`.
 <!-- END CONTRACT profile -->
 
 ### Client capture and transport

@@ -637,7 +637,8 @@ references is supported by the compiler.
 
 An SBPL policy may set `capture_compiled_profile: true` and a fresh per-application
 `capture_nonce` (32 lowercase hexadecimal characters). The runner adds
-`data.runner_result.compiled_profile`, with the admitted reply's producer context. A
+`data.runner_result.compiled_profile`. The receipt has no contract or version field
+of its own and is read under the contract of the reply that carries it. A
 `status: "captured"` receipt requires `producer: "worker"` and
 `capture_stage: "before_apply"`. It contains `worker_pid`, `request_nonce`, `profile_type`,
 `bytecode_length`, `bytecode_b64`, `bytecode_sha256`, `source_length`,
@@ -652,8 +653,9 @@ checksum before publication. Missing capture, failed apply, worker death or
 capture corruption is unavailable.
 An unavailable nested receipt has a reason and no bytecode, producer or capture
 stage, or is absent if no worker result was obtained. An opt-in request alone
-does not establish that capture ran. Readers require the nested receipt version
-and the exact producer/stage values for a captured receipt.
+does not establish that capture ran. The controller requires the exact
+producer/stage values for a captured receipt and classifies a reply without them
+as `malformed_runner_response`.
 
 Application is reported separately by `sandboxed_after_apply` and any published
 `runner_subprocess.worker_evidence.failure`. An unavailable capture does not
@@ -2638,7 +2640,7 @@ admission compares the complete build contract exactly.
 | `lifecycle` | Disposition and lifecycle evidence | v0.3.6 |
 | `policy` | SBPL, params, augments and imports | v0.3.6 |
 | `probes` | Probe steps | v0.3.6 |
-| `profile` | Compiled-profile receipt | v0.3.6 |
+| `profile` | Compiled-profile receipt | unreleased |
 | `refusals` | Exit classification and structured refusals | v0.3.6 |
 | `request` | Saved specimen and runner selection | v0.3.6 |
 | `steps` | Reply steps and comparison | v0.3.6 |
