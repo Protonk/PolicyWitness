@@ -30,6 +30,14 @@ field sets, that the projected `runner_result` reads back as the same typed
 record, the client observations, exit status and execution diagnostics. Real Swift policy-transfer and worker-clock replies
 also cross this assembly boundary and independent consumers in `runner_unit`.
 
+`compiled_profile_labels_determine_the_public_admission_outcome` runs the
+compiled-profile fixture corpus through production controller orchestration
+with a supplied client result. It checks `malformed_runner_response`, exit 1,
+retention of structurally decoded replies and absence of execution diagnostics
+and fallback compilation on receipt-label refusal. Accepted label controls
+retain `finished` and exit 0. These are constructed replies, with no worker
+capture or sandbox application.
+
 ## Success criteria
 
 `finished_run_preserves_successful_and_failed_attempts` pins the run summary

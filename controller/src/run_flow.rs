@@ -2567,6 +2567,55 @@ else:
         }
 
         #[test]
+        fn compiled_profile_labels_determine_the_public_admission_outcome() {
+            let root = scratch("profile-label-outcomes");
+            let app = synthetic_app(&root);
+            install_manifest(&app, ManifestState::Valid);
+            let request = request_file(&root, None);
+            let args = [request.to_str().unwrap()];
+            let cases: Value = serde_json::from_str(include_str!(
+                "../../tests/fixtures/contract/compiled_profile.json"
+            ))
+            .unwrap();
+            for case in cases.as_array().unwrap() {
+                let mut reply = worker("finished", None);
+                reply["compiled_profile"] = case["receipt"].clone();
+                let retained = serde_json::from_value::<PWRunnerRunResult>(reply.clone()).ok();
+                let observed = observe_reply(&app, None, &args, reply);
+                let (wire, exit_code) = envelope_of(&observed.output);
+                let valid = case["valid"].as_bool().unwrap();
+                let label = &case["name"];
+                assert_eq!(observed.calls.len(), 1, "{label}");
+                assert_eq!(exit_code, if valid { 0 } else { 1 }, "{label}");
+                assert_eq!(wire["result"]["ok"], valid, "{label}");
+                assert_eq!(
+                    wire["result"]["normalized_outcome"],
+                    if valid {
+                        "finished"
+                    } else {
+                        "malformed_runner_response"
+                    },
+                    "{label}"
+                );
+                assert_eq!(
+                    serde_json::from_value::<Option<PWRunnerRunResult>>(
+                        wire["data"]["runner_result"].clone()
+                    )
+                    .unwrap(),
+                    retained,
+                    "{label}: structurally decoded reports remain available"
+                );
+                assert!(wire["data"]["policy_check"].is_null(), "{label}");
+                assert_eq!(
+                    wire["data"]["runner_sandbox_diagnostics"].is_null(),
+                    !valid,
+                    "{label}"
+                );
+            }
+            fs::remove_dir_all(&root).unwrap();
+        }
+
+        #[test]
         fn refused_reply_versions_request_no_fallback_compilation() {
             // Through production admission: a reply under another response
             // version is refused before anything reads it, so no helper is

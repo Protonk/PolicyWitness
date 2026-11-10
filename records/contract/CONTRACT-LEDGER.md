@@ -12,24 +12,56 @@ sections hold and when they are updated; a check-in reads them first.
 
 ## Standing
 
-Stage one has not started and nothing is in motion. The staging plan was
-revised for delegated execution on 2026-11-10; "Review for delegated
-execution" below says what changed and on what readings it rests.
+Stage one started on 2026-11-10 at `8dfb1152`. Coverage reconciliation,
+the authoring spike and the migration dependency inventory are in progress
+as independent delegated tasks. The current contract remains authoritative
+until the coordinated switch. Their records are
+`CONTRACT-COVERAGE-MAP.md`, `CONTRACT-SPIKE-RESULT.md` and
+`CONTRACT-MIGRATION-INVENTORY.md` in this directory.
 
-Last check: `env -u PYTHONOPTIMIZE
-PW_TEST_OUT_DIR=tests/out/runs/contract-dispatch-plan-20261110 tests/run.sh
---suite source_drift` passed all ten cases on the revised documents (run
-`20261110T193138Z_ee6bc76c`). It checks documentation and generator
-contracts only, and its output is local and disposable.
+Last checks: all four `unit` cases passed in
+`tests/out/runs/contract-profile-outcome-20261110`
+(`20261110T195016Z_0d197151`). Nine of ten `source_drift` cases passed in
+`tests/out/runs/contract-stage-one-start-20261110`; `generator_contract`
+correctly refused links added to the plan before the delegated coverage and
+spike records existed. Those premature links were removed, and that case
+passed in `tests/out/runs/contract-stage-one-links-20261110`. The failure was
+an editing-order error, not an environment or product failure. These are
+local disposable development runs. New tree support modules are still being
+built separately and are not exercised by these checks.
 
-Next: stage one's first steps. Steps one, two and four do not depend on one
-another and can be handed out together.
+Next: review those returns, establish the generator's failing controls,
+and build the complete empty surface skeleton beside the current contract.
+No surface drafting precedes reconciliation of its inputs.
+
+Readiness checks found clean `main`, annotated history through `v0.3.6`,
+local archives `v0.3.3` through `v0.3.6`, and the Developer ID identity
+available outside the automation sandbox. The same read-only identity and
+native-builder probes failed inside the sandbox and passed outside it.
+The current notary profile has not been probed. No build or test execution
+is credited by this readiness review. Three agents are active; three have
+been dispatched in this task in total, including the two readiness readers
+now continuing with stage-one work.
 
 ## Decisions
 
-None yet. An entry gives the distinction, what was chosen and the commitment
-it makes, the evidence with its grade, and what a reversal would undo. The
-costliest to reverse come first.
+**Working record.** Retain this ledger as an internal index of decisions,
+evidence and unresolved items. The maintainer made its use optional; the
+existing register and cross-references make it useful without introducing
+another decision record. Review material will be brought forward explicitly
+at the required pauses. This changes no product commitment.
+
+**R-06: outcome owner.** Add
+`compiled_profile_labels_determine_the_public_admission_outcome` to the
+controller's existing orchestration controls. The compiled-profile corpus
+now passes through `run` with a supplied client result, checking the public
+outcome, exit status, decoded-report retention, diagnostics and fallback
+absence. This supports the example with a constructed input; it establishes
+no worker capture. `tests/out/runs/contract-profile-outcome-20261110` passed
+all four `unit` cases, including the new test and formatting. The evidence is
+local and disposable. The run identity is `20261110T195016Z_0d197151`.
+Reversal removes the outcome-level owner while leaving
+the existing reply-label test. Product behavior is unchanged.
 
 ## For the maintainer
 
@@ -719,7 +751,7 @@ read, with no test of that step for this cause. Recorded as `R-06`.
 | R-03 | `K-243-3` to `K-243-7` | Maintainer's reading; `F-06`; `A-29`; answers 2 and 8 | A list of six nouns standing for several relations with different owners and consequences, omitting the source and parameter comparisons and the conditions for `captured`. | Text | **Rewrite**, stating each rule with its owner and consequence, what the controller does not compare, and the consumer's own comparison. The existing division of responsibility is intended and preserved. Maintainer's decision. | Changed at `a7d9b320`; as above |
 | R-04 | `K-243-8` | Maintainer's reading; `L-30` | "A detached receipt grants no producer context": a changed subject, a verb for something no code path does, and one name for two fields. | Text | **Rewrite**, explaining the two `producer` fields by their qualified locations. Both names stay. Maintainer's decision. | Changed at `a7d9b320`; as above |
 | R-05 | `K-243-9` | Maintainer's reading; `F-05`; `F-06`; `A-29`; silence 4; answers 6 and 8 | The example stated a rule nothing performed and merged two different nonce failures. The journal writer, asked, expected "a request-aware acceptance step to refuse that receipt" and would rely on an example's behavior without checking it. | Text | **Rewrite**: replaced by a case the controller rejects, with its owning check. The source comment's "refuses publication" now names what is withheld and what is published. Maintainer's decision. | Changed at `a7d9b320`; as above |
-| R-06 | New example at C:243 | Coordinator | No test asserts that a receipt-label violation yields the outcome `malformed_runner_response`; the owning test stops at "not admitted". | Repository: a missing check | **Proposed: eliminate**, by asserting the outcome in the existing test. Outside the scope the maintainer set for this change. | Open; see the sorting |
+| R-06 | New example at C:243 | Coordinator | The original receipt-label test stopped at "not admitted". | Repository: a missing check | Add an orchestration control asserting the public outcome, exit status, retention and withheld diagnostics. | Closed: the four unit cases passed in `contract-profile-outcome-20261110`; constructed client-result evidence |
 
 ### C:165-236 and C:351-355, lifecycle, equipment and the publication rule
 
