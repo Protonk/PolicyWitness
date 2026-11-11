@@ -215,3 +215,86 @@ errors. Its integrated report contains exactly the intended refusal:
 The local evidence is `tests/out/runs/contract-v038-publication-fixture-20261111`;
 this offline control has no app-integrity observation. The complete replacement
 development battery and full build-refusal rehearsal follow this repair.
+
+## Completed pre-tag rehearsal and prepared review state
+
+The repaired source was committed as `e30cf4c3c182f96482664671327ffa1f2fe78ecf`.
+Signed development build 1339 reports that clean commit, version 0.3.7 and
+`v0.3.7-5-ge30cf4c3`, with the same development contract, worker identity and
+guide hash recorded above. This ordinary build used `PW_FRESH_BUILD=0`.
+The checkout and distribution stayed fixed through both following executions.
+
+| Execution | Canonical run | Completed result |
+| --- | --- | --- |
+| Full development default battery | `20261111T191123Z_094abff3` | 229 of 229 cases passed; Swift 604 of 604. |
+| Full `preflight/build_refusal_controls` | `20261111T194527Z_f1b62407` | One complete selected case passed: 76 variant records, 12 sequences and all 16 mutation demonstrations. |
+| Nested extracted-ZIP default battery | `20261111T205355Z_357efdcc` | 229 of 229 cases passed; Swift 604 of 604. |
+
+All three canonical runs are terminal, with zero skips, unrun cases, harness
+errors or recorded per-case sleep. Each inspected app was valid before execution
+and unchanged afterward. The development battery took 1,987.207 seconds; the
+full refusal case's enclosing run took 8,916.413 seconds. Its mutation records
+show a failed owning control for every altered guard, with self-check refusals
+excluded from the guard-only stage; the original controls passed again after
+restoration. The final completeness assertion records 88 controls and 16
+demonstrations. No repair was needed during this full refusal run.
+
+The independent development audit checked all 229 default IDs and their order,
+all 228 legacy reports and the separately accounted nine-item process family,
+including its 27 phases and 16 settled operations. It matched the frozen app
+to all 47 retained inventory paths/modes and 22 file hashes before reading its
+embedded identity. The independent nested audit repeated those accounting joins
+and checked the actual retained ZIP against the build and extracted inventory.
+The coordinator read both complete audits, checked the terminal outer receipts,
+mutation stages and unchanged source/app identities, and owns this combined account.
+
+Nested acceptance `accept-dc41eca6368e475eb0c1005dfe998477` completed against
+ZIP SHA-256 `7b7866cb80fcfa5881ce4bf6ed0a44df2eb73de750a8a23c85ace8a6a42aa99e`.
+Its disposable tagged fixture reports `release:v1.0.0`, build 1335, commit
+`45815df6a28ffe41ce6f0ebd0eb7160b8d48bd32`. Its full build used fresh mode;
+real tools built, signed, extracted and tested the app. Notarization, stapler
+and Gatekeeper responses were controlled locally. The fixture's successful
+guide-staging command and output inventory record hash
+`4c2054a0723d25edc19094bc2f2647fcea5dc5220702d73818a6769009e87fd3`;
+the standalone fixture guide bytes were not retained for independent rehash.
+The audits state the particular captured source hashes and build claims used
+for attribution. These joins establish their stated observations and selections.
+
+Local raw evidence is under `tests/out/runs/contract-v038-resumed-development-20261111`
+and `tests/out/runs/contract-v038-build-refusals-20261111`. Both are ordinary
+disposable development evidence. The `evidence/stage-four/pretag/` additions
+retain the frozen audits, compact canonical-run projections, 88 control records
+and 16 mutation records. Existing reports keep their original scopes, including
+the audits written while the outer mutation phase was still active. The package
+manifest checks all 63 members; it creates no retention pin.
+
+The ordinary `--check --require-history` passed before preparation.
+`generate_contract_stamps.py --release v0.3.8 --require-history` then changed
+only the two nineteen-row stamp tables and the public snapshot's history list.
+The contract body, guide workflows, authored tree and shape definitions retain
+the tested bytes. The snapshot now carries v0.3.6, v0.3.7 and prospective v0.3.8.
+The prepared contract SHA-256 is
+`b69eb2cf62d4416e89db310a1cae0963eedfed1f2cbff66550d06bb13e59230c`;
+the prepared guide is
+`766eb552504f61746bd00d22be17d759fe7e0fba355805115b77211dc378ceb9`.
+
+Strict tree loading and exact prospective rendering passed. Prose and build
+baselines have zero additions against v0.3.7. Free relationships remain at
+51 conditions, zero dependencies and four applicability clauses; effects fall
+from 88 to 78. Footprint attribution still names the preceding v0.3.7 acceptance
+battery, as required. The ordinary stamp check now gives exactly the expected
+pre-tag refusal: `release history unavailable; restore annotated release tags: v0.3.8`.
+The source/staged development guide still belongs to build 1339; the fresh
+tagged build will stage the prepared guide after review.
+
+The maintainer pause is before creating v0.3.8. The prepared-commit verifier is
+`/private/tmp/pw-contract-pretag-verify-20261111.py`; its report destination is
+`/private/tmp/pw-contract-pretag-verification-20261111.json`. It checks the clean
+untagged commit, retained annotated history, prospective outputs, baselines and
+footprint attribution, and accepts only the exact expected missing-tag refusal.
+The preparation check is retained separately as
+`/private/tmp/pw-contract-v038-prospective-check-20261111.json`.
+After the maintainer's review and instruction to continue, the remaining sequence
+is annotated tagging, strict preflight, a fresh signed tagged build and full
+default rehearsal, then the real release/Apple submission, extracted-ZIP
+acceptance and archival. Publication remains the maintainer's later decision.

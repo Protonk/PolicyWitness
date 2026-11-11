@@ -385,6 +385,90 @@
       "transform": "exact bytes"
     },
     {
+      "decoded_bytes": 18547,
+      "decoded_sha256": "fbbfc71375ea09d441d38428db5b43d71e403dc474c2440131dd8ac848b32bd9",
+      "encoding": "identity",
+      "path": "pretag/DEVELOPMENT-AUDIT.md",
+      "source": "/private/tmp/pw-contract-v038-default-independent-audit-20261111.md",
+      "source_bytes": 18547,
+      "source_sha256": "fbbfc71375ea09d441d38428db5b43d71e403dc474c2440131dd8ac848b32bd9",
+      "stored_bytes": 18547,
+      "stored_sha256": "fbbfc71375ea09d441d38428db5b43d71e403dc474c2440131dd8ac848b32bd9",
+      "transform": "exact bytes"
+    },
+    {
+      "decoded_bytes": 15941,
+      "decoded_sha256": "b092a1f32b4f62b659b6c2f1c5acbb277b230c353458689cb62e7e32fef14f1d",
+      "encoding": "identity",
+      "path": "pretag/NESTED-ACCEPTANCE-AUDIT.md",
+      "source": "/private/tmp/pw-contract-v038-nested-acceptance-audit-20261111.md",
+      "source_bytes": 15941,
+      "source_sha256": "b092a1f32b4f62b659b6c2f1c5acbb277b230c353458689cb62e7e32fef14f1d",
+      "stored_bytes": 15941,
+      "stored_sha256": "b092a1f32b4f62b659b6c2f1c5acbb277b230c353458689cb62e7e32fef14f1d",
+      "transform": "exact bytes"
+    },
+    {
+      "decoded_bytes": 12581,
+      "decoded_sha256": "cd549d3674992d1888119506bfeaf180d53ecd6011465671211aeddef6d0cb18",
+      "encoding": "gzip",
+      "path": "pretag/build-refusal-controls.json.gz",
+      "source": "/Users/raccoon/Desktop/Security/PolicyWitness/tests/out/runs/contract-v038-build-refusals-20261111/suites/preflight/build_refusal_controls/artifacts/controls.json",
+      "source_bytes": 12581,
+      "source_sha256": "cd549d3674992d1888119506bfeaf180d53ecd6011465671211aeddef6d0cb18",
+      "stored_bytes": 1376,
+      "stored_sha256": "d258f4a76ea566d9731aa87a7067d8660e40d1fca1d02d190752a3d503687787",
+      "transform": "exact bytes"
+    },
+    {
+      "decoded_bytes": 34390,
+      "decoded_sha256": "653bce9efd6929b1fa879979a8a771df6e7531d182b585dc8d78771569236a3a",
+      "encoding": "gzip",
+      "path": "pretag/build-refusal-mutations.json.gz",
+      "source": "/Users/raccoon/Desktop/Security/PolicyWitness/tests/out/runs/contract-v038-build-refusals-20261111/suites/preflight/build_refusal_controls/artifacts/mutations.json",
+      "source_bytes": 34390,
+      "source_sha256": "653bce9efd6929b1fa879979a8a771df6e7531d182b585dc8d78771569236a3a",
+      "stored_bytes": 4161,
+      "stored_sha256": "dfdd5f21673ffb7bfdce2685aca246fa4b51c79787f72d66dee36d1704d2b492",
+      "transform": "exact bytes"
+    },
+    {
+      "decoded_bytes": 247885,
+      "decoded_sha256": "f3d6813b6ab4f6f8473ef7af2b0451b84860583eaad215a8782a0fbd8702260f",
+      "encoding": "gzip",
+      "path": "pretag/development-run.json.gz",
+      "source": "/Users/raccoon/Desktop/Security/PolicyWitness/tests/out/runs/contract-v038-resumed-development-20261111/run.json",
+      "source_bytes": 1222754,
+      "source_sha256": "532f0b8b052a2705b5cf5af9f886b1d75d308dcf3c2341063461247d79d05faf",
+      "stored_bytes": 28120,
+      "stored_sha256": "eb1eca5b2bf112fc029206b5d172820bb52d8ce20824ef9f83b26db6f33753ff",
+      "transform": "pre-tag canonical run projection v1"
+    },
+    {
+      "decoded_bytes": 247917,
+      "decoded_sha256": "c44f350cc1a55c755105730152b4d41769121cd7e110bf9ddeb5a4873e293936",
+      "encoding": "gzip",
+      "path": "pretag/nested-run.json.gz",
+      "source": "/Users/raccoon/Desktop/Security/PolicyWitness/tests/out/runs/contract-v038-build-refusals-20261111/suites/preflight/build_refusal_controls/artifacts/release-battery/acceptance/tests/run.json",
+      "source_bytes": 1219911,
+      "source_sha256": "681e71d0c7cd4cdf2453bac3a0186bced19a18d3c67512c76a58bc7f35e17362",
+      "stored_bytes": 28073,
+      "stored_sha256": "c06e6ff4f1da4c1056a3f41eaf8ed887da8c8a777c0e21b5650325477425cd5f",
+      "transform": "pre-tag canonical run projection v1"
+    },
+    {
+      "decoded_bytes": 3737,
+      "decoded_sha256": "fb40b47a7e21d76cd24468eab8f9ea8d7bf3fdefa4d59d40814724ef3fdc19b5",
+      "encoding": "gzip",
+      "path": "pretag/refusals-run.json.gz",
+      "source": "/Users/raccoon/Desktop/Security/PolicyWitness/tests/out/runs/contract-v038-build-refusals-20261111/run.json",
+      "source_bytes": 226876,
+      "source_sha256": "0173d82a2d0b7441bf01954662f5e69384d97fa44a41c5626187f2774d591fc4",
+      "stored_bytes": 1391,
+      "stored_sha256": "7edf7873c654e1929d5ac10234fa1e0c2e03dab7761ec5c7c33fe63ec9f6545e",
+      "transform": "pre-tag canonical run projection v1"
+    },
+    {
       "decoded_bytes": 3979,
       "decoded_sha256": "4c8758bd8af52884e77c21d14e43a60115e7a5c5baeca87450c8fdb6362fb600",
       "encoding": "identity",
@@ -701,13 +785,37 @@
         "copy-observation": "927fdde2af1fa6a12fbf1cb7f00ba85896865b2dae8f2dae31fcb71cd13bb3fe",
         "final-guide": "dbd2075fd0c4c7d7d1d98b0a73d8a98386a0ba5de6747e747d0c7d13f52ad304"
       }
+    },
+    {
+      "added_files": [
+        "pretag/DEVELOPMENT-AUDIT.md",
+        "pretag/NESTED-ACCEPTANCE-AUDIT.md",
+        "pretag/build-refusal-controls.json.gz",
+        "pretag/build-refusal-mutations.json.gz",
+        "pretag/development-run.json.gz",
+        "pretag/nested-run.json.gz",
+        "pretag/refusals-run.json.gz"
+      ],
+      "packager": {
+        "path": "/private/tmp/pw-contract-pretag-evidence-20261111.py",
+        "sha256": "1acbd59fa3883b27df97a48a592bcedef3a3ae82eb0ceecf5e496eafc3629124"
+      },
+      "previous_manifest_sha256": "423781ec9e2b75bf0a9e02bc958aaf156d54f1d405588a1b767e63f5ebdca335",
+      "run_sha256": {
+        "pretag-development": "532f0b8b052a2705b5cf5af9f886b1d75d308dcf3c2341063461247d79d05faf",
+        "pretag-nested": "681e71d0c7cd4cdf2453bac3a0186bced19a18d3c67512c76a58bc7f35e17362",
+        "pretag-refusals": "0173d82a2d0b7441bf01954662f5e69384d97fa44a41c5626187f2774d591fc4"
+      }
     }
   ],
   "run_sha256": {
     "copy-observation": "927fdde2af1fa6a12fbf1cb7f00ba85896865b2dae8f2dae31fcb71cd13bb3fe",
     "corrected": "28cd321d7c51c11b499a80db20793cd5d8908fd5d605e868e13bf926f58b7d47",
     "final-guide": "dbd2075fd0c4c7d7d1d98b0a73d8a98386a0ba5de6747e747d0c7d13f52ad304",
-    "initial": "68e3ad3605623a83334ad0a2856e9d2d19b8da88f1d7727936415903daad0752"
+    "initial": "68e3ad3605623a83334ad0a2856e9d2d19b8da88f1d7727936415903daad0752",
+    "pretag-development": "532f0b8b052a2705b5cf5af9f886b1d75d308dcf3c2341063461247d79d05faf",
+    "pretag-nested": "681e71d0c7cd4cdf2453bac3a0186bced19a18d3c67512c76a58bc7f35e17362",
+    "pretag-refusals": "0173d82a2d0b7441bf01954662f5e69384d97fa44a41c5626187f2774d591fc4"
   },
   "schema_version": 1,
   "scope": "stage-four guide preparation, independent reviews, bounded audits and canonical selection outcomes"

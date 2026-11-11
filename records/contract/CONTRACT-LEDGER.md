@@ -18,18 +18,32 @@ Another agent's review and the maintainer's line-by-line contract reading
 will occur then. Tagged rehearsal and Apple submission wait for the
 instruction to continue after that review.
 
-**Stage-four guide work settled; pre-tag rehearsal follows.**
+**Stage-four guide work and pre-tag rehearsal complete; prepared for review.**
 `records/contract/STAGE-FOUR-ACCOUNT.md` records the section review, exact selected
 command walkthrough, corrections and remaining validation limits. The final
 walkthrough `20261111T182903Z_8aff51a9` passes with a valid unchanged app, zero
 sleep and verified external-runner/workspace cleanup. The corrected focused
 selection passed all ten source-drift cases, retention controls and the native
 default-location case; its failed guide attempt and two other failed attempts
-remain recorded separately. The source/staged guide is
+remain recorded separately. The walkthrough's source/staged guide was
 `31944ef9cd04d131e1cf2314ba1bb3e0f67322a4f58a5a828bcb08136f3fa3a4`.
 The contract's structured Reply link correction leaves 5,831 lines and 77,418
-words. Next: committed-source development build/default battery, full build
-refusal controls, prospective v0.3.8 stamping and the directed pre-tag pause.
+words. Clean source `e30cf4c3` built as development build 1339. Full default
+`20261111T191123Z_094abff3` passed 229/229. Full refusal run
+`20261111T194527Z_f1b62407` passed all 88 variant/sequence records and 16 mutation
+demonstrations, including nested ZIP acceptance/default run
+`20261111T205355Z_357efdcc` with 229/229 passes. All three runs record zero sleep,
+skips, unrun cases or harness errors and valid unchanged apps. Frozen audits and
+compact receipts are in `records/contract/evidence/stage-four/pretag/`.
+
+Prospective v0.3.8 generation changes only the contract/guide stamp tables and
+snapshot history. Strict rendering, non-growing baselines against v0.3.7 and
+preceding-release footprint attribution passed. The ordinary check now refuses
+for precisely the absent v0.3.8 annotated tag, as expected at this boundary.
+The prepared guide is `766eb552504f61746bd00d22be17d759fe7e0fba355805115b77211dc378ceb9`;
+the distribution guide still belongs to the tested development build. The
+stage-four account records the checks and next commands. Pause before the tag;
+maintainer review precedes tagged rehearsal and real Apple submission.
 
 **Stage three settled.**
 The contract, stage-two decision record and maintainer list are ready for the
