@@ -234,7 +234,10 @@ def check_contract_free_text_baseline(out):
     source = repo / 'docs/contract/00-fixture.surface.md'
     before = source.read_text()
     source.write_text(before.replace('## Defined value {value: definition}\n',
-        '## Defined value {value: definition}\n\n```contract\nfree.effect: Record the fixture observation.\n```\n', 1))
+        '## Defined value {value: definition}\n\n```contract\n'
+        'free.effect: Record the fixture observation.\n'
+        'retained_free: {"effect":{"kind":"environment_observation","reason":"This constructed fixture keeps an observation-recording instruction in prose to exercise release free-effect growth."}}\n'
+        '```\n', 1))
     assert source.read_text() != before
     raised = dict(condition=0, dependency=0, effect=1, when=0)
     (repo / release_preflight.CONTRACT_FREE_TEXT_BASELINE).write_text(json.dumps(raised))

@@ -183,3 +183,35 @@ lifecycle readers have their own available evidence.
 The final checkpoint stops before the v0.3.8 tag. The maintainer's review and
 line-by-line contract reading precede tagged rehearsal, Apple submission and
 final release acceptance. Publication waits until the whole effort is complete.
+
+## Development rehearsal and resumption
+
+Commit `897be512` built successfully as signed development build 1338, with
+the same contract and staged-guide hashes reported above. The first full default
+run, `20261111T183854Z_d69bde09`, found a stale publication-control fixture:
+its deliberately added free effect omitted the reason now required by strict
+authoring validation. At the maintainer's requested pause, the dispatcher was
+interrupted normally and settled its active process group. Its terminal summary
+recorded eleven passes, that one failure and 217 unrun cases; the app was valid
+and unchanged. The checkout lock was released without replacing its inode.
+
+Before resuming, the maintainer requested ordinary repository pruning. The first
+sandboxed preview refused while inspecting an archived signature; the identical
+unsandboxed preview passed. `make prune APPLY=1` then removed all 22 eligible
+inactive development runs, including the interrupted rehearsal, with no blockers
+or failures. Archives v0.3.4 through v0.3.7 and the latest v0.3.7 acceptance remain.
+The earlier development paths in this account are now retired; their committed
+audits and compact summaries retain their original scopes. Private prune reports
+are `/private/tmp/pw-contract-resume-prune-{preview-unsandboxed,apply}-20261111.stdout`.
+
+The fixture correction adds only `retained_free.effect` metadata at the caller
+that introduces the free fact. Its effect count still grows from zero to one;
+the parser, baseline and exact refusal assertion remain unchanged. Source review
+found no corresponding omission in the shared zero-free fixture or build-refusal
+constructors. Focused `preflight/release_publish_controls` run
+`20261111T190548Z_538ff7ae` passed, with zero sleep, skips, unrun cases or harness
+errors. Its integrated report contains exactly the intended refusal:
+`contract free-text baseline grew against v3.0.0: effect: 0 -> 1`.
+The local evidence is `tests/out/runs/contract-v038-publication-fixture-20261111`;
+this offline control has no app-integrity observation. The complete replacement
+development battery and full build-refusal rehearsal follow this repair.
