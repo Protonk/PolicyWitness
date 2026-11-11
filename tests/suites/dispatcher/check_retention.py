@@ -280,6 +280,31 @@ class Controls:
             runner.write_bytes(original)
         self.completed.append('ordinary prune removes inactive completed/interrupted output, ignores pins, and preserves unknown owners')
 
+    def guide_ownership(self):
+        repo = self.fixture('guide-resource-ownership')
+        base = repo / 'tests/out/runs'
+        states = {'pending': dict(removed=False),
+                  'cleanup-error': dict(removed=True, cleanup_error='constructed interrupted cleanup'),
+                  'complete': dict(removed=True)}
+        for name, progress in states.items():
+            self.call(repo, output='tests/out/runs/' + name)
+            artifacts = base / name / 'suites/witness_contract/guide_workflows/artifacts'
+            artifacts.mkdir(parents=True)
+            (artifacts / 'session.json').write_text(json.dumps(dict(kind='guide_workflow',
+                workspace='/private/tmp/pw-guide.constructed', workspace_identity=[123, 456], **progress)))
+            (artifacts / 'effect-observation').write_bytes(b'preserve unresolved ownership')
+        preserved = {name: artifact.inventory(base / name) for name in ('pending', 'cleanup-error')}
+        preview = json.loads(self.call(repo, ['--prune'], readonly=True).stdout)
+        rows = {r['path']: r for r in preview['runs']}
+        require(rows['runs/complete']['disposition'] == 'delete', 'clean guide owner blocked pruning')
+        for name in preserved:
+            require(rows['runs/' + name]['disposition'] == 'keep: blocked', 'pending guide owner was disposable')
+        self.call(repo, ['--prune', '--apply'], code=1)
+        require(not (base / 'complete').exists(), 'completed guide neighbor remained')
+        for name, before in preserved.items():
+            require(artifact.inventory(base / name) == before, 'prune changed unresolved guide receipts')
+        self.completed.append('top-level guide owner protects pending/error evidence; clean neighbor is pruned')
+
     def run(self):
         repo = self.fixture('retained-and-completed')
         kept = artifact.inventory(repo / 'tests/out/kept')
@@ -318,6 +343,7 @@ class Controls:
         self.completed.append('symlink redirects and lexical path escapes')
         self.locking()
         self.pruning()
+        self.guide_ownership()
         (self.out / 'controls.json').write_text(json.dumps(self.completed, indent=2) + '\n')
         print(f'{len(self.completed)} retention controls passed ({self.count} invocations)')
 

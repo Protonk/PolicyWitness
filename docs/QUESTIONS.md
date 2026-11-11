@@ -6,84 +6,75 @@ The following questions are answered briefly with exhaustive detail remanded to 
 
 ## When should I use PolicyWitness?
 
-Use PolicyWitness when you need to determine whether an observed result follows from the sandbox policy under test or from some unrelated part of the execution environment.
+Use it for a repeatable experiment about a sandbox policy: prepare a saved request, collect a prediction where available, perform the requested actions and retain the observations. Start with the [quick start](PolicyWitness.md#quick-start), then read the [result account](PolicyWitness.md#reading-a-result) before comparing runs.
 
 ## Who needs to use PolicyWitness?
 
-Almost no one. Folks authoring SBPL profiles can call `sandbox_check` and `sandbox-exec` directly and Apple's entitlements model plus their app's actual runtime behavior cover practical sandbox questions. A small wrapper script around `sandbox_check` plus `sandbox-exec` can obtain a prediction and an attempt result in the common case. 
+Developers investigating sandbox policy, native API behavior and process authority can use the same specimen and report to state exactly what they observed. A useful experiment identifies its target, its expected observation and an independent way to inspect the effect.
 
 ## What systems can run PolicyWitness?
 
-PolicyWitness requires macOS 26 on Apple Silicon. Its shipped executables are arm64-only; Intel Macs are not supported.
+The shipped app requires macOS 26 or later on Apple silicon (arm64).
 
 ## Can PolicyWitness attribute a failed attempt to sandbox denial?
 
-No. PolicyWitness records the failed attempt and the evidence available around it, but a failure alone does not establish that the sandbox caused it.
+A permission-shaped failure records a native result such as `EPERM`, `EACCES` or a bootstrap permission result. The report preserves that observation and the separately collected query answer. Establishing the cause requires evidence that distinguishes sandbox enforcement from the other reasons the native operation can fail.
 
 ## What does PolicyWitness's attempt channel record?
 
-The sandboxed worker supports four built-in attempt kinds: `file` (open/read/write/create/unlink/access), `mach_lookup` (`bootstrap_look_up`), `sysctl` (`sysctlbyname` read), and `exec` (`posix_spawn`). Completed results carry operation-specific status and error observations in a uniform per-step envelope; those status fields are PolicyWitness attempt status, not raw syscall returns. Result provenance and missing reasons distinguish completed observations from missing or incomplete reports.
+It records the requested operation's published result and the evidence that supports it. A completed failed operation is a result. A missing or incomplete publication stays unavailable, with lifecycle evidence showing whether the action boundary was reached. File, Mach lookup, sysctl and exec operations have [different observations](PolicyWitness.md#attempt-kinds-the-runner-implements).
 
 ## How does a worker report observations under `(deny default)`?
 
-The host prepares and pre-touches a shared-memory region before spawning the worker. The worker publishes observations there after applying its policy, and the unsandboxed host reads them to assemble the response.
+The host prepares shared evidence memory before the worker applies the policy. The worker publishes bounded observations there, and the host collects them after execution and cleanup. The host's reply path remains in its own unsandboxed process. Publication, collection and final process status each have their own records.
 
 ## Can PolicyWitness probe operations it doesn't natively support?
 
-Yes — via the `exec` attempt kind plus the named-augment interface. Callers ship their own helper binary and, where needed, opt into `exec_baseline`, a shipped SBPL fragment supplying baseline allows for spawning under `(deny default)`. PolicyWitness records spawn observations, child disposition and bounded stdout/stderr in the same envelope shape as the built-in attempt kinds. The helper must supply evidence about its internal operation; PW does not turn that evidence into a record for that operation, and a successful spawn can coexist with a failed exec result. The per-operation authoring burden lives with the caller — PolicyWitness intentionally doesn't carry an atlas of every sandboxable operation, and the augment system is the documented extension point for callers who need to test surfaces (network, iokit, ipc, signals, user_preference, etc.) PolicyWitness has no built-in attempt kind for.
+An `exec/spawn` attempt can run your helper and retain its bounded stdout, stderr and child-process observations. Arrange for the helper to report the native result and supporting effect you need. The [exec augment](PolicyWitness.md#augments) adds process permissions and an unconditional file-read allow; choose it only when those added permissions fit the experiment.
 
 ## What does a comparison record contain?
 
-Each step's `comparison` has six fields: what the attempt channel observed (`observation`: `succeeded`, `permission_failure`, `other_failure` or `unavailable`) and the raw fields that observation rests on (`observation_basis`); whether the query named the same operation as the attempt (`operation_relation`) and the same submitted target (`target_relation`); whether an eligible query is known to precede the attempt batch (`order`); and a short list of `limitations` that name a planning exclusion or the attempt's lifecycle state. The query's own answer stays in `sandbox_check`. See the guide's [reading rules](PolicyWitness.md#reading-a-comparison-record).
+It records the attempt observation and its basis, the relationship between submitted operations and targets, query order and limitations. The prediction stays in `sandbox_check`. [Reading a comparison](PolicyWitness.md#reading-a-comparison-record) explains the six fields together. Reporting-failure replies omit comparisons while retaining the observations their fallback form can carry.
 
 ## Does PolicyWitness decide whether `sandbox_check` and enforcement disagree?
 
-No. The envelope carries no evidence that a target's state was stable between the query and the attempt, or that a path named the same object both times, and a permission-shaped failure does not identify the sandbox as its cause. A deny prediction beside a successful attempt is therefore reported as those two facts with their relations and order, and nothing more. Readers who want an opinion form it from the record and the raw channels, under limits the record states.
+The report supplies the query answer, attempt observation and the relationships it can establish. `query_first` establishes collection before the phase's actions; `same_submitted` compares submitted target bytes. Runtime object identity and changes between query and action require additional observations for an agreement or disagreement claim.
 
 ## Can PolicyWitness run every profile that `libsandbox` accepts?
 
-No. PolicyWitness has its own limits, documented in [the limits inventory](PolicyWitness.md#limits).
+PolicyWitness admits requests within its grammar, action relationships and [limits](PolicyWitness.md#limits). The worker then uses the host OS's native compiler and applies the resulting profile. Compilation, application and completion are separate observations, each with its own failure record.
 
 ## What versions of SBPL are supported?
 
-PolicyWitness passes the submitted SBPL source to the host's `libsandbox` compiler and supports whatever profile versions that compiler accepts. `(version 1)` is the documented profile version; some Apple-shipped profiles use higher version numbers.
+SBPL is interpreted by the installed OS's `libsandbox`. Keep the recorded macOS build, selected source and parameters with the result when comparing compiler behavior. The [compiler helper](PolicyWitness.md#sbpl-check-sbpl-check) gives an independent host-side compilation diagnostic.
 
 ## How do I use imports with PolicyWitness?
 
-Write imports in the SBPL source, for example `(import "name.sb")`; macOS's
-`libsandbox` resolves them during compilation. PolicyWitness independently
-inventories literal imports, checking absolute names as supplied and searching
-relative names under `/System/Library/Sandbox/Profiles/` before
-`/usr/share/sandbox/`. The dossier records the files selected by that scan.
+Write native `(import "name.sb")` expressions in the policy. The controller separately inventories literal imports: absolute names are read as supplied; relative names are searched under `/System/Library/Sandbox/Profiles/` and then `/usr/share/sandbox/`. Preserve each inventory's errors, hashes and truncation status alongside the native compiler result. The [dossier](PolicyWitness.md#the-specimen-dossier) describes that inspection and the source selected for invocation.
 
 ## Can PolicyWitness test sandbox-extension behavior?
 
-Yes. Use an unapplied, unentitled actor to issue and transfer a token to an applied, selected actor, then compare fresh access before consumption, during use and after release. Add actors to test re-delegation. Unapplied does not mean unrestricted; signing observations do not establish effective authority. See [EXTENSIONS.md](EXTENSIONS.md) for operations and evidence limits.
+Use [actors and sandbox extensions](PolicyWitness.md#sandbox-extensions). Each actor selects equipment and either applies a policy or declares an unapplied path. Explicit issue, transfer, consume and release actions record native calls and host custody separately. Fresh file attempts before and after those actions observe access at those moments.
 
 ## Which happens first, the prediction or the attempt?
 
-A `query_first` comparison identifies an eligible native prediction collected before the worker acknowledged that phase's host release, which precedes its actions. Missing or unusable predictions and death before acknowledgement remain `unestablished`. Query collection closes even when validator cleanup is unconfirmed; a surviving validator cannot add later records. Earlier actions in the phase, including consumption or release, can change what a later attempt encounters. Use another phase for a new query collection; neither interval is a common state snapshot.
+The host closes a phase's query collection before releasing its action batch. A qualifying native answer has `comparison.order: query_first` when the report carries the supporting release and acknowledgement chain. Actions run in declaration order; an earlier action can change the state a later action encounters. Use [ordered phases](PolicyWitness.md#ordered-phases) to collect again after earlier actions.
 
 ## Can PolicyWitness collect sandbox-denial logs?
 
-No. Earlier versions included a best-effort unified-log observer. The observer
-and its former PolicyWitness integration are archived at
-[Protonk/Observer](https://github.com/Protonk/Observer). The archive is
-unmaintained.
+The result records query, worker, transport and process-lifecycle evidence. If you collect unified logs separately, retain their collection conditions and correlate them with the saved run; a log entry's availability and attribution require their own evidence.
 
 ## How long does a run take?
 
-A run includes the runner client span plus the controller's startup,
-preparation and output. `data.runner_client.ended_at_unix_ms` minus
-`started_at_unix_ms` records the client's wall-clock span; clock adjustments
-can affect that difference.
+The saved client start/end wall-clock milliseconds describe its observed span;
+wall-clock adjustments can affect their difference. Client acquisition/reply allowance, host collection and cleanup, worker waits and exec observation have separate clocks and [budgets](PolicyWitness.md#execution-budgets). A client deadline can expire after execution was invoked. Inspect [submission state](PolicyWitness.md#receiver-evidence) before deciding whether a retry could repeat an effect.
 
 ## Can I evaluate specimens in parallel?
 
-Yes and no. Each specimen is evaluated in its own runner and worker processes, but PolicyWitness does not guarantee relative scheduling between concurrent runs. Run specimens separately when you need to avoid timing interference between them. N.B. Runs through one installed [external runner](PolicyWitness.md#external-runners-byoxpc) are serial and queue behind launchd's configured respawn throttle.
+Each run acquires a fresh host and fresh specimen workers. Concurrent runs share machine resources and an installed service's launch pacing; acquisition can encounter an occupied host. Use independent request, result and target paths, retain each run's submission state and inspect its outcome. The [operating guidance](PolicyWitness.md#running-specimens-in-parallel) describes the separate process lifetimes.
 
 ## Are old versions of the app supported?
 
-In general, no. Using old releases of PolicyWitness, including and especially correlating output across schema versions, is a research problem for the user. The development repo carries release binaries and test evidence, but backwards compatibility is not a goal.
+Use the guide shipped with the app and retain its exact `build.contract`. Each release preserves its contract and shape history for interpreting that release's reports. Review the [surface table](PolicyWitness.md#public-contract-surfaces) before updating an existing request for another build.
 
 <!-- END SHARED QUESTIONS -->

@@ -298,8 +298,7 @@ An event can report `authority_channel_unavailable` when its worker cannot use t
 assigned authority region, or `delivery_unavailable` when the named delivery
 was not accepted. Individually unavailable issue, consume and release symbols
 produce operation-specific `native_api_unavailable` decisions; supported
-unrelated operations remain observable. These are no-call decisions, not
-native denial results.
+unrelated operations remain observable. These decisions record why the corresponding native call was not made.
 
 <!-- END SHARED EXTENSION STATUSES -->
 
@@ -1398,8 +1397,10 @@ label.
 <!-- BEGIN SHARED READING RULES -->
 
 1. The raw query answer is `sandbox_check.outcome` when `result_source`
-   is `validator` and the outcome is `allow` or `deny`; otherwise
-   `sandbox_check.missing_reason` explains the unavailable answer. An otherwise
+   is `validator` and the outcome is `allow` or `deny`. For another outcome,
+   read `result_source`, `native_rc`, `error` and the optional `missing_reason`
+   together: a received diagnostic and a synthetic missing answer are distinct.
+   An otherwise
    eligible answer qualifies as a prediction about a live specimen only with
    its phase's collection/release/acknowledgement chain, reflected by
    `comparison.order: query_first`. Neither successful attempts nor a successful
@@ -1407,15 +1408,16 @@ label.
    whether the target was live during any particular query. A degraded
    `runner_reporting_failed` reply certifies no per-step order, even when raw
    ordering observations survive; every comparison is omitted.
-2. `attempt.missing_reason` explains an unavailable attempt channel.
-3. A `permission_failure` or `other_failure` observation, or an exec attempt
-   whose spawned child exited nonzero, does not attribute the failure to the
-   sandbox. The envelope does not establish that sandbox enforcement caused a
-   particular attempt's failure.
-4. A `path` query, or an attempt whose mapped filter is `path`, never
-   establishes that both channels resolved the same object at runtime.
-5. No record establishes that the state the query saw is the state the
-   attempt met; nothing in a reply discharges this.
+2. `attempt.result_source` distinguishes a completed worker publication from
+   a synthetic unavailable result. `attempt.missing_reason` and `attempt.lifecycle`
+   describe the missing publication and the supported action boundary.
+3. Read a `permission_failure`, `other_failure` or nonzero child exit as the
+   recorded observation. Attributing it to sandbox enforcement requires evidence
+   that distinguishes that cause from the other causes of the native result.
+4. `same_submitted` compares the submitted path bytes. Runtime object identity
+   requires its own observations across the query and attempt.
+5. `query_first` establishes an order; state may change during that interval.
+   Keep independent state observations when a comparison depends on continuity.
 6. A worker `unlink` of a submitted path with `outcome: ok` and `rc: 0`
    records removal at that action. For a path query of that same submitted
    spelling in the same phase, `order: query_first` establishes that the query

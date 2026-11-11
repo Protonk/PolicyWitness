@@ -1,19 +1,23 @@
 # PolicyWitness User Guide
 
-PolicyWitness records `sandbox_check` queries and attempted operations under
-macOS sandbox policies. When prediction is available, the validator queries
-the worker's PID; the worker attempts its operation after applying the policy
-and receiving release from the host. Each step records available results, missing
-observations, submitted-scope relations and ordering. The controller adds
-request identity, source hashes, imports, runner and app provenance, host
-facts and hashes of selected binaries outside the app manifest. Retain the
-specimen alongside the envelope for the full input. The
-[comparison reading rules](#reading-a-comparison-record) explain how to interpret
-the channels together.
+PolicyWitness runs a saved sandbox-policy specimen and records what happened.
+A specimen supplies sandbox queries and attempted operations, with an SBPL
+policy for each process it asks to apply one. The runner arranges one fresh
+worker for an ordinary specimen or one per actor, collects eligible
+`sandbox_check` answers, then releases each phase's worker to perform its actions. The report keeps predictions,
+native observations, ordering and process cleanup separately so you can decide
+which facts support your experiment.
 
-PolicyWitness runs sandbox specimens and prints a single JSON envelope to stdout. Each specimen is an SBPL policy plus a probe plan. For shorter answers to common questions see [Questions](#questions).
+The **controller** is the `policy-witness` command you invoke. It prepares the
+request, selects a runner and prints the result envelope. The **runner host**
+manages fresh workers and validators and returns their observations. A
+**worker** performs its actions after policy application or its actor's explicit
+unapplied declaration; a **validator** asks `sandbox_check` about that worker. Actor specimens name several workers and
+schedule their visits explicitly.
 
-Reading paths: try it via [Quick start](#quick-start), write a specimen via [Specimen format](#specimen-format), or interpret output via [Output envelope](#output-envelope).
+This guide is staged with the app it describes. Keep the app's `build.contract`,
+your submitted JSON, its result envelope and independent observations together.
+They are the starting point for comparing runs.
 
 ## Contents
 
@@ -25,60 +29,77 @@ Reading paths: try it via [Quick start](#quick-start), write a specimen via [Spe
 - [What PolicyWitness understands](#what-policywitness-understands)
 - [Operating](#operating)
 - [External runners (BYOXPC)](#external-runners-byoxpc)
+- [Public contract surfaces](#public-contract-surfaces)
 
 ## Quick start
 
-PolicyWitness requires macOS 26 on Apple Silicon: every executable it ships is arm64-only macOS code, so an Intel Mac cannot run it. Quick start uses the built-in standard runner. If you need entitlements the standard runner doesn't ship — debug-attach, DYLD env, custom dylib loading, JIT — see [External runners (BYOXPC)](#external-runners-byoxpc) below.
-
-Set a convenience variable, adjusting the path to wherever `PolicyWitness.app` is installed:
+The shipped app requires macOS 26 or later on Apple silicon (arm64).
+Use the built-in standard runner for your first specimen. These commands use
+macOS tools and a new private work directory outside privacy-mediated folders.
+Run them in one shell, keeping the printed directory for later examples. Set
+`APP` to your installed app.
 
 ```sh
-PW="/Applications/PolicyWitness.app/Contents/MacOS/policy-witness"
+APP="/Applications/PolicyWitness.app"
+PW="$APP/Contents/MacOS/policy-witness"
+umask 077
+PW_WORK=$(mktemp -d /private/tmp/pw-guide.XXXXXX)
+printf 'Work directory: %s\n' "$PW_WORK"
+"$PW" --version > "$PW_WORK/version.json"
+PW_CONTRACT=$(/usr/bin/plutil -extract build.contract raw -o - "$PW_WORK/version.json")
+printf 'Contract: %s\n' "$PW_CONTRACT"
 ```
 
-Read the installed build’s contract:
+Check that the version command succeeded and the contract string is nonempty
+before continuing. The string identifies the exact input/report contract; the
+remaining examples marked `BUILD_CONTRACT` need that value before submission.
+A release uses `release:vX.Y.Z`; a development build uses `development:<digest>`.
+
+Create a request that opens a new, empty file under an allow-all policy:
 
 ```sh
-"$PW" --version
-```
-
-Copy `build.contract` from that output and replace `BUILD_CONTRACT` in the
-JSON below before creating the specimen file. The placeholder itself is not an
-accepted contract.
-
-Create a specimen:
-
-```sh
-cat > /tmp/pw_specimen_file_read_deny.json <<'JSON'
+cat > "$PW_WORK/create.json" <<JSON
 {
-  "contract": "BUILD_CONTRACT",
-  "specimen_id": "file_read_deny",
-  "policy": {
-    "format": "sbpl",
-    "sbpl_source": "(version 1) (allow default) (deny file-read-data)"
-  },
-  "probe_plan": [
-    {
-      "step_id": "fr1",
-      "sandbox_check": {
-        "operation": "file-read-data",
-        "filter": { "kind": "path", "value": "/etc/hosts" }
-      },
-      "attempt": { "kind": "file", "action": "open_read", "target": "/etc/hosts" }
-    }
-  ]
+  "contract": "$PW_CONTRACT",
+  "specimen_id": "guide-create",
+  "policy": {"format": "sbpl", "sbpl_source": "(version 1) (allow default)"},
+  "probe_plan": [{
+    "step_id": "create",
+    "sandbox_check": {
+      "operation": "file-write-create",
+      "filter": {"kind": "path", "value": "$PW_WORK/created"}
+    },
+    "attempt": {"kind": "file", "action": "create", "target": "$PW_WORK/created"}
+  }]
 }
 JSON
+if test ! -e "$PW_WORK/created"; then
+  "$PW" run "$PW_WORK/create.json" > "$PW_WORK/create-result.json" 2> "$PW_WORK/create-stderr.txt"
+  PW_EXIT=$?
+  printf '%s\n' "$PW_EXIT" > "$PW_WORK/create-exit.txt"
+  cat "$PW_WORK/create-result.json"
+  test -f "$PW_WORK/created"
+  /usr/bin/stat -f 'size=%z mode=%Sp inode=%i' "$PW_WORK/created" > "$PW_WORK/create-observation.txt"
+  cat "$PW_WORK/create-observation.txt"
+else
+  printf '%s\n' 'Target already exists; prepare a fresh work directory before running this create.' >&2
+fi
 ```
 
-Run it:
+The guard refuses to reuse an existing target. On a completed create, the command exits 0 and the target is an empty file. The saved
+exit status and envelope describe execution; `test` and `stat` independently
+observe the file effect. `create` opens an existing file without truncating it,
+which is why the initial absence matters.
 
-```sh
-$PW run /tmp/pw_specimen_file_read_deny.json > /tmp/pw_result.json
-```
+The query about the initially absent path can be `prediction_unavailable`
+while the attempt succeeds. Read [Reading a result](#reading-a-result) for the
+relationship between run status, evidence findings and individual effects. Then
+try [an accepted request and a refusal](#try-an-accepted-request-and-a-refusal)
+using the same saved request and work directory.
 
-For an exercise that checks a file effect and then deliberately triggers a
-request refusal, see [Try an accepted request and a refusal](#try-an-accepted-request-and-a-refusal).
+Preserve this directory until you have reviewed the results. If you later stage
+an external runner inside it, retain the directory through the runner's
+[removal and recovery](#list-validate-or-remove-runners).
 
 ## Questions
 
@@ -86,91 +107,81 @@ request refusal, see [Try an accepted request and a refusal](#try-an-accepted-re
 
 ### When should I use PolicyWitness?
 
-Use PolicyWitness when you need to determine whether an observed result follows from the sandbox policy under test or from some unrelated part of the execution environment.
+Use it for a repeatable experiment about a sandbox policy: prepare a saved request, collect a prediction where available, perform the requested actions and retain the observations. Start with the [quick start](#quick-start), then read the [result account](#reading-a-result) before comparing runs.
 
 ### Who needs to use PolicyWitness?
 
-Almost no one. Folks authoring SBPL profiles can call `sandbox_check` and `sandbox-exec` directly and Apple's entitlements model plus their app's actual runtime behavior cover practical sandbox questions. A small wrapper script around `sandbox_check` plus `sandbox-exec` can obtain a prediction and an attempt result in the common case. 
+Developers investigating sandbox policy, native API behavior and process authority can use the same specimen and report to state exactly what they observed. A useful experiment identifies its target, its expected observation and an independent way to inspect the effect.
 
 ### What systems can run PolicyWitness?
 
-PolicyWitness requires macOS 26 on Apple Silicon. Its shipped executables are arm64-only; Intel Macs are not supported.
+The shipped app requires macOS 26 or later on Apple silicon (arm64).
 
 ### Can PolicyWitness attribute a failed attempt to sandbox denial?
 
-No. PolicyWitness records the failed attempt and the evidence available around it, but a failure alone does not establish that the sandbox caused it.
+A permission-shaped failure records a native result such as `EPERM`, `EACCES` or a bootstrap permission result. The report preserves that observation and the separately collected query answer. Establishing the cause requires evidence that distinguishes sandbox enforcement from the other reasons the native operation can fail.
 
 ### What does PolicyWitness's attempt channel record?
 
-The sandboxed worker supports four built-in attempt kinds: `file` (open/read/write/create/unlink/access), `mach_lookup` (`bootstrap_look_up`), `sysctl` (`sysctlbyname` read), and `exec` (`posix_spawn`). Completed results carry operation-specific status and error observations in a uniform per-step envelope; those status fields are PolicyWitness attempt status, not raw syscall returns. Result provenance and missing reasons distinguish completed observations from missing or incomplete reports.
+It records the requested operation's published result and the evidence that supports it. A completed failed operation is a result. A missing or incomplete publication stays unavailable, with lifecycle evidence showing whether the action boundary was reached. File, Mach lookup, sysctl and exec operations have [different observations](#attempt-kinds-the-runner-implements).
 
 ### How does a worker report observations under `(deny default)`?
 
-The host prepares and pre-touches a shared-memory region before spawning the worker. The worker publishes observations there after applying its policy, and the unsandboxed host reads them to assemble the response.
+The host prepares shared evidence memory before the worker applies the policy. The worker publishes bounded observations there, and the host collects them after execution and cleanup. The host's reply path remains in its own unsandboxed process. Publication, collection and final process status each have their own records.
 
 ### Can PolicyWitness probe operations it doesn't natively support?
 
-Yes — via the `exec` attempt kind plus the named-augment interface. Callers ship their own helper binary and, where needed, opt into `exec_baseline`, a shipped SBPL fragment supplying baseline allows for spawning under `(deny default)`. PolicyWitness records spawn observations, child disposition and bounded stdout/stderr in the same envelope shape as the built-in attempt kinds. The helper must supply evidence about its internal operation; PW does not turn that evidence into a record for that operation, and a successful spawn can coexist with a failed exec result. The per-operation authoring burden lives with the caller — PolicyWitness intentionally doesn't carry an atlas of every sandboxable operation, and the augment system is the documented extension point for callers who need to test surfaces (network, iokit, ipc, signals, user_preference, etc.) PolicyWitness has no built-in attempt kind for.
+An `exec/spawn` attempt can run your helper and retain its bounded stdout, stderr and child-process observations. Arrange for the helper to report the native result and supporting effect you need. The [exec augment](#augments) adds process permissions and an unconditional file-read allow; choose it only when those added permissions fit the experiment.
 
 ### What does a comparison record contain?
 
-Each step's `comparison` has six fields: what the attempt channel observed (`observation`: `succeeded`, `permission_failure`, `other_failure` or `unavailable`) and the raw fields that observation rests on (`observation_basis`); whether the query named the same operation as the attempt (`operation_relation`) and the same submitted target (`target_relation`); whether an eligible query is known to precede the attempt batch (`order`); and a short list of `limitations` that name a planning exclusion or the attempt's lifecycle state. The query's own answer stays in `sandbox_check`. See the guide's [reading rules](#reading-a-comparison-record).
+It records the attempt observation and its basis, the relationship between submitted operations and targets, query order and limitations. The prediction stays in `sandbox_check`. [Reading a comparison](#reading-a-comparison-record) explains the six fields together. Reporting-failure replies omit comparisons while retaining the observations their fallback form can carry.
 
 ### Does PolicyWitness decide whether `sandbox_check` and enforcement disagree?
 
-No. The envelope carries no evidence that a target's state was stable between the query and the attempt, or that a path named the same object both times, and a permission-shaped failure does not identify the sandbox as its cause. A deny prediction beside a successful attempt is therefore reported as those two facts with their relations and order, and nothing more. Readers who want an opinion form it from the record and the raw channels, under limits the record states.
+The report supplies the query answer, attempt observation and the relationships it can establish. `query_first` establishes collection before the phase's actions; `same_submitted` compares submitted target bytes. Runtime object identity and changes between query and action require additional observations for an agreement or disagreement claim.
 
 ### Can PolicyWitness run every profile that `libsandbox` accepts?
 
-No. PolicyWitness has its own limits, documented in [the limits inventory](#limits).
+PolicyWitness admits requests within its grammar, action relationships and [limits](#limits). The worker then uses the host OS's native compiler and applies the resulting profile. Compilation, application and completion are separate observations, each with its own failure record.
 
 ### What versions of SBPL are supported?
 
-PolicyWitness passes the submitted SBPL source to the host's `libsandbox` compiler and supports whatever profile versions that compiler accepts. `(version 1)` is the documented profile version; some Apple-shipped profiles use higher version numbers.
+SBPL is interpreted by the installed OS's `libsandbox`. Keep the recorded macOS build, selected source and parameters with the result when comparing compiler behavior. The [compiler helper](#sbpl-check-sbpl-check) gives an independent host-side compilation diagnostic.
 
 ### How do I use imports with PolicyWitness?
 
-Write imports in the SBPL source, for example `(import "name.sb")`; macOS's
-`libsandbox` resolves them during compilation. PolicyWitness independently
-inventories literal imports, checking absolute names as supplied and searching
-relative names under `/System/Library/Sandbox/Profiles/` before
-`/usr/share/sandbox/`. The dossier records the files selected by that scan.
+Write native `(import "name.sb")` expressions in the policy. The controller separately inventories literal imports: absolute names are read as supplied; relative names are searched under `/System/Library/Sandbox/Profiles/` and then `/usr/share/sandbox/`. Preserve each inventory's errors, hashes and truncation status alongside the native compiler result. The [dossier](#the-specimen-dossier) describes that inspection and the source selected for invocation.
 
 ### Can PolicyWitness test sandbox-extension behavior?
 
-Yes. Use an unapplied, unentitled actor to issue and transfer a token to an applied, selected actor, then compare fresh access before consumption, during use and after release. Add actors to test re-delegation. Unapplied does not mean unrestricted; signing observations do not establish effective authority. See [EXTENSIONS.md](#sandbox-extensions) for operations and evidence limits.
+Use [actors and sandbox extensions](#sandbox-extensions). Each actor selects equipment and either applies a policy or declares an unapplied path. Explicit issue, transfer, consume and release actions record native calls and host custody separately. Fresh file attempts before and after those actions observe access at those moments.
 
 ### Which happens first, the prediction or the attempt?
 
-A `query_first` comparison identifies an eligible native prediction collected before the worker acknowledged that phase's host release, which precedes its actions. Missing or unusable predictions and death before acknowledgement remain `unestablished`. Query collection closes even when validator cleanup is unconfirmed; a surviving validator cannot add later records. Earlier actions in the phase, including consumption or release, can change what a later attempt encounters. Use another phase for a new query collection; neither interval is a common state snapshot.
+The host closes a phase's query collection before releasing its action batch. A qualifying native answer has `comparison.order: query_first` when the report carries the supporting release and acknowledgement chain. Actions run in declaration order; an earlier action can change the state a later action encounters. Use [ordered phases](#ordered-phases) to collect again after earlier actions.
 
 ### Can PolicyWitness collect sandbox-denial logs?
 
-No. Earlier versions included a best-effort unified-log observer. The observer
-and its former PolicyWitness integration are archived at
-[Protonk/Observer](https://github.com/Protonk/Observer). The archive is
-unmaintained.
+The result records query, worker, transport and process-lifecycle evidence. If you collect unified logs separately, retain their collection conditions and correlate them with the saved run; a log entry's availability and attribution require their own evidence.
 
 ### How long does a run take?
 
-A run includes the runner client span plus the controller's startup,
-preparation and output. `data.runner_client.ended_at_unix_ms` minus
-`started_at_unix_ms` records the client's wall-clock span; clock adjustments
-can affect that difference.
+The saved client start/end wall-clock milliseconds describe its observed span;
+wall-clock adjustments can affect their difference. Client acquisition/reply allowance, host collection and cleanup, worker waits and exec observation have separate clocks and [budgets](#execution-budgets). A client deadline can expire after execution was invoked. Inspect [submission state](#receiver-evidence) before deciding whether a retry could repeat an effect.
 
 ### Can I evaluate specimens in parallel?
 
-Yes and no. Each specimen is evaluated in its own runner and worker processes, but PolicyWitness does not guarantee relative scheduling between concurrent runs. Run specimens separately when you need to avoid timing interference between them. N.B. Runs through one installed [external runner](#external-runners-byoxpc) are serial and queue behind launchd's configured respawn throttle.
+Each run acquires a fresh host and fresh specimen workers. Concurrent runs share machine resources and an installed service's launch pacing; acquisition can encounter an occupied host. Use independent request, result and target paths, retain each run's submission state and inspect its outcome. The [operating guidance](#running-specimens-in-parallel) describes the separate process lifetimes.
 
 ### Are old versions of the app supported?
 
-In general, no. Using old releases of PolicyWitness, including and especially correlating output across schema versions, is a research problem for the user. The development repo carries release binaries and test evidence, but backwards compatibility is not a goal.
+Use the guide shipped with the app and retain its exact `build.contract`. Each release preserves its contract and shape history for interpreting that release's reports. Review the [surface table](#public-contract-surfaces) before updating an existing request for another build.
 
 <!-- END COPIED QUESTIONS -->
 
 ## Specimen format
 
-<!-- BEGIN CONTRACT request_form -->
 ### Top-level shape
 
 Top-level fields:
@@ -197,18 +208,22 @@ Minimal skeleton (copy/paste):
 }
 ```
 Notes:
-- The [accepted input contract](CONTRACT.md#contract-request) rejects
-  unsupported request versions, unknown fields and wrong types explicitly.
-  Optional nulls generally mean absence; actor equipment/requirements, termination dependencies and the actor equipment override map reject null. Parameter names inside `policy.params` remain
-  caller-defined. Runtime capacity limits are checked separately.
+- Save the request as UTF-8 JSON. Request objects have declared keys: an
+  unknown field or a value of the wrong type produces a request refusal.
+  Optional nulls generally mean absence; actor equipment/requirements,
+  termination dependencies and the actor equipment override map reject null.
+  Parameter names inside `policy.params` are caller data and their values
+  must be strings. [Acceptance](#what-acceptance-establishes) distinguishes
+  shape, meaning, capacity and execution.
 - All path rules live inside `policy.sbpl_source`.
-- `probe_plan` may be empty when you only want to exercise sandbox
-  apply (the validator child is only spawned when there are probes
-  to query).
+- `probe_plan` may be empty when you want to exercise policy application.
+  Each phase with an eligible query plan gets a fresh validator; a phase with
+  no eligible queries creates none.
+- Ordinary step IDs are unique strings, including an empty string when used
+  once. Actor action IDs and phase/actor IDs are nonempty. Give useful unique
+  labels to correlate the request, phases and returned steps.
 
-<!-- END CONTRACT request_form -->
 
-<!-- BEGIN CONTRACT actors_phases -->
 ### Ordered phases
 
 Use `probe_plan` for one query collection followed by its attempts. It becomes
@@ -255,9 +270,7 @@ Worker loss or an expired worker release wait stops further progression.
 The ordinary form accepts at most <!-- span limits.phase_count.value -->8<!-- /span --> phases; the actor form accepts at most <!-- span limits.actor_phases.value -->16<!-- /span --> phases across all actors. Both forms accept at most <!-- span limits.probe_steps.value -->256<!-- /span --> total actions; phases do not multiply the action or query allowance. The
 [limits](#limits) describe cumulative collection and per-phase wait bounds.
 
-<!-- END CONTRACT actors_phases -->
 
-<!-- BEGIN CONTRACT actors_extensions -->
 ### Sandbox extensions
 
 Extension specimens use actors. Start with an unapplied issuer using `unentitled` equipment and a subject using `selected` equipment under its submitted policy. Equipment selects the signed worker copy; sandbox mode selects whether that process applies an SBPL policy. An unapplied actor may still inherit restrictions. A worker's signing readback does not establish its effective authority.
@@ -265,9 +278,11 @@ Extension specimens use actors. Start with an unapplied issuer using `unentitled
 This two-actor specimen reads an owned file before consumption, issues and transfers a token, consumes it, reads again, releases the native handle, then makes another fresh read. Each read opens a new descriptor. The last read records the result after release without assuming revocation.
 
 ```sh
-PW=/Applications/PolicyWitness.app/Contents/MacOS/policy-witness
+# Continue with PW and PW_CONTRACT from the quick start.
 PW_EXTENSION_DIR=$(mktemp -d /private/tmp/pw-extension.XXXXXX)
 printf 'extension witness\n' > "$PW_EXTENSION_DIR/target"
+/usr/bin/stat -f 'size=%z inode=%i' "$PW_EXTENSION_DIR/target" > "$PW_EXTENSION_DIR/target-before.txt"
+/usr/bin/shasum -a 256 "$PW_EXTENSION_DIR/target" >> "$PW_EXTENSION_DIR/target-before.txt"
 cat > "$PW_EXTENSION_DIR/request.json" <<JSON
 {
   "contract": "BUILD_CONTRACT",
@@ -291,20 +306,29 @@ cat > "$PW_EXTENSION_DIR/request.json" <<JSON
   ]
 }
 JSON
-"$PW" run "$PW_EXTENSION_DIR/request.json" > "$PW_EXTENSION_DIR/run.json"
+sed "s/BUILD_CONTRACT/$PW_CONTRACT/" "$PW_EXTENSION_DIR/request.json" > "$PW_EXTENSION_DIR/submitted.json"
+"$PW" run "$PW_EXTENSION_DIR/submitted.json" > "$PW_EXTENSION_DIR/run.json" 2> "$PW_EXTENSION_DIR/stderr.txt"
+PW_EXIT=$?
+printf '%s\n' "$PW_EXIT" > "$PW_EXTENSION_DIR/exit.txt"
+/usr/bin/stat -f 'size=%z inode=%i' "$PW_EXTENSION_DIR/target" > "$PW_EXTENSION_DIR/target-after.txt"
+/usr/bin/shasum -a 256 "$PW_EXTENSION_DIR/target" >> "$PW_EXTENSION_DIR/target-after.txt"
 ```
 
 `read_write` selects the native read-write class and can name a directory. Issue passes the submitted absolute path unchanged with flags zero. Raw token bytes never appear in retained output. A published native result does not by itself establish file access or revocation: use the separate fresh reads and the actor's baseline.
 
 Omitting `equipment` selects `selected`; explicit null is rejected. Optional actor `required_entitlements` is a list of unique entitlement keys that must each have boolean value `true` in that actor's bound and observed live code. Its default is an empty list; explicit null is rejected. This is independent of the controller's `runner.required_entitlements`, which preflights only the selected runner worker. The host verifies both production equipment artifacts against its sealed service-local inventory before launching any actor and inspects each usable actor's owned live code before any scheduled activation. Missing or mismatched equipment never substitutes the other role.
 
-For a specimen that needs the issuer gone before consumption, add `"after_termination": {"actor_id": "issuer"}` to the `consume` phase. The source actor's last scheduled visit must precede the gated phase. The host waits for natural terminal completion and confirmed reaping before activation and query collection; it does not kill the source to satisfy the gate. The normal example has no such dependency.
+For a specimen that needs the issuer gone before consumption, add `"after_termination": {"actor_id": "issuer"}` to the `consume` phase. The source actor's last scheduled visit must precede the gated phase. The host evaluates the source's owned natural reap after its final activation
+before activating the dependent phase or collecting its queries. A nonzero exit
+or signal can qualify; final phase completion is separate. A failed evaluated
+gate cancels the remaining schedule, including unrelated later visits, while
+collection and cleanup continue. This example leaves that dependency absent.
 
-Actor setup automatically reports bounded apparatus operations and their publication. Required apparatus failures stop before compilation/application; missing private extension symbols instead make their actions unavailable. A missing terminal setup publication does not prove application never happened. Read application observations, setup decisions and process disposition separately.
+Actor setup automatically reports bounded apparatus operations and their publication. Required apparatus failures stop before policy setup or the unapplied declaration; missing private extension symbols instead make their actions unavailable. A missing terminal setup publication does not prove application never happened. Read application observations, setup decisions and process disposition separately.
 
 #### Actors: issue inside the sandbox and re-delegate
 
-The actor form puts issuance inside a sandboxed process. Replace `policy` with
+Use an applied actor to observe issuance under its policy. Replace `policy` with
 `actors`, give every phase an `actor_id`, and place `issue`, `transfer`,
 `consume` and `release` actions in the phases of the actor that performs them.
 An `unapplied` actor skips policy application and can request issuance under its actual inherited conditions; an `apply` actor applies its own policy once. Actors are
@@ -317,11 +341,13 @@ read extension, consumes it, reads, issues a second token and transfers it to
 both handles are released.
 
 ```sh
-PW=/Applications/PolicyWitness.app/Contents/MacOS/policy-witness
+# Continue with PW and PW_CONTRACT from the quick start.
 PW_ACTOR_DIR=$(mktemp -d /private/tmp/pw-actors.XXXXXX)
 printf 'actor witness\n' > "$PW_ACTOR_DIR/target"
 T="$PW_ACTOR_DIR/target"
 READ='"sandbox_check": {"operation": "file-read-data", "filter": {"kind": "path", "value": "'"$T"'"}}, "attempt": {"kind": "file", "action": "read_fresh", "target": "'"$T"'"}'
+/usr/bin/stat -f 'size=%z inode=%i' "$PW_ACTOR_DIR/target" > "$PW_ACTOR_DIR/target-before.txt"
+/usr/bin/shasum -a 256 "$PW_ACTOR_DIR/target" >> "$PW_ACTOR_DIR/target-before.txt"
 cat > "$PW_ACTOR_DIR/request.json" <<JSON
 {
   "contract": "BUILD_CONTRACT",
@@ -350,14 +376,19 @@ cat > "$PW_ACTOR_DIR/request.json" <<JSON
   ]
 }
 JSON
-"$PW" run "$PW_ACTOR_DIR/request.json" > "$PW_ACTOR_DIR/run.json"
+sed "s/BUILD_CONTRACT/$PW_CONTRACT/" "$PW_ACTOR_DIR/request.json" > "$PW_ACTOR_DIR/submitted.json"
+"$PW" run "$PW_ACTOR_DIR/submitted.json" > "$PW_ACTOR_DIR/run.json" 2> "$PW_ACTOR_DIR/stderr.txt"
+PW_EXIT=$?
+printf '%s\n' "$PW_EXIT" > "$PW_ACTOR_DIR/exit.txt"
+/usr/bin/stat -f 'size=%z inode=%i' "$PW_ACTOR_DIR/target" > "$PW_ACTOR_DIR/target-after.txt"
+/usr/bin/shasum -a 256 "$PW_ACTOR_DIR/target" >> "$PW_ACTOR_DIR/target-after.txt"
 ```
 
 Read `actors`, `phases`, `steps`, `extension_events`, `transfers` and
 `resources` under `data.runner_result`. Each actor's record names its process,
 its setup and both policy hashes; each phase names the actor it activated and
-that actor's visit number; each step and event names its actor. Compare the
-three fresh reads of the target with their actors' policies, and credit
+that actor's visit number; each step and event names its actor. Compare each
+fresh read of the target with its actor's policy, and credit
 re-delegation only when the whole chain published: A's nonnull issue, custody,
 delivery to B, B's consume, B's nonnull issue, delivery to C and C's consume,
 with C's later read succeeding where its earlier read failed. A published NULL,
@@ -377,9 +408,14 @@ Each actor chooses `equipment: "selected"` (the default) or `"unentitled"`, inde
 
 The service validates its own seal, its sealed `Contents/Resources/worker-equipment.json`, and both production worker artifacts before launching any actor. The inventory binds roles to relative paths, signed hashes, CDHashes, identifiers, teams, entitlements and the compiled worker ABI/build identity. There is no fallback between roles. After usable setup and before any activation or query collection, the host inspects the owned live process and matches its associated code to the binding. An inspection failure cancels scheduled activations while preserving any application already observed. Setup-failed or unlaunched actors remain unavailable without turning their missing inspection into a failure of healthy actors.
 
-Actor setup automatically records bounded apparatus observations before policy compilation/application: core-limit handling, authority mapping and framing, descriptor closure and each extension-symbol lookup. Missing extension symbols make the corresponding actions unavailable; required apparatus failure prevents application. Setup publication, application observation and final process disposition remain separate. Missing terminal publication leaves application uncertain rather than proving it did not happen.
+Actor setup automatically records bounded apparatus observations before policy
+compilation/application or the unapplied declaration: core-limit handling, authority mapping and framing, descriptor closure and each extension-symbol lookup. Missing extension symbols make the corresponding actions unavailable; required apparatus failure prevents application. Setup publication, application observation and final process disposition remain separate. Missing terminal publication leaves application uncertain rather than proving it did not happen.
 
-A phase may specify `after_termination: {"actor_id": "issuer"}` when that actor's last scheduled visit precedes the phase. The gate requires an owned natural reap after the source's final activation, including a nonzero exit or signal, before dependent activation and query collection. It does not require final phase completion. It does not kill an actor to satisfy the dependency. Expiry or an unusable dependency withholds that phase; cleanup and previously published facts retain their own meanings. The reply retains `actors[].owned_reap` and phase `activation_observation`; the gate references the source reap by `capture_ordinal`. Missing clock timestamps retain facts without establishing gate order.
+A phase may specify `after_termination: {"actor_id": "issuer"}` when that actor's last scheduled visit precedes the phase. The gate requires an owned natural reap after the source's final activation, including a nonzero exit or signal, before dependent activation and query collection. It does not require final phase completion. It does not kill an actor to satisfy the dependency. A failed evaluated gate cancels the remaining schedule, including later unrelated
+actors' visits, while final collection and cleanup continue. A gate that was
+never evaluated because its dependent actor was unavailable retains that distinct
+status; it does not itself impose that cancellation. Earlier published facts
+retain their own meanings. The reply retains `actors[].owned_reap` and phase `activation_observation`; the gate references the source reap by `capture_ordinal`. Missing clock timestamps retain facts without establishing gate order.
 
 #### Request forms
 
@@ -422,8 +458,9 @@ are in the [limits](#limits).
 
 #### How authority moves
 
-Each actor has its own evidence region and its own authority region; neither
-is visible to another actor or to a validator. Each admitted issue has its own
+Each actor has its own evidence region. A plan containing token or delivery
+resources also receives a host custody session and one authority region per
+actor. Those regions are private to their owning host/worker endpoints. Each admitted issue has its own
 outbound slot, and each transfer has its own request and answer cell. An issued
 token is published once; its bytes remain immutable until the host copies or
 rejects them and erases that slot. A timeout cannot reuse the slot or consume
@@ -447,24 +484,27 @@ use. Tokens never enter the request, the reply, logs or diagnostics.
 Every actor's worker is launched with an empty environment, a policy pipe on
 stdin, and stdout and stderr opened on the null device. Its other inherited
 endpoints are its evidence region, readiness pipe and, when needed, authority
-region. Other host descriptors are closed at exec. The host disables core dumps before any token
-can arrive, and so does each worker before mapping its region.
+region. Other host descriptors are closed at exec. When creating a custody session, the host disables core dumps before creating
+its actor regions. Every actor worker resolves extension symbols and attempts
+its core-limit setup. A required authority region is mapped before policy setup;
+a plan with no authority resources records mapping as `not_required`. Applied
+actors then enter policy setup, and unapplied actors publish their declaration.
 
 #### What each observation establishes
 
-| Observation | Establishes | Does not establish |
+| Observation | Supported reading | Read separately |
 | --- | --- | --- |
-| `extension_events[]` with operation `issue`, `status: returned`, `native_nonnull: true` | That actor's process made the native issue call for the recorded class and path and received a nonnull result of the recorded length. | That the token is usable by anyone, or why it was granted. |
-| `issue` with `native_nonnull: false` | The native call returned NULL; `errno` is the value saved immediately after it. | A sandbox cause for the refusal. |
-| `resources.tokens[].status: issued` | The host accepted the published bytes into custody. | Delivery or consumption. |
-| `transfers[].status: delivered` with `equality: equal` | The recipient acknowledged a framed delivery whose bytes equalled the host's custody copy. | Consumption or access. |
-| `transfers[]` with any other status | Where the exchange stopped: custody absent, recipient refusal, timeout, mismatch. No native result belongs to a transfer. | A native refusal. |
-| `consume` with `status: returned` and `native_result` other than the failure sentinel | That actor received a candidate handle for the delivery it named. | Effective permission for any operation. |
-| `release` with `status: returned` | The native release call returned the recorded value. | Revocation of access or undoing of earlier effects. |
-| `status: unavailable` with an `unavailable_reason` | The named operation was not called for the recorded reason (no delivery, no handle, missing native symbol, no authority channel, repeated action). | A native result of any kind. |
-| Resource status `not_reached` | Terminal lifecycle evidence establishes that the producing action was not reached. | Absence of a result alone is insufficient; interrupted or unknown producers remain `unresolved`. |
-| `status: unresolved` | The action's result was never published: the actor died, was stopped or never reached it. | That the call did not happen. |
-| A fresh read that succeeds after a consume | That process could open and read the file at that moment. | That the consumed extension caused it; compare with the actor's baseline read and its policy. |
+| `extension_events[]` with operation `issue`, `status: returned`, `native_nonnull: true` | That actor's process made the native issue call for the recorded class and path and received a nonnull result of the recorded length. | Host custody, recipient delivery, consumption and fresh access observations. |
+| `issue` with `native_nonnull: false` | The native call returned NULL; `errno` is the value saved immediately after it. | Evidence distinguishing the cause of the native refusal. |
+| `resources.tokens[].status: issued` | The host accepted the published bytes into custody. | The delivery and consume records. |
+| `transfers[].status: delivered` with `equality: equal` | The recipient acknowledged a framed delivery whose bytes equalled the host's custody copy. | The consume result and later fresh access observations. |
+| `transfers[]` with any other status | Where the exchange stopped: custody absent, recipient refusal, timeout, mismatch. No native result belongs to a transfer. | Native issue/consume/release calls belong to their separate event records. |
+| `consume` with `status: returned` and `native_result` other than the failure sentinel | That actor received a candidate handle for the delivery it named. | Fresh attempts in that process after the consume. |
+| `release` with `status: returned` | The native release call returned the recorded value. | Later fresh attempts and independently observed earlier effects. |
+| `status: unavailable` with an `unavailable_reason` | The named operation was not called for the recorded reason (no delivery, no handle, missing native symbol, no authority channel, repeated action). | The exact no-call reason. |
+| Resource status `not_reached` | Terminal lifecycle evidence establishes that the producing action was not reached. | Interrupted or unknown producers remain `unresolved`. |
+| `status: unresolved` | The action's result was never published: the actor died, was stopped or never reached it. | Published progress and final lifecycle evidence about whether the boundary was reached. |
+| A fresh read that succeeds after a consume | That process could open and read the file at that moment. | That actor's baseline read, policy and other authority when investigating the cause. |
 
 Native results, host custody facts, recipient acknowledgements and the
 validator's predictions are separate records with separate writers. A source
@@ -478,7 +518,7 @@ extension events stay outside the query/attempt comparison.
 
 | Situation | Reading |
 | --- | --- |
-| Required authority-region or custody setup fails | Host preparation refuses launch, or automatic worker setup records a terminal apparatus failure before policy compilation/application. This is distinct from missing native symbols or a native refusal. |
+| Required authority-region or custody setup fails | Host preparation refuses launch, or automatic worker setup records a terminal apparatus failure before policy setup or the unapplied declaration. Missing native symbols instead make the corresponding actions unavailable. |
 | An actor's policy does not compile or apply | That actor's `setup_status` is `setup_failed`; its visits are `actor_unavailable`; other actors' evidence stands. The run is `runner_failed`. |
 | An application is published during cleanup after setup expires | Setup stays `setup_timeout` and its visits remain unavailable; `applied` and `application_count` retain the later observed application. |
 | An actor dies during a visit | The visit records how it ended; the scheduler establishes the actor is reaped before activating anyone else; later visits of that actor are unavailable. |
@@ -489,134 +529,143 @@ extension events stay outside the query/attempt comparison.
 
 <!-- END COPIED EXTENSION COVERAGE -->
 
-<!-- END CONTRACT actors_extensions -->
 
-<!-- BEGIN CONTRACT request_admission -->
 ### Try an accepted request and a refusal
 
-This specimen asks a sandbox query and attempts to create an empty file. Use a
-fresh directory so you can observe whether the file was created. Adjust `PW`
-to your installed app; the commands need no repository files or extra tools.
+The [quick start](#quick-start) retained `create.json`, its envelope and an
+independent file observation in `$PW_WORK`. Use a different target for this
+refusal exercise, so an earlier successful run cannot explain its presence.
+
+Introduce an unknown policy field deliberately:
 
 ```sh
-PW="/Applications/PolicyWitness.app/Contents/MacOS/policy-witness"
-PW_EXAMPLE_DIR=$(mktemp -d /private/tmp/pw-input.XXXXXX)
-cat > "$PW_EXAMPLE_DIR/request.json" <<JSON
-{
-  "contract": "BUILD_CONTRACT",
-  "specimen_id": "request-grammar",
-  "policy": {
-    "format": "sbpl",
-    "sbpl_source": "(version 1) (allow default)"
-  },
-  "probe_plan": [
-    {
-      "step_id": "create",
-      "sandbox_check": {
-        "operation": "file-write-create",
-        "filter": { "kind": "path", "value": "$PW_EXAMPLE_DIR/created" }
-      },
-      "attempt": { "kind": "file", "action": "create", "target": "$PW_EXAMPLE_DIR/created" }
-    }
-  ]
-}
-JSON
-"$PW" run "$PW_EXAMPLE_DIR/request.json" > "$PW_EXAMPLE_DIR/run.json"
-test -f "$PW_EXAMPLE_DIR/created"
-```
-
-The run should exit 0, and `test -f` should succeed. The newly created file is
-an independent observation of the file effect. A query about an absent path
-can report
-`prediction_unavailable` while the creation attempt succeeds.
-
-Now make a copy with a new target and the deliberately misspelled field
-`capture_compiled_profiel`. The new target lets you check that refusal prevents
-an otherwise valid create from running:
-
-```sh
-sed -e 's|/created"|/refused"|g' \
+sed -e 's|/created"|/capture-target"|g' \
     -e 's|"format": "sbpl",|"format": "sbpl", "capture_compiled_profiel": true,|' \
-    "$PW_EXAMPLE_DIR/request.json" > "$PW_EXAMPLE_DIR/typo.json"
-PW_REFUSAL_RC=0
-"$PW" run "$PW_EXAMPLE_DIR/typo.json" > "$PW_EXAMPLE_DIR/refusal.json" || PW_REFUSAL_RC=$?
-test "$PW_REFUSAL_RC" -eq 1
-test ! -e "$PW_EXAMPLE_DIR/refused"
+    "$PW_WORK/create.json" > "$PW_WORK/capture-typo.json"
+test ! -e "$PW_WORK/capture-target"
+"$PW" run "$PW_WORK/capture-typo.json" > "$PW_WORK/capture-typo-result.json" 2> "$PW_WORK/capture-typo-stderr.txt"
+PW_EXIT=$?
+printf '%s\n' "$PW_EXIT" > "$PW_WORK/capture-typo-exit.txt"
+test "$PW_EXIT" -eq 1
+test ! -e "$PW_WORK/capture-target"
 ```
 
-Both `test` commands should succeed: PW exited 1 and the file is absent.
-In `refusal.json`, `result.normalized_outcome` is `bad_request`, and
-`data.request_failure` contains:
+The envelope reports `bad_request`; `data.request_failure` identifies
+`code: "unknown_field"` and
+`path: ["policy", "capture_compiled_profiel"]`. The host inspected the request
+and refused it before creating a worker or validator. The absent target checks
+the intended file effect independently.
+
+Correct the spelling in a copy, preserving the refused input:
+
+```sh
+sed 's/capture_compiled_profiel/capture_compiled_profile/' \
+    "$PW_WORK/capture-typo.json" > "$PW_WORK/capture-no-nonce.json"
+"$PW" run "$PW_WORK/capture-no-nonce.json" > "$PW_WORK/capture-no-nonce-result.json" 2> "$PW_WORK/capture-no-nonce-stderr.txt"
+PW_EXIT=$?
+printf '%s\n' "$PW_EXIT" > "$PW_WORK/capture-no-nonce-exit.txt"
+test "$PW_EXIT" -eq 1
+test ! -e "$PW_WORK/capture-target"
+```
+
+Enabled capture requires a nonce. This second refusal reports
+`invalid_capture_nonce` at `["policy", "capture_nonce"]`. To enable capture,
+first keep receipt files restricted as in the quick start, then supply a fresh
+32-character lowercase hexadecimal nonce. On macOS installations with
+`/usr/bin/openssl`, this produces one and saves a third request:
+
+```sh
+PW_NONCE=$(/usr/bin/openssl rand -hex 16)
+printf '%s\n' "$PW_NONCE"
+```
+
+Continue after that command succeeds and prints 32 lowercase hexadecimal
+characters. Preserve the corrected request and its result:
+
+```sh
+sed "s/\"capture_compiled_profile\": true/\"capture_compiled_profile\": true, \"capture_nonce\": \"$PW_NONCE\"/" \
+    "$PW_WORK/capture-no-nonce.json" > "$PW_WORK/capture.json"
+if test ! -e "$PW_WORK/capture-target"; then
+  "$PW" run "$PW_WORK/capture.json" > "$PW_WORK/capture-result.json" 2> "$PW_WORK/capture-stderr.txt"
+  PW_EXIT=$?
+  printf '%s\n' "$PW_EXIT" > "$PW_WORK/capture-exit.txt"
+  cat "$PW_WORK/capture-result.json"
+  test -f "$PW_WORK/capture-target"
+else
+  printf '%s\n' 'Capture target already exists; preserve its records and prepare a new target.' >&2
+fi
+```
+
+On a completed run the file exists; inspect the separate
+[compiled-object receipt](#compiled-object-receipt-opt-in) for its capture
+status, nonce and worker identity. Capture can be unavailable even when policy
+application was observed. Retain all three request/result pairs so the corrected
+field and the next prerequisite remain visible.
+
+For a different experiment, the following policy denies reading one existing
+file while leaving the rest allowed:
 
 ```json
-{
-  "code": "unknown_field",
-  "path": ["policy", "capture_compiled_profiel"]
+"policy": {
+  "format": "sbpl",
+  "sbpl_source": "(version 1) (allow default) (deny file-read-data (literal \"/etc/hosts\"))"
 }
 ```
 
-No worker or validator is created for this refusal; the XPC host may have
-launched to inspect the request. Keep the directory to inspect the submitted
-requests and both envelopes. Removing the misspelled field restores the
-original instruction. Enabling capture instead requires both the correctly
-spelled field and its [nonce](#compiled-object-receipt-opt-in).
+Pair it with the `read_etc_hosts` step in [Probe plan steps](#probe-plan-steps).
+A completed run can contain a permission-shaped open failure. Read the native
+observation and query separately; the run's success reports execution completion.
 
 ### What acceptance establishes
 
-An accepted-input grammar describes which input shapes are allowed. PW also
-checks their meaning and the build's capacity. Execution supplies a separate
-observation:
+The controller first parses its command arguments and reads the request. It
+checks `contract`, runner selection and policy augmentation before invocation.
+The host then admits the delivered request before spawning children. Compilation,
+application and attempted operations supply later observations.
 
-| Distinction | Example | What it tells you |
+| Boundary | Example | Next action |
 | --- | --- | --- |
-| Syntax and structure | Broken JSON, an unknown field, or a string where `args` requires an array of strings. | Correct the request's spelling or shape. Optional nulls mean absence; names inside `policy.params` are caller data, but their values must be strings. |
-| Meaning | `args: []` on a file attempt, or duplicate step IDs. | The fields decode, but the submitted instruction is invalid. Correct their relationship or choose a supported operation. |
-| Capacity | A plan contains more steps than this build admits. | Inspect `admission_failure` for the field, actual count and maximum, and find the field in the Specimen admission table under [Limits](#limits). Revise the specimen or use a build with sufficient capacity; PW never truncates the plan. |
-| Observed effects | A valid create encounters a permission failure, or succeeds and produces a file. | Read the attempt evidence and inspect the target to establish what happened during execution. |
+| CLI or request file | Unknown flag, missing file, invalid UTF-8 or malformed JSON. | Read stderr and any printed envelope; save the corrected command or UTF-8 JSON. |
+| Request shape | Unknown field or a string where `args` requires an array. | Correct the exact code/path in `request_failure`; keep the refused input. |
+| Request meaning | `args: []` on a file attempt, duplicate step IDs or a reference used before its producer. | Correct the field relationship or declared action order. |
+| Capacity | Source bytes or total actions exceed a bound. | Read `admission_failure.field`, `actual`, `maximum` and `unit` beside the [limits](#limits); revise the whole specimen. |
+| Compilation and application | Native compilation or apply fails after admission. | Read the worker failure operation and native result, then review the selected source and parameters. |
+| Attempted effect | A create succeeds or an open returns a permission-shaped failure. | Read that attempt's publication/native evidence and observe the target independently. |
 
-Unknown attempt combinations and filter names refuse the whole specimen before
-worker or validator creation. Recognized queries with unavailable predictions
-still permit supported attempts. A request can therefore be useful even when
-the query channel cannot answer. For capacities and units, see [Limits](#limits).
+Unknown attempt combinations and filter names refuse the specimen before worker
+or validator creation. A recognized query with an unavailable prediction still
+permits its supported attempt. The request is preserved as a whole; exceeding a
+capacity refuses it instead of shortening the plan.
 
 ### Correcting a refused request
 
-Use `data.request_failure.code` to classify the refusal and `path` to locate
-the field. Human-readable `result.error` supplies context; programs should not
-parse that prose. Path components are exact keys and decimal array positions:
-`["probe_plan", "1", "attempt", "args"]` identifies the second step's arguments.
-`[]` names the root; `null` means the location was withheld. Read the run's
-outcome in `result.normalized_outcome`. Capacity refusals also retain
-counts and positions in `data.runner_result.admission_failure`.
+Start with `result.normalized_outcome`. For `bad_request`, use
+`data.request_failure.code` and `path`; human-readable `result.error` adds
+context. Path components are exact keys and decimal array positions:
+`["probe_plan", "1", "attempt", "args"]` names the second step's arguments.
+`[]` names the root and `null` means the location was withheld. Numeric capacity
+refusals also retain `data.runner_result.admission_failure` with counts and
+applicable positions.
 
-Three field relationships commonly matter:
-
-| Field | When it applies |
+| Field | Accepted relationship |
 | --- | --- |
-| `attempt.args` | A non-null array, including `[]`, is accepted only for `exec/spawn`. |
-| `sandbox_check.filter.value` | `none` accepts only absence or null. Other recognized kinds require a nonempty string. |
-| `policy.capture_nonce` | Requires `capture_compiled_profile: true`; enabled capture requires a fresh nonce of 32 lowercase hexadecimal characters. |
+| `attempt.args` | A non-null array, including `[]`, belongs to `exec/spawn`. |
+| `sandbox_check.filter.value` | `none` uses absence or null; other recognized kinds require a nonempty string. |
+| `policy.capture_nonce` | Enabled capture requires a fresh nonce of 32 lowercase hexadecimal characters; a supplied nonce requires enabled capture. |
 
-A refusal identifies one problem. Correct it and rerun; another problem may
-then be reported. `bad_request` exits 1 and executes no probe steps. Missing or
-unreadable files and unavailable runners have their own failure outcomes.
+Correct one refused input in a new file and retain the new output. Another
+failure may then become visible, as the capture example shows. This retry is
+appropriate for a known pre-execution refusal. For a transport failure, first
+read [submission state](#receiver-evidence): an invoked or unknown request may
+have produced effects already.
 
-The request's `contract` asserts the exact producer identity it was written for.
-Read the value from `policy-witness --version` (`build.contract`) and replace
-`BUILD_CONTRACT` in the examples before running them. A clean annotated release
-uses `release:vX.Y.Z`; a development build uses `development:<digest>`. Review
-the public surface table before changing an existing specimen's assertion.
-Missing, malformed and foreign assertions are refused before any runner selection,
-policy augmentation, helper invocation or worker creation.
+The request's `contract` is an exact identity assertion. Compare it with the
+saved `--version` output and the [public surface table](#public-contract-surfaces)
+before updating an existing specimen. Missing, malformed and foreign assertions
+are refused before selection, augmentation or helper/worker invocation.
+Keep OS and input observations when comparing matching-contract runs: native
+sandbox results also depend on the machine and the state each action encounters.
 
-Implementation fixes and additions change a development build’s identity, and
-each release has its own identity. Review the changed surface rows before
-updating a specimen’s assertion. Identical assertions do not promise identical
-sandbox observations across macOS versions or runs.
-
-<!-- END CONTRACT request_admission -->
-
-<!-- BEGIN CONTRACT policy_input -->
 ### Policy
 
 SBPL source:
@@ -637,35 +686,35 @@ including references inside `string-append`, and determines how missing or
 unused parameters affect compilation. `sandbox_compile_string` resolves
 `(import "...")` statements against the system profile search path.
 
-<!-- END CONTRACT policy_input -->
 
-<!-- BEGIN CONTRACT profile -->
 ### Compiled-object receipt (opt-in)
 
 An SBPL policy may set `capture_compiled_profile: true` and a fresh per-application
-`capture_nonce` (32 lowercase hexadecimal characters). The runner adds
-`data.runner_result.compiled_profile`. The receipt has no contract or version field
-of its own and is read under the contract of the reply that carries it. A
-`status: "captured"` receipt requires `producer: "worker"` and
-`capture_stage: "before_apply"`. It contains `worker_pid`, `request_nonce`, `profile_type`,
+`capture_nonce` (32 lowercase hexadecimal characters). Ordinary output places
+its receipt at `data.runner_result.compiled_profile`; actor output places each
+worker's receipt at `data.runner_result.actors[].compiled_profile`. Each selected
+policy opts in independently. The receipt is read under the contract of the
+reply that carries it. A `status: "captured"` receipt requires
+`producer: "worker"` and `capture_stage: "before_apply"`. It contains `worker_pid`, `request_nonce`, `profile_type`,
 `bytecode_length`, `bytecode_b64`, `bytecode_sha256`, `source_length`,
 `source_sha256`, `parameter_count` and `params_sha256`. These are sensitive outputs:
 the caller must arrange restricted receipt storage before opting in.
 A non-null nonce without enabled capture is a `bad_request`.
 
 The C worker copies the bytecode from the same compiler-result pointer it passes
-to `sandbox_apply`, before applying. The host requires successful apply,
-complete worker exit, matching PID/nonce, lengths, input identities and payload
-checksum before publication. Missing capture, failed apply, worker death or
+to `sandbox_apply`, before applying. The host qualifies the captured bytes using successful apply,
+completed worker publication and clean owned exit, matching PID/nonce, lengths,
+input identities and payload checksum before publication. Missing capture, failed apply, worker death or
 capture corruption is unavailable.
 An unavailable nested receipt has a reason and no bytecode, producer or capture
 stage, or is absent if no worker result was obtained. An opt-in request alone
-does not establish that capture ran. The controller requires the exact
-producer/stage values for a captured receipt and classifies a reply without them
-as `malformed_runner_response`.
+does not establish that capture ran. The controller requires the exact producer/stage labels for a captured receipt
+and classifies a reply without them as `malformed_runner_response`. This label
+admission and the host's byte/input checks are separate boundaries.
 
-Application is reported separately by `sandboxed_after_apply` and any published
-`runner_subprocess.worker_evidence.failure`. An unavailable capture does not
+Application is reported separately by the ordinary `sandboxed_after_apply` and
+`runner_subprocess.worker_evidence`, or the actor's application account and
+`subprocess.worker_evidence`. An unavailable capture does not
 establish application failure. The receipt identifies compiler output; successful
 application and subsequent access observations supply different evidence. None
 is a readback of the kernel's effective policy.
@@ -680,9 +729,7 @@ ordering. Embedded NUL inputs cannot qualify as matching complete requested inpu
 the nonce and worker identity to their own request and compare actual decoded
 bytecode with any independently retained expected object.
 
-<!-- END CONTRACT profile -->
 
-<!-- BEGIN CONTRACT policy_tools -->
 ### SBPL check (`sbpl-check`)
 
 `sbpl-check` is a host-side SBPL compiler. The C worker exercises the
@@ -691,7 +738,18 @@ available native result, summarized as `runner_failed`. The controller runs
 `sbpl-check` only after `xpc_error`, retaining its independent result under
 `data.policy_check`. That fallback says nothing about how far a missing worker
 progressed or why its reply was lost. You can also run the tool directly for the
-diagnostics below.
+diagnostics below. For the ordinary request saved in the quick start:
+
+```sh
+"$APP/Contents/MacOS/sbpl-check" --request "$PW_WORK/create.json" > "$PW_WORK/compile-result.json" 2> "$PW_WORK/compile-stderr.txt"
+PW_EXIT=$?
+printf '%s\n' "$PW_EXIT" > "$PW_WORK/compile-exit.txt"
+cat "$PW_WORK/compile-result.json"
+```
+
+The helper also accepts `--request -` for stdin. It compiles the `policy`
+object and reports a diagnostic; application and file effects belong to the
+worker run. Its accepted request subset and input checks differ from `run`.
 
 The native compiler determines the verdict and handles missing or unused
 parameters. The helper copies its diagnostic unchanged. Supplied `policy.params`
@@ -772,8 +830,11 @@ worker and surfaces as `runner_failed` with an operation=5 compilation record,
 NULL-result evidence and any published compiler diagnostic. Parameter setup
 and application failures have their own operation/result records.
 In a run, a missing `sbpl_source` or non-`sbpl` `format` is a structured
-`bad_request` before children. The controller runs `sbpl-check` only on the
-`xpc_error` path.
+`bad_request` before children. The controller runs fallback checks only after an eligible terminal XPC error.
+It uses the held, resolved request already prepared for invocation. For actor
+requests, `actor_policy_checks` associates independent checks with each carried
+policy object and the available actor label, including policies whose actor
+mode or label would later fail host admission.
 
 The sbpl-check envelope also records the imports closure under
 `data.import_inventory`: null on an input refusal, otherwise present even when
@@ -835,14 +896,11 @@ Resolution rules:
 
 Splicing semantics:
 
-- Augments are **append-only and allow-only.** Each shipped augment
-  contains only `(allow ...)` rules; the author commits not to emit
-  `(deny ...)`.
-- SBPL is last-match-wins, so an augment's `(allow process-exec)`
-  overrides a caller's earlier `(deny process-exec)` for the
-  operations the augment covers. A caller opting into an augment
-  consents to this override; the controller does not warn about
-  overlap.
+The controller appends the named fragments in the submitted order. The shipped
+`exec_baseline` contains allow rules. Review those actual additions against the
+experiment: its unconditional `(allow file-read*)` broadens file access as well
+as permitting executable loading. Choose explicit policy rules when you need a
+more limited experiment.
 
 Envelope reporting:
 
@@ -868,33 +926,26 @@ Envelope reporting:
   caller submitted" reads `original_sha256` instead. See
   [The specimen dossier](#the-specimen-dossier).
 
-Shipped augments:
+Shipped augment:
 
-- **`exec_baseline`** — three `(allow ...)` rules that let a
-  libSystem-dynamic helper `posix_spawn` under `(deny default)`:
-  `(allow process-exec*)`, `(allow process-fork)`, and an
-  **unconditional** `(allow file-read*)`. Empirically derived
-  with the project's exec helper fixture
-  on macOS 14.8.3 (build 23J220, Darwin 23.6.0).
+- **`exec_baseline`** appends `(allow process-exec*)`, `(allow process-fork)` and
+  an unconditional `(allow file-read*)`. The project's libSystem-dynamic helper
+  exercised that fragment on macOS 14.8.3 (build 23J220, Darwin 23.6.0). Other
+  helpers and OS environments can require different permissions. Because the
+  fragment changes file-read authority, keep it separate from an experiment
+  intended to observe file-read denial under the unaugmented source.
 
-  **This baseline adds an unconditional file-read allow.**
-  The kernel reads the target binary's bytes before exec; `(allow file-read*)`
-  covers any caller-selected helper path. Because augments are
-  appended after the caller's source and SBPL is last-match-wins,
-  this allow overrides any caller-authored `(deny file-read* ...)`.
-  Specimens that probe file-read denial cannot be composed with
-  `exec_baseline`.
-
-<!-- END CONTRACT policy_tools -->
-
-<!-- BEGIN CONTRACT probes -->
 ### Probe plan steps
 
 Each step has:
 
 - `step_id`
 - `sandbox_check`: `{ operation, filter }`
-- `attempt`: `{ kind, action, target }`
+- `attempt`: `{ kind, action, target }`, with optional `args` for `exec/spawn`
+
+The query and attempt are independent instructions: their operation, filter and
+target can intentionally differ. The comparison records those relationships.
+Choose the pair that asks your question rather than assuming one implies the other.
 
 Step IDs, query strings, filter/attempt labels, attempt targets and the
 top-level strings have separate admission limits (see [Limits](#limits)).
@@ -914,19 +965,16 @@ Example:
 }
 ```
 
-<!-- END CONTRACT probes -->
 
 ## Limits
 
 <!-- BEGIN COPIED LIMITS -->
 
-A specimen that `libsandbox` would compile can still be refused here, or run
-with less evidence than it produced. This is the inventory of numeric capacities,
-budgets and evidence-retention bounds: what each counts and what happens at its
-boundary. Fitting these bounds does not establish that a request is meaningful
-or that evidence will be available. Request grammar, extension ownership and
-action order, receipt prerequisites and prediction eligibility still apply.
-A fitting query or complete record may supply no usable prediction.
+This inventory identifies the capacities, execution budgets and evidence-retention
+bounds a request encounters. Each row states what is counted, where the bound
+applies and what happens there. Prepare the request using its grammar and action
+relationships, then compare its measured quantities with these rows. After a run,
+use the reported refusal or collection state to locate the relevant boundary.
 
 Numeric capacity refusals carry `data.runner_result.admission_failure`, which names the
 `field`, the `actual` count, the `maximum` and the `unit`, with location details
@@ -975,7 +1023,8 @@ actor may exec.
   Mach time, which includes system sleep; host, validator and controller waits
   keep their own clocks, and no worker time is compared with them. Nominal waits
   can take longer than their listed duration; each row describes what expiry does.
-  Even elapsed deadlines do not preempt blocked native calls or guarantee final cleanup time.
+  A blocked native call can outlast a checked deadline; final cleanup has its own
+  observations and may remain unconfirmed.
 - The Control column describes `policy-witness` flags using four words.
   "Fixed" means no flag changes the value in this build. "Flag" names the flag
   that does. "Derived" means the value follows from another row.
@@ -1218,7 +1267,6 @@ actor may exec.
 
 <!-- END COPIED LIMITS -->
 
-<!-- BEGIN CONTRACT envelope -->
 ## Output envelope
 
 Every envelope carries a top-level `build` object naming the code that produced
@@ -1227,24 +1275,224 @@ it: `version` (nearest `v*` git tag), `number` (commit count), `describe` and
 The same values are stamped into the app’s Info.plist. The descriptive build
 coordinates correlate evidence with source; readers admit by `contract`.
 
-### Shape and producer contract
+### Reading a result
 
+`policy-witness run` prints one envelope. Read it in this order: whether a host
+report was admitted, what execution status was selected, which evidence checks
+passed, and what each attempted operation actually observed.
 
-The runner reply's JSON projection carries its `producer` context and
-holds `normalized_outcome`, `steps`, `runner_subprocess`, `phases`
-and the policy identity (`specimen_id`, `policy_format`, `policy_sha256`). It is
-readable on its own. The controller envelope is what `policy-witness run`
-prints: its `build.contract` identifies the producer, `result` summarizes
-the run, and `data` carries that projection as `runner_result` beside the
-specimen dossier (`specimen`), the client transport (`runner_client`), the
-fallback compilation (`policy_check`), the controller's projections
-(`runner_sandbox_diagnostics`) and `timeout_ms`. Readers that interpret either
-document require the expected build contract. A foreign string is unsupported;
-a missing or non-string assertion is malformed. Refused bytes remain available
-(see [CONTRACT.md](CONTRACT.md)).
-`pw-runner-client` emits a binary `runner_client_capture` carrying the same
-build contract. It carries acquisition and submission observations and the
-received host bytes, rather than manufacturing host results for client errors.
+| Part | Supplied by | Reading |
+| --- | --- | --- |
+| `data.runner_client` | Controller and runner client | Request delivery, capture retention, acquisition, submission state and received host bytes. |
+| `data.runner_result` | Runner host | The retained decoded report: host outcome, steps, phases and worker observations. |
+| `data.runner_sandbox_diagnostics` | Controller | Checks of the admitted report's evidence and the supported worker-ending projections. |
+| `result` and command exit status | Controller | Whole-run classification, with the result/error selected at the boundary reached. |
+| `data.specimen` | Controller | The saved request path, selected source/import inventory and runner/app provenance known before invocation. |
+
+Admission proceeds through client capture, complete host decoding and the host's
+producer/context checks. A decoded host report can remain in `runner_result`
+when admission is refused; `runner_sandbox_diagnostics` is then null. Raw bytes,
+decoded records and admitted evidence have different status. The
+[receiver account](#receiver-evidence) identifies which is available.
+
+#### What success means
+
+For `run`, `result.ok: true` and exit 0 mean the controller admitted a host report
+whose `normalized_outcome` is `finished`. The host reports completed, collected
+execution and confirmed clean disposition. Any invoked validator has confirmed
+clean disposition and complete, uniquely associated requested records without
+transport/decode/association failure. Per-step diagnostics still have their own
+meanings.
+
+A finished run can contain failed attempts. For example, a completed open that
+returns a permission-shaped failure remains a useful observation in a finished
+run. Read the step's `attempt`, its native observations and `comparison` to
+learn what happened to that operation.
+
+The controller also checks evidence consistency. Those findings are reported
+beside the completion result; they leave the host report and outer outcome
+unchanged. An envelope can therefore contain `finished`, `result.ok: true` and
+an `invalid` integrity finding with a withheld disposition. A consumer needing
+consistent evidence checks the applicable integrity and issue records as well
+as the outer result.
+
+#### How the controller's findings qualify the report
+
+For an ordinary worker, the diagnostics record its `process_disposition`,
+`termination_cause`, `stop_reason`, `disposition_integrity` and
+`disposition_issues`. The disposition is `no_worker`, `unconfirmed`, `clean_exit`,
+`nonzero_exit`, `signaled`, `conflicting`, `unrecognized` or `withheld`.
+
+| Scope | Consequence of a finding |
+| --- | --- |
+| Worker lifecycle | That worker's projection becomes `withheld`, with integrity `invalid` and cause `unknown`. Its raw observations remain in the host report. |
+| Actor aggregate | Top-level `per_actor` directs the reader to `diagnostics.actors[]`. Any invalid actor projection makes aggregate integrity invalid; other actor entries retain their own results. |
+| Reply-wide relationship | Top-level projection becomes `withheld`/`invalid`/`unknown`. Already computed actor entries remain available independently. |
+| Validated host conflict | The controller can report `conflicting` with integrity `valid` and copied host issues: it validated the evidence supporting that conflict. |
+
+Here `diagnostics` abbreviates `data.runner_sandbox_diagnostics`. Null integrity
+means there was no worker projection to validate. A nonempty issue list can
+contain validated host conflicts as well as controller findings; read each
+issue's kind and scope.
+
+For owned-reap, phase-activation and termination-gate findings, an optional
+`subject_path` locates the inspected assertion relative to
+`data.runner_result`. Components are object keys and zero-based array positions:
+`["phases", "2", "termination_gate"]` points to the third phase's carried gate,
+even if labels are duplicated. A present null target is still addressable.
+The path identifies the assertion; the producing check determines the projection
+scope. Other findings can omit the path.
+
+A supported termination cause names the complete host-cleanup chain:
+`host_sentinel_deadline`, `host_exit_grace_exhausted`,
+`host_cleanup_after_wait_error`, `host_cleanup_after_transfer_error` or
+`host_cleanup_after_transfer_timeout`. A confirmed clean exit has null cause;
+other endings remain `unknown` until their supporting chain establishes one of
+these causes. Actor causes live in their actor entries. `stop_reason` records
+why polling stopped, so an earlier deadline can coexist with a later clean exit.
+
+#### What a reporting failure preserves
+
+If host encoding fails, the replacement outcome is `runner_reporting_failed`,
+with `rc: 1`, an error and `reporting_failure` containing the diagnostic and
+original execution summary. The command exits 1.
+
+- `evidence_retained: true` retains the assembled observations while removing
+  every comparison. Retained ordering fields are diagnostic; this form supplies
+  no per-step `query_first` claim.
+- `evidence_retained: false` identifies the minimal fallback with no steps or
+  subprocess evidence.
+
+The controller checks the degradation's outcome, diagnostic and permitted retained
+form. Worker lifecycle projections still run, with the comparison-limitation
+requirement waived for the removed comparison. Ordinary phase, native-operation
+and actor-relationship check families apply to the nondegraded branch. Read the
+remaining observations at the boundary where they were published.
+
+#### When no host report was admitted
+
+Use the nearby [outcome catalog](#normalized_outcome-catalog) to identify the
+boundary. A missing or rejected client capture leaves submission unknown. A host
+reply truncated or undecodable as a complete typed body leaves `runner_result`
+null. A decoded but refused producer/context can remain there beside null
+diagnostics. Request-delivery failure takes precedence as `tool_error`, even
+when client bytes were retained.
+
+Before retrying, distinguish a known request refusal from `invoked` or `unknown`
+submission. Retain the request, output, stderr and independent target observations;
+execution after invocation is never automatically replayed by the client.
+
+### normalized_outcome catalog
+
+`data.runner_result.normalized_outcome` values the runner can produce
+(for the standalone helper's `bad_request`, `policy_too_large`,
+`setup_error`, `compile_error` and `ok` outcomes, see
+[SBPL check](#sbpl-check-sbpl-check)):
+
+- `finished` — the host reports completed, collected execution. See
+  [What success means](#what-success-means) for the distinction between that
+  status, individual effects and integrity findings.
+- `runner_timeout` — a host execution allowance expired, including sentinel
+  polling or policy transfer. The retained timeout and disposition records
+  identify the boundary. A later voluntary exit can coexist with the timeout;
+  a published worker failure can take priority as `runner_failed`.
+- `runner_failed` — execution/reporting failure, including inconsistent
+  publication, a published worker operation failure, an incomplete
+  report, abnormal or unconfirmed disposition, or a host wait/cleanup failure.
+  The cause may be unknown. A completed report survives an abnormal exit as
+  partial execution evidence.
+- `runner_reporting_failed` — the host could not encode its assembled result.
+  `reporting_failure` preserves the original execution summary separately.
+- `worker_spawn_failed` — host could not `posix_spawn` the worker
+  (filesystem/codesign/quota error). Worker never ran.
+- `validator_spawn_failed` — host could not `posix_spawn` the
+  validator child. `result.ok=false`; attempts are still surfaced
+  in `steps[*].attempt` as degraded evidence.
+- `validator_no_reply` — host encountered validator probe-write or verdict-read
+  I/O failure. Independently completed verdicts and attempts remain available.
+- `validator_decode_failure` — the host rejected a validator reply frame at the
+  UTF-8, JSON syntax, or record-structure boundary. Earlier valid records survive.
+- `validator_unavailable` — requested IDs lack unique replies, unassociated or
+  unexpected records arrived, or validator disposition/cleanup is abnormal or
+  unconfirmed.
+  Partial verdicts and attempts survive. Missing supported-query verdicts use
+  the `outcome="error"`, `rc=0` shape with `result_source="synthetic"`,
+  `native_rc:null`, and a missing reason.
+- `bad_request` — request rejected before any worker spawn. Causes
+  include: JSON decode failure, empty `sandbox_check.operation`, an unknown field (e.g.
+  `instrumentation`), duplicate `step_id`, or a capacity refusal: the worker's
+  shared-memory bounds, the host-only query strings and filter/attempt labels,
+  or the top-level and test-seam strings. Admission runs after decoding, before
+  semantic validation. Native C-string fields also reject embedded NUL.
+  Capacity refusals carry host-owned `admission_failure` with field, actual and
+  maximum, `utf8_bytes`, `items` or `nul_bytes`, and applicable `step_id`, `step_index`,
+  `parameter_key` and `index`. Every `bad_request` reply has `steps: []`:
+  nothing ran, so the refused probe plan is omitted. A capacity refusal never repeats
+  the string it refused: a refused step ID or parameter key is identified by
+  position or by field, and a refused `specimen_id`, `run_kind`, `policy.format`
+  or seam path is replaced by `<admission_refused>`, omitted, `unknown` or
+  dropped from the mirrored `test_overrides` respectively. Every echoed field
+  is checked independently, including when several fields are invalid.
+  Unknown filter kinds, unsupported attempt combinations and non-null fields
+  that cannot take effect are also refused. `request_failure` supplies the
+  structured code and field path; the controller mirrors it at
+  `data.request_failure`. See [Correcting a refused request](#correcting-a-refused-request).
+
+Client failures are separately attributed in `runner_client.transport` and the
+controller's result: `xpc_error` is a captured transport error and `xpc_timeout`
+is expiry of the overall client allowance. `xpc_acquisition_failed` means the
+client exhausted its bounded reservation attempts; `xpc_submission_refused`
+means the execution method returned a reservation refusal. Protocol/local
+failures retain their stage and diagnostic. Missing, malformed or unsupported
+client capture leaves submission unknown. These paths have no host RunResult.
+A host reply can be delayed or lost; an invoked execution is never replayed.
+
+For ordinary, successfully captured client output, the two timeout layers map
+to these fields:
+
+| Event | `result.normalized_outcome` | `data.runner_result.normalized_outcome` | Result origin and distinguishing evidence |
+| --- | --- | --- | --- |
+| Client allowance expires | `xpc_timeout` | null | Client capture retains whether execution was invoked. After invocation, execution is unknown; before invocation, it was not submitted. |
+| Host sentinel budget expires and its reply arrives | `runner_timeout` | `runner_timeout` | Host result includes `runner_subprocess.poll_stop_reason: "sentinel_deadline"` and available disposition evidence. Client exit code is 0 because it delivered the reply. |
+
+The client exit code is `data.runner_client.exit_code`. The controller
+`policy-witness` exits 1 in both cases. RPC expiry means no reply was received
+before the client's deadline. It does not prove the host never ran, was
+unreachable or crashed, and does not establish cancellation of host work.
+
+If client stdout supplies no admitted capture, `data.runner_result` is null and
+the controller reports a missing, malformed or unsupported client capture; inspect the
+[capture evidence](#receiver-evidence) for empty, undecodable or truncated output.
+Client launch or request-delivery failures are `tool_error` paths. These differ
+from a captured client RPC timeout and from a received host reply retained
+but refused as `unsupported_runner_response` or `malformed_runner_response`.
+
+Controller-owned outcomes appear in `result.normalized_outcome`:
+
+| Outcome | Boundary and recovery | Exit |
+| --- | --- | --- |
+| `tool_error` | Command/request-file handling, runner selection, client launch or request delivery failed. Read the error and retained delivery evidence before retrying. | 2 |
+| `missing_runner_client` | No client capture arrived; submission is unknown. | 1 |
+| `unsupported_runner_client` | The retained capture has another schema/contract; use matching app components. | 1 |
+| `malformed_runner_client` | The capture is incomplete or fails decoding/state admission; inspect retained bytes and capture counts. | 1 |
+| `runner_reply_truncated` | The accepted capture retained only a prefix of the host reply; its body supplies no decoded result. | 1 |
+| `unsupported_runner_response` | The host frame or producer differs from the expected schema/contract; update the selected runner to match the app. | 1 |
+| `malformed_runner_response` | Host framing, typed body or producer/context admission failed. A decoded body can remain beside the refusal. | 1 |
+| `xpc_error` | The admitted client capture records a terminal transport error. Inspect submission state; an independent fallback compiler result may also be present. | 1 |
+| `xpc_timeout` | The client allowance expired. Use submission state to distinguish a known unsubmitted request from possible execution. | 1 |
+| `xpc_acquisition_failed` | Reservation acquisition exhausted its attempt bound; inspect the attempts and observed service state. | 1 |
+| `xpc_submission_refused` | The execution method returned a reservation refusal; retain its reason and submission observation. | 1 |
+| `xpc_protocol_error` | Reservation/transport control failed its protocol checks. | 1 |
+| `runner_client_error` | The client recorded a local terminal failure; inspect its stage and native diagnostic. | 1 |
+
+An admitted result with any host outcome other than `finished` exits 1. A
+recognized client failure has its own record instead of a synthesized host
+execution result. A reply can be delayed or lost after invocation; inspect
+[Receiver evidence](#receiver-evidence) before repeating an effect.
+
+<a id="shape-and-producer-contract"></a>
+
+### Worker and host records
 
 The XPC host stays unsandboxed and spawns an attempt worker for each declared
 process, plus a fresh batch validator for each eligible phase. In a
@@ -1290,27 +1538,6 @@ authoritative; the record references them, and every lifecycle conclusion in
 the envelope, including `attempt.lifecycle` and the controller's
 `termination_cause`, is a projection of it.
 
-The controller projects the record into `data.runner_sandbox_diagnostics`:
-`process_disposition` (`no_worker`, `unconfirmed`, `clean_exit`, `nonzero_exit`,
-`signaled`, `conflicting`, `withheld` or `unrecognized`), `termination_cause`,
-`stop_reason`, `disposition_integrity` and `disposition_issues`.
-`termination_cause` names host cleanup the record witnesses end to end
-(`host_sentinel_deadline`, `host_exit_grace_exhausted`,
-`host_cleanup_after_wait_error`, `host_cleanup_after_transfer_error`); it is
-null for a confirmed clean exit and `unknown` for every other termination,
-including a self-signal and an unresolved or conflicting status. `stop_reason`
-projects why polling stopped (a deadline can coexist
-with a clean exit), and `disposition_integrity` with `disposition_issues` says
-whether the carried record agreed with the raw facts it cites (`valid`, or
-`invalid` with claims withheld). These fields do not change `normalized_outcome`.
-
-A host reply-construction failure reports `runner_reporting_failed`, `rc: 1`
-and `reporting_failure` with the diagnostic and original execution summary.
-When `reporting_failure.evidence_retained` is true, queries, attempts and child
-observations survive, but every `comparison` is omitted. Retained ordering
-observations are diagnostic; this reply certifies no per-step order. If serialization also fails for that degraded reply,
-`evidence_retained` is false and steps and subprocess evidence are absent.
-
 Optional subprocess objects may be omitted or null. A null `errno` on a step
 requires key presence. Outcome mappings below use execution evidence.
 
@@ -1323,29 +1550,49 @@ three child fields exactly when an exec attempt's slot was filled, and
 `stdout`/`stderr` only when that stream produced bytes. Other attempt kinds omit
 these keys. `exec_observation` is available only for a completed worker result
 whose spawn produced a child. Its absence or null means structured exec evidence
-is unavailable, including valid replies from producers without this field; it
-establishes no cleanup, EOF or reap fact. See [Structured exec observations](#structured-exec-observations).
+is unavailable, and leaves cleanup, EOF and reap unavailable at that boundary. See [Structured exec observations](#structured-exec-observations).
 
-<!-- END CONTRACT envelope -->
 
-<!-- BEGIN CONTRACT lifecycle -->
 ### Top-level fields
 
 Reply fields beyond `pid` / `runner_subprocess`:
 
-- `execution_form` — `single_worker` or `actors`. An actor-form reply has no
-  `runner_subprocess`, `policy_sha256` or `sandboxed_after_apply`; each actor
-  carries its own subprocess record, policy hashes and application account.
+- `execution_form` — actor assembly emits `actors`; the ordinary producer
+  omits the field. An actor-form reply has no `runner_subprocess`,
+  `policy_sha256` or `sandboxed_after_apply`; each actor carries its own
+  subprocess record, policy hashes and application account.
 - `actors[]` — one record per actor in request order: `actor_id`, `index`,
   `mode`, `setup_status` (`applied`, `unapplied_declared`, `setup_failed`,
   `exited_before_setup`, `setup_timeout`, `launch_refused`,
-  `transfer_failed` or `not_launched`), `applied` (null for an unapplied
-  actor), `application_count`, the host's `policy_sha256` and the worker's
-  `policy_received_sha256`, the `launch` context (`pid`, `parent_pid`,
+  `transfer_failed`, `authority_setup_failed` or `not_launched`), an optional
+  `applied` observation collected from an `apply` actor, `application_count`,
+  the host's `policy_sha256` and the worker's `policy_received_sha256`, the
+  `launch` context (`pid`, `parent_pid`,
   `environment`, `standard_streams`, `inherited_descriptors`), the actor's own
   `subprocess` with its disposition record, an optional `compiled_profile`
   and `visits` (its declared phase ordinals). The corresponding phase records
   separately state whether activation and subsequent progress were observed.
+- `schedule` — actor setup/execution waits and aggregate budgets, plus the
+  cancellation reason when traversal stopped. Read individual phases to see
+  which activations and results were actually observed.
+- `equipment_inventory`, `equipment_bindings`, `equipment_entitlements` and
+  `actors[].equipment` — service/worker selection, signing and entitlement
+  observations, followed by the actor's owned live-code observation.
+  `preparation_failure` identifies a host preparation refusal before the planned
+  actor schedule. Keep that refusal beside any setup/cleanup observations.
+- `actors[].application` — the classified setup/application account, read with
+  the worker's raw publication. The reply's top-level `authority_setup` records
+  host scopes and actor-indexed worker apparatus decisions. Selected equipment
+  and live inspection have their own records. An unapplied
+  declaration, a failed apply and missing publication describe different states.
+- `actors[].owned_reap` — the host's observed final status of its owned worker,
+  with an optional capture ordinal and timing observations. A termination request
+  remains separate from this observation.
+- `phases[].activation_observation` and `termination_gate` — whether the phase
+  was activated and, when declared, whether the source actor's natural ending
+  satisfied the dependency. Read the gate outcome and source reap/activation
+  references together. The [extension workflow](#sandbox-extensions) describes
+  failed evaluated gates and later schedule cancellation.
 - `transfers[]` and `resources` — the host's record of each explicit exchange
   and the token, delivery and handle tables; see
   [extension output](#extension-and-fresh-read-output).
@@ -1354,8 +1601,10 @@ Reply fields beyond `pid` / `runner_subprocess`:
   `action_ids`, `arrival_observed`, `completion_observed` and `collection_status`.
   Status is `not_reached`, `not_needed`, `collected`, `budget_exhausted` or
   `clock_unavailable`; `collected` includes failed or partial collection.
-  `ordering` is present when a worker exists. Each `steps[].phase_id` identifies
-  the phase owning its query, attempt and comparison. Phase completion and
+  Ordinary orchestration includes `ordering` with collected worker output;
+  actor assembly also needs the corresponding visit in that output.
+  Each `steps[].phase_id` identifies the phase owning its query, attempt and
+  comparison. Phase completion and
   individual action completion remain separate observations. In the actor
   form each phase and step also names its `actor_id`, and a phase carries the
   actor's one-based `actor_visit`; a later phase of another actor may arrive
@@ -1430,8 +1679,9 @@ Reply fields beyond `pid` / `runner_subprocess`:
   only. Spawning also depends on fork, interpreter and other prerequisites.
   Native failure and missing-result evidence survive.
 
-The authoritative child object also includes `worker_evidence` when a child was
-spawned. Its `abi_identity` identifies the host-selected protocol sources.
+The subprocess record carries `worker_evidence` when the collected shared
+memory has the expected worker identity. Its `abi_identity` identifies the
+host-selected protocol sources.
 Its latest atomic `progress` records the child's published stage, beside an
 independently published `failure` (operation, diagnostic code, native result
 kind/value, meaningful errno and optional parameter index), the worker's
@@ -1503,24 +1753,25 @@ names the missing result and does not say whether the operation ran. The
 or `conflicting`, and its `boundary` and `result` claims carry the supporting
 observations or the reason the
 question is unresolved, projected from
-[the worker disposition record](#shape-and-producer-contract). A completed
+[the worker disposition record](#worker-and-host-records). A completed
 attempt's `rc` is PW attempt status. For `read_fresh`, the separate
 `attempt.fresh_read` fields retain native open, fstat, read and close returns.
 
-<!-- END CONTRACT lifecycle -->
 
-<!-- BEGIN CONTRACT transport -->
 ### Receiver evidence
 
-`phases[].validator_subprocess` names the phase it served (`phase_id` and `ordinal`,
-which readers require to match the containing phase, with expected IDs equal to
-that phase's eligible query plan) and retains accepted `records` (including null-ID diagnostics)
-and their `raw_line`, expected IDs, association issues, received stdout byte
-count, probe write counts, independent I/O/decode faults, termination-call
-observations and actual reap status. Duplicate IDs supply no unique per-step
-prediction. Rejected-frame context remains diagnostic evidence. Unfamiliar
-structurally valid diagnostic outcomes remain visible even when their per-step summary is
-`error`.
+Read `data.runner_client.submission` before recovering from a transport failure:
+
+| State | Established boundary | Recovery |
+| --- | --- | --- |
+| `not_invoked` | An admitted capture records that execution was never submitted. | Correct the acquisition/selection problem, then prepare a new run. |
+| `invoked` | The client called execution on its reserved connection. | Inspect retained reply and independent effects before any repeat. |
+| `unknown` | A complete current capture was unavailable or refused. | Preserve available bytes/diagnostics and investigate service and target state. |
+
+The client can reconnect during reservation acquisition, within its original
+allowance. Once it invokes execution, a later error or timeout ends that attempt;
+it performs no replay. The client allowance, host/worker execution budgets and
+output-retention bounds are separate.
 
 `data.runner_client` reports the client's `argv`, start and end milliseconds,
 `exit_code`, exact received/retained stdout and stderr byte counts and
@@ -1588,9 +1839,17 @@ received diagnostic without a native return retains `result_source="validator"`,
 with a missing reason. Use `result_source` and `native_rc` to distinguish a
 received diagnostic, a native failure and a missing reply.
 
-<!-- END CONTRACT transport -->
+`phases[].validator_subprocess` names the phase it served (`phase_id` and `ordinal`,
+which readers require to match the containing phase, with expected IDs equal to
+that phase's eligible query plan) and retains accepted `records` (including null-ID diagnostics)
+and their `raw_line`, expected IDs, association issues, received stdout byte
+count, probe write counts, independent I/O/decode faults, termination-call
+observations and actual reap status. Duplicate IDs supply no unique per-step
+prediction. Rejected-frame context remains diagnostic evidence. Unfamiliar
+structurally valid diagnostic outcomes remain visible even when their per-step summary is
+`error`.
 
-<!-- BEGIN CONTRACT dossier -->
+
 ### The specimen dossier
 
 `data.specimen` is present on every `kind: "run"` envelope, including
@@ -1627,6 +1886,11 @@ remain in the caller's specimen.
   actually read are outside it. `data.policy_check`, when the fallback
   compilation ran, carries `sbpl-check`'s own inventory verbatim; the two are
   not reconciled.
+- `actors[]`: per-actor source augmentation and import inventories in request
+  order, with the actor label when available. Compare each selected source with
+  that actor's reported `policy_sha256`; the ordinary `policy` dossier describes
+  the ordinary form. Both record source selection independently from what the
+  compiler later reads from imported files.
 - `host`: `macos_version`, `macos_build`, `kernel_release` and `arch`, read
   from `kern.osproductversion`, `kern.osversion`, `kern.osrelease` and
   `hw.machine`; null when a read fails. These describe the host environment.
@@ -1659,19 +1923,19 @@ the request is admitted or the runner is invoked. For a controller refusal, the
 dossier holds what was collected before the refusal: unavailable scalars are
 null, lists are empty, and the imports status says why no scan ran.
 
-To inspect the selected source hashes and observed binary provenance:
+If you have `jq` installed, this optional view selects the ordinary source
+hashes and binary provenance from the quick-start result. The complete saved JSON
+is usable without `jq`:
 
 ```sh
 jq '.data.specimen | {request_path, policy: {augmentation: .policy.augmentation.status,
   applied_sha256: .policy.augmentation.applied_sha256, imports: .policy.imports.status,
   closure_sha256: .policy.imports.closure_sha256}, host, runner: .runner_provenance.runner_kind,
-  binaries}' run.json
-jq '[.data.specimen.policy.augmentation.applied_sha256, .data.runner_result.policy_sha256]' run.json
+  binaries}' "$PW_WORK/create-result.json"
+jq '[.data.specimen.policy.augmentation.applied_sha256, .data.runner_result.policy_sha256]' "$PW_WORK/create-result.json"
 ```
 
-<!-- END CONTRACT dossier -->
 
-<!-- BEGIN CONTRACT equipment -->
 ### Extension and fresh-read output
 
 The lifecycle [example](#sandbox-extensions) returns these records under
@@ -1718,8 +1982,7 @@ An event can report `authority_channel_unavailable` when its worker cannot use t
 assigned authority region, or `delivery_unavailable` when the named delivery
 was not accepted. Individually unavailable issue, consume and release symbols
 produce operation-specific `native_api_unavailable` decisions; supported
-unrelated operations remain observable. These are no-call decisions, not
-native denial results.
+unrelated operations remain observable. These decisions record why the corresponding native call was not made.
 
 <!-- END COPIED EXTENSION STATUSES -->
 
@@ -1734,8 +1997,8 @@ slots can therefore describe unavailable actions without implying a native call.
 A failed fresh open has no stat/read/close evidence. A completed fresh read keeps
 the first failure in syscall order as the aggregate `read_failed` outcome;
 missing action publication supplies no fresh-read payload. Returned bytes are a
-bounded prefix. Actor equipment, native actions and fresh access retain their separate observations. The [native evidence contract](../tests/FAILURE-PROPAGATION-CONTRACT.md#native-extension-evidence)
-defines producer and reader validation.
+bounded prefix. Actor equipment, native actions and fresh access retain their separate observations. Read the native event, custody/transfer status and later fresh access result
+in that order; each supplies the observation in its own row.
 
 For `write_fresh` and `create_fresh`, `fresh_write` retains each actual syscall
 result. Its metadata objects `preopen_stat`, `opened_stat`, `truncated_stat` and
@@ -1753,9 +2016,7 @@ the aggregate outcome. Missing publication supplies no `fresh_write` object.
 The returned byte count and metadata do not substitute for independently read
 contents or establish crash durability.
 
-<!-- END CONTRACT equipment -->
 
-<!-- BEGIN CONTRACT steps -->
 ### Per-step shape
 
 The runner echoes step results with additional context:
@@ -1776,16 +2037,15 @@ Notes:
   except when `outcome == "prediction_unavailable"` — in that case no
   `sandbox_check` call is made; `filter_value` is echoed back from the
   request unchanged for cross-referencing with the specimen.
-- `filter_type_id`: `1` (path) or `2` (mach-lookup global). The global-name
-  ID was verified against kernel enforcement (deny on the policy's denied
-  value and allow on a sibling un-denied value); ID `12` passes the same
-  check, so `2` is the selected working ID. No ID is emitted for
-  `local_name`: PW excludes this pair conservatively because the investigation
-  has not established a matched native lookup with which to calibrate a
-  filter ID. The empirical mapping question remains open. For filter kinds
-  in the prediction_unavailable set, no
-  `filter_type_id` is emitted (see
-  [Filter kinds where prediction is unavailable](#filter-kinds-where-prediction-is-unavailable)).
+- `filter_type_id` records the validator's selected numeric filter ID when
+  available: `none` uses 0, `path` uses 1 and `global_name` uses 2. The global-name
+  mapping was checked against native observations in the documented calibration;
+  the alternative ID 12 also matched that control. The `mach-lookup/local_name`
+  pair is excluded, while another operation with `local_name` reaches the
+  validator's candidate ID 3. A query skipped by the planner or rejected by the
+  validator has no native filter-ID observation. Read the particular
+  [excluded pair](#filter-kinds-where-prediction-is-unavailable), provenance and
+  native return together.
 - `outcome`: `allow`, `deny`, `error`, `unsupported_operation`, or
   `prediction_unavailable`.
     - `allow` / `deny`: `sandbox_check` returned a clean verdict.
@@ -1795,11 +2055,10 @@ Notes:
       diagnostic text can come from the validator or host as well as the native call.
     - `unsupported_operation`: `sandbox_check` returned `rc=-1` +
       `errno=22` (EINVAL), which most commonly means the operation
-      name is one libsandbox doesn't recognize. SBPL family
-      operations must be passed to `sandbox_check` in their
-      wildcard form — e.g. `process-exec*`, not the bare
-      `process-exec`. `error` is always populated with a message
-      naming the rejected operation and the wildcard hint. The step
+      name was rejected by the native call. `error` retains the validator's
+      diagnostic naming the operation and its hint that SBPL family operations
+      are typically queried in wildcard form, such as `process-exec*`. Keep that
+      hint beside the recorded return rather than treating it as a compiler rule. The step
       still runs the attempt channel for the observation. The
       prediction channel yields no answer, so `comparison.order` is
       `unestablished`, and `operation_relation` compares the
@@ -1855,7 +2114,8 @@ have source `"synthetic"` with `missing_reason: "slot_absent"` or
   `kr=1102` (`BOOTSTRAP_UNKNOWN_SERVICE`) reports an unregistered service.
 - `sysctl_failed` — `sysctlbyname()` returned non-zero; errno in
   `attempt.errno`. EPERM / EACCES are ambiguous; ENOENT / ENOMEM
-  are non-policy failures.
+  identify the native failure reported. Establishing its cause requires
+  additional evidence about the target and execution conditions.
 - `exec_failed` — `posix_spawn` was blocked, the target was
   missing, the helper exited non-zero, the helper was signaled,
   the per-exec deadline fired, or the worker's exec attempt budget
@@ -1868,7 +2128,7 @@ have source `"synthetic"` with `missing_reason: "slot_absent"` or
   simply exited non-zero.
 - `unsupported` — defensive output for an unimplemented attempt combination;
   public admission refuses such combinations before children. See the
-  [developer construction rule](REQUEST-GRAMMAR.md#what-the-implementation-promises).
+  [supported attempts](#attempt-kinds-the-runner-implements).
 - `no_completed_result` — no completed attempt result. The name makes no claim
   about whether the operation ran: a worker can die before an attempt, while
   the native call is in flight, or after the call returned but before the slot
@@ -1886,8 +2146,10 @@ Read the channels' results, relations and order with these rules:
 <!-- BEGIN COPIED READING RULES -->
 
 1. The raw query answer is `sandbox_check.outcome` when `result_source`
-   is `validator` and the outcome is `allow` or `deny`; otherwise
-   `sandbox_check.missing_reason` explains the unavailable answer. An otherwise
+   is `validator` and the outcome is `allow` or `deny`. For another outcome,
+   read `result_source`, `native_rc`, `error` and the optional `missing_reason`
+   together: a received diagnostic and a synthetic missing answer are distinct.
+   An otherwise
    eligible answer qualifies as a prediction about a live specimen only with
    its phase's collection/release/acknowledgement chain, reflected by
    `comparison.order: query_first`. Neither successful attempts nor a successful
@@ -1895,15 +2157,16 @@ Read the channels' results, relations and order with these rules:
    whether the target was live during any particular query. A degraded
    `runner_reporting_failed` reply certifies no per-step order, even when raw
    ordering observations survive; every comparison is omitted.
-2. `attempt.missing_reason` explains an unavailable attempt channel.
-3. A `permission_failure` or `other_failure` observation, or an exec attempt
-   whose spawned child exited nonzero, does not attribute the failure to the
-   sandbox. The envelope does not establish that sandbox enforcement caused a
-   particular attempt's failure.
-4. A `path` query, or an attempt whose mapped filter is `path`, never
-   establishes that both channels resolved the same object at runtime.
-5. No record establishes that the state the query saw is the state the
-   attempt met; nothing in a reply discharges this.
+2. `attempt.result_source` distinguishes a completed worker publication from
+   a synthetic unavailable result. `attempt.missing_reason` and `attempt.lifecycle`
+   describe the missing publication and the supported action boundary.
+3. Read a `permission_failure`, `other_failure` or nonzero child exit as the
+   recorded observation. Attributing it to sandbox enforcement requires evidence
+   that distinguishes that cause from the other causes of the native result.
+4. `same_submitted` compares the submitted path bytes. Runtime object identity
+   requires its own observations across the query and attempt.
+5. `query_first` establishes an order; state may change during that interval.
+   Keep independent state observations when a comparison depends on continuity.
 6. A worker `unlink` of a submitted path with `outcome: ok` and `rc: 0`
    records removal at that action. For a path query of that same submitted
    spelling in the same phase, `order: query_first` establishes that the query
@@ -1937,7 +2200,14 @@ Read the channels' results, relations and order with these rules:
 
 <!-- END COPIED READING RULES -->
 
-Select steps by explicit field combinations. A deny
+With optional `jq`, select steps by explicit field combinations from a saved
+result. For these commands, set `PW_RESULT` to that result's absolute path:
+
+```sh
+PW_RESULT="$PW_WORK/create-result.json"
+```
+
+A deny
 answer beside a successful attempt, with the relations and order that qualify
 it:
 
@@ -1946,7 +2216,7 @@ jq '.data.runner_result.steps[]
     | select(.sandbox_check.outcome == "deny" and .comparison.observation == "succeeded")
     | {step_id, operation_relation: .comparison.operation_relation,
        target_relation: .comparison.target_relation, order: .comparison.order,
-       limitations: .comparison.limitations}' run.json
+       limitations: .comparison.limitations}' "$PW_RESULT"
 ```
 
 Steps with no usable prediction, and why:
@@ -1955,8 +2225,9 @@ Steps with no usable prediction, and why:
 jq '.data.runner_result.steps[]
     | select(.sandbox_check.result_source != "validator"
              or (.sandbox_check.outcome | IN("allow", "deny") | not))
-    | {step_id, outcome: .sandbox_check.outcome, missing_reason: .sandbox_check.missing_reason,
-       limitations: .comparison.limitations}' run.json
+    | {step_id, outcome: .sandbox_check.outcome, result_source: .sandbox_check.result_source, native_rc: .sandbox_check.native_rc,
+       error: .sandbox_check.error, missing_reason: .sandbox_check.missing_reason,
+       limitations: .comparison.limitations}' "$PW_RESULT"
 ```
 
 ### path_diagnostics
@@ -2019,118 +2290,20 @@ unsandboxed host pass after orchestration (`observer="runner_host"`,
 `stage="after_orchestration"`) and always in the compact three-state form
 above. `realpath_resolved` is `realpath(3)` of the target with the leaf
 followed. `parent_realpath_resolved` is `realpath(3)` of the parent directory
-with the literal leaf appended: the path the kernel names for a created or
-unlinked entry, or for a symlink acted on itself. Either is null when the host
+with the literal leaf appended. That later host spelling keeps the submitted
+leaf instead of following it, which is useful for inspecting create, unlink and
+symlink experiments. Either is null when the host
 cannot derive it (a missing leaf has no leaf-followed form; a relative path has
 no parent form). Neither establishes what the worker's own syscall resolved,
 and neither changes the attempt or its comparison.
 
-Capture the sandbox_check argument quickly:
+With optional `jq`, inspect the submitted query and its later host diagnostics:
 
 ```sh
-jq '.data.runner_result.steps[].sandbox_check | {filter_value, filter_type_id, outcome, path_diagnostics}' run.json
+jq '.data.runner_result.steps[].sandbox_check | {filter_value, filter_type_id, outcome, path_diagnostics}' "$PW_WORK/create-result.json"
 ```
 
-<!-- END CONTRACT steps -->
 
-<!-- BEGIN CONTRACT refusals -->
-### normalized_outcome catalog
-
-`data.runner_result.normalized_outcome` values the runner can produce
-(for the standalone helper's `bad_request`, `policy_too_large`,
-`setup_error`, `compile_error` and `ok` outcomes, see
-[SBPL check](#sbpl-check-sbpl-check)):
-
-- `finished` — worker completion and clean disposition are confirmed. Any invoked
-  validator also has confirmed clean disposition, valid received records for
-  every requested step ID, and no transport, decoding, or association failure.
-  Uniquely associated per-step diagnostics retain their per-step semantics.
-  Attempted operations can succeed or fail in a finished run; inspect each
-  step's `attempt` and `comparison` records for those observations. The controller
-  reports `result.normalized_outcome: "finished"`, `result.ok: true` and exit 0
-  for this execution status. None of these establishes that an attempt succeeded.
-- `runner_timeout` — the host observed exhaustion of its sentinel polling
-  budget. This remains a timeout if the child voluntarily exits during grace;
-  a cleanup termination request alone does not establish a deadline.
-- `runner_failed` — execution/reporting failure, including inconsistent
-  publication, a published worker operation failure, an incomplete
-  report, abnormal or unconfirmed disposition, or a host wait/cleanup failure.
-  The cause may be unknown. A completed report survives an abnormal exit as
-  partial execution evidence.
-- `runner_reporting_failed` — the host could not encode its assembled result.
-  `reporting_failure` preserves the original execution summary separately.
-- `worker_spawn_failed` — host could not `posix_spawn` the worker
-  (filesystem/codesign/quota error). Worker never ran.
-- `validator_spawn_failed` — host could not `posix_spawn` the
-  validator child. `result.ok=false`; attempts are still surfaced
-  in `steps[*].attempt` as degraded evidence.
-- `validator_no_reply` — host encountered validator probe-write or verdict-read
-  I/O failure. Independently completed verdicts and attempts remain available.
-- `validator_decode_failure` — the host rejected a validator reply frame at the
-  UTF-8, JSON syntax, or record-structure boundary. Earlier valid records survive.
-- `validator_unavailable` — requested IDs lack unique replies, unassociated or
-  unexpected records arrived, or validator disposition/cleanup is abnormal or
-  unconfirmed.
-  Partial verdicts and attempts survive. Missing supported-query verdicts use
-  the `outcome="error"`, `rc=0` shape with `result_source="synthetic"`,
-  `native_rc:null`, and a missing reason.
-- `bad_request` — request rejected before any worker spawn. Causes
-  include: JSON decode failure, empty `sandbox_check.operation`, an unknown field (e.g.
-  `instrumentation`), duplicate `step_id`, or a capacity refusal: the worker's
-  shared-memory bounds, the host-only query strings and filter/attempt labels,
-  or the top-level and test-seam strings. Admission runs after decoding, before
-  semantic validation. Native C-string fields also reject embedded NUL.
-  Capacity refusals carry host-owned `admission_failure` with field, actual and
-  maximum, `utf8_bytes`, `items` or `nul_bytes`, and applicable `step_id`, `step_index`,
-  `parameter_key` and `index`. Every `bad_request` reply has `steps: []`:
-  nothing ran, so the refused probe plan is omitted. A capacity refusal never repeats
-  the string it refused: a refused step ID or parameter key is identified by
-  position or by field, and a refused `specimen_id`, `run_kind`, `policy.format`
-  or seam path is replaced by `<admission_refused>`, omitted, `unknown` or
-  dropped from the mirrored `test_overrides` respectively. Every echoed field
-  is checked independently, including when several fields are invalid.
-  Unknown filter kinds, unsupported attempt combinations and non-null fields
-  that cannot take effect are also refused. `request_failure` supplies the
-  structured code and field path; the controller mirrors it at
-  `data.request_failure`. See [request refusals](CONTRACT.md#contract-refusals).
-
-Client failures are separately attributed in `runner_client.transport` and the
-controller's result: `xpc_error` is a captured transport error and `xpc_timeout`
-is expiry of the overall client allowance. `xpc_acquisition_failed` means the
-client exhausted its bounded reservation attempts; `xpc_submission_refused`
-means the execution method returned a reservation refusal. Protocol/local
-failures retain their stage and diagnostic. Missing, malformed or unsupported
-client capture leaves submission unknown. These paths have no host RunResult.
-A host reply can be delayed or lost; an invoked execution is never replayed.
-
-For ordinary, successfully captured client output, the two timeout layers map
-to these fields:
-
-| Event | `result.normalized_outcome` | `data.runner_result.normalized_outcome` | Result origin and distinguishing evidence |
-| --- | --- | --- | --- |
-| Client allowance expires | `xpc_timeout` | null | Client capture retains whether execution was invoked. After invocation, execution is unknown; before invocation, it was not submitted. |
-| Host sentinel budget expires and its reply arrives | `runner_timeout` | `runner_timeout` | Host result includes `runner_subprocess.poll_stop_reason: "sentinel_deadline"` and available disposition evidence. Client exit code is 0 because it delivered the reply. |
-
-The client exit code is `data.runner_client.exit_code`. The controller
-`policy-witness` exits 1 in both cases. RPC expiry means no reply was received
-before the client's deadline. It does not prove the host never ran, was
-unreachable or crashed, and does not establish cancellation of host work.
-
-If client stdout supplies no admitted capture, `data.runner_result` is null and
-the controller reports a missing, malformed or unsupported client capture; inspect the
-[capture evidence](#receiver-evidence) for empty, undecodable or truncated output.
-Client launch or request-delivery failures are `tool_error` paths. These differ
-from a captured client RPC timeout and from a received host reply retained
-but refused as `unsupported_runner_response` or `malformed_runner_response`.
-
-The controller's own outcomes (`tool_error`, client capture refusals,
-`unsupported_runner_response` and `malformed_runner_response`) appear in
-`result.normalized_outcome` and are documented in the
-[controller README](../controller/README.md#output-contract).
-
-<!-- END CONTRACT refusals -->
-
-<!-- BEGIN CONTRACT operations -->
 ## What PolicyWitness understands
 
 ### Filter kinds the runner predicts
@@ -2157,10 +2330,11 @@ skips `sandbox_check` entirely and emits
 attempt evidence.
 
 The contract is keyed on the `(operation, filter_kind)` pair. A specimen pairing
-one of these filter kinds with a different operation gets a normal
-`sandbox_check` call; that answer is reported as received, because the runner
-excludes only the
-pairs it has checked.
+one of these filter kinds with a different operation goes through ordinary
+query planning. If eligible, it reaches validator processing, which can return
+its own filter/operation diagnostic or a native answer. Read `result_source`,
+`outcome` and `native_rc` to distinguish those results. The exclusions are
+specific to the listed pairs.
 
 Currently in this category:
 
@@ -2217,13 +2391,12 @@ combinations:
   binary. `target` is the absolute path to the helper (becomes
   argv[0]). Optional `args: ["…", …]` supplies argv[1..N].
   The worker creates each child's stdout/stderr pipes and spawn handles
-  inside the attempt, after the sandbox applies, and releases them before
-  the step completes. The bare-deny control observes successful setup followed
+  inside the attempt, after policy application or an actor's unapplied declaration,
+  and releases them before the step completes. The bare-deny control observes successful setup followed
   by a permission-shaped failure at `posix_spawn` for its tested inputs and
   environment. Setup can fail at an earlier call; its recorded boundary and
-  native error do not establish a sandbox cause. The
-  [worker tour](WORKER.md#acquisitions-inside-attempts) distinguishes these
-  observations from source-established placement. The worker bounds each child
+  native error do not establish a sandbox cause. Actor attempts begin after usable applied setup or the explicit unapplied
+  declaration; their recorded native results identify the boundary reached. The worker bounds each child
   by the deadlines under
   [Execution budgets](#execution-budgets), drains both streams while the
   child runs, reaps it, and surfaces these fields under `attempt`:
@@ -2237,18 +2410,16 @@ combinations:
   | `rc` | always populated | (n/a) | Helper's exit code after successful observation; `-1` on spawn, deadline, observation or cleanup failure. Consult `child_exit_code` for the leader's independently observed exit. |
   | `outcome` | always populated | (n/a) | `"ok"` when spawn and observation completed successfully and the leader exited 0; `"exec_failed"` also covers deadline and cleanup errors. Neither a successful leader reap nor pipe EOF proves descendant cleanup. |
 
-  Callers who want exec attempts to succeed under a deny-by-default
-  policy opt into `policy.augments: ["exec_baseline"]` (see
-  [Augments](#augments)) — three `(allow ...)` rules are sufficient
-  to let a libSystem-dynamic helper spawn, load dyld, and reach
-  `main`. Callers who need to allow more (network, IOKit, specific
-  filesystem subpaths) compose their own additional allows on top
-  of the augment.
+  The optional [exec augment](#augments) supplies the shipped process and file-read
+  allow rules. It broadens the source selected for compilation; inspect the helper's
+  actual native observations to establish how far it progressed in your environment.
 
   The helper is spawned with `POSIX_SPAWN_CLOEXEC_DEFAULT`, inheriting only
   stdin=/dev/null and its stdout/stderr pipes, and an empty environment,
   whatever `EnvironmentVariables` an external runner's launchd plist gave the
-  host. The worker's own environment is unrecorded. The helper's own failure is
+  host. Actor workers themselves use an empty environment, recorded in their
+  launch context; the ordinary worker inherits its host environment without a
+  corresponding full environment snapshot. The helper's own failure is
   the attempt's record
   (`child_exit_code` and its bounded output); it does not change the run's
   `normalized_outcome`.
@@ -2303,351 +2474,293 @@ also leave descendants alive. Exceptional cleanup targets the owned group;
 descendants that leave it are not contained. The host supervises the worker,
 not the exec descendants.
 
-<!-- END CONTRACT operations -->
 
 ## Operating
 
 ### Common flags
 
-- `--timeout-ms <n>`: runner RPC timeout
-- `--runner-mode <standard|byoxpc>`: inject `runner.mode` into the request
-- `--version`: print a `kind="version"` envelope with the build stamp and the
-  wire contract versions this build speaks
+| Command option | Effect |
+| --- | --- |
+| `run FILE --timeout-ms N` | Sets the client acquisition/reply allowance. Host, validator and worker budgets keep their own values. |
+| `run FILE --runner-mode standard` or `byoxpc` | Supplies the runner-mode selection; external selection still requires its registered ID or service. |
+| `--version` | Prints a version envelope with `build.contract` and descriptive build coordinates. Save it with the specimen. |
 
 ### Running specimens in parallel
 
-A run uses a controller and a separate `pw-runner-client` to acquire a fresh
-XPC host. After admission, an ordinary specimen uses one fresh
-worker; an actor specimen uses one fresh worker per actor, retained across
-that actor's phases. Each eligible phase gets a fresh validator; a phase with
-no eligible queries creates none. Exec attempts can create children, and a
-terminal XPC error can trigger independent `sbpl-check` helpers. These processes
-have different lifetimes, so there is no fixed process count per run. Concurrent
-runs add to per-user process-table pressure. A failed worker or validator spawn
-is reported as `worker_spawn_failed` or `validator_spawn_failed` with the native
-return code (see the
-[outcome catalog](#normalized_outcome-catalog)). Resource delays can exhaust
-the separate budgets in the [limits inventory](#limits): client RPC expiry
-produces `xpc_timeout`, while a delivered host sentinel-timeout reply reports
-`runner_timeout`. Worker or validator limits can also leave incomplete
-observations; read the available lifecycle evidence. See
-[External runners](#external-runners-byoxpc) for the pacing of one installed
-external runner.
+Each invocation uses a controller and client to acquire a fresh host. An ordinary
+request uses one fresh worker; actors each receive a fresh worker retained across
+that actor's visits. Each phase with eligible queries receives a fresh validator.
+Exec attempts can launch children, and a terminal XPC error can trigger independent
+compiler helpers. These lifetimes overlap, so concurrency increases process and
+resource pressure.
+
+Use separate work directories, request/result files and effect targets per run.
+An occupied host can refuse reservation; acquisition can reconnect within its
+original attempt/deadline limits. An installed external service also has launchd
+pacing. Inspect the outcome and [submission state](#receiver-evidence) of each
+run; scheduling delays and cleanup can outlast an earlier observation or deadline.
 
 ### Troubleshooting
 
-- Service not found: run `policy-witness runner list` and confirm the service name.
-- System scope install fails: use `--scope user` or run with admin privileges.
-- Verify fails with no reply: check launchd state and the service plist.
-- BYOXPC crashes at launch: confirm `XPC_SERVICE_PATH` is set and the bundle is a valid XPC service (`CFBundlePackageType=XPC!`).
-- `normalized_outcome` is `runner_failed`: inspect the published-state diagnostic
-  and independent `runner_subprocess` observations. A signal or missing report
-  may leave the underlying cause unknown. Completed predictions and attempts
-  remain usable for their own claims.
-- `normalized_outcome` is `worker_spawn_failed`: the host could not
-  `posix_spawn` the worker. Verify the bundle is signed and on a writable
-  filesystem; `pgrep -fl PWRunner` should show no stragglers.
-- If you are running inside a sandboxed automation harness, XPC lookup can be blocked;
-  run from a normal Terminal to confirm behavior.
+| Observation | Inspect and recover |
+| --- | --- |
+| `bad_request` | Read the structured code/path or capacity record and follow [request correction](#correcting-a-refused-request). |
+| Unknown or pending external runner | Save `runner list` and `runner reconcile`; use the recorded service/ID and finish installation or cleanup before ordinary selection. |
+| `unsupported_runner_response` or foreign registry contract | Compare the selected runner's contract with saved `--version`; prepare and reinstall a current intact service. Preserve old reports with their original app identity. |
+| `worker_spawn_failed` / `validator_spawn_failed` | Read the failed executable, direct native return and diagnostic. Inspect that exact artifact's availability, signatures and inventory before changing it. |
+| `runner_failed` | Read worker failure publication, final status and cleanup independently; a signal or missing publication can leave the underlying cause unknown. |
+| `xpc_timeout`, missing reply or capture refusal | Read submission state and inspect possible effects before repeating the request. Use the retained acquisition/transport diagnostics and observed service state. |
+| User-scope bootstrap unavailable | Use a logged-in GUI session for that user. System scope requires its administrative authorization and has separate service ownership. |
+| Signing or XPC lookup fails inside restricted automation | Preserve the artifact and diagnostic. Repeat a read-only signature/status check from a normal Terminal. Repeat execution only after its prior submission/effects are understood. |
 
-Common decode errors (quick fixes)
-- `missing field 'policy'`: add a top-level `policy` object with `format` and `sbpl_source`.
-- `keyNotFound(... "specimen_id" ...)`: add a top-level `specimen_id` string.
-- `unknown field 'path_membership'`: put path rules in `policy.sbpl_source` as SBPL.
-- `runner.mode=debuggable` or top-level `instrumentation` field rejected:
-  install a BYOXPC runner with the entitlements
-  you need and select it via `runner.id` or `runner.service`.
+For old request fields such as `instrumentation` or runner mode `debuggable`,
+prepare a current request and select a BYOXPC worker with the needed entitlements.
+Keep path restrictions in SBPL. Ordinary requests need `policy`; actor requests
+put each policy under that actor's `sandbox` object.
 
-<!-- BEGIN CONTRACT installation -->
 ## External runners (BYOXPC)
 
-For `run` and `runner verify`, one client acquires a reservation before sending
-the specimen for execution. Acquisition messages contain no specimen bytes.
-An occupied host or a connection lost during acquisition can lead to another
-connection within the original deadline and acquisition limits. A grant is
-single-use and bound to that connection. An abandoned or expired reservation
-retires its host without executing a specimen.
+Choose the built-in `standard` runner when its worker equipment fits the
+experiment. Use an external BYOXPC service when the selected worker needs
+specific signing entitlements. Each run still gets a fresh host and fresh
+specimen workers. The installer records the host, selected worker, unentitled
+worker and validator separately; a worker entitlement is read from that worker's
+metadata.
 
-The client marks submission `invoked` immediately before calling execution on
-the reserved connection. No later error, refusal or timeout causes replay.
-In particular, XPC error 4097 can accompany completed work and cannot establish
-nonexecution. A grant alone also does not establish invocation: the overall
-deadline can expire after the grant but before submission.
+Before preparing another service, retain the current registry and observations:
 
-`data.runner_client.transport` records acquisition attempts, their control
-observations, the acquisition stop reason, submission state, terminal event
-and host reply bytes accepted before the deadline. Host PID/instance values in a grant are
-peer-reported identities, not kernel-generation receipts. Reservation credentials
-are omitted. The controller admits the capture's build contract and state invariants
-before reading the host result. Missing or inadmissible capture means submission
-unknown, never known nonexecution. `runner_result` is null without a decoded
-host reply, and no client error is represented as a host execution observation.
+```sh
+"$PW" runner list > "$PW_WORK/runners-before.json" 2> "$PW_WORK/runners-before-stderr.txt"
+"$PW" runner reconcile > "$PW_WORK/reconcile-before.json" 2> "$PW_WORK/reconcile-before-stderr.txt"
+```
 
-External runners must advertise the controller’s exact build contract as
-`PWContract` in their signed bundle and participate in reservation. Install
-rejects missing or foreign contracts; run and verify independently check the
-live peer’s contract. A development build’s contract changes when any scoped
-source bytes change, so rebuild and reinstall its external runner after such
-a change. Registry records without a matching contract remain available for
-list, reconcile and removal, but cannot be selected for execution. There is no
-automatic legacy execution fallback.
-
-
-Use this when you need entitlements that are not in the built-in runner.
-BYOXPC is the only external runner kind.
+Inspect `runners`, `pending_cleanup` and reconcile's observed service/plist state.
+Resolve ownership of an existing service before reusing its label or bundle path.
+A label prefix is a discovery hint; the durable record supplies cleanup ownership.
 
 ### What you need
 
-- A runner `.xpc` bundle to sign (typically a copy of `PWRunner.xpc`).
-- A signing identity: a **Developer ID Application whose Team ID matches the app**
-  (see [Caller authentication and ad-hoc signing](#caller-authentication-and-ad-hoc-signing)).
-- An entitlements plist.
-- A logged-in GUI session (launchd bootstrap is not available from non-GUI shells).
+- An intact current `PWRunner.xpc` copied from the selected app, including its
+  nested workers, validator and sealed equipment inventory.
+- A Developer ID Application identity whose Team ID matches the app's caller.
+- An actual entitlements plist for the selected worker.
+- A logged-in GUI session for user scope, or administrative authorization for
+  system scope.
+- A fresh staging directory you own, retained while the registry refers to it.
+
+The external service must advertise the app's exact `PWContract`. Installation
+checks the signed bundle; run and verify check the live peer. After changing
+build identity, prepare a matching service before selecting it. Older records
+remain available for inspection and removal.
 
 ### Install a BYOXPC runner
 
-Installation verifies the source bundle's existing seal and complete service-local worker inventory before changing bytes. Start from an intact built service. If you change `CFBundleIdentifier` or caller-authentication keys in its `Info.plist`, reseal that source service with your signing identity before installation, for example `codesign --force --options runtime --sign "$IDENTITY" "$BYO"`. Preserve the nested workers and inventory; the installer separately signs the selected worker with your requested entitlements and regenerates signing observations before its final seal. A modified source with a stale or invalid seal is refused.
-
-This sequence is the one the project's own tests exercise and is the
-recommended starting point. Adjust `APP` to wherever `PolicyWitness.app` is
-installed.
+Continue from the quick start, using a new unique bundle path and service name.
+Replace the signing identity and entitlement path with your own values. Keep
+`$PW_WORK` until recovery is complete.
 
 ```sh
-APP="/Applications/PolicyWitness.app"
-PW="$APP/Contents/MacOS/policy-witness"
 IDENTITY="Developer ID Application: Your Name (TEAMID)"
-ENT="$PWD/path/to/your-byoxpc-entitlements.plist"
-BYO="$PWD/runtime/byosig/instances/PWRunner.byoxpc.xpc"
-
-mkdir -p "$(dirname "$BYO")"
-rm -rf "$BYO"
+ENT="/absolute/path/to/your-entitlements.plist"
+PW_RUNNER_STAGE=$(mktemp -d "$PW_WORK/runner.XXXXXX")
+BYO="$PW_RUNNER_STAGE/PWRunner.guide.xpc"
+SERVICE="com.policywitness.guide.$(id -u).$(basename "$PW_RUNNER_STAGE")"
 cp -R "$APP/Contents/XPCServices/PWRunner.xpc" "$BYO"
-
-$PW runner install --kind byoxpc \
-  --bundle "$BYO" \
-  --identity "$IDENTITY" \
-  --entitlements "$ENT" \
-  --scope user
-
-$PW runner verify --service-name com.policywitness.policy-witness.PWRunner --timeout-ms 2000
+/usr/libexec/PlistBuddy -c "Set :CFBundleIdentifier $SERVICE" "$BYO/Contents/Info.plist"
+/usr/bin/codesign --force --options runtime --sign "$IDENTITY" "$BYO"
 ```
 
-Notes:
-- Use `--allow-adhoc` only for a local runner whose caller-auth keys have been
-  removed; see [Caller authentication and ad-hoc signing](#caller-authentication-and-ad-hoc-signing).
-- Use `--scope system` if you want a system-wide service (requires admin).
-- Use `--skip-bootstrap` if you will run `launchctl` manually.
-- Use `--env KEY=VALUE` to set launchd `EnvironmentVariables` (for `DYLD_*`).
-- BYOXPC service name must match the bundle's `CFBundleIdentifier` (no override).
-- The bundle must be a valid XPC service (`CFBundlePackageType=XPC!`); plain
-  binaries are rejected at install time. The executable is derived from
-  `<bundle>/Contents/MacOS/<CFBundleExecutable>`.
-- `--entitlements` requires either `--identity <id>` or `--allow-adhoc` so the
-  supplied entitlements are re-embedded into the binary.
-- The installer signs the copy's embedded worker
-  (`Contents/MacOS/pw-probe-runner`) with the identity and the supplied plist,
-  its validator (`Contents/MacOS/sb_api_validator`) and unentitled worker
-  (`Contents/MacOS/pw-probe-runner-unentitled`) with the identity alone,
-  refreshes the sealed worker equipment inventory, and then signs the enclosing bundle with both. The worker is the process the
-  specimen policy is applied to, so the plist you supply is what the kernel
-  consults for that policy's `require-entitlement` rules. A copy missing
-  a required helper is refused.
-- Installation verifies the sealed bundle recursively
-  (`codesign --verify --deep --strict`): a copy whose embedded code changed
-  after sealing is refused.
-- Point specimen attempts at files you own under a temporary directory (for
-  example under `/private/tmp`). Attempts against targets under
-  privacy-mediated folders such as Desktop or Documents can stall on consent
-  mediation, and such a stall is not a sandbox verdict.
+Continue after the copy, metadata edit and signing all succeed. Keep any failure
+diagnostic with this staging directory. Then install the prepared service:
 
-The install command saves a `pending` registry record before writing its launchd
-plist, then bootstraps and marks the record `installed`. With `--skip-bootstrap`,
-plist creation completes installation; loaded state is reported separately.
-Errors after the pending save retain ownership for recovery. Pending runners
-can be listed, inspected and removed, but cannot be selected for specimens.
+```sh
+"$PW" runner install --bundle "$BYO" --identity "$IDENTITY" \
+  --entitlements "$ENT" --scope user \
+  > "$PW_WORK/install.json" 2> "$PW_WORK/install-stderr.txt"
+PW_EXIT=$?
+printf '%s\n' "$PW_EXIT" > "$PW_WORK/install-exit.txt"
+cat "$PW_WORK/install.json"
+cat "$PW_WORK/install-stderr.txt"
+"$PW" runner list > "$PW_WORK/runners-after-install.json"
+"$PW" runner reconcile > "$PW_WORK/reconcile-after-install.json"
+```
 
-The registry reads each binary back separately using `codesign`: `signature` and `entitlements` describe the host, `worker_signature` and `worker_entitlements` the selected worker, `unentitled_worker_signature` and `unentitled_worker_entitlements` the unentitled worker, and `validator_signature` and `validator_entitlements` the validator. Each entitlement object lists all `keys` and the `granted` keys whose values are boolean `true`. Current and source worker equipment inventory snapshots retain installation provenance; execution verifies the service-local sealed inventory against current bytes.
+Changing `Info.plist` requires resealing the enclosing source service first. The installer verifies
+that source seal and its complete worker inventory before changing signatures.
+It then signs the selected worker with your entitlements, signs the validator
+and unentitled worker with the identity alone, refreshes the inventory and seals
+the service. Preserve the nested code while preparing the source copy.
 
-Historical registry records remain available for list, reconcile and removal even when their protocol or inventory is unsupported for execution. Unknown historical observations remain unknown; they do not authorize substitution or bypass current equipment validation. `runner validate` checks the current copy and reports failures; `runner reconcile` reports installation state. Reinstall a current service to refresh its provenance.
+On successful installation, save `data.runner.id`, `service_name`, `scope`,
+`bundle_path` from `data.runner`, and `data.plist_path`. The durable ownership
+record also keeps its verified plist path and launchd domain. The service name equals
+`CFBundleIdentifier`; the executable comes from the bundle's
+`CFBundleExecutable`, and its package type is `XPC!`.
+
+Installation saves a `pending` registry record before publishing the launchd
+plist and marks it `installed` after the installation step. A later failure can
+therefore leave a record owning recovery, even when the command emitted only
+stderr. Inspect list/reconcile after a failure and preserve the staging bundle.
+A pending record remains available to status, explicit verify and removal;
+ordinary `run` selection refuses it.
+
+`--scope system` selects the system launchd domain. `--skip-bootstrap` finishes
+installation after plist creation and leaves loaded state to a later explicit
+bootstrap. `--env KEY=VALUE` configures launchd's host environment. Actor workers
+and exec children retain their separately defined empty environments.
+
+Keep effect targets under a directory you own, such as `/private/tmp`. Privacy
+mediation for Desktop or Documents can introduce consent or blocking behavior;
+record that boundary separately from the sandbox observation.
 
 ### Caller authentication and ad-hoc signing
 
-The shipped `PWRunner.xpc` has caller authentication enabled in its Info.plist
-(`PWRunnerRequireSignedCaller`), and the runner authenticates the caller by
-comparing the caller's **Team ID** to its own. A BYOXPC runner made by copying
-that template inherits the check, which constrains how you may sign it:
+The shipped service authenticates its caller using the signed caller's Team ID.
+The signed workflow above preserves that check, so the runner and the app's
+`pw-runner-client` need matching teams. Inspect the actual native diagnostic if
+connection admission fails; a particular XPC error number alone does not identify
+an authentication failure or prove that execution never occurred.
 
-- **Signed runner (default, recommended):** sign the copy with a **Developer ID
-  whose Team ID matches the app** (so the runner's team equals `pw-runner-client`'s).
-  `runner verify` returns `finished`.
-- **Ad-hoc / local runner:** ad-hoc signatures have **no Team ID**, so a runner
-  that keeps the caller-auth keys rejects every connection with
-  `NSXPCConnectionInvalid` (reported as `normalized_outcome: xpc_error`). To run
-  ad-hoc, first remove `PWRunnerRequireSignedCaller` and
-  `PWRunnerAllowedIdentifiers` from the copied bundle's Info.plist, then
-  `--allow-adhoc`. Such a runner accepts any local caller — appropriate for local
-  testing with trusted local callers.
-
-Symptom cheat-sheet: `xpc_error` right after install usually means an ad-hoc (or
-wrong-team) runner failing the signed-caller check; `xpc_timeout` means the host
-reply was not received before the deadline. A launch crash is one possible
-cause; the timeout alone does not establish it.
+The installer also accepts `--allow-adhoc` for a coherent ad-hoc source service.
+Its existing seal and equipment inventory must already match all role artifacts,
+including their team observations. An ad-hoc service has no Team ID; using it for
+local testing requires caller authentication to be deliberately disabled in its
+source configuration and the complete service prepared and sealed consistently.
+That configuration accepts local callers without the shipped team check. Removing
+authentication keys or resealing only the host while leaving differently signed
+workers produces an inconsistent source inventory, which installation refuses.
 
 ### Verify the runner
 
+Inspect the installed record, then send the fixed diagnostic request:
+
 ```sh
-$PW runner verify --service-name <service-name>
+"$PW" runner status --service-name "$SERVICE" > "$PW_WORK/status.json" 2> "$PW_WORK/status-stderr.txt"
+"$PW" runner verify --service-name "$SERVICE" --timeout-ms 20000 \
+  > "$PW_WORK/verify.json" 2> "$PW_WORK/verify-stderr.txt"
+PW_EXIT=$?
+printf '%s\n' "$PW_EXIT" > "$PW_WORK/verify-exit.txt"
+cat "$PW_WORK/verify.json"
 ```
 
-`runner verify` sends a fixed allow-all specimen with no probe steps to the
-runner on the client's stdin, as a run does, and reports the outcome and the
-PID the reply names as `runner_pid`: the worker that served the request, or
-the host when the host refused it (the reply's `pid` rule). It defaults to
-a <!-- span limits.runner_verify_wait.value_unit -->5,000 milliseconds<!-- /span --> timeout; pass `--timeout-ms <n>` for slow cold-spawn cases.
+Verify uses an allow-all policy and empty probe plan. An admitted `finished`
+reply and exit 0 establish that diagnostic request's completed application/run;
+inspect the retained client and host records. `runner_pid` is projected only from
+an admitted reply. A refused response keeps the available records and its refusal
+outcome with `runner_pid: null`; verify has no run diagnostics object.
 
-Verification consumes the host it reaches: every host serves one request and
-exits. The next request starts a fresh host once launchd allows a launch,
-which the installed plist's `ThrottleInterval` bounds at <!-- span limits.byoxpc_throttle_interval.value_unit -->1 second<!-- /span --> after the
-previous launch. Acquisition that reaches the verified host while it is still
-retiring, or a fresh host another connection reserved first, may reconnect
-without submitting a specimen. Execution remains a single invocation after
-the grant, as described above.
+The default verify allowance is <!-- span limits.runner_verify_wait.value_unit -->5,000 milliseconds<!-- /span -->;
+`--timeout-ms` adjusts acquisition/reply waiting. Verification consumes one host.
+The next request acquires a fresh host; the installed plist uses
+`ThrottleInterval` of <!-- span limits.byoxpc_throttle_interval.value_unit -->1 second<!-- /span -->.
+Observed startup and completion also depend on scheduling and cleanup.
 
 ### Use the runner in a specimen
 
-Consecutive runs through one installed runner are serial and paced by launchd:
-the runner exits after each specimen, and the generated plist sets
-`ThrottleInterval` to <!-- span limits.byoxpc_throttle_interval.value_unit -->1 second<!-- /span -->, so a run requested sooner than a second after
-the previous host's launch waits for the remainder (launchd's default without
-the key is ten seconds). Three serial runs with a short pause between them
-took about four seconds of wall time in the project's measurement.
-
-Preferred: include a `runner` object:
+Select the saved registry ID or exact service name in the request. For example:
 
 ```json
 "runner": {
   "id": "runner-<id-from-install>",
   "mode": "byoxpc",
-  "required_entitlements": [
-    "com.apple.security.cs.disable-library-validation"
-  ]
+  "required_entitlements": ["com.apple.security.cs.disable-library-validation"]
 }
 ```
 
-Alternative: select by service name:
+Choose only entitlements the experiment requires. Each named key must have
+boolean value `true` in the selected worker's readback (`worker_entitlements.granted`).
+A missing or differently valued key refuses selection before contacting a host.
+Actor `required_entitlements` adds that actor's own equipment/live-readback
+requirement. Host entitlement metadata belongs to the host.
 
-```json
-"runner": {
-  "service": "com.policywitness.policy-witness.PWRunner",
-  "mode": "byoxpc"
-}
-```
-
-`runner.mode` is optional; when present it must equal `byoxpc` for external
-runners. Valid modes: `standard`, `byoxpc`. `required_entitlements` is
-satisfied only by keys the selected runner's worker holds with the value
-`true`, as recorded in the registry's `worker_entitlements.granted` (for the
-built-in runner, its worker's evidence-manifest entry). A key that is absent,
-or present with any other value, refuses the run before any host is reached,
-and the refusal names the worker and the key. The host's entitlements are
-recorded separately.
-
-Quick smoke request (save as `/tmp/pw_byoxpc_smoke.json`):
-
-```json
-{
-  "contract": "BUILD_CONTRACT",
-  "specimen_id": "byoxpc_smoke",
-  "policy": {
-    "format": "sbpl",
-    "sbpl_source": "(version 1) (deny default)"
-  },
-  "probe_plan": [],
-  "runner": {
-    "service": "com.policywitness.policy-witness.PWRunner",
-    "mode": "byoxpc"
-  }
-}
-```
-
-Then run:
+For a service-selected file-effect check, derive another request from the saved
+quick-start input and use a new target:
 
 ```sh
-$PW run /tmp/pw_byoxpc_smoke.json --timeout-ms 20000
+sed -e "s|\"specimen_id\": \"guide-create\",|\"specimen_id\": \"guide-byoxpc-create\", \"runner\": {\"service\": \"$SERVICE\", \"mode\": \"byoxpc\"},|" \
+    -e 's|/created"|/byoxpc-created"|g' \
+    "$PW_WORK/create.json" > "$PW_WORK/byoxpc-create.json"
+if test ! -e "$PW_WORK/byoxpc-created"; then
+  "$PW" run "$PW_WORK/byoxpc-create.json" --timeout-ms 20000 \
+    > "$PW_WORK/byoxpc-create-result.json" 2> "$PW_WORK/byoxpc-create-stderr.txt"
+  PW_EXIT=$?
+  printf '%s\n' "$PW_EXIT" > "$PW_WORK/byoxpc-create-exit.txt"
+  cat "$PW_WORK/byoxpc-create-result.json"
+  test -f "$PW_WORK/byoxpc-created"
+  /usr/bin/stat -f 'size=%z mode=%Sp inode=%i' "$PW_WORK/byoxpc-created" > "$PW_WORK/byoxpc-observation.txt"
+  cat "$PW_WORK/byoxpc-observation.txt"
+else
+  printf '%s\n' 'Target already exists; preserve its records and prepare a new effect target.' >&2
+fi
 ```
+
+The client reserves a host before submitting the specimen; acquisition messages
+contain no specimen bytes. A grant is single-use and bound to its connection.
+Occupied/lost acquisition connections can lead to another attempt within the
+original limits. `submission: invoked` is recorded immediately before execution
+is called. A later refusal, timeout or lost reply causes no replay. Read
+[Receiver evidence](#receiver-evidence) before repeating a request whose effects
+are uncertain.
 
 ### List, validate, or remove runners
 
-```sh
-$PW runner list
-$PW runner validate
-$PW runner reconcile
-$PW runner remove --id runner-<id>
-```
-
-External runners install a launchd background item. `runner remove` first moves
-the record from `runners` to durable `pending_cleanup`, then checks ownership
-before bootout or plist removal. Each cleanup entry has a nested `runner`, a
-`cleanup_started_at_unix_ms` timestamp and an `observations` array. Unknown
-runner, ownership, signature and entitlement metadata stays inside the retained
-record and supplies no cleanup authority. It retires recovery only after verifying both
-service and plist absence, waiting up to a second for launchd to finish tearing
-the job down after a bootout. Failed or uncertain cleanup reports `data.warnings`
-and `data.cleanup_retained: true`, with the retained record. Retrying the same
-remove command continues recovery, including when the plist has already gone.
-`--skip-bootout` keeps recovery until service absence is observed.
-
-`runner list` includes both collections. `runner reconcile` reports recorded
-state, observed service/plist presence and ownership, and scans LaunchAgents and
-readable LaunchDaemons for unregistered candidates. A label prefix is evidence
-for reporting only. Inspection failures remain unknown. Reconcile never removes
-anything. Use the recorded `bundle_path` to find a test runner's staging directory
-and durable `session.json`, even after its original test output is deleted.
-Test bundles remain staged until cleanup verifies service/plist absence and
-registry retirement; retry the session cleanup using its durable state path if
-bundle deletion was interrupted.
-
-Modifying commands use a stable advisory lock beside the registry and atomic
-JSON replacement. One registry admits one modifier at a time; read-only commands
-remain available. Never remove the lock file while a command might hold it.
-
-`runner validate` verifies each registry entry's bundle recursively and the host, both current worker variants and validator individually. It also verifies the sealed equipment inventory against the current role artifacts. Historical issuer observations remain inspectable for legacy recovery. The command retains signature and entitlement readbacks and reports failed records in `invalid` and per-binary or `equipment_inventory` failure rows. A valid signature alone does not excuse a stale inventory. Use `runner reconcile` to compare installation state with launchctl and `LaunchAgents/`.
-
-`runner status`, `runner verify`, and `runner remove` emit an envelope with
-`result.normalized_outcome = "not_found"` and exit code 2 when the lookup key
-isn't present in the registry; the envelope `kind` still matches the operation
-so consumers can dispatch by `kind` and then branch on `normalized_outcome`.
-
-For an unregistered candidate, inspect `runner reconcile` and verify its exact
-service, executable, scope and plist ownership before any manual cleanup:
-
-User scope:
+Save inspection and cleanup results under the same owned work directory:
 
 ```sh
-launchctl bootout "gui/$(id -u)/<service-name>"
-rm -f "$HOME/Library/LaunchAgents/<service-name>.plist"
+"$PW" runner validate > "$PW_WORK/validate.json" 2> "$PW_WORK/validate-stderr.txt"
+PW_EXIT=$?
+printf '%s\n' "$PW_EXIT" > "$PW_WORK/validate-exit.txt"
+"$PW" runner remove --service-name "$SERVICE" > "$PW_WORK/remove.json" 2> "$PW_WORK/remove-stderr.txt"
+PW_EXIT=$?
+printf '%s\n' "$PW_EXIT" > "$PW_WORK/remove-exit.txt"
+"$PW" runner list > "$PW_WORK/runners-after-remove.json"
+"$PW" runner reconcile > "$PW_WORK/reconcile-after-remove.json"
 ```
 
-System scope:
+Read the bodies as well as the exits. `runner validate` can exit 0 while reporting
+`missing`, `invalid` or per-binary/inventory failures. It verifies the stored
+bundle and refreshes observations; reconcile separately compares recorded state
+with observed services/plists.
 
-```sh
-sudo launchctl bootout "system/<service-name>"
-sudo rm -f "/Library/LaunchDaemons/<service-name>.plist"
-```
+Removal first moves the runner into durable `pending_cleanup`, then checks
+ownership before bootout and plist removal. Exit 0 means the remove command
+completed its attempt; inspect `data.warnings`, `cleanup_retained` and the retained
+record. Recovery is retired only after service and plist absence are verified.
+An unknown inspection keeps recovery pending. Retrying the same remove command
+continues that recovery, including after the plist has gone. `--skip-bootout`
+keeps recovery until absence is observed.
 
-Registry location:
+Keep the bundle and saved install/remove records while either registry collection
+owns recovery. After list/reconcile confirm retirement and service/plist absence,
+the staging bundle can be removed and the experiment records retained wherever you
+keep run evidence. The registry is normally
+`~/Library/Application Support/PolicyWitness/runners.json`. Modifying commands
+serialize through its stable advisory lock; retain the lock file while any
+command may hold it.
 
-```
-~/Library/Application Support/PolicyWitness/runners.json
-```
+For an unregistered candidate reported by reconcile, establish its exact service,
+executable, bundle, scope and plist ownership before administrative cleanup. An
+owned user service can be booted out with
+`launchctl bootout "gui/$(id -u)/<recorded-service-name>"`; an owned system service
+uses `sudo launchctl bootout "system/<recorded-service-name>"`. Inspect the command
+result and actual service absence before removing the verified owned plist.
+Preserve the observations if absence or ownership remains uncertain. A test
+harness's durable cleanup session belongs to that harness; ordinary installed
+services recover through their recorded registry ownership.
 
-<!-- END CONTRACT installation -->
+`runner status`, `runner verify` and `runner remove` report `not_found` with exit 2
+when the lookup key is absent. The envelope `kind` still identifies the command.
+Install and other command setup errors can instead emit stderr without JSON;
+retain both streams and consult list/reconcile for any surviving ownership.
 
 ## Public contract surfaces
 
 The release is the public contract unit. Review rows changed since the release
 your specimen asserts before changing its `contract`. Stamps guide review;
-admission compares the complete build contract exactly.
+admission compares the complete build contract exactly. The release's
+[developer contract](https://github.com/Protonk/PolicyWitness/blob/v0.3.8/docs/CONTRACT.md)
+defines the fields, applicability and obligations behind these surfaces. Use the
+matching release's source when reading older reports.
 
 <!-- BEGIN GENERATED CONTRACT STAMPS -->
 | Surface | User artifact | Last changed |

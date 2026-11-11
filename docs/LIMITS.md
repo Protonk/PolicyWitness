@@ -1,13 +1,11 @@
 # PolicyWitness limits
 
 <!-- BEGIN SHARED LIMITS -->
-A specimen that `libsandbox` would compile can still be refused here, or run
-with less evidence than it produced. This is the inventory of numeric capacities,
-budgets and evidence-retention bounds: what each counts and what happens at its
-boundary. Fitting these bounds does not establish that a request is meaningful
-or that evidence will be available. Request grammar, extension ownership and
-action order, receipt prerequisites and prediction eligibility still apply.
-A fitting query or complete record may supply no usable prediction.
+This inventory identifies the capacities, execution budgets and evidence-retention
+bounds a request encounters. Each row states what is counted, where the bound
+applies and what happens there. Prepare the request using its grammar and action
+relationships, then compare its measured quantities with these rows. After a run,
+use the reported refusal or collection state to locate the relevant boundary.
 
 Numeric capacity refusals carry `data.runner_result.admission_failure`, which names the
 `field`, the `actual` count, the `maximum` and the `unit`, with location details
@@ -56,7 +54,8 @@ actor may exec.
   Mach time, which includes system sleep; host, validator and controller waits
   keep their own clocks, and no worker time is compared with them. Nominal waits
   can take longer than their listed duration; each row describes what expiry does.
-  Even elapsed deadlines do not preempt blocked native calls or guarantee final cleanup time.
+  A blocked native call can outlast a checked deadline; final cleanup has its own
+  observations and may remain unconfirmed.
 - The Control column describes `policy-witness` flags using four words.
   "Fixed" means no flag changes the value in this build. "Flag" names the flag
   that does. "Derived" means the value follows from another row.

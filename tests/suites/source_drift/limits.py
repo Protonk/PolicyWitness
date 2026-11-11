@@ -324,12 +324,18 @@ An authored source still has <!-- span limits.step_id.value -->STALE_PUBLIC<!-- 
         copied = self.guide.split(generator.GUIDE_QUESTIONS_START)[1].split(generator.GUIDE_QUESTIONS_END)[0].strip()
         expected = '\n'.join('#' + line if line.startswith('## ') else line
                              for line in shared.splitlines())
-        # Guide links become internal; the FAQ's bare coverage-document link is
-        # rebased onto the copied coverage section.
+        # Guide links become internal; a bare coverage-document link also
+        # rebases onto the copied coverage section.
         expected = expected.replace('](PolicyWitness.md#', '](#').replace('](EXTENSIONS.md)', f']({generator.COVERAGE_ANCHOR})')
         self.assertEqual(copied, expected)
-        self.assertIn('](EXTENSIONS.md)', shared)
         self.assertIn(f']({generator.COVERAGE_ANCHOR})', copied)
+        # The live FAQ can use a guide anchor. Keep the bare-document rewrite
+        # independently covered by a constructed shared question.
+        fixture = (generator.QUESTIONS_START + '\n\n## Coverage?\n\n'
+                   'See [extensions](EXTENSIONS.md) and [limits](PolicyWitness.md#limits).\n\n'
+                   + generator.QUESTIONS_END)
+        self.assertEqual(generator.shared_questions(fixture),
+                         '### Coverage?\n\nSee [extensions](#sandbox-extensions) and [limits](#limits).')
         questions = [h for h in markdown_reader.parse(shared).headings if h.level == 2]
         self.assertTrue(questions)
         copy = markdown_reader.parse(copied)
@@ -344,13 +350,20 @@ An authored source still has <!-- span limits.step_id.value -->STALE_PUBLIC<!-- 
         root = self.checkout()
         manifest_path = root / 'docs/limits.json'
         data = json.loads(manifest_path.read_text())
+        original_value = data['limits'][0]['value']
         data['limits'][0]['value'] += 1
+        self.assertNotEqual(data['limits'][0]['value'], original_value)
         manifest_path.write_text(json.dumps(data))
         source_path = root / 'docs/LIMITS.md'
-        source_path.write_text(source_path.read_text().replace(
-            'can still be refused here', 'can still be independently refused here', 1))
         questions_path = root / 'docs/QUESTIONS.md'
-        questions_path.write_text(questions_path.read_text().replace('Almost no one.', 'Almost nobody.', 1))
+        for path, old, new in [
+            (source_path, 'locate the relevant boundary.', 'locate the reported boundary.'),
+            (questions_path, 'A useful experiment identifies its target', 'A repeatable experiment identifies its target'),
+        ]:
+            original = path.read_text()
+            mutated = original.replace(old, new, 1)
+            self.assertNotEqual(mutated, original, f'prose mutation did not change {path.name}')
+            path.write_text(mutated)
         questions_before = questions_path.read_bytes()
         guide_path = root / 'docs/PolicyWitness.md'
         outside_before = self.guide.split(generator.GUIDE_START)[0], self.guide.split(generator.GUIDE_END)[1]
@@ -358,13 +371,13 @@ An authored source still has <!-- span limits.step_id.value -->STALE_PUBLIC<!-- 
         self.assertEqual(result.returncode, 0, result.stderr)
         for path in [source_path, guide_path]:
             self.assertIn('262,144 UTF-8 bytes', path.read_text())
-            self.assertIn('can still be independently refused here', path.read_text())
+            self.assertIn('locate the reported boundary.', path.read_text())
         guide = guide_path.read_text()
-        self.assertIn('Almost nobody.', guide.split(generator.GUIDE_QUESTIONS_START)[1])
+        self.assertIn('A repeatable experiment identifies its target', guide.split(generator.GUIDE_QUESTIONS_START)[1])
         self.assertEqual(questions_path.read_bytes(), questions_before)
         outside_after = guide.split(generator.GUIDE_START)[0], guide.split(generator.GUIDE_END)[1]
         self.assertEqual(outside_after[1], outside_before[1])
-        self.assertEqual(outside_after[0].replace('Almost nobody.', 'Almost no one.', 1), outside_before[0])
+        self.assertEqual(outside_after[0].replace('A repeatable experiment identifies its target', 'A useful experiment identifies its target', 1), outside_before[0])
         before = source_path.read_bytes(), guide_path.read_bytes()
         self.assertEqual(self.command(root).returncode, 0)
         self.assertEqual((source_path.read_bytes(), guide_path.read_bytes()), before)
@@ -375,16 +388,16 @@ An authored source still has <!-- span limits.step_id.value -->STALE_PUBLIC<!-- 
         mutations = [
             ('LIMITS.md', lambda text: text.replace('262,143', '262,144', 1)),
             ('PolicyWitness.md', lambda text: text.replace('262,143', '262,144', 1)),
-            ('LIMITS.md', lambda text: text.replace('can still be refused here', 'can still be edited and refused here', 1)),
-            ('PolicyWitness.md', lambda text: text.replace('can still be refused here', 'can still be edited and refused here', 1)),
+            ('LIMITS.md', lambda text: text.replace('locate the relevant boundary.', 'locate the reported boundary.', 1)),
+            ('PolicyWitness.md', lambda text: text.replace('locate the relevant boundary.', 'locate the reported boundary.', 1)),
             ('PolicyWitness.md', lambda text: '\n'.join(line for line in text.splitlines()
                                                        if '(`policy_source`)' not in line)),
             ('PolicyWitness.md', lambda text: text.replace(generator.GUIDE_END, '')),
             ('PolicyWitness.md', lambda text: text + generator.GUIDE_START),
             ('LIMITS.md', lambda text: text.replace(generator.SHARED_END, '')),
             ('LIMITS.md', lambda text: text.replace(generator.COVERAGE_END, '')),
-            ('QUESTIONS.md', lambda text: text.replace('Almost no one.', 'Almost nobody.', 1)),
-            ('PolicyWitness.md', lambda text: text.replace('Almost no one.', 'Almost nobody.', 1)),
+            ('QUESTIONS.md', lambda text: text.replace('A useful experiment identifies its target', 'A repeatable experiment identifies its target', 1)),
+            ('PolicyWitness.md', lambda text: text.replace('A useful experiment identifies its target', 'A repeatable experiment identifies its target', 1)),
             ('PolicyWitness.md', lambda text: text.replace(generator.GUIDE_QUESTIONS_END, '')),
             ('QUESTIONS.md', lambda text: text.replace(generator.QUESTIONS_END, '')),
         ]
@@ -392,7 +405,10 @@ An authored source still has <!-- span limits.step_id.value -->STALE_PUBLIC<!-- 
             with self.subTest(filename=filename, mutation=mutate):
                 root = self.checkout()
                 path = root / 'docs' / filename
-                path.write_text(mutate(path.read_text()))
+                original = path.read_text()
+                mutated = mutate(original)
+                self.assertNotEqual(mutated, original, f'stale-copy mutation did not change {filename}')
+                path.write_text(mutated)
                 source, guide = root / 'docs/LIMITS.md', root / 'docs/PolicyWitness.md'
                 questions = root / 'docs/QUESTIONS.md'
                 before = source.read_bytes(), guide.read_bytes(), questions.read_bytes()

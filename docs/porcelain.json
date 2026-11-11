@@ -3581,7 +3581,7 @@
           "json_null": false,
           "tag": 21,
           "doc": [
-            "/// `single_worker` or `actors`; emitted from the integrated actor contract."
+            "/// Actor assembly emits `actors`; the ordinary producer omits this field."
           ]
         },
         {

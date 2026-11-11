@@ -18,7 +18,20 @@ Another agent's review and the maintainer's line-by-line contract reading
 will occur then. Tagged rehearsal and Apple submission wait for the
 instruction to continue after that review.
 
-**Stage three settled; stage four follows.**
+**Stage-four guide work settled; pre-tag rehearsal follows.**
+`records/contract/STAGE-FOUR-ACCOUNT.md` records the section review, exact selected
+command walkthrough, corrections and remaining validation limits. The final
+walkthrough `20261111T182903Z_8aff51a9` passes with a valid unchanged app, zero
+sleep and verified external-runner/workspace cleanup. The corrected focused
+selection passed all ten source-drift cases, retention controls and the native
+default-location case; its failed guide attempt and two other failed attempts
+remain recorded separately. The source/staged guide is
+`31944ef9cd04d131e1cf2314ba1bb3e0f67322a4f58a5a828bcb08136f3fa3a4`.
+The contract's structured Reply link correction leaves 5,831 lines and 77,418
+words. Next: committed-source development build/default battery, full build
+refusal controls, prospective v0.3.8 stamping and the directed pre-tag pause.
+
+**Stage three settled.**
 The contract, stage-two decision record and maintainer list are ready for the
 maintainer's reading; work continues through guide validation to the directed
 pre-tag pause. `records/contract/STAGE-THREE-ACCOUNT.md` records the structured

@@ -116,12 +116,49 @@ def registry(pw, out, label, invoke):
     return data['runners'] + [row.get('runner', row) for row in data.get('pending_cleanup', [])]
 
 
+
+GUIDE_CORE = ('layout', 'workspace', 'workspace_identity', 'staging', 'staging_identity',
+              'bundle_path', 'service_name', 'target', 'plist_path', 'state_path',
+              'receipt_path', 'source_app', 'source_inventory', 'registry_path', 'variant')
+
+
+def guide_core(state):
+    return {key: state[key] for key in GUIDE_CORE}
+
+
+def owner_object(path):
+    assert path.is_file() and not path.is_symlink(), f'owner is not a regular file: {path}'
+    value = json.loads(path.read_text())
+    assert isinstance(value, dict), f'owner is not an object: {path}'
+    return value
+
+
 def owned_bundle(state):
     staging, bundle = Path(state['staging']), Path(state['bundle_path'])
-    assert staging.parent == Path('/private/tmp') and staging.name.startswith('pw-byoxpc-'), staging
-    assert staging.resolve() == staging and bundle == staging / 'PWRunner.xpc', state
+    if state.get('layout') == 'guide_workflow':
+        assert state['registry_path'] is None, 'guide session must use the default registry'
+        assert Path(state['state_path']) == staging / 'session.json'
+        parent = Path(state['workspace'])
+        assert parent.parent == Path('/private/tmp') and re.fullmatch(r'pw-guide\.[A-Za-z0-9]+', parent.name), parent
+        assert parent.resolve() == parent and parent.is_dir() and not parent.is_symlink(), parent
+        observed = parent.stat()
+        assert [observed.st_dev, observed.st_ino] == state['workspace_identity'], 'guide workspace identity changed'
+        assert staging.parent == parent and re.fullmatch(r'runner\.[A-Za-z0-9]+', staging.name), staging
+        assert staging.resolve() == staging and bundle == staging / 'PWRunner.guide.xpc', state
+        if staging.exists():
+            observed = staging.stat()
+            assert [observed.st_dev, observed.st_ino] == state['staging_identity'], 'guide staging identity changed'
+        else:
+            assert state.get('removed'), 'guide staging disappeared before verified cleanup'
+        expected = f'com.policywitness.guide.{os.getuid()}.{staging.name}'
+        assert state['service_name'] == expected, state
+        assert Path(state['plist_path']) == Path.home() / 'Library/LaunchAgents' / (expected + '.plist'), state
+    else:
+        assert state.get('layout') in (None, 'byoxpc'), 'unknown session layout'
+        assert staging.parent == Path('/private/tmp') and staging.name.startswith('pw-byoxpc-'), staging
+        assert staging.resolve() == staging and bundle == staging / 'PWRunner.xpc', state
+        assert state['service_name'].startswith('com.policywitness.test.byoxpc.s'), state
     assert bundle.resolve() == bundle, 'staged bundle redirected through a symlink'
-    assert state['service_name'].startswith('com.policywitness.test.byoxpc.s'), state
     assert state['target'] == f'gui/{os.getuid()}/{state["service_name"]}', state
     return staging, bundle
 
@@ -133,6 +170,45 @@ def persist_state(state, receipt=None):
     temporary.replace(path)
     if receipt is not None and receipt.parent.exists():
         save(receipt, state)
+
+
+def adopt_guide(app, receipt, workspace_owner, staging, bundle, service):
+    """Own the guide's already-created empty stage before copying or signing.
+
+    The guide case owns the containing work directory and records its inode;
+    this helper owns the external service through the ordinary cleanup path.
+    """
+    assert not os.path.lexists(receipt), f'ownership receipt already exists: {receipt}'
+    parent = Path(workspace_owner['workspace'])
+    assert Path(workspace_owner['state_path']) == parent / 'session.json'
+    durable = owner_object(parent / 'session.json')
+    assert durable['kind'] == 'guide_workflow' and durable['workspace_identity'] == workspace_owner['workspace_identity']
+    assert durable['workspace'] == str(parent) and durable['state_path'] == str(parent / 'session.json')
+    assert durable['source_app'] == str(app.resolve()) and durable['removed'] is False
+    assert workspace_owner['receipt_path'] == str(receipt.parent / 'session.json')
+    parent_receipt = owner_object(Path(workspace_owner['receipt_path']))
+    for key in ('kind', 'source_app', 'source_inventory', 'workspace', 'workspace_identity', 'state_path', 'receipt_path', 'contract'):
+        assert durable[key] == parent_receipt[key] == workspace_owner[key], 'guide parent ownership disagrees'
+    assert staging.is_dir() and not any(staging.iterdir()), 'guide staging must be new and empty'
+    observed = staging.stat()
+    state = dict(layout='guide_workflow', workspace=str(parent),
+                 workspace_identity=workspace_owner['workspace_identity'],
+                 staging_identity=[observed.st_dev, observed.st_ino],
+                 source_app=str(app.resolve()), source_inventory=workspace_owner['source_inventory'],
+                 staging=str(staging), bundle_path=str(bundle), service_name=service,
+                 target=f'gui/{os.getuid()}/{service}',
+                 plist_path=str(Path.home() / 'Library/LaunchAgents' / (service + '.plist')),
+                 install_attempted=False, install_finished=False, removed=False,
+                 state_path=str(staging / 'session.json'), receipt_path=str(receipt),
+                 registry_path=None, variant='guide')
+    owned_bundle(state)
+    source = app.resolve() / SERVICE
+    for path in source.rglob('*'):
+        assert path.resolve().is_relative_to(source.resolve()), f'runner path escapes bundle: {path}'
+    assert workspace_owner.get('external') is None, 'guide external stage already armed'
+    workspace_owner['external'] = guide_core(state)
+    persist_state(workspace_owner, Path(workspace_owner['receipt_path']))
+    persist_state(state, receipt)
 
 
 def install(pw, app, out, env_path, identity, *, invoke=command, launch_agents=None, variant="team", supplied_entitlements=None, default_location=False, registry_root=None):
@@ -267,12 +343,18 @@ def install(pw, app, out, env_path, identity, *, invoke=command, launch_agents=N
 
 
 def cleanup(pw, state_path, *, invoke=command, remove_tree=shutil.rmtree):
-    if not state_path.exists():
+    if not os.path.lexists(state_path):
         return
     receipt = state_path
-    state = json.loads(state_path.read_text())
+    state = owner_object(state_path)
     durable = Path(state['state_path'])
-    if durable.exists():
+    if state.get('layout') == 'guide_workflow':
+        owned_bundle(state)
+        if os.path.lexists(durable):
+            latest = owner_object(durable)
+            assert guide_core(latest) == guide_core(state), 'guide durable ownership disagrees with receipt'
+            state = latest
+    elif durable.exists():
         state = json.loads(durable.read_text())
     staging, bundle = owned_bundle(state)
     invoke = session_invoke(pw, state, invoke)

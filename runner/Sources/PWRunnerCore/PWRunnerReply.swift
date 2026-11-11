@@ -179,7 +179,7 @@ struct PWRunnerRunResult {
     var extension_events: [PWRunnerExtensionEvent]?
     var test_overrides: PWRunnerTestOverrides?
     var reporting_failure: PWRunnerReportingFailure?
-    /// `single_worker` or `actors`; emitted from the integrated actor contract.
+    /// Actor assembly emits `actors`; the ordinary producer omits this field.
     var execution_form: String?
     var actors: [PWRunnerActorResult]?
     var transfers: [PWRunnerTransferRecord]?

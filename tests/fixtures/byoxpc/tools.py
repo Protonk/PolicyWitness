@@ -99,10 +99,12 @@ if argv[0] == '/bin/launchctl':
     finish()
 assert argv[0] == config['pw'] and argv[1] == 'runner', argv
 assert os.environ.get('PW_RUNNER_REGISTRY') == ownership['registry_path']
-registry_path = Path(ownership['registry_path'])
+# The guide layout uses the public default scope; its fake registry stays in
+# the control's own directory rather than the real user's home.
+registry_path = Path(config['default_registry']) if ownership['registry_path'] is None else Path(ownership['registry_path'])
 registry_path.parent.mkdir(parents=True, exist_ok=True)
 registry_path.write_text(json.dumps(state))
-receipt['registry_path'] = str(registry_path)
+receipt['registry_path'] = ownership['registry_path']
 if argv[2] == 'list':
     reply({'runners': state['runners'], 'pending_cleanup': state['pending_cleanup']})
 if argv[2] == 'reconcile':
@@ -167,10 +169,11 @@ assert argv[2:] == ['remove', '--id', 'owned-id'], 'removal did not target the o
 if mode == 'remove_failure':
     finish(17)
 owned = next(r for r in state['runners'] + state['pending_cleanup'] if r['id'] == 'owned-id')
-state['runners'] = [r for r in state['runners'] if r['id'] != 'owned-id']
+state['runners'] = [r for r in state['runners'] if r['id'] != 'owned-id'] if mode != 'remove_keeps_record' else state['runners']
 state['pending_cleanup'] = [owned] if mode == 'remove_warning' else []
-if mode not in ('remove_warning', 'remove_lies'):
+if mode not in ('remove_warning', 'remove_lies', 'remove_keeps_service'):
     state['loaded'] = False
+if mode not in ('remove_warning', 'remove_lies', 'remove_keeps_plist'):
     plist.unlink(missing_ok=True)
 if mode == 'remove_warning':
     plist.unlink(missing_ok=True)

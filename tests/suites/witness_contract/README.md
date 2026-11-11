@@ -10,6 +10,64 @@ Cases assert contract claims independently. The suite reads as a
 behavior specification — what PolicyWitness promises, regardless of
 the architecture behind it.
 
+## Guide workflows
+
+The opt-in `guide_workflows` case executes selected `sh` fences from
+`docs/PolicyWitness.md`, after verifying that the selected app's adjacent staged
+guide has identical bytes. Only `APP`, `IDENTITY` and `ENT` setup values are
+substituted. Explicit cuts preserve the displayed command text while allowing
+ownership, exit-status capture and independent observations between commands.
+The shell state retains the guide's variables and umask; refusal commands keep
+their expected nonzero status. Source extraction controls refuse missing or
+ambiguous fences and reordered cuts. Constructed ownership controls use the
+existing fake OS tools and actual cleanup paths to observe refused foreign
+owners, uncertain submissions, each absence requirement and interrupted deletion
+recovery. The existing dispatcher retention control checks the top-level guide
+receipt through ordinary prune.
+
+The sequence creates a new empty file, observes an existing-target guard,
+repairs a misspelled capture flag and a missing nonce, reads a positive compiled
+object receipt, checks the policy through `sbpl-check`, and runs the external
+runner list/reconcile/install/status/verify/create/validate/remove workflow.
+Native file observations include absence before invocation and a regular empty
+0600 file afterward. Refused requests retain their inputs, specific failure
+codes/paths and absent target. The capture receipt binds nonce, worker PID,
+source hash and retained bytecode length/hash; capture unavailability cannot
+supply this case's positive-capture observation. Helper success and unchanged
+file observations are recorded separately.
+
+The case requires a matching Developer ID identity, a logged-in GUI session and
+an empty default runner registry with no concurrent registry changes during the
+workflow. Under those equipment conditions, the displayed `runner validate`
+refreshes only the owned installation. An additional installed record present at
+validation makes the expected updated-record count fail; validation may already
+have refreshed that record's metadata before the failure. The supplied
+entitlements plist comes from an independent read of the selected worker's
+signature. The case is opt-in because it signs and installs a service in the
+actual user launchd/default-registry locations. Run it through
+`tests/run.sh --case witness_contract/guide_workflows`.
+
+`artifacts/session.json` and the work directory's durable record own the guide's
+fresh work directory. `byoxpc-session.json` and the staged runner's durable
+record use the existing BYOXPC cleanup helper with an explicit guide layout;
+parent/staging inode, exact service, executable, plist and registry ownership
+must agree. A submitted run needs a retained worker-exit witness, or the named
+host admission refusal before launch, before cleanup can remove its work.
+Harness interruptions and unknown dispositions retain both resources and
+ownership. Successful removal requires independent launchd, plist and registry
+absence; cleanup also compares the selected app's complete inventory.
+
+Artifacts preserve guide bytes/hash and fence line ranges, actual substituted
+shell fragments, command stdout/stderr/status, version/contract, all request and
+result files, independent file and cleanup observations, equipment readback and
+constructed source/ownership controls. The copy fragment records its shell's
+`cp` resolution and both bundle inventories. Copy checks preserve contents,
+types, paths and owner access, allow the private mask to narrow directory modes,
+and reject source aliases; constructed controls retain changed-content and lost
+execute-permission refusals. Retained-reader interpretation and
+unavailable-capture branches have their own controls; this case records the
+native workflows it executes.
+
 ## Public-output interruption
 
 The opt-in `porcelain_output_controls` case runs one read-only specimen with

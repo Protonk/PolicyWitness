@@ -211,17 +211,17 @@ free-text relationship counts also compare by kind with the preceding
 release; removing that baseline or increasing any kind refuses release.
 
 ```sh
-tests/lib/python.sh docs/generate_contract_stamps.py --release v0.3.7
+tests/lib/python.sh docs/generate_contract_stamps.py --release v0.3.8
 git status --short
 git diff
 # After checking that the tree contains only the intended release change:
 git add -A
 git diff --cached
-git commit -m "Prepare PolicyWitness v0.3.7"
-git tag -a v0.3.7 -m "PolicyWitness 0.3.7"
+git commit -m "Prepare PolicyWitness v0.3.8"
+git tag -a v0.3.8 -m "PolicyWitness 0.3.8"
 tests/lib/python.sh docs/generate_contract_stamps.py --check
 make release NOTARY_KEYCHAIN_PROFILE=entitlement-jail IDENTITY='Developer ID Application: YOUR NAME (TEAMID)' RELEASE_NOTES=/path/to/notes.md
-make publish VERSION=0.3.7
+make publish VERSION=0.3.8
 ```
 
 `make release` runs the preflight, then the `make notarize` chain below (a

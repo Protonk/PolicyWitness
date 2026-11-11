@@ -218991,11 +218991,14 @@
           {
             "context": {},
             "facts": {
-              "defines": "condition"
+              "defines": "condition",
+              "uses": [
+                "identity.definitions.reply"
+              ]
             },
             "id": "diagnostics.execution.families",
             "kind": "definition",
-            "prose": "The ordinary semantic branch uses the [reply definition](#contract-identity-definitions-reply).\n\n| Check family | Applicability and checked relationship | Finding scope |\n| --- | --- | --- |\n| Lifecycle claims | Each worker subprocess: required claims, state/basis references, owned final status, cleanup facts, progress association, slot count/order, action identity, lifecycle copies and supported conflicts. | That worker's projection; ordinary projection or one actor entry. |\n| Phase and query evidence | Ordinary semantic reply: phase IDs/order, action partition, collection state, validator ownership and raw-record association, protocol violations, comparison vocabulary and the complete `query_first` chain. | Reply-wide. |\n| Policy delivery/read evidence | Ordinary semantic reply with a worker policy-read receipt: bounded counts, host expected-count agreement, length-refusal detail and consistency with later worker observations. | Reply-wide. |\n| Native operation observations | Ordinary semantic reply: each fresh-read, fresh-write and exec observation's applicable fields and native relationships. | Reply-wide. |\n| Actor association | Ordinary semantic actor reply: actor indexes/IDs, launch/subprocess PID, visits, phase owner, event owner and matching transfer source. | Reply-wide. |\n| Actor setup, equipment, application, termination and custody | Ordinary semantic reply: execution-form applicability and the actor record relationships defined by those surfaces. | Reply-wide. |\n| Reporting-failure form | A reply carrying reporting_failure: degraded outcome/rc/error, origin/diagnostic/original outcome, removed comparisons and the retention-specific record form. | Reply-wide. |\n\nThe reporting-failure branch checks its degradation form while retaining the\nassembled records. Worker lifecycle projections still run independently,\nwith their comparison-limitation requirement waived when the comparison\nhas been removed by degradation. The retained host records remain\navailable for inspection at their own observation boundaries.",
+            "prose": "| Check family | Applicability and checked relationship | Finding scope |\n| --- | --- | --- |\n| Lifecycle claims | Each worker subprocess: required claims, state/basis references, owned final status, cleanup facts, progress association, slot count/order, action identity, lifecycle copies and supported conflicts. | That worker's projection; ordinary projection or one actor entry. |\n| Phase and query evidence | Ordinary semantic reply: phase IDs/order, action partition, collection state, validator ownership and raw-record association, protocol violations, comparison vocabulary and the complete `query_first` chain. | Reply-wide. |\n| Policy delivery/read evidence | Ordinary semantic reply with a worker policy-read receipt: bounded counts, host expected-count agreement, length-refusal detail and consistency with later worker observations. | Reply-wide. |\n| Native operation observations | Ordinary semantic reply: each fresh-read, fresh-write and exec observation's applicable fields and native relationships. | Reply-wide. |\n| Actor association | Ordinary semantic actor reply: actor indexes/IDs, launch/subprocess PID, visits, phase owner, event owner and matching transfer source. | Reply-wide. |\n| Actor setup, equipment, application, termination and custody | Ordinary semantic reply: execution-form applicability and the actor record relationships defined by those surfaces. | Reply-wide. |\n| Reporting-failure form | A reply carrying reporting_failure: degraded outcome/rc/error, origin/diagnostic/original outcome, removed comparisons and the retention-specific record form. | Reply-wide. |\n\nThe reporting-failure branch checks its degradation form while retaining the\nassembled records. Worker lifecycle projections still run independently,\nwith their comparison-limitation requirement waived when the comparison\nhas been removed by degradation. The retained host records remain\navailable for inspection at their own observation boundaries.",
             "title": "Check families and applicability"
           },
           {
@@ -239557,6 +239560,16 @@
             "kind": "definition",
             "prose": "A prediction is the usable result of a native sandbox query for the reported\nworker, operation and filter at collection time. Excluded queries, diagnostics\nand missing validator results carry their own unavailable/error observations.\n`query_first` establishes a supported ordering interval before an action\nbatch; changes of state inside that interval remain possible.",
             "title": "Prediction"
+          },
+          {
+            "context": {},
+            "facts": {
+              "defines": "record"
+            },
+            "id": "identity.definitions.reply",
+            "kind": "definition",
+            "prose": "A host reply is the host-produced execution record, including its producer\nidentity, execution summary and available observations. The typed host frame\ncarries this record across XPC. Raw retained bytes and an admitted decoded\nreply have different availability and interpretation conditions.\n\nAn ordinary semantic reply is a reply with no reporting_failure record;\nthis branch includes both single-worker and actor execution forms.",
+            "title": "Reply"
           },
           {
             "context": {},
@@ -316789,11 +316802,14 @@
           {
             "context": {},
             "facts": {
-              "defines": "condition"
+              "defines": "condition",
+              "uses": [
+                "identity.definitions.reply"
+              ]
             },
             "id": "diagnostics.execution.families",
             "kind": "definition",
-            "prose": "The ordinary semantic branch uses the [reply definition](#contract-identity-definitions-reply).\n\n| Check family | Applicability and checked relationship | Finding scope |\n| --- | --- | --- |\n| Lifecycle claims | Each worker subprocess: required claims, state/basis references, owned final status, cleanup facts, progress association, slot count/order, action identity, lifecycle copies and supported conflicts. | That worker's projection; ordinary projection or one actor entry. |\n| Phase and query evidence | Ordinary semantic reply: phase IDs/order, action partition, collection state, validator ownership and raw-record association, protocol violations, comparison vocabulary and the complete `query_first` chain. | Reply-wide. |\n| Policy delivery/read evidence | Ordinary semantic reply with a worker policy-read receipt: bounded counts, host expected-count agreement, length-refusal detail and consistency with later worker observations. | Reply-wide. |\n| Native operation observations | Ordinary semantic reply: each fresh-read, fresh-write and exec observation's applicable fields and native relationships. | Reply-wide. |\n| Actor association | Ordinary semantic actor reply: actor indexes/IDs, launch/subprocess PID, visits, phase owner, event owner and matching transfer source. | Reply-wide. |\n| Actor setup, equipment, application, termination and custody | Ordinary semantic reply: execution-form applicability and the actor record relationships defined by those surfaces. | Reply-wide. |\n| Reporting-failure form | A reply carrying reporting_failure: degraded outcome/rc/error, origin/diagnostic/original outcome, removed comparisons and the retention-specific record form. | Reply-wide. |\n\nThe reporting-failure branch checks its degradation form while retaining the\nassembled records. Worker lifecycle projections still run independently,\nwith their comparison-limitation requirement waived when the comparison\nhas been removed by degradation. The retained host records remain\navailable for inspection at their own observation boundaries.",
+            "prose": "| Check family | Applicability and checked relationship | Finding scope |\n| --- | --- | --- |\n| Lifecycle claims | Each worker subprocess: required claims, state/basis references, owned final status, cleanup facts, progress association, slot count/order, action identity, lifecycle copies and supported conflicts. | That worker's projection; ordinary projection or one actor entry. |\n| Phase and query evidence | Ordinary semantic reply: phase IDs/order, action partition, collection state, validator ownership and raw-record association, protocol violations, comparison vocabulary and the complete `query_first` chain. | Reply-wide. |\n| Policy delivery/read evidence | Ordinary semantic reply with a worker policy-read receipt: bounded counts, host expected-count agreement, length-refusal detail and consistency with later worker observations. | Reply-wide. |\n| Native operation observations | Ordinary semantic reply: each fresh-read, fresh-write and exec observation's applicable fields and native relationships. | Reply-wide. |\n| Actor association | Ordinary semantic actor reply: actor indexes/IDs, launch/subprocess PID, visits, phase owner, event owner and matching transfer source. | Reply-wide. |\n| Actor setup, equipment, application, termination and custody | Ordinary semantic reply: execution-form applicability and the actor record relationships defined by those surfaces. | Reply-wide. |\n| Reporting-failure form | A reply carrying reporting_failure: degraded outcome/rc/error, origin/diagnostic/original outcome, removed comparisons and the retention-specific record form. | Reply-wide. |\n\nThe reporting-failure branch checks its degradation form while retaining the\nassembled records. Worker lifecycle projections still run independently,\nwith their comparison-limitation requirement waived when the comparison\nhas been removed by degradation. The retained host records remain\navailable for inspection at their own observation boundaries.",
             "title": "Check families and applicability"
           },
           {
@@ -318589,6 +318605,16 @@
             "kind": "definition",
             "prose": "The XPC host admits the request, prepares worker resources, coordinates query\ncollection and action release, collects worker/validator observations and\nproduces the host reply. Specimen policy application occurs in the worker so\nthe host retains its reply path.",
             "title": "Runner host"
+          },
+          {
+            "context": {},
+            "facts": {
+              "defines": "record"
+            },
+            "id": "identity.definitions.reply",
+            "kind": "definition",
+            "prose": "A host reply is the host-produced execution record, including its producer\nidentity, execution summary and available observations. The typed host frame\ncarries this record across XPC. Raw retained bytes and an admitted decoded\nreply have different availability and interpretation conditions.\n\nAn ordinary semantic reply is a reply with no reporting_failure record;\nthis branch includes both single-worker and actor execution forms.",
+            "title": "Reply"
           },
           {
             "context": {},
@@ -379798,11 +379824,14 @@
           {
             "context": {},
             "facts": {
-              "defines": "condition"
+              "defines": "condition",
+              "uses": [
+                "identity.definitions.reply"
+              ]
             },
             "id": "diagnostics.execution.families",
             "kind": "definition",
-            "prose": "The ordinary semantic branch uses the [reply definition](#contract-identity-definitions-reply).\n\n| Check family | Applicability and checked relationship | Finding scope |\n| --- | --- | --- |\n| Lifecycle claims | Each worker subprocess: required claims, state/basis references, owned final status, cleanup facts, progress association, slot count/order, action identity, lifecycle copies and supported conflicts. | That worker's projection; ordinary projection or one actor entry. |\n| Phase and query evidence | Ordinary semantic reply: phase IDs/order, action partition, collection state, validator ownership and raw-record association, protocol violations, comparison vocabulary and the complete `query_first` chain. | Reply-wide. |\n| Policy delivery/read evidence | Ordinary semantic reply with a worker policy-read receipt: bounded counts, host expected-count agreement, length-refusal detail and consistency with later worker observations. | Reply-wide. |\n| Native operation observations | Ordinary semantic reply: each fresh-read, fresh-write and exec observation's applicable fields and native relationships. | Reply-wide. |\n| Actor association | Ordinary semantic actor reply: actor indexes/IDs, launch/subprocess PID, visits, phase owner, event owner and matching transfer source. | Reply-wide. |\n| Actor setup, equipment, application, termination and custody | Ordinary semantic reply: execution-form applicability and the actor record relationships defined by those surfaces. | Reply-wide. |\n| Reporting-failure form | A reply carrying reporting_failure: degraded outcome/rc/error, origin/diagnostic/original outcome, removed comparisons and the retention-specific record form. | Reply-wide. |\n\nThe reporting-failure branch checks its degradation form while retaining the\nassembled records. Worker lifecycle projections still run independently,\nwith their comparison-limitation requirement waived when the comparison\nhas been removed by degradation. The retained host records remain\navailable for inspection at their own observation boundaries.",
+            "prose": "| Check family | Applicability and checked relationship | Finding scope |\n| --- | --- | --- |\n| Lifecycle claims | Each worker subprocess: required claims, state/basis references, owned final status, cleanup facts, progress association, slot count/order, action identity, lifecycle copies and supported conflicts. | That worker's projection; ordinary projection or one actor entry. |\n| Phase and query evidence | Ordinary semantic reply: phase IDs/order, action partition, collection state, validator ownership and raw-record association, protocol violations, comparison vocabulary and the complete `query_first` chain. | Reply-wide. |\n| Policy delivery/read evidence | Ordinary semantic reply with a worker policy-read receipt: bounded counts, host expected-count agreement, length-refusal detail and consistency with later worker observations. | Reply-wide. |\n| Native operation observations | Ordinary semantic reply: each fresh-read, fresh-write and exec observation's applicable fields and native relationships. | Reply-wide. |\n| Actor association | Ordinary semantic actor reply: actor indexes/IDs, launch/subprocess PID, visits, phase owner, event owner and matching transfer source. | Reply-wide. |\n| Actor setup, equipment, application, termination and custody | Ordinary semantic reply: execution-form applicability and the actor record relationships defined by those surfaces. | Reply-wide. |\n| Reporting-failure form | A reply carrying reporting_failure: degraded outcome/rc/error, origin/diagnostic/original outcome, removed comparisons and the retention-specific record form. | Reply-wide. |\n\nThe reporting-failure branch checks its degradation form while retaining the\nassembled records. Worker lifecycle projections still run independently,\nwith their comparison-limitation requirement waived when the comparison\nhas been removed by degradation. The retained host records remain\navailable for inspection at their own observation boundaries.",
             "title": "Check families and applicability"
           },
           {
@@ -424933,6 +424962,16 @@
             "facts": {
               "defines": "record"
             },
+            "id": "identity.definitions.reply",
+            "kind": "definition",
+            "prose": "A host reply is the host-produced execution record, including its producer\nidentity, execution summary and available observations. The typed host frame\ncarries this record across XPC. Raw retained bytes and an admitted decoded\nreply have different availability and interpretation conditions.\n\nAn ordinary semantic reply is a reply with no reporting_failure record;\nthis branch includes both single-worker and actor execution forms.",
+            "title": "Reply"
+          },
+          {
+            "context": {},
+            "facts": {
+              "defines": "record"
+            },
             "id": "identity.definitions.request",
             "kind": "definition",
             "prose": "A request is the value presented at an entry boundary. The controller holds\nthe parsed request, resolves controller-owned options and sends a serialization\nof the resulting value. Submitted bytes and original file bytes are distinct\nartifacts; each byte observation names the artifact it covers.",
@@ -467601,11 +467640,14 @@
           {
             "context": {},
             "facts": {
-              "defines": "condition"
+              "defines": "condition",
+              "uses": [
+                "identity.definitions.reply"
+              ]
             },
             "id": "diagnostics.execution.families",
             "kind": "definition",
-            "prose": "The ordinary semantic branch uses the [reply definition](#contract-identity-definitions-reply).\n\n| Check family | Applicability and checked relationship | Finding scope |\n| --- | --- | --- |\n| Lifecycle claims | Each worker subprocess: required claims, state/basis references, owned final status, cleanup facts, progress association, slot count/order, action identity, lifecycle copies and supported conflicts. | That worker's projection; ordinary projection or one actor entry. |\n| Phase and query evidence | Ordinary semantic reply: phase IDs/order, action partition, collection state, validator ownership and raw-record association, protocol violations, comparison vocabulary and the complete `query_first` chain. | Reply-wide. |\n| Policy delivery/read evidence | Ordinary semantic reply with a worker policy-read receipt: bounded counts, host expected-count agreement, length-refusal detail and consistency with later worker observations. | Reply-wide. |\n| Native operation observations | Ordinary semantic reply: each fresh-read, fresh-write and exec observation's applicable fields and native relationships. | Reply-wide. |\n| Actor association | Ordinary semantic actor reply: actor indexes/IDs, launch/subprocess PID, visits, phase owner, event owner and matching transfer source. | Reply-wide. |\n| Actor setup, equipment, application, termination and custody | Ordinary semantic reply: execution-form applicability and the actor record relationships defined by those surfaces. | Reply-wide. |\n| Reporting-failure form | A reply carrying reporting_failure: degraded outcome/rc/error, origin/diagnostic/original outcome, removed comparisons and the retention-specific record form. | Reply-wide. |\n\nThe reporting-failure branch checks its degradation form while retaining the\nassembled records. Worker lifecycle projections still run independently,\nwith their comparison-limitation requirement waived when the comparison\nhas been removed by degradation. The retained host records remain\navailable for inspection at their own observation boundaries.",
+            "prose": "| Check family | Applicability and checked relationship | Finding scope |\n| --- | --- | --- |\n| Lifecycle claims | Each worker subprocess: required claims, state/basis references, owned final status, cleanup facts, progress association, slot count/order, action identity, lifecycle copies and supported conflicts. | That worker's projection; ordinary projection or one actor entry. |\n| Phase and query evidence | Ordinary semantic reply: phase IDs/order, action partition, collection state, validator ownership and raw-record association, protocol violations, comparison vocabulary and the complete `query_first` chain. | Reply-wide. |\n| Policy delivery/read evidence | Ordinary semantic reply with a worker policy-read receipt: bounded counts, host expected-count agreement, length-refusal detail and consistency with later worker observations. | Reply-wide. |\n| Native operation observations | Ordinary semantic reply: each fresh-read, fresh-write and exec observation's applicable fields and native relationships. | Reply-wide. |\n| Actor association | Ordinary semantic actor reply: actor indexes/IDs, launch/subprocess PID, visits, phase owner, event owner and matching transfer source. | Reply-wide. |\n| Actor setup, equipment, application, termination and custody | Ordinary semantic reply: execution-form applicability and the actor record relationships defined by those surfaces. | Reply-wide. |\n| Reporting-failure form | A reply carrying reporting_failure: degraded outcome/rc/error, origin/diagnostic/original outcome, removed comparisons and the retention-specific record form. | Reply-wide. |\n\nThe reporting-failure branch checks its degradation form while retaining the\nassembled records. Worker lifecycle projections still run independently,\nwith their comparison-limitation requirement waived when the comparison\nhas been removed by degradation. The retained host records remain\navailable for inspection at their own observation boundaries.",
             "title": "Check families and applicability"
           },
           {
@@ -491367,6 +491409,16 @@
             "kind": "definition",
             "prose": "The XPC host admits the request, prepares worker resources, coordinates query\ncollection and action release, collects worker/validator observations and\nproduces the host reply. Specimen policy application occurs in the worker so\nthe host retains its reply path.",
             "title": "Runner host"
+          },
+          {
+            "context": {},
+            "facts": {
+              "defines": "record"
+            },
+            "id": "identity.definitions.reply",
+            "kind": "definition",
+            "prose": "A host reply is the host-produced execution record, including its producer\nidentity, execution summary and available observations. The typed host frame\ncarries this record across XPC. Raw retained bytes and an admitted decoded\nreply have different availability and interpretation conditions.\n\nAn ordinary semantic reply is a reply with no reporting_failure record;\nthis branch includes both single-worker and actor execution forms.",
+            "title": "Reply"
           },
           {
             "context": {},
@@ -519412,11 +519464,14 @@
           {
             "context": {},
             "facts": {
-              "defines": "condition"
+              "defines": "condition",
+              "uses": [
+                "identity.definitions.reply"
+              ]
             },
             "id": "diagnostics.execution.families",
             "kind": "definition",
-            "prose": "The ordinary semantic branch uses the [reply definition](#contract-identity-definitions-reply).\n\n| Check family | Applicability and checked relationship | Finding scope |\n| --- | --- | --- |\n| Lifecycle claims | Each worker subprocess: required claims, state/basis references, owned final status, cleanup facts, progress association, slot count/order, action identity, lifecycle copies and supported conflicts. | That worker's projection; ordinary projection or one actor entry. |\n| Phase and query evidence | Ordinary semantic reply: phase IDs/order, action partition, collection state, validator ownership and raw-record association, protocol violations, comparison vocabulary and the complete `query_first` chain. | Reply-wide. |\n| Policy delivery/read evidence | Ordinary semantic reply with a worker policy-read receipt: bounded counts, host expected-count agreement, length-refusal detail and consistency with later worker observations. | Reply-wide. |\n| Native operation observations | Ordinary semantic reply: each fresh-read, fresh-write and exec observation's applicable fields and native relationships. | Reply-wide. |\n| Actor association | Ordinary semantic actor reply: actor indexes/IDs, launch/subprocess PID, visits, phase owner, event owner and matching transfer source. | Reply-wide. |\n| Actor setup, equipment, application, termination and custody | Ordinary semantic reply: execution-form applicability and the actor record relationships defined by those surfaces. | Reply-wide. |\n| Reporting-failure form | A reply carrying reporting_failure: degraded outcome/rc/error, origin/diagnostic/original outcome, removed comparisons and the retention-specific record form. | Reply-wide. |\n\nThe reporting-failure branch checks its degradation form while retaining the\nassembled records. Worker lifecycle projections still run independently,\nwith their comparison-limitation requirement waived when the comparison\nhas been removed by degradation. The retained host records remain\navailable for inspection at their own observation boundaries.",
+            "prose": "| Check family | Applicability and checked relationship | Finding scope |\n| --- | --- | --- |\n| Lifecycle claims | Each worker subprocess: required claims, state/basis references, owned final status, cleanup facts, progress association, slot count/order, action identity, lifecycle copies and supported conflicts. | That worker's projection; ordinary projection or one actor entry. |\n| Phase and query evidence | Ordinary semantic reply: phase IDs/order, action partition, collection state, validator ownership and raw-record association, protocol violations, comparison vocabulary and the complete `query_first` chain. | Reply-wide. |\n| Policy delivery/read evidence | Ordinary semantic reply with a worker policy-read receipt: bounded counts, host expected-count agreement, length-refusal detail and consistency with later worker observations. | Reply-wide. |\n| Native operation observations | Ordinary semantic reply: each fresh-read, fresh-write and exec observation's applicable fields and native relationships. | Reply-wide. |\n| Actor association | Ordinary semantic actor reply: actor indexes/IDs, launch/subprocess PID, visits, phase owner, event owner and matching transfer source. | Reply-wide. |\n| Actor setup, equipment, application, termination and custody | Ordinary semantic reply: execution-form applicability and the actor record relationships defined by those surfaces. | Reply-wide. |\n| Reporting-failure form | A reply carrying reporting_failure: degraded outcome/rc/error, origin/diagnostic/original outcome, removed comparisons and the retention-specific record form. | Reply-wide. |\n\nThe reporting-failure branch checks its degradation form while retaining the\nassembled records. Worker lifecycle projections still run independently,\nwith their comparison-limitation requirement waived when the comparison\nhas been removed by degradation. The retained host records remain\navailable for inspection at their own observation boundaries.",
             "title": "Check families and applicability"
           },
           {
@@ -552592,6 +552647,16 @@
             "kind": "definition",
             "prose": "A prediction is the usable result of a native sandbox query for the reported\nworker, operation and filter at collection time. Excluded queries, diagnostics\nand missing validator results carry their own unavailable/error observations.\n`query_first` establishes a supported ordering interval before an action\nbatch; changes of state inside that interval remain possible.",
             "title": "Prediction"
+          },
+          {
+            "context": {},
+            "facts": {
+              "defines": "record"
+            },
+            "id": "identity.definitions.reply",
+            "kind": "definition",
+            "prose": "A host reply is the host-produced execution record, including its producer\nidentity, execution summary and available observations. The typed host frame\ncarries this record across XPC. Raw retained bytes and an admitted decoded\nreply have different availability and interpretation conditions.\n\nAn ordinary semantic reply is a reply with no reporting_failure record;\nthis branch includes both single-worker and actor execution forms.",
+            "title": "Reply"
           },
           {
             "context": {},

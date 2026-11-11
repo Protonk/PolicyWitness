@@ -1841,6 +1841,20 @@
           ]
         },
         {
+          "id": "guide_workflows",
+          "default": false,
+          "description": "Execute the staged guide's request, capture repair, helper and owned BYOXPC lifecycle commands with independent effects and cleanup observations",
+          "command": [
+            "bash",
+            "tests/suites/witness_contract/opt_in/guide_workflows.sh"
+          ],
+          "requires": [
+            "app",
+            "identity",
+            "gui"
+          ]
+        },
+        {
           "id": "dossier_witness_byoxpc",
           "default": false,
           "description": "The dossier of a run selected through an owned BYOXPC runner reports the installed bundle's binaries hashed against the shipped baselines",
@@ -2398,6 +2412,7 @@
         "runner_byoxpc/BBX-002",
         "witness_contract/order_barrier_mutations",
         "witness_contract/porcelain_output_controls",
+        "witness_contract/guide_workflows",
         "witness_contract/dossier_witness_byoxpc",
         "runner_byoxpc/registry_recovery",
         "runner_byoxpc/default_location",

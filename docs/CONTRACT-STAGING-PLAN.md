@@ -34,6 +34,11 @@ Stage-three records: the [settled account](../records/contract/STAGE-THREE-ACCOU
 [verification receipts](../records/contract/evidence/stage-three/README.md) retain
 the final representation, truth corrections and scoped checks.
 
+Stage-four records: the [guide account](../records/contract/STAGE-FOUR-ACCOUNT.md),
+[workflow evidence](../records/contract/evidence/stage-four/README.md) and
+[prepared release notes](../records/contract/RELEASE-NOTES-v0.3.8.md) retain the
+revised workflows, failed attempts, successful observations and validation limits.
+
 ## The stages
 
 | Stage | What it does | Changes product behavior | Ends with |

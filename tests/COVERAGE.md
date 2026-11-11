@@ -316,3 +316,13 @@ five alternating pairs per regime and one selected tail. Independent default
 CPU controls withhold no-op/contrary-pair credit and reject missing, excluded
 or mismatched pairs. Its live query/effect observations remain independent of
 CPU benefit; it supplies no deployment, response or energy qualification.
+
+
+The opt-in `witness_contract/guide_workflows` extracts commands from the staged
+guide and retains their exact source, substitutions and outcomes. It checks a
+fresh empty-file create and existing-target guard, host capture-flag/nonce
+refusals followed by a positive receipt, helper compilation, and the owned
+BYOXPC install/status/verify/create/validate/remove flow. File identities and
+service/plist/registry absence are observed independently. It requires an empty
+default registry, GUI session and matching signing identity. The independent
+reader corpus supplies the guide's constructed result-interpretation evidence.

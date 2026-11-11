@@ -997,3 +997,16 @@ intent boundary. It builds signed truncate and append controls with equal public
 shapes, checks both current assertions and both cross-build refusals, and observes
 file contents plus client and worker entry traces independently. The default
 accepted-input case covers direct XPC refusal before child creation.
+
+
+## Guide command workflows
+
+After revising executable request, repair or external-runner recipes, stage the
+generated guide with the selected signed app and run
+`tests/run.sh --case witness_contract/guide_workflows`. The opt-in case requires
+a matching Developer ID, logged-in GUI session and empty default runner registry.
+Its [suite account](suites/witness_contract/README.md#guide-workflows) identifies
+the exact displayed commands, independent file/cleanup observations and durable
+ownership. Missing or ambiguous command anchors refuse before the affected
+command; changed instructions require review of those cut points and assertions.
+Use the existing constructed reader controls for result-interpretation examples.

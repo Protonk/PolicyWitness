@@ -688,9 +688,8 @@ result.
 
 ```contract
 defines: "condition"
+uses: ["identity.definitions.reply"]
 ```
-
-The ordinary semantic branch uses the [reply definition](#contract-identity-definitions-reply).
 
 | Check family | Applicability and checked relationship | Finding scope |
 | --- | --- | --- |

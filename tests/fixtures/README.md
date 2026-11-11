@@ -176,3 +176,11 @@ controls. [Fixture contract](worker_lifecycle/README.md),
 for open-code preservation through ABI decoding, runner/client/controller
 forwarding, validator diagnostics and helper receivers. The fixture establishes
 transport only; see its README for structural and competing-failure controls.
+
+
+The BYOXPC session helper also adopts the guide workflow's explicit
+`pw-guide.*/runner.*/PWRunner.guide.xpc` layout before copying or signing.
+The guide case retains the work directory and its device/inode; the helper
+adds staged-directory identity and exact service/bundle/plist ownership, then
+uses the ordinary verified-removal path. Its source/ownership controls belong
+to `witness_contract/guide_workflows`.

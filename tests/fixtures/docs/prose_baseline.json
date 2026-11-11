@@ -8,18 +8,6 @@
       "text": "32-byte pair digests. Each pair digest hashes LE32 key-byte count, key UTF-8 bytes,"
     },
     {
-      "document": "docs/PolicyWitness.md",
-      "invariant": "G9",
-      "kind": "literal",
-      "text": "the key is ten seconds). Three serial runs with a short pause between them"
-    },
-    {
-      "document": "docs/PolicyWitness.md",
-      "invariant": "G9",
-      "kind": "literal",
-      "text": "took about four seconds of wall time in the project's measurement."
-    },
-    {
       "document": "docs/SIGNING.md",
       "invariant": "G9",
       "kind": "literal",

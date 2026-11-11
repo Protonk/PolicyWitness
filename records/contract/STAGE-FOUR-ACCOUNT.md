@@ -1,0 +1,185 @@
+# Stage-four guide account
+
+The guide now takes a user from a saved build identity and fresh effect target
+through request preparation, refusal correction, result interpretation and
+external-runner recovery. The contract supplies the underlying definitions;
+the guide keeps the fields and next actions together at the point of use.
+
+## Integration and review
+
+The nine-file authored package was integrated after stage-three commit
+`5c1c63dc`, with all preimages and postimages verified. It revises the guide,
+shared FAQ, limits explanation, extension coverage and comparison-reading rules,
+transcribes the preceding release's footprint observations and advances the
+release-procedure example. The two obsolete prose-baseline entries were removed;
+no new duration or size exceptions were added. Limits and footprint generators
+own the copied sections and tables. The initial assembled guide exactly matched
+the independently reviewed preview, SHA
+`aa24c71c67019804cf2d6b34655d23cc4271939797b94788b8110aff0558b01f`.
+
+The twelve-file workflow package adds an opt-in public-dispatcher case, documents
+its prerequisites and extends existing cleanup ownership to its private guide
+workspace. The package's new-file patch headers refused before mutation;
+all twelve reviewed postimages were then installed after complete preimage/hash
+verification. The shell wrapper uses the executable mode of neighboring wrappers.
+Constructed controls exercise actual file/ownership/recovery paths with fake OS
+inputs; the native walkthrough separately exercises the displayed commands.
+
+The coordinator reviewed the complete authored guide changes and regenerated
+regions, then reread the assembled workflow, shared explanations, result account,
+field inventory, operation descriptions and recovery sections in context.
+The preparatory section/evidence crosswalk records the available native,
+constructed and source owners. Existing anchors remain, with added entrances
+for the quick start, correction chain and contiguous result account.
+
+| Guide area | Resulting account |
+| --- | --- |
+| Quick start and questions | Save version/contract, use a private fresh directory, record stdout/stderr/exit and independently inspect a new empty file. Questions lead directly to the relevant workflow. |
+| Request, policy, helper and augmentation | Distinguish parsing, identity, shape, meaning, capacity, native compilation and application; preserve the typo → missing nonce → captured-receipt correction chain; separate helper diagnostics, held source/parameters and broadened augment permissions. |
+| Actors and extensions | Select equipment and application independently; keep native issuance, custody, delivery, consumption, release and fresh access separate; explain dependency cancellation, unavailable actors and observed setup/application. |
+| Limits and operating | Keep actual counts, units, deadline scopes and refusal fields beside their consequences; use submission state before retrying after transport uncertainty. |
+| Result and evidence | Read admission, host outcome, controller findings and individual effects in order; explain per-worker, actor and reply-wide withholding, degraded reports, finding paths and retained raw evidence. |
+| Dossier, paths, filters and attempts | Keep selected source/import inventory and later path observations separate from native operation results; preserve exact supported pairs, provenance, calibration limits and exec cleanup evidence. |
+| External runners | Inspect list/reconcile, stage and seal a coherent source, install with selected-worker entitlements, join stored/live identities, verify and perform a fresh effect, then observe registry/service/plist retirement before discarding staging. |
+| Public surfaces and packaging | Link the matching release contract, preserve the stamped surface inventory and stage the generated guide with its app. The v0.3.8 link becomes available when that history is published. |
+
+## Corrections exposed by integration
+
+The first focused selection found stale prose targets in six limits-documentation
+assertions. Their replacements use the current shared paragraphs and assert that
+each mutation actually changes its input. A constructed FAQ fixture preserves
+the bare EXTENSIONS.md link-rebasing control while live prose uses its guide
+anchor. Original failures remain recorded.
+
+The cross-document link check found the final stage-three prose link to a
+generated anchor inside an authored surface. The correction expresses the same
+Reply dependency with the tree's `uses` fact, allowing the renderer to own the
+link. This changes the account representation, with no product rule change.
+
+The assembled reread corrected inherited production descriptions: ordinary
+replies omit execution_form; an apply actor's optional applied observation is
+collected output, while unapplied actors omit it; ordering depends on collected
+worker output and the relevant actor visit; worker evidence depends on matching
+collected shared-memory identity. The generated execution-form comment is
+corrected at its porcelain input. The extension introduction describes applied
+issuance as an experiment choice, and the principal example refers to each of
+its four fresh reads. Receipt interpretation is stated positively under the
+carrying reply's contract. Displayed command fences remain unchanged by these
+corrections. Regenerated identities and final verification are recorded below.
+
+The initial focused run, `20261111T175904Z_4ee0cfa5`, completed all sixteen
+selected cases: twelve passed and four failed. All recorded zero system sleep;
+the selected app was valid before execution and unchanged afterward. The failed
+whole run remains failed. Its four diagnoses are distinct:
+
+| Owning case | Failure and correction |
+| --- | --- |
+| `source_drift/limits_documentation` | Six assertions retained former shared prose targets. The revised controls mutate current text and verify that every intended mutation changes its input. |
+| `source_drift/generator_contract` | An authored fragment linked to an anchor belonging to the generated document. A structured `uses` reference now owns that dependency and rendered link. |
+| `dispatcher/retention_controls` | The new guide-owner control expected exit 2 from the direct prune CLI; its documented/report-failure path returns 1. The expectation is corrected while preservation and exact inventory assertions remain. |
+| `witness_contract/guide_workflows` | Three list-envelope expectations used `runner_list`; the public constructor emits `runner_registry`. Only those literals changed. |
+
+The first walkthrough completed ordinary create, existing-target preservation,
+two pre-worker host refusals, positive compiled-profile capture and the direct
+helper before that list assertion. Its independently reviewed partial audit
+retains the exact input identity and successful outer cleanup. External runner
+installation had not begun and receives no credit from that attempt.
+
+The porcelain comment correction changed worker-identity input bytes, so the
+three generated identity copies were refreshed and the app rebuilt. The corrected
+build is 1337, source `5c1c63dc` dirty, with development contract
+`84448fb421a5a0e4acdbce236dae143e04df6d425c7a258c12df447e9b762444`
+and worker identity
+`52bbda618677886b6c59dcf5dd999e2b2a5021cbd2c8dc4f08aa0ba66ef2dd38`.
+The generated source and staged guide have identical SHA-256
+`31944ef9cd04d131e1cf2314ba1bb3e0f67322a4f58a5a828bcb08136f3fa3a4`.
+The corrected contract has 5,831 lines and 77,418 words; its only delta since
+the settled stage-three account is the generated Reply dependency link.
+
+The corrected selection, `20261111T181408Z_78d9824e`, passed all ten source-drift
+cases, the retention controls and the independent default-location runner case.
+Its guide case failed after the displayed copy command: the test compared full
+file modes with the source despite the guide's `umask 077`. All thirteen cases
+completed with zero sleep and a valid, unchanged app. The copied inventory had
+not been retained, so that attempt does not establish its exact difference.
+
+A first copy-control repair followed the local manual's distinction between
+masked regular files and preserved directory modes. The single-case retry
+`20261111T182501Z_840a2a11` retained both inventories and failed on all eleven
+directories: the observed copy narrowed 0755 to 0700 as well. File hashes, paths,
+types and regular-file modes matched; no entry aliased its source. This contradicts
+the manual-based directory prediction and remains a failed attempt. Its historical
+shell resolution was not recorded. Both attempts verified removal of their
+uninstalled staged copies and workspaces; installation had not begun.
+
+The revised copy check states the coherence requirement: exact contents, paths,
+types and symlink targets, preserved owner access, private regular-file modes,
+and directory modes either preserved or narrowed by the guide's mask. It rejects
+source aliases and changed bytes or lost execute permission. The next native run
+records copy-command resolution in its own shell, alongside both inventories.
+This is a test expectation and observation repair; displayed guide commands and
+product behavior are unchanged.
+
+## Execution and remaining limits
+
+The complete walkthrough `20261111T182903Z_8aff51a9` passes its single selected
+case, with zero sleep, no harness errors, a valid app before execution and an
+unchanged app afterward. It executes thirteen displayed fences as thirty-two
+source fragments plus the repeated existing-target guard. All thirty-three
+shell captures finish without timeout; the two intended native refusals retain
+exit 1 separately from their compound shell recipes.
+
+The coordinator read the actual retained host/client replies and independent
+file observations. The ordinary create, captured create and external-runner
+create each changed an absent target to a distinct regular, empty mode-0600 file.
+Their synthetic prediction-unavailable records retain query_not_requested and
+the path-unresolved planning limitation, with unestablished comparison order.
+The typo and missing-nonce requests were invoked at the host interface and then
+refused before worker creation. The positive capture joins nonce, worker PID,
+source hash and 492 decoded bytes with recomputed length/hash. The helper compiles
+that source while its earlier effect files remain unchanged.
+
+All six submitted run/verify exchanges carry accepted client captures and
+invoked submission states. The external create observes occupied from the host
+instance used for verification, then granted from a different host instance
+before its sole invocation. That is an observed acquisition retry; the saved
+submission records distinguish it from replaying a specimen.
+
+The external sequence joins install/status/verify/selected-run identities,
+selected worker equipment and independent entitlements. The selected worker's
+supplied/read-back entitlement dictionary is empty; the unentitled worker and
+validator report no entitlement payload. Validation updates one record, with
+zero missing/invalid entries and no failures. Removal leaves no installed or
+pending registry entry, service or plist. Both durable cleanup owners complete,
+the work/staging paths are absent, and the selected app's before/after inventory
+is identical. The copy's own shell resolves cp to /bin/cp; recorded source and
+copied inventories satisfy the revised coherence predicate without aliases.
+
+The new constructed ownership controls retain their separate scope: real file
+and cleanup operations with constructed command/OS inputs and injected consumer
+admission. They establish retention and refusal behavior for those inputs. Their
+simulated interrupted submission supplies no native interruption-frequency claim.
+The canonical failed and successful selections, original audits, final native
+audit and section/evidence crosswalk are retained in the stage-four evidence
+package. Original development artifacts remain gitignored and subject to ordinary
+retention.
+
+The source-drift and retention passes precede the final test-only copy repair.
+That repair is local to the opt-in walkthrough and its copy controls; it changes
+no generator, product source, shared ownership helper or corresponding input.
+Their earlier passes are retained with this reviewed applicability exception.
+The owning suite README now describes the new copy receipts; the final default
+battery will check that documentation with the complete final sources.
+
+Available repository scenarios support their actual policies, platform and
+observations. The exact new command walkthrough has its own evidence; existing
+extension tests execute the guide's two-actor JSON and the shared re-delegation
+scenario, while their newly displayed shell wrappers retain source-review scope.
+Constructed contradictory replies establish reader behavior separately from
+naturally observed executions. The unavailable external consumer profile
+collection remains a compatibility-validation limit; the local consumer and
+lifecycle readers have their own available evidence.
+
+The final checkpoint stops before the v0.3.8 tag. The maintainer's review and
+line-by-line contract reading precede tagged rehearsal, Apple submission and
+final release acceptance. Publication waits until the whole effort is complete.

@@ -12,9 +12,14 @@ Each actor chooses `equipment: "selected"` (the default) or `"unentitled"`, inde
 
 The service validates its own seal, its sealed `Contents/Resources/worker-equipment.json`, and both production worker artifacts before launching any actor. The inventory binds roles to relative paths, signed hashes, CDHashes, identifiers, teams, entitlements and the compiled worker ABI/build identity. There is no fallback between roles. After usable setup and before any activation or query collection, the host inspects the owned live process and matches its associated code to the binding. An inspection failure cancels scheduled activations while preserving any application already observed. Setup-failed or unlaunched actors remain unavailable without turning their missing inspection into a failure of healthy actors.
 
-Actor setup automatically records bounded apparatus observations before policy compilation/application: core-limit handling, authority mapping and framing, descriptor closure and each extension-symbol lookup. Missing extension symbols make the corresponding actions unavailable; required apparatus failure prevents application. Setup publication, application observation and final process disposition remain separate. Missing terminal publication leaves application uncertain rather than proving it did not happen.
+Actor setup automatically records bounded apparatus observations before policy
+compilation/application or the unapplied declaration: core-limit handling, authority mapping and framing, descriptor closure and each extension-symbol lookup. Missing extension symbols make the corresponding actions unavailable; required apparatus failure prevents application. Setup publication, application observation and final process disposition remain separate. Missing terminal publication leaves application uncertain rather than proving it did not happen.
 
-A phase may specify `after_termination: {"actor_id": "issuer"}` when that actor's last scheduled visit precedes the phase. The gate requires an owned natural reap after the source's final activation, including a nonzero exit or signal, before dependent activation and query collection. It does not require final phase completion. It does not kill an actor to satisfy the dependency. Expiry or an unusable dependency withholds that phase; cleanup and previously published facts retain their own meanings. The reply retains `actors[].owned_reap` and phase `activation_observation`; the gate references the source reap by `capture_ordinal`. Missing clock timestamps retain facts without establishing gate order.
+A phase may specify `after_termination: {"actor_id": "issuer"}` when that actor's last scheduled visit precedes the phase. The gate requires an owned natural reap after the source's final activation, including a nonzero exit or signal, before dependent activation and query collection. It does not require final phase completion. It does not kill an actor to satisfy the dependency. A failed evaluated gate cancels the remaining schedule, including later unrelated
+actors' visits, while final collection and cleanup continue. A gate that was
+never evaluated because its dependent actor was unavailable retains that distinct
+status; it does not itself impose that cancellation. Earlier published facts
+retain their own meanings. The reply retains `actors[].owned_reap` and phase `activation_observation`; the gate references the source reap by `capture_ordinal`. Missing clock timestamps retain facts without establishing gate order.
 
 ## Request forms
 
@@ -57,8 +62,9 @@ are in the [limits](PolicyWitness.md#limits).
 
 ## How authority moves
 
-Each actor has its own evidence region and its own authority region; neither
-is visible to another actor or to a validator. Each admitted issue has its own
+Each actor has its own evidence region. A plan containing token or delivery
+resources also receives a host custody session and one authority region per
+actor. Those regions are private to their owning host/worker endpoints. Each admitted issue has its own
 outbound slot, and each transfer has its own request and answer cell. An issued
 token is published once; its bytes remain immutable until the host copies or
 rejects them and erases that slot. A timeout cannot reuse the slot or consume
@@ -82,24 +88,27 @@ use. Tokens never enter the request, the reply, logs or diagnostics.
 Every actor's worker is launched with an empty environment, a policy pipe on
 stdin, and stdout and stderr opened on the null device. Its other inherited
 endpoints are its evidence region, readiness pipe and, when needed, authority
-region. Other host descriptors are closed at exec. The host disables core dumps before any token
-can arrive, and so does each worker before mapping its region.
+region. Other host descriptors are closed at exec. When creating a custody session, the host disables core dumps before creating
+its actor regions. Every actor worker resolves extension symbols and attempts
+its core-limit setup. A required authority region is mapped before policy setup;
+a plan with no authority resources records mapping as `not_required`. Applied
+actors then enter policy setup, and unapplied actors publish their declaration.
 
 ## What each observation establishes
 
-| Observation | Establishes | Does not establish |
+| Observation | Supported reading | Read separately |
 | --- | --- | --- |
-| `extension_events[]` with operation `issue`, `status: returned`, `native_nonnull: true` | That actor's process made the native issue call for the recorded class and path and received a nonnull result of the recorded length. | That the token is usable by anyone, or why it was granted. |
-| `issue` with `native_nonnull: false` | The native call returned NULL; `errno` is the value saved immediately after it. | A sandbox cause for the refusal. |
-| `resources.tokens[].status: issued` | The host accepted the published bytes into custody. | Delivery or consumption. |
-| `transfers[].status: delivered` with `equality: equal` | The recipient acknowledged a framed delivery whose bytes equalled the host's custody copy. | Consumption or access. |
-| `transfers[]` with any other status | Where the exchange stopped: custody absent, recipient refusal, timeout, mismatch. No native result belongs to a transfer. | A native refusal. |
-| `consume` with `status: returned` and `native_result` other than the failure sentinel | That actor received a candidate handle for the delivery it named. | Effective permission for any operation. |
-| `release` with `status: returned` | The native release call returned the recorded value. | Revocation of access or undoing of earlier effects. |
-| `status: unavailable` with an `unavailable_reason` | The named operation was not called for the recorded reason (no delivery, no handle, missing native symbol, no authority channel, repeated action). | A native result of any kind. |
-| Resource status `not_reached` | Terminal lifecycle evidence establishes that the producing action was not reached. | Absence of a result alone is insufficient; interrupted or unknown producers remain `unresolved`. |
-| `status: unresolved` | The action's result was never published: the actor died, was stopped or never reached it. | That the call did not happen. |
-| A fresh read that succeeds after a consume | That process could open and read the file at that moment. | That the consumed extension caused it; compare with the actor's baseline read and its policy. |
+| `extension_events[]` with operation `issue`, `status: returned`, `native_nonnull: true` | That actor's process made the native issue call for the recorded class and path and received a nonnull result of the recorded length. | Host custody, recipient delivery, consumption and fresh access observations. |
+| `issue` with `native_nonnull: false` | The native call returned NULL; `errno` is the value saved immediately after it. | Evidence distinguishing the cause of the native refusal. |
+| `resources.tokens[].status: issued` | The host accepted the published bytes into custody. | The delivery and consume records. |
+| `transfers[].status: delivered` with `equality: equal` | The recipient acknowledged a framed delivery whose bytes equalled the host's custody copy. | The consume result and later fresh access observations. |
+| `transfers[]` with any other status | Where the exchange stopped: custody absent, recipient refusal, timeout, mismatch. No native result belongs to a transfer. | Native issue/consume/release calls belong to their separate event records. |
+| `consume` with `status: returned` and `native_result` other than the failure sentinel | That actor received a candidate handle for the delivery it named. | Fresh attempts in that process after the consume. |
+| `release` with `status: returned` | The native release call returned the recorded value. | Later fresh attempts and independently observed earlier effects. |
+| `status: unavailable` with an `unavailable_reason` | The named operation was not called for the recorded reason (no delivery, no handle, missing native symbol, no authority channel, repeated action). | The exact no-call reason. |
+| Resource status `not_reached` | Terminal lifecycle evidence establishes that the producing action was not reached. | Interrupted or unknown producers remain `unresolved`. |
+| `status: unresolved` | The action's result was never published: the actor died, was stopped or never reached it. | Published progress and final lifecycle evidence about whether the boundary was reached. |
+| A fresh read that succeeds after a consume | That process could open and read the file at that moment. | That actor's baseline read, policy and other authority when investigating the cause. |
 
 Native results, host custody facts, recipient acknowledgements and the
 validator's predictions are separate records with separate writers. A source
@@ -113,7 +122,7 @@ extension events stay outside the query/attempt comparison.
 
 | Situation | Reading |
 | --- | --- |
-| Required authority-region or custody setup fails | Host preparation refuses launch, or automatic worker setup records a terminal apparatus failure before policy compilation/application. This is distinct from missing native symbols or a native refusal. |
+| Required authority-region or custody setup fails | Host preparation refuses launch, or automatic worker setup records a terminal apparatus failure before policy setup or the unapplied declaration. Missing native symbols instead make the corresponding actions unavailable. |
 | An actor's policy does not compile or apply | That actor's `setup_status` is `setup_failed`; its visits are `actor_unavailable`; other actors' evidence stands. The run is `runner_failed`. |
 | An application is published during cleanup after setup expires | Setup stays `setup_timeout` and its visits remain unavailable; `applied` and `application_count` retain the later observed application. |
 | An actor dies during a visit | The visit records how it ended; the scheduler establishes the actor is reaped before activating anyone else; later visits of that actor are unavailable. |

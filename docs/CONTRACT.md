@@ -4682,7 +4682,7 @@ result.
 <a id="contract-diagnostics-execution-families"></a>
 ##### Check families and applicability
 
-The ordinary semantic branch uses the [reply definition](#contract-identity-definitions-reply).
+Uses [Reply](#contract-identity-definitions-reply).
 
 | Check family | Applicability and checked relationship | Finding scope |
 | --- | --- | --- |
