@@ -33,6 +33,14 @@ Exit status decoded after waitpid returned this child; zero is an observed exit 
 
 True when the canonical disposition contains any slot other than completed; false means all represented slots completed.
 
+#### Canonical incomplete-slot flag {canonical: condition}
+
+```contract
+bind.c: lc_worker.disposition.steps
+match.c: lc_worker.disposition.steps[c].slot != "completed"
+test: implies(present(lc_worker.disposition), lc_worker.partial_steps == (matches(c) > 0))
+```
+
 ### worker_evidence {worker_evidence: field}
 
 Acquired worker publication snapshot, including independent progress, failure, diagnostic and policy-read observations.
@@ -107,6 +115,159 @@ Measured monotonic wait for departure after the host exit request, present when 
 ### disposition {disposition: field}
 
 Host-resolved lifecycle questions, step claims and conflicts. Ordinary subprocess reporting supplies this account and derives compatibility fields from it.
+
+#### Supported signal value {signal_value: condition}
+
+```contract
+test: implies(present(lc_worker.disposition) and lc_worker.disposition.questions.final_status.state == "supported" and lc_worker.disposition.questions.final_status.answer == "signal", present(lc_worker.disposition.questions.final_status.value) and is_variant(lc_worker.disposition.questions.final_status.value, "Integer") and variant(lc_worker.disposition.questions.final_status.value, "Integer") == lc_worker.term_signal)
+```
+
+#### Supported exit_code value {exit_value: condition}
+
+```contract
+test: implies(present(lc_worker.disposition) and lc_worker.disposition.questions.final_status.state == "supported" and lc_worker.disposition.questions.final_status.answer == "exit_code", present(lc_worker.disposition.questions.final_status.value) and is_variant(lc_worker.disposition.questions.final_status.value, "Integer") and variant(lc_worker.disposition.questions.final_status.value, "Integer") == lc_worker.exit_code)
+```
+
+#### Conflicting status issue exists {status_issue_exists: condition}
+
+```contract
+test: implies(present(lc_worker.disposition) and lc_worker.disposition.questions.final_status.state == "conflicting", count(lc_worker.disposition.issues) > 0)
+```
+
+#### First status conflict issue {status_issue: condition}
+
+```contract
+each: ["i"]
+bind.i: lc_worker.disposition.issues
+match.i: i == 0
+test: implies(present(lc_worker.disposition) and lc_worker.disposition.questions.final_status.state == "conflicting", lc_worker.disposition.issues[i].kind == "conflict" and lc_worker.disposition.issues[i].rule == "D1" and lc_worker.disposition.issues[i].question == "final_status" and absent(lc_worker.disposition.issues[i].step_index) and lc_worker.disposition.issues[i].observations == ["exit_code", "term_signal"])
+```
+
+### Resolve the final process status {final_status: reports}
+
+```contract
+who: ["identity.definitions.host"]
+where: "worker disposition assembly"
+entry: ["xpc_execute"]
+recipient: ["controller", "xpc_caller"]
+report: ["runner_reply"]
+when: present(lc_worker.disposition)
+selection: "first_match"
+```
+
+#### No successful reap {unreaped: outcome}
+
+```contract
+test: lc_worker.reaped != True
+effects: [set_value(lc_worker.disposition.questions.final_status.state, 'unresolved'), set_value(lc_worker.disposition.questions.final_status.reason, 'no_successful_reap'), set_value(lc_worker.disposition.questions.final_status.basis, ['reaped']), withhold(lc_worker.disposition.questions.final_status.answer), withhold(lc_worker.disposition.questions.final_status.value), withhold(lc_worker.disposition.questions.final_status.issue)]
+```
+
+#### Competing status forms {conflict: outcome}
+
+```contract
+test: present(lc_worker.exit_code) and present(lc_worker.term_signal)
+effects: [set_value(lc_worker.disposition.questions.final_status.state, 'conflicting'), set_value(lc_worker.disposition.questions.final_status.issue, 0), withhold(lc_worker.disposition.questions.final_status.answer), withhold(lc_worker.disposition.questions.final_status.value), withhold(lc_worker.disposition.questions.final_status.reason), withhold(lc_worker.disposition.questions.final_status.basis)]
+```
+
+#### Observed terminating signal {signal: outcome}
+
+```contract
+test: present(lc_worker.term_signal)
+effects: [set_value(lc_worker.disposition.questions.final_status.state, 'supported'), set_value(lc_worker.disposition.questions.final_status.answer, 'signal'), set_value(lc_worker.disposition.questions.final_status.basis, ['reaped', 'term_signal']), withhold(lc_worker.disposition.questions.final_status.reason), withhold(lc_worker.disposition.questions.final_status.issue)]
+```
+
+#### Observed exit status {exit: outcome}
+
+```contract
+test: present(lc_worker.exit_code)
+effects: [set_value(lc_worker.disposition.questions.final_status.state, 'supported'), set_value(lc_worker.disposition.questions.final_status.answer, 'exit_code'), set_value(lc_worker.disposition.questions.final_status.basis, ['reaped', 'exit_code']), withhold(lc_worker.disposition.questions.final_status.reason), withhold(lc_worker.disposition.questions.final_status.issue)]
+```
+
+#### Unusable owned status {missing: outcome}
+
+```contract
+test: True
+effects: [set_value(lc_worker.disposition.questions.final_status.state, 'unresolved'), set_value(lc_worker.disposition.questions.final_status.reason, 'status_unusable'), set_value(lc_worker.disposition.questions.final_status.basis, ['reaped']), withhold(lc_worker.disposition.questions.final_status.answer), withhold(lc_worker.disposition.questions.final_status.value), withhold(lc_worker.disposition.questions.final_status.issue)]
+```
+
+#### Source for these relationships {source: owner}
+
+```contract
+scope: "subtree"
+grade: "source_read"
+source: {"path": "runner/Sources/PWRunnerCore/CWorkerDisposition.swift", "symbol": "resolveDisposition"}
+pins: "The first five branches derive the final-status claim and place the D1 conflict first in the issue array."
+```
+
+### Copy the polling stop {resolve_stop_reason: reports}
+
+```contract
+who: ["identity.definitions.host"]
+where: "worker disposition assembly"
+entry: ["xpc_execute"]
+recipient: ["controller", "xpc_caller"]
+report: ["runner_reply"]
+when: present(lc_worker.disposition)
+selection: "first_match"
+```
+
+#### Recorded observation {recorded: outcome}
+
+```contract
+test: present(lc_worker.poll_stop_reason)
+effects: [set_value(lc_worker.disposition.questions.stop_reason.state, "supported"), set_value(lc_worker.disposition.questions.stop_reason.answer, lc_worker.poll_stop_reason), set_value(lc_worker.disposition.questions.stop_reason.basis, ["poll_stop_reason"]), withhold(lc_worker.disposition.questions.stop_reason.value), withhold(lc_worker.disposition.questions.stop_reason.reason), withhold(lc_worker.disposition.questions.stop_reason.issue)]
+```
+
+#### Unrecorded observation {missing: outcome}
+
+```contract
+test: True
+effects: [set_value(lc_worker.disposition.questions.stop_reason.state, "unresolved"), set_value(lc_worker.disposition.questions.stop_reason.reason, "not_recorded"), withhold(lc_worker.disposition.questions.stop_reason.answer), withhold(lc_worker.disposition.questions.stop_reason.value), withhold(lc_worker.disposition.questions.stop_reason.issue), withhold(lc_worker.disposition.questions.stop_reason.basis)]
+```
+
+#### Source for these relationships {source: owner}
+
+```contract
+scope: "subtree"
+grade: "source_read"
+source: {"path": "runner/Sources/PWRunnerCore/CWorkerDisposition.swift", "symbol": "resolveDisposition"}
+pins: "A present host string is copied verbatim with its basis; absence produces the unresolved not_recorded claim."
+```
+
+### Copy the final collection basis {resolve_collection_basis: reports}
+
+```contract
+who: ["identity.definitions.host"]
+where: "worker disposition assembly"
+entry: ["xpc_execute"]
+recipient: ["controller", "xpc_caller"]
+report: ["runner_reply"]
+when: present(lc_worker.disposition)
+selection: "first_match"
+```
+
+#### Recorded observation {recorded: outcome}
+
+```contract
+test: present(lc_worker.collection_basis)
+effects: [set_value(lc_worker.disposition.questions.collection_basis.state, "supported"), set_value(lc_worker.disposition.questions.collection_basis.answer, lc_worker.collection_basis), set_value(lc_worker.disposition.questions.collection_basis.basis, ["collection_basis"]), withhold(lc_worker.disposition.questions.collection_basis.value), withhold(lc_worker.disposition.questions.collection_basis.reason), withhold(lc_worker.disposition.questions.collection_basis.issue)]
+```
+
+#### Unrecorded observation {missing: outcome}
+
+```contract
+test: True
+effects: [set_value(lc_worker.disposition.questions.collection_basis.state, "unresolved"), set_value(lc_worker.disposition.questions.collection_basis.reason, "not_recorded"), withhold(lc_worker.disposition.questions.collection_basis.answer), withhold(lc_worker.disposition.questions.collection_basis.value), withhold(lc_worker.disposition.questions.collection_basis.issue), withhold(lc_worker.disposition.questions.collection_basis.basis)]
+```
+
+#### Source for these relationships {source: owner}
+
+```contract
+scope: "subtree"
+grade: "source_read"
+source: {"path": "runner/Sources/PWRunnerCore/CWorkerDisposition.swift", "symbol": "resolveDisposition"}
+pins: "A present host string is copied verbatim with its basis; absence produces the unresolved not_recorded claim."
+```
 
 ## Measured host wait {host_wait: subject}
 
@@ -490,13 +651,15 @@ Conflicting observations referenced by conflicting claims; indices are zero-base
 ### Resolving lifecycle claims {resolve: reports}
 
 ```contract
-who: "runner host"
+uses: ["lifecycle.worker.final_status", "lifecycle.worker.resolve_stop_reason", "lifecycle.worker.resolve_collection_basis", "lifecycle.disposition.ordinary_projection", "lifecycle.disposition.actor_projection"]
+who: ["identity.definitions.host"]
 where: "final worker output and plan join"
-entry: ["single_worker", "actors"]
-recipient: ["direct_host_caller", "runner_client", "controller"]
-report: ["ordinary_reply"]
+entry: ["xpc_execute"]
+recipient: ["xpc_caller", "runner_client", "controller"]
+report: ["runner_reply"]
 free.condition: Resolve each question from the owning worker's acquired output, unique slot identities and submitted plan. A not_reached or unpublished conclusion requires terminal collection where specified below.
-free.effect: Publish the canonical account once and copy its boundary/result claims into per-attempt lifecycle projections. Retain conflicts as issues rather than selecting one conflicting observation.
+free.effect: Resolve and publish the canonical account once. Retain competing observations as conflict issues, and derive each per-attempt summary from its canonical claims and attempt applicability.
+retained_free: {"condition": {"kind": "native_protocol", "reason": "Canonical lifecycle resolution uses acquired worker publication, slot identity and terminal collection; final labels cannot stand in for those raw inputs."}, "effect": {"kind": "native_protocol", "reason": "Acquired publication and progress ordering determine canonical claims and conflicts. Explicit projection rules own the first-ID association and copied boundary/result records; the summary classifier retains its existing source-defined vocabulary."}}
 ```
 
 An exit code or signal is supported after a successful reap. Both representations
@@ -508,6 +671,104 @@ slot it produces D5. Returned-or-later terminal progress beside an incomplete
 supported slot produces D5 for result publication. Live collection leaves
 missing results unresolved. An unsupported attempt has inapplicable result
 publication and an `unsupported` lifecycle summary.
+
+### Project ordinary canonical step claims {ordinary_projection: reports}
+
+```contract
+who: ["identity.definitions.host"]
+where: "per-step canonical lifecycle projection"
+entry: ["xpc_execute"]
+recipient: ["controller", "xpc_caller"]
+report: ["runner_reply"]
+when: present(reply.runner_subprocess) and present(reply.runner_subprocess.disposition) and matches(d) == 0
+each: ["s", "c"]
+bind.s: reply.steps
+bind.c: reply.runner_subprocess.disposition.steps
+match.c: reply.runner_subprocess.disposition.steps[c].step_id == reply.steps[s].step_id
+bind.d: reply.runner_subprocess.disposition.steps
+match.d: reply.runner_subprocess.disposition.steps[d].step_id == reply.steps[s].step_id and d < c
+```
+
+#### Both canonical claims produce the projection {presence: condition}
+
+```contract
+test: implies(present(reply.runner_subprocess.disposition.steps[c].questions.step_boundary_reached) and present(reply.runner_subprocess.disposition.steps[c].questions.step_result_published), present(reply.steps[s].attempt.lifecycle))
+```
+
+#### Copy the canonical claims {copy: effect}
+
+```contract
+on: "always"
+when: present(reply.runner_subprocess.disposition.steps[c].questions.step_boundary_reached) and present(reply.runner_subprocess.disposition.steps[c].questions.step_result_published)
+effects: [set_value(reply.steps[s].attempt.lifecycle.boundary, reply.runner_subprocess.disposition.steps[c].questions.step_boundary_reached), set_value(reply.steps[s].attempt.lifecycle.result, reply.runner_subprocess.disposition.steps[c].questions.step_result_published)]
+```
+
+#### Missing canonical claim {missing: effect}
+
+```contract
+on: "always"
+when: not (present(reply.runner_subprocess.disposition.steps[c].questions.step_boundary_reached) and present(reply.runner_subprocess.disposition.steps[c].questions.step_result_published))
+effects: [withhold(reply.steps[s].attempt.lifecycle)]
+```
+
+#### Projection source {source: owner}
+
+```contract
+scope: "subtree"
+grade: "source_read"
+source: [{"path": "runner/Sources/PWRunnerCore/CWorkerDisposition.swift", "symbol": "attemptLifecycle"}, {"path": "runner/Sources/PWRunnerCore/CWorkerStepResults.swift", "symbol": "buildStepResults"}, {"path": "runner/Sources/PWRunnerCore/ActorOrchestration.swift", "symbol": "assembleActorReply"}]
+pins: "The ordinary and actor builders select the first matching canonical step; attemptLifecycle copies both claims when present and returns nil otherwise."
+```
+
+### Project actor canonical step claims {actor_projection: reports}
+
+```contract
+who: ["identity.definitions.host"]
+where: "per-step canonical lifecycle projection"
+entry: ["xpc_execute"]
+recipient: ["controller", "xpc_caller"]
+report: ["runner_reply"]
+when: present(reply.actors) and present(reply.actors[a].subprocess) and present(reply.actors[a].subprocess.disposition) and matches(d) == 0
+each: ["a", "s", "c"]
+bind.a: reply.actors
+bind.s: reply.steps
+bind.c: reply.actors[a].subprocess.disposition.steps
+match.c: reply.actors[a].subprocess.disposition.steps[c].step_id == reply.steps[s].step_id
+bind.d: reply.actors[a].subprocess.disposition.steps
+match.d: reply.actors[a].subprocess.disposition.steps[d].step_id == reply.steps[s].step_id and d < c
+match.s: reply.steps[s].actor_id == reply.actors[a].actor_id
+```
+
+#### Both canonical claims produce the projection {presence: condition}
+
+```contract
+test: implies(present(reply.actors[a].subprocess.disposition.steps[c].questions.step_boundary_reached) and present(reply.actors[a].subprocess.disposition.steps[c].questions.step_result_published), present(reply.steps[s].attempt.lifecycle))
+```
+
+#### Copy the canonical claims {copy: effect}
+
+```contract
+on: "always"
+when: present(reply.actors[a].subprocess.disposition.steps[c].questions.step_boundary_reached) and present(reply.actors[a].subprocess.disposition.steps[c].questions.step_result_published)
+effects: [set_value(reply.steps[s].attempt.lifecycle.boundary, reply.actors[a].subprocess.disposition.steps[c].questions.step_boundary_reached), set_value(reply.steps[s].attempt.lifecycle.result, reply.actors[a].subprocess.disposition.steps[c].questions.step_result_published)]
+```
+
+#### Missing canonical claim {missing: effect}
+
+```contract
+on: "always"
+when: not (present(reply.actors[a].subprocess.disposition.steps[c].questions.step_boundary_reached) and present(reply.actors[a].subprocess.disposition.steps[c].questions.step_result_published))
+effects: [withhold(reply.steps[s].attempt.lifecycle)]
+```
+
+#### Projection source {source: owner}
+
+```contract
+scope: "subtree"
+grade: "source_read"
+source: [{"path": "runner/Sources/PWRunnerCore/CWorkerDisposition.swift", "symbol": "attemptLifecycle"}, {"path": "runner/Sources/PWRunnerCore/CWorkerStepResults.swift", "symbol": "buildStepResults"}, {"path": "runner/Sources/PWRunnerCore/ActorOrchestration.swift", "symbol": "assembleActorReply"}]
+pins: "The ordinary and actor builders select the first matching canonical step; attemptLifecycle copies both claims when present and returns nil otherwise."
+```
 
 ## Lifecycle claim {claim: subject}
 
@@ -890,14 +1151,16 @@ Measured monotonic host wait after collection closed, with production allowance 
 ### Joining accepted validator records {associate: reports}
 
 ```contract
-who: "runner host"
+uses: ["lifecycle.validator.cardinality"]
+who: ["identity.definitions.host"]
 where: "closed phase query collection"
-entry: ["single_worker", "actors"]
-recipient: ["direct_host_caller", "runner_client", "controller"]
-report: ["ordinary_reply", "retained_reporting_failure"]
+entry: ["xpc_execute"]
+recipient: ["xpc_caller", "runner_client", "controller"]
+report: ["runner_reply"]
 effects: retain_records(lc_validator.records)
-free.condition: Join each expected ID to exactly one accepted record whose supplied query metadata agrees; allow/deny additionally require the complete submitted query identity.
-free.effect: Exclude ambiguous, missing or mismatched records from the per-step join, retain every accepted record in the collection and publish association_issues.
+free.condition: A unique expected-ID record enters the per-step join only when every supplied query metadata value agrees with the submitted query. Allow/deny records must supply the complete submitted query identity.
+free.effect: Publish association issues in expected-query order, then unexpected IDs in sorted order, then a null-ID issue when present. Withhold each failed per-step join while retaining accepted records.
+retained_free: {"condition": {"kind": "native_protocol", "reason": "Operation/filter comparison uses the separate submitted ValidatorQueryIdentity array. The collector retains its step IDs, while diagnostic records can omit individual query metadata fields."}, "effect": {"kind": "native_protocol", "reason": "The transient byStep map and submitted-query order govern projection and mismatch diagnostics. The adjacent cardinality rule counts accepted records and the issues produced for their groups."}}
 ```
 
 Duplicate IDs leave every record of that group at collection scope. Null IDs
@@ -905,6 +1168,92 @@ remain unassociated. Diagnostic outcomes may omit query metadata; any supplied
 metadata must agree. A decoding fault retains the accepted prefix and the
 rejected frame's bounded byte context. Transport or later cleanup failure
 preserves the already accepted observations.
+
+### Count expected and unexpected associations {cardinality: reports}
+
+```contract
+who: ["identity.definitions.host"]
+where: "closed validator collection association"
+entry: ["xpc_execute"]
+recipient: ["controller", "xpc_caller"]
+report: ["runner_reply"]
+when: present(lc_validator.records) and present(lc_validator.expected_step_ids) and present(lc_validator.association_issues)
+```
+
+#### Expected identifier groups {expected: condition}
+
+```contract
+bind.e: lc_validator.expected_step_ids
+bind.f: lc_validator.expected_step_ids
+match.f: lc_validator.expected_step_ids[f] == lc_validator.expected_step_ids[e]
+bind.v: lc_validator.records
+match.v: lc_validator.records[v].step_id == lc_validator.expected_step_ids[e]
+bind.i: lc_validator.association_issues
+match.i: lc_validator.association_issues[i].step_id == lc_validator.expected_step_ids[e]
+each: ["e"]
+test: implies(matches(v) != 1, matches(i) == matches(f))
+```
+
+##### Missing group {missing: condition}
+
+```contract
+each: ["i"]
+test: implies(matches(v) == 0, lc_validator.association_issues[i].kind == "missing_id" and lc_validator.association_issues[i].count == 0)
+```
+
+##### Duplicate group {duplicate: condition}
+
+```contract
+each: ["i"]
+test: implies(matches(v) > 1, lc_validator.association_issues[i].kind == "duplicate_id" and lc_validator.association_issues[i].count == matches(v))
+```
+
+#### Unexpected identifier groups {unexpected: condition}
+
+```contract
+bind.v: lc_validator.records
+bind.e: lc_validator.expected_step_ids
+match.e: lc_validator.expected_step_ids[e] == lc_validator.records[v].step_id
+bind.g: lc_validator.records
+match.g: lc_validator.records[g].step_id == lc_validator.records[v].step_id
+bind.i: lc_validator.association_issues
+match.i: lc_validator.association_issues[i].step_id == lc_validator.records[v].step_id
+each: ["v"]
+test: implies(present(lc_validator.records[v].step_id) and matches(e) == 0, matches(i) == 1)
+```
+
+##### Unexpected group count {count: condition}
+
+```contract
+each: ["i"]
+test: implies(present(lc_validator.records[v].step_id) and matches(e) == 0, lc_validator.association_issues[i].kind == "unexpected_id" and lc_validator.association_issues[i].count == matches(g))
+```
+
+#### Unassociated records {unassociated: condition}
+
+```contract
+bind.v: lc_validator.records
+match.v: absent(lc_validator.records[v].step_id)
+bind.i: lc_validator.association_issues
+match.i: absent(lc_validator.association_issues[i].step_id) and lc_validator.association_issues[i].kind == "unassociated"
+test: implies(matches(v) > 0, matches(i) == 1) and implies(matches(v) == 0, matches(i) == 0)
+```
+
+##### Unassociated count {count: condition}
+
+```contract
+each: ["i"]
+test: lc_validator.association_issues[i].count == matches(v)
+```
+
+#### Source for these relationships {source: owner}
+
+```contract
+scope: "subtree"
+grade: "source_read"
+source: {"path": "runner/Sources/PWRunnerCore/PWRunnerPredictionEvidence.swift", "symbol": "validatorAssociationIssues"}
+pins: "Groups are formed from every accepted non-null ID before metadata comparison; missing/duplicate/unexpected/null-ID groups preserve their actual counts."
+```
 
 ## Rejected validator frame {decode_fault: subject}
 
@@ -1188,5 +1537,4 @@ grade: "source_read"
 source: [{"path": "runner/Sources/PWRunnerCore/PWRunnerLifecycleEvidence.swift", "symbol": "PWRunnerSubprocess"}, {"path": "runner/Sources/PWRunnerCore/CWorker.swift", "symbol": "decodeWorkerEvidence"}, {"path": "runner/Sources/PWRunnerCore/CWorkerDisposition.swift", "symbol": "resolveDisposition"}, {"path": "runner/Sources/PWRunnerCore/PWRunnerDisposition.swift", "symbol": "lifecycleSummary"}, {"path": "runner/Sources/PWRunnerCore/PWRunnerPredictionEvidence.swift", "symbol": "validatorAssociationIssues"}, {"path": "runner/Sources/PWRunnerCore/ValidatorClient.swift", "symbol": "decodeValidatorFrames"}, {"path": "runner/Sources/PWRunnerCore/PWRunnerAttemptEvidence.swift", "symbol": "execObservationEvidenceProblem"}, {"path": "runner/Sources/PWRunnerCore/PWRunnerAuthoritySetup.swift", "symbol": "PWOwnedReapObservation"}, {"path": "controller/tools/pw_probe_runner/pw_probe_runner.c", "symbol": "write_ready_byte"}, {"path": "runner/Sources/PWRunnerCore/CWorker.swift", "symbol": "CWorkerInput"}, {"path": "runner/Sources/PWRunnerCore/ActorSession.swift", "symbol": "readyBudgetMs"}, {"path": "runner/Sources/PWRunnerCore/ValidatorClient.swift", "symbol": "runValidator"}, {"path": "controller/tools/pw_probe_runner/pw_probe_runner_abi.h", "symbol": "PW_SHM_DIAGNOSTIC_BYTES"}, {"path": "controller/tools/pw_probe_runner/pw_worker_timing.h", "symbol": "PW_EXEC_REAP_GRACE_MS"}]
 pins: "Imported public field definitions joined to producer/decoder/assessment meanings; explicit rule and evidence gaps preserve scope."
 context: "Source and check inspection during contract drafting."
-limits: "No execution credit is claimed by this owner."
 ```

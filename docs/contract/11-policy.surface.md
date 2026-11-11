@@ -61,12 +61,13 @@ Controller-resolved list of named packaged SBPL fragments. Omission, null and an
 ### Prepare native compiler input {parameters: acts}
 
 ```contract
-who: "host and worker"
+who: ["identity.definitions.host", "identity.definitions.worker"]
 where: "policy preparation and compilation"
-entry: ["ordinary_xpc_execute", "actor_xpc_execute"]
+entry: ["xpc_execute"]
 recipient: ["caller", "report_reader"]
 report: ["runner_reply"]
 free.effect: Sort parameter keys, transport their complete strings, create native parameters only for a nonempty map, and pass each key and value through sandbox_set_param before compiling the selected source. Report setup or compile failure at the observed native stage.
+retained_free: {"effect":{"kind":"native_protocol","reason":"Sorted allocation and sandbox_set_param calls define native resource setup and cleanup, not merely the final parameter map."}}
 ```
 
 A supplied parameter is data for the SBPL compiler. The compiler decides how source expressions use it. Source text, selected parameter values and imported file bytes are distinct inputs.
@@ -128,7 +129,6 @@ scope: "subtree"
 grade: "source_read"
 source: [{"path": "runner/Sources/PWRunnerCore/PWRunnerRequest.swift", "symbol": "PWRunnerPolicySpec"}, {"path": "runner/Sources/PWRunnerCore/ProbeRunner.swift", "symbol": "policyMeaningFailure"}, {"path": "runner/Sources/PWRunnerCore/CWorkerRequestPlanning.swift", "symbol": "workerParamsFromPolicy"}, {"path": "controller/tools/pw_probe_runner/pw_probe_runner.c", "symbol": "sandbox_set_param"}]
 pins: "The adjacent field meanings and operations follow the named implementation."
-context: "Review of the named producer branches."
 limits: "Decoder, meaning checks, parameter ordering, worker parameter snapshot/setup and compilation branches read. Native execution is not credited."
 ```
 
@@ -141,12 +141,13 @@ Augments select packaged source fragments from `Contents/Resources/Augments/<nam
 ### Resolve and append {resolve: acts}
 
 ```contract
-who: "controller"
+who: ["identity.definitions.controller"]
 where: "saved-file policy normalization"
 entry: ["cli_run"]
 recipient: ["caller", "report_reader"]
 report: ["run_envelope"]
 free.effect: For a nonempty augment list require a string source, validate every name, read the named resources in requested order and append a newline plus each fragment. Replace the policy source only after every requested read succeeds. Remove augments from the held policy before submission.
+retained_free: {"effect":{"kind":"native_protocol","reason":"Ordered file reads, newline splicing and replacement after every successful read define atomic in-memory augmentation."}}
 ```
 
 An empty string source is accepted at this normalization boundary. An unavailable resource produces `augment_unavailable` at the offending list element. Invalid names produce `invalid_augment_name`. A wrong list or element type produces `type_mismatch`. The original file remains unchanged because resolution edits the held JSON value.
@@ -154,12 +155,13 @@ An empty string source is accepted at this normalization boundary. An unavailabl
 ### Resolve actor policies in request order {actors: acts}
 
 ```contract
-who: "controller"
+who: ["identity.definitions.controller"]
 where: "actor policy normalization"
 entry: ["cli_run"]
 recipient: ["caller", "report_reader"]
 report: ["run_envelope"]
 free.effect: Resolve each actor policy object in actor order and stop after the first augment refusal. Retain each visited actor's original and selected source in its dossier. Mode and policy applicability are judged later by host admission.
+retained_free: {"effect":{"kind":"native_protocol","reason":"The first failed actor augmentation controls which later actor policies are never visited; the partial dossier retains visited reads."}}
 ```
 
 
@@ -228,12 +230,13 @@ Required compiler-helper policy object.
 ### Read helper input {read: acts}
 
 ```contract
-who: "sbpl-check"
+who: ["identity.definitions.helper"]
 where: "standalone argument, read and JSON boundary"
 entry: ["standalone_helper", "controller_helper_stdin"]
 recipient: ["caller", "report_reader"]
 report: ["helper_envelope", "stderr"]
 free.effect: Use the helper policy decoder. Usage errors, input-read errors and JSON/decode errors exit 2 and report on stderr. Successfully decoded requests proceed to helper admission and produce an envelope.
+retained_free: {"effect":{"kind":"raw_admission","reason":"Usage, byte-read and decode failures occur before the helper envelope and have separate stderr/process-exit paths."}}
 ```
 
 
@@ -245,8 +248,6 @@ scope: "subtree"
 grade: "source_read"
 source: [{"path": "controller/src/bin/sbpl-check.rs", "symbol": "CheckRequest"}, {"path": "controller/src/bin/sbpl-check.rs", "symbol": "fn main"}]
 pins: "The adjacent field meanings and operations follow the named implementation."
-context: "Review of the named producer branches."
-limits: "Source inspection supplies the stated branch behavior; this draft credits no execution."
 ```
 
 
@@ -256,6 +257,7 @@ limits: "Source inspection supplies the stated branch behavior; this draft credi
 ```contract
 record: "rust.CheckPolicy"
 as: "helper_policy"
+at: ["helper_request.policy"]
 ```
 
 The helper decoder ignores policy members outside this record, including capture and augment requests. Controller fallback supplies the already normalized policy source.
@@ -281,15 +283,52 @@ Optional string map. Null and absence mean no map; an empty map is present for r
 ### Helper admission order {admit: acts}
 
 ```contract
-who: "sbpl-check"
+who: ["identity.definitions.helper"]
 where: "pre-inventory admission"
 entry: ["standalone_helper", "controller_helper_stdin"]
 recipient: ["caller", "report_reader"]
 report: ["helper_envelope"]
-free.effect: Check format, source presence, source byte cap, source C-string conversion and parameter C-string conversion before import inventory or any native call. Input refusals exit 1 and report bad_request or policy_too_large, with compile and import_inventory null.
+free.effect: Stop at the first admission refusal. After format, source-presence and source-extent checks pass, construct the source C string and then parameter key/value C strings in map order; a failed conversion prevents later conversions and retains its diagnostic.
+retained_free: {"effect":{"kind":"native_protocol","reason":"C-string construction and its first diagnostic remain preparation operations; the decoded field refusal predicates and envelope assignments are stated in the ordered cases."}}
+selection: "first_match"
+bind.k: helper_policy.params
+match.k: contains(k, "\u0000") or contains(helper_policy.params[k], "\u0000")
 ```
 
+#### Unsupported format {format: outcome}
 
+```contract
+test: helper_policy.format != "sbpl"
+effects: [set_value(helper_envelope.result.ok, False), set_value(helper_envelope.result.exit_code, 1), set_value(helper_envelope.result.normalized_outcome, "bad_request"), set_value(helper_envelope.data.policy_sha256, None), set_value(helper_envelope.data.compile, None), set_value(helper_envelope.data.import_inventory, None)]
+```
+
+#### Missing source {source: outcome}
+
+```contract
+test: absent(helper_policy.sbpl_source)
+effects: [set_value(helper_envelope.result.ok, False), set_value(helper_envelope.result.exit_code, 1), set_value(helper_envelope.result.normalized_outcome, "bad_request"), set_value(helper_envelope.data.policy_sha256, None), set_value(helper_envelope.data.compile, None), set_value(helper_envelope.data.import_inventory, None)]
+```
+
+#### Oversized source {extent: outcome}
+
+```contract
+test: present(helper_policy.sbpl_source) and utf8_length(helper_policy.sbpl_source) > limit("helper_source")
+effects: [set_value(helper_envelope.result.ok, False), set_value(helper_envelope.result.exit_code, 1), set_value(helper_envelope.result.normalized_outcome, "policy_too_large"), set_value(helper_envelope.data.policy_sha256, None), set_value(helper_envelope.data.compile, None), set_value(helper_envelope.data.import_inventory, None)]
+```
+
+#### Source NUL {source_nul: outcome}
+
+```contract
+test: present(helper_policy.sbpl_source) and contains(helper_policy.sbpl_source, "\u0000")
+effects: [set_value(helper_envelope.result.ok, False), set_value(helper_envelope.result.exit_code, 1), set_value(helper_envelope.result.normalized_outcome, "bad_request"), set_value(helper_envelope.data.policy_sha256, None), set_value(helper_envelope.data.compile, None), set_value(helper_envelope.data.import_inventory, None)]
+```
+
+#### Parameter NUL {parameter_nul: outcome}
+
+```contract
+test: present(helper_policy.params) and matches(k) > 0
+effects: [set_value(helper_envelope.result.ok, False), set_value(helper_envelope.result.exit_code, 1), set_value(helper_envelope.result.normalized_outcome, "bad_request"), set_value(helper_envelope.data.policy_sha256, None), set_value(helper_envelope.data.compile, None), set_value(helper_envelope.data.import_inventory, None)]
+```
 
 ### Support {support: owner}
 
@@ -298,8 +337,6 @@ scope: "subtree"
 grade: "source_read"
 source: [{"path": "controller/src/bin/sbpl-check.rs", "symbol": "admit"}, {"path": "controller/src/bin/sbpl-check.rs", "symbol": "CheckPolicy"}]
 pins: "The adjacent field meanings and operations follow the named implementation."
-context: "Review of the named producer branches."
-limits: "Source inspection supplies the stated branch behavior; this draft credits no execution."
 ```
 
 
@@ -310,6 +347,7 @@ limits: "Source inspection supplies the stated branch behavior; this draft credi
 record: "rust.CheckData"
 as: "check_data"
 part: "report"
+at: ["helper_envelope.data"]
 ```
 
 
@@ -345,12 +383,13 @@ The helper's literal-import walk performed before native compilation. Null means
 ### Inventory, compile and report {run_compile: acts}
 
 ```contract
-who: "sbpl-check"
+who: ["identity.definitions.helper"]
 where: "admitted diagnostic compilation"
 entry: ["standalone_helper", "controller_helper_stdin"]
 recipient: ["caller", "report_reader"]
 report: ["helper_envelope"]
-free.effect: Inventory imports, prepare native parameters when needed, then compile the admitted source. Native setup failure yields setup_error; a failed compile yields compile_error; successful compilation yields ok and exit 0. Preserve the inventory even when native compilation fails.
+free.effect: Inventory imports, prepare native parameters when needed, then compile the admitted source. Preserve the inventory even when native compilation fails.
+retained_free: {"effect":{"kind":"native_protocol","reason":"The import walk and native parameter/compile calls occur in order; the verdict from the retained last-stage record is defined separately."}}
 ```
 
 The helper compiles in its own process. The fallback capture reports this independent attempt alongside the transport result and any retained worker evidence.
@@ -362,11 +401,84 @@ scope: "subtree"
 grade: "source_read"
 source: [{"path": "controller/src/bin/sbpl-check.rs", "symbol": "check"}, {"path": "controller/src/bin/sbpl-check.rs", "symbol": "CheckData"}]
 pins: "The adjacent field meanings and operations follow the named implementation."
-context: "Review of the named producer branches."
-limits: "Source inspection supplies the stated branch behavior; this draft credits no execution."
 ```
 
+### Select the helper verdict {verdict: reports}
 
+```contract
+who: ["identity.definitions.helper"]
+where: "last native-stage record to helper result"
+entry: ["standalone_helper", "controller_helper_stdin"]
+recipient: ["report_reader"]
+report: ["helper_envelope"]
+when: present(helper_envelope.data.compile)
+selection: "first_match"
+```
+#### Successful last stage {ok: outcome}
+
+```contract
+test: helper_envelope.data.compile.ok
+effects: [set_value(helper_envelope.result.ok, True), set_value(helper_envelope.result.exit_code, 0), set_value(helper_envelope.result.normalized_outcome, "ok"), set_value(helper_envelope.result.error, None)]
+```
+#### Compile failure with a diagnostic {compile_diagnostic: outcome}
+
+```contract
+test: helper_envelope.data.compile.stage == "compile" and present(helper_envelope.data.compile.error)
+effects: [set_value(helper_envelope.result.ok, False), set_value(helper_envelope.result.exit_code, 1), set_value(helper_envelope.result.normalized_outcome, "compile_error"), set_value(helper_envelope.result.error, helper_envelope.data.compile.error)]
+```
+#### Compile failure without a diagnostic {compile_no_diagnostic: outcome}
+
+```contract
+test: helper_envelope.data.compile.stage == "compile"
+effects: [set_value(helper_envelope.result.ok, False), set_value(helper_envelope.result.exit_code, 1), set_value(helper_envelope.result.normalized_outcome, "compile_error"), set_value(helper_envelope.result.error, "sandbox_compile_string returned NULL without a diagnostic")]
+```
+
+The helper supplies its fixed explanatory summary when the native call returned no diagnostic.
+#### Native setup failure {setup: outcome}
+
+```contract
+test: True
+effects: [set_value(helper_envelope.result.ok, False), set_value(helper_envelope.result.exit_code, 1), set_value(helper_envelope.result.normalized_outcome, "setup_error"), set_value(helper_envelope.result.error, helper_envelope.data.compile.error)]
+```
+#### Source support {support: owner}
+
+```contract
+grade: "source_read"
+source: {"path":"controller/src/bin/sbpl-check.rs","symbol":"verdict"}
+pins: "The helper selects its result from the last native-stage record."
+```
+
+### Decoded policy metadata {metadata: reports}
+
+```contract
+who: ["identity.definitions.helper"]
+where: "decoded helper input to report metadata"
+entry: ["standalone_helper", "controller_helper_stdin"]
+recipient: ["report_reader"]
+report: ["helper_envelope"]
+effects: [set_value(check_data.policy_format, helper_request.policy.format), set_value(check_data.params_present, present(helper_request.policy.params))]
+```
+#### Present parameter map {present: effect}
+
+```contract
+on: "always"
+when: present(helper_request.policy.params)
+effects: set_value(check_data.params_count, count(helper_request.policy.params))
+```
+#### Absent parameter map {absent: effect}
+
+```contract
+on: "always"
+when: absent(helper_request.policy.params)
+effects: set_value(check_data.params_count, 0)
+```
+#### Source support {support: owner}
+
+```contract
+grade: "source_read"
+source: {"path":"controller/src/bin/sbpl-check.rs","symbol":"check"}
+pins: "Metadata retains decoded format and optional-map presence/count, including an empty present map."
+```
 
 ## Last native compile stage {compile: subject}
 
@@ -374,6 +486,7 @@ limits: "Source inspection supplies the stated branch behavior; this draft credi
 record: "rust.CompileRecord"
 as: "compile"
 part: "report"
+at: ["helper_envelope.data.compile"]
 ```
 
 
@@ -399,15 +512,22 @@ At setup failure, helper text identifies the call and, for parameter assignment,
 ### Release native resources {release: acts}
 
 ```contract
-who: "sbpl-check"
+who: ["identity.definitions.helper"]
 where: "native compile-call completion"
 entry: ["standalone_helper", "controller_helper_stdin"]
 recipient: ["caller", "report_reader"]
 report: ["helper_envelope"]
 free.effect: Free every acquired parameter object, returned profile and native error buffer. Treat a non-null diagnostic as compile failure even when a profile was returned. Preserve the native diagnostic separately from the helper summary.
+retained_free: {"effect":{"kind":"native_protocol","reason":"Acquired native pointers and diagnostic buffers have ownership and free obligations not represented by final result records."}}
 ```
 
+#### Retained compile diagnostic {diagnostic: condition}
 
+```contract
+test: implies(compile.stage == "compile" and present(compile.error), compile.ok == False)
+```
+
+An empty native diagnostic remains present and therefore also rules out helper compile success.
 
 ### Support {support: owner}
 
@@ -416,7 +536,6 @@ scope: "subtree"
 grade: "source_read"
 source: [{"path": "controller/src/bin/sbpl-check.rs", "symbol": "compile_with"}, {"path": "controller/src/bin/sbpl-check.rs", "symbol": "CompileRecord"}]
 pins: "The adjacent field meanings and operations follow the named implementation."
-context: "Review of the named producer branches."
 limits: "Native wrapper branches read. Scripted native-result controls and platform execution still need to be joined as graded owners."
 ```
 
@@ -451,12 +570,13 @@ SHA-256 of source bytes, byte 0x1F, then newline-joined sorted strings of each s
 ### Separate reads and their identities {holds: acts}
 
 ```contract
-who: "controller, helper and worker compiler"
+who: ["identity.definitions.controller", "identity.definitions.helper", "identity.definitions.worker"]
 where: "policy preparation and import reads"
 entry: ["cli_run", "standalone_helper", "xpc_execute"]
 recipient: ["caller", "report_reader"]
 report: ["run_envelope", "helper_envelope", "runner_reply"]
 free.effect: Bind each digest to the bytes held by its producing read. The controller dossier walk, fallback helper walk and worker native compiler perform their own reads. Preserve import errors and bounds beside each inventory.
+retained_free: {"effect":{"kind":"native_protocol","reason":"Each hash belongs to bytes held by a distinct producing read; final equal hashes do not establish read ownership or simultaneity."}}
 ```
 
 The saved file is held once by the controller, selected source is held after augmentation, and the serialized request is held once for delivery. Files named by imports can change between these independent reads. A literal inventory describes the producer's walk; the worker compiled-profile receipt has its own observation boundary.
@@ -486,7 +606,6 @@ scope: "subtree"
 grade: "source_read"
 source: [{"path": "controller/src/sbpl_imports.rs", "symbol": "resolve_imports"}, {"path": "controller/src/sbpl_imports.rs", "symbol": "read_regular_file"}, {"path": "controller/src/sbpl_imports.rs", "symbol": "compute_closure_hash"}, {"path": "controller/src/bin/sbpl-check.rs", "symbol": "ImportInventory"}]
 pins: "The adjacent field meanings and operations follow the named implementation."
-context: "Review of the named producer branches."
 limits: "Full inventory traversal and hashing implementation read. Native search-order observations are inherited from the source comments, not reproduced here."
 ```
 
@@ -568,12 +687,13 @@ Whether stderr exceeded its retained capture capacity.
 ### Fallback eligibility and classification {classify: acts}
 
 ```contract
-who: "controller"
+who: ["identity.definitions.controller"]
 where: "admitted client capture after xpc_error"
 entry: ["cli_run"]
 recipient: ["caller", "report_reader"]
 report: ["run_envelope"]
-free.effect: Invoke the fallback helper when client transport admission is accepted, request delivery has no error, and the admitted client capture has terminal xpc_error. Deliver the held request on stdin. Report launch or delivery failure as unavailable; otherwise apply capture_error, parse_error, absent-output tool_error, then envelope identity/kind validation. Copy a supported envelope's nonempty outcome into status.
+free.effect: Invoke the fallback helper when client transport admission is accepted, request delivery has no error, and the admitted client capture has terminal xpc_error. Deliver the held request on stdin. Report launch or delivery failure as unavailable; only after successful launch and delivery apply capture_error, parse_error, absent-output tool_error, then raw envelope identity/kind validation. Copy a supported envelope's nonempty outcome into status.
+retained_free: {"effect":{"kind":"native_protocol","reason":"Launch/delivery success is an independent event missing from PolicyCheckCapture; the unavailable constructor can also carry a capture error. The parsed envelope remains raw JSON for kind, identity and outcome admission."}}
 ```
 
 Support requires kind `sbpl_check`, the current non-unbound `build.contract`, and a nonempty string normalized_outcome. The capture preserves the envelope and helper process exit independently; compiler observations retain their own process owner.
@@ -589,8 +709,6 @@ context: "Review of the named producer branches."
 limits: "Capture parsing, fallback eligibility and call sites, supported-outcome control and constructed fallback-selection control read; no execution credited. The malformed actor-mode policy-object path is source-read. Detailed text-byte capture mechanics are shared with the transport surface."
 check: [{"path": "controller/src/policy_check.rs", "symbol": "supported_outcomes_are_copied_into_status_without_a_second_verdict", "form": "test"}, {"path": "controller/src/run_flow.rs", "symbol": "fallback_compilation_is_requested_only_for_an_admitted_xpc_error", "form": "test"}]
 ```
-
-
 
 ## Per-actor fallback capture {actor_check: subject}
 
@@ -617,6 +735,4 @@ scope: "subtree"
 grade: "source_read"
 source: [{"path": "controller/src/run_flow.rs", "symbol": "actor_fallback_checks"}, {"path": "controller/src/run_flow.rs", "symbol": "actor_policies"}]
 pins: "The adjacent field meanings and operations follow the named implementation."
-context: "Review of the named producer branches."
-limits: "Source inspection supplies the stated branch behavior; this draft credits no execution."
 ```

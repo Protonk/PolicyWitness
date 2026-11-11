@@ -76,11 +76,12 @@ readers. The received bytes remain with their capture owner.
 who: ["identity.definitions.controller", "wire.frame.reader"]
 where: "one complete client-capture or host-reply frame"
 entry: ["client_stdout", "host_reply", "retained_frame"]
-recipient: ["controller", "evidence_reader"]
-report: ["controller_envelope"]
+recipient: ["controller", "report_reader"]
+report: ["run_envelope"]
 uses: ["identity.public.contract", "identity.other.wire"]
 free.condition: A complete frame has been retained for the requested root kind.
 free.effect: Check frame extent/magic and exact fingerprint, then the expected root and producer identity before descendants. Refuse wrong kinds, unknown records/tags/cases, missing required fields, invalid UTF-8, out-of-range integers, impossible lengths/counts, duplicate or out-of-order fields/keys and trailing bytes.
+retained_free: {"condition":{"kind":"serialized_grammar","reason":"A complete retained frame and expected root are receiver input facts; the admitted record cannot prove complete retention."},"effect":{"kind":"serialized_grammar","reason":"Exact lengths, tags, ordering, UTF-8 and trailing-byte rejection belong to the serialized wire traversal."}}
 ```
 
 A complete header naming another fingerprint yields unsupported schema before payload interpretation. A short fingerprint is malformed. The bound reader compares the client’s contract or host producer contract with the caller’s expected public identity; `unbound` cannot supply a positive identity admission. Successful structural decoding establishes the declared typed shape. Native-operation, lifecycle, phase, actor, equipment and custody consistency have separately named semantic readers.
@@ -165,13 +166,14 @@ uses: ["steps.verdict", "lifecycle.validator", "lifecycle.decode_fault", "lifecy
 ### Query production and native boundary {query: acts}
 
 ```contract
-who: "runner host and native validator helper"
+who: ["identity.definitions.host", "identity.definitions.validator"]
 where: "validator --batch PID stdin and sandbox_check call"
 entry: ["eligible_phase_query"]
 recipient: ["validator"]
 report: ["validator_records"]
 free.condition: The host has planned an eligible query against the active worker PID.
 free.effect: Write one JSON object per line with string step_id, operation and filter_type, and string filter_value for a non-NONE filter. The helper parses that line and calls sandbox_check with SANDBOX_CHECK_NO_REPORT only after grammar and filter admission.
+retained_free: {"condition":{"kind":"native_protocol","reason":"The planned eligible query and active owned worker PID are host inputs before native invocation, not later verdict assertions."},"effect":{"kind":"serialized_grammar","reason":"Physical-line JSON encoding, filter grammar and native no-report invocation flags define the validator protocol boundary."}}
 ```
 
 The batch parser accepts a flat object with exactly the recognized key names; each supplied value is a string. NONE requires filter_value absent; other types require it present. Trailing content, raw NUL, invalid UTF-8, invalid escapes, U+0000 and unpaired surrogates are refused. Standard JSON escapes and paired Unicode surrogate escapes decode to their UTF-8 characters. Physical lines exceeding <!-- span limits.validator_query_payload.value -->65,534<!-- /span --> payload bytes are drained and yield one parse_error diagnostic. Blank lines are skipped. A repeated recognized key currently replaces the earlier parsed value.
@@ -179,13 +181,14 @@ The batch parser accepts a flat object with exactly the recognized key names; ea
 ### Verdict production {emit: reports}
 
 ```contract
-who: "native validator helper"
+who: ["identity.definitions.validator"]
 where: "batch stdout after each nonblank input line"
 entry: ["validator_batch"]
 recipient: ["runner_host"]
 report: ["validator_records"]
 free.condition: The helper parsed a physical input line or performed its requested native call.
 free.effect: Emit a newline-terminated object with kind sb_api_validator_verdict, integer schema_version 1, step_id and outcome. Native-call records carry operation, filter_type, filter_type_id, filter_value, rc, errno and error; parse/filter refusals carry recovered-or-null step_id and error without inventing native results.
+retained_free: {"condition":{"kind":"native_protocol","reason":"A parsed input line and a completed native call are distinct producing events selecting different verdict shapes."},"effect":{"kind":"serialized_grammar","reason":"Native-call and parse/filter-refusal objects have different conditional field sets before the host's narrower typed projection."}}
 ```
 
 Before each native call the helper clears errno. Native rc 0 is `allow`; rc 1 with errno 0 is `deny`; rc -1 with EINVAL is `unsupported_operation`; other pairs are `error`. Parse errors use `parse_error`; an unsupported filter uses `bad_filter`. Per-line failures continue to the next line, and clean batch EOF returns zero even when individual records report failures.
@@ -197,10 +200,11 @@ who: ["identity.definitions.host"]
 where: "validator stdout framing and decoded-record construction"
 entry: ["validator_stdout"]
 recipient: ["runner_host"]
-report: ["validator_records", "host_reply"]
+report: ["validator_records", "runner_reply"]
 uses: ["lifecycle.validator"]
 free.condition: The host has received a validator output prefix within its stream allowance.
 free.effect: Split on LF, ignore empty frames and decode a final nonempty fragment. Admit strict UTF-8 JSON objects under per-frame, record-count, primitive-type and string-byte checks. Stop at the first refused frame while preserving earlier complete records and bounded rejection context.
+retained_free: {"condition":{"kind":"serialized_grammar","reason":"Retained stream prefix extent is measured before UTF-8/frame parsing and is not represented by any accepted verdict record."},"effect":{"kind":"serialized_grammar","reason":"LF splitting, final-fragment decoding and stop-at-first-refused-frame retention form an ordered stream parser."}}
 ```
 
 Every admitted object has exact kind, integer schema_version 1, a present string-or-null step_id and nonempty string outcome. Known optional strings and integer fields may be absent or null; Boolean, fractional, string-valued and overflowing numbers cannot supply native integers. Allow/deny require nonempty step_id, operation and filter_type plus integer rc and errno. Every other outcome requires string error. Extra JSON fields and unfamiliar diagnostic outcomes survive in the accepted raw line. Frame size is at most <!-- span limits.validator_reply_frame.value_unit -->8,192 bytes<!-- /span -->; string limits are <!-- span limits.validator_reply_step_id.value_unit -->63 UTF-8 bytes<!-- /span --> for step_id, <!-- span limits.validator_reply_filter_type.value_unit -->63 UTF-8 bytes<!-- /span --> for filter_type, <!-- span limits.validator_reply_outcome.value_unit -->63 UTF-8 bytes<!-- /span --> for outcome, <!-- span limits.validator_reply_operation.value_unit -->127 UTF-8 bytes<!-- /span --> for operation, <!-- span limits.validator_reply_filter_value.value_unit -->1,023 UTF-8 bytes<!-- /span --> for filter_value and <!-- span limits.validator_reply_error.value_unit -->511 UTF-8 bytes<!-- /span --> for error. Rejected context retains at most <!-- span limits.validator_fault_context.value_unit -->256 bytes<!-- /span -->. The validator subprocess account defines this phase collector's total stream and record allowances and subsequent unique-step association.
@@ -248,13 +252,14 @@ Each shipped service contains `Contents/MacOS/sb_api_validator`. Direct invocati
 ### Parse and report a PID {status: acts}
 
 ```contract
-who: "native validator helper"
+who: ["identity.definitions.validator"]
 where: "direct argv admission"
 entry: ["validator_status", "validator_single_query", "validator_batch"]
-recipient: ["direct_helper_caller"]
+recipient: ["helper_caller"]
 report: ["validator_status", "validator_single_result", "validator_error"]
 free.condition: The first positional value is consumed by base-10 strtol and is positive and at most 1,073,741,824, with no trailing bytes.
 free.effect: Accept that numeric PID. With no further arguments in direct mode, print ok or the JSON status object and exit zero. With operation arguments, continue to filter admission; batch takes no further positional arguments.
+retained_free: {"condition":{"kind":"raw_admission","reason":"strtol consumption, overflow and trailing-byte handling concern raw argv bytes before a numeric PID exists."},"effect":{"kind":"raw_admission","reason":"Direct/batch mode and argument counts are CLI inputs; the output object cannot establish omitted or extra arguments."}}
 ```
 
 The PID-only branch performs parsing and reaches no sandbox_check call or process-existence check. Missing arguments before a PID produce stderr and exit 2, including a bare --json. An invalid supplied PID produces stderr in plain mode or pid_missing in JSON mode, with pid -1 and exit 2.
@@ -270,13 +275,14 @@ Direct and batch queries share a filter-name resolver: NONE is 0, PATH is 1, GLO
 ### Run one native query {query: acts}
 
 ```contract
-who: "native validator helper"
+who: ["identity.definitions.validator"]
 where: "direct sandbox_check call and stdout"
 entry: ["validator_single_query"]
-recipient: ["direct_helper_caller"]
+recipient: ["helper_caller"]
 report: ["validator_single_result", "validator_error"]
 free.condition: An operation and recognized filter are supplied. Numeric filter ID zero requires no filter-value argument; every other ID requires exactly one.
 free.effect: Clear errno, invoke sandbox_check for the supplied PID with SANDBOX_CHECK_NO_REPORT, and report the native rc and errno. Plain output is rc=<value> errno=<value> and exits zero for rc zero, one otherwise. JSON mode emits its single-result object and exits zero after the call, whatever its native result.
+retained_free: {"condition":{"kind":"raw_admission","reason":"Filter spelling and numeric-zero argument presence are raw command-line grammar, distinct from the normalized native filter ID."},"effect":{"kind":"native_protocol","reason":"Clearing errno, invoking the native query and choosing plain versus JSON process exit are separate producer actions."}}
 ```
 
 CLI filter/argument refusal exits 2. JSON mode emits sb_api_validator_error: bad_filter carries the supplied filter; missing_args, unexpected_filter_value_for_none, missing_filter_value and unexpected_extra_args carry the parsed PID. The native string printer escapes quotes, backslashes and control bytes; remaining argument bytes pass through unchanged.
@@ -343,6 +349,12 @@ type: "String"
 
 sb_api_validator_status identifies the PID-only JSON branch.
 
+#### Produced kind {produced: condition}
+
+```contract
+test: standalone_status.kind == "sb_api_validator_status"
+```
+
 ### schema_version {schema_version: field}
 
 ```contract
@@ -350,6 +362,12 @@ type: "Int32"
 ```
 
 Version 1 of this direct JSON object.
+
+#### Produced schema {produced: condition}
+
+```contract
+test: standalone_status.schema_version == 1
+```
 
 ### pid {pid: field}
 
@@ -359,6 +377,12 @@ type: "Int32"
 
 Positive PID accepted by argument parsing.
 
+#### Parsed positive PID {positive: condition}
+
+```contract
+test: standalone_status.pid > 0
+```
+
 ### error {error: field}
 
 ```contract
@@ -366,6 +390,12 @@ type: "JSON"
 ```
 
 Always null on this status branch.
+
+#### Status diagnostic slot {null: condition}
+
+```contract
+test: standalone_status.error == None
+```
 
 ## Direct native result {standalone_result: subject}
 
@@ -382,6 +412,12 @@ type: "String"
 
 sb_api_validator_result identifies one direct native query.
 
+#### Produced kind {produced: condition}
+
+```contract
+test: standalone_result.kind == "sb_api_validator_result"
+```
+
 ### schema_version {schema_version: field}
 
 ```contract
@@ -390,6 +426,12 @@ type: "Int32"
 
 Version 1 of this direct JSON object.
 
+#### Produced schema {produced: condition}
+
+```contract
+test: standalone_result.schema_version == 1
+```
+
 ### pid {pid: field}
 
 ```contract
@@ -397,6 +439,12 @@ type: "Int32"
 ```
 
 Parsed PID passed to sandbox_check.
+
+#### Parsed positive PID {positive: condition}
+
+```contract
+test: standalone_result.pid > 0
+```
 
 ### operation {operation: field}
 
@@ -432,6 +480,12 @@ json_null: true
 
 Filter string passed for a nonzero ID; null for ID zero.
 
+#### Numeric filter argument relation {numeric: condition}
+
+```contract
+test: implies(standalone_result.filter_type_id == 0, absent(standalone_result.filter_value)) and implies(standalone_result.filter_type_id != 0, present(standalone_result.filter_value))
+```
+
 ### extra {extra: field}
 
 ```contract
@@ -439,6 +493,12 @@ type: "JSON"
 ```
 
 Always null in this producer.
+
+#### Direct-result extension slot {null: condition}
+
+```contract
+test: standalone_result.extra == None
+```
 
 ### rc {rc: field}
 
@@ -464,6 +524,12 @@ type: "Bool"
 
 True exactly when native rc is zero.
 
+#### Zero native return {native: condition}
+
+```contract
+test: standalone_result.allowed == (standalone_result.rc == 0)
+```
+
 ### denied {denied: field}
 
 ```contract
@@ -471,6 +537,12 @@ type: "Bool"
 ```
 
 True exactly when native rc is nonzero, including native errors.
+
+#### Nonzero native return {native: condition}
+
+```contract
+test: standalone_result.denied == (standalone_result.rc != 0)
+```
 
 ## Direct argument error {standalone_error: subject}
 

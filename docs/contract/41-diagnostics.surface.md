@@ -80,15 +80,276 @@ entry is derived from that actor's subprocess and its actions selected
 through the phase plan. A reply-wide finding preserves these already
 computed actor entries.
 
+### Decoded response collection bounds {geometry: checks}
+
+```contract
+who: ["identity.definitions.controller"]
+where: "decoded response-context admission after delivery, capture and public identity admission"
+entry: ["cli_run","runner_verify"]
+recipient: ["caller","report_reader"]
+report: ["run_envelope","runner_verify"]
+when: present(reply)
+bind.p: reply.phases
+bind.a: reply.actors
+```
+
+These bounds apply to every structurally decoded reply reaching this gate, including preparation and reporting-failure replies. Optional collections are bounded when present. Counts use the retained rows before semantic association. A failed bound selects the calling operation’s response-context refusal.
+
+#### Phase and action tables {plan: condition}
+
+```contract
+test: implies(reply.execution_form == "actors", count(reply.phases) <= limit("actor_phases")) and implies(absent(reply.execution_form) or (present(reply.execution_form) and reply.execution_form != "actors"), count(reply.phases) <= limit("phase_count")) and count(reply.steps) <= limit("probe_steps") and implies(present(reply.extension_events), count(reply.extension_events) <= limit("probe_steps") - count(reply.steps)) and sum_over(p, count(reply.phases[p].action_ids)) <= limit("probe_steps")
+```
+
+#### Actor and transfer tables {actors_transfers: condition}
+
+```contract
+test: implies(present(reply.actors), count(reply.actors) <= limit("actors")) and implies(present(reply.transfers), count(reply.transfers) <= limit("actor_deliveries"))
+```
+
+#### Resource tables {resources: condition}
+
+```contract
+when: present(reply.resources)
+test: count(reply.resources.tokens) <= limit("actor_issues") and count(reply.resources.deliveries) <= limit("actor_deliveries") and count(reply.resources.handles) <= limit("actor_handles")
+```
+
+#### Equal-handle references {equal_handles: condition}
+
+```contract
+when: present(reply.resources)
+bind.h: reply.resources.handles
+each: ["h"]
+test: count(reply.resources.handles[h].raw_equal_handles) <= limit("actor_handles") - 1
+```
+
+#### Validator collection tables {validator: condition}
+
+```contract
+each: ["p"]
+when: present(reply.phases[p].validator_subprocess)
+bind.s: reply.steps
+match.s: reply.steps[s].phase_id == reply.phases[p].phase_id and reply.steps[s].sandbox_check.missing_reason != "query_not_requested"
+```
+
+For this guard, the probe count includes each retained step with the same phase_id except a step whose missing_reason is query_not_requested. An absent missing_reason is included. The count uses the carried labels before their semantic uniqueness or association is checked.
+
+##### Expected identifiers {expected: condition}
+
+```contract
+test: implies(present(reply.phases[p].validator_subprocess.expected_step_ids), count(reply.phases[p].validator_subprocess.expected_step_ids) <= limit("probe_steps"))
+```
+
+##### Retained validator records {records: condition}
+
+```contract
+when: present(reply.phases[p].validator_subprocess.records)
+test: implies(matches(s) == 0, count(reply.phases[p].validator_subprocess.records) <= limit("validator_records_per_query")) and implies(matches(s) > 0, count(reply.phases[p].validator_subprocess.records) <= matches(s) * limit("validator_records_per_query"))
+```
+
+##### Association issue allowance {issues: condition}
+
+```contract
+when: present(reply.phases[p].validator_subprocess.association_issues)
+test: implies(present(reply.phases[p].validator_subprocess.records), count(reply.phases[p].validator_subprocess.association_issues) <= matches(s) + count(reply.phases[p].validator_subprocess.records) + 1) and implies(absent(reply.phases[p].validator_subprocess.records), count(reply.phases[p].validator_subprocess.association_issues) <= matches(s) + 1)
+```
+
+#### Equipment tables {equipment: condition}
+
+```contract
+test: implies(present(reply.equipment_bindings), count(reply.equipment_bindings) <= limit("equipment_static_bindings")) and implies(present(reply.equipment_entitlements), count(reply.equipment_entitlements) <= limit("equipment_entitlement_records"))
+```
+
+#### Authority scope tables {authority: condition}
+
+```contract
+when: present(reply.authority_setup)
+test: count(reply.authority_setup.workers) <= limit("actors") and count(reply.authority_setup.host.regions) <= limit("actors") and count(reply.authority_setup.host.custody) <= limit("actor_issues")
+```
+
+#### Host run authority scope {host_scope: condition}
+
+```contract
+when: present(reply.authority_setup)
+test: count(reply.authority_setup.host.run.operations) <= 4 and count(reply.authority_setup.host.run.ownership) <= 5 and implies(present(reply.authority_setup.host.run.integrity_errors), count(reply.authority_setup.host.run.integrity_errors) <= 16)
+```
+
+#### Worker authority scopes {worker_scopes: condition}
+
+```contract
+when: present(reply.authority_setup)
+bind.w: reply.authority_setup.workers
+each: ["w"]
+test: count(reply.authority_setup.workers[w].operations) <= limit("authority_setup_cells") and count(reply.authority_setup.workers[w].ownership) <= 5 and implies(present(reply.authority_setup.workers[w].integrity_errors), count(reply.authority_setup.workers[w].integrity_errors) <= 16)
+```
+
+#### Host region authority scopes {region_scopes: condition}
+
+```contract
+when: present(reply.authority_setup)
+bind.r: reply.authority_setup.host.regions
+each: ["r"]
+test: count(reply.authority_setup.host.regions[r].operations) <= limit("authority_setup_cells") and count(reply.authority_setup.host.regions[r].ownership) <= 5 and implies(present(reply.authority_setup.host.regions[r].integrity_errors), count(reply.authority_setup.host.regions[r].integrity_errors) <= 16)
+```
+
+#### Host custody authority scopes {custody_scopes: condition}
+
+```contract
+when: present(reply.authority_setup)
+bind.c: reply.authority_setup.host.custody
+each: ["c"]
+test: count(reply.authority_setup.host.custody[c].operations) <= 4 and count(reply.authority_setup.host.custody[c].ownership) <= 5 and implies(present(reply.authority_setup.host.custody[c].integrity_errors), count(reply.authority_setup.host.custody[c].integrity_errors) <= 16)
+```
+
+#### Actor visits {visits: condition}
+
+```contract
+when: present(reply.actors)
+each: ["a"]
+test: count(reply.actors[a].visits) <= limit("actor_phases")
+```
+
+#### Actor equipment observations {actor_equipment: condition}
+
+```contract
+when: present(reply.actors) and present(reply.actors[a].equipment)
+each: ["a"]
+test: count(reply.actors[a].equipment.required_entitlements) <= limit("actor_required_entitlements") and implies(present(reply.actors[a].equipment.missing_requirements), count(reply.actors[a].equipment.missing_requirements) <= limit("actor_required_entitlements")) and count(reply.actors[a].equipment.execution.native_observations) <= 4
+```
+
+#### Ordinary worker disposition {ordinary_lifecycle: condition}
+
+```contract
+when: present(reply.runner_subprocess) and present(reply.runner_subprocess.disposition)
+bind.d: reply.runner_subprocess.disposition.steps
+bind.i: reply.runner_subprocess.disposition.issues
+```
+
+##### Disposition rows {rows: condition}
+
+```contract
+test: count(reply.runner_subprocess.disposition.steps) <= limit("probe_steps") and count(reply.runner_subprocess.disposition.issues) <= 1 + 2 * limit("probe_steps")
+```
+
+##### Run claim references {run_references: condition}
+
+```contract
+test: implies(present(reply.runner_subprocess.disposition.questions.final_status), implies(present(reply.runner_subprocess.disposition.questions.final_status.basis), count(reply.runner_subprocess.disposition.questions.final_status.basis) <= 14)) and implies(present(reply.runner_subprocess.disposition.questions.stop_reason), implies(present(reply.runner_subprocess.disposition.questions.stop_reason.basis), count(reply.runner_subprocess.disposition.questions.stop_reason.basis) <= 14)) and implies(present(reply.runner_subprocess.disposition.questions.cleanup_trigger), implies(present(reply.runner_subprocess.disposition.questions.cleanup_trigger.basis), count(reply.runner_subprocess.disposition.questions.cleanup_trigger.basis) <= 14)) and implies(present(reply.runner_subprocess.disposition.questions.grace_end), implies(present(reply.runner_subprocess.disposition.questions.grace_end.basis), count(reply.runner_subprocess.disposition.questions.grace_end.basis) <= 14)) and implies(present(reply.runner_subprocess.disposition.questions.kill_request_and_result), implies(present(reply.runner_subprocess.disposition.questions.kill_request_and_result.basis), count(reply.runner_subprocess.disposition.questions.kill_request_and_result.basis) <= 14)) and implies(present(reply.runner_subprocess.disposition.questions.collection_basis), implies(present(reply.runner_subprocess.disposition.questions.collection_basis.basis), count(reply.runner_subprocess.disposition.questions.collection_basis.basis) <= 14)) and implies(present(reply.runner_subprocess.disposition.questions.progress_association), implies(present(reply.runner_subprocess.disposition.questions.progress_association.basis), count(reply.runner_subprocess.disposition.questions.progress_association.basis) <= 14))
+```
+
+##### Step claim references {step_references: condition}
+
+```contract
+each: ["d"]
+test: implies(present(reply.runner_subprocess.disposition.steps[d].questions.step_boundary_reached), implies(present(reply.runner_subprocess.disposition.steps[d].questions.step_boundary_reached.basis), count(reply.runner_subprocess.disposition.steps[d].questions.step_boundary_reached.basis) <= 16)) and implies(present(reply.runner_subprocess.disposition.steps[d].questions.step_result_published), implies(present(reply.runner_subprocess.disposition.steps[d].questions.step_result_published.basis), count(reply.runner_subprocess.disposition.steps[d].questions.step_result_published.basis) <= 16)) and implies(present(reply.runner_subprocess.disposition.steps[d].questions.step_requested_operation_applicability), implies(present(reply.runner_subprocess.disposition.steps[d].questions.step_requested_operation_applicability.basis), count(reply.runner_subprocess.disposition.steps[d].questions.step_requested_operation_applicability.basis) <= 16))
+```
+
+##### Conflict observation references {issue_references: condition}
+
+```contract
+each: ["i"]
+test: implies(present(reply.runner_subprocess.disposition.issues[i].step_index), count(reply.runner_subprocess.disposition.issues[i].observations) <= 16) and implies(absent(reply.runner_subprocess.disposition.issues[i].step_index), count(reply.runner_subprocess.disposition.issues[i].observations) <= 14)
+```
+
+#### Actor worker disposition {actor_lifecycle: condition}
+
+```contract
+when: present(reply.actors) and present(reply.actors[a].subprocess) and present(reply.actors[a].subprocess.disposition)
+bind.d: reply.actors[a].subprocess.disposition.steps
+bind.i: reply.actors[a].subprocess.disposition.issues
+each: ["a"]
+```
+
+##### Disposition rows {rows: condition}
+
+```contract
+test: count(reply.actors[a].subprocess.disposition.steps) <= limit("probe_steps") and count(reply.actors[a].subprocess.disposition.issues) <= 1 + 2 * limit("probe_steps")
+```
+
+##### Run claim references {run_references: condition}
+
+```contract
+test: implies(present(reply.actors[a].subprocess.disposition.questions.final_status), implies(present(reply.actors[a].subprocess.disposition.questions.final_status.basis), count(reply.actors[a].subprocess.disposition.questions.final_status.basis) <= 14)) and implies(present(reply.actors[a].subprocess.disposition.questions.stop_reason), implies(present(reply.actors[a].subprocess.disposition.questions.stop_reason.basis), count(reply.actors[a].subprocess.disposition.questions.stop_reason.basis) <= 14)) and implies(present(reply.actors[a].subprocess.disposition.questions.cleanup_trigger), implies(present(reply.actors[a].subprocess.disposition.questions.cleanup_trigger.basis), count(reply.actors[a].subprocess.disposition.questions.cleanup_trigger.basis) <= 14)) and implies(present(reply.actors[a].subprocess.disposition.questions.grace_end), implies(present(reply.actors[a].subprocess.disposition.questions.grace_end.basis), count(reply.actors[a].subprocess.disposition.questions.grace_end.basis) <= 14)) and implies(present(reply.actors[a].subprocess.disposition.questions.kill_request_and_result), implies(present(reply.actors[a].subprocess.disposition.questions.kill_request_and_result.basis), count(reply.actors[a].subprocess.disposition.questions.kill_request_and_result.basis) <= 14)) and implies(present(reply.actors[a].subprocess.disposition.questions.collection_basis), implies(present(reply.actors[a].subprocess.disposition.questions.collection_basis.basis), count(reply.actors[a].subprocess.disposition.questions.collection_basis.basis) <= 14)) and implies(present(reply.actors[a].subprocess.disposition.questions.progress_association), implies(present(reply.actors[a].subprocess.disposition.questions.progress_association.basis), count(reply.actors[a].subprocess.disposition.questions.progress_association.basis) <= 14))
+```
+
+##### Step claim references {step_references: condition}
+
+```contract
+each: ["d"]
+test: implies(present(reply.actors[a].subprocess.disposition.steps[d].questions.step_boundary_reached), implies(present(reply.actors[a].subprocess.disposition.steps[d].questions.step_boundary_reached.basis), count(reply.actors[a].subprocess.disposition.steps[d].questions.step_boundary_reached.basis) <= 16)) and implies(present(reply.actors[a].subprocess.disposition.steps[d].questions.step_result_published), implies(present(reply.actors[a].subprocess.disposition.steps[d].questions.step_result_published.basis), count(reply.actors[a].subprocess.disposition.steps[d].questions.step_result_published.basis) <= 16)) and implies(present(reply.actors[a].subprocess.disposition.steps[d].questions.step_requested_operation_applicability), implies(present(reply.actors[a].subprocess.disposition.steps[d].questions.step_requested_operation_applicability.basis), count(reply.actors[a].subprocess.disposition.steps[d].questions.step_requested_operation_applicability.basis) <= 16))
+```
+
+##### Conflict observation references {issue_references: condition}
+
+```contract
+each: ["i"]
+test: implies(present(reply.actors[a].subprocess.disposition.issues[i].step_index), count(reply.actors[a].subprocess.disposition.issues[i].observations) <= 16) and implies(absent(reply.actors[a].subprocess.disposition.issues[i].step_index), count(reply.actors[a].subprocess.disposition.issues[i].observations) <= 14)
+```
+
+#### Attempt lifecycle copies {step_copies: condition}
+
+```contract
+when: present(reply.steps[s].attempt.lifecycle)
+bind.s: reply.steps
+each: ["s"]
+test: implies(present(reply.steps[s].attempt.lifecycle.boundary.basis), count(reply.steps[s].attempt.lifecycle.boundary.basis) <= 16) and implies(present(reply.steps[s].attempt.lifecycle.result.basis), count(reply.steps[s].attempt.lifecycle.result.basis) <= 16)
+```
+
+#### Extension lifecycle copies {extension_copies: condition}
+
+```contract
+when: present(reply.extension_events) and present(reply.extension_events[e].lifecycle)
+bind.e: reply.extension_events
+each: ["e"]
+test: implies(present(reply.extension_events[e].lifecycle.boundary.basis), count(reply.extension_events[e].lifecycle.boundary.basis) <= 16) and implies(present(reply.extension_events[e].lifecycle.result.basis), count(reply.extension_events[e].lifecycle.result.basis) <= 16)
+```
+
+#### Failed collection bound {failed: effect}
+
+```contract
+on: "failure"
+effects: [set_value(result.normalized_outcome, "malformed_runner_response"), set_value(result.ok, False), set_value(result.exit_code, 1), retain_records(reply)]
+```
+
+#### Run assessment after refusal {run_refusal: effect}
+
+```contract
+entry: ["cli_run"]
+on: "failure"
+effects: set_value(envelope.data.runner_sandbox_diagnostics, None)
+```
+
+#### Verification completion after refusal {verify_refusal: effect}
+
+```contract
+entry: ["runner_verify"]
+on: "failure"
+effects: [set_value(runner_verify.normalized_outcome, "malformed_runner_response"), set_value(runner_verify.runner_pid, None)]
+```
+
+#### Response-bound support {support: owner}
+
+```contract
+scope: "subtree"
+grade: "check_read"
+source: [{"path":"controller/src/porcelain_admission.rs","symbol":"claim_geometry"},{"path":"controller/src/porcelain_admission.rs","symbol":"lifecycle_geometry"},{"path":"controller/src/porcelain_admission.rs","symbol":"scope_geometry"},{"path":"controller/src/porcelain_admission.rs","symbol":"reply_geometry"},{"path":"controller/src/porcelain_admission.rs","symbol":"admission_problem"},{"path":"controller/src/run_flow.rs","symbol":"admit_reply"},{"path":"controller/src/runner_commands.rs","symbol":"cmd_runner_verify"}]
+check: [{"path":"controller/src/porcelain_admission.rs","symbol":"typed_geometry_refuses_before_projection_and_retains_every_raw_record","form":"test"},{"path":"controller/src/porcelain_admission.rs","symbol":"typed_reference_geometry_is_checked_before_claims_and_admission_contexts","form":"test"}]
+pins: "Collection bounds precede semantic joins and profile-context checking on run and verification admission; their refusal retains the decoded reply."
+context: "Read every geometry guard, both public call paths and the named constructed-control bodies."
+limits: "The controls assert selected excess tables, reference lists, an accepted boundary and unchanged raw records. The remaining enumerated collection bounds and verification-specific projection are supported by their source branches."
+```
+
 ### Admit the response before assessment {admit: acts}
 
 ```contract
-who: "controller"
+who: ["identity.definitions.controller"]
 where: "client delivery, public reply identity and bounded response context"
 entry: ["cli_run"]
 recipient: ["caller", "report_reader"]
 report: ["run_envelope"]
-free.effect: Check request-delivery failure and client capture status, then exact reply identity, response geometry and compiled-profile context before execution diagnostics. A failed response-context check reports malformed_runner_response and exit 1 with the decoded host reply retained and execution diagnostics omitted.
+uses: ["diagnostics.execution.geometry"]
+free.effect: Check request-delivery failure and client capture status, then exact reply identity, response geometry and compiled-profile context before execution diagnostics.
+retained_free: {"effect":{"kind":"native_protocol","reason":"Execution diagnostics are reached only after preceding delivery/capture/host-context gates, some of which operate before a decoded reply exists."}}
 ```
 
 A missing or foreign producer identity follows its own transport/identity
@@ -97,15 +358,27 @@ The compiled-profile guard checks its status and producer/stage context,
 including actor captures and reporting-failure replies. These are
 preconditions for the execution-assessment path described here.
 
+#### Decoded response-context refusal {context_refusal: outcome}
+
+```contract
+free.when: The controller's response geometry or compiled-profile context check rejects a structurally decoded host reply.
+effects: [set_value(envelope.result.normalized_outcome, "malformed_runner_response"), set_value(envelope.result.ok, False), set_value(envelope.result.exit_code, 1), set_value(envelope.data.runner_sandbox_diagnostics, None), retain_records(reply)]
+retained_free: {"when":{"kind":"native_protocol","reason":"The geometry or compiled-profile context check returns the intermediate admission decision that selects this refusal."}}
+```
+
+The controller returns the selected exit status with the decoded host reply
+still available in the envelope.
+
 ### Project one worker or aggregate actors {project: acts}
 
 ```contract
-who: "controller"
+who: ["identity.definitions.controller"]
 where: "typed worker lifecycle interpretation after response admission"
 entry: ["cli_run"]
 recipient: ["report_reader"]
 report: ["execution_diagnostics", "actor_execution_diagnostics"]
-free.effect: Validate each worker's lifecycle against its native records and assigned actions. If that worker's validation produces any finding, set its process_disposition to withheld, termination_cause to unknown and disposition_integrity to invalid, with stop_reason null. Otherwise derive the ending from final_status and preserve validated host conflicts.
+free.effect: Run the worker lifecycle validation against its native records, assigned actions and reporting form. Project a validated ending by the ending-mapping and stop-reason rules, then publish the validated host conflicts at that worker scope.
+retained_free: {"effect":{"kind":"native_protocol","reason":"The controller invokes lifecycle validation for the worker, assigned actions and reporting form. Its returned failure list selects the worker projection path; successful validation proceeds to host-conflict copying. The output field assignments are structured below."}}
 ```
 
 For the actor form, the controller computes each worker's projection
@@ -113,10 +386,276 @@ separately. It then sets the top-level disposition to `per_actor` when any
 entry differs from `no_worker`, and aggregates the actor integrity values.
 This calculation occurs before the reply-wide checks below.
 
+Ordinary execution copies the helper's projection to the top-level
+execution diagnostics. Actor execution computes a projection for each actor
+in the retained actor order, copies that actor's label, and appends the
+projection. The two concrete scopes below bind each source subprocess to
+its own output fields. Their lifecycle prerequisites are the actual helper
+check in each invocation, including retained reporting-failure replies.
+
+### Actor projection rows {actor_rows: reports}
+
+```contract
+who: ["identity.definitions.controller"]
+where: "worker projection after response admission"
+entry: ["cli_run"]
+recipient: ["report_reader"]
+report: ["execution_diagnostics", "actor_execution_diagnostics"]
+when: reply.execution_form == "actors"
+bind.a: reply.actors
+bind.d: envelope.data.runner_sandbox_diagnostics.actors
+match.d: d == a
+```
+
+#### Positional coverage {coverage: condition}
+
+```contract
+test: present(envelope.data.runner_sandbox_diagnostics.actors) and implies(present(reply.actors), count(envelope.data.runner_sandbox_diagnostics.actors) == count(reply.actors)) and implies(absent(reply.actors), count(envelope.data.runner_sandbox_diagnostics.actors) == 0)
+```
+
+#### Copied actor identity {identity: condition}
+
+```contract
+each: ["a", "d"]
+test: envelope.data.runner_sandbox_diagnostics.actors[d].actor_id == reply.actors[a].actor_id
+```
+
+The projection list has exactly the retained actor list's length and order.
+Position associates an input actor with its output projection; its label is
+copied even when that actor has no subprocess. Duplicate labels retain their
+separate positions and remain subject to the reply-wide association checks.
+
+### Ordinary worker projection {ordinary: subject}
+
+```contract
+who: ["identity.definitions.controller"]
+where: "worker projection after response admission"
+entry: ["cli_run"]
+recipient: ["report_reader"]
+report: ["execution_diagnostics", "actor_execution_diagnostics"]
+when: (absent(reply.execution_form) or (present(reply.execution_form) and reply.execution_form != "actors")) and present(reply.runner_subprocess)
+```
+
+The source is `reply.runner_subprocess`; the output is the ordinary
+execution diagnostic record, before reply-wide findings are appended.
+
+#### Worker lifecycle validation {lifecycle_check: checks}
+
+```contract
+who: ["identity.definitions.controller"]
+where: "one worker lifecycle validation before projection"
+entry: ["cli_run"]
+recipient: ["report_reader"]
+report: ["execution_diagnostics", "actor_execution_diagnostics"]
+free.condition: For reply.runner_subprocess and its assigned actions under the carried reporting form, the controller's lifecycle validation returns no failed-check findings, before validated host conflicts are copied.
+retained_free: {"condition":{"kind":"native_protocol","reason":"This prerequisite is the lifecycle validator's intermediate return for the selected worker, assigned actions and reporting form. Successful validation permits host conflicts to be copied into the final disposition_issues array."}}
+```
+
+The ending, stop-reason, attribution and host-conflict copy rules require
+this result from the same worker validation. A failed prerequisite has the
+following local consequence.
+
+##### Local lifecycle findings {local_failure: effect}
+
+```contract
+on: "failure"
+effects: [set_value(envelope.data.runner_sandbox_diagnostics.process_disposition, "withheld"), set_value(envelope.data.runner_sandbox_diagnostics.termination_cause, "unknown"), set_value(envelope.data.runner_sandbox_diagnostics.disposition_integrity, "invalid"), set_value(envelope.data.runner_sandbox_diagnostics.stop_reason, None)]
+```
+
+#### Ending mapping {mapping: reports}
+
+```contract
+who: ["identity.definitions.controller"]
+where: "validated worker ending projection"
+entry: ["cli_run"]
+recipient: ["report_reader"]
+report: ["execution_diagnostics", "actor_execution_diagnostics"]
+requires: ["diagnostics.execution.ordinary.lifecycle_check"]
+when: present(reply.runner_subprocess.disposition) and present(reply.runner_subprocess.disposition.questions.final_status)
+selection: "first_match"
+```
+
+##### Clean exit {clean: outcome}
+
+```contract
+test: reply.runner_subprocess.disposition.questions.final_status.state == "supported" and reply.runner_subprocess.disposition.questions.final_status.answer == "exit_code" and present(reply.runner_subprocess.disposition.questions.final_status.value) and is_variant(reply.runner_subprocess.disposition.questions.final_status.value, "Integer") and variant(reply.runner_subprocess.disposition.questions.final_status.value, "Integer") == 0
+effects: [set_value(envelope.data.runner_sandbox_diagnostics.process_disposition, "clean_exit"), set_value(envelope.data.runner_sandbox_diagnostics.termination_cause, None)]
+```
+
+##### Other exit status {nonzero: outcome}
+
+```contract
+test: reply.runner_subprocess.disposition.questions.final_status.state == "supported" and reply.runner_subprocess.disposition.questions.final_status.answer == "exit_code"
+effects: [set_value(envelope.data.runner_sandbox_diagnostics.process_disposition, "nonzero_exit"), set_value(envelope.data.runner_sandbox_diagnostics.termination_cause, "unknown")]
+```
+
+##### Signaled ending {signal: outcome}
+
+```contract
+test: reply.runner_subprocess.disposition.questions.final_status.state == "supported" and reply.runner_subprocess.disposition.questions.final_status.answer == "signal"
+effects: [set_value(envelope.data.runner_sandbox_diagnostics.process_disposition, "signaled"), set_value(envelope.data.runner_sandbox_diagnostics.termination_cause, "unknown")]
+```
+
+##### Supported conflict {conflict: outcome}
+
+```contract
+test: reply.runner_subprocess.disposition.questions.final_status.state == "conflicting"
+effects: [set_value(envelope.data.runner_sandbox_diagnostics.process_disposition, "conflicting"), set_value(envelope.data.runner_sandbox_diagnostics.termination_cause, "unknown")]
+```
+
+##### Unresolved or inapplicable ending {unconfirmed: outcome}
+
+```contract
+test: reply.runner_subprocess.disposition.questions.final_status.state in ["unresolved", "inapplicable"]
+effects: [set_value(envelope.data.runner_sandbox_diagnostics.process_disposition, "unconfirmed"), set_value(envelope.data.runner_sandbox_diagnostics.termination_cause, "unknown")]
+```
+
+##### Other admitted ending {other: outcome}
+
+```contract
+test: True
+effects: [set_value(envelope.data.runner_sandbox_diagnostics.process_disposition, "unrecognized"), set_value(envelope.data.runner_sandbox_diagnostics.termination_cause, "unknown")]
+```
+
+The `unconfirmed` value merges the two host states while the retained
+host claim preserves which state and reason it supplied. Lifecycle validation
+has already checked the integer exit value and supported-conflict evidence.
+
+#### Supported stop reason {stop: reports}
+
+```contract
+who: ["identity.definitions.controller"]
+where: "validated worker ending projection"
+entry: ["cli_run"]
+recipient: ["report_reader"]
+report: ["execution_diagnostics", "actor_execution_diagnostics"]
+requires: ["diagnostics.execution.ordinary.lifecycle_check"]
+when: present(reply.runner_subprocess.disposition)
+selection: "first_match"
+after: ["diagnostics.execution.ordinary.cause"]
+```
+
+##### Recognized supported stop {recognized: outcome}
+
+```contract
+test: present(reply.runner_subprocess.disposition.questions.stop_reason) and reply.runner_subprocess.disposition.questions.stop_reason.state == "supported" and present(reply.runner_subprocess.disposition.questions.stop_reason.answer) and reply.runner_subprocess.disposition.questions.stop_reason.answer in ["sentinel_deadline", "done", "child_reaped", "wait_error", "policy_write_error", "policy_transfer_deadline"]
+effects: [set_value(envelope.data.runner_sandbox_diagnostics.stop_reason, reply.runner_subprocess.disposition.questions.stop_reason.answer), set_value(envelope.data.runner_sandbox_diagnostics.disposition_integrity, "valid")]
+```
+
+##### No supported recognized stop {absent: outcome}
+
+```contract
+test: True
+effects: [set_value(envelope.data.runner_sandbox_diagnostics.stop_reason, None), set_value(envelope.data.runner_sandbox_diagnostics.disposition_integrity, "valid")]
+```
+
+#### Carried host-cleanup chain {cause_chain: definition}
+
+```contract
+defines: "condition"
+```
+
+##### Required claims and native request result {facts: condition}
+
+```contract
+test: present(reply.runner_subprocess.disposition) and present(reply.runner_subprocess.disposition.questions.final_status) and reply.runner_subprocess.disposition.questions.final_status.state == "supported" and reply.runner_subprocess.disposition.questions.final_status.answer == "signal" and present(reply.runner_subprocess.disposition.questions.final_status.value) and is_variant(reply.runner_subprocess.disposition.questions.final_status.value, "Integer") and present(reply.runner_subprocess.disposition.questions.cleanup_trigger) and reply.runner_subprocess.disposition.questions.cleanup_trigger.state == "supported" and present(reply.runner_subprocess.disposition.questions.grace_end) and reply.runner_subprocess.disposition.questions.grace_end.state == "supported" and reply.runner_subprocess.disposition.questions.grace_end.answer == "exhausted" and present(reply.runner_subprocess.disposition.questions.kill_request_and_result) and reply.runner_subprocess.disposition.questions.kill_request_and_result.state == "supported" and reply.runner_subprocess.disposition.questions.kill_request_and_result.answer == "requested" and present(reply.runner_subprocess.disposition.questions.kill_request_and_result.value) and is_variant(reply.runner_subprocess.disposition.questions.kill_request_and_result.value, "Request") and variant(reply.runner_subprocess.disposition.questions.kill_request_and_result.value, "Request").rc == 0 and variant(reply.runner_subprocess.disposition.questions.kill_request_and_result.value, "Request").signal == variant(reply.runner_subprocess.disposition.questions.final_status.value, "Integer")
+```
+
+#### Host-cleanup attribution {cause: acts}
+
+```contract
+who: ["identity.definitions.controller"]
+where: "validated worker ending projection"
+entry: ["cli_run"]
+recipient: ["report_reader"]
+report: ["execution_diagnostics", "actor_execution_diagnostics"]
+requires: ["diagnostics.execution.ordinary.lifecycle_check"]
+when: present(reply.runner_subprocess.disposition) and present(reply.runner_subprocess.disposition.questions.final_status) and reply.runner_subprocess.disposition.questions.final_status.state == "supported" and reply.runner_subprocess.disposition.questions.final_status.answer == "signal"
+selection: "first_match"
+after: ["diagnostics.execution.ordinary.mapping"]
+```
+
+##### Deadline expiry {deadline_expiry: outcome}
+
+```contract
+test: ref("diagnostics.execution.ordinary.cause_chain.facts") and reply.runner_subprocess.disposition.questions.cleanup_trigger.answer == "deadline_expiry"
+effects: set_value(envelope.data.runner_sandbox_diagnostics.termination_cause, "host_sentinel_deadline")
+```
+
+##### Completion {completion: outcome}
+
+```contract
+test: ref("diagnostics.execution.ordinary.cause_chain.facts") and reply.runner_subprocess.disposition.questions.cleanup_trigger.answer == "completion"
+effects: set_value(envelope.data.runner_sandbox_diagnostics.termination_cause, "host_exit_grace_exhausted")
+```
+
+##### Poll wait error {poll_wait_error: outcome}
+
+```contract
+test: ref("diagnostics.execution.ordinary.cause_chain.facts") and reply.runner_subprocess.disposition.questions.cleanup_trigger.answer == "poll_wait_error"
+effects: set_value(envelope.data.runner_sandbox_diagnostics.termination_cause, "host_cleanup_after_wait_error")
+```
+
+##### Policy transfer error {policy_transfer_error: outcome}
+
+```contract
+test: ref("diagnostics.execution.ordinary.cause_chain.facts") and reply.runner_subprocess.disposition.questions.cleanup_trigger.answer == "policy_transfer_error"
+effects: set_value(envelope.data.runner_sandbox_diagnostics.termination_cause, "host_cleanup_after_transfer_error")
+```
+
+##### Policy transfer timeout {policy_transfer_timeout: outcome}
+
+```contract
+test: ref("diagnostics.execution.ordinary.cause_chain.facts") and reply.runner_subprocess.disposition.questions.cleanup_trigger.answer == "policy_transfer_timeout"
+effects: set_value(envelope.data.runner_sandbox_diagnostics.termination_cause, "host_cleanup_after_transfer_timeout")
+```
+
+##### No eligible recognized cleanup cause {unknown: outcome}
+
+```contract
+test: True
+effects: set_value(envelope.data.runner_sandbox_diagnostics.termination_cause, "unknown")
+```
+
+The request result, exhausted grace and owned final status are independent
+observations in this chain. A successful signal request supplies its own
+request result; attribution requires the other carried claims and the
+preceding lifecycle validation.
+
+#### Copy validated host conflicts {host_conflicts: reports}
+
+```contract
+requires: ["diagnostics.execution.ordinary.lifecycle_check"]
+bind.i: reply.runner_subprocess.disposition.issues
+bind.j: envelope.data.runner_sandbox_diagnostics.disposition_issues
+match.j: j == i
+when: present(reply.runner_subprocess.disposition)
+after: ["diagnostics.execution.ordinary.stop"]
+```
+
+##### Copy cardinality {coverage: condition}
+
+```contract
+test: count(envelope.data.runner_sandbox_diagnostics.disposition_issues) == count(reply.runner_subprocess.disposition.issues)
+```
+
+##### Copy each conflict's fields {copy: effect}
+
+```contract
+on: "always"
+each: ["i", "j"]
+effects: [set_value(envelope.data.runner_sandbox_diagnostics.disposition_issues[j].kind, reply.runner_subprocess.disposition.issues[i].kind), set_value(envelope.data.runner_sandbox_diagnostics.disposition_issues[j].detail, reply.runner_subprocess.disposition.issues[i].detail), set_value(envelope.data.runner_sandbox_diagnostics.disposition_issues[j].subject_path, None), set_value(envelope.data.runner_sandbox_diagnostics.disposition_issues[j].rule, reply.runner_subprocess.disposition.issues[i].rule), set_value(envelope.data.runner_sandbox_diagnostics.disposition_issues[j].question, reply.runner_subprocess.disposition.issues[i].question), set_value(envelope.data.runner_sandbox_diagnostics.disposition_issues[j].step_index, reply.runner_subprocess.disposition.issues[i].step_index), set_value(envelope.data.runner_sandbox_diagnostics.disposition_issues[j].observations, reply.runner_subprocess.disposition.issues[i].observations)]
+```
+
+These assignments address the completed worker projection before reply-wide
+findings. Lifecycle validation has supplied no local failures, so the host
+conflicts occupy its issue list in source order. Later reply-wide findings
+append at the execution level; they preserve these copied records.
+
 ### Apply reply-wide findings {reply_checks: acts}
 
 ```contract
-who: "controller"
+who: ["identity.definitions.controller"]
 where: "typed reply relationship checks after worker projections"
 entry: ["cli_run"]
 recipient: ["report_reader"]
@@ -124,6 +663,7 @@ report: ["execution_diagnostics"]
 free.condition: One or more applicable reply-wide checks finds an invalid relationship.
 effects: [set_value(diagnostics.process_disposition, "withheld"), set_value(diagnostics.termination_cause, "unknown"), set_value(diagnostics.disposition_integrity, "invalid"), retain_records(reply), retain_assessments(diagnostics.actors)]
 after: ["diagnostics.execution.project"]
+retained_free: {"condition":{"kind":"native_protocol","reason":"The controller uses the reply-wide validation result before appending its findings to the existing top-level issue array."}}
 ```
 
 The controller appends these findings to top-level `disposition_issues`.
@@ -150,8 +690,7 @@ result.
 defines: "condition"
 ```
 
-An ordinary semantic reply is a reply with no reporting_failure record;
-this branch includes both single-worker and actor execution forms.
+The ordinary semantic branch uses the [reply definition](#contract-identity-definitions-reply).
 
 | Check family | Applicability and checked relationship | Finding scope |
 | --- | --- | --- |
@@ -188,6 +727,14 @@ final-status answer that passes the other claim checks projects as
 `unrecognized`. This differs from an unknown closed claim state, which
 withholds the worker projection.
 
+#### Unconfirmed vocabulary {vocabulary_choice: gap}
+
+```contract
+kind: "behavior"
+```
+
+For ordinary and actor workers, the controller maps both unresolved and inapplicable host final-status claims to unconfirmed while retaining the host claim. Whether to retain that merged controller vocabulary remains a maintainer decision.
+
 ### Scope example {scope_example: example}
 
 A typed actor reply can carry a transfer naming an invalid source actor,
@@ -203,7 +750,7 @@ questions respectively.
 ```contract
 scope: "subtree"
 grade: "check_read"
-source: [{"path":"controller/src/porcelain_admission.rs","symbol":"execution_diagnostics"},{"path":"controller/src/porcelain_admission.rs","symbol":"project"},{"path":"controller/src/porcelain_admission.rs","symbol":"admit_reply"},{"path":"controller/src/run_flow.rs","symbol":"reply_contract"},{"path":"controller/src/run_flow.rs","symbol":"complete_execution"},{"path":"controller/src/porcelain_actor.rs","symbol":"pub(super) fn validate"},{"path":"controller/src/porcelain_native.rs","symbol":"pub(super) fn validate"}]
+source: [{"path":"controller/src/porcelain_admission.rs","symbol":"execution_diagnostics"},{"path":"controller/src/porcelain_admission.rs","symbol":"project"},{"path":"controller/src/porcelain_admission.rs","symbol":"validate_lifecycle"},{"path":"controller/src/porcelain_admission.rs","symbol":"admit_reply"},{"path":"controller/src/run_flow.rs","symbol":"reply_contract"},{"path":"controller/src/run_flow.rs","symbol":"complete_execution"},{"path":"controller/src/porcelain_actor.rs","symbol":"pub(super) fn validate"},{"path":"controller/src/porcelain_native.rs","symbol":"pub(super) fn validate"}]
 check: [{"path":"controller/src/porcelain_admission.rs","symbol":"typed_invalid_actor_account_keeps_independent_actor_endings","form":"test"},{"path":"controller/src/porcelain_admission.rs","symbol":"typed_degradation_never_certifies_surviving_comparison","form":"test"},{"path":"controller/src/porcelain_admission.rs","symbol":"typed_future_applicability_and_summary_remain_open_without_rewriting","form":"test"},{"path":"controller/src/run_flow.rs","symbol":"malformed_phase_claims_withhold_projection_and_preserve_raw_reply","form":"test"},{"path":"controller/src/run_flow.rs","symbol":"execution_envelopes_preserve_raw_evidence_and_emit_only_execution_fields","form":"test"}]
 pins: "Worker-local and reply-wide projection effects, raw-record retention, open summaries, degradation applicability and outer success are distinct branches."
 context: "Typed controller implementation and the named constructed tests were read."
@@ -267,7 +814,7 @@ the label even when that actor has no subprocess record.
 
 ### process_disposition {process_disposition: field}
 
-The actor's own worker projection, chosen by the mapping below after its
+The actor's own worker projection, chosen by the actor-worker mapping below after its
 lifecycle checks pass. Local findings yield `withheld`; a missing
 subprocess record yields `no_worker`.
 
@@ -294,56 +841,238 @@ Findings from this actor's lifecycle validation, or copied validated host
 conflicts after successful validation. Reply-wide actor-association or
 equipment findings appear in the execution-level issue list.
 
-### Ending mapping {mapping: definition}
+### Actor worker projections {projection: subject}
 
 ```contract
-defines: "assessment"
+who: ["identity.definitions.controller"]
+where: "worker projection after response admission"
+entry: ["cli_run"]
+recipient: ["report_reader"]
+report: ["execution_diagnostics", "actor_execution_diagnostics"]
+bind.a: reply.actors
+bind.d: envelope.data.runner_sandbox_diagnostics.actors
+match.d: d == a
+each: ["a", "d"]
+when: reply.execution_form == "actors" and present(reply.actors) and present(reply.actors[a].subprocess)
 ```
 
-| Validated host final_status | Controller process_disposition |
-| --- | --- |
-| supported, answer exit_code, integer value 0 | clean_exit |
-| supported, answer exit_code, another integer value | nonzero_exit |
-| supported, answer signal | signaled |
-| conflicting with a matching supported conflict record | conflicting |
-| unresolved with a reason | unconfirmed |
-| inapplicable with a reason | unconfirmed |
-| another otherwise admitted answer | unrecognized |
+The source at actor position `a` supplies the projection at position `d`,
+with `d == a`. The separate actor-row obligation establishes cardinality
+and label copying. This scope addresses each existing subprocess, including
+its degraded reporting form, before later reply-wide findings.
 
-The `unconfirmed` value merges the two host states while the retained
-host claim preserves which state and reason it supplied.
-
-#### Unconfirmed vocabulary {vocabulary_choice: gap}
+#### Worker lifecycle validation {lifecycle_check: checks}
 
 ```contract
-kind: "behavior"
+who: ["identity.definitions.controller"]
+where: "one worker lifecycle validation before projection"
+entry: ["cli_run"]
+recipient: ["report_reader"]
+report: ["execution_diagnostics", "actor_execution_diagnostics"]
+free.condition: For reply.actors[a].subprocess and its assigned actions under the carried reporting form, the controller's lifecycle validation returns no failed-check findings, before validated host conflicts are copied.
+retained_free: {"condition":{"kind":"native_protocol","reason":"This prerequisite is the lifecycle validator's intermediate return for the selected worker, assigned actions and reporting form. Successful validation permits host conflicts to be copied into the final disposition_issues array."}}
 ```
 
-The controller maps both unresolved and inapplicable host final-status claims to unconfirmed while retaining the host claim. Whether to retain that merged controller vocabulary remains a maintainer decision.
+The ending, stop-reason, attribution and host-conflict copy rules require
+this result from the same worker validation. A failed prerequisite has the
+following local consequence.
 
-### Host-cleanup attribution {cause: acts}
+##### Local lifecycle findings {local_failure: effect}
 
 ```contract
-who: "controller"
+on: "failure"
+effects: [set_value(envelope.data.runner_sandbox_diagnostics.actors[d].process_disposition, "withheld"), set_value(envelope.data.runner_sandbox_diagnostics.actors[d].termination_cause, "unknown"), set_value(envelope.data.runner_sandbox_diagnostics.actors[d].disposition_integrity, "invalid"), set_value(envelope.data.runner_sandbox_diagnostics.actors[d].stop_reason, None)]
+```
+
+#### Ending mapping {mapping: reports}
+
+```contract
+who: ["identity.definitions.controller"]
 where: "validated worker ending projection"
 entry: ["cli_run"]
 recipient: ["report_reader"]
 report: ["execution_diagnostics", "actor_execution_diagnostics"]
-free.condition: The validated ending is signaled; cleanup trigger and exhausted grace are supported; the supported kill claim names a request with rc zero whose signal equals the observed final signal.
-free.effect: Select the named host-cleanup cause from its cleanup trigger. Preserve unknown when that complete chain or a recognized trigger is absent.
+requires: ["diagnostics.actor.projection.lifecycle_check"]
+when: present(reply.actors[a].subprocess.disposition) and present(reply.actors[a].subprocess.disposition.questions.final_status)
+selection: "first_match"
 ```
 
-| Cleanup trigger | termination_cause |
-| --- | --- |
-| deadline_expiry | host_sentinel_deadline |
-| completion | host_exit_grace_exhausted |
-| poll_wait_error | host_cleanup_after_wait_error |
-| policy_transfer_error | host_cleanup_after_transfer_error |
-| policy_transfer_timeout | host_cleanup_after_transfer_timeout |
+##### Clean exit {clean: outcome}
+
+```contract
+test: reply.actors[a].subprocess.disposition.questions.final_status.state == "supported" and reply.actors[a].subprocess.disposition.questions.final_status.answer == "exit_code" and present(reply.actors[a].subprocess.disposition.questions.final_status.value) and is_variant(reply.actors[a].subprocess.disposition.questions.final_status.value, "Integer") and variant(reply.actors[a].subprocess.disposition.questions.final_status.value, "Integer") == 0
+effects: [set_value(envelope.data.runner_sandbox_diagnostics.actors[d].process_disposition, "clean_exit"), set_value(envelope.data.runner_sandbox_diagnostics.actors[d].termination_cause, None)]
+```
+
+##### Other exit status {nonzero: outcome}
+
+```contract
+test: reply.actors[a].subprocess.disposition.questions.final_status.state == "supported" and reply.actors[a].subprocess.disposition.questions.final_status.answer == "exit_code"
+effects: [set_value(envelope.data.runner_sandbox_diagnostics.actors[d].process_disposition, "nonzero_exit"), set_value(envelope.data.runner_sandbox_diagnostics.actors[d].termination_cause, "unknown")]
+```
+
+##### Signaled ending {signal: outcome}
+
+```contract
+test: reply.actors[a].subprocess.disposition.questions.final_status.state == "supported" and reply.actors[a].subprocess.disposition.questions.final_status.answer == "signal"
+effects: [set_value(envelope.data.runner_sandbox_diagnostics.actors[d].process_disposition, "signaled"), set_value(envelope.data.runner_sandbox_diagnostics.actors[d].termination_cause, "unknown")]
+```
+
+##### Supported conflict {conflict: outcome}
+
+```contract
+test: reply.actors[a].subprocess.disposition.questions.final_status.state == "conflicting"
+effects: [set_value(envelope.data.runner_sandbox_diagnostics.actors[d].process_disposition, "conflicting"), set_value(envelope.data.runner_sandbox_diagnostics.actors[d].termination_cause, "unknown")]
+```
+
+##### Unresolved or inapplicable ending {unconfirmed: outcome}
+
+```contract
+test: reply.actors[a].subprocess.disposition.questions.final_status.state in ["unresolved", "inapplicable"]
+effects: [set_value(envelope.data.runner_sandbox_diagnostics.actors[d].process_disposition, "unconfirmed"), set_value(envelope.data.runner_sandbox_diagnostics.actors[d].termination_cause, "unknown")]
+```
+
+##### Other admitted ending {other: outcome}
+
+```contract
+test: True
+effects: [set_value(envelope.data.runner_sandbox_diagnostics.actors[d].process_disposition, "unrecognized"), set_value(envelope.data.runner_sandbox_diagnostics.actors[d].termination_cause, "unknown")]
+```
+
+The `unconfirmed` value merges the two host states while the retained
+host claim preserves which state and reason it supplied. Lifecycle validation
+has already checked the integer exit value and supported-conflict evidence.
+
+#### Supported stop reason {stop: reports}
+
+```contract
+who: ["identity.definitions.controller"]
+where: "validated worker ending projection"
+entry: ["cli_run"]
+recipient: ["report_reader"]
+report: ["execution_diagnostics", "actor_execution_diagnostics"]
+requires: ["diagnostics.actor.projection.lifecycle_check"]
+when: present(reply.actors[a].subprocess.disposition)
+selection: "first_match"
+after: ["diagnostics.actor.projection.cause"]
+```
+
+##### Recognized supported stop {recognized: outcome}
+
+```contract
+test: present(reply.actors[a].subprocess.disposition.questions.stop_reason) and reply.actors[a].subprocess.disposition.questions.stop_reason.state == "supported" and present(reply.actors[a].subprocess.disposition.questions.stop_reason.answer) and reply.actors[a].subprocess.disposition.questions.stop_reason.answer in ["sentinel_deadline", "done", "child_reaped", "wait_error", "policy_write_error", "policy_transfer_deadline"]
+effects: [set_value(envelope.data.runner_sandbox_diagnostics.actors[d].stop_reason, reply.actors[a].subprocess.disposition.questions.stop_reason.answer), set_value(envelope.data.runner_sandbox_diagnostics.actors[d].disposition_integrity, "valid")]
+```
+
+##### No supported recognized stop {absent: outcome}
+
+```contract
+test: True
+effects: [set_value(envelope.data.runner_sandbox_diagnostics.actors[d].stop_reason, None), set_value(envelope.data.runner_sandbox_diagnostics.actors[d].disposition_integrity, "valid")]
+```
+
+#### Carried host-cleanup chain {cause_chain: definition}
+
+```contract
+defines: "condition"
+```
+
+##### Required claims and native request result {facts: condition}
+
+```contract
+test: present(reply.actors[a].subprocess.disposition) and present(reply.actors[a].subprocess.disposition.questions.final_status) and reply.actors[a].subprocess.disposition.questions.final_status.state == "supported" and reply.actors[a].subprocess.disposition.questions.final_status.answer == "signal" and present(reply.actors[a].subprocess.disposition.questions.final_status.value) and is_variant(reply.actors[a].subprocess.disposition.questions.final_status.value, "Integer") and present(reply.actors[a].subprocess.disposition.questions.cleanup_trigger) and reply.actors[a].subprocess.disposition.questions.cleanup_trigger.state == "supported" and present(reply.actors[a].subprocess.disposition.questions.grace_end) and reply.actors[a].subprocess.disposition.questions.grace_end.state == "supported" and reply.actors[a].subprocess.disposition.questions.grace_end.answer == "exhausted" and present(reply.actors[a].subprocess.disposition.questions.kill_request_and_result) and reply.actors[a].subprocess.disposition.questions.kill_request_and_result.state == "supported" and reply.actors[a].subprocess.disposition.questions.kill_request_and_result.answer == "requested" and present(reply.actors[a].subprocess.disposition.questions.kill_request_and_result.value) and is_variant(reply.actors[a].subprocess.disposition.questions.kill_request_and_result.value, "Request") and variant(reply.actors[a].subprocess.disposition.questions.kill_request_and_result.value, "Request").rc == 0 and variant(reply.actors[a].subprocess.disposition.questions.kill_request_and_result.value, "Request").signal == variant(reply.actors[a].subprocess.disposition.questions.final_status.value, "Integer")
+```
+
+#### Host-cleanup attribution {cause: acts}
+
+```contract
+who: ["identity.definitions.controller"]
+where: "validated worker ending projection"
+entry: ["cli_run"]
+recipient: ["report_reader"]
+report: ["execution_diagnostics", "actor_execution_diagnostics"]
+requires: ["diagnostics.actor.projection.lifecycle_check"]
+when: present(reply.actors[a].subprocess.disposition) and present(reply.actors[a].subprocess.disposition.questions.final_status) and reply.actors[a].subprocess.disposition.questions.final_status.state == "supported" and reply.actors[a].subprocess.disposition.questions.final_status.answer == "signal"
+selection: "first_match"
+after: ["diagnostics.actor.projection.mapping"]
+```
+
+##### Deadline expiry {deadline_expiry: outcome}
+
+```contract
+test: ref("diagnostics.actor.projection.cause_chain.facts") and reply.actors[a].subprocess.disposition.questions.cleanup_trigger.answer == "deadline_expiry"
+effects: set_value(envelope.data.runner_sandbox_diagnostics.actors[d].termination_cause, "host_sentinel_deadline")
+```
+
+##### Completion {completion: outcome}
+
+```contract
+test: ref("diagnostics.actor.projection.cause_chain.facts") and reply.actors[a].subprocess.disposition.questions.cleanup_trigger.answer == "completion"
+effects: set_value(envelope.data.runner_sandbox_diagnostics.actors[d].termination_cause, "host_exit_grace_exhausted")
+```
+
+##### Poll wait error {poll_wait_error: outcome}
+
+```contract
+test: ref("diagnostics.actor.projection.cause_chain.facts") and reply.actors[a].subprocess.disposition.questions.cleanup_trigger.answer == "poll_wait_error"
+effects: set_value(envelope.data.runner_sandbox_diagnostics.actors[d].termination_cause, "host_cleanup_after_wait_error")
+```
+
+##### Policy transfer error {policy_transfer_error: outcome}
+
+```contract
+test: ref("diagnostics.actor.projection.cause_chain.facts") and reply.actors[a].subprocess.disposition.questions.cleanup_trigger.answer == "policy_transfer_error"
+effects: set_value(envelope.data.runner_sandbox_diagnostics.actors[d].termination_cause, "host_cleanup_after_transfer_error")
+```
+
+##### Policy transfer timeout {policy_transfer_timeout: outcome}
+
+```contract
+test: ref("diagnostics.actor.projection.cause_chain.facts") and reply.actors[a].subprocess.disposition.questions.cleanup_trigger.answer == "policy_transfer_timeout"
+effects: set_value(envelope.data.runner_sandbox_diagnostics.actors[d].termination_cause, "host_cleanup_after_transfer_timeout")
+```
+
+##### No eligible recognized cleanup cause {unknown: outcome}
+
+```contract
+test: True
+effects: set_value(envelope.data.runner_sandbox_diagnostics.actors[d].termination_cause, "unknown")
+```
 
 The request result, exhausted grace and owned final status are independent
-observations in this chain. A successful signal request alone supplies
-its own request result; attribution requires the other observations.
+observations in this chain. A successful signal request supplies its own
+request result; attribution requires the other carried claims and the
+preceding lifecycle validation.
+
+#### Copy validated host conflicts {host_conflicts: reports}
+
+```contract
+requires: ["diagnostics.actor.projection.lifecycle_check"]
+bind.i: reply.actors[a].subprocess.disposition.issues
+bind.j: envelope.data.runner_sandbox_diagnostics.actors[d].disposition_issues
+match.j: j == i
+when: present(reply.actors[a].subprocess.disposition)
+after: ["diagnostics.actor.projection.stop"]
+```
+
+##### Copy cardinality {coverage: condition}
+
+```contract
+test: count(envelope.data.runner_sandbox_diagnostics.actors[d].disposition_issues) == count(reply.actors[a].subprocess.disposition.issues)
+```
+
+##### Copy each conflict's fields {copy: effect}
+
+```contract
+on: "always"
+each: ["i", "j"]
+effects: [set_value(envelope.data.runner_sandbox_diagnostics.actors[d].disposition_issues[j].kind, reply.actors[a].subprocess.disposition.issues[i].kind), set_value(envelope.data.runner_sandbox_diagnostics.actors[d].disposition_issues[j].detail, reply.actors[a].subprocess.disposition.issues[i].detail), set_value(envelope.data.runner_sandbox_diagnostics.actors[d].disposition_issues[j].subject_path, None), set_value(envelope.data.runner_sandbox_diagnostics.actors[d].disposition_issues[j].rule, reply.actors[a].subprocess.disposition.issues[i].rule), set_value(envelope.data.runner_sandbox_diagnostics.actors[d].disposition_issues[j].question, reply.actors[a].subprocess.disposition.issues[i].question), set_value(envelope.data.runner_sandbox_diagnostics.actors[d].disposition_issues[j].step_index, reply.actors[a].subprocess.disposition.issues[i].step_index), set_value(envelope.data.runner_sandbox_diagnostics.actors[d].disposition_issues[j].observations, reply.actors[a].subprocess.disposition.issues[i].observations)]
+```
+
+These assignments address the completed worker projection before reply-wide
+findings. Lifecycle validation has supplied no local failures, so the host
+conflicts occupy its issue list in source order. Later reply-wide findings
+append at the execution level; they preserve these copied records.
 
 ### Actor projection support {support: owner}
 
@@ -374,8 +1103,8 @@ unknown: "An unfamiliar category remains a finding with its carried detail and s
 ```
 
 Category supplied by the controller check or copied from a host conflict.
-A finding's origin and effect follow the producing scope and the remaining
-fields, rather than an exhaustive match over this list.
+A finding's origin and effect follow the producing scope and its carried
+fields.
 
 ### detail {detail: field}
 
@@ -420,12 +1149,14 @@ Controller-created findings currently omit this field.
 ### Retain observation and finding separately {retain: acts}
 
 ```contract
-who: "controller"
+who: ["identity.definitions.controller"]
 where: "integrity finding construction"
 entry: ["cli_run"]
 recipient: ["report_reader"]
 report: ["execution_diagnostics", "actor_execution_diagnostics"]
-free.effect: Publish controller findings as kind and detail, with subject_path for the owned-reap, phase-activation and termination-gate checks. Copy validated host conflicts with their rule, question, step index and observation references. Preserve the host reply independently of both forms.
+effects: retain_records(reply)
+free.effect: Construct controller findings from the failed check's kind and detail, attaching subject_path for the owned-reap, phase-activation and termination-gate checks. Publish each finding and copied validated host conflict at its producing validation scope and in the producing order.
+retained_free: {"effect":{"kind":"native_protocol","reason":"The native validation procedure constructs findings, formats collection positions as decimal strings in subject paths, and appends records at the producing scope in order. Copied conflict field values and host-reply retention are structured separately."}}
 ```
 
 ### Finding association and effect {subject: definition}

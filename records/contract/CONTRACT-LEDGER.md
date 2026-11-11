@@ -18,7 +18,28 @@ Another agent's review and the maintainer's line-by-line contract reading
 will occur then. Tagged rehearsal and Apple submission wait for the
 instruction to continue after that review.
 
-**Stage two complete; stage three is next.**
+**Stage three settled; stage four follows.**
+The contract, stage-two decision record and maintainer list are ready for the
+maintainer's reading; work continues through guide validation to the directed
+pre-tag pause. `records/contract/STAGE-THREE-ACCOUNT.md` records the structured
+representation, source adjudication, verification and separately frozen readings.
+The final document has 5,831 lines and 77,424 words, including 2,086 generated
+body-table lines and 43,999 table words. The authored non-field body has 15,891
+words and field meanings 14,763 words. This exceeds the plan's size threshold.
+
+All nineteen surface names remain. The model has 1,917 nodes, 1,004 fields and
+zero uncovered imported records. Retained free relationships have checked
+local reasons: 51 conditions, no dependencies, 78 effects and four applicability
+clauses. Seven reserved maintainer choices retain their public Known gaps.
+
+Full source-drift `20261111T173646Z_0eba9df5` passed all ten cases. The final
+presentation owner `20261111T174820Z_8b4b477c` passed after the isolated reader's
+notation corrections. Strict tree loading and full history checking passed.
+Earlier failures and repairs remain in the stage-three account. The final
+isolated revision resolved the named spelling, collection-account and notation
+questions within its reading scope; source adjudications retain separate grades.
+
+**Stage two complete.**
 The reviewed 33-file candidate was applied after commit `b6ce6d26`, with all
 preimages matching. It adds the common constructed reader corpus, reconciles
 preparation/degradation applicability, adds optional finding subject paths,

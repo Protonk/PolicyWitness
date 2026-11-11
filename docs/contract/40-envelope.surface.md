@@ -6,16 +6,16 @@ artifact: "The controller envelope"
 part: "assessment"
 goldens: ["tests/fixtures/contract/surfaces/envelope.json"]
 checks: ["unit", "integration", "failure_boundaries"]
-who: "controller"
-where: "JSON envelope presentation"
-entry: ["cli"]
-recipient: ["cli_caller"]
-report: ["run"]
 ```
 
 ## Run envelope {run: subject}
 
 ```contract
+report: ["run_envelope"]
+recipient: ["cli_caller"]
+entry: ["cli_run"]
+where: "run envelope presentation"
+who: ["identity.definitions.controller"]
 record: "rust.RunEnvelope"
 as: "run_envelope"
 ```
@@ -46,6 +46,11 @@ their own scopes.
 ## Compiler-helper envelope {helper: subject}
 
 ```contract
+report: ["helper_envelope"]
+recipient: ["helper_caller", "controller"]
+entry: ["standalone_helper", "controller_helper_stdin"]
+where: "compiler-helper envelope presentation"
+who: ["identity.definitions.helper"]
 record: "rust.HelperEnvelope"
 as: "compiler_envelope"
 ```
@@ -125,6 +130,11 @@ typed nested data carries the report.
 ## Run payload {data: subject}
 
 ```contract
+report: ["run_envelope"]
+recipient: ["cli_caller"]
+entry: ["cli_run"]
+where: "run payload assembly"
+who: ["identity.definitions.controller"]
 record: "rust.RunData"
 as: "run_data"
 ```
@@ -180,8 +190,9 @@ where: "run completion after admission"
 after: ["diagnostics.execution.reply_checks"]
 when: present(envelope.data.runner_result)
 free.when: Client capture and host reply admission have succeeded.
-effects: [set_value(envelope.result.ok, reply.normalized_outcome == "finished"), set_value(envelope.result.normalized_outcome, reply.normalized_outcome)]
-free.effect: Choose exit 0 for finished and exit 1 otherwise. Retain query, attempt and native records, and compute diagnostics independently.
+free.effect: Compute diagnostics independently of the admitted host outcome and the selected run result.
+retained_free: {"when":{"kind":"native_protocol","reason":"Applicability requires successful capture admission and decoded-host admission, each selected by its own reader."},"effect":{"kind":"native_protocol","reason":"Independent diagnostic computation has its own reader inputs and findings; the admitted result and exit assignments are stated in the cases."}}
+selection: "first_match"
 ```
 
 `finished` can coexist with a failed file open or an integrity finding.
@@ -196,6 +207,20 @@ kind: "behavior"
 Whether result.ok and process exit should also reflect controller integrity
 findings remains open. Present behavior selects success from the admitted
 host outcome alone.
+
+#### Admitted finished outcome {finished: outcome}
+
+```contract
+test: envelope.data.runner_result.normalized_outcome == "finished"
+effects: [set_value(envelope.result.ok, True), set_value(envelope.result.exit_code, 0), set_value(envelope.result.normalized_outcome, envelope.data.runner_result.normalized_outcome), retain_records(envelope.data.runner_result)]
+```
+
+#### Other admitted outcome {other: outcome}
+
+```contract
+test: True
+effects: [set_value(envelope.result.ok, False), set_value(envelope.result.exit_code, 1), set_value(envelope.result.normalized_outcome, envelope.data.runner_result.normalized_outcome), retain_records(envelope.data.runner_result)]
+```
 
 ### Controller classifications {classification: definition}
 
@@ -223,6 +248,7 @@ where: "received run data admission"
 failure: "first"
 free.condition: Check request delivery error first, then client failure (capture admission, host frame admission and transport terminal), then decoded host producer identity and host capacity/profile-label admission.
 free.effect: A delivery failure yields tool_error/exit 2; another refused boundary yields its classification/exit 1. Retain the available capture and structurally decoded reply, with runner_sandbox_diagnostics null. Eligible xpc_error can add independent fallback compilation.
+retained_free: {"condition":{"kind":"serialized_grammar","reason":"Delivery, capture and host-byte admission form ordered receiver boundaries with different retained representations."},"effect":{"kind":"native_protocol","reason":"The selected failed boundary determines result/exit and available capture/reply retention; fallback has its own eligibility chain."}}
 ```
 
 Admission precedes evidence interpretation. The same held request supplies

@@ -1,0 +1,13 @@
+# Independent final presentation review
+
+Recommendation: adopt this narrow successor after the active frozen sequence finishes. No source-level issue found in the reviewed changes.
+
+Patch SHA256: `befa8feb44dca92c0f759af8fd416ccf10b930372bb28de223de9b8e13edfeaf`.
+
+- **Implication grouping:** enclosing each rendered implication in parentheses closes both antecedent/consequent scope and nested guards. The constructed control contains two independent conjuncts and a nested implication; its expected string distinguishes those three scopes. The existing checker accepts Boolean `implies` operands and the renderer preserves their recursive order. This resolves the actual ambiguity identified in the generated run-reference rows without changing model syntax or evaluation.
+- **Absent execution form:** `reply_geometry` selects actor capacity only for `execution_form.as_deref() == Some("actors")`; the other branch uses eight phases. The explicit absent-or-present-nonactor antecedent states that ordinary branch positively, while retaining the actor guard and every other count predicate. `phase_issues` uses the same source branch. The optional declaration was also inspected. This is an account clarification, not a product change.
+- **Early reply definition:** the ordinary-semantic-reply sentence moves unchanged beside the existing early Reply definition. Its distinction remains reporting-failure presence, including both single-worker and actor execution. `admit_reply` branches on `if let Some(f) = reporting_failure`, while ordinary checks in the else branch include actor-specific processing. The old check-family location now links the existing `identity.definitions.reply` anchor. Its surrounding table still states the check-family applicability. No definition node or old check-family anchor is removed.
+
+Opened: complete private patch and manifest; the existing Reply and old check-family definition contexts; `reply_geometry` and `phase_issues` phase-cap branches; `admit_reply` reporting-failure/ordinary branch; `PWRunnerRunResult.execution_form` Swift/Rust optional declarations; expression presence/implies inference and the existing authoring expression account. The earlier renderer review supplies the unchanged recursive rendering and fixture context. Geometry's other capacities and relationships remain separately reviewed by their owner/root.
+
+No tests, model load, product import, generator, build, app command or shared edit was performed. All four private postimages were compared to their manifest hashes using standard-library hashing. The isolated reader's frozen input/report remains unchanged; this recommendation supplies no execution or subsequent reader credit.

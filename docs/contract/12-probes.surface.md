@@ -48,7 +48,6 @@ scope: "subtree"
 grade: "source_read"
 source: [{"path": "runner/Sources/PWRunnerCore/PWRunnerRequest.swift", "symbol": "PWRunnerProbeStep"}, {"path": "runner/Sources/PWRunnerCore/ProbeRunner.swift", "symbol": "requestMeaningFailure"}, {"path": "runner/Sources/PWRunnerCore/ActorPlan.swift", "symbol": "normalizeActorPlan"}]
 pins: "The adjacent field meanings and operations follow the named implementation."
-context: "Current source read for this draft."
 limits: "Grammar and uniqueness branches read. The teaching step is a template; no live result is claimed."
 ```
 
@@ -74,15 +73,43 @@ Closed filter kind with its applicable optional value.
 ### Admission and eligibility {eligibility: acts}
 
 ```contract
-who: "host"
+uses: ["probes.query.excluded"]
+who: ["identity.definitions.host"]
 where: "query admission and planning"
-entry: ["ordinary_xpc_execute", "actor_xpc_execute"]
+entry: ["xpc_execute"]
 recipient: ["caller", "report_reader"]
 report: ["runner_reply"]
-free.effect: Refuse a blank operation, unknown filter or inapplicable/missing filter value as a whole-request error. For an admitted query, withhold native prediction when its path fails host realpath planning or its operation/filter pair is excluded; report prediction_unavailable while leaving the attempt eligible.
+free.effect: Check operation trimming first, filter kind next, and value applicability and trimming last; stop at the first refusal. For an admitted query, withhold native prediction when its path fails host realpath planning or its operation/filter pair is excluded; report prediction_unavailable while leaving the attempt eligible.
+retained_free: {"effect": {"kind": "environment_observation", "reason": "Query admission traverses operation, filter kind and applicable value in order. Realpath planning then observes the host filesystem before release; the finite pair exclusion has its own structured condition."}}
 ```
 
 A path created by the attempt can be unresolved at planning and resolve in later host diagnostics. These observations have separate times and owners.
+
+#### Whitespace-trimmed query inputs {trimmed: condition}
+
+```contract
+free.condition: The operation is nonempty after trimming whitespace and newlines. For a known non-none filter, its supplied value is also nonempty after that trimming.
+retained_free: {"condition": {"kind": "raw_admission", "reason": "The same query-admission action uses Foundation whitespace/newline trimming for the operation and applicable value, with operation checked before kind and then value."}}
+```
+
+#### Known filter {known_filter: condition}
+
+```contract
+test: query.filter.kind in ['none', 'path', 'global_name', 'local_name', 'iokit_registry_entry_class', 'iokit_user_client_class', 'sysctl_name']
+```
+
+#### Applicable value {value_presence: condition}
+
+```contract
+test: implies(query.filter.kind == "none", absent(query.filter.value)) and implies(query.filter.kind != "none", present(query.filter.value))
+```
+
+#### Whole-request refusal {failure: effect}
+
+```contract
+on: "failure"
+effects: [perform(ref("refusals.request.consequence"), request)]
+```
 
 ### Excluded prediction pairs {excluded: definition}
 
@@ -90,16 +117,13 @@ A path created by the attempt can be unresolved at planning and resolve in later
 defines: "condition"
 ```
 
-These exact pairs are excluded by the planner:
-
-| Operation | Filter |
-| --- | --- |
-| `iokit-open-service` | `iokit_registry_entry_class` |
-| `iokit-open-user-client` | `iokit_user_client_class` |
-| `sysctl-read` | `sysctl_name` |
-| `mach-lookup` | `local_name` |
-
 The exclusion belongs to the pair. Other operations using the same filter follow their own eligibility and native result.
+
+#### Exact excluded pairs {pairs: condition}
+
+```contract
+test: (query.operation == "iokit-open-service" and query.filter.kind == "iokit_registry_entry_class") or (query.operation == "iokit-open-user-client" and query.filter.kind == "iokit_user_client_class") or (query.operation == "sysctl-read" and query.filter.kind == "sysctl_name") or (query.operation == "mach-lookup" and query.filter.kind == "local_name")
+```
 
 ### Prediction-exclusion evidence scope {exclusion_evidence: definition}
 
@@ -124,10 +148,8 @@ limits: "This owner reads the recorded basis and current table; it adds no nativ
 ```contract
 scope: "subtree"
 grade: "source_read"
-source: [{"path": "runner/Sources/PWRunnerCore/ProbeRunner.swift", "symbol": "predictionUnavailableOpFilters"}, {"path": "runner/Sources/PWRunnerCore/CWorkerRequestPlanning.swift", "symbol": "pathFilterIsUnresolvable"}]
+source: [{"path": "runner/Sources/PWRunnerCore/ProbeRunner.swift", "symbol": "predictionUnavailableOpFilters"}, {"path": "runner/Sources/PWRunnerCore/ProbeRunner.swift", "symbol": "sandboxCheckFailure"}, {"path": "runner/Sources/PWRunnerCore/CWorkerRequestPlanning.swift", "symbol": "pathFilterIsUnresolvable"}]
 pins: "The adjacent field meanings and operations follow the named implementation."
-context: "Current source read for this draft."
-limits: "Source inspection supplies the stated branch behavior; this draft credits no execution."
 ```
 
 
@@ -162,8 +184,6 @@ scope: "subtree"
 grade: "source_read"
 source: [{"path": "runner/Sources/PWRunnerCore/ProbeRunner.swift", "symbol": "sandboxCheckFailure"}, {"path": "runner/Sources/PWRunnerCore/PWRunnerRequest.swift", "symbol": "PWRunnerSandboxFilter"}]
 pins: "The adjacent field meanings and operations follow the named implementation."
-context: "Current source read for this draft."
-limits: "Source inspection supplies the stated branch behavior; this draft credits no execution."
 ```
 
 
@@ -182,7 +202,7 @@ as: "attempt"
 ```contract
 vocabulary: "closed"
 listed: "exhaustive"
-values: ["file", "mach", "sysctl", "exec"]
+values: ["file", "mach_lookup", "sysctl", "exec"]
 ```
 
 Native operation family selected with action.
@@ -221,7 +241,7 @@ The worker runs the selected operation after policy application in an apply work
 | `file / create_fresh` | `lstat` before a fresh exclusive `open(O_WRONLY \| O_CLOEXEC \| O_CREAT \| O_EXCL, 0600)`, opened `fstat`, one-byte `x` write, written `fstat`, then close. Pre-open `lstat` is an independent observation. Preserve the first operation failure in the aggregate. |
 | `file / unlink` | `unlink(target)` and its return/errno. |
 | `file / access` | `access(target, R_OK)` and its return/errno. This is an access-check observation. |
-| `mach / lookup` | Obtain the task bootstrap port and call `bootstrap_look_up` for the supplied name; release the returned service port on success. |
+| `mach_lookup / bootstrap_look_up` | Obtain the task bootstrap port and call `bootstrap_look_up` for the supplied name; release the returned service port on success. |
 | `sysctl / read` | One `sysctlbyname` call with a <!-- span limits.sysctl_read_bytes.value_unit -->4,096 bytes<!-- /span --> buffer acquired after application. Report the call's result and errno; discard value bytes and the returned length. |
 | `exec / spawn` | Prepare per-attempt child resources, call `posix_spawn` for the absolute target with the requested argv, then collect child and cleanup observations. |
 
@@ -230,13 +250,14 @@ A short fresh write records its native count and fails the aggregate while retai
 ### Execute a declared operation {execute: acts}
 
 ```contract
-who: "C worker"
+who: ["identity.definitions.worker"]
 where: "released action slot"
-entry: ["ordinary_worker", "actor_worker"]
+entry: ["worker_action"]
 recipient: ["caller", "report_reader"]
 report: ["runner_reply"]
 free.effect: Dispatch only the admitted kind/action pair, record the operation's native observations and publish its slot after the attempt. Preserve operation-specific success meaning alongside the aggregate result.
 uses: ["identity.definitions.observation", "identity.definitions.effect"]
+retained_free: {"effect":{"kind":"native_protocol","reason":"Native action dispatch and release publication are operation-specific procedures; result fields retain the observations they produce."}}
 ```
 
 
@@ -244,12 +265,13 @@ uses: ["identity.definitions.observation", "identity.definitions.effect"]
 ### Exec setup and child inputs {exec: acts}
 
 ```contract
-who: "C worker"
+who: ["identity.definitions.worker"]
 where: "released exec action after setup"
-entry: ["ordinary_worker", "actor_worker"]
+entry: ["worker_action"]
 recipient: ["caller", "report_reader"]
 report: ["runner_reply"]
 free.effect: After application or an actor's unapplied declaration, acquire stdout/stderr pipes and spawn actions for this released attempt, release them on setup failure and at completion, and report the failing setup call when spawning was prevented. Spawn with target as argv[0], an empty environment, /dev/null stdin, captured stdout/stderr, close-on-exec descriptor policy and a new process group.
+retained_free: {"effect":{"kind":"native_protocol","reason":"Pipe/spawn-action acquisition, child argv/environment/descriptors and teardown describe resources and calls during the native attempt."}}
 ```
 
 A successful spawn supplies a child PID even if the child later exits nonzero. The child collection, termination request and owned reap remain separate observations. The production per-child collection allowance is <!-- span limits.exec_child_wait.value_unit -->10,000 milliseconds<!-- /span --> after successful spawn, capped by the remaining per-worker active-plan allowance of <!-- span limits.exec_attempt_budget.value_unit -->115,000 milliseconds<!-- /span -->. The active-plan clock starts before worker setup, includes setup and intervening work, and excludes acknowledged release waits and accepted actor parked-activation waits. Both allowances use continuous time, including system sleep. Exhausted allowance can refuse a later spawn or stop collection; clock faults retain their own boundary. Blocking native calls can outlast the allowance.
@@ -257,12 +279,13 @@ A successful spawn supplies a child PID even if the child later exits nonzero. T
 ### Extension participant restriction {extension_exec: acts}
 
 ```contract
-who: "host"
+when: present(request.actors) and present(request.phases)
+effects: perform(ref("extensions.operation.exec"), request)
+who: ["identity.definitions.host"]
 where: "actor admission"
-entry: ["actor_xpc_execute"]
+entry: ["xpc_execute"]
 recipient: ["caller", "report_reader"]
 report: ["runner_reply"]
-free.effect: Refuse exec probes in every actor participating in an extension operation, including an actor named only as a transfer recipient. Other actors may declare exec probes.
 uses: ["extensions.operation"]
 ```
 
@@ -293,6 +316,4 @@ scope: "subtree"
 grade: "source_read"
 source: [{"path": "runner/Sources/PWRunnerCore/CWorkerRequestPlanning.swift", "symbol": "mapAttemptKind"}, {"path": "controller/tools/pw_probe_runner/pw_probe_runner.c", "symbol": "attempt_file_open_read"}, {"path": "controller/tools/pw_probe_runner/pw_probe_runner.c", "symbol": "attempt_file_write_fresh"}, {"path": "controller/tools/pw_probe_runner/pw_probe_runner.c", "symbol": "attempt_sysctl_read"}, {"path": "controller/tools/pw_probe_runner/pw_worker_exec.h", "symbol": "attempt_exec_spawn"}, {"path": "runner/Sources/PWRunnerCore/ActorPlan.swift", "symbol": "normalizeActorPlan"}, {"path": "controller/tools/pw_probe_runner/pw_worker_timing.h", "symbol": "PW_EXEC_ATTEMPT_BUDGET_MS_DEFAULT"}, {"path": "controller/tools/pw_probe_runner/pw_worker_timing.h", "symbol": "pw_timing_setup"}]
 pins: "The adjacent field meanings and operations follow the named implementation."
-context: "Current source read for this draft."
-limits: "Source inspection supplies the stated branch behavior; this draft credits no execution."
 ```

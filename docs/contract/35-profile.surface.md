@@ -8,7 +8,7 @@ goldens: ["tests/fixtures/contract/surfaces/profile.json", "tests/fixtures/contr
 checks: ["runner_unit", "unit", "failure_boundaries"]
 entry: ["cli_run", "runner_verify", "direct_xpc"]
 recipient: ["controller", "xpc_caller", "cli_caller"]
-report: ["ordinary", "actor", "preparation_failure", "reporting_failure"]
+report: ["runner_reply"]
 ```
 
 The host reports the result of an optional capture of the worker's compiled policy before application.
@@ -71,6 +71,12 @@ The supported compiler result representation is `0`.
 
 The number of raw bytes copied from the compiled object, positive and at most <!-- span limits.compiled_profile.value_unit -->1,048,576 bytes<!-- /span -->. It counts the decoded bytes represented by `bytecode_b64`, separately for each opted-in worker.
 
+#### Captured byte extent {captured: condition}
+
+```contract
+test: implies(receipt.status == "captured", present(receipt.bytecode_length) and receipt.bytecode_length > 0 and receipt.bytecode_length <= limit("compiled_profile"))
+```
+
 ### Bytecode digest {bytecode_sha256: field}
 
 The host's SHA-256 digest of the captured bytes, presented as lowercase hexadecimal.
@@ -78,6 +84,13 @@ The host's SHA-256 digest of the captured bytes, presented as lowercase hexadeci
 ### Bytecode {bytecode_b64: field}
 
 The bytes copied from the compiler object passed to `sandbox_apply`, presented as base64. The worker captures them before application; publication as `captured` additionally requires the host's application and completion checks.
+
+#### Captured payload extent {extent: condition}
+
+```contract
+when: receipt.status == "captured"
+test: byte_length(receipt.bytecode_b64) == receipt.bytecode_length
+```
 
 ### Source digest {source_sha256: field}
 
@@ -102,11 +115,12 @@ Each parameter pair digest hashes its little-endian 32-bit key length, key bytes
 ### Receipt presence {presence: reports}
 
 ```contract
-who: "runner_host"
+who: ["identity.definitions.host"]
 where: "worker_collection"
 recipient: ["controller", "xpc_caller"]
-free.when: Capture was requested and worker output was collected.
+free.when: Capture was requested for this worker and worker output was collected.
 free.effect: Include the optional capture receipt in that worker output.
+retained_free: {"when": {"kind": "native_protocol", "reason": "The selected ordinary or actor policy supplies this worker capture request. Collection supplies the worker output consumed before receipt construction."}, "effect": {"kind": "native_protocol", "reason": "Receipt insertion occurs only for collected capture output, which is an intermediate producer object rather than a final admitted report."}}
 ```
 
 The host includes a receipt in collected capture output. A failure that produces no worker output leaves the receipt absent; absence has several possible causes.
@@ -115,10 +129,11 @@ The host includes a receipt in collected capture output. A failure that produces
 
 ```contract
 failure: "first"
-who: "runner_host"
-where: "worker_collection"
+who: ["identity.definitions.host"]
+where: "collected worker capture decoding"
 recipient: ["controller", "xpc_caller"]
-free.when: Capture was requested and worker output was collected.
+free.when: Capture was requested for this worker and worker output was collected.
+retained_free: {"when": {"kind": "native_protocol", "reason": "The selected ordinary or actor policy supplies this worker capture request. Collection supplies the worker output consumed before receipt construction."}}
 ```
 
 The host checks these conditions in order and reports the first failure as `unavailable` with its reason and the collected worker PID. Passing every condition produces `captured` with the capture fields.
@@ -126,71 +141,142 @@ The host checks these conditions in order and reports the first failure as `unav
 #### Application {application: condition}
 
 ```contract
-free.condition: Application was observed and its return code was zero; failure reason successful_application_unconfirmed.
+free.condition: Application was observed and its return code was zero.
+retained_free: {"condition":{"kind":"native_protocol","reason":"The raw application observation and return code are supplied to the capture decoder, separate from the derived capture receipt."}}
+```
+
+##### First failed guard reason {failure: effect}
+
+```contract
+on: "failure"
+effects: [set_value(receipt.reason, "successful_application_unconfirmed")]
 ```
 
 #### Worker completion {completion: condition}
 
 ```contract
 after: ["profile.receipt.host.application"]
-free.condition: The worker published done and was reaped with exit code zero and no signal; failure reason worker_not_complete.
+free.condition: The worker published done and the collected exit code is zero with no terminating signal.
+retained_free: {"condition": {"kind": "native_protocol", "reason": "The decoder receives done, exitCode and termSignal as independent inputs to capture validation."}}
+```
+
+##### First failed guard reason {failure: effect}
+
+```contract
+on: "failure"
+effects: [set_value(receipt.reason, "worker_not_complete")]
 ```
 
 #### Capture completion {capture: condition}
 
 ```contract
 after: ["profile.receipt.host.completion"]
-free.condition: The worker published capture completion; failure reason capture_not_complete.
+free.condition: The worker published capture completion.
+retained_free: {"condition":{"kind":"native_protocol","reason":"Raw capture-completion publication is the decoder input; captured status is its eventual result."}}
+```
+
+##### First failed guard reason {failure: effect}
+
+```contract
+on: "failure"
+effects: [set_value(receipt.reason, "capture_not_complete")]
 ```
 
 #### Capture status {status: condition}
 
 ```contract
 after: ["profile.receipt.host.capture"]
-free.condition: The recorded capture status was accepted; failure reason worker_capture_refused.
+free.condition: The recorded capture status was accepted.
+retained_free: {"condition":{"kind":"native_protocol","reason":"The native capture status precedes the receipt's captured/unavailable label and cannot be replaced by that label."}}
+```
+
+##### First failed guard reason {failure: effect}
+
+```contract
+on: "failure"
+effects: [set_value(receipt.reason, "worker_capture_refused")]
 ```
 
 #### Process association {pid: condition}
 
 ```contract
 after: ["profile.receipt.host.status"]
-free.condition: The recorded PID equals the worker PID collected by the host; failure reason capture_worker_mismatch.
+free.condition: The recorded PID equals the worker PID collected by the host.
+retained_free: {"condition":{"kind":"native_protocol","reason":"The recorded capture PID and host-collected owned PID are independent inputs whose equality is checked before receipt creation."}}
+```
+
+##### First failed guard reason {failure: effect}
+
+```contract
+on: "failure"
+effects: [set_value(receipt.reason, "capture_worker_mismatch")]
 ```
 
 #### Nonce association {nonce: condition}
 
 ```contract
 after: ["profile.receipt.host.pid"]
-free.condition: The recorded nonce bytes equal the valid request nonce; failure reason capture_nonce_mismatch.
+free.condition: The recorded nonce bytes equal the valid request nonce.
+retained_free: {"condition":{"kind":"native_protocol","reason":"Raw recorded nonce bytes are compared with the validated supplied nonce before the retained request nonce is emitted."}}
+```
+
+##### First failed guard reason {failure: effect}
+
+```contract
+on: "failure"
+effects: [set_value(receipt.reason, "capture_nonce_mismatch")]
 ```
 
 #### Extent and type {extent: condition}
 
 ```contract
 after: ["profile.receipt.host.nonce"]
-free.condition: The profile type is zero and its raw byte count is positive and at most <!-- span limits.compiled_profile.value_unit -->1,048,576 bytes<!-- /span -->; failure reason capture_extent_or_type_invalid.
+free.condition: The profile type is zero and its raw byte count is positive and at most <!-- span limits.compiled_profile.value_unit -->1,048,576 bytes<!-- /span -->.
+retained_free: {"condition":{"kind":"native_protocol","reason":"Raw profile type and extent are capture-buffer inputs checked before emitting the receipt's validated type/length fields."}}
+```
+
+##### First failed guard reason {failure: effect}
+
+```contract
+on: "failure"
+effects: [set_value(receipt.reason, "capture_extent_or_type_invalid")]
 ```
 
 #### Payload digest {digest: condition}
 
 ```contract
 after: ["profile.receipt.host.extent"]
-free.condition: SHA-256 of the captured bytes equals the recorded digest; failure reason capture_bytecode_digest_mismatch.
+free.condition: SHA-256 of the captured bytes equals the recorded digest.
+retained_free: {"condition":{"kind":"native_protocol","reason":"The host hashes raw captured bytes and compares the raw recorded digest; emitted digest equality cannot substitute for that producing calculation."}}
+```
+
+##### First failed guard reason {failure: effect}
+
+```contract
+on: "failure"
+effects: [set_value(receipt.reason, "capture_bytecode_digest_mismatch")]
 ```
 
 #### Consumed input {input: condition}
 
 ```contract
 after: ["profile.receipt.host.digest"]
-free.condition: The recorded source length and digest and parameter count and digest equal the host's supplied inputs; failure reason capture_consumed_input_mismatch.
+free.condition: The recorded source length and digest and parameter count and digest equal the host's supplied inputs.
+retained_free: {"condition":{"kind":"native_protocol","reason":"Supplied source/parameter identities and raw consumed-input publications are separate decoder inputs, not duplicate final receipt fields."}}
+```
+
+##### First failed guard reason {failure: effect}
+
+```contract
+on: "failure"
+effects: [set_value(receipt.reason, "capture_consumed_input_mismatch")]
 ```
 
 #### Capture failure {failure: effect}
 
 ```contract
+effects: [set_value(receipt.status, "unavailable"), withhold(receipt.producer), withhold(receipt.capture_stage), withhold(receipt.request_nonce), withhold(receipt.profile_type), withhold(receipt.bytecode_length), withhold(receipt.bytecode_sha256), withhold(receipt.bytecode_b64), withhold(receipt.source_sha256), withhold(receipt.source_length), withhold(receipt.params_sha256), withhold(receipt.parameter_count), retain_assessments(reply.normalized_outcome)]
 on: "failure"
-effects: [set_value(receipt.status, "unavailable"), withhold(receipt.bytecode_b64), retain_assessments(reply.normalized_outcome)]
-free.effect: The unavailable receipt retains only status, reason and worker_pid.
 ```
 
 #### Source and constructed capture checks {support: owner}
@@ -202,6 +288,13 @@ check: {"path":"runner/Tests/PWRunnerCoreTests/CompiledProfileCaptureTests.swift
 pins: "The read checks construct worker bytes, corrupt each capture input and assert unavailability and withheld bytecode."
 context: "Constructed shared-memory bytes and injected application/termination arguments."
 limits: "This owner credits source and check reading. The shared-memory fixture establishes host checks; the native same-pointer capture is source-supported here."
+```
+
+#### Successful receipt {success: effect}
+
+```contract
+on: "success"
+effects: [set_value(receipt.status, "captured"), set_value(receipt.producer, "worker"), set_value(receipt.capture_stage, "before_apply"), set_value(receipt.profile_type, 0), withhold(receipt.reason)]
 ```
 
 ### The controller checks carried labels {labels: checks}

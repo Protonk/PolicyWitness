@@ -81,13 +81,14 @@ behavior are recorded and checked by their respective operations.
 ### Build derivation {derive: acts}
 
 ```contract
-who: "build.sh and build_contract.py"
+who: ["identity.definitions.build_pipeline"]
 where: "packaged-build identity derivation"
 entry: ["packaged_build"]
 recipient: ["build_operator", "compiled_component"]
 report: ["build_context"]
 uses: ["identity.public.forms", "identity.public.inputs"]
 free.effect: Derive the public identity from the selected source tree, embed it in compiled producers and property lists, and refuse signing if recomputation after compilation yields a different identity.
+retained_free: {"effect":{"kind":"native_protocol","reason":"Source selection, embedding and post-compilation recomputation form a build procedure over source trees and compiled artifacts."}}
 ```
 
 The packaged build computes the identity itself and passes that value into
@@ -172,13 +173,14 @@ different build remains an explicit choice about the target's commitments.
 ### Deriving the history table {derive: reports}
 
 ```contract
-who: "contract stamp generator"
+who: ["identity.definitions.contract_generator"]
 where: "contract history derivation"
 entry: ["documentation_generation"]
 recipient: ["developer"]
 report: ["surface_table"]
 uses: ["identity.surfaces.stamp"]
 free.effect: Walk reachable annotated release tags in ancestry order, retain each surface's last changed stamp and removal state, and mark changed current inputs unreleased or with the explicitly prepared release.
+retained_free: {"effect":{"kind":"native_protocol","reason":"Ancestry walking and last-change/removal selection require the ordered release history, not a current report field."}}
 ```
 
 History derivation compares a surface with its prior declared inputs. The
@@ -346,6 +348,25 @@ PolicyWitness, abbreviated PW, is the controller, runner client, runner host,
 native worker, query validator and compiler helper distributed together. The
 controller exposes specimen execution, runner management and version reporting.
 
+### Build pipeline {build_pipeline: definition}
+
+```contract
+defines: "component"
+```
+
+The packaged build scripts and build-contract reader select source inputs,
+compute and embed the public identity, and compare it again before signing.
+
+### Contract generator {contract_generator: definition}
+
+```contract
+defines: "component"
+```
+
+The contract generator reads the selected authored tree, imported declarations,
+canonical shapes and retained release history to produce the public document,
+snapshot and surface stamps.
+
 ### Controller {controller: definition}
 
 ```contract
@@ -441,6 +462,9 @@ A host reply is the host-produced execution record, including its producer
 identity, execution summary and available observations. The typed host frame
 carries this record across XPC. Raw retained bytes and an admitted decoded
 reply have different availability and interpretation conditions.
+
+An ordinary semantic reply is a reply with no reporting_failure record;
+this branch includes both single-worker and actor execution forms.
 
 ### Capture {capture: definition}
 
@@ -776,15 +800,16 @@ The controller's public identity, also carried in the same envelope's
 ### Version command {emit: reports}
 
 ```contract
-who: "policy-witness controller"
+who: ["identity.definitions.controller"]
 where: "CLI version dispatch"
-entry: ["cli"]
+entry: ["version"]
 recipient: ["cli_caller"]
 report: ["version"]
 uses: ["identity.definitions.envelope", "identity.build.contract"]
 free.condition: The first command argument is --version or version.
-effects: [set_value(version_data.contract, ref("identity.build.contract"))]
-free.effect: Emit a kind version envelope with result.ok true, result.exit_code 0, other result fields null and the current build context; return process exit 0 after successful rendering, or 2 when envelope rendering returns an error.
+effects: [set_value(version_data.contract, ref("identity.build.contract")), set_value(result.ok, True), set_value(result.exit_code, 0), set_value(result.rc, None), set_value(result.normalized_outcome, None), set_value(result.errno, None), set_value(result.error, None), set_value(result.stderr, None), set_value(result.stdout, None)]
+free.effect: Emit the version envelope with its version payload and current build context; return process exit 0 after successful rendering, or 2 when envelope rendering returns an error.
+retained_free: {"condition": {"kind": "raw_admission", "reason": "The first raw argv value has no imported operand; a version envelope cannot establish how dispatch was reached."}, "effect": {"kind": "native_protocol", "reason": "The version command serializes its VersionData and shared JsonResult in a version envelope. Rendering success or failure then governs the process exit."}}
 ```
 
 Version dispatch reports the compiled context without loading a specimen or

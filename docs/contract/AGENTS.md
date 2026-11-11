@@ -13,9 +13,14 @@ prose. Mark a relationship as free text until it has an expression with
 resolved operands. Public gaps identify current behavior under review,
 unresolved meanings or limits in supporting evidence.
 
-Read an owner's source and check before crediting it. State the assertion,
-execution context and limits. Execution credit identifies the run and the
-source/build exercised; release credit identifies the acceptance case.
+Read each source and check named in an owner's support before crediting it.
+State the grade, assertion, sources and support scope. For source-read support,
+state any specific context or limit needed to understand the assertion; the
+shared grade definition supplies the generic source-inspection meaning.
+Check-read and executed support state context and limits explicitly. Preserve
+specific native, constructed-input, shortened-budget, missing-assertion and
+retention limits. Execution credit identifies the run and the source/build
+exercised; release credit identifies the acceptance case.
 Keep evidence metadata separate from stamped public meanings. Preserve useful
 examples with their support or an explicit evidence gap.
 

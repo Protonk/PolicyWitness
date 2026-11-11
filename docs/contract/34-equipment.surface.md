@@ -285,13 +285,15 @@ Structured native or decoding error at the failed inspection boundary, when avai
 ### Binding before launch {bind: acts}
 
 ```contract
-who: "runner host"
+when: present(request.actors)
+who: ["identity.definitions.host"]
 where: "actor preparation before spawn"
-entry: ["actors"]
-recipient: ["direct_host_caller", "runner_client", "controller"]
-report: ["ordinary_reply", "preparation_refusal"]
+entry: ["xpc_execute"]
+recipient: ["xpc_caller", "runner_client", "controller"]
+report: ["runner_reply"]
 free.condition: Inspect the service seal, bounded inventory and both packaged worker roles; compare signed hashes, signing identity/team and entitlement dictionaries with the inventory. Resolve every actor's role and Boolean-true entitlement requirements.
 free.effect: A preparation failure withholds every actor launch and records equipment_binding_refused with retained inspection evidence. Successful preparation selects the requested role/source path for each actor.
+retained_free: {"condition":{"kind":"environment_observation","reason":"Service seals, signatures, entitlement dictionaries and packaged paths are native/file inspection inputs distinct from their retained evidence summaries."},"effect":{"kind":"native_protocol","reason":"Preparation refusal suppresses all launches while retaining partial inspections; successful role/path resolution precedes those launches."}}
 ```
 
 Both packaged roles are checked even if the specimen uses only one. Explicit
@@ -310,6 +312,34 @@ check: {"path":"runner/Tests/PWRunnerCoreTests/ActorEquipmentTests.swift","symbo
 pins: "Missing unused packaged role withholds executable paths; Boolean true alone satisfies a key; live mismatch is ineligible; per-row retained observations survive failure."
 context: "Temporary equipment fixture with constructed inspection calls; source and assertions read."
 limits: "Execution credit is absent; fixture inspection results support branch/retention behavior."
+```
+
+### Packaged bound-row equalities {bound_values: reports}
+
+```contract
+who: ["identity.definitions.host"]
+where: "successful packaged static binding projection"
+entry: ["xpc_execute"]
+recipient: ["report_reader"]
+report: ["runner_reply"]
+when: eq_binding.source == "packaged" and eq_binding.status == "bound"
+```
+
+Packaged binding includes the retained digest and entitlement equalities. Test-override bindings have no packaged baseline requirement.
+
+#### Produced field relationships {fields: condition}
+
+```contract
+test: present(eq_binding.sha256) and present(eq_binding.expected_sha256) and eq_binding.sha256 == eq_binding.expected_sha256 and present(eq_binding.cdhash) and present(eq_binding.expected_cdhash) and eq_binding.cdhash == eq_binding.expected_cdhash and eq_binding.entitlements_match == True
+```
+
+#### Source support {support: owner}
+
+```contract
+scope: "subtree"
+grade: "source_read"
+source: {"path":"runner/Sources/PWRunnerCore/ActorEquipment.swift","symbol":"bindOne"}
+pins: "Packaged binding compares retained expected and observed digests and decoded entitlement equality before marking a row bound."
 ```
 
 ## Entitlement read-back {entitlements: subject}
@@ -513,13 +543,15 @@ True for matched execution, making this setup-usable actor eligible for activati
 ### Associating the owned process {inspect: acts}
 
 ```contract
-who: "runner host"
+when: present(request.actors)
+who: ["identity.definitions.host"]
 where: "after setup and before any actor activation"
-entry: ["actors"]
-recipient: ["direct_host_caller", "runner_client", "controller"]
-report: ["ordinary_reply"]
+entry: ["xpc_execute"]
+recipient: ["xpc_caller", "runner_client", "controller"]
+report: ["runner_reply"]
 free.condition: For each setup-usable child with retained ownership, inspect live code and compare path, CodeDirectory hash, identifier, team and entitlement dictionary to its bound row; recheck each required Boolean-true entitlement and the inspection deadline.
 free.effect: Matched inspection permits activation eligibility. Mismatch or inspection failure cancels all scheduling, retains earlier setup/application publications and leaves all phases unactivated and uncollected. An unavailable setup can coexist with other usable actors when no inspection failure cancels them.
+retained_free: {"condition":{"kind":"environment_observation","reason":"Live code identity, entitlement equality and inspection time are observations against an owned child, not inferences from static inventory."},"effect":{"kind":"native_protocol","reason":"Live inspection failure cancels scheduling while earlier setup publications remain, and unavailable setup has distinct per-actor scheduling behavior."}}
 ```
 
 The scheduler includes inspection in its shared <!-- span limits.actor_setup_allowance.value_unit -->10,000 milliseconds<!-- /span --> monotonic setup allowance. It requires valid clock samples before and after each inspection and records inspection_deadline, cancelling scheduling, when an otherwise successful inspection reaches or exceeds that setup deadline. Before the scheduler runs, orchestration also attempts to establish an additional monotonic deadline <!-- span limits.actor_lifetime_cutoff.value_unit -->180,000 milliseconds<!-- /span --> from that initial clock sample, reusing the configured actor-lifetime duration. This additional deadline has its own clock and origin, separate from the workers' shared continuous-clock cutoff. When its initial sample is unavailable, the additional deadline comparison is absent; the scheduler's setup guard and the inspection's valid start/final clock samples still apply. When present, the additional deadline requires both inspection samples strictly before it.
@@ -547,6 +579,36 @@ pins: "Live-inspection classification and the optional additional orchestration 
 context: "Static review of the cited producer and assertion branches."
 check: [{"path":"runner/Tests/PWRunnerCoreTests/ActorEquipmentTests.swift","symbol":"runActorEquipmentTests","form":"test"}]
 limits: "Injected failure prefixes and later clock controls supply constructed observations. Ownership loss or a mismatch has a different outcome from native inspection failure."
+```
+
+### Inspection result eligibility {eligibility: reports}
+
+```contract
+who: ["identity.definitions.host"]
+where: "live actor inspection result projection"
+entry: ["xpc_execute"]
+recipient: ["report_reader"]
+report: ["runner_reply"]
+selection: "first_match"
+```
+#### Matched inspection {matched: outcome}
+
+```contract
+test: eq_execution.status == "matched"
+effects: [set_value(eq_execution.eligible, True), set_value(eq_execution.reason, None)]
+```
+#### Refused inspection {refused: outcome}
+
+```contract
+test: eq_execution.status in ["mismatched", "inspection_failed"]
+effects: set_value(eq_execution.eligible, False)
+```
+#### Source support {support: owner}
+
+```contract
+grade: "source_read"
+source: {"path":"runner/Sources/PWRunnerCore/ActorEquipment.swift","symbol":"inspect"}
+pins: "A matched live inspection publishes eligibility; mismatched or failed inspection remains ineligible. Native ownership/deadline/entitlement checks precede these states."
 ```
 
 ## Live inspection call {native_observation: subject}
@@ -620,13 +682,15 @@ Equipment refusal classification, when the failure arose from equipment preparat
 ### Preparation refusal contents {retain: reports}
 
 ```contract
-who: "runner host"
+when: present(request.actors) and present(request.phases)
+who: ["identity.definitions.host"]
 where: "actor preparation refusal before launch"
-entry: ["actors"]
-recipient: ["direct_host_caller", "runner_client", "controller"]
-report: ["preparation_refusal"]
+entry: ["xpc_execute"]
+recipient: ["xpc_caller", "runner_client", "controller"]
+report: ["runner_reply"]
 free.condition: The resolved plan is inconsistent or equipment binding fails before actor launch.
-free.effect: Return runner_failed and rc 1, preserving declared actors/phases/action IDs and preparation evidence; retain empty steps, extension events, transfers and token/delivery/handle execution tables.
+retained_free: {"condition":{"kind":"native_protocol","reason":"Resolved-plan consistency and equipment binding supply independent preparation outcomes before launch."}}
+effects: [set_value(reply.execution_form, "actors"), set_value(reply.normalized_outcome, "runner_failed"), set_value(reply.rc, 1), set_value(reply.steps, []), set_value(reply.extension_events, []), set_value(reply.transfers, []), set_value(reply.resources.tokens, []), set_value(reply.resources.deliveries, []), set_value(reply.resources.handles, []), set_value(reply.schedule.cancelled, "preparation_refused"), set_value(reply.authority_setup.host.run.disposition, "not_attempted"), set_value(reply.authority_setup.host.regions, []), set_value(reply.authority_setup.host.custody, []), retain_records(reply.equipment_inventory), retain_records(reply.equipment_bindings), retain_records(reply.equipment_entitlements)]
 ```
 
 Actors have `launch_refused` setup, absent launch/subprocess, and application
@@ -636,6 +700,82 @@ Equipment inventory/binding/read-back rows preserve whichever preparation
 observations were obtained. The schedule records `preparation_refused`; host
 authority run setup is `not_attempted`, regions/custody are empty, and worker
 setup scopes identify their declared actors with decision `not_observed`.
+
+#### Declaration row counts {counts: condition}
+
+```contract
+test: count(reply.actors) == count(request.actors) and count(reply.phases) == count(request.phases)
+```
+
+#### Unlaunched actor rows {actors: effect}
+
+```contract
+on: "always"
+bind.a: reply.actors
+each: ["a"]
+effects: [set_value(reply.actors[a].setup_status, "launch_refused"), set_value(reply.actors[a].application_count, 0), withhold(reply.actors[a].launch), withhold(reply.actors[a].subprocess)]
+```
+
+#### Unactivated phase rows {phases: effect}
+
+```contract
+on: "always"
+bind.p: reply.phases
+each: ["p"]
+effects: [set_value(reply.phases[p].arrival_observed, False), set_value(reply.phases[p].completion_observed, False), set_value(reply.phases[p].collection_status, "not_reached")]
+```
+
+#### Actor identity in declaration order {actor_identity: condition}
+
+```contract
+bind.a: request.actors
+bind.b: reply.actors
+each: ["a", "b"]
+when: a == b
+test: request.actors[a].actor_id == reply.actors[b].actor_id and request.actors[a].sandbox.mode == reply.actors[b].mode and reply.actors[b].index == a
+```
+
+#### Phase identity in declaration order {phase_identity: condition}
+
+```contract
+bind.p: request.phases
+bind.q: reply.phases
+each: ["p", "q"]
+when: p == q
+test: request.phases[p].phase_id == reply.phases[q].phase_id and request.phases[p].actor_id == reply.phases[q].actor_id and reply.phases[q].ordinal == p + 1 and count(reply.phases[q].action_ids) == count(request.phases[p].actions)
+```
+
+#### Source support {support: owner}
+
+```contract
+grade: "source_read"
+source: [{"path":"runner/Sources/PWRunnerCore/ActorOrchestration.swift","symbol":"runActors"},{"path":"runner/Sources/PWRunnerCore/ActorOrchestration.swift","symbol":"actorPreparationRefusal"}]
+pins: "Before-launch plan or equipment refusal enumerates the already-admitted request actors, phases and action IDs in declaration order, preserving available equipment beside empty execution collections and unlaunched/unactivated states."
+```
+
+#### Retained probe action identity {action_probe: condition}
+
+```contract
+bind.p: request.phases
+bind.q: reply.phases
+bind.a: request.phases[p].actions
+bind.b: reply.phases[q].action_ids
+each: ["p", "q", "a", "b"]
+when: p == q and a == b and is_variant(request.phases[p].actions[a], "probe")
+test: reply.phases[q].action_ids[b] == variant(request.phases[p].actions[a], "probe").step_id
+```
+
+#### Retained extensionAction action identity {action_extensionaction: condition}
+
+```contract
+bind.p: request.phases
+bind.q: reply.phases
+bind.a: request.phases[p].actions
+bind.b: reply.phases[q].action_ids
+each: ["p", "q", "a", "b"]
+when: p == q and a == b and is_variant(request.phases[p].actions[a], "extensionAction")
+test: reply.phases[q].action_ids[b] == variant(request.phases[p].actions[a], "extensionAction").step_id
+```
 
 ## Authority setup account {authority_setup: subject}
 
@@ -741,13 +881,15 @@ Detected malformed, repeated, missing-primary or mismatched-association publicat
 ### Acquiring setup decisions and operations {acquire: reports}
 
 ```contract
-who: "runner host"
+when: present(request.actors)
+who: ["identity.definitions.host"]
 where: "worker shared-region collection"
-entry: ["actors"]
-recipient: ["direct_host_caller", "runner_client", "controller"]
-report: ["ordinary_reply", "retained_reporting_failure"]
+entry: ["xpc_execute"]
+recipient: ["xpc_caller", "runner_client", "controller"]
+report: ["runner_reply"]
 free.condition: After worker-identity agreement, acquire-load the decision snapshot first, then independently acquire-load each published operation cell.
-free.effect: Retain valid cells even when the decision is absent. For an observed decision, validate its actor/required association and primary failed/rejected cell, recording setup_primary_unpublished when that supporting cell is unavailable.
+free.effect: Retain independently valid operation cells even when the decision is absent. For an observed decision, validate its raw actor/required association before projecting the decision and its primary operation.
+retained_free: {"condition":{"kind":"native_protocol","reason":"Worker identity precedes independent acquire loads whose ordering is an execution event."},"effect":{"kind":"native_protocol","reason":"Raw actor/required header values and invalid publication flags are checked before projection; the published primary-cell relation is stated separately."}}
 ```
 
 The decision's release orders prerequisite cells. Reading the decision first
@@ -756,6 +898,24 @@ Each cell still has its own publication flag and kind/state guards. A cleanup
 cell can therefore be retained before the terminal decision appears. Invalid
 cells contribute integrity errors while independently valid observations
 remain available.
+
+#### Retained primary support {primary: condition}
+
+```contract
+bind.o: eq_authority_scope.operations
+match.o: eq_authority_scope.operations[o].slot == eq_authority_scope.primary_operation and eq_authority_scope.operations[o].state in ["failed", "rejected"]
+when: eq_authority_scope.publication == "observed" and present(eq_authority_scope.primary_operation)
+test: implies(matches(o) == 0, present(eq_authority_scope.integrity_errors) and "setup_primary_unpublished" in eq_authority_scope.integrity_errors)
+```
+
+A missing primary cell adds an integrity error alongside the decision and independently valid cells.
+
+#### Observed decision applicability {decision: condition}
+
+```contract
+when: eq_authority_scope.publication == "observed"
+test: implies(eq_authority_scope.disposition == "terminal_required_failure", eq_authority_scope.required and present(eq_authority_scope.primary_operation)) and implies(eq_authority_scope.disposition == "ready", eq_authority_scope.required) and implies(eq_authority_scope.disposition == "not_required", eq_authority_scope.required == False)
+```
 
 ### Publication evidence {publication_support: owner}
 
@@ -895,5 +1055,4 @@ grade: "source_read"
 source: [{"path": "runner/Sources/PWRunnerCore/ActorEquipment.swift", "symbol": "ActorEquipmentPreparation"}, {"path": "runner/Sources/PWRunnerCore/PWRunnerEquipment.swift", "symbol": "pwRunnerEquipmentProblems"}, {"path": "runner/Sources/PWRunnerCore/AuthoritySetupRuntime.swift", "symbol": "decodeAuthoritySetup"}, {"path": "runner/Sources/PWRunnerCore/PWRunnerAuthoritySetup.swift", "symbol": "authoritySetupIntegrityErrors"}, {"path": "runner/Sources/PWRunnerCore/ActorOrchestration.swift", "symbol": "actorPreparationRefusal"}, {"path": "runner/Sources/PWRunnerCore/PWRunnerReply.swift", "symbol": "actorExtensionEvidenceProblem"}, {"path": "runner/Sources/PWRunnerCore/ActorScheduler.swift", "symbol": "didSetUp"}, {"path": "runner/Sources/PWRunnerCore/ActorOrchestration.swift", "symbol": "inspectionDeadline"}, {"path": "runner/Sources/PWRunnerCore/MonotonicDeadline.swift", "symbol": "static func now"}]
 pins: "Imported public field definitions joined to producer/decoder/assessment meanings; explicit rule and evidence gaps preserve scope."
 context: "Source and check inspection during contract drafting."
-limits: "No execution credit is claimed by this owner."
 ```

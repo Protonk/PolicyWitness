@@ -43,12 +43,13 @@ Current expected public identity supplied for refusal at `contract`; omitted oth
 ### Refuse at the first reached boundary {select: acts}
 
 ```contract
-who: "host"
+who: ["identity.definitions.host"]
 where: "request decoding and admission"
 entry: ["xpc_execute"]
 recipient: ["caller", "report_reader"]
 report: ["runner_reply"]
 free.effect: Report the first failure reached by the actual decoder or admission branch. Check contract before unknown root fields; at a decoded closed object choose its lexicographically first unknown key before decoding its declared fields. Complete decoded capacity checks before meaning admission.
+retained_free: {"effect":{"kind":"raw_admission","reason":"Branch-local decoder traversal selects an unknown raw key before decoding declared fields; admitted values cannot reproduce that traversal."}}
 ```
 
 The ordinary and actor plan branches have different required fields and ordered checks. There is one request_failure per refusal. Its code and path locate the selected problem; correcting it may reveal the next problem.
@@ -56,13 +57,15 @@ The ordinary and actor plan branches have different required fields and ordered 
 ### Stop children and preserve safe metadata {consequence: acts}
 
 ```contract
-who: "host"
+effects: [set_value(reply.normalized_outcome, "bad_request"), set_value(reply.rc, 1), set_value(reply.steps, [])]
+free.effect: Start no worker or validator for the refused request. Retain metadata under its independent echo rule.
+who: ["identity.definitions.host"]
 where: "pre-child request refusal"
 entry: ["xpc_execute"]
 recipient: ["caller", "report_reader"]
 report: ["runner_reply"]
-free.effect: Return normalized_outcome bad_request, rc 1 and steps []. Start no worker or validator for the refused request. Retain metadata only under its own echo rule, independent of which field won refusal precedence.
 uses: ["request.specimen"]
+retained_free: {"effect":{"kind":"native_protocol","reason":"Child noncreation and bounded raw metadata echo are procedural refusal obligations beside the explicit reply assignments."}}
 ```
 
 
@@ -150,16 +153,38 @@ Current expected public identity supplied for refusal at `contract`; omitted oth
 ### Controller pre-invocation refusal {consequence: acts}
 
 ```contract
-who: "controller"
+effects: [set_value(envelope.result.ok, False), set_value(envelope.data.runner_client, None), set_value(envelope.data.runner_result, None), set_value(envelope.data.runner_sandbox_diagnostics, None), retain_records(envelope.data.specimen)]
+who: ["identity.definitions.controller"]
 where: "CLI preparation"
 entry: ["cli_run"]
 recipient: ["caller", "report_reader"]
 report: ["run_envelope"]
-free.effect: For malformed JSON, missing/wrong assertion, malformed selector values or augmentation refusal, report bad_request and exit 1 before client invocation. Argument parsing, missing/unreadable input file and target-resolution errors report tool_error and exit 2. Preserve a specimen dossier for the preparation reached.
+free.effect: Select bad_request for malformed JSON, missing or wrong contract assertions, malformed selector values or augmentation refusal. Select tool_error for argument parsing, missing or unreadable input and target resolution. Argument parsing precedes input reading; a retained target-resolution error takes precedence over an augmentation error. Preserve the diagnostic and structured refusal available at that stage.
 uses: ["request.options", "policy.augments"]
+retained_free: {"effect": {"kind": "raw_admission", "reason": "CLI and preparation failures arise before different typed inputs exist; the selected diagnostic and refusal path depend on those raw branches."}}
 ```
 
 CLI argument parsing precedes reading and gating the file. Target resolution errors take precedence over an augment error after dossier preparation. These results identify local refusal, while the client capture owns whether a later invocation was attempted.
+
+#### Selected request refusal {request_refusal: outcome}
+
+```contract
+test: envelope.result.normalized_outcome == "bad_request"
+effects: [set_value(envelope.result.exit_code, 1)]
+```
+
+#### Selected tool failure {tool_failure: outcome}
+
+```contract
+test: envelope.result.normalized_outcome == "tool_error"
+effects: [set_value(envelope.result.exit_code, 2)]
+```
+
+#### Selected local class {class: condition}
+
+```contract
+test: envelope.result.normalized_outcome in ["bad_request", "tool_error"]
+```
 
 ### Support {support: owner}
 
@@ -207,8 +232,6 @@ scope: "subtree"
 grade: "source_read"
 source: [{"path": "controller/src/run_flow.rs", "symbol": "RequestFailureProjection"}, {"path": "controller/src/run_flow.rs", "symbol": "RequestFailureProjection::Runner"}]
 pins: "The adjacent meanings follow the named request, producer and observation branches."
-context: "Review of the named producer branches."
-limits: "The checks cover exact identity admission and UTF-8 path-component and depth withholding."
 ```
 
 
@@ -267,12 +290,13 @@ Associated item position, such as argv or phase position, supplied by the specif
 ### Sanitize every echoed field {echo: acts}
 
 ```contract
-who: "host"
+who: ["identity.definitions.host"]
 where: "capacity-refusal reply assembly"
 entry: ["xpc_execute"]
 recipient: ["caller", "report_reader"]
 report: ["runner_reply"]
 free.effect: Independently inspect every echoed metadata value: replace an unsafe specimen_id with <admission_refused>, omit unsafe run_kind, use unknown for unsafe ordinary policy format, drop unsafe override paths, and withhold unsafe step IDs or parameter keys. Preserve the exact capacity counts.
+retained_free: {"effect":{"kind":"raw_admission","reason":"Safe refusal echo inspects malformed raw input values independently of the selected first refusal and typed request construction."}}
 ```
 
 A parameter key can fit the parameter capacity yet exceed the smaller path-component bound. Such a refusal may retain admission_failure.parameter_key while request_failure.path is null. The path is withheld as a whole rather than shortened into another input location.

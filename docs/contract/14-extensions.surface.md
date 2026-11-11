@@ -36,8 +36,6 @@ scope: "subtree"
 grade: "source_read"
 source: [{"path": "runner/Sources/PWRunnerCore/PWRunnerExtension.swift", "symbol": "PWRunnerExtensionAction"}, {"path": "runner/Sources/PWRunnerCore/ActorPlan.swift", "symbol": "normalizeActorPlan"}]
 pins: "The adjacent meanings follow the named request, producer and observation branches."
-context: "Current source read for this draft."
-limits: "Source inspection supplies these branch meanings; this draft credits no execution."
 ```
 
 
@@ -142,43 +140,203 @@ Each other operand must be absent. A required null operand is missing for this g
 ### Resolve references and ownership {references: acts}
 
 ```contract
-who: "host"
+when: present(request.actors) and present(request.phases)
+who: ["identity.definitions.host"]
 where: "whole actor-plan admission"
-entry: ["actor_xpc_execute"]
+entry: ["xpc_execute"]
 recipient: ["caller", "report_reader"]
 report: ["runner_reply"]
-free.effect: Assign each token, delivery and handle reference once across a shared specimen namespace. Require each use after its declared producer and enforce token-owner transfer, recipient-owned delivery consumption and consumer-owned handle release. Permit a handle at most one declared release.
+free.effect: Construct the token, delivery and handle assignments and their execution indexes once from the admitted ordered resource declarations.
+retained_free: {"effect":{"kind":"native_protocol","reason":"The executable index and custody-slot construction is an intermediate plan operation; declaration uniqueness, prior producers and ownership are expressed as request relationships."}}
 ```
 
 The same token may be transferred to multiple recipients or repeatedly to one recipient using distinct delivery references. A delivery may be consumed repeatedly using distinct handle references. Syntactic ordering establishes which resource is requested; the later resource record establishes what was observed.
 
+#### Unique issue assignment {unique_issue: condition}
+
+```contract
+bind.p: request.phases
+bind.a: request.phases[p].actions
+bind.q: request.phases
+bind.b: request.phases[q].actions
+each: ["p", "a"]
+when: is_variant(request.phases[p].actions[a], "extensionAction") and variant(request.phases[p].actions[a], "extensionAction").extension.operation == "issue"
+match.b: is_variant(request.phases[q].actions[b], "extensionAction") and ((variant(request.phases[q].actions[b], "extensionAction").extension.operation == "issue" and variant(request.phases[q].actions[b], "extensionAction").extension.token_ref == variant(request.phases[p].actions[a], "extensionAction").extension.token_ref) or (variant(request.phases[q].actions[b], "extensionAction").extension.operation == "transfer" and variant(request.phases[q].actions[b], "extensionAction").extension.delivery_ref == variant(request.phases[p].actions[a], "extensionAction").extension.token_ref) or (variant(request.phases[q].actions[b], "extensionAction").extension.operation == "consume" and variant(request.phases[q].actions[b], "extensionAction").extension.handle_ref == variant(request.phases[p].actions[a], "extensionAction").extension.token_ref))
+test: sum_over(q, matches(b)) == 1
+```
+
+#### Unique transfer assignment {unique_transfer: condition}
+
+```contract
+bind.p: request.phases
+bind.a: request.phases[p].actions
+bind.q: request.phases
+bind.b: request.phases[q].actions
+each: ["p", "a"]
+when: is_variant(request.phases[p].actions[a], "extensionAction") and variant(request.phases[p].actions[a], "extensionAction").extension.operation == "transfer"
+match.b: is_variant(request.phases[q].actions[b], "extensionAction") and ((variant(request.phases[q].actions[b], "extensionAction").extension.operation == "issue" and variant(request.phases[q].actions[b], "extensionAction").extension.token_ref == variant(request.phases[p].actions[a], "extensionAction").extension.delivery_ref) or (variant(request.phases[q].actions[b], "extensionAction").extension.operation == "transfer" and variant(request.phases[q].actions[b], "extensionAction").extension.delivery_ref == variant(request.phases[p].actions[a], "extensionAction").extension.delivery_ref) or (variant(request.phases[q].actions[b], "extensionAction").extension.operation == "consume" and variant(request.phases[q].actions[b], "extensionAction").extension.handle_ref == variant(request.phases[p].actions[a], "extensionAction").extension.delivery_ref))
+test: sum_over(q, matches(b)) == 1
+```
+
+#### Unique consume assignment {unique_consume: condition}
+
+```contract
+bind.p: request.phases
+bind.a: request.phases[p].actions
+bind.q: request.phases
+bind.b: request.phases[q].actions
+each: ["p", "a"]
+when: is_variant(request.phases[p].actions[a], "extensionAction") and variant(request.phases[p].actions[a], "extensionAction").extension.operation == "consume"
+match.b: is_variant(request.phases[q].actions[b], "extensionAction") and ((variant(request.phases[q].actions[b], "extensionAction").extension.operation == "issue" and variant(request.phases[q].actions[b], "extensionAction").extension.token_ref == variant(request.phases[p].actions[a], "extensionAction").extension.handle_ref) or (variant(request.phases[q].actions[b], "extensionAction").extension.operation == "transfer" and variant(request.phases[q].actions[b], "extensionAction").extension.delivery_ref == variant(request.phases[p].actions[a], "extensionAction").extension.handle_ref) or (variant(request.phases[q].actions[b], "extensionAction").extension.operation == "consume" and variant(request.phases[q].actions[b], "extensionAction").extension.handle_ref == variant(request.phases[p].actions[a], "extensionAction").extension.handle_ref))
+test: sum_over(q, matches(b)) == 1
+```
+
+#### Earlier owned producer for transfer {producer_transfer: condition}
+
+```contract
+bind.p: request.phases
+bind.a: request.phases[p].actions
+bind.q: request.phases
+bind.b: request.phases[q].actions
+each: ["p", "a"]
+when: is_variant(request.phases[p].actions[a], "extensionAction") and variant(request.phases[p].actions[a], "extensionAction").extension.operation == "transfer"
+match.b: is_variant(request.phases[q].actions[b], "extensionAction") and variant(request.phases[q].actions[b], "extensionAction").extension.operation == "issue" and variant(request.phases[q].actions[b], "extensionAction").extension.token_ref == variant(request.phases[p].actions[a], "extensionAction").extension.token_ref and (q < p or (q == p and b < a)) and request.phases[q].actor_id == request.phases[p].actor_id
+test: sum_over(q, matches(b)) == 1
+```
+
+#### Earlier owned producer for consume {producer_consume: condition}
+
+```contract
+bind.p: request.phases
+bind.a: request.phases[p].actions
+bind.q: request.phases
+bind.b: request.phases[q].actions
+each: ["p", "a"]
+when: is_variant(request.phases[p].actions[a], "extensionAction") and variant(request.phases[p].actions[a], "extensionAction").extension.operation == "consume"
+match.b: is_variant(request.phases[q].actions[b], "extensionAction") and variant(request.phases[q].actions[b], "extensionAction").extension.operation == "transfer" and variant(request.phases[q].actions[b], "extensionAction").extension.delivery_ref == variant(request.phases[p].actions[a], "extensionAction").extension.delivery_ref and (q < p or (q == p and b < a)) and variant(request.phases[q].actions[b], "extensionAction").extension.recipient == request.phases[p].actor_id
+test: sum_over(q, matches(b)) == 1
+```
+
+#### Earlier owned producer for release {producer_release: condition}
+
+```contract
+bind.p: request.phases
+bind.a: request.phases[p].actions
+bind.q: request.phases
+bind.b: request.phases[q].actions
+each: ["p", "a"]
+when: is_variant(request.phases[p].actions[a], "extensionAction") and variant(request.phases[p].actions[a], "extensionAction").extension.operation == "release"
+match.b: is_variant(request.phases[q].actions[b], "extensionAction") and variant(request.phases[q].actions[b], "extensionAction").extension.operation == "consume" and variant(request.phases[q].actions[b], "extensionAction").extension.handle_ref == variant(request.phases[p].actions[a], "extensionAction").extension.handle_ref and (q < p or (q == p and b < a)) and request.phases[q].actor_id == request.phases[p].actor_id
+test: sum_over(q, matches(b)) == 1
+```
+
+#### At most one handle release {single_release: condition}
+
+```contract
+bind.p: request.phases
+bind.a: request.phases[p].actions
+bind.q: request.phases
+bind.b: request.phases[q].actions
+each: ["p", "a"]
+when: is_variant(request.phases[p].actions[a], "extensionAction") and variant(request.phases[p].actions[a], "extensionAction").extension.operation == "consume"
+match.b: is_variant(request.phases[q].actions[b], "extensionAction") and variant(request.phases[q].actions[b], "extensionAction").extension.operation == "release" and variant(request.phases[q].actions[b], "extensionAction").extension.handle_ref == variant(request.phases[p].actions[a], "extensionAction").extension.handle_ref
+test: sum_over(q, matches(b)) <= 1
+```
+
+#### Refusal consequence {failure: effect}
+
+```contract
+on: "failure"
+effects: perform(ref("refusals.request.consequence"), request)
+```
+
 ### Bound the declared resource plan {capacity: acts}
 
 ```contract
-who: "host"
+when: present(request.actors) and present(request.phases)
+bind.p: request.phases
+bind.a: request.phases[p].actions
+who: ["identity.definitions.host"]
 where: "pre-child admission"
-entry: ["actor_xpc_execute"]
+entry: ["xpc_execute"]
 recipient: ["caller", "report_reader"]
 report: ["runner_reply"]
-free.effect: Refuse plans exceeding <!-- span limits.actor_issues.value_unit -->32 items<!-- /span --> issues, <!-- span limits.actor_deliveries.value_unit -->64 items<!-- /span --> deliveries, <!-- span limits.actor_handles.value_unit -->64 items<!-- /span --> handles or <!-- span limits.actor_releases.value_unit -->64 items<!-- /span --> releases. Count every extension action toward the shared <!-- span limits.probe_steps.value_unit -->256 items<!-- /span --> action capacity.
 uses: ["request.specimen"]
 ```
 
+#### Issue count {issue: condition}
 
+```contract
+match.a: is_variant(request.phases[p].actions[a], "extensionAction") and variant(request.phases[p].actions[a], "extensionAction").extension.operation == "issue"
+test: sum_over(p, matches(a)) <= limit("actor_issues")
+```
+
+#### Transfer count {transfer: condition}
+
+```contract
+match.a: is_variant(request.phases[p].actions[a], "extensionAction") and variant(request.phases[p].actions[a], "extensionAction").extension.operation == "transfer"
+test: sum_over(p, matches(a)) <= limit("actor_deliveries")
+```
+
+#### Consume count {consume: condition}
+
+```contract
+match.a: is_variant(request.phases[p].actions[a], "extensionAction") and variant(request.phases[p].actions[a], "extensionAction").extension.operation == "consume"
+test: sum_over(p, matches(a)) <= limit("actor_handles")
+```
+
+#### Release count {release: condition}
+
+```contract
+match.a: is_variant(request.phases[p].actions[a], "extensionAction") and variant(request.phases[p].actions[a], "extensionAction").extension.operation == "release"
+test: sum_over(p, matches(a)) <= limit("actor_releases")
+```
+
+#### Whole-specimen action count {actions: condition}
+
+```contract
+test: sum_over(p, count(request.phases[p].actions)) <= limit("probe_steps")
+```
+
+#### Refusal consequence {failure: effect}
+
+```contract
+on: "failure"
+effects: perform(ref("refusals.request.consequence"), request)
+```
 
 ### Exclude exec in participating actors {exec: acts}
 
 ```contract
-who: "host"
+when: present(request.actors) and present(request.phases)
+bind.a: request.actors
+bind.p: request.phases
+bind.x: request.phases[p].actions
+bind.q: request.phases
+bind.y: request.phases[q].actions
+match.x: is_variant(request.phases[p].actions[x], "extensionAction") and (request.phases[p].actor_id == request.actors[a].actor_id or (variant(request.phases[p].actions[x], "extensionAction").extension.operation == "transfer" and variant(request.phases[p].actions[x], "extensionAction").extension.recipient == request.actors[a].actor_id))
+match.y: request.phases[q].actor_id == request.actors[a].actor_id and is_variant(request.phases[q].actions[y], "probe") and variant(request.phases[q].actions[y], "probe").attempt.kind == "exec"
+who: ["identity.definitions.host"]
 where: "actor-plan admission"
-entry: ["actor_xpc_execute"]
+entry: ["xpc_execute"]
 recipient: ["caller", "report_reader"]
 report: ["runner_reply"]
-free.effect: Mark issuers, senders, consumers, releasers and transfer recipients as extension participants. Refuse any exec probe in those actors; retain exec availability in other actors.
 uses: ["probes.attempt"]
 ```
 
+#### Participant exec exclusion {participants: condition}
 
+```contract
+each: ["a"]
+test: implies(sum_over(p, matches(x)) > 0, sum_over(q, matches(y)) == 0)
+```
+
+#### Refusal consequence {failure: effect}
+
+```contract
+on: "failure"
+effects: perform(ref("refusals.request.consequence"), request)
+```
 
 ### Support {support: owner}
 
@@ -187,8 +345,6 @@ scope: "subtree"
 grade: "source_read"
 source: [{"path": "runner/Sources/PWRunnerCore/PWRunnerExtension.swift", "symbol": "actorOperands"}, {"path": "runner/Sources/PWRunnerCore/ActorPlan.swift", "symbol": "normalizeActorPlan"}, {"path": "runner/Sources/PWRunnerCore/ActorPlan.swift", "symbol": "actorAdmissionFailure"}]
 pins: "The adjacent meanings follow the named request, producer and observation branches."
-context: "Current source read for this draft."
-limits: "Source inspection supplies these branch meanings; this draft credits no execution."
 ```
 
 
@@ -200,13 +356,15 @@ Authority payloads occupy bounded native storage assigned to the admitted resour
 ### Prepare before use {prepare: acts}
 
 ```contract
-who: "host and actor worker"
+when: present(request.actors)
+who: ["identity.definitions.host", "identity.definitions.worker"]
 where: "host custody preparation before launch and actor setup before application or unapplied declaration"
-entry: ["actor_xpc_execute"]
+entry: ["xpc_execute"]
 recipient: ["caller", "report_reader"]
 report: ["runner_reply"]
 free.effect: When the admitted resource plan contains a token or delivery, the host attempts to disable core dumps; after that succeeds, it prepares one authority region for every actor and a bounded custody buffer for each token. Failure of this host custody preparation prevents every actor launch. Each actor worker reaching authority setup looks up extension symbols and attempts its own core-dump limit. Required setup publishes ready after mapping and validating its assigned region; a primary failure publishes terminal_required_failure and ends the worker before policy setup. Unneeded authority selects not_required without mapping, including when the core-limit attempt failed. These worker setup operations precede application or the actor's unapplied declaration. A reached extension action reports unavailability for missing required apparatus or symbols.
 uses: ["equipment.authority_setup"]
+retained_free: {"effect":{"kind":"native_protocol","reason":"Host authority allocation, worker symbol lookup, core-limit calls and conditional mapping are native setup procedures whose order precedes application or the unapplied declaration."}}
 ```
 
 
@@ -214,12 +372,13 @@ uses: ["equipment.authority_setup"]
 ### Issue and transfer payload ownership {issue: acts}
 
 ```contract
-who: "issuing worker and host"
-where: "outbound token publication"
+who: ["identity.definitions.worker", "identity.definitions.host"]
+where: "outbound token publication by the issuing worker"
 entry: ["actor_worker"]
 recipient: ["caller", "report_reader"]
 report: ["runner_reply"]
 free.effect: Publish a one-shot bounded token only when native issuance returned a non-null payload with length from one through <!-- span limits.extension_token_payload.value_unit -->16,383 bytes<!-- /span -->. Erase the native allocation after copying. Keep the published outbound slot immutable until the host validates, copies or rejects it, erases its payload and acknowledges it.
+retained_free: {"effect":{"kind":"native_protocol","reason":"Copy, erase, immutable publication and acknowledgement transfer payload ownership between live native storage regions."}}
 ```
 
 The slot owns one declared issue. A worker timeout or exit leaves its published bytes available for the host's later copy and erasure. Another issue uses another slot. The native return and host custody acceptance are reported independently.
@@ -227,12 +386,13 @@ The slot owns one declared issue. A worker timeout or exit leaves its published 
 ### Acknowledge, compare and settle delivery {deliver: acts}
 
 ```contract
-who: "host and recipient worker"
-where: "explicit transfer exchange"
+who: ["identity.definitions.host", "identity.definitions.worker"]
+where: "explicit transfer exchange with the named recipient worker"
 entry: ["actor_worker"]
 recipient: ["caller", "report_reader"]
 report: ["runner_reply"]
 free.effect: Require a valid transfer request and held host custody, copy into the assigned recipient slot, obtain recipient framing acknowledgement and compare its complete length and bytes with custody. Set delivered and publish settlement only after accepted acknowledgement and equal bytes. On failure publish the corresponding acknowledgement and withdraw the delivery.
+retained_free: {"effect":{"kind":"native_protocol","reason":"Recipient framing acknowledgement and custody byte comparison govern settlement of a live native exchange."}}
 ```
 
 A parked recipient validates framing. A self-transfer also services inbound work while waiting. Consumption requires settled, committed and accepted delivery. Each exchange is bounded by <!-- span limits.actor_exchange_allowance.value_unit -->5,000 milliseconds<!-- /span --> and the remaining actor budget; timeout and clock observations retain their own boundary.
@@ -240,12 +400,14 @@ A parked recipient validates framing. A self-transfer also services inbound work
 ### Observe the source answer {source_answer: acts}
 
 ```contract
-who: "host"
+when: present(request.actors)
+who: ["identity.definitions.host"]
 where: "reply assembly after transfer"
-entry: ["actor_xpc_execute"]
+entry: ["xpc_execute"]
 recipient: ["caller", "report_reader"]
 report: ["runner_reply"]
 free.effect: Set source_acknowledged only when the source action completed and its published transfer status matches the host's nonzero acknowledgement. Preserve late host answers independently of an unpublished or differently completed source action.
+retained_free: {"effect":{"kind":"native_protocol","reason":"Source completion and the raw published acknowledgement are separate native observations; the late host answer alone cannot establish source acknowledgement."}}
 ```
 
 
@@ -253,12 +415,14 @@ free.effect: Set source_acknowledged only when the source action completed and i
 ### Erase at declared last use and teardown {erase: acts}
 
 ```contract
-who: "host and workers"
+when: present(request.actors)
+who: ["identity.definitions.host", "identity.definitions.worker"]
 where: "resource retirement"
-entry: ["actor_xpc_execute"]
+entry: ["xpc_execute"]
 recipient: ["caller", "report_reader"]
 report: ["runner_reply"]
 free.effect: Erase host-private custody at the last declared transfer (or after issue when never transferred) and at teardown. Erase worker-owned inbound payloads after their last declared consume and at normal exit once host settlement transfers ownership. At host teardown erase shared regions only for actors whose termination is established; otherwise detach the host mapping.
+retained_free: {"effect":{"kind":"native_protocol","reason":"Erasure and detachment depend on native mapping ownership and observed process termination at teardown."}}
 ```
 
 A last transfer retires custody even when the recipient is unavailable. Payload erasure is a memory-lifetime action; a native release request and the later access observation are separate operations.
@@ -288,7 +452,6 @@ scope: "subtree"
 grade: "source_read"
 source: [{"path": "runner/Sources/PWRunnerCore/ActorPlan.swift", "symbol": "var authorityRequired: Bool"}, {"path": "runner/Sources/PWRunnerCore/ActorOrchestration.swift", "symbol": "if !plan.authorityRequired { authority = nil; return }"}, {"path": "runner/Sources/PWRunnerCore/ActorScheduler.swift", "symbol": "if let plan = input.authority"}, {"path": "runner/Sources/PWRunnerCore/AuthorityCustody.swift", "symbol": "init(plan: AuthorityPlan, actorCount: Int, calls: ChildProcessCalls)"}, {"path": "controller/tools/pw_probe_runner/pw_probe_runner.c", "symbol": "static void prepare_authority"}, {"path": "controller/tools/pw_probe_runner/pw_probe_runner.c", "symbol": "if (hdr->actor_mode == PW_ACTOR_MODE_UNAPPLIED)"}, {"path": "runner/Sources/PWRunnerCore/AuthorityCustody.swift", "symbol": "serviceOutbound"}, {"path": "runner/Sources/PWRunnerCore/AuthorityCustody.swift", "symbol": "serviceTransfer"}, {"path": "runner/Sources/PWRunnerCore/AuthorityCustody.swift", "symbol": "recordSourceAcknowledgements"}, {"path": "runner/Sources/PWRunnerCore/AuthorityCustody.swift", "symbol": "finish"}, {"path": "controller/tools/pw_probe_runner/pw_probe_runner.c", "symbol": "attempt_extension_issue"}, {"path": "controller/tools/pw_probe_runner/pw_probe_runner.c", "symbol": "attempt_extension_consume_actor"}, {"path": "controller/tools/pw_probe_runner/pw_probe_runner.c", "symbol": "erase_authority"}]
 pins: "The adjacent meanings follow the named request, producer and observation branches."
-context: "Current source read for this draft."
 limits: "Conditional host/worker setup, host custody service and worker issue/transfer/consume/release have source-read support here. Collected setup-account meanings are owned by the equipment surface. Native private-library behavior remains environment-specific evidence."
 ```
 
@@ -457,11 +620,26 @@ scope: "subtree"
 grade: "source_read"
 source: [{"path": "runner/Sources/PWRunnerCore/PWRunnerExtension.swift", "symbol": "PWRunnerExtensionEvent"}, {"path": "runner/Sources/PWRunnerCore/ActorOrchestration.swift", "symbol": "assembleActorReply"}, {"path": "controller/tools/pw_probe_runner/pw_probe_runner.c", "symbol": "attempt_extension_issue"}, {"path": "controller/tools/pw_probe_runner/pw_probe_runner.c", "symbol": "attempt_extension_consume_actor"}]
 pins: "The adjacent meanings follow the named request, producer and observation branches."
-context: "Current source read for this draft."
-limits: "Source inspection supplies these branch meanings; this draft credits no execution."
 ```
 
+### Project a published issue result {issue_projection: reports}
 
+```contract
+who: ["identity.definitions.host"]
+where: "completed issue event projection"
+entry: ["xpc_execute"]
+recipient: ["report_reader"]
+report: ["runner_reply"]
+when: event.operation == "issue" and event.result_published and present(event.native_result)
+effects: set_value(event.native_nonnull, event.native_result == 1)
+```
+#### Source support {support: owner}
+
+```contract
+grade: "source_read"
+source: {"path":"runner/Sources/PWRunnerCore/ActorOrchestration.swift","symbol":"assembleActorReply"}
+pins: "A published issue native value projects to native_nonnull; the host custody record carries token acceptance."
+```
 
 ## Host transfer observation {transfer: subject}
 
@@ -540,11 +718,72 @@ scope: "subtree"
 grade: "source_read"
 source: [{"path": "runner/Sources/PWRunnerCore/AuthorityCustody.swift", "symbol": "TransferObservation"}, {"path": "runner/Sources/PWRunnerCore/AuthorityCustody.swift", "symbol": "serviceTransfer"}, {"path": "runner/Sources/PWRunnerCore/ActorOrchestration.swift", "symbol": "PWRunnerTransferRecord"}]
 pins: "The adjacent meanings follow the named request, producer and observation branches."
-context: "Current source read for this draft."
-limits: "Source inspection supplies these branch meanings; this draft credits no execution."
 ```
 
+### Delivered receipt prerequisites {delivered_receipt: reports}
 
+```contract
+who: ["identity.definitions.host"]
+where: "host transfer observation projection"
+entry: ["xpc_execute"]
+recipient: ["report_reader"]
+report: ["runner_reply"]
+when: transfer.status == "delivered"
+```
+
+A delivered transfer retains the listed request, custody, copy, byte-equality and recipient-acknowledgement observations. The custody rule describes native framing and settlement.
+
+#### Produced field relationships {fields: condition}
+
+```contract
+test: transfer.request_published and transfer.custody_status == "held" and transfer.copy_status == "copied" and transfer.equality == "equal" and transfer.recipient_acknowledged
+```
+
+#### Source support {support: owner}
+
+```contract
+scope: "subtree"
+grade: "source_read"
+source: {"path":"runner/Sources/PWRunnerCore/AuthorityCustody.swift","symbol":"serviceTransfer"}
+pins: "A delivered transfer retains the request, custody, copy, recipient acknowledgement and byte-equality observations."
+```
+
+### Source acknowledgement association {source_association: reports}
+
+```contract
+who: ["identity.definitions.host"]
+where: "ordinary actor report transfer and source-event projection"
+entry: ["xpc_execute"]
+recipient: ["report_reader"]
+report: ["runner_reply"]
+when: absent(reply.reporting_failure) and present(reply.transfers) and present(reply.extension_events)
+bind.t: reply.transfers
+bind.e: reply.extension_events
+match.e: reply.extension_events[e].phase_id == reply.transfers[t].phase_id and reply.extension_events[e].step_id == reply.transfers[t].step_id and reply.extension_events[e].actor_id == reply.transfers[t].source_actor_id and reply.extension_events[e].operation == "transfer"
+each: ["t"]
+```
+#### Exactly one published source event {unique: condition}
+
+```contract
+when: reply.transfers[t].source_acknowledged
+test: matches(e) == 1
+```
+#### Published matching acknowledgement {published: condition}
+
+```contract
+each: ["e"]
+when: reply.transfers[t].source_acknowledged and reply.extension_events[e].phase_id == reply.transfers[t].phase_id and reply.extension_events[e].step_id == reply.transfers[t].step_id and reply.extension_events[e].actor_id == reply.transfers[t].source_actor_id and reply.extension_events[e].operation == "transfer"
+test: reply.extension_events[e].result_published and reply.transfers[t].status != "none" and implies(reply.transfers[t].status in ["delivered", "custody_unavailable", "recipient_rejected", "recipient_timeout", "recipient_unavailable", "request_invalid", "host_timeout", "clock_fault", "copy_mismatch"], reply.extension_events[e].status == reply.transfers[t].status)
+```
+
+Source acknowledgement requires a completed source publication carrying the matching host acknowledgement. Unknown raw acknowledgement names and degraded records retain their raw evidence; the status equality applies to ordinary records with the listed known acknowledgement names.
+#### Source support {support: owner}
+
+```contract
+grade: "source_read"
+source: [{"path":"runner/Sources/PWRunnerCore/AuthorityCustody.swift","symbol":"recordSourceAcknowledgements"},{"path":"runner/Sources/PWRunnerCore/ActorOrchestration.swift","symbol":"assembleActorReply"},{"path":"runner/Sources/PWRunnerCore/ActorPlan.swift","symbol":"normalizeActorPlan"},{"path":"runner/Sources/PWRunnerCore/ActorPlan.swift","symbol":"actorPlanAssignmentsConsistent"}]
+pins: "Custody requires a completed source slot with the matching nonzero acknowledgement. Admitted unique actions and consistent delivery assignments identify one source transfer event; assembly maps known acknowledgement values to the same event and transfer status names."
+```
 
 ## Resource tables {resources: subject}
 
@@ -575,8 +814,6 @@ scope: "subtree"
 grade: "source_read"
 source: [{"path": "runner/Sources/PWRunnerCore/PWRunnerActors.swift", "symbol": "PWRunnerResourceTables"}, {"path": "runner/Sources/PWRunnerCore/ActorOrchestration.swift", "symbol": "tokenRecords"}]
 pins: "The adjacent meanings follow the named request, producer and observation branches."
-context: "Current source read for this draft."
-limits: "Source inspection supplies these branch meanings; this draft credits no execution."
 ```
 
 
@@ -626,8 +863,6 @@ scope: "subtree"
 grade: "source_read"
 source: [{"path": "runner/Sources/PWRunnerCore/ActorOrchestration.swift", "symbol": "tokenRecords"}, {"path": "runner/Sources/PWRunnerCore/ActorOrchestration.swift", "symbol": "unpublishedResourceStatus"}]
 pins: "The adjacent meanings follow the named request, producer and observation branches."
-context: "Current source read for this draft."
-limits: "Source inspection supplies these branch meanings; this draft credits no execution."
 ```
 
 
@@ -685,8 +920,6 @@ scope: "subtree"
 grade: "source_read"
 source: [{"path": "runner/Sources/PWRunnerCore/ActorOrchestration.swift", "symbol": "deliveryRecords"}]
 pins: "The adjacent meanings follow the named request, producer and observation branches."
-context: "Current source read for this draft."
-limits: "Source inspection supplies these branch meanings; this draft credits no execution."
 ```
 
 
@@ -744,6 +977,4 @@ scope: "subtree"
 grade: "source_read"
 source: [{"path": "runner/Sources/PWRunnerCore/ActorOrchestration.swift", "symbol": "handleRecords"}]
 pins: "The adjacent meanings follow the named request, producer and observation branches."
-context: "Current source read for this draft."
-limits: "Source inspection supplies these branch meanings; this draft credits no execution."
 ```

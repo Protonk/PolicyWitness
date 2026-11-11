@@ -1,0 +1,166 @@
+{
+  "files": [
+    {
+      "bytes": 918,
+      "decoded_sha256": "182e96d1e6735633327c081542963d2b0edce1df4685f4f5e209ab258d814496",
+      "encoding": "identity",
+      "path": "README.md",
+      "source": "/private/tmp/pw-contract-stage-three-evidence-package-20261111.py",
+      "source_bytes": 23661,
+      "source_sha256": "23179cf833287105c7af28e6374bd509f2db70bc14ab3c73215c9caed44704d9",
+      "stored_bytes": 918,
+      "stored_sha256": "182e96d1e6735633327c081542963d2b0edce1df4685f4f5e209ab258d814496",
+      "transform": "embedded package scope text"
+    },
+    {
+      "bytes": 763367,
+      "decoded_sha256": "96649e66153c0670d111b4235817ffda15f4a8ac12e9dd62f3dddc0a91a21eb4",
+      "encoding": "gzip",
+      "path": "final/FINAL-CONTRACT.md.gz",
+      "source": "/private/tmp/pw-contract-stage-three-isolated-reading-20261111/FINAL-CONTRACT.md",
+      "source_bytes": 763367,
+      "source_sha256": "96649e66153c0670d111b4235817ffda15f4a8ac12e9dd62f3dddc0a91a21eb4",
+      "stored_bytes": 157152,
+      "stored_sha256": "58a44a7df5031001196eaf4f7defbe77c78e7c77043d5910bea2e429749742a2",
+      "transform": "exact bytes"
+    },
+    {
+      "bytes": 102660,
+      "decoded_sha256": "7757178b704e6e6334924dd6738c9f7127385fdac790abcfb0abbb60bf429d01",
+      "encoding": "gzip",
+      "path": "final/FINAL-DELTA.diff.gz",
+      "source": "/private/tmp/pw-contract-stage-three-isolated-reading-20261111/FINAL-DELTA.diff",
+      "source_bytes": 102660,
+      "source_sha256": "7757178b704e6e6334924dd6738c9f7127385fdac790abcfb0abbb60bf429d01",
+      "stored_bytes": 12588,
+      "stored_sha256": "a1028a7e7a2f6b720b36bcc8a64e9a676dc149501da21c1aba176732668247ba",
+      "transform": "exact bytes"
+    },
+    {
+      "bytes": 16294,
+      "decoded_sha256": "40ba8ed595b96ea5ed81496ff835b314e35edfb6360ccf6605ff015fe1c40e8b",
+      "encoding": "identity",
+      "path": "final/FINAL-REVISION-READING.md",
+      "source": "/private/tmp/pw-contract-stage-three-isolated-reading-20261111/FINAL-REVISION-READING.md",
+      "source_bytes": 16294,
+      "source_sha256": "40ba8ed595b96ea5ed81496ff835b314e35edfb6360ccf6605ff015fe1c40e8b",
+      "stored_bytes": 16294,
+      "stored_sha256": "40ba8ed595b96ea5ed81496ff835b314e35edfb6360ccf6605ff015fe1c40e8b",
+      "transform": "exact bytes"
+    },
+    {
+      "bytes": 736944,
+      "decoded_sha256": "e1aafb723c46261bffe5c4c940abd81dae222ee1aa6ff53067428ef4c17c9814",
+      "encoding": "gzip",
+      "path": "initial/CONTRACT.md.gz",
+      "source": "/private/tmp/pw-contract-stage-three-isolated-reading-20261111/CONTRACT.md",
+      "source_bytes": 736944,
+      "source_sha256": "e1aafb723c46261bffe5c4c940abd81dae222ee1aa6ff53067428ef4c17c9814",
+      "stored_bytes": 153641,
+      "stored_sha256": "f650bbca790fad5ff39977cbcf370797939131dbc8dd82b32fd9ff27207f9159",
+      "transform": "exact bytes"
+    },
+    {
+      "bytes": 127647,
+      "decoded_sha256": "64c9f500057b17f3e2f2d64363da797c3ed90cd81b2e454395054141af55eba0",
+      "encoding": "identity",
+      "path": "initial/JOURNAL.md",
+      "source": "/private/tmp/pw-contract-stage-three-isolated-reading-20261111/JOURNAL-FROZEN.md",
+      "source_bytes": 127647,
+      "source_sha256": "64c9f500057b17f3e2f2d64363da797c3ed90cd81b2e454395054141af55eba0",
+      "stored_bytes": 127647,
+      "stored_sha256": "64c9f500057b17f3e2f2d64363da797c3ed90cd81b2e454395054141af55eba0",
+      "transform": "exact bytes"
+    },
+    {
+      "bytes": 47707,
+      "decoded_sha256": "b80ca7ff514bd87c77545a6aaae4b098a0dc24f79a709052c6d926fe8cc17d76",
+      "encoding": "identity",
+      "path": "initial/PROMPTED.md",
+      "source": "/private/tmp/pw-contract-stage-three-isolated-reading-20261111/PROMPTED-FROZEN.md",
+      "source_bytes": 47707,
+      "source_sha256": "b80ca7ff514bd87c77545a6aaae4b098a0dc24f79a709052c6d926fe8cc17d76",
+      "stored_bytes": 47707,
+      "stored_sha256": "b80ca7ff514bd87c77545a6aaae4b098a0dc24f79a709052c6d926fe8cc17d76",
+      "transform": "exact bytes"
+    },
+    {
+      "bytes": 5660,
+      "decoded_sha256": "ed345141def867c2c2311c2e045b02b3e5a25f3ff8f1bf0357fc189260d8b898",
+      "encoding": "identity",
+      "path": "initial/PROMPTS.md",
+      "source": "/private/tmp/pw-contract-stage-three-isolated-reading-20261111/PROMPTS.md",
+      "source_bytes": 5660,
+      "source_sha256": "ed345141def867c2c2311c2e045b02b3e5a25f3ff8f1bf0357fc189260d8b898",
+      "stored_bytes": 5660,
+      "stored_sha256": "ed345141def867c2c2311c2e045b02b3e5a25f3ff8f1bf0357fc189260d8b898",
+      "transform": "exact bytes"
+    },
+    {
+      "bytes": 2323,
+      "decoded_sha256": "c45a3014a00f9d9262325434ba3bd9190be4b44d19f2b1e9609caa4852e36e14",
+      "encoding": "identity",
+      "path": "initial/TASK.md",
+      "source": "/private/tmp/pw-contract-stage-three-isolated-reading-20261111/TASK.md",
+      "source_bytes": 2323,
+      "source_sha256": "c45a3014a00f9d9262325434ba3bd9190be4b44d19f2b1e9609caa4852e36e14",
+      "stored_bytes": 2323,
+      "stored_sha256": "c45a3014a00f9d9262325434ba3bd9190be4b44d19f2b1e9609caa4852e36e14",
+      "transform": "exact bytes"
+    },
+    {
+      "bytes": 399,
+      "decoded_sha256": "8a30c892b98066e394a83e1ea3c85f7e14f3dfea56746aef79a7b91c389b6be4",
+      "encoding": "identity",
+      "path": "initial/isolation.json",
+      "source": "/private/tmp/pw-contract-stage-three-isolated-reading-20261111/isolation.json",
+      "source_bytes": 399,
+      "source_sha256": "8a30c892b98066e394a83e1ea3c85f7e14f3dfea56746aef79a7b91c389b6be4",
+      "stored_bytes": 399,
+      "stored_sha256": "8a30c892b98066e394a83e1ea3c85f7e14f3dfea56746aef79a7b91c389b6be4",
+      "transform": "exact bytes"
+    },
+    {
+      "bytes": 69126,
+      "decoded_sha256": "b6653d823f6e415e45cd52b6fcc01fefd2b798cbe0f4a714927e5145db6c6224",
+      "encoding": "gzip",
+      "path": "revised/DELTA.diff.gz",
+      "source": "/private/tmp/pw-contract-stage-three-isolated-reading-20261111/DELTA.diff",
+      "source_bytes": 69126,
+      "source_sha256": "b6653d823f6e415e45cd52b6fcc01fefd2b798cbe0f4a714927e5145db6c6224",
+      "stored_bytes": 11834,
+      "stored_sha256": "d8b5dc251ab9321151299f0dcb5901996aa160abf01dc8899628bc9c95795ade",
+      "transform": "exact bytes"
+    },
+    {
+      "bytes": 762932,
+      "decoded_sha256": "fe58bde3292263eea1ebf252d2cf279fbf691e61f4476fc6fe394c55d022111a",
+      "encoding": "gzip",
+      "path": "revised/REVISED-CONTRACT.md.gz",
+      "source": "/private/tmp/pw-contract-stage-three-isolated-reading-20261111/REVISED-CONTRACT.md",
+      "source_bytes": 762932,
+      "source_sha256": "fe58bde3292263eea1ebf252d2cf279fbf691e61f4476fc6fe394c55d022111a",
+      "stored_bytes": 157057,
+      "stored_sha256": "af21e8fcf720e23f2e8312757a9e6d7e37e142d38a07497c0880dfc16c026519",
+      "transform": "exact bytes"
+    },
+    {
+      "bytes": 26001,
+      "decoded_sha256": "d0a83ccf4cd2cecee3c314cb9798e3d0493ad24130784a86b01e7ec439d80070",
+      "encoding": "identity",
+      "path": "revised/REVISION-READING.md",
+      "source": "/private/tmp/pw-contract-stage-three-isolated-reading-20261111/REVISION-READING.md",
+      "source_bytes": 26001,
+      "source_sha256": "d0a83ccf4cd2cecee3c314cb9798e3d0493ad24130784a86b01e7ec439d80070",
+      "stored_bytes": 26001,
+      "stored_sha256": "d0a83ccf4cd2cecee3c314cb9798e3d0493ad24130784a86b01e7ec439d80070",
+      "transform": "exact bytes"
+    }
+  ],
+  "packager": {
+    "path": "/private/tmp/pw-contract-stage-three-evidence-package-20261111.py",
+    "sha256": "23179cf833287105c7af28e6374bd509f2db70bc14ab3c73215c9caed44704d9"
+  },
+  "schema_version": 1,
+  "scope": "frozen stage-three reading/source verification evidence"
+}

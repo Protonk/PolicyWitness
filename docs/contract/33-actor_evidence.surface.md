@@ -100,13 +100,15 @@ Host-owned waitpid ending retained for this actor and referenced by dependent te
 ### Actor ownership and reporting scope {account: reports}
 
 ```contract
-who: "runner host"
+when: present(request.actors)
+who: ["identity.definitions.host"]
 where: "actor reply assembly"
-entry: ["actors"]
-recipient: ["direct_host_caller", "runner_client", "controller"]
-report: ["ordinary_reply", "preparation_refusal", "retained_reporting_failure"]
+entry: ["xpc_execute"]
+recipient: ["xpc_caller", "runner_client", "controller"]
+report: ["runner_reply"]
 free.condition: Assemble each actor's row from its declaration, launch/driver output and its own shared publications; phases retain their declared actor and action ownership.
 free.effect: Retain the actor-indexed account and separately report schedule observations. In an ordinary executed reply, each declared action has its ordered step or extension-event record even when execution evidence is unresolved. Preparation refusals and retained reporting failures carry the distinct contents stated below.
+retained_free: {"condition":{"kind":"native_protocol","reason":"Actor assembly binds declarations to actual launch, setup and phase outputs before reporting missing or unresolved observations."},"effect":{"kind":"native_protocol","reason":"Assembly consumes the internal ActorScheduleOutcome, query plans and validator results to construct ordered actor, step and extension-event tables. These intermediate records and the preparation or reporting form determine the native assembly procedure."}}
 ```
 
 A preparation refusal retains declarations and preparation observations while
@@ -220,22 +222,64 @@ values: ["unapplied_declaration", "worker_not_launched", "applied_publication", 
 
 The specific declaration, launch state or worker/authority publication supporting state. The eleven permitted state/basis pairs are defined by the application rule below.
 
+### Associated authority rows {authority_association: reports}
+
+```contract
+who: ["identity.definitions.host"]
+where: "actor reply assembly"
+entry: ["xpc_execute"]
+recipient: ["xpc_caller", "runner_client", "controller"]
+report: ["runner_reply"]
+bind.a: reply.actors
+bind.w: reply.authority_setup.workers
+match.w: w == a and present(reply.authority_setup.workers[w].actor_index) and reply.authority_setup.workers[w].actor_index == a and present(reply.authority_setup.workers[w].actor_id) and reply.authority_setup.workers[w].actor_id == reply.actors[a].actor_id
+each: ["a"]
+when: present(request.actors) and present(reply.actors) and reply.execution_form == "actors" and absent(reply.reporting_failure)
+```
+
+#### One associated entry for each actor {entry: condition}
+
+```contract
+test: present(reply.authority_setup) and count(reply.authority_setup.workers) == count(reply.actors) and matches(w) == 1
+```
+
+The produced authority table has one entry at each actor's list position,
+carrying that actor's index and identifier. Application classification
+evaluates each actor's applicable evidence in the case order below.
+
 ### Application classification {classify: reports}
 
 ```contract
-who: "runner host"
+who: ["identity.definitions.host"]
 where: "actor reply assembly"
-entry: ["actors"]
-recipient: ["direct_host_caller", "runner_client", "controller"]
-report: ["ordinary_reply", "preparation_refusal"]
-free.condition: Evaluate the following branches in displayed precedence order. A terminal worker branch requires failure_state published and the specified operation/code/native-kind combination.
-free.effect: Publish exactly the state/basis pair of the first matching branch.
+entry: ["xpc_execute"]
+recipient: ["xpc_caller", "runner_client", "controller"]
+report: ["runner_reply"]
+selection: "first_match"
+bind.a: reply.actors
+bind.t: reply.authority_setup.workers
+match.t: t == a and present(reply.authority_setup.workers[t].publication) and reply.authority_setup.workers[t].publication == "observed" and present(reply.authority_setup.workers[t].disposition) and reply.authority_setup.workers[t].disposition == "terminal_required_failure" and absent(reply.authority_setup.workers[t].integrity_errors)
+each: ["a"]
+when: present(request.actors) and present(reply.actors) and reply.execution_form == "actors" and absent(reply.reporting_failure)
 ```
+
+
+The rule uses the actor's launch presence and applied flag, the worker
+evidence retained in its subprocess, and the authority entry at the same
+actor position when that entry exists. Preparation refusals classify their
+unlaunched rows through the first two branches. An unavailable native
+authority observation is reported as an entry with publication `not_observed`.
+
+These are the host's production assignments. Recipient checks separately
+validate the carried associations, permitted state/basis pairs and source
+precedence. A reporting-failure reply retains the earlier assessment under
+its own reporting scope.
 
 #### Unapplied declaration {unapplied: outcome}
 
 ```contract
-value: ["not_requested", "unapplied_declaration"]
+test: reply.actors[a].mode == "unapplied"
+effects: [set_value(reply.actors[a].application.state, "not_requested"), set_value(reply.actors[a].application.basis, "unapplied_declaration")]
 ```
 
 Mode is `unapplied`.
@@ -243,7 +287,8 @@ Mode is `unapplied`.
 #### Worker absent {unlaunched: outcome}
 
 ```contract
-value: ["not_attempted", "worker_not_launched"]
+test: absent(reply.actors[a].launch)
+effects: [set_value(reply.actors[a].application.state, "not_attempted"), set_value(reply.actors[a].application.basis, "worker_not_launched")]
 ```
 
 Apply mode has no launched worker.
@@ -251,7 +296,8 @@ Apply mode has no launched worker.
 #### Applied flag {applied: outcome}
 
 ```contract
-value: ["observed", "applied_publication"]
+test: present(reply.actors[a].applied) and reply.actors[a].applied == True
+effects: [set_value(reply.actors[a].application.state, "observed"), set_value(reply.actors[a].application.basis, "applied_publication")]
 ```
 
 The worker's applied publication is true.
@@ -259,7 +305,8 @@ The worker's applied publication is true.
 #### Authority refusal {authority: outcome}
 
 ```contract
-value: ["not_attempted", "terminal_authority_setup_refusal"]
+test: present(reply.authority_setup) and matches(t) == 1
+effects: [set_value(reply.actors[a].application.state, "not_attempted"), set_value(reply.actors[a].application.basis, "terminal_authority_setup_refusal")]
 ```
 
 An observed authority decision is `terminal_required_failure` and carries no
@@ -268,7 +315,8 @@ setup integrity error.
 #### Native apply failure {apply_failure: outcome}
 
 ```contract
-value: ["observed", "apply_failure_publication"]
+test: present(reply.actors[a].subprocess) and present(reply.actors[a].subprocess.worker_evidence) and reply.actors[a].subprocess.worker_evidence.failure_state == "published" and present(reply.actors[a].subprocess.worker_evidence.failure) and reply.actors[a].subprocess.worker_evidence.failure.operation == 8 and reply.actors[a].subprocess.worker_evidence.failure.code == 1 and reply.actors[a].subprocess.worker_evidence.failure.native_kind == 1 and present(reply.actors[a].subprocess.worker_evidence.failure.native_result) and reply.actors[a].subprocess.worker_evidence.failure.native_result != 0
+effects: [set_value(reply.actors[a].application.state, "observed"), set_value(reply.actors[a].application.basis, "apply_failure_publication")]
 ```
 
 Terminal operation 8, code 1, native kind 1 has a nonzero native result.
@@ -276,7 +324,8 @@ Terminal operation 8, code 1, native kind 1 has a nonzero native result.
 #### Input refusal {input: outcome}
 
 ```contract
-value: ["not_attempted", "terminal_input_refusal"]
+test: present(reply.actors[a].subprocess) and present(reply.actors[a].subprocess.worker_evidence) and reply.actors[a].subprocess.worker_evidence.failure_state == "published" and present(reply.actors[a].subprocess.worker_evidence.failure) and ((reply.actors[a].subprocess.worker_evidence.failure.operation == 1 and reply.actors[a].subprocess.worker_evidence.failure.code in [4, 7, 10, 12] and reply.actors[a].subprocess.worker_evidence.failure.native_kind == 0) or (reply.actors[a].subprocess.worker_evidence.failure.operation == 2 and reply.actors[a].subprocess.worker_evidence.failure.code in [2, 3, 9, 13]))
+effects: [set_value(reply.actors[a].application.state, "not_attempted"), set_value(reply.actors[a].application.basis, "terminal_input_refusal")]
 ```
 
 Terminal operation 1 has code 4, 7, 10 or 12 and native kind 0; or operation 2
@@ -285,7 +334,8 @@ has code 2, 3, 9 or 13.
 #### Parameter refusal {parameter: outcome}
 
 ```contract
-value: ["not_attempted", "terminal_parameter_refusal"]
+test: present(reply.actors[a].subprocess) and present(reply.actors[a].subprocess.worker_evidence) and reply.actors[a].subprocess.worker_evidence.failure_state == "published" and present(reply.actors[a].subprocess.worker_evidence.failure) and ((reply.actors[a].subprocess.worker_evidence.failure.operation == 1 and reply.actors[a].subprocess.worker_evidence.failure.code == 5 and reply.actors[a].subprocess.worker_evidence.failure.native_kind == 0) or (reply.actors[a].subprocess.worker_evidence.failure.operation == 3 and reply.actors[a].subprocess.worker_evidence.failure.code == 1 and reply.actors[a].subprocess.worker_evidence.failure.native_kind == 2) or (reply.actors[a].subprocess.worker_evidence.failure.operation == 4 and ((reply.actors[a].subprocess.worker_evidence.failure.code == 1 and reply.actors[a].subprocess.worker_evidence.failure.native_kind == 1) or (reply.actors[a].subprocess.worker_evidence.failure.code == 6 and reply.actors[a].subprocess.worker_evidence.failure.native_kind == 0))))
+effects: [set_value(reply.actors[a].application.state, "not_attempted"), set_value(reply.actors[a].application.basis, "terminal_parameter_refusal")]
 ```
 
 Terminal operation 1/code 5/kind 0; operation 3/code 1/kind 2; or operation 4
@@ -294,7 +344,8 @@ with code 1/kind 1 or code 6/kind 0.
 #### Compile refusal {compile: outcome}
 
 ```contract
-value: ["not_attempted", "terminal_compile_refusal"]
+test: present(reply.actors[a].subprocess) and present(reply.actors[a].subprocess.worker_evidence) and reply.actors[a].subprocess.worker_evidence.failure_state == "published" and present(reply.actors[a].subprocess.worker_evidence.failure) and reply.actors[a].subprocess.worker_evidence.failure.operation == 5 and reply.actors[a].subprocess.worker_evidence.failure.code == 1 and reply.actors[a].subprocess.worker_evidence.failure.native_kind == 2
+effects: [set_value(reply.actors[a].application.state, "not_attempted"), set_value(reply.actors[a].application.basis, "terminal_compile_refusal")]
 ```
 
 Terminal operation 5/code 1/native kind 2.
@@ -302,7 +353,8 @@ Terminal operation 5/code 1/native kind 2.
 #### Timing refusal {timing: outcome}
 
 ```contract
-value: ["not_attempted", "terminal_timing_refusal"]
+test: present(reply.actors[a].subprocess) and present(reply.actors[a].subprocess.worker_evidence) and reply.actors[a].subprocess.worker_evidence.failure_state == "published" and present(reply.actors[a].subprocess.worker_evidence.failure) and reply.actors[a].subprocess.worker_evidence.failure.operation == 12 and ((reply.actors[a].subprocess.worker_evidence.failure.code == 1 and reply.actors[a].subprocess.worker_evidence.failure.native_kind == 1) or (reply.actors[a].subprocess.worker_evidence.failure.code == 14 and reply.actors[a].subprocess.worker_evidence.failure.native_kind == 0) or (reply.actors[a].subprocess.worker_evidence.failure.code == 15 and reply.actors[a].subprocess.worker_evidence.failure.detail == 1 and reply.actors[a].subprocess.worker_evidence.failure.native_kind == 0))
+effects: [set_value(reply.actors[a].application.state, "not_attempted"), set_value(reply.actors[a].application.basis, "terminal_timing_refusal")]
 ```
 
 Terminal operation 12 has code 1/kind 1, code 14/kind 0, or code 15/detail 1/kind 0.
@@ -310,7 +362,8 @@ Terminal operation 12 has code 1/kind 1, code 14/kind 0, or code 15/detail 1/kin
 #### Apply boundary without result {boundary: outcome}
 
 ```contract
-value: ["unobserved", "apply_call_boundary_without_result"]
+test: present(reply.actors[a].subprocess) and present(reply.actors[a].subprocess.worker_evidence) and present(reply.actors[a].subprocess.worker_evidence.progress) and reply.actors[a].subprocess.worker_evidence.progress.operation == 8 and reply.actors[a].subprocess.worker_evidence.progress.stage in [1, 2]
+effects: [set_value(reply.actors[a].application.state, "unobserved"), set_value(reply.actors[a].application.basis, "apply_call_boundary_without_result")]
 ```
 
 Progress identifies operation 8 and stage 1 or 2, after all earlier branches failed.
@@ -318,7 +371,8 @@ Progress identifies operation 8 and stage 1 or 2, after all earlier branches fai
 #### Remaining evidence {remaining: outcome}
 
 ```contract
-value: ["unobserved", "no_eligible_apply_publication"]
+test: True
+effects: [set_value(reply.actors[a].application.state, "unobserved"), set_value(reply.actors[a].application.basis, "no_eligible_apply_publication")]
 ```
 
 The preceding evidence branches did not establish another pair.
@@ -539,18 +593,58 @@ True exactly for a satisfied gate, allowing this dependent phase to proceed to a
 
 Capture of the gate result in the source child's host-observation sequence; absent for not_reached and when no source session supplies a sequence.
 
+### Prepared actor phase and gate records {prepared_association: reports}
+
+```contract
+who: ["identity.definitions.host"]
+where: "prepared actor reply assembly"
+entry: ["xpc_execute"]
+recipient: ["xpc_caller", "runner_client", "controller"]
+report: ["runner_reply"]
+when: present(request.actors) and reply.execution_form == "actors" and absent(reply.preparation_failure) and absent(reply.reporting_failure)
+bind.q: request.phases
+bind.p: reply.phases
+match.p: p == q
+```
+
+#### Phase cardinality {cardinality: condition}
+
+```contract
+test: present(request.phases) and count(reply.phases) == count(request.phases)
+```
+
+#### Each phase and declared gate {rows: condition}
+
+```contract
+each: ["q", "p"]
+test: reply.phases[p].phase_id == request.phases[q].phase_id and reply.phases[p].ordinal == q + 1 and reply.phases[p].actor_id == request.phases[q].actor_id and implies(present(request.phases[q].after_termination), present(reply.phases[p].termination_gate) and reply.phases[p].termination_gate.source_actor_id == request.phases[q].after_termination.actor_id) and implies(absent(request.phases[q].after_termination), absent(reply.phases[p].termination_gate))
+```
+
+Normalization retains the submitted phase order. Each prepared reply has
+one phase row per request phase at the corresponding position. The scheduler
+installs every declared gate before cancellation, allowance and dependent
+availability checks, then assembly copies that gate into the phase row.
+An unreached gate therefore remains a declared gate. Its source final phase
+comes from the source actor's last preceding phase in the normalized plan.
+Preparation refusals carry their separate before-launch phase account.
+
 ### Evaluating and applying the dependency {evaluate: acts}
 
 ```contract
-who: "runner host"
+who: ["identity.definitions.host"]
 where: "serial actor schedule before dependent activation"
-entry: ["actors"]
-recipient: ["direct_host_caller", "runner_client", "controller"]
-report: ["ordinary_reply"]
+entry: ["xpc_execute"]
+recipient: ["xpc_caller", "runner_client", "controller"]
+report: ["runner_reply"]
+bind.q: request.phases
 bind.p: reply.phases
-when: present(reply.phases[p].termination_gate)
+match.p: p == q
+each: ["q", "p"]
+when: present(request.actors) and present(request.phases) and present(request.phases[q].after_termination) and reply.execution_form == "actors" and absent(reply.preparation_failure) and absent(reply.reporting_failure)
+requires: ["actor_evidence.gate.prepared_association.cardinality", "actor_evidence.gate.prepared_association.rows"]
 free.condition: Evaluate only after the schedule remains uncancelled, its allowance is positive, and the dependent actor session, usable setup, unstopped state and visit are available. Evaluation first checks the source session and final declared phase activation; unavailable source evidence gives source_unavailable.
-free.effect: Set activation_eligible from satisfied. A failed evaluated gate prevents dependent activation, collection and release, and cancels every later scheduled phase regardless of its actor. Cleanup and final collection continue for launched actors.
+free.effect: A failed evaluated gate prevents dependent activation, collection and release, and cancels every later scheduled phase regardless of its actor. Cleanup and final collection continue for launched actors.
+retained_free: {"condition":{"kind":"native_protocol","reason":"The scheduler consults live cancellation, remaining allowance and dependent-session/setup/visit state before invocation. Evaluation consults the source session and prior final-activation observation."},"effect":{"kind":"native_protocol","reason":"The native cancellation and cleanup procedure acts on the live schedule and owned sessions and formats the cancelled string from its prefix and gate outcome. The activation_eligible assignment is structured below."}}
 ```
 
 The dependency wait observes the owned source child without requesting its
@@ -566,11 +660,23 @@ and visit timing. Their own gates remain `not_reached`. Final cleanup may add
 the source's later owned ending while the failed gate keeps the observation
 reference captured during its evaluation.
 
+#### Eligibility assigned by evaluation {eligibility_assignment: effect}
+
+```contract
+on: "always"
+effects: set_value(reply.phases[p].termination_gate.activation_eligible, reply.phases[p].termination_gate.outcome == "satisfied")
+```
+
+The evaluated outcome determines the permission to activate the dependent
+phase. The scheduler applies the cancellation procedure when this value is
+false.
+
 #### Satisfied {satisfied: outcome}
 
 ```contract
 value: "satisfied"
 free.condition: The source final activation precedes a natural owned reap in its child sequence; both timestamps exist and activation time is at most reap time. Ownership is unbroken, departure_requested is false, budget is positive, deadline samples permit the reap, and final wait has a valid elapsed interval at most budget.
+retained_free: {"condition":{"kind":"native_protocol","reason":"Owned reap eligibility includes intermediate deadline samples and final wait observations, beyond the carried ordinal/timestamp comparisons."}}
 ```
 
 The gate closes after the source's owned ending. A normal exit or signaled
@@ -649,19 +755,31 @@ The host had requested the source's departure before the eligible ending.
 ```contract
 who: ["identity.definitions.controller"]
 where: "semantic assessment after reply admission"
-entry: ["controller_run"]
+entry: ["cli_run"]
 recipient: ["cli_caller"]
-report: ["ordinary_reply"]
+report: ["runner_reply"]
 bind.p: reply.phases
 bind.s: reply.actors
 bind.f: reply.phases
 match.s: reply.actors[s].actor_id == reply.phases[p].termination_gate.source_actor_id
 match.f: reply.phases[f].phase_id == reply.phases[p].termination_gate.source_final_phase_id
-when: absent(reply.reporting_failure) and present(reply.phases[p].termination_gate)
+when: absent(reply.reporting_failure) and reply.execution_form == "actors" and present(reply.phases[p].termination_gate)
 failure: "accumulate"
 free.condition: Resolve source and final-phase joins before using s or f; missing, nonfinal, same-actor or nonpreceding associations are findings. Check owned PID/native-status agreement, all conditional gate captures, independent actor setup/equipment eligibility and activation timing.
-free.effect: Add actor_evidence issues for failed requirements, with subject_path naming the inspected termination_gate. Set top-level disposition_integrity invalid, process_disposition withheld and termination_cause unknown. Preserve the host reply, each actor's independently projected disposition, run result and exit status.
+retained_free: {"condition":{"kind":"native_protocol","reason":"Reader findings combine source/final-phase association, native status, conditional captures and independent equipment/setup checks. Their carried gate and resolved records are distinct operands of the complete procedure."}}
 ```
+
+#### Failed carried-gate requirement {failed: effect}
+
+```contract
+on: "failure"
+effects: [set_value(envelope.data.runner_sandbox_diagnostics.disposition_integrity, "invalid"), set_value(envelope.data.runner_sandbox_diagnostics.process_disposition, "withheld"), set_value(envelope.data.runner_sandbox_diagnostics.termination_cause, "unknown"), retain_records(reply), retain_assessments(envelope.data.runner_sandbox_diagnostics.actors)]
+free.effect: Append the actor_evidence finding for the failed requirement, with subject_path naming this phase's inspected termination_gate.
+uses: ["envelope.data.select"]
+retained_free: {"effect":{"kind":"native_protocol","reason":"Native finding construction selects details from the failed predicate, formats the phase position in subject_path as a decimal string, and appends the record. Projection assignments and retention are structured separately."}}
+```
+
+Run result and exit status continue to follow their result-selection rule.
 
 #### Unreached shape {unreached: condition}
 
@@ -694,8 +812,10 @@ order; a timestamped dependent activation is at or after the reap.
 #### Eligibility consequence {eligibility: condition}
 
 ```contract
-test: implies(reply.phases[p].termination_gate.activation_eligible == True, reply.phases[p].termination_gate.outcome == "satisfied")
-free.condition: True eligibility also requires the dependent actor's applied or unapplied_declared setup and eligible equipment. False eligibility requires absent activation/visit timing, false arrival/proceed flags and collection not_reached.
+bind.d: reply.actors
+match.d: present(reply.phases[p].actor_id) and reply.actors[d].actor_id == reply.phases[p].actor_id and reply.actors[d].setup_status in ["applied", "unapplied_declared"] and present(reply.actors[d].equipment) and reply.actors[d].equipment.execution.eligible == True
+each: ["p"]
+test: implies(reply.phases[p].termination_gate.activation_eligible == True, reply.phases[p].termination_gate.outcome == "satisfied" and present(reply.actors) and matches(d) > 0) and implies(reply.phases[p].termination_gate.activation_eligible == False, absent(reply.phases[p].activation_observation) and absent(reply.phases[p].visit_timing) and reply.phases[p].arrival_observed == False and reply.phases[p].collection_status == "not_reached" and (absent(reply.phases[p].ordering) or (reply.phases[p].ordering.proceed_set == False and reply.phases[p].ordering.proceed_observed == False)))
 ```
 
 ### A timeout followed by cleanup {timeout_example: example}
@@ -755,7 +875,7 @@ A `not_reached` gate consumes no gate-capture ordinal.
 ```contract
 scope: "subtree"
 grade: "source_read"
-source: [{"path": "runner/Sources/PWRunnerCore/PWRunnerActors.swift", "symbol": "PWRunnerActorResult"}, {"path": "runner/Sources/PWRunnerCore/PWRunnerAuthoritySetup.swift", "symbol": "actorApplicationAssessment"}, {"path": "runner/Sources/PWRunnerCore/ActorScheduler.swift", "symbol": "ActorScheduler"}, {"path": "runner/Sources/PWRunnerCore/ActorOrchestration.swift", "symbol": "assembleActorReply"}, {"path": "runner/Sources/PWRunnerCore/PWRunnerReply.swift", "symbol": "actorExtensionEvidenceProblem"}, {"path": "controller/src/porcelain_actor.rs", "symbol": "gates"}, {"path": "controller/src/porcelain_admission.rs", "symbol": "execution_diagnostics"}, {"path": "tests/lib/actor_evidence.py", "symbol": "validate_actor_evidence"}, {"path": "tests/lib/lifecycle_oracle.py", "symbol": "check_actor_records"}, {"path": "tests/lib/consumer.py", "symbol": "_validate_actors"}]
+source: [{"path": "runner/Sources/PWRunnerCore/PWRunnerActors.swift", "symbol": "PWRunnerActorResult"}, {"path": "runner/Sources/PWRunnerCore/PWRunnerAuthoritySetup.swift", "symbol": "actorApplicationAssessment"}, {"path": "runner/Sources/PWRunnerCore/ActorScheduler.swift", "symbol": "ActorScheduler"}, {"path": "runner/Sources/PWRunnerCore/ActorOrchestration.swift", "symbol": "assembleActorReply"}, {"path": "runner/Sources/PWRunnerCore/ActorPlan.swift", "symbol": "normalizeActorPlan"}, {"path": "runner/Sources/PWRunnerCore/PWRunnerReply.swift", "symbol": "actorExtensionEvidenceProblem"}, {"path": "controller/src/porcelain_actor.rs", "symbol": "gates"}, {"path": "controller/src/porcelain_admission.rs", "symbol": "execution_diagnostics"}, {"path": "tests/lib/actor_evidence.py", "symbol": "validate_actor_evidence"}, {"path": "tests/lib/lifecycle_oracle.py", "symbol": "check_actor_records"}, {"path": "tests/lib/consumer.py", "symbol": "_validate_actors"}]
 pins: "Imported public field definitions joined to producer/decoder/assessment meanings; explicit rule and evidence gaps preserve scope."
 context: "Source and check inspection during contract drafting."
 limits: "No execution credit is claimed by this owner."

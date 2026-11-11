@@ -6,11 +6,11 @@ artifact: "Predictions, attempts and comparison"
 part: "report"
 goldens: ["tests/fixtures/contract/surfaces/steps.json", "tests/fixtures/comparison/matrix.json"]
 checks: ["runner_unit", "failure_boundaries", "witness_contract"]
-who: "runner host"
+who: ["identity.definitions.host"]
 where: "step evidence assembly"
-entry: ["cli", "direct_xpc"]
+entry: ["xpc_execute"]
 recipient: ["controller", "xpc_caller"]
-report: ["ordinary", "actors", "reporting_failure"]
+report: ["runner_reply"]
 ```
 
 ## Probe result {step: subject}
@@ -532,6 +532,7 @@ match.s: reply.steps[s].phase_id == reply.phases[p].phase_id
 
 ```contract
 free.effect: Associate validator records and completed worker slots with the declared probe, retain their separate provenance and native observations, and synthesize an unavailable channel when its required observation is absent.
+retained_free: {"effect":{"kind":"native_protocol","reason":"Association uses the planned query and completed native slot before producing the per-step channels; output fields cannot replace missing source observations."}}
 ```
 
 An excluded query remains synthetic even when an unexpected validator frame
@@ -553,12 +554,26 @@ limits: "Check reading. Integrated query association has the validator collectio
 ### Establish query order {order: checks}
 
 ```contract
+each: ["p", "s"]
+when: absent(reply.reporting_failure) and present(reply.steps[s].comparison)
 who: ["identity.definitions.host"]
 where: "per-step ordering assessment"
-report: ["ordinary", "actors"]
+report: ["runner_reply"]
 failure: "first"
-free.when: A nondegraded report retains this probe's comparison.
-free.effect: Set comparison.order to query_first exactly when all eligibility conditions hold; otherwise retain unestablished.
+```
+
+#### Established order {success: effect}
+
+```contract
+on: "success"
+effects: set_value(reply.steps[s].comparison.order, "query_first")
+```
+
+#### Unestablished order {failure: effect}
+
+```contract
+on: "failure"
+effects: set_value(reply.steps[s].comparison.order, "unestablished")
 ```
 
 #### Collection chain {chain: condition}
@@ -574,6 +589,7 @@ ownership was established through acknowledgement.
 
 ```contract
 free.condition: Ordinary execution has observed successful application; actor execution has established the actor's declared applied or unapplied setup.
+retained_free: {"condition":{"kind":"native_protocol","reason":"Ordinary apply observation and actor declared setup are producer inputs; their final summary labels alone do not establish the eligibility observation."}}
 ```
 
 #### Native answer {native: condition}
@@ -585,11 +601,31 @@ test: reply.steps[s].sandbox_check.result_source == "validator" and present(repl
 #### Unique association {association: condition}
 
 ```contract
-free.condition: The query targets the associated worker PID, and exactly one retained validator record has the step identifier and matches operation, uppercase filter kind, native filter value, outcome, return and errno.
+test: present(reply.phases[p].validator_subprocess) and present(reply.phases[p].validator_subprocess.records) and matches(v) == 1
+match.v: reply.phases[p].validator_subprocess.records[v].step_id == reply.steps[s].step_id
+bind.v: reply.phases[p].validator_subprocess.records
+free.condition: The query targets the associated live worker PID. For a filter kind outside the known request vocabulary, the native filter type is the uppercase spelling of that kind.
+retained_free: {"condition": {"kind": "native_protocol", "reason": "The constructor receives the owned worker PID from live CWorkerOutput; the general reader supplies its associated reported process PID. Future filter names use the source string uppercasing operation."}}
 ```
 
 The native value for a none filter is absent. Other filters compare the
 carried value with the projected query value.
+
+##### Exact retained query identity {identity: condition}
+
+```contract
+each: ["v"]
+test: reply.phases[p].validator_subprocess.records[v].operation == reply.steps[s].sandbox_check.operation and reply.phases[p].validator_subprocess.records[v].outcome == reply.steps[s].sandbox_check.outcome and reply.phases[p].validator_subprocess.records[v].rc == reply.steps[s].sandbox_check.native_rc and reply.phases[p].validator_subprocess.records[v].errno == reply.steps[s].sandbox_check.errno and implies(reply.steps[s].sandbox_check.filter_kind in ['none', 'path', 'global_name', 'local_name', 'iokit_registry_entry_class', 'iokit_user_client_class', 'sysctl_name'], (reply.steps[s].sandbox_check.filter_kind == "none" and reply.phases[p].validator_subprocess.records[v].filter_type == "NONE") or (reply.steps[s].sandbox_check.filter_kind == "path" and reply.phases[p].validator_subprocess.records[v].filter_type == "PATH") or (reply.steps[s].sandbox_check.filter_kind == "global_name" and reply.phases[p].validator_subprocess.records[v].filter_type == "GLOBAL_NAME") or (reply.steps[s].sandbox_check.filter_kind == "local_name" and reply.phases[p].validator_subprocess.records[v].filter_type == "LOCAL_NAME") or (reply.steps[s].sandbox_check.filter_kind == "iokit_registry_entry_class" and reply.phases[p].validator_subprocess.records[v].filter_type == "IOKIT_REGISTRY_ENTRY_CLASS") or (reply.steps[s].sandbox_check.filter_kind == "iokit_user_client_class" and reply.phases[p].validator_subprocess.records[v].filter_type == "IOKIT_USER_CLIENT_CLASS") or (reply.steps[s].sandbox_check.filter_kind == "sysctl_name" and reply.phases[p].validator_subprocess.records[v].filter_type == "SYSCTL_NAME")) and ((reply.steps[s].sandbox_check.filter_kind == "none" and absent(reply.phases[p].validator_subprocess.records[v].filter_value)) or (reply.steps[s].sandbox_check.filter_kind != "none" and reply.phases[p].validator_subprocess.records[v].filter_value == reply.steps[s].sandbox_check.filter_value))
+```
+
+#### Order association source {source: owner}
+
+```contract
+scope: "subtree"
+grade: "source_read"
+source: [{"path": "runner/Sources/PWRunnerCore/PWRunnerStepEvidence.swift", "symbol": "eligibleOrderedStep"}, {"path": "runner/Sources/PWRunnerCore/PWRunnerReply.swift", "symbol": "validateForReporting"}]
+pins: "Ordering first counts all records for the step ID, then compares the selected record and native value. Production supplies its live worker PID; reporting validation supplies the associated reported worker PID."
+```
 
 ### Temporal meaning {meaning: definition}
 
@@ -615,23 +651,64 @@ limits: "Source and check reading; no new execution or mutation-control run is c
 ### Classify an observation {observe: checks}
 
 ```contract
+bind.r: reply.steps
+each: ["r"]
+when: present(reply.steps[r].comparison)
+selection: "first_match"
 who: ["identity.definitions.host"]
-free.effect: Select the first applicable observation below from the attempt channel and retain its stated basis.
 ```
 
-| Condition in order | Observation | Basis |
-| --- | --- | --- |
-| Worker source, exec kind, positive child PID | succeeded | spawned_child |
-| Worker source, ok outcome, zero return | succeeded | completed_worker_status |
-| Worker source, nonzero return, file/sysctl/exec failure carrying EPERM or EACCES | permission_failure | permission_errno |
-| Worker source, lookup_failed with exactly `bootstrap_look_up: kr=1100` | permission_failure | bootstrap_permission_result |
-| Worker source, nonzero return | other_failure | completed_worker_status |
-| Otherwise | unavailable | no_completed_worker_result |
 
 A permission classification records the shape of the native failure.
 Attribution to a particular enforcing mechanism requires supporting
 evidence. A positive child PID establishes spawning even when the child
 subsequently exits nonzero.
+
+#### Spawn observed {spawned: outcome}
+
+```contract
+test: reply.steps[r].attempt.result_source == "worker" and reply.steps[r].attempt.requested_kind == "exec" and present(reply.steps[r].attempt.child_pid) and reply.steps[r].attempt.child_pid > 0
+effects: [set_value(reply.steps[r].comparison.observation, "succeeded"), set_value(reply.steps[r].comparison.observation_basis, "spawned_child")]
+```
+
+A positive child PID records spawning even when the child's later status fails.
+
+#### Completed success {completed: outcome}
+
+```contract
+test: reply.steps[r].attempt.result_source == "worker" and reply.steps[r].attempt.outcome == "ok" and reply.steps[r].attempt.rc == 0
+effects: [set_value(reply.steps[r].comparison.observation, "succeeded"), set_value(reply.steps[r].comparison.observation_basis, "completed_worker_status")]
+```
+
+#### Permission errno {permission: outcome}
+
+```contract
+test: reply.steps[r].attempt.result_source == "worker" and reply.steps[r].attempt.rc != 0 and reply.steps[r].attempt.outcome in ["open_failed", "read_failed", "write_failed", "unlink_failed", "access_failed", "sysctl_failed", "exec_failed"] and reply.steps[r].attempt.errno in [1, 13]
+effects: [set_value(reply.steps[r].comparison.observation, "permission_failure"), set_value(reply.steps[r].comparison.observation_basis, "permission_errno")]
+```
+
+Darwin EPERM and EACCES supply the numeric errno alternatives at this boundary.
+
+#### Bootstrap permission result {bootstrap: outcome}
+
+```contract
+test: reply.steps[r].attempt.result_source == "worker" and reply.steps[r].attempt.rc != 0 and reply.steps[r].attempt.outcome == "lookup_failed" and reply.steps[r].attempt.error == "bootstrap_look_up: kr=1100"
+effects: [set_value(reply.steps[r].comparison.observation, "permission_failure"), set_value(reply.steps[r].comparison.observation_basis, "bootstrap_permission_result")]
+```
+
+#### Other completed failure {other: outcome}
+
+```contract
+test: reply.steps[r].attempt.result_source == "worker" and reply.steps[r].attempt.rc != 0
+effects: [set_value(reply.steps[r].comparison.observation, "other_failure"), set_value(reply.steps[r].comparison.observation_basis, "completed_worker_status")]
+```
+
+#### Unavailable observation {unavailable: outcome}
+
+```contract
+test: True
+effects: [set_value(reply.steps[r].comparison.observation, "unavailable"), set_value(reply.steps[r].comparison.observation_basis, "no_completed_worker_result")]
+```
 
 ### Submitted operation and target {relations: definition}
 
@@ -673,23 +750,22 @@ limits: "Constructed controls were read. Corresponding integrated cases own live
 ### Observe fresh descriptors {fresh: acts}
 
 ```contract
-who: "C worker"
+uses: ["steps.assessment.fresh_read_aggregate", "steps.assessment.fresh_write_aggregate"]
+who: ["identity.definitions.worker"]
 where: "released probe action"
-free.effect: Open a new descriptor during the action, publish reached native operations and preserve the aggregate's first failed descriptor operation.
+free.effect: Open a new descriptor during the released action, perform the action-specific native sequence and publish each reached operation when the slot completes.
+retained_free: {"effect": {"kind": "native_protocol", "reason": "Descriptor acquisition, call order and release publication are native events. The adjacent aggregate classifiers express the ordered selection from carried native returns and errno values."}}
 ```
 
 `read_fresh` performs descriptor stat, bounded read and close after a
-successful open. The first stat, read or close failure supplies the
-aggregate failure. A successful read records the bytes actually returned.
+successful open. A successful read records the bytes actually returned.
 
 `write_fresh` opens, records descriptor metadata, truncates to zero,
 records metadata again, writes one byte if truncation succeeded, records
 metadata after that write and closes. `create_fresh` first records a
 path-stat diagnostic, then opens with exclusive creation, records descriptor
 metadata, writes one byte, records metadata and closes. Creation's pre-open
-stat is diagnostic. Metadata, truncate, write and close failures preserve
-the first failed descriptor operation; a short write fails with its
-observed count. Unreached operations remain absent.
+stat is diagnostic. A short write retains its observed count. Unreached operations remain absent.
 
 #### Publication support {support: owner}
 
@@ -705,9 +781,11 @@ limits: "Fresh-read sequencing is source-supported here. Constructed controls es
 ### Add host path observations {paths: acts}
 
 ```contract
-who: "runner host"
+each: ["p", "s"]
+who: ["identity.definitions.host"]
 where: "after orchestration"
-free.effect: Add query and attempt path forms to their separate channel records when their path inputs qualify.
+free.effect: Resolve qualifying query and attempt paths through the host filesystem after orchestration. Preserve independent realpath, parent-form and firmlink observations and their unavailable results.
+retained_free: {"effect": {"kind": "environment_observation", "reason": "Realpath, parent lookup and firmlink resolution are later filesystem observations; channel input eligibility and fixed output provenance are structured below."}}
 ```
 
 Query realpath and firmlink forms describe host observations after
@@ -726,6 +804,246 @@ check: {"path":"runner/Tests/PWRunnerCoreTests/PathDiagnosticsTests.swift","symb
 pins: "Path controls create parents and symlinks, distinguish missing and symlink leaves, skip non-path attempts and preserve separate query observations."
 context: "Read enrichment, helpers and path controls, including exact UTF-8 retention."
 limits: "Check reading; the observations retain the host's after-orchestration interval."
+```
+
+#### Attempt path input {attempt: effect}
+
+```contract
+on: "always"
+when: reply.steps[s].attempt.requested_kind in ["file", "exec"] and present(reply.steps[s].attempt.requested_path) and reply.steps[s].attempt.requested_path != ""
+effects: [set_value(reply.steps[s].attempt.path_diagnostics.input, reply.steps[s].attempt.requested_path), set_value(reply.steps[s].attempt.path_diagnostics.observer, "runner_host"), set_value(reply.steps[s].attempt.path_diagnostics.stage, "after_orchestration")]
+```
+
+#### Attempt path input applicability {attempt_presence: condition}
+
+```contract
+test: implies(reply.steps[s].attempt.requested_kind in ["file", "exec"] and present(reply.steps[s].attempt.requested_path) and reply.steps[s].attempt.requested_path != "", present(reply.steps[s].attempt.path_diagnostics))
+```
+
+#### Query path input {query: effect}
+
+```contract
+on: "always"
+when: reply.steps[s].sandbox_check.filter_kind == "path" and present(reply.steps[s].sandbox_check.filter_value) and reply.steps[s].sandbox_check.filter_value != ""
+effects: [set_value(reply.steps[s].sandbox_check.path_diagnostics.input, reply.steps[s].sandbox_check.filter_value), set_value(reply.steps[s].sandbox_check.path_diagnostics.observer, "runner_host"), set_value(reply.steps[s].sandbox_check.path_diagnostics.stage, "after_orchestration")]
+```
+
+#### Query path input applicability {query_presence: condition}
+
+```contract
+test: implies(reply.steps[s].sandbox_check.filter_kind == "path" and present(reply.steps[s].sandbox_check.filter_value) and reply.steps[s].sandbox_check.filter_value != "", present(reply.steps[s].sandbox_check.path_diagnostics))
+```
+
+### Project the fresh-read aggregate {fresh_read_aggregate: reports}
+
+```contract
+who: ["identity.definitions.worker", "identity.definitions.host"]
+where: "completed native aggregate projection"
+entry: ["xpc_execute"]
+recipient: ["controller", "xpc_caller"]
+report: ["runner_reply"]
+when: reply.steps[s].attempt.requested_kind == "file" and reply.steps[s].attempt.requested_action == "read_fresh" and reply.steps[s].attempt.result_source == "worker" and present(reply.steps[s].attempt.fresh_read)
+each: ["p", "s"]
+selection: "first_match"
+```
+
+#### open failure with errno {open_errno: outcome}
+
+```contract
+test: present(reply.steps[s].attempt.fresh_read.open_rc) and reply.steps[s].attempt.fresh_read.open_rc < 0 and present(reply.steps[s].attempt.fresh_read.open_errno) and reply.steps[s].attempt.fresh_read.open_errno != 0
+effects: [set_value(reply.steps[s].attempt.rc, -1), set_value(reply.steps[s].attempt.outcome, "read_failed"), set_value(reply.steps[s].attempt.errno, reply.steps[s].attempt.fresh_read.open_errno)]
+```
+
+#### open failure without nonzero errno {open_zero: outcome}
+
+```contract
+test: present(reply.steps[s].attempt.fresh_read.open_rc) and reply.steps[s].attempt.fresh_read.open_rc < 0
+effects: [set_value(reply.steps[s].attempt.rc, -1), set_value(reply.steps[s].attempt.outcome, "read_failed"), set_value(reply.steps[s].attempt.errno, None)]
+```
+
+#### stat failure with errno {stat_errno: outcome}
+
+```contract
+test: present(reply.steps[s].attempt.fresh_read.stat_rc) and reply.steps[s].attempt.fresh_read.stat_rc != 0 and present(reply.steps[s].attempt.fresh_read.stat_errno) and reply.steps[s].attempt.fresh_read.stat_errno != 0
+effects: [set_value(reply.steps[s].attempt.rc, -1), set_value(reply.steps[s].attempt.outcome, "read_failed"), set_value(reply.steps[s].attempt.errno, reply.steps[s].attempt.fresh_read.stat_errno)]
+```
+
+#### stat failure without nonzero errno {stat_zero: outcome}
+
+```contract
+test: present(reply.steps[s].attempt.fresh_read.stat_rc) and reply.steps[s].attempt.fresh_read.stat_rc != 0
+effects: [set_value(reply.steps[s].attempt.rc, -1), set_value(reply.steps[s].attempt.outcome, "read_failed"), set_value(reply.steps[s].attempt.errno, None)]
+```
+
+#### read failure with errno {read_errno: outcome}
+
+```contract
+test: present(reply.steps[s].attempt.fresh_read.read_rc) and reply.steps[s].attempt.fresh_read.read_rc < 0 and present(reply.steps[s].attempt.fresh_read.read_errno) and reply.steps[s].attempt.fresh_read.read_errno != 0
+effects: [set_value(reply.steps[s].attempt.rc, -1), set_value(reply.steps[s].attempt.outcome, "read_failed"), set_value(reply.steps[s].attempt.errno, reply.steps[s].attempt.fresh_read.read_errno)]
+```
+
+#### read failure without nonzero errno {read_zero: outcome}
+
+```contract
+test: present(reply.steps[s].attempt.fresh_read.read_rc) and reply.steps[s].attempt.fresh_read.read_rc < 0
+effects: [set_value(reply.steps[s].attempt.rc, -1), set_value(reply.steps[s].attempt.outcome, "read_failed"), set_value(reply.steps[s].attempt.errno, None)]
+```
+
+#### close failure with errno {close_errno: outcome}
+
+```contract
+test: present(reply.steps[s].attempt.fresh_read.close_rc) and reply.steps[s].attempt.fresh_read.close_rc != 0 and present(reply.steps[s].attempt.fresh_read.close_errno) and reply.steps[s].attempt.fresh_read.close_errno != 0
+effects: [set_value(reply.steps[s].attempt.rc, -1), set_value(reply.steps[s].attempt.outcome, "read_failed"), set_value(reply.steps[s].attempt.errno, reply.steps[s].attempt.fresh_read.close_errno)]
+```
+
+#### close failure without nonzero errno {close_zero: outcome}
+
+```contract
+test: present(reply.steps[s].attempt.fresh_read.close_rc) and reply.steps[s].attempt.fresh_read.close_rc != 0
+effects: [set_value(reply.steps[s].attempt.rc, -1), set_value(reply.steps[s].attempt.outcome, "read_failed"), set_value(reply.steps[s].attempt.errno, None)]
+```
+
+#### Successful aggregate {success: outcome}
+
+```contract
+test: True
+effects: [set_value(reply.steps[s].attempt.rc, 0), set_value(reply.steps[s].attempt.outcome, "ok"), set_value(reply.steps[s].attempt.errno, None)]
+```
+
+#### Aggregate source {source: owner}
+
+```contract
+scope: "subtree"
+grade: "source_read"
+source: [{"path": "controller/tools/pw_probe_runner/pw_probe_runner.c", "symbol": "attempt_file_read_fresh"}, {"path": "runner/Sources/PWRunnerCore/CWorkerStepResults.swift", "symbol": "buildAttemptResult"}]
+pins: "Native code preserves the first failed reached descriptor operation; the host maps the completed aggregate rc and converts errno zero to null. Creation pre-open stat stays diagnostic."
+```
+
+### Project the fresh-write aggregate {fresh_write_aggregate: reports}
+
+```contract
+who: ["identity.definitions.worker", "identity.definitions.host"]
+where: "completed native aggregate projection"
+entry: ["xpc_execute"]
+recipient: ["controller", "xpc_caller"]
+report: ["runner_reply"]
+when: reply.steps[s].attempt.requested_kind == "file" and reply.steps[s].attempt.requested_action in ["write_fresh", "create_fresh"] and reply.steps[s].attempt.result_source == "worker" and present(reply.steps[s].attempt.fresh_write)
+each: ["p", "s"]
+selection: "first_match"
+```
+
+#### open failure with errno {open_errno: outcome}
+
+```contract
+test: present(reply.steps[s].attempt.fresh_write.open_rc) and reply.steps[s].attempt.fresh_write.open_rc < 0 and present(reply.steps[s].attempt.fresh_write.open_errno) and reply.steps[s].attempt.fresh_write.open_errno != 0
+effects: [set_value(reply.steps[s].attempt.rc, -1), set_value(reply.steps[s].attempt.outcome, "write_failed"), set_value(reply.steps[s].attempt.errno, reply.steps[s].attempt.fresh_write.open_errno)]
+```
+
+#### open failure without nonzero errno {open_zero: outcome}
+
+```contract
+test: present(reply.steps[s].attempt.fresh_write.open_rc) and reply.steps[s].attempt.fresh_write.open_rc < 0
+effects: [set_value(reply.steps[s].attempt.rc, -1), set_value(reply.steps[s].attempt.outcome, "write_failed"), set_value(reply.steps[s].attempt.errno, None)]
+```
+
+#### opened stat failure with errno {opened_stat_errno: outcome}
+
+```contract
+test: present(reply.steps[s].attempt.fresh_write.opened_stat) and present(reply.steps[s].attempt.fresh_write.opened_stat.rc) and reply.steps[s].attempt.fresh_write.opened_stat.rc != 0 and present(reply.steps[s].attempt.fresh_write.opened_stat.errno) and reply.steps[s].attempt.fresh_write.opened_stat.errno != 0
+effects: [set_value(reply.steps[s].attempt.rc, -1), set_value(reply.steps[s].attempt.outcome, "write_failed"), set_value(reply.steps[s].attempt.errno, reply.steps[s].attempt.fresh_write.opened_stat.errno)]
+```
+
+#### opened stat failure without nonzero errno {opened_stat_zero: outcome}
+
+```contract
+test: present(reply.steps[s].attempt.fresh_write.opened_stat) and present(reply.steps[s].attempt.fresh_write.opened_stat.rc) and reply.steps[s].attempt.fresh_write.opened_stat.rc != 0
+effects: [set_value(reply.steps[s].attempt.rc, -1), set_value(reply.steps[s].attempt.outcome, "write_failed"), set_value(reply.steps[s].attempt.errno, None)]
+```
+
+#### truncate failure with errno {truncate_errno: outcome}
+
+```contract
+test: reply.steps[s].attempt.requested_action == "write_fresh" and present(reply.steps[s].attempt.fresh_write.truncate_rc) and reply.steps[s].attempt.fresh_write.truncate_rc != 0 and present(reply.steps[s].attempt.fresh_write.truncate_errno) and reply.steps[s].attempt.fresh_write.truncate_errno != 0
+effects: [set_value(reply.steps[s].attempt.rc, -1), set_value(reply.steps[s].attempt.outcome, "write_failed"), set_value(reply.steps[s].attempt.errno, reply.steps[s].attempt.fresh_write.truncate_errno)]
+```
+
+#### truncate failure without nonzero errno {truncate_zero: outcome}
+
+```contract
+test: reply.steps[s].attempt.requested_action == "write_fresh" and present(reply.steps[s].attempt.fresh_write.truncate_rc) and reply.steps[s].attempt.fresh_write.truncate_rc != 0
+effects: [set_value(reply.steps[s].attempt.rc, -1), set_value(reply.steps[s].attempt.outcome, "write_failed"), set_value(reply.steps[s].attempt.errno, None)]
+```
+
+#### truncated stat failure with errno {truncated_stat_errno: outcome}
+
+```contract
+test: reply.steps[s].attempt.requested_action == "write_fresh" and present(reply.steps[s].attempt.fresh_write.truncated_stat) and present(reply.steps[s].attempt.fresh_write.truncated_stat.rc) and reply.steps[s].attempt.fresh_write.truncated_stat.rc != 0 and present(reply.steps[s].attempt.fresh_write.truncated_stat.errno) and reply.steps[s].attempt.fresh_write.truncated_stat.errno != 0
+effects: [set_value(reply.steps[s].attempt.rc, -1), set_value(reply.steps[s].attempt.outcome, "write_failed"), set_value(reply.steps[s].attempt.errno, reply.steps[s].attempt.fresh_write.truncated_stat.errno)]
+```
+
+#### truncated stat failure without nonzero errno {truncated_stat_zero: outcome}
+
+```contract
+test: reply.steps[s].attempt.requested_action == "write_fresh" and present(reply.steps[s].attempt.fresh_write.truncated_stat) and present(reply.steps[s].attempt.fresh_write.truncated_stat.rc) and reply.steps[s].attempt.fresh_write.truncated_stat.rc != 0
+effects: [set_value(reply.steps[s].attempt.rc, -1), set_value(reply.steps[s].attempt.outcome, "write_failed"), set_value(reply.steps[s].attempt.errno, None)]
+```
+
+#### write failure with errno {write_errno: outcome}
+
+```contract
+test: present(reply.steps[s].attempt.fresh_write.write_rc) and reply.steps[s].attempt.fresh_write.write_rc != 1 and present(reply.steps[s].attempt.fresh_write.write_errno) and reply.steps[s].attempt.fresh_write.write_errno != 0
+effects: [set_value(reply.steps[s].attempt.rc, -1), set_value(reply.steps[s].attempt.outcome, "write_failed"), set_value(reply.steps[s].attempt.errno, reply.steps[s].attempt.fresh_write.write_errno)]
+```
+
+#### write failure without nonzero errno {write_zero: outcome}
+
+```contract
+test: present(reply.steps[s].attempt.fresh_write.write_rc) and reply.steps[s].attempt.fresh_write.write_rc != 1
+effects: [set_value(reply.steps[s].attempt.rc, -1), set_value(reply.steps[s].attempt.outcome, "write_failed"), set_value(reply.steps[s].attempt.errno, None)]
+```
+
+#### written stat failure with errno {written_stat_errno: outcome}
+
+```contract
+test: present(reply.steps[s].attempt.fresh_write.written_stat) and present(reply.steps[s].attempt.fresh_write.written_stat.rc) and reply.steps[s].attempt.fresh_write.written_stat.rc != 0 and present(reply.steps[s].attempt.fresh_write.written_stat.errno) and reply.steps[s].attempt.fresh_write.written_stat.errno != 0
+effects: [set_value(reply.steps[s].attempt.rc, -1), set_value(reply.steps[s].attempt.outcome, "write_failed"), set_value(reply.steps[s].attempt.errno, reply.steps[s].attempt.fresh_write.written_stat.errno)]
+```
+
+#### written stat failure without nonzero errno {written_stat_zero: outcome}
+
+```contract
+test: present(reply.steps[s].attempt.fresh_write.written_stat) and present(reply.steps[s].attempt.fresh_write.written_stat.rc) and reply.steps[s].attempt.fresh_write.written_stat.rc != 0
+effects: [set_value(reply.steps[s].attempt.rc, -1), set_value(reply.steps[s].attempt.outcome, "write_failed"), set_value(reply.steps[s].attempt.errno, None)]
+```
+
+#### close failure with errno {close_errno: outcome}
+
+```contract
+test: present(reply.steps[s].attempt.fresh_write.close_rc) and reply.steps[s].attempt.fresh_write.close_rc != 0 and present(reply.steps[s].attempt.fresh_write.close_errno) and reply.steps[s].attempt.fresh_write.close_errno != 0
+effects: [set_value(reply.steps[s].attempt.rc, -1), set_value(reply.steps[s].attempt.outcome, "write_failed"), set_value(reply.steps[s].attempt.errno, reply.steps[s].attempt.fresh_write.close_errno)]
+```
+
+#### close failure without nonzero errno {close_zero: outcome}
+
+```contract
+test: present(reply.steps[s].attempt.fresh_write.close_rc) and reply.steps[s].attempt.fresh_write.close_rc != 0
+effects: [set_value(reply.steps[s].attempt.rc, -1), set_value(reply.steps[s].attempt.outcome, "write_failed"), set_value(reply.steps[s].attempt.errno, None)]
+```
+
+#### Successful aggregate {success: outcome}
+
+```contract
+test: True
+effects: [set_value(reply.steps[s].attempt.rc, 0), set_value(reply.steps[s].attempt.outcome, "ok"), set_value(reply.steps[s].attempt.errno, None)]
+```
+
+#### Aggregate source {source: owner}
+
+```contract
+scope: "subtree"
+grade: "source_read"
+source: [{"path": "controller/tools/pw_probe_runner/pw_probe_runner.c", "symbol": "attempt_file_write_fresh"}, {"path": "runner/Sources/PWRunnerCore/CWorkerStepResults.swift", "symbol": "buildAttemptResult"}]
+pins: "Native code preserves the first failed reached descriptor operation; the host maps the completed aggregate rc and converts errno zero to null. Creation pre-open stat stays diagnostic."
 ```
 
 ## Record-field support {support: owner}

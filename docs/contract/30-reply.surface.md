@@ -6,11 +6,11 @@ artifact: "The host report"
 part: "report"
 goldens: ["tests/fixtures/contract/surfaces/reply.json"]
 checks: ["runner_unit", "failure_boundaries"]
-who: "runner host"
+who: ["identity.definitions.host"]
 where: "host reply assembly"
-entry: ["cli", "direct_xpc"]
+entry: ["xpc_execute"]
 recipient: ["controller", "xpc_caller"]
-report: ["ordinary", "actors", "preparation_failure", "reporting_failure"]
+report: ["runner_reply"]
 ```
 
 ## Execution record {record: subject}
@@ -184,6 +184,7 @@ cells and cleanup evidence under their own publication rules.
 
 ```contract
 free.effect: Assemble the aggregate summary and available observations without replacing native operation returns with the summary. Ordinary and actor-owned fields use their respective locations.
+retained_free: {"effect":{"kind":"native_protocol","reason":"Ordinary, actor and refusal forms assemble reports from different available outputs; final array presence alone cannot establish all prior publications."}}
 ```
 
 Ordinary classification examines worker failure, publication and supervision
@@ -259,7 +260,8 @@ empty steps/phases.
 ```contract
 where: "host response encoding"
 failure: "first"
-free.effect: Validate and encode the assembled report. On failure, set the current producer, select runner_reporting_failed/rc 1, add reporting_failure with evidence_retained true and remove every step comparison. Validate and encode this rich fallback; if it also fails, use the independent minimal writer with evidence_retained false. If that writer fails, return empty bytes.
+free.effect: Validate and encode the assembled report. If either operation fails, copy that report into a rich fallback, replace the producer and aggregate summary, preserve the original summary as reporting-failure diagnostics, and remove step comparisons. Validate and encode the rich fallback. If either operation fails again, use the independent minimal writer with original specimen/run/bundle/policy identity, PID and summary diagnostics. If that writer fails, return empty bytes.
+retained_free: {"effect": {"kind": "native_protocol", "reason": "Validation/encoding failures select successive writer attempts. Original-summary copying reads the distinct rejected report; the final fallback carries the selected writer retention state."}}
 ```
 
 The rich fallback preserves observations that triggered rejection. The
@@ -288,4 +290,37 @@ check: {"path":"runner/Tests/PWRunnerCoreTests/ReplyFailureTests.swift","symbol"
 pins: "Constructed reporting defects trigger rich fallback, preserve other projected fields and remove comparisons; malformed fallback markers refuse. Independent minimal/empty paths are read in source."
 context: "Read report validation, fallback writers and constructed binary reply controls."
 limits: "No new execution credit. The association commitment remains open independently of fallback validation."
+```
+#### Fallback summary {summary: effect}
+
+```contract
+on: "always"
+when: present(reply.reporting_failure)
+effects: [set_value(reply.rc, 1), set_value(reply.normalized_outcome, "runner_reporting_failed"), set_value(reply.reporting_failure.origin, "runner_host")]
+```
+
+#### Rich fallback comparisons {rich: effect}
+
+```contract
+bind.s: reply.steps
+on: "always"
+when: present(reply.reporting_failure) and reply.reporting_failure.evidence_retained
+each: ["s"]
+effects: [withhold(reply.steps[s].comparison)]
+```
+
+#### Minimal fallback arrays {minimal: effect}
+
+```contract
+on: "always"
+when: present(reply.reporting_failure) and not reply.reporting_failure.evidence_retained
+effects: [set_value(reply.steps, []), set_value(reply.phases, [])]
+```
+
+#### Fallback producer identity {producer: effect}
+
+```contract
+on: "always"
+when: present(reply.reporting_failure)
+effects: [set_value(reply.producer.contract, ref("identity.build.contract")), set_value(reply.producer.describe, ref("identity.build.describe")), set_value(reply.producer.commit, ref("identity.build.commit"))]
 ```

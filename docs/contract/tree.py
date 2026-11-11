@@ -49,16 +49,16 @@ CHILDREN = {
     'outcome': {'condition', 'effect', *AUXILIARY},
     'gap': {'owner'}, 'example': {'owner', 'gap'}, 'owner': set(),
 }
-COMMON_FACTS = {*CONTEXT, 'uses', 'after', 'precedes', 'requires'}
+COMMON_FACTS = {*CONTEXT, 'uses', 'after', 'precedes', 'requires', 'each', 'retained_free'}
 FACTS_BY_KIND = {
     'surface': {'syntax', 'artifact', 'part', 'goldens', 'checks', 'coverage'},
     'subject': {'record', 'as', 'at', 'part', 'coverage', 'open'},
     'definition': {'defines', 'type', 'value', 'object'},
     'field': {'name', 'type', 'optional', 'json_null', 'projection', 'default',
               'vocabulary', 'listed', 'values', 'unknown', 'required_when', 'present_when'},
-    'acts': {'effects', 'failure'},
-    'reports': {'effects', 'failure'},
-    'checks': {'test', 'effects', 'failure'},
+    'acts': {'effects', 'failure', 'selection'},
+    'reports': {'effects', 'failure', 'selection'},
+    'checks': {'test', 'effects', 'failure', 'selection'},
     'condition': {'test'},
     'effect': {'on', 'effects'},
     'outcome': {'value', 'object', 'test', 'effects'},
@@ -72,12 +72,21 @@ DEFINITION_KINDS = {'action', 'event', 'assessment', 'record', 'condition',
 CALL_ARITY = {'present': 1, 'absent': 1, 'implies': 2, 'ref': 1, 'later': 2,
               'set_value': 2, 'prevent': 2, 'retain_records': 1,
               'retain_assessments': 1, 'withhold': 1, 'emit': 2,
-              'count': 1, 'length': 1, 'variant': 2}
+              'count': 1, 'length': 1, 'variant': 2, 'is_variant': 2,
+              'matches': 1, 'sum_over': 2, 'utf8_length': 1,
+              'byte_length': 1, 'contains': 2, 'limit': 1, 'perform': 2}
 EFFECT_CALLS = {'set_value', 'prevent', 'retain_records', 'retain_assessments',
-                'withhold', 'emit'}
+                'withhold', 'emit', 'perform'}
 COMPARE_OPERATORS = {ast.Eq, ast.NotEq, ast.Lt, ast.LtE, ast.Gt, ast.GtE,
                      ast.In, ast.NotIn}
-PUBLIC_EXCLUSIONS = {'syntax', 'goldens', 'checks', 'coverage'}
+PUBLIC_EXCLUSIONS = {'syntax', 'goldens', 'checks', 'coverage', 'retained_free'}
+SUPPORT_GRADES = {
+    'source_read': 'The named source was inspected for the stated assertions.',
+    'check_read': 'The named source and check assertions were inspected in the stated context.',
+    'executed': 'The named run exercised the stated assertions with its identified source or build.',
+}
+FREE_REASONS = {'native_protocol', 'serialized_grammar', 'raw_admission',
+                'environment_observation', 'pending_decision'}
 
 
 class ContractError(ValueError):
@@ -108,8 +117,11 @@ class Node:
     context: dict = field(default_factory=dict)
     aliases: dict = field(default_factory=dict)
     bindings: dict = field(default_factory=dict)
+    selectors: dict = field(default_factory=dict)
+    each: tuple = ()
     expressions: dict = field(default_factory=dict)
     references: set = field(default_factory=set)
+    limit_refs: set = field(default_factory=set)
     object_types: dict = field(default_factory=dict)
     record: str | None = None
     field_info: dict | None = None
@@ -141,6 +153,7 @@ class Tree:
     read: object
     strict: bool
     uncovered_records: list[str] = field(default_factory=list)
+    limits: dict | None = None
 
 
 def _relative(path):
@@ -249,8 +262,10 @@ def _category(native, records):
         return 'union' if records[raw].get('variants') else 'record'
     if raw == 'Bool':
         return 'boolean'
-    if raw in {'String', 'Data'}:
+    if raw == 'String':
         return 'string'
+    if raw == 'Data':
+        return 'bytes'
     if raw in {'Index', 'Number', 'Double', 'Float'} or re.fullmatch(r'U?Int(?:8|16|32|64|128)?', raw):
         return 'number'
     if raw == 'Null':
@@ -275,7 +290,7 @@ def _compatible(left, right, records):
         return True
     if a == 'null' or b == 'null':
         return a == b or (right if a == 'null' else left).endswith('?')
-    if a in {'number', 'string', 'boolean'}:
+    if a in {'number', 'string', 'bytes', 'boolean'}:
         return a == b
     return left.removesuffix('?') == right.removesuffix('?')
 
@@ -288,6 +303,34 @@ def _reference(tree, node, ident, key=None, allowed=None):
         node.fail(f'inappropriate {target.kind} reference {ident!r}', key)
     node.references.add(ident)
     return target
+
+
+def _limit(tree, node, ident, key):
+    if not isinstance(ident, str):
+        node.fail('limit requires a literal limit identifier', key)
+    if tree.limits is None:
+        try:
+            rows = json.loads(tree.read('docs/limits.json'))['limits']
+            if not isinstance(rows, list):
+                raise ValueError('limits must be a list')
+            tree.limits = {}
+            for row in rows:
+                name = row['id']
+                if not isinstance(name, str) or name in tree.limits:
+                    raise ValueError('limit identifiers must be distinct strings')
+                tree.limits[name] = row
+        except (OSError, KeyError, ValueError, TypeError) as error:
+            node.fail(f'invalid owned limits source docs/limits.json: {error}', key)
+    if ident not in tree.limits:
+        node.fail(f'unknown limit identifier {ident!r}', key)
+    row = tree.limits[ident]
+    if type(row.get('value')) is not int:
+        node.fail(f'limit {ident!r} requires an integer value in docs/limits.json', key)
+    if any(not isinstance(row.get(field), str) for field in ('unit', 'counting', 'effect', 'control')):
+        node.fail(f'limit {ident!r} lacks public quantity meanings in docs/limits.json', key)
+    node.limit_refs.add(ident)
+    return {field: row[field] for field in
+            ('id', 'title', 'value', 'unit', 'counting', 'effect', 'control', 'refusal_field') if field in row}
 
 
 def _ref_type(target):
@@ -314,6 +357,8 @@ def _ref_type(target):
 class Expressions:
     def __init__(self, tree, node, key):
         self.tree, self.node, self.key = tree, node, key
+        self.scope = set(node.each)
+        self.scope_check = bool(node.each) and not key.startswith(('bind.', 'match.'))
 
     def fail(self, text):
         self.node.fail(text, self.key)
@@ -340,6 +385,29 @@ class Expressions:
                 self.fail('effects require effect calls or a list of effect calls')
         return expression
 
+    def aggregate(self, call, args):
+        index = args[0]
+        if not isinstance(index, ast.Name) or index.id not in self.node.bindings:
+            self.fail(f'{call} requires a bound index')
+        name = index.id
+        if name in self.scope:
+            self.fail(f'{call} cannot quantify an index already in scope: {name}')
+        if call == 'matches' and name not in self.node.selectors:
+            self.fail('matches requires an association selector for its bound index')
+        previous_scope, previous_check = self.scope, self.scope_check
+        self.scope, self.scope_check = self.scope | {name}, True
+        try:
+            # The domain and selector use actual record paths in the outer
+            # quantified scope. Nested aggregates introduce only their own index.
+            self.infer(ast.parse(self.node.bindings[name].domain, mode='eval').body)
+            if name in self.node.selectors:
+                self.parse(self.node.selectors[name], 'boolean')
+            if call == 'sum_over' and self.category(self.infer(args[1])) != 'number':
+                self.fail('sum_over requires a numeric term')
+        finally:
+            self.scope, self.scope_check = previous_scope, previous_check
+        return 'Int' if call == 'matches' else 'Number'
+
     def infer(self, value):
         records, node = self.tree.records, self.node
         if isinstance(value, ast.Constant):
@@ -353,6 +421,8 @@ class Expressions:
             if value.id in node.aliases:
                 return node.aliases[value.id]
             if value.id in node.bindings:
+                if self.scope_check and value.id not in self.scope:
+                    self.fail(f'bound index {value.id!r} is outside quantified scope')
                 return node.bindings[value.id].index_type
             self.fail(f'unknown object or bound index {value.id!r}')
         if isinstance(value, ast.Attribute):
@@ -368,6 +438,8 @@ class Expressions:
                 self.fail('index applied to a noncollection')
             if not isinstance(value.slice, ast.Name) or value.slice.id not in node.bindings:
                 self.fail('collection index is not bound')
+            if self.scope_check and value.slice.id not in self.scope:
+                self.fail(f'bound index {value.slice.id!r} is outside quantified scope')
             binding = node.bindings[value.slice.id]
             if binding.domain != ast.unparse(value.value):
                 self.fail(f'index {value.slice.id!r} belongs to {binding.domain}, not {ast.unparse(value.value)}')
@@ -413,16 +485,24 @@ class Expressions:
             call = value.func.id
             if value.keywords or len(value.args) != CALL_ARITY[call]:
                 self.fail(f'{call} requires {CALL_ARITY[call]} positional operands')
+            if call == 'limit':
+                if not isinstance(value.args[0], ast.Constant):
+                    self.fail('limit requires a literal limit identifier')
+                _limit(self.tree, node, value.args[0].value, self.key)
+                return 'Int'
             if call == 'ref':
                 if not isinstance(value.args[0], ast.Constant):
                     self.fail('ref requires a literal node identifier')
                 return _ref_type(_reference(self.tree, node, value.args[0].value, self.key))
-            if call == 'variant':
+            if call in {'matches', 'sum_over'}:
+                return self.aggregate(call, value.args)
+            if call in {'variant', 'is_variant'}:
                 native = self.infer(value.args[0]).removesuffix('?')
                 variants = records.get(native, {}).get('variants', {})
-                if not isinstance(value.args[1], ast.Constant) or value.args[1].value not in variants:
+                if (not isinstance(value.args[1], ast.Constant)
+                        or not isinstance(value.args[1].value, str) or value.args[1].value not in variants):
                     self.fail('unknown variant of the referenced record')
-                return variants[value.args[1].value]
+                return 'Bool' if call == 'is_variant' else variants[value.args[1].value]
             operands = [self.infer(arg) for arg in value.args]
             if call in {'present', 'absent'}:
                 if not isinstance(value.args[0], (ast.Name, ast.Attribute, ast.Subscript, ast.Call)):
@@ -430,6 +510,15 @@ class Expressions:
                 return 'Bool'
             if call == 'implies':
                 for operand in operands: self.boolean(operand)
+                return 'Bool'
+            if call in {'utf8_length', 'byte_length'}:
+                expected = 'string' if call == 'utf8_length' else 'bytes'
+                if self.category(operands[0]) != expected:
+                    self.fail(f'{call} requires {expected}, received {operands[0]}')
+                return 'Int'
+            if call == 'contains':
+                if any(self.category(operand) != 'string' for operand in operands):
+                    self.fail('contains requires text and a text fragment')
                 return 'Bool'
             if call in {'count', 'length'}:
                 if self.category(operands[0]) not in {'list', 'map', 'string'}:
@@ -448,8 +537,26 @@ class Expressions:
                     self.fail('set_value requires a named target')
                 if self.category(operands[0]) in {'action', 'event', 'component', 'boundary', 'entry', 'recipient', 'report'}:
                     self.fail('set_value requires a field or assessment target')
-                if self.category(operands[0]) not in {'assessment', 'value'} and not _compatible(*operands, records):
+                empty_list = isinstance(value.args[1], ast.List) and not value.args[1].elts
+                if empty_list and self.category(operands[0]) != 'list':
+                    self.fail('empty-list assignment requires a list target')
+                if (not empty_list and self.category(operands[0]) not in {'assessment', 'value'}
+                        and not _compatible(*operands, records)):
                     self.fail('set_value operands have incompatible types')
+            elif call == 'perform':
+                target = value.args[0]
+                if not (isinstance(target, ast.Call) and isinstance(target.func, ast.Name)
+                        and target.func.id == 'ref'):
+                    self.fail('perform requires a referenced action with a consequence')
+                procedure = self.tree.index[target.args[0].value]
+                def consequential(item):
+                    return bool({'effects', 'free.effect'} & item.facts.keys()) or any(
+                        consequential(child) for child in item.children
+                        if child.kind in {'condition', 'effect', 'outcome'})
+                if self.category(operands[0]) != 'action' or not consequential(procedure):
+                    self.fail('perform requires a referenced action with a consequence')
+                if self.category(operands[1]) not in {'record', 'union', 'list', 'map', 'event'}:
+                    self.fail('perform requires an explicit record, event or collection scope')
             elif call == 'prevent':
                 target = value.args[0]
                 named_rule = (isinstance(target, ast.Call) and isinstance(target.func, ast.Name)
@@ -547,6 +654,8 @@ def _inline_records(tree):
             if 'projection' in member.facts:
                 if member.facts['projection'] not in {'hex', 'base64'}:
                     member.fail('unknown byte projection', 'projection')
+                if native.removesuffix('?') != 'Data':
+                    member.fail('byte projection requires a Data field', 'projection')
                 fields[key]['projection'] = member.facts['projection']
         tree.records[name] = dict(name=name, fields=fields, input=False,
                                   authored=True, source=node.source,
@@ -562,10 +671,11 @@ def _owner(tree, node):
     if facts.get('scope', 'self') not in {'self', 'subtree'}:
         node.fail('owner scope must be self or subtree', 'scope')
     grade = facts.get('grade')
-    if grade not in {'source_read', 'check_read', 'executed'}:
+    if grade not in SUPPORT_GRADES:
         node.fail('owner grade must be source_read, check_read or executed', 'grade')
     for key in ('pins', 'context', 'limits'):
-        _string(node, key, facts.get(key))
+        if key == 'pins' or grade != 'source_read' or key in facts:
+            _string(node, key, facts.get(key))
     for key, required in (('source', True), ('check', grade != 'source_read')):
         value = facts.get(key)
         if value is None and not required:
@@ -621,6 +731,51 @@ def _record_children(record, records):
     return targets
 
 
+def _retained_free(tree, node):
+    free = {key[5:] for key in node.facts if key.startswith('free.')}
+    reasons = node.facts.get('retained_free')
+    if reasons is None and not tree.strict:
+        return
+    if not free and reasons is None:
+        return
+    if not isinstance(reasons, dict) or set(reasons) != free:
+        node.fail('retained_free must account for exactly the local free relationships', 'retained_free')
+    for relationship, item in reasons.items():
+        if not isinstance(item, dict) or set(item) - {'kind', 'reason', 'gap'}:
+            node.fail('retained_free entries require kind/reason and optional gap', 'retained_free')
+        if not isinstance(item.get('kind'), str) or item['kind'] not in FREE_REASONS:
+            node.fail('unknown retained_free reason kind', 'retained_free')
+        _string(node, 'retained_free', item.get('reason'))
+        if item['kind'] == 'pending_decision':
+            ident = item.get('gap')
+            gap = tree.index.get(ident) if isinstance(ident, str) else None
+            if gap is None or gap.kind != 'gap' or gap.facts.get('kind') not in {'behavior', 'meaning'}:
+                node.fail('pending_decision requires a public behavior or meaning gap', 'retained_free')
+        elif 'gap' in item:
+            node.fail('retained_free gap belongs to pending_decision', 'retained_free')
+        # These are editorial reasons, not public uses/references. A public
+        # cross-surface dependency still belongs in the ordinary uses relation.
+
+
+def _selection(node):
+    if 'selection' not in node.facts:
+        return
+    if node.facts['selection'] != 'first_match':
+        node.fail('selection must be first_match', 'selection')
+    cases = [child for child in node.children if child.kind == 'outcome']
+    if not cases or any(child.kind in {'condition', 'effect'} for child in node.children):
+        node.fail('first_match requires direct outcome cases', 'selection')
+    for index, case in enumerate(cases):
+        if not {'test', 'effects'} <= case.facts.keys():
+            case.fail('first_match case requires a test and explicit effects')
+        if (set(case.facts) - {'test', 'effects', 'uses', 'object', 'value'}
+                or any(child.kind in {'condition', 'effect'} for child in case.children)):
+            case.fail('first_match case uses its test and direct effects for selection')
+        fallback = case.expressions.get('test')
+        if fallback and isinstance(fallback.body, ast.Constant) and fallback.body.value is True and index != len(cases)-1:
+            case.fail('first_match fallback must be the final case', 'test')
+
+
 def _validate(tree):
     _inline_records(tree)
     catalog = json.loads(tree.read('tests/catalog.json'))['suites']
@@ -629,6 +784,8 @@ def _validate(tree):
         node.context = dict(node.parent.context) if node.parent else {}
         node.aliases = dict(node.parent.aliases) if node.parent else dict(tree.aliases)
         node.bindings = dict(node.parent.bindings) if node.parent else {}
+        node.selectors = dict(node.parent.selectors) if node.parent else {}
+        node.each = node.parent.each if node.parent else ()
         facts = node.facts
         for key, value in facts.items():
             if key.startswith('free.'):
@@ -657,6 +814,7 @@ def _validate(tree):
                 if key == 'when' and key in node.context:
                     value = f'({node.context[key]}) and ({value})'
                 node.context[key] = value
+        _retained_free(tree, node)
         if 'part' in facts and facts['part'] not in PARTS:
             node.fail('unknown document part', 'part')
         if node.kind == 'surface':
@@ -707,6 +865,29 @@ def _validate(tree):
                     node.fail('binding shadows a different inherited domain', key)
                 node.bindings[name] = binding
                 node.expressions[key] = parsed
+        for key, value in facts.items():
+            if key.startswith('match.'):
+                name = key[6:]
+                if name not in node.bindings:
+                    node.fail('join names an unbound index', key)
+                if name in node.selectors and node.selectors[name] != value:
+                    node.fail('association selector changes an inherited binding', key)
+                node.selectors[name] = value
+        if 'each' in facts:
+            _strings(node, 'each', facts['each'])
+            for name in facts['each']:
+                if name not in node.bindings:
+                    node.fail('each names an unbound index', 'each')
+                if name in node.each:
+                    node.fail('each repeats an inherited quantified index', 'each')
+                # A nested domain may depend on preceding outer indices only.
+                checker = Expressions(tree, node, 'each')
+                checker.scope_check = True
+                checker.infer(ast.parse(node.bindings[name].domain, mode='eval').body)
+                node.each += (name,)
+                if name in node.selectors:
+                    checker.scope.add(name)
+                    checker.parse(node.selectors[name], 'boolean')
         if node.kind == 'field':
             parent = node.parent
             if not parent or not parent.record:
@@ -793,6 +974,8 @@ def _validate(tree):
                 node.fail('condition has no expression or explicit free-text condition')
             if node.kind == 'effect' and not ({'effects', 'free.effect'} & node.facts.keys()):
                 node.fail('effect has no structured or explicit free-text consequence')
+    for node in tree.nodes:
+        _selection(node)
     # A public inventory covers every imported root, including an entire family
     # that an edit accidentally drops. Small constructed models select their own
     # subjects and still cover every referenced child record.
@@ -896,7 +1079,9 @@ def _expression_text(tree, expression):
     if isinstance(value, (ast.Name, ast.Attribute, ast.Subscript)):
         return '`' + ast.unparse(value) + '`'
     if isinstance(value, (ast.List, ast.Tuple, ast.Set)):
-        return ', '.join(_expression_text(tree, x) for x in value.elts) or 'an empty set'
+        if not value.elts:
+            return 'an empty array' if isinstance(value, ast.List) else 'an empty sequence'
+        return ', '.join(_expression_text(tree, x) for x in value.elts)
     if isinstance(value, ast.BoolOp):
         conjunction = ' and ' if isinstance(value.op, ast.And) else ' or '
         return '(' + conjunction.join(_expression_text(tree, x) for x in value.values) + ')'
@@ -905,7 +1090,9 @@ def _expression_text(tree, expression):
             return 'not (' + _expression_text(tree, value.operand) + ')'
         return '`' + ast.unparse(value) + '`'
     if isinstance(value, ast.BinOp):
-        return '`' + ast.unparse(value) + '`'
+        operators = {ast.Add: '+', ast.Sub: '−', ast.Mult: '×',
+                     ast.FloorDiv: '//', ast.Mod: '%'}
+        return '(' + _expression_text(tree, value.left).rstrip() + ' ' + operators[type(value.op)] + ' ' + _expression_text(tree, value.right).rstrip() + ')'
     if isinstance(value, ast.Compare):
         operators = {ast.Eq: '=', ast.NotEq: '≠', ast.Lt: '<', ast.LtE: '≤',
                      ast.Gt: '>', ast.GtE: '≥', ast.In: 'is one of', ast.NotIn: 'is outside'}
@@ -916,14 +1103,18 @@ def _expression_text(tree, expression):
         return ' '.join(parts)
     if isinstance(value, ast.Call):
         call = value.func.id
+        if call == 'limit':
+            row = tree.limits[value.args[0].value]
+            return '`' + format(row['value'], ',') + ' ' + row['unit'] + '` (`' + row['id'] + '`) '
         if call == 'ref':
             return _link(tree.index[value.args[0].value])
         args = [_expression_text(tree, x) for x in value.args]
         if call == 'present': return args[0] + ' is present'
         if call == 'absent': return args[0] + ' is absent'
-        if call == 'implies': return 'if ' + args[0] + ', then ' + args[1]
+        if call == 'implies': return '(if ' + args[0] + ', then ' + args[1] + ')'
         if call == 'later': return 'members after ' + args[1] + ' in ' + args[0]
         if call == 'set_value': return 'sets ' + args[0] + ' to ' + args[1]
+        if call == 'perform': return 'performs ' + args[0] + ' for ' + args[1]
         if call == 'prevent': return 'prevents ' + args[0] + ' for ' + args[1]
         if call == 'retain_records': return 'retains the records ' + args[0]
         if call == 'retain_assessments': return 'keeps the assessment ' + args[0]
@@ -931,6 +1122,12 @@ def _expression_text(tree, expression):
         if call == 'emit': return 'reports ' + args[0] + ' as ' + args[1]
         if call in {'count', 'length'}: return call + ' of ' + args[0]
         if call == 'variant': return args[1] + ' alternative of ' + args[0]
+        if call == 'is_variant': return args[0] + ' has alternative ' + args[1]
+        if call == 'matches': return 'number of matching entries for ' + args[0]
+        if call == 'sum_over': return 'sum over ' + args[0] + ' of ' + args[1]
+        if call == 'utf8_length': return 'UTF-8 byte length of ' + args[0]
+        if call == 'byte_length': return 'decoded byte length of ' + args[0]
+        if call == 'contains': return args[0] + ' contains ' + args[1]
     raise ContractError('cannot render an unchecked expression')
 
 
@@ -960,16 +1157,32 @@ def _context_text(tree, node):
     return ' '.join(parts)
 
 
-def _facts_text(tree, node, include_context=False):
+def _facts_text(tree, node, include_context=False, omit=()):
     parts = []
     if include_context and node.kind in RULE_KINDS:
         context = _context_text(tree, node)
         if context: parts.append(context)
+    elif node.kind not in RULE_KINDS:
+        # Compact rows still own their locally narrowed boundary and entry.
+        # Their parent supplies inherited context in the surrounding account.
+        if 'who' in node.facts:
+            parts.append('Actor: ' + _actor_text(tree, node.facts['who']) + '.')
+        if 'where' in node.facts:
+            parts.append('Boundary: ' + node.facts['where'].replace('_', ' ') + '.')
+        for key, title in (('entry', 'Entry'), ('recipient', 'Recipient'), ('report', 'Reports')):
+            if key in node.facts:
+                parts.append(title + ': ' + ', '.join(value.replace('_', ' ') for value in node.facts[key]) + '.')
     for key, expression in node.expressions.items():
         if key.startswith('bind.'):
             parts.append('Binding `' + key[5:] + '`: entry in ' + _expression_text(tree, expression) + '.')
         elif key.startswith('match.'):
             parts.append('Association restriction for `' + key[6:] + '`: ' + _expression_text(tree, expression) + '.')
+    if node.each and (include_context or 'each' in node.facts):
+        parts.append('For each ' + ', '.join('`' + name + '`' for name in node.each) + '.')
+    if 'selection' in node.facts:
+        parts.append('Select the first matching case in the listed order.')
+    if node.record and 'at' not in node.facts:
+        parts.append('Record `' + node.facts['as'] + '`: `' + node.record + '`.')
     if 'at' in node.facts:
         parts.append('Record `' + node.facts['as'] + '` locations: ' +
                      ', '.join('`' + path + '`' for path in node.facts['at']) + '.')
@@ -981,7 +1194,7 @@ def _facts_text(tree, node, include_context=False):
         parts.extend(node.context.get('free_when', []))
     for key, label in (('test', 'Requires'), ('required_when', 'Required when'),
                        ('present_when', 'Present when'), ('object', 'Concerns')):
-        if key in node.expressions:
+        if key in node.expressions and key not in omit:
             parts.append(label + ' ' + _expression_text(tree, node.expressions[key]) + '.')
     if 'effects' in node.expressions:
         trigger = node.facts.get('on')
@@ -1006,10 +1219,14 @@ def _facts_text(tree, node, include_context=False):
 
 
 def _finding_consequence(tree, node):
-    if node.kind == 'effect':
+    if node.kind in {'effect', 'outcome'}:
         # Effect prose belongs to this consequence, along with its trigger,
         # applicability and bindings. A check's general prose does not.
-        return ' '.join(part for part in (_facts_text(tree, node), node.prose) if part)
+        prefix = ''
+        if node.kind == 'outcome' and node.parent.facts.get('selection') == 'first_match':
+            cases = [child for child in node.parent.children if child.kind == 'outcome']
+            prefix = 'First-match case ' + str(cases.index(node) + 1) + ': '
+        return prefix + ' '.join(part for part in (_facts_text(tree, node), node.prose) if part)
     parts = []
     if 'effects' in node.expressions:
         parts.append(_expression_text(tree, node.expressions['effects']) + '.')
@@ -1020,15 +1237,27 @@ def _finding_consequence(tree, node):
 
 def _citation_links(value, label):
     items = value if isinstance(value, list) else [value]
-    return ', '.join('[' + label + (f' {i + 1}' if len(items) > 1 else '') +
-                     '](../' + item['path'] + ')' for i, item in enumerate(items) if isinstance(item, dict))
+    grouped = {}
+    for item in items:
+        grouped.setdefault(item['path'], [])
+        if item['symbol'] not in grouped[item['path']]:
+            grouped[item['path']].append(item['symbol'])
+    def code(text):
+        delimiter = '`' * (max((len(run) for run in re.findall(r'`+', text)), default=0) + 1)
+        return delimiter + text + delimiter
+    return label + ': ' + '; '.join('[' + Path(path).name + '](../' + path + '): ' +
+                                    ', '.join(code(symbol) for symbol in symbols)
+                                    for path, symbols in grouped.items()) + '.'
 
 
 def _owner_text(node):
     facts = node.facts
-    scope = ' for this subject and its descendants' if facts.get('scope') == 'subtree' else ''
-    pieces = ['**Support' + scope + ' — ' + facts['grade'].replace('_', ' ') + '.**',
-              facts['pins'], 'Context: ' + facts['context'], 'Evidence limit: ' + facts['limits']]
+    scope = _link(node.parent)
+    if facts.get('scope') == 'subtree': scope += ' and its descendants'
+    pieces = ['**Support: [' + facts['grade'].replace('_', ' ') +
+              '](#contract-support-grades) for ' + scope + '.**', facts['pins']]
+    if 'context' in facts: pieces.append('Context: ' + facts['context'])
+    if 'limits' in facts: pieces.append('Evidence limit: ' + facts['limits'])
     pieces.append(_citation_links(facts['source'], 'Source'))
     if 'check' in facts:
         pieces.append(_citation_links(facts['check'], 'Check'))
@@ -1093,7 +1322,8 @@ def _views(tree):
             reads = {path for path in reads if not any(other.startswith(path + '.') or other.startswith(path + '[')
                                                        for other in reads if other != path)}
             consequences = ([node] if 'effects' in node.expressions or 'free.effect' in node.facts else [])
-            consequences.extend(c for c in node.descendants() if c.kind == 'effect')
+            consequences.extend(c for c in node.descendants()
+                                if c.kind == 'effect' or (c.kind == 'outcome' and 'effects' in c.facts))
             findings.append((node, sorted(reads), consequences))
         if node.kind == 'gap':
             gaps.append(node)
@@ -1116,13 +1346,19 @@ def render(tree):
 
     def table(parent, children):
         if not children: return
-        output.extend(['| Item | Requirement or consequence |', '| --- | --- |'])
-        for child in children:
-            text = ' '.join(p for p in (_facts_text(tree, child), child.prose) if p)
-            output.append('| <a id="' + _anchor(child) + '"></a>' + _cell(child.title) + ' | ' + _cell(text) + ' |')
+        ordered = parent.facts.get('selection') == 'first_match'
+        output.extend(['| Case | When | Consequence |', '| --- | --- | --- |'] if ordered
+                      else ['| Item | Requirement or consequence |', '| --- | --- |'])
+        for position, child in enumerate(children, 1):
+            text = ' '.join(p for p in (_facts_text(tree, child, omit={'test'} if ordered else ()), child.prose) if p)
+            title = (str(position) + '. ' if ordered else '') + child.title
+            condition = _cell(_expression_text(tree, child.expressions['test'])) + ' | ' if ordered else ''
+            output.append('| <a id="' + _anchor(child) + '"></a>' + _cell(title) + ' | ' + condition + _cell(text) + ' |')
         output.append('')
         for child in children:
             nested = [c for c in child.children if c.kind in {'condition', 'effect', 'outcome'}]
+            if nested:
+                output.extend(['**Within ' + _link(child) + '.**', ''])
             table(child, nested)
             for extra in child.children:
                 if extra not in nested: visit(extra, min(parent.level + 3, 6))
@@ -1176,15 +1412,16 @@ def render(tree):
             output.extend(['<!-- CONTRACT SURFACE TABLE -->', ''])
     if not roots['identity']:
         output[2:2] = ['<!-- CONTRACT SURFACE TABLE -->', '']
+    output.extend(['## Evidence support', '', '<a id="contract-support-grades"></a>',
+                   '**Support grades.** ' + ' '.join('**' + key.replace('_', ' ') + ':** ' + text
+                                                     for key, text in SUPPORT_GRADES.items()), ''])
     applicability, findings, gaps = _views(tree)
     if applicability:
-        output.extend(['## Rule applicability', '', '| Rule | Component and boundary | Entry and recipient | Reports and conditions |', '| --- | --- | --- | --- |'])
+        output.extend(['## Rule applicability', '',
+                       'Each linked rule states its boundary, entry, recipients, reports and conditions.', '',
+                       '| Rule | Acting components |', '| --- | --- |'])
         for node, context in applicability:
-            scope = ', '.join(context.get('report', []))
-            if 'when' in context: scope += '; ' + _expression_text(tree, ast.parse(context['when'], mode='eval'))
-            if context.get('free_when'): scope += '; ' + ' '.join(context['free_when'])
-            output.append('| ' + _link(node) + ' | ' + _cell(_actor_text(tree, context.get('who', '')) + '; ' + context.get('where', '')) +
-                          ' | ' + _cell(', '.join(context.get('entry', [])) + '; ' + ', '.join(context.get('recipient', []))) + ' | ' + _cell(scope) + ' |')
+            output.append('| ' + _link(node) + ' | ' + _cell(_actor_text(tree, context.get('who', ''))) + ' |')
         output.append('')
     if findings:
         output.extend(['## Controller findings', '', '| Check | Structured operands | Consequences and retained assessments |', '| --- | --- | --- |'])
@@ -1217,6 +1454,10 @@ def _node_public(tree, node):
         context['when'] = _ast_public(ast.parse(context['when'], mode='eval'))
     result = dict(id=node.id, kind=node.kind, title=node.title, facts=facts,
                   context=context, prose=node.prose)
+    if node.each:
+        result['each_scope'] = list(node.each)
+    if node.facts.get('selection') == 'first_match':
+        result['case_order'] = [child.id for child in node.children if child.kind == 'outcome']
     if node.field_info:
         result['field'] = _public_field(tree.records[node.parent.record], node.field_info)
     if node.record:
@@ -1225,6 +1466,8 @@ def _node_public(tree, node):
             result['variants'] = record['variants']
         if record.get('open'):
             result['additional_fields'] = record.get('additional_type', 'JSON')
+    if node.limit_refs:
+        result['referenced_limits'] = {ident: _limit(tree, node, ident, 'limit') for ident in sorted(node.limit_refs)}
     if node.object_types:
         result['referenced_types'] = node.object_types
     return result
@@ -1239,7 +1482,10 @@ def public_payload(tree, surface_id):
     selected, pending = set(local), list(local)
     while pending:
         node = tree.index[pending.pop()]
-        for ident in node.references:
+        references = set(node.references)
+        if node.facts.get('selection') == 'first_match':
+            references.update(child.id for child in node.children if child.kind == 'outcome')
+        for ident in references:
             target = tree.index[ident]
             candidates = [target, *target.descendants()]
             # The ancestor supplies effective definitions and context, without
@@ -1269,5 +1515,8 @@ def statistics(tree, body):
             'authored_body_lines': len([line for line in authored.splitlines() if line.strip()]),
             'authored_body_words': len(authored.split()), 'field_meaning_words': len(fields.split()),
             'free_text_words': len(free_text.split()), 'free_counts': tree.free_counts,
+            'retained_free_reasons': dict(sorted(Counter(
+                item['kind'] for node in tree.nodes
+                for item in node.facts.get('retained_free', {}).values()).items())),
             'nodes': len(tree.nodes), 'fields': sum(n.kind == 'field' for n in tree.nodes),
             'surfaces': len(tree.surfaces), 'uncovered_records': tree.uncovered_records}

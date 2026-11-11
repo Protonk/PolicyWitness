@@ -2661,14 +2661,14 @@ admission compares the complete build contract exactly.
 | `extensions` | Extension actions and authority custody | unreleased |
 | `identity` | The contract identity | unreleased |
 | `installation` | Managing runners | unreleased |
-| `lifecycle` | Process and operation observations | v0.3.7 |
+| `lifecycle` | Process and operation observations | unreleased |
 | `policy` | Policy source, parameters and compilation | unreleased |
 | `probes` | Paired probes and attempted operations | unreleased |
-| `profile` | Compiled-profile receipts | v0.3.7 |
+| `profile` | Compiled-profile receipts | unreleased |
 | `refusals` | Request refusals and retained evidence | unreleased |
 | `reply` | The host report | unreleased |
 | `request` | Saved specimens and runner selection | unreleased |
-| `steps` | Predictions, attempts and comparison | v0.3.7 |
+| `steps` | Predictions, attempts and comparison | unreleased |
 | `transport` | Reservation, invocation and client capture | unreleased |
 | `wire` | Binary response primitives and validator record transport | unreleased |
 <!-- END GENERATED CONTRACT STAMPS -->

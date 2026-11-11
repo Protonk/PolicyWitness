@@ -27,14 +27,15 @@ limits: "These read controls establish controller calculations and selected-file
 ### Hold the selected request {held: acts}
 
 ```contract
-who: "controller"
+who: ["identity.definitions.controller"]
 where: "request preparation before runner-client invocation and fallback compile"
-entry: ["run"]
-recipient: ["cli_caller", "runner_client", "sandbox_compile_helper"]
+entry: ["cli_run"]
+recipient: ["cli_caller", "runner_client", "compiler_helper"]
 report: ["specimen_dossier"]
 uses: ["identity.definitions.request", "identity.definitions.bytes"]
 free.condition: A request has been parsed and controller policy changes have been resolved in memory.
 free.effect: Serialize the held selected request once and use those bytes for client delivery and whole-request fallback compilation. Derive source hashes from its decoded UTF-8 sbpl_source string and retain the dossier even when later preparation or invocation fails.
+retained_free: {"condition":{"kind":"native_protocol","reason":"Parsed request ownership and completed in-memory normalization precede serialization and dossier construction."},"effect":{"kind":"native_protocol","reason":"One held serialization and independent source/import reads define byte provenance across later delivery/fallback invocations."}}
 ```
 
 The original path is a locator. JSON whitespace, escape spelling and subsequent edits to that file have no role in the held source hash. Actor fallback checks serialize the held resolved policy objects separately in request order. A later helper import scan can observe different import-file bytes because those files are independently opened. Actor-form dossiers retain request order; malformed identity/mode fields become null and policy availability remains distinct from admission.
@@ -42,13 +43,14 @@ The original path is a locator. JSON whitespace, escape spelling and subsequent 
 ### Scan literal imports {scan: acts}
 
 ```contract
-who: "controller import scanner"
+who: ["identity.definitions.controller"]
 where: "selected policy source and local import files before invocation"
-entry: ["run"]
+entry: ["cli_run"]
 recipient: ["cli_caller"]
 report: ["specimen_dossier"]
 free.condition: The selected policy has string source within the <!-- span limits.helper_source.binary -->4 MiB<!-- /span --> source bound.
 free.effect: Scan literal import forms, resolve absolute names as given and relative names under /System/Library/Sandbox/Profiles then /usr/share/sandbox, and record observed reads within depth 8 and count 64. Mark unresolved names, nonliteral forms, cycles, decoding failures and bound hits as incomplete.
+retained_free: {"condition":{"kind":"raw_admission","reason":"The dossier scans a raw selected policy JSON value, which can contain a missing or wrongly typed source before host request admission."},"effect":{"kind":"native_protocol","reason":"Literal import grammar, ordered filesystem search, recursion, deduplication and incomplete causes define an input-reading algorithm."}}
 ```
 
 Names retain their spelling, including a `.sb` suffix when supplied. Resolution deduplicates canonical paths and unresolved names. A file is opened once with nonblocking open, checked as regular through that descriptor, and read for both hashing and recursive scanning. Records sort by resolved path, then unresolved name. The closure hash is SHA-256 of selected source UTF-8 bytes, byte `0x1f`, then sorted `resolved_path + " " + sha256` lines joined with LF for records having both values. This identifies the scanned material even when the scan is incomplete.
@@ -56,13 +58,15 @@ Names retain their spelling, including a `.sb` suffix when supplied. Resolution 
 ### Compare selected files {compare: acts}
 
 ```contract
-who: "controller"
+who: ["identity.definitions.controller"]
 where: "selected runner/helper paths and embedded evidence manifest"
-entry: ["run"]
+entry: ["cli_run"]
 recipient: ["cli_caller"]
 report: ["specimen_dossier"]
 free.condition: Runner selection supplies paths and the app evidence manifest supplies role baselines where available.
-free.effect: For a shipped path already described by its unique typed manifest entry, emit a null binary record. For another selected file, attempt its hash and compare it with the role baseline; retain independent availability and error facts. After a dossier-only collection failure or hash mismatch, continue preparation and invocation subject to the separate selection and admission results.
+free.effect: For a shipped path already described by its unique typed manifest entry, emit a null binary record. For another selected file, attempt its hash and retain the role baseline, available digest and independent error facts. After a dossier-only collection failure or hash mismatch, continue preparation and invocation subject to the separate selection and admission results.
+retained_free: {"condition":{"kind":"environment_observation","reason":"Selected file paths and available embedded role baselines are separate input observations before comparison records are constructed."},"effect":{"kind":"native_protocol","reason":"Reading/hashing selected files, omitting manifest-described shipped roles and continuing preparation after dossier-only errors are procedural; retained digest comparison is defined separately."}}
+uses: ["dossier.binary.classify"]
 ```
 
 A role baseline must be the unique entry at the expected path and kind with a 64-digit hexadecimal SHA-256. `match` means selected on-disk bytes matched that baseline at this read. A null role record refers to the shipped manifest description; ordinary collection does not rehash that shipped file. Worker/validator override strings must be absolute to be read; NUL-containing or over-<!-- span limits.test_override_path.value -->1,023<!-- /span -->-byte overrides are neither echoed nor opened. Optional `PW_VERIFY_EVIDENCE=1` separately hashes the manifest entries carrying declared hashes.
@@ -187,6 +191,33 @@ SHA-256 of the selected source string, including unchanged source for not_reques
 
 Augmentation failure text for failed; otherwise null.
 
+### Augmentation record relationships {relationships: reports}
+
+```contract
+who: ["identity.definitions.controller"]
+where: "augmentation dossier projection"
+entry: ["cli_run"]
+recipient: ["report_reader"]
+report: ["specimen_dossier"]
+```
+
+Equal optional digests on not_requested include the case where no string source existed.
+
+#### Produced field relationships {fields: condition}
+
+```contract
+test: implies(augmentation.status in ["not_requested", "failed", "not_applicable"], count(augmentation.applied) == 0) and implies(augmentation.status in ["failed", "not_applicable"], absent(augmentation.applied_sha256)) and implies(augmentation.status == "not_requested", augmentation.original_sha256 == augmentation.applied_sha256) and implies(augmentation.status == "failed", present(augmentation.error)) and implies(augmentation.status in ["not_requested", "applied", "not_applicable"], absent(augmentation.error))
+```
+
+#### Source support {support: owner}
+
+```contract
+scope: "subtree"
+grade: "source_read"
+source: {"path":"controller/src/dossier.rs","symbol":"Augmentation"}
+pins: "The four constructors preserve optional original/selected hashes and distinct failure/error states."
+```
+
 ## Import scan {imports: subject}
 
 ```contract
@@ -217,6 +248,35 @@ First reached traversal bound, `depth` or `count`; null when neither was recorde
 ### failure {failure: field}
 
 First collection problem, scan setup failure or reason for a not-applicable scan; null when none was recorded.
+
+### Retained scan scope {scope: reports}
+
+```contract
+who: ["identity.definitions.controller"]
+where: "literal import dossier projection"
+entry: ["cli_run"]
+recipient: ["report_reader"]
+report: ["specimen_dossier"]
+bind.r: imports.records
+match.r: present(imports.records[r].error)
+```
+
+These are necessary conditions for complete. The scan also classifies nonliteral forms, an observation with no dedicated carried Boolean.
+
+#### Produced field relationships {fields: condition}
+
+```contract
+test: implies(imports.status in ["complete", "incomplete"], present(imports.closure_sha256)) and implies(imports.status in ["failed", "not_applicable"], absent(imports.closure_sha256) and count(imports.records) == 0 and absent(imports.cycle) and absent(imports.exceeded)) and implies(imports.status == "complete", absent(imports.cycle) and absent(imports.exceeded) and matches(r) == 0)
+```
+
+#### Source support {support: owner}
+
+```contract
+scope: "subtree"
+grade: "source_read"
+source: {"path":"controller/src/dossier.rs","symbol":"Imports"}
+pins: "Performed complete/incomplete scans retain a closure; skipped/failed scans have no records. Complete scans have no carried cycle, exceeded bound or record errors."
+```
 
 ## One import observation {import_record: subject}
 
@@ -338,6 +398,44 @@ Normalized SHA-256 from the shipped app manifest’s unique typed role entry; nu
 ### reason {reason: field}
 
 Diagnostic explaining mismatch or unavailability; null for match.
+
+### Classify the retained digest pair {classify: reports}
+
+```contract
+who: ["identity.definitions.controller"]
+where: "selected binary comparison record after collection"
+entry: ["cli_run"]
+recipient: ["report_reader"]
+report: ["specimen_dossier"]
+selection: "first_match"
+```
+
+This rule applies to a constructed binary record. A null shipped-role record remains outside it; matching bytes at this read do not identify an executing image.
+#### Equal available digests {match: outcome}
+
+```contract
+test: present(binary.actual_sha256) and present(binary.baseline_sha256) and binary.actual_sha256 == binary.baseline_sha256
+effects: [set_value(binary.verification, "match"), set_value(binary.reason, None)]
+```
+#### Different available digests {mismatch: outcome}
+
+```contract
+test: present(binary.actual_sha256) and present(binary.baseline_sha256)
+effects: set_value(binary.verification, "mismatch")
+```
+#### Unavailable comparison operand {unavailable: outcome}
+
+```contract
+test: True
+effects: set_value(binary.verification, "unavailable")
+```
+#### Source support {support: owner}
+
+```contract
+grade: "source_read"
+source: {"path":"controller/src/dossier.rs","symbol":"compare"}
+pins: "Available expected/actual digests select match or mismatch; missing operands retain unavailable with the collection diagnosis."
+```
 
 ## Selected runner provenance {runner: subject}
 

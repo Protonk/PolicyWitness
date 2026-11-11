@@ -27,13 +27,14 @@ limits: "These read controls use registry files and supplied cleanup/signing obs
 ### Read and select records {read: acts}
 
 ```contract
-who: "controller"
+who: ["identity.definitions.controller"]
 where: "runner registry lookup"
 entry: ["runner_list", "runner_status", "runner_verify", "runner_remove", "runner_reconcile"]
 recipient: ["cli_caller"]
 report: ["runner_registry", "runner_status", "runner_verify", "runner_remove", "runner_reconcile"]
 free.condition: The registry is readable with schema_version 1, or its path is absent.
-free.effect: Use PW_RUNNER_REGISTRY when nonempty, otherwise HOME/Library/Application Support/PolicyWitness/runners.json. An absent file yields empty runners and pending_cleanup. For selector commands, prefer a supplied id and otherwise use service_name; an unmatched id remains a miss.
+free.effect: Use PW_RUNNER_REGISTRY when nonempty, otherwise HOME/Library/Application Support/PolicyWitness/runners.json. An absent file yields schema_version 1 with empty runners and pending_cleanup. For selector commands, prefer a supplied id and otherwise use service_name; an unmatched id remains a miss.
+retained_free: {"condition":{"kind":"raw_admission","reason":"Registry absence, unreadability and decoded schema version are filesystem/decoder outcomes before a registry value exists."},"effect":{"kind":"raw_admission","reason":"Environment path choice and command selector precedence are raw process inputs; an empty decoded registry cannot distinguish an absent file."}}
 ```
 
 `runner list` returns the registry as `kind: "runner_registry"`. `runner status` returns the selected active record as `kind: "runner_status"`. Status and verify search `runners`; removal also resumes `pending_cleanup`. A miss returns that operation’s envelope kind, `result.normalized_outcome: "not_found"`, false `ok` and exit code 2. Unsupported registry schemas and malformed known fields refuse loading. Read-only commands can read the prior or replacement complete registry while a modifier holds its lock.
@@ -41,13 +42,14 @@ free.effect: Use PW_RUNNER_REGISTRY when nonempty, otherwise HOME/Library/Applic
 ### Publish a registry mutation {publish: acts}
 
 ```contract
-who: "controller"
+who: ["identity.definitions.controller"]
 where: "install, validate and remove registry transaction"
 entry: ["runner_install", "runner_validate", "runner_remove"]
 recipient: ["cli_caller"]
 report: ["runner_registry"]
 free.condition: The command holds the stable sibling registry lock across its mutation and associated launchd actions.
 free.effect: Serialize and read back the proposed registry, require lossless reserialization, write and sync a new mode-0600 file in the same directory, then atomically rename it over the registry. Refuse a busy/unavailable advisory lock or a readback that loses metadata.
+retained_free: {"condition":{"kind":"native_protocol","reason":"Advisory lock ownership and its lifetime span filesystem publication and launchd actions independently of registry contents."},"effect":{"kind":"native_protocol","reason":"Serialize/readback, permission mode, sync and atomic rename are native publication steps with distinct failure points."}}
 ```
 
 The lock inode is retained across replacements. Operators must keep the lock file while any command may hold it. Unknown JSON members at the registry, runner, cleanup, ownership, signature and entitlement levels survive unrelated writes as opaque values. Known fields retain their meanings; opaque members supply no ownership observations.
@@ -55,7 +57,7 @@ The lock inode is retained across replacements. Operators must keep the lock fil
 ### Install a selected service {install: acts}
 
 ```contract
-who: "controller installer"
+who: ["identity.definitions.controller"]
 where: "external bundle validation, signing, registry and launchd"
 entry: ["runner_install"]
 recipient: ["cli_caller", "launchd"]
@@ -63,6 +65,7 @@ report: ["runner_install", "runner_registry"]
 uses: ["identity.public.contract"]
 free.condition: The caller supplies an existing bundle directory; the kind defaults to byoxpc, and an explicit kind must be byoxpc. Scope defaults to user or may be explicitly system.
 free.effect: Resolve the canonical bundle, require CFBundlePackageType XPC!, exact current PWContract, CFBundleIdentifier service identity and an existing Contents/MacOS/CFBundleExecutable. Reject conflicting active/recovery service, bundle or executable identities; verify the source seal and equipment inventory before optional signing.
+retained_free: {"condition":{"kind":"raw_admission","reason":"Bundle path existence, supplied/default kind and scope are command inputs before any runner record is installed."},"effect":{"kind":"environment_observation","reason":"Canonical paths, plist metadata, source seal and equipment inventory are read before the installed registry record is published."}}
 ```
 
 An explicit service name must equal the bundle identifier. `--bundle-id` and `--executable` are refused; those identities come from the bundle. The installer refuses an existing target plist. With `--identity`, it signs the selected worker and host with the supplied entitlements, and the validator/unentitled worker without them, refreshing the sealed equipment inventory before sealing the host. Entitlements with `--allow-adhoc` can select ad-hoc signing; an ad-hoc result requires that flag. Required helpers must exist. The final recursive strict signature verification and reread of bundle identity precede registry installation.
@@ -70,13 +73,14 @@ An explicit service name must equal the bundle identifier. `--bundle-id` and `--
 ### Retain installation ownership {pending: acts}
 
 ```contract
-who: "controller installer"
+who: ["identity.definitions.controller"]
 where: "pending registry save before plist creation and bootstrap"
 entry: ["runner_install"]
 recipient: ["cli_caller", "launchd"]
 report: ["runner_install", "runner_registry"]
 free.condition: Bundle verification/signing and readbacks succeeded and the launchd plist has been prepared.
 free.effect: Save a pending runner with its plist path, launchd domain, owner UID and plist hash before creating the plist or bootstrapping. Mark installed only after those requested operations and final registry save succeed; retain pending on later failure.
+retained_free: {"condition":{"kind":"native_protocol","reason":"Verification/signing/readback completion and prepared plist bytes are ordered preparation events before pending publication."},"effect":{"kind":"native_protocol","reason":"Pending registry persistence precedes external launchd effects; installed publication and retained pending recovery reflect their later outcomes."}}
 ```
 
 User scope writes HOME/Library/LaunchAgents and targets gui/<uid>, requiring access to that logged-in GUI domain. System scope writes /Library/LaunchDaemons and targets system, requiring the relevant privilege. The plist invokes the recorded executable with `--mach-service` and the service name, advertises that Mach service, sets RunAtLoad and a <!-- span limits.byoxpc_throttle_interval.value_unit -->1 second<!-- /span --> throttle, and defaults XPC_SERVICE_PATH to the bundle. `--env KEY=VALUE` requires a nonempty key; later occurrences replace earlier values. With `--skip-bootstrap`, successful plist creation completes installation; `loaded` remains a separate observation. Signing changes can precede the pending save.
@@ -84,17 +88,25 @@ User scope writes HOME/Library/LaunchAgents and targets gui/<uid>, requiring acc
 ### Verify a selected service {verify: acts}
 
 ```contract
-who: "controller and runner client"
+who: ["identity.definitions.controller", "identity.definitions.client"]
 where: "fixed verification specimen through reservation and execution"
 entry: ["runner_verify"]
 recipient: ["cli_caller", "runner_host"]
 report: ["runner_verify"]
-uses: ["transport.delivery", "identity.public.contract"]
-free.condition: Lookup finds an external runner record whose contract matches the current public identity.
-free.effect: Send a fresh fixed SBPL allow-all request with specimen_id runner_verify, run_kind runner_verify and an empty probe plan. Apply ordinary delivery and reply admission. Return exit 0 for an admitted finished result, exit 1 for other admitted/refused outcomes, and exit 2 for request-delivery failure.
+uses: ["installation.verify.select", "installation.verify.delivery_failure", "diagnostics.execution.geometry"]
+free.condition: Lookup finds an external runner record.
+free.effect: Send the held fixed verification request in a fresh invocation and apply ordinary delivery and reply admission. Under successful admission, copy a supported reply's PID and outcome; an absent reply selects runner_response_unavailable and no PID. A refused boundary selects its admission classification and no PID. The selected verification outcome and independent delivery error determine the operation result below.
+retained_free: {"condition":{"kind":"raw_admission","reason":"Registry lookup and external-runner selection precede verification; the selected record must also pass the current contract requirement."},"effect":{"kind":"native_protocol","reason":"Fresh invocation and admission traverse their own byte/capture boundaries; the fixed request and verification-specific result assignments are structured separately."}}
+effects: [set_value(request.contract, ref("identity.build.contract")), set_value(request.specimen_id, "runner_verify"), set_value(request.run_kind, "runner_verify"), set_value(request.policy.format, "sbpl"), set_value(request.policy.sbpl_source, "(version 1)\n(allow default)\n"), set_value(request.probe_plan, []), withhold(request.actors), withhold(request.phases), withhold(request._test_overrides)]
 ```
 
 The timeout defaults to <!-- span limits.runner_verify_wait.value_unit -->5,000 milliseconds<!-- /span --> and is clamped to at least one. The returned PID comes from an admitted host reply’s `pid`; read its subject according to that reply’s lifecycle. An empty successful plan establishes the verification request’s application and completion. It supplies no per-operation prediction or attempt observations.
+
+#### Selected record identity {identity: condition}
+
+```contract
+test: runner_record.contract == ref("identity.build.contract")
+```
 
 ### Pending verification {pending_verify: definition}
 
@@ -118,13 +130,14 @@ limits: "The control uses an owned live current service with a constructed Pendi
 ### Refresh validation metadata {validate: acts}
 
 ```contract
-who: "controller"
+who: ["identity.definitions.controller"]
 where: "registered bundle and binary signature/inventory reads"
 entry: ["runner_validate"]
 recipient: ["cli_caller"]
 report: ["runner_validate", "runner_registry"]
 free.condition: The controller loaded and locked the registry.
 free.effect: Visit every record in runners, refresh available per-binary signature/entitlement observations, verify the bundle and equipment inventory, save the registry, and report missing/invalid counts and per-binary failures.
+retained_free: {"condition":{"kind":"native_protocol","reason":"Successful registry loading and held advisory lock are native entry observations for validation, not fields of each runner row."},"effect":{"kind":"environment_observation","reason":"Each binary's current signing/entitlement and bundle/equipment observations require fresh inspection before registry/report updates."}}
 ```
 
 A missing host executable increments `missing`, marks the host signature invalid and records its entitlement error, then skips further verification for that row. Bundle/binary verification, signature-metadata readback and equipment-inventory failures increment `invalid` once per affected row and retain each named failure. Entitlement read errors also remain in their individual metadata objects. `updated` counts every visited runner. A completed validate command reports `result.ok: true` and exit 0 even when missing/invalid is positive; inspect those fields. Pending cleanup records remain recovery records.
@@ -151,13 +164,14 @@ limits: "The injected seam checks per-role metadata and failure lists. Whole-com
 ### Reconcile observations {reconcile: acts}
 
 ```contract
-who: "controller"
+who: ["identity.definitions.controller"]
 where: "registry records, launchctl print and launchd plist directories"
 entry: ["runner_reconcile"]
 recipient: ["cli_caller"]
 report: ["runner_reconcile"]
 free.condition: The registry loaded successfully.
 free.effect: Report each active and cleanup record with current service/plist observations and separate ownership classifications, and report recognizable unregistered plist candidates plus inspection errors. Leave installation resources and registry records as observed.
+retained_free: {"condition":{"kind":"raw_admission","reason":"Registry-load success is an input-reading outcome preceding reconcile inspection, separate from a decoded registry's field values."},"effect":{"kind":"environment_observation","reason":"Active/recovery records and discovered unregistered plist candidates supply distinct filesystem/launchd observations without mutation."}}
 ```
 
 Candidate discovery scans readable LaunchDaemons and the user LaunchAgents directory. A com.policywitness. label, executable filename PWRunner, or unreadable/unparsed plist with that filename prefix can identify a reporting candidate. Registered label/scope pairs are suppressed from candidates. Discovery establishes a candidate for inspection; cleanup authority requires the recorded identity and the independent ownership gates.
@@ -165,13 +179,14 @@ Candidate discovery scans readable LaunchDaemons and the user LaunchAgents direc
 ### Remove an owned installation {remove: acts}
 
 ```contract
-who: "controller"
+who: ["identity.definitions.controller"]
 where: "durable cleanup transaction, launchctl bootout and plist unlink"
 entry: ["runner_remove"]
 recipient: ["cli_caller", "launchd"]
 report: ["runner_remove", "runner_registry"]
 free.condition: The requested active record or retained cleanup record exists.
 free.effect: Move an active record to nested pending_cleanup and save before any launchd/plist action. Inspect service and plist ownership independently; boot out only an owned service unless skip_bootout, and unlink only an owned plist after an immediate ownership recheck. Retire cleanup only after observed service absence, plist absence, no warnings and successful registry publication.
+retained_free: {"condition":{"kind":"raw_admission","reason":"Active or nested recovery lookup applies command selector rules before cleanup ownership is inspected."},"effect":{"kind":"native_protocol","reason":"Durable pending state, immediate ownership recheck, launchd/plist actions and warning-free absence precede recovery retirement."}}
 ```
 
 After a successful bootout, re-read a still-present service every <!-- span limits.runner_remove_poll_interval.value_unit -->50 milliseconds<!-- /span --> for at most <!-- span limits.runner_remove_teardown_wait.value_unit -->1,000 milliseconds<!-- /span --> of nominal waiting; stop at absence or unknown. A bootout or unlink success records that call’s success. Final absence is separately observed. A changed/unreadable/unowned object, failed action or failed retirement publication retains recovery and warnings. A repeated remove continues the retained record, including after the plist has disappeared. `--skip-bootout` can remove an owned plist; retirement still requires observed service absence. A completed remove command reports `result.ok: true` and exit 0 even when cleanup remains retained.
@@ -185,7 +200,9 @@ entry: ["runner_remove", "runner_reconcile"]
 recipient: ["cli_caller"]
 report: ["runner_remove", "runner_reconcile"]
 free.condition: The recorded service name, user/scope/domain and paths pass location checks.
-free.effect: Classify service ownership from present service executable equality. Classify plist ownership from a regular file with matching Label, complete ProgramArguments, MachServices and XPC_SERVICE_PATH; recorded ownership additionally requires matching UID and plist hash.
+free.effect: Classify plist ownership from a regular file with matching Label, complete ProgramArguments, MachServices and XPC_SERVICE_PATH; recorded ownership additionally requires matching UID and plist hash.
+retained_free: {"condition":{"kind":"raw_admission","reason":"Recorded domain/user/path location rules validate external command targets before any native cleanup action."},"effect":{"kind":"environment_observation","reason":"Complete plist configuration remains a raw JSON value read from the filesystem; service ownership uses the separate typed observation classification."}}
+uses: ["installation.service.classify"]
 ```
 
 A present service with a different executable is unowned; one with no unique executable observation is ambiguous. Absent resources are classified ambiguous for ownership and retain their independently observed absent presence. Unknown presence produces unknown ownership. Recorded cleanup paths must be absolute, have no parent traversal, end in the expected service plist, and have an immediate parent named LaunchAgents for user scope or LaunchDaemons for system scope. The location check also requires the executable parent to equal the recorded bundle’s Contents/MacOS and refuses symlinked plist ancestors. The recorded ownership supplies the full parent path. Legacy records without ownership derive the conventional plist path and use the content checks.
@@ -497,6 +514,33 @@ Recovery snapshot when cleanup remains retained; omitted after retirement.
 
 Diagnostics for refused, failed, uncertain or unpersisted cleanup; omitted when empty.
 
+### Retained recovery account {retention: reports}
+
+```contract
+who: ["identity.definitions.controller"]
+where: "runner remove result after cleanup publication attempt"
+entry: ["runner_remove"]
+recipient: ["report_reader"]
+report: ["runner_remove"]
+```
+
+The final persistence attempt and observed absence determine cleanup completion.
+
+#### Produced recovery fields {fields: condition}
+
+```contract
+test: cleanup.cleanup_retained == present(cleanup.retained_record) and implies(present(cleanup.warnings) and count(cleanup.warnings) > 0, cleanup.cleanup_retained)
+```
+
+#### Source support {support: owner}
+
+```contract
+scope: "subtree"
+grade: "source_read"
+source: {"path":"controller/src/runner_manager.rs","symbol":"remove_record"}
+pins: "An incomplete or unpersisted cleanup retains its recovery snapshot; warnings prevent clean retirement."
+```
+
 ## Installation result {install: subject}
 
 ```contract
@@ -524,6 +568,26 @@ Path where the installer published the launchd plist.
 
 True when this command requested and successfully completed bootstrap; false with skip-bootstrap.
 
+### Published installation state {state_copy: reports}
+
+```contract
+who: ["identity.definitions.controller"]
+where: "runner install result projection"
+entry: ["runner_install"]
+recipient: ["report_reader"]
+report: ["runner_install"]
+effects: set_value(install.state, install.runner.state)
+```
+
+The returned state copies the registry record after installation publication.
+#### Source support {support: owner}
+
+```contract
+grade: "source_read"
+source: {"path":"controller/src/runner_commands.rs","symbol":"cmd_runner_install"}
+pins: "RunnerInstallData copies the returned record state."
+```
+
 ## Verification result {verify: subject}
 
 ```contract
@@ -531,6 +595,8 @@ record: "rust.RunnerVerifyData"
 as: "verify"
 uses: ["transport.client"]
 ```
+
+This is the completion record for a selected registry entry after the client invocation returns its capture. An unmatched lookup uses RunnerNotFoundData with not_found and exit code 2. Earlier argument, registry, setup or invocation failures return without this record.
 
 ### runner_client {runner_client: field}
 
@@ -559,6 +625,65 @@ PID projected only from an admitted host result. Its worker/host role follows th
 ### normalized_outcome {normalized_outcome: field}
 
 Controller verification classification, also supplied in the envelope result.
+
+### Request delivery failure {delivery_failure: reports}
+
+```contract
+who: ["identity.definitions.controller"]
+where: "runner verify completion before reply interpretation"
+entry: ["runner_verify"]
+recipient: ["report_reader"]
+report: ["runner_verify"]
+when: present(verify.runner_client) and present(verify.runner_client.request_delivery) and present(verify.runner_client.request_delivery.error)
+effects: [set_value(result.ok, False), set_value(result.exit_code, 2), set_value(result.normalized_outcome, "tool_error"), set_value(result.error, verify.runner_client.request_delivery.error), set_value(verify.normalized_outcome, "tool_error"), set_value(verify.runner_pid, None), retain_records(verify.runner_client), retain_records(verify.runner_result)]
+```
+
+A returned capture or structurally decoded reply remains retained; neither supplies a verification PID after delivery refusal.
+#### Source support {support: owner}
+
+```contract
+grade: "source_read"
+source: {"path":"controller/src/runner_commands.rs","symbol":"cmd_runner_verify"}
+pins: "DeliveryFailed precedes capture/reply interpretation and preserves the returned observations."
+```
+
+### Select the verification operation result {select: reports}
+
+```contract
+who: ["identity.definitions.controller"]
+where: "verification operation result from its selected outcome and delivery observation"
+entry: ["runner_verify"]
+recipient: ["report_reader"]
+report: ["runner_verify"]
+selection: "first_match"
+```
+
+These assignments consume the completion outcome selected by ordinary delivery and reply admission, including refused or unavailable replies. The PID projection uses an admitted supported host reply.
+#### Delivery error has precedence {delivery: outcome}
+
+```contract
+test: present(verify.runner_client) and present(verify.runner_client.request_delivery) and present(verify.runner_client.request_delivery.error)
+effects: [set_value(result.ok, False), set_value(result.exit_code, 2), set_value(result.normalized_outcome, "tool_error")]
+```
+#### Selected finished outcome {finished: outcome}
+
+```contract
+test: verify.normalized_outcome == "finished"
+effects: [set_value(result.ok, True), set_value(result.exit_code, 0), set_value(result.normalized_outcome, verify.normalized_outcome)]
+```
+#### Other selected outcome {other: outcome}
+
+```contract
+test: True
+effects: [set_value(result.ok, False), set_value(result.exit_code, 1), set_value(result.normalized_outcome, verify.normalized_outcome)]
+```
+#### Source support {support: owner}
+
+```contract
+grade: "source_read"
+source: {"path":"controller/src/runner_commands.rs","symbol":"cmd_runner_verify"}
+pins: "The verification result uses delivery failure precedence and the already selected operation outcome; unsupported retained host fields do not supply a PID."
+```
 
 ## Validation result {validate: subject}
 
@@ -639,6 +764,65 @@ The unique program = line from a successful launchctl print; null when missing, 
 ### error {error: field}
 
 Inspection diagnostic for unknown presence; null for recognized present/absent.
+
+### Service ownership assessment {ownership: definition}
+
+```contract
+defines: "assessment"
+type: "String"
+```
+
+Ownership of this observed service relative to the selected runner_record. Reconciliation and cleanup copy this assessment beside the observation. The plist ownership assessment uses the plist configuration and recorded identity.
+### Classify the typed service observation {classify: reports}
+
+```contract
+who: ["identity.definitions.controller"]
+where: "service observation for the selected runner record after location resolution"
+entry: ["runner_reconcile", "runner_remove"]
+recipient: ["report_reader"]
+report: ["runner_reconcile", "runner_remove"]
+selection: "first_match"
+uses: ["installation.service.ownership"]
+```
+
+This rule consumes the typed ServiceObservation and selected RunnerRecord. A raw reconciliation row containing only unknown presence after location failure has no typed ownership association.
+#### Unknown presence {unknown: outcome}
+
+```contract
+test: service.presence == "unknown"
+effects: set_value(ref("installation.service.ownership"), "unknown")
+```
+#### Absent service {absent: outcome}
+
+```contract
+test: service.presence == "absent"
+effects: set_value(ref("installation.service.ownership"), "ambiguous")
+```
+#### Matching executable {owned: outcome}
+
+```contract
+test: service.presence == "present" and present(service.executable_path) and service.executable_path == runner_record.executable_path
+effects: set_value(ref("installation.service.ownership"), "owned")
+```
+#### Different executable {unowned: outcome}
+
+```contract
+test: service.presence == "present" and present(service.executable_path)
+effects: set_value(ref("installation.service.ownership"), "unowned")
+```
+#### No usable executable {ambiguous: outcome}
+
+```contract
+test: service.presence == "present" and absent(service.executable_path)
+effects: set_value(ref("installation.service.ownership"), "ambiguous")
+```
+#### Source support {support: owner}
+
+```contract
+grade: "source_read"
+source: {"path":"controller/src/runner_manager.rs","symbol":"service_ownership"}
+pins: "The typed presence and observed/recorded executable paths determine service ownership; plist ownership is independent."
+```
 
 ## Observed plist {plist: subject}
 

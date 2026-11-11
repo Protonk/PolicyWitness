@@ -29,6 +29,11 @@ Stage-two records: the [decisions](../records/contract/STAGE-TWO-DECISIONS.md)
 and [scoped evidence](../records/contract/evidence/stage-two/README.md) retain
 the implementation dispositions, observed controls and remaining choices.
 
+Stage-three records: the [settled account](../records/contract/STAGE-THREE-ACCOUNT.md),
+[frozen readings](../records/contract/readings/stage-three/README.md) and
+[verification receipts](../records/contract/evidence/stage-three/README.md) retain
+the final representation, truth corrections and scoped checks.
+
 ## The stages
 
 | Stage | What it does | Changes product behavior | Ends with |

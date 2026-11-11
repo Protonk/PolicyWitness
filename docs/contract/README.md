@@ -124,7 +124,12 @@ Their rendered prose remains part of the public commitment.
 ## Support and rendering
 
 An owner states `grade` (`source_read`, `check_read` or `executed`),
-`source`, `check` when read, `pins`, `context` and `limits`. Citations use
+`source`, `check` when read and `pins`. Check-read and executed owners also
+state `context` and `limits`. Source-read owners state either whenever a
+specific circumstance or support limitation is needed to understand their
+assertion; those optional keys can omit the generic source-inspection meaning
+already supplied by the grade. Preserve specific native, constructed-input,
+shortened-budget, missing-assertion and retention limits. Citations use
 the shared `path`, `symbol` and check `form` vocabulary. An owner's
 `scope: "subtree"` supports its parent's descendants; the default `self`
 supports its parent. Execution credit also names `run` and
@@ -149,3 +154,115 @@ free-text operands remain in the linked rule. The entry point fills
 the surface-table marker after the opening identity material. Statistics
 report rendered lines and words, table content, authored prose, field
 meanings and free-text relationships separately.
+
+## Quantified relationships and decision cases
+
+`each: ["p"]` gives a rule universal scope over an existing `bind.p` domain.
+That scope applies to child obligations. A child may add further indices;
+outer indices remain in scope and cannot be repeated. List order supplies the
+outer-to-inner order, so a nested binding domain can use preceding indices.
+A binding and its `match` restriction still establish no cardinality by themselves.
+
+`matches(q)` counts candidates in `bind.q` satisfying its `match.q` restriction
+in the current outer scope. It requires a selector. `sum_over(p, expression)`
+sums a numeric expression over that binding's domain, restricted by `match.p`
+when present; it supplies zero for an empty candidate set. Aggregates introduce
+their own bound index. A candidate's domain, selector and sum term may refer to
+outer quantified indices; a nested aggregate introduces a further index.
+An index already fixed by `each` cannot be quantified again by an aggregate.
+Within a quantified rule and its descendants, every index used by a condition or
+effect must be in the explicit `each` scope or a containing aggregate. A count
+such as `matches(q) == 1` does not bind `q` for a later expression. Binding and
+selector declarations remain parameterized; their references are checked in the
+quantified scope that consumes them. Existing rules without `each` retain their
+symbolic binding interpretation until they acquire explicit quantification.
+These facts describe requirements and are never executed against records.
+
+```contract
+bind.p: request.phases
+bind.q: request.phases
+match.q: request.phases[q].phase_id == request.phases[p].phase_id
+each: ["p"]
+test: matches(q) == 1
+```
+
+`is_variant(value, "probe")` is a Boolean predicate over a declared variant;
+`variant(value, "probe")` projects that declared alternative. Both validate the
+operand's imported type and alternative label. The authored condition supplies
+the case guard; the model performs no general implication or exhaustiveness
+proof. Optional presence likewise belongs in authored applicability.
+
+`utf8_length(text)` counts the decoded text's UTF-8 bytes. `contains(text,
+fragment)` states a text-substring condition, including an embedded-NUL test.
+`byte_length(bytes)` counts a typed byte payload: for a Data field projected as
+base64 or hex, that is the decoded payload length. The imported projection
+remains displayed in the field's public type. Text and Data operands are distinct;
+encoded character width and decoded byte extent therefore use distinct facts.
+`set_value(record.items, [])` takes its empty array type from the declared list
+target. Nonempty values retain their normal element-type checks.
+
+`limit("probe_steps")` reads the owned integer value from `docs/limits.json`.
+Its literal ID and numeric type are checked. Rendering supplies the current value
+and unit; public content carries the referenced value, unit, counting rule,
+consequence and control alongside its identity. Shared references carry those
+same dependencies. Source/check metadata remains outside the public digest.
+Authors pair the limit with the matching measured quantity; this adds no unit
+algebra or record evaluation. Unknown IDs and noninteger values refuse.
+
+`perform(ref("refusals.request.consequence"), request)` states that the named
+action applies to that explicit request scope, including its conditions and
+triggered consequences under its declared applicability. The target must be
+an action with a structured or retained consequence, and the scope must be a
+record, event or collection. It shares the action's existing facts and public
+dependencies; it neither evaluates the action nor binds new formal parameters.
+A Boolean `requires` reference continues to name a condition or check.
+
+`selection: "first_match"` on a rule selects its first satisfied direct
+`outcome` child in heading order. Each case supplies Boolean `test` and typed
+`effects`; it may also state `uses`, `object`, `value` and prose. The rule owns
+shared context, bindings and applicability. Cases render as ordered condition
+and consequence rows. A literal `test: True` fallback belongs last. Cases can
+omit a fallback when the authored rule defines only conditional selection.
+The canonical public payload records derived `case_order`, so moving a case
+changes public content even though canonical node IDs remain sorted.
+
+## Reasons for retained free relationships
+
+Each remaining `free.*` fact has an authoring reason under `retained_free`.
+The map keys are exactly the local free relationship kinds; reasons are local
+and do not inherit. Each entry contains `kind` and a specific `reason`:
+`native_protocol`, `serialized_grammar`, `raw_admission`,
+`environment_observation` or `pending_decision`. The last kind additionally
+names a public behavior or meaning `gap` by its full node identifier.
+
+```contract
+free.effect: Close collection before releasing the waiting worker.
+retained_free: {"effect":{"kind":"native_protocol","reason":"This clause specifies the collector and release-store sequence across the live process boundary."}}
+```
+
+Strict checking requires exact reason coverage and rejects stale entries after
+a relationship becomes structured. Preview permits absent reasons while a
+surface is being converted; any supplied map is checked completely. Public free
+prose and gaps remain stamped. Editorial reasons stay outside the readable
+contract and public digest; statistics report their counts by reason kind.
+Released v1 snapshots retain their canonical content and use the existing
+snapshot reader independently of current authoring syntax.
+
+
+The readable rule keeps its complete effective context and applicability.
+The final applicability view indexes rule links and acting components; the
+conditions stay beside the obligations they qualify. Support grades are defined
+once, each support paragraph identifies its subject and scope, and citations
+group source paths while retaining the named symbols. Owner-only editorial
+changes and renderer layout leave the canonical public payload unchanged.
+Context facts and component definitions remain public content and affect the
+public payload when edited.
+
+Context identifies the applicable operation at that node. `entry` names an
+invocation or receiving protocol boundary, such as `cli_run`, `runner_verify`,
+`xpc_execute` or `worker_action`; `where` names the precise operation there.
+`report` names the produced or consumed artifact. Use actual request/report
+operands for form conditions. A producer's assembly rule applies before the
+report writer selects its fallback; a retained-report reader states its own
+marker and form conditions. Field subjects shared by several producers receive
+local context only when that ownership applies to the whole subject.

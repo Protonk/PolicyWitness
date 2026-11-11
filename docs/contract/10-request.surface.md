@@ -64,13 +64,14 @@ Optional execution controls accepted by the host request decoder. Each declared 
 ### Hold and deliver the selected request {hold: acts}
 
 ```contract
-who: "controller"
+who: ["identity.definitions.controller"]
 where: "saved-file processing"
 entry: ["cli_run"]
 recipient: ["caller", "report_reader"]
 report: ["run_envelope"]
 free.effect: Read and parse the request file once; gate its contract, parse selection, resolve named augments, strip controller selector fields and serialize once for client delivery. Preserve original and selected policy observations in the specimen dossier.
 uses: ["identity.definitions.specimen", "identity.definitions.request"]
+retained_free: {"effect":{"kind":"native_protocol","reason":"The read-once, in-memory augmentation and one-serialization guarantee concerns ownership of intermediate request bytes."}}
 ```
 
 
@@ -78,12 +79,14 @@ uses: ["identity.definitions.specimen", "identity.definitions.request"]
 ### Admission order and effects {admission: acts}
 
 ```contract
-who: "XPC host"
+uses: ["refusals.request.consequence"]
+who: ["identity.definitions.host"]
 where: "request decode and whole-request admission"
 entry: ["xpc_execute"]
 recipient: ["caller", "report_reader"]
 report: ["runner_reply"]
-free.effect: Check contract first, decode the selected plan form and closed nested objects, check capacities, then validate policy and plan meaning. A refusal returns bad_request with no worker or validator execution and an empty steps array. A host may already exist to deliver this refusal.
+free.effect: Check contract first, decode the selected plan form and closed nested objects, check capacities, then validate policy and plan meaning. On refusal apply the runner request-refusal consequence. A host may already exist to deliver that refusal.
+retained_free: {"effect": {"kind": "raw_admission", "reason": "Contract-first decoding and branch traversal consume raw objects before a complete typed request is available."}}
 ```
 
 The decoder follows its object and branch order. A capacity failure can precede a semantic failure in a successfully decoded object. Admission accepts or refuses the complete plan; it preserves declared action counts. Empty ordinary plans still compile and apply the policy.
@@ -91,13 +94,14 @@ The decoder follows its object and branch order. A capacity failure can precede 
 ### Null and omission {nulls: acts}
 
 ```contract
-who: "XPC host"
+who: ["identity.definitions.host"]
 where: "request decoding"
 entry: ["xpc_execute"]
 recipient: ["caller", "report_reader"]
 report: ["runner_reply"]
 free.effect: Treat optional null as absent where decodeIfPresent is used. Refuse present null for actor equipment, actor required_entitlements, after_termination and actor_equipment_executable_paths. Retain presence of extension operands so an inapplicable operand is refused even when null.
 uses: ["identity.definitions.absent", "identity.definitions.null_value", "extensions.operation"]
+retained_free: {"effect":{"kind":"raw_admission","reason":"Key presence, explicit null and failed decoding are distinguished before optional admitted values erase those distinctions."}}
 ```
 
 
@@ -105,15 +109,68 @@ uses: ["identity.definitions.absent", "identity.definitions.null_value", "extens
 ### Bounded strings and action counts {capacity: acts}
 
 ```contract
-who: "XPC host"
+free.effect: Preserve complete UTF-8 strings at accepted bounds.
+who: ["identity.definitions.host"]
 where: "pre-child admission"
 entry: ["xpc_execute"]
 recipient: ["caller", "report_reader"]
 report: ["runner_reply"]
-free.effect: Refuse excess before launch: <!-- span limits.policy_source.value_unit -->262,143 UTF-8 bytes<!-- /span --> per final policy source, <!-- span limits.probe_steps.value_unit -->256 items<!-- /span --> total actions, <!-- span limits.phase_count.value_unit -->8 items<!-- /span --> ordinary phases, and <!-- span limits.actor_phases.value_unit -->16 items<!-- /span --> actor phases. Preserve complete UTF-8 strings at accepted bounds.
+retained_free: {"effect":{"kind":"serialized_grammar","reason":"Complete string transport and C-string admission describe the original encoded inputs, separate from the structured count requirements."}}
 ```
 
 Native C-string inputs also refuse embedded NUL. Host-only labels use their declared UTF-8 capacities. Unicode is counted by encoded bytes. A paired query and attempt consumes one action; an extension action consumes one action and contributes no query. Phase and actor counts do not multiply the total action capacity.
+
+#### Ordinary source bytes {ordinary_source: condition}
+
+```contract
+when: absent(specimen.actors) and present(specimen.policy) and present(specimen.policy.sbpl_source)
+test: utf8_length(specimen.policy.sbpl_source) <= limit("policy_source")
+```
+
+#### Actor source bytes {actor_source: condition}
+
+```contract
+bind.a: specimen.actors
+each: ["a"]
+when: present(specimen.actors) and present(specimen.actors[a].sandbox.policy) and present(specimen.actors[a].sandbox.policy.sbpl_source)
+test: utf8_length(specimen.actors[a].sandbox.policy.sbpl_source) <= limit("policy_source")
+```
+
+#### Flat action count {flat_actions: condition}
+
+```contract
+when: absent(specimen.actors) and present(specimen.probe_plan)
+test: count(specimen.probe_plan) <= limit("probe_steps")
+```
+
+#### Phased action count {phase_actions: condition}
+
+```contract
+when: present(specimen.phases)
+bind.p: specimen.phases
+test: sum_over(p, count(specimen.phases[p].actions)) <= limit("probe_steps")
+```
+
+#### Ordinary phase count {ordinary_phases: condition}
+
+```contract
+when: absent(specimen.actors) and present(specimen.phases)
+test: count(specimen.phases) <= limit("phase_count")
+```
+
+#### Actor phase count {actor_phases: condition}
+
+```contract
+when: present(specimen.actors) and present(specimen.phases)
+test: count(specimen.phases) <= limit("actor_phases")
+```
+
+#### Refusal consequence {failure: effect}
+
+```contract
+on: "failure"
+effects: perform(ref("refusals.request.consequence"), request)
+```
 
 ### Apply-only specimen {apply_only: example}
 
@@ -147,7 +204,7 @@ limits: "The pinned matrix distinguishes both member orders and canonical neighb
 ```contract
 scope: "subtree"
 grade: "check_read"
-source: [{"path": "runner/Sources/PWRunnerCore/PWRunnerRequest.swift", "symbol": "PWRunnerRunSpec"}, {"path": "runner/Sources/PWRunnerCore/CWorkerRequestPlanning.swift", "symbol": "admissionFailure"}, {"path": "runner/Sources/PWRunnerCore/ProbeRunner.swift", "symbol": "admitSpecimen"}, {"path": "controller/src/run_flow.rs", "symbol": "validate_request_contract"}]
+source: [{"path": "runner/Sources/PWRunnerCore/PWRunnerRequest.swift", "symbol": "PWRunnerRunSpec"}, {"path": "runner/Sources/PWRunnerCore/CWorkerRequestPlanning.swift", "symbol": "admissionFailure"}, {"path": "runner/Sources/PWRunnerCore/ProbeRunner.swift", "symbol": "admitSpecimen"}, {"path": "controller/src/run_flow.rs", "symbol": "validate_request_contract"}, {"path": "runner/Sources/PWRunnerCore/CWorkerRequestPlanning.swift", "symbol": "requestAdmissionFailure"}, {"path": "runner/Sources/PWRunnerCore/ActorPlan.swift", "symbol": "actorAdmissionFailure"}]
 pins: "The adjacent field meanings and obligations follow the named producer and admission branches."
 context: "Source inspection of the current implementation; no execution is credited."
 limits: "Read the request fixture corpus loop, identity/unknown-field checks and actor parameter-capacity assertions. The apply-only template has source-level support; this owner credits no executed instance of that template."
@@ -221,12 +278,13 @@ Legacy runner mode. Null means absent. The accepted values are `standard` and `b
 ### Selector precedence {precedence: acts}
 
 ```contract
-who: "controller"
+who: ["identity.definitions.controller"]
 where: "runner selector parsing"
 entry: ["cli_run"]
 recipient: ["caller", "report_reader"]
 report: ["run_envelope"]
 free.effect: Validate every supplied legacy value first, then let each non-null nested value replace its corresponding legacy value. An explicit nested empty entitlement list replaces the legacy list. Refuse standard mode with an external selector and byoxpc mode without an ID or service.
+retained_free: {"effect": {"kind": "raw_admission", "reason": "CLI mode injection and per-field precedence construct the effective selector from supplied candidates. Malformed raw values are checked before replacement; an explicit nested empty entitlement list replaces the legacy list."}}
 ```
 
 CLI `--runner-mode` is parsed before reading the request and is injected into its selector processing. `machme` is refused. Selection resolution and entitlement checks precede client invocation. A resolved target identifies the requested host service; actor equipment roles remain actor declarations.
@@ -234,12 +292,14 @@ CLI `--runner-mode` is parsed before reading the request and is injected into it
 ### Selection and augmentation failure order {failure_order: acts}
 
 ```contract
-who: "controller"
+uses: ["refusals.controller.consequence"]
+who: ["identity.definitions.controller"]
 where: "request preparation"
 entry: ["cli_run"]
 recipient: ["caller", "report_reader"]
 report: ["run_envelope"]
-free.effect: Retain a target-resolution error while resolving augment dossiers. If target resolution failed, report tool_error and exit 2; otherwise an augment refusal reports bad_request and exit 1. Neither branch invokes the client.
+free.effect: Retain a target-resolution error while resolving augment dossiers. Select the target-resolution error first; otherwise select an augment refusal when present. Apply the controller pre-invocation consequence to the selected failure.
+retained_free: {"effect": {"kind": "native_protocol", "reason": "Target resolution and augmentation return separate intermediate results. Their priority determines which refusal procedure applies."}}
 ```
 
 
@@ -317,8 +377,6 @@ scope: "subtree"
 grade: "source_read"
 source: [{"path": "controller/src/runner_select.rs", "symbol": "RunnerSelector"}, {"path": "controller/src/runner_select.rs", "symbol": "parse_runner_selector_value"}]
 pins: "The adjacent field meanings and obligations follow the named producer and admission branches."
-context: "Source inspection of the current implementation; no execution is credited."
-limits: "Runtime behavior remains subject to integrated acceptance evidence."
 ```
 
 
@@ -437,6 +495,4 @@ scope: "subtree"
 grade: "source_read"
 source: [{"path": "runner/Sources/PWRunnerCore/PWRunnerRequest.swift", "symbol": "PWRunnerTestOverrides"}, {"path": "runner/Sources/PWRunnerCore/CWorkerRequestPlanning.swift", "symbol": "timeoutMsForCWorker"}, {"path": "runner/Sources/PWRunnerCore/ProbeRunner.swift", "symbol": "admitSpecimen"}, {"path": "runner/Sources/PWRunnerCore/CWorkerOrchestrator.swift", "symbol": "collectionRemainingNs"}, {"path": "runner/Sources/PWRunnerCore/ActorOrchestration.swift", "symbol": "collectionRemainingNs"}, {"path": "runner/Sources/PWRunnerCore/ActorSession.swift", "symbol": "postApplyHangMs"}, {"path": "runner/Sources/PWRunnerCore/ActorEquipment.swift", "symbol": "private func prepare"}, {"path": "controller/tools/pw_probe_runner/pw_probe_runner.c", "symbol": "kill_before_publish_slot"}]
 pins: "The adjacent field meanings and obligations follow the named producer and admission branches."
-context: "Source inspection of the current implementation; no execution is credited."
-limits: "Runtime behavior remains subject to integrated acceptance evidence."
 ```

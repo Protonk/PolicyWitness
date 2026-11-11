@@ -29,11 +29,12 @@ limits: "The Swift session checks inject clock, scheduler and connection boundar
 ```contract
 who: ["identity.definitions.host"]
 where: "NSXPCListener connection acceptance before exporting reservation methods"
-entry: ["run", "runner_verify", "direct_xpc"]
+entry: ["cli_run", "runner_verify", "direct_xpc"]
 recipient: ["xpc_caller"]
 report: ["connection_acceptance"]
 free.condition: The host reads PWRunnerRequireSignedCaller from its Info.plist as a Boolean; absence or an unavailable Boolean value selects false.
 free.effect: When true, obtain caller signing information using the connection PID and the host's own signing information; require both Team IDs to be present and equal. If a nonempty identifier allowlist is configured, also require the caller signing identifier to occur in it. Reject the connection before exporting reservation methods when these checks fail.
+retained_free: {"condition":{"kind":"raw_admission","reason":"The Info.plist Boolean read can be absent or of another type; the accepted connection has no field carrying that raw configuration observation."},"effect":{"kind":"environment_observation","reason":"Caller and host signing information are live Security API observations tied to a connection PID and configured identifiers."}}
 ```
 
 `PWRunnerAllowedIdentifiers` is a string array whose members are trimmed and empty members removed. An unavailable or empty resulting list leaves the identifier unrestricted within the Team ID check. The shipped template enables the signed-caller check and lists `pw-runner-client` and `com.policywitness.policy-witness`. An ad-hoc host has no Team ID and fails the enabled check. With the Boolean false, the listener accepts local connections without these signing comparisons; reservation and specimen admission still follow. These signing comparisons and public contract equality are separate checks.
@@ -54,14 +55,15 @@ limits: "Source reading. The external-auth wrapper was read, but its delegated s
 ### Acquire an unused host {acquire: acts}
 
 ```contract
-who: "runner client and authenticated runner host"
+who: ["identity.definitions.client", "identity.definitions.host"]
 where: "reserveRunner control RPC"
-entry: ["run", "runner_verify", "direct_xpc"]
+entry: ["cli_run", "runner_verify", "direct_xpc"]
 recipient: ["runner_host", "runner_client"]
 report: ["client_capture", "control_reply"]
 uses: ["identity.public.contract"]
 free.condition: The client has a positive remaining overall allowance and has already begun fewer than <!-- span limits.reservation_attempts.value -->256<!-- /span --> acquisition attempts.
 free.effect: Send only the reservation control; the host may grant its one unused slot to that connection. Occupied or transport-lost acquisition may reconnect within the original allowance.
+retained_free: {"condition":{"kind":"native_protocol","reason":"The pre-attempt remaining continuous-clock allowance and attempts-started counter precede the final acquisition report."},"effect":{"kind":"native_protocol","reason":"Grant/reconnect control runs on connection-bound reservation state within an unchanged deadline and never submits specimen bytes during acquisition."}}
 ```
 
 The requested lease is at most <!-- span limits.reservation_lease.value_unit -->5,000 milliseconds<!-- /span --> and at most the remaining overall allowance. Each reservation RPC waits at most <!-- span limits.reservation_rpc_wait.value_unit -->5,000 milliseconds<!-- /span -->; retries wait up to <!-- span limits.reservation_retry_delay.value_unit -->100 milliseconds<!-- /span -->, shortened by the remaining allowance. The client begins at most <!-- span limits.reservation_attempts.value -->256<!-- /span --> acquisition attempts, including occupied replies and transport failures. Every attempt uses a new UUID. A host shares its one slot across authenticated connections. Grant, execution, expiry and abandonment advance that slot toward retirement; expiry or disconnect does not make it reusable. The client sends specimen bytes at the execution RPC.
@@ -71,26 +73,59 @@ The requested lease is at most <!-- span limits.reservation_lease.value_unit -->
 ```contract
 who: ["identity.definitions.client"]
 where: "reservation and submission-control reply admission"
-entry: ["run", "runner_verify"]
+entry: ["cli_run", "runner_verify"]
 recipient: ["runner_client"]
 report: ["client_capture"]
-uses: ["identity.public.contract"]
+uses: ["identity.public.contract", "transport.control"]
 free.condition: Control bytes arrive before a terminal client decision.
-free.effect: Bound the control to <!-- span limits.reservation_control_bytes.value_unit -->65,536 bytes<!-- /span -->, compare its contract before decoding its remaining fields, and require the status-specific fields and matching acquisition attempt. On refusal retain control byte count and SHA-256, withhold decoded control fields and end with protocol_error.
+free.effect: Bound the control to <!-- span limits.reservation_control_bytes.value_unit -->65,536 bytes<!-- /span -->, compare the contract before decoding descendants, validate host-instance and credential UUID syntax, and associate the callback with the active phase and attempt. Acquisition accepts granted or occupied and checks the echoed attempt and requested lease; submission accepts reservation_refused. On refusal retain control byte count and SHA-256, withhold decoded fields and end with protocol_error.
+retained_free: {"condition": {"kind": "native_protocol", "reason": "Control callback arrival must precede the client terminal decision; the decoded control cannot establish event ordering alone."}, "effect": {"kind": "serialized_grammar", "reason": "Raw control bytes, live callback phase/attempt, requested lease and UUID parsing govern admission. The adjacent typed requirements express the carried status-specific fields."}}
 ```
 
 A grant requires a positive signed-32-bit host PID, UUID host instance, the current attempt UUID, UUID credential and positive lease no greater than requested. Acquisition replies require reason absent or null; occupied replies also require credential and lease absent or null. Both reservation requests and admitted control replies reject unknown keys after identity admission. Optional control fields accept JSON null as absence. Reservation acceptance establishes control admission and ownership of a slot. Peer PID and host-instance strings are assertions supplied by that peer.
 
+#### Typed control identity {identity: condition}
+
+```contract
+test: control.host_pid > 0 and control.host_pid <= 2147483647 and utf8_length(control.host_instance) == 36
+```
+
+#### Admitted status forms {status: condition}
+
+```contract
+test: control.status in ["granted", "occupied", "reservation_refused"]
+```
+
+#### Granted reservation fields {grant: condition}
+
+```contract
+test: implies(control.status == "granted", present(control.attempt_id) and absent(control.reason) and present(control.reservation_id) and utf8_length(control.reservation_id) == 36 and present(control.lease_ms) and control.lease_ms > 0 and control.lease_ms <= limit("reservation_lease"))
+```
+
+#### Occupied reservation fields {occupied: condition}
+
+```contract
+test: implies(control.status == "occupied", present(control.attempt_id) and absent(control.reason) and absent(control.reservation_id) and absent(control.lease_ms))
+```
+
+#### Submission refusal fields {refusal: condition}
+
+```contract
+test: implies(control.status == "reservation_refused", absent(control.attempt_id) and absent(control.reservation_id) and absent(control.lease_ms) and control.reason in ["wrong", "expired", "absent", "consumed", "clock_error"])
+```
+
 ### Invoke execution once {invoke: acts}
 
 ```contract
-who: "runner client"
+effects: set_value(capture.submission.state, "invoked")
+who: ["identity.definitions.client"]
 where: "runReservedSpecimen invocation on the granting connection"
-entry: ["run", "runner_verify"]
+entry: ["cli_run", "runner_verify"]
 recipient: ["runner_host"]
 report: ["client_capture"]
 free.condition: A grant was admitted and a fresh continuous-clock sample is before the original deadline.
-free.effect: Record submission.state invoked and its elapsed time before acquiring/calling the execution proxy. Make one execution invocation. Preserve that fact through every later error, timeout or refusal; never replay the specimen.
+free.effect: Record the sampled invocation elapsed time before acquiring/calling the execution proxy. Make one execution invocation and preserve its observation through later error, timeout or refusal; never replay the specimen.
+retained_free: {"condition": {"kind": "native_protocol", "reason": "Invocation eligibility uses a fresh continuous-clock sample after an admitted grant, not the final reported elapsed time."}, "effect": {"kind": "native_protocol", "reason": "The sampled elapsed time, publication-before-proxy ordering and once-only invocation are live session events. The invoked field records this client call boundary."}}
 ```
 
 A grant handled at or after the overall deadline remains granted with submission `not_invoked`. The host checks the connection-bound credential before interpreting the specimen. Wrong, expired, absent or consumed credentials return a submission control refusal. A transport error after invocation leaves receipt and execution uncertain until independent observations resolve them.
@@ -98,13 +133,14 @@ A grant handled at or after the overall deadline remains granted with submission
 ### Apply the original allowance {deadline: acts}
 
 ```contract
-who: "controller and runner client"
+who: ["identity.definitions.controller", "identity.definitions.client"]
 where: "client launch, input delivery, acquisition and execution wait"
-entry: ["run", "runner_verify"]
+entry: ["cli_run", "runner_verify"]
 recipient: ["cli_caller"]
-report: ["client_capture", "controller_envelope"]
+report: ["client_capture", "run_envelope", "runner_verify"]
 free.condition: The controller invokes its runner client with timeout_ms clamped to at least one millisecond.
 free.effect: Create an absolute mach_continuous_time deadline before tool resolution and process spawn and pass it to the client. The client ends on expiry and ignores later callbacks; granting a reservation never resets the deadline.
+retained_free: {"condition":{"kind":"raw_admission","reason":"The timeout floor applies to the parsed command option before the effective client allowance is stored."},"effect":{"kind":"native_protocol","reason":"One continuous-clock deadline is created and propagated through acquisition, invocation and callback expiry."}}
 ```
 
 Continuous time includes machine sleep. Client clock failure ends with `local_error` and `clock_error`, preserves valid earlier readings and any positive invocation, and leaves the final reading absent. The controller drains complete stdout and stderr and waits for the client process; that collection has no independent receiver deadline. Client allowance expiry ends its wait. Host cleanup and worker termination follow their own owners and observations.
@@ -232,9 +268,21 @@ Last valid sample at terminal completion; absent after clock failure.
 
 Positive nominal allowance supplied to the client, in milliseconds. The inherited absolute deadline accounts for time already spent before the session starts.
 
+#### Positive effective allowance {positive: condition}
+
+```contract
+test: capture.timeout_ms > 0
+```
+
 ### attempts {attempts: field}
 
 Acquisition attempts in invocation order, with one-based ordinals and unique attempt UUIDs.
+
+#### Bounded acquisition count {bounded: condition}
+
+```contract
+test: count(capture.attempts) <= limit("reservation_attempts")
+```
 
 ### acquisition_stop {acquisition_stop: field}
 
@@ -364,9 +412,30 @@ Length of its retained prefix, the smaller of bytes_received and <!-- span limit
 
 True exactly when bytes_retained is smaller than bytes_received. The controller refuses a truncated host frame before structural decoding.
 
+#### Retention arithmetic {arithmetic: condition}
+
+```contract
+test: retained_reply.truncated == (retained_reply.bytes_retained < retained_reply.bytes_received) and retained_reply.bytes_retained <= retained_reply.bytes_received and retained_reply.bytes_retained <= limit("client_reply_retention") and implies(retained_reply.bytes_received <= limit("client_reply_retention"), retained_reply.bytes_retained == retained_reply.bytes_received) and implies(retained_reply.bytes_received > limit("client_reply_retention"), retained_reply.bytes_retained == limit("client_reply_retention"))
+```
+
 ### data_base64 {data_base64: field}
 
 Exact retained host bytes, kept as bytes internally and rendered as base64 at public JSON projection.
+
+#### Exact retained byte extent {extent: condition}
+
+```contract
+test: byte_length(retained_reply.data_base64) == retained_reply.bytes_retained
+```
+
+### Source for these relationships {source: owner}
+
+```contract
+scope: "subtree"
+grade: "source_read"
+source: {"path": "runner/Sources/PWRunnerCore/PWRunnerTransport.swift", "symbol": "struct PWRunnerReplyCapture"}
+pins: "The constructor retains the bounded Data prefix, its original and retained lengths, and their inequality flag."
+```
 
 ## Client error {error: subject}
 
@@ -495,15 +564,42 @@ Whether complete stderr exceeded its retained prefix allowance.
 ```contract
 who: ["identity.definitions.controller"]
 where: "completed client stdout and nested host frame"
-entry: ["run", "runner_verify"]
+entry: ["cli_run", "runner_verify"]
 recipient: ["cli_caller"]
-report: ["controller_envelope"]
+report: ["run_envelope", "runner_verify"]
 uses: ["identity.public.contract"]
 free.condition: The client process and input writer completed collection.
 free.effect: Give request-delivery failure precedence; otherwise refuse retention loss, missing capture, unsupported producer/schema or inconsistent capture. Admit the host frame separately only when its retained bytes are complete. Keep raw received bytes at the boundary that received them.
+retained_free: {"condition":{"kind":"native_protocol","reason":"Process collection and stdin-writer completion are independent events whose join determines delivery success."},"effect":{"kind":"serialized_grammar","reason":"Retention, capture decoding and host-frame admission operate on successive byte representations before the decoded host reply is available."}}
 ```
 
 Delivery failure yields controller `tool_error` and exit 2 while retaining available client bytes. Admitted capture semantics check chronology, UUIDs, terminal combinations, control fields and retained lengths. Unsupported or malformed capture withholds submission knowledge and host interpretation. An admitted capture’s `runner_reply` can still be refused as `runner_reply_truncated`, `unsupported_runner_response` or `malformed_runner_response`. Host semantic admission follows structural decoding.
+
+#### Input delivery takes precedence {delivery: condition}
+
+```contract
+test: implies(present(client.request_delivery) and present(client.request_delivery.error), client.transport_admission == "delivery_failed" and client.transport_error == client.request_delivery.error and client.submission == "unknown" and absent(client.stdout_parse_error) and absent(client.runner_reply_error))
+```
+
+#### Retention loss precedes decoding {retention: condition}
+
+```contract
+test: implies(not (present(client.request_delivery) and present(client.request_delivery.error)) and present(client.stdout_capture_error), client.transport_admission == "malformed" and client.transport_error == client.stdout_capture_error and client.submission == "unknown" and absent(client.stdout_parse_error) and absent(client.runner_reply_error))
+```
+
+#### Empty retained capture {missing: condition}
+
+```contract
+test: implies(not (present(client.request_delivery) and present(client.request_delivery.error)) and absent(client.stdout_capture_error) and client.stdout_bytes_retained == 0, client.transport_admission == "missing" and client.transport_error == "runner client produced no capture" and client.submission == "unknown" and absent(client.stdout_parse_error) and absent(client.runner_reply_error))
+```
+
+#### Capture refusal selection source {selection_source: owner}
+
+```contract
+grade: "source_read"
+source: {"path": "controller/src/runner_client.rs", "symbol": "parse_runner_client_output"}
+pins: "Completed collection first selects input-delivery error, then retained-output loss, then an empty capture. These paths preserve unknown submission and skip both frame decoders."
+```
 
 ## Request stdin delivery {request_delivery: subject}
 
