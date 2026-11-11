@@ -128,7 +128,7 @@
           "requires": [
             "clang"
           ],
-          "description": "Tag preflight, release archiving with retention, and GitHub publication verify their inputs offline and refuse mismatches"
+          "description": "Fresh-build release entrypoints, tag preflight, archiving with retention, and GitHub publication verify inputs offline and refuse mismatches"
         },
         {
           "id": "release_rotation_controls",

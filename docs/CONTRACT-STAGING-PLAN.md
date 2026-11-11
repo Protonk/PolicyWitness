@@ -19,6 +19,11 @@ Stage-one execution records: the
 [authoring trial](../records/contract/CONTRACT-SPIKE-RESULT.md),
 [migration inventory](../records/contract/CONTRACT-MIGRATION-INVENTORY.md) and
 [generator guarantees](../records/contract/CONTRACT-GENERATOR-GUARANTEES.md).
+The [stage-one reading journal](../records/contract/readings/stage-one/JOURNAL.md),
+[unprompted adjudication](../records/contract/readings/stage-one/UNPROMPTED-ADJUDICATION.md),
+[prompted adjudication](../records/contract/readings/stage-one/PROMPTED-ADJUDICATION.md)
+and [targeted revision reading](../records/contract/readings/stage-one/REVISION-READING.md)
+retain the frozen-input reading separately from subsequent truth corrections.
 
 ## The stages
 

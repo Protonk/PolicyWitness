@@ -13,6 +13,7 @@ from __future__ import annotations
 from bisect import bisect_right
 from dataclasses import dataclass
 from functools import lru_cache
+from html.parser import HTMLParser
 from pathlib import Path
 import re
 import sys
@@ -62,6 +63,35 @@ PARSER = _parser()
 def slug(text):
     """GitHub's heading anchor for a heading's text, without a duplicate suffix."""
     return re.sub(r'[^\w -]', '', text.lower()).replace(' ', '-')
+
+
+class _AnchorParser(HTMLParser):
+    """Read explicit anchor elements only after CommonMark identifies HTML."""
+
+    def __init__(self):
+        super().__init__(convert_charrefs=True)
+        self.anchors = []
+
+    def handle_starttag(self, tag, attrs):
+        if tag != 'a':
+            return
+        attributes = {}
+        for key, value in attrs:
+            attributes.setdefault(key, value)
+        self.anchors.extend(attributes[key] for key in ('id', 'name') if attributes.get(key))
+
+
+def _explicit_anchors(tokens):
+    parser = _AnchorParser()
+    for token in tokens:
+        if token.type == 'html_block':
+            parser.feed(token.content)
+        elif token.type == 'inline':
+            for child in token.children or ():
+                if child.type == 'html_inline':
+                    parser.feed(child.content)
+    parser.close()
+    return parser.anchors
 
 
 def plain(children, softbreak=' '):
@@ -208,6 +238,10 @@ class Document:
                 anchor = f'{base}-{suffix}'
             seen.add(anchor)
             self.anchors.append(anchor)
+        # Explicit anchors do not consume heading duplicate suffixes. Their
+        # HTML comes only from parser tokens, so examples in code or comments
+        # cannot create link destinations.
+        self.anchors.extend(_explicit_anchors(self.tokens))
 
     def _read(self):
         lists, items, order, row, rows, header = [], [], [], None, None, None

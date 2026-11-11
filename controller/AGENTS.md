@@ -5,9 +5,9 @@ and external-runner registry. These rules supplement the [root guidance](../AGEN
 
 ## Find the relevant contract
 
-- Use the [wire contract](../docs/CONTRACT.md) for producer admission and shape ownership,
+- Use the [public contract](../docs/CONTRACT.md) for accepted requests, producer admission and field meanings,
   the [request grammar](../docs/REQUEST-GRAMMAR.md) for admission, and the
-  [user guide](../docs/PolicyWitness.md) for public field meanings.
+  [user guide](../docs/PolicyWitness.md) for preparation, execution and recovery.
 - For native helpers under `tools/`, runner behavior or test seams, also read
   [runner/AGENTS.md](../runner/AGENTS.md) and the [runner reference](../runner/README.md).
 - For test selection, evidence and cleanup, follow [tests/AGENTS.md](../tests/AGENTS.md).
@@ -50,14 +50,14 @@ to the selected worker's read-back.
 
 For request or evidence changes, trace affected admission, transport, assembly,
 independent consumers, fixtures, shape goldens and documentation. Use the
-[contract evolution rules](../docs/CONTRACT.md#maintaining-the-contract) to maintain definitions, examples and shape goldens. Update owning inputs and regenerate through the
+[contract authoring rules](../docs/contract/AGENTS.md) to maintain definitions, examples and shape goldens. Update owning inputs and regenerate through the
 [generator contracts](../tests/suites/source_drift/README.md#generator-contracts);
 do not hand-edit generated contracts, limits, layouts or worker identity.
 Native source additions/moves also require the owning Meson target.
 
 Keep the README's CLI block synchronized with [cli.rs](src/cli.rs).
-Put public field definitions in the user guide, implementation responsibilities
-in this README, and detailed assertions beside their suites. Preserve inbound
+Put public field definitions in the [contract sources](../docs/contract/README.md),
+user workflows in the guide, implementation responsibilities in this README, and detailed assertions beside their suites. Preserve inbound
 anchors when condensing documentation, or update their callers together.
 
 ## Verify the changed boundary

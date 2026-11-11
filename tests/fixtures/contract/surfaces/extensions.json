@@ -1,0 +1,482 @@
+{
+  "records": {
+    "PWRunnerDeliveryRecord": {
+      "fields": {
+        "delivered_length": {
+          "json_null": false,
+          "name": "delivered_length",
+          "optional": true,
+          "swift_type": "Int?"
+        },
+        "delivery_ref": {
+          "json_null": false,
+          "name": "delivery_ref",
+          "optional": false,
+          "swift_type": "String"
+        },
+        "equality": {
+          "json_null": false,
+          "name": "equality",
+          "optional": true,
+          "swift_type": "String?"
+        },
+        "last_use_step_id": {
+          "json_null": false,
+          "name": "last_use_step_id",
+          "optional": true,
+          "swift_type": "String?"
+        },
+        "recipient_actor_id": {
+          "json_null": false,
+          "name": "recipient_actor_id",
+          "optional": false,
+          "swift_type": "String"
+        },
+        "source_actor_id": {
+          "json_null": false,
+          "name": "source_actor_id",
+          "optional": false,
+          "swift_type": "String"
+        },
+        "status": {
+          "json_null": false,
+          "name": "status",
+          "optional": false,
+          "swift_type": "String"
+        },
+        "step_id": {
+          "json_null": false,
+          "name": "step_id",
+          "optional": false,
+          "swift_type": "String"
+        },
+        "token_ref": {
+          "json_null": false,
+          "name": "token_ref",
+          "optional": false,
+          "swift_type": "String"
+        }
+      },
+      "input": false
+    },
+    "PWRunnerExtensionAction": {
+      "fields": {
+        "extension": {
+          "json_null": false,
+          "name": "extension",
+          "optional": false,
+          "swift_type": "PWRunnerExtensionOperation"
+        },
+        "step_id": {
+          "json_null": false,
+          "name": "step_id",
+          "optional": false,
+          "swift_type": "String"
+        }
+      },
+      "input": true
+    },
+    "PWRunnerExtensionEvent": {
+      "fields": {
+        "actor_id": {
+          "json_null": false,
+          "name": "actor_id",
+          "optional": true,
+          "swift_type": "String?"
+        },
+        "call_boundary_observed": {
+          "json_null": false,
+          "name": "call_boundary_observed",
+          "optional": false,
+          "swift_type": "Bool"
+        },
+        "delivery_ref": {
+          "json_null": false,
+          "name": "delivery_ref",
+          "optional": true,
+          "swift_type": "String?"
+        },
+        "errno": {
+          "json_null": false,
+          "name": "errno",
+          "optional": true,
+          "swift_type": "Int32?"
+        },
+        "extension_class": {
+          "json_null": false,
+          "name": "extension_class",
+          "optional": true,
+          "swift_type": "String?"
+        },
+        "family": {
+          "json_null": false,
+          "name": "family",
+          "optional": true,
+          "swift_type": "String?"
+        },
+        "flags": {
+          "json_null": false,
+          "name": "flags",
+          "optional": true,
+          "swift_type": "Int?"
+        },
+        "handle_ref": {
+          "json_null": false,
+          "name": "handle_ref",
+          "optional": true,
+          "swift_type": "String?"
+        },
+        "lifecycle": {
+          "json_null": false,
+          "name": "lifecycle",
+          "optional": true,
+          "swift_type": "PWAttemptLifecycle?"
+        },
+        "native_nonnull": {
+          "json_null": false,
+          "name": "native_nonnull",
+          "optional": true,
+          "swift_type": "Bool?"
+        },
+        "native_result": {
+          "json_null": false,
+          "name": "native_result",
+          "optional": true,
+          "swift_type": "Int64?"
+        },
+        "operation": {
+          "json_null": false,
+          "name": "operation",
+          "optional": false,
+          "swift_type": "String"
+        },
+        "phase_id": {
+          "json_null": false,
+          "name": "phase_id",
+          "optional": false,
+          "swift_type": "String"
+        },
+        "result_published": {
+          "json_null": false,
+          "name": "result_published",
+          "optional": false,
+          "swift_type": "Bool"
+        },
+        "status": {
+          "json_null": false,
+          "name": "status",
+          "optional": false,
+          "swift_type": "String"
+        },
+        "step_id": {
+          "json_null": false,
+          "name": "step_id",
+          "optional": false,
+          "swift_type": "String"
+        },
+        "target": {
+          "json_null": false,
+          "name": "target",
+          "optional": true,
+          "swift_type": "String?"
+        },
+        "token_length": {
+          "json_null": false,
+          "name": "token_length",
+          "optional": true,
+          "swift_type": "Int?"
+        },
+        "token_ref": {
+          "json_null": false,
+          "name": "token_ref",
+          "optional": true,
+          "swift_type": "String?"
+        },
+        "unavailable_reason": {
+          "json_null": false,
+          "name": "unavailable_reason",
+          "optional": true,
+          "swift_type": "String?"
+        }
+      },
+      "input": false
+    },
+    "PWRunnerExtensionOperation": {
+      "fields": {
+        "authority": {
+          "json_null": false,
+          "name": "authority",
+          "optional": true,
+          "swift_type": "String?"
+        },
+        "delivery_ref": {
+          "json_null": false,
+          "name": "delivery_ref",
+          "optional": true,
+          "swift_type": "String?"
+        },
+        "family": {
+          "json_null": false,
+          "name": "family",
+          "optional": true,
+          "swift_type": "String?"
+        },
+        "handle_ref": {
+          "json_null": false,
+          "name": "handle_ref",
+          "optional": true,
+          "swift_type": "String?"
+        },
+        "operation": {
+          "json_null": false,
+          "name": "operation",
+          "optional": false,
+          "swift_type": "String"
+        },
+        "recipient": {
+          "json_null": false,
+          "name": "recipient",
+          "optional": true,
+          "swift_type": "String?"
+        },
+        "target": {
+          "json_null": false,
+          "name": "target",
+          "optional": true,
+          "swift_type": "String?"
+        },
+        "token_ref": {
+          "json_null": false,
+          "name": "token_ref",
+          "optional": true,
+          "swift_type": "String?"
+        }
+      },
+      "input": true
+    },
+    "PWRunnerHandleRecord": {
+      "fields": {
+        "actor_id": {
+          "json_null": false,
+          "name": "actor_id",
+          "optional": false,
+          "swift_type": "String"
+        },
+        "delivery_ref": {
+          "json_null": false,
+          "name": "delivery_ref",
+          "optional": false,
+          "swift_type": "String"
+        },
+        "handle_ref": {
+          "json_null": false,
+          "name": "handle_ref",
+          "optional": false,
+          "swift_type": "String"
+        },
+        "native_handle": {
+          "json_null": false,
+          "name": "native_handle",
+          "optional": true,
+          "swift_type": "Int64?"
+        },
+        "raw_equal_handles": {
+          "json_null": false,
+          "name": "raw_equal_handles",
+          "optional": false,
+          "swift_type": "[String]"
+        },
+        "release_attempted": {
+          "json_null": false,
+          "name": "release_attempted",
+          "optional": false,
+          "swift_type": "Bool"
+        },
+        "release_step_id": {
+          "json_null": false,
+          "name": "release_step_id",
+          "optional": true,
+          "swift_type": "String?"
+        },
+        "status": {
+          "json_null": false,
+          "name": "status",
+          "optional": false,
+          "swift_type": "String"
+        },
+        "step_id": {
+          "json_null": false,
+          "name": "step_id",
+          "optional": false,
+          "swift_type": "String"
+        }
+      },
+      "input": false
+    },
+    "PWRunnerResourceTables": {
+      "fields": {
+        "deliveries": {
+          "json_null": false,
+          "name": "deliveries",
+          "optional": false,
+          "swift_type": "[PWRunnerDeliveryRecord]"
+        },
+        "handles": {
+          "json_null": false,
+          "name": "handles",
+          "optional": false,
+          "swift_type": "[PWRunnerHandleRecord]"
+        },
+        "tokens": {
+          "json_null": false,
+          "name": "tokens",
+          "optional": false,
+          "swift_type": "[PWRunnerTokenRecord]"
+        }
+      },
+      "input": false
+    },
+    "PWRunnerTokenRecord": {
+      "fields": {
+        "actor_id": {
+          "json_null": false,
+          "name": "actor_id",
+          "optional": false,
+          "swift_type": "String"
+        },
+        "family": {
+          "json_null": false,
+          "name": "family",
+          "optional": false,
+          "swift_type": "String"
+        },
+        "last_use_step_id": {
+          "json_null": false,
+          "name": "last_use_step_id",
+          "optional": true,
+          "swift_type": "String?"
+        },
+        "status": {
+          "json_null": false,
+          "name": "status",
+          "optional": false,
+          "swift_type": "String"
+        },
+        "step_id": {
+          "json_null": false,
+          "name": "step_id",
+          "optional": false,
+          "swift_type": "String"
+        },
+        "token_length": {
+          "json_null": false,
+          "name": "token_length",
+          "optional": true,
+          "swift_type": "Int?"
+        },
+        "token_ref": {
+          "json_null": false,
+          "name": "token_ref",
+          "optional": false,
+          "swift_type": "String"
+        }
+      },
+      "input": false
+    },
+    "PWRunnerTransferRecord": {
+      "fields": {
+        "copy_status": {
+          "json_null": false,
+          "name": "copy_status",
+          "optional": false,
+          "swift_type": "String"
+        },
+        "custody_status": {
+          "json_null": false,
+          "name": "custody_status",
+          "optional": false,
+          "swift_type": "String"
+        },
+        "delivery_ref": {
+          "json_null": false,
+          "name": "delivery_ref",
+          "optional": false,
+          "swift_type": "String"
+        },
+        "equality": {
+          "json_null": false,
+          "name": "equality",
+          "optional": false,
+          "swift_type": "String"
+        },
+        "lifecycle": {
+          "json_null": false,
+          "name": "lifecycle",
+          "optional": true,
+          "swift_type": "PWAttemptLifecycle?"
+        },
+        "phase_id": {
+          "json_null": false,
+          "name": "phase_id",
+          "optional": false,
+          "swift_type": "String"
+        },
+        "recipient_acknowledged": {
+          "json_null": false,
+          "name": "recipient_acknowledged",
+          "optional": false,
+          "swift_type": "Bool"
+        },
+        "recipient_actor_id": {
+          "json_null": false,
+          "name": "recipient_actor_id",
+          "optional": false,
+          "swift_type": "String"
+        },
+        "recipient_wait": {
+          "json_null": false,
+          "name": "recipient_wait",
+          "optional": true,
+          "swift_type": "PWHostWait?"
+        },
+        "request_published": {
+          "json_null": false,
+          "name": "request_published",
+          "optional": false,
+          "swift_type": "Bool"
+        },
+        "source_acknowledged": {
+          "json_null": false,
+          "name": "source_acknowledged",
+          "optional": false,
+          "swift_type": "Bool"
+        },
+        "source_actor_id": {
+          "json_null": false,
+          "name": "source_actor_id",
+          "optional": false,
+          "swift_type": "String"
+        },
+        "status": {
+          "json_null": false,
+          "name": "status",
+          "optional": false,
+          "swift_type": "String"
+        },
+        "step_id": {
+          "json_null": false,
+          "name": "step_id",
+          "optional": false,
+          "swift_type": "String"
+        },
+        "token_ref": {
+          "json_null": false,
+          "name": "token_ref",
+          "optional": false,
+          "swift_type": "String"
+        }
+      },
+      "input": false
+    }
+  }
+}

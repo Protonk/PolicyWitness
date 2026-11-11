@@ -53,8 +53,9 @@ class BuildEntryTests(receipts.TestCase):
         root = Path(directory.name)
         copied = fixture_inputs.copy_declared(ROOT, root, fixture_inputs.generator_inputs(ROOT, 'contract_stamps'), extra=extra)
         print(f'fixture: {copied.files} files, {copied.bytes} bytes, {copied.seconds:.3f} s')
-        for name, _, after in generator.render(root, 'v9.0.0'):
-            (root / name).write_text(after)
+        # This is a source-copy check: preserve its generated document,
+        # snapshot and inherited stamps. No synthetic release can replace
+        # unavailable history merely to reach a later build boundary.
         self.track_inputs(root)
         return root
 
@@ -76,9 +77,13 @@ class BuildEntryTests(receipts.TestCase):
         return result, destination
 
     def stale_copy(self, root, rel):
-        path = root / 'docs/CONTRACT.md'
+        path = root / rel
         before = path.read_text()
-        path.write_text(before.replace('| Last changed |', '| Stale |'))
+        marker = generator.contract_module('runtime').DOCUMENT_BEGIN
+        self.assertIn(marker, before)
+        after = before.replace(marker, marker + '\nStale generated output control.', 1)
+        self.assertNotEqual(after, before)
+        path.write_text(after)
 
     def test_build_refuses_an_identity_of_another_class_as_absent_before_cargo(self):
         """Every check before the identity step passes in the checkout; an identity the keychain does not list stops the
@@ -401,7 +406,7 @@ class BuildEntryTests(receipts.TestCase):
                                 capture_output=True, text=True, timeout=10)
         self.assertEqual(result.returncode, 1, result.stdout + result.stderr)
         self.assertIn('Checking limits documentation', result.stdout)
-        self.assertIn('stale contract stamps: docs/CONTRACT.md', result.stderr)
+        self.assertIn('stale generated contract: docs/CONTRACT.md', result.stderr)
         self.assertFalse(destination.exists())
 
     def test_build_refuses_stale_guide_before_signing_or_creating_output(self):

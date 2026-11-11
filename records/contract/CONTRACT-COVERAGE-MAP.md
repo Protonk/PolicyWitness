@@ -28,7 +28,7 @@ named as paths, not linked from this record.
 | D | The named document passage was read. Its meaning is inventoried; implementation support still needs an owner. |
 | I | A prior examination supplies a source/check trace. This pass read the examination, not every underlying source or check. Preserve its finer evidence grade when attaching an owner; I is not execution credit. |
 | S | This pass read the specific implementation cited in the source-confirmed corrections table. It supports the narrow assertion stated there. |
-| T | This pass read a check's assertions and execution context without executing it. The R-06 constructed orchestration check added during this work is the sole T entry. |
+| T | This pass read a check's assertions and execution context without executing it. The initial inventory used T for R-06; the draft reconciliation below names subsequent check reading and newly authored controls separately. |
 | E | Execution observed in this pass. There are no E entries: no tests, builds, releases or experiments were run. |
 
 All guide rows are D unless marked S or I. A guide statement alone is not an
@@ -582,7 +582,7 @@ retirement/change of an unclear public promise must use that decision process.
 
 | Item | Question / current disposition / next evidence |
 | --- | --- |
-| Q-01 entry-path matrix | Enumerate CLI parsing, decoded saved specimen, direct XPC, standalone sbpl-check, reply readers, PW build environment and every accepted `_test_overrides` field/effect. Name caller/build applicability and whether assertions gate each operation. Signed overrides are accepted behavior to describe, not an implied authorization policy. R-12 remains a behavioral decision. |
+| Q-01 entry-path matrix | Enumerate CLI parsing, decoded saved specimen, direct XPC, standalone sbpl-check, reply readers, PW build environment and every accepted `_test_overrides` field/effect. Name caller/build applicability and whether assertions gate each operation. Signed overrides are accepted behavior to describe. R-12 requires the executor to state override availability and the meaning of packaged/fixture observations clearly. |
 | Q-02 exact identities | Import public identity walk, clean-tree/tag conditions, two-tag refusal and build env override from owning source/checks; distinguish internal hash and wire fingerprint. Direct Cargo/build-env experiment is unrun. |
 | Q-03 development reuse | There is no asserted release row for a development digest. State exact admission and manual review; decide/document a usable comparison workflow without inventing digest-to-release derivation. |
 | Q-04 refusal completeness | Build complete field/default/code catalog from actual decoders and semantic validators; preserve open code vocabulary, inapplicable extension operands, path string encoding and branch-dependent ordering. Do not turn the partial old code table into exhaustive evidence. |
@@ -618,3 +618,72 @@ performed for this map. The next concrete unit is to assign the inventoried
 meanings to structured definitions/rules/examples/known gaps and attach exact
 owners; source/check reading must settle each D/I limitation or leave its
 label visible before the generated document claims stronger support.
+
+## Structured-draft reconciliation
+
+The following destinations were inspected while drafting the structured tree.
+They identify where the original questions remain answerable or visibly open;
+they do not claim that release execution has occurred. The source tree is still
+being integrated with the generator and its checks. Parent-owned generator,
+shape and release work must establish the completed artifact's agreement.
+
+| Original question | Authored destination and remaining work |
+| --- | --- |
+| Q-01 entry paths | `request`, `policy.helper_request`, `transport`, `wire`, `identity.public` and `request.overrides`. All override fields have current effects; signed execution remains `request.overrides.override_coverage`. R-12's hypothetical access restriction was removed from the draft: the implemented authorization and packaged-before-fixture sequence are stated. |
+| Q-02 identities | `identity.public`, `identity.other.worker` and version definitions separate public, surface and worker identities. `identity.public.direct.direct_evidence` retains the unrun supplied-build-identity path. |
+| Q-03 development reuse | `identity.surfaces.development_review` preserves the missing development-to-comparison workflow. Exact admission is defined independently. |
+| Q-04 refusals | `request` and `refusals.request` state decoding, branch order, path withholding and open refusal codes. `refusals.request.compound_order` preserves the incomplete compound-error control set. |
+| Q-05 quantities | Fields use owning `limits.*` spans. The quantity audit added actual helper/parser/reader value controls for newly inventoried bounds. Remaining source quantities and their evidence limits stay in `request.overrides.override_inventory` until the owning representation and checks are complete. |
+| Q-06 workflows | `policy.spec.parameter_evidence`, `extensions.examples.execution`, `refusals.examples.workflow`, `equipment.execution.live_evidence` and `dossier.collection.native_gap` preserve the specific native/signed workflow obligations. Full guide workflows remain stage-four work. |
+| Q-07 held input/compiler | `policy` and `dossier.collection` distinguish held decoded input, controller augmentation, separate import reads and helper/worker compilation. `request.specimen.duplicate_keys`, `policy.imports.native_import_agreement` and `dossier.collection.native_gap` keep the unestablished cases visible. |
+| Q-08 predictions | `probes.query`, `steps.assessment` and `steps.comparison` define native eligibility, exact association, the release chain, classified observations and submitted relations. `probes.query.exclusion_evidence` retains the empirical mapping limits. |
+| Q-09 bytes | `transport`, `wire`, `policy` and `envelope` identify received bytes, retained prefixes, parsed helper JSON and projection boundaries separately. Exact JSON omission/null distinctions were checked against the Rust serializers during step review. |
+| Q-10 application | `actor_evidence.application` lists the four states and eleven pairs with precedence. `actor_evidence.actor.reader_scope` and `diagnostics.execution.reader_evidence` preserve the independent-reader reconciliation work; source/check grades do not establish missing signed native cases. |
+| Q-11 dependency timing | `actor_evidence.gate` and `actor_evidence.owned_endings` name the sequences, clocks and evaluated-gate cancellation. `actor_evidence.gate.cancellation_evidence` keeps the additional-later-actor control outstanding. The parked-source timing experiment from Q-11 remains outstanding. |
+| Q-12 transport | `transport.delivery` defines acquisition and invocation knowledge. `transport.delivery.live_evidence` retains foreign signed-host, unbound-peer and complete fault-matrix limits. |
+| Q-13 registry | `installation` defines active/pending/legacy forms and retained cleanup ownership. `installation.commands.legacy` preserves the live opaque-metadata workflow gap; `ownership_location` and `pending_verify` retain newly identified implementation questions. |
+| Q-14 wire | `wire.frame`, `wire.validator` and imported record fields state primitive grammar and projection. `wire.frame.reader_coverage` distinguishes actual Rust controls from remaining malformed variants/count/order/nesting cases and writer branches. |
+| Q-15 large frames | `transport.delivery.live_evidence` preserves the unestablished live interval between retained-host and full-frame caps. The capacities retain distinct owners and operations. |
+| Q-16 internal identity | `identity` and `wire` define producer/reader fingerprints and build identity boundaries. Historical old-worker and post-sign refusal execution remains part of the release evidence audit; source reading supplies no new execution credit. |
+| Q-17 launch scope | `probes` describes exec setup; `actor_evidence.launch` describes actor launch context. The launch descriptor array is a host-arranged context, while per-operation observations identify the action that ran. |
+| Q-18 empirical claims | `probes.query.exclusion_evidence`, `policy.augments.augment_semantics` and `extensions.custody.native_library` retain platform-sensitive evidence limits. Historical runner-verify timing remains guide material for stage-four evidence review. |
+| Q-19 guide corrections | Minimal guide edits now state ordinary/actor PID ownership, declared visits, negative-fd open failure, ordinary/actor phase caps and parameter setup. Source was read; no workflow execution was credited. |
+| Q-20 vocabularies/scopes | `diagnostics`, `lifecycle`, `actor_evidence` and `steps` define current values and their boundaries. Step review identified and corrected null-versus-omission prose and open validator diagnostics. R-07/R-20/R-34/R-36/R-37 consequential choices remain governed by stage two; keeping current behavior in a draft does not settle them. |
+| Q-21 timeout precedence | `refusals.later`, `reply`, `lifecycle` and `envelope` retain worker policy-transfer and publication timeout distinctions. Their full control/evidence join remains `refusals.later.evidence` until integration establishes it. |
+| Q-22 validator protocol | `wire.validator`, `lifecycle.validator`, `lifecycle.decode_fault`, `lifecycle.association_issue` and `steps.verdict` cover grammar, retained records, fault prefixes and unique association. `wire.validator.duplicate_keys` preserves the parser-policy question. |
+
+Stage-one strain destinations are explicit: R-01–R-06 live in `profile` and
+`envelope`; R-08–R-13 in `identity`, `request`, `actor_evidence` and
+`equipment`; R-14–R-18 in actor partition/application/gate/sequence subjects;
+R-19 in `transport`, `wire`, `reply`, `envelope` and `diagnostics`; R-21–R-28
+and R-30–R-32 in the opening definitions, identity and generated-account
+structure. R-29's history-free release preparation is generator integration
+work; its stated refusal and support belong to `identity.surfaces.source_history`,
+separately from the narrower source-copy check result. R-33 remains the substantive guide rewrite. R-35's
+`per_actor` value is present in `diagnostics`. R-36 retains reader-scope and
+common-corpus work. R-38 retains the missing structured finding subject in
+`diagnostics.issue.subject_gap` and `actor_evidence.gate.check.finding_subject`.
+
+Additional current-behavior tensions discovered while drafting remain visible:
+worker/helper treatment of a simultaneous compiled pointer and diagnostic
+(`policy.spec.compile_classification`); ordinary/actor empty step IDs
+(`actors.action.empty_id`); the actor's accepted but unused worker-timeout
+override (`request.overrides.override_inventory`); standalone validator
+semantics (`wire.standalone.meaning`); and registry verification, entitlement
+summary and cleanup-directory questions in `installation.commands`.
+
+The independent review read all public nodes of lifecycle, actor-evidence,
+equipment and steps. It traversed the relevant current producers, decoders,
+projection/association functions and selected check bodies. Corrections
+included augmented-source hashing, an open lifecycle summary vocabulary,
+nominal versus overridden collection allowance, and JSON projection presence.
+Detailed equipment semantic predicates and every native exec/lifecycle branch
+were not independently re-audited in full. Source and check owners retain
+those limits rather than claiming a second complete implementation audit.
+
+Newly authored quantity controls call production code: the worker planning
+helper, the native fixture-argument parser, inventory decoder, equipment
+reader/error constructor, authority cleanup-reference reader and registry
+polling constant. Constructed inputs distinguish those operations from a
+signed-product run. These controls were read after authoring; this reconciliation
+performed no test run, compilation, build, release, commit or publication.

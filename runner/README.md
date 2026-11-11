@@ -151,7 +151,7 @@ The service validates its own seal, its sealed `Contents/Resources/worker-equipm
 
 Actor setup automatically records bounded apparatus observations before policy compilation/application: core-limit handling, authority mapping and framing, descriptor closure and each extension-symbol lookup. Missing extension symbols make the corresponding actions unavailable; required apparatus failure prevents application. Setup publication, application observation and final process disposition remain separate. Missing terminal publication leaves application uncertain rather than proving it did not happen.
 
-A phase's `after_termination` dependency requires an owned natural reap after the source's final activation, before dependent activation and query collection. Abnormal natural exit can satisfy it without final phase completion. Source clock uncertainty prevents satisfaction, while clock loss after dependent activation was stored cannot erase that activation. The gate never requests termination to satisfy itself. [The wire contract](../docs/CONTRACT.md#actor-evidence-ownership) defines source association, clock eligibility and retained evidence.
+A phase's `after_termination` dependency requires an owned natural reap after the source's final activation, before dependent activation and query collection. Abnormal natural exit can satisfy it without final phase completion. Source clock uncertainty prevents satisfaction, while clock loss after dependent activation was stored cannot erase that activation. The gate never requests termination to satisfy itself. [The wire contract](../docs/CONTRACT.md#contract-actor_evidence-gate) defines source association, clock eligibility and retained evidence.
 
 Every validator query uses `SANDBOX_CHECK_NO_REPORT`, so predictions produce no
 denial records. `comparison.order=query_first` requires eligible native records,
@@ -191,7 +191,7 @@ Extension actions are actor-only and use issue, transfer, consume and release wi
 The controller resolves `policy.augments` and removes selection fields before
 delivery. Direct XPC requests containing nonempty unresolved augments or
 controller selection fields are refused. The [request grammar](../docs/REQUEST-GRAMMAR.md)
-and [accepted input contract](../docs/CONTRACT.md#accepted-input-contract)
+and [accepted input contract](../docs/CONTRACT.md#contract-request)
 own the full rules; [augments/](augments/README.md) describes the shipped policy
 fragment.
 

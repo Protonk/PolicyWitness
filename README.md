@@ -137,7 +137,7 @@ preserved release archives.
   - FAQ: [docs/QUESTIONS.md](docs/QUESTIONS.md)
   - Signing/distribution: [docs/SIGNING.md](docs/SIGNING.md)
 - Consuming the output:
-  - Wire contracts (request, reply, envelope): [docs/CONTRACT.md](docs/CONTRACT.md)
+  - Public contract (requests, behavior and evidence): [docs/CONTRACT.md](docs/CONTRACT.md)
   - Accepted requests and refusal diagnostics: [docs/REQUEST-GRAMMAR.md](docs/REQUEST-GRAMMAR.md)
 - Implementation details:
   - Build tour, native compilation and signing: [docs/BUILD.md](docs/BUILD.md)

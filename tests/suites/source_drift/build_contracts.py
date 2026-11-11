@@ -1,5 +1,6 @@
 """Verify public build identities, derived surface stamps and internal worker identity."""
 import copy
+import hashlib
 import importlib.util
 import json
 import plistlib
@@ -309,27 +310,54 @@ class SurfaceStampTests(PublicBuildContractTests):
                 self.git(root, 'clone', '--no-tags', str(root), str(target))
             else:
                 shutil.copytree(root, target, ignore=shutil.ignore_patterns('.git'))
-            before = {name: (target / name).read_bytes() for name in stamps.OUTPUTS}
+            before = fixture_inputs.snapshot(target)
             self.assertFalse(stamps.check(target))
             with self.assertRaisesRegex(ValueError, 'history unavailable'):
                 stamps.check(target, require_history=True)
-            with self.assertRaisesRegex(ValueError, 'history unavailable'):
-                stamps.render(target)
-            self.assertEqual(before, {name: (target / name).read_bytes() for name in before})
+            for proposed in (None, 'v9.0.1'):
+                with self.assertRaisesRegex(ValueError, 'history unavailable'):
+                    stamps.render(target, proposed)
+            self.assertEqual(before, fixture_inputs.snapshot(target))
 
     def stamp_checkout(self):
         import generate_contract_stamps as stamps
+        import contract_fixture
         directory = tempfile.TemporaryDirectory(prefix='pw-surface-stamps-')
         self.addCleanup(directory.cleanup)
         root = Path(directory.name)
         fixture_inputs.copy_declared(ROOT, root, stamps.input_paths(ROOT))
+        # An independent, unreferenced surface makes removal observable without
+        # deleting meanings still required by a public record elsewhere.
+        path = root / 'docs/contract/99-fixture_aux.surface.md'
+        path.write_text('# Fixture-only surface {fixture_aux: surface}\n\n```contract\n'
+                        'syntax: 1\nartifact: "Fixture"\npart: "definitions"\n'
+                        'goldens: ["tests/fixtures/contract/surfaces/fixture_aux.json"]\n'
+                        'checks: ["unit"]\n```\n\n'
+                        '## Meaning {meaning: definition}\n\nFixture-only meaning.\n')
+        (root / 'tests/fixtures/contract/surfaces/fixture_aux.json').write_text('{"records": {}}\n')
+        contract_fixture.fresh_authoring(root, stamps)
         self.git(root, 'init')
         return root
 
     def write_tables(self, root, release=None):
         import generate_contract_stamps as stamps
-        for name, _, after in stamps.render(root, release):
-            (root / name).write_text(after)
+        import contract_fixture
+        contract_fixture.write_outputs(root, stamps.render(root, release, refresh_shapes=True))
+
+    def replace(self, root, name, old, new):
+        path = root / name
+        before = path.read_text()
+        self.assertIn(old, before, name)
+        after = before.replace(old, new, 1)
+        self.assertNotEqual(before, after)
+        path.write_text(after)
+
+    def release_fixture(self):
+        root = self.stamp_checkout()
+        self.write_tables(root, 'v9.0.0')
+        self.commit(root)
+        self.git(root, 'tag', '-a', 'v9.0.0', '-m', 'control')
+        return root
 
     def test_pending_release_reproduces_after_tagging_and_tracks_removal(self):
         import generate_contract_stamps as stamps
@@ -339,99 +367,91 @@ class SurfaceStampTests(PublicBuildContractTests):
         self.commit(root)
         self.git(root, 'tag', '-a', 'v9.0.0', '-m', 'control')
         self.assertTrue(all(before == after for _, before, after in stamps.render(root)))
-        path = root / 'docs/CONTRACT.md'
-        path.write_text(path.read_text() + '\nExplanatory text outside the definitions.\n')
+        # Reader guidance outside the guide table is not a second meaning source.
+        guide = root / 'docs/PolicyWitness.md'
+        guide.write_text(guide.read_text() + '\nFixture-only guide explanation.\n')
         self.assertTrue(all(v['stamp'] == 'v9.0.0' for v in stamps.stamps(root).values()))
-        path.write_text(path.read_text().replace('<!-- BEGIN CONTRACT request -->',
-            '<!-- BEGIN CONTRACT request -->\nA changed normative example.'))
+        self.replace(root, 'docs/contract/99-fixture_aux.surface.md',
+                     'Fixture-only meaning.', 'Changed fixture-only meaning.')
         values = stamps.stamps(root)
-        self.assertEqual(values['request']['stamp'], 'unreleased')
+        self.assertEqual(values['fixture_aux']['stamp'], 'unreleased')
         self.assertEqual(values['profile']['stamp'], 'v9.0.0')
-        manifest = root / stamps.MANIFEST
-        data = json.loads(manifest.read_text())
-        data['surfaces'] = [r for r in data['surfaces'] if r['id'] != 'profile']
-        manifest.write_text(json.dumps(data))
+        (root / 'docs/contract/99-fixture_aux.surface.md').unlink()
         pending = stamps.stamps(root, 'v9.0.1')
-        self.assertEqual(pending['profile']['stamp'], 'v9.0.1')
-        self.assertTrue(pending['profile']['removed'])
+        self.assertEqual(pending['fixture_aux']['stamp'], 'v9.0.1')
+        self.assertTrue(pending['fixture_aux']['removed'])
         self.write_tables(root, 'v9.0.1')
         self.commit(root)
         self.git(root, 'tag', '-a', 'v9.0.1', '-m', 'control')
         self.assertTrue(all(before == after for _, before, after in stamps.render(root)))
-        self.assertTrue(stamps.stamps(root)['profile']['removed'])
+        self.assertTrue(stamps.stamps(root)['fixture_aux']['removed'])
 
     def test_golden_change_moves_its_surface_and_malformed_region_refuses(self):
         import generate_contract_stamps as stamps
-        root = self.stamp_checkout()
-        self.write_tables(root, 'v9.0.0')
-        self.commit(root)
-        self.git(root, 'tag', '-a', 'v9.0.0', '-m', 'control')
+        root = self.release_fixture()
         path = root / 'tests/fixtures/contract/surfaces/profile.json'
         data = json.loads(path.read_text())
-        data['shape']['reply.compiled_profile']['added'] = 'string'
+        data['fixture_added_shape'] = 'string'
         path.write_text(json.dumps(data))
         self.assertEqual(stamps.stamps(root)['profile']['stamp'], 'unreleased')
-        path = root / 'docs/CONTRACT.md'
-        path.write_text(path.read_text().replace('<!-- END CONTRACT profile -->', ''))
-        with self.assertRaisesRegex(ValueError, 'ordered definition'):
+        with self.assertRaisesRegex(ValueError, 'stale surface shape goldens'):
+            stamps.render(root)
+        self.write_tables(root)
+        self.replace(root, 'docs/contract/99-fixture_aux.surface.md',
+                     '{fixture_aux: surface}', '{fixture_aux: unknown_kind}')
+        with self.assertRaises(ValueError):
             stamps.render(root)
 
     def test_surface_ownership_and_collected_shapes_require_review(self):
         import generate_contract_stamps as stamps
-        root = self.stamp_checkout()
-        self.write_tables(root, 'v9.0.0')
-        self.commit(root)
-        self.git(root, 'tag', '-a', 'v9.0.0', '-m', 'control')
+        root = self.release_fixture()
         stamps.check_shapes(root)
-        source = root / 'runner/Sources/PWRunnerCore/PWRunnerRequest.swift'
-        source.write_text(source.read_text().replace('case contract, specimen_id', 'case new_intent, contract, specimen_id'))
-        with self.assertRaisesRegex(ValueError, 'stale surface shape goldens'):
+        source = 'runner/Sources/PWRunnerCore/PWRunnerRequest.swift'
+        original = (root / source).read_text()
+        self.replace(root, source, 'case contract, specimen_id', 'case new_intent, contract, specimen_id')
+        with self.assertRaisesRegex(ValueError, 'missing declared type'):
             stamps.check_shapes(root)
-        stamps.check_shapes(root, refresh=True)
-        stamps.check_shapes(root)
-        path = root / stamps.MANIFEST
-        data = json.loads(path.read_text())
-        data['surfaces'][0]['checks'] = ['nonexistent_suite']
-        path.write_text(json.dumps(data))
+        (root / source).write_text(original)
+        self.replace(root, 'docs/contract/99-fixture_aux.surface.md',
+                     'checks: ["unit"]', 'checks: ["nonexistent_suite"]')
         with self.assertRaisesRegex(ValueError, 'unknown verification suite'):
             stamps.render(root)
 
     def test_reservation_and_selector_keys_move_the_surfaces_that_use_them(self):
         import generate_contract_stamps as stamps
-        for filename, old, new, expected in (
-            ('runner/Sources/PWRunnerCore/PWRunnerTransport.swift',
-             'case contract, attempt_id, lease_ms', 'case future_key, contract, attempt_id, lease_ms',
-             {'transport', 'installation'}),
-            ('controller/src/runner_select.rs',
-             '&["id", "service", "required_entitlements", "mode"]',
-             '&["future_key", "id", "service", "required_entitlements", "mode"]', {'request'}),
-        ):
-            with self.subTest(source=filename):
-                root = self.stamp_checkout()
-                self.write_tables(root, 'v9.0.0')
-                self.commit(root)
-                self.git(root, 'tag', '-a', 'v9.0.0', '-m', 'control')
-                path = root / filename
-                self.assertIn(old, path.read_text())
-                path.write_text(path.read_text().replace(old, new))
-                with self.assertRaisesRegex(ValueError, 'stale surface shape goldens'):
-                    stamps.check_shapes(root)
-                stamps.check_shapes(root, refresh=True)
-                changed = {name for name, row in stamps.stamps(root).items() if row['stamp'] == 'unreleased'}
-                self.assertEqual(changed, expected)
+        root = self.release_fixture()
+        source = 'runner/Sources/PWRunnerCore/PWRunnerTransport.swift'
+        original = (root / source).read_text()
+        self.replace(root, source, 'case contract, attempt_id, lease_ms',
+                     'case future_key, contract, attempt_id, lease_ms')
+        # A new key without a declaration cannot be silently blessed by recollection.
+        with self.assertRaisesRegex(ValueError, 'missing declared type'):
+            stamps.check_shapes(root, refresh=True)
+        (root / source).write_text(original)
+        before = stamps.collected_shapes(root)
+        self.replace(root, 'controller/src/runner_select.rs',
+                     '&["id", "service", "required_entitlements", "mode"]',
+                     '&["future_key", "id", "service", "required_entitlements", "mode"]')
+        with self.assertRaisesRegex(ValueError, 'stale surface shape goldens'):
+            stamps.check_shapes(root)
+        after = stamps.collected_shapes(root)
+        self.assertEqual({name for name in before if before[name] != after[name]},
+                         {'tests/fixtures/contract/surfaces/request.json'})
+        self.write_tables(root)
+        stamps.check_shapes(root)
+        self.assertEqual(stamps.stamps(root)['request']['stamp'], 'unreleased')
 
     def test_reservation_limits_and_host_wire_declarations_move_their_surfaces(self):
         import generate_contract_stamps as stamps
+        import generate_porcelain
         mutations = [
             ('limit', name, None) for name in ('reservation_lease', 'reservation_rpc_wait',
                                              'reservation_attempts', 'reservation_retry_delay', 'client_rpc_wait')
         ] + [('wire', 'tag', 100), ('wire', 'swift_type', 'Int32')]
         for kind, key, replacement in mutations:
             with self.subTest(kind=kind, key=key):
-                root = self.stamp_checkout()
-                self.write_tables(root, 'v9.0.0')
-                self.commit(root)
-                self.git(root, 'tag', '-a', 'v9.0.0', '-m', 'control')
+                root = self.release_fixture()
+                before = stamps.collected_shapes(root)
                 path = root / ('docs/limits.json' if kind == 'limit' else 'docs/porcelain.json')
                 data = json.loads(path.read_text())
                 if kind == 'limit':
@@ -439,15 +459,393 @@ class SurfaceStampTests(PublicBuildContractTests):
                     expected = {'transport', 'installation'}
                 else:
                     record = next(row for row in data['records'] if row['name'] == 'PWRunnerRunResult')
-                    next(field for field in record['fields'] if field['name'] == 'rc')[key] = replacement
+                    field = next(field for field in record['fields'] if field['name'] == 'rc')
+                    self.assertNotEqual(field[key], replacement)
+                    field[key] = replacement
                     record['fields'].sort(key=lambda field: field['tag'])
-                    expected = {'transport'}
+                    expected = {'wire'} if key == 'tag' else {'wire', 'reply'}
                 path.write_text(json.dumps(data))
+                if kind == 'wire':
+                    # The schema and imported Swift declaration must agree before
+                    # a field can supply a reviewed shape. This is source-only.
+                    for name, content in generate_porcelain.outputs(root, data).items():
+                        (root / name).write_text(content)
                 with self.assertRaisesRegex(ValueError, 'stale surface shape goldens'):
                     stamps.check_shapes(root)
-                stamps.check_shapes(root, refresh=True)
-                changed = {name for name, row in stamps.stamps(root).items() if row['stamp'] == 'unreleased'}
+                after = stamps.collected_shapes(root)
+                changed = {Path(name).stem for name in before if before[name] != after[name]}
                 self.assertEqual(changed, expected)
+                self.write_tables(root)
+                stamps.check_shapes(root)
+                self.assertTrue(expected <= {name for name, row in stamps.stamps(root).items()
+                                             if row['stamp'] == 'unreleased'})
+
+
+class ContractReaderControls(receipts.TestCase):
+    def reader(self, name, root=ROOT):
+        path = f'docs/contract/{name}.py'
+        self.track_inputs(root, [path])
+        spec = importlib.util.spec_from_file_location('contract_reader_' + name, root / path)
+        module = importlib.util.module_from_spec(spec)
+        spec.loader.exec_module(module)
+        return module
+
+    def source_fixture(self):
+        directory = tempfile.TemporaryDirectory(prefix='pw-contract-reader-')
+        self.addCleanup(directory.cleanup)
+        root = Path(directory.name)
+        declared = fixture_inputs.generator_inputs(ROOT, 'contract_stamps')
+        collector = self.reader('record_definitions')
+        self.assertLessEqual(set(collector.input_paths(ROOT)), set(declared))
+        fixture_inputs.copy_declared(ROOT, root, declared)
+        self.track_inputs(root)
+        return root
+
+    def files_fixture(self, files):
+        directory = tempfile.TemporaryDirectory(prefix='pw-contract-history-')
+        self.addCleanup(directory.cleanup)
+        root = Path(directory.name)
+        for name, value in files.items():
+            path = root / name
+            path.parent.mkdir(parents=True, exist_ok=True)
+            path.write_text(value)
+        self.track_inputs(root)
+        return root
+
+    def replace_source(self, root, name, before, after):
+        path = root / name
+        original = path.read_text()
+        self.assertIn(before, original, f'control has lost its source target: {name}')
+        changed = original.replace(before, after, 1)
+        self.assertNotEqual(changed, original, f'control did not change {name}')
+        path.write_text(changed)
+        self.evidence.capture_tracked('mutated reader input')
+
+
+class RecordDefinitionTests(ContractReaderControls):
+    def test_equipment_team_id_requires_a_key_and_accepts_json_null(self):
+        root = self.source_fixture()
+        reader = self.reader('record_definitions', root)
+        records, _ = reader.load(root)
+        record = records['ActorEquipmentManifest.Worker']
+        field = record['fields']['team_id']
+        self.assertTrue(field['required_key'])
+        self.assertTrue(field['optional'])
+        self.assertTrue(field['json_null'])
+        self.assertEqual(reader.field_type(field), 'string')
+        self.assertEqual(reader.field_presence(record, field), 'required; may be null')
+
+        path = 'runner/Sources/PWRunnerCore/ActorEquipment.swift'
+        guard = 'guard c.contains(.team_id) else { throw ActorEquipmentProblem("missing team_id") }'
+        decode = 'team_id = try c.decodeIfPresent(String.self, forKey: .team_id)'
+        for before, after in ((guard, ''),
+                              (decode, decode.replace('decodeIfPresent', 'decode')),
+                              (guard + '\n            ' + decode,
+                               decode + '\n            ' + guard)):
+            with self.subTest(decoder=after):
+                changed_root = self.source_fixture()
+                self.replace_source(changed_root, path, before, after)
+                with self.assertRaisesRegex(ValueError, 'required-key nullable decoder needs review'):
+                    self.reader('record_definitions', changed_root).load(changed_root)
+
+    def test_declared_fixture_imports_public_roots_without_path_specific_duplicates(self):
+        root = self.source_fixture()
+        reader = self.reader('record_definitions', root)
+        reads = set()
+
+        def read(name):
+            reads.add(name)
+            return (root / name).read_text()
+
+        swift = sorted(p.relative_to(root).as_posix()
+                       for p in (root / 'runner/Sources/PWRunnerCore').glob('*.swift'))
+        records, aliases = reader.load(root, read=read, swift_paths=swift)
+        self.assertLessEqual(reads, set(reader.input_paths(root)))
+        self.assertEqual(aliases['envelope'], 'rust.RunEnvelope')
+        self.assertEqual(aliases['request'], 'PWRunnerRunSpec')
+        self.assertEqual(records['rust.RunEnvelope']['fields']['data']['swift_type'], 'rust.RunData')
+        self.assertEqual(records['rust.RunEnvelope']['fields']['build']['swift_type'], 'rust.BuildStamp')
+        self.assertEqual(records['rust.HelperEnvelope']['fields']['build']['swift_type'], 'rust.BuildStamp')
+        self.assertTrue(all(record['coverage_required'] for record in records.values()))
+        self.assertFalse(any(name.startswith('shape.') for name in records))
+        for name in ('rust.ExecutionData', 'rust.OutputCapture', 'rust.EvidenceEntry'):
+            self.assertNotIn(name, records)
+        with self.assertRaisesRegex(ValueError, 'own swift_paths'):
+            reader.load(root, read=read)
+
+    def test_public_projection_types_and_presence_follow_the_owners(self):
+        root = self.source_fixture()
+        reader = self.reader('record_definitions', root)
+        records, _ = reader.load(root)
+        expected = [
+            ('ActorEquipmentManifest', 'worker_identity', 'string', 'as defined below'),
+            ('ActorEquipmentManifest.Worker', 'sha256', 'string', 'as defined below'),
+            ('PWRunnerControlReply', 'reason', 'string', 'omitted when absent'),
+            ('rust.ServiceObservation', 'presence', 'string', 'required'),
+            ('rust.RunnerRecord', 'contract', 'string', 'omitted when empty'),
+            ('rust.CleanupReport', 'warnings', 'array of string', 'omitted when empty'),
+            ('rust.PolicyCheckCapture', 'envelope', 'JSON value', 'null when absent'),
+            ('PWRunnerAttemptPathDiagnostics', 'same_as_input', 'array of string', 'required'),
+            ('PWRunnerAttemptPathDiagnostics', 'realpath_resolved', 'string',
+             'omitted when named in same_as_input; otherwise present, possibly null'),
+            ('PWRunnerEquipmentBinding', 'team_id', 'string',
+             'present when identifier has a value; may be null'),
+            ('rust.TransportCapture.Rejected', 'data_base64', 'string (base64)', 'required'),
+        ]
+        for name, key, expected_type, expected_presence in expected:
+            with self.subTest(record=name, key=key):
+                field = records[name]['fields'][key]
+                self.assertEqual(reader.field_type(field), expected_type)
+                self.assertEqual(reader.field_presence(records[name], field), expected_presence)
+        self.assertNotIn('execObservationDecodeProblem', records['PWRunnerAttemptResult']['fields'])
+        self.assertEqual(records['PWRunnerRunSpec']['fields']['probe_plan']['swift_type'], '[PWRunnerProbeStep]?')
+        self.assertEqual(records['rust.RunnerClientRun']['fields']['runner_reply_error']['swift_type'], 'String?')
+        self.assertEqual(records['rust.RunnerClientRun']['fields']['stdout_truncated']['swift_type'], 'Bool')
+        self.assertNotIn('output', records['rust.RunnerClientRun']['fields'])
+        self.assertEqual(records['rust.RunnerSignature']['additional_type'], 'JSON')
+        self.assertTrue(records['rust.RunnerSignature']['open'])
+        self.assertEqual(records['PWRunnerPhaseAction']['variants'],
+                         {'probe': 'PWRunnerProbeStep', 'extensionAction': 'PWRunnerExtensionAction'})
+        self.assertEqual(records['rust.TransportCapture']['variants'],
+                         {'Typed': 'PWRunnerClientCapture', 'Rejected': 'rust.TransportCapture.Rejected'})
+        self.assertEqual(records['PWDispositionValue']['variants'],
+                         {'Integer': 'Int', 'Request': 'PWRunnerTerminationRequest'})
+        for name in ('PWRunnerPhaseAction', 'rust.TransportCapture', 'rust.RequestFailureProjection'):
+            self.assertEqual(records[name]['fields'], {})
+
+    def test_reachable_source_additions_enter_coverage_and_unreachable_test_types_do_not(self):
+        root = self.source_fixture()
+        self.replace_source(root, 'controller/src/runner_commands.rs',
+            'struct RunnerVerifyData {', 'struct RunnerVerifyData {\n    future_observation: bool,')
+        path = root / 'controller/src/runner_commands.rs'
+        path.write_text(path.read_text() + '\n#[cfg(test)]\n#[derive(Serialize)]\n'
+                        'struct FixtureOnly {\n    ignored: FutureType,\n}\n'
+                        '\n#[derive(Serialize)]\nstruct UnreachableControl {\n    ignored: FutureType,\n}\n')
+        self.evidence.capture_tracked('reachable and test-only declarations')
+        records, _ = self.reader('record_definitions', root).load(root)
+        self.assertEqual(records['rust.RunnerVerifyData']['fields']['future_observation']['swift_type'], 'Bool')
+        self.assertTrue(records['rust.RunnerVerifyData']['coverage_required'])
+        self.assertNotIn('rust.FixtureOnly', records)
+        self.assertNotIn('rust.UnreachableControl', records)
+
+    def test_native_omission_change_changes_the_imported_presence(self):
+        root = self.source_fixture()
+        self.replace_source(root, 'controller/src/runner_manager.rs',
+            '#[serde(default, skip_serializing_if = "String::is_empty")]', '#[serde(default)]')
+        reader = self.reader('record_definitions', root)
+        records, _ = reader.load(root)
+        record = records['rust.RunnerRecord']
+        self.assertEqual(reader.field_presence(record, record['fields']['contract']), 'required')
+
+    def test_unreadable_or_unresolved_source_forms_refuse_instead_of_guessing(self):
+        cases = [
+            ('controller/src/runner_commands.rs', 'struct RunnerVerifyData {',
+             'struct RunnerVerifyData {\n    future: FutureType,', 'unresolved type rust.FutureType'),
+            ('controller/src/runner_commands.rs', 'struct RunnerVerifyData {',
+             'struct RunnerVerifyData {\n    #[cfg(test)]\n    future: bool,', 'conditional field attributes'),
+            ('controller/src/runner_commands.rs', 'struct RunnerVerifyData {',
+             'struct RunnerVerifyData {\n    #[serde(serialize_with = "future")]\n    future: bool,', 'unsupported serde attribute'),
+            ('controller/src/runner_client.rs', 'pub struct RunnerClientRun {',
+             'pub struct RunnerClientRun {\n    pub stdout_truncated: bool,', 'colliding flattened fields'),
+            ('controller/src/runner_client.rs', 'serialize_with = "serialize_rejected_bytes"',
+             'serialize_with = "future_projection"', 'rejected-byte projection needs review'),
+            ('controller/src/runner_manager.rs', 'pub extra: BTreeMap<String, Value>,',
+             'pub extra: BTreeMap<u64, Value>,', 'unsupported JSON map key type'),
+            ('runner/Sources/PWRunnerCore/PWRunnerRequest.swift', 'case contract, specimen_id',
+             'case future, contract, specimen_id', 'missing declared type'),
+            ('runner/Sources/PWRunnerCore/PWRunnerRequest.swift', 'case worker_executable_path, worker_timeout_ms',
+             'case worker_timeout_ms', 'CodingKeys and porcelain field sets disagree'),
+            ('runner/Sources/PWRunnerCore/PWRunnerRequest.swift', 'case probe(PWRunnerProbeStep)',
+             'case empty\n    case probe(PWRunnerProbeStep)', 'alternative needs review'),
+        ]
+        for path, before, after, diagnostic in cases:
+            with self.subTest(source=path, diagnostic=diagnostic):
+                root = self.source_fixture()
+                self.replace_source(root, path, before, after)
+                with self.assertRaisesRegex(ValueError, diagnostic):
+                    self.reader('record_definitions', root).load(root)
+
+    def test_observed_golden_cannot_override_a_declared_type_or_add_a_field(self):
+        for key, value, diagnostic in (
+                ('generated_at_unix_ms', 'string', 'declared number'),
+                ('fabricated_field', 'string', 'has no declared field')):
+            with self.subTest(key=key):
+                root = self.source_fixture()
+                path = root / 'tests/fixtures/contract/envelope_shape.json'
+                golden = json.loads(path.read_text())
+                golden['shape']['envelope'][key] = value
+                path.write_text(json.dumps(golden))
+                self.evidence.capture_tracked('changed envelope shape')
+                with self.assertRaisesRegex(ValueError, diagnostic):
+                    self.reader('record_definitions', root).load(root)
+
+
+class RetainedContractReaderTests(ContractReaderControls):
+    def legacy_fixture(self):
+        row = dict(id='request', artifact='Authored legacy control',
+                   definition='docs/CONTRACT.md',
+                   definitions=['docs/PolicyWitness.md#second', 'docs/PolicyWitness.md#first'],
+                   goldens=['shapes/one.json', 'shapes/two.json'], checks=['source_drift'])
+        return self.files_fixture({
+            'docs/contract_surfaces.json': json.dumps({'surfaces': [row]}),
+            'tests/catalog.json': json.dumps({'suites': {'source_drift': {}, 'unit': {}}}),
+            'docs/CONTRACT.md': 'Outside.\n<!-- BEGIN CONTRACT request -->Alpha\n beta<!-- END CONTRACT request -->\nIgnored.',
+            'docs/PolicyWitness.md': '<!-- BEGIN CONTRACT first -->first<!-- END CONTRACT first -->\n'
+                                    '<!-- BEGIN CONTRACT second -->second<!-- END CONTRACT second -->',
+            'shapes/one.json': '{"z":"é", "a":[2,1]}',
+            'shapes/two.json': '{"value":7}',
+        })
+
+    def snapshot_fixture(self):
+        return self.files_fixture({
+            'docs/contract/public.json': json.dumps({
+                'format': 'policywitness.contract.public.v1', 'history': ['v0.3.6'],
+                'surfaces': [dict(id='request', artifact='Authored snapshot control',
+                                  goldens=['shapes/one.json'],
+                                  public={'entries': [{'id': 'a', 'text': 'Alpha'}]})]}),
+            'shapes/one.json': '{"shape":{"x":"number"}}',
+        })
+
+    def test_legacy_framing_whitespace_and_golden_order_match_the_retained_format(self):
+        reader = self.reader('history_v0')
+        root = self.legacy_fixture()
+        read = lambda name: (root / name).read_text()
+        row, = reader.surfaces(read)
+        # Independently spelled preimage pins the old payload framing, Unicode
+        # escaping, object-key order, array order and supplementary-region order.
+        expected = hashlib.sha256(
+            b'["Alpha beta second first",[{"a":[2,1],"z":"\\u00e9"},{"value":7}]]').hexdigest()
+        self.assertEqual(reader.surface_hash(read, row), expected)
+        (root / 'shapes/one.json').write_text('{"a": [2, 1], "z": "\\u00e9"}')
+        self.replace_source(root, 'docs/CONTRACT.md', 'Alpha\n beta', '\n Alpha\t beta \n')
+        self.assertEqual(reader.surface_hash(read, row), expected)
+        metadata = dict(row, artifact='Changed description', checks=['unit'])
+        self.assertEqual(reader.surface_hash(read, metadata), expected)
+        self.assertNotEqual(reader.surface_hash(read, dict(row, definitions=list(reversed(row['definitions'])))), expected)
+        self.assertNotEqual(reader.surface_hash(read, dict(row, goldens=list(reversed(row['goldens'])))), expected)
+        (root / 'shapes/one.json').write_text('{"a":[1,2],"z":"é"}')
+        self.assertNotEqual(reader.surface_hash(read, row), expected)
+
+    def test_legacy_manifest_and_region_refusals_remain_strict(self):
+        reader = self.reader('history_v0')
+        for change, diagnostic in (
+                (lambda v: v.update(version=1), 'invalid contract surfaces manifest'),
+                (lambda v: v['surfaces'][0].update(extra=True), 'invalid surface fields'),
+                (lambda v: v['surfaces'].append(copy.deepcopy(v['surfaces'][0])), 'duplicate or invalid surface id'),
+                (lambda v: v['surfaces'][0].update(goldens=[]), 'missing golden or verification'),
+                (lambda v: v['surfaces'][0].update(checks=['missing']), 'unknown verification suite'),
+                (lambda v: v['surfaces'][0].update(definition='../outside'), 'repository-relative')):
+            with self.subTest(diagnostic=diagnostic):
+                root = self.legacy_fixture()
+                path = root / 'docs/contract_surfaces.json'
+                value = json.loads(path.read_text())
+                change(value)
+                path.write_text(json.dumps(value))
+                with self.assertRaisesRegex(ValueError, diagnostic):
+                    reader.surfaces(lambda name: (root / name).read_text())
+        for path, region in (('docs/CONTRACT.md', 'request'), ('docs/PolicyWitness.md', 'second')):
+            for mode in ('missing', 'duplicate', 'reversed'):
+                with self.subTest(path=path, mode=mode):
+                    root = self.legacy_fixture()
+                    read = lambda name: (root / name).read_text()
+                    row, = reader.surfaces(read)
+                    start, stop = f'<!-- BEGIN CONTRACT {region} -->', f'<!-- END CONTRACT {region} -->'
+                    text = (root / path).read_text()
+                    if mode == 'missing':
+                        text = text.replace(stop, '')
+                    elif mode == 'duplicate':
+                        text += start
+                    else:
+                        text = text.replace(start, '@CONTROL@').replace(stop, start).replace('@CONTROL@', stop)
+                    (root / path).write_text(text)
+                    with self.assertRaisesRegex(ValueError, 'expected one ordered definition region'):
+                        reader.surface_hash(read, row)
+
+    def test_snapshot_framing_uses_released_public_content_and_own_goldens(self):
+        reader = self.reader('history_v1')
+        root = self.snapshot_fixture()
+        read = lambda name: (root / name).read_text()
+        row, = reader.surfaces(read)
+        expected = hashlib.sha256(b'["policywitness.contract.public.v1",'
+            b'{"entries":[{"id":"a","text":"Alpha"}]},[{"shape":{"x":"number"}}]]').hexdigest()
+        self.assertEqual(reader.surface_hash(read, row), expected)
+        self.assertEqual(reader.surface_hash(read, dict(row, artifact='Other metadata')), expected)
+        snapshot_path = root / 'docs/contract/public.json'
+        snapshot = json.loads(snapshot_path.read_text())
+        snapshot['history'].append('v0.3.7')
+        snapshot_path.write_text(json.dumps(snapshot))
+        updated_row, = reader.surfaces(read)
+        self.assertEqual(reader.surface_hash(read, updated_row), expected)
+        (root / 'docs/contract/current-syntax-is-unreadable.md').write_text('Unrelated current authoring.')
+        self.assertEqual(reader.surface_hash(read, row), expected)
+        changed = copy.deepcopy(row)
+        changed['public']['entries'][0]['text'] = 'Changed obligation'
+        self.assertNotEqual(reader.surface_hash(read, changed), expected)
+        (root / 'shapes/one.json').write_text('{"shape":{"x":"string"}}')
+        self.assertNotEqual(reader.surface_hash(read, row), expected)
+
+    def test_snapshot_rejects_unknown_format_missing_fields_and_invalid_history(self):
+        reader = self.reader('history_v1')
+        changes = [
+            ('unknown format', lambda v: v.update(format='future-format')),
+            ('extra top-level key', lambda v: v.update(extra=True)),
+            ('missing history', lambda v: v.pop('history')),
+            ('invalid history container', lambda v: v.update(history='v0.3.6')),
+            ('duplicate historical tag', lambda v: v.update(history=['v0.3.6', 'v0.3.6'])),
+            ('invalid historical tag', lambda v: v.update(history=['main'])),
+            ('nontext historical tag', lambda v: v.update(history=[{}])),
+            ('invalid surface container', lambda v: v.update(surfaces={})),
+            ('extra row key', lambda v: v['surfaces'][0].update(extra=True)),
+            ('duplicate id', lambda v: v['surfaces'].append(copy.deepcopy(v['surfaces'][0]))),
+            ('invalid id', lambda v: v['surfaces'][0].update(id='Invalid-ID')),
+            ('missing artifact', lambda v: v['surfaces'][0].update(artifact='')),
+            ('empty public', lambda v: v['surfaces'][0].update(public={})),
+            ('scalar public', lambda v: v['surfaces'][0].update(public='unstructured')),
+        ]
+        for label, change in changes:
+            with self.subTest(control=label):
+                root = self.snapshot_fixture()
+                path = root / 'docs/contract/public.json'
+                value = json.loads(path.read_text())
+                change(value)
+                path.write_text(json.dumps(value))
+                with self.assertRaises(ValueError):
+                    reader.surfaces(lambda name: (root / name).read_text())
+
+    def test_snapshot_rejects_nontext_duplicate_and_nonrelative_golden_paths(self):
+        reader = self.reader('history_v1')
+        for goldens in ([], ['shapes/one.json', 'shapes/one.json'], [{}], [[]], [7],
+                        ['/tmp/shape.json'], ['../shape.json'], ['.'], [''],
+                        ['./shape.json'], ['shapes//one.json']):
+            with self.subTest(goldens=goldens):
+                root = self.snapshot_fixture()
+                path = root / 'docs/contract/public.json'
+                value = json.loads(path.read_text())
+                value['surfaces'][0]['goldens'] = goldens
+                path.write_text(json.dumps(value))
+                with self.assertRaises(ValueError):
+                    reader.surfaces(lambda name: (root / name).read_text())
+
+    def test_missing_released_inputs_propagate_without_current_tree_fallback(self):
+        for version, factory, missing in (
+                ('history_v0', self.legacy_fixture, 'docs/contract_surfaces.json'),
+                ('history_v0', self.legacy_fixture, 'tests/catalog.json'),
+                ('history_v0', self.legacy_fixture, 'docs/CONTRACT.md'),
+                ('history_v0', self.legacy_fixture, 'docs/PolicyWitness.md'),
+                ('history_v0', self.legacy_fixture, 'shapes/one.json'),
+                ('history_v1', self.snapshot_fixture, 'docs/contract/public.json'),
+                ('history_v1', self.snapshot_fixture, 'shapes/one.json')):
+            with self.subTest(version=version, missing=missing):
+                reader = self.reader(version)
+                root = factory()
+                (root / missing).unlink()
+                read = lambda name: (root / name).read_text()
+                with self.assertRaises(FileNotFoundError):
+                    for row in reader.surfaces(read):
+                        reader.surface_hash(read, row)
+
+
+from contract_tree_controls import ContractHistoryTests, ContractTreeTests  # noqa: E402
 
 
 if __name__ == '__main__':

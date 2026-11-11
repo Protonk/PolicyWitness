@@ -1,38 +1,907 @@
 {
-  "closed_keys": {
-    "ActorEquipmentManifest": [
-      "contract",
-      "schema_version",
-      "unsigned_worker_sha256",
-      "worker_identity",
-      "workers"
-    ],
-    "ActorEquipmentManifest.Worker": [
-      "cdhash",
-      "entitlements_xml",
-      "identifier",
-      "relative_path",
-      "role",
-      "sha256",
-      "team_id"
-    ]
-  },
-  "reservation_keys": {
-    "PWRunnerControlReply": [
-      "attempt_id",
-      "contract",
-      "host_instance",
-      "host_pid",
-      "lease_ms",
-      "reason",
-      "reservation_id",
-      "status"
-    ],
-    "PWRunnerReservationRequest": [
-      "attempt_id",
-      "contract",
-      "lease_ms"
-    ]
+  "records": {
+    "RunnerCleanupObservation": {
+      "fields": {
+        "phase": {
+          "json_null": false,
+          "name": "phase",
+          "optional": false,
+          "swift_type": "String"
+        },
+        "plist": {
+          "json_null": false,
+          "name": "plist",
+          "optional": false,
+          "swift_type": "rust.PlistObservation"
+        },
+        "plist_ownership": {
+          "json_null": false,
+          "name": "plist_ownership",
+          "optional": true,
+          "swift_type": "String?"
+        },
+        "service": {
+          "json_null": false,
+          "name": "service",
+          "optional": false,
+          "swift_type": "rust.ServiceObservation"
+        },
+        "service_ownership": {
+          "json_null": false,
+          "name": "service_ownership",
+          "optional": true,
+          "swift_type": "String?"
+        },
+        "teardown_wait": {
+          "json_null": false,
+          "name": "teardown_wait",
+          "optional": true,
+          "swift_type": "RunnerCleanupWait?"
+        }
+      },
+      "input": false,
+      "open": false
+    },
+    "RunnerCleanupWait": {
+      "fields": {
+        "budget_ms": {
+          "json_null": false,
+          "name": "budget_ms",
+          "optional": false,
+          "swift_type": "UInt64"
+        },
+        "poll_interval_ms": {
+          "json_null": false,
+          "name": "poll_interval_ms",
+          "optional": false,
+          "swift_type": "UInt64"
+        },
+        "reads": {
+          "json_null": false,
+          "name": "reads",
+          "optional": false,
+          "swift_type": "UInt64"
+        },
+        "waited_ms": {
+          "json_null": false,
+          "name": "waited_ms",
+          "optional": false,
+          "swift_type": "UInt64"
+        }
+      },
+      "input": false,
+      "open": false
+    },
+    "RunnerReconcileCandidate": {
+      "fields": {
+        "executable_path": {
+          "json_null": true,
+          "name": "executable_path",
+          "optional": true,
+          "swift_type": "String?"
+        },
+        "ownership": {
+          "json_null": false,
+          "name": "ownership",
+          "optional": false,
+          "swift_type": "String"
+        },
+        "plist": {
+          "json_null": false,
+          "name": "plist",
+          "optional": false,
+          "swift_type": "rust.PlistObservation"
+        },
+        "plist_path": {
+          "json_null": false,
+          "name": "plist_path",
+          "optional": false,
+          "swift_type": "String"
+        },
+        "recorded_state": {
+          "json_null": false,
+          "name": "recorded_state",
+          "optional": false,
+          "swift_type": "String"
+        },
+        "scope": {
+          "json_null": false,
+          "name": "scope",
+          "optional": false,
+          "swift_type": "String"
+        },
+        "service": {
+          "json_null": true,
+          "name": "service",
+          "optional": true,
+          "swift_type": "rust.ServiceObservation?"
+        },
+        "service_name": {
+          "json_null": true,
+          "name": "service_name",
+          "optional": true,
+          "swift_type": "String?"
+        }
+      },
+      "input": false,
+      "open": false
+    },
+    "RunnerReconcileData": {
+      "fields": {
+        "candidates": {
+          "json_null": false,
+          "name": "candidates",
+          "optional": false,
+          "swift_type": "[RunnerReconcileCandidate]"
+        },
+        "inspection_errors": {
+          "json_null": false,
+          "name": "inspection_errors",
+          "optional": false,
+          "swift_type": "[RunnerReconcileInspectionError]"
+        },
+        "records": {
+          "json_null": false,
+          "name": "records",
+          "optional": false,
+          "swift_type": "[RunnerReconcileRecord]"
+        },
+        "registry_path": {
+          "json_null": false,
+          "name": "registry_path",
+          "optional": false,
+          "swift_type": "String"
+        }
+      },
+      "input": false,
+      "open": false
+    },
+    "RunnerReconcileInspectionError": {
+      "fields": {
+        "error": {
+          "json_null": false,
+          "name": "error",
+          "optional": false,
+          "swift_type": "String"
+        },
+        "path": {
+          "json_null": false,
+          "name": "path",
+          "optional": true,
+          "swift_type": "String?"
+        },
+        "presence": {
+          "json_null": false,
+          "name": "presence",
+          "optional": false,
+          "swift_type": "String"
+        }
+      },
+      "input": false,
+      "open": false
+    },
+    "RunnerReconcileRecord": {
+      "fields": {
+        "error": {
+          "json_null": false,
+          "name": "error",
+          "optional": true,
+          "swift_type": "String?"
+        },
+        "launchd_domain": {
+          "json_null": false,
+          "name": "launchd_domain",
+          "optional": true,
+          "swift_type": "String?"
+        },
+        "ownership": {
+          "json_null": false,
+          "name": "ownership",
+          "optional": true,
+          "swift_type": "String?"
+        },
+        "plist": {
+          "json_null": false,
+          "name": "plist",
+          "optional": false,
+          "swift_type": "JSON"
+        },
+        "plist_ownership": {
+          "json_null": false,
+          "name": "plist_ownership",
+          "optional": true,
+          "swift_type": "String?"
+        },
+        "plist_path": {
+          "json_null": false,
+          "name": "plist_path",
+          "optional": true,
+          "swift_type": "String?"
+        },
+        "recorded_state": {
+          "json_null": false,
+          "name": "recorded_state",
+          "optional": false,
+          "swift_type": "String"
+        },
+        "runner": {
+          "json_null": false,
+          "name": "runner",
+          "optional": false,
+          "swift_type": "rust.RunnerRecord"
+        },
+        "service": {
+          "json_null": false,
+          "name": "service",
+          "optional": false,
+          "swift_type": "JSON"
+        },
+        "service_ownership": {
+          "json_null": false,
+          "name": "service_ownership",
+          "optional": true,
+          "swift_type": "String?"
+        }
+      },
+      "input": false,
+      "open": false
+    },
+    "rust.CleanupReport": {
+      "fields": {
+        "booted_out": {
+          "json_null": false,
+          "name": "booted_out",
+          "omission": null,
+          "optional": false,
+          "swift_type": "Bool"
+        },
+        "cleanup_retained": {
+          "json_null": false,
+          "name": "cleanup_retained",
+          "omission": null,
+          "optional": false,
+          "swift_type": "Bool"
+        },
+        "plist_path": {
+          "json_null": false,
+          "name": "plist_path",
+          "omission": null,
+          "optional": false,
+          "swift_type": "String"
+        },
+        "plist_removed": {
+          "json_null": false,
+          "name": "plist_removed",
+          "omission": null,
+          "optional": false,
+          "swift_type": "Bool"
+        },
+        "retained_record": {
+          "json_null": false,
+          "name": "retained_record",
+          "omission": "Option::is_none",
+          "optional": true,
+          "swift_type": "rust.PendingCleanup?"
+        },
+        "runner_id": {
+          "json_null": false,
+          "name": "runner_id",
+          "omission": null,
+          "optional": false,
+          "swift_type": "String"
+        },
+        "service_name": {
+          "json_null": false,
+          "name": "service_name",
+          "omission": null,
+          "optional": false,
+          "swift_type": "String"
+        },
+        "warnings": {
+          "json_null": false,
+          "name": "warnings",
+          "omission": "Vec::is_empty",
+          "optional": false,
+          "swift_type": "[String]"
+        }
+      },
+      "input": false
+    },
+    "rust.PendingCleanup": {
+      "additional_type": "JSON",
+      "fields": {
+        "cleanup_started_at_unix_ms": {
+          "json_null": false,
+          "name": "cleanup_started_at_unix_ms",
+          "omission": null,
+          "optional": false,
+          "swift_type": "UInt64"
+        },
+        "observations": {
+          "json_null": false,
+          "name": "observations",
+          "omission": null,
+          "optional": false,
+          "swift_type": "[JSON]"
+        },
+        "runner": {
+          "json_null": false,
+          "name": "runner",
+          "omission": null,
+          "optional": false,
+          "swift_type": "rust.RunnerRecord"
+        }
+      },
+      "input": false,
+      "open": true
+    },
+    "rust.PlistObservation": {
+      "fields": {
+        "config": {
+          "json_null": true,
+          "name": "config",
+          "omission": null,
+          "optional": true,
+          "swift_type": "JSON?"
+        },
+        "error": {
+          "json_null": true,
+          "name": "error",
+          "omission": null,
+          "optional": true,
+          "swift_type": "String?"
+        },
+        "owner_uid": {
+          "json_null": true,
+          "name": "owner_uid",
+          "omission": null,
+          "optional": true,
+          "swift_type": "UInt64?"
+        },
+        "presence": {
+          "json_null": false,
+          "name": "presence",
+          "omission": null,
+          "optional": false,
+          "swift_type": "String"
+        },
+        "regular": {
+          "json_null": false,
+          "name": "regular",
+          "omission": null,
+          "optional": false,
+          "swift_type": "Bool"
+        },
+        "sha256": {
+          "json_null": true,
+          "name": "sha256",
+          "omission": null,
+          "optional": true,
+          "swift_type": "String?"
+        }
+      },
+      "input": false
+    },
+    "rust.RunnerEntitlements": {
+      "additional_type": "JSON",
+      "fields": {
+        "error": {
+          "json_null": true,
+          "name": "error",
+          "omission": null,
+          "optional": true,
+          "swift_type": "String?"
+        },
+        "granted": {
+          "json_null": false,
+          "name": "granted",
+          "omission": null,
+          "optional": false,
+          "swift_type": "[String]"
+        },
+        "keys": {
+          "json_null": false,
+          "name": "keys",
+          "omission": null,
+          "optional": false,
+          "swift_type": "[String]"
+        },
+        "raw_plist": {
+          "json_null": true,
+          "name": "raw_plist",
+          "omission": null,
+          "optional": true,
+          "swift_type": "String?"
+        }
+      },
+      "input": false,
+      "open": true
+    },
+    "rust.RunnerInstallData": {
+      "fields": {
+        "bootstrapped": {
+          "json_null": false,
+          "name": "bootstrapped",
+          "omission": null,
+          "optional": false,
+          "swift_type": "Bool"
+        },
+        "loaded": {
+          "json_null": false,
+          "name": "loaded",
+          "omission": null,
+          "optional": false,
+          "swift_type": "rust.ServiceObservation"
+        },
+        "plist_path": {
+          "json_null": false,
+          "name": "plist_path",
+          "omission": null,
+          "optional": false,
+          "swift_type": "String"
+        },
+        "runner": {
+          "json_null": false,
+          "name": "runner",
+          "omission": null,
+          "optional": false,
+          "swift_type": "rust.RunnerRecord"
+        },
+        "state": {
+          "json_null": false,
+          "name": "state",
+          "omission": null,
+          "optional": false,
+          "swift_type": "String"
+        }
+      },
+      "input": false
+    },
+    "rust.RunnerNotFoundData": {
+      "fields": {
+        "requested_id": {
+          "json_null": false,
+          "name": "requested_id",
+          "omission": "Option::is_none",
+          "optional": true,
+          "swift_type": "String?"
+        },
+        "requested_service_name": {
+          "json_null": false,
+          "name": "requested_service_name",
+          "omission": "Option::is_none",
+          "optional": true,
+          "swift_type": "String?"
+        }
+      },
+      "input": false
+    },
+    "rust.RunnerOwnership": {
+      "additional_type": "JSON",
+      "fields": {
+        "launchd_domain": {
+          "json_null": false,
+          "name": "launchd_domain",
+          "omission": null,
+          "optional": false,
+          "swift_type": "String"
+        },
+        "owner_uid": {
+          "json_null": false,
+          "name": "owner_uid",
+          "omission": null,
+          "optional": false,
+          "swift_type": "UInt64"
+        },
+        "plist_path": {
+          "json_null": false,
+          "name": "plist_path",
+          "omission": null,
+          "optional": false,
+          "swift_type": "String"
+        },
+        "plist_sha256": {
+          "json_null": false,
+          "name": "plist_sha256",
+          "omission": null,
+          "optional": false,
+          "swift_type": "String"
+        }
+      },
+      "input": false,
+      "open": true
+    },
+    "rust.RunnerRecord": {
+      "additional_type": "JSON",
+      "fields": {
+        "bundle_id": {
+          "json_null": true,
+          "name": "bundle_id",
+          "omission": null,
+          "optional": true,
+          "swift_type": "String?"
+        },
+        "bundle_path": {
+          "json_null": false,
+          "name": "bundle_path",
+          "omission": null,
+          "optional": false,
+          "swift_type": "String"
+        },
+        "contract": {
+          "json_null": false,
+          "name": "contract",
+          "omission": "String::is_empty",
+          "optional": false,
+          "swift_type": "String"
+        },
+        "entitlements": {
+          "json_null": false,
+          "name": "entitlements",
+          "omission": null,
+          "optional": false,
+          "swift_type": "rust.RunnerEntitlements"
+        },
+        "executable_path": {
+          "json_null": false,
+          "name": "executable_path",
+          "omission": null,
+          "optional": false,
+          "swift_type": "String"
+        },
+        "id": {
+          "json_null": false,
+          "name": "id",
+          "omission": null,
+          "optional": false,
+          "swift_type": "String"
+        },
+        "installed_at_unix_ms": {
+          "json_null": false,
+          "name": "installed_at_unix_ms",
+          "omission": null,
+          "optional": false,
+          "swift_type": "UInt64"
+        },
+        "issuer_entitlements": {
+          "json_null": false,
+          "name": "issuer_entitlements",
+          "omission": "Option::is_none",
+          "optional": true,
+          "swift_type": "rust.RunnerEntitlements?"
+        },
+        "issuer_signature": {
+          "json_null": false,
+          "name": "issuer_signature",
+          "omission": "Option::is_none",
+          "optional": true,
+          "swift_type": "rust.RunnerSignature?"
+        },
+        "kind": {
+          "json_null": false,
+          "name": "kind",
+          "omission": "Option::is_none",
+          "optional": true,
+          "swift_type": "String?"
+        },
+        "ownership": {
+          "json_null": true,
+          "name": "ownership",
+          "omission": null,
+          "optional": true,
+          "swift_type": "rust.RunnerOwnership?"
+        },
+        "scope": {
+          "json_null": false,
+          "name": "scope",
+          "omission": null,
+          "optional": false,
+          "swift_type": "String"
+        },
+        "service_name": {
+          "json_null": false,
+          "name": "service_name",
+          "omission": null,
+          "optional": false,
+          "swift_type": "String"
+        },
+        "signature": {
+          "json_null": false,
+          "name": "signature",
+          "omission": null,
+          "optional": false,
+          "swift_type": "rust.RunnerSignature"
+        },
+        "source_worker_equipment_inventory": {
+          "json_null": false,
+          "name": "source_worker_equipment_inventory",
+          "omission": "Option::is_none",
+          "optional": true,
+          "swift_type": "JSON?"
+        },
+        "state": {
+          "json_null": false,
+          "name": "state",
+          "omission": null,
+          "optional": false,
+          "swift_type": "String"
+        },
+        "unentitled_worker_entitlements": {
+          "json_null": false,
+          "name": "unentitled_worker_entitlements",
+          "omission": "Option::is_none",
+          "optional": true,
+          "swift_type": "rust.RunnerEntitlements?"
+        },
+        "unentitled_worker_sha256": {
+          "json_null": false,
+          "name": "unentitled_worker_sha256",
+          "omission": "Option::is_none",
+          "optional": true,
+          "swift_type": "String?"
+        },
+        "unentitled_worker_signature": {
+          "json_null": false,
+          "name": "unentitled_worker_signature",
+          "omission": "Option::is_none",
+          "optional": true,
+          "swift_type": "rust.RunnerSignature?"
+        },
+        "validator_entitlements": {
+          "json_null": false,
+          "name": "validator_entitlements",
+          "omission": "Option::is_none",
+          "optional": true,
+          "swift_type": "rust.RunnerEntitlements?"
+        },
+        "validator_signature": {
+          "json_null": false,
+          "name": "validator_signature",
+          "omission": "Option::is_none",
+          "optional": true,
+          "swift_type": "rust.RunnerSignature?"
+        },
+        "worker_entitlements": {
+          "json_null": false,
+          "name": "worker_entitlements",
+          "omission": "Option::is_none",
+          "optional": true,
+          "swift_type": "rust.RunnerEntitlements?"
+        },
+        "worker_equipment_inventory": {
+          "json_null": false,
+          "name": "worker_equipment_inventory",
+          "omission": "Option::is_none",
+          "optional": true,
+          "swift_type": "JSON?"
+        },
+        "worker_signature": {
+          "json_null": false,
+          "name": "worker_signature",
+          "omission": "Option::is_none",
+          "optional": true,
+          "swift_type": "rust.RunnerSignature?"
+        }
+      },
+      "input": false,
+      "open": true
+    },
+    "rust.RunnerRegistry": {
+      "additional_type": "JSON",
+      "fields": {
+        "pending_cleanup": {
+          "json_null": false,
+          "name": "pending_cleanup",
+          "omission": null,
+          "optional": false,
+          "swift_type": "[rust.PendingCleanup]"
+        },
+        "runners": {
+          "json_null": false,
+          "name": "runners",
+          "omission": null,
+          "optional": false,
+          "swift_type": "[rust.RunnerRecord]"
+        },
+        "schema_version": {
+          "json_null": false,
+          "name": "schema_version",
+          "omission": null,
+          "optional": false,
+          "swift_type": "UInt64"
+        }
+      },
+      "input": false,
+      "open": true
+    },
+    "rust.RunnerSignature": {
+      "additional_type": "JSON",
+      "fields": {
+        "adhoc": {
+          "json_null": false,
+          "name": "adhoc",
+          "omission": null,
+          "optional": false,
+          "swift_type": "Bool"
+        },
+        "cdhash": {
+          "json_null": true,
+          "name": "cdhash",
+          "omission": null,
+          "optional": true,
+          "swift_type": "String?"
+        },
+        "identity": {
+          "json_null": true,
+          "name": "identity",
+          "omission": null,
+          "optional": true,
+          "swift_type": "String?"
+        },
+        "team_id": {
+          "json_null": true,
+          "name": "team_id",
+          "omission": null,
+          "optional": true,
+          "swift_type": "String?"
+        },
+        "valid": {
+          "json_null": false,
+          "name": "valid",
+          "omission": null,
+          "optional": false,
+          "swift_type": "Bool"
+        }
+      },
+      "input": false,
+      "open": true
+    },
+    "rust.RunnerValidateData": {
+      "fields": {
+        "failures": {
+          "json_null": false,
+          "name": "failures",
+          "omission": null,
+          "optional": false,
+          "swift_type": "[rust.ValidateFailure]"
+        },
+        "invalid": {
+          "json_null": false,
+          "name": "invalid",
+          "omission": null,
+          "optional": false,
+          "swift_type": "UInt64"
+        },
+        "missing": {
+          "json_null": false,
+          "name": "missing",
+          "omission": null,
+          "optional": false,
+          "swift_type": "UInt64"
+        },
+        "updated": {
+          "json_null": false,
+          "name": "updated",
+          "omission": null,
+          "optional": false,
+          "swift_type": "UInt64"
+        }
+      },
+      "input": false
+    },
+    "rust.RunnerVerifyData": {
+      "fields": {
+        "normalized_outcome": {
+          "json_null": false,
+          "name": "normalized_outcome",
+          "omission": null,
+          "optional": false,
+          "swift_type": "String"
+        },
+        "runner_client": {
+          "json_null": true,
+          "name": "runner_client",
+          "omission": null,
+          "optional": true,
+          "swift_type": "rust.RunnerClientRun?"
+        },
+        "runner_id": {
+          "json_null": true,
+          "name": "runner_id",
+          "omission": null,
+          "optional": true,
+          "swift_type": "String?"
+        },
+        "runner_pid": {
+          "json_null": true,
+          "name": "runner_pid",
+          "omission": null,
+          "optional": true,
+          "swift_type": "Int64?"
+        },
+        "runner_result": {
+          "json_null": true,
+          "name": "runner_result",
+          "omission": null,
+          "optional": true,
+          "swift_type": "PWRunnerRunResult?"
+        },
+        "service_name": {
+          "json_null": false,
+          "name": "service_name",
+          "omission": null,
+          "optional": false,
+          "swift_type": "String"
+        },
+        "state": {
+          "json_null": false,
+          "name": "state",
+          "omission": null,
+          "optional": false,
+          "swift_type": "String"
+        }
+      },
+      "input": false
+    },
+    "rust.ServiceObservation": {
+      "fields": {
+        "error": {
+          "json_null": true,
+          "name": "error",
+          "omission": null,
+          "optional": true,
+          "swift_type": "String?"
+        },
+        "executable_path": {
+          "json_null": true,
+          "name": "executable_path",
+          "omission": null,
+          "optional": true,
+          "swift_type": "String?"
+        },
+        "presence": {
+          "json_null": false,
+          "name": "presence",
+          "omission": null,
+          "optional": false,
+          "swift_type": "String"
+        }
+      },
+      "input": false
+    },
+    "rust.ValidateFailure": {
+      "fields": {
+        "binary": {
+          "json_null": false,
+          "name": "binary",
+          "omission": null,
+          "optional": false,
+          "swift_type": "String"
+        },
+        "error": {
+          "json_null": false,
+          "name": "error",
+          "omission": null,
+          "optional": false,
+          "swift_type": "String"
+        },
+        "runner_id": {
+          "json_null": false,
+          "name": "runner_id",
+          "omission": null,
+          "optional": false,
+          "swift_type": "String"
+        },
+        "service_name": {
+          "json_null": false,
+          "name": "service_name",
+          "omission": null,
+          "optional": false,
+          "swift_type": "String"
+        }
+      },
+      "input": false
+    }
   },
   "reservation_limits": {
     "client_rpc_wait": {
@@ -70,24 +939,5 @@
       "unit": "milliseconds",
       "value": 5000
     }
-  },
-  "serde_records": {
-    "CleanupReport": "runner_id: String, service_name: String, plist_path: String, booted_out: bool, plist_removed: bool, cleanup_retained: bool, #[serde(skip_serializing_if = \"Option::is_none\")] retained_record: Option<PendingCleanup>, #[serde(skip_serializing_if = \"Vec::is_empty\")] warnings: Vec<String>,",
-    "PendingCleanup": "pub runner: RunnerRecord, pub cleanup_started_at_unix_ms: u64, pub observations: Vec<Value>, #[serde(flatten)] pub extra: BTreeMap<String, Value>,",
-    "PlistObservation": "pub presence: Presence, pub config: Option<Value>, pub sha256: Option<String>, pub owner_uid: Option<u32>, pub regular: bool, pub error: Option<String>,",
-    "RunnerEntitlements": "#[serde(flatten)] pub extra: BTreeMap<String, Value>, pub raw_plist: Option<String>, pub keys: Vec<String>, #[serde(default)] pub granted: Vec<String>, pub error: Option<String>,",
-    "RunnerInstallData": "state: RunnerState, loaded: runner_manager::ServiceObservation, runner: RunnerRecord, plist_path: String, bootstrapped: bool,",
-    "RunnerNotFoundData": "#[serde(skip_serializing_if = \"Option::is_none\")] requested_id: Option<String>, #[serde(skip_serializing_if = \"Option::is_none\")] requested_service_name: Option<String>,",
-    "RunnerOwnership": "#[serde(flatten)] pub extra: BTreeMap<String, Value>, pub plist_path: String, pub launchd_domain: String, pub owner_uid: u32, pub plist_sha256: String,",
-    "RunnerProvenance": "runner_kind: String, runner_registry_id: Option<String>, runner_service_name: String, runner_bundle_id: Option<String>, runner_bundle_path: Option<String>, runner_executable_path: Option<String>, runner_signature: Option<RunnerSignature>, runner_entitlements: Option<RunnerEntitlements>, runner_worker_signature: Option<RunnerSignature>, runner_worker_entitlements: Option<RunnerEntitlements>, runner_validator_signature: Option<RunnerSignature>, runner_validator_entitlements: Option<RunnerEntitlements>, runner_unentitled_worker_signature: Option<RunnerSignature>, runner_unentitled_worker_entitlements: Option<RunnerEntitlements>,",
-    "RunnerRecord": "#[serde(flatten)] pub extra: BTreeMap<String, Value>, #[serde(default)] pub state: RunnerState, #[serde(default)] pub ownership: Option<RunnerOwnership>, pub id: String, pub service_name: String, pub bundle_path: String, pub executable_path: String, pub bundle_id: Option<String>, pub scope: RunnerScope, #[serde(default, skip_serializing_if = \"String::is_empty\")] pub contract: String, pub signature: RunnerSignature, pub entitlements: RunnerEntitlements, pub installed_at_unix_ms: u64, #[serde(default, skip_serializing_if = \"Option::is_none\")] pub kind: Option<RunnerKind>, #[serde(default, skip_serializing_if = \"Option::is_none\")] pub worker_signature: Option<RunnerSignature>, #[serde(default, skip_serializing_if = \"Option::is_none\")] pub worker_entitlements: Option<RunnerEntitlements>, #[serde(default, skip_serializing_if = \"Option::is_none\")] pub unentitled_worker_signature: Option<RunnerSignature>, #[serde(default, skip_serializing_if = \"Option::is_none\")] pub unentitled_worker_entitlements: Option<RunnerEntitlements>, #[serde(default, skip_serializing_if = \"Option::is_none\")] pub unentitled_worker_sha256: Option<String>, #[serde(default, skip_serializing_if = \"Option::is_none\")] pub worker_equipment_inventory: Option<Value>, #[serde(default, skip_serializing_if = \"Option::is_none\")] pub source_worker_equipment_inventory: Option<Value>, #[serde(default, skip_serializing_if = \"Option::is_none\")] pub validator_signature: Option<RunnerSignature>, #[serde(default, skip_serializing_if = \"Option::is_none\")] pub validator_entitlements: Option<RunnerEntitlements>, #[serde(default, skip_serializing_if = \"Option::is_none\")] pub issuer_signature: Option<RunnerSignature>, #[serde(default, skip_serializing_if = \"Option::is_none\")] pub issuer_entitlements: Option<RunnerEntitlements>,",
-    "RunnerRegistry": "#[serde(flatten)] pub extra: BTreeMap<String, Value>, pub schema_version: u32, pub runners: Vec<RunnerRecord>, #[serde(default)] pub pending_cleanup: Vec<PendingCleanup>,",
-    "RunnerSignature": "#[serde(flatten)] pub extra: BTreeMap<String, Value>, pub team_id: Option<String>, pub identity: Option<String>, pub cdhash: Option<String>, pub valid: bool, pub adhoc: bool,",
-    "RunnerValidateData": "updated: usize, missing: usize, invalid: usize, failures: Vec<runner_manager::ValidateFailure>,",
-    "RunnerVerifyData": "runner_client: Option<RunnerClientRun>, runner_result: Option<PWRunnerRunResult>, state: RunnerState, runner_id: Option<String>, service_name: String, runner_pid: Option<i64>, normalized_outcome: String,",
-    "ServiceObservation": "pub presence: Presence, pub executable_path: Option<String>, pub error: Option<String>,",
-    "ValidateFailure": "pub runner_id: String, pub service_name: String, pub binary: String, pub error: String,",
-    "WorkerEquipmentEntry": "pub role: String, pub relative_path: String, pub sha256: String, pub cdhash: String, pub identifier: String, pub team_id: Option<String>, pub entitlements_xml: String,",
-    "WorkerEquipmentInventory": "pub schema_version: u32, pub contract: String, pub worker_identity: String, pub unsigned_worker_sha256: String, pub workers: Vec<WorkerEquipmentEntry>,"
   }
 }

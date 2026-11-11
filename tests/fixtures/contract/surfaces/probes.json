@@ -1,23 +1,90 @@
 {
-  "closed_keys": {
-    "PWRunnerAttempt": [
-      "action",
-      "args",
-      "kind",
-      "target"
-    ],
-    "PWRunnerProbeStep": [
-      "attempt",
-      "sandbox_check",
-      "step_id"
-    ],
-    "PWRunnerSandboxCheck": [
-      "filter",
-      "operation"
-    ],
-    "PWRunnerSandboxFilter": [
-      "kind",
-      "value"
-    ]
+  "records": {
+    "PWRunnerAttempt": {
+      "fields": {
+        "action": {
+          "json_null": false,
+          "name": "action",
+          "optional": false,
+          "swift_type": "String"
+        },
+        "args": {
+          "json_null": false,
+          "name": "args",
+          "optional": true,
+          "swift_type": "[String]?"
+        },
+        "kind": {
+          "json_null": false,
+          "name": "kind",
+          "optional": false,
+          "swift_type": "String"
+        },
+        "target": {
+          "json_null": false,
+          "name": "target",
+          "optional": false,
+          "swift_type": "String"
+        }
+      },
+      "input": true
+    },
+    "PWRunnerProbeStep": {
+      "fields": {
+        "attempt": {
+          "json_null": false,
+          "name": "attempt",
+          "optional": false,
+          "swift_type": "PWRunnerAttempt"
+        },
+        "sandbox_check": {
+          "json_null": false,
+          "name": "sandbox_check",
+          "optional": false,
+          "swift_type": "PWRunnerSandboxCheck"
+        },
+        "step_id": {
+          "json_null": false,
+          "name": "step_id",
+          "optional": false,
+          "swift_type": "String"
+        }
+      },
+      "input": true
+    },
+    "PWRunnerSandboxCheck": {
+      "fields": {
+        "filter": {
+          "json_null": false,
+          "name": "filter",
+          "optional": false,
+          "swift_type": "PWRunnerSandboxFilter"
+        },
+        "operation": {
+          "json_null": false,
+          "name": "operation",
+          "optional": false,
+          "swift_type": "String"
+        }
+      },
+      "input": true
+    },
+    "PWRunnerSandboxFilter": {
+      "fields": {
+        "kind": {
+          "json_null": false,
+          "name": "kind",
+          "optional": false,
+          "swift_type": "String"
+        },
+        "value": {
+          "json_null": false,
+          "name": "value",
+          "optional": true,
+          "swift_type": "String?"
+        }
+      },
+      "input": true
+    }
   }
 }

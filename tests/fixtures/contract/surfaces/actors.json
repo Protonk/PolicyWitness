@@ -1,37 +1,98 @@
 {
-  "closed_keys": {
-    "PWRunnerActor": [
-      "actor_id",
-      "equipment",
-      "required_entitlements",
-      "sandbox"
-    ],
-    "PWRunnerActorSandbox": [
-      "mode",
-      "policy"
-    ],
-    "PWRunnerAfterTermination": [
-      "actor_id"
-    ],
-    "PWRunnerExtensionAction": [
-      "extension",
-      "step_id"
-    ],
-    "PWRunnerExtensionOperation": [
-      "authority",
-      "delivery_ref",
-      "family",
-      "handle_ref",
-      "operation",
-      "recipient",
-      "target",
-      "token_ref"
-    ],
-    "PWRunnerPhase": [
-      "actions",
-      "actor_id",
-      "after_termination",
-      "phase_id"
-    ]
+  "records": {
+    "PWRunnerActor": {
+      "fields": {
+        "actor_id": {
+          "json_null": false,
+          "name": "actor_id",
+          "optional": false,
+          "swift_type": "String"
+        },
+        "equipment": {
+          "json_null": false,
+          "name": "equipment",
+          "optional": true,
+          "swift_type": "String?"
+        },
+        "required_entitlements": {
+          "json_null": false,
+          "name": "required_entitlements",
+          "optional": false,
+          "swift_type": "[String]"
+        },
+        "sandbox": {
+          "json_null": false,
+          "name": "sandbox",
+          "optional": false,
+          "swift_type": "PWRunnerActorSandbox"
+        }
+      },
+      "input": true
+    },
+    "PWRunnerActorSandbox": {
+      "fields": {
+        "mode": {
+          "json_null": false,
+          "name": "mode",
+          "optional": false,
+          "swift_type": "String"
+        },
+        "policy": {
+          "json_null": false,
+          "name": "policy",
+          "optional": true,
+          "swift_type": "PWRunnerPolicySpec?"
+        }
+      },
+      "input": true
+    },
+    "PWRunnerAfterTermination": {
+      "fields": {
+        "actor_id": {
+          "json_null": false,
+          "name": "actor_id",
+          "optional": false,
+          "swift_type": "String"
+        }
+      },
+      "input": true
+    },
+    "PWRunnerPhase": {
+      "fields": {
+        "actions": {
+          "json_null": false,
+          "name": "actions",
+          "optional": false,
+          "swift_type": "[PWRunnerPhaseAction]"
+        },
+        "actor_id": {
+          "json_null": false,
+          "name": "actor_id",
+          "optional": true,
+          "swift_type": "String?"
+        },
+        "after_termination": {
+          "json_null": false,
+          "name": "after_termination",
+          "optional": true,
+          "swift_type": "PWRunnerAfterTermination?"
+        },
+        "phase_id": {
+          "json_null": false,
+          "name": "phase_id",
+          "optional": false,
+          "swift_type": "String"
+        }
+      },
+      "input": true
+    },
+    "PWRunnerPhaseAction": {
+      "fields": {},
+      "input": true,
+      "variants": {
+        "extensionAction": "PWRunnerExtensionAction",
+        "probe": "PWRunnerProbeStep"
+      }
+    }
   }
 }

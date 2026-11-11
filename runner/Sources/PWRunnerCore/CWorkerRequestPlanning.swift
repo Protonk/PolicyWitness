@@ -48,6 +48,11 @@ extension CWorkerOrchestrator {
 
 let phaseCollectionBudgetMs = 30_000
 
+/// Resolve the aggregate collection allowance before either scheduler starts.
+func collectionBudgetMs(override: Int?, maximum: Int) -> Int {
+    max(1, min(maximum, override ?? maximum))
+}
+
 /// Resolve the sentinel-timeout for the C worker from the request's
 /// `_test_overrides.worker_timeout_ms`. Floor at 50 ms because a
 /// smaller deadline fires before any real worker can complete its

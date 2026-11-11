@@ -2348,9 +2348,9 @@
       "clusters": [
         {
           "id": "manifests",
-          "label": "hand-owned manifests",
+          "label": "authored definitions and manifests",
           "nodes": [
-            "contract_json",
+            "contract_tree",
             "limits_json",
             "matrix_json",
             "architecture_json",
@@ -2374,7 +2374,8 @@
             "gen_build",
             "markdown_reader",
             "gen_footprint",
-            "gen_porcelain"
+            "gen_porcelain",
+            "contract_records"
           ]
         },
         {
@@ -2413,7 +2414,8 @@
             "identity_sources",
             "meson_build",
             "suites",
-            "porcelain_records"
+            "porcelain_records",
+            "contract_history"
           ]
         },
         {
@@ -2434,22 +2436,27 @@
       ],
       "nodes": [
         {
-          "id": "contract_json",
-          "label": "docs/contract_surfaces.json",
+          "id": "contract_tree",
+          "label": "docs/contract/*.surface.md",
           "kind": "manifest",
           "facts": {
-            "Owns": "the public surface scope, shape inputs, definitions and verification owners"
+            "Owns": "public meanings, applicability, obligations, examples, evidence limits and surface membership"
           },
           "sources": [
             {
-              "path": "docs/contract_surfaces.json",
-              "symbol": "surfaces"
+              "path": "docs/contract/tree.py",
+              "symbol": "parse_surface"
             }
           ],
           "checks": [
             {
-              "path": "tests/suites/source_drift/build_contracts.py",
-              "symbol": "test_pending_release_reproduces_after_tagging_and_tracks_removal",
+              "path": "tests/suites/source_drift/contract_tree_controls.py",
+              "symbol": "test_complete_fixture_joins_imported_fields_and_renders_distinctions",
+              "form": "test"
+            },
+            {
+              "path": "tests/suites/source_drift/contract_tree_controls.py",
+              "symbol": "test_field_coverage_vocabulary_and_support_are_required",
               "form": "test"
             }
           ]
@@ -2543,18 +2550,27 @@
           "label": "generate_contract_stamps.py",
           "kind": "generator",
           "facts": {
-            "Owns": "derived surface stamps across annotated release trees"
+            "Owns": "the readable contract, canonical public snapshot, shape views and surface stamps across retained release layouts"
           },
           "sources": [
             {
-              "path": "docs/generate_contract_stamps.py",
+              "path": "docs/contract/runtime.py",
               "symbol": "render"
+            },
+            {
+              "path": "docs/contract/tree.py",
+              "symbol": "public_payload"
             }
           ],
           "checks": [
             {
-              "path": "tests/suites/source_drift/build_contracts.py",
-              "symbol": "test_pending_release_reproduces_after_tagging_and_tracks_removal",
+              "path": "tests/suites/source_drift/contract_tree_controls.py",
+              "symbol": "test_complete_fixture_joins_imported_fields_and_renders_distinctions",
+              "form": "test"
+            },
+            {
+              "path": "tests/suites/source_drift/contract_tree_controls.py",
+              "symbol": "test_prepared_tree_release_reproduces_after_tag_and_preserves_legacy_removal",
               "form": "test"
             }
           ]
@@ -2632,18 +2648,23 @@
           "label": "docs/CONTRACT.md",
           "kind": "document",
           "facts": {
-            "Carries": "the version sentence and table"
+            "Carries": "the generated public contract and derived surface history table"
           },
           "sources": [
             {
-              "path": "docs/CONTRACT.md",
-              "symbol": "BEGIN GENERATED CONTRACT STAMPS"
+              "path": "docs/contract/runtime.py",
+              "symbol": "DOCUMENT_BEGIN"
             }
           ],
           "checks": [
             {
-              "path": "tests/suites/source_drift/build_contracts.py",
-              "symbol": "test_pending_release_reproduces_after_tagging_and_tracks_removal",
+              "path": "tests/suites/source_drift/contract_tree_controls.py",
+              "symbol": "test_complete_fixture_joins_imported_fields_and_renders_distinctions",
+              "form": "test"
+            },
+            {
+              "path": "tests/suites/source_drift/contract_tree_controls.py",
+              "symbol": "test_prepared_tree_release_reproduces_after_tag_and_preserves_legacy_removal",
               "form": "test"
             }
           ]
@@ -2674,7 +2695,7 @@
           "label": "docs/PolicyWitness.md",
           "kind": "document",
           "facts": {
-            "Carries": "copied limits, questions, reading rules and extension statuses and coverage; the version sentence; the only document that ships"
+            "Carries": "copied limits, questions, reading rules and extension statuses and coverage; the surface history table; the only document that ships"
           },
           "sources": [
             {
@@ -3297,12 +3318,16 @@
         },
         {
           "id": "drift_contract",
-          "label": "source_drift build_contracts.py",
+          "label": "source_drift contract controls",
           "kind": "check",
           "facts": {
-            "Owns": "public build identity, surface-history and worker-identity controls"
+            "Owns": "public build identity, authored tree and imported field checks, retained surface history and worker identity controls"
           },
           "sources": [
+            {
+              "path": "tests/suites/source_drift/contract_tree_controls.py",
+              "symbol": "ContractTreeTests"
+            },
             {
               "path": "tests/suites/source_drift/build_contracts.py",
               "symbol": "test_pending_release_reproduces_after_tagging_and_tracks_removal"
@@ -3816,26 +3841,85 @@
               "form": "test"
             }
           ]
-        }
-      ],
-      "edges": [
+        },
         {
-          "id": "D1",
-          "from": "contract_json",
-          "to": "gen_contract",
-          "kind": "reads",
-          "label": "surface definitions and shape inputs",
-          "short": "surfaces",
+          "id": "contract_records",
+          "label": "record_definitions.py",
+          "kind": "library",
+          "facts": {
+            "Carries": "public field types and presence imported from porcelain, Swift request decoders and Rust serialization declarations"
+          },
           "sources": [
             {
-              "path": "docs/generate_contract_stamps.py",
-              "symbol": "render"
+              "path": "docs/contract/record_definitions.py",
+              "symbol": "load"
+            },
+            {
+              "path": "docs/contract/record_definitions.py",
+              "symbol": "RUST_INPUTS"
             }
           ],
           "checks": [
             {
               "path": "tests/suites/source_drift/build_contracts.py",
-              "symbol": "test_pending_release_reproduces_after_tagging_and_tracks_removal",
+              "symbol": "test_public_projection_types_and_presence_follow_the_owners",
+              "form": "test"
+            }
+          ]
+        },
+        {
+          "id": "contract_history",
+          "label": "public snapshots and release shapes",
+          "kind": "record",
+          "facts": {
+            "Carries": "the current canonical public view and each release's own public definitions and shape files, read through retained layout readers"
+          },
+          "sources": [
+            {
+              "path": "docs/contract/history_v1.py",
+              "symbol": "SNAPSHOT"
+            },
+            {
+              "path": "docs/contract/history_v0.py",
+              "symbol": "surface_hash"
+            },
+            {
+              "path": "docs/contract/runtime.py",
+              "symbol": "history"
+            }
+          ],
+          "checks": [
+            {
+              "path": "tests/suites/source_drift/contract_tree_controls.py",
+              "symbol": "test_prepared_tree_release_reproduces_after_tag_and_preserves_legacy_removal",
+              "form": "test"
+            },
+            {
+              "path": "tests/suites/source_drift/contract_tree_controls.py",
+              "symbol": "test_released_snapshot_remains_readable_when_authoring_syntax_changes",
+              "form": "test"
+            }
+          ]
+        }
+      ],
+      "edges": [
+        {
+          "id": "D1",
+          "from": "contract_tree",
+          "to": "gen_contract",
+          "kind": "reads",
+          "label": "authored tree and declared surface shapes",
+          "short": "definitions",
+          "sources": [
+            {
+              "path": "docs/contract/tree.py",
+              "symbol": "load_tree"
+            }
+          ],
+          "checks": [
+            {
+              "path": "tests/suites/source_drift/contract_tree_controls.py",
+              "symbol": "test_complete_fixture_joins_imported_fields_and_renders_distinctions",
               "form": "test"
             }
           ]
@@ -3845,18 +3929,23 @@
           "from": "gen_contract",
           "to": "contract_md",
           "kind": "writes",
-          "label": "derived surface stamp table",
-          "short": "stamps",
+          "label": "complete readable contract and surface history table",
+          "short": "contract",
           "sources": [
             {
-              "path": "docs/generate_contract_stamps.py",
-              "symbol": "render"
+              "path": "docs/contract/runtime.py",
+              "symbol": "assemble"
             }
           ],
           "checks": [
             {
-              "path": "tests/suites/source_drift/build_contracts.py",
-              "symbol": "test_pending_release_reproduces_after_tagging_and_tracks_removal",
+              "path": "tests/suites/source_drift/contract_tree_controls.py",
+              "symbol": "test_complete_fixture_joins_imported_fields_and_renders_distinctions",
+              "form": "test"
+            },
+            {
+              "path": "tests/suites/source_drift/contract_tree_controls.py",
+              "symbol": "test_prepared_tree_release_reproduces_after_tag_and_preserves_legacy_removal",
               "form": "test"
             }
           ]
@@ -3870,14 +3959,19 @@
           "short": "stamps",
           "sources": [
             {
-              "path": "docs/generate_contract_stamps.py",
-              "symbol": "render"
+              "path": "docs/contract/runtime.py",
+              "symbol": "_replace_table"
             }
           ],
           "checks": [
             {
-              "path": "tests/suites/source_drift/build_contracts.py",
-              "symbol": "test_pending_release_reproduces_after_tagging_and_tracks_removal",
+              "path": "tests/suites/source_drift/contract_tree_controls.py",
+              "symbol": "test_prepared_tree_release_reproduces_after_tag_and_preserves_legacy_removal",
+              "form": "test"
+            },
+            {
+              "path": "tests/suites/source_drift/contract_tree_controls.py",
+              "symbol": "test_guide_and_support_edits_leave_public_stamps_while_meaning_changes_move_them",
               "form": "test"
             }
           ]
@@ -4457,12 +4551,16 @@
           "from": "drift_contract",
           "to": "gen_contract",
           "kind": "checks",
-          "label": "--check and generator controls",
+          "label": "tree, imported record, snapshot and release-history controls",
           "short": "--check",
           "sources": [
             {
+              "path": "tests/suites/source_drift/contract_tree_controls.py",
+              "symbol": "ContractTreeTests"
+            },
+            {
               "path": "tests/suites/source_drift/build_contracts.py",
-              "symbol": "test_pending_release_reproduces_after_tagging_and_tracks_removal"
+              "symbol": "RecordDefinitionTests"
             }
           ],
           "checks": [
@@ -5424,6 +5522,137 @@
             {
               "path": "tests/suites/source_drift/porcelain_codec.py",
               "symbol": "test_one_sided_regeneration_is_stale_and_old_fingerprint_is_refused",
+              "form": "test"
+            }
+          ]
+        },
+        {
+          "id": "D81",
+          "from": "porcelain_json",
+          "to": "contract_records",
+          "kind": "reads",
+          "label": "typed host and client public declarations",
+          "short": "typed fields",
+          "sources": [
+            {
+              "path": "docs/contract/record_definitions.py",
+              "symbol": "_porcelain_records"
+            }
+          ],
+          "checks": [
+            {
+              "path": "tests/suites/source_drift/build_contracts.py",
+              "symbol": "test_public_projection_types_and_presence_follow_the_owners",
+              "form": "test"
+            }
+          ]
+        },
+        {
+          "id": "D82",
+          "from": "request_swift",
+          "to": "contract_records",
+          "kind": "reads",
+          "label": "request field names, decoded types and presence",
+          "short": "request fields",
+          "sources": [
+            {
+              "path": "docs/contract/record_definitions.py",
+              "symbol": "_request_records"
+            }
+          ],
+          "checks": [
+            {
+              "path": "tests/suites/source_drift/build_contracts.py",
+              "symbol": "test_public_projection_types_and_presence_follow_the_owners",
+              "form": "test"
+            }
+          ]
+        },
+        {
+          "id": "D83",
+          "from": "json_contract_rs",
+          "to": "contract_records",
+          "kind": "reads",
+          "label": "controller envelope among the imported Rust record declarations",
+          "short": "controller fields",
+          "sources": [
+            {
+              "path": "docs/contract/record_definitions.py",
+              "symbol": "_rust_records"
+            }
+          ],
+          "checks": [
+            {
+              "path": "tests/suites/source_drift/build_contracts.py",
+              "symbol": "test_public_projection_types_and_presence_follow_the_owners",
+              "form": "test"
+            }
+          ]
+        },
+        {
+          "id": "D84",
+          "from": "contract_records",
+          "to": "gen_contract",
+          "kind": "reads",
+          "label": "join imported public fields to their authored meanings",
+          "short": "field facts",
+          "sources": [
+            {
+              "path": "docs/contract/tree.py",
+              "symbol": "load_tree"
+            }
+          ],
+          "checks": [
+            {
+              "path": "tests/suites/source_drift/contract_tree_controls.py",
+              "symbol": "test_complete_fixture_joins_imported_fields_and_renders_distinctions",
+              "form": "test"
+            }
+          ]
+        },
+        {
+          "id": "D85",
+          "from": "gen_contract",
+          "to": "contract_history",
+          "kind": "writes",
+          "label": "canonical public snapshot and refreshed shape views",
+          "short": "snapshot",
+          "sources": [
+            {
+              "path": "docs/contract/runtime.py",
+              "symbol": "render"
+            }
+          ],
+          "checks": [
+            {
+              "path": "tests/suites/source_drift/contract_tree_controls.py",
+              "symbol": "test_prepared_tree_release_reproduces_after_tag_and_preserves_legacy_removal",
+              "form": "test"
+            }
+          ]
+        },
+        {
+          "id": "D86",
+          "from": "contract_history",
+          "to": "gen_contract",
+          "kind": "reads",
+          "label": "released public definitions and their own shape files",
+          "short": "released inputs",
+          "sources": [
+            {
+              "path": "docs/contract/runtime.py",
+              "symbol": "history"
+            }
+          ],
+          "checks": [
+            {
+              "path": "tests/suites/source_drift/contract_tree_controls.py",
+              "symbol": "test_prepared_tree_release_reproduces_after_tag_and_preserves_legacy_removal",
+              "form": "test"
+            },
+            {
+              "path": "tests/suites/source_drift/build_contracts.py",
+              "symbol": "test_missing_released_inputs_propagate_without_current_tree_fallback",
               "form": "test"
             }
           ]
@@ -6683,7 +6912,7 @@
           "from": "host",
           "to": "validator",
           "kind": "spawn",
-          "label": "eligible collection spawns the copy\u2019s bundle-local validator by default; an explicit override takes precedence",
+          "label": "eligible collection spawns the copy’s bundle-local validator by default; an explicit override takes precedence",
           "short": "spawn",
           "sources": [
             {

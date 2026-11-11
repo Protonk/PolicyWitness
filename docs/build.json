@@ -325,7 +325,7 @@
         "full",
         "partial"
       ],
-      "reads": "docs/contract_surfaces.json and annotated release history, docs/architecture.json and their generated copies, docs/footprint.json and its generated document, docs/porcelain.json and its generated typed record declarations and codecs",
+      "reads": "docs/contract/*.surface.md, imported public record declarations, canonical shapes, the generated public snapshot and annotated release history; docs/architecture.json and their generated copies; docs/footprint.json and its generated document; docs/porcelain.json and its generated typed record declarations and codecs",
       "writes": "nothing",
       "refusals": [
         "stale_contract_stamps",
@@ -3173,7 +3173,7 @@
     },
     {
       "id": "stale_contract_stamps",
-      "message": "stale contract stamps: <copies>; run tests/lib/python.sh docs/generate_contract_stamps.py",
+      "message": "stale generated contract: <copies>; run tests/lib/python.sh docs/generate_contract_stamps.py",
       "kind": "propagated",
       "steps": [
         "check_contract_stamps"
@@ -3189,8 +3189,8 @@
           "symbol": "generate_contract_stamps.py"
         },
         {
-          "path": "docs/generate_contract_stamps.py",
-          "symbol": "stale"
+          "path": "docs/contract/runtime.py",
+          "symbol": "stale generated contract"
         }
       ],
       "checks": [

@@ -2674,14 +2674,19 @@ mod tests {
     fn documented_removal_limits() {
         let manifest: serde_json::Value =
             serde_json::from_str(include_str!("../../docs/limits.json")).unwrap();
-        let row = manifest["limits"]
-            .as_array()
-            .unwrap()
-            .iter()
-            .find(|r| r["id"] == "runner_remove_teardown_wait")
-            .expect("limits.json documents the removal teardown wait");
-        assert_eq!(row["value"].as_u64(), Some(TEARDOWN_WAIT_MS));
-        assert_eq!(row["unit"], "milliseconds");
+        for (id, actual) in [
+            ("runner_remove_teardown_wait", TEARDOWN_WAIT_MS),
+            ("runner_remove_poll_interval", TEARDOWN_POLL_INTERVAL_MS),
+        ] {
+            let row = manifest["limits"]
+                .as_array()
+                .unwrap()
+                .iter()
+                .find(|r| r["id"] == id)
+                .expect("limits.json documents each removal wait quantity");
+            assert_eq!(row["value"].as_u64(), Some(actual), "{id}");
+            assert_eq!(row["unit"], "milliseconds", "{id}");
+        }
     }
 
     #[test]

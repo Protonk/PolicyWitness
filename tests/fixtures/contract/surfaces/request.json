@@ -1,28 +1,4 @@
 {
-  "closed_keys": {
-    "PWRunnerRunSpec": [
-      "_test_overrides",
-      "actors",
-      "contract",
-      "phases",
-      "policy",
-      "probe_plan",
-      "run_kind",
-      "specimen_id"
-    ],
-    "PWRunnerTestOverrides": [
-      "actor_equipment_executable_paths",
-      "validator_executable_path",
-      "validator_io_timeout_ms",
-      "validator_total_timeout_ms",
-      "worker_executable_path",
-      "worker_kill_before_publish_slot",
-      "worker_post_apply_hang_ms",
-      "worker_post_apply_kill_signal",
-      "worker_pre_ready_hang_ms",
-      "worker_timeout_ms"
-    ]
-  },
   "controller_keys": {
     "RUNNER_SELECTOR_FIELDS": [
       "id",
@@ -37,5 +13,191 @@
       "runner_mode",
       "runner_service"
     ]
+  },
+  "records": {
+    "ControllerRunnerSelector": {
+      "fields": {
+        "id": {
+          "json_null": true,
+          "name": "id",
+          "optional": true,
+          "swift_type": "String?"
+        },
+        "mode": {
+          "json_null": true,
+          "name": "mode",
+          "optional": true,
+          "swift_type": "String?"
+        },
+        "required_entitlements": {
+          "json_null": true,
+          "name": "required_entitlements",
+          "optional": true,
+          "swift_type": "[String]?"
+        },
+        "service": {
+          "json_null": true,
+          "name": "service",
+          "optional": true,
+          "swift_type": "String?"
+        }
+      },
+      "input": false,
+      "open": false
+    },
+    "ControllerSelectionOptions": {
+      "fields": {
+        "required_entitlements": {
+          "json_null": true,
+          "name": "required_entitlements",
+          "optional": true,
+          "swift_type": "[String]?"
+        },
+        "runner": {
+          "json_null": true,
+          "name": "runner",
+          "optional": true,
+          "swift_type": "ControllerRunnerSelector?"
+        },
+        "runner_id": {
+          "json_null": true,
+          "name": "runner_id",
+          "optional": true,
+          "swift_type": "String?"
+        },
+        "runner_mode": {
+          "json_null": true,
+          "name": "runner_mode",
+          "optional": true,
+          "swift_type": "String?"
+        },
+        "runner_service": {
+          "json_null": true,
+          "name": "runner_service",
+          "optional": true,
+          "swift_type": "String?"
+        }
+      },
+      "input": false,
+      "open": false
+    },
+    "PWRunnerRunSpec": {
+      "fields": {
+        "_test_overrides": {
+          "json_null": false,
+          "name": "_test_overrides",
+          "optional": true,
+          "swift_type": "PWRunnerTestOverrides?"
+        },
+        "actors": {
+          "json_null": false,
+          "name": "actors",
+          "optional": true,
+          "swift_type": "[PWRunnerActor]?"
+        },
+        "contract": {
+          "json_null": false,
+          "name": "contract",
+          "optional": false,
+          "swift_type": "String"
+        },
+        "phases": {
+          "json_null": false,
+          "name": "phases",
+          "optional": true,
+          "swift_type": "[PWRunnerPhase]?"
+        },
+        "policy": {
+          "json_null": false,
+          "name": "policy",
+          "optional": true,
+          "swift_type": "PWRunnerPolicySpec?"
+        },
+        "probe_plan": {
+          "json_null": false,
+          "name": "probe_plan",
+          "optional": true,
+          "swift_type": "[PWRunnerProbeStep]?"
+        },
+        "run_kind": {
+          "json_null": false,
+          "name": "run_kind",
+          "optional": true,
+          "swift_type": "String?"
+        },
+        "specimen_id": {
+          "json_null": false,
+          "name": "specimen_id",
+          "optional": false,
+          "swift_type": "String"
+        }
+      },
+      "input": true
+    },
+    "PWRunnerTestOverrides": {
+      "fields": {
+        "actor_equipment_executable_paths": {
+          "json_null": false,
+          "name": "actor_equipment_executable_paths",
+          "optional": true,
+          "swift_type": "[String: String]?"
+        },
+        "validator_executable_path": {
+          "json_null": false,
+          "name": "validator_executable_path",
+          "optional": true,
+          "swift_type": "String?"
+        },
+        "validator_io_timeout_ms": {
+          "json_null": false,
+          "name": "validator_io_timeout_ms",
+          "optional": true,
+          "swift_type": "Int?"
+        },
+        "validator_total_timeout_ms": {
+          "json_null": false,
+          "name": "validator_total_timeout_ms",
+          "optional": true,
+          "swift_type": "Int?"
+        },
+        "worker_executable_path": {
+          "json_null": false,
+          "name": "worker_executable_path",
+          "optional": true,
+          "swift_type": "String?"
+        },
+        "worker_kill_before_publish_slot": {
+          "json_null": false,
+          "name": "worker_kill_before_publish_slot",
+          "optional": true,
+          "swift_type": "Int?"
+        },
+        "worker_post_apply_hang_ms": {
+          "json_null": false,
+          "name": "worker_post_apply_hang_ms",
+          "optional": true,
+          "swift_type": "Int?"
+        },
+        "worker_post_apply_kill_signal": {
+          "json_null": false,
+          "name": "worker_post_apply_kill_signal",
+          "optional": true,
+          "swift_type": "Int?"
+        },
+        "worker_pre_ready_hang_ms": {
+          "json_null": false,
+          "name": "worker_pre_ready_hang_ms",
+          "optional": true,
+          "swift_type": "Int?"
+        },
+        "worker_timeout_ms": {
+          "json_null": false,
+          "name": "worker_timeout_ms",
+          "optional": true,
+          "swift_type": "Int?"
+        }
+      },
+      "input": false
+    }
   }
 }

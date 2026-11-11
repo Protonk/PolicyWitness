@@ -1,41 +1,120 @@
 {
-  "shape": {
-    "envelope.data": {
-      "request_failure": "object"
+  "records": {
+    "PWRunnerAdmissionFailure": {
+      "fields": {
+        "actual": {
+          "json_null": false,
+          "name": "actual",
+          "optional": false,
+          "swift_type": "Int"
+        },
+        "field": {
+          "json_null": false,
+          "name": "field",
+          "optional": false,
+          "swift_type": "String"
+        },
+        "index": {
+          "json_null": false,
+          "name": "index",
+          "optional": true,
+          "swift_type": "Int?"
+        },
+        "maximum": {
+          "json_null": false,
+          "name": "maximum",
+          "optional": false,
+          "swift_type": "Int"
+        },
+        "origin": {
+          "json_null": false,
+          "name": "origin",
+          "optional": false,
+          "swift_type": "String"
+        },
+        "parameter_key": {
+          "json_null": false,
+          "name": "parameter_key",
+          "optional": true,
+          "swift_type": "String?"
+        },
+        "step_id": {
+          "json_null": false,
+          "name": "step_id",
+          "optional": true,
+          "swift_type": "String?"
+        },
+        "step_index": {
+          "json_null": false,
+          "name": "step_index",
+          "optional": true,
+          "swift_type": "Int?"
+        },
+        "unit": {
+          "json_null": false,
+          "name": "unit",
+          "optional": false,
+          "swift_type": "String"
+        }
+      },
+      "input": false
     },
-    "envelope.data.request_failure": {
-      "code": "string",
-      "expected_contract": "string",
-      "path": "array"
+    "PWRunnerRequestFailure": {
+      "fields": {
+        "code": {
+          "json_null": false,
+          "name": "code",
+          "optional": false,
+          "swift_type": "String"
+        },
+        "expected_contract": {
+          "json_null": false,
+          "name": "expected_contract",
+          "optional": true,
+          "swift_type": "String?"
+        },
+        "path": {
+          "json_null": true,
+          "name": "path",
+          "optional": true,
+          "swift_type": "[String]?"
+        }
+      },
+      "input": false
     },
-    "reply": {
-      "admission_failure": "object",
-      "reporting_failure": "object",
-      "request_failure": "object"
+    "rust.RequestFailure": {
+      "fields": {
+        "code": {
+          "json_null": false,
+          "name": "code",
+          "omission": null,
+          "optional": false,
+          "swift_type": "String"
+        },
+        "expected_contract": {
+          "json_null": false,
+          "name": "expected_contract",
+          "omission": "Option::is_none",
+          "optional": true,
+          "swift_type": "String?"
+        },
+        "path": {
+          "json_null": true,
+          "name": "path",
+          "omission": null,
+          "optional": true,
+          "swift_type": "[String]?"
+        }
+      },
+      "input": false
     },
-    "reply.admission_failure": {
-      "actual": "number",
-      "field": "string",
-      "index": "number",
-      "maximum": "number",
-      "origin": "string",
-      "parameter_key": "string",
-      "step_id": "string",
-      "step_index": "number",
-      "unit": "string"
-    },
-    "reply.reporting_failure": {
-      "diagnostic": "string",
-      "evidence_retained": "boolean",
-      "origin": "string",
-      "original_error": "string",
-      "original_normalized_outcome": "string",
-      "original_rc": "number"
-    },
-    "reply.request_failure": {
-      "code": "string",
-      "expected_contract": "string",
-      "path": "array"
+    "rust.RequestFailureProjection": {
+      "fields": {},
+      "input": false,
+      "variants": {
+        "Controller": "rust.RequestFailure",
+        "Runner": "PWRunnerRequestFailure"
+      }
     }
   }
 }

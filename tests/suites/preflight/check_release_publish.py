@@ -28,6 +28,7 @@ import execution_contract
 sys.path.insert(0, str(ROOT / 'tests/fixtures/dispatcher'))
 from repository import completed_output
 import fixture_bundle
+import contract_fixture
 sys.path.insert(0, str(ROOT / 'tests/fixtures/release'))
 from publish_tools import GitHub
 
@@ -36,12 +37,11 @@ GIT = ['git', '-c', 'user.name=pw', '-c', 'user.email=pw@example.invalid', '-c',
 
 
 def git(repo, *args):
-    if args[:2] == ('tag', '-a') and (repo / 'docs/contract_surfaces.json').exists():
+    if args[:2] == ('tag', '-a') and (repo / 'docs/contract').is_dir():
         # Release preparation precedes the tag, as it does in the real workflow.
         sys.path.insert(0, str(ROOT / 'docs'))
         import generate_contract_stamps
-        for name, _, after in generate_contract_stamps.render(repo, args[2]):
-            (repo / name).write_text(after)
+        contract_fixture.write_outputs(repo, generate_contract_stamps.render(repo, args[2]))
         git(repo, 'add', 'docs')
         git(repo, 'commit', '--amend', '--no-edit', '--allow-empty')
     return subprocess.run([*GIT, '-C', str(repo), *args], capture_output=True, text=True, check=True).stdout.strip()
@@ -57,22 +57,16 @@ def make_repo(work):
     sys.path.insert(0, str(ROOT / 'docs'))
     import build_contract
     import fixture_inputs
-    fixture_inputs.copy_declared(ROOT, repo, build_contract.inputs(ROOT))
-    (repo / 'docs').mkdir(exist_ok=True)
-    (repo / 'docs/contract_surfaces.json').write_text(json.dumps(dict(surfaces=[dict(
-        id='fixture', artifact='Fixture', goldens=['docs/shape.json'], definition='docs/CONTRACT.md', checks=['fixture'])])))
-    (repo / 'docs/shape.json').write_text('{}\n')
-    region = '<!-- BEGIN GENERATED CONTRACT STAMPS -->\n<!-- END GENERATED CONTRACT STAMPS -->\n'
-    (repo / 'docs/CONTRACT.md').write_text('<!-- BEGIN CONTRACT fixture -->\nFixture definition.\n<!-- END CONTRACT fixture -->\n' + region)
-    (repo / 'docs/PolicyWitness.md').write_text(region)
+    import generate_contract_stamps
+    fixture_inputs.copy_declared(ROOT, repo, sorted(set(build_contract.inputs(ROOT)) |
+                                                   set(generate_contract_stamps.input_paths(ROOT))))
+    (repo / 'tests').mkdir(exist_ok=True)
+    (repo / 'tests/catalog.json').write_text(json.dumps(dict(suites=dict(fixture=dict(command=['bash', 'tests/suites/fixture/run.sh'], cases=['0','1','2'])))))
+    contract_fixture.fresh_authoring(repo, generate_contract_stamps, minimal=True)
     git(repo, 'add', '.')
     git(repo, 'commit', '-q', '-m', 'initial')
     git(repo, 'remote', 'add', 'origin', str(remote))
     git(repo, 'push', '-q', 'origin', 'main')
-    (repo / 'tests').mkdir(exist_ok=True)
-    (repo / 'tests/catalog.json').write_text(json.dumps(dict(suites=dict(fixture=dict(command=['bash', 'tests/suites/fixture/run.sh'], cases=['0','1','2'])))))
-    git(repo, 'add', 'tests')
-    git(repo, 'commit', '--amend', '--no-edit')
     return repo
 
 
@@ -94,6 +88,9 @@ def check_preflight(out):
     assert stamp['describe'] == 'v0.3.0' and stamp['build_number'] == '2', stamp
     assert stamp['prose_baseline']['previous_tag'] == 'v0.2.8', stamp
     assert stamp['build_baseline']['previous_tag'] == 'v0.2.8', stamp
+    assert stamp['contract_free_text_baseline'] == dict(previous_tag='v0.2.8', status='non-growing',
+        counts=dict(condition=0, dependency=0, effect=0, when=0),
+        previous_counts=dict(condition=0, dependency=0, effect=0, when=0), increases={}), stamp
     (skipped / 'preflight.json').write_text(json.dumps(stamp, indent=2) + '\n')
 
     work = out / 'preflight'
@@ -160,6 +157,96 @@ def check_preflight(out):
         assert report == 0 and 'WARNING:' in stderr.getvalue()
         assert json.loads(stdout.getvalue())['version'] == '0.9.0'
     return repo
+
+
+def check_contract_free_text_baseline(out):
+    """A carried count-file edit cannot authorize public free-text growth at release."""
+    work = out / 'contract-free-text'
+    work.mkdir()
+    counts = dict(condition=4, dependency=3, effect=2, when=1)
+
+    def raw_git(repo, *args):
+        return subprocess.run([*GIT, '-C', str(repo), *args], capture_output=True,
+                              text=True, check=True).stdout.strip()
+
+    def commit(repo, value, tag):
+        path = repo / release_preflight.CONTRACT_FREE_TEXT_BASELINE
+        path.parent.mkdir(parents=True, exist_ok=True)
+        if value is None:
+            path.unlink(missing_ok=True)
+        else:
+            path.write_text(value if isinstance(value, str) else json.dumps(value))
+        # The previous release deliberately has no authoring tree, parser or
+        # generated contract. Its count file alone supplies this comparison.
+        (repo / 'version').write_text(tag)
+        raw_git(repo, 'add', '.')
+        raw_git(repo, 'commit', '-qm', tag)
+        raw_git(repo, 'tag', '-a', tag, '-m', tag)
+
+    reports = {}
+    cases = [('equal', counts, counts, False),
+             ('shrunk', counts, dict(counts, effect=1), False),
+             ('grown', counts, dict(counts, effect=3), True),
+             ('same_total_new_kind', counts, dict(counts, condition=3, effect=3), True),
+             ('removed', counts, None, True),
+             ('predates', None, counts, False)]
+    for label, previous, candidate, refused in cases:
+        repo = work / label
+        repo.mkdir()
+        raw_git(repo, 'init', '-q')
+        commit(repo, previous, 'v3.0.0')
+        commit(repo, candidate, 'v3.0.1')
+        report, problems = release_preflight.inspect_contract_free_text_baseline(repo, 'v3.0.1')
+        assert bool(problems) == refused, (label, report, problems)
+        assert report['previous_tag'] == 'v3.0.0' and report['counts'] == candidate, report
+        assert report['previous_counts'] == previous, report
+        if label in {'grown', 'same_total_new_kind'}:
+            assert report['increases'] == {'effect': 1}, report
+        if label == 'removed':
+            assert report['status'] == 'missing baseline', report
+        reports[label] = dict(report, problems=problems)
+
+    # Inaugural files are validated even when no earlier release can impose a
+    # ceiling. Count types and duplicate kinds cannot establish one either.
+    malformed = [dict(counts, effect=True), dict(counts, effect=-1),
+                 dict(counts, effect=1.5), dict(counts, future=0),
+                 {key: value for key, value in counts.items() if key != 'when'},
+                 '{"when": 1, "condition": 4, "dependency": 3, "effect": 2, "effect": 1}']
+    for index, value in enumerate(malformed):
+        repo = work / f'inaugural-invalid-{index}'
+        repo.mkdir()
+        raw_git(repo, 'init', '-q')
+        commit(repo, value, 'v3.0.0')
+        try:
+            release_preflight.inspect_contract_free_text_baseline(repo, 'v3.0.0')
+        except ValueError as error:
+            assert 'contract free-text baseline' in str(error), error
+        else:
+            raise AssertionError(f'invalid inaugural count file accepted: {value}')
+
+    # Exercise the strict preflight with a fully generated, otherwise valid
+    # candidate. Local rendering accepts the deliberately raised carried file;
+    # release comparison must still name its growth against the prior tag.
+    integrated = work / 'integrated'
+    integrated.mkdir()
+    repo = make_repo(integrated)
+    git(repo, 'tag', '-a', 'v3.0.0', '-m', 'initial contract')
+    source = repo / 'docs/contract/00-fixture.surface.md'
+    before = source.read_text()
+    source.write_text(before.replace('## Defined value {value: definition}\n',
+        '## Defined value {value: definition}\n\n```contract\nfree.effect: Record the fixture observation.\n```\n', 1))
+    assert source.read_text() != before
+    raised = dict(condition=0, dependency=0, effect=1, when=0)
+    (repo / release_preflight.CONTRACT_FREE_TEXT_BASELINE).write_text(json.dumps(raised))
+    git(repo, 'add', 'docs')
+    git(repo, 'commit', '-qm', 'new free-text effect and carried ceiling')
+    git(repo, 'tag', '-a', 'v3.0.1', '-m', 'candidate')
+    stamp, problems = release_preflight.inspect(repo)
+    assert len(problems) == 1 and 'contract free-text baseline grew against v3.0.0' in problems[0], (stamp, problems)
+    assert stamp['contract_free_text_baseline']['counts'] == raised, stamp
+    assert stamp['contract_free_text_baseline']['increases'] == {'effect': 1}, stamp
+    reports['integrated'] = dict(stamp, problems=problems)
+    (work / 'reports.json').write_text(json.dumps(reports, indent=2, sort_keys=True) + '\n')
 
 
 def check_branch_names(out):
@@ -772,14 +859,32 @@ def check_publish(out, repo, dest, notes):
     assert artifact.inventory(unsupported) == before, 'refusal changed the archive'
 
 
+def check_release_entrypoints(out):
+    """Exercise the real preflight subprocess before the controlled build stops make."""
+    import importlib.util
+    from types import SimpleNamespace
+    spec = importlib.util.spec_from_file_location(
+        'release_entrypoint_controls', ROOT / 'tests/suites/preflight/opt_in/build_refusals.py')
+    controls = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(controls)
+    work = out / 'entrypoints'
+    work.mkdir()
+    environment = {key: value for key, value in os.environ.items() if not key.startswith('PW_')}
+    environment['PW_PYTHON'] = sys.executable
+    controls.control_release_entrypoints_enforce_fresh_mode(
+        SimpleNamespace(out=work, prefix='', base_env=environment), 'full')
+
+
 def main(out):
     out.mkdir(parents=True, exist_ok=True)
+    check_release_entrypoints(out)
     check_preflight(out)
+    check_contract_free_text_baseline(out)
     check_branch_names(out)
     check_archive_layout(out)
     repo, dest, notes = check_archive(out)
     check_publish(out, repo, dest, notes)
-    print('release publish controls passed: tag preflight, archive assembly with retention, and '
+    print('release publish controls passed: fresh-build entrypoints, tag preflight, archive assembly with retention, and '
           'GitHub publication verify their inputs and refuse every mismatch')
 
 

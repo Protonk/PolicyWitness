@@ -821,6 +821,31 @@
       "behavior": "runCWorker measures the publication wait as elapsed monotonic time from the end of the readiness wait, with each synchronous phase collection interval measured and excluded; every sleep is bounded by the remaining allowance, and a failed or regressing clock spends only the last remaining allowance in nominal sleeps, including the last requested sleep, and sentinel_wait.clock_fault reports the fault. After a received ready byte, the host may resample first arrival or done once before first collection. After a phase release, it may resample the next arrival before sleeping. Each opportunity is charged like any pass, capped at 100 microseconds of the remaining allowance and 16,384 unsuccessful loop checks, followed by one final answer check, then falls back to a sleep of at most 2 ms when unanswered. An unusable clock ends resampling at once. Initial resampling returns through the ordinary application, identity and ownership checks and is skipped when no ready byte was received. CWorkerClockTests cover oversleep, irregular polling costs, zero allowance, interrupted waits, clock failure, regression and excluded intervals, and drive the re-sampling directly with an answer present, appearing within the budget or absent throughout, with zero allowance and with an unusable clock; the live deadline cases assert the measured allowance within a stated scheduling tolerance. The worker uses a separate local active-time exec budget, configured below this window without an end-to-end guarantee. CWorkerInitialWaitTests separate delayed application, published apply failure, pre-application exit, missing readiness, deadline and clock faults through a gated child; they establish host decisions, not sandbox effects or real-time bounds."
     },
     {
+      "id": "worker_timeout_override_floor",
+      "section": "execution",
+      "title": "Ordinary worker timeout override floor",
+      "value": 50,
+      "unit": "milliseconds",
+      "counting": "Minimum ordinary worker publication-wait allowance selected by `_test_overrides.worker_timeout_ms`; zero and negative overrides select this floor.",
+      "effect": "An override below this value is clamped before the ordinary worker input is built. Actor scheduling uses its own fixed allowance.",
+      "control": "Fixed; a larger supplied override is used without a ceiling.",
+      "sources": [
+        {
+          "path": "runner/Sources/PWRunnerCore/CWorkerRequestPlanning.swift",
+          "symbol": "timeoutMsForCWorker"
+        }
+      ],
+      "checks": [
+        {
+          "path": "runner/Tests/PWRunnerCoreTests/LimitsContractTests.swift",
+          "symbol": "runLimitsContractTests",
+          "kind": "value",
+          "form": "test"
+        }
+      ],
+      "behavior": "The value owner calls the production planning helper with zero and compares the returned allowance to this inventory. Independent constructed assertions cover negative, zero, immediately below, equal, immediately above and maximum integer overrides. The helper does not change actor scheduling. These assertions are authored and source-inspected; no execution is claimed by the contract draft."
+    },
+    {
       "id": "actor_setup_allowance",
       "section": "execution",
       "title": "Actor setup allowance",
@@ -1436,6 +1461,37 @@
         }
       ],
       "behavior": "After its own bootout, runner remove re-reads the service every 50 milliseconds until it is absent or the nominal allowance is spent. Controlled cleanup systems report the job present for two reads and then absent (completion after two waits), present for every read (retention after the whole allowance), and a skipped bootout (nothing awaited). The live removal cases observe real launchd teardown."
+    },
+    {
+      "id": "runner_remove_poll_interval",
+      "section": "execution",
+      "title": "Runner removal observation interval",
+      "value": 50,
+      "unit": "milliseconds",
+      "counting": "Requested delay between service observations after this removal call successfully boots out a service that remains present.",
+      "effect": "Each delay is charged to the nominal teardown allowance; absence, an unknown observation or budget exhaustion ends polling.",
+      "control": "Fixed.",
+      "sources": [
+        {
+          "path": "controller/src/runner_manager.rs",
+          "symbol": "TEARDOWN_POLL_INTERVAL_MS"
+        }
+      ],
+      "checks": [
+        {
+          "path": "controller/src/runner_manager.rs",
+          "symbol": "documented_removal_limits",
+          "kind": "value",
+          "form": "test"
+        },
+        {
+          "path": "controller/src/runner_manager.rs",
+          "symbol": "bootout_waits_out_launchd_teardown_within_the_budget",
+          "kind": "boundary",
+          "form": "test"
+        }
+      ],
+      "behavior": "The value check compares the compiled interval constant with the inventory. Constructed cleanup systems assert the requested wait interval, repeated observations, whole-budget retention and absence after two waits. The interval is requested nominal waiting; host scheduling and observation calls can take additional elapsed time."
     },
     {
       "id": "byoxpc_throttle_interval",
@@ -3266,7 +3322,7 @@
       "value": 64,
       "unit": "items",
       "counting": "Unique nonempty required boolean entitlement keys per actor.",
-      "effect": "Excess request input is refused before launch; evidence storage and output never silently truncate native observations.",
+      "effect": "A count above the maximum refuses the request before any worker or validator starts; admission_failure reports unit items.",
       "control": "Fixed.",
       "sources": [
         {
@@ -3292,7 +3348,7 @@
       "value": 255,
       "unit": "UTF-8 bytes",
       "counting": "Each actor requirement key, excluding NUL.",
-      "effect": "Excess request input is refused before launch; evidence storage and output never silently truncate native observations.",
+      "effect": "An overlong key or embedded NUL refuses the request before any worker or validator starts; admission_failure reports utf8_bytes or nul_bytes.",
       "control": "Fixed.",
       "sources": [
         {
@@ -3317,8 +3373,8 @@
       "title": "Actor termination dependency wait",
       "value": 5000,
       "unit": "milliseconds",
-      "counting": "Maximum wait before a dependent phase, additionally capped by remaining execution and lifetime allowances.",
-      "effect": "Excess request input is refused before launch; evidence storage and output never silently truncate native observations.",
+      "counting": "Maximum wait before a dependent phase, additionally capped by the remaining execution allowance.",
+      "effect": "Expiry leaves the dependent phase unactivated and cancels the remaining schedule. A later cleanup reap does not satisfy the expired gate.",
       "control": "Fixed.",
       "sources": [
         {
@@ -3343,7 +3399,7 @@
       "value": 832,
       "unit": "bytes",
       "counting": "64-byte header plus sixteen 48-byte independently published operation cells.",
-      "effect": "Excess request input is refused before launch; evidence storage and output never silently truncate native observations.",
+      "effect": "The host retains eligible published setup and cleanup cells independently of the final setup decision; malformed publications are reported as integrity errors.",
       "control": "Fixed.",
       "sources": [
         {
@@ -3368,7 +3424,7 @@
       "value": 16,
       "unit": "items",
       "counting": "Fixed operation slots per worker trailer, including separate cleanup facts.",
-      "effect": "Excess request input is refused before launch; evidence storage and output never silently truncate native observations.",
+      "effect": "Each fixed slot publishes at most once. Unpublished cells supply no native result; invalid published cells are omitted and reported as integrity errors.",
       "control": "Fixed.",
       "sources": [
         {
@@ -3393,7 +3449,7 @@
       "value": 65536,
       "unit": "UTF-8 bytes",
       "counting": "UTF-8 XML payload in each entitlement readback row.",
-      "effect": "Excess request input is refused before launch; evidence storage and output never silently truncate native observations.",
+      "effect": "Overlong entitlement XML fails inventory decoding or signing readback. Static failure refuses actor preparation; live failure cancels scheduled activation. No XML prefix is reported.",
       "control": "Fixed.",
       "sources": [
         {
@@ -3418,7 +3474,7 @@
       "value": 4,
       "unit": "items",
       "counting": "Two required packaged roles and at most two explicit role overrides.",
-      "effect": "Excess request input is refused before launch; evidence storage and output never silently truncate native observations.",
+      "effect": "Preparation retains packaged and explicit override bindings, including refused rows. A failed binding prevents actor launch; the controller refuses replies above this table capacity.",
       "control": "Fixed.",
       "sources": [
         {
@@ -3443,7 +3499,7 @@
       "value": 8,
       "unit": "items",
       "counting": "One inspection per usable actor, before any schedule activation.",
-      "effect": "Excess request input is refused before launch; evidence storage and output never silently truncate native observations.",
+      "effect": "Actor admission bounds this population. A failed live inspection cancels scheduled activation and retains existing setup and application observations.",
       "control": "Fixed.",
       "sources": [
         {
@@ -3468,7 +3524,7 @@
       "value": 12,
       "unit": "items",
       "counting": "Four static and eight live readbacks at the maximum actor and override population.",
-      "effect": "Excess request input is refused before launch; evidence storage and output never silently truncate native observations.",
+      "effect": "Static and live readbacks share this table. Each reported readback is observed XML or a failure with an error; the controller refuses replies above this table capacity.",
       "control": "Fixed.",
       "sources": [
         {
@@ -3665,6 +3721,192 @@
         }
       ],
       "behavior": "Independent primitive controls exercise malformed lengths/counts, native integer ranges, nesting refusal and shared decoded storage. Dense live and constructed response receipts establish their actual sizes, not a global maximum reachable reply."
+    },
+    {
+      "id": "equipment_signing_text",
+      "section": "evidence",
+      "title": "Equipment signing identifier or team",
+      "value": 255,
+      "unit": "UTF-8 bytes",
+      "counting": "Each nonempty signing identifier or team string in the equipment inventory and reported static/live equipment identity.",
+      "effect": "Oversized inventory strings refuse inventory decoding; the equipment reader identifies oversized reported strings as invalid.",
+      "control": "Fixed.",
+      "sources": [
+        {
+          "path": "runner/Sources/PWRunnerCore/ActorEquipment.swift",
+          "symbol": "ActorEquipmentManifest"
+        },
+        {
+          "path": "runner/Sources/PWRunnerCore/PWRunnerEquipment.swift",
+          "symbol": "pwRunnerEquipmentProblems"
+        }
+      ],
+      "checks": [
+        {
+          "path": "runner/Tests/PWRunnerCoreTests/LimitsContractTests.swift",
+          "symbol": "runLimitsContractTests",
+          "kind": "value",
+          "form": "test"
+        }
+      ],
+      "behavior": "Value calibration calls the actual inventory decoder with increasing identifier lengths. Independent constructed cases exercise identifier and team admission at 255 UTF-8 bytes and refusal at 256, plus the separate Swift equipment-reader predicates. Native signing-information decoding has the same source-inspected bound; these controls do not inspect a live signed process."
+    },
+    {
+      "id": "equipment_path",
+      "section": "evidence",
+      "title": "Equipment observed path",
+      "value": 1023,
+      "unit": "UTF-8 bytes",
+      "counting": "Each absolute inventory, binding or live execution path in the equipment report.",
+      "effect": "The equipment reader reports an integrity finding for an overlong path; native signing-information decoding also refuses an overlong executable path.",
+      "control": "Fixed.",
+      "sources": [
+        {
+          "path": "runner/Sources/PWRunnerCore/PWRunnerEquipment.swift",
+          "symbol": "pwRunnerEquipmentProblems"
+        },
+        {
+          "path": "runner/Sources/PWRunnerCore/ActorEquipment.swift",
+          "symbol": "signingInfo"
+        }
+      ],
+      "checks": [
+        {
+          "path": "runner/Tests/PWRunnerCoreTests/LimitsContractTests.swift",
+          "symbol": "runLimitsContractTests",
+          "kind": "value",
+          "form": "test"
+        }
+      ],
+      "behavior": "Calibration calls the actual Swift binding-path predicate with constructed records. Independent multibyte paths exercise 1023-byte acceptance and 1024-byte refusal. Other predicates may report unrelated findings on the isolated calibration record. Inventory/live path guards and native signing-information decoding are source-inspected copies, not exercised by this boundary control."
+    },
+    {
+      "id": "equipment_error_domain",
+      "section": "evidence",
+      "title": "Equipment native error domain",
+      "value": 128,
+      "unit": "UTF-8 bytes",
+      "counting": "Retained native NSError domain text in an equipment diagnostic, preserving complete Swift Characters.",
+      "effect": "The producer retains the prefix that fits; the equipment reader reports an integrity finding for an overlong carried domain.",
+      "control": "Fixed.",
+      "sources": [
+        {
+          "path": "runner/Sources/PWRunnerCore/ActorEquipment.swift",
+          "symbol": "static func error"
+        },
+        {
+          "path": "runner/Sources/PWRunnerCore/PWRunnerEquipment.swift",
+          "symbol": "equipment error domain bound"
+        }
+      ],
+      "checks": [
+        {
+          "path": "runner/Tests/PWRunnerCoreTests/LimitsContractTests.swift",
+          "symbol": "runLimitsContractTests",
+          "kind": "value",
+          "form": "test"
+        },
+        {
+          "path": "runner/Tests/PWRunnerCoreTests/ActorEquipmentTests.swift",
+          "symbol": "runActorEquipmentTests",
+          "kind": "boundary",
+          "form": "test"
+        }
+      ],
+      "behavior": "Value calibration observes the domain returned by the production error constructor for a longer NSError domain. Independent multibyte cases preserve the exact boundary and shorten the next byte; a constructed overlong report exercises the separate reader predicate."
+    },
+    {
+      "id": "authority_cleanup_name",
+      "section": "evidence",
+      "title": "Authority cleanup object name",
+      "value": 31,
+      "unit": "UTF-8 bytes",
+      "counting": "The absolute POSIX shared-memory name in a retained authority cleanup reference.",
+      "effect": "The authority setup reader reports authority_cleanup_reference for an overlong carried name.",
+      "control": "Fixed.",
+      "sources": [
+        {
+          "path": "runner/Sources/PWRunnerCore/PWRunnerAuthoritySetup.swift",
+          "symbol": "authoritySetupIntegrityErrors"
+        },
+        {
+          "path": "runner/Sources/PWRunnerCore/AuthorityCustody.swift",
+          "symbol": "let name ="
+        }
+      ],
+      "checks": [
+        {
+          "path": "runner/Tests/PWRunnerCoreTests/LimitsContractTests.swift",
+          "symbol": "runLimitsContractTests",
+          "kind": "value",
+          "form": "test"
+        }
+      ],
+      "behavior": "Calibration calls the actual setup-integrity reader on a constructed region with successful creation and failed unlink observations. Independent multibyte names exercise 31-byte acceptance and 32-byte refusal. This establishes record admission, not native shared-memory creation, unlink failure or cleanup ownership."
+    },
+    {
+      "id": "worker_fixture_delay",
+      "section": "execution",
+      "title": "Worker fixture delay ceiling",
+      "value": 60000,
+      "unit": "milliseconds",
+      "counting": "Each --pre-ready-hang-ms or --post-apply-hang-ms worker argument forwarded from a positive request override.",
+      "effect": "The worker argument parser refuses a larger forwarded value before worker setup; zero disables that fixture delay.",
+      "control": "Fixed.",
+      "sources": [
+        {
+          "path": "controller/tools/pw_probe_runner/pw_probe_runner.c",
+          "symbol": "parse_args"
+        }
+      ],
+      "checks": [
+        {
+          "path": "runner/Tests/PWRunnerCoreTests/LimitsContractTests.swift",
+          "symbol": "runLimitsContractTests",
+          "kind": "value",
+          "form": "test"
+        },
+        {
+          "path": "tests/suites/runner_abi_layout/limits.py",
+          "symbol": "compare",
+          "kind": "value",
+          "form": "test"
+        }
+      ],
+      "behavior": "The compiled worker-limits probe includes the production parser and calls it directly, without worker launch or sandbox application. It calibrates the accepted ceiling separately for both flags and requires agreement; independent calls assert refusal of negative input and one above the ceiling, acceptance of zero and the exact ceiling, and preservation of each parsed value. Host forwarding and elapsed fixture behavior have separate execution obligations."
+    },
+    {
+      "id": "validator_collection_override_floor",
+      "section": "execution",
+      "title": "Aggregate validator collection override floor",
+      "value": 1,
+      "unit": "milliseconds",
+      "counting": "Minimum aggregate collection allowance for either execution form.",
+      "effect": "Zero and negative validator_total_timeout_ms overrides select this floor before phase planning. The remaining aggregate allowance still controls whether a validator is invoked.",
+      "control": "Fixed; larger overrides are capped at the owning execution form's aggregate collection allowance.",
+      "sources": [
+        {
+          "path": "runner/Sources/PWRunnerCore/CWorkerRequestPlanning.swift",
+          "symbol": "collectionBudgetMs"
+        },
+        {
+          "path": "runner/Sources/PWRunnerCore/CWorkerOrchestrator.swift",
+          "symbol": "collectionBudgetMs"
+        },
+        {
+          "path": "runner/Sources/PWRunnerCore/ActorOrchestration.swift",
+          "symbol": "collectionBudgetMs"
+        }
+      ],
+      "checks": [
+        {
+          "path": "runner/Tests/PWRunnerCoreTests/LimitsContractTests.swift",
+          "symbol": "runLimitsContractTests",
+          "kind": "value",
+          "form": "test"
+        }
+      ],
+      "behavior": "Both orchestrators call the same unchanged max/min calculation. The value control calls that production helper and independently checks negative, zero, floor, just-above-floor, cap, above-cap, maximum-integer and omitted inputs. It establishes the selected allowance; elapsed collection and planning costs remain separate observations."
     }
   ]
 }

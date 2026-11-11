@@ -166,7 +166,7 @@ for launch, policy transfer, readiness, polling and cleanup.
 
 Actor setup automatically records bounded apparatus observations before policy compilation/application: core-limit handling, authority mapping and framing, descriptor closure and each extension-symbol lookup. Missing extension symbols make the corresponding actions unavailable; required apparatus failure prevents application. Setup publication, application observation and final process disposition remain separate. Missing terminal publication leaves application uncertain rather than proving it did not happen.
 
-A phase may specify `after_termination: {"actor_id": "issuer"}` when that actor's last scheduled visit precedes the phase. The gate requires an owned natural reap after the source's final activation, including a nonzero exit or signal, before dependent activation and query collection. It does not require final phase completion. It does not kill an actor to satisfy the dependency. Expiry or an unusable dependency withholds that phase; cleanup and previously published facts retain their own meanings. The source actor owns the native reap record. Source-scoped activation, reap and gate-close ordinals establish their capture order; optional timestamps preserve clock gaps instead of filling them. The gate carries an ordinal reference, not another copy of native wait facts. [CONTRACT](CONTRACT.md#actor-evidence-ownership) specifies eligibility and landing paths.
+A phase may specify `after_termination: {"actor_id": "issuer"}` when that actor's last scheduled visit precedes the phase. The gate requires an owned natural reap after the source's final activation, including a nonzero exit or signal, before dependent activation and query collection. It does not require final phase completion. It does not kill an actor to satisfy the dependency. A failed evaluated gate cancels the remaining schedule; cleanup and previously published facts retain their own meanings. A phase skipped because its dependent actor is unavailable does not evaluate its gate or independently cancel later phases. The source actor owns the native reap record. Source-scoped activation, reap and gate-close ordinals establish their capture order; optional timestamps preserve clock gaps instead of filling them. The gate carries an ordinal reference, not another copy of native wait facts. [CONTRACT](CONTRACT.md#contract-actor_evidence-gate) specifies eligibility and landing paths.
 
 The single-worker sequence is:
 
@@ -436,7 +436,7 @@ edge is the guard that lets it cross. The [public contract](CONTRACT.md)
 binds requests and independent producers to one build identity. The worker
 identity generator produces a separate host/worker source identity; the build
 checks its copies and refuses stale ones without rewriting them
-([CONTRACT.md](CONTRACT.md#internal-hostworker-identity)). Local infrastructure
+([CONTRACT.md](CONTRACT.md#contract-identity-other-worker)). Local infrastructure
 formats keep their own markers: the evidence manifest, runner registry and
 validator NDJSON. Nested compiled-profile receipts inherit the reply context.
 Every other
@@ -522,7 +522,7 @@ and the worker source identity do not authenticate a validator selected through
 a test seam; its observations and process disposition remain explicit.
 
 The controller and the nested `data.policy_check.envelope` share the
-[envelope frame](CONTRACT.md#controller-and-helper-envelopes). The helper receiver
+[envelope frame](CONTRACT.md#contract-envelope). The helper receiver
 checks its kind and version in [policy_check.rs](../controller/src/policy_check.rs)
 before interpreting its outcome; rejected parsed output is retained as opaque
 evidence.
@@ -538,15 +538,16 @@ this section names the mechanisms they are built from.
   readers' allowlists. `abi_layout.txt` is the compiled harvest of the
   worker ABI's sizes and offsets. A difference writes a candidate; replacing
   the golden with the reviewed candidate is the acknowledgement
-  ([shape goldens](CONTRACT.md#shape-goldens)).
+  ([shape goldens](CONTRACT.md#contract-identity-surfaces)).
 - **Generators with marked regions.**
   The <!-- span architecture.documents.kinds.manifest -->10<!-- /span --> manifest
-  nodes of the document graph, from the wire numbers to the prose baseline,
-  are hand-owned facts, and the identity is digested from the sources
+  nodes of the document graph, including the contract tree, wire numbers and prose baseline,
+  are authored facts, and the identity is digested from the sources
   themselves.
   The <!-- span architecture.documents.kinds.generator -->8<!-- /span --> generator
-  nodes, one of them the shared module, copy manifest facts into marked
-  regions of documents and sources, render counts and limit values into
+  nodes, one of them the shared module, render the contract tree with imported
+  field definitions, copy manifest facts into marked regions of documents and
+  sources, render counts and limit values into
   inline spans, and resolve limit placeholders in the architecture facts;
   the build runs every generator's check before signing. Every check
   citation carries a form, and the generator verifies the definition behind
@@ -595,7 +596,7 @@ this section names the mechanisms they are built from.
   check refuses them.
 
 The document graph below shows how those generators and rules connect the
-documents: which manifest feeds which generator, which regions it writes,
+documents: which authored source feeds which generator, which outputs it writes,
 which copies a rule keeps equal, and where the build runs the checks.
 
 <!-- BEGIN GENERATED ARCHITECTURE GRAPH documents -->
@@ -604,24 +605,24 @@ which copies a rule keeps equal, and where the build runs the checks.
 *Figure: the document graph. Generated from [architecture.json](architecture.json) by [generate_architecture.py](generate_architecture.py); dot source in [architecture-documents.dot](architecture-documents.dot). The ids in the figure are the ids in the tables below, and each row cites the source symbol that implements it and the test or rule the manifest names for it. Symbol presence and test definition are verified; whether a test asserts the row is not verified.*
 
 <details>
-<summary>The document graph: 56 nodes and 73 edges, with symbol presence and test definition verified; whether a test asserts the row is not verified</summary>
+<summary>The document graph: 58 nodes and 79 edges, with symbol presence and test definition verified; whether a test asserts the row is not verified</summary>
 
 #### The document graph nodes
 
 | Id | Node | Kind | Owns | Carries | Guards | Sources | Checks | Limits |
 | --- | --- | --- | --- | --- | --- | --- | --- | --- |
-| contract_json | docs/contract_surfaces.json | manifest | the public surface scope, shape inputs, definitions and verification owners |  |  | [`surfaces`](../docs/contract_surfaces.json) | [`test_pending_release_reproduces_after_tagging_and_tracks_removal`](../tests/suites/source_drift/build_contracts.py) |  |
+| contract_tree | docs/contract/*.surface.md | manifest | public meanings, applicability, obligations, examples, evidence limits and surface membership |  |  | [`parse_surface`](../docs/contract/tree.py) | [`test_complete_fixture_joins_imported_fields_and_renders_distinctions`](../tests/suites/source_drift/contract_tree_controls.py); [`test_field_coverage_vocabulary_and_support_are_required`](../tests/suites/source_drift/contract_tree_controls.py) |  |
 | limits_json | docs/limits.json | manifest | every runtime limit with its source and check citations |  |  | [`schema_version`](../docs/limits.json) | [`test_document_is_current`](../tests/suites/source_drift/limits.py) |  |
 | matrix_json | tests/fixtures/comparison/matrix.json | manifest | the comparison scenario matrix |  |  | [`observation`](../tests/fixtures/comparison/matrix.json) | [`test_document_is_current`](../tests/suites/source_drift/limits.py) |  |
 | architecture_json | docs/architecture.json | manifest | the nodes and edges of these figures, each with its citations |  |  | [`MANIFEST_NAME`](../docs/generate_architecture.py) | [`test_document_and_figures_are_current`](../tests/suites/source_drift/architecture.py) |  |
 | catalog_json | tests/catalog.json | manifest | the registered suites and cases |  |  | [`"suites"`](../tests/catalog.json) | [`check_index_vs_disk`](../tests/suites/source_drift/check.py) |  |
-| gen_contract | generate_contract_stamps.py | generator | derived surface stamps across annotated release trees |  |  | [`render`](../docs/generate_contract_stamps.py) | [`test_pending_release_reproduces_after_tagging_and_tracks_removal`](../tests/suites/source_drift/build_contracts.py) |  |
+| gen_contract | generate_contract_stamps.py | generator | the readable contract, canonical public snapshot, shape views and surface stamps across retained release layouts |  |  | [`render`](../docs/contract/runtime.py); [`public_payload`](../docs/contract/tree.py) | [`test_complete_fixture_joins_imported_fields_and_renders_distinctions`](../tests/suites/source_drift/contract_tree_controls.py); [`test_prepared_tree_release_reproduces_after_tag_and_preserves_legacy_removal`](../tests/suites/source_drift/contract_tree_controls.py) |  |
 | gen_limits | generate_limits.py | generator | the limits tables, the scenario matrix, the guide's copied regions and the limits spans |  |  | [`CONTRACT_NAME`](../docs/generate_limits.py) | [`test_document_is_current`](../tests/suites/source_drift/limits.py) |  |
 | gen_identity | generate_worker_identity.py | generator | the host/worker source identity regions |  |  | [`SOURCE_DIRS`](../docs/generate_worker_identity.py) | [`test_identity_is_current_relocatable_and_regeneration_is_idempotent`](../tests/suites/source_drift/build_contracts.py); [`test_pending_release_reproduces_after_tagging_and_tracks_removal`](../tests/suites/source_drift/build_contracts.py) |  |
 | gen_architecture | generate_architecture.py | generator | these figures, their dot and SVG files, the tables beside them and the architecture spans |  |  | [`MANIFEST_NAME`](../docs/generate_architecture.py) | [`test_document_and_figures_are_current`](../tests/suites/source_drift/architecture.py) |  |
-| contract_md | docs/CONTRACT.md | document |  | the version sentence and table |  | [`BEGIN GENERATED CONTRACT STAMPS`](../docs/CONTRACT.md) | [`test_pending_release_reproduces_after_tagging_and_tracks_removal`](../tests/suites/source_drift/build_contracts.py) |  |
+| contract_md | docs/CONTRACT.md | document |  | the generated public contract and derived surface history table |  | [`DOCUMENT_BEGIN`](../docs/contract/runtime.py) | [`test_complete_fixture_joins_imported_fields_and_renders_distinctions`](../tests/suites/source_drift/contract_tree_controls.py); [`test_prepared_tree_release_reproduces_after_tag_and_preserves_legacy_removal`](../tests/suites/source_drift/contract_tree_controls.py) |  |
 | limits_md | docs/LIMITS.md | document |  | the limits tables and coverage |  | [`BEGIN GENERATED LIMITS`](../docs/LIMITS.md) | [`test_document_is_current`](../tests/suites/source_drift/limits.py) |  |
-| guide | docs/PolicyWitness.md | document |  | copied limits, questions, reading rules and extension statuses and coverage; the version sentence; the only document that ships |  | [`BEGIN COPIED LIMITS`](../docs/PolicyWitness.md); [`BEGIN GENERATED CONTRACT STAMPS`](../docs/PolicyWitness.md) | [`test_document_is_current`](../tests/suites/source_drift/limits.py); [`--stage-guide`](../build.sh) |  |
+| guide | docs/PolicyWitness.md | document |  | copied limits, questions, reading rules and extension statuses and coverage; the surface history table; the only document that ships |  | [`BEGIN COPIED LIMITS`](../docs/PolicyWitness.md); [`BEGIN GENERATED CONTRACT STAMPS`](../docs/PolicyWitness.md) | [`test_document_is_current`](../tests/suites/source_drift/limits.py); [`--stage-guide`](../build.sh) |  |
 | questions_md | docs/QUESTIONS.md | document |  | the shared questions the guide copies |  | [`BEGIN SHARED QUESTIONS`](../docs/QUESTIONS.md) | [`test_document_is_current`](../tests/suites/source_drift/limits.py) |  |
 | failure_contract | tests/FAILURE-PROPAGATION-CONTRACT.md | document |  | the generated scenario matrix, shared reading rules and extension statuses |  | [`BEGIN GENERATED SCENARIO MATRIX`](../tests/FAILURE-PROPAGATION-CONTRACT.md); [`BEGIN SHARED READING RULES`](../tests/FAILURE-PROPAGATION-CONTRACT.md); [`BEGIN SHARED EXTENSION STATUSES`](../tests/FAILURE-PROPAGATION-CONTRACT.md) | [`test_document_is_current`](../tests/suites/source_drift/limits.py) |  |
 | architecture_md | docs/ARCHITECTURE.md | document |  | these figures and their tables |  | [`REGION_START`](../docs/generate_architecture.py) | [`test_document_and_figures_are_current`](../tests/suites/source_drift/architecture.py) |  |
@@ -644,7 +645,7 @@ which copies a rule keeps equal, and where the build runs the checks.
 | suites | tests/suites/<name>/ | source |  | a README per suite and the case scripts the catalog names; no script is an entry point |  | [`suite_directories`](../tests/suites/source_drift/check.py) | [`check_index_vs_disk`](../tests/suites/source_drift/check.py); [`check_run_scripts_are_catalog_commands`](../tests/suites/source_drift/check.py) |  |
 | drift_check | source_drift check.py | check |  |  | copies and vocabularies that are not generated, workflow guidance sections and diagnostic routes, the Known gap indexes in the architecture, build and worker tours, and the evidence-channel landing paths | [`check_harness_guidance_routes`](../tests/suites/source_drift/check.py) | [`check_readmes_present`](../tests/suites/source_drift/check.py); [`check_index_vs_disk`](../tests/suites/source_drift/check.py); [`check_run_scripts_are_catalog_commands`](../tests/suites/source_drift/check.py); [`check_no_direct_case_commands_in_docs`](../tests/suites/source_drift/check.py); [`check_release_production_runs_the_default_battery`](../tests/suites/source_drift/check.py); [`check_baseline_in_catalog_defaults`](../tests/suites/source_drift/check.py); [`check_runner_outcome_suites_have_matrix_rows`](../tests/suites/source_drift/check.py); [`check_normalized_outcomes_have_matrix_rows`](../tests/suites/source_drift/check.py); [`check_attempt_outcomes_have_matrix_rows`](../tests/suites/source_drift/check.py); [`check_attempt_kind_enum_agreement`](../tests/suites/source_drift/check.py); [`check_prediction_unavailable_agreement`](../tests/suites/source_drift/check.py); [`check_prediction_unavailable_planner`](../tests/suites/source_drift/check.py); [`check_test_overrides_table_agreement`](../tests/suites/source_drift/check.py); [`check_harness_guidance_routes`](../tests/suites/source_drift/check.py); [`check_cli_surface_agreement`](../tests/suites/source_drift/check.py); [`check_host_invariance`](../tests/suites/source_drift/check.py); [`check_known_gap_index`](../tests/suites/source_drift/check.py); [`check_evidence_channel_paths`](../tests/suites/source_drift/check.py); [`check_meson_source_lists`](../tests/suites/source_drift/check.py); [`runner_source_manifests_agree`](../tests/suites/source_drift/run.sh) |  |
 | drift_limits | source_drift limits.py | check |  |  | the limits generator's copies and the standalone guide's structure and internal links | [`LimitsDocumentationTests`](../tests/suites/source_drift/limits.py) | [`test_document_is_current`](../tests/suites/source_drift/limits.py) |  |
-| drift_contract | source_drift build_contracts.py | check | public build identity, surface-history and worker-identity controls |  |  | [`test_pending_release_reproduces_after_tagging_and_tracks_removal`](../tests/suites/source_drift/build_contracts.py); [`WorkerIdentityTests`](../tests/suites/source_drift/build_contracts.py) | [`build_contracts`](../tests/suites/source_drift/run.sh) |  |
+| drift_contract | source_drift contract controls | check | public build identity, authored tree and imported field checks, retained surface history and worker identity controls |  |  | [`ContractTreeTests`](../tests/suites/source_drift/contract_tree_controls.py); [`test_pending_release_reproduces_after_tagging_and_tracks_removal`](../tests/suites/source_drift/build_contracts.py); [`WorkerIdentityTests`](../tests/suites/source_drift/build_contracts.py) | [`build_contracts`](../tests/suites/source_drift/run.sh) |  |
 | drift_architecture | source_drift architecture.py | check |  |  | this manifest against its dot, SVG and document copies | [`ArchitectureDocumentationTests`](../tests/suites/source_drift/architecture.py) | [`architecture_documentation`](../tests/suites/source_drift/run.sh) |  |
 | gen_common | generator_common.py | generator | the citation forms, the duration pattern, the limits formatter and the span rules the three document generators share |  |  | [`FORM_RULES`](../docs/generator_common.py); [`render_spans`](../docs/generator_common.py) | [`test_check_citations_carry_a_form_and_tests_are_defined`](../tests/suites/source_drift/generators.py); [`test_readme_form_table_is_a_copy_of_the_shared_rules`](../tests/suites/source_drift/generators.py) |  |
 | prose_baseline | tests/fixtures/docs/prose_baseline.json | manifest | every prose site that still states a value, a count or a citation in an unverified form |  |  | [`BASELINE_NAME`](../tests/suites/source_drift/generators.py) | [`test_prose_baseline_is_consistent_and_growth_is_explicit`](../tests/suites/source_drift/generators.py) |  |
@@ -666,14 +667,16 @@ which copies a rule keeps equal, and where the build runs the checks.
 | porcelain_json | docs/porcelain.json | manifest | typed record fields, tags, primitive kinds and public presentation rules |  |  | [`wire_identity`](../docs/generate_porcelain.py) | [`test_comment_only_change_preserves_wire_fingerprint_and_codecs`](../tests/suites/source_drift/porcelain_codec.py) |  |
 | gen_porcelain | generate_porcelain.py | generator | Swift stored-field regions, Swift writers, Rust records/readers and Python structural tables |  |  | [`outputs`](../docs/generate_porcelain.py) | [`test_one_sided_regeneration_is_stale_and_old_fingerprint_is_refused`](../tests/suites/source_drift/porcelain_codec.py) |  |
 | porcelain_records | generated typed records and tables | source |  | binary structure shared by producers and readers; semantic checks remain authored |  | [`OUTPUTS`](../docs/generate_porcelain.py) | [`test_literal_invalid_ids_variants_and_cycles_do_not_write`](../tests/suites/source_drift/porcelain_codec.py) |  |
+| contract_records | record_definitions.py | library |  | public field types and presence imported from porcelain, Swift request decoders and Rust serialization declarations |  | [`load`](../docs/contract/record_definitions.py); [`RUST_INPUTS`](../docs/contract/record_definitions.py) | [`test_public_projection_types_and_presence_follow_the_owners`](../tests/suites/source_drift/build_contracts.py) |  |
+| contract_history | public snapshots and release shapes | record |  | the current canonical public view and each release's own public definitions and shape files, read through retained layout readers |  | [`SNAPSHOT`](../docs/contract/history_v1.py); [`surface_hash`](../docs/contract/history_v0.py); [`history`](../docs/contract/runtime.py) | [`test_prepared_tree_release_reproduces_after_tag_and_preserves_legacy_removal`](../tests/suites/source_drift/contract_tree_controls.py); [`test_released_snapshot_remains_readable_when_authoring_syntax_changes`](../tests/suites/source_drift/contract_tree_controls.py) |  |
 
 #### The document graph edges
 
 | Id | From | To | Kind | Edge | Sources | Checks | Limits |
 | --- | --- | --- | --- | --- | --- | --- | --- |
-| D1 | contract_json | gen_contract | reads | surface definitions and shape inputs | [`render`](../docs/generate_contract_stamps.py) | [`test_pending_release_reproduces_after_tagging_and_tracks_removal`](../tests/suites/source_drift/build_contracts.py) |  |
-| D2 | gen_contract | contract_md | writes | derived surface stamp table | [`render`](../docs/generate_contract_stamps.py) | [`test_pending_release_reproduces_after_tagging_and_tracks_removal`](../tests/suites/source_drift/build_contracts.py) |  |
-| D6 | gen_contract | guide | writes | derived surface stamp table | [`render`](../docs/generate_contract_stamps.py) | [`test_pending_release_reproduces_after_tagging_and_tracks_removal`](../tests/suites/source_drift/build_contracts.py) |  |
+| D1 | contract_tree | gen_contract | reads | authored tree and declared surface shapes | [`load_tree`](../docs/contract/tree.py) | [`test_complete_fixture_joins_imported_fields_and_renders_distinctions`](../tests/suites/source_drift/contract_tree_controls.py) |  |
+| D2 | gen_contract | contract_md | writes | complete readable contract and surface history table | [`assemble`](../docs/contract/runtime.py) | [`test_complete_fixture_joins_imported_fields_and_renders_distinctions`](../tests/suites/source_drift/contract_tree_controls.py); [`test_prepared_tree_release_reproduces_after_tag_and_preserves_legacy_removal`](../tests/suites/source_drift/contract_tree_controls.py) |  |
+| D6 | gen_contract | guide | writes | derived surface stamp table | [`_replace_table`](../docs/contract/runtime.py) | [`test_prepared_tree_release_reproduces_after_tag_and_preserves_legacy_removal`](../tests/suites/source_drift/contract_tree_controls.py); [`test_guide_and_support_edits_leave_public_stamps_while_meaning_changes_move_them`](../tests/suites/source_drift/contract_tree_controls.py) |  |
 | D9 | limits_json | gen_limits | reads | limits with citations | [`load_limits`](../docs/generate_limits.py) | [`test_document_is_current`](../tests/suites/source_drift/limits.py) |  |
 | D10 | matrix_json | gen_limits | reads | scenario rows | [`MATRIX_NAME`](../docs/generate_limits.py) | [`test_document_is_current`](../tests/suites/source_drift/limits.py) |  |
 | D11 | questions_md | gen_limits | reads | shared questions | [`QUESTIONS_START`](../docs/generate_limits.py) | [`test_document_is_current`](../tests/suites/source_drift/limits.py) |  |
@@ -699,7 +702,7 @@ which copies a rule keeps equal, and where the build runs the checks.
 | D31 | drift_check | coverage_md | checks | every outcome constant has a row and every row a constant | [`check_normalized_outcomes_have_matrix_rows`](../tests/suites/source_drift/check.py) | [`runner_source_manifests_agree`](../tests/suites/source_drift/run.sh) |  |
 | D32 | drift_check | tests_readme | checks | suite table equals suites and catalog | [`check_index_vs_disk`](../tests/suites/source_drift/check.py) | [`runner_source_manifests_agree`](../tests/suites/source_drift/run.sh) |  |
 | D33 | drift_limits | gen_limits | checks | --check, stale-copy and standalone-guide staging controls | [`test_check_and_staging_refuse_stale_or_incomplete_documents_without_writing`](../tests/suites/source_drift/limits.py) | [`limits_documentation`](../tests/suites/source_drift/run.sh) |  |
-| D34 | drift_contract | gen_contract | checks | --check and generator controls | [`test_pending_release_reproduces_after_tagging_and_tracks_removal`](../tests/suites/source_drift/build_contracts.py) | [`build_contracts`](../tests/suites/source_drift/run.sh) |  |
+| D34 | drift_contract | gen_contract | checks | tree, imported record, snapshot and release-history controls | [`ContractTreeTests`](../tests/suites/source_drift/contract_tree_controls.py); [`RecordDefinitionTests`](../tests/suites/source_drift/build_contracts.py) | [`build_contracts`](../tests/suites/source_drift/run.sh) |  |
 | D35 | drift_contract | gen_identity | checks | regeneration, relocation and stale-value controls | [`WorkerIdentityTests`](../tests/suites/source_drift/build_contracts.py) | [`build_contracts`](../tests/suites/source_drift/run.sh) |  |
 | D36 | drift_architecture | gen_architecture | checks | --check, citation, stale-copy and SVG-stamp controls | [`ArchitectureDocumentationTests`](../tests/suites/source_drift/architecture.py) | [`architecture_documentation`](../tests/suites/source_drift/run.sh) |  |
 | D37 | build | gen_limits | checks | --check before compiling; --stage-guide into dist | [`--stage-guide`](../build.sh) | [`test_document_is_current`](../tests/suites/source_drift/limits.py) |  |
@@ -744,6 +747,12 @@ which copies a rule keeps equal, and where the build runs the checks.
 | D78 | porcelain_json | gen_porcelain | reads | record schema and presentation rules | [`wire_identity`](../docs/generate_porcelain.py) | [`test_one_sided_regeneration_is_stale_and_old_fingerprint_is_refused`](../tests/suites/source_drift/porcelain_codec.py) |  |
 | D79 | gen_porcelain | porcelain_records | writes | stored fields and typed codecs | [`outputs`](../docs/generate_porcelain.py) | [`test_one_sided_regeneration_is_stale_and_old_fingerprint_is_refused`](../tests/suites/source_drift/porcelain_codec.py) |  |
 | D80 | build | gen_porcelain | checks | refuse stale outputs before compilation | [`main`](../docs/generate_porcelain.py) | [`test_one_sided_regeneration_is_stale_and_old_fingerprint_is_refused`](../tests/suites/source_drift/porcelain_codec.py) |  |
+| D81 | porcelain_json | contract_records | reads | typed host and client public declarations | [`_porcelain_records`](../docs/contract/record_definitions.py) | [`test_public_projection_types_and_presence_follow_the_owners`](../tests/suites/source_drift/build_contracts.py) |  |
+| D82 | request_swift | contract_records | reads | request field names, decoded types and presence | [`_request_records`](../docs/contract/record_definitions.py) | [`test_public_projection_types_and_presence_follow_the_owners`](../tests/suites/source_drift/build_contracts.py) |  |
+| D83 | json_contract_rs | contract_records | reads | controller envelope among the imported Rust record declarations | [`_rust_records`](../docs/contract/record_definitions.py) | [`test_public_projection_types_and_presence_follow_the_owners`](../tests/suites/source_drift/build_contracts.py) |  |
+| D84 | contract_records | gen_contract | reads | join imported public fields to their authored meanings | [`load_tree`](../docs/contract/tree.py) | [`test_complete_fixture_joins_imported_fields_and_renders_distinctions`](../tests/suites/source_drift/contract_tree_controls.py) |  |
+| D85 | gen_contract | contract_history | writes | canonical public snapshot and refreshed shape views | [`render`](../docs/contract/runtime.py) | [`test_prepared_tree_release_reproduces_after_tag_and_preserves_legacy_removal`](../tests/suites/source_drift/contract_tree_controls.py) |  |
+| D86 | contract_history | gen_contract | reads | released public definitions and their own shape files | [`history`](../docs/contract/runtime.py) | [`test_prepared_tree_release_reproduces_after_tag_and_preserves_legacy_removal`](../tests/suites/source_drift/contract_tree_controls.py); [`test_missing_released_inputs_propagate_without_current_tree_fallback`](../tests/suites/source_drift/build_contracts.py) |  |
 
 Every node and edge above cites at least one test or rule.
 

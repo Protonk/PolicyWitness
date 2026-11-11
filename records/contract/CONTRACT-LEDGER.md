@@ -12,58 +12,309 @@ sections hold and when they are updated; a check-in reads them first.
 
 ## Standing
 
-Stage one started on 2026-11-10 at `8dfb1152`. Coverage reconciliation,
-the authoring spike and the migration dependency inventory are complete.
-The empty nineteen-surface skeleton rendered separately at 66 lines and
-138 words, with no authored body or fields. Identity and shared definitions
-were drafted first and independently reviewed; the other surfaces are now
-being drafted. The current contract remains authoritative until the
-coordinated switch. The preparatory records are
-`CONTRACT-COVERAGE-MAP.md`, `CONTRACT-SPIKE-RESULT.md` and
-`CONTRACT-MIGRATION-INVENTORY.md` in this directory.
+**Stage one: full refusal rehearsal passed; prepare the final development build.** The maintainer's
+normal-Terminal history lookup succeeded, and the same approved lookup now
+succeeds in this session: `Successfully received submission history`, with
+100 entries. The earlier exit 69 from `xcrun notarytool history
+--keychain-profile entitlement-jail --output-format json` established a lookup
+failure in this session, not an absent profile. Its cause remains unestablished.
+No credential was read out, changed or recreated, and no app was submitted.
+The plan's absent-profile stop condition does not apply.
 
-Last checks: all four `unit` cases passed in
-`tests/out/runs/contract-profile-outcome-20261110`
-(`20261110T195016Z_0d197151`). Nine of ten `source_drift` cases passed in
-`tests/out/runs/contract-stage-one-start-20261110`; `generator_contract`
-correctly refused links added to the plan before the delegated coverage and
-spike records existed. Those premature links were removed, and that case
-passed in `tests/out/runs/contract-stage-one-links-20261110`. The failure was
-an editing-order error, not an environment or product failure. These are
-local disposable development runs. New tree support modules are still being
-built separately and are not exercised by these checks.
+The signed development build passed outside the automation sandbox. Its full
+default battery, `contract-stage-one-development-20261110`
+(`20261110T222809Z_ff8b1006`), passed 228 of 229 cases. The sole failure was
+`preflight/release_rotation_controls`: its fixture amended a previously
+tagged commit while preparing the next fixture release, making a required
+historical tag unreachable from HEAD. The history guard correctly refused.
+The fixture now makes a new preparation commit before the stamp helper amends
+it. This repairs the fixture's ancestry, leaving the history requirement intact.
+All case sleep observations were zero; app integrity was valid before the run
+and unchanged afterward. Swift controls passed 602 of 602 assertions. This is
+development evidence, not release acceptance.
 
-The first production model/reader control run found two errors in the new
-controls: an incomplete nested node path, and a supposed missing symbol that
-appeared literally in its fixture source. Corrected controls passed all 48
-items in `tests/out/runs/contract-tree-readers-fixed-20261110`.
-All ten source-drift cases then passed in
-`tests/out/runs/contract-tree-source-drift-20261110`. The new history-backend
-controls were added after that run's build-contract case; their first run,
-`tests/out/runs/contract-tree-history-20261110`, refused because the constructed
-tree's cited fixture source had not been copied. That test-input omission is
-fixed; all 54 items passed in
-`tests/out/runs/contract-tree-history-input-20261110`. This includes actual
-disposable Git releases in both retained layouts, before/after-tag equality,
-permanent removal rows and history-loss refusals. No signing or runtime-product
-failure occurred in these generator controls.
+The build used commit `39d5b2cf` with the coordinated changes uncommitted,
+Developer ID Application: Adam Hyland (42D369QV8E), SDK 27.2 and thin arm64
+outputs. Its public identity was
+`development:4d5ee1aad9e36e17b19c02a4bb9abbf67d3f363e2395720ba49c9eac8b25d6e2`.
+All seven executable signatures and both enclosing seals had secure timestamps.
+Its staged guide matched the source. Subsequent contract corrections require
+another build before the final development rehearsal.
 
-Next: complete and independently review the surfaces, finish the history and
-rendering guarantees, then switch the dependent generator consumers together.
-The default entry point still checks the legacy contract; draft preview is
-explicit and leaves that document intact. The release backend is being tested
-separately before activation.
+The original isolated reading completed all 4,441 lines, 101 entries and its
+Close-out, followed by a separate round answering all 29 prompts. Input,
+journal, prompts, answers and snapshot metadata are preserved under
+`records/contract/readings/stage-one/`. The interruption after line 2978 and
+resumption at 2979 remain recorded. A targeted reading of the corrected
+rendering is complete; it is separate from the original isolated reading.
+The source audit of all prompted answers found no new incorrect operational
+conclusion; the overbroad override-coverage statement had already been corrected.
+The targeted revision reading covered all 43 delta hunks and selected current
+passages, in 21 discussions. It correctly retained limits on source evidence,
+matching identities, gate findings, independent projections and outer success.
+It also exposed the still-hidden record-alias locations; the renderer now prints
+the two existing `at` facts, covered by an additional fixture control. The
+preserved revised input predates that small rendering follow-up, as its metadata
+states. No original reading artifact was rewritten.
 
-Readiness checks found clean `main`, annotated history through `v0.3.6`,
-local archives `v0.3.3` through `v0.3.6`, and the Developer ID identity
-available outside the automation sandbox. The same read-only identity and
-native-builder probes failed inside the sandbox and passed outside it.
-The current notary profile has not been probed. No build or test execution
-is credited by this readiness review. Three agents are active; three have
-been dispatched in this task in total, including the two readiness readers
-now continuing with stage-one work.
+`contract-stage-one-corrected-controls-20261110`
+(`20261110T225800Z_6ab2bdea`) completed eleven of thirteen cases successfully.
+Release rotation and publication controls passed; all sleep observations were
+zero and the inspected app stayed valid and unchanged. The build-refusal case
+passed all 76 full/partial guard controls and five sequences, then stopped at
+the release-entry fixture: it had replaced `build.sh` with a recorder while
+retaining contract citations to the removed source. The citation refusal was
+correct. The fixture now owns a minimal contract, preserves inherited claims,
+imports genuine release ancestry and checks the resulting removal rows.
+Later sequences, the nested release battery and mutation controls were unrun.
+These completed subcontrols do not establish a passing whole case.
+
+The other failed case, `source_drift/build_contracts`, found two test-construction
+errors: a duplicated `at` fact, and a section split that matched a level-three
+surface title before the intended level-two findings index. Both are corrected.
+The focused `contract-stage-one-model-fixtures-20261110` retry passed that case
+and release/publication controls after the fixture-helper extraction. These
+failures concern test fixtures, not signing or Keychain access. The complete
+build-refusal rerun, `contract-stage-one-build-refusals-20261111`
+(`20261111T000643Z_d561558c`), again passed all 76 guard controls and the first
+five sequences. Its release-entrypoint fixture then failed before reaching the
+controlled build: the copied preflight could not import `retention`. The prior
+citation repair exposed this second incomplete-fixture dependency. The fixture
+now copies the top-level Python/shell runtime helpers explicitly, including
+retention's transitive release helpers. The existing default release/publication
+case also invokes that exact entrypoint control, so its subprocess dependency
+closure is exercised before another expensive full run. No guard or release
+requirement was weakened. This failed run had zero sleep and valid, unchanged
+app bytes; its later sequences, nested battery and mutations remain unrun.
+
+The focused `contract-stage-one-entrypoint-inputs-20261111` retry
+(`20261111T005604Z_9b5938e5`) passed all eleven selected cases: the exact
+release-entrypoint control through the default publication case, and all ten
+source-drift cases. All case sleep observations were zero. This selection did
+not select an app, so it supplies no new artifact inspection or native execution
+credit. Each release-entrypoint invocation now saves its receipt before its
+assertions, preserving diagnostics if a future fixture refusal interrupts it.
+The complete `contract-stage-one-refusal-rehearsal-20261111` run
+(`20261111T010305Z_bc56e764`) passed all 76 full/partial guards and eleven
+sequences, including the repaired release entrypoints, fresh/reused caches,
+lock lifetime, compiler selection and SDK requests. Its nested release
+acceptance then refused before starting the default battery: the copied
+repository's new annotated tag was `v1.0.0`, while the build fixture still
+forced `PW_VERSION=0.0.0`. The extracted app correctly reported its tagged
+contract `release:v1.0.0`, and acceptance correctly refused the disagreement
+with its version. The nested acceptance identity is
+`accept-870424051dce46238f978deaf71bb623`; its receipts are under the case's
+`artifacts/release-battery/acceptance/`. This is a fixture version-setting
+error, not a signature or Keychain failure. That tagged fixture now clears
+both version/count overrides so the builder derives them from its own tag
+and ancestry. The outer run recorded zero sleep and valid, unchanged app
+bytes. The nested default battery and the later guard mutations remain
+unrun. No partial run is counted as whole-case acceptance.
+
+Source review also corrected nine limits effects that incorrectly shared a
+generic pre-launch-refusal sentence. Their actual admission, runtime gate,
+publication and equipment consequences are now distinct. The termination wait
+uses the remaining host execution allowance; worker lifetime enforcement is
+separate. A further contract correction places missing ordering/setup/worker
+evidence inside the `unestablished` comparison outcome's applicability. These
+account corrections change no runtime behavior or numerical limit. The next
+full refusal run included them; the next development rehearsal will too.
+Four additional source-reviewed account corrections are now applied:
+profile-label refusal has separate `run` and `runner verify` consequences;
+exec acquisition can follow an actor's unapplied declaration; and authority
+preparation distinguishes conditional host custody from each reached worker's
+setup; and termination evaluation itself determines source availability, after
+the dependent actor's availability checks permit evaluation. A missing source
+activation can therefore produce the evaluated `source_unavailable` outcome.
+Their support remains source-read except for the existing constructed
+run-label control. A private strict tree load caught subject-local aliases in
+the verify effect; it now uses the existing `runner_verify` root and a shared
+`JsonResult` root. The three corrections then loaded and rendered together,
+and the owning generator regenerated the public document and snapshot.
+The original and targeted reading inputs predate these corrections, as their
+metadata records. All ten source-drift cases passed in
+`contract-stage-one-truth-checks-20261111` (`20261111T015147Z_5de6838a`), with
+zero sleep and no selected app. That run includes the first three corrections
+and the version-fixture repair; the subsequent one-line gate correction was
+source-reviewed and regenerated. The complete refusal run
+`contract-stage-one-complete-rehearsal-20261111`
+(`20261111T015906Z_48b4ac1d`) passed with all four corrections: 76 full/partial
+guards, twelve sequences and sixteen mutation controls. Its outer case recorded
+zero system sleep and valid, unchanged app bytes, with no integrity harness
+errors. The nested release fixture derived version and count from its annotated
+`v1.0.0` tag and ancestry. Acceptance
+`accept-6fff214d2fa24b1a9cf81f404c36c3ae` passed all 229 default cases in battery
+`20261111T024736Z_0922b5ae`, including 602 Swift assertions, with no skips,
+unrun cases, harness errors or system sleep. Its extracted app remained unchanged;
+the ZIP SHA-256 before and after was
+`221097970ea20fc7a1deff0d29d023cdb96ecbd6c7c8fe8f77a1c4ab01ff401d`.
+The receipt is under the refusal case's `artifacts/release-battery/acceptance/`.
+This rehearsal used controlled Apple responses; it establishes the local release
+sequence and default acceptance, not an Apple submission. The corrected version
+fixture is now exercised through the whole sequence. The final development build
+and full battery follow on the main checkout.
+No new tag, Apple submission or archive exists. The coordinated stage-one
+switch remains uncommitted pending these checks.
+
+
+Stage one started at `8dfb1152`. All nineteen surfaces have been authored
+and independently reviewed; imported public records have one owner and every
+field has an authored meaning. The generator now owns the complete contract,
+the guide's stamp table, the canonical public snapshot and per-surface shapes.
+The former manifest was removed from current inputs; its retained reader
+still derives the `v0.3.6` history. Current surfaces remain unreleased.
+
+The initial complete tree had 1,003 field meanings, 1,526 nodes and nineteen
+surfaces. Its rendered size was 4,412 lines and 57,897 words, including 1,651
+table lines, 14,203 words of field meanings and 13,882 authored body words.
+The corrected rendering has 4,494 lines and 59,989 words: 1,671 table lines
+with 34,191 words, 859 nonblank authored body lines with 14,524 words, 14,623
+words of field meanings and 4,045 free-relationship words. These categories
+overlap where the renderer places prose in tables. There are 1,535 nodes,
+1,003 field meanings and nineteen surfaces, with no uncovered imported records.
+The size exceeds the plan's reporting threshold; stage three will examine
+duplication and rendering while preserving the commitments. The first free-text ceiling
+is 51 conditions, zero dependencies, 88 effects and four applicability items.
+These categories now have both local generation checks and a strict comparison
+with the preceding release's retained count file.
+
+Local development evidence, all through the dispatcher:
+
+- `contract-profile-outcome-20261110` (`20261110T195016Z_0d197151`): all four
+  unit cases passed, including the added compiled-profile public-outcome test.
+- `contract-stage-one-start-20261110`: nine source-drift cases passed; the
+  generator case refused links to not-yet-created records. Removing the
+  premature links fixed that editing-order error; its focused retry passed.
+- `contract-tree-readers-fixed-20261110`: all 48 model/reader controls passed
+  after correcting two test fixture mistakes. `contract-tree-source-drift-20261110`
+  then passed all ten source-drift cases.
+- `contract-tree-history-input-20261110`: all 54 controls passed after copying
+  the constructed history fixture's cited source. Both retained layouts,
+  before/after-tag equality, removals and history loss were exercised.
+- `contract-tree-shared-20261110` (`20261110T203659Z_0da2904f`): one new negative
+  control expected the later duplicate-record error, while the earlier
+  duplicate-inline-record guard correctly refused. The assertion now names
+  that earlier boundary.
+- `contract-switch-build-controls-20261110` (`20261110T205852Z_c5a701ae`): 57 of
+  58 controls passed. A wire-tag mutation also moved the JSON reply shape,
+  revealing that collection retained wire tags and native storage metadata.
+  JSON shape collection now retains public declarations; the wire surface
+  separately retains exact wire tags and encoding.
+- `contract-switch-shape-scope-20261110` (`20261110T210134Z_9b95bf97`): all 58
+  controls passed, including the corrected ownership boundary, complete public
+  record coverage and both retained history readers.
+
+`contract-switch-source-drift-20261110` (`20261110T210725Z_85e9e7ab`)
+passed six cases and found four integration failures. Build/architecture/
+footprint fixture commands lacked the newly imported `repository_tree.py`;
+the owning generators now declare it. Generator controls found an incomplete
+prose fixture, explicit generated anchors absent from link lookup, and a
+false size match in the heading “SHA-256 byte width”. The fixture scope and
+shared Markdown anchor reader are corrected with controls; the heading now
+names digest length. No baseline exemption was added. The limits, current
+contract/history, Markdown parser, direct-entry and porcelain cases passed.
+
+All four cases passed in `contract-limit-controller-unit-20261110`, including
+the actual removal-poll constant check. In
+`contract-switch-integrated-controls-20261110`, all ten source-drift cases,
+native ABI/limit controls and release/publication controls passed. Build-entry
+controls were obstructed by nested sandbox-exec and native-builder probes.
+Their unchanged outside-sandbox rerun,
+`contract-build-entry-unsandboxed-20261110` (`20261110T222611Z_28c7198e`),
+passed. The same build-entry case also passed in the full development battery.
+The earlier diagnostic failures listed above were test/input/tooling
+disagreements; these two sandbox obstructions have separate evidence.
+
+The first isolated reader started outside the repository with only
+`/private/tmp/pw-contract-isolated-stage1-kd5asdhh/CONTRACT.md` and the original
+isolated-reader task text. Snapshot SHA-256:
+`9e3c46c13a8899512f68d9a07e6cecdfc3e2f1057bcf82bada882d3d9029185c`.
+Its completed journal and prompted answers remain unchanged. The preserved
+revised snapshot and 43-hunk delta distinguish numeric-span/fixed-width
+presentation work, source-checked truth corrections, and the newly visible
+bindings, association selectors and findings consequences. The initial reading
+cannot establish that the previously hidden structured facts were understood.
+
+Readiness established annotated history through `v0.3.6`, local archives
+`v0.3.3` through `v0.3.6`, and the Developer ID identity outside the automation
+sandbox. The same read-only identity/native-builder probes failed inside and
+passed outside. The notary history lookup now succeeds as recorded above.
+Four agents have been dispatched in total, with earlier agents reused.
 
 ## Decisions
+
+**Surface names for the intermediate release.** Confirm the thirteen inherited
+IDs (`request`, `policy`, `probes`, `actors`, `envelope`, `dossier`, `steps`,
+`lifecycle`, `equipment`, `profile`, `transport`, `refusals`, `installation`)
+and six additions (`identity`, `extensions`, `reply`, `actor_evidence`,
+`diagnostics`, `wire`). No inherited surface disappears. The additions separate
+identity admission, extension authority, host publication, actor/phase evidence,
+controller assessment and encoding responsibilities that were distributed
+across the older account. `actor_evidence` displays as “Actor and phase
+evidence”, including phases in either specimen form. The source roots and
+`v0.3.6` manifest were independently compared; the draft release notes give
+one row per surface. These IDs become permanent at archival; a later removal
+would retain its history row. This decision changes ownership of the account,
+not native behavior.
+
+**Render every authored relationship.** Review found binding domains and
+association restrictions were checked but absent from the readable contract;
+the controller-findings view also omitted direct effects and child consequence
+prose, and a joint controller/retained-reader label hid one check from the
+index. The renderer now exposes these facts, including triggers, and all eleven
+checks name resolved component definitions. Controller membership is explicit;
+six checks participate in that index. Binding declarations alone establish no
+uniqueness or cardinality. Six independent fixture controls cover the model
+change. The frozen first reading predates it; targeted revision reading supplies
+separate, narrower reading evidence.
+The follow-up also renders existing record-alias locations for receipts and
+diagnostics, making their structured placements visible beside their meanings;
+an additional control covers these locations.
+
+**Truth corrections from the first reading.** Source/check reading clarified
+the required request strings, timeout floors, acquisition count, helper fallback
+eligibility, actor-policy extraction, raw-byte retention, deadline origins and
+the two independent host inspection guards. “Ordinary semantic reply” is now
+defined before use and includes actor replies. Existing signed-app override
+controls are acknowledged while their incomplete attribution coverage remains
+visible. Source evidence and newly executed controls keep separate grades.
+The outer result assignment has one owner; the diagnostics definition references
+it. No production outcome changes accompany these account corrections.
+The shared import question also now distinguishes native compiler resolution
+from the dossier's literal-import scan; its former wording attributed the
+scanner's search-order convention to the native compiler without evidence.
+This is a minimal factual guide correction, generated from QUESTIONS.md.
+
+**Footprint transcription checked.** The current measured rows agree with
+38 retained receipts in `dist/archive/v0.3.6/evidence/test-runs/runs.tar.gz`:
+five response workloads and their aggregate, 24 held measurements, and eight
+aftermath measurements. Each receipt hash agrees with the inventory; the
+archive and manifest hashes agree with their enclosing records. Source commit
+`cbf5f298baff0d39a14a58019e779321d08791ad`, acceptance
+`accept-b9249da88e604c44a251ab5cf2c5947b`, battery
+`20261109T214743Z_63091daa`. Response sizes and sample intervals, logical actor
+backing, per-repetition CPU sums and ranges, six held authority states, and
+post-return/timeout process observations were independently recalculated.
+No numeric transcription changed. These are retained release observations;
+candidate measurements belong to the later rehearsal and acceptance.
+
+**Scalar support without changing behavior.** Newly inventoried override,
+equipment, cleanup-name and polling quantities use actual helper/parser/reader
+or compiled-constant controls. The aggregate validator clamp was duplicated
+inside two orchestrators. Its exact `max(1, min(maximum, override ?? maximum))`
+expression moved to the existing planning file, and both callers use it with
+their unchanged maximum. This behavior-preserving extraction permits direct
+floor/cap/default/extreme-input checks without inventing runtime evidence or
+weakening the limit inventory's value-owner requirement. Worker identity was
+regenerated because its source inputs changed. Fixed digest widths are typed
+public definitions, referenced by their public encodings; they are format
+geometry, separate from capacity limits.
+
+**No-history release refusal.** `R-29`'s release-preparation bypass is repaired
+by the new backend: all writing paths check carried historical dependencies
+before producing output. The source-copy check remains narrower, as currently
+kept by the plan; its ordinary-build requirement remains on the maintainer's
+list. Source and check grades do not claim live product or release execution.
 
 **Working record.** Retain this ledger as an internal index of decisions,
 evidence and unresolved items. The maintainer made its use optional; the
@@ -122,6 +373,7 @@ under the strain register, gives the evidence found for each row.
 | `R-15`, one source | Three hand-written copies of a rule held together by a check, against generating them from one table. | Generation removes the independence that exposed `R-36`. | Three copies, with a check across them. |
 | What ships | A release archives the guide and not the contract. After stage one the guide's surface table names surfaces defined only in the contract. | A reader holding only the release cannot follow the table to a definition. | The table stays in the guide and the archive's contents are unchanged. |
 | The reading before `v0.3.8` | The final checkpoint is cut after the maintainer has read the settled contract and ruled on this list, or has said to cut without that. | A change to shipped source after the final archive needs another release. | Stage four proceeds; the final tag waits. |
+| Contract size | The stage-one rendering has 4,494 lines and 59,989 words, including 1,671 table lines; authored body and field meanings are counted above. | This exceeds the plan's 2,200-line reporting threshold. | Stage three examines repetition and generated presentation while retaining field meanings and boundary distinctions. |
 | `v0.3.7` at publication | Published as a release, against only its tag pushed. | `make publish` pushes one tag, and a clone with `main` and the earlier tags but without `v0.3.7` fails the stamp check. | Nothing is pushed; notes are drafted for both versions. |
 
 ## Stage log

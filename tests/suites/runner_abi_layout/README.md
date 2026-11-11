@@ -91,8 +91,9 @@ public command, or the explicit `PW_TEST_OUT_DIR`.
 ## Documented limits
 
 The compiled printer also supplies the ABI-derived public limits to `limits.py`.
-`worker_limits.c` includes the production worker implementation without running
-it, exposing its exec-child deadline. `validator_limits.c` exposes the production
+`worker_limits.c` includes the production worker implementation without launching
+a worker, exposing production defaults and exercising both fixture-delay argument
+boundaries. `validator_limits.c` exposes the production
 batch-line capacity and runs that same parser for exact/over-limit and recovery
 controls. Values are compared with `docs/limits.json`; the behavioral inputs are
 independent of that manifest. A changed manifest value is a required negative
@@ -108,7 +109,7 @@ changes the identity even with unchanged layout.
 The geometry harvest must equal `tests/fixtures/contract/abi_layout.txt`. A
 change writes `abi_layout.candidate.txt` for review. The identity is excluded
 from this golden, so a protocol-only edit requires no manual layout update or
-ordinal bump. See [the contract](../../../docs/CONTRACT.md#internal-hostworker-identity).
+ordinal bump. See [the contract](../../../docs/CONTRACT.md#contract-identity-other-worker).
 
 ## Compiled-object capture
 

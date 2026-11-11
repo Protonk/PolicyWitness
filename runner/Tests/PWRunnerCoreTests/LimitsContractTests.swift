@@ -9,6 +9,62 @@ private struct DocumentedLimit: Decodable {
 }
 private struct LimitsManifest: Decodable { let limits: [DocumentedLimit] }
 
+// These calibrations call the admitting implementation; their search bounds
+// only bracket the result. The literal boundary assertions below are separate
+// from limits.json. Constructed reader records isolate the named predicate.
+private func largestAcceptedCount(upper: Int, accepts: (Int) throws -> Bool) throws -> Int {
+    try expectTrue(try accepts(1))
+    try expectFalse(try accepts(upper))
+    var low = 1, high = upper
+    while high - low > 1 {
+        let middle = low + (high - low) / 2
+        if try accepts(middle) { low = middle } else { high = middle }
+    }
+    return low
+}
+
+private func manifestAcceptsSigningText(_ text: String, field: String) throws -> Bool {
+    let workers: [[String: Any]] = ActorEquipmentPreparation.roles.map { role in
+        var row: [String: Any] = ["role": role,
+            "relative_path": ActorEquipmentPreparation.relativePath(role),
+            "sha256": String(repeating: "0", count: 64), "cdhash": String(repeating: "0", count: 40),
+            "identifier": "worker", "team_id": NSNull(),
+            "entitlements_xml": "<plist version=\"1.0\"><dict/></plist>"]
+        row[field] = text
+        return row
+    }
+    let manifest: [String: Any] = ["schema_version": 1, "contract": "test:limit-manifest",
+        "worker_identity": String(repeating: "0", count: 64),
+        "unsigned_worker_sha256": String(repeating: "0", count: 64), "workers": workers]
+    let data = try JSONSerialization.data(withJSONObject: manifest)
+    do {
+        _ = try ActorEquipmentManifest.decode(data, expectedIdentity: Data(repeating: 0, count: 32),
+            expectedContract: "test:limit-manifest")
+        return true
+    } catch { return false }
+}
+
+private func equipmentTextProblems(path: String = "/constructed", identifier: String? = nil,
+                                  team: String? = nil) -> [String] {
+    let row = PWRunnerEquipmentBinding(role: "selected", source: "test_override",
+        implementation_identity: "unverified_fixture", path: path, identifier: identifier, team_id: team)
+    return pwRunnerEquipmentProblems(inventory: nil, bindings: [row], entitlements: [],
+        actors: [], actorIDs: [], actorPIDs: [])
+}
+
+private func cleanupReferenceProblems(name: String) -> [String] {
+    let region = PWRunnerAuthorityScope(actor_id: "A", actor_index: 0, operations: [
+        PWRunnerAuthorityOperation(slot: 0, operation: "shm_open", role: "setup", state: "succeeded",
+            native_kind: "integer", native_rc: 3),
+        PWRunnerAuthorityOperation(slot: 1, operation: "shm_unlink", role: "setup", state: "failed",
+            native_kind: "integer", native_rc: -1, errno: 1)],
+        ownership: ["object_name": "unresolved"],
+        cleanup_reference: PWAuthorityCleanupReference(name: name, host_pid: 1, session_nonce: 1))
+    let setup = PWRunnerAuthoritySetup(host: PWRunnerAuthorityHost(run: PWRunnerAuthorityScope(), regions: [region]),
+        workers: [PWRunnerAuthorityScope(actor_id: "A", actor_index: 0, publication: "not_observed")])
+    return authoritySetupIntegrityErrors(setup, actorIDs: ["A"], tokenRefs: [])
+}
+
 func runLimitsContractTests(_ tk: TestKit) {
     tk.group("Documented limits") {
         tk.run("compiled layout and production defaults agree with inventory") {
@@ -49,6 +105,21 @@ func runLimitsContractTests(_ tk: TestKit) {
             guard let retainedDepth = retainedDepths.max(), let retainedComponentBytes = retainedComponents.max() else {
                 throw TestFailure(message: "request failure constructor retained no diagnostic paths")
             }
+            let signingTextBytes = try largestAcceptedCount(upper: 1024) { count in
+                try manifestAcceptsSigningText(String(repeating: "x", count: count), field: "identifier")
+            }
+            let equipmentPathBytes = try largestAcceptedCount(upper: 4096) { count in
+                !equipmentTextProblems(path: "/" + String(repeating: "x", count: count - 1))
+                    .contains("equipment binding path")
+            }
+            let cleanupNameBytes = try largestAcceptedCount(upper: 128) { count in
+                cleanupReferenceProblems(name: "/" + String(repeating: "x", count: count - 1)).isEmpty
+            }
+            let equipmentDomainBytes = ActorEquipmentSystem.error("worker_path",
+                NSError(domain: String(repeating: "d", count: 2048), code: 1)).domain!.utf8.count
+            guard let fixtureDelay = native["worker_fixture_delay"] else {
+                throw TestFailure(message: "compiled C probe omitted fixture delay parser capacity")
+            }
             let observed: [String: Int] = [
                 "request_failure_path_components": retainedDepth,
                 "request_failure_path_component": retainedComponentBytes,
@@ -79,6 +150,10 @@ func runLimitsContractTests(_ tk: TestKit) {
                 "equipment_inventory_bytes": PWEquipmentLimits.inventoryBytes,
                 "equipment_diagnostic_bytes": PWEquipmentLimits.diagnosticBytes,
                 "equipment_metadata_bytes": PWEquipmentLimits.metadataBytes,
+                "equipment_signing_text": signingTextBytes,
+                "equipment_path": equipmentPathBytes,
+                "equipment_error_domain": equipmentDomainBytes,
+                "authority_cleanup_name": cleanupNameBytes,
                 "equipment_static_bindings": PWEquipmentLimits.staticBindings,
                 "equipment_live_inspections": PWEquipmentLimits.liveInspections,
                 "equipment_entitlement_records": PWEquipmentLimits.entitlementRecords,
@@ -116,6 +191,9 @@ func runLimitsContractTests(_ tk: TestKit) {
                 "worker_policy_transfer": worker.policyTransferTimeoutMs,
                 "worker_ready_wait": worker.readyByteTimeoutMs,
                 "worker_sentinel_wait": worker.sentinelTimeoutMs,
+                "worker_timeout_override_floor": timeoutMsForCWorker(override: 0),
+                "validator_collection_override_floor": collectionBudgetMs(override: 0, maximum: phaseCollectionBudgetMs),
+                "worker_fixture_delay": fixtureDelay,
                 "worker_exit_grace": worker.exitGraceMs,
                 "validator_io_wait": validator.verdictReadTimeoutMs,
                 "worker_proceed_wait": proceedWait,
@@ -139,6 +217,17 @@ func runLimitsContractTests(_ tk: TestKit) {
             try expectEqual(PWShmLayout.extTargetBytes - 1, PWActorLimits.targetBytes)
             try expectEqual(PWExtensionLimits.freshReadBytes, PWShmLayout.freshReadBytes)
             try expectEqual(timeoutMsForValidator(override: nil), validator.verdictReadTimeoutMs)
+            for maximum in [phaseCollectionBudgetMs, PWActorLimits.collectionMs] {
+                for input in [Int.min, -1, 0, 1] {
+                    try expectEqual(collectionBudgetMs(override: input, maximum: maximum), 1)
+                }
+                try expectEqual(collectionBudgetMs(override: 2, maximum: maximum), 2)
+                try expectEqual(collectionBudgetMs(override: maximum - 1, maximum: maximum), maximum - 1)
+                try expectEqual(collectionBudgetMs(override: maximum, maximum: maximum), maximum)
+                try expectEqual(collectionBudgetMs(override: maximum + 1, maximum: maximum), maximum)
+                try expectEqual(collectionBudgetMs(override: Int.max, maximum: maximum), maximum)
+                try expectEqual(collectionBudgetMs(override: nil, maximum: maximum), maximum)
+            }
             try expectEqual(timeoutMsForValidator(override: -100), 50)
             try expectEqual(timeoutMsForValidator(override: 70), 70)
             try expectEqual(timeoutMsForValidator(override: Int.max), Int.max, "fault-injection override has no ceiling")
@@ -151,10 +240,46 @@ func runLimitsContractTests(_ tk: TestKit) {
             }
             try expectEqual(timeoutMsForCWorker(override: nil), worker.sentinelTimeoutMs,
                             "orchestrator and driver defaults agree")
+            for value in [-1, 0, 49, 50] {
+                try expectEqual(timeoutMsForCWorker(override: value), 50,
+                                "ordinary worker override retains its minimum")
+            }
+            try expectEqual(timeoutMsForCWorker(override: 51), 51)
+            try expectEqual(timeoutMsForCWorker(override: Int.max), Int.max,
+                            "ordinary worker override has no ceiling")
             // Configuration allowance only: the C active-time budget and host polling
             // budget have different epochs and accounting, not one shared clock.
             try expectEqual(worker.sentinelTimeoutMs - attemptBudget, 5_000,
                             "exec attempt budget leaves the publication margin inside the worker window")
+        }
+        tk.run("equipment text boundaries use UTF-8 bytes at their own admission predicates") {
+            let exactSigning = String(repeating: "é", count: 127) + "x"
+            for field in ["identifier", "team_id"] {
+                try expectTrue(try manifestAcceptsSigningText(exactSigning, field: field))
+                try expectFalse(try manifestAcceptsSigningText(exactSigning + "x", field: field))
+            }
+            try expectFalse(equipmentTextProblems(identifier: exactSigning).contains("equipment signature identifier bound"))
+            try expectTrue(equipmentTextProblems(identifier: exactSigning + "x").contains("equipment signature identifier bound"))
+            try expectFalse(equipmentTextProblems(team: exactSigning).contains("equipment signature team bound"))
+            try expectTrue(equipmentTextProblems(team: exactSigning + "x").contains("equipment signature team bound"))
+            let exactPath = "/" + String(repeating: "é", count: 511)
+            try expectEqual(exactPath.utf8.count, 1023)
+            try expectFalse(equipmentTextProblems(path: exactPath).contains("equipment binding path"))
+            try expectTrue(equipmentTextProblems(path: exactPath + "x").contains("equipment binding path"))
+            let exactName = "/" + String(repeating: "é", count: 15)
+            try expectEqual(exactName.utf8.count, 31)
+            try expectEqual(cleanupReferenceProblems(name: exactName), [])
+            try expectTrue(cleanupReferenceProblems(name: exactName + "x").contains("authority_cleanup_reference"))
+            let exactDomain = String(repeating: "é", count: 64)
+            for domain in [exactDomain, exactDomain + "x"] {
+                let observed = ActorEquipmentSystem.error("worker_path", NSError(domain: domain, code: 17))
+                try expectEqual(observed.domain, exactDomain)
+                try expectEqual(observed.code, 17)
+            }
+            let overlong = PWRunnerEquipmentError(operation: "worker_path", domain: exactDomain + "x", code: 17)
+            let inventory = PWRunnerEquipmentInventory(path: "/constructed", status: "refused", error: overlong)
+            try expectTrue(pwRunnerEquipmentProblems(inventory: inventory, bindings: [], entitlements: [],
+                actors: [], actorIDs: [], actorPIDs: []).contains("equipment error domain bound"))
         }
         tk.run("request failure paths retain whole locations or withhold them") {
             // Literal behavioral oracles remain independent of limits.json.

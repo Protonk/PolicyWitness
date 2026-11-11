@@ -206,7 +206,9 @@ It also refuses added or rewritten sites in the committed
 [prose baseline](../tests/fixtures/docs/prose_baseline.json) and added or rewritten
 entries in the committed [build baseline](../tests/fixtures/docs/build_baseline.json),
 compared with the nearest preceding annotated release tag. A preceding release
-without a baseline is recorded as such; `--report` turns growth refusals into warnings.
+without a baseline is recorded as such; `--report` turns growth refusals into warnings. The contract's
+free-text relationship counts also compare by kind with the preceding
+release; removing that baseline or increasing any kind refuses release.
 
 ```sh
 tests/lib/python.sh docs/generate_contract_stamps.py --release v0.3.7

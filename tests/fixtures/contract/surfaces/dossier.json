@@ -1,202 +1,552 @@
 {
-  "shape": {
-    "envelope.data": {
-      "specimen": "object"
+  "records": {
+    "rust.ActorDossier": {
+      "fields": {
+        "actor_id": {
+          "json_null": true,
+          "name": "actor_id",
+          "omission": null,
+          "optional": true,
+          "swift_type": "String?"
+        },
+        "mode": {
+          "json_null": true,
+          "name": "mode",
+          "omission": null,
+          "optional": true,
+          "swift_type": "String?"
+        },
+        "policy": {
+          "json_null": false,
+          "name": "policy",
+          "omission": null,
+          "optional": false,
+          "swift_type": "rust.PolicyDossier"
+        }
+      },
+      "input": false
     },
-    "envelope.data.specimen": {
-      "actors": "array",
-      "app_provenance": "object",
-      "binaries": "object",
-      "host": "object",
-      "policy": "object",
-      "request_path": "string",
-      "runner_provenance": "object"
+    "rust.AppProvenance": {
+      "fields": {
+        "evidence_manifest_path": {
+          "json_null": false,
+          "name": "evidence_manifest_path",
+          "omission": null,
+          "optional": false,
+          "swift_type": "String"
+        },
+        "evidence_verify": {
+          "json_null": true,
+          "name": "evidence_verify",
+          "omission": null,
+          "optional": true,
+          "swift_type": "rust.VerifyReport?"
+        }
+      },
+      "input": false
     },
-    "envelope.data.specimen.actors[]": {
-      "actor_id": "string",
-      "mode": "string",
-      "policy": "object"
+    "rust.Augmentation": {
+      "fields": {
+        "applied": {
+          "json_null": false,
+          "name": "applied",
+          "omission": null,
+          "optional": false,
+          "swift_type": "[String]"
+        },
+        "applied_sha256": {
+          "json_null": true,
+          "name": "applied_sha256",
+          "omission": null,
+          "optional": true,
+          "swift_type": "String?"
+        },
+        "error": {
+          "json_null": true,
+          "name": "error",
+          "omission": null,
+          "optional": true,
+          "swift_type": "String?"
+        },
+        "original_sha256": {
+          "json_null": true,
+          "name": "original_sha256",
+          "omission": null,
+          "optional": true,
+          "swift_type": "String?"
+        },
+        "status": {
+          "json_null": false,
+          "name": "status",
+          "omission": null,
+          "optional": false,
+          "swift_type": "String"
+        }
+      },
+      "input": false
     },
-    "envelope.data.specimen.actors[].policy": {
-      "augmentation": "object",
-      "imports": "object"
+    "rust.Binaries": {
+      "fields": {
+        "service": {
+          "json_null": true,
+          "name": "service",
+          "omission": null,
+          "optional": true,
+          "swift_type": "rust.BinaryRecord?"
+        },
+        "unentitled_worker": {
+          "json_null": true,
+          "name": "unentitled_worker",
+          "omission": null,
+          "optional": true,
+          "swift_type": "rust.BinaryRecord?"
+        },
+        "validator": {
+          "json_null": true,
+          "name": "validator",
+          "omission": null,
+          "optional": true,
+          "swift_type": "rust.BinaryRecord?"
+        },
+        "worker": {
+          "json_null": true,
+          "name": "worker",
+          "omission": null,
+          "optional": true,
+          "swift_type": "rust.BinaryRecord?"
+        }
+      },
+      "input": false
     },
-    "envelope.data.specimen.actors[].policy.augmentation": {
-      "applied": "array",
-      "applied_sha256": "string",
-      "error": "string",
-      "original_sha256": "string",
-      "status": "string"
+    "rust.BinaryRecord": {
+      "fields": {
+        "actual_sha256": {
+          "json_null": true,
+          "name": "actual_sha256",
+          "omission": null,
+          "optional": true,
+          "swift_type": "String?"
+        },
+        "baseline_sha256": {
+          "json_null": true,
+          "name": "baseline_sha256",
+          "omission": null,
+          "optional": true,
+          "swift_type": "String?"
+        },
+        "path": {
+          "json_null": true,
+          "name": "path",
+          "omission": null,
+          "optional": true,
+          "swift_type": "String?"
+        },
+        "reason": {
+          "json_null": true,
+          "name": "reason",
+          "omission": null,
+          "optional": true,
+          "swift_type": "String?"
+        },
+        "verification": {
+          "json_null": false,
+          "name": "verification",
+          "omission": null,
+          "optional": false,
+          "swift_type": "String"
+        }
+      },
+      "input": false
     },
-    "envelope.data.specimen.actors[].policy.imports": {
-      "closure_sha256": "string",
-      "cycle": "array",
-      "exceeded": "string",
-      "failure": "string",
-      "records": "array",
-      "status": "string"
+    "rust.HostFacts": {
+      "fields": {
+        "arch": {
+          "json_null": true,
+          "name": "arch",
+          "omission": null,
+          "optional": true,
+          "swift_type": "String?"
+        },
+        "kernel_release": {
+          "json_null": true,
+          "name": "kernel_release",
+          "omission": null,
+          "optional": true,
+          "swift_type": "String?"
+        },
+        "macos_build": {
+          "json_null": true,
+          "name": "macos_build",
+          "omission": null,
+          "optional": true,
+          "swift_type": "String?"
+        },
+        "macos_version": {
+          "json_null": true,
+          "name": "macos_version",
+          "omission": null,
+          "optional": true,
+          "swift_type": "String?"
+        }
+      },
+      "input": false
     },
-    "envelope.data.specimen.actors[].policy.imports.records[]": {
-      "error": "string",
-      "mtime_unix": "number",
-      "name": "string",
-      "resolved_path": "string",
-      "sha256": "string",
-      "size_bytes": "number"
+    "rust.ImportRecord": {
+      "fields": {
+        "error": {
+          "json_null": true,
+          "name": "error",
+          "omission": null,
+          "optional": true,
+          "swift_type": "String?"
+        },
+        "mtime_unix": {
+          "json_null": true,
+          "name": "mtime_unix",
+          "omission": null,
+          "optional": true,
+          "swift_type": "Int64?"
+        },
+        "name": {
+          "json_null": false,
+          "name": "name",
+          "omission": null,
+          "optional": false,
+          "swift_type": "String"
+        },
+        "resolved_path": {
+          "json_null": true,
+          "name": "resolved_path",
+          "omission": null,
+          "optional": true,
+          "swift_type": "String?"
+        },
+        "sha256": {
+          "json_null": true,
+          "name": "sha256",
+          "omission": null,
+          "optional": true,
+          "swift_type": "String?"
+        },
+        "size_bytes": {
+          "json_null": true,
+          "name": "size_bytes",
+          "omission": null,
+          "optional": true,
+          "swift_type": "UInt64?"
+        }
+      },
+      "input": false
     },
-    "envelope.data.specimen.app_provenance": {
-      "evidence_manifest_path": "string",
-      "evidence_verify": "object"
+    "rust.Imports": {
+      "fields": {
+        "closure_sha256": {
+          "json_null": true,
+          "name": "closure_sha256",
+          "omission": null,
+          "optional": true,
+          "swift_type": "String?"
+        },
+        "cycle": {
+          "json_null": true,
+          "name": "cycle",
+          "omission": null,
+          "optional": true,
+          "swift_type": "[String]?"
+        },
+        "exceeded": {
+          "json_null": true,
+          "name": "exceeded",
+          "omission": null,
+          "optional": true,
+          "swift_type": "String?"
+        },
+        "failure": {
+          "json_null": true,
+          "name": "failure",
+          "omission": null,
+          "optional": true,
+          "swift_type": "String?"
+        },
+        "records": {
+          "json_null": false,
+          "name": "records",
+          "omission": null,
+          "optional": false,
+          "swift_type": "[rust.ImportRecord]"
+        },
+        "status": {
+          "json_null": false,
+          "name": "status",
+          "omission": null,
+          "optional": false,
+          "swift_type": "String"
+        }
+      },
+      "input": false
     },
-    "envelope.data.specimen.app_provenance.evidence_verify": {
-      "checked": "number",
-      "manifest_path": "string",
-      "mismatches": "array",
-      "notes": "array",
-      "ok": "boolean",
-      "schema_version": "number"
+    "rust.PolicyDossier": {
+      "fields": {
+        "augmentation": {
+          "json_null": false,
+          "name": "augmentation",
+          "omission": null,
+          "optional": false,
+          "swift_type": "rust.Augmentation"
+        },
+        "imports": {
+          "json_null": false,
+          "name": "imports",
+          "omission": null,
+          "optional": false,
+          "swift_type": "rust.Imports"
+        }
+      },
+      "input": false
     },
-    "envelope.data.specimen.app_provenance.evidence_verify.mismatches[]": {
-      "actual_sha256": "string",
-      "error": "string",
-      "expected_sha256": "string",
-      "id": "string",
-      "rel_path": "string"
+    "rust.RunnerProvenance": {
+      "fields": {
+        "runner_bundle_id": {
+          "json_null": true,
+          "name": "runner_bundle_id",
+          "omission": null,
+          "optional": true,
+          "swift_type": "String?"
+        },
+        "runner_bundle_path": {
+          "json_null": true,
+          "name": "runner_bundle_path",
+          "omission": null,
+          "optional": true,
+          "swift_type": "String?"
+        },
+        "runner_entitlements": {
+          "json_null": true,
+          "name": "runner_entitlements",
+          "omission": null,
+          "optional": true,
+          "swift_type": "rust.RunnerEntitlements?"
+        },
+        "runner_executable_path": {
+          "json_null": true,
+          "name": "runner_executable_path",
+          "omission": null,
+          "optional": true,
+          "swift_type": "String?"
+        },
+        "runner_kind": {
+          "json_null": false,
+          "name": "runner_kind",
+          "omission": null,
+          "optional": false,
+          "swift_type": "String"
+        },
+        "runner_registry_id": {
+          "json_null": true,
+          "name": "runner_registry_id",
+          "omission": null,
+          "optional": true,
+          "swift_type": "String?"
+        },
+        "runner_service_name": {
+          "json_null": false,
+          "name": "runner_service_name",
+          "omission": null,
+          "optional": false,
+          "swift_type": "String"
+        },
+        "runner_signature": {
+          "json_null": true,
+          "name": "runner_signature",
+          "omission": null,
+          "optional": true,
+          "swift_type": "rust.RunnerSignature?"
+        },
+        "runner_unentitled_worker_entitlements": {
+          "json_null": true,
+          "name": "runner_unentitled_worker_entitlements",
+          "omission": null,
+          "optional": true,
+          "swift_type": "rust.RunnerEntitlements?"
+        },
+        "runner_unentitled_worker_signature": {
+          "json_null": true,
+          "name": "runner_unentitled_worker_signature",
+          "omission": null,
+          "optional": true,
+          "swift_type": "rust.RunnerSignature?"
+        },
+        "runner_validator_entitlements": {
+          "json_null": true,
+          "name": "runner_validator_entitlements",
+          "omission": null,
+          "optional": true,
+          "swift_type": "rust.RunnerEntitlements?"
+        },
+        "runner_validator_signature": {
+          "json_null": true,
+          "name": "runner_validator_signature",
+          "omission": null,
+          "optional": true,
+          "swift_type": "rust.RunnerSignature?"
+        },
+        "runner_worker_entitlements": {
+          "json_null": true,
+          "name": "runner_worker_entitlements",
+          "omission": null,
+          "optional": true,
+          "swift_type": "rust.RunnerEntitlements?"
+        },
+        "runner_worker_signature": {
+          "json_null": true,
+          "name": "runner_worker_signature",
+          "omission": null,
+          "optional": true,
+          "swift_type": "rust.RunnerSignature?"
+        }
+      },
+      "input": false
     },
-    "envelope.data.specimen.binaries": {
-      "service": "object",
-      "unentitled_worker": "object",
-      "validator": "object",
-      "worker": "object"
+    "rust.Specimen": {
+      "fields": {
+        "actors": {
+          "json_null": false,
+          "name": "actors",
+          "omission": "Option::is_none",
+          "optional": true,
+          "swift_type": "[rust.ActorDossier]?"
+        },
+        "app_provenance": {
+          "json_null": true,
+          "name": "app_provenance",
+          "omission": null,
+          "optional": true,
+          "swift_type": "rust.AppProvenance?"
+        },
+        "binaries": {
+          "json_null": false,
+          "name": "binaries",
+          "omission": null,
+          "optional": false,
+          "swift_type": "rust.Binaries"
+        },
+        "host": {
+          "json_null": false,
+          "name": "host",
+          "omission": null,
+          "optional": false,
+          "swift_type": "rust.HostFacts"
+        },
+        "policy": {
+          "json_null": false,
+          "name": "policy",
+          "omission": null,
+          "optional": false,
+          "swift_type": "rust.PolicyDossier"
+        },
+        "request_path": {
+          "json_null": true,
+          "name": "request_path",
+          "omission": null,
+          "optional": true,
+          "swift_type": "String?"
+        },
+        "runner_provenance": {
+          "json_null": true,
+          "name": "runner_provenance",
+          "omission": null,
+          "optional": true,
+          "swift_type": "rust.RunnerProvenance?"
+        }
+      },
+      "input": false
     },
-    "envelope.data.specimen.binaries.service": {
-      "actual_sha256": "string",
-      "baseline_sha256": "string",
-      "path": "string",
-      "reason": "string",
-      "verification": "string"
+    "rust.VerifyMismatch": {
+      "fields": {
+        "actual_sha256": {
+          "json_null": true,
+          "name": "actual_sha256",
+          "omission": null,
+          "optional": true,
+          "swift_type": "String?"
+        },
+        "error": {
+          "json_null": true,
+          "name": "error",
+          "omission": null,
+          "optional": true,
+          "swift_type": "String?"
+        },
+        "expected_sha256": {
+          "json_null": true,
+          "name": "expected_sha256",
+          "omission": null,
+          "optional": true,
+          "swift_type": "String?"
+        },
+        "id": {
+          "json_null": false,
+          "name": "id",
+          "omission": null,
+          "optional": false,
+          "swift_type": "String"
+        },
+        "rel_path": {
+          "json_null": false,
+          "name": "rel_path",
+          "omission": null,
+          "optional": false,
+          "swift_type": "String"
+        }
+      },
+      "input": false
     },
-    "envelope.data.specimen.binaries.unentitled_worker": {
-      "actual_sha256": "string",
-      "baseline_sha256": "string",
-      "path": "string",
-      "reason": "string",
-      "verification": "string"
-    },
-    "envelope.data.specimen.binaries.validator": {
-      "actual_sha256": "string",
-      "baseline_sha256": "string",
-      "path": "string",
-      "reason": "string",
-      "verification": "string"
-    },
-    "envelope.data.specimen.binaries.worker": {
-      "actual_sha256": "string",
-      "baseline_sha256": "string",
-      "path": "string",
-      "reason": "string",
-      "verification": "string"
-    },
-    "envelope.data.specimen.host": {
-      "arch": "string",
-      "kernel_release": "string",
-      "macos_build": "string",
-      "macos_version": "string"
-    },
-    "envelope.data.specimen.policy": {
-      "augmentation": "object",
-      "imports": "object"
-    },
-    "envelope.data.specimen.policy.augmentation": {
-      "applied": "array",
-      "applied_sha256": "string",
-      "error": "string",
-      "original_sha256": "string",
-      "status": "string"
-    },
-    "envelope.data.specimen.policy.imports": {
-      "closure_sha256": "string",
-      "cycle": "array",
-      "exceeded": "string",
-      "failure": "string",
-      "records": "array",
-      "status": "string"
-    },
-    "envelope.data.specimen.policy.imports.records[]": {
-      "error": "string",
-      "mtime_unix": "number",
-      "name": "string",
-      "resolved_path": "string",
-      "sha256": "string",
-      "size_bytes": "number"
-    },
-    "envelope.data.specimen.runner_provenance": {
-      "runner_bundle_id": "string",
-      "runner_bundle_path": "string",
-      "runner_entitlements": "object",
-      "runner_executable_path": "string",
-      "runner_kind": "string",
-      "runner_registry_id": "string",
-      "runner_service_name": "string",
-      "runner_signature": "object",
-      "runner_unentitled_worker_entitlements": "object",
-      "runner_unentitled_worker_signature": "object",
-      "runner_validator_entitlements": "object",
-      "runner_validator_signature": "object",
-      "runner_worker_entitlements": "object",
-      "runner_worker_signature": "object"
-    },
-    "envelope.data.specimen.runner_provenance.runner_entitlements": {
-      "error": "string",
-      "granted": "array",
-      "keys": "array",
-      "raw_plist": "string"
-    },
-    "envelope.data.specimen.runner_provenance.runner_signature": {
-      "adhoc": "boolean",
-      "cdhash": "string",
-      "identity": "string",
-      "team_id": "string",
-      "valid": "boolean"
-    },
-    "envelope.data.specimen.runner_provenance.runner_unentitled_worker_entitlements": {
-      "error": "string",
-      "granted": "array",
-      "keys": "array",
-      "raw_plist": "string"
-    },
-    "envelope.data.specimen.runner_provenance.runner_unentitled_worker_signature": {
-      "adhoc": "boolean",
-      "cdhash": "string",
-      "identity": "string",
-      "team_id": "string",
-      "valid": "boolean"
-    },
-    "envelope.data.specimen.runner_provenance.runner_validator_entitlements": {
-      "error": "string",
-      "granted": "array",
-      "keys": "array",
-      "raw_plist": "string"
-    },
-    "envelope.data.specimen.runner_provenance.runner_validator_signature": {
-      "adhoc": "boolean",
-      "cdhash": "string",
-      "identity": "string",
-      "team_id": "string",
-      "valid": "boolean"
-    },
-    "envelope.data.specimen.runner_provenance.runner_worker_entitlements": {
-      "error": "string",
-      "granted": "array",
-      "keys": "array",
-      "raw_plist": "string"
-    },
-    "envelope.data.specimen.runner_provenance.runner_worker_signature": {
-      "adhoc": "boolean",
-      "cdhash": "string",
-      "identity": "string",
-      "team_id": "string",
-      "valid": "boolean"
+    "rust.VerifyReport": {
+      "fields": {
+        "checked": {
+          "json_null": false,
+          "name": "checked",
+          "omission": null,
+          "optional": false,
+          "swift_type": "UInt64"
+        },
+        "manifest_path": {
+          "json_null": false,
+          "name": "manifest_path",
+          "omission": null,
+          "optional": false,
+          "swift_type": "String"
+        },
+        "mismatches": {
+          "json_null": false,
+          "name": "mismatches",
+          "omission": null,
+          "optional": false,
+          "swift_type": "[rust.VerifyMismatch]"
+        },
+        "notes": {
+          "json_null": true,
+          "name": "notes",
+          "omission": null,
+          "optional": true,
+          "swift_type": "[String]?"
+        },
+        "ok": {
+          "json_null": false,
+          "name": "ok",
+          "omission": null,
+          "optional": false,
+          "swift_type": "Bool"
+        },
+        "schema_version": {
+          "json_null": false,
+          "name": "schema_version",
+          "omission": null,
+          "optional": false,
+          "swift_type": "UInt64"
+        }
+      },
+      "input": false
     }
   }
 }

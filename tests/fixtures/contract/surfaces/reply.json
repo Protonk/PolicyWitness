@@ -1,0 +1,231 @@
+{
+  "records": {
+    "PWRunnerReportingFailure": {
+      "fields": {
+        "diagnostic": {
+          "json_null": false,
+          "name": "diagnostic",
+          "optional": false,
+          "swift_type": "String"
+        },
+        "evidence_retained": {
+          "json_null": false,
+          "name": "evidence_retained",
+          "optional": false,
+          "swift_type": "Bool"
+        },
+        "origin": {
+          "json_null": false,
+          "name": "origin",
+          "optional": false,
+          "swift_type": "String"
+        },
+        "original_error": {
+          "json_null": false,
+          "name": "original_error",
+          "optional": true,
+          "swift_type": "String?"
+        },
+        "original_normalized_outcome": {
+          "json_null": false,
+          "name": "original_normalized_outcome",
+          "optional": false,
+          "swift_type": "String"
+        },
+        "original_rc": {
+          "json_null": false,
+          "name": "original_rc",
+          "optional": false,
+          "swift_type": "Int"
+        }
+      },
+      "input": false
+    },
+    "PWRunnerRunResult": {
+      "fields": {
+        "actors": {
+          "json_null": false,
+          "name": "actors",
+          "optional": true,
+          "swift_type": "[PWRunnerActorResult]?"
+        },
+        "admission_failure": {
+          "json_null": false,
+          "name": "admission_failure",
+          "optional": true,
+          "swift_type": "PWRunnerAdmissionFailure?"
+        },
+        "authority_setup": {
+          "json_null": false,
+          "name": "authority_setup",
+          "optional": true,
+          "swift_type": "PWRunnerAuthoritySetup?"
+        },
+        "bundle_id": {
+          "json_null": false,
+          "name": "bundle_id",
+          "optional": true,
+          "swift_type": "String?"
+        },
+        "compiled_profile": {
+          "json_null": false,
+          "name": "compiled_profile",
+          "optional": true,
+          "swift_type": "CompiledProfileCapture?"
+        },
+        "equipment_bindings": {
+          "json_null": false,
+          "name": "equipment_bindings",
+          "optional": true,
+          "swift_type": "[PWRunnerEquipmentBinding]?"
+        },
+        "equipment_entitlements": {
+          "json_null": false,
+          "name": "equipment_entitlements",
+          "optional": true,
+          "swift_type": "[PWRunnerEquipmentEntitlements]?"
+        },
+        "equipment_inventory": {
+          "json_null": false,
+          "name": "equipment_inventory",
+          "optional": true,
+          "swift_type": "PWRunnerEquipmentInventory?"
+        },
+        "error": {
+          "json_null": false,
+          "name": "error",
+          "optional": true,
+          "swift_type": "String?"
+        },
+        "execution_form": {
+          "json_null": false,
+          "name": "execution_form",
+          "optional": true,
+          "swift_type": "String?"
+        },
+        "extension_events": {
+          "json_null": false,
+          "name": "extension_events",
+          "optional": true,
+          "swift_type": "[PWRunnerExtensionEvent]?"
+        },
+        "normalized_outcome": {
+          "json_null": false,
+          "name": "normalized_outcome",
+          "optional": false,
+          "swift_type": "String"
+        },
+        "phases": {
+          "json_null": false,
+          "name": "phases",
+          "optional": false,
+          "swift_type": "[PWRunnerPhaseResult]"
+        },
+        "pid": {
+          "json_null": false,
+          "name": "pid",
+          "optional": false,
+          "swift_type": "Int"
+        },
+        "policy_format": {
+          "json_null": false,
+          "name": "policy_format",
+          "optional": true,
+          "swift_type": "String?"
+        },
+        "policy_sha256": {
+          "json_null": false,
+          "name": "policy_sha256",
+          "optional": true,
+          "projection": "hex",
+          "swift_type": "Data?"
+        },
+        "preparation_failure": {
+          "json_null": false,
+          "name": "preparation_failure",
+          "optional": true,
+          "swift_type": "PWRunnerPreparationFailure?"
+        },
+        "producer": {
+          "json_null": false,
+          "name": "producer",
+          "optional": false,
+          "swift_type": "PWProducer"
+        },
+        "rc": {
+          "json_null": false,
+          "name": "rc",
+          "optional": false,
+          "swift_type": "Int"
+        },
+        "reporting_failure": {
+          "json_null": false,
+          "name": "reporting_failure",
+          "optional": true,
+          "swift_type": "PWRunnerReportingFailure?"
+        },
+        "request_failure": {
+          "json_null": false,
+          "name": "request_failure",
+          "optional": true,
+          "swift_type": "PWRunnerRequestFailure?"
+        },
+        "resources": {
+          "json_null": false,
+          "name": "resources",
+          "optional": true,
+          "swift_type": "PWRunnerResourceTables?"
+        },
+        "run_kind": {
+          "json_null": false,
+          "name": "run_kind",
+          "optional": true,
+          "swift_type": "String?"
+        },
+        "runner_subprocess": {
+          "json_null": false,
+          "name": "runner_subprocess",
+          "optional": true,
+          "swift_type": "PWRunnerSubprocess?"
+        },
+        "sandboxed_after_apply": {
+          "json_null": false,
+          "name": "sandboxed_after_apply",
+          "optional": true,
+          "swift_type": "Bool?"
+        },
+        "schedule": {
+          "json_null": false,
+          "name": "schedule",
+          "optional": true,
+          "swift_type": "PWRunnerScheduleRecord?"
+        },
+        "specimen_id": {
+          "json_null": false,
+          "name": "specimen_id",
+          "optional": false,
+          "swift_type": "String"
+        },
+        "steps": {
+          "json_null": false,
+          "name": "steps",
+          "optional": false,
+          "swift_type": "[PWRunnerStepResult]"
+        },
+        "test_overrides": {
+          "json_null": false,
+          "name": "test_overrides",
+          "optional": true,
+          "swift_type": "PWRunnerTestOverrides?"
+        },
+        "transfers": {
+          "json_null": false,
+          "name": "transfers",
+          "optional": true,
+          "swift_type": "[PWRunnerTransferRecord]?"
+        }
+      },
+      "input": false
+    }
+  }
+}

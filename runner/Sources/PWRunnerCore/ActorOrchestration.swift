@@ -64,7 +64,8 @@ extension CWorkerOrchestrator {
         var queryPlans = phases.map { _ in [ValidatorQueryDecision]() }
         var validatorResults = phases.map { _ -> ValidatorClientResult? in nil }
         var collectionStatuses = phases.map { _ in "not_reached" }
-        var collectionRemainingNs = UInt64(max(1, min(PWActorLimits.collectionMs, parsed._test_overrides?.validator_total_timeout_ms ?? PWActorLimits.collectionMs))) * 1_000_000
+        var collectionRemainingNs = UInt64(collectionBudgetMs(override: parsed._test_overrides?.validator_total_timeout_ms,
+                                                            maximum: PWActorLimits.collectionMs)) * 1_000_000
         let outcome = ActorScheduler.run(input) { index, _, workerPid in
             guard let start = MonotonicDeadline.now() else {
                 collectionStatuses[index] = "clock_unavailable"; collectionRemainingNs = 0; return

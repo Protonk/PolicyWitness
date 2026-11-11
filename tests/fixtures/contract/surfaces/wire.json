@@ -1,0 +1,5310 @@
+{
+  "records": {
+    "ValidatorDirectError": {
+      "fields": {
+        "error": {
+          "json_null": false,
+          "name": "error",
+          "optional": false,
+          "swift_type": "String"
+        },
+        "filter": {
+          "json_null": false,
+          "name": "filter",
+          "optional": true,
+          "swift_type": "String?"
+        },
+        "kind": {
+          "json_null": false,
+          "name": "kind",
+          "optional": false,
+          "swift_type": "String"
+        },
+        "pid": {
+          "json_null": false,
+          "name": "pid",
+          "optional": true,
+          "swift_type": "Int32?"
+        },
+        "schema_version": {
+          "json_null": false,
+          "name": "schema_version",
+          "optional": false,
+          "swift_type": "Int32"
+        }
+      },
+      "input": false,
+      "open": false
+    },
+    "ValidatorDirectResult": {
+      "fields": {
+        "allowed": {
+          "json_null": false,
+          "name": "allowed",
+          "optional": false,
+          "swift_type": "Bool"
+        },
+        "denied": {
+          "json_null": false,
+          "name": "denied",
+          "optional": false,
+          "swift_type": "Bool"
+        },
+        "errno": {
+          "json_null": false,
+          "name": "errno",
+          "optional": false,
+          "swift_type": "Int32"
+        },
+        "extra": {
+          "json_null": false,
+          "name": "extra",
+          "optional": false,
+          "swift_type": "JSON"
+        },
+        "filter_type": {
+          "json_null": false,
+          "name": "filter_type",
+          "optional": false,
+          "swift_type": "String"
+        },
+        "filter_type_id": {
+          "json_null": false,
+          "name": "filter_type_id",
+          "optional": false,
+          "swift_type": "Int32"
+        },
+        "filter_value": {
+          "json_null": true,
+          "name": "filter_value",
+          "optional": true,
+          "swift_type": "String?"
+        },
+        "kind": {
+          "json_null": false,
+          "name": "kind",
+          "optional": false,
+          "swift_type": "String"
+        },
+        "operation": {
+          "json_null": false,
+          "name": "operation",
+          "optional": false,
+          "swift_type": "String"
+        },
+        "pid": {
+          "json_null": false,
+          "name": "pid",
+          "optional": false,
+          "swift_type": "Int32"
+        },
+        "rc": {
+          "json_null": false,
+          "name": "rc",
+          "optional": false,
+          "swift_type": "Int32"
+        },
+        "schema_version": {
+          "json_null": false,
+          "name": "schema_version",
+          "optional": false,
+          "swift_type": "Int32"
+        }
+      },
+      "input": false,
+      "open": false
+    },
+    "ValidatorDirectStatus": {
+      "fields": {
+        "error": {
+          "json_null": false,
+          "name": "error",
+          "optional": false,
+          "swift_type": "JSON"
+        },
+        "kind": {
+          "json_null": false,
+          "name": "kind",
+          "optional": false,
+          "swift_type": "String"
+        },
+        "pid": {
+          "json_null": false,
+          "name": "pid",
+          "optional": false,
+          "swift_type": "Int32"
+        },
+        "schema_version": {
+          "json_null": false,
+          "name": "schema_version",
+          "optional": false,
+          "swift_type": "Int32"
+        }
+      },
+      "input": false,
+      "open": false
+    }
+  },
+  "wire_schema": {
+    "records": [
+      {
+        "fields": [
+          {
+            "json_null": false,
+            "name": "status",
+            "tag": 2,
+            "type": "text"
+          },
+          {
+            "json_null": false,
+            "name": "reason",
+            "tag": 3,
+            "type": {
+              "optional": "text"
+            }
+          },
+          {
+            "json_null": false,
+            "name": "worker_pid",
+            "tag": 4,
+            "type": "i64"
+          },
+          {
+            "json_null": false,
+            "name": "producer",
+            "tag": 5,
+            "type": {
+              "optional": "text"
+            }
+          },
+          {
+            "json_null": false,
+            "name": "capture_stage",
+            "tag": 6,
+            "type": {
+              "optional": "text"
+            }
+          },
+          {
+            "json_null": false,
+            "name": "request_nonce",
+            "tag": 7,
+            "type": {
+              "optional": "text"
+            }
+          },
+          {
+            "json_null": false,
+            "name": "profile_type",
+            "tag": 8,
+            "type": {
+              "optional": "i64"
+            }
+          },
+          {
+            "json_null": false,
+            "name": "bytecode_length",
+            "tag": 9,
+            "type": {
+              "optional": "i64"
+            }
+          },
+          {
+            "json_null": false,
+            "name": "bytecode_sha256",
+            "projection": "hex",
+            "tag": 10,
+            "type": {
+              "optional": "bytes"
+            }
+          },
+          {
+            "json_null": false,
+            "name": "bytecode_b64",
+            "projection": "base64",
+            "tag": 11,
+            "type": {
+              "optional": "bytes"
+            }
+          },
+          {
+            "json_null": false,
+            "name": "source_sha256",
+            "projection": "hex",
+            "tag": 12,
+            "type": {
+              "optional": "bytes"
+            }
+          },
+          {
+            "json_null": false,
+            "name": "source_length",
+            "tag": 13,
+            "type": {
+              "optional": "i64"
+            }
+          },
+          {
+            "json_null": false,
+            "name": "params_sha256",
+            "projection": "hex",
+            "tag": 14,
+            "type": {
+              "optional": "bytes"
+            }
+          },
+          {
+            "json_null": false,
+            "name": "parameter_count",
+            "tag": 15,
+            "type": {
+              "optional": "i64"
+            }
+          }
+        ],
+        "id": 1,
+        "name": "CompiledProfileCapture"
+      },
+      {
+        "fields": [
+          {
+            "json_null": false,
+            "name": "summary",
+            "tag": 1,
+            "type": "text"
+          },
+          {
+            "json_null": false,
+            "name": "boundary",
+            "tag": 2,
+            "type": {
+              "record": 4
+            }
+          },
+          {
+            "json_null": false,
+            "name": "result",
+            "tag": 3,
+            "type": {
+              "record": 4
+            }
+          }
+        ],
+        "id": 2,
+        "name": "PWAttemptLifecycle"
+      },
+      {
+        "fields": [
+          {
+            "json_null": false,
+            "name": "kind",
+            "tag": 1,
+            "type": "text"
+          },
+          {
+            "json_null": false,
+            "name": "name",
+            "tag": 2,
+            "type": "text"
+          },
+          {
+            "json_null": false,
+            "name": "host_pid",
+            "tag": 3,
+            "type": "i64"
+          },
+          {
+            "json_null": false,
+            "name": "session_nonce",
+            "tag": 4,
+            "type": "u64"
+          },
+          {
+            "json_null": false,
+            "name": "recovery_state",
+            "tag": 5,
+            "type": "text"
+          }
+        ],
+        "id": 3,
+        "name": "PWAuthorityCleanupReference"
+      },
+      {
+        "fields": [
+          {
+            "json_null": false,
+            "name": "state",
+            "tag": 1,
+            "type": "text"
+          },
+          {
+            "json_null": false,
+            "name": "answer",
+            "tag": 2,
+            "type": {
+              "optional": "text"
+            }
+          },
+          {
+            "json_null": false,
+            "name": "value",
+            "tag": 3,
+            "type": {
+              "optional": {
+                "variant": "PWDispositionValue"
+              }
+            }
+          },
+          {
+            "json_null": false,
+            "name": "reason",
+            "tag": 4,
+            "type": {
+              "optional": "text"
+            }
+          },
+          {
+            "json_null": false,
+            "name": "issue",
+            "tag": 5,
+            "type": {
+              "optional": "i64"
+            }
+          },
+          {
+            "json_null": false,
+            "name": "basis",
+            "tag": 6,
+            "type": {
+              "optional": {
+                "list": "text"
+              }
+            }
+          }
+        ],
+        "id": 4,
+        "name": "PWDispositionClaim"
+      },
+      {
+        "fields": [
+          {
+            "json_null": false,
+            "name": "kind",
+            "tag": 1,
+            "type": "text"
+          },
+          {
+            "json_null": false,
+            "name": "rule",
+            "tag": 2,
+            "type": "text"
+          },
+          {
+            "json_null": false,
+            "name": "question",
+            "tag": 3,
+            "type": "text"
+          },
+          {
+            "json_null": false,
+            "name": "step_index",
+            "tag": 4,
+            "type": {
+              "optional": "i64"
+            }
+          },
+          {
+            "json_null": false,
+            "name": "observations",
+            "tag": 5,
+            "type": {
+              "list": "text"
+            }
+          },
+          {
+            "json_null": false,
+            "name": "detail",
+            "tag": 6,
+            "type": "text"
+          }
+        ],
+        "id": 5,
+        "name": "PWDispositionIssue"
+      },
+      {
+        "fields": [
+          {
+            "json_null": false,
+            "name": "questions",
+            "tag": 1,
+            "type": {
+              "record": 82
+            }
+          },
+          {
+            "json_null": false,
+            "name": "steps",
+            "tag": 2,
+            "type": {
+              "list": {
+                "record": 7
+              }
+            }
+          },
+          {
+            "json_null": false,
+            "name": "issues",
+            "tag": 3,
+            "type": {
+              "list": {
+                "record": 5
+              }
+            }
+          }
+        ],
+        "id": 6,
+        "name": "PWDispositionRecord"
+      },
+      {
+        "fields": [
+          {
+            "json_null": false,
+            "name": "index",
+            "tag": 1,
+            "type": "i64"
+          },
+          {
+            "json_null": false,
+            "name": "step_id",
+            "tag": 2,
+            "type": "text"
+          },
+          {
+            "json_null": false,
+            "name": "slot",
+            "tag": 3,
+            "type": "text"
+          },
+          {
+            "json_null": false,
+            "name": "attempt_support",
+            "tag": 4,
+            "type": "text"
+          },
+          {
+            "json_null": false,
+            "name": "questions",
+            "tag": 5,
+            "type": {
+              "record": 83
+            }
+          }
+        ],
+        "id": 7,
+        "name": "PWDispositionStep"
+      },
+      {
+        "fields": [
+          {
+            "json_null": false,
+            "name": "state",
+            "tag": 1,
+            "type": "text"
+          },
+          {
+            "json_null": false,
+            "name": "group_request",
+            "tag": 2,
+            "type": {
+              "optional": {
+                "record": 12
+              }
+            }
+          },
+          {
+            "json_null": false,
+            "name": "leader_fallback",
+            "tag": 3,
+            "type": {
+              "optional": {
+                "record": 12
+              }
+            }
+          }
+        ],
+        "id": 8,
+        "name": "PWExecCleanupObservation"
+      },
+      {
+        "fields": [
+          {
+            "json_null": false,
+            "name": "stop_reason",
+            "tag": 1,
+            "type": "text"
+          },
+          {
+            "json_null": false,
+            "name": "leader_exit_observed",
+            "tag": 2,
+            "type": "bool"
+          },
+          {
+            "json_null": false,
+            "name": "stdout",
+            "tag": 3,
+            "type": {
+              "record": 13
+            }
+          },
+          {
+            "json_null": false,
+            "name": "stderr",
+            "tag": 4,
+            "type": {
+              "record": 13
+            }
+          },
+          {
+            "json_null": false,
+            "name": "deadline_kind",
+            "tag": 5,
+            "type": {
+              "optional": "text"
+            }
+          },
+          {
+            "json_null": false,
+            "name": "waitid_errno",
+            "tag": 6,
+            "type": {
+              "optional": "i32"
+            }
+          },
+          {
+            "json_null": false,
+            "name": "poll_errno",
+            "tag": 7,
+            "type": {
+              "optional": "i32"
+            }
+          },
+          {
+            "json_null": false,
+            "name": "clock_fault",
+            "tag": 8,
+            "type": {
+              "optional": "u32"
+            }
+          }
+        ],
+        "id": 9,
+        "name": "PWExecCollectionObservation"
+      },
+      {
+        "fields": [
+          {
+            "json_null": false,
+            "name": "collection",
+            "tag": 1,
+            "type": {
+              "record": 9
+            }
+          },
+          {
+            "json_null": false,
+            "name": "cleanup",
+            "tag": 2,
+            "type": {
+              "record": 8
+            }
+          },
+          {
+            "json_null": false,
+            "name": "reap",
+            "tag": 3,
+            "type": {
+              "record": 11
+            }
+          }
+        ],
+        "id": 10,
+        "name": "PWExecObservation"
+      },
+      {
+        "fields": [
+          {
+            "json_null": false,
+            "name": "stop_reason",
+            "tag": 1,
+            "type": "text"
+          },
+          {
+            "json_null": false,
+            "name": "last_wait",
+            "tag": 2,
+            "type": {
+              "record": 14
+            }
+          },
+          {
+            "json_null": false,
+            "name": "clock_fault",
+            "tag": 3,
+            "type": {
+              "optional": "u32"
+            }
+          }
+        ],
+        "id": 11,
+        "name": "PWExecReapObservation"
+      },
+      {
+        "fields": [
+          {
+            "json_null": false,
+            "name": "target",
+            "tag": 1,
+            "type": "i32"
+          },
+          {
+            "json_null": false,
+            "name": "signal",
+            "tag": 2,
+            "type": "i32"
+          },
+          {
+            "json_null": false,
+            "name": "rc",
+            "tag": 3,
+            "type": "i32"
+          },
+          {
+            "json_null": false,
+            "name": "errno",
+            "tag": 4,
+            "type": {
+              "optional": "i32"
+            }
+          }
+        ],
+        "id": 12,
+        "name": "PWExecSignalRequest"
+      },
+      {
+        "fields": [
+          {
+            "json_null": false,
+            "name": "eof",
+            "tag": 1,
+            "type": "bool"
+          },
+          {
+            "json_null": false,
+            "name": "read_errno",
+            "tag": 2,
+            "type": {
+              "optional": "i32"
+            }
+          },
+          {
+            "json_null": false,
+            "name": "poll_revents",
+            "tag": 3,
+            "type": {
+              "optional": "i32"
+            }
+          }
+        ],
+        "id": 13,
+        "name": "PWExecStreamObservation"
+      },
+      {
+        "fields": [
+          {
+            "json_null": false,
+            "name": "rc",
+            "tag": 1,
+            "type": "i32"
+          },
+          {
+            "json_null": false,
+            "name": "errno",
+            "tag": 2,
+            "type": {
+              "optional": "i32"
+            }
+          },
+          {
+            "json_null": false,
+            "name": "status",
+            "tag": 3,
+            "type": {
+              "optional": "i32"
+            }
+          }
+        ],
+        "id": 14,
+        "name": "PWExecWaitObservation"
+      },
+      {
+        "fields": [
+          {
+            "json_null": false,
+            "name": "device",
+            "tag": 1,
+            "type": "u64"
+          },
+          {
+            "json_null": false,
+            "name": "inode",
+            "tag": 2,
+            "type": "u64"
+          },
+          {
+            "json_null": false,
+            "name": "mode",
+            "tag": 3,
+            "type": "u32"
+          },
+          {
+            "json_null": false,
+            "name": "uid",
+            "tag": 4,
+            "type": "u32"
+          },
+          {
+            "json_null": false,
+            "name": "gid",
+            "tag": 5,
+            "type": "u32"
+          }
+        ],
+        "id": 15,
+        "name": "PWFileIdentity"
+      },
+      {
+        "fields": [
+          {
+            "json_null": false,
+            "name": "budget_ms",
+            "tag": 1,
+            "type": "i64"
+          },
+          {
+            "json_null": false,
+            "name": "elapsed_ms",
+            "tag": 2,
+            "type": {
+              "optional": "u64"
+            }
+          },
+          {
+            "json_null": false,
+            "name": "stop",
+            "tag": 3,
+            "type": "text"
+          },
+          {
+            "json_null": false,
+            "name": "excluded_ms",
+            "tag": 4,
+            "type": {
+              "optional": "u64"
+            }
+          },
+          {
+            "json_null": false,
+            "name": "native_errno",
+            "tag": 5,
+            "type": {
+              "optional": "i32"
+            }
+          },
+          {
+            "json_null": false,
+            "name": "clock_fault",
+            "tag": 6,
+            "type": "bool"
+          }
+        ],
+        "id": 16,
+        "name": "PWHostWait"
+      },
+      {
+        "fields": [
+          {
+            "json_null": false,
+            "name": "pid",
+            "tag": 1,
+            "type": "i64"
+          },
+          {
+            "json_null": false,
+            "name": "native_rc",
+            "tag": 2,
+            "type": "i32"
+          },
+          {
+            "json_null": false,
+            "name": "raw_status",
+            "tag": 3,
+            "type": "i32"
+          },
+          {
+            "json_null": false,
+            "name": "stage",
+            "tag": 4,
+            "type": "text"
+          },
+          {
+            "json_null": false,
+            "name": "observed_ns",
+            "tag": 5,
+            "type": {
+              "optional": "u64"
+            }
+          },
+          {
+            "json_null": false,
+            "name": "ownership_unbroken",
+            "tag": 6,
+            "type": "bool"
+          },
+          {
+            "json_null": false,
+            "name": "departure_requested",
+            "tag": 7,
+            "type": "bool"
+          },
+          {
+            "json_null": false,
+            "name": "capture_ordinal",
+            "tag": 8,
+            "type": "u64"
+          }
+        ],
+        "id": 17,
+        "name": "PWOwnedReapObservation"
+      },
+      {
+        "fields": [
+          {
+            "json_null": false,
+            "name": "capture_ordinal",
+            "tag": 1,
+            "type": "u64"
+          }
+        ],
+        "id": 18,
+        "name": "PWOwnedReapReference"
+      },
+      {
+        "fields": [
+          {
+            "json_null": false,
+            "name": "ordinal",
+            "tag": 1,
+            "type": "i64"
+          },
+          {
+            "json_null": false,
+            "name": "attempt_id",
+            "tag": 2,
+            "type": "text"
+          },
+          {
+            "json_null": false,
+            "name": "started_elapsed_ms",
+            "tag": 3,
+            "type": {
+              "optional": "u64"
+            }
+          },
+          {
+            "json_null": false,
+            "name": "ended_elapsed_ms",
+            "tag": 4,
+            "type": {
+              "optional": "u64"
+            }
+          },
+          {
+            "json_null": false,
+            "name": "outcome",
+            "tag": 5,
+            "type": "text"
+          },
+          {
+            "json_null": false,
+            "name": "control",
+            "tag": 6,
+            "type": {
+              "optional": {
+                "record": 34
+              }
+            }
+          },
+          {
+            "json_null": false,
+            "name": "error",
+            "tag": 7,
+            "type": {
+              "optional": {
+                "record": 67
+              }
+            }
+          }
+        ],
+        "id": 19,
+        "name": "PWRunnerAcquisitionAttempt"
+      },
+      {
+        "fields": [
+          {
+            "json_null": false,
+            "name": "capture_ordinal",
+            "tag": 1,
+            "type": "u64"
+          },
+          {
+            "json_null": false,
+            "name": "observed_ns",
+            "tag": 2,
+            "type": {
+              "optional": "u64"
+            }
+          }
+        ],
+        "id": 20,
+        "name": "PWRunnerActorActivation"
+      },
+      {
+        "fields": [
+          {
+            "json_null": false,
+            "name": "state",
+            "tag": 1,
+            "type": "text"
+          },
+          {
+            "json_null": false,
+            "name": "basis",
+            "tag": 2,
+            "type": "text"
+          }
+        ],
+        "id": 21,
+        "name": "PWRunnerActorApplication"
+      },
+      {
+        "fields": [
+          {
+            "json_null": true,
+            "name": "requested",
+            "tag": 1,
+            "type": {
+              "optional": "text"
+            }
+          },
+          {
+            "json_null": false,
+            "name": "resolved",
+            "tag": 2,
+            "type": "text"
+          },
+          {
+            "json_null": true,
+            "name": "binding_ref",
+            "tag": 3,
+            "type": {
+              "optional": "u32"
+            }
+          },
+          {
+            "json_null": false,
+            "name": "required_entitlements",
+            "tag": 4,
+            "type": {
+              "list": "text"
+            }
+          },
+          {
+            "json_null": false,
+            "name": "requirements_status",
+            "tag": 5,
+            "type": "text"
+          },
+          {
+            "json_null": false,
+            "name": "missing_requirements",
+            "tag": 6,
+            "type": {
+              "optional": {
+                "list": "text"
+              }
+            }
+          },
+          {
+            "json_null": false,
+            "name": "execution",
+            "tag": 7,
+            "type": {
+              "record": 39
+            }
+          }
+        ],
+        "id": 22,
+        "name": "PWRunnerActorEquipment"
+      },
+      {
+        "fields": [
+          {
+            "json_null": false,
+            "name": "pid",
+            "tag": 1,
+            "type": "i64"
+          },
+          {
+            "json_null": false,
+            "name": "parent_pid",
+            "tag": 2,
+            "type": "i64"
+          },
+          {
+            "json_null": false,
+            "name": "environment",
+            "tag": 3,
+            "type": "text"
+          },
+          {
+            "json_null": false,
+            "name": "standard_streams",
+            "tag": 4,
+            "type": "text"
+          },
+          {
+            "json_null": false,
+            "name": "inherited_descriptors",
+            "tag": 5,
+            "type": {
+              "list": "i64"
+            }
+          }
+        ],
+        "id": 23,
+        "name": "PWRunnerActorLaunch"
+      },
+      {
+        "fields": [
+          {
+            "json_null": false,
+            "name": "actor_id",
+            "tag": 1,
+            "type": "text"
+          },
+          {
+            "json_null": false,
+            "name": "index",
+            "tag": 2,
+            "type": "i64"
+          },
+          {
+            "json_null": false,
+            "name": "mode",
+            "tag": 3,
+            "type": "text"
+          },
+          {
+            "json_null": false,
+            "name": "policy_format",
+            "tag": 4,
+            "type": {
+              "optional": "text"
+            }
+          },
+          {
+            "json_null": false,
+            "name": "policy_sha256",
+            "projection": "hex",
+            "tag": 5,
+            "type": {
+              "optional": "bytes"
+            }
+          },
+          {
+            "json_null": false,
+            "name": "policy_received_sha256",
+            "projection": "hex",
+            "tag": 6,
+            "type": {
+              "optional": "bytes"
+            }
+          },
+          {
+            "json_null": false,
+            "name": "setup_status",
+            "tag": 7,
+            "type": "text"
+          },
+          {
+            "json_null": false,
+            "name": "applied",
+            "tag": 8,
+            "type": {
+              "optional": "bool"
+            }
+          },
+          {
+            "json_null": false,
+            "name": "application_count",
+            "tag": 9,
+            "type": "i64"
+          },
+          {
+            "json_null": false,
+            "name": "launch",
+            "tag": 10,
+            "type": {
+              "optional": {
+                "record": 23
+              }
+            }
+          },
+          {
+            "json_null": false,
+            "name": "subprocess",
+            "tag": 11,
+            "type": {
+              "optional": {
+                "record": 61
+              }
+            }
+          },
+          {
+            "json_null": false,
+            "name": "compiled_profile",
+            "tag": 12,
+            "type": {
+              "optional": {
+                "record": 1
+              }
+            }
+          },
+          {
+            "json_null": false,
+            "name": "visits",
+            "tag": 13,
+            "type": {
+              "list": "i64"
+            }
+          },
+          {
+            "json_null": false,
+            "name": "equipment",
+            "tag": 14,
+            "type": {
+              "optional": {
+                "record": 22
+              }
+            }
+          },
+          {
+            "json_null": false,
+            "name": "application",
+            "tag": 15,
+            "type": {
+              "optional": {
+                "record": 21
+              }
+            }
+          },
+          {
+            "json_null": false,
+            "name": "owned_reap",
+            "tag": 16,
+            "type": {
+              "optional": {
+                "record": 17
+              }
+            }
+          }
+        ],
+        "id": 24,
+        "name": "PWRunnerActorResult"
+      },
+      {
+        "fields": [
+          {
+            "json_null": false,
+            "name": "origin",
+            "tag": 1,
+            "type": "text"
+          },
+          {
+            "json_null": false,
+            "name": "field",
+            "tag": 2,
+            "type": "text"
+          },
+          {
+            "json_null": false,
+            "name": "actual",
+            "tag": 3,
+            "type": "i64"
+          },
+          {
+            "json_null": false,
+            "name": "maximum",
+            "tag": 4,
+            "type": "i64"
+          },
+          {
+            "json_null": false,
+            "name": "unit",
+            "tag": 5,
+            "type": "text"
+          },
+          {
+            "json_null": false,
+            "name": "step_id",
+            "tag": 6,
+            "type": {
+              "optional": "text"
+            }
+          },
+          {
+            "json_null": false,
+            "name": "step_index",
+            "tag": 7,
+            "type": {
+              "optional": "i64"
+            }
+          },
+          {
+            "json_null": false,
+            "name": "parameter_key",
+            "tag": 8,
+            "type": {
+              "optional": "text"
+            }
+          },
+          {
+            "json_null": false,
+            "name": "index",
+            "tag": 9,
+            "type": {
+              "optional": "i64"
+            }
+          }
+        ],
+        "id": 25,
+        "name": "PWRunnerAdmissionFailure"
+      },
+      {
+        "fields": [
+          {
+            "json_null": false,
+            "name": "observer",
+            "tag": 1,
+            "type": {
+              "optional": "text"
+            }
+          },
+          {
+            "json_null": false,
+            "name": "stage",
+            "tag": 2,
+            "type": {
+              "optional": "text"
+            }
+          },
+          {
+            "json_null": false,
+            "name": "input",
+            "tag": 3,
+            "type": "text"
+          },
+          {
+            "json_null": false,
+            "name": "realpath_resolved",
+            "tag": 4,
+            "type": {
+              "optional": "text"
+            }
+          },
+          {
+            "json_null": false,
+            "name": "parent_realpath_resolved",
+            "tag": 5,
+            "type": {
+              "optional": "text"
+            }
+          }
+        ],
+        "id": 26,
+        "name": "PWRunnerAttemptPathDiagnostics",
+        "path_forms": [
+          "realpath_resolved",
+          "parent_realpath_resolved"
+        ]
+      },
+      {
+        "fields": [
+          {
+            "json_null": false,
+            "name": "requested_kind",
+            "tag": 1,
+            "type": {
+              "optional": "text"
+            }
+          },
+          {
+            "json_null": false,
+            "name": "requested_action",
+            "tag": 2,
+            "type": {
+              "optional": "text"
+            }
+          },
+          {
+            "json_null": false,
+            "name": "result_source",
+            "tag": 3,
+            "type": {
+              "optional": "text"
+            }
+          },
+          {
+            "json_null": false,
+            "name": "missing_reason",
+            "tag": 4,
+            "type": {
+              "optional": "text"
+            }
+          },
+          {
+            "json_null": false,
+            "name": "lifecycle",
+            "tag": 5,
+            "type": {
+              "optional": {
+                "record": 2
+              }
+            }
+          },
+          {
+            "json_null": false,
+            "name": "fresh_read",
+            "tag": 6,
+            "type": {
+              "optional": {
+                "record": 44
+              }
+            }
+          },
+          {
+            "json_null": false,
+            "name": "fresh_write",
+            "tag": 7,
+            "type": {
+              "optional": {
+                "record": 45
+              }
+            }
+          },
+          {
+            "json_null": false,
+            "name": "exec_observation",
+            "tag": 8,
+            "type": {
+              "optional": {
+                "record": 10
+              }
+            }
+          },
+          {
+            "json_null": false,
+            "name": "rc",
+            "tag": 10,
+            "type": "i64"
+          },
+          {
+            "json_null": true,
+            "name": "errno",
+            "tag": 11,
+            "type": {
+              "optional": "i64"
+            }
+          },
+          {
+            "json_null": false,
+            "name": "outcome",
+            "tag": 12,
+            "type": "text"
+          },
+          {
+            "json_null": false,
+            "name": "error",
+            "tag": 13,
+            "type": {
+              "optional": "text"
+            }
+          },
+          {
+            "json_null": true,
+            "name": "requested_path",
+            "tag": 14,
+            "type": {
+              "optional": "text"
+            }
+          },
+          {
+            "json_null": false,
+            "name": "path_diagnostics",
+            "tag": 15,
+            "type": {
+              "optional": {
+                "record": 26
+              }
+            }
+          },
+          {
+            "json_null": true,
+            "name": "observed_path",
+            "tag": 16,
+            "type": {
+              "optional": "text"
+            }
+          },
+          {
+            "json_null": false,
+            "name": "child_pid",
+            "tag": 17,
+            "type": {
+              "optional": "i64"
+            }
+          },
+          {
+            "json_null": false,
+            "name": "child_exit_code",
+            "tag": 18,
+            "type": {
+              "optional": "i64"
+            }
+          },
+          {
+            "json_null": false,
+            "name": "child_term_signal",
+            "tag": 19,
+            "type": {
+              "optional": "i64"
+            }
+          },
+          {
+            "json_null": false,
+            "name": "stdout",
+            "tag": 20,
+            "type": {
+              "optional": "text"
+            }
+          },
+          {
+            "json_null": false,
+            "name": "stderr",
+            "tag": 21,
+            "type": {
+              "optional": "text"
+            }
+          }
+        ],
+        "id": 27,
+        "name": "PWRunnerAttemptResult"
+      },
+      {
+        "fields": [
+          {
+            "json_null": false,
+            "name": "run",
+            "tag": 1,
+            "type": {
+              "record": 30
+            }
+          },
+          {
+            "json_null": false,
+            "name": "regions",
+            "tag": 2,
+            "type": {
+              "list": {
+                "record": 30
+              }
+            }
+          },
+          {
+            "json_null": false,
+            "name": "custody",
+            "tag": 3,
+            "type": {
+              "list": {
+                "record": 30
+              }
+            }
+          }
+        ],
+        "id": 28,
+        "name": "PWRunnerAuthorityHost"
+      },
+      {
+        "fields": [
+          {
+            "json_null": false,
+            "name": "slot",
+            "tag": 1,
+            "type": "i64"
+          },
+          {
+            "json_null": false,
+            "name": "operation",
+            "tag": 2,
+            "type": "text"
+          },
+          {
+            "json_null": false,
+            "name": "role",
+            "tag": 3,
+            "type": "text"
+          },
+          {
+            "json_null": false,
+            "name": "state",
+            "tag": 4,
+            "type": "text"
+          },
+          {
+            "json_null": false,
+            "name": "native_kind",
+            "tag": 5,
+            "type": {
+              "optional": "text"
+            }
+          },
+          {
+            "json_null": false,
+            "name": "native_rc",
+            "tag": 6,
+            "type": {
+              "optional": "i64"
+            }
+          },
+          {
+            "json_null": false,
+            "name": "errno",
+            "tag": 7,
+            "type": {
+              "optional": "i32"
+            }
+          },
+          {
+            "json_null": false,
+            "name": "detail",
+            "tag": 8,
+            "type": {
+              "optional": "text"
+            }
+          },
+          {
+            "json_null": false,
+            "name": "value",
+            "tag": 9,
+            "type": {
+              "optional": "u64"
+            }
+          }
+        ],
+        "id": 29,
+        "name": "PWRunnerAuthorityOperation"
+      },
+      {
+        "fields": [
+          {
+            "json_null": false,
+            "name": "actor_id",
+            "tag": 1,
+            "type": {
+              "optional": "text"
+            }
+          },
+          {
+            "json_null": false,
+            "name": "actor_index",
+            "tag": 2,
+            "type": {
+              "optional": "i64"
+            }
+          },
+          {
+            "json_null": false,
+            "name": "token_ref",
+            "tag": 3,
+            "type": {
+              "optional": "text"
+            }
+          },
+          {
+            "json_null": false,
+            "name": "token_index",
+            "tag": 4,
+            "type": {
+              "optional": "i64"
+            }
+          },
+          {
+            "json_null": false,
+            "name": "required",
+            "tag": 5,
+            "type": {
+              "optional": "bool"
+            }
+          },
+          {
+            "json_null": false,
+            "name": "publication",
+            "tag": 6,
+            "type": {
+              "optional": "text"
+            }
+          },
+          {
+            "json_null": false,
+            "name": "disposition",
+            "tag": 7,
+            "type": {
+              "optional": "text"
+            }
+          },
+          {
+            "json_null": false,
+            "name": "primary_operation",
+            "tag": 8,
+            "type": {
+              "optional": "i64"
+            }
+          },
+          {
+            "json_null": false,
+            "name": "operations",
+            "tag": 9,
+            "type": {
+              "list": {
+                "record": 29
+              }
+            }
+          },
+          {
+            "json_null": false,
+            "name": "ownership",
+            "tag": 10,
+            "type": {
+              "map": "text"
+            }
+          },
+          {
+            "json_null": false,
+            "name": "cleanup_reference",
+            "tag": 11,
+            "type": {
+              "optional": {
+                "record": 3
+              }
+            }
+          },
+          {
+            "json_null": false,
+            "name": "integrity_errors",
+            "tag": 12,
+            "type": {
+              "optional": {
+                "list": "text"
+              }
+            }
+          }
+        ],
+        "id": 30,
+        "name": "PWRunnerAuthorityScope"
+      },
+      {
+        "fields": [
+          {
+            "json_null": false,
+            "name": "host",
+            "tag": 1,
+            "type": {
+              "record": 28
+            }
+          },
+          {
+            "json_null": false,
+            "name": "workers",
+            "tag": 2,
+            "type": {
+              "list": {
+                "record": 30
+              }
+            }
+          }
+        ],
+        "id": 31,
+        "name": "PWRunnerAuthoritySetup"
+      },
+      {
+        "fields": [
+          {
+            "json_null": false,
+            "name": "kind",
+            "tag": 1,
+            "type": "text"
+          },
+          {
+            "json_null": false,
+            "name": "contract",
+            "tag": 2,
+            "type": "text"
+          },
+          {
+            "json_null": false,
+            "name": "client_pid",
+            "tag": 3,
+            "type": "i64"
+          },
+          {
+            "json_null": false,
+            "name": "clock",
+            "tag": 4,
+            "type": "text"
+          },
+          {
+            "json_null": false,
+            "name": "clock_available",
+            "tag": 5,
+            "type": "bool"
+          },
+          {
+            "json_null": false,
+            "name": "started_continuous_ns",
+            "tag": 6,
+            "type": {
+              "optional": "u64"
+            }
+          },
+          {
+            "json_null": false,
+            "name": "deadline_continuous_ns",
+            "tag": 7,
+            "type": {
+              "optional": "u64"
+            }
+          },
+          {
+            "json_null": false,
+            "name": "ended_continuous_ns",
+            "tag": 8,
+            "type": {
+              "optional": "u64"
+            }
+          },
+          {
+            "json_null": false,
+            "name": "timeout_ms",
+            "tag": 9,
+            "type": "u64"
+          },
+          {
+            "json_null": false,
+            "name": "attempts",
+            "tag": 10,
+            "type": {
+              "list": {
+                "record": 19
+              }
+            }
+          },
+          {
+            "json_null": false,
+            "name": "acquisition_stop",
+            "tag": 11,
+            "type": "text"
+          },
+          {
+            "json_null": false,
+            "name": "submission",
+            "tag": 12,
+            "type": {
+              "record": 60
+            }
+          },
+          {
+            "json_null": false,
+            "name": "terminal",
+            "tag": 13,
+            "type": "text"
+          },
+          {
+            "json_null": false,
+            "name": "error",
+            "tag": 14,
+            "type": {
+              "optional": {
+                "record": 67
+              }
+            }
+          },
+          {
+            "json_null": false,
+            "name": "runner_reply",
+            "tag": 15,
+            "type": {
+              "optional": {
+                "record": 51
+              }
+            }
+          },
+          {
+            "json_null": false,
+            "name": "submission_refusal",
+            "tag": 16,
+            "type": {
+              "optional": {
+                "record": 34
+              }
+            }
+          }
+        ],
+        "id": 32,
+        "name": "PWRunnerClientCapture"
+      },
+      {
+        "fields": [
+          {
+            "json_null": false,
+            "name": "observation",
+            "tag": 1,
+            "type": "text"
+          },
+          {
+            "json_null": false,
+            "name": "observation_basis",
+            "tag": 2,
+            "type": "text"
+          },
+          {
+            "json_null": false,
+            "name": "operation_relation",
+            "tag": 3,
+            "type": "text"
+          },
+          {
+            "json_null": false,
+            "name": "target_relation",
+            "tag": 4,
+            "type": "text"
+          },
+          {
+            "json_null": false,
+            "name": "order",
+            "tag": 5,
+            "type": "text"
+          },
+          {
+            "json_null": false,
+            "name": "limitations",
+            "tag": 6,
+            "type": {
+              "list": "text"
+            }
+          }
+        ],
+        "id": 33,
+        "name": "PWRunnerComparison"
+      },
+      {
+        "fields": [
+          {
+            "json_null": false,
+            "name": "bytes_received",
+            "tag": 1,
+            "type": "i64"
+          },
+          {
+            "json_null": false,
+            "name": "sha256",
+            "projection": "hex",
+            "tag": 2,
+            "type": "bytes"
+          },
+          {
+            "json_null": false,
+            "name": "status",
+            "tag": 3,
+            "type": {
+              "optional": "text"
+            }
+          },
+          {
+            "json_null": false,
+            "name": "host_pid",
+            "tag": 4,
+            "type": {
+              "optional": "i64"
+            }
+          },
+          {
+            "json_null": false,
+            "name": "host_instance",
+            "tag": 5,
+            "type": {
+              "optional": "text"
+            }
+          },
+          {
+            "json_null": false,
+            "name": "lease_ms",
+            "tag": 6,
+            "type": {
+              "optional": "i64"
+            }
+          },
+          {
+            "json_null": false,
+            "name": "reason",
+            "tag": 7,
+            "type": {
+              "optional": "text"
+            }
+          }
+        ],
+        "id": 34,
+        "name": "PWRunnerControlObservation"
+      },
+      {
+        "fields": [
+          {
+            "json_null": false,
+            "name": "delivery_ref",
+            "tag": 1,
+            "type": "text"
+          },
+          {
+            "json_null": false,
+            "name": "token_ref",
+            "tag": 2,
+            "type": "text"
+          },
+          {
+            "json_null": false,
+            "name": "source_actor_id",
+            "tag": 3,
+            "type": "text"
+          },
+          {
+            "json_null": false,
+            "name": "recipient_actor_id",
+            "tag": 4,
+            "type": "text"
+          },
+          {
+            "json_null": false,
+            "name": "step_id",
+            "tag": 5,
+            "type": "text"
+          },
+          {
+            "json_null": false,
+            "name": "status",
+            "tag": 6,
+            "type": "text"
+          },
+          {
+            "json_null": false,
+            "name": "delivered_length",
+            "tag": 7,
+            "type": {
+              "optional": "i64"
+            }
+          },
+          {
+            "json_null": false,
+            "name": "equality",
+            "tag": 8,
+            "type": {
+              "optional": "text"
+            }
+          },
+          {
+            "json_null": false,
+            "name": "last_use_step_id",
+            "tag": 9,
+            "type": {
+              "optional": "text"
+            }
+          }
+        ],
+        "id": 35,
+        "name": "PWRunnerDeliveryRecord"
+      },
+      {
+        "conditional_null": {
+          "team_id": "identifier"
+        },
+        "fields": [
+          {
+            "json_null": false,
+            "name": "role",
+            "tag": 2,
+            "type": "text"
+          },
+          {
+            "json_null": false,
+            "name": "source",
+            "tag": 3,
+            "type": "text"
+          },
+          {
+            "json_null": false,
+            "name": "implementation_identity",
+            "tag": 4,
+            "type": "text"
+          },
+          {
+            "json_null": false,
+            "name": "relative_path",
+            "tag": 5,
+            "type": {
+              "optional": "text"
+            }
+          },
+          {
+            "json_null": false,
+            "name": "path",
+            "tag": 6,
+            "type": "text"
+          },
+          {
+            "json_null": false,
+            "name": "status",
+            "tag": 7,
+            "type": "text"
+          },
+          {
+            "json_null": false,
+            "name": "reason",
+            "tag": 8,
+            "type": {
+              "optional": "text"
+            }
+          },
+          {
+            "json_null": false,
+            "name": "expected_sha256",
+            "projection": "hex",
+            "tag": 9,
+            "type": {
+              "optional": "bytes"
+            }
+          },
+          {
+            "json_null": false,
+            "name": "expected_cdhash",
+            "projection": "hex",
+            "tag": 10,
+            "type": {
+              "optional": "bytes"
+            }
+          },
+          {
+            "json_null": false,
+            "name": "sha256",
+            "projection": "hex",
+            "tag": 11,
+            "type": {
+              "optional": "bytes"
+            }
+          },
+          {
+            "json_null": false,
+            "name": "cdhash",
+            "projection": "hex",
+            "tag": 12,
+            "type": {
+              "optional": "bytes"
+            }
+          },
+          {
+            "json_null": false,
+            "name": "identifier",
+            "tag": 13,
+            "type": {
+              "optional": "text"
+            }
+          },
+          {
+            "json_null": true,
+            "name": "team_id",
+            "tag": 14,
+            "type": {
+              "optional": "text"
+            }
+          },
+          {
+            "json_null": false,
+            "name": "entitlements_ref",
+            "tag": 15,
+            "type": {
+              "optional": "u32"
+            }
+          },
+          {
+            "json_null": false,
+            "name": "signature_osstatus",
+            "tag": 16,
+            "type": {
+              "optional": "i64"
+            }
+          },
+          {
+            "json_null": false,
+            "name": "entitlements_match",
+            "tag": 17,
+            "type": {
+              "optional": "bool"
+            }
+          },
+          {
+            "json_null": false,
+            "name": "error",
+            "tag": 18,
+            "type": {
+              "optional": {
+                "record": 38
+              }
+            }
+          }
+        ],
+        "id": 36,
+        "name": "PWRunnerEquipmentBinding"
+      },
+      {
+        "fields": [
+          {
+            "json_null": false,
+            "name": "source",
+            "tag": 2,
+            "type": "text"
+          },
+          {
+            "json_null": false,
+            "name": "binding_ref",
+            "tag": 3,
+            "type": "u32"
+          },
+          {
+            "json_null": false,
+            "name": "actor_id",
+            "tag": 4,
+            "type": {
+              "optional": "text"
+            }
+          },
+          {
+            "json_null": false,
+            "name": "status",
+            "tag": 5,
+            "type": "text"
+          },
+          {
+            "json_null": false,
+            "name": "raw_plist",
+            "tag": 6,
+            "type": {
+              "optional": "text"
+            }
+          },
+          {
+            "json_null": false,
+            "name": "error",
+            "tag": 7,
+            "type": {
+              "optional": {
+                "record": 38
+              }
+            }
+          }
+        ],
+        "id": 37,
+        "name": "PWRunnerEquipmentEntitlements"
+      },
+      {
+        "fields": [
+          {
+            "json_null": false,
+            "name": "operation",
+            "tag": 1,
+            "type": "text"
+          },
+          {
+            "json_null": false,
+            "name": "domain",
+            "tag": 2,
+            "type": {
+              "optional": "text"
+            }
+          },
+          {
+            "json_null": false,
+            "name": "code",
+            "tag": 3,
+            "type": {
+              "optional": "i64"
+            }
+          },
+          {
+            "json_null": false,
+            "name": "message",
+            "tag": 4,
+            "type": {
+              "optional": "text"
+            }
+          }
+        ],
+        "id": 38,
+        "name": "PWRunnerEquipmentError"
+      },
+      {
+        "conditional_null": {
+          "team_id": "identifier"
+        },
+        "fields": [
+          {
+            "json_null": false,
+            "name": "status",
+            "tag": 1,
+            "type": "text"
+          },
+          {
+            "json_null": false,
+            "name": "pid",
+            "tag": 2,
+            "type": {
+              "optional": "i64"
+            }
+          },
+          {
+            "json_null": false,
+            "name": "parent_pid",
+            "tag": 3,
+            "type": {
+              "optional": "i64"
+            }
+          },
+          {
+            "json_null": false,
+            "name": "observed_at_monotonic_ns",
+            "tag": 4,
+            "type": {
+              "optional": "u64"
+            }
+          },
+          {
+            "json_null": false,
+            "name": "path",
+            "tag": 5,
+            "type": {
+              "optional": "text"
+            }
+          },
+          {
+            "json_null": false,
+            "name": "cdhash",
+            "projection": "hex",
+            "tag": 6,
+            "type": {
+              "optional": "bytes"
+            }
+          },
+          {
+            "json_null": false,
+            "name": "identifier",
+            "tag": 7,
+            "type": {
+              "optional": "text"
+            }
+          },
+          {
+            "json_null": true,
+            "name": "team_id",
+            "tag": 8,
+            "type": {
+              "optional": "text"
+            }
+          },
+          {
+            "json_null": false,
+            "name": "entitlements_ref",
+            "tag": 9,
+            "type": {
+              "optional": "u32"
+            }
+          },
+          {
+            "json_null": false,
+            "name": "native_observations",
+            "tag": 10,
+            "type": {
+              "list": {
+                "record": 41
+              }
+            }
+          },
+          {
+            "json_null": false,
+            "name": "reason",
+            "tag": 11,
+            "type": {
+              "optional": "text"
+            }
+          },
+          {
+            "json_null": false,
+            "name": "eligible",
+            "tag": 12,
+            "type": "bool"
+          }
+        ],
+        "id": 39,
+        "name": "PWRunnerEquipmentExecution"
+      },
+      {
+        "fields": [
+          {
+            "json_null": false,
+            "name": "path",
+            "tag": 1,
+            "type": "text"
+          },
+          {
+            "json_null": false,
+            "name": "status",
+            "tag": 2,
+            "type": "text"
+          },
+          {
+            "json_null": false,
+            "name": "sha256",
+            "projection": "hex",
+            "tag": 3,
+            "type": {
+              "optional": "bytes"
+            }
+          },
+          {
+            "json_null": false,
+            "name": "schema_version",
+            "tag": 4,
+            "type": {
+              "optional": "i64"
+            }
+          },
+          {
+            "json_null": false,
+            "name": "worker_identity",
+            "projection": "hex",
+            "tag": 5,
+            "type": {
+              "optional": "bytes"
+            }
+          },
+          {
+            "json_null": false,
+            "name": "unsigned_worker_sha256",
+            "projection": "hex",
+            "tag": 6,
+            "type": {
+              "optional": "bytes"
+            }
+          },
+          {
+            "json_null": false,
+            "name": "seal_osstatus",
+            "tag": 7,
+            "type": {
+              "optional": "i64"
+            }
+          },
+          {
+            "json_null": false,
+            "name": "reason",
+            "tag": 8,
+            "type": {
+              "optional": "text"
+            }
+          },
+          {
+            "json_null": false,
+            "name": "error",
+            "tag": 9,
+            "type": {
+              "optional": {
+                "record": 38
+              }
+            }
+          }
+        ],
+        "id": 40,
+        "name": "PWRunnerEquipmentInventory"
+      },
+      {
+        "fields": [
+          {
+            "json_null": false,
+            "name": "operation",
+            "tag": 1,
+            "type": "text"
+          },
+          {
+            "json_null": false,
+            "name": "attempted",
+            "tag": 2,
+            "type": "bool"
+          },
+          {
+            "json_null": false,
+            "name": "osstatus",
+            "tag": 3,
+            "type": {
+              "optional": "i64"
+            }
+          }
+        ],
+        "id": 41,
+        "name": "PWRunnerEquipmentNativeObservation"
+      },
+      {
+        "fields": [
+          {
+            "json_null": false,
+            "name": "phase_id",
+            "tag": 1,
+            "type": "text"
+          },
+          {
+            "json_null": false,
+            "name": "step_id",
+            "tag": 2,
+            "type": "text"
+          },
+          {
+            "json_null": false,
+            "name": "operation",
+            "tag": 3,
+            "type": "text"
+          },
+          {
+            "json_null": false,
+            "name": "token_ref",
+            "tag": 4,
+            "type": {
+              "optional": "text"
+            }
+          },
+          {
+            "json_null": false,
+            "name": "handle_ref",
+            "tag": 5,
+            "type": {
+              "optional": "text"
+            }
+          },
+          {
+            "json_null": false,
+            "name": "call_boundary_observed",
+            "tag": 6,
+            "type": "bool"
+          },
+          {
+            "json_null": false,
+            "name": "result_published",
+            "tag": 7,
+            "type": "bool"
+          },
+          {
+            "json_null": false,
+            "name": "status",
+            "tag": 8,
+            "type": "text"
+          },
+          {
+            "json_null": false,
+            "name": "native_result",
+            "tag": 9,
+            "type": {
+              "optional": "i64"
+            }
+          },
+          {
+            "json_null": false,
+            "name": "errno",
+            "tag": 10,
+            "type": {
+              "optional": "i32"
+            }
+          },
+          {
+            "json_null": false,
+            "name": "unavailable_reason",
+            "tag": 11,
+            "type": {
+              "optional": "text"
+            }
+          },
+          {
+            "json_null": false,
+            "name": "lifecycle",
+            "tag": 12,
+            "type": {
+              "optional": {
+                "record": 2
+              }
+            }
+          },
+          {
+            "json_null": false,
+            "name": "actor_id",
+            "tag": 13,
+            "type": {
+              "optional": "text"
+            }
+          },
+          {
+            "json_null": false,
+            "name": "family",
+            "tag": 14,
+            "type": {
+              "optional": "text"
+            }
+          },
+          {
+            "json_null": false,
+            "name": "target",
+            "tag": 15,
+            "type": {
+              "optional": "text"
+            }
+          },
+          {
+            "json_null": false,
+            "name": "extension_class",
+            "tag": 16,
+            "type": {
+              "optional": "text"
+            }
+          },
+          {
+            "json_null": false,
+            "name": "flags",
+            "tag": 17,
+            "type": {
+              "optional": "i64"
+            }
+          },
+          {
+            "json_null": false,
+            "name": "delivery_ref",
+            "tag": 18,
+            "type": {
+              "optional": "text"
+            }
+          },
+          {
+            "json_null": false,
+            "name": "native_nonnull",
+            "tag": 19,
+            "type": {
+              "optional": "bool"
+            }
+          },
+          {
+            "json_null": false,
+            "name": "token_length",
+            "tag": 20,
+            "type": {
+              "optional": "i64"
+            }
+          }
+        ],
+        "id": 42,
+        "name": "PWRunnerExtensionEvent"
+      },
+      {
+        "fields": [
+          {
+            "json_null": false,
+            "name": "rc",
+            "tag": 1,
+            "type": "i32"
+          },
+          {
+            "json_null": false,
+            "name": "errno",
+            "tag": 2,
+            "type": {
+              "optional": "i32"
+            }
+          },
+          {
+            "json_null": false,
+            "name": "identity",
+            "tag": 3,
+            "type": {
+              "optional": {
+                "record": 15
+              }
+            }
+          },
+          {
+            "json_null": false,
+            "name": "size",
+            "tag": 4,
+            "type": {
+              "optional": "i64"
+            }
+          }
+        ],
+        "id": 43,
+        "name": "PWRunnerFileStat"
+      },
+      {
+        "fields": [
+          {
+            "json_null": false,
+            "name": "open_rc",
+            "tag": 1,
+            "type": "i32"
+          },
+          {
+            "json_null": false,
+            "name": "open_errno",
+            "tag": 2,
+            "type": {
+              "optional": "i32"
+            }
+          },
+          {
+            "json_null": false,
+            "name": "read_rc",
+            "tag": 3,
+            "type": {
+              "optional": "i64"
+            }
+          },
+          {
+            "json_null": false,
+            "name": "read_errno",
+            "tag": 4,
+            "type": {
+              "optional": "i32"
+            }
+          },
+          {
+            "json_null": false,
+            "name": "stat_rc",
+            "tag": 5,
+            "type": {
+              "optional": "i32"
+            }
+          },
+          {
+            "json_null": false,
+            "name": "stat_errno",
+            "tag": 6,
+            "type": {
+              "optional": "i32"
+            }
+          },
+          {
+            "json_null": false,
+            "name": "identity",
+            "tag": 7,
+            "type": {
+              "optional": {
+                "record": 15
+              }
+            }
+          },
+          {
+            "json_null": false,
+            "name": "close_rc",
+            "tag": 8,
+            "type": {
+              "optional": "i32"
+            }
+          },
+          {
+            "json_null": false,
+            "name": "close_errno",
+            "tag": 9,
+            "type": {
+              "optional": "i32"
+            }
+          },
+          {
+            "json_null": false,
+            "name": "content_hex",
+            "projection": "hex",
+            "tag": 10,
+            "type": {
+              "optional": "bytes"
+            }
+          }
+        ],
+        "id": 44,
+        "name": "PWRunnerFreshRead"
+      },
+      {
+        "fields": [
+          {
+            "json_null": false,
+            "name": "open_rc",
+            "tag": 1,
+            "type": "i32"
+          },
+          {
+            "json_null": false,
+            "name": "open_errno",
+            "tag": 2,
+            "type": {
+              "optional": "i32"
+            }
+          },
+          {
+            "json_null": false,
+            "name": "truncate_rc",
+            "tag": 3,
+            "type": {
+              "optional": "i32"
+            }
+          },
+          {
+            "json_null": false,
+            "name": "truncate_errno",
+            "tag": 4,
+            "type": {
+              "optional": "i32"
+            }
+          },
+          {
+            "json_null": false,
+            "name": "write_rc",
+            "tag": 5,
+            "type": {
+              "optional": "i64"
+            }
+          },
+          {
+            "json_null": false,
+            "name": "write_errno",
+            "tag": 6,
+            "type": {
+              "optional": "i32"
+            }
+          },
+          {
+            "json_null": false,
+            "name": "close_rc",
+            "tag": 7,
+            "type": {
+              "optional": "i32"
+            }
+          },
+          {
+            "json_null": false,
+            "name": "close_errno",
+            "tag": 8,
+            "type": {
+              "optional": "i32"
+            }
+          },
+          {
+            "json_null": false,
+            "name": "preopen_stat",
+            "tag": 9,
+            "type": {
+              "optional": {
+                "record": 43
+              }
+            }
+          },
+          {
+            "json_null": false,
+            "name": "opened_stat",
+            "tag": 10,
+            "type": {
+              "optional": {
+                "record": 43
+              }
+            }
+          },
+          {
+            "json_null": false,
+            "name": "truncated_stat",
+            "tag": 11,
+            "type": {
+              "optional": {
+                "record": 43
+              }
+            }
+          },
+          {
+            "json_null": false,
+            "name": "written_stat",
+            "tag": 12,
+            "type": {
+              "optional": {
+                "record": 43
+              }
+            }
+          }
+        ],
+        "id": 45,
+        "name": "PWRunnerFreshWrite"
+      },
+      {
+        "fields": [
+          {
+            "json_null": false,
+            "name": "handle_ref",
+            "tag": 1,
+            "type": "text"
+          },
+          {
+            "json_null": false,
+            "name": "delivery_ref",
+            "tag": 2,
+            "type": "text"
+          },
+          {
+            "json_null": false,
+            "name": "actor_id",
+            "tag": 3,
+            "type": "text"
+          },
+          {
+            "json_null": false,
+            "name": "step_id",
+            "tag": 4,
+            "type": "text"
+          },
+          {
+            "json_null": false,
+            "name": "status",
+            "tag": 5,
+            "type": "text"
+          },
+          {
+            "json_null": false,
+            "name": "native_handle",
+            "tag": 6,
+            "type": {
+              "optional": "i64"
+            }
+          },
+          {
+            "json_null": false,
+            "name": "raw_equal_handles",
+            "tag": 7,
+            "type": {
+              "list": "text"
+            }
+          },
+          {
+            "json_null": false,
+            "name": "release_step_id",
+            "tag": 8,
+            "type": {
+              "optional": "text"
+            }
+          },
+          {
+            "json_null": false,
+            "name": "release_attempted",
+            "tag": 9,
+            "type": "bool"
+          }
+        ],
+        "id": 46,
+        "name": "PWRunnerHandleRecord"
+      },
+      {
+        "fields": [
+          {
+            "json_null": false,
+            "name": "collection_closed_before_proceed",
+            "tag": 1,
+            "type": "bool"
+          },
+          {
+            "json_null": false,
+            "name": "proceed_set",
+            "tag": 2,
+            "type": "bool"
+          },
+          {
+            "json_null": false,
+            "name": "proceed_observed",
+            "tag": 3,
+            "type": "bool"
+          },
+          {
+            "json_null": false,
+            "name": "validator_disposition",
+            "tag": 4,
+            "type": "text"
+          },
+          {
+            "json_null": false,
+            "name": "worker_lifetime_established",
+            "tag": 5,
+            "type": "bool"
+          },
+          {
+            "json_null": false,
+            "name": "protocol_violations",
+            "tag": 6,
+            "type": {
+              "list": "text"
+            }
+          }
+        ],
+        "id": 47,
+        "name": "PWRunnerOrdering"
+      },
+      {
+        "fields": [
+          {
+            "json_null": false,
+            "name": "observer",
+            "tag": 1,
+            "type": {
+              "optional": "text"
+            }
+          },
+          {
+            "json_null": false,
+            "name": "stage",
+            "tag": 2,
+            "type": {
+              "optional": "text"
+            }
+          },
+          {
+            "json_null": false,
+            "name": "input",
+            "tag": 3,
+            "type": "text"
+          },
+          {
+            "json_null": false,
+            "name": "realpath_resolved",
+            "tag": 4,
+            "type": {
+              "optional": "text"
+            }
+          },
+          {
+            "json_null": false,
+            "name": "firmlink_resolved",
+            "tag": 5,
+            "type": {
+              "optional": "text"
+            }
+          }
+        ],
+        "id": 48,
+        "name": "PWRunnerPathDiagnostics",
+        "path_forms": [
+          "realpath_resolved",
+          "firmlink_resolved"
+        ]
+      },
+      {
+        "fields": [
+          {
+            "json_null": false,
+            "name": "phase_id",
+            "tag": 1,
+            "type": "text"
+          },
+          {
+            "json_null": false,
+            "name": "ordinal",
+            "tag": 2,
+            "type": "i64"
+          },
+          {
+            "json_null": false,
+            "name": "action_ids",
+            "tag": 3,
+            "type": {
+              "list": "text"
+            }
+          },
+          {
+            "json_null": false,
+            "name": "arrival_observed",
+            "tag": 4,
+            "type": "bool"
+          },
+          {
+            "json_null": false,
+            "name": "completion_observed",
+            "tag": 5,
+            "type": "bool"
+          },
+          {
+            "json_null": false,
+            "name": "collection_status",
+            "tag": 6,
+            "type": "text"
+          },
+          {
+            "json_null": false,
+            "name": "ordering",
+            "tag": 7,
+            "type": {
+              "optional": {
+                "record": 47
+              }
+            }
+          },
+          {
+            "json_null": false,
+            "name": "validator_subprocess",
+            "tag": 8,
+            "type": {
+              "optional": {
+                "record": 68
+              }
+            }
+          },
+          {
+            "json_null": false,
+            "name": "validator_spawn_failure",
+            "tag": 9,
+            "type": {
+              "optional": {
+                "record": 58
+              }
+            }
+          },
+          {
+            "json_null": false,
+            "name": "actor_id",
+            "tag": 10,
+            "type": {
+              "optional": "text"
+            }
+          },
+          {
+            "json_null": false,
+            "name": "actor_visit",
+            "tag": 11,
+            "type": {
+              "optional": "i64"
+            }
+          },
+          {
+            "json_null": false,
+            "name": "visit_timing",
+            "tag": 12,
+            "type": {
+              "optional": {
+                "record": 69
+              }
+            }
+          },
+          {
+            "json_null": false,
+            "name": "termination_gate",
+            "tag": 13,
+            "type": {
+              "optional": {
+                "record": 62
+              }
+            }
+          },
+          {
+            "json_null": false,
+            "name": "activation_observation",
+            "tag": 14,
+            "type": {
+              "optional": {
+                "record": 20
+              }
+            }
+          }
+        ],
+        "id": 49,
+        "name": "PWRunnerPhaseResult"
+      },
+      {
+        "fields": [
+          {
+            "json_null": false,
+            "name": "stage",
+            "tag": 1,
+            "type": "text"
+          },
+          {
+            "json_null": false,
+            "name": "code",
+            "tag": 2,
+            "type": "text"
+          },
+          {
+            "json_null": false,
+            "name": "actor_id",
+            "tag": 3,
+            "type": {
+              "optional": "text"
+            }
+          },
+          {
+            "json_null": false,
+            "name": "binding_ref",
+            "tag": 4,
+            "type": {
+              "optional": "u32"
+            }
+          },
+          {
+            "json_null": false,
+            "name": "reason",
+            "tag": 5,
+            "type": {
+              "optional": "text"
+            }
+          }
+        ],
+        "id": 50,
+        "name": "PWRunnerPreparationFailure"
+      },
+      {
+        "fields": [
+          {
+            "json_null": false,
+            "name": "bytes_received",
+            "tag": 1,
+            "type": "i64"
+          },
+          {
+            "json_null": false,
+            "name": "bytes_retained",
+            "tag": 2,
+            "type": "i64"
+          },
+          {
+            "json_null": false,
+            "name": "truncated",
+            "tag": 3,
+            "type": "bool"
+          },
+          {
+            "json_null": false,
+            "name": "data_base64",
+            "projection": "base64",
+            "tag": 4,
+            "type": "bytes"
+          }
+        ],
+        "id": 51,
+        "name": "PWRunnerReplyCapture"
+      },
+      {
+        "fields": [
+          {
+            "json_null": false,
+            "name": "origin",
+            "tag": 1,
+            "type": "text"
+          },
+          {
+            "json_null": false,
+            "name": "diagnostic",
+            "tag": 2,
+            "type": "text"
+          },
+          {
+            "json_null": false,
+            "name": "original_rc",
+            "tag": 3,
+            "type": "i64"
+          },
+          {
+            "json_null": false,
+            "name": "original_normalized_outcome",
+            "tag": 4,
+            "type": "text"
+          },
+          {
+            "json_null": false,
+            "name": "original_error",
+            "tag": 5,
+            "type": {
+              "optional": "text"
+            }
+          },
+          {
+            "json_null": false,
+            "name": "evidence_retained",
+            "tag": 6,
+            "type": "bool"
+          }
+        ],
+        "id": 52,
+        "name": "PWRunnerReportingFailure"
+      },
+      {
+        "fields": [
+          {
+            "json_null": false,
+            "name": "code",
+            "tag": 1,
+            "type": "text"
+          },
+          {
+            "json_null": true,
+            "name": "path",
+            "tag": 2,
+            "type": {
+              "optional": {
+                "list": "text"
+              }
+            }
+          },
+          {
+            "json_null": false,
+            "name": "expected_contract",
+            "tag": 3,
+            "type": {
+              "optional": "text"
+            }
+          }
+        ],
+        "id": 53,
+        "name": "PWRunnerRequestFailure"
+      },
+      {
+        "fields": [
+          {
+            "json_null": false,
+            "name": "tokens",
+            "tag": 1,
+            "type": {
+              "list": {
+                "record": 65
+              }
+            }
+          },
+          {
+            "json_null": false,
+            "name": "deliveries",
+            "tag": 2,
+            "type": {
+              "list": {
+                "record": 35
+              }
+            }
+          },
+          {
+            "json_null": false,
+            "name": "handles",
+            "tag": 3,
+            "type": {
+              "list": {
+                "record": 46
+              }
+            }
+          }
+        ],
+        "id": 54,
+        "name": "PWRunnerResourceTables"
+      },
+      {
+        "fields": [
+          {
+            "json_null": false,
+            "name": "producer",
+            "tag": 1,
+            "type": {
+              "record": 84
+            }
+          },
+          {
+            "json_null": false,
+            "name": "specimen_id",
+            "tag": 2,
+            "type": "text"
+          },
+          {
+            "json_null": false,
+            "name": "run_kind",
+            "tag": 3,
+            "type": {
+              "optional": "text"
+            }
+          },
+          {
+            "json_null": false,
+            "name": "rc",
+            "tag": 4,
+            "type": "i64"
+          },
+          {
+            "json_null": false,
+            "name": "normalized_outcome",
+            "tag": 5,
+            "type": "text"
+          },
+          {
+            "json_null": false,
+            "name": "error",
+            "tag": 6,
+            "type": {
+              "optional": "text"
+            }
+          },
+          {
+            "json_null": false,
+            "name": "pid",
+            "tag": 7,
+            "type": "i64"
+          },
+          {
+            "json_null": false,
+            "name": "bundle_id",
+            "tag": 8,
+            "type": {
+              "optional": "text"
+            }
+          },
+          {
+            "json_null": false,
+            "name": "policy_format",
+            "tag": 9,
+            "type": {
+              "optional": "text"
+            }
+          },
+          {
+            "json_null": false,
+            "name": "policy_sha256",
+            "projection": "hex",
+            "tag": 10,
+            "type": {
+              "optional": "bytes"
+            }
+          },
+          {
+            "json_null": false,
+            "name": "compiled_profile",
+            "tag": 11,
+            "type": {
+              "optional": {
+                "record": 1
+              }
+            }
+          },
+          {
+            "json_null": false,
+            "name": "sandboxed_after_apply",
+            "tag": 12,
+            "type": {
+              "optional": "bool"
+            }
+          },
+          {
+            "json_null": false,
+            "name": "steps",
+            "tag": 13,
+            "type": {
+              "list": {
+                "record": 59
+              }
+            }
+          },
+          {
+            "json_null": false,
+            "name": "runner_subprocess",
+            "tag": 14,
+            "type": {
+              "optional": {
+                "record": 61
+              }
+            }
+          },
+          {
+            "json_null": false,
+            "name": "admission_failure",
+            "tag": 15,
+            "type": {
+              "optional": {
+                "record": 25
+              }
+            }
+          },
+          {
+            "json_null": false,
+            "name": "request_failure",
+            "tag": 16,
+            "type": {
+              "optional": {
+                "record": 53
+              }
+            }
+          },
+          {
+            "json_null": false,
+            "name": "phases",
+            "tag": 17,
+            "type": {
+              "list": {
+                "record": 49
+              }
+            }
+          },
+          {
+            "json_null": false,
+            "name": "extension_events",
+            "tag": 18,
+            "type": {
+              "optional": {
+                "list": {
+                  "record": 42
+                }
+              }
+            }
+          },
+          {
+            "json_null": false,
+            "name": "test_overrides",
+            "tag": 19,
+            "type": {
+              "optional": {
+                "record": 64
+              }
+            }
+          },
+          {
+            "json_null": false,
+            "name": "reporting_failure",
+            "tag": 20,
+            "type": {
+              "optional": {
+                "record": 52
+              }
+            }
+          },
+          {
+            "json_null": false,
+            "name": "execution_form",
+            "tag": 21,
+            "type": {
+              "optional": "text"
+            }
+          },
+          {
+            "json_null": false,
+            "name": "actors",
+            "tag": 22,
+            "type": {
+              "optional": {
+                "list": {
+                  "record": 24
+                }
+              }
+            }
+          },
+          {
+            "json_null": false,
+            "name": "transfers",
+            "tag": 23,
+            "type": {
+              "optional": {
+                "list": {
+                  "record": 66
+                }
+              }
+            }
+          },
+          {
+            "json_null": false,
+            "name": "resources",
+            "tag": 24,
+            "type": {
+              "optional": {
+                "record": 54
+              }
+            }
+          },
+          {
+            "json_null": false,
+            "name": "schedule",
+            "tag": 25,
+            "type": {
+              "optional": {
+                "record": 57
+              }
+            }
+          },
+          {
+            "json_null": false,
+            "name": "preparation_failure",
+            "tag": 26,
+            "type": {
+              "optional": {
+                "record": 50
+              }
+            }
+          },
+          {
+            "json_null": false,
+            "name": "equipment_inventory",
+            "tag": 27,
+            "type": {
+              "optional": {
+                "record": 40
+              }
+            }
+          },
+          {
+            "json_null": false,
+            "name": "equipment_bindings",
+            "tag": 28,
+            "type": {
+              "optional": {
+                "list": {
+                  "record": 36
+                }
+              }
+            }
+          },
+          {
+            "json_null": false,
+            "name": "equipment_entitlements",
+            "tag": 29,
+            "type": {
+              "optional": {
+                "list": {
+                  "record": 37
+                }
+              }
+            }
+          },
+          {
+            "json_null": false,
+            "name": "authority_setup",
+            "tag": 30,
+            "type": {
+              "optional": {
+                "record": 31
+              }
+            }
+          }
+        ],
+        "id": 55,
+        "name": "PWRunnerRunResult"
+      },
+      {
+        "conditional_null": {
+          "native_rc": "result_source"
+        },
+        "fields": [
+          {
+            "json_null": false,
+            "name": "result_source",
+            "tag": 1,
+            "type": {
+              "optional": "text"
+            }
+          },
+          {
+            "json_null": true,
+            "name": "native_rc",
+            "tag": 2,
+            "type": {
+              "optional": "i64"
+            }
+          },
+          {
+            "json_null": false,
+            "name": "missing_reason",
+            "tag": 3,
+            "type": {
+              "optional": "text"
+            }
+          },
+          {
+            "json_null": false,
+            "name": "rc",
+            "tag": 4,
+            "type": "i64"
+          },
+          {
+            "json_null": false,
+            "name": "outcome",
+            "tag": 5,
+            "type": "text"
+          },
+          {
+            "json_null": true,
+            "name": "pid",
+            "tag": 6,
+            "type": {
+              "optional": "i64"
+            }
+          },
+          {
+            "json_null": false,
+            "name": "operation",
+            "tag": 7,
+            "type": "text"
+          },
+          {
+            "json_null": false,
+            "name": "filter_kind",
+            "tag": 8,
+            "type": "text"
+          },
+          {
+            "json_null": true,
+            "name": "filter_value",
+            "tag": 9,
+            "type": {
+              "optional": "text"
+            }
+          },
+          {
+            "json_null": true,
+            "name": "filter_type_id",
+            "tag": 10,
+            "type": {
+              "optional": "i64"
+            }
+          },
+          {
+            "json_null": true,
+            "name": "errno",
+            "tag": 11,
+            "type": {
+              "optional": "i64"
+            }
+          },
+          {
+            "json_null": true,
+            "name": "error",
+            "tag": 12,
+            "type": {
+              "optional": "text"
+            }
+          },
+          {
+            "json_null": false,
+            "name": "path_diagnostics",
+            "tag": 13,
+            "type": {
+              "optional": {
+                "record": 48
+              }
+            }
+          }
+        ],
+        "id": 56,
+        "name": "PWRunnerSandboxCheckResult"
+      },
+      {
+        "fields": [
+          {
+            "json_null": false,
+            "name": "setup_wait",
+            "tag": 1,
+            "type": {
+              "optional": {
+                "record": 16
+              }
+            }
+          },
+          {
+            "json_null": false,
+            "name": "execution_wait",
+            "tag": 2,
+            "type": {
+              "optional": {
+                "record": 16
+              }
+            }
+          },
+          {
+            "json_null": false,
+            "name": "lifetime_budget_ms",
+            "tag": 3,
+            "type": "i64"
+          },
+          {
+            "json_null": false,
+            "name": "collection_budget_ms",
+            "tag": 4,
+            "type": "i64"
+          },
+          {
+            "json_null": false,
+            "name": "cancelled",
+            "tag": 5,
+            "type": {
+              "optional": "text"
+            }
+          }
+        ],
+        "id": 57,
+        "name": "PWRunnerScheduleRecord"
+      },
+      {
+        "fields": [
+          {
+            "json_null": false,
+            "name": "origin",
+            "tag": 1,
+            "type": "text"
+          },
+          {
+            "json_null": false,
+            "name": "operation",
+            "tag": 2,
+            "type": "text"
+          },
+          {
+            "json_null": false,
+            "name": "executable_path",
+            "tag": 3,
+            "type": "text"
+          },
+          {
+            "json_null": false,
+            "name": "return_code",
+            "tag": 4,
+            "type": "i32"
+          },
+          {
+            "json_null": false,
+            "name": "diagnostic",
+            "tag": 5,
+            "type": "text"
+          }
+        ],
+        "id": 58,
+        "name": "PWRunnerSpawnFailure"
+      },
+      {
+        "fields": [
+          {
+            "json_null": false,
+            "name": "phase_id",
+            "tag": 1,
+            "type": "text"
+          },
+          {
+            "json_null": false,
+            "name": "step_id",
+            "tag": 2,
+            "type": "text"
+          },
+          {
+            "json_null": false,
+            "name": "sandbox_check",
+            "tag": 3,
+            "type": {
+              "record": 56
+            }
+          },
+          {
+            "json_null": false,
+            "name": "attempt",
+            "tag": 4,
+            "type": {
+              "record": 27
+            }
+          },
+          {
+            "json_null": false,
+            "name": "comparison",
+            "tag": 5,
+            "type": {
+              "optional": {
+                "record": 33
+              }
+            }
+          },
+          {
+            "json_null": false,
+            "name": "actor_id",
+            "tag": 6,
+            "type": {
+              "optional": "text"
+            }
+          }
+        ],
+        "id": 59,
+        "name": "PWRunnerStepResult"
+      },
+      {
+        "fields": [
+          {
+            "json_null": false,
+            "name": "state",
+            "tag": 1,
+            "type": "text"
+          },
+          {
+            "json_null": false,
+            "name": "invoked_elapsed_ms",
+            "tag": 2,
+            "type": {
+              "optional": "u64"
+            }
+          }
+        ],
+        "id": 60,
+        "name": "PWRunnerSubmission"
+      },
+      {
+        "fields": [
+          {
+            "json_null": false,
+            "name": "pid",
+            "tag": 1,
+            "type": "i64"
+          },
+          {
+            "json_null": false,
+            "name": "term_signal",
+            "tag": 2,
+            "type": {
+              "optional": "i64"
+            }
+          },
+          {
+            "json_null": false,
+            "name": "exit_code",
+            "tag": 3,
+            "type": {
+              "optional": "i64"
+            }
+          },
+          {
+            "json_null": false,
+            "name": "partial_steps",
+            "tag": 4,
+            "type": "bool"
+          },
+          {
+            "json_null": false,
+            "name": "worker_evidence",
+            "tag": 5,
+            "type": {
+              "optional": {
+                "record": 74
+              }
+            }
+          },
+          {
+            "json_null": false,
+            "name": "policy_transfer_timeout",
+            "tag": 6,
+            "type": {
+              "optional": {
+                "record": 78
+              }
+            }
+          },
+          {
+            "json_null": false,
+            "name": "policy_transfer_error",
+            "tag": 7,
+            "type": {
+              "optional": {
+                "record": 77
+              }
+            }
+          },
+          {
+            "json_null": false,
+            "name": "ready_byte_received",
+            "tag": 8,
+            "type": {
+              "optional": "bool"
+            }
+          },
+          {
+            "json_null": false,
+            "name": "done_observed",
+            "tag": 9,
+            "type": {
+              "optional": "bool"
+            }
+          },
+          {
+            "json_null": false,
+            "name": "poll_stop_reason",
+            "tag": 10,
+            "type": {
+              "optional": "text"
+            }
+          },
+          {
+            "json_null": false,
+            "name": "exit_requested",
+            "tag": 11,
+            "type": {
+              "optional": "bool"
+            }
+          },
+          {
+            "json_null": false,
+            "name": "termination_request",
+            "tag": 12,
+            "type": {
+              "optional": {
+                "record": 63
+              }
+            }
+          },
+          {
+            "json_null": false,
+            "name": "reaped",
+            "tag": 13,
+            "type": {
+              "optional": "bool"
+            }
+          },
+          {
+            "json_null": false,
+            "name": "wait_errors",
+            "tag": 14,
+            "type": {
+              "optional": {
+                "list": {
+                  "record": 70
+                }
+              }
+            }
+          },
+          {
+            "json_null": false,
+            "name": "cleanup_trigger",
+            "tag": 15,
+            "type": {
+              "optional": "text"
+            }
+          },
+          {
+            "json_null": false,
+            "name": "grace_end",
+            "tag": 16,
+            "type": {
+              "optional": "text"
+            }
+          },
+          {
+            "json_null": false,
+            "name": "collection_basis",
+            "tag": 17,
+            "type": {
+              "optional": "text"
+            }
+          },
+          {
+            "json_null": false,
+            "name": "ready_wait",
+            "tag": 18,
+            "type": {
+              "optional": {
+                "record": 16
+              }
+            }
+          },
+          {
+            "json_null": false,
+            "name": "sentinel_wait",
+            "tag": 19,
+            "type": {
+              "optional": {
+                "record": 16
+              }
+            }
+          },
+          {
+            "json_null": false,
+            "name": "exit_grace_wait",
+            "tag": 20,
+            "type": {
+              "optional": {
+                "record": 16
+              }
+            }
+          },
+          {
+            "json_null": false,
+            "name": "disposition",
+            "tag": 21,
+            "type": {
+              "optional": {
+                "record": 6
+              }
+            }
+          }
+        ],
+        "id": 61,
+        "name": "PWRunnerSubprocess"
+      },
+      {
+        "fields": [
+          {
+            "json_null": false,
+            "name": "source_actor_id",
+            "tag": 1,
+            "type": "text"
+          },
+          {
+            "json_null": false,
+            "name": "source_final_phase_id",
+            "tag": 2,
+            "type": "text"
+          },
+          {
+            "json_null": false,
+            "name": "condition",
+            "tag": 3,
+            "type": "text"
+          },
+          {
+            "json_null": false,
+            "name": "outcome",
+            "tag": 4,
+            "type": "text"
+          },
+          {
+            "json_null": false,
+            "name": "wait",
+            "tag": 5,
+            "type": {
+              "optional": {
+                "record": 16
+              }
+            }
+          },
+          {
+            "json_null": false,
+            "name": "observation",
+            "tag": 6,
+            "type": {
+              "optional": {
+                "record": 18
+              }
+            }
+          },
+          {
+            "json_null": false,
+            "name": "activation_eligible",
+            "tag": 7,
+            "type": "bool"
+          },
+          {
+            "json_null": false,
+            "name": "capture_ordinal",
+            "tag": 8,
+            "type": {
+              "optional": "u64"
+            }
+          }
+        ],
+        "id": 62,
+        "name": "PWRunnerTerminationGate"
+      },
+      {
+        "fields": [
+          {
+            "json_null": false,
+            "name": "signal",
+            "tag": 1,
+            "type": "i32"
+          },
+          {
+            "json_null": false,
+            "name": "rc",
+            "tag": 2,
+            "type": "i32"
+          },
+          {
+            "json_null": false,
+            "name": "errno",
+            "tag": 3,
+            "type": {
+              "optional": "i32"
+            }
+          }
+        ],
+        "id": 63,
+        "name": "PWRunnerTerminationRequest"
+      },
+      {
+        "fields": [
+          {
+            "json_null": false,
+            "name": "worker_executable_path",
+            "tag": 1,
+            "type": {
+              "optional": "text"
+            }
+          },
+          {
+            "json_null": false,
+            "name": "worker_timeout_ms",
+            "tag": 2,
+            "type": {
+              "optional": "i64"
+            }
+          },
+          {
+            "json_null": false,
+            "name": "actor_equipment_executable_paths",
+            "tag": 3,
+            "type": {
+              "optional": {
+                "map": "text"
+              }
+            }
+          },
+          {
+            "json_null": false,
+            "name": "validator_executable_path",
+            "tag": 4,
+            "type": {
+              "optional": "text"
+            }
+          },
+          {
+            "json_null": false,
+            "name": "validator_total_timeout_ms",
+            "tag": 5,
+            "type": {
+              "optional": "i64"
+            }
+          },
+          {
+            "json_null": false,
+            "name": "validator_io_timeout_ms",
+            "tag": 6,
+            "type": {
+              "optional": "i64"
+            }
+          },
+          {
+            "json_null": false,
+            "name": "worker_post_apply_hang_ms",
+            "tag": 7,
+            "type": {
+              "optional": "i64"
+            }
+          },
+          {
+            "json_null": false,
+            "name": "worker_post_apply_kill_signal",
+            "tag": 8,
+            "type": {
+              "optional": "i64"
+            }
+          },
+          {
+            "json_null": false,
+            "name": "worker_pre_ready_hang_ms",
+            "tag": 9,
+            "type": {
+              "optional": "i64"
+            }
+          },
+          {
+            "json_null": false,
+            "name": "worker_kill_before_publish_slot",
+            "tag": 10,
+            "type": {
+              "optional": "i64"
+            }
+          }
+        ],
+        "id": 64,
+        "name": "PWRunnerTestOverrides"
+      },
+      {
+        "fields": [
+          {
+            "json_null": false,
+            "name": "token_ref",
+            "tag": 1,
+            "type": "text"
+          },
+          {
+            "json_null": false,
+            "name": "actor_id",
+            "tag": 2,
+            "type": "text"
+          },
+          {
+            "json_null": false,
+            "name": "step_id",
+            "tag": 3,
+            "type": "text"
+          },
+          {
+            "json_null": false,
+            "name": "family",
+            "tag": 4,
+            "type": "text"
+          },
+          {
+            "json_null": false,
+            "name": "status",
+            "tag": 5,
+            "type": "text"
+          },
+          {
+            "json_null": false,
+            "name": "token_length",
+            "tag": 6,
+            "type": {
+              "optional": "i64"
+            }
+          },
+          {
+            "json_null": false,
+            "name": "last_use_step_id",
+            "tag": 7,
+            "type": {
+              "optional": "text"
+            }
+          }
+        ],
+        "id": 65,
+        "name": "PWRunnerTokenRecord"
+      },
+      {
+        "fields": [
+          {
+            "json_null": false,
+            "name": "phase_id",
+            "tag": 1,
+            "type": "text"
+          },
+          {
+            "json_null": false,
+            "name": "step_id",
+            "tag": 2,
+            "type": "text"
+          },
+          {
+            "json_null": false,
+            "name": "source_actor_id",
+            "tag": 3,
+            "type": "text"
+          },
+          {
+            "json_null": false,
+            "name": "recipient_actor_id",
+            "tag": 4,
+            "type": "text"
+          },
+          {
+            "json_null": false,
+            "name": "token_ref",
+            "tag": 5,
+            "type": "text"
+          },
+          {
+            "json_null": false,
+            "name": "delivery_ref",
+            "tag": 6,
+            "type": "text"
+          },
+          {
+            "json_null": false,
+            "name": "request_published",
+            "tag": 7,
+            "type": "bool"
+          },
+          {
+            "json_null": false,
+            "name": "custody_status",
+            "tag": 8,
+            "type": "text"
+          },
+          {
+            "json_null": false,
+            "name": "copy_status",
+            "tag": 9,
+            "type": "text"
+          },
+          {
+            "json_null": false,
+            "name": "equality",
+            "tag": 10,
+            "type": "text"
+          },
+          {
+            "json_null": false,
+            "name": "recipient_acknowledged",
+            "tag": 11,
+            "type": "bool"
+          },
+          {
+            "json_null": false,
+            "name": "source_acknowledged",
+            "tag": 12,
+            "type": "bool"
+          },
+          {
+            "json_null": false,
+            "name": "status",
+            "tag": 13,
+            "type": "text"
+          },
+          {
+            "json_null": false,
+            "name": "lifecycle",
+            "tag": 14,
+            "type": {
+              "optional": {
+                "record": 2
+              }
+            }
+          },
+          {
+            "json_null": false,
+            "name": "recipient_wait",
+            "tag": 15,
+            "type": {
+              "optional": {
+                "record": 16
+              }
+            }
+          }
+        ],
+        "id": 66,
+        "name": "PWRunnerTransferRecord"
+      },
+      {
+        "fields": [
+          {
+            "json_null": false,
+            "name": "stage",
+            "tag": 1,
+            "type": "text"
+          },
+          {
+            "json_null": false,
+            "name": "reason",
+            "tag": 2,
+            "type": "text"
+          },
+          {
+            "json_null": false,
+            "name": "domain",
+            "tag": 3,
+            "type": {
+              "optional": "text"
+            }
+          },
+          {
+            "json_null": false,
+            "name": "code",
+            "tag": 4,
+            "type": {
+              "optional": "i64"
+            }
+          },
+          {
+            "json_null": false,
+            "name": "message",
+            "tag": 5,
+            "type": "text"
+          },
+          {
+            "json_null": false,
+            "name": "domain_truncated",
+            "tag": 6,
+            "type": "bool"
+          },
+          {
+            "json_null": false,
+            "name": "message_truncated",
+            "tag": 7,
+            "type": "bool"
+          }
+        ],
+        "id": 67,
+        "name": "PWRunnerTransportError"
+      },
+      {
+        "fields": [
+          {
+            "json_null": false,
+            "name": "phase_id",
+            "tag": 1,
+            "type": {
+              "optional": "text"
+            }
+          },
+          {
+            "json_null": false,
+            "name": "ordinal",
+            "tag": 2,
+            "type": {
+              "optional": "i64"
+            }
+          },
+          {
+            "json_null": false,
+            "name": "pid",
+            "tag": 3,
+            "type": "i64"
+          },
+          {
+            "json_null": false,
+            "name": "term_signal",
+            "tag": 4,
+            "type": {
+              "optional": "i64"
+            }
+          },
+          {
+            "json_null": false,
+            "name": "exit_code",
+            "tag": 5,
+            "type": {
+              "optional": "i64"
+            }
+          },
+          {
+            "json_null": false,
+            "name": "reaped",
+            "tag": 6,
+            "type": {
+              "optional": "bool"
+            }
+          },
+          {
+            "json_null": false,
+            "name": "termination_request",
+            "tag": 7,
+            "type": {
+              "optional": {
+                "record": 63
+              }
+            }
+          },
+          {
+            "json_null": false,
+            "name": "wait_errors",
+            "tag": 8,
+            "type": {
+              "optional": {
+                "list": {
+                  "record": 70
+                }
+              }
+            }
+          },
+          {
+            "json_null": false,
+            "name": "read_error",
+            "tag": 9,
+            "type": {
+              "optional": "text"
+            }
+          },
+          {
+            "json_null": false,
+            "name": "stdout_collection_stop",
+            "tag": 10,
+            "type": {
+              "optional": "text"
+            }
+          },
+          {
+            "json_null": false,
+            "name": "stdout_bytes_received",
+            "tag": 11,
+            "type": {
+              "optional": "i64"
+            }
+          },
+          {
+            "json_null": false,
+            "name": "probe_bytes_written",
+            "tag": 12,
+            "type": {
+              "optional": "i64"
+            }
+          },
+          {
+            "json_null": false,
+            "name": "probe_bytes_expected",
+            "tag": 13,
+            "type": {
+              "optional": "i64"
+            }
+          },
+          {
+            "json_null": false,
+            "name": "io_error",
+            "tag": 14,
+            "type": {
+              "optional": "text"
+            }
+          },
+          {
+            "json_null": false,
+            "name": "decode_fault",
+            "tag": 15,
+            "type": {
+              "optional": {
+                "record": 72
+              }
+            }
+          },
+          {
+            "json_null": false,
+            "name": "records",
+            "tag": 16,
+            "type": {
+              "optional": {
+                "list": {
+                  "record": 81
+                }
+              }
+            }
+          },
+          {
+            "json_null": false,
+            "name": "expected_step_ids",
+            "tag": 17,
+            "type": {
+              "optional": {
+                "list": "text"
+              }
+            }
+          },
+          {
+            "json_null": false,
+            "name": "association_issues",
+            "tag": 18,
+            "type": {
+              "optional": {
+                "list": {
+                  "record": 71
+                }
+              }
+            }
+          },
+          {
+            "json_null": false,
+            "name": "exit_grace_wait",
+            "tag": 19,
+            "type": {
+              "optional": {
+                "record": 16
+              }
+            }
+          }
+        ],
+        "id": 68,
+        "name": "PWRunnerValidatorSubprocess"
+      },
+      {
+        "fields": [
+          {
+            "json_null": false,
+            "name": "activation_to_arrival_ms",
+            "tag": 1,
+            "type": {
+              "optional": "u64"
+            }
+          },
+          {
+            "json_null": false,
+            "name": "collection_ms",
+            "tag": 2,
+            "type": {
+              "optional": "u64"
+            }
+          },
+          {
+            "json_null": false,
+            "name": "arrival_to_release_ms",
+            "tag": 3,
+            "type": {
+              "optional": "u64"
+            }
+          },
+          {
+            "json_null": false,
+            "name": "release_to_completion_ms",
+            "tag": 4,
+            "type": {
+              "optional": "u64"
+            }
+          }
+        ],
+        "id": 69,
+        "name": "PWRunnerVisitTiming"
+      },
+      {
+        "fields": [
+          {
+            "json_null": false,
+            "name": "stage",
+            "tag": 1,
+            "type": "text"
+          },
+          {
+            "json_null": false,
+            "name": "rc",
+            "tag": 2,
+            "type": "i32"
+          },
+          {
+            "json_null": false,
+            "name": "errno",
+            "tag": 3,
+            "type": "i32"
+          }
+        ],
+        "id": 70,
+        "name": "PWRunnerWaitError"
+      },
+      {
+        "fields": [
+          {
+            "json_null": false,
+            "name": "origin",
+            "tag": 1,
+            "type": "text"
+          },
+          {
+            "json_null": false,
+            "name": "kind",
+            "tag": 2,
+            "type": "text"
+          },
+          {
+            "json_null": false,
+            "name": "step_id",
+            "tag": 3,
+            "type": {
+              "optional": "text"
+            }
+          },
+          {
+            "json_null": false,
+            "name": "count",
+            "tag": 4,
+            "type": "i64"
+          }
+        ],
+        "id": 71,
+        "name": "PWValidatorAssociationIssue"
+      },
+      {
+        "fields": [
+          {
+            "json_null": false,
+            "name": "origin",
+            "tag": 1,
+            "type": "text"
+          },
+          {
+            "json_null": false,
+            "name": "kind",
+            "tag": 2,
+            "type": "text"
+          },
+          {
+            "json_null": false,
+            "name": "message",
+            "tag": 3,
+            "type": "text"
+          },
+          {
+            "json_null": false,
+            "name": "byte_offset",
+            "tag": 4,
+            "type": "i64"
+          },
+          {
+            "json_null": false,
+            "name": "frame_bytes",
+            "tag": 5,
+            "type": "i64"
+          },
+          {
+            "json_null": false,
+            "name": "retained_bytes",
+            "tag": 6,
+            "type": "i64"
+          },
+          {
+            "json_null": false,
+            "name": "context_b64",
+            "projection": "base64",
+            "tag": 7,
+            "type": "bytes"
+          },
+          {
+            "json_null": false,
+            "name": "context_truncated",
+            "tag": 8,
+            "type": "bool"
+          }
+        ],
+        "id": 72,
+        "name": "PWValidatorDecodeFault"
+      },
+      {
+        "fields": [
+          {
+            "json_null": false,
+            "name": "state",
+            "tag": 1,
+            "type": "u32"
+          },
+          {
+            "json_null": false,
+            "name": "status",
+            "tag": 2,
+            "type": "text"
+          },
+          {
+            "json_null": false,
+            "name": "length",
+            "tag": 3,
+            "type": {
+              "optional": "u32"
+            }
+          },
+          {
+            "json_null": false,
+            "name": "text",
+            "tag": 4,
+            "type": {
+              "optional": "text"
+            }
+          }
+        ],
+        "id": 73,
+        "name": "PWWorkerDiagnostic"
+      },
+      {
+        "fields": [
+          {
+            "json_null": false,
+            "name": "abi_identity",
+            "projection": "hex",
+            "tag": 1,
+            "type": "bytes"
+          },
+          {
+            "json_null": false,
+            "name": "progress",
+            "tag": 2,
+            "type": {
+              "optional": {
+                "record": 79
+              }
+            }
+          },
+          {
+            "json_null": false,
+            "name": "failure_publication",
+            "tag": 3,
+            "type": "u32"
+          },
+          {
+            "json_null": false,
+            "name": "failure_state",
+            "tag": 4,
+            "type": "text"
+          },
+          {
+            "json_null": false,
+            "name": "failure",
+            "tag": 5,
+            "type": {
+              "optional": {
+                "record": 75
+              }
+            }
+          },
+          {
+            "json_null": false,
+            "name": "readiness",
+            "tag": 6,
+            "type": {
+              "optional": {
+                "record": 80
+              }
+            }
+          },
+          {
+            "json_null": false,
+            "name": "diagnostic",
+            "tag": 7,
+            "type": {
+              "record": 73
+            }
+          },
+          {
+            "json_null": false,
+            "name": "policy_read",
+            "tag": 8,
+            "type": {
+              "optional": {
+                "record": 76
+              }
+            }
+          }
+        ],
+        "id": 74,
+        "name": "PWWorkerEvidence"
+      },
+      {
+        "fields": [
+          {
+            "json_null": false,
+            "name": "operation",
+            "tag": 1,
+            "type": "u32"
+          },
+          {
+            "json_null": false,
+            "name": "code",
+            "tag": 2,
+            "type": "u32"
+          },
+          {
+            "json_null": false,
+            "name": "native_kind",
+            "tag": 3,
+            "type": "u32"
+          },
+          {
+            "json_null": false,
+            "name": "native_result",
+            "tag": 4,
+            "type": {
+              "optional": "i32"
+            }
+          },
+          {
+            "json_null": false,
+            "name": "errno",
+            "tag": 5,
+            "type": {
+              "optional": "i32"
+            }
+          },
+          {
+            "json_null": false,
+            "name": "index",
+            "tag": 6,
+            "type": {
+              "optional": "u32"
+            }
+          },
+          {
+            "json_null": false,
+            "name": "detail",
+            "tag": 7,
+            "type": "u32"
+          }
+        ],
+        "id": 75,
+        "name": "PWWorkerFailure"
+      },
+      {
+        "fields": [
+          {
+            "json_null": false,
+            "name": "bytes_expected",
+            "tag": 1,
+            "type": "i64"
+          },
+          {
+            "json_null": false,
+            "name": "bytes_received",
+            "tag": 2,
+            "type": "i64"
+          }
+        ],
+        "id": 76,
+        "name": "PWWorkerPolicyRead"
+      },
+      {
+        "fields": [
+          {
+            "json_null": false,
+            "name": "errno",
+            "tag": 1,
+            "type": "i32"
+          },
+          {
+            "json_null": false,
+            "name": "bytes_written",
+            "tag": 2,
+            "type": "i64"
+          },
+          {
+            "json_null": false,
+            "name": "bytes_expected",
+            "tag": 3,
+            "type": "i64"
+          }
+        ],
+        "id": 77,
+        "name": "PWWorkerPolicyTransferError"
+      },
+      {
+        "fields": [
+          {
+            "json_null": false,
+            "name": "budget_ms",
+            "tag": 1,
+            "type": "i64"
+          },
+          {
+            "json_null": false,
+            "name": "elapsed_ms",
+            "tag": 2,
+            "type": "u64"
+          },
+          {
+            "json_null": false,
+            "name": "bytes_written",
+            "tag": 3,
+            "type": "i64"
+          },
+          {
+            "json_null": false,
+            "name": "bytes_expected",
+            "tag": 4,
+            "type": "i64"
+          }
+        ],
+        "id": 78,
+        "name": "PWWorkerPolicyTransferTimeout"
+      },
+      {
+        "fields": [
+          {
+            "json_null": false,
+            "name": "raw",
+            "tag": 1,
+            "type": "u32"
+          },
+          {
+            "json_null": false,
+            "name": "operation",
+            "tag": 2,
+            "type": "u32"
+          },
+          {
+            "json_null": false,
+            "name": "stage",
+            "tag": 3,
+            "type": "u32"
+          },
+          {
+            "json_null": false,
+            "name": "index",
+            "tag": 4,
+            "type": {
+              "optional": "u32"
+            }
+          }
+        ],
+        "id": 79,
+        "name": "PWWorkerProgress"
+      },
+      {
+        "fields": [
+          {
+            "json_null": false,
+            "name": "rc",
+            "tag": 1,
+            "type": "i32"
+          },
+          {
+            "json_null": false,
+            "name": "errno",
+            "tag": 2,
+            "type": {
+              "optional": "i32"
+            }
+          }
+        ],
+        "id": 80,
+        "name": "PWWorkerReadiness"
+      },
+      {
+        "fields": [
+          {
+            "json_null": true,
+            "name": "step_id",
+            "tag": 1,
+            "type": {
+              "optional": "text"
+            }
+          },
+          {
+            "json_null": false,
+            "name": "operation",
+            "tag": 2,
+            "type": {
+              "optional": "text"
+            }
+          },
+          {
+            "json_null": false,
+            "name": "filter_type",
+            "tag": 3,
+            "type": {
+              "optional": "text"
+            }
+          },
+          {
+            "json_null": false,
+            "name": "filter_type_id",
+            "tag": 4,
+            "type": {
+              "optional": "i64"
+            }
+          },
+          {
+            "json_null": false,
+            "name": "filter_value",
+            "tag": 5,
+            "type": {
+              "optional": "text"
+            }
+          },
+          {
+            "json_null": false,
+            "name": "rc",
+            "tag": 6,
+            "type": {
+              "optional": "i64"
+            }
+          },
+          {
+            "json_null": false,
+            "name": "errno",
+            "tag": 7,
+            "type": {
+              "optional": "i64"
+            }
+          },
+          {
+            "json_null": false,
+            "name": "outcome",
+            "tag": 8,
+            "type": "text"
+          },
+          {
+            "json_null": false,
+            "name": "error",
+            "tag": 9,
+            "type": {
+              "optional": "text"
+            }
+          },
+          {
+            "json_null": false,
+            "name": "raw_line",
+            "tag": 10,
+            "type": "text"
+          }
+        ],
+        "id": 81,
+        "name": "ValidatorVerdict"
+      },
+      {
+        "fields": [
+          {
+            "json_null": false,
+            "name": "final_status",
+            "tag": 1,
+            "type": {
+              "optional": {
+                "record": 4
+              }
+            }
+          },
+          {
+            "json_null": false,
+            "name": "stop_reason",
+            "tag": 2,
+            "type": {
+              "optional": {
+                "record": 4
+              }
+            }
+          },
+          {
+            "json_null": false,
+            "name": "cleanup_trigger",
+            "tag": 3,
+            "type": {
+              "optional": {
+                "record": 4
+              }
+            }
+          },
+          {
+            "json_null": false,
+            "name": "grace_end",
+            "tag": 4,
+            "type": {
+              "optional": {
+                "record": 4
+              }
+            }
+          },
+          {
+            "json_null": false,
+            "name": "kill_request_and_result",
+            "tag": 5,
+            "type": {
+              "optional": {
+                "record": 4
+              }
+            }
+          },
+          {
+            "json_null": false,
+            "name": "collection_basis",
+            "tag": 6,
+            "type": {
+              "optional": {
+                "record": 4
+              }
+            }
+          },
+          {
+            "json_null": false,
+            "name": "progress_association",
+            "tag": 7,
+            "type": {
+              "optional": {
+                "record": 4
+              }
+            }
+          }
+        ],
+        "id": 82,
+        "name": "PWDispositionRunQuestions"
+      },
+      {
+        "fields": [
+          {
+            "json_null": false,
+            "name": "step_boundary_reached",
+            "tag": 1,
+            "type": {
+              "optional": {
+                "record": 4
+              }
+            }
+          },
+          {
+            "json_null": false,
+            "name": "step_result_published",
+            "tag": 2,
+            "type": {
+              "optional": {
+                "record": 4
+              }
+            }
+          },
+          {
+            "json_null": false,
+            "name": "step_requested_operation_applicability",
+            "tag": 3,
+            "type": {
+              "optional": {
+                "record": 4
+              }
+            }
+          }
+        ],
+        "id": 83,
+        "name": "PWDispositionStepQuestions"
+      },
+      {
+        "fields": [
+          {
+            "json_null": false,
+            "name": "contract",
+            "tag": 1,
+            "type": "text"
+          },
+          {
+            "json_null": false,
+            "name": "describe",
+            "tag": 2,
+            "type": "text"
+          },
+          {
+            "json_null": false,
+            "name": "commit",
+            "tag": 3,
+            "type": "text"
+          }
+        ],
+        "id": 84,
+        "name": "PWProducer"
+      }
+    ],
+    "roots": {
+      "capture": 32,
+      "reply": 55
+    },
+    "variants": {
+      "PWDispositionValue": {
+        "1": {
+          "name": "Integer",
+          "type": "Int"
+        },
+        "2": {
+          "name": "Request",
+          "type": "PWRunnerTerminationRequest"
+        }
+      }
+    },
+    "version": 1
+  }
+}

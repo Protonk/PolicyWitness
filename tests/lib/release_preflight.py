@@ -21,6 +21,8 @@ ROOT = Path(__file__).resolve().parents[2]
 RELEASE_TAG = re.compile(r'v\d+\.\d+\.\d+')
 BASELINE_NAME = 'tests/fixtures/docs/prose_baseline.json'
 BUILD_BASELINE_NAME = 'tests/fixtures/docs/build_baseline.json'
+CONTRACT_FREE_TEXT_BASELINE = 'docs/contract/free_text.json'
+CONTRACT_FREE_TEXT_KINDS = frozenset(('when', 'condition', 'dependency', 'effect'))
 
 
 def git(root, *args, check=True):
@@ -100,6 +102,45 @@ def inspect_build_baseline(root, tag):
     return report, ([f'build baseline grew against {previous}: {sum(added.values())} added or rewritten entries'] if added else [])
 
 
+def contract_free_text_counts(text):
+    """Read the retained count format without loading a release's authoring syntax."""
+    def unique(pairs):
+        data = {}
+        for key, value in pairs:
+            if key in data:
+                raise ValueError(f'duplicate contract free-text baseline kind: {key}')
+            data[key] = value
+        return data
+    data = json.loads(text, object_pairs_hook=unique)
+    if not isinstance(data, dict) or set(data) != CONTRACT_FREE_TEXT_KINDS:
+        raise ValueError('contract free-text baseline must contain exactly when, condition, dependency and effect')
+    if any(type(value) is not int or value < 0 for value in data.values()):
+        raise ValueError('contract free-text baseline counts must be nonnegative integers')
+    return dict(sorted(data.items()))
+
+
+def inspect_contract_free_text_baseline(root, tag):
+    """Each free-text kind may decrease against the preceding annotated release."""
+    previous = previous_release(root, tag)
+    current = git(root, 'show', f'HEAD:{CONTRACT_FREE_TEXT_BASELINE}', check=False)
+    prior = git(root, 'show', f'{previous}:{CONTRACT_FREE_TEXT_BASELINE}', check=False) if previous else None
+    # The first baseline establishes a ceiling only after format validation.
+    now = contract_free_text_counts(current) if current is not None else None
+    before = contract_free_text_counts(prior) if prior is not None else None
+    report = dict(previous_tag=previous,
+                  status='no previous release' if previous is None else 'previous release predates baseline',
+                  counts=now, previous_counts=before, increases={})
+    if before is None:
+        return report, []
+    if now is None:
+        return dict(report, status='missing baseline'), ['release removed the contract free-text baseline']
+    increases = {kind: now[kind] - before[kind] for kind in sorted(CONTRACT_FREE_TEXT_KINDS)
+                 if now[kind] > before[kind]}
+    report.update(status='grown' if increases else 'non-growing', increases=increases)
+    detail = ', '.join(f'{kind}: {before[kind]} -> {now[kind]}' for kind in increases)
+    return report, ([f'contract free-text baseline grew against {previous}: {detail}'] if increases else [])
+
+
 def inspect_baseline(root, tag):
     """Compare against the previous annotated release reachable before this commit."""
     parent = git(root, 'rev-parse', '--verify', 'HEAD^', check=False)
@@ -166,6 +207,8 @@ def inspect(root, *, remote='origin', dist='dist'):
     problems.extend(baseline_problems)
     stamp['build_baseline'], build_problems = inspect_build_baseline(root, tag)
     problems.extend(build_problems)
+    stamp['contract_free_text_baseline'], free_text_problems = inspect_contract_free_text_baseline(root, tag)
+    problems.extend(free_text_problems)
     sys.path.insert(0, str(root / 'docs'))
     import generate_contract_stamps
     import build_contract

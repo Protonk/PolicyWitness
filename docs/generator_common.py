@@ -240,8 +240,60 @@ def region_ranges(text):
     return ranges
 
 
+def _contract_owner_ranges(document):
+    ranges = []
+    for index, heading in enumerate(document.headings):
+        if not re.search(r'\s\{[a-z_][a-z0-9_]*:\s*owner\}$', heading.text):
+            continue
+        end = next((other.line for other in document.headings[index + 1:]
+                    if other.level <= heading.level), len(document.text.splitlines()))
+        ranges.append((document.offset(heading.line), document.offset(end)))
+    return ranges
+
+
+def contract_public_prose(text, name='<text>'):
+    """Physical line to raw public free-fact value in an authored contract source."""
+    if not str(name).endswith('.surface.md'):
+        return {}
+    document = markdown_reader.parse(text, name)
+    owners = _contract_owner_ranges(document)
+    lines = text.splitlines()
+    public = {}
+    for block in document.blocks:
+        if block.kind != 'fence' or block.info != 'contract':
+            continue
+        for line in range(block.lines[0] + 1, block.lines[1] - 1):
+            if any(a <= document.offset(line) < b for a, b in owners):
+                continue
+            match = re.fullmatch(r'\s*free\.(?:when|condition|dependency|effect)\s*:\s*(.*)', lines[line])
+            if match:
+                public[line] = match[1]
+    return public
+
+
+def authoring_excluded_ranges(text, name='<text>'):
+    """Generated copies, plus a contract source's support and non-prose fences.
+
+    The contract parser validates node kinds separately. This shared projection
+    needs only the owner boundary to keep support metadata out of prose and
+    scalar ownership checks, without importing the contract model.
+    """
+    if not str(name).endswith('.surface.md'):
+        return region_ranges(text)
+    # A surface is an authored source. A comment spelling GENERATED inside it
+    # cannot turn its public definitions into an excluded generated copy.
+    document = markdown_reader.parse(text, name)
+    ranges = _contract_owner_ranges(document)
+    public = contract_public_prose(text, name)
+    for block in document.blocks:
+        if block.kind in {'fence', 'code'}:
+            ranges.extend((document.offset(line), document.offset(line + 1))
+                          for line in range(*block.lines) if line not in public)
+    return ranges
+
+
 def authored_spans(text, name='<text>'):
-    ranges = region_ranges(text)
+    ranges = authoring_excluded_ranges(text, name)
     def authored(offset):
         return not any(a <= offset < b for a, b in ranges)
     matches = [m for m in SPAN_RE.finditer(text) if authored(m.start())]

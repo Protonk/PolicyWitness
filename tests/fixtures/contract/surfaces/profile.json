@@ -1,42 +1,97 @@
 {
-  "shape": {
-    "reply": {
-      "compiled_profile": "object"
-    },
-    "reply.actors[]": {
-      "compiled_profile": "object"
-    },
-    "reply.actors[].compiled_profile": {
-      "bytecode_b64": "string",
-      "bytecode_length": "number",
-      "bytecode_sha256": "string",
-      "capture_stage": "string",
-      "parameter_count": "number",
-      "params_sha256": "string",
-      "producer": "string",
-      "profile_type": "number",
-      "reason": "string",
-      "request_nonce": "string",
-      "source_length": "number",
-      "source_sha256": "string",
-      "status": "string",
-      "worker_pid": "number"
-    },
-    "reply.compiled_profile": {
-      "bytecode_b64": "string",
-      "bytecode_length": "number",
-      "bytecode_sha256": "string",
-      "capture_stage": "string",
-      "parameter_count": "number",
-      "params_sha256": "string",
-      "producer": "string",
-      "profile_type": "number",
-      "reason": "string",
-      "request_nonce": "string",
-      "source_length": "number",
-      "source_sha256": "string",
-      "status": "string",
-      "worker_pid": "number"
+  "records": {
+    "CompiledProfileCapture": {
+      "fields": {
+        "bytecode_b64": {
+          "json_null": false,
+          "name": "bytecode_b64",
+          "optional": true,
+          "projection": "base64",
+          "swift_type": "Data?"
+        },
+        "bytecode_length": {
+          "json_null": false,
+          "name": "bytecode_length",
+          "optional": true,
+          "swift_type": "Int?"
+        },
+        "bytecode_sha256": {
+          "json_null": false,
+          "name": "bytecode_sha256",
+          "optional": true,
+          "projection": "hex",
+          "swift_type": "Data?"
+        },
+        "capture_stage": {
+          "json_null": false,
+          "name": "capture_stage",
+          "optional": true,
+          "swift_type": "String?"
+        },
+        "parameter_count": {
+          "json_null": false,
+          "name": "parameter_count",
+          "optional": true,
+          "swift_type": "Int?"
+        },
+        "params_sha256": {
+          "json_null": false,
+          "name": "params_sha256",
+          "optional": true,
+          "projection": "hex",
+          "swift_type": "Data?"
+        },
+        "producer": {
+          "json_null": false,
+          "name": "producer",
+          "optional": true,
+          "swift_type": "String?"
+        },
+        "profile_type": {
+          "json_null": false,
+          "name": "profile_type",
+          "optional": true,
+          "swift_type": "Int?"
+        },
+        "reason": {
+          "json_null": false,
+          "name": "reason",
+          "optional": true,
+          "swift_type": "String?"
+        },
+        "request_nonce": {
+          "json_null": false,
+          "name": "request_nonce",
+          "optional": true,
+          "swift_type": "String?"
+        },
+        "source_length": {
+          "json_null": false,
+          "name": "source_length",
+          "optional": true,
+          "swift_type": "Int?"
+        },
+        "source_sha256": {
+          "json_null": false,
+          "name": "source_sha256",
+          "optional": true,
+          "projection": "hex",
+          "swift_type": "Data?"
+        },
+        "status": {
+          "json_null": false,
+          "name": "status",
+          "optional": false,
+          "swift_type": "String"
+        },
+        "worker_pid": {
+          "json_null": false,
+          "name": "worker_pid",
+          "optional": false,
+          "swift_type": "Int"
+        }
+      },
+      "input": false
     }
   }
 }

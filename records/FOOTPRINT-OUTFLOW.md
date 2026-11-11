@@ -36,7 +36,7 @@ Rows: fr6–fr7.
 
 ### Disposition: schema-owned response representation
 
-[Typed response transport](../docs/CONTRACT.md#typed-response-transport) owns the
+[Typed response transport at v0.3.6](https://github.com/Protonk/PolicyWitness/blob/v0.3.6/docs/CONTRACT.md#typed-response-transport) owns the
 adopted boundary. One schema defines 83 records, their stored fields, binary
 representation and public JSON projection. Swift constructs and validates typed
 records; the client relays host bytes; Rust admits typed evidence and projects

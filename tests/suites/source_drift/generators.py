@@ -15,7 +15,9 @@ sys.path.insert(0, str(ROOT / 'docs'))
 sys.path.insert(0, str(ROOT / 'tests/lib'))
 import receipts  # noqa: E402
 import fixture_inputs  # noqa: E402
+import contract_fixture  # noqa: E402
 import markdown_reader  # noqa: E402
+import repository_tree  # noqa: E402
 GENERATORS = fixture_inputs.GENERATORS
 # Files no generator owns, placed in every fixture so a write outside owned regions is visible in a snapshot.
 SENTINELS = {'SENTINEL.md': '# Sentinel\n\nNo generator owns this file.\n', 'sentinel/notes.txt': 'unrelated\n'}
@@ -41,8 +43,9 @@ def ownership(root, name):
     if name in {'limits', 'architecture', 'build', 'footprint'}:
         gen = module('span_owner_' + name, root / f'docs/generate_{name}.py')
         common = module('span_common', root / 'docs/generator_common.py')
-        for document in gen.SPAN_DOCUMENTS:
-            if any(match[1].startswith(name + '.') for match in common.authored_spans((root / document).read_text())):
+        documents = gen.span_documents(root) if hasattr(gen, 'span_documents') else gen.SPAN_DOCUMENTS
+        for document in documents:
+            if any(match[1].startswith(name + '.') for match in common.authored_spans((root / document).read_text(), document)):
                 regions.setdefault(document, []).append(SPAN_MARKER)
     return regions, whole
 
@@ -57,7 +60,10 @@ def region_ownership(root, name):
     if name == 'porcelain':
         return gen.ownership(root)
     if name == 'contract_stamps':
-        return {p: [(gen.BEGIN, gen.END)] for p in gen.OUTPUTS}, set()
+        runtime = gen.contract_module('runtime')
+        return {'docs/PolicyWitness.md': [(gen.BEGIN, gen.END)]}, {
+            'docs/CONTRACT.md', runtime.history_v1.SNAPSHOT, runtime.BASELINE,
+            *runtime.collected_shapes(root)}
     if name == 'worker_identity':
         regions = {}
         for p in gen.TARGETS:
@@ -121,11 +127,26 @@ def changed_outside(before, after, regions, whole):
 def scanned_documents(root=ROOT):
     """Historical routing/docs scan plus every Markdown generator target."""
     paths = set((root / 'docs').glob('*.md'))
+    paths.update(root / name for name in repository_tree.Tree(root).inventory(repository_tree.CONTRACT_SURFACES))
     paths.update(root / name for name in ['README.md', 'AGENTS.md', 'controller/AGENTS.md', 'runner/AGENTS.md', 'tests/README.md', 'tests/AGENTS.md'])
     for name in GENERATORS:
+        if name == 'contract_stamps':
+            # Prose discovery must still observe a newly authored or malformed
+            # surface before the contract model can collect its output shapes.
+            paths.update(root / path for path in ('docs/CONTRACT.md', 'docs/PolicyWitness.md'))
+            continue
         regions, _ = region_ownership(root, name)
         paths.update(root / name for name in regions if name.endswith('.md'))
     return sorted(paths)
+
+
+def public_link_documents(path):
+    """Markdown links plus public free.* values carried inside contract fences."""
+    text = path.read_text()
+    common = module('link_common', ROOT / 'docs/generator_common.py')
+    return [markdown_reader.parse(text, str(path)),
+            *(markdown_reader.parse(value, f'{path}:{line + 1}')
+              for line, value in common.contract_public_prose(text, str(path)).items())]
 
 
 def prose_inputs(root=ROOT):
@@ -135,7 +156,7 @@ def prose_inputs(root=ROOT):
     found = set()
     for path in scanned_documents(root):
         found.add(path.relative_to(root).as_posix())
-        for link in markdown_reader.read(path).links:
+        for link in (link for document in public_link_documents(path) for link in document.links):
             target = link.target.split('#')[0]
             if target and not re.match(r'^[a-zA-Z][a-zA-Z0-9+.-]*:', target):
                 destination = (path.parent / target).resolve()
@@ -148,10 +169,10 @@ def broken_links(paths):
     """Check local files, heading anchors and backticked-symbol link labels (G11)."""
     broken = []
     for path in paths:
-        document = markdown_reader.read(path)
-        if document.references:
+        documents = public_link_documents(path)
+        if any(document.references for document in documents):
             broken.append(f'{path}: reference-style link is not verified; use inline links')
-        for link in document.links:
+        for link in (link for document in documents for link in document.links):
             target = link.target
             if re.match(r'^[a-zA-Z][a-zA-Z0-9+.-]*:', target):
                 continue
@@ -176,12 +197,12 @@ BASELINE_NAME = 'tests/fixtures/docs/prose_baseline.json'
 def authored_prose(text, name='<text>'):
     """Lines of prose blocks with generated and copied regions and span values blanked; other lines are empty."""
     common = module('baseline_common', ROOT / 'docs/generator_common.py')
-    hidden = common.region_ranges(text) + [(m.start(), m.end()) for m in common.SPAN_RE.finditer(text)]
+    hidden = common.authoring_excluded_ranges(text, name) + [(m.start(), m.end()) for m in common.SPAN_RE.finditer(text)]
     keep = [True] * len(text)
     for a, b in hidden:
         keep[a:b] = [False] * (b - a)
     blanked = ''.join(c if keep[i] else ('\n' if c == '\n' else ' ') for i, c in enumerate(text))
-    prose = markdown_reader.parse(text, name).prose_lines
+    prose = set(markdown_reader.parse(text, name).prose_lines) | set(common.contract_public_prose(text, name))
     return '\n'.join(line if i in prose else '' for i, line in enumerate(blanked.split('\n')))
 
 
@@ -190,7 +211,7 @@ def citation_pairs(path, text):
     common = module('pair_common', ROOT / 'docs/generator_common.py')
     identifier = re.compile(r'[A-Za-z_][A-Za-z0-9_.:]*(?:\(\))?')
     document = markdown_reader.parse(text, str(path))
-    regions = common.region_ranges(text)
+    regions = common.authoring_excluded_ranges(text, str(path))
     pairs = []
     for inline in document.inlines:
         if any(a <= document.offset(inline.lines[0]) < b for a, b in regions):
@@ -228,13 +249,17 @@ def citation_pairs(path, text):
             held = [code for code in near if identifier.fullmatch(code) and len(code) >= 3 and code in cited]
             if held:
                 pairs.append(f'`{held[0]}` … [{link.label}]({link.target})')
+    # free.* facts are authored public Markdown, even though their carrier is
+    # a contract fence. Parsing each raw value keeps its relative link base.
+    for value in common.contract_public_prose(text, str(path)).values():
+        pairs.extend(citation_pairs(path, value))
     return pairs
 
 
 def span_marker_problems(path, text, owners):
     """Span markers in a scanned document: inline in prose, opened and closed in turn, each with a registered owner."""
     common = module('marker_common', ROOT / 'docs/generator_common.py')
-    regions = common.region_ranges(text)
+    regions = common.authoring_excluded_ranges(text, str(path))
     document = markdown_reader.parse(text, str(path))
     name = path.relative_to(ROOT).as_posix()
 
@@ -256,6 +281,9 @@ def span_marker_problems(path, text, owners):
             span = re.match(r'<!-- span ([a-z][a-z0-9_]*)\.', marker)
             if not span or name not in owners.get(span[1], ()):
                 problems.append(f'{name}:{inline.lines[0] + 1}: {marker} has no registered owner')
+    for line, value in common.contract_public_prose(text, str(path)).items():
+        problems.extend(problem.replace(f'{name}:1:', f'{name}:{line + 1}:', 1)
+                        for problem in span_marker_problems(path, value, owners))
     return problems
 
 
@@ -361,14 +389,22 @@ class GeneratorContractTests(receipts.TestCase):
         for name in GENERATORS:
             with self.subTest(generator=name):
                 root = self.checkout()
+                if name == 'contract_stamps':
+                    contract_fixture.fresh_authoring(root, module('fresh_contract', root / 'docs/generate_contract_stamps.py'))
                 regions, whole = ownership(root, name)
                 if name == 'worker_identity':
                     path = root / 'controller/tools/pw_probe_runner/pw_probe_runner.c'
                     path.write_text(path.read_text() + '\n/* identity property control */\n')
                 elif name == 'contract_stamps':
-                    path = root / 'docs/CONTRACT.md'
-                    path.write_text(path.read_text().replace('<!-- BEGIN CONTRACT request -->',
-                        '<!-- BEGIN CONTRACT request -->\nNormative property control.'))
+                    gen = module('mutation_contract', root / 'docs/generate_contract_stamps.py')
+                    tree = gen.contract_module('tree').load_tree(root)
+                    node = next(node for node in tree.nodes if node.kind == 'definition' and node.prose)
+                    path = root / node.source
+                    original = path.read_text()
+                    self.assertEqual(original.count(node.prose), 1)
+                    changed = original.replace(node.prose, node.prose + '\n\nAuthored property control.', 1)
+                    self.assertNotEqual(original, changed)
+                    path.write_text(changed)
                 else:
                     path = root / f'docs/{name}.json'
                     data = json.loads(path.read_text())
@@ -399,7 +435,9 @@ class GeneratorContractTests(receipts.TestCase):
                 # A real command that corrupts bytes past its END marker must fail the property.
                 target = next(iter(regions))
                 script = root / f'docs/generate_{name}.py'
-                script.write_text(script.read_text().replace('sys.exit(main())',
+                original = script.read_text()
+                self.assertIn('sys.exit(main())', original)
+                script.write_text(original.replace('sys.exit(main())',
                     'code = main()\n    target = ROOT / ' + repr(target) +
                     '\n    target.write_text(target.read_text() + "x")\n    sys.exit(code)'))
                 before = self.snapshot(root)
@@ -678,7 +716,7 @@ class GeneratorContractTests(receipts.TestCase):
         for name in ('limits', 'architecture', 'build', 'footprint'):
             gen = module('prefix_' + name, ROOT / f'docs/generate_{name}.py')
             self.assertNotIn(name, owners)
-            owners[name] = set(gen.SPAN_DOCUMENTS)
+            owners[name] = set(gen.span_documents(ROOT) if hasattr(gen, 'span_documents') else gen.SPAN_DOCUMENTS)
         for path in scanned_documents():
             self.assertEqual(span_marker_problems(path, path.read_text(), owners), [])
         document = ROOT / 'docs/ARCHITECTURE.md'
@@ -700,11 +738,15 @@ class GeneratorContractTests(receipts.TestCase):
         (root / 'source.py').write_text('def defined():\n    pass\n')
         (root / 'target.md').write_text('# Target\n## Repeated\n## Repeated\n')
         path = root / 'doc.md'
-        (root / 'target.md').write_text('# Target\n## Repeated\n## Repeated\nA row names (`step_id`).\n')
-        path.write_text('[target](target.md#repeated-1) [`defined`](source.py) [file](source.py) [`step_id`](target.md#target)')
+        (root / 'target.md').write_text('# Target\n## Repeated\n## Repeated\nA row names (`step_id`).\n\n'
+                                      '<a id="contract-stable-node"></a>\n\n'
+                                      '```html\n<a id="fenced-target"></a>\n```\n')
+        path.write_text('[target](target.md#repeated-1) [`defined`](source.py) [file](source.py) '
+                        '[`step_id`](target.md#target) [stable](target.md#contract-stable-node)')
         self.assertEqual(broken_links([path]), [])
         for content, expected in [
             ('[target](target.md#absent)', 'missing heading'),
+            ('[example](target.md#fenced-target)', 'missing heading'),
             ('[`absent`](source.py)', 'missing symbol'),
             ('[`absent`](target.md)', 'missing symbol'),
             ('[target][reference]\n\n[reference]: target.md', 'reference-style'),
@@ -731,6 +773,54 @@ class GeneratorContractTests(receipts.TestCase):
         self.assertEqual(len(prose.split('\n')), len(text.split('\n')))
         kept = [(n, line) for n, line in enumerate(prose.split('\n')) if line.strip()]
         self.assertEqual(kept, [(0, 'Intro.'), (17, 'A span ' + ' ' * len(span) + ' and a real 12 seconds.')])
+
+    def test_surface_prose_scope_includes_public_meaning_and_excludes_support(self):
+        root = self.checkout()
+        fixture_inputs.copy_declared(ROOT, root, prose_inputs(ROOT))
+        fixture = root / 'docs/contract/99-scan.surface.md'
+        text = ('# Scan {scan: surface}\n\n'
+                '```contract\nsyntax: 1\nfree.condition: Public allowance is 709 bytes.\n```\n\n'
+                '## Value {value: definition}\n\nPublic capacity is 701 bytes.\n\n'
+                '```text\nFenced capacity is 702 bytes.\n```\n\n'
+                '### Support {support: owner}\n\nSupport capacity is 703 bytes.\n\n'
+                '```contract\nfree.effect: Support allowance is 710 bytes.\n```\n\n'
+                'Owner span <!-- span nobody.value -->704 bytes<!-- /span -->.\n\n'
+                '## Next {next: definition}\n\nPublic delay is 705 seconds.\n\n'
+                '<!-- BEGIN GENERATED CLAIM -->\n\nClaimed generated capacity is 708 bytes.\n\n'
+                '<!-- END GENERATED CLAIM -->\n')
+        fixture.write_text(text)
+        self.assertIn(fixture, scanned_documents(root), 'a new surface without owned spans is authored input')
+        prose = authored_prose(text, str(fixture))
+        self.assertIn('Public capacity is 701 bytes.', prose)
+        self.assertIn('Public delay is 705 seconds.', prose)
+        self.assertIn('Public allowance is 709 bytes.', prose)
+        self.assertIn('Claimed generated capacity is 708 bytes.', prose,
+                      'a generated-marker claim cannot exempt an authored surface')
+        for value in ('702 bytes', '703 bytes', '704 bytes', '710 bytes'):
+            self.assertNotIn(value, prose)
+        # The marker scanner shares the support boundary even for an unknown
+        # span prefix. The same marker in public prose remains an error.
+        original_path = ROOT / 'docs/contract/99-scan.surface.md'
+        self.assertEqual(span_marker_problems(original_path, text, {}), [])
+        public_marker = text + '\nValue <!-- span nobody.value -->706 bytes<!-- /span -->.\n'
+        self.assertTrue(span_marker_problems(original_path, public_marker, {}))
+        free_marker = text.replace('Public allowance is 709 bytes.',
+                                   'Public allowance <!-- span nobody.value -->709 bytes<!-- /span -->.')
+        self.assertTrue(span_marker_problems(original_path, free_marker, {}))
+        (fixture.parent / 'scan.py').write_text('def public_symbol():\n    pass\n\ndef support_symbol():\n    pass\n')
+        cited = text.replace('Public allowance is 709 bytes.',
+                             'The `public_symbol` ([source](scan.py)) supplies the allowance.').replace(
+                             'Support allowance is 710 bytes.',
+                             'The `support_symbol` ([source](scan.py)) supplies support.')
+        self.assertEqual(citation_pairs(fixture, cited), ['`public_symbol` … [source](scan.py)'])
+        fixture.write_text(cited)
+        self.assertIn('docs/contract/scan.py', prose_inputs(root))
+        self.assertEqual(broken_links([fixture]), [])
+        fixture.write_text(cited.replace('[source](scan.py)', '[source](missing-scan.py)', 1))
+        self.assertTrue(any('missing file missing-scan.py' in problem for problem in broken_links([fixture])))
+        gen = module('scan_contract', ROOT / 'docs/generate_contract_stamps.py')
+        rendered = gen.DOCUMENT_BEGIN + '\nGenerated capacity is 707 bytes.\n' + gen.DOCUMENT_END + '\n'
+        self.assertNotIn('707 bytes', authored_prose(rendered, 'docs/CONTRACT.md'))
 
     def test_prose_baseline_is_consistent_and_growth_is_explicit(self):
         self.assertEqual(baseline_problems(), [])
@@ -798,14 +888,16 @@ class GeneratorContractTests(receipts.TestCase):
                 import generate_contract_stamps as stamps
                 import build_contract
                 fixture_inputs.copy_declared(ROOT, root, sorted(set(stamps.input_paths(ROOT)) | set(build_contract.inputs(ROOT))))
+                contract_fixture.fresh_authoring(root, stamps)
                 def commit(rows, tag):
                     path = root / BASELINE_NAME
                     if rows is not None:
                         path.parent.mkdir(parents=True, exist_ok=True)
                         path.write_text(json.dumps(dict(schema_version=1, entries=rows)))
+                    else:
+                        path.unlink(missing_ok=True)
                     (root / 'version').write_text(tag)
-                    for name, _, after in stamps.render(root, tag):
-                        (root / name).write_text(after)
+                    contract_fixture.write_outputs(root, stamps.render(root, tag))
                     git('add', '.')
                     git('commit', '-qm', tag)
                     git('tag', '-a', tag, '-m', tag)
@@ -926,7 +1018,12 @@ class GeneratorContractTests(receipts.TestCase):
             'porcelain': ['docs/porcelain.json', 'docs/generate_porcelain.py',
                           'runner/Sources/PWRunnerCore/PWPorcelainRecords.swift',
                           'controller/src/porcelain_records.rs', 'tests/lib/porcelain_schema.py'],
-            'contract_stamps': ['docs/contract_surfaces.json', 'docs/generate_contract_stamps.py', 'docs/CONTRACT.md', 'docs/PolicyWitness.md'],
+            'contract_stamps': ['docs/generate_contract_stamps.py', 'docs/CONTRACT.md', 'docs/PolicyWitness.md',
+                                'docs/contract/00-identity.surface.md', 'docs/contract/tree.py',
+                                'docs/contract/runtime.py', 'docs/contract/record_definitions.py',
+                                'docs/contract/history_v0.py', 'docs/contract/history_v1.py',
+                                'docs/contract/public.json', 'docs/contract/free_text.json',
+                                'docs/generator_common.py', 'docs/markdown_reader.py'],
             'worker_identity': ['docs/generate_worker_identity.py', 'build.sh', 'meson.build', 'meson.options', 'runner/Package.swift',
                                 'controller/tools/pw_probe_runner/pw_probe_runner.c', 'controller/tools/pw_probe_runner/pw_probe_runner_abi.h',
                                 'runner/Sources/PWRunnerCore/CWorker.swift', 'tests/lib/contract.py'],
@@ -975,8 +1072,10 @@ class GeneratorContractTests(receipts.TestCase):
         probe = ('import importlib.util, json, sys\n'
                  'spec = importlib.util.spec_from_file_location("probe", sys.argv[1]); module = importlib.util.module_from_spec(spec)\n'
                  'spec.loader.exec_module(module)\n'
-                 'print(json.dumps({name: sys.modules[name].__file__ for name in ("generator_common", "markdown_reader", "generate_limits", '
-                 '"generate_architecture") if name in sys.modules}))\n')
+                 'if hasattr(module, "contract_module"): module.contract_module("runtime")\n'
+                 'print(json.dumps({name: value.__file__ for name, value in sys.modules.copy().items() '
+                 'if getattr(value, "__file__", None) and (name in ("generator_common", "markdown_reader", "generate_limits", '
+                 '"generate_architecture") or "/docs/contract/" in value.__file__)}))\n')
         for name in GENERATORS:
             with self.subTest(fresh_import=name):
                 result = self.run_command([sys.executable, '-B', '-S', '-c', probe, str(root / f'docs/generate_{name}.py')],
@@ -987,6 +1086,14 @@ class GeneratorContractTests(receipts.TestCase):
                     self.assertTrue(Path(path).resolve().is_relative_to(root.resolve()), (name, module_name, path))
                 if name in ('limits', 'architecture', 'build', 'footprint'):
                     self.assertIn('generator_common', loaded)
+                if name == 'contract_stamps':
+                    self.assertLessEqual({'runtime.py', 'tree.py', 'history_v0.py', 'history_v1.py',
+                                          'record_definitions.py'},
+                                         {Path(path).name for path in loaded.values()})
+        (root / 'docs/contract/history_v0.py').unlink()
+        result = self.command(root, 'contract_stamps', '--check')
+        self.assertNotEqual(result.returncode, 0)
+        self.assertIn('history_v0', result.stderr)
         # An omitted helper is a clear refusal, not a silent pass.
         (root / 'docs/generator_common.py').unlink()
         result = self.command(root, 'limits', '--check')
@@ -1000,7 +1107,7 @@ class GeneratorContractTests(receipts.TestCase):
         self.assertTrue(set(documents) <= declared)
         targets = set()
         for path in scanned_documents(ROOT):
-            for link in markdown_reader.read(path).links:
+            for link in (link for document in public_link_documents(path) for link in document.links):
                 target = link.target.split('#')[0]
                 if target and not re.match(r'^[a-zA-Z][a-zA-Z0-9+.-]*:', target):
                     targets.add((path.parent / target).resolve().relative_to(ROOT.resolve()).as_posix())

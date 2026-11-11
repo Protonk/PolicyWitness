@@ -44,6 +44,7 @@ import build_provenance as prov
 import cargo_config
 import checkout_lock
 import shim_probe
+import contract_fixture
 WRAPPER = ROOT / 'tests/fixtures/build_refusals/tools.py'
 FORWARD = ROOT / 'tests/fixtures/build_refusals/forward.py'
 WRONG_WORKER = ROOT / 'tests/fixtures/build_refusals/wrong_worker.c'
@@ -1942,6 +1943,10 @@ def control_release_entrypoints_enforce_fresh_mode(co, variant):
         import fixture_inputs
         fixture_inputs.copy_declared(ROOT, repo, sorted(set(build_contract.inputs(ROOT)) |
                                                        set(generate_contract_stamps.input_paths(ROOT))))
+        # Preflight runs in a separate interpreter in this fixture. Its release
+        # and retention helpers must come from the copied tree as well.
+        fixture_inputs.copy_declared(ROOT, repo, fixture_inputs.expand(ROOT, (
+            fixture_inputs.directory('tests/lib', ('.py', '.sh'), recursive=False),)))
         for name in ('Makefile', 'tests/lib/sdk_guard.sh', 'tests/lib/python_start.sh', 'tests/lib/python.sh',
                      'tests/lib/release_preflight.py', 'tests/fixtures/docs/prose_baseline.json', 'tests/fixtures/docs/build_baseline.json'):
             target = repo / name
@@ -1951,14 +1956,35 @@ def control_release_entrypoints_enforce_fresh_mode(co, variant):
         script = repo / 'build.sh'
         script.write_text('#!/usr/bin/env bash\nprintf \'{"PW_FRESH_BUILD": "%s", "IDENTITY": "%s"}\' "${PW_FRESH_BUILD-unset}" "${IDENTITY:-}" > build-invocation.json\nexit 97\n')
         script.chmod(0o755)
-        for name, _, after in generate_contract_stamps.render(repo, 'v0.0.1'):
-            (repo / name).write_text(after)
+        # This fixture owns a controlled build step and a small contract. Keep
+        # inherited release claims until the real release trees are imported;
+        # rendering then records the removed surfaces at the fixture release.
+        runtime = generate_contract_stamps.contract_module('runtime')
+        inherited = {name: (repo / name).read_bytes() for name in
+                     (*runtime.OUTPUTS, runtime.history_v1.SNAPSHOT, runtime.BASELINE)}
+        contract_fixture.minimal_surfaces(repo, checks=('preflight',))
+        assert all((repo / name).read_bytes() == body for name, body in inherited.items()), \
+            'changing fixture surfaces erased inherited release claims'
+        release_tag = contract_fixture.seed_release_history(repo, ROOT, generate_contract_stamps)
+        released = runtime.history(repo)
+        assert released, 'the entrypoint fixture requires genuine released contract history'
+        prior_active = {row['id'] for row, _ in released[-1][1]}
+        assert prior_active and 'fixture' not in prior_active, prior_active
+        contract_fixture.write_outputs(repo, generate_contract_stamps.render(repo, release_tag))
+        state = generate_contract_stamps.stamps(repo, release_tag)
+        assert {name for name, value in state.items() if not value['removed']} == {'fixture'}, state
+        assert state['fixture']['stamp'] == release_tag, state['fixture']
+        assert all(state[name]['removed'] and state[name]['stamp'] == release_tag for name in prior_active), state
+        snapshot = json.loads((repo / runtime.history_v1.SNAPSHOT).read_text())
+        assert snapshot['history'] == [tag for tag, _ in released] + [release_tag], snapshot['history']
+        save(co.out / f'{co.prefix}{variant}-release_entrypoints_history.json',
+             dict(release=release_tag, inherited_releases=[tag for tag, _ in released],
+                  removed_surfaces=sorted(prior_active), active_surfaces=['fixture']))
         (repo / 'dist').mkdir()
         git = ['git', '-C', str(repo), '-c', 'user.name=Control', '-c', 'user.email=control@example.invalid', '-c', 'commit.gpgsign=false', '-c', 'tag.gpgsign=false']
-        subprocess.run([*git, 'init', '-q'], check=True)
         subprocess.run([*git, 'add', '.'], check=True)
         subprocess.run([*git, 'commit', '-qm', 'control'], check=True)
-        subprocess.run([*git, 'tag', '-a', 'v0.0.1', '-m', 'control'], check=True)
+        subprocess.run([*git, 'tag', '-a', release_tag, '-m', 'control'], check=True)
         remote = Path(temporary) / 'origin.git'
         subprocess.run(['git', 'init', '-q', '--bare', str(remote)], check=True)
         subprocess.run([*git, 'remote', 'add', 'origin', str(remote)], check=True)
@@ -1970,6 +1996,7 @@ def control_release_entrypoints_enforce_fresh_mode(co, variant):
             result = subprocess.run(['make', *args], cwd=repo, env=dict(base, **(env or {})), capture_output=True, text=True, timeout=120)
             invoked = json.loads(marker.read_text()) if marker.exists() else None
             results.append(dict(label=label, args=args, env=env, returncode=result.returncode, stdout=result.stdout, stderr=result.stderr, build=invoked))
+            save(co.out / f'{co.prefix}{variant}-release_entrypoints.json', results)
             return result, invoked
 
         settings = ['NOTARY_KEYCHAIN_PROFILE=control-profile', 'IDENTITY=Developer ID Application: Control (TEAMID00AA)']
@@ -2011,13 +2038,16 @@ def control_release_battery(co, variant):
                '-c', 'tag.gpgsign=false']
         sys.path.insert(0, str(ROOT / 'docs'))
         import generate_contract_stamps
-        for name, _, after in generate_contract_stamps.render(fresh.root, 'v0.0.0'):
-            (fresh.root / name).write_text(after)
-        subprocess.run([*git, 'init', '-q'], check=True)
+        release_tag = contract_fixture.seed_release_history(fresh.root, ROOT, generate_contract_stamps)
+        contract_fixture.write_outputs(fresh.root, generate_contract_stamps.render(fresh.root, release_tag))
         subprocess.run([*git, 'add', '.'], check=True)
         subprocess.run([*git, 'commit', '-qm', 'rehearsal source snapshot'], check=True)
-        subprocess.run([*git, 'tag', '-a', 'v0.0.0', '-m', 'rehearsal release'], check=True)
-        build = fresh.build('release-battery', 'full', fresh='1')
+        subprocess.run([*git, 'tag', '-a', release_tag, '-m', 'rehearsal release'], check=True)
+        # This checkout has genuine imported release ancestry and a new tag.
+        # Use that tag's version and commit count instead of the unversioned
+        # build fixtures' defaults, so acceptance sees one release identity.
+        build = fresh.build('release-battery', 'full', fresh='1',
+                            env={'PW_VERSION': '', 'PW_BUILD_NUMBER': ''})
         passing(fresh, build, 'full')
         acceptance = fresh.root / 'tests/out/release-acceptance/live-battery'
         evidence = co.out / 'release-battery'

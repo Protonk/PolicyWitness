@@ -235,7 +235,7 @@ Clock failure can leave native facts or activation observations without a
 timestamp. Retain them; they cannot satisfy a gate requiring temporal support.
 Gate timeout or ownership loss stays ineligible after later cleanup. Neither
 successful termination ordering nor a satisfied gate proves native consumption,
-authority persistence or fresh access. The [wire contract](../docs/CONTRACT.md#actor-evidence-ownership)
+authority persistence or fresh access. The [wire contract](../docs/CONTRACT.md#contract-actor_evidence-gate)
 owns the field relationships.
 
 ### Native extension evidence

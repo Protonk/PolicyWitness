@@ -66,6 +66,10 @@ COMMAND_DOCUMENTS = Scope('repository command documents', ('.md',),
                           hidden=True)
 # Every shell script under tests/ except retained output; hidden and vendored paths stay included.
 TEST_SHELL_SCRIPTS = Scope('test shell scripts', ('.sh',), base='tests', pruned=('tests/out/',))
+# Each immediate surface file is an authored contract input, including one
+# newly added in a source copy before it has any scalar spans.
+CONTRACT_SURFACES = Scope('contract surface sources', ('.surface.md',),
+                          base='docs/contract', recursive=False)
 
 
 @dataclass(frozen=True)

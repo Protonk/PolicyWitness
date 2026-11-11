@@ -131,7 +131,8 @@ enum CWorkerOrchestrator {
         var queryPlans = phases.map { _ in [ValidatorQueryDecision]() }
         var validatorResults = phases.map { _ -> ValidatorClientResult? in nil }
         var collectionStatuses = phases.map { _ in "not_reached" }
-        var collectionRemainingNs = UInt64(max(1, min(phaseCollectionBudgetMs, parsed._test_overrides?.validator_total_timeout_ms ?? phaseCollectionBudgetMs))) * 1_000_000
+        var collectionRemainingNs = UInt64(collectionBudgetMs(override: parsed._test_overrides?.validator_total_timeout_ms,
+                                                            maximum: phaseCollectionBudgetMs)) * 1_000_000
         let workerResult = runCWorker(workerInput, phaseBoundary: { workerPid, index in
             guard let start = MonotonicDeadline.now() else {
                 collectionStatuses[index] = "clock_unavailable"; collectionRemainingNs = 0; return

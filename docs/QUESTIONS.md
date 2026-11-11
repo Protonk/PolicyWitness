@@ -50,7 +50,11 @@ PolicyWitness passes the submitted SBPL source to the host's `libsandbox` compil
 
 ## How do I use imports with PolicyWitness?
 
-PolicyWitness supports imports the same way `sandbox-exec` does — `(import "name.sb")` statements are resolved by libsandbox against the system search path (`/System/Library/Sandbox/Profiles/` first, then `/usr/share/sandbox/`).
+Write imports in the SBPL source, for example `(import "name.sb")`; macOS's
+`libsandbox` resolves them during compilation. PolicyWitness independently
+inventories literal imports, checking absolute names as supplied and searching
+relative names under `/System/Library/Sandbox/Profiles/` before
+`/usr/share/sandbox/`. The dossier records the files selected by that scan.
 
 ## Can PolicyWitness test sandbox-extension behavior?
 

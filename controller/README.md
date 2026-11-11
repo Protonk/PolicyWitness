@@ -57,7 +57,7 @@ identity in `data.contract` and `build.contract`. Every envelope also carries
 `version`, `number`, `describe` and `commit` as provenance. The app and service
 plists advertise the same identity as `PWContract`. A plain Cargo build is
 `unbound` and refuses public requests and packaged peers.
-The [build-stamp contract](../docs/CONTRACT.md#build-stamp) defines these fields.
+The [build-stamp contract](../docs/CONTRACT.md#contract-identity-build) defines these fields.
 
 `--timeout-ms` controls the runner RPC. `PW_VERIFY_EVIDENCE=1` adds manifest hash verification under
 `data.specimen.app_provenance.evidence_verify`.

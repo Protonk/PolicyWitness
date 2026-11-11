@@ -15,7 +15,7 @@ ROOT = Path(__file__).resolve().parents[1]
 MANIFEST_NAME = 'docs/footprint.json'
 GENERATOR_NAME = 'docs/generate_footprint.py'
 SPAN_DOCUMENTS = ('docs/FOOTPRINT.md',)
-INPUTS = (GENERATOR_NAME, MANIFEST_NAME, 'docs/generator_common.py', 'docs/generate_limits.py',
+INPUTS = (GENERATOR_NAME, MANIFEST_NAME, 'docs/generator_common.py', 'docs/generate_limits.py', 'docs/repository_tree.py',
           'docs/limits.json', 'tests/catalog.json', *SPAN_DOCUMENTS)
 CASES = {'waiting': 'Waiting and retained resources', 'response': 'Response storage and transport',
          'aftermath': 'State remaining after a run'}

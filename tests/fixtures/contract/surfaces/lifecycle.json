@@ -1,575 +1,1206 @@
 {
-  "shape": {
-    "reply": {
-      "phases": "array",
-      "runner_subprocess": "object",
-      "sandboxed_after_apply": "boolean",
-      "schedule": "object"
-    },
-    "reply.actors[]": {
-      "subprocess": "object"
-    },
-    "reply.actors[].subprocess": {
-      "cleanup_trigger": "string",
-      "collection_basis": "string",
-      "disposition": "object",
-      "done_observed": "boolean",
-      "exit_code": "number",
-      "exit_grace_wait": "object",
-      "exit_requested": "boolean",
-      "grace_end": "string",
-      "partial_steps": "boolean",
-      "pid": "number",
-      "policy_transfer_error": "object",
-      "policy_transfer_timeout": "object",
-      "poll_stop_reason": "string",
-      "ready_byte_received": "boolean",
-      "ready_wait": "object",
-      "reaped": "boolean",
-      "term_signal": "number",
-      "termination_request": "object",
-      "wait_errors": "array",
-      "worker_evidence": "object"
-    },
-    "reply.actors[].subprocess.disposition": {
-      "issues": "array",
-      "questions": "object",
-      "steps": "array"
-    },
-    "reply.actors[].subprocess.disposition.issues[]": {
-      "detail": "string",
-      "kind": "string",
-      "observations": "array",
-      "question": "string",
-      "rule": "string",
-      "step_index": "number"
-    },
-    "reply.actors[].subprocess.disposition.questions": {
-      "cleanup_trigger": "object",
-      "collection_basis": "object",
-      "final_status": "object",
-      "grace_end": "object",
-      "kill_request_and_result": "object",
-      "progress_association": "object",
-      "stop_reason": "object"
-    },
-    "reply.actors[].subprocess.disposition.questions.cleanup_trigger": {
-      "answer": "string",
-      "basis": "array",
-      "reason": "string",
-      "state": "string"
-    },
-    "reply.actors[].subprocess.disposition.questions.collection_basis": {
-      "answer": "string",
-      "basis": "array",
-      "state": "string"
-    },
-    "reply.actors[].subprocess.disposition.questions.final_status": {
-      "answer": "string",
-      "basis": "array",
-      "reason": "string",
-      "state": "string",
-      "value": "number"
-    },
-    "reply.actors[].subprocess.disposition.questions.grace_end": {
-      "answer": "string",
-      "basis": "array",
-      "reason": "string",
-      "state": "string"
-    },
-    "reply.actors[].subprocess.disposition.questions.kill_request_and_result": {
-      "answer": "string",
-      "basis": "array",
-      "reason": "string",
-      "state": "string",
-      "value": "object"
-    },
-    "reply.actors[].subprocess.disposition.questions.kill_request_and_result.value": {
-      "errno": "number",
-      "rc": "number",
-      "signal": "number"
-    },
-    "reply.actors[].subprocess.disposition.questions.progress_association": {
-      "answer": "string",
-      "basis": "array",
-      "reason": "string",
-      "state": "string",
-      "value": "number"
-    },
-    "reply.actors[].subprocess.disposition.questions.stop_reason": {
-      "answer": "string",
-      "basis": "array",
-      "state": "string"
-    },
-    "reply.actors[].subprocess.disposition.steps[]": {
-      "attempt_support": "string",
-      "index": "number",
-      "questions": "object",
-      "slot": "string",
-      "step_id": "string"
-    },
-    "reply.actors[].subprocess.disposition.steps[].questions": {
-      "step_boundary_reached": "object",
-      "step_requested_operation_applicability": "object",
-      "step_result_published": "object"
-    },
-    "reply.actors[].subprocess.disposition.steps[].questions.step_boundary_reached": {
-      "answer": "string",
-      "basis": "array",
-      "reason": "string",
-      "state": "string"
-    },
-    "reply.actors[].subprocess.disposition.steps[].questions.step_requested_operation_applicability": {
-      "answer": "string",
-      "basis": "array",
-      "state": "string"
-    },
-    "reply.actors[].subprocess.disposition.steps[].questions.step_result_published": {
-      "answer": "string",
-      "basis": "array",
-      "issue": "number",
-      "reason": "string",
-      "state": "string"
-    },
-    "reply.actors[].subprocess.exit_grace_wait": {
-      "budget_ms": "number",
-      "clock_fault": "boolean",
-      "elapsed_ms": "number",
-      "stop": "string"
-    },
-    "reply.actors[].subprocess.policy_transfer_error": {
-      "bytes_expected": "number",
-      "bytes_written": "number",
-      "errno": "number"
-    },
-    "reply.actors[].subprocess.policy_transfer_timeout": {
-      "budget_ms": "number",
-      "bytes_expected": "number",
-      "bytes_written": "number",
-      "elapsed_ms": "number"
-    },
-    "reply.actors[].subprocess.ready_wait": {
-      "budget_ms": "number",
-      "clock_fault": "boolean",
-      "elapsed_ms": "number",
-      "native_errno": "number",
-      "stop": "string"
-    },
-    "reply.actors[].subprocess.termination_request": {
-      "errno": "number",
-      "rc": "number",
-      "signal": "number"
-    },
-    "reply.actors[].subprocess.wait_errors[]": {
-      "errno": "number",
-      "rc": "number",
-      "stage": "string"
-    },
-    "reply.actors[].subprocess.worker_evidence": {
-      "abi_identity": "string",
-      "diagnostic": "object",
-      "failure": "object",
-      "failure_publication": "number",
-      "failure_state": "string",
-      "policy_read": "object",
-      "progress": "object",
-      "readiness": "object"
-    },
-    "reply.actors[].subprocess.worker_evidence.diagnostic": {
-      "length": "number",
-      "state": "number",
-      "status": "string",
-      "text": "string"
-    },
-    "reply.actors[].subprocess.worker_evidence.failure": {
-      "code": "number",
-      "detail": "number",
-      "errno": "number",
-      "index": "number",
-      "native_kind": "number",
-      "native_result": "number",
-      "operation": "number"
-    },
-    "reply.actors[].subprocess.worker_evidence.policy_read": {
-      "bytes_expected": "number",
-      "bytes_received": "number"
-    },
-    "reply.actors[].subprocess.worker_evidence.progress": {
-      "index": "number",
-      "operation": "number",
-      "raw": "number",
-      "stage": "number"
-    },
-    "reply.actors[].subprocess.worker_evidence.readiness": {
-      "errno": "number",
-      "rc": "number"
-    },
-    "reply.authority_setup.host.custody[]": {
-      "disposition": "string"
-    },
-    "reply.authority_setup.host.regions[]": {
-      "disposition": "string"
-    },
-    "reply.authority_setup.host.run": {
-      "disposition": "string"
-    },
-    "reply.authority_setup.workers[]": {
-      "disposition": "string"
-    },
-    "reply.phases[]": {
-      "action_ids": "array",
-      "activation_observation": "object",
-      "actor_id": "string",
-      "actor_visit": "number",
-      "arrival_observed": "boolean",
-      "collection_status": "string",
-      "completion_observed": "boolean",
-      "ordering": "object",
-      "ordinal": "number",
-      "phase_id": "string",
-      "termination_gate": "object",
-      "validator_spawn_failure": "object",
-      "validator_subprocess": "object",
-      "visit_timing": "object"
-    },
-    "reply.phases[].activation_observation": {
-      "capture_ordinal": "number",
-      "observed_ns": "number"
-    },
-    "reply.phases[].ordering": {
-      "collection_closed_before_proceed": "boolean",
-      "proceed_observed": "boolean",
-      "proceed_set": "boolean",
-      "protocol_violations": "array",
-      "validator_disposition": "string",
-      "worker_lifetime_established": "boolean"
-    },
-    "reply.phases[].termination_gate": {
-      "activation_eligible": "boolean",
-      "capture_ordinal": "number",
-      "condition": "string",
-      "observation": "object",
-      "outcome": "string",
-      "source_actor_id": "string",
-      "source_final_phase_id": "string",
-      "wait": "object"
-    },
-    "reply.phases[].termination_gate.observation": {
-      "capture_ordinal": "number"
-    },
-    "reply.phases[].termination_gate.wait": {
-      "budget_ms": "number",
-      "clock_fault": "boolean",
-      "elapsed_ms": "number",
-      "native_errno": "number",
-      "stop": "string"
-    },
-    "reply.phases[].validator_spawn_failure": {
-      "diagnostic": "string",
-      "executable_path": "string",
-      "operation": "string",
-      "origin": "string",
-      "return_code": "number"
-    },
-    "reply.phases[].validator_subprocess": {
-      "association_issues": "array",
-      "decode_fault": "object",
-      "exit_code": "number",
-      "exit_grace_wait": "object",
-      "expected_step_ids": "array",
-      "io_error": "string",
-      "ordinal": "number",
-      "phase_id": "string",
-      "pid": "number",
-      "probe_bytes_expected": "number",
-      "probe_bytes_written": "number",
-      "read_error": "string",
-      "reaped": "boolean",
-      "records": "array",
-      "stdout_bytes_received": "number",
-      "stdout_collection_stop": "string",
-      "term_signal": "number",
-      "termination_request": "object",
-      "wait_errors": "array"
-    },
-    "reply.phases[].validator_subprocess.association_issues[]": {
-      "count": "number",
-      "kind": "string",
-      "origin": "string",
-      "step_id": "string"
-    },
-    "reply.phases[].validator_subprocess.decode_fault": {
-      "byte_offset": "number",
-      "context_b64": "string",
-      "context_truncated": "boolean",
-      "frame_bytes": "number",
-      "kind": "string",
-      "message": "string",
-      "origin": "string",
-      "retained_bytes": "number"
-    },
-    "reply.phases[].validator_subprocess.exit_grace_wait": {
-      "budget_ms": "number",
-      "clock_fault": "boolean",
-      "elapsed_ms": "number",
-      "excluded_ms": "number",
-      "native_errno": "number",
-      "stop": "string"
-    },
-    "reply.phases[].validator_subprocess.records[]": {
-      "errno": "number",
-      "error": "string",
-      "filter_type": "string",
-      "filter_type_id": "number",
-      "filter_value": "string",
-      "operation": "string",
-      "outcome": "string",
-      "raw_line": "string",
-      "rc": "number",
-      "step_id": "string"
-    },
-    "reply.phases[].validator_subprocess.termination_request": {
-      "errno": "number",
-      "rc": "number",
-      "signal": "number"
-    },
-    "reply.phases[].validator_subprocess.wait_errors[]": {
-      "errno": "number",
-      "rc": "number",
-      "stage": "string"
-    },
-    "reply.phases[].visit_timing": {
-      "activation_to_arrival_ms": "number",
-      "arrival_to_release_ms": "number",
-      "collection_ms": "number",
-      "release_to_completion_ms": "number"
-    },
-    "reply.runner_subprocess": {
-      "cleanup_trigger": "string",
-      "collection_basis": "string",
-      "disposition": "object",
-      "done_observed": "boolean",
-      "exit_code": "number",
-      "exit_grace_wait": "object",
-      "exit_requested": "boolean",
-      "grace_end": "string",
-      "partial_steps": "boolean",
-      "pid": "number",
-      "policy_transfer_error": "object",
-      "policy_transfer_timeout": "object",
-      "poll_stop_reason": "string",
-      "ready_byte_received": "boolean",
-      "ready_wait": "object",
-      "reaped": "boolean",
-      "sentinel_wait": "object",
-      "term_signal": "number",
-      "termination_request": "object",
-      "wait_errors": "array",
-      "worker_evidence": "object"
-    },
-    "reply.runner_subprocess.disposition": {
-      "issues": "array",
-      "questions": "object",
-      "steps": "array"
-    },
-    "reply.runner_subprocess.disposition.issues[]": {
-      "detail": "string",
-      "kind": "string",
-      "observations": "array",
-      "question": "string",
-      "rule": "string",
-      "step_index": "number"
-    },
-    "reply.runner_subprocess.disposition.questions": {
-      "cleanup_trigger": "object",
-      "collection_basis": "object",
-      "final_status": "object",
-      "grace_end": "object",
-      "kill_request_and_result": "object",
-      "progress_association": "object",
-      "stop_reason": "object"
-    },
-    "reply.runner_subprocess.disposition.questions.cleanup_trigger": {
-      "answer": "string",
-      "basis": "array",
-      "reason": "string",
-      "state": "string"
-    },
-    "reply.runner_subprocess.disposition.questions.collection_basis": {
-      "answer": "string",
-      "basis": "array",
-      "state": "string"
-    },
-    "reply.runner_subprocess.disposition.questions.final_status": {
-      "answer": "string",
-      "basis": "array",
-      "reason": "string",
-      "state": "string",
-      "value": "number"
-    },
-    "reply.runner_subprocess.disposition.questions.grace_end": {
-      "answer": "string",
-      "basis": "array",
-      "reason": "string",
-      "state": "string"
-    },
-    "reply.runner_subprocess.disposition.questions.kill_request_and_result": {
-      "answer": "string",
-      "basis": "array",
-      "reason": "string",
-      "state": "string",
-      "value": "object"
-    },
-    "reply.runner_subprocess.disposition.questions.kill_request_and_result.value": {
-      "errno": "number",
-      "rc": "number",
-      "signal": "number"
-    },
-    "reply.runner_subprocess.disposition.questions.progress_association": {
-      "answer": "string",
-      "basis": "array",
-      "reason": "string",
-      "state": "string",
-      "value": "number"
-    },
-    "reply.runner_subprocess.disposition.questions.stop_reason": {
-      "answer": "string",
-      "basis": "array",
-      "state": "string"
-    },
-    "reply.runner_subprocess.disposition.steps[]": {
-      "attempt_support": "string",
-      "index": "number",
-      "questions": "object",
-      "slot": "string",
-      "step_id": "string"
-    },
-    "reply.runner_subprocess.disposition.steps[].questions": {
-      "step_boundary_reached": "object",
-      "step_requested_operation_applicability": "object",
-      "step_result_published": "object"
-    },
-    "reply.runner_subprocess.disposition.steps[].questions.step_boundary_reached": {
-      "answer": "string",
-      "basis": "array",
-      "reason": "string",
-      "state": "string"
-    },
-    "reply.runner_subprocess.disposition.steps[].questions.step_requested_operation_applicability": {
-      "answer": "string",
-      "basis": "array",
-      "state": "string"
-    },
-    "reply.runner_subprocess.disposition.steps[].questions.step_result_published": {
-      "answer": "string",
-      "basis": "array",
-      "issue": "number",
-      "reason": "string",
-      "state": "string"
-    },
-    "reply.runner_subprocess.exit_grace_wait": {
-      "budget_ms": "number",
-      "clock_fault": "boolean",
-      "elapsed_ms": "number",
-      "excluded_ms": "number",
-      "native_errno": "number",
-      "stop": "string"
-    },
-    "reply.runner_subprocess.policy_transfer_error": {
-      "bytes_expected": "number",
-      "bytes_written": "number",
-      "errno": "number"
-    },
-    "reply.runner_subprocess.policy_transfer_timeout": {
-      "budget_ms": "number",
-      "bytes_expected": "number",
-      "bytes_written": "number",
-      "elapsed_ms": "number"
-    },
-    "reply.runner_subprocess.ready_wait": {
-      "budget_ms": "number",
-      "clock_fault": "boolean",
-      "elapsed_ms": "number",
-      "excluded_ms": "number",
-      "native_errno": "number",
-      "stop": "string"
-    },
-    "reply.runner_subprocess.sentinel_wait": {
-      "budget_ms": "number",
-      "clock_fault": "boolean",
-      "elapsed_ms": "number",
-      "excluded_ms": "number",
-      "native_errno": "number",
-      "stop": "string"
-    },
-    "reply.runner_subprocess.termination_request": {
-      "errno": "number",
-      "rc": "number",
-      "signal": "number"
-    },
-    "reply.runner_subprocess.wait_errors[]": {
-      "errno": "number",
-      "rc": "number",
-      "stage": "string"
-    },
-    "reply.runner_subprocess.worker_evidence": {
-      "abi_identity": "string",
-      "diagnostic": "object",
-      "failure": "object",
-      "failure_publication": "number",
-      "failure_state": "string",
-      "policy_read": "object",
-      "progress": "object",
-      "readiness": "object"
-    },
-    "reply.runner_subprocess.worker_evidence.diagnostic": {
-      "length": "number",
-      "state": "number",
-      "status": "string",
-      "text": "string"
-    },
-    "reply.runner_subprocess.worker_evidence.failure": {
-      "code": "number",
-      "detail": "number",
-      "errno": "number",
-      "index": "number",
-      "native_kind": "number",
-      "native_result": "number",
-      "operation": "number"
-    },
-    "reply.runner_subprocess.worker_evidence.policy_read": {
-      "bytes_expected": "number",
-      "bytes_received": "number"
-    },
-    "reply.runner_subprocess.worker_evidence.progress": {
-      "index": "number",
-      "operation": "number",
-      "raw": "number",
-      "stage": "number"
-    },
-    "reply.runner_subprocess.worker_evidence.readiness": {
-      "errno": "number",
-      "rc": "number"
-    },
-    "reply.schedule": {
-      "cancelled": "string",
-      "collection_budget_ms": "number",
-      "execution_wait": "object",
-      "lifetime_budget_ms": "number",
-      "setup_wait": "object"
-    },
-    "reply.schedule.execution_wait": {
-      "budget_ms": "number",
-      "clock_fault": "boolean",
-      "elapsed_ms": "number",
-      "excluded_ms": "number",
-      "stop": "string"
-    },
-    "reply.schedule.setup_wait": {
-      "budget_ms": "number",
-      "clock_fault": "boolean",
-      "elapsed_ms": "number",
-      "stop": "string"
+  "records": {
+    "PWAttemptLifecycle": {
+      "fields": {
+        "boundary": {
+          "json_null": false,
+          "name": "boundary",
+          "optional": false,
+          "swift_type": "PWDispositionClaim"
+        },
+        "result": {
+          "json_null": false,
+          "name": "result",
+          "optional": false,
+          "swift_type": "PWDispositionClaim"
+        },
+        "summary": {
+          "json_null": false,
+          "name": "summary",
+          "optional": false,
+          "swift_type": "String"
+        }
+      },
+      "input": false
+    },
+    "PWDispositionClaim": {
+      "fields": {
+        "answer": {
+          "json_null": false,
+          "name": "answer",
+          "optional": true,
+          "swift_type": "String?"
+        },
+        "basis": {
+          "json_null": false,
+          "name": "basis",
+          "optional": true,
+          "swift_type": "[String]?"
+        },
+        "issue": {
+          "json_null": false,
+          "name": "issue",
+          "optional": true,
+          "swift_type": "Int?"
+        },
+        "reason": {
+          "json_null": false,
+          "name": "reason",
+          "optional": true,
+          "swift_type": "String?"
+        },
+        "state": {
+          "json_null": false,
+          "name": "state",
+          "optional": false,
+          "swift_type": "String"
+        },
+        "value": {
+          "json_null": false,
+          "name": "value",
+          "optional": true,
+          "swift_type": "PWDispositionValue?"
+        }
+      },
+      "input": false
+    },
+    "PWDispositionIssue": {
+      "fields": {
+        "detail": {
+          "json_null": false,
+          "name": "detail",
+          "optional": false,
+          "swift_type": "String"
+        },
+        "kind": {
+          "json_null": false,
+          "name": "kind",
+          "optional": false,
+          "swift_type": "String"
+        },
+        "observations": {
+          "json_null": false,
+          "name": "observations",
+          "optional": false,
+          "swift_type": "[String]"
+        },
+        "question": {
+          "json_null": false,
+          "name": "question",
+          "optional": false,
+          "swift_type": "String"
+        },
+        "rule": {
+          "json_null": false,
+          "name": "rule",
+          "optional": false,
+          "swift_type": "String"
+        },
+        "step_index": {
+          "json_null": false,
+          "name": "step_index",
+          "optional": true,
+          "swift_type": "Int?"
+        }
+      },
+      "input": false
+    },
+    "PWDispositionRecord": {
+      "fields": {
+        "issues": {
+          "json_null": false,
+          "name": "issues",
+          "optional": false,
+          "swift_type": "[PWDispositionIssue]"
+        },
+        "questions": {
+          "json_null": false,
+          "name": "questions",
+          "optional": false,
+          "swift_type": "PWDispositionRunQuestions"
+        },
+        "steps": {
+          "json_null": false,
+          "name": "steps",
+          "optional": false,
+          "swift_type": "[PWDispositionStep]"
+        }
+      },
+      "input": false
+    },
+    "PWDispositionRunQuestions": {
+      "fields": {
+        "cleanup_trigger": {
+          "json_null": false,
+          "name": "cleanup_trigger",
+          "optional": true,
+          "swift_type": "PWDispositionClaim?"
+        },
+        "collection_basis": {
+          "json_null": false,
+          "name": "collection_basis",
+          "optional": true,
+          "swift_type": "PWDispositionClaim?"
+        },
+        "final_status": {
+          "json_null": false,
+          "name": "final_status",
+          "optional": true,
+          "swift_type": "PWDispositionClaim?"
+        },
+        "grace_end": {
+          "json_null": false,
+          "name": "grace_end",
+          "optional": true,
+          "swift_type": "PWDispositionClaim?"
+        },
+        "kill_request_and_result": {
+          "json_null": false,
+          "name": "kill_request_and_result",
+          "optional": true,
+          "swift_type": "PWDispositionClaim?"
+        },
+        "progress_association": {
+          "json_null": false,
+          "name": "progress_association",
+          "optional": true,
+          "swift_type": "PWDispositionClaim?"
+        },
+        "stop_reason": {
+          "json_null": false,
+          "name": "stop_reason",
+          "optional": true,
+          "swift_type": "PWDispositionClaim?"
+        }
+      },
+      "input": false
+    },
+    "PWDispositionStep": {
+      "fields": {
+        "attempt_support": {
+          "json_null": false,
+          "name": "attempt_support",
+          "optional": false,
+          "swift_type": "String"
+        },
+        "index": {
+          "json_null": false,
+          "name": "index",
+          "optional": false,
+          "swift_type": "Int"
+        },
+        "questions": {
+          "json_null": false,
+          "name": "questions",
+          "optional": false,
+          "swift_type": "PWDispositionStepQuestions"
+        },
+        "slot": {
+          "json_null": false,
+          "name": "slot",
+          "optional": false,
+          "swift_type": "String"
+        },
+        "step_id": {
+          "json_null": false,
+          "name": "step_id",
+          "optional": false,
+          "swift_type": "String"
+        }
+      },
+      "input": false
+    },
+    "PWDispositionStepQuestions": {
+      "fields": {
+        "step_boundary_reached": {
+          "json_null": false,
+          "name": "step_boundary_reached",
+          "optional": true,
+          "swift_type": "PWDispositionClaim?"
+        },
+        "step_requested_operation_applicability": {
+          "json_null": false,
+          "name": "step_requested_operation_applicability",
+          "optional": true,
+          "swift_type": "PWDispositionClaim?"
+        },
+        "step_result_published": {
+          "json_null": false,
+          "name": "step_result_published",
+          "optional": true,
+          "swift_type": "PWDispositionClaim?"
+        }
+      },
+      "input": false
+    },
+    "PWDispositionValue": {
+      "fields": {},
+      "input": false,
+      "variants": {
+        "Integer": "Int",
+        "Request": "PWRunnerTerminationRequest"
+      }
+    },
+    "PWExecCleanupObservation": {
+      "fields": {
+        "group_request": {
+          "json_null": false,
+          "name": "group_request",
+          "optional": true,
+          "swift_type": "PWExecSignalRequest?"
+        },
+        "leader_fallback": {
+          "json_null": false,
+          "name": "leader_fallback",
+          "optional": true,
+          "swift_type": "PWExecSignalRequest?"
+        },
+        "state": {
+          "json_null": false,
+          "name": "state",
+          "optional": false,
+          "swift_type": "String"
+        }
+      },
+      "input": false
+    },
+    "PWExecCollectionObservation": {
+      "fields": {
+        "clock_fault": {
+          "json_null": false,
+          "name": "clock_fault",
+          "optional": true,
+          "swift_type": "UInt32?"
+        },
+        "deadline_kind": {
+          "json_null": false,
+          "name": "deadline_kind",
+          "optional": true,
+          "swift_type": "String?"
+        },
+        "leader_exit_observed": {
+          "json_null": false,
+          "name": "leader_exit_observed",
+          "optional": false,
+          "swift_type": "Bool"
+        },
+        "poll_errno": {
+          "json_null": false,
+          "name": "poll_errno",
+          "optional": true,
+          "swift_type": "Int32?"
+        },
+        "stderr": {
+          "json_null": false,
+          "name": "stderr",
+          "optional": false,
+          "swift_type": "PWExecStreamObservation"
+        },
+        "stdout": {
+          "json_null": false,
+          "name": "stdout",
+          "optional": false,
+          "swift_type": "PWExecStreamObservation"
+        },
+        "stop_reason": {
+          "json_null": false,
+          "name": "stop_reason",
+          "optional": false,
+          "swift_type": "String"
+        },
+        "waitid_errno": {
+          "json_null": false,
+          "name": "waitid_errno",
+          "optional": true,
+          "swift_type": "Int32?"
+        }
+      },
+      "input": false
+    },
+    "PWExecObservation": {
+      "fields": {
+        "cleanup": {
+          "json_null": false,
+          "name": "cleanup",
+          "optional": false,
+          "swift_type": "PWExecCleanupObservation"
+        },
+        "collection": {
+          "json_null": false,
+          "name": "collection",
+          "optional": false,
+          "swift_type": "PWExecCollectionObservation"
+        },
+        "reap": {
+          "json_null": false,
+          "name": "reap",
+          "optional": false,
+          "swift_type": "PWExecReapObservation"
+        }
+      },
+      "input": false
+    },
+    "PWExecReapObservation": {
+      "fields": {
+        "clock_fault": {
+          "json_null": false,
+          "name": "clock_fault",
+          "optional": true,
+          "swift_type": "UInt32?"
+        },
+        "last_wait": {
+          "json_null": false,
+          "name": "last_wait",
+          "optional": false,
+          "swift_type": "PWExecWaitObservation"
+        },
+        "stop_reason": {
+          "json_null": false,
+          "name": "stop_reason",
+          "optional": false,
+          "swift_type": "String"
+        }
+      },
+      "input": false
+    },
+    "PWExecSignalRequest": {
+      "fields": {
+        "errno": {
+          "json_null": false,
+          "name": "errno",
+          "optional": true,
+          "swift_type": "Int32?"
+        },
+        "rc": {
+          "json_null": false,
+          "name": "rc",
+          "optional": false,
+          "swift_type": "Int32"
+        },
+        "signal": {
+          "json_null": false,
+          "name": "signal",
+          "optional": false,
+          "swift_type": "Int32"
+        },
+        "target": {
+          "json_null": false,
+          "name": "target",
+          "optional": false,
+          "swift_type": "Int32"
+        }
+      },
+      "input": false
+    },
+    "PWExecStreamObservation": {
+      "fields": {
+        "eof": {
+          "json_null": false,
+          "name": "eof",
+          "optional": false,
+          "swift_type": "Bool"
+        },
+        "poll_revents": {
+          "json_null": false,
+          "name": "poll_revents",
+          "optional": true,
+          "swift_type": "Int32?"
+        },
+        "read_errno": {
+          "json_null": false,
+          "name": "read_errno",
+          "optional": true,
+          "swift_type": "Int32?"
+        }
+      },
+      "input": false
+    },
+    "PWExecWaitObservation": {
+      "fields": {
+        "errno": {
+          "json_null": false,
+          "name": "errno",
+          "optional": true,
+          "swift_type": "Int32?"
+        },
+        "rc": {
+          "json_null": false,
+          "name": "rc",
+          "optional": false,
+          "swift_type": "Int32"
+        },
+        "status": {
+          "json_null": false,
+          "name": "status",
+          "optional": true,
+          "swift_type": "Int32?"
+        }
+      },
+      "input": false
+    },
+    "PWHostWait": {
+      "fields": {
+        "budget_ms": {
+          "json_null": false,
+          "name": "budget_ms",
+          "optional": false,
+          "swift_type": "Int"
+        },
+        "clock_fault": {
+          "json_null": false,
+          "name": "clock_fault",
+          "optional": false,
+          "swift_type": "Bool"
+        },
+        "elapsed_ms": {
+          "json_null": false,
+          "name": "elapsed_ms",
+          "optional": true,
+          "swift_type": "UInt64?"
+        },
+        "excluded_ms": {
+          "json_null": false,
+          "name": "excluded_ms",
+          "optional": true,
+          "swift_type": "UInt64?"
+        },
+        "native_errno": {
+          "json_null": false,
+          "name": "native_errno",
+          "optional": true,
+          "swift_type": "Int32?"
+        },
+        "stop": {
+          "json_null": false,
+          "name": "stop",
+          "optional": false,
+          "swift_type": "String"
+        }
+      },
+      "input": false
+    },
+    "PWOwnedReapObservation": {
+      "fields": {
+        "capture_ordinal": {
+          "json_null": false,
+          "name": "capture_ordinal",
+          "optional": false,
+          "swift_type": "UInt64"
+        },
+        "departure_requested": {
+          "json_null": false,
+          "name": "departure_requested",
+          "optional": false,
+          "swift_type": "Bool"
+        },
+        "native_rc": {
+          "json_null": false,
+          "name": "native_rc",
+          "optional": false,
+          "swift_type": "Int32"
+        },
+        "observed_ns": {
+          "json_null": false,
+          "name": "observed_ns",
+          "optional": true,
+          "swift_type": "UInt64?"
+        },
+        "ownership_unbroken": {
+          "json_null": false,
+          "name": "ownership_unbroken",
+          "optional": false,
+          "swift_type": "Bool"
+        },
+        "pid": {
+          "json_null": false,
+          "name": "pid",
+          "optional": false,
+          "swift_type": "Int"
+        },
+        "raw_status": {
+          "json_null": false,
+          "name": "raw_status",
+          "optional": false,
+          "swift_type": "Int32"
+        },
+        "stage": {
+          "json_null": false,
+          "name": "stage",
+          "optional": false,
+          "swift_type": "String"
+        }
+      },
+      "input": false
+    },
+    "PWOwnedReapReference": {
+      "fields": {
+        "capture_ordinal": {
+          "json_null": false,
+          "name": "capture_ordinal",
+          "optional": false,
+          "swift_type": "UInt64"
+        }
+      },
+      "input": false
+    },
+    "PWRunnerSpawnFailure": {
+      "fields": {
+        "diagnostic": {
+          "json_null": false,
+          "name": "diagnostic",
+          "optional": false,
+          "swift_type": "String"
+        },
+        "executable_path": {
+          "json_null": false,
+          "name": "executable_path",
+          "optional": false,
+          "swift_type": "String"
+        },
+        "operation": {
+          "json_null": false,
+          "name": "operation",
+          "optional": false,
+          "swift_type": "String"
+        },
+        "origin": {
+          "json_null": false,
+          "name": "origin",
+          "optional": false,
+          "swift_type": "String"
+        },
+        "return_code": {
+          "json_null": false,
+          "name": "return_code",
+          "optional": false,
+          "swift_type": "Int32"
+        }
+      },
+      "input": false
+    },
+    "PWRunnerSubprocess": {
+      "fields": {
+        "cleanup_trigger": {
+          "json_null": false,
+          "name": "cleanup_trigger",
+          "optional": true,
+          "swift_type": "String?"
+        },
+        "collection_basis": {
+          "json_null": false,
+          "name": "collection_basis",
+          "optional": true,
+          "swift_type": "String?"
+        },
+        "disposition": {
+          "json_null": false,
+          "name": "disposition",
+          "optional": true,
+          "swift_type": "PWDispositionRecord?"
+        },
+        "done_observed": {
+          "json_null": false,
+          "name": "done_observed",
+          "optional": true,
+          "swift_type": "Bool?"
+        },
+        "exit_code": {
+          "json_null": false,
+          "name": "exit_code",
+          "optional": true,
+          "swift_type": "Int?"
+        },
+        "exit_grace_wait": {
+          "json_null": false,
+          "name": "exit_grace_wait",
+          "optional": true,
+          "swift_type": "PWHostWait?"
+        },
+        "exit_requested": {
+          "json_null": false,
+          "name": "exit_requested",
+          "optional": true,
+          "swift_type": "Bool?"
+        },
+        "grace_end": {
+          "json_null": false,
+          "name": "grace_end",
+          "optional": true,
+          "swift_type": "String?"
+        },
+        "partial_steps": {
+          "json_null": false,
+          "name": "partial_steps",
+          "optional": false,
+          "swift_type": "Bool"
+        },
+        "pid": {
+          "json_null": false,
+          "name": "pid",
+          "optional": false,
+          "swift_type": "Int"
+        },
+        "policy_transfer_error": {
+          "json_null": false,
+          "name": "policy_transfer_error",
+          "optional": true,
+          "swift_type": "PWWorkerPolicyTransferError?"
+        },
+        "policy_transfer_timeout": {
+          "json_null": false,
+          "name": "policy_transfer_timeout",
+          "optional": true,
+          "swift_type": "PWWorkerPolicyTransferTimeout?"
+        },
+        "poll_stop_reason": {
+          "json_null": false,
+          "name": "poll_stop_reason",
+          "optional": true,
+          "swift_type": "String?"
+        },
+        "ready_byte_received": {
+          "json_null": false,
+          "name": "ready_byte_received",
+          "optional": true,
+          "swift_type": "Bool?"
+        },
+        "ready_wait": {
+          "json_null": false,
+          "name": "ready_wait",
+          "optional": true,
+          "swift_type": "PWHostWait?"
+        },
+        "reaped": {
+          "json_null": false,
+          "name": "reaped",
+          "optional": true,
+          "swift_type": "Bool?"
+        },
+        "sentinel_wait": {
+          "json_null": false,
+          "name": "sentinel_wait",
+          "optional": true,
+          "swift_type": "PWHostWait?"
+        },
+        "term_signal": {
+          "json_null": false,
+          "name": "term_signal",
+          "optional": true,
+          "swift_type": "Int?"
+        },
+        "termination_request": {
+          "json_null": false,
+          "name": "termination_request",
+          "optional": true,
+          "swift_type": "PWRunnerTerminationRequest?"
+        },
+        "wait_errors": {
+          "json_null": false,
+          "name": "wait_errors",
+          "optional": true,
+          "swift_type": "[PWRunnerWaitError]?"
+        },
+        "worker_evidence": {
+          "json_null": false,
+          "name": "worker_evidence",
+          "optional": true,
+          "swift_type": "PWWorkerEvidence?"
+        }
+      },
+      "input": false
+    },
+    "PWRunnerTerminationRequest": {
+      "fields": {
+        "errno": {
+          "json_null": false,
+          "name": "errno",
+          "optional": true,
+          "swift_type": "Int32?"
+        },
+        "rc": {
+          "json_null": false,
+          "name": "rc",
+          "optional": false,
+          "swift_type": "Int32"
+        },
+        "signal": {
+          "json_null": false,
+          "name": "signal",
+          "optional": false,
+          "swift_type": "Int32"
+        }
+      },
+      "input": false
+    },
+    "PWRunnerValidatorSubprocess": {
+      "fields": {
+        "association_issues": {
+          "json_null": false,
+          "name": "association_issues",
+          "optional": true,
+          "swift_type": "[PWValidatorAssociationIssue]?"
+        },
+        "decode_fault": {
+          "json_null": false,
+          "name": "decode_fault",
+          "optional": true,
+          "swift_type": "PWValidatorDecodeFault?"
+        },
+        "exit_code": {
+          "json_null": false,
+          "name": "exit_code",
+          "optional": true,
+          "swift_type": "Int?"
+        },
+        "exit_grace_wait": {
+          "json_null": false,
+          "name": "exit_grace_wait",
+          "optional": true,
+          "swift_type": "PWHostWait?"
+        },
+        "expected_step_ids": {
+          "json_null": false,
+          "name": "expected_step_ids",
+          "optional": true,
+          "swift_type": "[String]?"
+        },
+        "io_error": {
+          "json_null": false,
+          "name": "io_error",
+          "optional": true,
+          "swift_type": "String?"
+        },
+        "ordinal": {
+          "json_null": false,
+          "name": "ordinal",
+          "optional": true,
+          "swift_type": "Int?"
+        },
+        "phase_id": {
+          "json_null": false,
+          "name": "phase_id",
+          "optional": true,
+          "swift_type": "String?"
+        },
+        "pid": {
+          "json_null": false,
+          "name": "pid",
+          "optional": false,
+          "swift_type": "Int"
+        },
+        "probe_bytes_expected": {
+          "json_null": false,
+          "name": "probe_bytes_expected",
+          "optional": true,
+          "swift_type": "Int?"
+        },
+        "probe_bytes_written": {
+          "json_null": false,
+          "name": "probe_bytes_written",
+          "optional": true,
+          "swift_type": "Int?"
+        },
+        "read_error": {
+          "json_null": false,
+          "name": "read_error",
+          "optional": true,
+          "swift_type": "String?"
+        },
+        "reaped": {
+          "json_null": false,
+          "name": "reaped",
+          "optional": true,
+          "swift_type": "Bool?"
+        },
+        "records": {
+          "json_null": false,
+          "name": "records",
+          "optional": true,
+          "swift_type": "[ValidatorVerdict]?"
+        },
+        "stdout_bytes_received": {
+          "json_null": false,
+          "name": "stdout_bytes_received",
+          "optional": true,
+          "swift_type": "Int?"
+        },
+        "stdout_collection_stop": {
+          "json_null": false,
+          "name": "stdout_collection_stop",
+          "optional": true,
+          "swift_type": "String?"
+        },
+        "term_signal": {
+          "json_null": false,
+          "name": "term_signal",
+          "optional": true,
+          "swift_type": "Int?"
+        },
+        "termination_request": {
+          "json_null": false,
+          "name": "termination_request",
+          "optional": true,
+          "swift_type": "PWRunnerTerminationRequest?"
+        },
+        "wait_errors": {
+          "json_null": false,
+          "name": "wait_errors",
+          "optional": true,
+          "swift_type": "[PWRunnerWaitError]?"
+        }
+      },
+      "input": false
+    },
+    "PWRunnerWaitError": {
+      "fields": {
+        "errno": {
+          "json_null": false,
+          "name": "errno",
+          "optional": false,
+          "swift_type": "Int32"
+        },
+        "rc": {
+          "json_null": false,
+          "name": "rc",
+          "optional": false,
+          "swift_type": "Int32"
+        },
+        "stage": {
+          "json_null": false,
+          "name": "stage",
+          "optional": false,
+          "swift_type": "String"
+        }
+      },
+      "input": false
+    },
+    "PWValidatorAssociationIssue": {
+      "fields": {
+        "count": {
+          "json_null": false,
+          "name": "count",
+          "optional": false,
+          "swift_type": "Int"
+        },
+        "kind": {
+          "json_null": false,
+          "name": "kind",
+          "optional": false,
+          "swift_type": "String"
+        },
+        "origin": {
+          "json_null": false,
+          "name": "origin",
+          "optional": false,
+          "swift_type": "String"
+        },
+        "step_id": {
+          "json_null": false,
+          "name": "step_id",
+          "optional": true,
+          "swift_type": "String?"
+        }
+      },
+      "input": false
+    },
+    "PWValidatorDecodeFault": {
+      "fields": {
+        "byte_offset": {
+          "json_null": false,
+          "name": "byte_offset",
+          "optional": false,
+          "swift_type": "Int"
+        },
+        "context_b64": {
+          "json_null": false,
+          "name": "context_b64",
+          "optional": false,
+          "projection": "base64",
+          "swift_type": "Data"
+        },
+        "context_truncated": {
+          "json_null": false,
+          "name": "context_truncated",
+          "optional": false,
+          "swift_type": "Bool"
+        },
+        "frame_bytes": {
+          "json_null": false,
+          "name": "frame_bytes",
+          "optional": false,
+          "swift_type": "Int"
+        },
+        "kind": {
+          "json_null": false,
+          "name": "kind",
+          "optional": false,
+          "swift_type": "String"
+        },
+        "message": {
+          "json_null": false,
+          "name": "message",
+          "optional": false,
+          "swift_type": "String"
+        },
+        "origin": {
+          "json_null": false,
+          "name": "origin",
+          "optional": false,
+          "swift_type": "String"
+        },
+        "retained_bytes": {
+          "json_null": false,
+          "name": "retained_bytes",
+          "optional": false,
+          "swift_type": "Int"
+        }
+      },
+      "input": false
+    },
+    "PWWorkerDiagnostic": {
+      "fields": {
+        "length": {
+          "json_null": false,
+          "name": "length",
+          "optional": true,
+          "swift_type": "UInt32?"
+        },
+        "state": {
+          "json_null": false,
+          "name": "state",
+          "optional": false,
+          "swift_type": "UInt32"
+        },
+        "status": {
+          "json_null": false,
+          "name": "status",
+          "optional": false,
+          "swift_type": "String"
+        },
+        "text": {
+          "json_null": false,
+          "name": "text",
+          "optional": true,
+          "swift_type": "String?"
+        }
+      },
+      "input": false
+    },
+    "PWWorkerEvidence": {
+      "fields": {
+        "abi_identity": {
+          "json_null": false,
+          "name": "abi_identity",
+          "optional": false,
+          "projection": "hex",
+          "swift_type": "Data"
+        },
+        "diagnostic": {
+          "json_null": false,
+          "name": "diagnostic",
+          "optional": false,
+          "swift_type": "PWWorkerDiagnostic"
+        },
+        "failure": {
+          "json_null": false,
+          "name": "failure",
+          "optional": true,
+          "swift_type": "PWWorkerFailure?"
+        },
+        "failure_publication": {
+          "json_null": false,
+          "name": "failure_publication",
+          "optional": false,
+          "swift_type": "UInt32"
+        },
+        "failure_state": {
+          "json_null": false,
+          "name": "failure_state",
+          "optional": false,
+          "swift_type": "String"
+        },
+        "policy_read": {
+          "json_null": false,
+          "name": "policy_read",
+          "optional": true,
+          "swift_type": "PWWorkerPolicyRead?"
+        },
+        "progress": {
+          "json_null": false,
+          "name": "progress",
+          "optional": true,
+          "swift_type": "PWWorkerProgress?"
+        },
+        "readiness": {
+          "json_null": false,
+          "name": "readiness",
+          "optional": true,
+          "swift_type": "PWWorkerReadiness?"
+        }
+      },
+      "input": false
+    },
+    "PWWorkerFailure": {
+      "fields": {
+        "code": {
+          "json_null": false,
+          "name": "code",
+          "optional": false,
+          "swift_type": "UInt32"
+        },
+        "detail": {
+          "json_null": false,
+          "name": "detail",
+          "optional": false,
+          "swift_type": "UInt32"
+        },
+        "errno": {
+          "json_null": false,
+          "name": "errno",
+          "optional": true,
+          "swift_type": "Int32?"
+        },
+        "index": {
+          "json_null": false,
+          "name": "index",
+          "optional": true,
+          "swift_type": "UInt32?"
+        },
+        "native_kind": {
+          "json_null": false,
+          "name": "native_kind",
+          "optional": false,
+          "swift_type": "UInt32"
+        },
+        "native_result": {
+          "json_null": false,
+          "name": "native_result",
+          "optional": true,
+          "swift_type": "Int32?"
+        },
+        "operation": {
+          "json_null": false,
+          "name": "operation",
+          "optional": false,
+          "swift_type": "UInt32"
+        }
+      },
+      "input": false
+    },
+    "PWWorkerPolicyRead": {
+      "fields": {
+        "bytes_expected": {
+          "json_null": false,
+          "name": "bytes_expected",
+          "optional": false,
+          "swift_type": "Int"
+        },
+        "bytes_received": {
+          "json_null": false,
+          "name": "bytes_received",
+          "optional": false,
+          "swift_type": "Int"
+        }
+      },
+      "input": false
+    },
+    "PWWorkerPolicyTransferError": {
+      "fields": {
+        "bytes_expected": {
+          "json_null": false,
+          "name": "bytes_expected",
+          "optional": false,
+          "swift_type": "Int"
+        },
+        "bytes_written": {
+          "json_null": false,
+          "name": "bytes_written",
+          "optional": false,
+          "swift_type": "Int"
+        },
+        "errno": {
+          "json_null": false,
+          "name": "errno",
+          "optional": false,
+          "swift_type": "Int32"
+        }
+      },
+      "input": false
+    },
+    "PWWorkerPolicyTransferTimeout": {
+      "fields": {
+        "budget_ms": {
+          "json_null": false,
+          "name": "budget_ms",
+          "optional": false,
+          "swift_type": "Int"
+        },
+        "bytes_expected": {
+          "json_null": false,
+          "name": "bytes_expected",
+          "optional": false,
+          "swift_type": "Int"
+        },
+        "bytes_written": {
+          "json_null": false,
+          "name": "bytes_written",
+          "optional": false,
+          "swift_type": "Int"
+        },
+        "elapsed_ms": {
+          "json_null": false,
+          "name": "elapsed_ms",
+          "optional": false,
+          "swift_type": "UInt64"
+        }
+      },
+      "input": false
+    },
+    "PWWorkerProgress": {
+      "fields": {
+        "index": {
+          "json_null": false,
+          "name": "index",
+          "optional": true,
+          "swift_type": "UInt32?"
+        },
+        "operation": {
+          "json_null": false,
+          "name": "operation",
+          "optional": false,
+          "swift_type": "UInt32"
+        },
+        "raw": {
+          "json_null": false,
+          "name": "raw",
+          "optional": false,
+          "swift_type": "UInt32"
+        },
+        "stage": {
+          "json_null": false,
+          "name": "stage",
+          "optional": false,
+          "swift_type": "UInt32"
+        }
+      },
+      "input": false
+    },
+    "PWWorkerReadiness": {
+      "fields": {
+        "errno": {
+          "json_null": false,
+          "name": "errno",
+          "optional": true,
+          "swift_type": "Int32?"
+        },
+        "rc": {
+          "json_null": false,
+          "name": "rc",
+          "optional": false,
+          "swift_type": "Int32"
+        }
+      },
+      "input": false
     }
   }
 }

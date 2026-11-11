@@ -26,6 +26,7 @@ sys.dont_write_bytecode = True  # --check must not create import caches.
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 from generator_common import citation, cited_paths, require_test, format_value, render_spans, span_problems
 import markdown_reader
+import repository_tree
 
 ROOT = Path(__file__).resolve().parents[1]
 START = "<!-- BEGIN GENERATED LIMITS -->"
@@ -65,7 +66,7 @@ GUIDE_NAME = "PolicyWitness.md"
 # documents it renders or copies, the questions, the coverage document and the matrix. The reader's files are
 # added by input_paths.
 INPUTS = ("docs/generate_limits.py", "docs/generator_common.py", "tests/catalog.json", "docs/limits.json",
-          "docs/LIMITS.md", "docs/PolicyWitness.md", "docs/QUESTIONS.md", *SPAN_DOCUMENTS)
+          "docs/repository_tree.py", "docs/LIMITS.md", "docs/PolicyWitness.md", "docs/QUESTIONS.md", *SPAN_DOCUMENTS)
 CONTRACT_NAME = "tests/FAILURE-PROPAGATION-CONTRACT.md"
 MATRIX_NAME = "tests/fixtures/comparison/matrix.json"
 COMPARISON_KEYS = ("observation", "observation_basis", "operation_relation", "target_relation", "order", "limitations")
@@ -102,10 +103,16 @@ def unique_object(pairs):
     return result
 
 
+def span_documents(root=ROOT):
+    """Authored scalar destinations in the selected tree, including its surfaces."""
+    return (*SPAN_DOCUMENTS,
+            *repository_tree.Tree(root).inventory(repository_tree.CONTRACT_SURFACES))
+
+
 def input_paths(root):
     """Every path a run reads under root; discovery only, so a malformed manifest still reaches load_limits."""
     root = Path(root)
-    return sorted({*INPUTS, CONTRACT_NAME, MATRIX_NAME, *markdown_reader.source_files(root),
+    return sorted({*INPUTS, *span_documents(root), CONTRACT_NAME, MATRIX_NAME, *markdown_reader.source_files(root),
                    *cited_paths(root / "docs/limits.json")})
 
 
@@ -473,7 +480,7 @@ def main():
         contract_after = update_contract(render_spans(contract_before, "limits", span_values(limits), CONTRACT_NAME), rows)
         # Documents the limits generator touches only through authored spans.
         span_only = {}
-        for name in SPAN_DOCUMENTS:
+        for name in span_documents(ROOT):
             if name in ("docs/LIMITS.md", "docs/PolicyWitness.md", CONTRACT_NAME):
                 continue
             text = (ROOT / name).read_text()

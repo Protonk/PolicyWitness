@@ -299,7 +299,9 @@ Offline release controls also exercise the release procedure's decision points.
   control. Opt-in, with the same toolchain and identity requirements as the
   guard controls; it needs no Rosetta.
   A final release-battery sequence builds a fresh full ZIP and runs real
-  acceptance with the real default battery against its extracted app. Only
+  acceptance with the real default battery against its extracted app. Its
+  version and build number derive from the copied repository's new annotated
+  release tag and imported ancestry. Only
   notarization, staple validation and Gatekeeper responses are controlled;
   extraction, signatures, case execution and the full inventory comparison
   remain real. The nested output is copied intact into the case's artifacts.
@@ -364,7 +366,11 @@ Offline release controls also exercise the release procedure's decision points.
 
 - `release_publish_controls` exercises the three release tools against a real
   temporary repository with a bare `origin`, fixture ZIPs, attempts and run
-  records. Its ZIP members are real linker-signed Mach-O stand-ins whose
+  records. It also runs the make release/notarize entrypoints through a copied
+  preflight and a controlled build that stops before submission, checking fresh
+  mode, conflicting caller settings and the fixture's complete runtime inputs.
+  The full build-refusal case runs the same entrypoint control within its sequence.
+  Its ZIP members are real linker-signed Mach-O stand-ins whose
   load commands and signature facts the independent fixture writer records.
   The tag preflight must refuse an untagged or dirty tree, a
   lightweight tag, a remote holding a different tag, an unreachable remote and

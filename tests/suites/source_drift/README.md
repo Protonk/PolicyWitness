@@ -315,7 +315,8 @@ compiled-value and behavioral checks establish implementation agreement.
 - **G11. Prose citations use the rendered form and are verified.** A drift
   rule verifies, in every Markdown document it scans, the symbol behind each
   link whose text is a backticked symbol and whose target is not Markdown,
-  and resolves every `#anchor` against the target's headings.
+  and resolves every `#anchor` against the target's heading anchors and explicit
+  `<a id>` or `<a name>` destinations.
 
 For G9 and G11, distinguish implementation of the mechanism from its prose
 coverage. The baseline records sites outside each mechanism; coverage is
@@ -416,6 +417,9 @@ GitHub hides it.
 The `markdown_reader` case in [markdown.py](markdown.py) holds the reader to
 hand-written expectations for fences, indented code, list content, comments,
 links and images, headings and sections, anchors, tables and line ranges. It
+reads explicit anchor elements only from CommonMark HTML tokens, leaving code
+examples and comments out of the destination set. Explicit anchors preserve
+the duplicate suffixes computed for headings. It
 runs the import guard against stand-in packages and a changed version,
 compares every vendored file with its wheel's `RECORD` digest and refuses an
 import of either package anywhere else.
@@ -582,6 +586,16 @@ recollected with `docs/generate_contract_stamps.py --refresh-shapes` and reviewe
 The early build-refusal controls, including stale stamp tables, the native
 builder check and the make entry, are `preflight/build_entry_controls`.
 See [docs/CONTRACT.md](../../../docs/CONTRACT.md).
+
+The authoring controls exercise legal node nesting, field joins, typed
+references, applicability narrowing, explicit check order, effect scope,
+evidence grades and the free-text ratchet. They distinguish retained records
+from withheld assessments and public meanings from supporting metadata.
+The record-reader controls mutate source declarations and serialization forms;
+unrecognized forms refuse instead of supplying guessed types. Retained-reader
+controls use independent preimages for legacy regions and public snapshots,
+including missing-input and malformed-history refusals. These constructed
+controls establish generator behavior; their fixture rules are test inputs.
 
 The `build_contracts` case also checks the generated host/worker source
 identity and exercises relocation, deterministic regeneration, stale generated values, malformed

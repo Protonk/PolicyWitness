@@ -1,237 +1,206 @@
 {
-  "shape": {
-    "envelope": {
-      "build": "object",
-      "data": "object",
-      "generated_at_unix_ms": "number",
-      "kind": "string",
-      "result": "object"
+  "records": {
+    "rust.HelperEnvelope": {
+      "fields": {
+        "build": {
+          "json_null": false,
+          "name": "build",
+          "omission": null,
+          "optional": false,
+          "swift_type": "rust.BuildStamp"
+        },
+        "data": {
+          "json_null": false,
+          "name": "data",
+          "omission": null,
+          "optional": false,
+          "swift_type": "rust.CheckData"
+        },
+        "generated_at_unix_ms": {
+          "json_null": false,
+          "name": "generated_at_unix_ms",
+          "omission": null,
+          "optional": false,
+          "swift_type": "UInt64"
+        },
+        "kind": {
+          "json_null": false,
+          "name": "kind",
+          "omission": null,
+          "optional": false,
+          "swift_type": "String"
+        },
+        "result": {
+          "json_null": false,
+          "name": "result",
+          "omission": null,
+          "optional": false,
+          "swift_type": "rust.JsonResult"
+        }
+      },
+      "input": false
     },
-    "envelope.build": {
-      "commit": "string",
-      "contract": "string",
-      "describe": "string",
-      "number": "string",
-      "version": "string"
+    "rust.JsonResult": {
+      "fields": {
+        "errno": {
+          "json_null": true,
+          "name": "errno",
+          "omission": null,
+          "optional": true,
+          "swift_type": "Int64?"
+        },
+        "error": {
+          "json_null": true,
+          "name": "error",
+          "omission": null,
+          "optional": true,
+          "swift_type": "String?"
+        },
+        "exit_code": {
+          "json_null": true,
+          "name": "exit_code",
+          "omission": null,
+          "optional": true,
+          "swift_type": "Int64?"
+        },
+        "normalized_outcome": {
+          "json_null": true,
+          "name": "normalized_outcome",
+          "omission": null,
+          "optional": true,
+          "swift_type": "String?"
+        },
+        "ok": {
+          "json_null": false,
+          "name": "ok",
+          "omission": null,
+          "optional": false,
+          "swift_type": "Bool"
+        },
+        "rc": {
+          "json_null": true,
+          "name": "rc",
+          "omission": null,
+          "optional": true,
+          "swift_type": "Int64?"
+        },
+        "stderr": {
+          "json_null": true,
+          "name": "stderr",
+          "omission": null,
+          "optional": true,
+          "swift_type": "String?"
+        },
+        "stdout": {
+          "json_null": true,
+          "name": "stdout",
+          "omission": null,
+          "optional": true,
+          "swift_type": "String?"
+        }
+      },
+      "input": false
     },
-    "envelope.data": {
-      "actor_policy_checks": "array",
-      "policy_check": "object",
-      "runner_result": "object",
-      "runner_sandbox_diagnostics": "object",
-      "timeout_ms": "number"
+    "rust.RunData": {
+      "fields": {
+        "actor_policy_checks": {
+          "json_null": false,
+          "name": "actor_policy_checks",
+          "omission": "Option::is_none",
+          "optional": true,
+          "swift_type": "[rust.ActorPolicyCheck]?"
+        },
+        "policy_check": {
+          "json_null": true,
+          "name": "policy_check",
+          "omission": null,
+          "optional": true,
+          "swift_type": "rust.PolicyCheckCapture?"
+        },
+        "request_failure": {
+          "json_null": false,
+          "name": "request_failure",
+          "omission": "Option::is_none",
+          "optional": true,
+          "swift_type": "rust.RequestFailureProjection?"
+        },
+        "runner_client": {
+          "json_null": true,
+          "name": "runner_client",
+          "omission": null,
+          "optional": true,
+          "swift_type": "rust.RunnerClientRun?"
+        },
+        "runner_result": {
+          "json_null": true,
+          "name": "runner_result",
+          "omission": null,
+          "optional": true,
+          "swift_type": "PWRunnerRunResult?"
+        },
+        "runner_sandbox_diagnostics": {
+          "json_null": true,
+          "name": "runner_sandbox_diagnostics",
+          "omission": null,
+          "optional": true,
+          "swift_type": "rust.RunnerExecutionDiagnostics?"
+        },
+        "specimen": {
+          "json_null": false,
+          "name": "specimen",
+          "omission": null,
+          "optional": false,
+          "swift_type": "rust.Specimen"
+        },
+        "timeout_ms": {
+          "json_null": true,
+          "name": "timeout_ms",
+          "omission": null,
+          "optional": true,
+          "swift_type": "UInt64?"
+        }
+      },
+      "input": false
     },
-    "envelope.data.actor_policy_checks[]": {
-      "actor_id": "string",
-      "policy_check": "object"
-    },
-    "envelope.data.actor_policy_checks[].policy_check": {
-      "capture_limit_bytes": "number",
-      "envelope": "object",
-      "status": "string",
-      "stderr": "string",
-      "stderr_bytes_received": "number",
-      "stderr_bytes_retained": "number",
-      "stderr_truncated": "boolean",
-      "stdout_bytes_received": "number",
-      "stdout_bytes_retained": "number",
-      "stdout_capture_error": "string",
-      "stdout_parse_error": "string",
-      "stdout_raw": "string",
-      "stdout_truncated": "boolean",
-      "tool_exit_code": "number"
-    },
-    "envelope.data.actor_policy_checks[].policy_check.envelope": {
-      "build": "object",
-      "data": "object",
-      "generated_at_unix_ms": "number",
-      "kind": "string",
-      "result": "object"
-    },
-    "envelope.data.actor_policy_checks[].policy_check.envelope.build": {
-      "commit": "string",
-      "contract": "string",
-      "describe": "string",
-      "number": "string",
-      "version": "string"
-    },
-    "envelope.data.actor_policy_checks[].policy_check.envelope.data": {
-      "compile": "object",
-      "import_inventory": "object",
-      "macos_build_version": "string",
-      "params_count": "number",
-      "params_present": "boolean",
-      "policy_format": "string",
-      "policy_sha256": "string"
-    },
-    "envelope.data.actor_policy_checks[].policy_check.envelope.data.compile": {
-      "error": "string",
-      "ok": "boolean",
-      "stage": "string"
-    },
-    "envelope.data.actor_policy_checks[].policy_check.envelope.data.import_inventory": {
-      "cycle": "array",
-      "policy_closure_sha256": "string",
-      "records": "array",
-      "truncated": "boolean"
-    },
-    "envelope.data.actor_policy_checks[].policy_check.envelope.data.import_inventory.records[]": {
-      "error": "string",
-      "mtime_unix": "number",
-      "name": "string",
-      "resolved_path": "string",
-      "sha256": "string",
-      "size_bytes": "number"
-    },
-    "envelope.data.actor_policy_checks[].policy_check.envelope.result": {
-      "errno": "number",
-      "error": "string",
-      "exit_code": "number",
-      "normalized_outcome": "string",
-      "ok": "boolean",
-      "rc": "number",
-      "stderr": "string",
-      "stdout": "string"
-    },
-    "envelope.data.policy_check": {
-      "capture_limit_bytes": "number",
-      "envelope": "object",
-      "status": "string",
-      "stderr": "string",
-      "stderr_bytes_received": "number",
-      "stderr_bytes_retained": "number",
-      "stderr_truncated": "boolean",
-      "stdout_bytes_received": "number",
-      "stdout_bytes_retained": "number",
-      "stdout_capture_error": "string",
-      "stdout_parse_error": "string",
-      "stdout_raw": "string",
-      "stdout_truncated": "boolean",
-      "tool_exit_code": "number"
-    },
-    "envelope.data.policy_check.envelope": {
-      "build": "object",
-      "data": "object",
-      "generated_at_unix_ms": "number",
-      "kind": "string",
-      "result": "object"
-    },
-    "envelope.data.policy_check.envelope.build": {
-      "commit": "string",
-      "contract": "string",
-      "describe": "string",
-      "number": "string",
-      "version": "string"
-    },
-    "envelope.data.policy_check.envelope.data": {
-      "compile": "object",
-      "import_inventory": "object",
-      "macos_build_version": "string",
-      "params_count": "number",
-      "params_present": "boolean",
-      "policy_format": "string",
-      "policy_sha256": "string"
-    },
-    "envelope.data.policy_check.envelope.data.compile": {
-      "error": "string",
-      "ok": "boolean",
-      "stage": "string"
-    },
-    "envelope.data.policy_check.envelope.data.import_inventory": {
-      "cycle": "array",
-      "policy_closure_sha256": "string",
-      "records": "array",
-      "truncated": "boolean"
-    },
-    "envelope.data.policy_check.envelope.data.import_inventory.records[]": {
-      "error": "string",
-      "mtime_unix": "number",
-      "name": "string",
-      "resolved_path": "string",
-      "sha256": "string",
-      "size_bytes": "number"
-    },
-    "envelope.data.policy_check.envelope.result": {
-      "errno": "number",
-      "error": "string",
-      "exit_code": "number",
-      "normalized_outcome": "string",
-      "ok": "boolean",
-      "rc": "number",
-      "stderr": "string",
-      "stdout": "string"
-    },
-    "envelope.data.runner_sandbox_diagnostics": {
-      "actors": "array",
-      "disposition_integrity": "string",
-      "disposition_issues": "array",
-      "process_disposition": "string",
-      "stop_reason": "string",
-      "termination_cause": "string"
-    },
-    "envelope.data.runner_sandbox_diagnostics.actors[]": {
-      "actor_id": "string",
-      "disposition_integrity": "string",
-      "disposition_issues": "array",
-      "process_disposition": "string",
-      "stop_reason": "string",
-      "termination_cause": "string"
-    },
-    "envelope.data.runner_sandbox_diagnostics.actors[].disposition_issues[]": {
-      "detail": "string",
-      "kind": "string"
-    },
-    "envelope.data.runner_sandbox_diagnostics.disposition_issues[]": {
-      "detail": "string",
-      "kind": "string"
-    },
-    "envelope.result": {
-      "errno": "number",
-      "error": "string",
-      "exit_code": "number",
-      "normalized_outcome": "string",
-      "ok": "boolean",
-      "rc": "number",
-      "stderr": "string",
-      "stdout": "string"
-    },
-    "reply": {
-      "bundle_id": "string",
-      "error": "string",
-      "execution_form": "string",
-      "normalized_outcome": "string",
-      "pid": "number",
-      "policy_format": "string",
-      "policy_sha256": "string",
-      "preparation_failure": "object",
-      "producer": "object",
-      "rc": "number",
-      "run_kind": "string",
-      "specimen_id": "string",
-      "test_overrides": "object"
-    },
-    "reply.preparation_failure": {
-      "actor_id": "string",
-      "binding_ref": "number",
-      "code": "string",
-      "reason": "string",
-      "stage": "string"
-    },
-    "reply.producer": {
-      "commit": "string",
-      "contract": "string",
-      "describe": "string"
-    },
-    "reply.test_overrides": {
-      "validator_executable_path": "string",
-      "validator_io_timeout_ms": "number",
-      "validator_total_timeout_ms": "number",
-      "worker_executable_path": "string",
-      "worker_kill_before_publish_slot": "number",
-      "worker_post_apply_hang_ms": "number",
-      "worker_post_apply_kill_signal": "number",
-      "worker_pre_ready_hang_ms": "number",
-      "worker_timeout_ms": "number"
+    "rust.RunEnvelope": {
+      "fields": {
+        "build": {
+          "json_null": false,
+          "name": "build",
+          "omission": null,
+          "optional": false,
+          "swift_type": "rust.BuildStamp"
+        },
+        "data": {
+          "json_null": false,
+          "name": "data",
+          "omission": null,
+          "optional": false,
+          "swift_type": "rust.RunData"
+        },
+        "generated_at_unix_ms": {
+          "json_null": false,
+          "name": "generated_at_unix_ms",
+          "omission": null,
+          "optional": false,
+          "swift_type": "UInt64"
+        },
+        "kind": {
+          "json_null": false,
+          "name": "kind",
+          "omission": null,
+          "optional": false,
+          "swift_type": "String"
+        },
+        "result": {
+          "json_null": false,
+          "name": "result",
+          "omission": null,
+          "optional": false,
+          "swift_type": "rust.JsonResult"
+        }
+      },
+      "input": false
     }
   }
 }

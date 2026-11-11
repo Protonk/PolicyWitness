@@ -65,6 +65,78 @@ class LimitsDocumentationTests(receipts.TestCase):
         result = self.command(ROOT, '--check')
         self.assertEqual(result.returncode, 0, result.stderr)
 
+    def test_contract_sources_render_public_spans_and_leave_support_and_examples(self):
+        root = self.checkout()
+        name = 'docs/contract/zz-limit-control.surface.md'
+        path = root / name
+        path.parent.mkdir(parents=True, exist_ok=True)
+        text = '''# Scalar control {scalar: surface}
+
+Public allowance <!-- span limits.step_id.value -->STALE_PUBLIC<!-- /span --> UTF-8 bytes.
+
+```contract
+free.effect: Retain <!-- span limits.step_id.value -->STALE_FREE<!-- /span --> UTF-8 bytes.
+context: "Metadata <!-- span limits.unknown -->unchanged<!-- /span -->"
+```
+
+## Evidence owner {support: owner}
+
+Support <!-- span limits.unknown -->unchanged<!-- /span -->.
+
+```contract
+free.effect: Owner metadata <!-- span limits.unknown -->unchanged<!-- /span -->.
+```
+
+## Public example {example: example}
+
+```text
+<!-- span limits.unknown -->unchanged<!-- /span -->
+```
+
+<!-- BEGIN GENERATED FALSE_SOURCE_CLAIM -->
+An authored source still has <!-- span limits.step_id.value -->STALE_PUBLIC<!-- /span --> UTF-8 bytes.
+<!-- END GENERATED FALSE_SOURCE_CLAIM -->
+'''
+        path.write_text(text)
+        nested_name = 'docs/contract/nested/ignored.surface.md'
+        nested = root / nested_name
+        nested.parent.mkdir()
+        nested.write_text('Value <!-- span limits.unknown -->unchanged<!-- /span -->.\n')
+        self.track_inputs(root, [name, nested_name])
+        self.assertIn(name, generator.span_documents(root))
+        self.assertIn(name, generator.input_paths(root))
+        self.assertNotIn(nested_name, generator.span_documents(root))
+        self.assertNotIn(nested_name, generator.input_paths(root))
+
+        destination = root / 'staged-guide.md'
+        destination.write_text('previous staged guide')
+        before = {p: p.read_bytes() for p in root.rglob('*') if p.is_file()}
+        for args in (('--check',), ('--stage-guide', str(destination))):
+            result = self.command(root, *args)
+            self.assertNotEqual(result.returncode, 0)
+            self.assertIn(name, result.stderr)
+            self.assertIn('stale span limits.step_id.value', result.stderr)
+            self.assertEqual({p: p.read_bytes() for p in before}, before)
+        result = self.command(root)
+        self.assertEqual(result.returncode, 0, result.stderr)
+        value = next(row['value'] for row in self.manifest['limits'] if row['id'] == 'step_id')
+        expected = text.replace('STALE_PUBLIC', str(value)).replace('STALE_FREE', str(value))
+        self.assertEqual(path.read_text(), expected)
+        self.assertEqual(nested.read_bytes(), before[nested])
+        result = self.command(root, '--check')
+        self.assertEqual(result.returncode, 0, result.stderr)
+        original_mtime = path.stat().st_mtime_ns
+        self.assertEqual(self.command(root).returncode, 0)
+        self.assertEqual(path.stat().st_mtime_ns, original_mtime)
+
+        path.write_text(expected.replace('limits.step_id.value', 'limits.unknown', 1))
+        before = {p: p.read_bytes() for p in root.rglob('*') if p.is_file()}
+        for args in (('--check',), ()):
+            result = self.command(root, *args)
+            self.assertNotEqual(result.returncode, 0)
+            self.assertIn('unknown span limits.unknown', result.stderr)
+            self.assertEqual({p: p.read_bytes() for p in before}, before)
+
     def test_matrix_table_equals_the_generator_output_for_every_fixture_row(self):
         rows = generator.load_matrix(ROOT / generator.MATRIX_NAME)
         self.assertEqual(self.contract, generator.update_contract(self.contract, rows))

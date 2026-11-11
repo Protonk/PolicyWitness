@@ -1,0 +1,145 @@
+{
+  "records": {
+    "rust.ActorExecutionDiagnostics": {
+      "fields": {
+        "actor_id": {
+          "json_null": true,
+          "name": "actor_id",
+          "omission": null,
+          "optional": true,
+          "swift_type": "String?"
+        },
+        "disposition_integrity": {
+          "json_null": true,
+          "name": "disposition_integrity",
+          "omission": null,
+          "optional": true,
+          "swift_type": "String?"
+        },
+        "disposition_issues": {
+          "json_null": false,
+          "name": "disposition_issues",
+          "omission": null,
+          "optional": false,
+          "swift_type": "[rust.IntegrityIssue]"
+        },
+        "process_disposition": {
+          "json_null": false,
+          "name": "process_disposition",
+          "omission": null,
+          "optional": false,
+          "swift_type": "String"
+        },
+        "stop_reason": {
+          "json_null": true,
+          "name": "stop_reason",
+          "omission": null,
+          "optional": true,
+          "swift_type": "String?"
+        },
+        "termination_cause": {
+          "json_null": true,
+          "name": "termination_cause",
+          "omission": null,
+          "optional": true,
+          "swift_type": "String?"
+        }
+      },
+      "input": false
+    },
+    "rust.IntegrityIssue": {
+      "fields": {
+        "detail": {
+          "json_null": false,
+          "name": "detail",
+          "omission": null,
+          "optional": false,
+          "swift_type": "String"
+        },
+        "kind": {
+          "json_null": false,
+          "name": "kind",
+          "omission": null,
+          "optional": false,
+          "swift_type": "String"
+        },
+        "observations": {
+          "json_null": false,
+          "name": "observations",
+          "omission": "Option::is_none",
+          "optional": true,
+          "swift_type": "[String]?"
+        },
+        "question": {
+          "json_null": false,
+          "name": "question",
+          "omission": "Option::is_none",
+          "optional": true,
+          "swift_type": "String?"
+        },
+        "rule": {
+          "json_null": false,
+          "name": "rule",
+          "omission": "Option::is_none",
+          "optional": true,
+          "swift_type": "String?"
+        },
+        "step_index": {
+          "json_null": false,
+          "name": "step_index",
+          "omission": "Option::is_none",
+          "optional": true,
+          "swift_type": "Int64?"
+        }
+      },
+      "input": false
+    },
+    "rust.RunnerExecutionDiagnostics": {
+      "fields": {
+        "actors": {
+          "json_null": false,
+          "name": "actors",
+          "omission": "Option::is_none",
+          "optional": true,
+          "swift_type": "[rust.ActorExecutionDiagnostics]?"
+        },
+        "disposition_integrity": {
+          "json_null": true,
+          "name": "disposition_integrity",
+          "omission": null,
+          "optional": true,
+          "swift_type": "String?"
+        },
+        "disposition_issues": {
+          "json_null": false,
+          "name": "disposition_issues",
+          "omission": null,
+          "optional": false,
+          "swift_type": "[rust.IntegrityIssue]"
+        },
+        "process_disposition": {
+          "json_null": false,
+          "name": "process_disposition",
+          "omission": null,
+          "optional": false,
+          "swift_type": "String"
+        },
+        "stop_reason": {
+          "json_null": true,
+          "name": "stop_reason",
+          "omission": null,
+          "optional": true,
+          "swift_type": "String?"
+        },
+        "termination_cause": {
+          "json_null": true,
+          "name": "termination_cause",
+          "omission": null,
+          "optional": true,
+          "swift_type": "String?"
+        }
+      },
+      "input": false
+    }
+  }
+}

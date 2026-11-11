@@ -1,12 +1,318 @@
 {
-  "closed_keys": {
-    "PWRunnerPolicySpec": [
-      "augments",
-      "capture_compiled_profile",
-      "capture_nonce",
-      "format",
-      "params",
-      "sbpl_source"
-    ]
+  "records": {
+    "PWRunnerPolicySpec": {
+      "fields": {
+        "augments": {
+          "json_null": false,
+          "name": "augments",
+          "optional": true,
+          "swift_type": "[String]?"
+        },
+        "capture_compiled_profile": {
+          "json_null": false,
+          "name": "capture_compiled_profile",
+          "optional": true,
+          "swift_type": "Bool?"
+        },
+        "capture_nonce": {
+          "json_null": false,
+          "name": "capture_nonce",
+          "optional": true,
+          "swift_type": "String?"
+        },
+        "format": {
+          "json_null": false,
+          "name": "format",
+          "optional": false,
+          "swift_type": "String"
+        },
+        "params": {
+          "json_null": false,
+          "name": "params",
+          "optional": true,
+          "swift_type": "[String: String]?"
+        },
+        "sbpl_source": {
+          "json_null": false,
+          "name": "sbpl_source",
+          "optional": true,
+          "swift_type": "String?"
+        }
+      },
+      "input": true
+    },
+    "rust.ActorPolicyCheck": {
+      "fields": {
+        "actor_id": {
+          "json_null": true,
+          "name": "actor_id",
+          "omission": null,
+          "optional": true,
+          "swift_type": "String?"
+        },
+        "policy_check": {
+          "json_null": false,
+          "name": "policy_check",
+          "omission": null,
+          "optional": false,
+          "swift_type": "rust.PolicyCheckCapture"
+        }
+      },
+      "input": false
+    },
+    "rust.CheckData": {
+      "fields": {
+        "compile": {
+          "json_null": true,
+          "name": "compile",
+          "omission": null,
+          "optional": true,
+          "swift_type": "rust.CompileRecord?"
+        },
+        "import_inventory": {
+          "json_null": true,
+          "name": "import_inventory",
+          "omission": null,
+          "optional": true,
+          "swift_type": "rust.ImportInventory?"
+        },
+        "macos_build_version": {
+          "json_null": true,
+          "name": "macos_build_version",
+          "omission": null,
+          "optional": true,
+          "swift_type": "String?"
+        },
+        "params_count": {
+          "json_null": false,
+          "name": "params_count",
+          "omission": null,
+          "optional": false,
+          "swift_type": "UInt64"
+        },
+        "params_present": {
+          "json_null": false,
+          "name": "params_present",
+          "omission": null,
+          "optional": false,
+          "swift_type": "Bool"
+        },
+        "policy_format": {
+          "json_null": false,
+          "name": "policy_format",
+          "omission": null,
+          "optional": false,
+          "swift_type": "String"
+        },
+        "policy_sha256": {
+          "json_null": true,
+          "name": "policy_sha256",
+          "omission": null,
+          "optional": true,
+          "swift_type": "String?"
+        }
+      },
+      "input": false
+    },
+    "rust.CheckPolicy": {
+      "fields": {
+        "format": {
+          "json_null": false,
+          "name": "format",
+          "omission": null,
+          "optional": false,
+          "swift_type": "String"
+        },
+        "params": {
+          "json_null": true,
+          "name": "params",
+          "omission": null,
+          "optional": true,
+          "swift_type": "[String: String]?"
+        },
+        "sbpl_source": {
+          "json_null": true,
+          "name": "sbpl_source",
+          "omission": null,
+          "optional": true,
+          "swift_type": "String?"
+        }
+      },
+      "input": true
+    },
+    "rust.CheckRequest": {
+      "fields": {
+        "policy": {
+          "json_null": false,
+          "name": "policy",
+          "omission": null,
+          "optional": false,
+          "swift_type": "rust.CheckPolicy"
+        }
+      },
+      "input": true
+    },
+    "rust.CompileRecord": {
+      "fields": {
+        "error": {
+          "json_null": true,
+          "name": "error",
+          "omission": null,
+          "optional": true,
+          "swift_type": "String?"
+        },
+        "ok": {
+          "json_null": false,
+          "name": "ok",
+          "omission": null,
+          "optional": false,
+          "swift_type": "Bool"
+        },
+        "stage": {
+          "json_null": false,
+          "name": "stage",
+          "omission": null,
+          "optional": false,
+          "swift_type": "String"
+        }
+      },
+      "input": false
+    },
+    "rust.ImportInventory": {
+      "fields": {
+        "cycle": {
+          "json_null": true,
+          "name": "cycle",
+          "omission": null,
+          "optional": true,
+          "swift_type": "[String]?"
+        },
+        "policy_closure_sha256": {
+          "json_null": false,
+          "name": "policy_closure_sha256",
+          "omission": null,
+          "optional": false,
+          "swift_type": "String"
+        },
+        "records": {
+          "json_null": false,
+          "name": "records",
+          "omission": null,
+          "optional": false,
+          "swift_type": "[rust.ImportRecord]"
+        },
+        "truncated": {
+          "json_null": false,
+          "name": "truncated",
+          "omission": null,
+          "optional": false,
+          "swift_type": "Bool"
+        }
+      },
+      "input": false
+    },
+    "rust.PolicyCheckCapture": {
+      "fields": {
+        "capture_limit_bytes": {
+          "json_null": false,
+          "name": "capture_limit_bytes",
+          "omission": null,
+          "optional": false,
+          "swift_type": "UInt64"
+        },
+        "envelope": {
+          "json_null": true,
+          "name": "envelope",
+          "omission": null,
+          "optional": true,
+          "swift_type": "JSON?"
+        },
+        "status": {
+          "json_null": false,
+          "name": "status",
+          "omission": null,
+          "optional": false,
+          "swift_type": "String"
+        },
+        "stderr": {
+          "json_null": false,
+          "name": "stderr",
+          "omission": null,
+          "optional": false,
+          "swift_type": "String"
+        },
+        "stderr_bytes_received": {
+          "json_null": true,
+          "name": "stderr_bytes_received",
+          "omission": null,
+          "optional": true,
+          "swift_type": "UInt64?"
+        },
+        "stderr_bytes_retained": {
+          "json_null": true,
+          "name": "stderr_bytes_retained",
+          "omission": null,
+          "optional": true,
+          "swift_type": "UInt64?"
+        },
+        "stderr_truncated": {
+          "json_null": false,
+          "name": "stderr_truncated",
+          "omission": null,
+          "optional": false,
+          "swift_type": "Bool"
+        },
+        "stdout_bytes_received": {
+          "json_null": true,
+          "name": "stdout_bytes_received",
+          "omission": null,
+          "optional": true,
+          "swift_type": "UInt64?"
+        },
+        "stdout_bytes_retained": {
+          "json_null": true,
+          "name": "stdout_bytes_retained",
+          "omission": null,
+          "optional": true,
+          "swift_type": "UInt64?"
+        },
+        "stdout_capture_error": {
+          "json_null": true,
+          "name": "stdout_capture_error",
+          "omission": null,
+          "optional": true,
+          "swift_type": "String?"
+        },
+        "stdout_parse_error": {
+          "json_null": true,
+          "name": "stdout_parse_error",
+          "omission": null,
+          "optional": true,
+          "swift_type": "String?"
+        },
+        "stdout_raw": {
+          "json_null": true,
+          "name": "stdout_raw",
+          "omission": null,
+          "optional": true,
+          "swift_type": "String?"
+        },
+        "stdout_truncated": {
+          "json_null": false,
+          "name": "stdout_truncated",
+          "omission": null,
+          "optional": false,
+          "swift_type": "Bool"
+        },
+        "tool_exit_code": {
+          "json_null": false,
+          "name": "tool_exit_code",
+          "omission": null,
+          "optional": false,
+          "swift_type": "Int64"
+        }
+      },
+      "input": false
+    }
   }
 }

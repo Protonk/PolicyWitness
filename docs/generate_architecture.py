@@ -38,7 +38,7 @@ GENERATOR_NAME = "docs/generate_architecture.py"
 SPAN_DOCUMENTS = ("docs/ARCHITECTURE.md", "docs/WORKER.md")
 # What a run reads besides the files the manifests cite and the figures: this generator and its helpers, the
 # limits manifest it resolves placeholders through, and the span documents. The reader's files are added by input_paths.
-INPUTS = (GENERATOR_NAME, "docs/generator_common.py", "docs/generate_limits.py", "docs/limits.json", "tests/catalog.json",
+INPUTS = (GENERATOR_NAME, "docs/generator_common.py", "docs/generate_limits.py", "docs/repository_tree.py", "docs/limits.json", "tests/catalog.json",
           MANIFEST_NAME, *SPAN_DOCUMENTS)
 REGION_START = "<!-- BEGIN GENERATED ARCHITECTURE GRAPH {graph} -->"
 REGION_END = "<!-- END GENERATED ARCHITECTURE GRAPH {graph} -->"

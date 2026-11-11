@@ -1,366 +1,726 @@
 {
-  "shape": {
-    "reply": {
-      "actors": "array",
-      "authority_setup": "object",
-      "equipment_bindings": "array",
-      "equipment_entitlements": "array",
-      "equipment_inventory": "object",
-      "extension_events": "array",
-      "resources": "object",
-      "transfers": "array"
+  "records": {
+    "ActorEquipmentManifest": {
+      "fields": {
+        "contract": {
+          "json_null": false,
+          "name": "contract",
+          "optional": false,
+          "swift_type": "String"
+        },
+        "schema_version": {
+          "json_null": false,
+          "name": "schema_version",
+          "optional": false,
+          "swift_type": "Int"
+        },
+        "unsigned_worker_sha256": {
+          "json_null": false,
+          "name": "unsigned_worker_sha256",
+          "optional": false,
+          "swift_type": "String"
+        },
+        "worker_identity": {
+          "json_null": false,
+          "name": "worker_identity",
+          "optional": false,
+          "swift_type": "String"
+        },
+        "workers": {
+          "json_null": false,
+          "name": "workers",
+          "optional": false,
+          "swift_type": "[ActorEquipmentManifest.Worker]"
+        }
+      },
+      "input": true
     },
-    "reply.actors[]": {
-      "actor_id": "string",
-      "application": "object",
-      "application_count": "number",
-      "applied": "boolean",
-      "equipment": "object",
-      "index": "number",
-      "launch": "object",
-      "mode": "string",
-      "owned_reap": "object",
-      "policy_format": "string",
-      "policy_received_sha256": "string",
-      "policy_sha256": "string",
-      "setup_status": "string",
-      "visits": "array"
+    "ActorEquipmentManifest.Worker": {
+      "fields": {
+        "cdhash": {
+          "json_null": false,
+          "name": "cdhash",
+          "optional": false,
+          "swift_type": "String"
+        },
+        "entitlements_xml": {
+          "json_null": false,
+          "name": "entitlements_xml",
+          "optional": false,
+          "swift_type": "String"
+        },
+        "identifier": {
+          "json_null": false,
+          "name": "identifier",
+          "optional": false,
+          "swift_type": "String"
+        },
+        "relative_path": {
+          "json_null": false,
+          "name": "relative_path",
+          "optional": false,
+          "swift_type": "String"
+        },
+        "role": {
+          "json_null": false,
+          "name": "role",
+          "optional": false,
+          "swift_type": "String"
+        },
+        "sha256": {
+          "json_null": false,
+          "name": "sha256",
+          "optional": false,
+          "swift_type": "String"
+        },
+        "team_id": {
+          "json_null": true,
+          "name": "team_id",
+          "optional": true,
+          "required_key": true,
+          "swift_type": "String?"
+        }
+      },
+      "input": true
     },
-    "reply.actors[].application": {
-      "basis": "string",
-      "state": "string"
+    "PWAuthorityCleanupReference": {
+      "fields": {
+        "host_pid": {
+          "json_null": false,
+          "name": "host_pid",
+          "optional": false,
+          "swift_type": "Int"
+        },
+        "kind": {
+          "json_null": false,
+          "name": "kind",
+          "optional": false,
+          "swift_type": "String"
+        },
+        "name": {
+          "json_null": false,
+          "name": "name",
+          "optional": false,
+          "swift_type": "String"
+        },
+        "recovery_state": {
+          "json_null": false,
+          "name": "recovery_state",
+          "optional": false,
+          "swift_type": "String"
+        },
+        "session_nonce": {
+          "json_null": false,
+          "name": "session_nonce",
+          "optional": false,
+          "swift_type": "UInt64"
+        }
+      },
+      "input": false
     },
-    "reply.actors[].equipment": {
-      "binding_ref": "number",
-      "execution": "object",
-      "missing_requirements": "array",
-      "requested": "string",
-      "required_entitlements": "array",
-      "requirements_status": "string",
-      "resolved": "string"
+    "PWRunnerActorEquipment": {
+      "fields": {
+        "binding_ref": {
+          "json_null": true,
+          "name": "binding_ref",
+          "optional": true,
+          "swift_type": "UInt32?"
+        },
+        "execution": {
+          "json_null": false,
+          "name": "execution",
+          "optional": false,
+          "swift_type": "PWRunnerEquipmentExecution"
+        },
+        "missing_requirements": {
+          "json_null": false,
+          "name": "missing_requirements",
+          "optional": true,
+          "swift_type": "[String]?"
+        },
+        "requested": {
+          "json_null": true,
+          "name": "requested",
+          "optional": true,
+          "swift_type": "String?"
+        },
+        "required_entitlements": {
+          "json_null": false,
+          "name": "required_entitlements",
+          "optional": false,
+          "swift_type": "[String]"
+        },
+        "requirements_status": {
+          "json_null": false,
+          "name": "requirements_status",
+          "optional": false,
+          "swift_type": "String"
+        },
+        "resolved": {
+          "json_null": false,
+          "name": "resolved",
+          "optional": false,
+          "swift_type": "String"
+        }
+      },
+      "input": false
     },
-    "reply.actors[].equipment.execution": {
-      "cdhash": "string",
-      "eligible": "boolean",
-      "entitlements_ref": "number",
-      "identifier": "string",
-      "native_observations": "array",
-      "observed_at_monotonic_ns": "number",
-      "parent_pid": "number",
-      "path": "string",
-      "pid": "number",
-      "reason": "string",
-      "status": "string",
-      "team_id": "string"
+    "PWRunnerAuthorityHost": {
+      "fields": {
+        "custody": {
+          "json_null": false,
+          "name": "custody",
+          "optional": false,
+          "swift_type": "[PWRunnerAuthorityScope]"
+        },
+        "regions": {
+          "json_null": false,
+          "name": "regions",
+          "optional": false,
+          "swift_type": "[PWRunnerAuthorityScope]"
+        },
+        "run": {
+          "json_null": false,
+          "name": "run",
+          "optional": false,
+          "swift_type": "PWRunnerAuthorityScope"
+        }
+      },
+      "input": false
     },
-    "reply.actors[].equipment.execution.native_observations[]": {
-      "attempted": "boolean",
-      "operation": "string",
-      "osstatus": "number"
+    "PWRunnerAuthorityOperation": {
+      "fields": {
+        "detail": {
+          "json_null": false,
+          "name": "detail",
+          "optional": true,
+          "swift_type": "String?"
+        },
+        "errno": {
+          "json_null": false,
+          "name": "errno",
+          "optional": true,
+          "swift_type": "Int32?"
+        },
+        "native_kind": {
+          "json_null": false,
+          "name": "native_kind",
+          "optional": true,
+          "swift_type": "String?"
+        },
+        "native_rc": {
+          "json_null": false,
+          "name": "native_rc",
+          "optional": true,
+          "swift_type": "Int64?"
+        },
+        "operation": {
+          "json_null": false,
+          "name": "operation",
+          "optional": false,
+          "swift_type": "String"
+        },
+        "role": {
+          "json_null": false,
+          "name": "role",
+          "optional": false,
+          "swift_type": "String"
+        },
+        "slot": {
+          "json_null": false,
+          "name": "slot",
+          "optional": false,
+          "swift_type": "Int"
+        },
+        "state": {
+          "json_null": false,
+          "name": "state",
+          "optional": false,
+          "swift_type": "String"
+        },
+        "value": {
+          "json_null": false,
+          "name": "value",
+          "optional": true,
+          "swift_type": "UInt64?"
+        }
+      },
+      "input": false
     },
-    "reply.actors[].launch": {
-      "environment": "string",
-      "inherited_descriptors": "array",
-      "parent_pid": "number",
-      "pid": "number",
-      "standard_streams": "string"
+    "PWRunnerAuthorityScope": {
+      "fields": {
+        "actor_id": {
+          "json_null": false,
+          "name": "actor_id",
+          "optional": true,
+          "swift_type": "String?"
+        },
+        "actor_index": {
+          "json_null": false,
+          "name": "actor_index",
+          "optional": true,
+          "swift_type": "Int?"
+        },
+        "cleanup_reference": {
+          "json_null": false,
+          "name": "cleanup_reference",
+          "optional": true,
+          "swift_type": "PWAuthorityCleanupReference?"
+        },
+        "disposition": {
+          "json_null": false,
+          "name": "disposition",
+          "optional": true,
+          "swift_type": "String?"
+        },
+        "integrity_errors": {
+          "json_null": false,
+          "name": "integrity_errors",
+          "optional": true,
+          "swift_type": "[String]?"
+        },
+        "operations": {
+          "json_null": false,
+          "name": "operations",
+          "optional": false,
+          "swift_type": "[PWRunnerAuthorityOperation]"
+        },
+        "ownership": {
+          "json_null": false,
+          "name": "ownership",
+          "optional": false,
+          "swift_type": "[String: String]"
+        },
+        "primary_operation": {
+          "json_null": false,
+          "name": "primary_operation",
+          "optional": true,
+          "swift_type": "Int?"
+        },
+        "publication": {
+          "json_null": false,
+          "name": "publication",
+          "optional": true,
+          "swift_type": "String?"
+        },
+        "required": {
+          "json_null": false,
+          "name": "required",
+          "optional": true,
+          "swift_type": "Bool?"
+        },
+        "token_index": {
+          "json_null": false,
+          "name": "token_index",
+          "optional": true,
+          "swift_type": "Int?"
+        },
+        "token_ref": {
+          "json_null": false,
+          "name": "token_ref",
+          "optional": true,
+          "swift_type": "String?"
+        }
+      },
+      "input": false
     },
-    "reply.actors[].owned_reap": {
-      "capture_ordinal": "number",
-      "departure_requested": "boolean",
-      "native_rc": "number",
-      "observed_ns": "number",
-      "ownership_unbroken": "boolean",
-      "pid": "number",
-      "raw_status": "number",
-      "stage": "string"
+    "PWRunnerAuthoritySetup": {
+      "fields": {
+        "host": {
+          "json_null": false,
+          "name": "host",
+          "optional": false,
+          "swift_type": "PWRunnerAuthorityHost"
+        },
+        "workers": {
+          "json_null": false,
+          "name": "workers",
+          "optional": false,
+          "swift_type": "[PWRunnerAuthorityScope]"
+        }
+      },
+      "input": false
     },
-    "reply.authority_setup": {
-      "host": "object",
-      "workers": "array"
+    "PWRunnerEquipmentBinding": {
+      "fields": {
+        "cdhash": {
+          "json_null": false,
+          "name": "cdhash",
+          "optional": true,
+          "projection": "hex",
+          "swift_type": "Data?"
+        },
+        "entitlements_match": {
+          "json_null": false,
+          "name": "entitlements_match",
+          "optional": true,
+          "swift_type": "Bool?"
+        },
+        "entitlements_ref": {
+          "json_null": false,
+          "name": "entitlements_ref",
+          "optional": true,
+          "swift_type": "UInt32?"
+        },
+        "error": {
+          "json_null": false,
+          "name": "error",
+          "optional": true,
+          "swift_type": "PWRunnerEquipmentError?"
+        },
+        "expected_cdhash": {
+          "json_null": false,
+          "name": "expected_cdhash",
+          "optional": true,
+          "projection": "hex",
+          "swift_type": "Data?"
+        },
+        "expected_sha256": {
+          "json_null": false,
+          "name": "expected_sha256",
+          "optional": true,
+          "projection": "hex",
+          "swift_type": "Data?"
+        },
+        "identifier": {
+          "json_null": false,
+          "name": "identifier",
+          "optional": true,
+          "swift_type": "String?"
+        },
+        "implementation_identity": {
+          "json_null": false,
+          "name": "implementation_identity",
+          "optional": false,
+          "swift_type": "String"
+        },
+        "path": {
+          "json_null": false,
+          "name": "path",
+          "optional": false,
+          "swift_type": "String"
+        },
+        "reason": {
+          "json_null": false,
+          "name": "reason",
+          "optional": true,
+          "swift_type": "String?"
+        },
+        "relative_path": {
+          "json_null": false,
+          "name": "relative_path",
+          "optional": true,
+          "swift_type": "String?"
+        },
+        "role": {
+          "json_null": false,
+          "name": "role",
+          "optional": false,
+          "swift_type": "String"
+        },
+        "sha256": {
+          "json_null": false,
+          "name": "sha256",
+          "optional": true,
+          "projection": "hex",
+          "swift_type": "Data?"
+        },
+        "signature_osstatus": {
+          "json_null": false,
+          "name": "signature_osstatus",
+          "optional": true,
+          "swift_type": "Int?"
+        },
+        "source": {
+          "json_null": false,
+          "name": "source",
+          "optional": false,
+          "swift_type": "String"
+        },
+        "status": {
+          "json_null": false,
+          "name": "status",
+          "optional": false,
+          "swift_type": "String"
+        },
+        "team_id": {
+          "conditional_presence": "identifier",
+          "json_null": true,
+          "name": "team_id",
+          "optional": true,
+          "swift_type": "String?"
+        }
+      },
+      "input": false
     },
-    "reply.authority_setup.host": {
-      "custody": "array",
-      "regions": "array",
-      "run": "object"
+    "PWRunnerEquipmentEntitlements": {
+      "fields": {
+        "actor_id": {
+          "json_null": false,
+          "name": "actor_id",
+          "optional": true,
+          "swift_type": "String?"
+        },
+        "binding_ref": {
+          "json_null": false,
+          "name": "binding_ref",
+          "optional": false,
+          "swift_type": "UInt32"
+        },
+        "error": {
+          "json_null": false,
+          "name": "error",
+          "optional": true,
+          "swift_type": "PWRunnerEquipmentError?"
+        },
+        "raw_plist": {
+          "json_null": false,
+          "name": "raw_plist",
+          "optional": true,
+          "swift_type": "String?"
+        },
+        "source": {
+          "json_null": false,
+          "name": "source",
+          "optional": false,
+          "swift_type": "String"
+        },
+        "status": {
+          "json_null": false,
+          "name": "status",
+          "optional": false,
+          "swift_type": "String"
+        }
+      },
+      "input": false
     },
-    "reply.authority_setup.host.custody[]": {
-      "integrity_errors": "array",
-      "operations": "array",
-      "ownership": "object",
-      "primary_operation": "number",
-      "required": "boolean",
-      "token_index": "number",
-      "token_ref": "string"
+    "PWRunnerEquipmentError": {
+      "fields": {
+        "code": {
+          "json_null": false,
+          "name": "code",
+          "optional": true,
+          "swift_type": "Int?"
+        },
+        "domain": {
+          "json_null": false,
+          "name": "domain",
+          "optional": true,
+          "swift_type": "String?"
+        },
+        "message": {
+          "json_null": false,
+          "name": "message",
+          "optional": true,
+          "swift_type": "String?"
+        },
+        "operation": {
+          "json_null": false,
+          "name": "operation",
+          "optional": false,
+          "swift_type": "String"
+        }
+      },
+      "input": false
     },
-    "reply.authority_setup.host.custody[].operations[]": {
-      "detail": "string",
-      "errno": "number",
-      "native_kind": "string",
-      "native_rc": "number",
-      "operation": "string",
-      "role": "string",
-      "slot": "number",
-      "state": "string",
-      "value": "number"
+    "PWRunnerEquipmentExecution": {
+      "fields": {
+        "cdhash": {
+          "json_null": false,
+          "name": "cdhash",
+          "optional": true,
+          "projection": "hex",
+          "swift_type": "Data?"
+        },
+        "eligible": {
+          "json_null": false,
+          "name": "eligible",
+          "optional": false,
+          "swift_type": "Bool"
+        },
+        "entitlements_ref": {
+          "json_null": false,
+          "name": "entitlements_ref",
+          "optional": true,
+          "swift_type": "UInt32?"
+        },
+        "identifier": {
+          "json_null": false,
+          "name": "identifier",
+          "optional": true,
+          "swift_type": "String?"
+        },
+        "native_observations": {
+          "json_null": false,
+          "name": "native_observations",
+          "optional": false,
+          "swift_type": "[PWRunnerEquipmentNativeObservation]"
+        },
+        "observed_at_monotonic_ns": {
+          "json_null": false,
+          "name": "observed_at_monotonic_ns",
+          "optional": true,
+          "swift_type": "UInt64?"
+        },
+        "parent_pid": {
+          "json_null": false,
+          "name": "parent_pid",
+          "optional": true,
+          "swift_type": "Int?"
+        },
+        "path": {
+          "json_null": false,
+          "name": "path",
+          "optional": true,
+          "swift_type": "String?"
+        },
+        "pid": {
+          "json_null": false,
+          "name": "pid",
+          "optional": true,
+          "swift_type": "Int?"
+        },
+        "reason": {
+          "json_null": false,
+          "name": "reason",
+          "optional": true,
+          "swift_type": "String?"
+        },
+        "status": {
+          "json_null": false,
+          "name": "status",
+          "optional": false,
+          "swift_type": "String"
+        },
+        "team_id": {
+          "conditional_presence": "identifier",
+          "json_null": true,
+          "name": "team_id",
+          "optional": true,
+          "swift_type": "String?"
+        }
+      },
+      "input": false
     },
-    "reply.authority_setup.host.custody[].ownership": {
-      "mapping": "string",
-      "private_erasure": "string"
+    "PWRunnerEquipmentInventory": {
+      "fields": {
+        "error": {
+          "json_null": false,
+          "name": "error",
+          "optional": true,
+          "swift_type": "PWRunnerEquipmentError?"
+        },
+        "path": {
+          "json_null": false,
+          "name": "path",
+          "optional": false,
+          "swift_type": "String"
+        },
+        "reason": {
+          "json_null": false,
+          "name": "reason",
+          "optional": true,
+          "swift_type": "String?"
+        },
+        "schema_version": {
+          "json_null": false,
+          "name": "schema_version",
+          "optional": true,
+          "swift_type": "Int?"
+        },
+        "seal_osstatus": {
+          "json_null": false,
+          "name": "seal_osstatus",
+          "optional": true,
+          "swift_type": "Int?"
+        },
+        "sha256": {
+          "json_null": false,
+          "name": "sha256",
+          "optional": true,
+          "projection": "hex",
+          "swift_type": "Data?"
+        },
+        "status": {
+          "json_null": false,
+          "name": "status",
+          "optional": false,
+          "swift_type": "String"
+        },
+        "unsigned_worker_sha256": {
+          "json_null": false,
+          "name": "unsigned_worker_sha256",
+          "optional": true,
+          "projection": "hex",
+          "swift_type": "Data?"
+        },
+        "worker_identity": {
+          "json_null": false,
+          "name": "worker_identity",
+          "optional": true,
+          "projection": "hex",
+          "swift_type": "Data?"
+        }
+      },
+      "input": false
     },
-    "reply.authority_setup.host.regions[]": {
-      "actor_id": "string",
-      "actor_index": "number",
-      "cleanup_reference": "object",
-      "integrity_errors": "array",
-      "operations": "array",
-      "ownership": "object",
-      "primary_operation": "number",
-      "required": "boolean"
+    "PWRunnerEquipmentNativeObservation": {
+      "fields": {
+        "attempted": {
+          "json_null": false,
+          "name": "attempted",
+          "optional": false,
+          "swift_type": "Bool"
+        },
+        "operation": {
+          "json_null": false,
+          "name": "operation",
+          "optional": false,
+          "swift_type": "String"
+        },
+        "osstatus": {
+          "json_null": false,
+          "name": "osstatus",
+          "optional": true,
+          "swift_type": "Int?"
+        }
+      },
+      "input": false
     },
-    "reply.authority_setup.host.regions[].cleanup_reference": {
-      "host_pid": "number",
-      "kind": "string",
-      "name": "string",
-      "recovery_state": "string",
-      "session_nonce": "number"
-    },
-    "reply.authority_setup.host.regions[].operations[]": {
-      "detail": "string",
-      "errno": "number",
-      "native_kind": "string",
-      "native_rc": "number",
-      "operation": "string",
-      "role": "string",
-      "slot": "number",
-      "state": "string",
-      "value": "number"
-    },
-    "reply.authority_setup.host.regions[].ownership": {
-      "descriptor": "string",
-      "mapping": "string",
-      "object_name": "string",
-      "shared_erasure": "string"
-    },
-    "reply.authority_setup.host.run": {
-      "integrity_errors": "array",
-      "operations": "array",
-      "ownership": "object",
-      "primary_operation": "number"
-    },
-    "reply.authority_setup.host.run.operations[]": {
-      "detail": "string",
-      "errno": "number",
-      "native_kind": "string",
-      "native_rc": "number",
-      "operation": "string",
-      "role": "string",
-      "slot": "number",
-      "state": "string",
-      "value": "number"
-    },
-    "reply.authority_setup.workers[]": {
-      "actor_id": "string",
-      "actor_index": "number",
-      "integrity_errors": "array",
-      "operations": "array",
-      "ownership": "object",
-      "primary_operation": "number",
-      "publication": "string",
-      "required": "boolean"
-    },
-    "reply.authority_setup.workers[].operations[]": {
-      "detail": "string",
-      "errno": "number",
-      "native_kind": "string",
-      "native_rc": "number",
-      "operation": "string",
-      "role": "string",
-      "slot": "number",
-      "state": "string",
-      "value": "number"
-    },
-    "reply.authority_setup.workers[].ownership": {
-      "descriptor": "string",
-      "mapping": "string",
-      "shared_erasure": "string"
-    },
-    "reply.equipment_bindings[]": {
-      "cdhash": "string",
-      "entitlements_match": "boolean",
-      "entitlements_ref": "number",
-      "error": "object",
-      "expected_cdhash": "string",
-      "expected_sha256": "string",
-      "identifier": "string",
-      "implementation_identity": "string",
-      "path": "string",
-      "reason": "string",
-      "relative_path": "string",
-      "role": "string",
-      "sha256": "string",
-      "signature_osstatus": "number",
-      "source": "string",
-      "status": "string",
-      "team_id": "string"
-    },
-    "reply.equipment_bindings[].error": {
-      "code": "number",
-      "domain": "string",
-      "message": "string",
-      "operation": "string"
-    },
-    "reply.equipment_entitlements[]": {
-      "actor_id": "string",
-      "binding_ref": "number",
-      "error": "object",
-      "raw_plist": "string",
-      "source": "string",
-      "status": "string"
-    },
-    "reply.equipment_entitlements[].error": {
-      "code": "number",
-      "domain": "string",
-      "message": "string",
-      "operation": "string"
-    },
-    "reply.equipment_inventory": {
-      "error": "object",
-      "path": "string",
-      "reason": "string",
-      "schema_version": "number",
-      "seal_osstatus": "number",
-      "sha256": "string",
-      "status": "string",
-      "unsigned_worker_sha256": "string",
-      "worker_identity": "string"
-    },
-    "reply.equipment_inventory.error": {
-      "code": "number",
-      "domain": "string",
-      "message": "string",
-      "operation": "string"
-    },
-    "reply.extension_events[]": {
-      "actor_id": "string",
-      "call_boundary_observed": "boolean",
-      "delivery_ref": "string",
-      "errno": "number",
-      "extension_class": "string",
-      "family": "string",
-      "flags": "number",
-      "handle_ref": "string",
-      "lifecycle": "object",
-      "native_nonnull": "boolean",
-      "native_result": "number",
-      "operation": "string",
-      "phase_id": "string",
-      "result_published": "boolean",
-      "status": "string",
-      "step_id": "string",
-      "target": "string",
-      "token_length": "number",
-      "token_ref": "string",
-      "unavailable_reason": "string"
-    },
-    "reply.extension_events[].lifecycle": {
-      "boundary": "object",
-      "result": "object",
-      "summary": "string"
-    },
-    "reply.extension_events[].lifecycle.boundary": {
-      "answer": "string",
-      "basis": "array",
-      "reason": "string",
-      "state": "string"
-    },
-    "reply.extension_events[].lifecycle.result": {
-      "answer": "string",
-      "basis": "array",
-      "issue": "number",
-      "reason": "string",
-      "state": "string"
-    },
-    "reply.resources": {
-      "deliveries": "array",
-      "handles": "array",
-      "tokens": "array"
-    },
-    "reply.resources.deliveries[]": {
-      "delivered_length": "number",
-      "delivery_ref": "string",
-      "equality": "string",
-      "last_use_step_id": "string",
-      "recipient_actor_id": "string",
-      "source_actor_id": "string",
-      "status": "string",
-      "step_id": "string",
-      "token_ref": "string"
-    },
-    "reply.resources.handles[]": {
-      "actor_id": "string",
-      "delivery_ref": "string",
-      "handle_ref": "string",
-      "native_handle": "number",
-      "raw_equal_handles": "array",
-      "release_attempted": "boolean",
-      "release_step_id": "string",
-      "status": "string",
-      "step_id": "string"
-    },
-    "reply.resources.tokens[]": {
-      "actor_id": "string",
-      "family": "string",
-      "last_use_step_id": "string",
-      "status": "string",
-      "step_id": "string",
-      "token_length": "number",
-      "token_ref": "string"
-    },
-    "reply.test_overrides": {
-      "actor_equipment_executable_paths": "object"
-    },
-    "reply.test_overrides.actor_equipment_executable_paths": {
-      "selected": "string",
-      "unentitled": "string"
-    },
-    "reply.transfers[]": {
-      "copy_status": "string",
-      "custody_status": "string",
-      "delivery_ref": "string",
-      "equality": "string",
-      "lifecycle": "object",
-      "phase_id": "string",
-      "recipient_acknowledged": "boolean",
-      "recipient_actor_id": "string",
-      "recipient_wait": "object",
-      "request_published": "boolean",
-      "source_acknowledged": "boolean",
-      "source_actor_id": "string",
-      "status": "string",
-      "step_id": "string",
-      "token_ref": "string"
-    },
-    "reply.transfers[].lifecycle": {
-      "boundary": "object",
-      "result": "object",
-      "summary": "string"
-    },
-    "reply.transfers[].lifecycle.boundary": {
-      "answer": "string",
-      "basis": "array",
-      "state": "string"
-    },
-    "reply.transfers[].lifecycle.result": {
-      "answer": "string",
-      "basis": "array",
-      "state": "string"
-    },
-    "reply.transfers[].recipient_wait": {
-      "budget_ms": "number",
-      "clock_fault": "boolean",
-      "elapsed_ms": "number",
-      "stop": "string"
+    "PWRunnerPreparationFailure": {
+      "fields": {
+        "actor_id": {
+          "json_null": false,
+          "name": "actor_id",
+          "optional": true,
+          "swift_type": "String?"
+        },
+        "binding_ref": {
+          "json_null": false,
+          "name": "binding_ref",
+          "optional": true,
+          "swift_type": "UInt32?"
+        },
+        "code": {
+          "json_null": false,
+          "name": "code",
+          "optional": false,
+          "swift_type": "String"
+        },
+        "reason": {
+          "json_null": false,
+          "name": "reason",
+          "optional": true,
+          "swift_type": "String?"
+        },
+        "stage": {
+          "json_null": false,
+          "name": "stage",
+          "optional": false,
+          "swift_type": "String"
+        }
+      },
+      "input": false
     }
   }
 }

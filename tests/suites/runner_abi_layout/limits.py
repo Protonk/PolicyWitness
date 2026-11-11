@@ -28,7 +28,7 @@ ABI_LIMITS = {
     'extension_issue_target': ('PW_SHM_EXT_TARGET_BYTES', 1),
 }
 NATIVE_LIMITS = {'worker_proceed_wait', 'exec_child_wait', 'exec_attempt_budget', 'exec_reap_grace',
-                 'validator_query_payload'}
+                 'validator_query_payload', 'worker_fixture_delay'}
 
 
 def values(text):

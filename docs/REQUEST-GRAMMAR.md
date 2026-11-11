@@ -1,6 +1,6 @@
 # Teaching the accepted request contract
 
-This is a developer lesson. The [contract rules](CONTRACT.md#accepted-input-contract)
+This is a developer lesson. The [contract rules](CONTRACT.md#contract-request)
 define the promise; the [specimen reference](PolicyWitness.md#specimen-format)
 describes authoring. The examples here are executable inputs from
 [tests/fixtures/request_contract/examples.json](../tests/fixtures/request_contract/examples.json).
@@ -174,7 +174,7 @@ final scheduled visit precedes that phase. Unknown, self or non-prior source
 dependencies return `invalid_termination_dependency` at the dependency's
 `actor_id`. Null and unknown keys are refused. A satisfied dependency requires
 an owned natural reap after source final activation; phase completion alone
-cannot satisfy it. [The wire account](CONTRACT.md#actor-evidence-ownership)
+cannot satisfy it. [The wire account](CONTRACT.md#contract-actor_evidence-gate)
 describes retained reap, activation and reference-only gate observations.
 
 Extension actions name their operands by reference. `issue` takes `family`

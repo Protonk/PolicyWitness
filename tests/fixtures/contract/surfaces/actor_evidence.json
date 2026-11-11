@@ -1,0 +1,382 @@
+{
+  "records": {
+    "PWRunnerActorActivation": {
+      "fields": {
+        "capture_ordinal": {
+          "json_null": false,
+          "name": "capture_ordinal",
+          "optional": false,
+          "swift_type": "UInt64"
+        },
+        "observed_ns": {
+          "json_null": false,
+          "name": "observed_ns",
+          "optional": true,
+          "swift_type": "UInt64?"
+        }
+      },
+      "input": false
+    },
+    "PWRunnerActorApplication": {
+      "fields": {
+        "basis": {
+          "json_null": false,
+          "name": "basis",
+          "optional": false,
+          "swift_type": "String"
+        },
+        "state": {
+          "json_null": false,
+          "name": "state",
+          "optional": false,
+          "swift_type": "String"
+        }
+      },
+      "input": false
+    },
+    "PWRunnerActorLaunch": {
+      "fields": {
+        "environment": {
+          "json_null": false,
+          "name": "environment",
+          "optional": false,
+          "swift_type": "String"
+        },
+        "inherited_descriptors": {
+          "json_null": false,
+          "name": "inherited_descriptors",
+          "optional": false,
+          "swift_type": "[Int]"
+        },
+        "parent_pid": {
+          "json_null": false,
+          "name": "parent_pid",
+          "optional": false,
+          "swift_type": "Int"
+        },
+        "pid": {
+          "json_null": false,
+          "name": "pid",
+          "optional": false,
+          "swift_type": "Int"
+        },
+        "standard_streams": {
+          "json_null": false,
+          "name": "standard_streams",
+          "optional": false,
+          "swift_type": "String"
+        }
+      },
+      "input": false
+    },
+    "PWRunnerActorResult": {
+      "fields": {
+        "actor_id": {
+          "json_null": false,
+          "name": "actor_id",
+          "optional": false,
+          "swift_type": "String"
+        },
+        "application": {
+          "json_null": false,
+          "name": "application",
+          "optional": true,
+          "swift_type": "PWRunnerActorApplication?"
+        },
+        "application_count": {
+          "json_null": false,
+          "name": "application_count",
+          "optional": false,
+          "swift_type": "Int"
+        },
+        "applied": {
+          "json_null": false,
+          "name": "applied",
+          "optional": true,
+          "swift_type": "Bool?"
+        },
+        "compiled_profile": {
+          "json_null": false,
+          "name": "compiled_profile",
+          "optional": true,
+          "swift_type": "CompiledProfileCapture?"
+        },
+        "equipment": {
+          "json_null": false,
+          "name": "equipment",
+          "optional": true,
+          "swift_type": "PWRunnerActorEquipment?"
+        },
+        "index": {
+          "json_null": false,
+          "name": "index",
+          "optional": false,
+          "swift_type": "Int"
+        },
+        "launch": {
+          "json_null": false,
+          "name": "launch",
+          "optional": true,
+          "swift_type": "PWRunnerActorLaunch?"
+        },
+        "mode": {
+          "json_null": false,
+          "name": "mode",
+          "optional": false,
+          "swift_type": "String"
+        },
+        "owned_reap": {
+          "json_null": false,
+          "name": "owned_reap",
+          "optional": true,
+          "swift_type": "PWOwnedReapObservation?"
+        },
+        "policy_format": {
+          "json_null": false,
+          "name": "policy_format",
+          "optional": true,
+          "swift_type": "String?"
+        },
+        "policy_received_sha256": {
+          "json_null": false,
+          "name": "policy_received_sha256",
+          "optional": true,
+          "projection": "hex",
+          "swift_type": "Data?"
+        },
+        "policy_sha256": {
+          "json_null": false,
+          "name": "policy_sha256",
+          "optional": true,
+          "projection": "hex",
+          "swift_type": "Data?"
+        },
+        "setup_status": {
+          "json_null": false,
+          "name": "setup_status",
+          "optional": false,
+          "swift_type": "String"
+        },
+        "subprocess": {
+          "json_null": false,
+          "name": "subprocess",
+          "optional": true,
+          "swift_type": "PWRunnerSubprocess?"
+        },
+        "visits": {
+          "json_null": false,
+          "name": "visits",
+          "optional": false,
+          "swift_type": "[Int]"
+        }
+      },
+      "input": false
+    },
+    "PWRunnerPhaseResult": {
+      "fields": {
+        "action_ids": {
+          "json_null": false,
+          "name": "action_ids",
+          "optional": false,
+          "swift_type": "[String]"
+        },
+        "activation_observation": {
+          "json_null": false,
+          "name": "activation_observation",
+          "optional": true,
+          "swift_type": "PWRunnerActorActivation?"
+        },
+        "actor_id": {
+          "json_null": false,
+          "name": "actor_id",
+          "optional": true,
+          "swift_type": "String?"
+        },
+        "actor_visit": {
+          "json_null": false,
+          "name": "actor_visit",
+          "optional": true,
+          "swift_type": "Int?"
+        },
+        "arrival_observed": {
+          "json_null": false,
+          "name": "arrival_observed",
+          "optional": false,
+          "swift_type": "Bool"
+        },
+        "collection_status": {
+          "json_null": false,
+          "name": "collection_status",
+          "optional": false,
+          "swift_type": "String"
+        },
+        "completion_observed": {
+          "json_null": false,
+          "name": "completion_observed",
+          "optional": false,
+          "swift_type": "Bool"
+        },
+        "ordering": {
+          "json_null": false,
+          "name": "ordering",
+          "optional": true,
+          "swift_type": "PWRunnerOrdering?"
+        },
+        "ordinal": {
+          "json_null": false,
+          "name": "ordinal",
+          "optional": false,
+          "swift_type": "Int"
+        },
+        "phase_id": {
+          "json_null": false,
+          "name": "phase_id",
+          "optional": false,
+          "swift_type": "String"
+        },
+        "termination_gate": {
+          "json_null": false,
+          "name": "termination_gate",
+          "optional": true,
+          "swift_type": "PWRunnerTerminationGate?"
+        },
+        "validator_spawn_failure": {
+          "json_null": false,
+          "name": "validator_spawn_failure",
+          "optional": true,
+          "swift_type": "PWRunnerSpawnFailure?"
+        },
+        "validator_subprocess": {
+          "json_null": false,
+          "name": "validator_subprocess",
+          "optional": true,
+          "swift_type": "PWRunnerValidatorSubprocess?"
+        },
+        "visit_timing": {
+          "json_null": false,
+          "name": "visit_timing",
+          "optional": true,
+          "swift_type": "PWRunnerVisitTiming?"
+        }
+      },
+      "input": false
+    },
+    "PWRunnerScheduleRecord": {
+      "fields": {
+        "cancelled": {
+          "json_null": false,
+          "name": "cancelled",
+          "optional": true,
+          "swift_type": "String?"
+        },
+        "collection_budget_ms": {
+          "json_null": false,
+          "name": "collection_budget_ms",
+          "optional": false,
+          "swift_type": "Int"
+        },
+        "execution_wait": {
+          "json_null": false,
+          "name": "execution_wait",
+          "optional": true,
+          "swift_type": "PWHostWait?"
+        },
+        "lifetime_budget_ms": {
+          "json_null": false,
+          "name": "lifetime_budget_ms",
+          "optional": false,
+          "swift_type": "Int"
+        },
+        "setup_wait": {
+          "json_null": false,
+          "name": "setup_wait",
+          "optional": true,
+          "swift_type": "PWHostWait?"
+        }
+      },
+      "input": false
+    },
+    "PWRunnerTerminationGate": {
+      "fields": {
+        "activation_eligible": {
+          "json_null": false,
+          "name": "activation_eligible",
+          "optional": false,
+          "swift_type": "Bool"
+        },
+        "capture_ordinal": {
+          "json_null": false,
+          "name": "capture_ordinal",
+          "optional": true,
+          "swift_type": "UInt64?"
+        },
+        "condition": {
+          "json_null": false,
+          "name": "condition",
+          "optional": false,
+          "swift_type": "String"
+        },
+        "observation": {
+          "json_null": false,
+          "name": "observation",
+          "optional": true,
+          "swift_type": "PWOwnedReapReference?"
+        },
+        "outcome": {
+          "json_null": false,
+          "name": "outcome",
+          "optional": false,
+          "swift_type": "String"
+        },
+        "source_actor_id": {
+          "json_null": false,
+          "name": "source_actor_id",
+          "optional": false,
+          "swift_type": "String"
+        },
+        "source_final_phase_id": {
+          "json_null": false,
+          "name": "source_final_phase_id",
+          "optional": false,
+          "swift_type": "String"
+        },
+        "wait": {
+          "json_null": false,
+          "name": "wait",
+          "optional": true,
+          "swift_type": "PWHostWait?"
+        }
+      },
+      "input": false
+    },
+    "PWRunnerVisitTiming": {
+      "fields": {
+        "activation_to_arrival_ms": {
+          "json_null": false,
+          "name": "activation_to_arrival_ms",
+          "optional": true,
+          "swift_type": "UInt64?"
+        },
+        "arrival_to_release_ms": {
+          "json_null": false,
+          "name": "arrival_to_release_ms",
+          "optional": true,
+          "swift_type": "UInt64?"
+        },
+        "collection_ms": {
+          "json_null": false,
+          "name": "collection_ms",
+          "optional": true,
+          "swift_type": "UInt64?"
+        },
+        "release_to_completion_ms": {
+          "json_null": false,
+          "name": "release_to_completion_ms",
+          "optional": true,
+          "swift_type": "UInt64?"
+        }
+      },
+      "input": false
+    }
+  }
+}

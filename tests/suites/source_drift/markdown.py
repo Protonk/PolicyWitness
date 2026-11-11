@@ -289,6 +289,26 @@ class HeadingTests(receipts.TestCase):
                          ['test-seam-_test_overrides', 'repeated', 'repeated-1', 'ünïcode'])
         self.assertEqual(reader.slug('One build in time'), 'one-build-in-time')
 
+    def test_explicit_anchor_elements_are_destinations_without_changing_heading_slugs(self):
+        document = parse('<a id="contract-request-policy"></a>\n\n'
+                         '## Repeated\n\n<a id="repeated"></a>\n\n## Repeated\n\n'
+                         'Inline <a class="target" id=inline-anchor></a> destination.\n\n'
+                         '<A NAME=legacy-anchor></A>\n\n'
+                         '<a\n title="attribute contains >"\n id="entity&amp;anchor"></a>\n')
+        self.assertEqual(document.anchors, ['repeated', 'repeated-1', 'contract-request-policy',
+                                           'repeated', 'inline-anchor', 'legacy-anchor', 'entity&anchor'])
+
+    def test_explicit_anchor_examples_in_code_comments_and_escaped_text_are_not_destinations(self):
+        document = parse('```html\n<a id="fenced"></a>\n```\n\n'
+                         '    <a id="indented"></a>\n\n'
+                         'Inline `<a id="inline-code"></a>` example.\n\n'
+                         '<!-- <a id="commented"></a> -->\n\n'
+                         'Text <!-- <a id="inline-comment"></a> --> continues.\n\n'
+                         '&lt;a id="escaped"&gt;&lt;/a&gt;\n\n'
+                         '<a href="#link-only"></a>\n\n'
+                         '<script>const example = \'<a id="script-text"></a>\';</script>\n')
+        self.assertEqual(document.anchors, [])
+
 
 class TableTests(receipts.TestCase):
     def test_cells_hold_inline_content(self):

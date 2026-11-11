@@ -35,13 +35,13 @@ investigation, bounded by the current architecture and toolchain restrictions.
 Specific machinery and explanations are considered individually; this report
 does not propose special documentation categories or general prose restrictions.
 
-The current [wire contract](../../docs/CONTRACT.md#supported-versions) requires
+The examined [wire contract](https://github.com/Protonk/PolicyWitness/blob/2d15b1138c973181eef23e38b4a4669d890f9fa2/docs/CONTRACT.md#supported-versions) requires
 exact-version admission before interpretation, retains unsupported bytes, and
 does not translate historical judgments. It also expressly permits comparisons
 of current-format runs. An older admissible record remains subject to current
 reading rules: age is not a refusal condition. Changing those rules or their
 meaning would require the contract/version decision described in
-[When a number moves](../../docs/CONTRACT.md#when-a-number-moves). None of the
+[When a number moves](https://github.com/Protonk/PolicyWitness/blob/2d15b1138c973181eef23e38b4a4669d890f9fa2/docs/CONTRACT.md#when-a-number-moves). None of the
 three narrow proposals below needs such a change. The release-evidence decision
 concerns a different, separately promised format service.
 

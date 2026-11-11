@@ -33,6 +33,9 @@ def reject(call, needle):
 
 
 def make_release(repo, version):
+    # Each retained release keeps an ancestor commit. The stamp helper amends
+    # this new preparation commit, never a previously tagged release.
+    git(repo, 'commit', '-q', '--allow-empty', '-m', 'prepare fixture ' + version)
     git(repo, 'tag', '-a', 'v' + version, '-m', 'fixture ' + version)
     dist, attempt = make_dist(repo, version=version)
     acceptance = repo / 'tests/out/release-acceptance' / ('run-' + version.replace('.', '-'))

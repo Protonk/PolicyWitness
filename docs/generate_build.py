@@ -71,7 +71,7 @@ SPAN_DOCUMENTS = ("docs/BUILD.md",)
 # What a run reads besides the files the manifests cite and the figure: this generator and its helpers, the
 # manifest and baseline, the script and the files its rules compare, and the inventories. The reader's files
 # are added by input_paths.
-INPUTS = (GENERATOR_NAME, "docs/generator_common.py", "docs/generate_architecture.py", "docs/generate_limits.py",
+INPUTS = (GENERATOR_NAME, "docs/generator_common.py", "docs/generate_architecture.py", "docs/generate_limits.py", "docs/repository_tree.py",
           "docs/limits.json", "tests/catalog.json", MANIFEST_NAME, BASELINE_NAME, *SPAN_DOCUMENTS, "build.sh", "meson.build",
           "Makefile", "README.md", "Info.plist", "runner/Services/PWRunner/Info.plist", "tests/lib/artifact.py",
           "tests/build-evidence.py", "tests/lib/build_provenance.py", "tests/lib/signer_check.py", "tests/lib/output_target.py")

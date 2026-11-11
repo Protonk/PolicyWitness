@@ -1,0 +1,79 @@
+{
+  "records": {
+    "PWProducer": {
+      "fields": {
+        "commit": {
+          "json_null": false,
+          "name": "commit",
+          "optional": false,
+          "swift_type": "String"
+        },
+        "contract": {
+          "json_null": false,
+          "name": "contract",
+          "optional": false,
+          "swift_type": "String"
+        },
+        "describe": {
+          "json_null": false,
+          "name": "describe",
+          "optional": false,
+          "swift_type": "String"
+        }
+      },
+      "input": false
+    },
+    "VersionData": {
+      "fields": {
+        "contract": {
+          "json_null": false,
+          "name": "contract",
+          "optional": false,
+          "swift_type": "String"
+        }
+      },
+      "input": false,
+      "open": false
+    },
+    "rust.BuildStamp": {
+      "fields": {
+        "commit": {
+          "json_null": false,
+          "name": "commit",
+          "omission": null,
+          "optional": false,
+          "swift_type": "String"
+        },
+        "contract": {
+          "json_null": false,
+          "name": "contract",
+          "omission": null,
+          "optional": false,
+          "swift_type": "String"
+        },
+        "describe": {
+          "json_null": false,
+          "name": "describe",
+          "omission": null,
+          "optional": false,
+          "swift_type": "String"
+        },
+        "number": {
+          "json_null": false,
+          "name": "number",
+          "omission": null,
+          "optional": false,
+          "swift_type": "String"
+        },
+        "version": {
+          "json_null": false,
+          "name": "version",
+          "omission": null,
+          "optional": false,
+          "swift_type": "String"
+        }
+      },
+      "input": false
+    }
+  }
+}

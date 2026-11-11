@@ -1,0 +1,1263 @@
+--- initial/CONTRACT.md
++++ revised/CONTRACT.md
+@@ -167,33 +167,63 @@
+ variants and roots. The receiver checks this fingerprint before decoding the
+ producer context for public identity admission. A matching fingerprint
+ establishes the selected wire-schema match; the public producer identity is
+ then checked separately.
+ 
+ <a id="contract-identity-other-worker"></a>
+ #### Worker protocol identity
+ 
+-The host/worker protocol identity is a SHA-256 digest embedded as 32 bytes and
+-64 lowercase hexadecimal characters. It covers sorted C/header/Swift inputs
++The host/worker protocol identity is a SHA-256 digest, carried as raw bytes or
++lowercase hexadecimal using the fixed widths below. It covers sorted C/header/Swift inputs
+ under `controller/tools/pw_probe_runner` and `runner/Sources`, together with
+ `docs/generate_worker_identity.py`, `docs/source_identity.py`, `build.sh`,
+ `meson.build`, `meson.options` and `runner/Package.swift`. Its domain prefix is
+ `PolicyWitness host/worker source identity` followed by NUL; path and contents
+ use the same unsigned eight-byte big-endian length framing. Generated identity
+ region bodies are excluded while their boundary markers remain inputs.
+ 
+ The worker compares its embedded value and bootstrap magic with the host's
+ shared header before reading the remaining protocol state. A mapping failure
+ returns worker exit 3; a mapped header mismatch returns exit 4. Host decoding
+ of `worker_evidence` also requires a matching header. A reported `abi_identity` identifies
+ the protocol sources selected by the host; establishing the executing binary's
+ association uses the equipment and launch evidence.
+ 
+-**Support for this subject and its descendants — source read.** Wire fingerprint precedes producer admission; worker digest scope/framing and fixed-header mismatch have separate producers and checks. Context: Read schema identity construction, Rust bound frame decoder, worker identity generator, C bootstrap branch and Swift evidence header check. Evidence limit: Source reading only. This owner does not credit old-worker execution, every host header-read site, signature association or wire correctness. Those need their respective boundary owners. [Source 1](../docs/generate_porcelain.py), [Source 2](../controller/src/porcelain.rs), [Source 3](../docs/generate_worker_identity.py), [Source 4](../controller/tools/pw_probe_runner/pw_probe_runner.c), [Source 5](../runner/Sources/PWRunnerCore/CWorker.swift)
++<a id="contract-identity-other-sha256_bytes"></a>
++#### SHA-256 digest length
++
++Value: `32`.
++
++Fixed byte length of SHA-256 digests used for the schema fingerprint, worker
++identity and signed-file hashes.
++
++<a id="contract-identity-other-sha256_hex"></a>
++#### SHA-256 hexadecimal width
++
++Uses [SHA-256 digest length](#contract-identity-other-sha256_bytes). Value: `64`.
++
++Character length of their lowercase hexadecimal representation.
++
++<a id="contract-identity-other-cdhash_bytes"></a>
++#### CodeDirectory hash byte width
++
++Value: `20`.
++
++Fixed byte length of the CodeDirectory hashes admitted from equipment
++inventory and code inspection.
++
++<a id="contract-identity-other-cdhash_hex"></a>
++#### CodeDirectory hexadecimal width
++
++Uses [CodeDirectory hash byte width](#contract-identity-other-cdhash_bytes). Value: `40`.
++
++Character length of their lowercase hexadecimal representation.
++
++**Support for this subject and its descendants — source read.** Wire fingerprint precedes producer admission; worker digest scope/framing and fixed-header mismatch have separate producers and checks. Context: Read schema identity construction, Rust bound frame decoder, worker identity generator, C bootstrap branch and Swift evidence header check. Evidence limit: Source reading only. This owner does not credit old-worker execution, every host header-read site, signature association or wire correctness. Those need their respective boundary owners. [Source 1](../docs/generate_porcelain.py), [Source 2](../controller/src/porcelain.rs), [Source 3](../docs/generate_worker_identity.py), [Source 4](../controller/tools/pw_probe_runner/pw_probe_runner.c), [Source 5](../runner/Sources/PWRunnerCore/CWorker.swift), [Source 6](../runner/Sources/PWRunnerCore/ActorEquipment.swift), [Source 7](../runner/Sources/PWRunnerCore/ActorEquipment.swift)
+ 
+ <a id="contract-identity-build"></a>
+ ### Build identification
+ 
+ Every controller and compiler-helper envelope carries these string fields
+ under `build`. They identify the emitting binary's compiled context.
+ 
+ | Field | JSON type and presence | Meaning |
+@@ -218,17 +248,17 @@
+ | <a id="contract-identity-producer-describe"></a>`describe` | string; required | The host build's descriptive Git coordinate, or `unknown` in the ordinary unbound Swift build context. Packaged context generation supplies the observed build description. Uses [Describe](#contract-identity-build-describe). |
+ | <a id="contract-identity-producer-commit"></a>`commit` | string; required | The host build's observed Git HEAD object name, or `unknown` when the compiled context has no such observation. Identity admission uses `contract`; this field retains the host's provenance. Uses [Commit](#contract-identity-build-commit). |
+ 
+ **Support for this subject and its descendants — source read.** PWProducer.current copies the compiled contract/describe/commit context; bound reply decoding compares producer.contract before decoding descendants. Context: Read the complete producer declaration/current constructor, generated Swift context producer, ordinary fallback context and Rust bound-frame path. Evidence limit: Source reading only; component signing, live peer association and a fresh packaged producer run require their respective evidence. [Source 1](../runner/Sources/PWRunnerCore/PWRunnerAPI.swift), [Source 2](../docs/build_contract.py), [Source 3](../controller/src/porcelain.rs)
+ 
+ <!-- BEGIN GENERATED CONTRACT STAMPS -->
+ | Surface | User artifact | Last changed |
+ | --- | --- | --- |
+-| `actor_evidence` | Actor evidence | unreleased |
++| `actor_evidence` | Actor and phase evidence | unreleased |
+ | `actors` | Actors and phases | unreleased |
+ | `diagnostics` | Controller findings and assessments | unreleased |
+ | `dossier` | Specimen dossier | unreleased |
+ | `envelope` | The controller envelope | unreleased |
+ | `equipment` | Equipment and authority setup | unreleased |
+ | `extensions` | Extension actions and authority custody | unreleased |
+ | `identity` | The contract identity | unreleased |
+ | `installation` | Managing runners | unreleased |
+@@ -390,18 +420,18 @@
+ The meaning of a successful status is specific to that operation.
+ 
+ <a id="contract-identity-definitions-cause"></a>
+ #### Cause
+ 
+ A cause identifies why an event occurred. Permission-shaped return values
+ support the `permission_failure` observation class; they leave sandbox cause
+ unresolved. A termination request and a later owned reap support the specific
+-lifecycle relationship stated by the lifecycle assessment. Query answers,
+-attempt returns and log text retain their individual observation scopes.
++lifecycle relationship stated by the lifecycle assessment. Query answers and
++attempt returns retain their individual observation scopes.
+ 
+ <a id="contract-identity-definitions-assessment"></a>
+ #### Assessment
+ 
+ An assessment is a conclusion computed from named observations and declared
+ relations, such as query order, operation/target relation, application state
+ or process disposition. Its applicability and supporting observations belong
+ to that assessment. Raw observation retention and permission to use an
+@@ -476,18 +506,18 @@
+ 
+ <a id="contract-request-specimen"></a>
+ #### Specimen
+ 
+ The host request objects have closed field sets. Parameter-map keys and caller labels are data within their own bounds.
+ 
+ | Field | JSON type and presence | Meaning |
+ | --- | --- | --- |
+-| <a id="contract-request-specimen-contract"></a>`contract` | string; as defined below | The exact public contract identity asserted by the caller. The controller checks it before selector parsing and augmentation; the host checks it before other request fields. Obtain the current value from the packaged version envelope. `unbound` is refused. Uses [Exact admission identity](#contract-identity-public-contract). |
+-| <a id="contract-request-specimen-specimen_id"></a>`specimen_id` | string; as defined below | Caller label echoed when it fits <!-- span limits.specimen_id.value_unit -->255 UTF-8 bytes<!-- /span -->. It may be empty. Its identity is independent of the worker PID or an actor ID. |
++| <a id="contract-request-specimen-contract"></a>`contract` | string; as defined below | Required non-null string asserting the exact public contract identity. The controller checks it before selector parsing and augmentation; the host checks it before other request fields. Obtain the current value from the packaged version envelope. `unbound` is refused. Uses [Exact admission identity](#contract-identity-public-contract). |
++| <a id="contract-request-specimen-specimen_id"></a>`specimen_id` | string; as defined below | Required non-null string caller label, echoed when it fits <!-- span limits.specimen_id.value_unit -->255 UTF-8 bytes<!-- /span -->. It may be empty. Its identity is independent of the worker PID or an actor ID. |
+ | <a id="contract-request-specimen-run_kind"></a>`run_kind` | string; as defined below | Optional caller label, bounded by <!-- span limits.request_label.value_unit -->63 UTF-8 bytes<!-- /span -->. Omission and null have the same meaning; it selects no execution mode. Default: `null`. |
+ | <a id="contract-request-specimen-policy"></a>`policy` | [Worker policy input](#contract-policy-spec); as defined below | Policy for the ordinary form. With no non-null `actors`, the policy object is required. In the actor form a non-null top-level policy is refused; each actor declares its own sandbox mode and policy. |
+ | <a id="contract-request-specimen-probe_plan"></a>`probe_plan` | array of [Paired probe](#contract-probes-step); as defined below | Ordinary paired probes, including an empty array for apply-only execution. Exactly one of this field and `phases` must be non-null in the ordinary form. The host represents this plan as the `main` phase. |
+ | <a id="contract-request-specimen-phases"></a>`phases` | array of [Phase declaration](#contract-actors-phase); as defined below | Ordered phase declarations. The ordinary form requires a nonempty array, forbids actor ownership, termination dependencies and extension actions, and uses one worker across its phases. The actor form requires phases and forbids a non-null `probe_plan`. |
+ | <a id="contract-request-specimen-actors"></a>`actors` | array of [Actor declaration](#contract-actors-actor); as defined below | A non-null actor array selects the actor form; an empty array is refused. Each declared actor has its own fresh worker and at least one declared visit. Omission or null selects the ordinary form. |
+ | <a id="contract-request-specimen-_test_overrides"></a>`_test_overrides` | [Execution overrides](#contract-request-overrides); as defined below | Optional execution controls accepted by the host request decoder. Each declared control retains its stated scope and meaning; unknown override fields are refused. |
+ 
+ <a id="contract-request-specimen-hold"></a>
+@@ -505,17 +535,17 @@
+ <a id="contract-request-specimen-nulls"></a>
+ ##### Null and omission
+ 
+ XPC host acts at request decoding. Entry: xpc execute. Recipient: caller, report reader. Reports: runner reply. Uses [Absent field](#contract-identity-definitions-absent), [Null value](#contract-identity-definitions-null_value), [Extension operation](#contract-extensions-operation). Treat optional null as absent where decodeIfPresent is used. Refuse present null for actor equipment, actor required_entitlements, after_termination and actor_equipment_executable_paths. Retain presence of extension operands so an inapplicable operand is refused even when null.
+ 
+ <a id="contract-request-specimen-capacity"></a>
+ ##### Bounded strings and action counts
+ 
+-XPC host acts at pre-child admission. Entry: xpc execute. Recipient: caller, report reader. Reports: runner reply. Refuse excess before launch: <!-- span limits.policy_source.value_unit -->262143 UTF-8 bytes<!-- /span --> per final policy source, <!-- span limits.probe_steps.value_unit -->256 items<!-- /span --> total actions, <!-- span limits.phase_count.value_unit -->8 items<!-- /span --> ordinary phases, and <!-- span limits.actor_phases.value_unit -->16 items<!-- /span --> actor phases. Preserve complete UTF-8 strings at accepted bounds.
++XPC host acts at pre-child admission. Entry: xpc execute. Recipient: caller, report reader. Reports: runner reply. Refuse excess before launch: <!-- span limits.policy_source.value_unit -->262,143 UTF-8 bytes<!-- /span --> per final policy source, <!-- span limits.probe_steps.value_unit -->256 items<!-- /span --> total actions, <!-- span limits.phase_count.value_unit -->8 items<!-- /span --> ordinary phases, and <!-- span limits.actor_phases.value_unit -->16 items<!-- /span --> actor phases. Preserve complete UTF-8 strings at accepted bounds.
+ 
+ Native C-string inputs also refuse embedded NUL. Host-only labels use their declared UTF-8 capacities. Unicode is counted by encoded bytes. A paired query and attempt consumes one action; an extension action consumes one action and contributes no query. Phase and actor counts do not multiply the total action capacity.
+ 
+ <a id="contract-request-specimen-apply_only"></a>
+ ##### Apply-only specimen
+ 
+ This template applies a policy with no probe actions. Replace the assertion with the packaged version's `build.contract` before submission.
+ 
+@@ -573,22 +603,22 @@
+ 
+ <a id="contract-request-overrides"></a>
+ #### Execution overrides
+ 
+ These controls are admitted as request data in the current implementation, including packaged hosts. Their names identify test use; the parser applies the documented grammar and capacities.
+ 
+ | Field | JSON type and presence | Meaning |
+ | --- | --- | --- |
+-| <a id="contract-request-overrides-worker_executable_path"></a>`worker_executable_path` | string; omitted when absent | Ordinary-worker executable override, bounded by <!-- span limits.test_override_path.value_unit -->1023 UTF-8 bytes<!-- /span -->. Actor-form admission refuses this singular override. |
+-| <a id="contract-request-overrides-worker_timeout_ms"></a>`worker_timeout_ms` | integer; omitted when absent | Ordinary worker sentinel budget override in milliseconds. The host clamps it to <!-- span limits.worker_timeout_override_floor.value_unit -->50 milliseconds<!-- /span -->; omission uses <!-- span limits.worker_sentinel_wait.value_unit -->120000 milliseconds<!-- /span -->. Actor scheduling uses its fixed <!-- span limits.actor_execution_allowance.value_unit -->120000 milliseconds<!-- /span --> allowance even when this field is supplied. |
++| <a id="contract-request-overrides-worker_executable_path"></a>`worker_executable_path` | string; omitted when absent | Ordinary-worker executable override, bounded by <!-- span limits.test_override_path.value_unit -->1,023 UTF-8 bytes<!-- /span -->. Actor-form admission refuses this singular override. |
++| <a id="contract-request-overrides-worker_timeout_ms"></a>`worker_timeout_ms` | integer; omitted when absent | Ordinary worker sentinel budget override in milliseconds. The host floors the supplied allowance at <!-- span limits.worker_timeout_override_floor.value_unit -->50 milliseconds<!-- /span -->; omission uses <!-- span limits.worker_sentinel_wait.value_unit -->120,000 milliseconds<!-- /span -->. Actor scheduling uses its fixed <!-- span limits.actor_execution_allowance.value_unit -->120,000 milliseconds<!-- /span --> allowance even when this field is supplied. |
+ | <a id="contract-request-overrides-actor_equipment_executable_paths"></a>`actor_equipment_executable_paths` | object with string keys and string values; omitted when absent | Actor equipment role-to-path map. Present maps must be nonempty and use only `selected` and `unentitled` keys; actor admission requires absolute paths. The ordinary form refuses this map. |
+-| <a id="contract-request-overrides-validator_executable_path"></a>`validator_executable_path` | string; omitted when absent | Validator executable override, bounded by <!-- span limits.test_override_path.value_unit -->1023 UTF-8 bytes<!-- /span -->. The validator remains a separate child and receives query work through its own channel. |
+-| <a id="contract-request-overrides-validator_total_timeout_ms"></a>`validator_total_timeout_ms` | integer; omitted when absent | Cumulative validator collection budget override in milliseconds, spanning phases. Both schedulers clamp it to a minimum of 1 ms and their configured maximum: <!-- span limits.phase_collection_wait.value_unit -->30000 milliseconds<!-- /span --> for the ordinary form and <!-- span limits.actor_collection_allowance.value_unit -->30000 milliseconds<!-- /span --> for actors. Omission uses that maximum. |
+-| <a id="contract-request-overrides-validator_io_timeout_ms"></a>`validator_io_timeout_ms` | integer; omitted when absent | Per-validator I/O timeout override in milliseconds, clamped to <!-- span limits.validator_io_override_floor.value_unit -->50 milliseconds<!-- /span -->; omission uses <!-- span limits.validator_io_wait.value_unit -->30000 milliseconds<!-- /span -->. |
++| <a id="contract-request-overrides-validator_executable_path"></a>`validator_executable_path` | string; omitted when absent | Validator executable override, bounded by <!-- span limits.test_override_path.value_unit -->1,023 UTF-8 bytes<!-- /span -->. The validator remains a separate child and receives query work through its own channel. |
++| <a id="contract-request-overrides-validator_total_timeout_ms"></a>`validator_total_timeout_ms` | integer; omitted when absent | Cumulative validator collection budget override in milliseconds, spanning phases. Both schedulers clamp it to a minimum of <!-- span limits.validator_collection_override_floor.value_unit -->1 millisecond<!-- /span --> and their configured maximum: <!-- span limits.phase_collection_wait.value_unit -->30,000 milliseconds<!-- /span --> for the ordinary form and <!-- span limits.actor_collection_allowance.value_unit -->30,000 milliseconds<!-- /span --> for actors. Omission uses that maximum. |
++| <a id="contract-request-overrides-validator_io_timeout_ms"></a>`validator_io_timeout_ms` | integer; omitted when absent | Per-validator I/O timeout override in milliseconds. The host floors the proposed allowance at <!-- span limits.validator_io_override_floor.value_unit -->50 milliseconds<!-- /span -->; omission uses <!-- span limits.validator_io_wait.value_unit -->30,000 milliseconds<!-- /span -->. The remaining aggregate collection allowance can reduce the effective timeout below that floor. |
+ | <a id="contract-request-overrides-worker_post_apply_hang_ms"></a>`worker_post_apply_hang_ms` | integer; omitted when absent | Positive fixture delay in milliseconds after all declared visits and actions, before terminal publication. The host forwards positive values; the worker argument parser accepts through <!-- span limits.worker_fixture_delay.value_unit -->60,000 milliseconds<!-- /span -->. A larger forwarded value causes worker argument refusal after launch. Zero and negative values are omitted by the host. |
+ | <a id="contract-request-overrides-worker_post_apply_kill_signal"></a>`worker_post_apply_kill_signal` | integer; omitted when absent | Positive fixture signal requested after completed actions and before terminal publication, including an unapplied actor's visits. The host forwards positive values; the worker accepts signal numbers through 31. A larger value causes worker argument refusal after launch. Zero and negative values are omitted. A signal request can return without termination; final process observations decide the ending. |
+ | <a id="contract-request-overrides-worker_pre_ready_hang_ms"></a>`worker_pre_ready_hang_ms` | integer; omitted when absent | Positive fixture delay in milliseconds after compilation and optional capture, before an apply worker's readiness byte and policy application. The host forwards positive values; the worker argument parser accepts through <!-- span limits.worker_fixture_delay.value_unit -->60,000 milliseconds<!-- /span -->. A larger value causes worker argument refusal after launch. Zero and negative values are omitted. The unapplied actor branch bypasses this compile/readiness path. |
+ | <a id="contract-request-overrides-worker_kill_before_publish_slot"></a>`worker_kill_before_publish_slot` | integer; omitted when absent | Nonnegative zero-based slot in each worker's own plan. After that attempt returns and its result payload is written, the worker raises SIGKILL before publishing completion. Negative values are omitted. The worker argument parser requires an index below <!-- span limits.probe_steps.value_unit -->256 items<!-- /span -->; an index beyond the worker's actual plan has no reached action to trigger it. |
+ 
+ **Support — check read.** Calls the production helper to compare its floor to the limits inventory; independent below/equal/above cases retain the minimum and the uncapped larger override. Context: Planning helper and newly authored constructed assertions read. Evidence limit: No test execution is credited; the check establishes the planning value, not elapsed worker time. [Source](../runner/Sources/PWRunnerCore/CWorkerRequestPlanning.swift) [Check](../runner/Tests/PWRunnerCoreTests/LimitsContractTests.swift)
+ 
+ <a id="contract-request-overrides-override_authority"></a>
+@@ -596,38 +626,38 @@
+ 
+ Uses [Static worker binding](#contract-equipment-binding).
+ 
+ A caller whose connection passes host authorization can supply these controls. Actor equipment preparation checks the packaged inventory and both packaged role bindings before considering fixture override bindings. It retains the packaged and test_override rows with their respective implementation identities.
+ 
+ <a id="contract-request-overrides-override_inventory"></a>
+ ##### Known gap: Override quantities and applicability
+ 
+-The 1 ms collection floor and signal-number bound 31 remain source-owned quantities awaiting their shared representation. The ordinary worker floor and fixture-delay caps have controls calling the production planning helper and argument parser; execution of those controls remains outstanding. Actor admission currently accepts worker_timeout_ms although actor execution uses its fixed allowance. Whether to refuse that inapplicable override remains an admission decision.
++The signal-number bound 31 remains a source-owned grammar value. Collection floors are selected by the production planning helpers and checked against the limits inventory. The ordinary worker floor and fixture-delay caps have controls calling the production planning helper and argument parser. Actor admission currently accepts worker_timeout_ms although actor execution uses its fixed allowance. Whether to refuse that inapplicable override remains an admission decision.
+ 
+ <a id="contract-request-overrides-override_coverage"></a>
+ ##### Known gap: Override fixture coverage
+ 
+-The draft has inspected the decoder and timeout planning. Every override still needs a boundary control through the signed app, including the downstream worker-argument refusal for excessive values.
+-
+-**Support for this subject and its descendants — source read.** The adjacent field meanings and obligations follow the named producer and admission branches. Context: Source inspection of the current implementation; no execution is credited. Evidence limit: Runtime behavior remains subject to integrated acceptance evidence. [Source 1](../runner/Sources/PWRunnerCore/PWRunnerRequest.swift), [Source 2](../runner/Sources/PWRunnerCore/CWorkerRequestPlanning.swift), [Source 3](../runner/Sources/PWRunnerCore/ProbeRunner.swift), [Source 4](../runner/Sources/PWRunnerCore/CWorkerOrchestrator.swift), [Source 5](../runner/Sources/PWRunnerCore/ActorOrchestration.swift), [Source 6](../runner/Sources/PWRunnerCore/ActorSession.swift), [Source 7](../controller/tools/pw_probe_runner/pw_probe_runner.c)
++The draft has inspected the decoder and timeout planning. Existing signed-app cases exercise several overrides; a complete mapping of overrides to boundary assertions and applicable release results remains to be assembled, including downstream worker-argument refusal for excessive values. This gap records incomplete evidence attribution across the override set.
++
++**Support for this subject and its descendants — source read.** The adjacent field meanings and obligations follow the named producer and admission branches. Context: Source inspection of the current implementation; no execution is credited. Evidence limit: Runtime behavior remains subject to integrated acceptance evidence. [Source 1](../runner/Sources/PWRunnerCore/PWRunnerRequest.swift), [Source 2](../runner/Sources/PWRunnerCore/CWorkerRequestPlanning.swift), [Source 3](../runner/Sources/PWRunnerCore/ProbeRunner.swift), [Source 4](../runner/Sources/PWRunnerCore/CWorkerOrchestrator.swift), [Source 5](../runner/Sources/PWRunnerCore/ActorOrchestration.swift), [Source 6](../runner/Sources/PWRunnerCore/ActorSession.swift), [Source 7](../runner/Sources/PWRunnerCore/ActorEquipment.swift), [Source 8](../controller/tools/pw_probe_runner/pw_probe_runner.c)
+ 
+ <a id="contract-policy"></a>
+ ### Policy source, parameters and compilation
+ 
+ <a id="contract-policy-spec"></a>
+ #### Worker policy input
+ 
+ Each apply actor owns a separate policy. The host bounds the selected source string and parameter map before starting workers or validators.
+ 
+ | Field | JSON type and presence | Meaning |
+ | --- | --- | --- |
+ | <a id="contract-policy-spec-format"></a>`format` | string; as defined below | The accepted policy representation is `sbpl`; another value is refused before worker launch. Admitted vocabulary: closed; displayed list: exhaustive: `"sbpl"`. |
+-| <a id="contract-policy-spec-sbpl_source"></a>`sbpl_source` | string; as defined below | Required string when applying a policy. An empty string reaches native compilation. The final source after augmentation fits <!-- span limits.policy_source.value_unit -->262143 UTF-8 bytes<!-- /span -->, and embedded NUL is refused before child launch. |
+-| <a id="contract-policy-spec-params"></a>`params` | object with string keys and string values; as defined below | Optional string-to-string compiler parameter map. Omission, null and an empty map produce no native parameter setup. Supplied names remain open data. At most <!-- span limits.policy_parameters.value_unit -->1024 items<!-- /span --> fit each policy, with keys bounded by <!-- span limits.parameter_key.value_unit -->127 UTF-8 bytes<!-- /span --> and values by <!-- span limits.parameter_value.value_unit -->383 UTF-8 bytes<!-- /span -->; native strings must be NUL-free. |
++| <a id="contract-policy-spec-sbpl_source"></a>`sbpl_source` | string; as defined below | Required string when applying a policy. An empty string reaches native compilation. The final source after augmentation fits <!-- span limits.policy_source.value_unit -->262,143 UTF-8 bytes<!-- /span -->, and embedded NUL is refused before child launch. |
++| <a id="contract-policy-spec-params"></a>`params` | object with string keys and string values; as defined below | Optional string-to-string compiler parameter map. Omission, null and an empty map produce no native parameter setup. Supplied names remain open data. At most <!-- span limits.policy_parameters.value_unit -->1,024 items<!-- /span --> fit each policy, with keys bounded by <!-- span limits.parameter_key.value_unit -->127 UTF-8 bytes<!-- /span --> and values by <!-- span limits.parameter_value.value_unit -->383 UTF-8 bytes<!-- /span -->; native strings must be NUL-free. |
+ | <a id="contract-policy-spec-capture_compiled_profile"></a>`capture_compiled_profile` | boolean; as defined below | When true, request a compiled-profile receipt from the worker before application and require a valid capture_nonce. Omission, null and false leave capture unrequested. Default: `false`. |
+ | <a id="contract-policy-spec-capture_nonce"></a>`capture_nonce` | string; as defined below | Required with enabled capture: exactly 32 lowercase hexadecimal characters encoding the caller's nonce. A non-null nonce with capture disabled is an inapplicable-field refusal. Receipt publication and consistency checks belong to the compiled-profile surface. Required when `spec.capture_compiled_profile` = `true`. Present when `spec.capture_compiled_profile` = `true`. |
+ | <a id="contract-policy-spec-augments"></a>`augments` | array of string; as defined below | Controller-resolved list of named packaged SBPL fragments. Omission, null and an empty list are no-ops. The controller strips the field before delivery. The host accepts the no-op forms and refuses a nonempty unresolved list. |
+ 
+ <a id="contract-policy-spec-parameters"></a>
+ ##### Prepare native compiler input
+ 
+ host and worker acts at policy preparation and compilation. Entry: ordinary xpc execute, actor xpc execute. Recipient: caller, report reader. Reports: runner reply. Sort parameter keys, transport their complete strings, create native parameters only for a nonempty map, and pass each key and value through sandbox_set_param before compiling the selected source. Report setup or compile failure at the observed native stage.
+@@ -715,17 +745,17 @@
+ <a id="contract-policy-helper_policy"></a>
+ #### Compiler-helper policy
+ 
+ The helper decoder ignores policy members outside this record, including capture and augment requests. Controller fallback supplies the already normalized policy source.
+ 
+ | Field | JSON type and presence | Meaning |
+ | --- | --- | --- |
+ | <a id="contract-policy-helper_policy-format"></a>`format` | string; as defined below | Require `sbpl` at helper admission. Admitted vocabulary: closed; displayed list: exhaustive: `"sbpl"`. |
+-| <a id="contract-policy-helper_policy-sbpl_source"></a>`sbpl_source` | string; as defined below | Require a string source at helper admission; allow an empty string for the native compiler. Bound its UTF-8 bytes by <!-- span limits.helper_source.value_unit -->4194304 bytes<!-- /span -->, then require a NUL-free C string. |
++| <a id="contract-policy-helper_policy-sbpl_source"></a>`sbpl_source` | string; as defined below | Require a string source at helper admission; allow an empty string for the native compiler. Bound its UTF-8 bytes by <!-- span limits.helper_source.value_unit -->4,194,304 bytes<!-- /span -->, then require a NUL-free C string. |
+ | <a id="contract-policy-helper_policy-params"></a>`params` | object with string keys and string values; as defined below | Optional string map. Null and absence mean no map; an empty map is present for reporting but needs no native parameter object. Reject embedded NUL in each key and value before inventory or native calls. |
+ 
+ <a id="contract-policy-helper_policy-admit"></a>
+ ##### Helper admission order
+ 
+ sbpl-check acts at pre-inventory admission. Entry: standalone helper, controller helper stdin. Recipient: caller, report reader. Reports: helper envelope. Check format, source presence, source byte cap, source C-string conversion and parameter C-string conversion before import inventory or any native call. Input refusals exit 1 and report bad_request or policy_too_large, with compile and import_inventory null.
+ 
+ **Support for this subject and its descendants — source read.** The adjacent field meanings and operations follow the named implementation. Context: Current source read for this draft. Evidence limit: Source inspection supplies the stated branch behavior; this draft credits no execution. [Source 1](../controller/src/bin/sbpl-check.rs), [Source 2](../controller/src/bin/sbpl-check.rs)
+@@ -824,44 +854,44 @@
+ | `file / open_write` | `open(O_WRONLY \| O_TRUNC)`; on an accepted descriptor, request a one-byte `x` write and close. Aggregate success is the successful open; write and close results are discarded. |
+ | `file / create` | `open(O_WRONLY \| O_CREAT, 0600)` then close. Creation mode is subject to umask. An existing file is opened without truncation or exclusive creation. |
+ | `file / read_fresh` | Fresh `open(O_RDONLY \| O_CLOEXEC)`, `fstat`, one read bounded by <!-- span limits.fresh_read_bytes.value_unit -->64 bytes<!-- /span -->, then close. Record each boundary and read bytes; aggregate failure selects stat, read or close failure after a successful open. |
+ | `file / write_fresh` | Fresh `open(O_WRONLY \| O_CLOEXEC)` of an existing target, opened `fstat`, `ftruncate(0)`, truncated `fstat`, one-byte `x` write after successful truncation, written `fstat`, then close. Preserve the first failure in the aggregate. |
+ | `file / create_fresh` | `lstat` before a fresh exclusive `open(O_WRONLY \| O_CLOEXEC \| O_CREAT \| O_EXCL, 0600)`, opened `fstat`, one-byte `x` write, written `fstat`, then close. Pre-open `lstat` is an independent observation. Preserve the first operation failure in the aggregate. |
+ | `file / unlink` | `unlink(target)` and its return/errno. |
+ | `file / access` | `access(target, R_OK)` and its return/errno. This is an access-check observation. |
+ | `mach / lookup` | Obtain the task bootstrap port and call `bootstrap_look_up` for the supplied name; release the returned service port on success. |
+-| `sysctl / read` | One `sysctlbyname` call with a <!-- span limits.sysctl_read_bytes.value_unit -->4096 bytes<!-- /span --> buffer acquired after application. Report the call's result and errno; discard value bytes and the returned length. |
++| `sysctl / read` | One `sysctlbyname` call with a <!-- span limits.sysctl_read_bytes.value_unit -->4,096 bytes<!-- /span --> buffer acquired after application. Report the call's result and errno; discard value bytes and the returned length. |
+ | `exec / spawn` | Prepare per-attempt child resources, call `posix_spawn` for the absolute target with the requested argv, then collect child and cleanup observations. |
+ 
+ A short fresh write records its native count and fails the aggregate while retaining zero native errno when the write returned a short nonnegative count. A fresh file descriptor belongs to that attempt and is closed before its result is published.
+ 
+ <a id="contract-probes-attempt-execute"></a>
+ ##### Execute a declared operation
+ 
+ C worker acts at released action slot. Entry: ordinary worker, actor worker. Recipient: caller, report reader. Reports: runner reply. Uses [Observation](#contract-identity-definitions-observation), [Effect](#contract-identity-definitions-effect). Dispatch only the admitted kind/action pair, record the operation's native observations and publish its slot after the attempt. Preserve operation-specific success meaning alongside the aggregate result.
+ 
+ <a id="contract-probes-attempt-exec"></a>
+ ##### Exec setup and child inputs
+ 
+ C worker acts at post-apply exec attempt. Entry: ordinary worker, actor worker. Recipient: caller, report reader. Reports: runner reply. Acquire stdout/stderr pipes and spawn actions for this attempt after application, release them on setup failure and at completion, and report the failing setup call when spawning was prevented. Spawn with target as argv[0], an empty environment, /dev/null stdin, captured stdout/stderr, close-on-exec descriptor policy and a new process group.
+ 
+-A successful spawn supplies a child PID even if the child later exits nonzero. The child collection, termination request and owned reap remain separate observations. The per-child and cumulative attempt budgets can refuse a spawn or stop collection; clock faults retain their own boundary.
++A successful spawn supplies a child PID even if the child later exits nonzero. The child collection, termination request and owned reap remain separate observations. The production per-child collection allowance is <!-- span limits.exec_child_wait.value_unit -->10,000 milliseconds<!-- /span --> after successful spawn, capped by the remaining per-worker active-plan allowance of <!-- span limits.exec_attempt_budget.value_unit -->115,000 milliseconds<!-- /span -->. The active-plan clock starts before worker setup, includes setup and intervening work, and excludes acknowledged release waits and accepted actor parked-activation waits. Both allowances use continuous time, including system sleep. Exhausted allowance can refuse a later spawn or stop collection; clock faults retain their own boundary. Blocking native calls can outlast the allowance.
+ 
+ <a id="contract-probes-attempt-extension_exec"></a>
+ ##### Extension participant restriction
+ 
+ host acts at actor admission. Entry: actor xpc execute. Recipient: caller, report reader. Reports: runner reply. Uses [Extension operation](#contract-extensions-operation). Refuse exec probes in every actor participating in an extension operation, including an actor named only as a transfer recipient. Other actors may declare exec probes.
+ 
+ <a id="contract-probes-attempt-operation_evidence"></a>
+ ##### Known gap: Operation controls to attach
+ 
+ The worker operation implementations and exec setup branches were read. Fresh-file effects, closed-descriptor inheritance, syscall buffers and cleanup behavior still need their existing control runs attached to the release evidence. The legacy open operations intentionally retain their open-boundary aggregate meaning.
+ 
+-**Support for this subject and its descendants — source read.** The adjacent field meanings and operations follow the named implementation. Context: Current source read for this draft. Evidence limit: Source inspection supplies the stated branch behavior; this draft credits no execution. [Source 1](../runner/Sources/PWRunnerCore/CWorkerRequestPlanning.swift), [Source 2](../controller/tools/pw_probe_runner/pw_probe_runner.c), [Source 3](../controller/tools/pw_probe_runner/pw_probe_runner.c), [Source 4](../controller/tools/pw_probe_runner/pw_probe_runner.c), [Source 5](../controller/tools/pw_probe_runner/pw_worker_exec.h), [Source 6](../runner/Sources/PWRunnerCore/ActorPlan.swift)
++**Support for this subject and its descendants — source read.** The adjacent field meanings and operations follow the named implementation. Context: Current source read for this draft. Evidence limit: Source inspection supplies the stated branch behavior; this draft credits no execution. [Source 1](../runner/Sources/PWRunnerCore/CWorkerRequestPlanning.swift), [Source 2](../controller/tools/pw_probe_runner/pw_probe_runner.c), [Source 3](../controller/tools/pw_probe_runner/pw_probe_runner.c), [Source 4](../controller/tools/pw_probe_runner/pw_probe_runner.c), [Source 5](../controller/tools/pw_probe_runner/pw_worker_exec.h), [Source 6](../runner/Sources/PWRunnerCore/ActorPlan.swift), [Source 7](../controller/tools/pw_probe_runner/pw_worker_timing.h), [Source 8](../controller/tools/pw_probe_runner/pw_worker_timing.h)
+ 
+ <a id="contract-actors"></a>
+ ### Actors and phases
+ 
+ <a id="contract-actors-actor"></a>
+ #### Actor declaration
+ 
+ A specimen admits at most <!-- span limits.actors.value_unit -->8 items<!-- /span -->. Each actor has at least one declared phase. Each required-entitlement list fits <!-- span limits.actor_required_entitlements.value_unit -->64 items<!-- /span -->, with each key bounded by <!-- span limits.actor_entitlement_key.value_unit -->255 UTF-8 bytes<!-- /span -->.
+@@ -988,17 +1018,17 @@
+ Every supplied operand is checked for applicability, including null. Required operands must contain strings. References are nonempty, NUL-free and bounded by <!-- span limits.extension_reference.value_unit -->63 UTF-8 bytes<!-- /span -->.
+ 
+ | Field | JSON type and presence | Meaning |
+ | --- | --- | --- |
+ | <a id="contract-extensions-operation-operation"></a>`operation` | string; as defined below | Select the operation and its exact applicable operands. Admitted vocabulary: closed; displayed list: exhaustive: `"issue"`, `"transfer"`, `"consume"`, `"release"`. |
+ | <a id="contract-extensions-operation-token_ref"></a>`token_ref` | string; as defined below | Required new token reference for issue; required previously assigned token owned by the active actor for transfer. Other operations require this field absent. Required when `operation.operation` is one of `"issue"`, `"transfer"`. Present when `operation.operation` is one of `"issue"`, `"transfer"`. |
+ | <a id="contract-extensions-operation-handle_ref"></a>`handle_ref` | string; as defined below | Required new handle reference for consume; required previously assigned handle owned by the active actor for release. Other operations require this field absent. Required when `operation.operation` is one of `"consume"`, `"release"`. Present when `operation.operation` is one of `"consume"`, `"release"`. |
+ | <a id="contract-extensions-operation-family"></a>`family` | string; as defined below | Required `file` for issue. Other operations require this field absent. Required when `operation.operation` = `"issue"`. Present when `operation.operation` = `"issue"`. |
+-| <a id="contract-extensions-operation-target"></a>`target` | string; as defined below | Required absolute file or directory path for issue, bounded by <!-- span limits.extension_issue_target.value_unit -->1023 UTF-8 bytes<!-- /span -->. The exact submitted bytes reach native issuance. Other operations require this field absent. Required when `operation.operation` = `"issue"`. Present when `operation.operation` = `"issue"`. |
++| <a id="contract-extensions-operation-target"></a>`target` | string; as defined below | Required absolute file or directory path for issue, bounded by <!-- span limits.extension_issue_target.value_unit -->1,023 UTF-8 bytes<!-- /span -->. The exact submitted bytes reach native issuance. Other operations require this field absent. Required when `operation.operation` = `"issue"`. Present when `operation.operation` = `"issue"`. |
+ | <a id="contract-extensions-operation-authority"></a>`authority` | string; as defined below | Required `read` or `read_write` for issue, selecting `com.apple.app-sandbox.read` or `com.apple.app-sandbox.read-write`. Other operations require this field absent. Required when `operation.operation` = `"issue"`. Present when `operation.operation` = `"issue"`. |
+ | <a id="contract-extensions-operation-recipient"></a>`recipient` | string; as defined below | Required known actor ID for transfer; may name the active actor itself. Other operations require this field absent. Required when `operation.operation` = `"transfer"`. Present when `operation.operation` = `"transfer"`. |
+ | <a id="contract-extensions-operation-delivery_ref"></a>`delivery_ref` | string; as defined below | Required new delivery reference for transfer; required previously assigned delivery owned by the active recipient for consume. Other operations require this field absent. Required when `operation.operation` is one of `"transfer"`, `"consume"`. Present when `operation.operation` is one of `"transfer"`, `"consume"`. |
+ 
+ <a id="contract-extensions-operation-grammar"></a>
+ ##### Operation grammar
+ 
+ | Operation | Required operands | Producing actor and consequence |
+@@ -1037,26 +1067,26 @@
+ <a id="contract-extensions-custody-prepare"></a>
+ ##### Prepare before use
+ 
+ host and actor worker acts at authority setup before sandbox application. Entry: actor xpc execute. Recipient: caller, report reader. Reports: runner reply. Uses [Authority setup account](#contract-equipment-authority_setup). Create one authority region per actor and bounded host custody storage, establish core-dump limits before accepting authority payloads, map the actor region and resolve native extension symbols before application. Publish setup observations and explicit action unavailability when required apparatus or symbols are unavailable.
+ 
+ <a id="contract-extensions-custody-issue"></a>
+ ##### Issue and transfer payload ownership
+ 
+-issuing worker and host acts at outbound token publication. Entry: actor worker. Recipient: caller, report reader. Reports: runner reply. Publish a one-shot bounded token only when native issuance returned a non-null payload with length from one through <!-- span limits.extension_token_payload.value_unit -->16383 bytes<!-- /span -->. Erase the native allocation after copying. Keep the published outbound slot immutable until the host validates, copies or rejects it, erases its payload and acknowledges it.
++issuing worker and host acts at outbound token publication. Entry: actor worker. Recipient: caller, report reader. Reports: runner reply. Publish a one-shot bounded token only when native issuance returned a non-null payload with length from one through <!-- span limits.extension_token_payload.value_unit -->16,383 bytes<!-- /span -->. Erase the native allocation after copying. Keep the published outbound slot immutable until the host validates, copies or rejects it, erases its payload and acknowledges it.
+ 
+ The slot owns one declared issue. A worker timeout or exit leaves its published bytes available for the host's later copy and erasure. Another issue uses another slot. The native return and host custody acceptance are reported independently.
+ 
+ <a id="contract-extensions-custody-deliver"></a>
+ ##### Acknowledge, compare and settle delivery
+ 
+ host and recipient worker acts at explicit transfer exchange. Entry: actor worker. Recipient: caller, report reader. Reports: runner reply. Require a valid transfer request and held host custody, copy into the assigned recipient slot, obtain recipient framing acknowledgement and compare its complete length and bytes with custody. Set delivered and publish settlement only after accepted acknowledgement and equal bytes. On failure publish the corresponding acknowledgement and withdraw the delivery.
+ 
+-A parked recipient validates framing. A self-transfer also services inbound work while waiting. Consumption requires settled, committed and accepted delivery. Each exchange is bounded by <!-- span limits.actor_exchange_allowance.value_unit -->5000 milliseconds<!-- /span --> and the remaining actor budget; timeout and clock observations retain their own boundary.
++A parked recipient validates framing. A self-transfer also services inbound work while waiting. Consumption requires settled, committed and accepted delivery. Each exchange is bounded by <!-- span limits.actor_exchange_allowance.value_unit -->5,000 milliseconds<!-- /span --> and the remaining actor budget; timeout and clock observations retain their own boundary.
+ 
+ <a id="contract-extensions-custody-source_answer"></a>
+ ##### Observe the source answer
+ 
+ host acts at reply assembly after transfer. Entry: actor xpc execute. Recipient: caller, report reader. Reports: runner reply. Set source_acknowledged only when the source action completed and its published transfer status matches the host's nonzero acknowledgement. Preserve late host answers independently of an unpublished or differently completed source action.
+ 
+ <a id="contract-extensions-custody-erase"></a>
+ ##### Erase at declared last use and teardown
+@@ -1114,36 +1144,36 @@
+ **Support for this subject and its descendants — check read.** Source defines all imported fields, reservation state transitions, capture gates, preservation and deadline boundaries. Controlled tests establish retry/invocation accounting, connection binding, bound-control admission, byte preservation and delivery-error precedence. Context: Read the cited producer/receiver declarations and branches; check citations identify the assertions read. Evidence limit: The Swift session checks inject clock, scheduler and connection boundaries. Rust process controls use controlled child programs. Live XPC, signed foreign-host nonreceipt and large native replies require separate execution evidence. [Source 1](../controller/src/runner_client.rs), [Source 2](../controller/src/runner_client.rs), [Source 3](../controller/src/utils.rs), [Source 4](../runner/Clients/PWRunnerClient/PWRunnerClientSession.swift), [Source 5](../runner/Sources/PWRunnerCore/PWRunnerReservation.swift), [Source 6](../runner/Sources/PWRunnerCore/PWRunnerTransport.swift), [Source 7](../runner/Sources/PWRunnerCore/PWRunnerService.swift) [Check 1](../runner/Tests/PWRunnerClientSessionTests/main.swift), [Check 2](../runner/Tests/PWRunnerCoreTests/ReservationAdmissionTests.swift), [Check 3](../controller/src/runner_client.rs), [Check 4](../controller/src/runner_client.rs)
+ 
+ <a id="contract-transport-authorization"></a>
+ #### Caller authorization
+ 
+ <a id="contract-transport-authorization-connection"></a>
+ ##### Admit a connection
+ 
+-runner host listener checks at NSXPCListener connection acceptance before exporting reservation methods. Entry: run, runner verify, direct xpc. Recipient: xpc caller. Reports: connection acceptance. The host reads PWRunnerRequireSignedCaller from its Info.plist as a Boolean; absence or an unavailable Boolean value selects false. When true, obtain caller signing information using the connection PID and the host's own signing information; require both Team IDs to be present and equal. If a nonempty identifier allowlist is configured, also require the caller signing identifier to occur in it. Reject the connection before exporting reservation methods when these checks fail.
++[Runner host](#contract-identity-definitions-host) checks at NSXPCListener connection acceptance before exporting reservation methods. Entry: run, runner verify, direct xpc. Recipient: xpc caller. Reports: connection acceptance. The host reads PWRunnerRequireSignedCaller from its Info.plist as a Boolean; absence or an unavailable Boolean value selects false. When true, obtain caller signing information using the connection PID and the host's own signing information; require both Team IDs to be present and equal. If a nonempty identifier allowlist is configured, also require the caller signing identifier to occur in it. Reject the connection before exporting reservation methods when these checks fail.
+ 
+ `PWRunnerAllowedIdentifiers` is a string array whose members are trimmed and empty members removed. An unavailable or empty resulting list leaves the identifier unrestricted within the Team ID check. The shipped template enables the signed-caller check and lists `pw-runner-client` and `com.policywitness.policy-witness`. An ad-hoc host has no Team ID and fails the enabled check. With the Boolean false, the listener accepts local connections without these signing comparisons; reservation and specimen admission still follow. These signing comparisons and public contract equality are separate checks.
+ 
+ **Support for this subject and its descendants — source read.** The listener applies configured signing-information comparisons before exporting a service; source defaults and shipped settings are distinct. Context: Read Security lookup, Team ID and identifier comparisons, option decoding, listener call order and shipped template. Evidence limit: Source reading. The external-auth wrapper was read, but its delegated setup assertions and a signed refusal matrix are not credited by this owner. [Source 1](../runner/Sources/PWRunnerCore/PWRunnerService.swift), [Source 2](../runner/Sources/PWRunnerCore/PWRunnerService.swift), [Source 3](../runner/Services/PWRunner/Info.plist)
+ 
+ <a id="contract-transport-delivery"></a>
+ #### Reservation and execution
+ 
+ <a id="contract-transport-delivery-acquire"></a>
+ ##### Acquire an unused host
+ 
+-runner client and authenticated runner host acts at reserveRunner control RPC. Entry: run, runner verify, direct xpc. Recipient: runner host, runner client. Reports: client capture, control reply. Uses [Exact admission identity](#contract-identity-public-contract). The client has a positive remaining overall allowance and fewer than 256 acquisition attempts. Send only the reservation control; the host may grant its one unused slot to that connection. Occupied or transport-lost acquisition may reconnect within the original allowance.
+-
+-The requested lease is at most <!-- span limits.reservation_lease.value_unit -->5,000 milliseconds<!-- /span --> and at most the remaining overall allowance. Each reservation RPC waits at most <!-- span limits.reservation_rpc_wait.value_unit -->5,000 milliseconds<!-- /span -->; retries wait up to <!-- span limits.reservation_retry_delay.value_unit -->100 milliseconds<!-- /span -->, shortened by the remaining allowance. Every attempt uses a new UUID. A host shares its one slot across authenticated connections. Grant, execution, expiry and abandonment advance that slot toward retirement; expiry or disconnect does not make it reusable. The client sends specimen bytes at the execution RPC.
++runner client and authenticated runner host acts at reserveRunner control RPC. Entry: run, runner verify, direct xpc. Recipient: runner host, runner client. Reports: client capture, control reply. Uses [Exact admission identity](#contract-identity-public-contract). The client has a positive remaining overall allowance and has already begun fewer than <!-- span limits.reservation_attempts.value -->256<!-- /span --> acquisition attempts. Send only the reservation control; the host may grant its one unused slot to that connection. Occupied or transport-lost acquisition may reconnect within the original allowance.
++
++The requested lease is at most <!-- span limits.reservation_lease.value_unit -->5,000 milliseconds<!-- /span --> and at most the remaining overall allowance. Each reservation RPC waits at most <!-- span limits.reservation_rpc_wait.value_unit -->5,000 milliseconds<!-- /span -->; retries wait up to <!-- span limits.reservation_retry_delay.value_unit -->100 milliseconds<!-- /span -->, shortened by the remaining allowance. The client begins at most <!-- span limits.reservation_attempts.value -->256<!-- /span --> acquisition attempts, including occupied replies and transport failures. Every attempt uses a new UUID. A host shares its one slot across authenticated connections. Grant, execution, expiry and abandonment advance that slot toward retirement; expiry or disconnect does not make it reusable. The client sends specimen bytes at the execution RPC.
+ 
+ <a id="contract-transport-delivery-admit_control"></a>
+ ##### Admit the control
+ 
+-runner client checks at reservation and submission-control reply admission. Entry: run, runner verify. Recipient: runner client. Reports: client capture. Uses [Exact admission identity](#contract-identity-public-contract). Control bytes arrive before a terminal client decision. Bound the control to 65,536 bytes, compare its contract before decoding its remaining fields, and require the status-specific fields and matching acquisition attempt. On refusal retain control byte count and SHA-256, withhold decoded control fields and end with protocol_error.
++[Runner client](#contract-identity-definitions-client) checks at reservation and submission-control reply admission. Entry: run, runner verify. Recipient: runner client. Reports: client capture. Uses [Exact admission identity](#contract-identity-public-contract). Control bytes arrive before a terminal client decision. Bound the control to <!-- span limits.reservation_control_bytes.value_unit -->65,536 bytes<!-- /span -->, compare its contract before decoding its remaining fields, and require the status-specific fields and matching acquisition attempt. On refusal retain control byte count and SHA-256, withhold decoded control fields and end with protocol_error.
+ 
+ A grant requires a positive signed-32-bit host PID, UUID host instance, the current attempt UUID, UUID credential and positive lease no greater than requested. Acquisition replies require reason absent or null; occupied replies also require credential and lease absent or null. Both reservation requests and admitted control replies reject unknown keys after identity admission. Optional control fields accept JSON null as absence. Reservation acceptance establishes control admission and ownership of a slot. Peer PID and host-instance strings are assertions supplied by that peer.
+ 
+ <a id="contract-transport-delivery-invoke"></a>
+ ##### Invoke execution once
+ 
+ runner client acts at runReservedSpecimen invocation on the granting connection. Entry: run, runner verify. Recipient: runner host. Reports: client capture. A grant was admitted and a fresh continuous-clock sample is before the original deadline. Record submission.state invoked and its elapsed time before acquiring/calling the execution proxy. Make one execution invocation. Preserve that fact through every later error, timeout or refusal; never replay the specimen.
+ 
+@@ -1292,17 +1322,17 @@
+ | <a id="contract-transport-client-stderr_bytes_retained"></a>`stderr_bytes_retained` | integer; null when absent | Retained stderr prefix length before diagnostic text conversion. |
+ | <a id="contract-transport-client-capture_limit_bytes"></a>`capture_limit_bytes` | integer; required | Per-stream prefix-retention allowance, currently <!-- span limits.controller_output.value_unit -->285,212,672 bytes<!-- /span --> for the runner client. |
+ | <a id="contract-transport-client-stderr"></a>`stderr` | string; required | Retained stderr converted to UTF-8 text with replacement for invalid bytes. |
+ | <a id="contract-transport-client-stderr_truncated"></a>`stderr_truncated` | boolean; required | Whether complete stderr exceeded its retained prefix allowance. |
+ 
+ <a id="contract-transport-client-admit"></a>
+ ##### Admit client and host observations
+ 
+-controller checks at completed client stdout and nested host frame. Entry: run, runner verify. Recipient: cli caller. Reports: controller envelope. Uses [Exact admission identity](#contract-identity-public-contract). The client process and input writer completed collection. Give request-delivery failure precedence; otherwise refuse retention loss, missing capture, unsupported producer/schema or inconsistent capture. Admit the host frame separately only when its retained bytes are complete. Keep raw received bytes at the boundary that received them.
++[Controller](#contract-identity-definitions-controller) checks at completed client stdout and nested host frame. Entry: run, runner verify. Recipient: cli caller. Reports: controller envelope. Uses [Exact admission identity](#contract-identity-public-contract). The client process and input writer completed collection. Give request-delivery failure precedence; otherwise refuse retention loss, missing capture, unsupported producer/schema or inconsistent capture. Admit the host frame separately only when its retained bytes are complete. Keep raw received bytes at the boundary that received them.
+ 
+ Delivery failure yields controller `tool_error` and exit 2 while retaining available client bytes. Admitted capture semantics check chronology, UUIDs, terminal combinations, control fields and retained lengths. Unsupported or malformed capture withholds submission knowledge and host interpretation. An admitted capture’s `runner_reply` can still be refused as `runner_reply_truncated`, `unsupported_runner_response` or `malformed_runner_response`. Host semantic admission follows structural decoding.
+ 
+ <a id="contract-transport-request_delivery"></a>
+ #### Request stdin delivery
+ 
+ | Field | JSON type and presence | Meaning |
+ | --- | --- | --- |
+@@ -1359,20 +1389,27 @@
+ 
+ Optional record fields are omitted from the binary record when the producer has no value. A reader requires each nonoptional field and constructs optional absence from missing tags. JSON omission and null are projection choices owned by the field definition.
+ 
+ <a id="contract-wire-frame-variants"></a>
+ ##### Text enums and typed variants
+ 
+ Outcome, state and reason vocabularies travel as text values. Each field's named recipient checks and assessments determine the consequence of a familiar or unfamiliar value. Record references retain their declared record type; equipment references use unsigned indices into their named tables. The declared PWDispositionValue variant has case tag 1 carrying a signed integer and case tag 2 carrying PWRunnerTerminationRequest. Public JSON serializes the selected value directly.
+ 
++<a id="contract-wire-frame-reader"></a>
++##### Retained-byte reader
++
++The Python retained-byte reader admits captured porcelain frames against the
++declared wire schema and projects their fields for the repository's evidence
++readers. The received bytes remain with their capture owner.
++
+ <a id="contract-wire-frame-admit"></a>
+ ##### Exact structural admission
+ 
+-controller Rust decoder and retained-byte Python reader checks at one complete client-capture or host-reply frame. Entry: client stdout, host reply, retained frame. Recipient: controller, evidence reader. Reports: controller envelope. Uses [Exact admission identity](#contract-identity-public-contract), [Wire-schema fingerprint](#contract-identity-other-wire). A complete frame has been retained for the requested root kind. Check frame extent/magic and exact fingerprint, then the expected root and producer identity before descendants. Refuse wrong kinds, unknown records/tags/cases, missing required fields, invalid UTF-8, out-of-range integers, impossible lengths/counts, duplicate or out-of-order fields/keys and trailing bytes.
++[Controller](#contract-identity-definitions-controller), [Retained-byte reader](#contract-wire-frame-reader) checks at one complete client-capture or host-reply frame. Entry: client stdout, host reply, retained frame. Recipient: controller, evidence reader. Reports: controller envelope. Uses [Exact admission identity](#contract-identity-public-contract), [Wire-schema fingerprint](#contract-identity-other-wire). A complete frame has been retained for the requested root kind. Check frame extent/magic and exact fingerprint, then the expected root and producer identity before descendants. Refuse wrong kinds, unknown records/tags/cases, missing required fields, invalid UTF-8, out-of-range integers, impossible lengths/counts, duplicate or out-of-order fields/keys and trailing bytes.
+ 
+ A complete header naming another fingerprint yields unsupported schema before payload interpretation. A short fingerprint is malformed. The bound reader compares the client’s contract or host producer contract with the caller’s expected public identity; `unbound` cannot supply a positive identity admission. Successful structural decoding establishes the declared typed shape. Native-operation, lifecycle, phase, actor, equipment and custody consistency have separately named semantic readers.
+ 
+ <a id="contract-wire-frame-budgets"></a>
+ ##### Receiver and writer budgets
+ 
+ The frame cap is <!-- span limits.porcelain_frame_bytes.value_unit -->134,217,728 bytes<!-- /span --> and the nesting limit is <!-- span limits.porcelain_nesting.value -->32<!-- /span --> values. Rust shares one <!-- span limits.porcelain_decoded_storage_bytes.value_unit -->134,217,728 bytes<!-- /span --> logical decoded-storage budget across collection slots, strings and byte arrays within each frame; slot charges use the compiled destination type’s size. Capture and embedded host reply are separate frames and separate budgets. Swift bounds encoded values and record growth so a produced frame fits its frame cap. The client retains at most <!-- span limits.client_reply_retention.value_unit -->96,468,992 bytes<!-- /span --> of a host reply. The controller collects client output before applying its <!-- span limits.controller_output.value_unit -->285,212,672 bytes<!-- /span --> per-stream retention cap. These quantities describe distinct allocation, encoding and retention operations; complete-output collection can use more memory than a retained prefix.
+ 
+@@ -1408,19 +1445,19 @@
+ 
+ native validator helper reports at batch stdout after each nonblank input line. Entry: validator batch. Recipient: runner host. Reports: validator records. The helper parsed a physical input line or performed its requested native call. Emit a newline-terminated object with kind sb_api_validator_verdict, integer schema_version 1, step_id and outcome. Native-call records carry operation, filter_type, filter_type_id, filter_value, rc, errno and error; parse/filter refusals carry recovered-or-null step_id and error without inventing native results.
+ 
+ Before each native call the helper clears errno. Native rc 0 is `allow`; rc 1 with errno 0 is `deny`; rc -1 with EINVAL is `unsupported_operation`; other pairs are `error`. Parse errors use `parse_error`; an unsupported filter uses `bad_filter`. Per-line failures continue to the next line, and clean batch EOF returns zero even when individual records report failures.
+ 
+ <a id="contract-wire-validator-read"></a>
+ ##### Host line admission
+ 
+-runner host checks at validator stdout framing and decoded-record construction. Entry: validator stdout. Recipient: runner host. Reports: validator records, host reply. The host has received a validator output prefix within its stream allowance. Split on LF, ignore empty frames and decode a final nonempty fragment. Admit strict UTF-8 JSON objects under per-frame, record-count, primitive-type and string-byte checks. Stop at the first refused frame while preserving earlier complete records and bounded rejection context.
+-
+-Every admitted object has exact kind, integer schema_version 1, a present string-or-null step_id and nonempty string outcome. Known optional strings and integer fields may be absent or null; Boolean, fractional, string-valued and overflowing numbers cannot supply native integers. Allow/deny require nonempty step_id, operation and filter_type plus integer rc and errno. Every other outcome requires string error. Extra JSON fields and unfamiliar diagnostic outcomes survive in the accepted raw line. Frame size is at most <!-- span limits.validator_reply_frame.value_unit -->8,192 bytes<!-- /span -->; string limits are <!-- span limits.validator_reply_step_id.value_unit -->63 UTF-8 bytes<!-- /span --> for step_id, <!-- span limits.validator_reply_filter_type.value_unit -->63 UTF-8 bytes<!-- /span --> for filter_type, <!-- span limits.validator_reply_outcome.value_unit -->63 UTF-8 bytes<!-- /span --> for outcome, <!-- span limits.validator_reply_operation.value_unit -->127 UTF-8 bytes<!-- /span --> for operation, <!-- span limits.validator_reply_filter_value.value_unit -->1,023 UTF-8 bytes<!-- /span --> for filter_value and <!-- span limits.validator_reply_error.value_unit -->511 UTF-8 bytes<!-- /span --> for error. Rejected context retains at most <!-- span limits.validator_fault_context.value_unit -->256 bytes<!-- /span -->. Phase collection owns the total stream and record allowance and the subsequent unique-step association.
++[Runner host](#contract-identity-definitions-host) checks at validator stdout framing and decoded-record construction. Entry: validator stdout. Recipient: runner host. Reports: validator records, host reply. Uses [Validator subprocess](#contract-lifecycle-validator). The host has received a validator output prefix within its stream allowance. Split on LF, ignore empty frames and decode a final nonempty fragment. Admit strict UTF-8 JSON objects under per-frame, record-count, primitive-type and string-byte checks. Stop at the first refused frame while preserving earlier complete records and bounded rejection context.
++
++Every admitted object has exact kind, integer schema_version 1, a present string-or-null step_id and nonempty string outcome. Known optional strings and integer fields may be absent or null; Boolean, fractional, string-valued and overflowing numbers cannot supply native integers. Allow/deny require nonempty step_id, operation and filter_type plus integer rc and errno. Every other outcome requires string error. Extra JSON fields and unfamiliar diagnostic outcomes survive in the accepted raw line. Frame size is at most <!-- span limits.validator_reply_frame.value_unit -->8,192 bytes<!-- /span -->; string limits are <!-- span limits.validator_reply_step_id.value_unit -->63 UTF-8 bytes<!-- /span --> for step_id, <!-- span limits.validator_reply_filter_type.value_unit -->63 UTF-8 bytes<!-- /span --> for filter_type, <!-- span limits.validator_reply_outcome.value_unit -->63 UTF-8 bytes<!-- /span --> for outcome, <!-- span limits.validator_reply_operation.value_unit -->127 UTF-8 bytes<!-- /span --> for operation, <!-- span limits.validator_reply_filter_value.value_unit -->1,023 UTF-8 bytes<!-- /span --> for filter_value and <!-- span limits.validator_reply_error.value_unit -->511 UTF-8 bytes<!-- /span --> for error. Rejected context retains at most <!-- span limits.validator_fault_context.value_unit -->256 bytes<!-- /span -->. The validator subprocess account defines this phase collector's total stream and record allowances and subsequent unique-step association.
+ 
+ <a id="contract-wire-validator-duplicate_keys"></a>
+ ##### Known gap: Repeated query keys
+ 
+ The native batch parser currently accepts repeated recognized keys and uses the last parsed string. Host query serialization emits each key once. Alignment with the other request decoders’ duplicate-key behavior and a shared acceptance policy remain unresolved.
+ 
+ <a id="contract-wire-validator-example"></a>
+ ##### Native prediction example
+@@ -1578,28 +1615,28 @@
+ | <a id="contract-policy-fallback-stdout_raw"></a>`stdout_raw` | string; null when absent | Retained textual stdout used for capture diagnosis. |
+ | <a id="contract-policy-fallback-stdout_parse_error"></a>`stdout_parse_error` | string; null when absent | Parse diagnosis when retained stdout could not be decoded as the helper JSON value. |
+ | <a id="contract-policy-fallback-stdout_truncated"></a>`stdout_truncated` | boolean; required | Whether stdout retention truncated the child's output; truncation prevents interpreting a parsed prefix as the complete reply. |
+ | <a id="contract-policy-fallback-stdout_capture_error"></a>`stdout_capture_error` | string; null when absent | Capture loss diagnosis, which takes precedence over parsing and helper interpretation. |
+ | <a id="contract-policy-fallback-stdout_bytes_received"></a>`stdout_bytes_received` | integer; null when absent | Count of stdout bytes observed by capture. |
+ | <a id="contract-policy-fallback-stdout_bytes_retained"></a>`stdout_bytes_retained` | integer; null when absent | Count of stdout bytes retained within the capture limit. |
+ | <a id="contract-policy-fallback-stderr_bytes_received"></a>`stderr_bytes_received` | integer; null when absent | Count of stderr bytes observed by capture. |
+ | <a id="contract-policy-fallback-stderr_bytes_retained"></a>`stderr_bytes_retained` | integer; null when absent | Count of stderr bytes retained within the capture limit. |
+-| <a id="contract-policy-fallback-capture_limit_bytes"></a>`capture_limit_bytes` | integer; required | Per-stream retention limit, <!-- span limits.policy_helper_output.value_unit -->8388608 bytes<!-- /span -->. |
++| <a id="contract-policy-fallback-capture_limit_bytes"></a>`capture_limit_bytes` | integer; required | Per-stream retention limit, <!-- span limits.policy_helper_output.value_unit -->8,388,608 bytes<!-- /span -->. |
+ | <a id="contract-policy-fallback-stderr"></a>`stderr` | string; required | Retained stderr text, including diagnostic output when the helper produced no envelope. |
+ | <a id="contract-policy-fallback-stderr_truncated"></a>`stderr_truncated` | boolean; required | Whether stderr exceeded its retained capture capacity. |
+ 
+ <a id="contract-policy-fallback-classify"></a>
+ #### Fallback eligibility and classification
+ 
+-controller acts at admitted client capture after xpc error. Entry: cli run. Recipient: caller, report reader. Reports: run envelope. Invoke the fallback helper only when the admitted client result is fallback-eligible xpc_error. Deliver the held request on stdin. Report launch or delivery failure as unavailable; otherwise apply capture_error, parse_error, absent-output tool_error, then envelope identity/kind validation. Copy a supported envelope's nonempty outcome into status.
++controller acts at admitted client capture after xpc error. Entry: cli run. Recipient: caller, report reader. Reports: run envelope. Invoke the fallback helper when client transport admission is accepted, request delivery has no error, and the admitted client capture has terminal xpc_error. Deliver the held request on stdin. Report launch or delivery failure as unavailable; otherwise apply capture_error, parse_error, absent-output tool_error, then envelope identity/kind validation. Copy a supported envelope's nonempty outcome into status.
+ 
+ Support requires kind `sbpl_check`, the current non-unbound `build.contract`, and a nonempty string normalized_outcome. The capture preserves the envelope and helper process exit independently; compiler observations retain their own process owner.
+ 
+-**Support for this subject and its descendants — check read.** The adjacent field meanings and operations follow the named implementation. Context: Current source read for this draft. Evidence limit: Capture parsing, fallback call site and supported-outcome control read; no execution credited. Detailed text-byte capture mechanics are shared with the transport surface. [Source 1](../controller/src/policy_check.rs), [Source 2](../controller/src/policy_check.rs), [Source 3](../controller/src/run_flow.rs) [Check](../controller/src/policy_check.rs)
++**Support for this subject and its descendants — check read.** The adjacent field meanings and operations follow the named implementation. Context: Current source read for this draft. Evidence limit: Capture parsing, fallback eligibility and call sites, supported-outcome control and constructed fallback-selection control read; no execution credited. The malformed actor-mode policy-object path is source-read. Detailed text-byte capture mechanics are shared with the transport surface. [Source 1](../controller/src/policy_check.rs), [Source 2](../controller/src/policy_check.rs), [Source 3](../controller/src/run_flow.rs), [Source 4](../controller/src/runner_client.rs), [Source 5](../controller/src/run_flow.rs) [Check 1](../controller/src/policy_check.rs), [Check 2](../controller/src/run_flow.rs)
+ 
+ <a id="contract-policy-actor_check"></a>
+ ### Per-actor fallback capture
+ 
+ When fallback is eligible, the controller checks each actor carrying a policy object in request order, sending a separate policy-only request. A malformed mode remains a host-admission question; the controller collected these policy objects before host execution.
+ 
+ | Field | JSON type and presence | Meaning |
+ | --- | --- | --- |
+@@ -2054,18 +2091,18 @@
+ | <a id="contract-steps-attempt-outcome"></a>`outcome` | string; required | A completed zero return yields `ok`. Nonzero returns map by action to `open_failed`, `read_failed`, `write_failed`, `unlink_failed`, `access_failed`, `lookup_failed`, `sysctl_failed` or `exec_failed`. Synthetic slots yield `no_completed_result` or `unsupported`. |
+ | <a id="contract-steps-attempt-error"></a>`error` | string; omitted when absent | Action diagnostic from the completed slot or explanation of a synthetic result. |
+ | <a id="contract-steps-attempt-requested_path"></a>`requested_path` | string; null when absent | Submitted target string, including service and sysctl names for those kinds. |
+ | <a id="contract-steps-attempt-path_diagnostics"></a>`path_diagnostics` | [Attempt path observations](#contract-steps-attempt_paths); omitted when absent | Host observations after orchestration for a nonempty file or exec target. |
+ | <a id="contract-steps-attempt-observed_path"></a>`observed_path` | string; null when absent | Path observation supplied by the worker slot when available. |
+ | <a id="contract-steps-attempt-child_pid"></a>`child_pid` | integer; omitted when absent | Completed exec slot's child PID: zero when no child was spawned. A positive value supports the comparison's spawned_child observation. |
+ | <a id="contract-steps-attempt-child_exit_code"></a>`child_exit_code` | integer; omitted when absent | Completed exec slot's child exit code, using -1 until a normal child exit is observed. |
+ | <a id="contract-steps-attempt-child_term_signal"></a>`child_term_signal` | integer; omitted when absent | Completed exec slot's terminating signal, using zero until a signaled child termination is observed. |
+-| <a id="contract-steps-attempt-stdout"></a>`stdout` | string; omitted when absent | Captured child stdout, omitted when empty. |
+-| <a id="contract-steps-attempt-stderr"></a>`stderr` | string; omitted when absent | Captured child stderr, omitted when empty. |
++| <a id="contract-steps-attempt-stdout"></a>`stdout` | string; omitted when absent | Captured child stdout, omitted when empty. The worker retains at most <!-- span limits.exec_stream.value_unit -->1,023 bytes<!-- /span --> for this stream; an overflow marker occupies part of that allowance. |
++| <a id="contract-steps-attempt-stderr"></a>`stderr` | string; omitted when absent | Captured child stderr, omitted when empty. The worker retains at most <!-- span limits.exec_stream.value_unit -->1,023 bytes<!-- /span --> for this stream; an overflow marker occupies part of that allowance. |
+ 
+ <a id="contract-steps-comparison"></a>
+ #### Comparison assessment
+ 
+ | Field | JSON type and presence | Meaning |
+ | --- | --- | --- |
+ | <a id="contract-steps-comparison-observation"></a>`observation` | string; required | `succeeded`, `permission_failure`, `other_failure` or `unavailable`, classified from the attempt channel by the rule below. |
+ | <a id="contract-steps-comparison-observation_basis"></a>`observation_basis` | string; required | Supporting observation: `spawned_child`, `completed_worker_status`, `permission_errno`, `bootstrap_permission_result` or `no_completed_worker_result`. |
+@@ -2163,32 +2200,34 @@
+ | <a id="contract-steps-fresh_write-preopen_stat"></a>`preopen_stat` | [File metadata observation](#contract-steps-stat); omitted when absent | Creation's pre-open lstat diagnostic, including absence or existing-object metadata. |
+ | <a id="contract-steps-fresh_write-opened_stat"></a>`opened_stat` | [File metadata observation](#contract-steps-stat); omitted when absent | Descriptor metadata immediately after successful open. |
+ | <a id="contract-steps-fresh_write-truncated_stat"></a>`truncated_stat` | [File metadata observation](#contract-steps-stat); omitted when absent | Descriptor metadata after the write_fresh truncate call, including a failed truncate. |
+ | <a id="contract-steps-fresh_write-written_stat"></a>`written_stat` | [File metadata observation](#contract-steps-stat); omitted when absent | Descriptor metadata after the attempted write, including a failed or short write. |
+ 
+ <a id="contract-steps-assessment"></a>
+ #### Interpreting the observations
+ 
++Binding `p`: entry in `reply.phases`. Binding `s`: entry in `reply.steps`. Association restriction for `s`: `reply.steps[s].phase_id` = `reply.phases[p].phase_id`.
++
+ <a id="contract-steps-assessment-assembly"></a>
+ ##### Assemble the two channels
+ 
+ runner host reports at step evidence assembly. Entry: cli, direct xpc. Recipient: controller, xpc caller. Reports: ordinary, actors, reporting failure. Associate validator records and completed worker slots with the declared probe, retain their separate provenance and native observations, and synthesize an unavailable channel when its required observation is absent.
+ 
+ An excluded query remains synthetic even when an unexpected validator frame
+ carries its step identifier. A completed slot is used only for a supported
+ attempt. The native answer is the validator-sourced allow or deny value;
+ the ordering assessment supplies its live-worker temporal meaning.
+ 
+ **Support — check read.** Completed, incomplete, absent and unsupported slots map to distinct provenance and outcomes; action mapping preserves exec child observations. Context: Read complete step assembly and constructed attempt-mapping controls. Evidence limit: Check reading. Integrated query association has the validator collection's own support. [Source](../runner/Sources/PWRunnerCore/CWorkerStepResults.swift) [Check](../runner/Tests/PWRunnerCoreTests/AttemptOutcomeMappingTests.swift)
+ 
+ <a id="contract-steps-assessment-order"></a>
+ ##### Establish query order
+ 
+-runner host checks at per-step ordering assessment. Entry: cli, direct xpc. Recipient: controller, xpc caller. Reports: ordinary, actors. A nondegraded report carries this probe's query, phase ordering, setup and worker association. The first failed condition selects the consequence. Set comparison.order to query_first exactly when all eligibility conditions hold; otherwise retain unestablished.
++[Runner host](#contract-identity-definitions-host) checks at per-step ordering assessment. Entry: cli, direct xpc. Recipient: controller, xpc caller. Reports: ordinary, actors. A nondegraded report carries this probe's query, phase ordering, setup and worker association. The first failed condition selects the consequence. Set comparison.order to query_first exactly when all eligibility conditions hold; otherwise retain unestablished.
+ 
+ | Item | Requirement or consequence |
+ | --- | --- |
+ | <a id="contract-steps-assessment-order-chain"></a>Collection chain | Requires (`reply.phases[p].ordering.collection_closed_before_proceed` and `reply.phases[p].ordering.proceed_set` and `reply.phases[p].ordering.proceed_observed` and `reply.phases[p].ordering.worker_lifetime_established` and count of `reply.phases[p].ordering.protocol_violations` = `0`). Collection closed, release and acknowledgement occurred, and worker ownership was established through acknowledgement. |
+ | <a id="contract-steps-assessment-order-setup"></a>Setup | Ordinary execution has observed successful application; actor execution has established the actor's declared applied or unapplied setup. |
+ | <a id="contract-steps-assessment-order-native"></a>Native answer | Requires (`reply.steps[s].sandbox_check.result_source` = `"validator"` and `reply.steps[s].sandbox_check.native_rc` is present and `reply.steps[s].sandbox_check.errno` is present and `reply.steps[s].sandbox_check.rc` = `reply.steps[s].sandbox_check.native_rc` and ((`reply.steps[s].sandbox_check.outcome` = `"allow"` and `reply.steps[s].sandbox_check.native_rc` = `0`) or (`reply.steps[s].sandbox_check.outcome` = `"deny"` and `reply.steps[s].sandbox_check.native_rc` = `1` and `reply.steps[s].sandbox_check.errno` = `0`))). |
+ | <a id="contract-steps-assessment-order-association"></a>Unique association | The query targets the associated worker PID, and exactly one retained validator record has the step identifier and matches operation, uppercase filter kind, native filter value, outcome, return and errno. The native value for a none filter is absent. Other filters compare the carried value with the projected query value. |
+ 
+@@ -2202,17 +2241,17 @@
+ state a later attempt encounters. Submitted-string relations and path
+ observations retain their respective intervals and identities.
+ 
+ **Support for this subject and its descendants — check read.** Native answer eligibility and the collection/release/acknowledgement chain are independently required; producer association is exact within the phase. Context: Read eligibility, ordering construction, phase adaptation and ordering controls. Evidence limit: Source and check reading; no new execution or mutation-control run is credited. [Source 1](../runner/Sources/PWRunnerCore/PWRunnerStepEvidence.swift), [Source 2](../runner/Sources/PWRunnerCore/CWorkerComparison.swift), [Source 3](../runner/Sources/PWRunnerCore/CWorkerStepResults.swift) [Check](../runner/Tests/PWRunnerCoreTests/OrderingTests.swift)
+ 
+ <a id="contract-steps-assessment-observe"></a>
+ ##### Classify an observation
+ 
+-runner host checks at step evidence assembly. Entry: cli, direct xpc. Recipient: controller, xpc caller. Reports: ordinary, actors, reporting failure. Select the first applicable observation below from the attempt channel and retain its stated basis.
++[Runner host](#contract-identity-definitions-host) checks at step evidence assembly. Entry: cli, direct xpc. Recipient: controller, xpc caller. Reports: ordinary, actors, reporting failure. Select the first applicable observation below from the attempt channel and retain its stated basis.
+ 
+ | Condition in order | Observation | Basis |
+ | --- | --- | --- |
+ | Worker source, exec kind, positive child PID | succeeded | spawned_child |
+ | Worker source, ok outcome, zero return | succeeded | completed_worker_status |
+ | Worker source, nonzero return, file/sysctl/exec failure carrying EPERM or EACCES | permission_failure | permission_errno |
+ | Worker source, lookup_failed with exactly `bootstrap_look_up: kr=1100` | permission_failure | bootstrap_permission_result |
+ | Worker source, nonzero return | other_failure | completed_worker_status |
+@@ -2281,17 +2320,17 @@
+ orchestration. The attempt's realpath follows the leaf; its parent form
+ resolves the parent and appends the literal leaf. A missing leaf can have
+ a parent form and a null realpath form. For a symlink leaf, the parent form
+ names the link while realpath can name its destination. The submitted
+ comparison operands remain preserved.
+ 
+ **Support — check read.** Path controls create parents and symlinks, distinguish missing and symlink leaves, skip non-path attempts and preserve separate query observations. Context: Read enrichment, helpers and path controls, including exact UTF-8 retention. Evidence limit: Check reading; the observations retain the host's after-orchestration interval. [Source 1](../runner/Sources/PWRunnerCore/PWRunnerService.swift), [Source 2](../runner/Sources/PWRunnerCore/PathUtils.swift), [Source 3](../runner/Sources/PWRunnerCore/PathUtils.swift) [Check](../runner/Tests/PWRunnerCoreTests/PathDiagnosticsTests.swift)
+ 
+-**Support for this subject and its descendants — source read.** Imported fields receive their producer meanings, channel origins and observation boundaries. Context: Read definitions alongside assembly, native payload decoding and path enrichment. Evidence limit: Source support; specific rules have separately graded check owners. [Source 1](../runner/Sources/PWRunnerCore/CWorkerStepResults.swift), [Source 2](../runner/Sources/PWRunnerCore/CWorkerComparison.swift), [Source 3](../runner/Sources/PWRunnerCore/PWRunnerStepEvidence.swift), [Source 4](../runner/Sources/PWRunnerCore/PWRunnerPredictionEvidence.swift), [Source 5](../runner/Sources/PWRunnerCore/CWorker.swift), [Source 6](../runner/Sources/PWRunnerCore/PWRunnerService.swift)
++**Support for this subject and its descendants — source read.** Imported fields receive their producer meanings, channel origins and observation boundaries. Context: Read definitions alongside assembly, native payload decoding and path enrichment. Evidence limit: Source support; specific rules have separately graded check owners. [Source 1](../runner/Sources/PWRunnerCore/CWorkerStepResults.swift), [Source 2](../runner/Sources/PWRunnerCore/CWorkerComparison.swift), [Source 3](../runner/Sources/PWRunnerCore/PWRunnerStepEvidence.swift), [Source 4](../runner/Sources/PWRunnerCore/PWRunnerPredictionEvidence.swift), [Source 5](../runner/Sources/PWRunnerCore/CWorker.swift), [Source 6](../runner/Sources/PWRunnerCore/PWRunnerService.swift), [Source 7](../controller/tools/pw_probe_runner/pw_probe_runner_abi.h), [Source 8](../controller/tools/pw_probe_runner/pw_worker_exec.h)
+ 
+ <a id="contract-lifecycle"></a>
+ ### Process and operation observations
+ 
+ <a id="contract-lifecycle-worker"></a>
+ #### Worker subprocess
+ 
+ The host retains one process account for the fresh worker. Actor replies put this account on its actor; single-worker replies put it at run scope.
+@@ -2310,19 +2349,19 @@
+ | <a id="contract-lifecycle-worker-poll_stop_reason"></a>`poll_stop_reason` | string; omitted when absent | Why host publication polling ended. Only sentinel_deadline names exhaustion of that polling allowance; later cleanup preserves this recorded reason. Admitted vocabulary: open; displayed list: illustrative: `"done"`, `"child_reaped"`, `"sentinel_deadline"`, `"wait_error"`, `"policy_write_error"`, `"policy_transfer_deadline"`. Unfamiliar values: The host string is retained; an unfamiliar reason establishes only that recorded reason, and gains no known timeout or cause meaning.. |
+ | <a id="contract-lifecycle-worker-exit_requested"></a>`exit_requested` | boolean; omitted when absent | Whether the host performed the release store asking the worker to exit. Worker receipt is a separate observation. |
+ | <a id="contract-lifecycle-worker-termination_request"></a>`termination_request` | [Host termination request](#contract-lifecycle-termination); omitted when absent | Host kill call, its requested signal and native return. Absence means no retained request. |
+ | <a id="contract-lifecycle-worker-reaped"></a>`reaped` | boolean; omitted when absent | True when waitpid returned this child PID; false explicitly records unconfirmed disposition. Absence means the observation is unavailable. |
+ | <a id="contract-lifecycle-worker-wait_errors"></a>`wait_errors` | array of [Failed host wait](#contract-lifecycle-wait_error); omitted when absent | Failed host waitpid calls, including recovered EINTR. Empty means none observed; absence means unavailable. |
+ | <a id="contract-lifecycle-worker-cleanup_trigger"></a>`cleanup_trigger` | string; omitted when absent | Host fact recorded when it requests exit: deadline_expiry, completion, child_reaped, poll_wait_error, policy_transfer_error or policy_transfer_timeout. |
+ | <a id="contract-lifecycle-worker-grace_end"></a>`grace_end` | string; omitted when absent | How the post-request grace stage ended: not_entered, reaped_during_grace, exhausted or wait_error. |
+ | <a id="contract-lifecycle-worker-collection_basis"></a>`collection_basis` | string; omitted when absent | Whether final reads followed a confirmed reap: after_confirmed_reap, execution_may_continue or unavailable. This controls terminal absence claims. |
+-| <a id="contract-lifecycle-worker-ready_wait"></a>`ready_wait` | [Measured host wait](#contract-lifecycle-host_wait); omitted when absent | Measured wait for the readiness hint, present when that stage ran. |
++| <a id="contract-lifecycle-worker-ready_wait"></a>`ready_wait` | [Measured host wait](#contract-lifecycle-host_wait); omitted when absent | Measured monotonic wait for the readiness hint, present when that stage ran. The production allowance is <!-- span limits.worker_ready_wait.value_unit -->1,000 milliseconds<!-- /span --> after successful policy delivery and readiness-pipe setup; actor setup can reduce it to the remaining shared setup allowance. The record carries the allowance actually assigned. Expiry leaves the readiness hint absent and execution continues. |
+ | <a id="contract-lifecycle-worker-sentinel_wait"></a>`sentinel_wait` | [Measured host wait](#contract-lifecycle-host_wait); omitted when absent | Measured publication wait, with synchronous validator collection charged separately through excluded_ms. |
+-| <a id="contract-lifecycle-worker-exit_grace_wait"></a>`exit_grace_wait` | [Measured host wait](#contract-lifecycle-host_wait); omitted when absent | Measured wait for departure after the host exit request, present when that stage ran. |
++| <a id="contract-lifecycle-worker-exit_grace_wait"></a>`exit_grace_wait` | [Measured host wait](#contract-lifecycle-host_wait); omitted when absent | Measured monotonic wait for departure after the host exit request, present when that stage ran. Its production allowance is <!-- span limits.worker_exit_grace.value_unit -->1,000 milliseconds<!-- /span -->; subsequent termination and final reap retain their own observations. |
+ | <a id="contract-lifecycle-worker-disposition"></a>`disposition` | [Canonical worker disposition](#contract-lifecycle-disposition); omitted when absent | Host-resolved lifecycle questions, step claims and conflicts. Ordinary subprocess reporting supplies this account and derives compatibility fields from it. |
+ 
+ <a id="contract-lifecycle-host_wait"></a>
+ #### Measured host wait
+ 
+ A wait records the host boundary at which it moved on. Budgets and elapsed values use milliseconds on CLOCK_MONOTONIC.
+ 
+ | Field | JSON type and presence | Meaning |
+@@ -2358,17 +2397,17 @@
+ 
+ <a id="contract-lifecycle-transfer_timeout"></a>
+ #### Policy-pipe timeout
+ 
+ Host write counts and worker read receipts describe separate ends of the policy pipe.
+ 
+ | Field | JSON type and presence | Meaning |
+ | --- | --- | --- |
+-| <a id="contract-lifecycle-transfer_timeout-budget_ms"></a>`budget_ms` | integer; required | Host policy-transfer allowance in milliseconds. |
++| <a id="contract-lifecycle-transfer_timeout-budget_ms"></a>`budget_ms` | integer; required | Host policy-transfer allowance in milliseconds. Production assigns <!-- span limits.worker_policy_transfer.value_unit -->5,000 milliseconds<!-- /span --> from an absolute monotonic deadline established immediately after spawn; partial writes and interrupted calls keep that deadline. Actor delivery is additionally capped by the remaining shared setup allowance. This field reports the assigned allowance. |
+ | <a id="contract-lifecycle-transfer_timeout-elapsed_ms"></a>`elapsed_ms` | integer; required | Measured transfer interval when its deadline expired. |
+ | <a id="contract-lifecycle-transfer_timeout-bytes_written"></a>`bytes_written` | integer; required | UTF-8 policy bytes accepted by host write calls before timeout. |
+ | <a id="contract-lifecycle-transfer_timeout-bytes_expected"></a>`bytes_expected` | integer; required | Total UTF-8 policy bytes the host attempted to send. |
+ 
+ <a id="contract-lifecycle-transfer_error"></a>
+ #### Policy-pipe write error
+ 
+ This record belongs to the host's transport of the selected source bytes.
+@@ -2436,18 +2475,18 @@
+ #### Worker diagnostic
+ 
+ The host exposes text only after acquiring a complete or truncated publication with a bounded length and terminating NUL.
+ 
+ | Field | JSON type and presence | Meaning |
+ | --- | --- | --- |
+ | <a id="contract-lifecycle-diagnostic-state"></a>`state` | integer; required | Raw diagnostic publication word: 0 absent, 1 complete, 2 truncated, 3 incomplete; other values remain numeric. Admitted vocabulary: open; displayed list: illustrative: `0`, `1`, `2`, `3`. Unfamiliar values: The numeric value remains in the report. Known-branch assessments require their own recognized code and publication conditions.. |
+ | <a id="contract-lifecycle-diagnostic-status"></a>`status` | string; required | Host interpretation: absent, incomplete, unknown, complete, truncated or invalid. Invalid identifies an eligible publication whose length or terminator failed validation. Admitted vocabulary: closed; displayed list: exhaustive: `"absent"`, `"incomplete"`, `"unknown"`, `"complete"`, `"truncated"`, `"invalid"`. |
+-| <a id="contract-lifecycle-diagnostic-length"></a>`length` | integer; omitted when absent | Retained UTF-8 buffer length excluding its terminating NUL, when validation permits text extraction. |
+-| <a id="contract-lifecycle-diagnostic-text"></a>`text` | string; omitted when absent | Bounded diagnostic buffer decoded as UTF-8 with replacement for invalid sequences. The diagnostic status carries whether the worker truncated its buffer. |
++| <a id="contract-lifecycle-diagnostic-length"></a>`length` | integer; omitted when absent | Retained diagnostic-byte length excluding its terminating NUL, at most <!-- span limits.worker_diagnostic.value_unit -->4,095 bytes<!-- /span --> when validation permits text extraction. |
++| <a id="contract-lifecycle-diagnostic-text"></a>`text` | string; omitted when absent | Diagnostic bytes decoded as UTF-8 with replacement for invalid sequences. The <!-- span limits.worker_diagnostic.value_unit -->4,095 bytes<!-- /span --> bound applies before replacement decoding. The diagnostic status carries whether the worker truncated its buffer. |
+ 
+ <a id="contract-lifecycle-policy_read"></a>
+ #### Worker policy receipt
+ 
+ At EOF the worker publishes both counts before comparing them. A header refusal, read failure or overflow leaves this receipt unavailable; both counts must fit the <!-- span limits.policy_source.value -->262,143<!-- /span -->-byte source capacity.
+ 
+ | Field | JSON type and presence | Meaning |
+ | --- | --- | --- |
+@@ -2605,16 +2644,18 @@
+ | <a id="contract-lifecycle-spawn_failure-executable_path"></a>`executable_path` | string; required | Executable path passed to the attempted spawn. |
+ | <a id="contract-lifecycle-spawn_failure-return_code"></a>`return_code` | integer; required | Native spawn return code, whose error-code convention is distinct from a child exit status. |
+ | <a id="contract-lifecycle-spawn_failure-diagnostic"></a>`diagnostic` | string; required | Human-readable native error explanation of the spawn failure. |
+ 
+ <a id="contract-lifecycle-validator"></a>
+ #### Validator subprocess
+ 
+ The host binds each validator collection to its phase and retains accepted records through later I/O, association or cleanup failure.
++
++For N submitted queries, the collector assigns a record allowance of max(1, N) multiplied by <!-- span limits.validator_records_per_query.value -->2<!-- /span --> and a stdout retention allowance of max(1, N) multiplied by <!-- span limits.validator_reply_bytes_per_query.value_unit -->16,384 bytes<!-- /span -->. The allowances are sized before writing the query batch. On byte overflow the host counts all bytes received, keeps the bounded prefix through its last complete LF frame, closes collection and reports byte_limit. Decoding retains complete accepted records before the first refused frame or record-count excess.
+ 
+ | Field | JSON type and presence | Meaning |
+ | --- | --- | --- |
+ | <a id="contract-lifecycle-validator-phase_id"></a>`phase_id` | string; omitted when absent | Host-stamped phase identifier served by this collection; agrees with the containing phase. |
+ | <a id="contract-lifecycle-validator-ordinal"></a>`ordinal` | integer; omitted when absent | Host-stamped one-based phase ordinal for this collection. |
+ | <a id="contract-lifecycle-validator-pid"></a>`pid` | integer; required | Spawned validator PID used for collection and owned cleanup. |
+ | <a id="contract-lifecycle-validator-term_signal"></a>`term_signal` | integer; omitted when absent | Signal decoded only from a successful waitpid result for this validator. |
+ | <a id="contract-lifecycle-validator-exit_code"></a>`exit_code` | integer; omitted when absent | Exit status decoded only from a successful waitpid result for this validator. |
+@@ -2623,20 +2664,20 @@
+ | <a id="contract-lifecycle-validator-wait_errors"></a>`wait_errors` | array of [Failed host wait](#contract-lifecycle-wait_error); omitted when absent | Failed waitpid observations from validator cleanup, including recovered interruptions. |
+ | <a id="contract-lifecycle-validator-read_error"></a>`read_error` | string; omitted when absent | Host diagnostic for stdout-read failure, separate from accepted record contents. |
+ | <a id="contract-lifecycle-validator-stdout_collection_stop"></a>`stdout_collection_stop` | string; omitted when absent | Host reason for stopping stdout collection: eof, clock_error, deadline, poll_error, byte_limit or read_error. This is fixed before the exit-grace stage. |
+ | <a id="contract-lifecycle-validator-stdout_bytes_received"></a>`stdout_bytes_received` | integer; omitted when absent | Total stdout bytes received by the host, including bytes later rejected by frame decoding. |
+ | <a id="contract-lifecycle-validator-probe_bytes_written"></a>`probe_bytes_written` | integer; omitted when absent | Request bytes accepted by host writes to the validator input pipe. |
+ | <a id="contract-lifecycle-validator-probe_bytes_expected"></a>`probe_bytes_expected` | integer; omitted when absent | Serialized request-batch byte count the host intended to write. |
+ | <a id="contract-lifecycle-validator-io_error"></a>`io_error` | string; omitted when absent | Host transport diagnostic for the first request-write or stdout-read failure selected for this collection. |
+ | <a id="contract-lifecycle-validator-decode_fault"></a>`decode_fault` | [Rejected validator frame](#contract-lifecycle-decode_fault); omitted when absent | First rejected stdout frame's receiver-owned diagnostic and bounded byte prefix. |
+-| <a id="contract-lifecycle-validator-records"></a>`records` | array of [Accepted validator record](#contract-steps-verdict); omitted when absent | Accepted verdict records in received order, including diagnostic, unexpected-ID and null-ID records. |
++| <a id="contract-lifecycle-validator-records"></a>`records` | array of [Accepted validator record](#contract-steps-verdict); omitted when absent | Accepted verdict records in received order, including diagnostic, unexpected-ID and null-ID records, within this phase collector's record allowance. |
+ | <a id="contract-lifecycle-validator-expected_step_ids"></a>`expected_step_ids` | array of string; omitted when absent | Submitted query IDs in the planned collection; used to check missing, duplicate and unexpected associations. |
+ | <a id="contract-lifecycle-validator-association_issues"></a>`association_issues` | array of [Validator query association](#contract-lifecycle-association_issue); omitted when absent | Host-computed join problems; an empty array records a complete unambiguous join for the expected queries. |
+-| <a id="contract-lifecycle-validator-exit_grace_wait"></a>`exit_grace_wait` | [Measured host wait](#contract-lifecycle-host_wait); omitted when absent | Measured host wait after collection closed, before any further termination/reap work. |
++| <a id="contract-lifecycle-validator-exit_grace_wait"></a>`exit_grace_wait` | [Measured host wait](#contract-lifecycle-host_wait); omitted when absent | Measured monotonic host wait after collection closed, with production allowance <!-- span limits.validator_exit_grace.value_unit -->1,000 milliseconds<!-- /span -->, before any further termination/reap work. Those later operations can continue beyond this allowance. |
+ 
+ <a id="contract-lifecycle-validator-associate"></a>
+ ##### Joining accepted validator records
+ 
+ runner host reports at closed phase query collection. Entry: single worker, actors. Recipient: direct host caller, runner client, controller. Reports: ordinary reply, retained reporting failure. retains the records `lc_validator.records`. Join each expected ID to exactly one accepted record whose supplied query metadata agrees; allow/deny additionally require the complete submitted query identity. Exclude ambiguous, missing or mismatched records from the per-step join, retain every accepted record in the collection and publish association_issues.
+ 
+ Duplicate IDs leave every record of that group at collection scope. Null IDs
+ remain unassociated. Diagnostic outcomes may omit query metadata; any supplied
+@@ -2689,17 +2730,17 @@
+ The collector can observe leader exit and pipe EOF independently; descendants may keep a stream open after the leader exits.
+ 
+ | Field | JSON type and presence | Meaning |
+ | --- | --- | --- |
+ | <a id="contract-lifecycle-exec_collection-stop_reason"></a>`stop_reason` | string; required | leader_exit_and_eof, deadline, observation_error or clock_fault, recording the branch that stopped collection. Admitted vocabulary: closed; displayed list: exhaustive: `"leader_exit_and_eof"`, `"deadline"`, `"observation_error"`, `"clock_fault"`. |
+ | <a id="contract-lifecycle-exec_collection-leader_exit_observed"></a>`leader_exit_observed` | boolean; required | Whether waitid observed the owned leader's exit during collection. |
+ | <a id="contract-lifecycle-exec_collection-stdout"></a>`stdout` | [Exec stream observation](#contract-lifecycle-exec_stream); required | EOF or native read/poll failure retained for stdout. |
+ | <a id="contract-lifecycle-exec_collection-stderr"></a>`stderr` | [Exec stream observation](#contract-lifecycle-exec_stream); required | EOF or native read/poll failure retained for stderr. |
+-| <a id="contract-lifecycle-exec_collection-deadline_kind"></a>`deadline_kind` | string; omitted when absent | child or plan when the selected collection deadline expires; absent on other stop branches. Admitted vocabulary: closed; displayed list: exhaustive: `"child"`, `"plan"`. |
++| <a id="contract-lifecycle-exec_collection-deadline_kind"></a>`deadline_kind` | string; omitted when absent | child or plan when the selected collection deadline expires; absent on other stop branches. The child allowance and remaining per-worker active-plan allowance are defined by the exec operation. Uses [Exec setup and child inputs](#contract-probes-attempt-exec). Admitted vocabulary: closed; displayed list: exhaustive: `"child"`, `"plan"`. |
+ | <a id="contract-lifecycle-exec_collection-waitid_errno"></a>`waitid_errno` | integer; omitted when absent | Native waitid failure which stopped leader observation; recovered EINTR is excluded. |
+ | <a id="contract-lifecycle-exec_collection-poll_errno"></a>`poll_errno` | integer; omitted when absent | Native poll failure which stopped stream observation; recovered EINTR is excluded. |
+ | <a id="contract-lifecycle-exec_collection-clock_fault"></a>`clock_fault` | integer; omitted when absent | Local numeric clock-fault observation when collection stopped for failed/backward time. |
+ 
+ <a id="contract-lifecycle-exec_stream"></a>
+ #### Exec stream observation
+ 
+ A stream carries EOF or a terminal read/poll observation from collection.
+@@ -2731,17 +2772,17 @@
+ | <a id="contract-lifecycle-exec_signal-target"></a>`target` | integer; required | Negative leader PID for a process-group request, or positive leader PID for the fallback request. |
+ | <a id="contract-lifecycle-exec_signal-signal"></a>`signal` | integer; required | Signal passed to kill; the exec cleanup path uses SIGKILL. |
+ | <a id="contract-lifecycle-exec_signal-rc"></a>`rc` | integer; required | Native kill return, zero or -1. |
+ | <a id="contract-lifecycle-exec_signal-errno"></a>`errno` | integer; omitted when absent | Positive native errno captured for rc -1; absent after success. |
+ 
+ <a id="contract-lifecycle-exec_reap"></a>
+ #### Exec leader reap
+ 
+-Final wait facts concern the spawned leader owned by the worker.
++Final wait facts concern the spawned leader owned by the worker. After collection ends, the production reap allowance is <!-- span limits.exec_reap_grace.value_unit -->1,000 milliseconds<!-- /span --> of continuous time. Earlier ownership or group-request failures retain their branch priority; a recorded request and an observed reap remain separate.
+ 
+ | Field | JSON type and presence | Meaning |
+ | --- | --- | --- |
+ | <a id="contract-lifecycle-exec_reap-stop_reason"></a>`stop_reason` | string; required | reaped, wait_error, ownership_unconfirmed, group_request_failed, clock_fault or deadline; branch priority preserves earlier ownership/group-request failures. Admitted vocabulary: closed; displayed list: exhaustive: `"reaped"`, `"wait_error"`, `"ownership_unconfirmed"`, `"group_request_failed"`, `"clock_fault"`, `"deadline"`. |
+ | <a id="contract-lifecycle-exec_reap-last_wait"></a>`last_wait` | [Exec leader wait result](#contract-lifecycle-exec_wait); required | Last native waitpid result, with status only when the owned leader PID returned. |
+ | <a id="contract-lifecycle-exec_reap-clock_fault"></a>`clock_fault` | integer; omitted when absent | Local numeric clock fault encountered by the reap wait, when observed. |
+ 
+ <a id="contract-lifecycle-exec_wait"></a>
+@@ -2750,20 +2791,20 @@
+ Pending, failed and reaped waits retain their different native return values.
+ 
+ | Field | JSON type and presence | Meaning |
+ | --- | --- | --- |
+ | <a id="contract-lifecycle-exec_wait-rc"></a>`rc` | integer; required | Native waitpid return: zero pending, -1 failure, or owned leader PID when reaped. |
+ | <a id="contract-lifecycle-exec_wait-errno"></a>`errno` | integer; omitted when absent | Positive captured errno for rc -1, including EINTR; absent otherwise. |
+ | <a id="contract-lifecycle-exec_wait-status"></a>`status` | integer; omitted when absent | Raw terminal wait status present exactly when rc is the owned leader PID, agreeing with the attempt's leader exit/signal fields. |
+ 
+-**Support for this subject and its descendants — source read.** Imported public field definitions joined to producer/decoder/assessment meanings; explicit rule and evidence gaps preserve scope. Context: Source and check inspection during contract drafting. Evidence limit: No execution credit is claimed by this owner. [Source 1](../runner/Sources/PWRunnerCore/PWRunnerLifecycleEvidence.swift), [Source 2](../runner/Sources/PWRunnerCore/CWorker.swift), [Source 3](../runner/Sources/PWRunnerCore/CWorkerDisposition.swift), [Source 4](../runner/Sources/PWRunnerCore/PWRunnerDisposition.swift), [Source 5](../runner/Sources/PWRunnerCore/PWRunnerPredictionEvidence.swift), [Source 6](../runner/Sources/PWRunnerCore/ValidatorClient.swift), [Source 7](../runner/Sources/PWRunnerCore/PWRunnerAttemptEvidence.swift), [Source 8](../runner/Sources/PWRunnerCore/PWRunnerAuthoritySetup.swift), [Source 9](../controller/tools/pw_probe_runner/pw_probe_runner.c)
++**Support for this subject and its descendants — source read.** Imported public field definitions joined to producer/decoder/assessment meanings; explicit rule and evidence gaps preserve scope. Context: Source and check inspection during contract drafting. Evidence limit: No execution credit is claimed by this owner. [Source 1](../runner/Sources/PWRunnerCore/PWRunnerLifecycleEvidence.swift), [Source 2](../runner/Sources/PWRunnerCore/CWorker.swift), [Source 3](../runner/Sources/PWRunnerCore/CWorkerDisposition.swift), [Source 4](../runner/Sources/PWRunnerCore/PWRunnerDisposition.swift), [Source 5](../runner/Sources/PWRunnerCore/PWRunnerPredictionEvidence.swift), [Source 6](../runner/Sources/PWRunnerCore/ValidatorClient.swift), [Source 7](../runner/Sources/PWRunnerCore/PWRunnerAttemptEvidence.swift), [Source 8](../runner/Sources/PWRunnerCore/PWRunnerAuthoritySetup.swift), [Source 9](../controller/tools/pw_probe_runner/pw_probe_runner.c), [Source 10](../runner/Sources/PWRunnerCore/CWorker.swift), [Source 11](../runner/Sources/PWRunnerCore/ActorSession.swift), [Source 12](../runner/Sources/PWRunnerCore/ValidatorClient.swift), [Source 13](../controller/tools/pw_probe_runner/pw_probe_runner_abi.h), [Source 14](../controller/tools/pw_probe_runner/pw_worker_timing.h)
+ 
+ <a id="contract-actor_evidence"></a>
+-### Actor evidence
++### Actor and phase evidence
+ 
+ <a id="contract-actor_evidence-actor"></a>
+ #### Actor process account
+ 
+ The host emits actors in request order. Each actor owns its launch, worker publications, policy receipt, equipment read-back and lifecycle account.
+ 
+ | Field | JSON type and presence | Meaning |
+ | --- | --- | --- |
+@@ -2930,17 +2971,17 @@
+ | <a id="contract-actor_evidence-gate-wait"></a>`wait` | [Measured host wait](#contract-lifecycle-host_wait); omitted when absent | Host dependency wait, with budget capped at <!-- span limits.actor_termination_wait.value_unit -->5,000 milliseconds<!-- /span --> and charged to remaining execution allowance. Absent for not_reached. |
+ | <a id="contract-actor_evidence-gate-observation"></a>`observation` | [Owned-ending reference](#contract-lifecycle-reap_reference); omitted when absent | Reference to the source actor's owned ending captured by the evaluated gate, when available; a late ending can remain beside a failed gate. |
+ | <a id="contract-actor_evidence-gate-activation_eligible"></a>`activation_eligible` | boolean; required | True exactly for a satisfied gate, allowing this dependent phase to proceed to activation. |
+ | <a id="contract-actor_evidence-gate-capture_ordinal"></a>`capture_ordinal` | integer; omitted when absent | Capture of the gate result in the source child's host-observation sequence; absent for not_reached and when no source session supplies a sequence. |
+ 
+ <a id="contract-actor_evidence-gate-evaluate"></a>
+ ##### Evaluating and applying the dependency
+ 
+-runner host acts at serial actor schedule before dependent activation. Entry: actors. Recipient: direct host caller, runner client, controller. Reports: ordinary reply. Applies when `reply.phases[p].termination_gate` is present. Evaluate only after schedule allowance and dependent actor/visit availability checks pass. The source's final declared phase must already have an activation observation. Set activation_eligible from satisfied. A failed evaluated gate prevents dependent activation, collection and release, and cancels every later scheduled phase regardless of its actor. Cleanup and final collection continue for launched actors.
++runner host acts at serial actor schedule before dependent activation. Entry: actors. Recipient: direct host caller, runner client, controller. Reports: ordinary reply. Binding `p`: entry in `reply.phases`. Applies when `reply.phases[p].termination_gate` is present. Evaluate only after schedule allowance and dependent actor/visit availability checks pass. The source's final declared phase must already have an activation observation. Set activation_eligible from satisfied. A failed evaluated gate prevents dependent activation, collection and release, and cancels every later scheduled phase regardless of its actor. Cleanup and final collection continue for launched actors.
+ 
+ The dependency wait observes the owned source child without requesting its
+ departure. Its budget is the lesser of <!-- span limits.actor_termination_wait.value_unit -->5,000 milliseconds<!-- /span --> and the remaining
+ execution allowance in whole milliseconds. Deadline samples and final elapsed
+ accounting govern satisfaction. These are charged-wait conditions; operating
+ system scheduling determines when the host next runs.
+ 
+ A failed evaluated gate sets `schedule.cancelled` to
+@@ -2959,17 +3000,17 @@
+ | <a id="contract-actor_evidence-gate-evaluate-clock_unavailable"></a>Timing unavailable | Value: `"clock_unavailable"`. A deadline sample, required activation/reap time or final elapsed accounting was unavailable or moved backward. Retained fields provide the available context for this timing failure. |
+ | <a id="contract-actor_evidence-gate-evaluate-timed_out"></a>Gate timeout | Value: `"timed_out"`. The deadline or wait expired, including after a reap, or final elapsed time exceeded budget. A retained reap reference establishes that capture while this outcome records failure to establish timely satisfaction. |
+ | <a id="contract-actor_evidence-gate-evaluate-ownership_lost"></a>Ownership lost | Value: `"ownership_lost"`. The host's uninterrupted source ownership was lost or its source wait failed. |
+ | <a id="contract-actor_evidence-gate-evaluate-source_departure_requested"></a>Departure requested | Value: `"source_departure_requested"`. The host had requested the source's departure before the eligible ending. |
+ 
+ <a id="contract-actor_evidence-gate-check"></a>
+ ##### Checking a carried gate
+ 
+-controller checks at semantic assessment after reply admission. Entry: controller run. Recipient: cli caller. Reports: ordinary reply. Applies when (`reply.reporting_failure` is absent and `reply.phases[p].termination_gate` is present). The check retains each failed condition it finds. Resolve source and final-phase joins before using s or f; missing, nonfinal, same-actor or nonpreceding associations are findings. Check owned PID/native-status agreement, all conditional gate captures, independent actor setup/equipment eligibility and activation timing. Add actor_evidence issues for failed requirements; set top-level disposition_integrity invalid, process_disposition withheld and termination_cause unknown. Preserve the host reply, each actor's independently projected disposition, run result and exit status.
++[Controller](#contract-identity-definitions-controller) checks at semantic assessment after reply admission. Entry: controller run. Recipient: cli caller. Reports: ordinary reply. Binding `p`: entry in `reply.phases`. Binding `s`: entry in `reply.actors`. Binding `f`: entry in `reply.phases`. Association restriction for `s`: `reply.actors[s].actor_id` = `reply.phases[p].termination_gate.source_actor_id`. Association restriction for `f`: `reply.phases[f].phase_id` = `reply.phases[p].termination_gate.source_final_phase_id`. Applies when (`reply.reporting_failure` is absent and `reply.phases[p].termination_gate` is present). The check retains each failed condition it finds. Resolve source and final-phase joins before using s or f; missing, nonfinal, same-actor or nonpreceding associations are findings. Check owned PID/native-status agreement, all conditional gate captures, independent actor setup/equipment eligibility and activation timing. Add actor_evidence issues for failed requirements; set top-level disposition_integrity invalid, process_disposition withheld and termination_cause unknown. Preserve the host reply, each actor's independently projected disposition, run result and exit status.
+ 
+ | Item | Requirement or consequence |
+ | --- | --- |
+ | <a id="contract-actor_evidence-gate-check-unreached"></a>Unreached shape | Requires if `reply.phases[p].termination_gate.outcome` = `"not_reached"`, then (`reply.phases[p].termination_gate.wait` is absent and `reply.phases[p].termination_gate.observation` is absent and `reply.phases[p].termination_gate.capture_ordinal` is absent). An unreached gate carries its declaration and false eligibility. |
+ | <a id="contract-actor_evidence-gate-check-timely"></a>Timely satisfied wait | Requires if `reply.phases[p].termination_gate.outcome` = `"satisfied"`, then (`reply.phases[p].termination_gate.wait` is present and `reply.phases[p].termination_gate.wait.budget_ms` > `0` and `reply.phases[p].termination_gate.wait.budget_ms` ≤ `5000` and `reply.phases[p].termination_gate.wait.elapsed_ms` is present and `reply.phases[p].termination_gate.wait.elapsed_ms` ≤ `reply.phases[p].termination_gate.wait.budget_ms` and `reply.phases[p].termination_gate.wait.clock_fault` = `false` and `reply.phases[p].termination_gate.wait.native_errno` is absent). Every present gate wait has budget 0–5000 and absent excluded time. An evaluated gate has a wait whose stop matches its outcome. |
+ | <a id="contract-actor_evidence-gate-check-sequence"></a>Source sequence | Requires if `reply.phases[p].termination_gate.outcome` = `"satisfied"`, then (`reply.phases[f].activation_observation` is present and `reply.actors[s].owned_reap` is present and `reply.phases[f].activation_observation.capture_ordinal` < `reply.actors[s].owned_reap.capture_ordinal` and `reply.actors[s].owned_reap.capture_ordinal` < `reply.phases[p].termination_gate.capture_ordinal` and `reply.actors[s].owned_reap.ownership_unbroken` = `true` and `reply.actors[s].owned_reap.departure_requested` = `false`). The referenced ending matches the source actor's valid PID/native wait status, has stage `schedule` or `termination_gate`, and has the reference's positive ordinal. Final activation and reap timestamps must exist in nondecreasing order; a timestamped dependent activation is at or after the reap. |
+ | <a id="contract-actor_evidence-gate-check-eligibility"></a>Eligibility consequence | Requires if `reply.phases[p].termination_gate.activation_eligible` = `true`, then `reply.phases[p].termination_gate.outcome` = `"satisfied"`. True eligibility also requires the dependent actor's applied or unapplied_declared setup and eligible equipment. False eligibility requires absent activation/visit timing, false arrival/proceed flags and collection not_reached. |
+ 
+@@ -3019,48 +3060,48 @@
+ #### Observed service inventory
+ 
+ The host inspects the selected service seal and reads its bounded worker-equipment.json before launching any actor.
+ 
+ | Field | JSON type and presence | Meaning |
+ | --- | --- | --- |
+ | <a id="contract-equipment-inventory-path"></a>`path` | string; required | Absolute path of the service-local worker-equipment.json selected for inspection. |
+ | <a id="contract-equipment-inventory-status"></a>`status` | string; required | verified after seal, inventory decoding and expected-identity checks; refused after a retained failure; unobserved before inspection. Admitted vocabulary: closed; displayed list: exhaustive: `"verified"`, `"refused"`, `"unobserved"`. |
+-| <a id="contract-equipment-inventory-sha256"></a>`sha256` | string (hex); omitted when absent | SHA-256 of inventory bytes actually read, when available. |
++| <a id="contract-equipment-inventory-sha256"></a>`sha256` | string (hex); omitted when absent | SHA-256 of inventory bytes actually read, when available. Uses [SHA-256 hexadecimal width](#contract-identity-other-sha256_hex). |
+ | <a id="contract-equipment-inventory-schema_version"></a>`schema_version` | integer; omitted when absent | Decoded inventory schema; verified inventory has version 1. |
+-| <a id="contract-equipment-inventory-worker_identity"></a>`worker_identity` | string (hex); omitted when absent | Decoded worker protocol identity, required to equal the host's selected worker identity for verification. |
+-| <a id="contract-equipment-inventory-unsigned_worker_sha256"></a>`unsigned_worker_sha256` | string (hex); omitted when absent | Decoded digest identifying the shared unsigned worker input named by the inventory. |
++| <a id="contract-equipment-inventory-worker_identity"></a>`worker_identity` | string (hex); omitted when absent | Decoded worker protocol identity, required to equal the host's selected worker identity for verification. Uses [SHA-256 hexadecimal width](#contract-identity-other-sha256_hex). |
++| <a id="contract-equipment-inventory-unsigned_worker_sha256"></a>`unsigned_worker_sha256` | string (hex); omitted when absent | Decoded digest identifying the shared unsigned worker input named by the inventory. Uses [SHA-256 hexadecimal width](#contract-identity-other-sha256_hex). |
+ | <a id="contract-equipment-inventory-seal_osstatus"></a>`seal_osstatus` | integer; omitted when absent | Native service-signature validity result, when supplied by static inspection; verified inventory requires zero. |
+ | <a id="contract-equipment-inventory-reason"></a>`reason` | string; omitted when absent | Refusal classification describing the failed inventory/seal boundary; absent for verified inventory. |
+ | <a id="contract-equipment-inventory-error"></a>`error` | [Equipment diagnostic](#contract-equipment-error); omitted when absent | Structured native or decoding diagnostic retained at the failed boundary. |
+ 
+ <a id="contract-equipment-manifest"></a>
+ #### Sealed equipment inventory file
+ 
+ The package places this JSON inventory inside each service seal after signing both worker roles. Its hashes use lowercase hexadecimal text.
+ 
+ | Field | JSON type and presence | Meaning |
+ | --- | --- | --- |
+ | <a id="contract-equipment-manifest-schema_version"></a>`schema_version` | integer; as defined below | Inventory format version; the host accepts 1. |
+ | <a id="contract-equipment-manifest-contract"></a>`contract` | string; as defined below | Exact public build identity which must match the host's expected contract. |
+-| <a id="contract-equipment-manifest-worker_identity"></a>`worker_identity` | string; as defined below | 64 lowercase hexadecimal characters encoding the 32-byte worker protocol identity expected by the host. |
+-| <a id="contract-equipment-manifest-unsigned_worker_sha256"></a>`unsigned_worker_sha256` | string; as defined below | 64 lowercase hexadecimal characters encoding the common unsigned worker input digest. |
++| <a id="contract-equipment-manifest-worker_identity"></a>`worker_identity` | string; as defined below | Lowercase hexadecimal worker protocol identity expected by the host. Uses [SHA-256 hexadecimal width](#contract-identity-other-sha256_hex). |
++| <a id="contract-equipment-manifest-unsigned_worker_sha256"></a>`unsigned_worker_sha256` | string; as defined below | Lowercase hexadecimal common unsigned worker input digest. Uses [SHA-256 hexadecimal width](#contract-identity-other-sha256_hex). |
+ | <a id="contract-equipment-manifest-workers"></a>`workers` | array of [Inventory worker row](#contract-equipment-manifest_worker); as defined below | Exactly two distinct role rows, selected and unentitled, providing expected signed file and entitlement identities. |
+ 
+ <a id="contract-equipment-manifest_worker"></a>
+ #### Inventory worker row
+ 
+ Each row states the signed identity expected at a fixed service-relative worker path.
+ 
+ | Field | JSON type and presence | Meaning |
+ | --- | --- | --- |
+ | <a id="contract-equipment-manifest_worker-role"></a>`role` | string; as defined below | selected or unentitled, identifying the worker role. Admitted vocabulary: closed; displayed list: exhaustive: `"selected"`, `"unentitled"`. |
+ | <a id="contract-equipment-manifest_worker-relative_path"></a>`relative_path` | string; as defined below | Contents/MacOS/pw-probe-runner for selected; Contents/MacOS/pw-probe-runner-unentitled for unentitled. |
+-| <a id="contract-equipment-manifest_worker-sha256"></a>`sha256` | string; as defined below | 64 lowercase hexadecimal characters for the SHA-256 of the signed worker file. |
+-| <a id="contract-equipment-manifest_worker-cdhash"></a>`cdhash` | string; as defined below | 40 lowercase hexadecimal characters for the worker's 20-byte CodeDirectory hash. |
++| <a id="contract-equipment-manifest_worker-sha256"></a>`sha256` | string; as defined below | Lowercase hexadecimal SHA-256 of the signed worker file. Uses [SHA-256 hexadecimal width](#contract-identity-other-sha256_hex). |
++| <a id="contract-equipment-manifest_worker-cdhash"></a>`cdhash` | string; as defined below | Lowercase hexadecimal worker CodeDirectory hash. Uses [CodeDirectory hexadecimal width](#contract-identity-other-cdhash_hex). |
+ | <a id="contract-equipment-manifest_worker-identifier"></a>`identifier` | string; as defined below | Nonempty signing identifier expected from static code inspection, bounded to <!-- span limits.equipment_signing_text.value_unit -->255 UTF-8 bytes<!-- /span -->. |
+ | <a id="contract-equipment-manifest_worker-team_id"></a>`team_id` | string; required; may be null | Required key whose value is the expected signing team or null; a string is nonempty and at most <!-- span limits.equipment_signing_text.value_unit -->255 UTF-8 bytes<!-- /span -->. |
+ | <a id="contract-equipment-manifest_worker-entitlements_xml"></a>`entitlements_xml` | string; as defined below | Entitlement dictionary serialized as an XML property list, at most <!-- span limits.equipment_entitlement_bytes.value_unit -->65,536 UTF-8 bytes<!-- /span -->; unentitled has an empty dictionary. |
+ 
+ <a id="contract-equipment-binding"></a>
+ #### Static worker binding
+ 
+ The host emits one row per inspected role and source. Binding establishes the chosen file’s observed identity and entitlement read-back; actors select rows by zero-based index.
+@@ -3069,20 +3110,20 @@
+ | --- | --- | --- |
+ | <a id="contract-equipment-binding-role"></a>`role` | string; required | selected or unentitled, the equipment role inspected. Admitted vocabulary: closed; displayed list: exhaustive: `"selected"`, `"unentitled"`. |
+ | <a id="contract-equipment-binding-source"></a>`source` | string; required | packaged for service inventory equipment; test_override for an explicitly selected fixture path. Admitted vocabulary: closed; displayed list: exhaustive: `"packaged"`, `"test_override"`. |
+ | <a id="contract-equipment-binding-implementation_identity"></a>`implementation_identity` | string; required | inventory_verified for packaged rows or unverified_fixture for test overrides, identifying the source of expected implementation identity. Admitted vocabulary: closed; displayed list: exhaustive: `"inventory_verified"`, `"unverified_fixture"`. |
+ | <a id="contract-equipment-binding-relative_path"></a>`relative_path` | string; omitted when absent | Fixed service-relative path for packaged equipment; absent for an override path. |
+ | <a id="contract-equipment-binding-path"></a>`path` | string; required | Absolute resolved worker path inspected for launch, bounded to <!-- span limits.equipment_path.value_unit -->1,023 UTF-8 bytes<!-- /span -->. |
+ | <a id="contract-equipment-binding-status"></a>`status` | string; required | bound when path, executable, hash/signature and applicable expected-identity checks pass; refused when a boundary fails. Admitted vocabulary: closed; displayed list: exhaustive: `"bound"`, `"refused"`. |
+ | <a id="contract-equipment-binding-reason"></a>`reason` | string; omitted when absent | Refusal reason: missing, not_regular, not_executable, outside_bundle, signature_invalid, signature_unreadable, entitlements_unreadable, worker_identity_mismatch or inspection_failed. Admitted vocabulary: closed; displayed list: exhaustive: `"missing"`, `"not_regular"`, `"not_executable"`, `"outside_bundle"`, `"signature_invalid"`, `"signature_unreadable"`, `"entitlements_unreadable"`, `"worker_identity_mismatch"`, `"inspection_failed"`. |
+-| <a id="contract-equipment-binding-expected_sha256"></a>`expected_sha256` | string (hex); omitted when absent | 32-byte signed-file digest from the packaged inventory; absent for test overrides. |
+-| <a id="contract-equipment-binding-expected_cdhash"></a>`expected_cdhash` | string (hex); omitted when absent | 20-byte CodeDirectory hash from the packaged inventory; absent for test overrides. |
+-| <a id="contract-equipment-binding-sha256"></a>`sha256` | string (hex); omitted when absent | SHA-256 of the inspected file's actual bytes, when hashing completed. |
+-| <a id="contract-equipment-binding-cdhash"></a>`cdhash` | string (hex); omitted when absent | CodeDirectory hash read from the inspected static signature, when available. |
++| <a id="contract-equipment-binding-expected_sha256"></a>`expected_sha256` | string (hex); omitted when absent | Signed-file SHA-256 digest from the packaged inventory; absent for test overrides. Uses [SHA-256 hexadecimal width](#contract-identity-other-sha256_hex). |
++| <a id="contract-equipment-binding-expected_cdhash"></a>`expected_cdhash` | string (hex); omitted when absent | CodeDirectory hash from the packaged inventory; absent for test overrides. Uses [CodeDirectory hexadecimal width](#contract-identity-other-cdhash_hex). |
++| <a id="contract-equipment-binding-sha256"></a>`sha256` | string (hex); omitted when absent | SHA-256 of the inspected file's actual bytes, when hashing completed. Uses [SHA-256 hexadecimal width](#contract-identity-other-sha256_hex). |
++| <a id="contract-equipment-binding-cdhash"></a>`cdhash` | string (hex); omitted when absent | CodeDirectory hash read from the inspected static signature, when available. Uses [CodeDirectory hexadecimal width](#contract-identity-other-cdhash_hex). |
+ | <a id="contract-equipment-binding-identifier"></a>`identifier` | string; omitted when absent | Signing identifier read from static inspection, when available. |
+ | <a id="contract-equipment-binding-team_id"></a>`team_id` | string; present when identifier has a value; may be null | Signing team read from static inspection, or null when the signature has none or read-back is unavailable. |
+ | <a id="contract-equipment-binding-entitlements_ref"></a>`entitlements_ref` | integer; omitted when absent | Zero-based index of this binding's observed or failed entitlement read-back in equipment_entitlements. |
+ | <a id="contract-equipment-binding-signature_osstatus"></a>`signature_osstatus` | integer; omitted when absent | Native static-signature validity result; a bound row requires zero. |
+ | <a id="contract-equipment-binding-entitlements_match"></a>`entitlements_match` | boolean; omitted when absent | Whether packaged inventory entitlements equal the observed dictionary; absent for an override or when that comparison was unavailable. |
+ | <a id="contract-equipment-binding-error"></a>`error` | [Equipment diagnostic](#contract-equipment-error); omitted when absent | Structured native or decoding error at the failed inspection boundary, when available. |
+ 
+ <a id="contract-equipment-binding-bind"></a>
+@@ -3144,44 +3185,47 @@
+ 
+ For a setup-usable owned actor, the host inspects guest code, dynamic validity, associated static code and signing information before schedule activation.
+ 
+ | Field | JSON type and presence | Meaning |
+ | --- | --- | --- |
+ | <a id="contract-equipment-execution-status"></a>`status` | string; required | matched when every comparison and time/ownership guard succeeds; mismatched for a differing executable/signature/entitlement requirement; inspection_failed for an unavailable inspection boundary; unobserved before eligible inspection. Admitted vocabulary: closed; displayed list: exhaustive: `"matched"`, `"mismatched"`, `"inspection_failed"`, `"unobserved"`. |
+ | <a id="contract-equipment-execution-pid"></a>`pid` | integer; omitted when absent | Inspected actor PID, agreeing with its launch record when present. |
+ | <a id="contract-equipment-execution-parent_pid"></a>`parent_pid` | integer; omitted when absent | Runner host PID recorded when inspection begins. |
+-| <a id="contract-equipment-execution-observed_at_monotonic_ns"></a>`observed_at_monotonic_ns` | integer; omitted when absent | Host monotonic observation time in nanoseconds; matched status requires a valid final time within the inspection deadline. |
++| <a id="contract-equipment-execution-observed_at_monotonic_ns"></a>`observed_at_monotonic_ns` | integer; omitted when absent | Host monotonic observation time in nanoseconds. A matched record requires valid inspection start and final clock samples, a nondecreasing final time, and both samples before the additional inspection deadline when that deadline was established. The scheduler separately guards the shared setup allowance. |
+ | <a id="contract-equipment-execution-path"></a>`path` | string; omitted when absent | Executable path reported by live code inspection, when available. |
+-| <a id="contract-equipment-execution-cdhash"></a>`cdhash` | string (hex); omitted when absent | Live code's 20-byte CodeDirectory hash, when available. |
++| <a id="contract-equipment-execution-cdhash"></a>`cdhash` | string (hex); omitted when absent | Live code's CodeDirectory hash, when available. Uses [CodeDirectory hexadecimal width](#contract-identity-other-cdhash_hex). |
+ | <a id="contract-equipment-execution-identifier"></a>`identifier` | string; omitted when absent | Live signing identifier, when available. |
+ | <a id="contract-equipment-execution-team_id"></a>`team_id` | string; present when identifier has a value; may be null | Live signing team, when supplied by the signature. |
+ | <a id="contract-equipment-execution-entitlements_ref"></a>`entitlements_ref` | integer; omitted when absent | Zero-based index of this actor's live entitlement read-back, when reached. |
+ | <a id="contract-equipment-execution-native_observations"></a>`native_observations` | array of [Live inspection call](#contract-equipment-native_observation); required | Ordered attempted prefix of guest_code, dynamic_validity, associated_static_code and signing_information, preserving each OSStatus. |
+ | <a id="contract-equipment-execution-reason"></a>`reason` | string; omitted when absent | Ineligible reason: not_launched, setup_unavailable, process_unavailable, ownership_unresolved, code_lookup_failed, dynamic_validation_failed, signing_readback_failed, executable_mismatch, signature_identity_mismatch, entitlement_mismatch, requirements_unsatisfied or inspection_deadline. Admitted vocabulary: closed; displayed list: exhaustive: `"not_launched"`, `"setup_unavailable"`, `"process_unavailable"`, `"ownership_unresolved"`, `"code_lookup_failed"`, `"dynamic_validation_failed"`, `"signing_readback_failed"`, `"executable_mismatch"`, `"signature_identity_mismatch"`, `"entitlement_mismatch"`, `"requirements_unsatisfied"`, `"inspection_deadline"`. |
+ | <a id="contract-equipment-execution-eligible"></a>`eligible` | boolean; required | True for matched execution, making this setup-usable actor eligible for activation; false preserves the failed or unavailable inspection state. |
+ 
+ <a id="contract-equipment-execution-inspect"></a>
+ ##### Associating the owned process
+ 
+ runner host acts at after setup and before any actor activation. Entry: actors. Recipient: direct host caller, runner client, controller. Reports: ordinary reply. For each setup-usable child with retained ownership, inspect live code and compare path, CodeDirectory hash, identifier, team and entitlement dictionary to its bound row; recheck each required Boolean-true entitlement and the inspection deadline. Matched inspection permits activation eligibility. Mismatch or inspection failure cancels all scheduling, retains earlier setup/application publications and leaves all phases unactivated and uncollected. An unavailable setup can coexist with other usable actors when no inspection failure cancels them.
+ 
++The scheduler includes inspection in its shared <!-- span limits.actor_setup_allowance.value_unit -->10,000 milliseconds<!-- /span --> monotonic setup allowance. It requires valid clock samples before and after each inspection and records inspection_deadline, cancelling scheduling, when an otherwise successful inspection reaches or exceeds that setup deadline. Before the scheduler runs, orchestration also attempts to establish an additional monotonic deadline <!-- span limits.actor_lifetime_cutoff.value_unit -->180,000 milliseconds<!-- /span --> from that initial clock sample, reusing the configured actor-lifetime duration. This additional deadline has its own clock and origin, separate from the workers' shared continuous-clock cutoff. When its initial sample is unavailable, the additional deadline comparison is absent; the scheduler's setup guard and the inspection's valid start/final clock samples still apply. When present, the additional deadline requires both inspection samples strictly before it.
++
+ Inspection retains each attempted native call and stops at its first failed
+ boundary. A later inspection failure preserves an earlier cancellation reason
+ already selected by the scheduler. Static `bound` and live `matched` express
+ their respective observations; the signature entitlement dictionary supplies
+ the values assessed at each boundary.
+ 
+ <a id="contract-equipment-execution-live_evidence"></a>
+ ##### Known gap: Live-inspection evidence limit
+ 
+ The read unit controls construct failing Security-call results and verify the
+ retained attempted prefix and ineligible execution. The signed-product
+ acceptance evidence still needs a case reaching runtime inspection failure
+ and asserting cancellation with earlier application observations retained.
++The optional additional deadline after an unavailable orchestration clock sample is source-read; this draft credits no control of that initial failure followed by valid inspection clocks.
+ 
+ <a id="contract-equipment-native_observation"></a>
+ #### Live inspection call
+ 
+ Each row identifies one attempted Security-framework boundary in its observed order.
+ 
+ | Field | JSON type and presence | Meaning |
+ | --- | --- | --- |
+@@ -3307,38 +3351,40 @@
+ | Field | JSON type and presence | Meaning |
+ | --- | --- | --- |
+ | <a id="contract-equipment-cleanup_reference-kind"></a>`kind` | string; required | posix_shm_name, the retained resource name form. Admitted vocabulary: closed; displayed list: exhaustive: `"posix_shm_name"`. |
+ | <a id="contract-equipment-cleanup_reference-name"></a>`name` | string; required | Absolute POSIX shared-memory name beginning with slash, at most <!-- span limits.authority_cleanup_name.value_unit -->31 UTF-8 bytes<!-- /span -->. |
+ | <a id="contract-equipment-cleanup_reference-host_pid"></a>`host_pid` | integer; required | Host PID recorded when the name was created. |
+ | <a id="contract-equipment-cleanup_reference-session_nonce"></a>`session_nonce` | integer; required | Run nonce associated with creation of this named region. |
+ | <a id="contract-equipment-cleanup_reference-recovery_state"></a>`recovery_state` | string; required | unresolved_manual: recovery must establish current ownership before acting because a reused name can identify another object. Admitted vocabulary: closed; displayed list: exhaustive: `"unresolved_manual"`. |
+ 
+-**Support for this subject and its descendants — source read.** Imported public field definitions joined to producer/decoder/assessment meanings; explicit rule and evidence gaps preserve scope. Context: Source and check inspection during contract drafting. Evidence limit: No execution credit is claimed by this owner. [Source 1](../runner/Sources/PWRunnerCore/ActorEquipment.swift), [Source 2](../runner/Sources/PWRunnerCore/PWRunnerEquipment.swift), [Source 3](../runner/Sources/PWRunnerCore/AuthoritySetupRuntime.swift), [Source 4](../runner/Sources/PWRunnerCore/PWRunnerAuthoritySetup.swift), [Source 5](../runner/Sources/PWRunnerCore/ActorOrchestration.swift), [Source 6](../runner/Sources/PWRunnerCore/PWRunnerReply.swift), [Source 7](../runner/Sources/PWRunnerCore/ActorScheduler.swift)
++**Support for this subject and its descendants — source read.** Imported public field definitions joined to producer/decoder/assessment meanings; explicit rule and evidence gaps preserve scope. Context: Source and check inspection during contract drafting. Evidence limit: No execution credit is claimed by this owner. [Source 1](../runner/Sources/PWRunnerCore/ActorEquipment.swift), [Source 2](../runner/Sources/PWRunnerCore/PWRunnerEquipment.swift), [Source 3](../runner/Sources/PWRunnerCore/AuthoritySetupRuntime.swift), [Source 4](../runner/Sources/PWRunnerCore/PWRunnerAuthoritySetup.swift), [Source 5](../runner/Sources/PWRunnerCore/ActorOrchestration.swift), [Source 6](../runner/Sources/PWRunnerCore/PWRunnerReply.swift), [Source 7](../runner/Sources/PWRunnerCore/ActorScheduler.swift), [Source 8](../runner/Sources/PWRunnerCore/ActorOrchestration.swift), [Source 9](../runner/Sources/PWRunnerCore/MonotonicDeadline.swift)
+ 
+ <a id="contract-profile"></a>
+ ### Compiled-profile receipts
+ 
+ The host reports the result of an optional capture of the worker's compiled policy before application.
+ 
+ <a id="contract-profile-receipt"></a>
+ #### Receipt
++
++Binding `a`: entry in `reply.actors`.
+ 
+ The containing reply's producer contract identifies the receipt's contract. The receipt's `producer` names the component that captured the policy.
+ 
+ | Field | JSON type and presence | Meaning |
+ | --- | --- | --- |
+ | <a id="contract-profile-receipt-status"></a>`status` | string; required | `captured` states that the host's capture checks passed. `unavailable` states that a capture condition failed. Admitted vocabulary: closed; displayed list: exhaustive: `"captured"`, `"unavailable"`. |
+ | <a id="contract-profile-receipt-reason"></a>`reason` | string; omitted when absent | The host names the first failing capture condition. The controller's label check accepts the carried reason string. Admitted vocabulary: open; displayed list: illustrative: `"successful_application_unconfirmed"`, `"worker_not_complete"`, `"capture_nonce_mismatch"`. Unfamiliar values: retained as the host's reason string. |
+ | <a id="contract-profile-receipt-worker_pid"></a>`worker_pid` | integer; required | The process identifier of the worker whose output the host collected. |
+ | <a id="contract-profile-receipt-producer"></a>`producer` | string; omitted when absent | `worker` on a captured receipt identifies the component that captured the bytes. |
+ | <a id="contract-profile-receipt-capture_stage"></a>`capture_stage` | string; omitted when absent | `before_apply` on a captured receipt identifies when the worker captured the bytes. |
+ | <a id="contract-profile-receipt-request_nonce"></a>`request_nonce` | string; omitted when absent | The host returns the request's capture nonce after comparing it with the worker's recorded bytes. A comparison with a separately retained request nonce supplies a consumer's request association; the controller's carried-label check has no request-nonce operand. |
+ | <a id="contract-profile-receipt-profile_type"></a>`profile_type` | integer; omitted when absent | The supported compiler result representation is `0`. |
+-| <a id="contract-profile-receipt-bytecode_length"></a>`bytecode_length` | integer; omitted when absent | The number of bytes copied from the compiled object, bounded by the configured capture capacity. It counts the decoded bytes represented by `bytecode_b64`. |
++| <a id="contract-profile-receipt-bytecode_length"></a>`bytecode_length` | integer; omitted when absent | The number of raw bytes copied from the compiled object, positive and at most <!-- span limits.compiled_profile.value_unit -->1,048,576 bytes<!-- /span -->. It counts the decoded bytes represented by `bytecode_b64`, separately for each opted-in worker. |
+ | <a id="contract-profile-receipt-bytecode_sha256"></a>`bytecode_sha256` | string (hex); omitted when absent | The host's SHA-256 digest of the captured bytes, presented as lowercase hexadecimal. |
+ | <a id="contract-profile-receipt-bytecode_b64"></a>`bytecode_b64` | string (base64); omitted when absent | The bytes copied from the compiler object passed to `sandbox_apply`, presented as base64. The worker captures them before application; publication as `captured` additionally requires the host's application and completion checks. |
+ | <a id="contract-profile-receipt-source_sha256"></a>`source_sha256` | string (hex); omitted when absent | The SHA-256 digest of the UTF-8 C-string source passed to compilation, presented as lowercase hexadecimal. The host compares it with its supplied source bytes; an embedded NUL cannot establish the full source identity. |
+ | <a id="contract-profile-receipt-source_length"></a>`source_length` | integer; omitted when absent | The supplied source's UTF-8 byte count. |
+ | <a id="contract-profile-receipt-params_sha256"></a>`params_sha256` | string (hex); omitted when absent | The order-independent digest of parameter names and values consumed by the worker, presented as lowercase hexadecimal. |
+ | <a id="contract-profile-receipt-parameter_count"></a>`parameter_count` | integer; omitted when absent | The count of parameters supplied to the worker. |
+ 
+ <a id="contract-profile-receipt-identity"></a>
+@@ -3363,27 +3409,27 @@
+ | Item | Requirement or consequence |
+ | --- | --- |
+ | <a id="contract-profile-receipt-host-application"></a>Application | Application was observed and its return code was zero; failure reason successful_application_unconfirmed. |
+ | <a id="contract-profile-receipt-host-completion"></a>Worker completion | Follows [Application](#contract-profile-receipt-host-application). The worker published done and was reaped with exit code zero and no signal; failure reason worker_not_complete. |
+ | <a id="contract-profile-receipt-host-capture"></a>Capture completion | Follows [Worker completion](#contract-profile-receipt-host-completion). The worker published capture completion; failure reason capture_not_complete. |
+ | <a id="contract-profile-receipt-host-status"></a>Capture status | Follows [Capture completion](#contract-profile-receipt-host-capture). The recorded capture status was accepted; failure reason worker_capture_refused. |
+ | <a id="contract-profile-receipt-host-pid"></a>Process association | Follows [Capture status](#contract-profile-receipt-host-status). The recorded PID equals the worker PID collected by the host; failure reason capture_worker_mismatch. |
+ | <a id="contract-profile-receipt-host-nonce"></a>Nonce association | Follows [Process association](#contract-profile-receipt-host-pid). The recorded nonce bytes equal the valid request nonce; failure reason capture_nonce_mismatch. |
+-| <a id="contract-profile-receipt-host-extent"></a>Extent and type | Follows [Nonce association](#contract-profile-receipt-host-nonce). The profile type is zero and its byte count is positive and within the capture capacity; failure reason capture_extent_or_type_invalid. |
++| <a id="contract-profile-receipt-host-extent"></a>Extent and type | Follows [Nonce association](#contract-profile-receipt-host-nonce). The profile type is zero and its raw byte count is positive and at most <!-- span limits.compiled_profile.value_unit -->1,048,576 bytes<!-- /span -->; failure reason capture_extent_or_type_invalid. |
+ | <a id="contract-profile-receipt-host-digest"></a>Payload digest | Follows [Extent and type](#contract-profile-receipt-host-extent). SHA-256 of the captured bytes equals the recorded digest; failure reason capture_bytecode_digest_mismatch. |
+ | <a id="contract-profile-receipt-host-input"></a>Consumed input | Follows [Payload digest](#contract-profile-receipt-host-digest). The recorded source length and digest and parameter count and digest equal the host's supplied inputs; failure reason capture_consumed_input_mismatch. |
+ | <a id="contract-profile-receipt-host-failure"></a>Capture failure | On failure, sets `receipt.status` to `"unavailable"`, withholds `receipt.bytecode_b64`, keeps the assessment `reply.normalized_outcome`. The unavailable receipt retains only status, reason and worker_pid. |
+ 
+ **Support — check read.** The read checks construct worker bytes, corrupt each capture input and assert unavailability and withheld bytecode. Context: Constructed shared-memory bytes and injected application/termination arguments. Evidence limit: This owner credits source and check reading. The shared-memory fixture establishes host checks; the native same-pointer capture is source-supported here. [Source](../runner/Sources/PWRunnerCore/CWorker.swift) [Check](../runner/Tests/PWRunnerCoreTests/CompiledProfileCaptureTests.swift)
+ 
+ <a id="contract-profile-receipt-labels"></a>
+ ##### The controller checks carried labels
+ 
+-controller checks at reply admission. Entry: cli. Recipient: cli caller. Reports: ordinary, actor, preparation failure, reporting failure. Applies when `receipt` is present.
++[Controller](#contract-identity-definitions-controller) checks at reply admission. Entry: cli. Recipient: cli caller. Reports: ordinary, actor, preparation failure, reporting failure. Applies when `receipt` is present.
+ 
+ After public producer admission and reply-capacity checks, the controller applies these conditions to every present receipt, including actor, preparation-failure and reporting-failure records. It checks the status/producer/stage relationship. The retained nonce, bytecode, digests, lengths and counts remain the host's assertions; their production checks belong to the host capture rule.
+ 
+ | Item | Requirement or consequence |
+ | --- | --- |
+ | <a id="contract-profile-receipt-labels-status"></a>Status vocabulary | Requires `receipt.status` is one of `"captured"`, `"unavailable"`. |
+ | <a id="contract-profile-receipt-labels-captured"></a>Captured labels | Requires if `receipt.status` = `"captured"`, then (`receipt.producer` = `"worker"` and `receipt.capture_stage` = `"before_apply"`). |
+ | <a id="contract-profile-receipt-labels-unavailable"></a>Unavailable labels | Requires if `receipt.status` = `"unavailable"`, then (`receipt.producer` is absent and `receipt.capture_stage` is absent). |
+@@ -3442,26 +3488,26 @@
+ <a id="contract-envelope-data"></a>
+ #### Run payload
+ 
+ | Field | JSON type and presence | Meaning |
+ | --- | --- | --- |
+ | <a id="contract-envelope-data-runner_sandbox_diagnostics"></a>`runner_sandbox_diagnostics` | [Execution diagnostics](#contract-diagnostics-execution); null when absent | Assessments after client/reply admission. Null for earlier refusals and tool errors. An admitted execution with no host report can still produce the controller's no-worker assessment. |
+ | <a id="contract-envelope-data-specimen"></a>`specimen` | [Run dossier](#contract-dossier-specimen); required | Held-input, equipment and provenance observations, including partial records on failure. |
+ | <a id="contract-envelope-data-policy_check"></a>`policy_check` | [Fallback helper capture](#contract-policy-fallback); null when absent | Independent helper capture after an eligible admitted client-terminal `xpc_error`. Null when fallback was not invoked. |
+-| <a id="contract-envelope-data-actor_policy_checks"></a>`actor_policy_checks` | array of [Per-actor fallback capture](#contract-policy-actor_check); omitted when absent | Captures for apply actors with policies, in request order, when fallback is eligible. Omitted for ordinary form, ineligible fallback or no applicable policy. |
++| <a id="contract-envelope-data-actor_policy_checks"></a>`actor_policy_checks` | array of [Per-actor fallback capture](#contract-policy-actor_check); omitted when absent | Captures for actor declarations carrying a sandbox.policy object, in request order, when fallback is eligible. Collection of these policy objects precedes host admission of sandbox mode. Omitted when fallback is ineligible or the request contains no actor policy objects. |
+ | <a id="contract-envelope-data-timeout_ms"></a>`timeout_ms` | integer; null when absent | Selected runner-client wait budget in milliseconds when argument parsing supplied it; null when no usable configuration was obtained. |
+ | <a id="contract-envelope-data-runner_client"></a>`runner_client` | [Controller observation of the client process](#contract-transport-client); null when absent | Client invocation, capture and delivery account. Null when the client was not invoked or launch failed before a capture returned. |
+ | <a id="contract-envelope-data-runner_result"></a>`runner_result` | [Execution record](#contract-reply-record); null when absent | Structurally decoded host reply when available, retained even if a later label gate refuses admission. Null when there is no decodable reply; an accepted capture can retain its exact bytes separately. |
+ | <a id="contract-envelope-data-request_failure"></a>`request_failure` | [Projected request refusal](#contract-refusals-projection); omitted when absent | Controller refusal code/path, or the host refusal projected from an admitted `bad_request` reply. Omitted when the selected result supplies none. |
+ 
+ <a id="contract-envelope-data-select"></a>
+ ##### Select the public result
+ 
+-controller reports at run completion after admission. Entry: cli. Recipient: cli caller. Reports: run. Applies when `envelope.data.runner_result` is present. Client capture and host reply admission have succeeded. sets `envelope.result.ok` to `reply.normalized_outcome` = `"finished"`, sets `envelope.result.normalized_outcome` to `reply.normalized_outcome`. Choose exit 0 for finished and exit 1 otherwise. Retain query, attempt and native records, and compute diagnostics independently.
++controller reports at run completion after admission. Entry: cli. Recipient: cli caller. Reports: run. Applies when `envelope.data.runner_result` is present. Client capture and host reply admission have succeeded. sets `envelope.result.ok` to `reply.normalized_outcome` = `"finished"`, sets `envelope.result.normalized_outcome` to `reply.normalized_outcome`. Follows [Apply reply-wide findings](#contract-diagnostics-execution-reply_checks). Choose exit 0 for finished and exit 1 otherwise. Retain query, attempt and native records, and compute diagnostics independently.
+ 
+ `finished` can coexist with a failed file open or an integrity finding.
+ The observations and supported assessments state what the run establishes.
+ 
+ <a id="contract-envelope-data-select-success_findings"></a>
+ ###### Known gap: Success and findings
+ 
+ Whether result.ok and process exit should also reflect controller integrity
+@@ -3485,17 +3531,17 @@
+ | `xpc_acquisition_failed`, `xpc_submission_refused`, `xpc_protocol_error` | Client reports acquisition failure, reservation refusal or protocol error; exit 1. |
+ | `runner_client_error` | Another admitted client local-terminal failure; exit 1. |
+ | `runner_response_unavailable` | Completion has no host result to supply an outcome; exit 1. |
+ | Other admitted host label | Retain the label and select exit 1; only exact `finished` selects run success. |
+ 
+ <a id="contract-envelope-data-admit"></a>
+ ##### Boundary precedence
+ 
+-controller checks at received run data admission. Entry: cli. Recipient: cli caller. Reports: run. The first failed condition selects the consequence. Check request delivery error first, then client failure (capture admission, host frame admission and transport terminal), then decoded host producer identity and host capacity/profile-label admission. A delivery failure yields tool_error/exit 2; another refused boundary yields its classification/exit 1. Retain the available capture and structurally decoded reply, with runner_sandbox_diagnostics null. Eligible xpc_error can add independent fallback compilation.
++[Controller](#contract-identity-definitions-controller) checks at received run data admission. Entry: cli. Recipient: cli caller. Reports: run. The first failed condition selects the consequence. Check request delivery error first, then client failure (capture admission, host frame admission and transport terminal), then decoded host producer identity and host capacity/profile-label admission. A delivery failure yields tool_error/exit 2; another refused boundary yields its classification/exit 1. Retain the available capture and structurally decoded reply, with runner_sandbox_diagnostics null. Eligible xpc_error can add independent fallback compilation.
+ 
+ Admission precedes evidence interpretation. The same held request supplies
+ client delivery and eligible ordinary fallback compilation; the helper
+ result describes its separate compiler invocation.
+ 
+ <a id="contract-envelope-data-failed_attempt"></a>
+ ##### A finished run with a failed attempt
+ 
+@@ -3555,42 +3601,42 @@
+ The controller appends these findings to top-level `disposition_issues`.
+ It preserves the actor entries, an ordinary stop reason already derived,
+ and all host fields including step comparisons and claimed gate outcomes.
+ Those retained assertions can therefore appear beside the controller's
+ finding about them. The finding's level determines which controller
+ projection changes.
+ 
+ <a id="contract-diagnostics-execution-outer_result"></a>
+-##### Keep the outer completion result
+-
+-controller acts at completed execution envelope construction. Entry: cli run. Recipient: caller, report reader. Reports: run envelope. Applies when `reply.normalized_outcome` = `"finished"`. sets `envelope.result.ok` to `true`, sets `envelope.result.exit_code` to `0`, sets `envelope.result.normalized_outcome` to `"finished"`, retains the records `reply`. Follows [Apply reply-wide findings](#contract-diagnostics-execution-reply_checks).
+-
+-After response admission, the outer result copies the host outcome and
+-uses `finished` for `ok: true` and exit 0. Other host outcomes give false
+-and exit 1. Individual failed attempts and controller integrity findings
+-remain visible beside that completion result. A reply-wide withheld
+-disposition can therefore accompany an outer successful result.
++##### Findings beside the completion result
++
++Uses [Select the public result](#contract-envelope-data-select).
++
++The envelope's result-selection rule governs completion. Individual failed
++attempts and controller integrity findings remain visible beside that result.
++A reply-wide withheld disposition can therefore accompany an outer successful
++result.
+ 
+ <a id="contract-diagnostics-execution-families"></a>
+ ##### Check families and applicability
++
++An ordinary semantic reply is a reply with no reporting_failure record;
++this branch includes both single-worker and actor execution forms.
+ 
+ | Check family | Applicability and checked relationship | Finding scope |
+ | --- | --- | --- |
+ | Lifecycle claims | Each worker subprocess: required claims, state/basis references, owned final status, cleanup facts, progress association, slot count/order, action identity, lifecycle copies and supported conflicts. | That worker's projection; ordinary projection or one actor entry. |
+ | Phase and query evidence | Ordinary semantic reply: phase IDs/order, action partition, collection state, validator ownership and raw-record association, protocol violations, comparison vocabulary and the complete `query_first` chain. | Reply-wide. |
+ | Policy delivery/read evidence | Ordinary semantic reply with a worker policy-read receipt: bounded counts, host expected-count agreement, length-refusal detail and consistency with later worker observations. | Reply-wide. |
+ | Native operation observations | Ordinary semantic reply: each fresh-read, fresh-write and exec observation's applicable fields and native relationships. | Reply-wide. |
+ | Actor association | Ordinary semantic actor reply: actor indexes/IDs, launch/subprocess PID, visits, phase owner, event owner and matching transfer source. | Reply-wide. |
+ | Actor setup, equipment, application, termination and custody | Ordinary semantic reply: execution-form applicability and the actor record relationships defined by those surfaces. | Reply-wide. |
+ | Reporting-failure form | A reply carrying reporting_failure: degraded outcome/rc/error, origin/diagnostic/original outcome, removed comparisons and the retention-specific record form. | Reply-wide. |
+ 
+-Here, “ordinary semantic reply” means the branch with no reporting_failure
+-record, and includes both single-worker and actor execution forms. The
+-reporting-failure branch checks its degradation form while retaining the
++The reporting-failure branch checks its degradation form while retaining the
+ assembled records. Worker lifecycle projections still run independently,
+ with their comparison-limitation requirement waived when the comparison
+ has been removed by degradation. The retained host records remain
+ available for inspection at their own observation boundaries.
+ 
+ <a id="contract-diagnostics-execution-vocabulary"></a>
+ ##### Closed claim states and open answers
+ 
+@@ -3721,17 +3767,17 @@
+ 
+ controller acts at request preparation before runner-client invocation and fallback compile. Entry: run. Recipient: cli caller, runner client, sandbox compile helper. Reports: specimen dossier. Uses [Request](#contract-identity-definitions-request), [Byte observation](#contract-identity-definitions-bytes). A request has been parsed and controller policy changes have been resolved in memory. Serialize the held selected request once and use those bytes for client delivery and whole-request fallback compilation. Derive source hashes from its decoded UTF-8 sbpl_source string and retain the dossier even when later preparation or invocation fails.
+ 
+ The original path is a locator. JSON whitespace, escape spelling and subsequent edits to that file have no role in the held source hash. Actor fallback checks serialize the held resolved policy objects separately in request order. A later helper import scan can observe different import-file bytes because those files are independently opened. Actor-form dossiers retain request order; malformed identity/mode fields become null and policy availability remains distinct from admission.
+ 
+ <a id="contract-dossier-collection-scan"></a>
+ ##### Scan literal imports
+ 
+-controller import scanner acts at selected policy source and local import files before invocation. Entry: run. Recipient: cli caller. Reports: specimen dossier. The selected policy has string source within the 4 MiB source bound. Scan literal import forms, resolve absolute names as given and relative names under /System/Library/Sandbox/Profiles then /usr/share/sandbox, and record observed reads within depth 8 and count 64. Mark unresolved names, nonliteral forms, cycles, decoding failures and bound hits as incomplete.
++controller import scanner acts at selected policy source and local import files before invocation. Entry: run. Recipient: cli caller. Reports: specimen dossier. The selected policy has string source within the <!-- span limits.helper_source.binary -->4 MiB<!-- /span --> source bound. Scan literal import forms, resolve absolute names as given and relative names under /System/Library/Sandbox/Profiles then /usr/share/sandbox, and record observed reads within depth 8 and count 64. Mark unresolved names, nonliteral forms, cycles, decoding failures and bound hits as incomplete.
+ 
+ Names retain their spelling, including a `.sb` suffix when supplied. Resolution deduplicates canonical paths and unresolved names. A file is opened once with nonblocking open, checked as regular through that descriptor, and read for both hashing and recursive scanning. Records sort by resolved path, then unresolved name. The closure hash is SHA-256 of selected source UTF-8 bytes, byte `0x1f`, then sorted `resolved_path + " " + sha256` lines joined with LF for records having both values. This identifies the scanned material even when the scan is incomplete.
+ 
+ <a id="contract-dossier-collection-compare"></a>
+ ##### Compare selected files
+ 
+ controller acts at selected runner/helper paths and embedded evidence manifest. Entry: run. Recipient: cli caller. Reports: specimen dossier. Runner selection supplies paths and the app evidence manifest supplies role baselines where available. For a shipped path already described by its unique typed manifest entry, emit a null binary record. For another selected file, attempt its hash and compare it with the role baseline; retain independent availability and error facts. After a dossier-only collection failure or hash mismatch, continue preparation and invocation subject to the separate selection and admission results.
+ 
+@@ -3933,17 +3979,17 @@
+ 
+ An explicit service name must equal the bundle identifier. `--bundle-id` and `--executable` are refused; those identities come from the bundle. The installer refuses an existing target plist. With `--identity`, it signs the selected worker and host with the supplied entitlements, and the validator/unentitled worker without them, refreshing the sealed equipment inventory before sealing the host. Entitlements with `--allow-adhoc` can select ad-hoc signing; an ad-hoc result requires that flag. Required helpers must exist. The final recursive strict signature verification and reread of bundle identity precede registry installation.
+ 
+ <a id="contract-installation-commands-pending"></a>
+ #### Retain installation ownership
+ 
+ controller installer acts at pending registry save before plist creation and bootstrap. Entry: runner install. Recipient: cli caller, launchd. Reports: runner install, runner registry. Bundle verification/signing and readbacks succeeded and the launchd plist has been prepared. Save a pending runner with its plist path, launchd domain, owner UID and plist hash before creating the plist or bootstrapping. Mark installed only after those requested operations and final registry save succeed; retain pending on later failure.
+ 
+-User scope writes HOME/Library/LaunchAgents and targets gui/<uid>, requiring access to that logged-in GUI domain. System scope writes /Library/LaunchDaemons and targets system, requiring the relevant privilege. The plist invokes the recorded executable with `--mach-service` and the service name, advertises that Mach service, sets RunAtLoad and a one-second throttle, and defaults XPC_SERVICE_PATH to the bundle. `--env KEY=VALUE` requires a nonempty key; later occurrences replace earlier values. With `--skip-bootstrap`, successful plist creation completes installation; `loaded` remains a separate observation. Signing changes can precede the pending save.
++User scope writes HOME/Library/LaunchAgents and targets gui/<uid>, requiring access to that logged-in GUI domain. System scope writes /Library/LaunchDaemons and targets system, requiring the relevant privilege. The plist invokes the recorded executable with `--mach-service` and the service name, advertises that Mach service, sets RunAtLoad and a <!-- span limits.byoxpc_throttle_interval.value_unit -->1 second<!-- /span --> throttle, and defaults XPC_SERVICE_PATH to the bundle. `--env KEY=VALUE` requires a nonempty key; later occurrences replace earlier values. With `--skip-bootstrap`, successful plist creation completes installation; `loaded` remains a separate observation. Signing changes can precede the pending save.
+ 
+ <a id="contract-installation-commands-verify"></a>
+ #### Verify a selected service
+ 
+ controller and runner client acts at fixed verification specimen through reservation and execution. Entry: runner verify. Recipient: cli caller, runner host. Reports: runner verify. Uses [Reservation and execution](#contract-transport-delivery), [Exact admission identity](#contract-identity-public-contract). Lookup finds an external runner record whose contract matches the current public identity. Send a fresh fixed SBPL allow-all request with specimen_id runner_verify, run_kind runner_verify and an empty probe plan. Apply ordinary delivery and reply admission. Return exit 0 for an admitted finished result, exit 1 for other admitted/refused outcomes, and exit 2 for request-delivery failure.
+ 
+ The timeout defaults to <!-- span limits.runner_verify_wait.value_unit -->5,000 milliseconds<!-- /span --> and is clamped to at least one. The returned PID comes from an admitted host reply’s `pid`; read its subject according to that reply’s lifecycle. An empty successful plan establishes the verification request’s application and completion. It supplies no per-operation prediction or attempt observations.
+ 
+@@ -3976,17 +4022,17 @@
+ 
+ controller acts at durable cleanup transaction, launchctl bootout and plist unlink. Entry: runner remove. Recipient: cli caller, launchd. Reports: runner remove, runner registry. The requested active record or retained cleanup record exists. Move an active record to nested pending_cleanup and save before any launchd/plist action. Inspect service and plist ownership independently; boot out only an owned service unless skip_bootout, and unlink only an owned plist after an immediate ownership recheck. Retire cleanup only after observed service absence, plist absence, no warnings and successful registry publication.
+ 
+ After a successful bootout, re-read a still-present service every <!-- span limits.runner_remove_poll_interval.value_unit -->50 milliseconds<!-- /span --> for at most <!-- span limits.runner_remove_teardown_wait.value_unit -->1,000 milliseconds<!-- /span --> of nominal waiting; stop at absence or unknown. A bootout or unlink success records that call’s success. Final absence is separately observed. A changed/unreadable/unowned object, failed action or failed retirement publication retains recovery and warnings. A repeated remove continues the retained record, including after the plist has disappeared. `--skip-bootout` can remove an owned plist; retirement still requires observed service absence. A completed remove command reports `result.ok: true` and exit 0 even when cleanup remains retained.
+ 
+ <a id="contract-installation-commands-ownership"></a>
+ #### Classify cleanup ownership
+ 
+-controller checks at recorded cleanup location and current resource observations. Entry: runner remove, runner reconcile. Recipient: cli caller. Reports: runner remove, runner reconcile. The recorded service name, user/scope/domain and paths pass location checks. Classify service ownership from present service executable equality. Classify plist ownership from a regular file with matching Label, complete ProgramArguments, MachServices and XPC_SERVICE_PATH; recorded ownership additionally requires matching UID and plist hash.
++[Controller](#contract-identity-definitions-controller) checks at recorded cleanup location and current resource observations. Entry: runner remove, runner reconcile. Recipient: cli caller. Reports: runner remove, runner reconcile. The recorded service name, user/scope/domain and paths pass location checks. Classify service ownership from present service executable equality. Classify plist ownership from a regular file with matching Label, complete ProgramArguments, MachServices and XPC_SERVICE_PATH; recorded ownership additionally requires matching UID and plist hash.
+ 
+ A present service with a different executable is unowned; one with no unique executable observation is ambiguous. Absent resources are classified ambiguous for ownership and retain their independently observed absent presence. Unknown presence produces unknown ownership. Recorded cleanup paths must be absolute, have no parent traversal, end in the expected service plist, and have an immediate parent named LaunchAgents for user scope or LaunchDaemons for system scope. The location check also requires the executable parent to equal the recorded bundle’s Contents/MacOS and refuses symlinked plist ancestors. The recorded ownership supplies the full parent path. Legacy records without ownership derive the conventional plist path and use the content checks.
+ 
+ <a id="contract-installation-commands-ownership_location"></a>
+ #### Known gap: Recorded cleanup directory
+ 
+ Recorded ownership can select an absolute directory whose last component matches the scope name. Whether cleanup should also compare the entire parent path with the conventional scope directory remains unresolved.
+ 
+@@ -4289,17 +4335,17 @@
+ remaining arguments. The intended argument-count commitment is unresolved;
+ the source establishes this acceptance, while the version check exercises the
+ single-argument form.
+ 
+ ## Rule applicability
+ 
+ | Rule | Component and boundary | Entry and recipient | Reports and conditions |
+ | --- | --- | --- | --- |
+-| [Build derivation](#contract-identity-public-derive) | build.sh and build_contract.py; packaged-build identity derivation | packaged_build; build_operator, compiled_component | build_context |
++| [Build derivation](#contract-identity-public-derive) | build.sh and build contract.py; packaged-build identity derivation | packaged_build; build_operator, compiled_component | build_context |
+ | [Deriving the history table](#contract-identity-surfaces-derive) | contract stamp generator; contract history derivation | documentation_generation; developer | surface_table |
+ | [Version command](#contract-identity-version-emit) | policy-witness controller; CLI version dispatch | cli; cli_caller | version |
+ | [Hold and deliver the selected request](#contract-request-specimen-hold) | controller; saved-file processing | cli_run; caller, report_reader | run_envelope |
+ | [Admission order and effects](#contract-request-specimen-admission) | XPC host; request decode and whole-request admission | xpc_execute; caller, report_reader | runner_reply |
+ | [Null and omission](#contract-request-specimen-nulls) | XPC host; request decoding | xpc_execute; caller, report_reader | runner_reply |
+ | [Bounded strings and action counts](#contract-request-specimen-capacity) | XPC host; pre-child admission | xpc_execute; caller, report_reader | runner_reply |
+ | [Selector precedence](#contract-request-options-precedence) | controller; runner selector parsing | cli_run; caller, report_reader | run_envelope |
+ | [Selection and augmentation failure order](#contract-request-options-failure_order) | controller; request preparation | cli_run; caller, report_reader | run_envelope |
+@@ -4328,78 +4374,78 @@
+ | [Issue and transfer payload ownership](#contract-extensions-custody-issue) | issuing worker and host; outbound token publication | actor_worker; caller, report_reader | runner_reply |
+ | [Acknowledge, compare and settle delivery](#contract-extensions-custody-deliver) | host and recipient worker; explicit transfer exchange | actor_worker; caller, report_reader | runner_reply |
+ | [Observe the source answer](#contract-extensions-custody-source_answer) | host; reply assembly after transfer | actor_xpc_execute; caller, report_reader | runner_reply |
+ | [Erase at declared last use and teardown](#contract-extensions-custody-erase) | host and workers; resource retirement | actor_xpc_execute; caller, report_reader | runner_reply |
+ | [Refuse at the first reached boundary](#contract-refusals-request-select) | host; request decoding and admission | xpc_execute; caller, report_reader | runner_reply |
+ | [Stop children and preserve safe metadata](#contract-refusals-request-consequence) | host; pre-child request refusal | xpc_execute; caller, report_reader | runner_reply |
+ | [Controller pre-invocation refusal](#contract-refusals-controller-consequence) | controller; CLI preparation | cli_run; caller, report_reader | run_envelope |
+ | [Sanitize every echoed field](#contract-refusals-admission-echo) | host; capacity-refusal reply assembly | xpc_execute; caller, report_reader | runner_reply |
+-| [Admit a connection](#contract-transport-authorization-connection) | runner host listener; NSXPCListener connection acceptance before exporting reservation methods | run, runner_verify, direct_xpc; xpc_caller | connection_acceptance |
++| [Admit a connection](#contract-transport-authorization-connection) | [Runner host](#contract-identity-definitions-host); NSXPCListener connection acceptance before exporting reservation methods | run, runner_verify, direct_xpc; xpc_caller | connection_acceptance |
+ | [Acquire an unused host](#contract-transport-delivery-acquire) | runner client and authenticated runner host; reserveRunner control RPC | run, runner_verify, direct_xpc; runner_host, runner_client | client_capture, control_reply |
+-| [Admit the control](#contract-transport-delivery-admit_control) | runner client; reservation and submission-control reply admission | run, runner_verify; runner_client | client_capture |
++| [Admit the control](#contract-transport-delivery-admit_control) | [Runner client](#contract-identity-definitions-client); reservation and submission-control reply admission | run, runner_verify; runner_client | client_capture |
+ | [Invoke execution once](#contract-transport-delivery-invoke) | runner client; runReservedSpecimen invocation on the granting connection | run, runner_verify; runner_host | client_capture |
+ | [Apply the original allowance](#contract-transport-delivery-deadline) | controller and runner client; client launch, input delivery, acquisition and execution wait | run, runner_verify; cli_caller | client_capture, controller_envelope |
+-| [Admit client and host observations](#contract-transport-client-admit) | controller; completed client stdout and nested host frame | run, runner_verify; cli_caller | controller_envelope |
+-| [Exact structural admission](#contract-wire-frame-admit) | controller Rust decoder and retained-byte Python reader; one complete client-capture or host-reply frame | client_stdout, host_reply, retained_frame; controller, evidence_reader | controller_envelope |
++| [Admit client and host observations](#contract-transport-client-admit) | [Controller](#contract-identity-definitions-controller); completed client stdout and nested host frame | run, runner_verify; cli_caller | controller_envelope |
++| [Exact structural admission](#contract-wire-frame-admit) | [Controller](#contract-identity-definitions-controller), [Retained-byte reader](#contract-wire-frame-reader); one complete client-capture or host-reply frame | client_stdout, host_reply, retained_frame; controller, evidence_reader | controller_envelope |
+ | [Query production and native boundary](#contract-wire-validator-query) | runner host and native validator helper; validator --batch PID stdin and sandbox_check call | eligible_phase_query; validator | validator_records |
+ | [Verdict production](#contract-wire-validator-emit) | native validator helper; batch stdout after each nonblank input line | validator_batch; runner_host | validator_records |
+-| [Host line admission](#contract-wire-validator-read) | runner host; validator stdout framing and decoded-record construction | validator_stdout; runner_host | validator_records, host_reply |
++| [Host line admission](#contract-wire-validator-read) | [Runner host](#contract-identity-definitions-host); validator stdout framing and decoded-record construction | validator_stdout; runner_host | validator_records, host_reply |
+ | [Parse and report a PID](#contract-wire-standalone-status) | native validator helper; direct argv admission | validator_status, validator_single_query, validator_batch; direct_helper_caller | validator_status, validator_single_result, validator_error |
+ | [Run one native query](#contract-wire-standalone-query) | native validator helper; direct sandbox_check call and stdout | validator_single_query; direct_helper_caller | validator_single_result, validator_error |
+ | [Assemble execution evidence](#contract-reply-record-assemble) | runner host; host reply assembly | cli, direct_xpc; controller, xpc_caller | ordinary, actors, preparation_failure, reporting_failure |
+ | [Publish a report or fallback](#contract-reply-failure-publish) | runner host; host response encoding | cli, direct_xpc; controller, xpc_caller | ordinary, actors, preparation_failure, reporting_failure |
+ | [Assemble the two channels](#contract-steps-assessment-assembly) | runner host; step evidence assembly | cli, direct_xpc; controller, xpc_caller | ordinary, actors, reporting_failure |
+-| [Establish query order](#contract-steps-assessment-order) | runner host; per-step ordering assessment | cli, direct_xpc; controller, xpc_caller | ordinary, actors; A nondegraded report carries this probe's query, phase ordering, setup and worker association. |
+-| [Classify an observation](#contract-steps-assessment-observe) | runner host; step evidence assembly | cli, direct_xpc; controller, xpc_caller | ordinary, actors, reporting_failure |
++| [Establish query order](#contract-steps-assessment-order) | [Runner host](#contract-identity-definitions-host); per-step ordering assessment | cli, direct_xpc; controller, xpc_caller | ordinary, actors; A nondegraded report carries this probe's query, phase ordering, setup and worker association. |
++| [Classify an observation](#contract-steps-assessment-observe) | [Runner host](#contract-identity-definitions-host); step evidence assembly | cli, direct_xpc; controller, xpc_caller | ordinary, actors, reporting_failure |
+ | [Observe fresh descriptors](#contract-steps-assessment-fresh) | C worker; released probe action | cli, direct_xpc; controller, xpc_caller | ordinary, actors, reporting_failure |
+ | [Add host path observations](#contract-steps-assessment-paths) | runner host; after orchestration | cli, direct_xpc; controller, xpc_caller | ordinary, actors, reporting_failure |
+ | [Resolving lifecycle claims](#contract-lifecycle-disposition-resolve) | runner host; final worker output and plan join | single_worker, actors; direct_host_caller, runner_client, controller | ordinary_reply |
+ | [Joining accepted validator records](#contract-lifecycle-validator-associate) | runner host; closed phase query collection | single_worker, actors; direct_host_caller, runner_client, controller | ordinary_reply, retained_reporting_failure |
+ | [Actor ownership and reporting scope](#contract-actor_evidence-actor-account) | runner host; actor reply assembly | actors; direct_host_caller, runner_client, controller | ordinary_reply, preparation_refusal, retained_reporting_failure |
+ | [Application classification](#contract-actor_evidence-application-classify) | runner host; actor reply assembly | actors; direct_host_caller, runner_client, controller | ordinary_reply, preparation_refusal |
+ | [Evaluating and applying the dependency](#contract-actor_evidence-gate-evaluate) | runner host; serial actor schedule before dependent activation | actors; direct_host_caller, runner_client, controller | ordinary_reply; `reply.phases[p].termination_gate` is present |
+-| [Checking a carried gate](#contract-actor_evidence-gate-check) | controller; semantic assessment after reply admission | controller_run; cli_caller | ordinary_reply; (`reply.reporting_failure` is absent and `reply.phases[p].termination_gate` is present) |
++| [Checking a carried gate](#contract-actor_evidence-gate-check) | [Controller](#contract-identity-definitions-controller); semantic assessment after reply admission | controller_run; cli_caller | ordinary_reply; (`reply.reporting_failure` is absent and `reply.phases[p].termination_gate` is present) |
+ | [Binding before launch](#contract-equipment-binding-bind) | runner host; actor preparation before spawn | actors; direct_host_caller, runner_client, controller | ordinary_reply, preparation_refusal |
+ | [Associating the owned process](#contract-equipment-execution-inspect) | runner host; after setup and before any actor activation | actors; direct_host_caller, runner_client, controller | ordinary_reply |
+ | [Preparation refusal contents](#contract-equipment-preparation_failure-retain) | runner host; actor preparation refusal before launch | actors; direct_host_caller, runner_client, controller | preparation_refusal |
+ | [Acquiring setup decisions and operations](#contract-equipment-authority_scope-acquire) | runner host; worker shared-region collection | actors; direct_host_caller, runner_client, controller | ordinary_reply, retained_reporting_failure |
+-| [Receipt presence](#contract-profile-receipt-presence) | runner_host; worker_collection | cli, direct_xpc; controller, xpc_caller | ordinary, actor, preparation_failure, reporting_failure; Capture was requested and worker output was collected. |
+-| [The host decides capture availability](#contract-profile-receipt-host) | runner_host; worker_collection | cli, direct_xpc; controller, xpc_caller | ordinary, actor, preparation_failure, reporting_failure; Capture was requested and worker output was collected. |
+-| [The controller checks carried labels](#contract-profile-receipt-labels) | controller; reply_admission | cli; cli_caller | ordinary, actor, preparation_failure, reporting_failure; `receipt` is present |
++| [Receipt presence](#contract-profile-receipt-presence) | runner host; worker_collection | cli, direct_xpc; controller, xpc_caller | ordinary, actor, preparation_failure, reporting_failure; Capture was requested and worker output was collected. |
++| [The host decides capture availability](#contract-profile-receipt-host) | runner host; worker_collection | cli, direct_xpc; controller, xpc_caller | ordinary, actor, preparation_failure, reporting_failure; Capture was requested and worker output was collected. |
++| [The controller checks carried labels](#contract-profile-receipt-labels) | [Controller](#contract-identity-definitions-controller); reply_admission | cli; cli_caller | ordinary, actor, preparation_failure, reporting_failure; `receipt` is present |
+ | [Select the public result](#contract-envelope-data-select) | controller; run completion after admission | cli; cli_caller | run; `envelope.data.runner_result` is present; Client capture and host reply admission have succeeded. |
+-| [Boundary precedence](#contract-envelope-data-admit) | controller; received run data admission | cli; cli_caller | run |
++| [Boundary precedence](#contract-envelope-data-admit) | [Controller](#contract-identity-definitions-controller); received run data admission | cli; cli_caller | run |
+ | [Admit the response before assessment](#contract-diagnostics-execution-admit) | controller; client delivery, public reply identity and bounded response context | cli_run; caller, report_reader | run_envelope |
+ | [Project one worker or aggregate actors](#contract-diagnostics-execution-project) | controller; typed worker lifecycle interpretation after response admission | cli_run; report_reader | execution_diagnostics, actor_execution_diagnostics |
+ | [Apply reply-wide findings](#contract-diagnostics-execution-reply_checks) | controller; typed reply relationship checks after worker projections | cli_run; report_reader | execution_diagnostics |
+-| [Keep the outer completion result](#contract-diagnostics-execution-outer_result) | controller; completed execution envelope construction | cli_run; caller, report_reader | run_envelope; `reply.normalized_outcome` = `"finished"` |
+ | [Host-cleanup attribution](#contract-diagnostics-actor-cause) | controller; validated worker ending projection | cli_run; report_reader | execution_diagnostics, actor_execution_diagnostics |
+ | [Retain observation and finding separately](#contract-diagnostics-issue-retain) | controller; integrity finding construction | cli_run; report_reader | execution_diagnostics, actor_execution_diagnostics |
+ | [Hold the selected request](#contract-dossier-collection-held) | controller; request preparation before runner-client invocation and fallback compile | run; cli_caller, runner_client, sandbox_compile_helper | specimen_dossier |
+ | [Scan literal imports](#contract-dossier-collection-scan) | controller import scanner; selected policy source and local import files before invocation | run; cli_caller | specimen_dossier |
+ | [Compare selected files](#contract-dossier-collection-compare) | controller; selected runner/helper paths and embedded evidence manifest | run; cli_caller | specimen_dossier |
+ | [Read and select records](#contract-installation-commands-read) | controller; runner registry lookup | runner_list, runner_status, runner_verify, runner_remove, runner_reconcile; cli_caller | runner_registry, runner_status, runner_verify, runner_remove, runner_reconcile |
+ | [Publish a registry mutation](#contract-installation-commands-publish) | controller; install, validate and remove registry transaction | runner_install, runner_validate, runner_remove; cli_caller | runner_registry |
+ | [Install a selected service](#contract-installation-commands-install) | controller installer; external bundle validation, signing, registry and launchd | runner_install; cli_caller, launchd | runner_install, runner_registry |
+ | [Retain installation ownership](#contract-installation-commands-pending) | controller installer; pending registry save before plist creation and bootstrap | runner_install; cli_caller, launchd | runner_install, runner_registry |
+ | [Verify a selected service](#contract-installation-commands-verify) | controller and runner client; fixed verification specimen through reservation and execution | runner_verify; cli_caller, runner_host | runner_verify |
+ | [Refresh validation metadata](#contract-installation-commands-validate) | controller; registered bundle and binary signature/inventory reads | runner_validate; cli_caller | runner_validate, runner_registry |
+ | [Reconcile observations](#contract-installation-commands-reconcile) | controller; registry records, launchctl print and launchd plist directories | runner_reconcile; cli_caller | runner_reconcile |
+ | [Remove an owned installation](#contract-installation-commands-remove) | controller; durable cleanup transaction, launchctl bootout and plist unlink | runner_remove; cli_caller, launchd | runner_remove, runner_registry |
+-| [Classify cleanup ownership](#contract-installation-commands-ownership) | controller; recorded cleanup location and current resource observations | runner_remove, runner_reconcile; cli_caller | runner_remove, runner_reconcile |
++| [Classify cleanup ownership](#contract-installation-commands-ownership) | [Controller](#contract-identity-definitions-controller); recorded cleanup location and current resource observations | runner_remove, runner_reconcile; cli_caller | runner_remove, runner_reconcile |
+ 
+ ## Controller findings
+ 
+-| Check | Records inspected | Consequences and retained assessments |
+-| --- | --- | --- |
+-| [Admit client and host observations](#contract-transport-client-admit) |  |  |
+-| [Checking a carried gate](#contract-actor_evidence-gate-check) | `reply.actors[s].owned_reap.capture_ordinal`, `reply.actors[s].owned_reap.departure_requested`, `reply.actors[s].owned_reap.ownership_unbroken`, `reply.phases[f].activation_observation.capture_ordinal`, `reply.phases[p].termination_gate.activation_eligible`, `reply.phases[p].termination_gate.capture_ordinal`, `reply.phases[p].termination_gate.observation`, `reply.phases[p].termination_gate.outcome`, `reply.phases[p].termination_gate.wait.budget_ms`, `reply.phases[p].termination_gate.wait.clock_fault`, `reply.phases[p].termination_gate.wait.elapsed_ms`, `reply.phases[p].termination_gate.wait.native_errno`, `reply.reporting_failure` |  |
+-| [The controller checks carried labels](#contract-profile-receipt-labels) | `receipt.capture_stage`, `receipt.producer`, `receipt.status` | On failure, sets `envelope.result.normalized_outcome` to `"malformed_runner_response"`, sets `envelope.result.ok` to `false`, withholds `envelope.data.runner_sandbox_diagnostics`, retains the records `reply`. |
+-| [Boundary precedence](#contract-envelope-data-admit) |  |  |
+-| [Classify cleanup ownership](#contract-installation-commands-ownership) |  |  |
++| Check | Structured operands | Consequences and retained assessments |
++| --- | --- | --- |
++| [Admit client and host observations](#contract-transport-client-admit) | See the linked rule. | Give request-delivery failure precedence; otherwise refuse retention loss, missing capture, unsupported producer/schema or inconsistent capture. Admit the host frame separately only when its retained bytes are complete. Keep raw received bytes at the boundary that received them. |
++| [Exact structural admission](#contract-wire-frame-admit) | See the linked rule. | Check frame extent/magic and exact fingerprint, then the expected root and producer identity before descendants. Refuse wrong kinds, unknown records/tags/cases, missing required fields, invalid UTF-8, out-of-range integers, impossible lengths/counts, duplicate or out-of-order fields/keys and trailing bytes. |
++| [Checking a carried gate](#contract-actor_evidence-gate-check) | `reply.actors[s].actor_id`, `reply.actors[s].owned_reap.capture_ordinal`, `reply.actors[s].owned_reap.departure_requested`, `reply.actors[s].owned_reap.ownership_unbroken`, `reply.phases[f].activation_observation.capture_ordinal`, `reply.phases[f].phase_id`, `reply.phases[p].termination_gate.activation_eligible`, `reply.phases[p].termination_gate.capture_ordinal`, `reply.phases[p].termination_gate.observation`, `reply.phases[p].termination_gate.outcome`, `reply.phases[p].termination_gate.source_actor_id`, `reply.phases[p].termination_gate.source_final_phase_id`, `reply.phases[p].termination_gate.wait.budget_ms`, `reply.phases[p].termination_gate.wait.clock_fault`, `reply.phases[p].termination_gate.wait.elapsed_ms`, `reply.phases[p].termination_gate.wait.native_errno`, `reply.reporting_failure` | Add actor_evidence issues for failed requirements; set top-level disposition_integrity invalid, process_disposition withheld and termination_cause unknown. Preserve the host reply, each actor's independently projected disposition, run result and exit status. |
++| [The controller checks carried labels](#contract-profile-receipt-labels) | `receipt.capture_stage`, `receipt.producer`, `receipt.status` | On failure, sets `envelope.result.normalized_outcome` to `"malformed_runner_response"`, sets `envelope.result.ok` to `false`, withholds `envelope.data.runner_sandbox_diagnostics`, retains the records `reply`. The controller refuses admission of the containing report, reports a failed result and exits with status 1. The retained report remains the host's account. |
++| [Boundary precedence](#contract-envelope-data-admit) | See the linked rule. | A delivery failure yields tool_error/exit 2; another refused boundary yields its classification/exit 1. Retain the available capture and structurally decoded reply, with runner_sandbox_diagnostics null. Eligible xpc_error can add independent fallback compilation. |
++| [Classify cleanup ownership](#contract-installation-commands-ownership) | See the linked rule. | Classify service ownership from present service executable equality. Classify plist ownership from a regular file with matching Label, complete ProgramArguments, MachServices and XPC_SERVICE_PATH; recorded ownership additionally requires matching UID and plist hash. |
+ 
+ ## Known gaps
+ 
+ | Item | Kind |
+ | --- | --- |
+ | [Direct-build evidence limit](#contract-identity-public-direct-direct_evidence) | evidence |
+ | [Ordinary-build history requirement](#contract-identity-surfaces-release_history) | behavior |
+ | [Development specimen review](#contract-identity-surfaces-development_review) | meaning |
