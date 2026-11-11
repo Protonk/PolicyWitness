@@ -1,6 +1,5 @@
 """Archive windows, portable evidence and interrupted cleanup, observed on real files."""
 import hashlib
-import copy
 import json
 import os
 from pathlib import Path
@@ -8,13 +7,10 @@ import shutil
 import subprocess
 import sys
 import tarfile
-import plistlib
-import zipfile
 from unittest.mock import patch
 
 from check_release_publish import ROOT, git, make_repo, make_dist, completed_output
 import artifact
-import historical_release_storage
 import execution_contract
 import release_archive
 import release_preflight
@@ -104,73 +100,41 @@ def portable(out):
     reject(lambda: release_runs.verify_release(copy), 'checksum mismatch')
 
 
-def historical_storage(out):
-    """Storage recognition never grants historical evidence current acceptance."""
-    root = out / 'historical'; root.mkdir()
-    archive = root / 'dist/archive/v0.3.3'
-    bundle = archive / release_runs.BUNDLE; bundle.mkdir(parents=True)
-    source = '1bf0341cd06c48122af1635e8aa8cac77517d9e1'
-    record = dict(schema_version=1, tag='v0.3.3', version='0.3.3', source_commit=source,
-                  archive='PolicyWitness-0.3.3.zip', guide='PolicyWitness.md')
-    manifest = dict(schema_version=1, tag='v0.3.3', source_commit=source,
-                    archive='runs.tar.gz', runs={}, summaries={})
-    with tarfile.open(bundle / 'runs.tar.gz', 'w:gz') as packed:
-        for role in ('acceptance', 'battery'):
-            relative = ('release-acceptance/' if role == 'acceptance' else 'runs/') + role
-            path = root / 'tests/out' / relative; path.mkdir(parents=True)
-            summary = 'acceptance.json' if role == 'acceptance' else 'run.json'
-            # Deliberately not valid current acceptance or default-battery evidence.
-            (path / summary).write_text(json.dumps(dict(run_id=role, historical_storage=True)))
-            (path / 'owner.json').write_text(json.dumps(dict(schema_version=1, run_id=role, out_dir=str(path))))
-            entry = dict(path=relative, run_id=role, source=source, release='v0.3.3')
-            manifest['runs'][role] = dict(retained=entry, inventory=artifact.inventory(path))
-            packed.add(path, arcname=role)
-            shutil.copy2(path / summary, bundle / (role + '.json'))
-            manifest['summaries'][role + '.json'] = artifact.digest(bundle / (role + '.json'))
-            record[role] = dict(path=release_runs.BUNDLE + '/' + role + '.json',
-                                original_path=relative + '/acceptance.json' if role == 'acceptance' else relative)
-            if role == 'battery': record[role]['run_id'] = role
-    manifest['sha256'] = artifact.digest(bundle / 'runs.tar.gz')
-    with zipfile.ZipFile(archive / record['archive'], 'w') as zipped:
-        zipped.writestr('PolicyWitness.app/Contents/Info.plist', plistlib.dumps(dict(
-            PWBuildCommit=source, PWBuildDescribe=record['tag'], CFBundleShortVersionString=record['version'])))
-    (archive / 'PolicyWitness.md').write_text('historical guide')
-    record['sha256'] = artifact.digest(archive / record['archive'])
-    (archive / 'SHA256SUMS').write_text(''.join(artifact.digest(archive / name) + '  ' + name + '\n'
-                                            for name in (record['archive'], 'PolicyWitness.md')))
-    def write():
-        run_ownership.atomic_json(bundle / 'manifest.json', manifest)
-        record['test_evidence'] = dict(path=release_runs.BUNDLE + '/manifest.json', sha256=artifact.digest(bundle / 'manifest.json'))
-        run_ownership.atomic_json(archive / 'release.json', record)
-    write()
-    before = artifact.inventory(root)
-    assert retention.archives(root, verify=True)[0]['record'] == record
-    assert artifact.inventory(root) == before
-    reject(lambda: release_runs.producer_contract(record), 'producer execution contract')
-    reject(lambda: release_runs.verify_bundle(bundle, expected_contract={}), 'expected schema 3')
-    original_record, original_manifest = copy.deepcopy(record), copy.deepcopy(manifest)
-    for mutation, diagnostic in (
-        ('source', 'unrecognized historical'), ('layout', 'historical run identity'),
-        ('summary', 'summary checksum'), ('bundle', 'archive checksum'),
-        ('relabel', 'must be acceptance/tests/run.json')):
-        record, manifest = copy.deepcopy(original_record), copy.deepcopy(original_manifest)
-        if mutation == 'source':
-            record['source_commit'] = manifest['source_commit'] = 'f' * 40
-        elif mutation == 'layout': manifest['runs']['battery']['retained']['path'] = '../escape'
-        elif mutation == 'summary': manifest['summaries']['battery.json'] = '0' * 64
-        elif mutation == 'bundle': manifest['sha256'] = '0' * 64
-        else:
-            record['schema_version'] = 2
-            manifest.update(schema_version=3, battery=dict(role='battery', path='run.json'))
-        write()
-        if mutation == 'layout': diagnostic = 'invalid relative path'
-        reject(lambda: retention.archives(root, verify=True), diagnostic)
-    record, manifest = original_record, original_manifest; write()
-    summary = bundle / 'battery.json'; saved = summary.read_bytes()
-    summary.unlink(); summary.symlink_to(root / 'tests/out/runs/battery/run.json')
-    reject(lambda: retention.archives(root, verify=True), 'symlink redirects')
-    summary.unlink(); summary.write_bytes(saved)
-    assert retention.archives(root, verify=True)
+def unsupported_and_corrupt_storage(out):
+    """Unsupported formats and corrupt bytes never become cleanup authority."""
+    repo, old, previous, new, current = fixture(out, 'refused-storage')
+    bundle = old / release_runs.BUNDLE
+    manifest_path = bundle / 'manifest.json'
+    record_path = old / 'release.json'
+    original_manifest, original_record = manifest_path.read_bytes(), record_path.read_bytes()
+
+    def unchanged_refusal(diagnostic):
+        paths = (old, previous, new, current)
+        before = {path: artifact.inventory(path) for path in paths}
+        reject(lambda: retention.prune(repo), diagnostic)
+        reject(lambda: retention.prune(repo, apply=True), diagnostic)
+        assert all(artifact.inventory(path) == before[path] for path in paths), 'storage refusal changed evidence'
+        assert retention.pending(repo) is None, 'storage refusal created a cleanup transaction'
+
+    # Keep assets and outer identity consistent so format admission owns the
+    # refusal. No producer allowlist grants an old format storage eligibility.
+    manifest = json.loads(original_manifest)
+    manifest['schema_version'] = 1
+    run_ownership.atomic_json(manifest_path, manifest)
+    record = json.loads(original_record)
+    record['test_evidence']['sha256'] = artifact.digest(manifest_path)
+    run_ownership.atomic_json(record_path, record)
+    reject(lambda: retention.archives(repo), 'expected schema 3')
+    unchanged_refusal('expected schema 3')
+    manifest_path.write_bytes(original_manifest)
+    record_path.write_bytes(original_record)
+
+    packed = bundle / 'runs.tar.gz'
+    original_packed = packed.read_bytes()
+    packed.write_bytes(b'corrupt')
+    unchanged_refusal('checksum mismatch')
+    packed.write_bytes(original_packed)
+    assert release_runs.verify_release(old)[1]['schema_version'] == 3
 
 
 def battery_contract(out):
@@ -222,8 +186,6 @@ def windows(out):
         archives = {row['path'] for row in report['targets'] if row['kind'] == 'archive'}
         assert archives == {'dist/archive/v' + v for v in versions[:max(0,i-3)]}
     survivors = {p: artifact.inventory(p) for p,_ in entries[-4:]}
-    historical = repo / 'dist/archive/v0.3.3'
-    shutil.copytree(out / 'historical/dist/archive/v0.3.3', historical)
     # Positively linked superseded copies expire; unrelated material cannot borrow a name.
     linked = repo / 'dist/evidence/superseded'; linked.mkdir()
     record = run_ownership.read_object(entries[0][0] / 'release.json')
@@ -255,7 +217,7 @@ def windows(out):
     receipt.write_bytes(saved)
     assert not retention.prune(repo, apply=True)['failures'], 'unassociated evidence permanently failed cleanup'
     assert sorted((p.name for p in (repo / 'dist/archive').iterdir()), key=retention.version) == ['v' + v for v in versions[-4:]]
-    assert not historical.exists() and retention.pending(repo) is None, 'last historical storage obligation did not expire'
+    assert retention.pending(repo) is None, 'completed cleanup retained a quarantine'
     assert [p.exists() for _,p in entries] == [False]*5 + [True]
     for path, inventory in survivors.items():
         assert artifact.inventory(path) == inventory, 'cleanup changed surviving archive bytes'
@@ -410,7 +372,7 @@ def interrupted(out):
 def main(out):
     out.mkdir(parents=True, exist_ok=True)
     portable(out)
-    historical_storage(out)
+    unsupported_and_corrupt_storage(out)
     battery_contract(out)
     windows(out)
     blockers_and_handoff(out)

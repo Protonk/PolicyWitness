@@ -78,15 +78,11 @@ def archives(root, *, verify=False):
         for name in (record['archive'], record['guide'], 'SHA256SUMS', release_runs.BUNDLE + '/runs.tar.gz'):
             if not real(path / name).is_file():
                 raise ValueError(f'incomplete release archive: {path / name}')
-        if manifest.get('schema_version') == 1:
-            import historical_release_storage
-            historical_release_storage.inspect(path, record, manifest, verify=verify)
-        else:
-            release_runs.battery_source(manifest)
-            if manifest.get('execution_contract') != release_runs.producer_contract(record):
-                raise ValueError('archive producer contract differs from portable evidence')
-            if verify:
-                release_runs.verify_release(path)
+        release_runs.battery_source(manifest)
+        if manifest.get('execution_contract') != release_runs.producer_contract(record):
+            raise ValueError('archive producer contract differs from portable evidence')
+        if verify:
+            release_runs.verify_release(path)
         found.append(dict(path=path, record=record, manifest=manifest, order=order))
     return sorted(found, key=lambda r: r['order'])
 

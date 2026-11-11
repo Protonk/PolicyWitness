@@ -309,7 +309,7 @@ combined with test selection or `--list`, and `--apply` requires `--prune`.
 the dispatcher. Ordinary tests never trigger a sweep. Scratch follows
 [.tmp/AGENTS.md](../.tmp/AGENTS.md), outside this operation. The
 [release procedure](../docs/SIGNING.md#portable-test-evidence-and-release-cleanup)
-describes archive verification and the temporary historical storage inspector.
+describes archive verification and cleanup recovery.
 
 ## Tiers
 
@@ -692,7 +692,6 @@ Release acceptance captures the source/selection evidence contract before the
 battery starts. New family evidence, including the terminal ownership receipt,
 is required independently of optional fields in the result. Portable schema 3
 bundles are checked against the contract captured in the release record. Missing
-contracts and older bundle formats are refused. A separate temporary storage
-inspector identifies the remaining schema-1 archives for retention; it cannot
-establish acceptance or authorize publication. Deleting a family declaration or
+contracts and older bundle formats are refused by verification, publication
+and retention. Deleting a family declaration or
 reference cannot remove its independently captured obligation.

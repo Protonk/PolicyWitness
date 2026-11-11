@@ -12,14 +12,63 @@ sections hold and when they are updated; a check-in reads them first.
 
 ## Standing
 
-**Stage one: development and refusal rehearsals passed; prepare `v0.3.7`.** The maintainer's
-normal-Terminal history lookup succeeded, and the same approved lookup now
-succeeds in this session: `Successfully received submission history`, with
-100 entries. The earlier exit 69 from `xcrun notarytool history
---keychain-profile entitlement-jail --output-format json` established a lookup
-failure in this session, not an absent profile. Its cause remains unestablished.
-No credential was read out, changed or recreated, and no app was submitted.
-The plan's absent-profile stop condition does not apply.
+**Stage one complete: `v0.3.7` accepted and archived; stage two begins.**
+The annotated local tag names `0487956a85b8c1a83d081e55526b0eaf58aa1269`.
+Apple accepted submission `a7524f04-382b-4199-8118-f76b4cabda61`.
+Acceptance `accept-dca94dacf7d64575949501bb7bfbaabe`, battery
+`20261111T145311Z_7a4a9f53`, passed all 229 default cases and 602 Swift
+assertions, with no skips, unrun cases, harness errors or system sleep.
+The extracted app was valid and unchanged. The final ZIP SHA-256 before
+and after acceptance was
+`a276a10b4dde06b1b0fd173fc7abd08aa40023acdbf3a536f6582df6d757b2b7`.
+The archive is `dist/archive/v0.3.7/`, including portable acceptance and
+battery evidence. Its guide SHA-256 is
+`e8b7f97b6f02b97a0de294778b781f4976d2f9c3e79632651851af359bbe1e7e`.
+Nothing has been published or pushed.
+
+The tagged fresh-build rehearsal, `contract-v037-tagged-rehearsal-20261111`
+(`20261111T041230Z_7be334e8`), also passed all 229 cases and 602 Swift
+assertions with no skips, unrun cases, harness errors or system sleep.
+Strict preflight passed before that build and again after final acceptance.
+The tagged build reported version `0.3.7`, build 1334 and
+`release:v0.3.7`; SDK 27.2, thin arm64, seven executable signatures and two
+enclosing seals with secure timestamps. The staged guide equaled its source.
+Source remained unchanged from tagging through completed archival.
+
+The first actual release attempt, `dist/evidence/20261111T043546Z-j409nqrj`,
+built and signed successfully but its notary profile lookup returned exit 69
+without a submission identifier. A fresh lookup outside the automation
+sandbox failed too. That observed accessibility failure did not establish
+that the saved profile was absent. The maintainer then obtained successful
+history in normal Terminal and in shell mode; the next approved lookup in
+this session succeeded with 100 entries. Its cause remains unestablished.
+No credential was read out, changed or recreated. After the maintainer's
+instruction to proceed, the retained unchanged ZIP (SHA-256
+`183c25e5dd69ec49c3405ef62823924508a768082ab7c1d0cbef954f6174822f`)
+was submitted once in attempt `20261111T145124Z-i1e_yko4`, accepted, stapled,
+validated, checked by Gatekeeper, rezipped, accepted locally and archived.
+The stopped attempt remains retained by the release owner.
+
+Ordinary pruning completed with no blockers, failures or missing acceptance.
+It removed the expired `v0.3.3` archive and its archived pointer, disposable
+working runs and the previous unpacked acceptance. The retained archive
+window is `v0.3.4`–`v0.3.7`; the newest unpacked acceptance stays protected.
+A fresh read-only owner check verified all four complete archives, each
+portable schema 3, and the newest inactive acceptance's identity and ZIP.
+No pending retention transaction, old rotation obligation, hidden archive
+entry, unassociated pointer or further cleanup target remains. Local raw
+receipts are `/private/tmp/pw-contract-v037-prune-20261111.stdout` and
+`/private/tmp/pw-historical-storage-eligibility-0487956a/post-prune-observation.json`.
+The latter exits 1 solely because one private patch preimage needs rebasing:
+the preflight README gained the annotated-tag/ancestry fixture explanation.
+Storage eligibility passed. The separate historical-storage reader removal
+preserves that explanation. Its dispatcher run,
+`contract-historical-storage-removal-20261111`, passed all thirteen selected
+cases: release publication, release rotation, dispatcher retention and all ten
+source-drift cases. There were no skips, unrun cases, harness errors or system
+sleep. This app-independent selection supplies no new native-app observation.
+Next are the reviewed stage-two changes and their canonical controls.
+Later-stage candidates remain private.
 
 The signed development build passed outside the automation sandbox. Its full
 default battery, `contract-stage-one-development-20261110`
@@ -165,12 +214,8 @@ before execution and the app remained unchanged. This completes the required
 pre-stamp development rehearsal. The opt-in full refusal rehearsal above supplies
 the separate build-refusal and integrated release-sequence controls.
 
-At release preparation, no new tag, Apple submission or archive exists. Next:
-prepare the `v0.3.7` surface stamps, commit and annotate the local tag, then keep
-the source tree unchanged through strict preflight, a fresh tagged build and
-default battery, and `make release` through accepted archival. Publication and
-tag pushes remain deferred. Later-stage candidates and their reviews remain
-private and unexecuted against the product.
+The development rehearsal preceded the `v0.3.7` stamp preparation and local
+annotated tag. Its completed release and cleanup are recorded above.
 
 
 Stage one started at `8dfb1152`. All nineteen surfaces have been authored
@@ -178,7 +223,8 @@ and independently reviewed; imported public records have one owner and every
 field has an authored meaning. The generator now owns the complete contract,
 the guide's stamp table, the canonical public snapshot and per-surface shapes.
 The former manifest was removed from current inputs; its retained reader
-still derives the `v0.3.6` history. Current surfaces remain unreleased.
+still derives the `v0.3.6` history. All nineteen surfaces first shipped in
+the new representation at `v0.3.7`.
 
 The initial complete tree had 1,003 field meanings, 1,526 nodes and nineteen
 surfaces. Its rendered size was 4,412 lines and 57,897 words, including 1,651
@@ -258,6 +304,20 @@ passed outside. The notary history lookup now succeeds as recorded above.
 Four agents have been dispatched in total, with earlier agents reused.
 
 ## Decisions
+
+**Retire the expired storage interpreter.** After `v0.3.7` archival, ordinary
+retention removed the last schema-1 archive, `v0.3.3`, and its pointer.
+A fresh owner check verified all retained archives as schema 3, with no
+pending quarantine or old rotation obligation. Remove the temporary inspector
+and its positive historical-storage fixtures; require the existing current
+portable schema and producer binding for every complete archive. New controls
+must establish that unsupported formats and corrupt packed bytes refuse
+preview and apply before mutation, preserving neighboring archives and working
+acceptance. This changes storage eligibility after its migration obligation
+has expired. Current retention ownership, locking, recovery and the four-release
+window stay with their existing owners. The independent `history_v0.py`
+reader continues to preserve `v0.3.6` public-contract history. Reversal would
+restore a storage interpreter whose known local obligations have ended.
 
 **Surface names for the intermediate release.** Confirm the thirteen inherited
 IDs (`request`, `policy`, `probes`, `actors`, `envelope`, `dossier`, `steps`,

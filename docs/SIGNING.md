@@ -319,12 +319,8 @@ cleanup remain blockers. The checkout lock and acceptance lifetime locks
 establish inactivity; timestamps do not. Pruning never removes machine
 services to settle an obligation.
 
-Cleanup verifies current portable evidence before mutation. A temporary
-`historical_release_storage.py` inspector recognizes the six schema-1 producers
-for storage classification only, binding their assets, manifests and original
-run identities. It does not restore historical acceptance or publication.
-Remove that inspector and its positive controls once the last schema-1 archive
-and dependent quarantine expire. Unsupported or corrupt storage blocks cleanup.
+Cleanup requires current portable evidence and verifies it before mutation.
+Unsupported or corrupt storage blocks cleanup.
 
 Apply holds `tests/.checkout.lock`, journals the exact target inventories inside
 `tests/out/.retention/`, and renames targets into that quarantine before deletion.

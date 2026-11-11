@@ -410,8 +410,8 @@ Offline release controls also exercise the release procedure's decision points.
   repositories and independently inspects stored files and symlink targets.
   Detached current-format evidence verifies after its working output is gone
   and the checkout catalog changes; the packed acceptance owner must match its
-  recorded identity. Temporary historical storage controls bind schema-1
-  identities, assets and inventories while refusing malformed or relabeled data.
+  recorded identity. Unsupported bundle formats and corrupt stored bytes refuse
+  retention without changing archives or their working evidence.
   Inventories from empty through six releases establish the four-release
   window, numeric patch/minor ordering, exact surviving archive bytes and
   removal of expired pointers and positively linked attempts.
@@ -428,7 +428,7 @@ Offline release controls also exercise the release procedure's decision points.
   and completed deletion resume from quarantine while preserving replacements at original
   paths. Competing processes respect the stable checkout lock. Unfinished old
   journals or quarantine block the new planner. Unsupported portable formats
-  remain refusals, separately from temporary historical storage inspection.
+  remain refusals.
 
 ## Fixtures
 
