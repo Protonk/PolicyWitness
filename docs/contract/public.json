@@ -1,7 +1,8 @@
 {
   "format": "policywitness.contract.public.v1",
   "history": [
-    "v0.3.6"
+    "v0.3.6",
+    "v0.3.7"
   ],
   "surfaces": [
     {

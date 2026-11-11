@@ -12,7 +12,7 @@ sections hold and when they are updated; a check-in reads them first.
 
 ## Standing
 
-**Stage one: full refusal rehearsal passed; prepare the final development build.** The maintainer's
+**Stage one: development and refusal rehearsals passed; prepare `v0.3.7`.** The maintainer's
 normal-Terminal history lookup succeeded, and the same approved lookup now
 succeeds in this session: `Successfully received submission history`, with
 100 entries. The earlier exit 69 from `xcrun notarytool history
@@ -151,10 +151,26 @@ the ZIP SHA-256 before and after was
 The receipt is under the refusal case's `artifacts/release-battery/acceptance/`.
 This rehearsal used controlled Apple responses; it establishes the local release
 sequence and default acceptance, not an Apple submission. The corrected version
-fixture is now exercised through the whole sequence. The final development build
-and full battery follow on the main checkout.
-No new tag, Apple submission or archive exists. The coordinated stage-one
-switch remains uncommitted pending these checks.
+fixture is now exercised through the whole sequence.
+
+The coordinated stage-one switch is committed as
+`f6551bf97a7a342ea837087ba85bfaf9c94faef7`. Its fresh signed development build
+passed with SDK 27.2, thin arm64 outputs, seven executable signatures and two
+enclosing seals with secure timestamps. The staged guide equals the source.
+The final development battery, `contract-stage-one-final-development-20261111`
+(`20261111T034703Z_a4773070`), passed all 229 selected cases, including all ten
+source-drift cases and 602 Swift assertions. There were no skips, unrun cases,
+harness errors or system-sleep observations. Artifact inspection was valid
+before execution and the app remained unchanged. This completes the required
+pre-stamp development rehearsal. The opt-in full refusal rehearsal above supplies
+the separate build-refusal and integrated release-sequence controls.
+
+At release preparation, no new tag, Apple submission or archive exists. Next:
+prepare the `v0.3.7` surface stamps, commit and annotate the local tag, then keep
+the source tree unchanged through strict preflight, a fresh tagged build and
+default battery, and `make release` through accepted archival. Publication and
+tag pushes remain deferred. Later-stage candidates and their reviews remain
+private and unexecuted against the product.
 
 
 Stage one started at `8dfb1152`. All nineteen surfaces have been authored
@@ -333,7 +349,8 @@ check's claim explicit: retained public representation, not reparsing old
 authoring syntax. The dependency list preserves the need for earlier tags
 even when every surface changes in the representation migration. The legacy
 reader's thirteen actual `v0.3.6` digests matched in the recorded read-only
-calculation. Integrated controls are still being completed. Reversal before
+calculation. The disposable history controls and complete development/refusal
+rehearsals passed; the tagged release checkpoint follows. Reversal before
 the first new release replaces this reader design and its tests; after a
 release its reader must remain available.
 
