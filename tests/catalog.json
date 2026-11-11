@@ -671,11 +671,11 @@
       "cases": [
         {
           "id": "batch_ndjson_roundtrip",
-          "description": "10 verdicts validated (3 allow + 1 deny + 1 unsupported_operation + 1 bad_filter + 4 parse_error)"
+          "description": "10 native batch verdicts plus shipped-helper duplicate-key, RAW-zero and direct/batch meaning controls"
         },
         {
           "id": "predictions_do_not_report",
-          "description": "The production validator source, compiled with a recording sandbox_check, issues every batch and per-probe query with SANDBOX_CHECK_NO_REPORT and an intact filter id"
+          "description": "The production validator source with constructed native results preserves no-report flags, final duplicate strings, RAW-zero value handling and mode-specific result meanings"
         }
       ]
     },
@@ -1912,7 +1912,7 @@
         },
         {
           "id": "actor_compositions",
-          "description": "Public actor compositions preserve distinct resources across multiple issuers, fan-out, repeated handles, self-transfer, empty revisits and renamed actor declarations and failed-recipient isolation",
+          "description": "Public actor compositions preserve distinct resources across multiple issuers, fan-out, repeated handles, self-transfer, empty revisits and renamed actor declarations and failed-recipient isolation; failed evaluated termination gates cancel later unrelated work, while unreached gates permit it; ordinary worker-timeout overrides leave actor scheduling allowances intact",
           "command": [
             "bash",
             "tests/suites/witness_contract/actor_compositions.sh"

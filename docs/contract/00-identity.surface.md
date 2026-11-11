@@ -103,7 +103,7 @@ source: [{"path":"docs/build_contract.py","symbol":"identity"},{"path":"docs/sou
 check: [{"path":"tests/suites/source_drift/build_contracts.py","symbol":"test_build_identity_tracks_shipped_inputs_and_requires_an_annotated_clean_release","form":"test"},{"path":"tests/suites/source_drift/build_contracts.py","symbol":"test_source_copies_ignore_artifacts_and_release_checks_actual_bytes","form":"test"},{"path":"tests/suites/source_drift/build_contracts.py","symbol":"test_swift_context_refuses_a_different_compilation_identity","form":"test"},{"path":"tests/suites/source_drift/build_contracts.py","symbol":"test_presign_contract_guard_refuses_changed_sources","form":"test"}]
 pins: "Selected-source mutations change the digest; clean annotated release selection checks actual bytes; Swift context disagreement and the extracted pre-sign guard refuse."
 context: "Read generator/source walker and build-stamp/pre-sign code; read tests using disposable source copies and Git repositories, including execution of the extracted shell guard."
-limits: "Checks were read, not run for this draft. The guard control executes a script fragment, not a full signing pipeline; multiple qualifying annotated tags are source-established here."
+limits: "The guard control executes the pre-sign script fragment. The multiple-qualifying-tag branch has source support."
 ```
 
 ### Direct compilation contexts {direct: definition}
@@ -119,17 +119,24 @@ context uses `test:policy-witness`. Rust unit tests likewise use
 `test:policy-witness`. A request cannot pass the controller's identity gate
 when its expected identity is empty or `unbound`.
 
-#### Direct-build evidence limit {direct_evidence: gap}
+#### Direct-build identity {direct_evidence: definition}
 
 ```contract
-kind: "evidence"
+defines: "value"
 ```
 
-The direct Rust environment path is established by the compile-time constant
-and Cargo's environment tracking. The available plain-Cargo integration check
-removes `PW_BUILD_CONTRACT` and establishes the unbound case. A direct Cargo
-build with an explicitly supplied foreign or release-form identity has not
-been exercised in this examination.
+A non-test Cargo build embeds a nonempty supplied PW_BUILD_CONTRACT verbatim. An absent or empty value produces unbound. The spelling can be foreign or release-shaped; build version, number, commit and describe retain their separately supplied provenance. An unbound receiver refuses public requests; a bound receiver requires exact equality with its public identity.
+
+##### Disposition support {disposition_support: owner}
+
+```contract
+grade: "check_read"
+source: [{"path":"controller/src/json_contract.rs","symbol":"BUILD_CONTRACT"},{"path":"controller/build.rs","symbol":"fn main"},{"path":"controller/src/request_patch.rs","symbol":"validate_contract"}]
+pins: "The non-test constant, Cargo environment tracking and receiver equality gate have separate roles."
+context: "Static review of the cited producer and assertion branches."
+check: [{"path":"controller/integration/cli_contract.rs","symbol":"supplied_direct_cargo_identity_is_embedded_without_release_provenance","form":"test"}]
+limits: "The control builds an isolated non-test controller with supplied and absent stamp values, then checks identity and the next refusing controller boundary."
+```
 
 #### Direct-build support {support: owner}
 
@@ -212,17 +219,23 @@ release history for that build would change which source distributions can
 build; the requirement remains a maintainer decision. Strict release
 preflight requires complete history.
 
-### Development specimen review {development_review: gap}
+### Reviewing a development specimen {development_review: definition}
 
 ```contract
-kind: "meaning"
+defines: "value"
 ```
 
-A development identity names a source digest, while the table is indexed by
-releases. The current reuse procedure leaves the comparison baseline for a
-development-asserting specimen unspecified. Exact admission still uses the
-target identity; the development-to-release review workflow needs a stated
-baseline or an explicit review of the relevant target definitions.
+Review a development-asserting specimen against its original source and contract snapshot when those are available. Record the old assertion, target identity and commitments compared. When the old snapshot is unavailable, review the relevant target definitions and chosen validation against the specimen explicitly. Set the target assertion after that review. A development digest identifies selected source bytes; the release table supplies release-indexed history.
+
+#### Disposition support {disposition_support: owner}
+
+```contract
+grade: "source_read"
+source: {"path":"docs/build_contract.py","symbol":"def identity"}
+pins: "The development identity hashes selected source paths and bytes; release identity selection uses release-tag and byte checks."
+context: "Static review of the cited production branches."
+limits: "The source establishes identity construction. The specimen review procedure is the stated reuse obligation."
+```
 
 ## Other identities {other: subject}
 
@@ -689,7 +702,7 @@ source: [{"path":"controller/src/json_contract.rs","symbol":"build_stamp"},{"pat
 check: [{"path":"controller/src/json_contract.rs","symbol":"every_envelope_carries_a_complete_build_stamp","form":"test"},{"path":"controller/src/json_contract.rs","symbol":"public_identity_is_in_the_build_frame","form":"test"},{"path":"controller/integration/cli_contract.rs","symbol":"version_flag_reports_build_stamp_and_contract","form":"test"}]
 pins: "Envelope build fields are strings, contract is embedded, and the version command's reported contract matches the independently read candidate plist."
 context: "Read build shell derivation and shared Rust serializer; read unit checks and integration command/plist assertions."
-limits: "No check execution in this draft. Integration expects populated packaged provenance; override and missing-Git fallback branches are supported by source reading."
+limits: "Integration checks populated packaged provenance; override and missing-Git fallback branches have source support."
 ```
 
 ## Host producer identification {producer: subject}
@@ -790,13 +803,21 @@ context: "Read dispatch and serializer branches; read integration test invoking 
 limits: "Check read without execution. Alias version, trailing arguments, exact null result fields and rendering-error exit are source-established here; the cited check exercises --version success."
 ```
 
-### Trailing version arguments {arguments: gap}
+### Version argument dispatch {arguments: definition}
 
 ```contract
-kind: "behavior"
+defines: "value"
 ```
 
-Current dispatch selects version reporting from the first argument and ignores
-remaining arguments. The intended argument-count commitment is unresolved;
-the source establishes this acceptance, while the version check exercises the
-single-argument form.
+The first argument --version or version selects version reporting. Remaining arguments are ignored. Successful envelope rendering returns process exit 0; a rendering error returns 2.
+
+#### Disposition support {disposition_support: owner}
+
+```contract
+grade: "check_read"
+source: {"path":"controller/src/cli.rs","symbol":"pub fn run"}
+pins: "Version dispatch precedes other command parsing."
+context: "Static review of the cited producer and assertion branches."
+check: [{"path":"controller/integration/cli_contract.rs","symbol":"version_dispatch_uses_the_first_argument","form":"test"}]
+limits: "The argument matrix compares kind, build, result and data while allowing each invocation its own timestamp."
+```

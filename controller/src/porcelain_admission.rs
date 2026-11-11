@@ -13,6 +13,8 @@ pub(crate) struct IntegrityIssue {
     pub kind: String,
     pub detail: String,
     #[serde(skip_serializing_if = "Option::is_none")]
+    pub subject_path: Option<Vec<String>>,
+    #[serde(skip_serializing_if = "Option::is_none")]
     pub rule: Option<String>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub question: Option<String>,
@@ -25,6 +27,7 @@ fn issue(out: &mut Vec<IntegrityIssue>, kind: &str, detail: impl Into<String>) {
     out.push(IntegrityIssue {
         kind: kind.into(),
         detail: detail.into(),
+        subject_path: None,
         rule: None,
         question: None,
         step_index: None,
@@ -829,6 +832,22 @@ fn phase_issues(reply: &PWRunnerRunResult, out: &mut Vec<IntegrityIssue>) {
                 "phase ordinal/partition identity conflict",
             );
         }
+        // Reply declarations retain the grammar of their admitted input. Empty
+        // ordinary action IDs are accepted; actor action IDs are nonempty.
+        let admitted_identity = |id: &str, empty: bool| {
+            (empty || !id.is_empty()) && id.len() <= 63 && !id.as_bytes().contains(&0)
+        };
+        if !admitted_identity(&p.phase_id, false)
+            || p.action_ids
+                .iter()
+                .any(|id| !admitted_identity(id, !actor_form))
+        {
+            issue(
+                out,
+                "phase_collection",
+                "phase/action identity exceeds admitted grammar",
+            );
+        }
         let worker = if actor_form {
             reply
                 .actors
@@ -1403,6 +1422,7 @@ fn project(
         out.disposition_issues.push(IntegrityIssue {
             kind: i.kind.clone(),
             detail: i.detail.clone(),
+            subject_path: None,
             rule: Some(i.rule.clone()),
             question: Some(i.question.clone()),
             step_index: i.step_index,

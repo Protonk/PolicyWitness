@@ -73,7 +73,7 @@ its Rust and Swift producers. Swift context generation recomputes it and
 refuses a supplied `PW_BUILD_CONTRACT` that differs. The pre-sign comparison
 refuses a selected-source change during compilation.
 
-**Support — check read.** Selected-source mutations change the digest; clean annotated release selection checks actual bytes; Swift context disagreement and the extracted pre-sign guard refuse. Context: Read generator/source walker and build-stamp/pre-sign code; read tests using disposable source copies and Git repositories, including execution of the extracted shell guard. Evidence limit: Checks were read, not run for this draft. The guard control executes a script fragment, not a full signing pipeline; multiple qualifying annotated tags are source-established here. [Source 1](../docs/build_contract.py), [Source 2](../docs/source_identity.py), [Source 3](../build.sh) [Check 1](../tests/suites/source_drift/build_contracts.py), [Check 2](../tests/suites/source_drift/build_contracts.py), [Check 3](../tests/suites/source_drift/build_contracts.py), [Check 4](../tests/suites/source_drift/build_contracts.py)
+**Support — check read.** Selected-source mutations change the digest; clean annotated release selection checks actual bytes; Swift context disagreement and the extracted pre-sign guard refuse. Context: Read generator/source walker and build-stamp/pre-sign code; read tests using disposable source copies and Git repositories, including execution of the extracted shell guard. Evidence limit: The guard control executes the pre-sign script fragment. The multiple-qualifying-tag branch has source support. [Source 1](../docs/build_contract.py), [Source 2](../docs/source_identity.py), [Source 3](../build.sh) [Check 1](../tests/suites/source_drift/build_contracts.py), [Check 2](../tests/suites/source_drift/build_contracts.py), [Check 3](../tests/suites/source_drift/build_contracts.py), [Check 4](../tests/suites/source_drift/build_contracts.py)
 
 <a id="contract-identity-public-direct"></a>
 #### Direct compilation contexts
@@ -86,13 +86,11 @@ context uses `test:policy-witness`. Rust unit tests likewise use
 when its expected identity is empty or `unbound`.
 
 <a id="contract-identity-public-direct-direct_evidence"></a>
-##### Known gap: Direct-build evidence limit
+##### Direct-build identity
 
-The direct Rust environment path is established by the compile-time constant
-and Cargo's environment tracking. The available plain-Cargo integration check
-removes `PW_BUILD_CONTRACT` and establishes the unbound case. A direct Cargo
-build with an explicitly supplied foreign or release-form identity has not
-been exercised in this examination.
+A non-test Cargo build embeds a nonempty supplied PW_BUILD_CONTRACT verbatim. An absent or empty value produces unbound. The spelling can be foreign or release-shaped; build version, number, commit and describe retain their separately supplied provenance. An unbound receiver refuses public requests; a bound receiver requires exact equality with its public identity.
+
+**Support — check read.** The non-test constant, Cargo environment tracking and receiver equality gate have separate roles. Context: Static review of the cited producer and assertion branches. Evidence limit: The control builds an isolated non-test controller with supplied and absent stamp values, then checks identity and the next refusing controller boundary. [Source 1](../controller/src/json_contract.rs), [Source 2](../controller/build.rs), [Source 3](../controller/src/request_patch.rs) [Check](../controller/integration/cli_contract.rs)
 
 **Support — check read.** Absent build binding reports unbound and refuses a matching unbound request; decoded request identity matching is exact and distinguishes missing, null, mistyped and foreign values. Context: Read compile-time constants and Cargo environment tracking; read integration and constructed request tests. Evidence limit: No compilation or test execution credited here; the plain-Cargo check covers an unset environment, not the supplied-value path. [Source 1](../controller/src/json_contract.rs), [Source 2](../controller/build.rs), [Source 3](../runner/Sources/PWRunnerCore/PWRunnerAPI.swift), [Source 4](../controller/src/request_patch.rs) [Check 1](../controller/integration/cli_contract.rs), [Check 2](../controller/src/request_patch.rs)
 
@@ -147,13 +145,11 @@ build; the requirement remains a maintainer decision. Strict release
 preflight requires complete history.
 
 <a id="contract-identity-surfaces-development_review"></a>
-#### Known gap: Development specimen review
+#### Reviewing a development specimen
 
-A development identity names a source digest, while the table is indexed by
-releases. The current reuse procedure leaves the comparison baseline for a
-development-asserting specimen unspecified. Exact admission still uses the
-target identity; the development-to-release review workflow needs a stated
-baseline or an explicit review of the relevant target definitions.
+Review a development-asserting specimen against its original source and contract snapshot when those are available. Record the old assertion, target identity and commitments compared. When the old snapshot is unavailable, review the relevant target definitions and chosen validation against the specimen explicitly. Set the target assertion after that review. A development digest identifies selected source bytes; the release table supplies release-indexed history.
+
+**Support — source read.** The development identity hashes selected source paths and bytes; release identity selection uses release-tag and byte checks. Context: Static review of the cited production branches. Evidence limit: The source establishes identity construction. The specimen review procedure is the stated reuse obligation. [Source](../docs/build_contract.py)
 
 <a id="contract-identity-other"></a>
 ### Other identities
@@ -234,7 +230,7 @@ under `build`. They identify the emitting binary's compiled context.
 | <a id="contract-identity-build-describe"></a>`describe` | string; required | The descriptive source coordinate compiled into the producer. `build.sh` uses `git describe --tags --match 'v[0-9]*' --always --dirty`, falling back to `unknown`. Direct Rust compilation reads `PW_BUILD_DESCRIBE` with an absent value falling back to `unknown`. |
 | <a id="contract-identity-build-commit"></a>`commit` | string; required | The Git HEAD object name observed by the packaged build, or `unknown` when unavailable. Direct Rust compilation reads `PW_BUILD_COMMIT` with an absent value falling back to `unknown`. Describe and commit report provenance; identity admission compares the contract field. |
 
-**Support for this subject and its descendants — check read.** Envelope build fields are strings, contract is embedded, and the version command's reported contract matches the independently read candidate plist. Context: Read build shell derivation and shared Rust serializer; read unit checks and integration command/plist assertions. Evidence limit: No check execution in this draft. Integration expects populated packaged provenance; override and missing-Git fallback branches are supported by source reading. [Source 1](../controller/src/json_contract.rs), [Source 2](../build.sh), [Source 3](../build.sh) [Check 1](../controller/src/json_contract.rs), [Check 2](../controller/src/json_contract.rs), [Check 3](../controller/integration/cli_contract.rs)
+**Support for this subject and its descendants — check read.** Envelope build fields are strings, contract is embedded, and the version command's reported contract matches the independently read candidate plist. Context: Read build shell derivation and shared Rust serializer; read unit checks and integration command/plist assertions. Evidence limit: Integration checks populated packaged provenance; override and missing-Git fallback branches have source support. [Source 1](../controller/src/json_contract.rs), [Source 2](../build.sh), [Source 3](../build.sh) [Check 1](../controller/src/json_contract.rs), [Check 2](../controller/src/json_contract.rs), [Check 3](../controller/integration/cli_contract.rs)
 
 <a id="contract-identity-producer"></a>
 ### Host producer identification
@@ -253,25 +249,25 @@ host's compiled build context.
 <!-- BEGIN GENERATED CONTRACT STAMPS -->
 | Surface | User artifact | Last changed |
 | --- | --- | --- |
-| `actor_evidence` | Actor and phase evidence | v0.3.7 |
-| `actors` | Actors and phases | v0.3.7 |
-| `diagnostics` | Controller findings and assessments | v0.3.7 |
-| `dossier` | Specimen dossier | v0.3.7 |
-| `envelope` | The controller envelope | v0.3.7 |
-| `equipment` | Equipment and authority setup | v0.3.7 |
-| `extensions` | Extension actions and authority custody | v0.3.7 |
-| `identity` | The contract identity | v0.3.7 |
-| `installation` | Managing runners | v0.3.7 |
+| `actor_evidence` | Actor and phase evidence | unreleased |
+| `actors` | Actors and phases | unreleased |
+| `diagnostics` | Controller findings and assessments | unreleased |
+| `dossier` | Specimen dossier | unreleased |
+| `envelope` | The controller envelope | unreleased |
+| `equipment` | Equipment and authority setup | unreleased |
+| `extensions` | Extension actions and authority custody | unreleased |
+| `identity` | The contract identity | unreleased |
+| `installation` | Managing runners | unreleased |
 | `lifecycle` | Process and operation observations | v0.3.7 |
-| `policy` | Policy source, parameters and compilation | v0.3.7 |
-| `probes` | Paired probes and attempted operations | v0.3.7 |
+| `policy` | Policy source, parameters and compilation | unreleased |
+| `probes` | Paired probes and attempted operations | unreleased |
 | `profile` | Compiled-profile receipts | v0.3.7 |
-| `refusals` | Request refusals and retained evidence | v0.3.7 |
-| `reply` | The host report | v0.3.7 |
-| `request` | Saved specimens and runner selection | v0.3.7 |
+| `refusals` | Request refusals and retained evidence | unreleased |
+| `reply` | The host report | unreleased |
+| `request` | Saved specimens and runner selection | unreleased |
 | `steps` | Predictions, attempts and comparison | v0.3.7 |
-| `transport` | Reservation, invocation and client capture | v0.3.7 |
-| `wire` | Binary response primitives and validator record transport | v0.3.7 |
+| `transport` | Reservation, invocation and client capture | unreleased |
+| `wire` | Binary response primitives and validator record transport | unreleased |
 <!-- END GENERATED CONTRACT STAMPS -->
 
 ## Definitions
@@ -554,9 +550,11 @@ This template applies a policy with no probe actions. Replace the assertion with
 ```
 
 <a id="contract-request-specimen-duplicate_keys"></a>
-##### Known gap: Duplicate-key decoding
+##### Repeated members at each entry
 
-The exact handling of repeated JSON object keys across the controller parser and Swift decoder still requires a paired boundary control. The closed-field and branch-order obligations above concern the object each decoder produces.
+For the paired repeated-member cases, CLI entry keeps the last contract, policy, probe step_id, attempt target, runner selector or runner.mode value, then holds the parsed object’s serialization. Direct host entry keeps the first contract, policy, probe step_id or attempt target value in either tested order. Direct-host runner and runner.mode cases refuse with unknown_field at ["runner"] in either order. These observations concern the listed raw-input pairs, their canonical neighbours and independent file effects on the observed platform.
+
+**Support — check read.** The controller parses raw JSON before holding its object; the direct-host cases use retained raw request bytes. Context: Static review of the cited producer and assertion branches. Evidence limit: The pinned matrix distinguishes both member orders and canonical neighbours for six fields at CLI and direct host entries. Its selected field/value pairs bound the observation. [Source](../controller/src/request_patch.rs) [Check](../tests/suites/runner_outcome_bad_request/contract.py)
 
 **Support for this subject and its descendants — check read.** The adjacent field meanings and obligations follow the named producer and admission branches. Context: Source inspection of the current implementation; no execution is credited. Evidence limit: Read the request fixture corpus loop, identity/unknown-field checks and actor parameter-capacity assertions. The apply-only template has source-level support; this owner credits no executed instance of that template. [Source 1](../runner/Sources/PWRunnerCore/PWRunnerRequest.swift), [Source 2](../runner/Sources/PWRunnerCore/CWorkerRequestPlanning.swift), [Source 3](../runner/Sources/PWRunnerCore/ProbeRunner.swift), [Source 4](../controller/src/run_flow.rs) [Check](../runner/Tests/PWRunnerCoreTests/RequestContractTests.swift)
 
@@ -629,14 +627,18 @@ Uses [Static worker binding](#contract-equipment-binding).
 A caller whose connection passes host authorization can supply these controls. Actor equipment preparation checks the packaged inventory and both packaged role bindings before considering fixture override bindings. It retains the packaged and test_override rows with their respective implementation identities.
 
 <a id="contract-request-overrides-override_inventory"></a>
-##### Known gap: Override quantities and applicability
+##### Override quantities and applicability
 
-The signal-number bound 31 remains a source-owned grammar value. Collection floors are selected by the production planning helpers and checked against the limits inventory. The ordinary worker floor and fixture-delay caps have controls calling the production planning helper and argument parser. Actor admission currently accepts worker_timeout_ms although actor execution uses its fixed allowance. Whether to refuse that inapplicable override remains an admission decision.
+Override applicability follows the selected execution form and owning boundary. Ordinary worker timeout planning uses worker_timeout_ms with its documented floor; actor admission accepts that field while the actor scheduler uses its fixed setup and execution allowances. The signal-number bound 31 is argument grammar. Host decoding, planning floors and caps, worker argument refusal, and fixture behavior retain their separate boundaries.
+
+**Support — check read.** Actor orchestration constructs the scheduler input with its fixed allowances. Context: Static review of the cited producer and assertion branches. Evidence limit: The paired control uses a 200 ms override and a 500 ms delay, checking an ordinary timeout and actor completion with a later dependent file read. [Source](../runner/Sources/PWRunnerCore/ActorOrchestration.swift) [Check](../tests/suites/witness_contract/check_actor_compositions.py)
 
 <a id="contract-request-overrides-override_coverage"></a>
-##### Known gap: Override fixture coverage
+##### Override observation scope
 
-The draft has inspected the decoder and timeout planning. Existing signed-app cases exercise several overrides; a complete mapping of overrides to boundary assertions and applicable release results remains to be assembled, including downstream worker-argument refusal for excessive values. This gap records incomplete evidence attribution across the override set.
+An override is interpreted at its owning selection, planning, launch or worker-argument boundary. Host admission of a positive fixture value can be followed by worker argument refusal before application. Executable overrides retain their selected-file, spawn and live-inspection observations at those respective boundaries. Timeout and fixture-delay evidence is scoped to the submitted value and execution form.
+
+**Support — check read.** The actor path retains equipment preparation and fixed scheduler applicability separately. Context: Static review of the cited producer and assertion branches. Evidence limit: Excessive positive fixture values are sent through the selected CLI and checked at the downstream worker argument boundary. [Source](../runner/Sources/PWRunnerCore/ActorOrchestration.swift) [Check](../tests/suites/witness_contract/check_pre_apply_failure.py)
 
 **Support for this subject and its descendants — source read.** The adjacent field meanings and obligations follow the named producer and admission branches. Context: Source inspection of the current implementation; no execution is credited. Evidence limit: Runtime behavior remains subject to integrated acceptance evidence. [Source 1](../runner/Sources/PWRunnerCore/PWRunnerRequest.swift), [Source 2](../runner/Sources/PWRunnerCore/CWorkerRequestPlanning.swift), [Source 3](../runner/Sources/PWRunnerCore/ProbeRunner.swift), [Source 4](../runner/Sources/PWRunnerCore/CWorkerOrchestrator.swift), [Source 5](../runner/Sources/PWRunnerCore/ActorOrchestration.swift), [Source 6](../runner/Sources/PWRunnerCore/ActorSession.swift), [Source 7](../runner/Sources/PWRunnerCore/ActorEquipment.swift), [Source 8](../controller/tools/pw_probe_runner/pw_probe_runner.c)
 
@@ -678,16 +680,20 @@ A source may combine a parameter with a literal suffix:
 `"params":{"ROOT":"/etc"}` supplies the value used by this expression. An unused `OPTIONAL` parameter and a referenced but missing `ROOT` exercise different compiler paths. Inspect the native compile record for the latter's outcome.
 
 <a id="contract-policy-spec-parameter_evidence"></a>
-##### Known gap: Parameter example execution
+##### Parameter example observations
 
-The parameter teaching examples are preserved from the guide and prior examination. Their native outcomes require the release's helper and worker controls; none is credited as executed by this draft.
+The helper records parameter-map presence and count separately: omission and null decode as absent; an empty map remains present with zero entries. Native compiler examples concern the helper invocation that produced the verdict. Worker examples use the consumed source and parameter values, then observe application and the requested fresh-file effects on concrete targets. Record the selected binaries, policy and platform with each native observation.
+
+**Support — check read.** Helper metadata and native verdict are retained together. Context: Static review of the cited producer and assertion branches. Evidence limit: Helper omitted/null/empty neighbours and worker ROOT twins have distinct oracles; worker target bytes and descriptor identity are checked independently. [Source](../controller/src/bin/sbpl-check.rs) [Check 1](../controller/integration/cli_contract.rs), [Check 2](../tests/suites/runner_outcome_bad_request/contract.py)
 
 <a id="contract-policy-spec-compile_classification"></a>
-##### Known gap: Worker and helper compile classification
+##### Worker and helper compile classification
 
-The worker treats a null compiled-profile pointer as failure and proceeds with a non-null pointer. The helper also treats a non-null native diagnostic as failure. A simultaneous profile and diagnostic therefore takes different branches in these producers. Whether to align that behavior, and how to dispose of that diagnostic in the worker branch, remains unresolved.
+The worker treats a null compiled-profile pointer as failure and proceeds to capture and application with a non-null profile. The helper requires a profile and no native diagnostic for success, and frees the returned profile, parameters and diagnostic it owns. A simultaneous profile and diagnostic therefore has different classifications at these two boundaries. The helper branch has an injected native-return control; native occurrence of the worker combination remains unobserved.
 
-**Support for this subject and its descendants — source read.** The adjacent field meanings and operations follow the named implementation. Context: Current source read for this draft. Evidence limit: Decoder, meaning checks, parameter ordering, worker parameter snapshot/setup and compilation branches read. Native execution is not credited. [Source 1](../runner/Sources/PWRunnerCore/PWRunnerRequest.swift), [Source 2](../runner/Sources/PWRunnerCore/ProbeRunner.swift), [Source 3](../runner/Sources/PWRunnerCore/CWorkerRequestPlanning.swift), [Source 4](../controller/tools/pw_probe_runner/pw_probe_runner.c)
+**Support — check read.** Worker pointer acceptance and helper diagnostic-sensitive classification are separate producer rules. Context: Static review of the cited producer and assertion branches. Evidence limit: Injected helper returns check verdict and free counts. Worker simultaneous profile/diagnostic occurrence has source support only. [Source 1](../controller/tools/pw_probe_runner/pw_probe_runner.c), [Source 2](../controller/src/bin/sbpl-check.rs) [Check](../controller/src/bin/sbpl-check.rs)
+
+**Support for this subject and its descendants — source read.** The adjacent field meanings and operations follow the named implementation. Context: Review of the named producer branches. Evidence limit: Decoder, meaning checks, parameter ordering, worker parameter snapshot/setup and compilation branches read. Native execution is not credited. [Source 1](../runner/Sources/PWRunnerCore/PWRunnerRequest.swift), [Source 2](../runner/Sources/PWRunnerCore/ProbeRunner.swift), [Source 3](../runner/Sources/PWRunnerCore/CWorkerRequestPlanning.swift), [Source 4](../controller/tools/pw_probe_runner/pw_probe_runner.c)
 
 <a id="contract-policy-augments"></a>
 #### Augment resolution
@@ -720,11 +726,13 @@ controller acts at actor policy normalization. Entry: cli run. Recipient: caller
 The `file-read*` allowance is unconditional. Using this augment changes the selected policy's file-read authority and can mask the denial a file-read experiment intended to observe. Its documented derivation used macOS 14.8.3, build 23J220, and the repository's dynamic exec helper.
 
 <a id="contract-policy-augments-augment_semantics"></a>
-##### Known gap: Augment semantics and historical environment
+##### Augment evidence scope
 
-The resolver enforces names, ordered reads and append behavior. The allow-only intent of packaged fragments, SBPL rule-composition behavior, and the baseline's sufficient prerequisites on another macOS build require their own native evidence.
+The resolver validates all names before file access, reads fragments in requested order and appends each with a leading newline. Native behavior is scoped to the exact fragment bytes, base policy and macOS build observed. The packaged exec_baseline fragment includes broad file-read allowance; additional prerequisites and SBPL composition on another platform require their own observations.
 
-**Support for this subject and its descendants — check read.** The adjacent field meanings and operations follow the named implementation. Context: Current source read for this draft. Evidence limit: Read append/no-partial-replacement and actor-order controls. The packaged baseline source was read; its historical derivation is inherited evidence. [Source 1](../controller/src/augments.rs), [Source 2](../controller/src/augments.rs), [Source 3](../runner/augments/exec_baseline.sb) [Check 1](../controller/src/augments.rs), [Check 2](../controller/src/augments.rs), [Check 3](../controller/src/augments.rs)
+**Support — source read.** Resolver validation, ordered reads and source append define the produced policy text. Context: Static review of the cited production branches. Evidence limit: Resolver correctness and selected native fragment observations have distinct scopes. [Source](../controller/src/augments.rs)
+
+**Support for this subject and its descendants — check read.** The adjacent field meanings and operations follow the named implementation. Context: Review of the named producer branches. Evidence limit: Read append/no-partial-replacement and actor-order controls. The packaged baseline source was read; its historical derivation is inherited evidence. [Source 1](../controller/src/augments.rs), [Source 2](../controller/src/augments.rs), [Source 3](../runner/augments/exec_baseline.sb) [Check 1](../controller/src/augments.rs), [Check 2](../controller/src/augments.rs), [Check 3](../controller/src/augments.rs)
 
 <a id="contract-policy-helper_request"></a>
 #### Standalone compiler-helper request
@@ -740,7 +748,7 @@ The resolver enforces names, ordered reads and append behavior. The allow-only i
 
 sbpl-check acts at standalone argument, read and JSON boundary. Entry: standalone helper, controller helper stdin. Recipient: caller, report reader. Reports: helper envelope, stderr. Use the helper policy decoder. Usage errors, input-read errors and JSON/decode errors exit 2 and report on stderr. Successfully decoded requests proceed to helper admission and produce an envelope.
 
-**Support for this subject and its descendants — source read.** The adjacent field meanings and operations follow the named implementation. Context: Current source read for this draft. Evidence limit: Source inspection supplies the stated branch behavior; this draft credits no execution. [Source 1](../controller/src/bin/sbpl-check.rs), [Source 2](../controller/src/bin/sbpl-check.rs)
+**Support for this subject and its descendants — source read.** The adjacent field meanings and operations follow the named implementation. Context: Review of the named producer branches. Evidence limit: Source inspection supplies the stated branch behavior; this draft credits no execution. [Source 1](../controller/src/bin/sbpl-check.rs), [Source 2](../controller/src/bin/sbpl-check.rs)
 
 <a id="contract-policy-helper_policy"></a>
 #### Compiler-helper policy
@@ -758,7 +766,7 @@ The helper decoder ignores policy members outside this record, including capture
 
 sbpl-check acts at pre-inventory admission. Entry: standalone helper, controller helper stdin. Recipient: caller, report reader. Reports: helper envelope. Check format, source presence, source byte cap, source C-string conversion and parameter C-string conversion before import inventory or any native call. Input refusals exit 1 and report bad_request or policy_too_large, with compile and import_inventory null.
 
-**Support for this subject and its descendants — source read.** The adjacent field meanings and operations follow the named implementation. Context: Current source read for this draft. Evidence limit: Source inspection supplies the stated branch behavior; this draft credits no execution. [Source 1](../controller/src/bin/sbpl-check.rs), [Source 2](../controller/src/bin/sbpl-check.rs)
+**Support for this subject and its descendants — source read.** The adjacent field meanings and operations follow the named implementation. Context: Review of the named producer branches. Evidence limit: Source inspection supplies the stated branch behavior; this draft credits no execution. [Source 1](../controller/src/bin/sbpl-check.rs), [Source 2](../controller/src/bin/sbpl-check.rs)
 
 <a id="contract-probes"></a>
 ### Paired probes and attempted operations
@@ -817,9 +825,11 @@ These exact pairs are excluded by the planner:
 The exclusion belongs to the pair. Other operations using the same filter follow their own eligibility and native result.
 
 <a id="contract-probes-query-exclusion_evidence"></a>
-##### Known gap: Prediction-exclusion basis
+##### Prediction-exclusion evidence scope
 
-The IOKit and sysctl exclusions inherit the recorded 2026-05-29 exploration of filter IDs 1–200. The local Mach mapping remains conservatively unresolved. This draft inspected the exclusion table and planner, and has not reproduced those native observations.
+The IOKit and sysctl exclusions retain the dated 2026-05-29 exploration of filter IDs 1–200. The local Mach mapping remains conservatively unresolved. Each native filter observation belongs to its recorded operation, target and platform; the finite exploration bounds the basis for the current exclusion table.
+
+**Support — source read.** The table preserves the dated IOKit/sysctl exploration and conservative local-Mach choice. Context: Static review of the cited production branches. Evidence limit: This owner reads the recorded basis and current table; it adds no native rerun credit. [Source](../runner/Sources/PWRunnerCore/ProbeRunner.swift)
 
 **Support for this subject and its descendants — source read.** The adjacent field meanings and operations follow the named implementation. Context: Current source read for this draft. Evidence limit: Source inspection supplies the stated branch behavior; this draft credits no execution. [Source 1](../runner/Sources/PWRunnerCore/ProbeRunner.swift), [Source 2](../runner/Sources/PWRunnerCore/CWorkerRequestPlanning.swift)
 
@@ -882,9 +892,11 @@ A successful spawn supplies a child PID even if the child later exits nonzero. T
 host acts at actor admission. Entry: actor xpc execute. Recipient: caller, report reader. Reports: runner reply. Uses [Extension operation](#contract-extensions-operation). Refuse exec probes in every actor participating in an extension operation, including an actor named only as a transfer recipient. Other actors may declare exec probes.
 
 <a id="contract-probes-attempt-operation_evidence"></a>
-##### Known gap: Operation controls to attach
+##### Operation observation scope
 
-The worker operation implementations and exec setup branches were read. Fresh-file effects, closed-descriptor inheritance, syscall buffers and cleanup behavior still need their existing control runs attached to the release evidence. The legacy open operations intentionally retain their open-boundary aggregate meaning.
+Fresh-file records retain the reached descriptor operations and the bytes or object identity observed by those operations. Exec records distinguish child creation, final child status, captured output and cleanup. The legacy open operations keep their open-boundary aggregate meaning. Independent target and process observations supply the evidence for effects claimed by a concrete operation control.
+
+**Support — source read.** Native operation details and aggregate return/errno projection have their own report fields. Context: Static review of the cited production branches. Evidence limit: This owner is source-read. Selected fresh-file, descriptor, sysctl-buffer and exec-cleanup executions need their exact operation owners. [Source 1](../controller/tools/pw_probe_runner/pw_probe_runner.c), [Source 2](../controller/tools/pw_probe_runner/pw_probe_runner.c), [Source 3](../runner/Sources/PWRunnerCore/CWorkerStepResults.swift)
 
 **Support for this subject and its descendants — source read.** The adjacent field meanings and operations follow the named implementation. Context: Current source read for this draft. Evidence limit: Source inspection supplies the stated branch behavior; this draft credits no execution. [Source 1](../runner/Sources/PWRunnerCore/CWorkerRequestPlanning.swift), [Source 2](../controller/tools/pw_probe_runner/pw_probe_runner.c), [Source 3](../controller/tools/pw_probe_runner/pw_probe_runner.c), [Source 4](../controller/tools/pw_probe_runner/pw_probe_runner.c), [Source 5](../controller/tools/pw_probe_runner/pw_worker_exec.h), [Source 6](../runner/Sources/PWRunnerCore/ActorPlan.swift), [Source 7](../controller/tools/pw_probe_runner/pw_worker_timing.h), [Source 8](../controller/tools/pw_probe_runner/pw_worker_timing.h)
 
@@ -913,7 +925,7 @@ XPC host acts at actor-plan admission. Entry: actor xpc execute. Recipient: call
 
 XPC host and actor worker acts at actor process lifecycle. Entry: actor xpc execute. Recipient: caller, report reader. Reports: runner reply. Uses [Application assessment](#contract-actor_evidence-application). Launch one fresh worker for each actor. An apply worker compiles and applies its own declared policy once before its visits; an unapplied worker publishes that declaration and executes under the restrictions already inherited by its process. Keep that worker for its successive visits.
 
-**Support for this subject and its descendants — source read.** The adjacent field meanings and obligations follow the named producer and admission branches. Context: Source inspection of the current implementation; no execution is credited. Evidence limit: Declaration and normalization source read. Worker setup and application evidence have separate source owners; native execution has not been credited here. [Source 1](../runner/Sources/PWRunnerCore/PWRunnerActors.swift), [Source 2](../runner/Sources/PWRunnerCore/ActorPlan.swift), [Source 3](../runner/Sources/PWRunnerCore/ActorOrchestration.swift)
+**Support for this subject and its descendants — source read.** The adjacent field meanings and obligations follow the named producer and admission branches. Context: Source inspection of the current implementation; no execution is credited. Evidence limit: Normalization concerns admitted declarations; worker setup and application observations have separate owners. [Source 1](../runner/Sources/PWRunnerCore/PWRunnerActors.swift), [Source 2](../runner/Sources/PWRunnerCore/ActorPlan.swift), [Source 3](../runner/Sources/PWRunnerCore/ActorOrchestration.swift)
 
 <a id="contract-actors-sandbox"></a>
 #### Actor sandbox declaration
@@ -943,9 +955,11 @@ The actor form admits <!-- span limits.actor_phases.value_unit -->16 items<!-- /
 XPC host acts at phase scheduler. Entry: ordinary xpc execute, actor xpc execute. Recipient: caller, report reader. Reports: runner reply. Uses [Phase](#contract-identity-definitions-phase), [Prediction](#contract-identity-definitions-prediction). Close the active phase's eligible prediction collection before releasing its actions; run those actions in declaration order. Begin the next phase's collection after the previous phase completes. In the actor form activate one actor at a time while other workers remain parked.
 
 <a id="contract-actors-phase-barrier_evidence"></a>
-##### Known gap: Barrier execution evidence
+##### Barrier observation scope
 
-The phase-order source has been inspected in the wider examination. Integrated order-barrier and mutation controls must be attached to the completed release account; this draft credits no execution of those controls.
+Query ordering joins whole-batch collection, host release, worker acknowledgement and the associated attempt. Phase records retain each observation and the established order. Integrated controls and mutation controls assess this sequence at their selected execution boundary; source ordering alone has source-read support.
+
+**Support — source read.** The ordering claim requires a complete chain and a unique matching native prediction for the owned worker. Context: Static review of the cited production branches. Evidence limit: The source owner describes eligibility. Integrated collection/release and mutation observations retain their own execution owners. [Source](../runner/Sources/PWRunnerCore/PWRunnerStepEvidence.swift)
 
 **Support for this subject and its descendants — source read.** The adjacent field meanings and obligations follow the named producer and admission branches. Context: Source inspection of the current implementation; no execution is credited. Evidence limit: Source support here pins decoded grammar and normalized order. Runtime collection/release evidence belongs to the phase and lifecycle producer rules. [Source 1](../runner/Sources/PWRunnerCore/PWRunnerRequest.swift), [Source 2](../runner/Sources/PWRunnerCore/ActorPlan.swift)
 
@@ -991,9 +1005,11 @@ The extension variant is `PWRunnerExtensionAction`: a step ID and closed extensi
 XPC host acts at plan admission. Entry: ordinary xpc execute, actor xpc execute. Recipient: caller, report reader. Reports: runner reply. Uses [Paired probe](#contract-probes-step), [Extension action](#contract-extensions-action). Refuse repeated step IDs across the complete specimen. Actor actions require nonempty IDs. The ordinary form currently accepts an empty step ID when it is unique.
 
 <a id="contract-actors-action-empty_id"></a>
-##### Known gap: Empty ordinary identifiers
+##### Form-specific action identifiers
 
-The ordinary and actor forms currently differ on empty step IDs. Aligning them requires an explicit admission decision; this draft preserves the implemented distinction.
+Ordinary-form action identifiers may be empty. Actor-form action identifiers must be nonempty so declared actions can be resolved in the actor schedule. UTF-8 capacity, NUL exclusion, uniqueness and membership are separate requirements at their owning admission boundary.
+
+**Support — check read.** Actor normalization rejects an empty action step_id before constructing its slot map; ordinary meaning admission tests uniqueness without a nonempty condition. Context: Static review of the cited producer and assertion branches. Evidence limit: The corpus emits separate ordinary-empty and actor-empty declaration neighbours through reporting admission; it is constructed reader evidence. [Source 1](../runner/Sources/PWRunnerCore/ActorPlan.swift), [Source 2](../runner/Sources/PWRunnerCore/ProbeRunner.swift) [Check](../runner/Tests/PWRunnerCoreTests/ReaderCorpusTests.swift)
 
 **Support for this subject and its descendants — source read.** The adjacent field meanings and obligations follow the named producer and admission branches. Context: Source inspection of the current implementation; no execution is credited. Evidence limit: Runtime behavior remains subject to integrated acceptance evidence. [Source 1](../runner/Sources/PWRunnerCore/PWRunnerRequest.swift), [Source 2](../runner/Sources/PWRunnerCore/ProbeRunner.swift), [Source 3](../runner/Sources/PWRunnerCore/ActorPlan.swift)
 
@@ -1096,9 +1112,11 @@ host and workers acts at resource retirement. Entry: actor xpc execute. Recipien
 A last transfer retires custody even when the recipient is unavailable. Payload erasure is a memory-lifetime action; a native release request and the later access observation are separate operations.
 
 <a id="contract-extensions-custody-native_library"></a>
-##### Known gap: Native private-library behavior
+##### Native extension evidence scope
 
-Native extension calls use private entry points discovered at setup. Their allocations, opaque token meaning and platform-specific issuance/revocation behavior require observed native results on the tested OS build. The controlled custody protocol has source support here; its integrated interruption controls have not been executed for this draft.
+Native extension issuance, consumption and release observations are scoped to the concrete policy, entitlements, resource, token bytes and macOS build. Host custody records describe the controlled publication, copying and erasure protocol. A release return records that native call; subsequent access is established by the corresponding access observation.
+
+**Support — source read.** Host transfer observations record custody, copying, recipient acknowledgement and equality separately. Context: Static review of the cited production branches. Evidence limit: Private-library allocation and opaque token behavior retain the scope of their native observations. [Source](../runner/Sources/PWRunnerCore/AuthorityCustody.swift)
 
 **Support for this subject and its descendants — source read.** The adjacent meanings follow the named request, producer and observation branches. Context: Current source read for this draft. Evidence limit: Conditional host/worker setup, host custody service and worker issue/transfer/consume/release have source-read support here. Collected setup-account meanings are owned by the equipment surface. Native private-library behavior remains environment-specific evidence. [Source 1](../runner/Sources/PWRunnerCore/ActorPlan.swift), [Source 2](../runner/Sources/PWRunnerCore/ActorOrchestration.swift), [Source 3](../runner/Sources/PWRunnerCore/ActorScheduler.swift), [Source 4](../runner/Sources/PWRunnerCore/AuthorityCustody.swift), [Source 5](../controller/tools/pw_probe_runner/pw_probe_runner.c), [Source 6](../controller/tools/pw_probe_runner/pw_probe_runner.c), [Source 7](../runner/Sources/PWRunnerCore/AuthorityCustody.swift), [Source 8](../runner/Sources/PWRunnerCore/AuthorityCustody.swift), [Source 9](../runner/Sources/PWRunnerCore/AuthorityCustody.swift), [Source 10](../runner/Sources/PWRunnerCore/AuthorityCustody.swift), [Source 11](../controller/tools/pw_probe_runner/pw_probe_runner.c), [Source 12](../controller/tools/pw_probe_runner/pw_probe_runner.c), [Source 13](../controller/tools/pw_probe_runner/pw_probe_runner.c)
 
@@ -1128,11 +1146,15 @@ Declare `A`, `B` and `C` with their own sandbox and equipment choices. Read the 
 The second issuance is `B`'s own native action under its then-current state. Keep the two issue events, two custody/delivery chains, two candidate handles and the readers' file observations distinct. `read_write` may name an absolute directory target; fresh writes or exclusive creation within that directory expose their own file effects.
 
 <a id="contract-extensions-examples-execution"></a>
-##### Known gap: Experiment execution
+##### Instantiated extension schedules
 
-These schedules preserve the guide and EXTENSIONS teaching cases. They require concrete policies, entitlements, paths and expected platform observations before native execution can establish a particular outcome. The remaining evidence gap is association of each schedule with its concrete input and retained native observations.
+An executed extension schedule fixes concrete actor roles, policies, entitlements, paths and phase boundaries. Its account distinguishes native issue/consume/release returns, host custody and transfers, and fresh access before and after the operations. Those inputs and retained observations identify the schedule supported by that execution.
 
-**Support for this subject and its descendants — source read.** Admission supports these resource chains and native operations. Context: Source-backed teaching schedules; historical examples retained. Evidence limit: No native outcome or effect is asserted for these unexecuted schedules. [Source 1](../runner/Sources/PWRunnerCore/ActorPlan.swift), [Source 2](../controller/tools/pw_probe_runner/pw_probe_runner.c), [Source 3](../controller/tools/pw_probe_runner/pw_probe_runner.c)
+**Support — source read.** Reply assembly retains extension events, transfer observations and resource accounts by their declared actions. Context: Static review of the cited production branches. Evidence limit: Native examples require their concrete input and selected-platform observations. [Source](../runner/Sources/PWRunnerCore/ActorOrchestration.swift)
+
+**Support — executed.** Concrete before/during/after access, the extracted guide JSON example, credited three-actor redelegation and separate directory authority retain native calls, custody/transfer observations and independently identified file effects. Context: Passed signed-CLI cases with their recorded policies, equipment, paths and macOS 26.7.1/25G241 arm64 environment; inspected native results, principal credit, file observations and owned cleanup. Evidence limit: The before/during/after instance splits reader actions across visits. Redelegation includes B/C control-path reads and the retained policies. Directory writes and exclusive creation form a separate experiment. The extracted guide JSON and the guide's full shell workflows have separate execution scopes. [Source 1](../controller/tools/pw_probe_runner/pw_probe_runner.c), [Source 2](../controller/tools/pw_probe_runner/pw_probe_runner.c), [Source 3](../runner/Sources/PWRunnerCore/ActorOrchestration.swift) [Check 1](../tests/suites/witness_contract/check_extensions.py), [Check 2](../tests/suites/witness_contract/check_extension_redelegation.py), [Check 3](../tests/suites/witness_contract/check_extension_directory.py) Run: `20261111T155411Z_29ef0802; witness_contract/extensions, witness_contract/extension_redelegation and witness_contract/extension_directory`. Build: `Signed candidate build 1335, version 0.3.7, b6ce6d266ff281fafdae44c32061ceff018485bb dirty; development:1445cd80509c983c6894339523f9f13ad08f5e003de4cb29ce1c398527c42f28`.
+
+**Support for this subject and its descendants — source read.** Admission supports these resource chains and native operations. Context: Admission and native-operation source for the teaching schedules. Evidence limit: Native examples are scoped to their recorded policies, equipment, targets and platform. Before/during/after access was observed with an unapplied unentitled issuer and an applied selected subject, with reader actions split across visits. Three-actor redelegation was observed with the retained B/C policies and added control-path reads. Directory read-write authority was exercised separately through fresh writes and exclusive creation. Release results and later access observations retain their individual meanings. [Source 1](../runner/Sources/PWRunnerCore/ActorPlan.swift), [Source 2](../controller/tools/pw_probe_runner/pw_probe_runner.c), [Source 3](../controller/tools/pw_probe_runner/pw_probe_runner.c)
 
 ## Delivery to the host
 
@@ -1192,9 +1214,11 @@ Continuous time includes machine sleep. Client clock failure ends with `local_er
 A capture can contain `acquisition_stop: "granted"`, `submission: {"state":"invoked"}` and `terminal: "xpc_error"` while `runner_reply` is absent. The client crossed its execution-call boundary once; the reply was unavailable. Retrying the specimen would be a new caller decision with possible repeated effects. A capture rejected by the controller instead leaves the controller’s `submission` projection `unknown`.
 
 <a id="contract-transport-delivery-live_evidence"></a>
-##### Known gap: Live transport evidence
+##### Transport evidence scope
 
-Controlled connections cover foreign control identity before submission and post-invocation failure without replay. A genuine foreign signed host’s receiving boundary, unbound peer branches and the full native request/reply fault matrix still need separately identified observations. Constructed retention checks leave live outcomes between the <!-- span limits.client_reply_retention.value_unit -->96,468,992 bytes<!-- /span --> client-retention cap and <!-- span limits.porcelain_frame_bytes.value_unit -->134,217,728 bytes<!-- /span --> frame limit unresolved.
+Controlled client connections establish the observed control-identity refusal and once-only submission behavior. Signed reservation and single-use observations concern their selected service and binaries. A foreign signed host’s receiving boundary, unbound-peer branches and native request/reply faults require their own observations. Native outcomes between the <!-- span limits.client_reply_retention.value_unit -->96,468,992 bytes<!-- /span --> client-retention cap and <!-- span limits.porcelain_frame_bytes.value_unit -->134,217,728 bytes<!-- /span --> frame limit remain unobserved in this account.
+
+**Support — source read.** Control admission and submission phase changes preserve the once-only client boundary. Context: Static review of the cited production branches. Evidence limit: A substituted foreign control is a controlled receive observation. Native cap-interval behavior and a complete native fault matrix remain outside that observation. [Source](../runner/Clients/PWRunnerClient/PWRunnerClientSession.swift)
 
 <a id="contract-transport-reservation"></a>
 #### Reservation request
@@ -1424,9 +1448,15 @@ The fingerprint is SHA-256 of the compact, object-key-sorted JSON wire identity 
 Bytecode, retained host frames and rejected validator context become standard base64. Digests, code-directory hashes, worker identity and fresh-read bytes become lowercase hexadecimal. Path-form fields equal to their input bytes are omitted and listed in `same_as_input`; unavailable forms remain null. Conditional-null fields are carried only when their guard has a value. Other optional fields follow their declared omit/null rule. The generated Rust serializers and independent Python projection apply these rules after typed byte admission.
 
 <a id="contract-wire-frame-reader_coverage"></a>
-##### Known gap: Primitive reader coverage
+##### Primitive and writer evidence scope
 
-The current Rust controls directly cover scalar ranges/booleans/UTF-8, record ID/tag/required-field faults, incomplete prefixes, trailing bytes, fingerprint precedence and shared list/string storage charging. The independently written Python controls additionally exercise variant, map order, impossible count, byte-kind and nesting faults. Equivalent Rust malformed-container controls and a host-writer frame-cap failure observation remain open evidence items.
+Literal malformed frames exercise ordered maps, collection counts and item kinds, generated byte fields, variant alternatives and nested-container limits through the Rust decoder. The public schema is nonrecursive; the depth control uses a recursive test wrapper over the production list reader. A constructed oversized diagnostic exercises the actual host writer limit and rich-to-minimal fallback. Its emitted minimal frame is carried through the independent readers.
+
+**Support — check read.** Actual decoder and writer boundaries own structural refusal and fallback. Context: Static review of the cited producer and assertion branches. Evidence limit: The huge diagnostic is constructed; writer refusal and its retained minimal frame are distinct from native production or XPC cap-interval observation. [Source 1](../controller/src/porcelain.rs), [Source 2](../runner/Sources/PWRunnerCore/PWRunnerService.swift) [Check 1](../controller/src/porcelain.rs), [Check 2](../controller/src/porcelain.rs), [Check 3](../controller/src/porcelain.rs), [Check 4](../runner/Tests/PWRunnerCoreTests/ReplyFailureTests.swift)
+
+**Support — executed.** Literal frames exercise duplicate/descending map keys, impossible or mixed lists, generated byte kind, variant tag/payload/body and actual nested depths 32 and 33. Context: The completed unit/rust.unit case passed with zero recorded system sleep; all five named controls passed in cargo-test-bins.log. Evidence limit: The depth control uses a recursive test wrapper over the production list reader; the public schema is nonrecursive. These are structural decoder controls over constructed bytes. [Source](../controller/src/porcelain.rs) [Check 1](../controller/src/porcelain.rs), [Check 2](../controller/src/porcelain.rs), [Check 3](../controller/src/porcelain.rs), [Check 4](../controller/src/porcelain.rs), [Check 5](../controller/src/porcelain.rs) Run: `20261111T155411Z_29ef0802`. Source snapshot: `reviewed-inputs sha256:b5298841bceaea7af57843a0e2ab68de2dd2ed85edf21fd07b16ac91d5a8838e (b6ce6d26 dirty)`. Case: `unit/rust.unit`.
+
+**Support — executed.** A constructed 134217729-byte attempt diagnostic reaches the actual text guard twice. The independent minimal writer emits 621 bytes with evidence_retained false, empty steps/phases and preserved scalar identity and original summary; Rust and Python read the retained frame. Context: The whole fresh runner-unit case passed with zero recorded system sleep. writer-cap-receipt.json and writer-cap-minimal.pwp join the actual Swift failures to the exact-one Rust and completed Python corpus replay. Evidence limit: The diagnostic is constructed. The observation covers the production writer and fallback; native production of that diagnostic and XPC behavior between retention and frame limits retain separate evidence scopes. [Source 1](../runner/Sources/PWRunnerCore/PWRunnerService.swift), [Source 2](../runner/Sources/PWRunnerCore/PWPorcelain.swift) [Check 1](../runner/Tests/PWRunnerCoreTests/ReplyFailureTests.swift), [Check 2](../controller/src/run_flow.rs), [Check 3](../tests/suites/runner_unit/reader_corpus.py) Run: `20261111T162345Z_3d6c7242`. Source snapshot: `reviewed-inputs sha256:af396aadf41ba79a0d072b62d9c3f4ff1df5b5fa30d6c4ff267c53e8437dd51d (b6ce6d26 dirty; replay identity correction)`. Case: `runner_unit/pwrunner_core_unit_executable`.
 
 <a id="contract-wire-validator"></a>
 #### Validator query and reply lines
@@ -1455,9 +1485,11 @@ Before each native call the helper clears errno. Native rc 0 is `allow`; rc 1 wi
 Every admitted object has exact kind, integer schema_version 1, a present string-or-null step_id and nonempty string outcome. Known optional strings and integer fields may be absent or null; Boolean, fractional, string-valued and overflowing numbers cannot supply native integers. Allow/deny require nonempty step_id, operation and filter_type plus integer rc and errno. Every other outcome requires string error. Extra JSON fields and unfamiliar diagnostic outcomes survive in the accepted raw line. Frame size is at most <!-- span limits.validator_reply_frame.value_unit -->8,192 bytes<!-- /span -->; string limits are <!-- span limits.validator_reply_step_id.value_unit -->63 UTF-8 bytes<!-- /span --> for step_id, <!-- span limits.validator_reply_filter_type.value_unit -->63 UTF-8 bytes<!-- /span --> for filter_type, <!-- span limits.validator_reply_outcome.value_unit -->63 UTF-8 bytes<!-- /span --> for outcome, <!-- span limits.validator_reply_operation.value_unit -->127 UTF-8 bytes<!-- /span --> for operation, <!-- span limits.validator_reply_filter_value.value_unit -->1,023 UTF-8 bytes<!-- /span --> for filter_value and <!-- span limits.validator_reply_error.value_unit -->511 UTF-8 bytes<!-- /span --> for error. Rejected context retains at most <!-- span limits.validator_fault_context.value_unit -->256 bytes<!-- /span -->. The validator subprocess account defines this phase collector's total stream and record allowances and subsequent unique-step association.
 
 <a id="contract-wire-validator-duplicate_keys"></a>
-##### Known gap: Repeated query keys
+##### Repeated native query keys
 
-The native batch parser currently accepts repeated recognized keys and uses the last parsed string. Host query serialization emits each key once. Alignment with the other request decoders’ duplicate-key behavior and a shared acceptance policy remain unresolved.
+The native batch parser accepts repeated recognized string keys and keeps the last parsed value for each key. Host query serialization emits each key once. Direct-arrival batch queries retain their own parsing rule at this native boundary.
+
+**Support — check read.** The native batch parser supplies the accepted query values. Context: Static review of the cited producer and assertion branches. Evidence limit: Both member orders are retained in raw query text and checked against independently selected final strings. [Source 1](../controller/tools/sb_api_validator/sb_api_validator.c), [Source 2](../controller/tools/sb_api_validator/sb_api_validator.c) [Check](../tests/suites/validator_batch_mode/run.sh)
 
 <a id="contract-wire-validator-example"></a>
 ##### Native prediction example
@@ -1490,12 +1522,16 @@ native validator helper acts at direct sandbox check call and stdout. Entry: val
 
 CLI filter/argument refusal exits 2. JSON mode emits sb_api_validator_error: bad_filter carries the supplied filter; missing_args, unexpected_filter_value_for_none, missing_filter_value and unexpected_extra_args carry the parsed PID. The native string printer escapes quotes, backslashes and control bytes; remaining argument bytes pass through unchanged.
 
+**Support — executed.** RAW empty/zero direct value arity, no-report native-call flag, and direct JSON/plain versus batch output/exit for six supplied rc/errno pairs; the shipped helper separately observes selected allow, deny and unsupported-operation results against its owned native target. Context: Read the production parser/emitter and exact assertions; inspected both completed validator_batch_mode case receipts, retained argv/input/output and control.log in run 20261111T155411Z_29ef0802. Evidence limit: The return matrix substitutes the native call in a production-source build. Shipped-helper observations use the selected target and macOS build; PID-only admission, other argument errors and invalid-UTF-8 direct arguments retain source support. The overall default run has a separate reader-corpus case failure. [Source 1](../controller/tools/sb_api_validator/sb_api_validator.c), [Source 2](../controller/tools/sb_api_validator/sb_api_validator.c) [Check 1](../tests/fixtures/validator/no_report.c), [Check 2](../tests/fixtures/validator/no_report.c), [Check 3](../tests/suites/validator_batch_mode/run.sh) Run: `20261111T155411Z_29ef0802; validator_batch_mode/predictions_do_not_report and validator_batch_mode/batch_ndjson_roundtrip`. Source snapshot: `controller/tools/sb_api_validator/sb_api_validator.c sha256 93318c0dd70ce26a0113fc0ab5fb676cf91938eda1bf2cfce3afc8d50c8ae4c6; tests/fixtures/validator/no_report.c sha256 d82d36711d15c824085a327f3dc268263f144949d8582c7ddc4682277d3a4e51; tests/suites/validator_batch_mode/run.sh sha256 da7ae5d7825202e974accd01149daff914c194a7d69d5af7bbc9c7d4a6e57897`. Build: `Selected signed candidate build 1335, version 0.3.7, commit b6ce6d266ff281fafdae44c32061ceff018485bb dirty; public identity development:1445cd80509c983c6894339523f9f13ad08f5e003de4cb29ce1c398527c42f28`.
+
 <a id="contract-wire-standalone-meaning"></a>
-##### Known gap: Direct-mode meaning and input issues
+##### Direct and batch validator meanings
 
-The direct JSON `denied` Boolean means rc is nonzero, including a native error; it has a broader meaning than batch outcome deny, which requires rc 1 and errno zero. The RAW parser also accepts an empty numeric suffix as zero. Batch’s filter-value grammar treats only the name NONE as valueless, whereas direct mode treats every numeric-zero filter as valueless; a batch RAW:0 value is therefore accepted then unused by the native call. Direct arguments are passed as C strings without batch’s UTF-8 validation. Whether these direct and batch conventions should be aligned remains unresolved.
+Direct JSON denied means native rc is nonzero, including a native error; successful direct JSON reporting exits 0. Plain output exits 0 or 1 from native rc. Batch deny requires rc 1 and errno zero and retains its diagnostic classifications. An empty RAW suffix resolves to numeric zero. Direct numeric-zero filters take no value; batch treats the spelling NONE as valueless, so RAW:0 carries a value that the zero-filter native call leaves unused. Direct argv uses C strings; batch validates its JSON strings as UTF-8.
 
-**Support for this subject and its descendants — source read.** Direct argv branches establish parsing, mode-specific output, filter resolution and exit selection; the build inventory establishes the shipped helper location. Context: Read complete main/parse/filter/error-printer branches and the signed app helper inventory. Evidence limit: Source reading only. Existing discovery harness calls exercise RAW JSON output for investigations, but a dedicated independent direct-mode grammar/status/error/exit corpus has not been credited here. [Source 1](../controller/tools/sb_api_validator/sb_api_validator.c), [Source 2](../controller/tools/sb_api_validator/sb_api_validator.c), [Source 3](../controller/tools/sb_api_validator/sb_api_validator.c), [Source 4](../controller/tools/sb_api_validator/sb_api_validator.c), [Source 5](../docs/build.json)
+**Support — check read.** Direct and batch parsing and native-result projection retain operation-specific rules. Context: Static review of the cited producer and assertion branches. Evidence limit: The controls compare selected shipped-helper RAW-zero, duplicate and native error/deny cases; status and encoding branches retain their own source support. [Source](../controller/tools/sb_api_validator/sb_api_validator.c) [Check](../tests/suites/validator_batch_mode/run.sh)
+
+**Support for this subject and its descendants — source read.** Direct argv branches establish parsing, mode-specific output, filter resolution and exit selection; the build inventory establishes the shipped helper location. Context: Read complete main/parse/filter/error-printer branches and the signed app helper inventory. Evidence limit: PID-only admission, conditional filter names and raw C-string encoding are supported by the cited source branches. The query controls cover their selected RAW-zero and result/exit branches. [Source 1](../controller/tools/sb_api_validator/sb_api_validator.c), [Source 2](../controller/tools/sb_api_validator/sb_api_validator.c), [Source 3](../controller/tools/sb_api_validator/sb_api_validator.c), [Source 4](../controller/tools/sb_api_validator/sb_api_validator.c), [Source 5](../docs/build.json)
 
 <a id="contract-wire-standalone_status"></a>
 #### Direct PID status
@@ -1560,7 +1596,7 @@ sbpl-check acts at admitted diagnostic compilation. Entry: standalone helper, co
 
 The helper compiles in its own process. The fallback capture reports this independent attempt alongside the transport result and any retained worker evidence.
 
-**Support for this subject and its descendants — source read.** The adjacent field meanings and operations follow the named implementation. Context: Current source read for this draft. Evidence limit: Source inspection supplies the stated branch behavior; this draft credits no execution. [Source 1](../controller/src/bin/sbpl-check.rs), [Source 2](../controller/src/bin/sbpl-check.rs)
+**Support for this subject and its descendants — source read.** The adjacent field meanings and operations follow the named implementation. Context: Review of the named producer branches. Evidence limit: Source inspection supplies the stated branch behavior; this draft credits no execution. [Source 1](../controller/src/bin/sbpl-check.rs), [Source 2](../controller/src/bin/sbpl-check.rs)
 
 <a id="contract-policy-compile"></a>
 ### Last native compile stage
@@ -1576,7 +1612,7 @@ The helper compiles in its own process. The fallback capture reports this indepe
 
 sbpl-check acts at native compile-call completion. Entry: standalone helper, controller helper stdin. Recipient: caller, report reader. Reports: helper envelope. Free every acquired parameter object, returned profile and native error buffer. Treat a non-null diagnostic as compile failure even when a profile was returned. Preserve the native diagnostic separately from the helper summary.
 
-**Support for this subject and its descendants — source read.** The adjacent field meanings and operations follow the named implementation. Context: Current source read for this draft. Evidence limit: Native wrapper branches read. Scripted native-result controls and platform execution still need to be joined as graded owners. [Source 1](../controller/src/bin/sbpl-check.rs), [Source 2](../controller/src/bin/sbpl-check.rs)
+**Support for this subject and its descendants — source read.** The adjacent field meanings and operations follow the named implementation. Context: Review of the named producer branches. Evidence limit: Native wrapper branches read. Scripted native-result controls and platform execution still need to be joined as graded owners. [Source 1](../controller/src/bin/sbpl-check.rs), [Source 2](../controller/src/bin/sbpl-check.rs)
 
 <a id="contract-policy-imports"></a>
 ### Literal import inventory
@@ -1598,11 +1634,13 @@ controller, helper and worker compiler acts at policy preparation and import rea
 The saved file is held once by the controller, selected source is held after augmentation, and the serialized request is held once for delivery. Files named by imports can change between these independent reads. A literal inventory describes the producer's walk; the worker compiled-profile receipt has its own observation boundary.
 
 <a id="contract-policy-imports-native_import_agreement"></a>
-#### Known gap: Import resolver agreement
+#### Literal import evidence scope
 
-The inventory source implements its two-directory search order by convention. Native compiler agreement on collisions between those directories, macro-generated imports and cross-read file changes remains outside the evidence credited to this draft.
+The inventory walks literal imports using its documented two-directory search order and records the bytes read during that walk. The directory order is a platform convention. Native compilation examples establish their selected literal imports; collision precedence, macro-generated dependencies and files changing between independent reads retain their own evidence limits.
 
-**Support for this subject and its descendants — source read.** The adjacent field meanings and operations follow the named implementation. Context: Current source read for this draft. Evidence limit: Full inventory traversal and hashing implementation read. Native search-order observations are inherited from the source comments, not reproduced here. [Source 1](../controller/src/sbpl_imports.rs), [Source 2](../controller/src/sbpl_imports.rs), [Source 3](../controller/src/sbpl_imports.rs), [Source 4](../controller/src/bin/sbpl-check.rs)
+**Support — source read.** The scanner follows IMPORT_SEARCH_PATHS and records each resolved file read. Context: Static review of the cited production branches. Evidence limit: The source records that collision precedence was not established by the cited platform exploration. [Source](../controller/src/sbpl_imports.rs)
+
+**Support for this subject and its descendants — source read.** The adjacent field meanings and operations follow the named implementation. Context: Review of the named producer branches. Evidence limit: Full inventory traversal and hashing implementation read. Native search-order observations are inherited from the source comments, not reproduced here. [Source 1](../controller/src/sbpl_imports.rs), [Source 2](../controller/src/sbpl_imports.rs), [Source 3](../controller/src/sbpl_imports.rs), [Source 4](../controller/src/bin/sbpl-check.rs)
 
 <a id="contract-policy-fallback"></a>
 ### Fallback helper capture
@@ -1631,7 +1669,7 @@ controller acts at admitted client capture after xpc error. Entry: cli run. Reci
 
 Support requires kind `sbpl_check`, the current non-unbound `build.contract`, and a nonempty string normalized_outcome. The capture preserves the envelope and helper process exit independently; compiler observations retain their own process owner.
 
-**Support for this subject and its descendants — check read.** The adjacent field meanings and operations follow the named implementation. Context: Current source read for this draft. Evidence limit: Capture parsing, fallback eligibility and call sites, supported-outcome control and constructed fallback-selection control read; no execution credited. The malformed actor-mode policy-object path is source-read. Detailed text-byte capture mechanics are shared with the transport surface. [Source 1](../controller/src/policy_check.rs), [Source 2](../controller/src/policy_check.rs), [Source 3](../controller/src/run_flow.rs), [Source 4](../controller/src/runner_client.rs), [Source 5](../controller/src/run_flow.rs) [Check 1](../controller/src/policy_check.rs), [Check 2](../controller/src/run_flow.rs)
+**Support for this subject and its descendants — check read.** The adjacent field meanings and operations follow the named implementation. Context: Review of the named producer branches. Evidence limit: Capture parsing, fallback eligibility and call sites, supported-outcome control and constructed fallback-selection control read; no execution credited. The malformed actor-mode policy-object path is source-read. Detailed text-byte capture mechanics are shared with the transport surface. [Source 1](../controller/src/policy_check.rs), [Source 2](../controller/src/policy_check.rs), [Source 3](../controller/src/run_flow.rs), [Source 4](../controller/src/runner_client.rs), [Source 5](../controller/src/run_flow.rs) [Check 1](../controller/src/policy_check.rs), [Check 2](../controller/src/run_flow.rs)
 
 <a id="contract-policy-actor_check"></a>
 ### Per-actor fallback capture
@@ -1643,7 +1681,7 @@ When fallback is eligible, the controller checks each actor carrying a policy ob
 | <a id="contract-policy-actor_check-actor_id"></a>`actor_id` | string; null when absent | Actor label copied from the policy-bearing actor declaration when it is a string; null otherwise. |
 | <a id="contract-policy-actor_check-policy_check"></a>`policy_check` | [Fallback helper capture](#contract-policy-fallback); required | Independent helper capture for this actor's selected policy object. |
 
-**Support for this subject and its descendants — source read.** The adjacent field meanings and operations follow the named implementation. Context: Current source read for this draft. Evidence limit: Source inspection supplies the stated branch behavior; this draft credits no execution. [Source 1](../controller/src/run_flow.rs), [Source 2](../controller/src/run_flow.rs)
+**Support for this subject and its descendants — source read.** The adjacent field meanings and operations follow the named implementation. Context: Review of the named producer branches. Evidence limit: Source inspection supplies the stated branch behavior; this draft credits no execution. [Source 1](../controller/src/run_flow.rs), [Source 2](../controller/src/run_flow.rs)
 
 <a id="contract-extensions-event"></a>
 ### Extension event
@@ -1805,11 +1843,13 @@ host acts at pre-child request refusal. Entry: xpc execute. Recipient: caller, r
 Each code's condition remains attached to its owning input rule. This list supplies current examples for the open code vocabulary.
 
 <a id="contract-refusals-request-compound_order"></a>
-##### Known gap: Compound-error precedence controls
+##### Branch-local refusal precedence
 
-The source defines deterministic branch-local precedence. Paired controls covering every combination of identity, unknown fields, capacity and semantic errors remain to be assembled; this draft credits only the inspected identity and bounded-path controls.
+Each entry reports the first failure reached in its own traversal. CLI parsing, controller identity and selector checks, augmentation, host decoding, capacity and meaning admission remain distinct boundaries. Representative compound-error neighbours and one-component corrections identify the boundary reached by each input.
 
-**Support for this subject and its descendants — check read.** The adjacent meanings follow the named request, producer and observation branches. Context: Current source read for this draft. Evidence limit: Read identity-before-unknown, unknown-field and actor parameter-path assertions. The code examples are source-derived, with the reference-family details owned by extensions. [Source 1](../runner/Sources/PWRunnerCore/PWRunnerRequest.swift), [Source 2](../runner/Sources/PWRunnerCore/PWRunnerService.swift), [Source 3](../runner/Sources/PWRunnerCore/PWRunnerCoding.swift), [Source 4](../runner/Sources/PWRunnerCore/ProbeRunner.swift), [Source 5](../runner/Sources/PWRunnerCore/ActorPlan.swift) [Check](../runner/Tests/PWRunnerCoreTests/RequestContractTests.swift)
+**Support — check read.** Controller preparation and typed host meaning admission have their own ordered branches. Context: Static review of the cited producer and assertion branches. Evidence limit: The matrix checks selected neighbouring failures and their corrections through actual CLI and direct-host entries. [Source 1](../controller/src/run_flow.rs), [Source 2](../runner/Sources/PWRunnerCore/ProbeRunner.swift) [Check](../tests/suites/runner_outcome_bad_request/contract.py)
+
+**Support for this subject and its descendants — check read.** The adjacent meanings follow the named request, producer and observation branches. Context: Review of the named producer branches. Evidence limit: Read identity-before-unknown, unknown-field and actor parameter-path assertions. The code examples are source-derived, with the reference-family details owned by extensions. [Source 1](../runner/Sources/PWRunnerCore/PWRunnerRequest.swift), [Source 2](../runner/Sources/PWRunnerCore/PWRunnerService.swift), [Source 3](../runner/Sources/PWRunnerCore/PWRunnerCoding.swift), [Source 4](../runner/Sources/PWRunnerCore/ProbeRunner.swift), [Source 5](../runner/Sources/PWRunnerCore/ActorPlan.swift) [Check](../runner/Tests/PWRunnerCoreTests/RequestContractTests.swift)
 
 <a id="contract-refusals-controller"></a>
 #### Controller request refusal
@@ -1829,7 +1869,7 @@ controller acts at CLI preparation. Entry: cli run. Recipient: caller, report re
 
 CLI argument parsing precedes reading and gating the file. Target resolution errors take precedence over an augment error after dossier preparation. These results identify local refusal, while the client capture owns whether a later invocation was attempted.
 
-**Support for this subject and its descendants — check read.** The adjacent meanings follow the named request, producer and observation branches. Context: Current source read for this draft. Evidence limit: Source inspection supplies these branch meanings; this draft credits no execution. [Source 1](../controller/src/request_patch.rs), [Source 2](../controller/src/run_flow.rs), [Source 3](../controller/src/run_flow.rs) [Check 1](../controller/src/request_patch.rs), [Check 2](../controller/src/request_patch.rs), [Check 3](../controller/src/request_patch.rs)
+**Support for this subject and its descendants — check read.** The adjacent meanings follow the named request, producer and observation branches. Context: Review of the named producer branches. Evidence limit: The checks cover exact identity admission and UTF-8 path-component and depth withholding. [Source 1](../controller/src/request_patch.rs), [Source 2](../controller/src/run_flow.rs), [Source 3](../controller/src/run_flow.rs) [Check 1](../controller/src/request_patch.rs), [Check 2](../controller/src/request_patch.rs), [Check 3](../controller/src/request_patch.rs)
 
 <a id="contract-refusals-projection"></a>
 #### Projected request refusal
@@ -1851,7 +1891,7 @@ The `Controller` variant carries `rust.RequestFailure` from local preparation.
 
 The `Runner` variant carries `PWRunnerRequestFailure` from the admitted host reply.
 
-**Support for this subject and its descendants — source read.** The adjacent meanings follow the named request, producer and observation branches. Context: Current source read for this draft. Evidence limit: Source inspection supplies these branch meanings; this draft credits no execution. [Source 1](../controller/src/run_flow.rs), [Source 2](../controller/src/run_flow.rs)
+**Support for this subject and its descendants — source read.** The adjacent meanings follow the named request, producer and observation branches. Context: Review of the named producer branches. Evidence limit: The checks cover exact identity admission and UTF-8 path-component and depth withholding. [Source 1](../controller/src/run_flow.rs), [Source 2](../controller/src/run_flow.rs)
 
 <a id="contract-refusals-admission"></a>
 #### Capacity refusal
@@ -1877,7 +1917,7 @@ host acts at capacity-refusal reply assembly. Entry: xpc execute. Recipient: cal
 
 A parameter key can fit the parameter capacity yet exceed the smaller path-component bound. Such a refusal may retain admission_failure.parameter_key while request_failure.path is null. The path is withheld as a whole rather than shortened into another input location.
 
-**Support for this subject and its descendants — check read.** The adjacent meanings follow the named request, producer and observation branches. Context: Current source read for this draft. Evidence limit: Read actor parameter count, UTF-8 boundary, NUL, safe-key and path-withholding controls. Other capacity fixtures are inherited evidence until release validation. [Source 1](../runner/Sources/PWRunnerCore/CWorkerRequestPlanning.swift), [Source 2](../runner/Sources/PWRunnerCore/CWorkerRequestPlanning.swift), [Source 3](../runner/Sources/PWRunnerCore/PWRunnerRequest.swift) [Check](../runner/Tests/PWRunnerCoreTests/RequestContractTests.swift)
+**Support for this subject and its descendants — check read.** The adjacent meanings follow the named request, producer and observation branches. Context: Review of the named producer branches. Evidence limit: The cited controls cover actor parameter count, UTF-8 and NUL boundaries, safe keys and path withholding. [Source 1](../runner/Sources/PWRunnerCore/CWorkerRequestPlanning.swift), [Source 2](../runner/Sources/PWRunnerCore/CWorkerRequestPlanning.swift), [Source 3](../runner/Sources/PWRunnerCore/PWRunnerRequest.swift) [Check](../runner/Tests/PWRunnerCoreTests/RequestContractTests.swift)
 
 <a id="contract-refusals-examples"></a>
 #### Refusal and unavailable-prediction examples
@@ -1895,11 +1935,13 @@ A target-absence check made by a teaching control is separate evidence of the fi
 A paired probe can query `file-write-create` with a path that does not exist at planning time, then attempt `file/create` at that path. The planner reports `prediction_unavailable`; the attempt remains eligible to run. A successful native create/open and an independent newly-created-file check answer different observations. Later realpath diagnostics can resolve a path the earlier query planner could not resolve.
 
 <a id="contract-refusals-examples-workflow"></a>
-##### Known gap: Example workflow evidence
+##### Refusal correction workflows
 
-The request example corpus and its decode/admission harness were read. Full CLI/XPC execution, target-before/after observations and guide recovery commands for these examples must be checked at the release boundary; this draft credits no live effect.
+The capture correction chain changes the misspelled capture option, then supplies a valid nonce, then reaches application and capture. The same intent is exercised through CLI and direct-host entries. Each refused input retains its first diagnostic and no child effect; each successful correction retains its request, reply and independently checked target effect.
 
-**Support for this subject and its descendants — check read.** The adjacent meanings follow the named request, producer and observation branches. Context: Current source read for this draft. Evidence limit: Read the corpus-loop assertions and relevant producer branches. Runtime file-effect assertions were not read or executed in this drafting pass. [Source 1](../runner/Sources/PWRunnerCore/PWRunnerCoding.swift), [Source 2](../runner/Sources/PWRunnerCore/CWorkerRequestPlanning.swift), [Source 3](../controller/tools/pw_probe_runner/pw_probe_runner.c) [Check](../runner/Tests/PWRunnerCoreTests/RequestContractTests.swift)
+**Support — check read.** Controller refusals precede invocation at their own preparation boundaries. Context: Static review of the cited producer and assertion branches. Evidence limit: This owner describes the concrete correction chain; the guide presentation has its own workflow validation. [Source](../controller/src/run_flow.rs) [Check](../tests/suites/runner_outcome_bad_request/contract.py)
+
+**Support for this subject and its descendants — check read.** The adjacent meanings follow the named request, producer and observation branches. Context: Review of the named producer branches. Evidence limit: The request corpus checks refusal fields; the correction workflow and independent file effects have their own support. [Source 1](../runner/Sources/PWRunnerCore/PWRunnerCoding.swift), [Source 2](../runner/Sources/PWRunnerCore/CWorkerRequestPlanning.swift), [Source 3](../controller/tools/pw_probe_runner/pw_probe_runner.c) [Check](../runner/Tests/PWRunnerCoreTests/RequestContractTests.swift)
 
 <a id="contract-refusals-later"></a>
 #### Failures after invocation
@@ -1914,9 +1956,11 @@ A client `xpc_timeout` records expiry of the client's wait without a host reply.
 Worker or validator launch failure belongs to the respective child record. A missing completed slot leaves its operation result unresolved. `runner_reporting_failed` carries the reporting failure's explicit retention account and original summary when available. Preserve the records that were actually received while reading each failure at its own scope.
 
 <a id="contract-refusals-later-evidence"></a>
-##### Known gap: Late-failure evidence join
+##### Later-outcome observation owners
 
-The full late-outcome catalog, capture retention, reporting fallback and refusal precedence belong to the transport, reply, lifecycle and envelope surfaces. Their runtime source/check owners must support those shared distinctions during integration; this surface supplies the request-refusal account.
+Transport delivery and capture admission, host publication, worker and validator lifecycle, and controller disposition have separate owners. Their accounts retain the available raw evidence and identify the boundary that refused or withheld a conclusion. Rich reporting retains observations with removed comparisons; minimal reporting retains scalar context and original summary diagnostics; empty publication reaches receiver decoding failure.
+
+**Support — source read.** Delivery/capture precedence, successive reporting writers and controller reply admission retain separate consequences. Context: Static review of the cited production branches. Evidence limit: Constructed writer and reader controls, source-built child controls and native selected-app outcomes retain their individual evidence grades. [Source 1](../controller/src/runner_client.rs), [Source 2](../runner/Sources/PWRunnerCore/PWRunnerService.swift), [Source 3](../controller/src/run_flow.rs)
 
 <a id="contract-reply"></a>
 ### The host report
@@ -2808,7 +2852,7 @@ The host emits actors in request order. Each actor owns its launch, worker publi
 
 | Field | JSON type and presence | Meaning |
 | --- | --- | --- |
-| <a id="contract-actor_evidence-actor-actor_id"></a>`actor_id` | string; required | Submitted actor identifier that binds this row to its phases and resources. |
+| <a id="contract-actor_evidence-actor-actor_id"></a>`actor_id` | string; required | Submitted actor identifier that binds this row to its phases and resources. Ordinary semantic replies require nonempty, NUL-free actor identifiers within their admitted UTF-8 capacity, distinct identifiers and request order. |
 | <a id="contract-actor_evidence-actor-index"></a>`index` | integer; required | Zero-based position in the admitted actor list. |
 | <a id="contract-actor_evidence-actor-mode"></a>`mode` | string; required | Submitted sandbox mode, apply or unapplied. Admitted vocabulary: closed; displayed list: exhaustive: `"apply"`, `"unapplied"`. |
 | <a id="contract-actor_evidence-actor-policy_format"></a>`policy_format` | string; omitted when absent | Selected policy representation for an apply actor, when provided. |
@@ -2820,7 +2864,7 @@ The host emits actors in request order. Each actor owns its launch, worker publi
 | <a id="contract-actor_evidence-actor-launch"></a>`launch` | [Actor launch context](#contract-actor_evidence-launch); omitted when absent | Host-arranged launch context once this actor process was spawned. |
 | <a id="contract-actor_evidence-actor-subprocess"></a>`subprocess` | [Worker subprocess](#contract-lifecycle-worker); omitted when absent | This actor's worker lifecycle and publication account. |
 | <a id="contract-actor_evidence-actor-compiled_profile"></a>`compiled_profile` | [Receipt](#contract-profile-receipt); omitted when absent | Receipt from this actor's requested compiled-profile capture, when the host has a capture result. |
-| <a id="contract-actor_evidence-actor-visits"></a>`visits` | array of integer; required | One-based global phase ordinals declared for this actor, including visits whose activation never occurred. |
+| <a id="contract-actor_evidence-actor-visits"></a>`visits` | array of integer; required | In an ordinary semantic reply, the exact ordered list of one-based global phase ordinals declared for this actor, including visits whose activation never occurred. Membership comes from each phase's declared owner. |
 | <a id="contract-actor_evidence-actor-equipment"></a>`equipment` | [Actor equipment selection](#contract-equipment-actor); omitted when absent | Requested and resolved worker role, entitlement requirement assessment and live execution observation. |
 | <a id="contract-actor_evidence-actor-application"></a>`application` | [Application assessment](#contract-actor_evidence-application); omitted when absent | Host application-boundary assessment with its evidence basis. |
 | <a id="contract-actor_evidence-actor-owned_reap"></a>`owned_reap` | [Owned child ending](#contract-lifecycle-owned_reap); omitted when absent | Host-owned waitpid ending retained for this actor and referenced by dependent termination gates. |
@@ -2838,17 +2882,36 @@ actor, phase and resource associations remain available for inspection as
 assembled. Ordinary consistency assessments apply on the ordinary reply path.
 
 <a id="contract-actor_evidence-actor-reader_scope"></a>
-##### Known gap: Reader scope requiring reconciliation
+##### Reader applicability
 
-The host and controller apply actor/equipment/gate assessment on the ordinary
-reporting path. The Python lifecycle receipt reader checks those predicates
-for actor-form reporting-failure replies too. The general JSON consumer skips
-its extension checks there but still checks actor identities, launch and
-phase/step associations. Its preparation partition exception requires a valid
-preparation-failure shape. The degraded form guarantee and preservation of
-assembled observations above govern retained reporting failures. These reader
-scopes still need reconciliation and a common corpus; a gate-specific
-disagreement remains an unestablished case.
+Uses [Check families and applicability](#contract-diagnostics-execution-families), [Publish a report or fallback](#contract-reply-failure-publish).
+
+The host self-check, controller semantic reader and general canonical-JSON
+consumer check ordinary actor relationships when `reporting_failure` is
+absent. A preparation refusal belongs to the actor execution form and retains
+its admitted declarations: actor order, IDs and visits, phase order and owner,
+actor visit numbers and action IDs. It carries no launch, arrival, completion,
+proceed publication, step, extension-event, transfer or resource entry. Each
+actor has zero successful applications. Its host authority scope is
+`not_attempted`, with empty region and custody tables. The actor event table
+is present, including when empty.
+
+Phase and actor identifiers are nonempty and NUL-free within their admitted
+UTF-8 capacities. Action identifiers use that same capacity and NUL rule;
+ordinary-form actions admit an empty identifier, while actor-form actions require a
+nonempty one. Declaration uniqueness and exact schedule membership apply
+separately from that string grammar.
+
+A reporting-failure reply is checked for its degradation form and applicable
+compiled-profile context. Host validation, controller admission and the general consumer apply that
+scope. The actor/extension readers check ordinary semantic relationships when
+the reporting-failure record is absent. The lifecycle receipt reader separately checks each
+retained worker's claims and controller projection; findings from that
+assessment describe the retained worker evidence. Ordinary actor, phase and
+resource association requirements remain conditional on the ordinary semantic
+reply path.
+
+**Support — executed.** Constructed typed preparation, declaration and degradation neighbours retain separate host, controller, general-consumer and worker-lifecycle judgments. Context: Whole canonical runner-unit case passed with zero recorded system sleep. Swift judgments over 142 typed frames were retained before encoding; exact-one Rust replay carried 143 frames including the real writer-cap fallback through envelopes, then independent Python readers completed all rows and seven JSON-only controls. Evidence limit: The corpus uses constructed records and independently expected interpretations. Eleven application-positive pairs, degradation admission, the exact contradictory-worker D1 finding and retained actor projections have separate assertions. JSON-only normalization has its own domain. Native occurrence of each constructed context has separate observation owners. [Source 1](../runner/Sources/PWRunnerCore/ActorOrchestration.swift), [Source 2](../runner/Sources/PWRunnerCore/ActorPlan.swift), [Source 3](../runner/Sources/PWRunnerCore/PWRunnerReply.swift), [Source 4](../runner/Sources/PWRunnerCore/PWRunnerReply.swift), [Source 5](../controller/src/porcelain_admission.rs), [Source 6](../controller/src/porcelain_actor.rs), [Source 7](../tests/lib/consumer.py), [Source 8](../tests/lib/lifecycle_oracle.py) [Check 1](../runner/Tests/PWRunnerCoreTests/ReaderCorpusTests.swift), [Check 2](../controller/src/run_flow.rs) Run: `20261111T162345Z_3d6c7242`. Source snapshot: `reviewed-inputs sha256:af396aadf41ba79a0d072b62d9c3f4ff1df5b5fa30d6c4ff267c53e8437dd51d (b6ce6d26 dirty; replay identity correction)`. Case: `runner_unit/pwrunner_core_unit_executable`.
 
 <a id="contract-actor_evidence-launch"></a>
 #### Actor launch context
@@ -2893,12 +2956,11 @@ runner host reports at actor reply assembly. Entry: actors. Recipient: direct ho
 | <a id="contract-actor_evidence-application-classify-remaining"></a>Remaining evidence | Value: `["unobserved","no_eligible_apply_publication"]`. The preceding evidence branches did not establish another pair. |
 
 <a id="contract-actor_evidence-application-late_application"></a>
-##### Known gap: Setup deadline and later application
+##### Setup deadline and later application
 
-Final actor collection preserves a later applied publication and derives
-`application_count` from it even after setup eligibility ended. The exact
-combination of `setup_timeout` with an observed applied publication still
-needs an owning behavioral check; the current account is supported by source.
+Final collection preserves a later applied publication and derives application_count from it after setup eligibility has ended. A setup_timeout can therefore coexist with applied true, count 1 and application state observed with basis applied_publication. The affected actor remains ineligible for phase activation and query collection.
+
+**Support — check read.** Final collection retains application independently of earlier setup eligibility. Context: Static review of the cited producer and assertion branches. Evidence limit: The read controls use 40 ms setup, 150 ms pre-ready delay and 1000 ms grace, then retain the production reply. Their timing observation is bounded to that schedule. [Source](../runner/Sources/PWRunnerCore/ActorScheduler.swift) [Check 1](../runner/Tests/PWRunnerCoreTests/ActorSchedulerTests.swift), [Check 2](../runner/Tests/PWRunnerCoreTests/ActorReplyTests.swift)
 
 <a id="contract-actor_evidence-phase"></a>
 #### Phase collection and execution
@@ -2907,7 +2969,7 @@ The host reports phases in declared schedule order. Observation fields record ac
 
 | Field | JSON type and presence | Meaning |
 | --- | --- | --- |
-| <a id="contract-actor_evidence-phase-phase_id"></a>`phase_id` | string; required | Submitted phase identifier used by its action records and validator collection. |
+| <a id="contract-actor_evidence-phase-phase_id"></a>`phase_id` | string; required | Submitted phase identifier used by its action records and validator collection. Ordinary semantic replies require a nonempty, NUL-free identifier within its admitted UTF-8 capacity. The declared phase order determines its ordinal. |
 | <a id="contract-actor_evidence-phase-ordinal"></a>`ordinal` | integer; required | One-based position in the global phase schedule. |
 | <a id="contract-actor_evidence-phase-action_ids"></a>`action_ids` | array of string; required | Declared action identifiers in phase order, retained even when actions produce no execution observations. |
 | <a id="contract-actor_evidence-phase-arrival_observed"></a>`arrival_observed` | boolean; required | Whether the host acquired the active worker's arrival publication for this visit. |
@@ -3005,7 +3067,7 @@ reference captured during its evaluation.
 <a id="contract-actor_evidence-gate-check"></a>
 ##### Checking a carried gate
 
-[Controller](#contract-identity-definitions-controller) checks at semantic assessment after reply admission. Entry: controller run. Recipient: cli caller. Reports: ordinary reply. Binding `p`: entry in `reply.phases`. Binding `s`: entry in `reply.actors`. Binding `f`: entry in `reply.phases`. Association restriction for `s`: `reply.actors[s].actor_id` = `reply.phases[p].termination_gate.source_actor_id`. Association restriction for `f`: `reply.phases[f].phase_id` = `reply.phases[p].termination_gate.source_final_phase_id`. Applies when (`reply.reporting_failure` is absent and `reply.phases[p].termination_gate` is present). The check retains each failed condition it finds. Resolve source and final-phase joins before using s or f; missing, nonfinal, same-actor or nonpreceding associations are findings. Check owned PID/native-status agreement, all conditional gate captures, independent actor setup/equipment eligibility and activation timing. Add actor_evidence issues for failed requirements; set top-level disposition_integrity invalid, process_disposition withheld and termination_cause unknown. Preserve the host reply, each actor's independently projected disposition, run result and exit status.
+[Controller](#contract-identity-definitions-controller) checks at semantic assessment after reply admission. Entry: controller run. Recipient: cli caller. Reports: ordinary reply. Binding `p`: entry in `reply.phases`. Binding `s`: entry in `reply.actors`. Binding `f`: entry in `reply.phases`. Association restriction for `s`: `reply.actors[s].actor_id` = `reply.phases[p].termination_gate.source_actor_id`. Association restriction for `f`: `reply.phases[f].phase_id` = `reply.phases[p].termination_gate.source_final_phase_id`. Applies when (`reply.reporting_failure` is absent and `reply.phases[p].termination_gate` is present). The check retains each failed condition it finds. Resolve source and final-phase joins before using s or f; missing, nonfinal, same-actor or nonpreceding associations are findings. Check owned PID/native-status agreement, all conditional gate captures, independent actor setup/equipment eligibility and activation timing. Add actor_evidence issues for failed requirements, with subject_path naming the inspected termination_gate. Set top-level disposition_integrity invalid, process_disposition withheld and termination_cause unknown. Preserve the host reply, each actor's independently projected disposition, run result and exit status.
 
 | Item | Requirement or consequence |
 | --- | --- |
@@ -3013,13 +3075,6 @@ reference captured during its evaluation.
 | <a id="contract-actor_evidence-gate-check-timely"></a>Timely satisfied wait | Requires if `reply.phases[p].termination_gate.outcome` = `"satisfied"`, then (`reply.phases[p].termination_gate.wait` is present and `reply.phases[p].termination_gate.wait.budget_ms` > `0` and `reply.phases[p].termination_gate.wait.budget_ms` ≤ `5000` and `reply.phases[p].termination_gate.wait.elapsed_ms` is present and `reply.phases[p].termination_gate.wait.elapsed_ms` ≤ `reply.phases[p].termination_gate.wait.budget_ms` and `reply.phases[p].termination_gate.wait.clock_fault` = `false` and `reply.phases[p].termination_gate.wait.native_errno` is absent). Every present gate wait has budget 0–5000 and absent excluded time. An evaluated gate has a wait whose stop matches its outcome. |
 | <a id="contract-actor_evidence-gate-check-sequence"></a>Source sequence | Requires if `reply.phases[p].termination_gate.outcome` = `"satisfied"`, then (`reply.phases[f].activation_observation` is present and `reply.actors[s].owned_reap` is present and `reply.phases[f].activation_observation.capture_ordinal` < `reply.actors[s].owned_reap.capture_ordinal` and `reply.actors[s].owned_reap.capture_ordinal` < `reply.phases[p].termination_gate.capture_ordinal` and `reply.actors[s].owned_reap.ownership_unbroken` = `true` and `reply.actors[s].owned_reap.departure_requested` = `false`). The referenced ending matches the source actor's valid PID/native wait status, has stage `schedule` or `termination_gate`, and has the reference's positive ordinal. Final activation and reap timestamps must exist in nondecreasing order; a timestamped dependent activation is at or after the reap. |
 | <a id="contract-actor_evidence-gate-check-eligibility"></a>Eligibility consequence | Requires if `reply.phases[p].termination_gate.activation_eligible` = `true`, then `reply.phases[p].termination_gate.outcome` = `"satisfied"`. True eligibility also requires the dependent actor's applied or unapplied_declared setup and eligible equipment. False eligibility requires absent activation/visit timing, false arrival/proceed flags and collection not_reached. |
-
-<a id="contract-actor_evidence-gate-check-finding_subject"></a>
-###### Known gap: Finding subject
-
-Gate findings carry `actor_evidence` and a detail sentence. They currently
-lack a structured actor or phase reference joining the issue to its gate.
-The host's gate fields remain present beside the controller's overall finding.
 
 <a id="contract-actor_evidence-gate-timeout_example"></a>
 ##### A timeout followed by cleanup
@@ -3031,12 +3086,11 @@ Cleanup later reaps the source; the gate remains `timed_out`.
 **Support for this subject and its descendants — check read.** Source phase completion, timeout, withheld dependent activation/collection/release, later source reap and unchanged timeout. Context: Real fixture child with post-apply hang and 50 ms execution allowance; test source inspected. Evidence limit: No execution credit; this assertion covers scheduler observations with shortened allowance, not public JSON or an additional later actor. [Source](../runner/Sources/PWRunnerCore/ActorScheduler.swift) [Check](../runner/Tests/PWRunnerCoreTests/ActorSchedulerTests.swift)
 
 <a id="contract-actor_evidence-gate-cancellation_evidence"></a>
-##### Known gap: Cancellation-scope evidence
+##### Known gap: Termination cancellation reach
 
-The scheduler source cancels every phase after a failed evaluated gate. The
-read timeout check covers the dependent phase; a focused check still needs
-to assert an additional later phase owned by another actor and its public
-cancellation account.
+A failed evaluated termination dependency cancels every remaining scheduled phase, including later work owned by another actor. A dependent actor that is ineligible before gate evaluation has a not_reached gate and does not create that dependency failure. Whether cancellation should have narrower reach remains a maintainer decision.
+
+**Support — check read.** An evaluated failed gate sets global schedule cancellation; an unreached gate has a different path. Context: Static review of the cited producer and assertion branches. Evidence limit: The control distinguishes a three-worker evaluated timeout from an ineligible-dependent neighbour and retains final collection. [Source](../runner/Sources/PWRunnerCore/ActorScheduler.swift) [Check](../tests/suites/witness_contract/check_actor_compositions.py)
 
 <a id="contract-actor_evidence-owned_endings"></a>
 #### Observation sequences
@@ -3214,13 +3268,11 @@ their respective observations; the signature entitlement dictionary supplies
 the values assessed at each boundary.
 
 <a id="contract-equipment-execution-live_evidence"></a>
-##### Known gap: Live-inspection evidence limit
+##### Live-inspection evidence limit
 
-The read unit controls construct failing Security-call results and verify the
-retained attempted prefix and ineligible execution. The signed-product
-acceptance evidence still needs a case reaching runtime inspection failure
-and asserting cancellation with earlier application observations retained.
-The optional additional deadline after an unavailable orchestration clock sample is source-read; this draft credits no control of that initial failure followed by valid inspection clocks.
+Constructed Security-call failures establish attempted-prefix retention, inspection_failed and ineligibility. Signed normal observations establish association of the selected worker with its live inspection. Spontaneous native Security failure after application remains unobserved. The optional deadline after an unavailable initial orchestration clock sample is source-supported; later inspection-clock controls concern their own samples.
+
+**Support — check read.** Live-inspection classification and the optional additional orchestration deadline have distinct inputs. Context: Static review of the cited producer and assertion branches. Evidence limit: Injected failure prefixes and later clock controls supply constructed observations. Ownership loss or a mismatch has a different outcome from native inspection failure. [Source 1](../runner/Sources/PWRunnerCore/ActorEquipment.swift), [Source 2](../runner/Sources/PWRunnerCore/ActorOrchestration.swift) [Check](../runner/Tests/PWRunnerCoreTests/ActorEquipmentTests.swift)
 
 <a id="contract-equipment-native_observation"></a>
 #### Live inspection call
@@ -3674,15 +3726,30 @@ questions respectively.
 **Support for this subject and its descendants — check read.** Worker-local and reply-wide projection effects, raw-record retention, open summaries, degradation applicability and outer success are distinct branches. Context: Typed controller implementation and the named constructed tests were read. Evidence limit: Actor/native family entry points and the complete gate checks were read; their detailed operation predicates have separate source owners. The scope example combines separately inspected projection and outer-result controls. [Source 1](../controller/src/porcelain_admission.rs), [Source 2](../controller/src/porcelain_admission.rs), [Source 3](../controller/src/porcelain_admission.rs), [Source 4](../controller/src/run_flow.rs), [Source 5](../controller/src/run_flow.rs), [Source 6](../controller/src/porcelain_actor.rs), [Source 7](../controller/src/porcelain_native.rs) [Check 1](../controller/src/porcelain_admission.rs), [Check 2](../controller/src/porcelain_admission.rs), [Check 3](../controller/src/porcelain_admission.rs), [Check 4](../controller/src/run_flow.rs), [Check 5](../controller/src/run_flow.rs)
 
 <a id="contract-diagnostics-execution-reader_evidence"></a>
-##### Known gap: Shared reader evidence
+##### Reader judgments
 
-The host self-check, controller reader and harness reader are separate
-implementations of the public relationships. The prior constructed
-comparison found divergent judgments. Shared acceptance and refusal
-controls still need to be reconciled around each rule's applicability,
-including preparation failures and reporting failures. This draft credits
-the controller branches and inspected controls above; integrated release
-execution remains to be attached.
+Uses [Reader applicability](#contract-actor_evidence-actor-reader_scope).
+
+Host reporting validation, controller semantic admission and canonical-JSON
+consumption interpret the same typed records at their stated scopes. Worker
+lifecycle assessment remains a separate judgment over the retained native
+account and its projection. A reporting failure can retain observations that
+produce a lifecycle finding while satisfying the degradation form.
+
+The shared corpus carries constructed Swift records through binary encoding,
+Rust decoding and envelope assembly, and independent Python decoding and
+consumption. Its cases retain each judgment, the raw reply, outer result and
+exit, and independently projected actor endings. JSON-only null and omission
+controls retain their authored input and test-decoder normalization separately.
+These cases check reader behavior against independently authored expectations;
+native producer observations have their own owners.
+
+**Support — executed.** Preparation, identifier, membership, application precedence and degradation cases check their own expected judgments and retained consequences across the actual readers. Context: Whole canonical runner-unit case passed with zero recorded system sleep. Swift judgments over 142 typed frames were retained before encoding; exact-one Rust replay carried 143 frames including the real writer-cap fallback through envelopes, then independent Python readers completed all rows and seven JSON-only controls. Evidence limit: The corpus uses constructed records and independently expected interpretations. Eleven application-positive pairs, degradation admission, the exact contradictory-worker D1 finding and retained actor projections have separate assertions. JSON-only normalization has its own domain. Native occurrence of each constructed context has separate observation owners. [Source 1](../controller/src/porcelain_admission.rs), [Source 2](../tests/lib/consumer.py), [Source 3](../tests/lib/lifecycle_oracle.py) [Check 1](../controller/src/run_flow.rs), [Check 2](../tests/suites/runner_unit/reader_corpus.py) Run: `20261111T162345Z_3d6c7242`. Source snapshot: `reviewed-inputs sha256:af396aadf41ba79a0d072b62d9c3f4ff1df5b5fa30d6c4ff267c53e8437dd51d (b6ce6d26 dirty; replay identity correction)`. Case: `runner_unit/pwrunner_core_unit_executable`.
+
+<a id="contract-diagnostics-execution-reader_evidence-classifier_generation"></a>
+###### Known gap: Independent semantic classifiers
+
+The host, controller and test readers retain independently written semantic classifiers checked against the stated definitions. Whether to generate those classifiers from one implementation remains a maintainer decision.
 
 <a id="contract-diagnostics-actor"></a>
 #### One actor's diagnostics
@@ -3712,6 +3779,11 @@ execution remains to be attached.
 The `unconfirmed` value merges the two host states while the retained
 host claim preserves which state and reason it supplied.
 
+<a id="contract-diagnostics-actor-mapping-vocabulary_choice"></a>
+###### Known gap: Unconfirmed vocabulary
+
+The controller maps both unresolved and inapplicable host final-status claims to unconfirmed while retaining the host claim. Whether to retain that merged controller vocabulary remains a maintainer decision.
+
 <a id="contract-diagnostics-actor-cause"></a>
 ##### Host-cleanup attribution
 
@@ -3738,6 +3810,7 @@ its own request result; attribution requires the other observations.
 | --- | --- | --- |
 | <a id="contract-diagnostics-issue-kind"></a>`kind` | string; required | Category supplied by the controller check or copied from a host conflict. A finding's origin and effect follow the producing scope and the remaining fields, rather than an exhaustive match over this list. Admitted vocabulary: open; displayed list: illustrative: `"missing_record"`, `"malformed_record"`, `"invalid_claim"`, `"unresolved_reference"`, `"phase_collection"`, `"ordering"`, `"policy_read"`, `"fresh_read"`, `"fresh_write"`, `"exec_observation"`, `"actor_evidence"`, `"reporting_failure"`, `"conflict"`. Unfamiliar values: An unfamiliar category remains a finding with its carried detail and scope; interpreting its specific condition requires that producer's definition.. |
 | <a id="contract-diagnostics-issue-detail"></a>`detail` | string; required | Human-readable explanation of the failed relationship or copied host conflict. Some controller details embed a step label or position; other actor and gate findings carry a general explanation. |
+| <a id="contract-diagnostics-issue-subject_path"></a>`subject_path` | array of string; omitted when absent | Optional location of the inspected assertion within `data.runner_result`. The path is an ordered list of object keys and canonical zero-based decimal array positions. An empty path names the whole host result; a present null value remains an addressable target. For example, `["phases","2","termination_gate"]` names the third phase's carried gate, even when phase labels are duplicated or invalid. The controller supplies this field for owned-reap, phase-activation and termination-gate findings. Its association identifies the inspected record; projection and retention effects follow the producing check's scope. Other controller findings and copied host conflicts omit this field. |
 | <a id="contract-diagnostics-issue-rule"></a>`rule` | string; omitted when absent | Host conflict rule copied from the retained disposition issue, such as D1 for a final-status conflict or D5 for the supported step conflicts. Controller-created findings currently omit this field. |
 | <a id="contract-diagnostics-issue-question"></a>`question` | string; omitted when absent | Host question associated with a copied conflict. Controller-created findings currently omit this field even when a detail names the question. |
 | <a id="contract-diagnostics-issue-step_index"></a>`step_index` | integer; omitted when absent | Worker-local step index copied from a host conflict when it has step scope. A copied run-level conflict and controller-created findings omit it. |
@@ -3746,18 +3819,29 @@ its own request result; attribution requires the other observations.
 <a id="contract-diagnostics-issue-retain"></a>
 ##### Retain observation and finding separately
 
-controller acts at integrity finding construction. Entry: cli run. Recipient: report reader. Reports: execution diagnostics, actor execution diagnostics. Publish controller findings as kind and detail. Copy validated host conflicts with their rule, question, step index and observation references. Preserve the host reply independently of both forms.
+controller acts at integrity finding construction. Entry: cli run. Recipient: report reader. Reports: execution diagnostics, actor execution diagnostics. Publish controller findings as kind and detail, with subject_path for the owned-reap, phase-activation and termination-gate checks. Copy validated host conflicts with their rule, question, step index and observation references. Preserve the host reply independently of both forms.
 
-<a id="contract-diagnostics-issue-subject_gap"></a>
-##### Known gap: Structured finding subjects
+<a id="contract-diagnostics-issue-subject"></a>
+##### Finding association and effect
 
-Controller-generated findings currently identify their affected phase or
-actor through surrounding scope and, where supplied, human detail.
-A structured reference to the specific phase, actor or assertion remains
-unimplemented. Adding that reference must preserve the existing distinction
-between worker-local projection findings and reply-wide findings.
+Uses [subject_path](#contract-diagnostics-issue-subject_path), [Apply reply-wide findings](#contract-diagnostics-execution-reply_checks), [Project one worker or aggregate actors](#contract-diagnostics-execution-project).
 
-**Support for this subject and its descendants — source read.** Generic controller findings omit optional host-conflict metadata; copied host issues preserve it. Gate findings use the generic actor-evidence constructor. Context: Constructors, projection copy, actor gate checks and native validator dispatch read. Evidence limit: The proposed structured subject is a visible gap, not a field added by this draft. [Source 1](../controller/src/porcelain_admission.rs), [Source 2](../controller/src/porcelain_admission.rs), [Source 3](../controller/src/porcelain_admission.rs), [Source 4](../controller/src/porcelain_actor.rs), [Source 5](../controller/src/porcelain_actor.rs), [Source 6](../controller/src/porcelain_native.rs)
+A subject path associates the finding with the retained assertion that its
+check inspected. A gate's source and dependent records remain operands of
+that check. Reply-wide findings withhold the aggregate projection and retain
+the separately computed actor projections. Worker-local findings affect
+that worker's projection.
+
+<a id="contract-diagnostics-issue-subject-withholding_scope"></a>
+###### Known gap: Reply-wide withholding scope
+
+A reply-wide finding withholds the aggregate projection and retains separately computed actor projections. Whether that finding should also withhold the actor conclusions remains a maintainer decision.
+
+**Support — executed.** The constructed check retains both equal-label gates by positions 2 and 6, then checks owned-reap, activation and dependent-gate subjects with exact finding details/order and unchanged input records. Context: The named control passed in the completed zero-sleep unit/rust.unit case; its assertions inspect the findings returned by the production gate checker. Evidence limit: Execution covers the constructed owned-reap, activation and selected gate cases. Remaining predicate-location assignments retain their source support. Reference resolution and action-wide withholding choices have separate owners. [Source](../controller/src/porcelain_actor.rs) [Check](../controller/src/porcelain_actor.rs) Run: `20261111T155411Z_29ef0802`. Source snapshot: `reviewed-inputs sha256:b5298841bceaea7af57843a0e2ab68de2dd2ed85edf21fd07b16ac91d5a8838e (b6ce6d26 dirty)`. Case: `unit/rust.unit`.
+
+**Support — executed.** Forty-two retained controls cover optional/root/object/scalar/null targets, canonical array positions, malformed or unresolved paths, aggregate and actor issue locations, version gating and accumulated independent faults; 12 accept and 30 refuse. Context: The completed blackbox_e2e/checker_controls case passed with zero recorded system sleep. Each constructed input and its exact findings remain in consumer_subject_*.json and *.errors.json. Evidence limit: These controls establish reference reading and unchanged carried documents. Product predicate-to-subject selection is checked by the gate and full-reply corpus owners; reserved withholding policy remains explicit. [Source 1](../tests/lib/consumer.py), [Source 2](../tests/lib/consumer.py) [Check](../tests/suites/blackbox_e2e/checker_controls.py) Run: `20261111T155411Z_29ef0802`. Source snapshot: `reviewed-inputs sha256:b5298841bceaea7af57843a0e2ab68de2dd2ed85edf21fd07b16ac91d5a8838e (b6ce6d26 dirty)`. Case: `blackbox_e2e/checker_controls`.
+
+**Support for this subject and its descendants — source read.** Gate-family findings carry locations in the retained reply while preserving existing predicates, detail, order and projection scope. Copied host issues preserve their own metadata. Context: Constructors, projection copy, actor gate checks and native validator dispatch read. Evidence limit: Locations identify inspected retained records. Existing worker-local and reply-wide projection rules govern the findings independently. [Source 1](../controller/src/porcelain_admission.rs), [Source 2](../controller/src/porcelain_admission.rs), [Source 3](../controller/src/porcelain_admission.rs), [Source 4](../controller/src/porcelain_actor.rs), [Source 5](../controller/src/porcelain_actor.rs), [Source 6](../controller/src/porcelain_native.rs)
 
 <a id="contract-dossier"></a>
 ### Specimen dossier
@@ -3796,9 +3880,11 @@ A role baseline must be the unique entry at the expected path and kind with a 64
 If a caller changes the input JSON after the controller has parsed it, the client and fallback compiler still receive the controller’s held serialization. An import file changed between dossier collection and fallback compilation may produce different import observations. Compare the source hash and the separately reported closures at their named boundaries.
 
 <a id="contract-dossier-collection-native_gap"></a>
-##### Known gap: Import and execution evidence
+##### Held input and file observation scope
 
-The scanner’s `complete` status exhausts its literal import search. Its search order follows the recorded platform convention; collision precedence and parity with native compilation remain unverified. A signed held-request change experiment and independent observations tying selected-file hashes to executing images remain open.
+The controller resolves and serializes the request once, then delivers that held text to the selected client and applicable helper calls. The dossier scanner and selected-file hashes describe their own reads. Literal import completeness belongs to the scanner convention; actor live equipment supplies its separate process association. Ordinary selected-file hashes remain file observations at collection time.
+
+**Support — check read.** Held request delivery, import reads and selected-file comparison have distinct boundaries. Context: Static review of the cited producer and assertion branches. Evidence limit: The file-replacement control uses controlled client/helper callbacks and exact independent held inputs; selected-file hashes do not supply an ordinary executing-image association. [Source 1](../controller/src/run_flow.rs), [Source 2](../controller/src/sbpl_imports.rs), [Source 3](../controller/src/dossier.rs) [Check](../controller/src/run_flow.rs)
 
 <a id="contract-dossier-specimen"></a>
 #### Run dossier
@@ -4001,9 +4087,11 @@ controller and runner client acts at fixed verification specimen through reserva
 The timeout defaults to <!-- span limits.runner_verify_wait.value_unit -->5,000 milliseconds<!-- /span --> and is clamped to at least one. The returned PID comes from an admitted host reply’s `pid`; read its subject according to that reply’s lifecycle. An empty successful plan establishes the verification request’s application and completion. It supplies no per-operation prediction or attempt observations.
 
 <a id="contract-installation-commands-pending_verify"></a>
-#### Known gap: Pending verification
+#### Pending verification
 
-Ordinary specimen selection refuses a pending installation. `runner verify` currently looks up the same pending record, checks its kind and contract, and can invoke it. Whether verification should share the pending-state gate remains unresolved; the existing pending-selection recovery control does not establish that decision.
+Ordinary specimen selection refuses a Pending installation. Explicit runner verify can address that recorded service after kind and contract checks, using the fixed verification request and retaining the recorded Pending state. Verification leaves the registry bytes unchanged.
+
+**Support — check read.** Explicit verification selects by recorded identity and kind/contract, independently of ordinary Pending selection. Context: Static review of the cited producer and assertion branches. Evidence limit: The control uses an owned live current service with a constructed Pending registry state and snapshots the registry around both operations. [Source 1](../controller/src/runner_commands.rs), [Source 2](../tests/suites/runner_byoxpc/opt_in/registry_recovery.py) [Check](../tests/suites/runner_byoxpc/opt_in/registry_recovery.sh)
 
 <a id="contract-installation-commands-validate"></a>
 #### Refresh validation metadata
@@ -4013,9 +4101,11 @@ controller acts at registered bundle and binary signature/inventory reads. Entry
 A missing host executable increments `missing`, marks the host signature invalid and records its entitlement error, then skips further verification for that row. Bundle/binary verification, signature-metadata readback and equipment-inventory failures increment `invalid` once per affected row and retain each named failure. Entitlement read errors also remain in their individual metadata objects. `updated` counts every visited runner. A completed validate command reports `result.ok: true` and exit 0 even when missing/invalid is positive; inspect those fields. Pending cleanup records remain recovery records.
 
 <a id="contract-installation-commands-entitlement_errors"></a>
-#### Known gap: Entitlement read errors and summary counts
+#### Entitlement read errors and summary counts
 
-An entitlement-read error can coexist with successful signature readback and an empty validation failures list. Equipment-inventory verification independently checks current worker entitlements; host and validator entitlement errors alone remain in their metadata. Whether the validation summary should count every such read error remains unresolved.
+A successful metadata read can retain an entitlement error alongside a valid signature without adding a validation failure. A failed read-back contributes a failure and unreadable signature metadata. Equipment validation applies its own entitlement requirements. The command counts invalid runners after combining the applicable failures; host and validator entitlement metadata errors alone retain their metadata scope.
+
+**Support — check read.** Read-back failure and entitlement metadata are separate validation results. Context: Static review of the cited producer and assertion branches. Evidence limit: The injected seam checks per-role metadata and failure lists. Whole-command invalid-count consequences remain source-read alongside the separate equipment checks. [Source 1](../controller/src/runner_manager.rs), [Source 2](../controller/src/runner_commands.rs) [Check](../controller/src/runner_manager.rs)
 
 <a id="contract-installation-commands-reconcile"></a>
 #### Reconcile observations
@@ -4039,9 +4129,11 @@ After a successful bootout, re-read a still-present service every <!-- span limi
 A present service with a different executable is unowned; one with no unique executable observation is ambiguous. Absent resources are classified ambiguous for ownership and retain their independently observed absent presence. Unknown presence produces unknown ownership. Recorded cleanup paths must be absolute, have no parent traversal, end in the expected service plist, and have an immediate parent named LaunchAgents for user scope or LaunchDaemons for system scope. The location check also requires the executable parent to equal the recorded bundle’s Contents/MacOS and refuses symlinked plist ancestors. The recorded ownership supplies the full parent path. Legacy records without ownership derive the conventional plist path and use the content checks.
 
 <a id="contract-installation-commands-ownership_location"></a>
-#### Known gap: Recorded cleanup directory
+#### Recorded cleanup directory
 
-Recorded ownership can select an absolute directory whose last component matches the scope name. Whether cleanup should also compare the entire parent path with the conventional scope directory remains unresolved.
+Durable ownership supplies the recorded absolute plist path. Cleanup checks its owner UID and launchd domain, excludes parent traversal and symlinked ancestors, requires the scope parent basename and service plist filename, and checks the executable-to-bundle relationship. Plist content and recorded hash/UID and service executable observations then establish their resource ownership. A conventional full parent path is used for records without durable ownership.
+
+**Support — source read.** Location and resource ownership checks use the recorded path and complete associated identities. Context: Static review of the cited production branches. Evidence limit: Acceptance of a nonconventional full parent is source-supported; this owner supplies no native occurrence for that path. [Source 1](../controller/src/runner_manager.rs), [Source 2](../controller/src/runner_manager.rs), [Source 3](../controller/src/runner_manager.rs)
 
 <a id="contract-installation-commands-recovery"></a>
 #### Retained cleanup example
@@ -4049,9 +4141,11 @@ Recorded ownership can select an absolute directory whose last component matches
 If bootout succeeds and plist removal succeeds but the final launchctl read is unknown, the command reports both action booleans true and cleanup_retained true. Keep the recorded bundle and any operator recovery state, inspect reconcile, and repeat removal until service/plist absence and registry retirement are observed.
 
 <a id="contract-installation-commands-legacy"></a>
-#### Known gap: Legacy values and evidence
+#### Legacy registry values and recovery
 
-Offline controls cover preservation of unknown nested JSON and historical cleanup forms. The complete live install/list/reconcile/remove sequence carrying unusual opaque metadata remains an evidence obligation. Legacy `machme` and `debuggable` kinds normalize to byoxpc on registry load while new CLI input rejects those aliases. That deliberate compatibility behavior and the pending-verification distinction need to stay visible during review.
+Registry loading normalizes legacy machme and debuggable kinds to byoxpc; new CLI input rejects those aliases. Unknown nested metadata and historical cleanup records survive inspection and unrelated saves. Owned recovery follows the durable registry after the original diagnostic output is gone and retains cleanup state until service and plist absence are established.
+
+**Support — check read.** Registry normalization and durable cleanup preserve historical records and opaque metadata. Context: Static review of the cited producer and assertion branches. Evidence limit: The live workflow uses a current owned service and a constructed historical debuggable record; both retired aliases have separate offline controls. [Source 1](../controller/src/runner_manager.rs), [Source 2](../controller/src/runner_manager.rs), [Source 3](../tests/suites/runner_byoxpc/opt_in/registry_recovery.py) [Check 1](../tests/suites/runner_byoxpc/opt_in/registry_recovery.sh), [Check 2](../controller/src/runner_manager.rs), [Check 3](../controller/src/runner_manager.rs), [Check 4](../controller/src/runner_manager.rs)
 
 <a id="contract-installation-registry"></a>
 ### Runner registry
@@ -4336,12 +4430,11 @@ uses zero if its system time precedes that epoch.
 **Support — check read.** --version succeeds, emits kind version and result.ok true, supplies populated packaged build fields, and reports candidate-plist identity in data and build. Context: Read dispatch and serializer branches; read integration test invoking the selected controller binary and independently extracting its app plist identity. Evidence limit: Check read without execution. Alias version, trailing arguments, exact null result fields and rendering-error exit are source-established here; the cited check exercises --version success. [Source 1](../controller/src/cli.rs), [Source 2](../controller/src/json_contract.rs), [Source 3](../controller/src/json_contract.rs) [Check](../controller/integration/cli_contract.rs)
 
 <a id="contract-identity-version-arguments"></a>
-#### Known gap: Trailing version arguments
+#### Version argument dispatch
 
-Current dispatch selects version reporting from the first argument and ignores
-remaining arguments. The intended argument-count commitment is unresolved;
-the source establishes this acceptance, while the version check exercises the
-single-argument form.
+The first argument --version or version selects version reporting. Remaining arguments are ignored. Successful envelope rendering returns process exit 0; a rendering error returns 2.
+
+**Support — check read.** Version dispatch precedes other command parsing. Context: Static review of the cited producer and assertion branches. Evidence limit: The argument matrix compares kind, build, result and data while allowing each invocation its own timestamp. [Source](../controller/src/cli.rs) [Check](../controller/integration/cli_contract.rs)
 
 ## Rule applicability
 
@@ -4444,7 +4537,7 @@ single-argument form.
 | --- | --- | --- |
 | [Admit client and host observations](#contract-transport-client-admit) | See the linked rule. | Give request-delivery failure precedence; otherwise refuse retention loss, missing capture, unsupported producer/schema or inconsistent capture. Admit the host frame separately only when its retained bytes are complete. Keep raw received bytes at the boundary that received them. |
 | [Exact structural admission](#contract-wire-frame-admit) | See the linked rule. | Check frame extent/magic and exact fingerprint, then the expected root and producer identity before descendants. Refuse wrong kinds, unknown records/tags/cases, missing required fields, invalid UTF-8, out-of-range integers, impossible lengths/counts, duplicate or out-of-order fields/keys and trailing bytes. |
-| [Checking a carried gate](#contract-actor_evidence-gate-check) | `reply.actors[s].actor_id`, `reply.actors[s].owned_reap.capture_ordinal`, `reply.actors[s].owned_reap.departure_requested`, `reply.actors[s].owned_reap.ownership_unbroken`, `reply.phases[f].activation_observation.capture_ordinal`, `reply.phases[f].phase_id`, `reply.phases[p].termination_gate.activation_eligible`, `reply.phases[p].termination_gate.capture_ordinal`, `reply.phases[p].termination_gate.observation`, `reply.phases[p].termination_gate.outcome`, `reply.phases[p].termination_gate.source_actor_id`, `reply.phases[p].termination_gate.source_final_phase_id`, `reply.phases[p].termination_gate.wait.budget_ms`, `reply.phases[p].termination_gate.wait.clock_fault`, `reply.phases[p].termination_gate.wait.elapsed_ms`, `reply.phases[p].termination_gate.wait.native_errno`, `reply.reporting_failure` | Add actor_evidence issues for failed requirements; set top-level disposition_integrity invalid, process_disposition withheld and termination_cause unknown. Preserve the host reply, each actor's independently projected disposition, run result and exit status. |
+| [Checking a carried gate](#contract-actor_evidence-gate-check) | `reply.actors[s].actor_id`, `reply.actors[s].owned_reap.capture_ordinal`, `reply.actors[s].owned_reap.departure_requested`, `reply.actors[s].owned_reap.ownership_unbroken`, `reply.phases[f].activation_observation.capture_ordinal`, `reply.phases[f].phase_id`, `reply.phases[p].termination_gate.activation_eligible`, `reply.phases[p].termination_gate.capture_ordinal`, `reply.phases[p].termination_gate.observation`, `reply.phases[p].termination_gate.outcome`, `reply.phases[p].termination_gate.source_actor_id`, `reply.phases[p].termination_gate.source_final_phase_id`, `reply.phases[p].termination_gate.wait.budget_ms`, `reply.phases[p].termination_gate.wait.clock_fault`, `reply.phases[p].termination_gate.wait.elapsed_ms`, `reply.phases[p].termination_gate.wait.native_errno`, `reply.reporting_failure` | Add actor_evidence issues for failed requirements, with subject_path naming the inspected termination_gate. Set top-level disposition_integrity invalid, process_disposition withheld and termination_cause unknown. Preserve the host reply, each actor's independently projected disposition, run result and exit status. |
 | [The controller checks carried labels](#contract-profile-receipt-labels) | `receipt.capture_stage`, `receipt.producer`, `receipt.status` | On failure, sets `envelope.result.normalized_outcome` to `"malformed_runner_response"`, sets `envelope.result.ok` to `false`, withholds `envelope.data.runner_sandbox_diagnostics`, retains the records `reply`. For `run`, the controller refuses admission of the containing report, reports a failed result and exits with status 1. The retained report remains the host's account. On failure, sets `result.ok` to `false`, sets `result.exit_code` to `1`, sets `result.normalized_outcome` to `"malformed_runner_response"`, sets `runner_verify.normalized_outcome` to `"malformed_runner_response"`, sets `runner_verify.runner_pid` to `null`, retains the records `runner_verify.runner_client`, retains the records `runner_verify.runner_result`. `runner verify` emits its verification envelope and exits with status 1. |
 | [Boundary precedence](#contract-envelope-data-admit) | See the linked rule. | A delivery failure yields tool_error/exit 2; another refused boundary yields its classification/exit 1. Retain the available capture and structurally decoded reply, with runner_sandbox_diagnostics null. Eligible xpc_error can add independent fallback compilation. |
 | [Classify cleanup ownership](#contract-installation-commands-ownership) | See the linked rule. | Classify service ownership from present service executable equality. Classify plist ownership from a regular file with matching Label, complete ProgramArguments, MachServices and XPC_SERVICE_PATH; recorded ownership additionally requires matching UID and plist hash. |
@@ -4453,42 +4546,11 @@ single-argument form.
 
 | Item | Kind |
 | --- | --- |
-| [Direct-build evidence limit](#contract-identity-public-direct-direct_evidence) | evidence |
 | [Ordinary-build history requirement](#contract-identity-surfaces-release_history) | behavior |
-| [Development specimen review](#contract-identity-surfaces-development_review) | meaning |
-| [Trailing version arguments](#contract-identity-version-arguments) | behavior |
-| [Duplicate-key decoding](#contract-request-specimen-duplicate_keys) | evidence |
-| [Override quantities and applicability](#contract-request-overrides-override_inventory) | meaning |
-| [Override fixture coverage](#contract-request-overrides-override_coverage) | evidence |
-| [Parameter example execution](#contract-policy-spec-parameter_evidence) | evidence |
-| [Worker and helper compile classification](#contract-policy-spec-compile_classification) | behavior |
-| [Augment semantics and historical environment](#contract-policy-augments-augment_semantics) | evidence |
-| [Import resolver agreement](#contract-policy-imports-native_import_agreement) | evidence |
-| [Prediction-exclusion basis](#contract-probes-query-exclusion_evidence) | evidence |
-| [Operation controls to attach](#contract-probes-attempt-operation_evidence) | evidence |
-| [Barrier execution evidence](#contract-actors-phase-barrier_evidence) | evidence |
-| [Empty ordinary identifiers](#contract-actors-action-empty_id) | behavior |
-| [Native private-library behavior](#contract-extensions-custody-native_library) | evidence |
-| [Experiment execution](#contract-extensions-examples-execution) | evidence |
-| [Compound-error precedence controls](#contract-refusals-request-compound_order) | evidence |
-| [Example workflow evidence](#contract-refusals-examples-workflow) | evidence |
-| [Late-failure evidence join](#contract-refusals-later-evidence) | evidence |
-| [Live transport evidence](#contract-transport-delivery-live_evidence) | evidence |
-| [Primitive reader coverage](#contract-wire-frame-reader_coverage) | evidence |
-| [Repeated query keys](#contract-wire-validator-duplicate_keys) | behavior |
-| [Direct-mode meaning and input issues](#contract-wire-standalone-meaning) | behavior |
 | [Reporting-failure associations](#contract-reply-failure-publish-associations) | behavior |
-| [Reader scope requiring reconciliation](#contract-actor_evidence-actor-reader_scope) | behavior |
-| [Setup deadline and later application](#contract-actor_evidence-application-late_application) | evidence |
-| [Finding subject](#contract-actor_evidence-gate-check-finding_subject) | behavior |
-| [Cancellation-scope evidence](#contract-actor_evidence-gate-cancellation_evidence) | evidence |
-| [Live-inspection evidence limit](#contract-equipment-execution-live_evidence) | evidence |
+| [Termination cancellation reach](#contract-actor_evidence-gate-cancellation_evidence) | behavior |
 | [Success and findings](#contract-envelope-data-select-success_findings) | behavior |
-| [Shared reader evidence](#contract-diagnostics-execution-reader_evidence) | evidence |
-| [Structured finding subjects](#contract-diagnostics-issue-subject_gap) | meaning |
-| [Import and execution evidence](#contract-dossier-collection-native_gap) | evidence |
-| [Pending verification](#contract-installation-commands-pending_verify) | behavior |
-| [Entitlement read errors and summary counts](#contract-installation-commands-entitlement_errors) | behavior |
-| [Recorded cleanup directory](#contract-installation-commands-ownership_location) | behavior |
-| [Legacy values and evidence](#contract-installation-commands-legacy) | evidence |
+| [Independent semantic classifiers](#contract-diagnostics-execution-reader_evidence-classifier_generation) | behavior |
+| [Unconfirmed vocabulary](#contract-diagnostics-actor-mapping-vocabulary_choice) | behavior |
+| [Reply-wide withholding scope](#contract-diagnostics-issue-subject-withholding_scope) | behavior |
 <!-- END GENERATED PUBLIC CONTRACT -->

@@ -98,6 +98,15 @@ execution. A reporting failure may retain contradictory receipt values only
 with its failure diagnostics and every comparison omitted; receipt structure
 and member types remain required.
 
+Finding-reference controls resolve optional `subject_path` from the whole
+retained runner result, for both aggregate and actor-contained issues. They
+cover object keys, canonical array positions, the root and present null
+endpoints, and reject malformed or unresolvable paths. Separate degraded
+neighbors check required query, attempt, path and worker-receipt member types
+while retaining values whose ordinary relationships are outside that form's
+assessment. The actor subaccount fixtures include each phase's declared
+per-actor visit number; their constructed records supply interpretation evidence.
+
 The missing-file control also verifies the unavailable-result contract,
 rejects an invented prediction, and proves that an expected unavailable
 prediction cannot hide a later attempt failure.

@@ -284,11 +284,13 @@
     },
     "envelope.data.runner_sandbox_diagnostics.actors[].disposition_issues[]": {
       "detail": "string",
-      "kind": "string"
+      "kind": "string",
+      "subject_path": "array"
     },
     "envelope.data.runner_sandbox_diagnostics.disposition_issues[]": {
       "detail": "string",
-      "kind": "string"
+      "kind": "string",
+      "subject_path": "array"
     },
     "envelope.data.specimen": {
       "actors": "array",

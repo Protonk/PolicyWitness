@@ -153,6 +153,85 @@ def exec_observation_controls(artifacts):
     (artifacts / 'exec-observation-reader-controls.json').write_text(json.dumps(receipts, indent=2) + '\n')
 
 
+def diagnostic_subject_controls(run, current):
+    """Constructed reference-form controls, independent of finding predicates."""
+    absent = object()
+
+    def document(path, actor_scope=False):
+        envelope = copy.deepcopy(current)
+        issue = dict(kind='constructed_reference', detail='authored reference-form control')
+        if path is not absent:
+            issue['subject_path'] = copy.deepcopy(path)
+        diagnostics = envelope['data']['runner_sandbox_diagnostics']
+        # These authored scopes exercise reference reading. The consumer does
+        # not certify which predicate produced a finding or recompute its
+        # projection. Product-emitted gate associations have their own corpus.
+        if actor_scope:
+            diagnostics['actors'] = [dict(actor_id='constructed-scope',
+                process_disposition='withheld', termination_cause='unknown', stop_reason=None,
+                disposition_integrity='invalid', disposition_issues=[issue])]
+        else:
+            diagnostics.update(process_disposition='withheld', termination_cause='unknown',
+                               disposition_integrity='invalid', disposition_issues=[issue])
+        return envelope
+
+    positives = [
+        ('absent', absent),
+        ('root', []),
+        ('object', ['steps', '0', 'attempt']),
+        ('nonzero_index', ['steps', '1', 'attempt']),
+        ('scalar_target', ['steps', '0', 'attempt', 'rc']),
+        ('null_target', ['steps', '0', 'attempt', 'errno']),
+    ]
+    negatives = [
+        ('null_path', None, 'must be an array of strings'),
+        ('string_path', 'steps.0.attempt', 'must be an array of strings'),
+        ('numeric_component', ['steps', 0, 'attempt'], 'must be an array of strings'),
+        ('boolean_component', ['steps', True, 'attempt'], 'must be an array of strings'),
+        ('leading_zero', ['steps', '01', 'attempt'], 'not a canonical array position'),
+        ('negative_index', ['steps', '-1', 'attempt'], 'not a canonical array position'),
+        ('decimal_index', ['steps', '1.0', 'attempt'], 'not a canonical array position'),
+        ('unicode_index', ['steps', '\u0661', 'attempt'], 'not a canonical array position'),
+        ('missing_index', ['steps', '3', 'attempt'], 'outside the retained array'),
+        ('oversized_index', ['steps', '9' * 128], 'outside the retained array'),
+        ('missing_key', ['steps', '0', 'absent'], 'names an absent object key'),
+        ('scalar_traversal', ['steps', '0', 'attempt', 'rc', 'child'], 'traverses a non-container'),
+        ('null_traversal', ['steps', '0', 'attempt', 'errno', 'child'], 'traverses a non-container'),
+        ('wrong_root', ['data', 'runner_result', 'steps'], 'names an absent object key'),
+    ]
+    assert len(current['data']['runner_result']['steps']) == 3
+    assert current['data']['runner_result']['steps'][0]['attempt']['errno'] is None
+    for actor_scope in (False, True):
+        scope = 'actor' if actor_scope else 'aggregate'
+        for name, path in positives:
+            envelope = document(path, actor_scope)
+            before = copy.deepcopy(envelope)
+            run('subject_' + scope + '_' + name, envelope)
+            assert envelope == before, 'reference reading changed retained evidence or projections'
+        for name, path, reason in negatives:
+            envelope = document(path, actor_scope)
+            before = copy.deepcopy(envelope)
+            location = ('data.runner_sandbox_diagnostics.actors[0]' if actor_scope else
+                        'data.runner_sandbox_diagnostics')
+            prefix = location + '.disposition_issues[0].subject_path '
+            run('subject_' + scope + '_' + name, envelope, rejected_by=prefix)
+            errors = validate(envelope)
+            assert any(error.startswith(prefix) and reason in error for error in errors), (name, errors)
+            assert envelope == before, 'invalid reference reading changed retained evidence'
+
+    # The envelope version still gates all interpretation; an independent
+    # dossier fault still accumulates beside an admitted malformed reference.
+    foreign = document(['steps', '01'])
+    foreign['build']['contract'] = 'test:foreign'
+    run('subject_version_gate', foreign, rejected_by='unsupported controller envelope')
+    assert len(validate(foreign)) == 1, validate(foreign)
+    combined = document(['steps', '3'])
+    del combined['data']['specimen']['host']['arch']
+    run('subject_combined_faults', combined, rejected_by='outside the retained array')
+    errors = validate(combined)
+    assert 'invalid data.specimen.host' in errors, errors
+
+
 def consumer_controls(artifacts, current):
     """Constructed JSON interpretation controls; no new native observation."""
     records = []
@@ -185,6 +264,7 @@ def consumer_controls(artifacts, current):
         chosen = select(steps(e), step_id='fs_write_allowed', observation='succeeded', order='query_first')
         require(len(chosen) == 1 and chosen[0]['attempt']['outcome'] == 'ok', 'allowed write must be selectable by its record')
     run('constructed_current_run', current, allowed_write)
+    diagnostic_subject_controls(run, current)
 
     from runner_client_capture_controls import run_capture_controls
     run_capture_controls(run)
@@ -378,6 +458,40 @@ def consumer_controls(artifacts, current):
     failed = copy.deepcopy(current)
     degraded(failed)
     run_host('reporting_failure_preserved', failed, preserved)
+    # Retention waives ordinary evidence relationships, not the carried
+    # query/attempt objects or their already-required member types.
+    for name, change, diagnostic in [
+        ('query_missing', lambda s: s.pop('sandbox_check'), 'missing sandbox_check'),
+        ('attempt_missing', lambda s: s.pop('attempt'), 'missing attempt'),
+        ('attempt_rc_missing', lambda s: s['attempt'].pop('rc'), 'invalid attempt.rc'),
+        ('attempt_rc_fractional', lambda s: s['attempt'].update(rc=0.5), 'invalid attempt.rc'),
+        ('attempt_errno_fractional', lambda s: s['attempt'].update(errno=0.5), 'invalid attempt.errno'),
+        ('query_operation_missing', lambda s: s['sandbox_check'].pop('operation'), 'missing sandbox_check.operation'),
+        ('query_filter_missing', lambda s: s['sandbox_check'].pop('filter_kind'), 'missing sandbox_check.operation'),
+        ('path_input_missing', lambda s: s['attempt']['path_diagnostics'].pop('input'), 'require a string input'),
+        ('path_compact_missing', lambda s: s['attempt']['path_diagnostics'].pop('same_as_input'), 'require same_as_input'),
+        ('path_compact_type', lambda s: s['attempt']['path_diagnostics'].update(same_as_input=[3]), 'array of strings'),
+    ]:
+        malformed = copy.deepcopy(failed)
+        change(first(malformed))
+        run_host('reporting_failure_shape_' + name, malformed, rejected_by=diagnostic)
+    retained = copy.deepcopy(failed)
+    first(retained)['attempt'].pop('requested_kind')
+    first(retained)['attempt'].pop('requested_action')
+    first(retained)['attempt']['path_diagnostics'].update(
+        observer='retained_unknown', same_as_input=['retained_future_form'])
+    run_host('reporting_failure_retained_optional_intent_and_path_relationship', retained)
+    # Required timeout members stay typed, while contradictory values and
+    # associations are retained for their ordinary reader rather than certified.
+    retained = copy.deepcopy(failed)
+    timeout = dict(budget_ms=-1, elapsed_ms=0, bytes_written=50, bytes_expected=40)
+    runner(retained)['runner_subprocess']['policy_transfer_timeout'] = timeout
+    run_host('reporting_failure_timeout_relationship_retained', retained)
+    for field in ('budget_ms', 'elapsed_ms', 'bytes_written', 'bytes_expected'):
+        malformed = copy.deepcopy(retained)
+        runner(malformed)['runner_subprocess']['policy_transfer_timeout'].pop(field)
+        run_host('reporting_failure_timeout_missing_' + field, malformed,
+                 rejected_by='invalid policy_transfer_timeout observation')
     # Reporting failure retains the contradictory receipt that stopped ordinary
     # encoding. Its values are diagnostics; object/member types remain required.
     for name, receipt in [
@@ -388,7 +502,8 @@ def consumer_controls(artifacts, current):
         runner(retained)['runner_subprocess']['worker_evidence']['policy_read'] = receipt
         run_host('reporting_failure_policy_read_' + name, retained)
     for name, receipt in [('missing', {'bytes_expected': 43}),
-                          ('type', {'bytes_expected': 43, 'bytes_received': '28'})]:
+                          ('type', {'bytes_expected': 43, 'bytes_received': '28'}),
+                          ('fractional', {'bytes_expected': 43, 'bytes_received': 28.5})]:
         malformed = copy.deepcopy(failed)
         runner(malformed)['runner_subprocess']['worker_evidence']['policy_read'] = receipt
         run_host('reporting_failure_policy_read_' + name, malformed, rejected_by='policy_read')

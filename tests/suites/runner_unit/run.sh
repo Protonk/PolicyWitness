@@ -77,4 +77,10 @@ test_run_logged "${PW_TEST_ARTIFACTS}/actor-readers.log" "actor reader replay fa
   --include-ignored --exact run_flow::tests::actor_driver_replies_cross_readers
 if ! grep -Fxq 'running 1 test' "${PW_TEST_ARTIFACTS}/actor-readers.log"; then test_fail "actor replay did not run"; fi
 
+test_step definition_readers "read constructed reply definitions with independently scoped judgments"
+test_run_logged "${PW_TEST_ARTIFACTS}/definition-readers.log" "reader definition corpus replay failed" \
+  cargo test --jobs 2 --manifest-path "${ROOT_DIR}/controller/Cargo.toml" --bin policy-witness -- \
+  --include-ignored --exact run_flow::tests::reader_definition_corpus_cross_readers
+if ! grep -Fxq 'running 1 test' "${PW_TEST_ARTIFACTS}/definition-readers.log"; then test_fail "definition replay did not run"; fi
+
 test_pass "${SUMMARY}" "{\"log\":\"${RUN_LOG}\"}"

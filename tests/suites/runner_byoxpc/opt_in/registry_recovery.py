@@ -347,6 +347,49 @@ try:
     assert installed['bootstrapped'] and installed['state'] == 'installed'
     assert installed['runner']['contract'] == build_context.candidate_contract()
     data(['runner', 'verify', '--service-name', service])
+    # The same owned live service remains inspectable through explicit verify
+    # while its constructed Pending record refuses ordinary execution. Restore
+    # the exact installed registry even if an assertion or invocation fails.
+    installed_registry = registry.read_bytes()
+    (out / 'pending-verify-installed-registry.json').write_bytes(installed_registry)
+    pending_registry = json.loads(installed_registry)
+    selected = [record for record in pending_registry['runners']
+                if record['id'] == installed['runner']['id'] and record['service_name'] == service]
+    assert len(selected) == 1 and Path(selected[0]['bundle_path']) == bundle
+    selected[0]['state'] = 'pending'
+    try:
+        save(registry, pending_registry)
+        pending_bytes = registry.read_bytes()
+        (out / 'pending-verify-pending-registry.json').write_bytes(pending_bytes)
+        specimen = staging / 'live-pending.json'
+        save(specimen, dict(contract=build_context.candidate_contract(), specimen_id='live-pending',
+                            policy=dict(format='sbpl', sbpl_source='(version 1)\n(allow default)'),
+                            runner=dict(mode='byoxpc', service=service), probe_plan=[]))
+        refused = json.loads(command(['run', specimen], code=2, label='live-pending-run').stdout)
+        assert refused['result']['normalized_outcome'] == 'tool_error', refused
+        assert refused['result']['error'] == 'external runner is pending installation', refused
+        assert refused['data']['runner_client'] is None and refused['data']['runner_result'] is None, refused
+        verified = json.loads(command(['runner', 'verify', '--service-name', service],
+                                      label='live-pending-verify').stdout)
+        assert verified['kind'] == 'runner_verify' and verified['result']['ok'] is True, verified
+        assert verified['result']['normalized_outcome'] == 'finished', verified
+        observed = verified['data']
+        assert observed['state'] == 'pending' and observed['runner_id'] == installed['runner']['id'], observed
+        assert observed['service_name'] == service and observed['normalized_outcome'] == 'finished', observed
+        reply = observed['runner_result']
+        assert observed['runner_client'] is not None and observed['runner_pid'] == reply['pid'] > 0, observed
+        assert reply['producer']['contract'] == build_context.candidate_contract(), reply
+        assert reply['specimen_id'] == reply['run_kind'] == 'runner_verify' and reply['steps'] == [], reply
+        assert reply['normalized_outcome'] == 'finished' and reply['sandboxed_after_apply'] is True, reply
+        assert reply['runner_subprocess']['reaped'] is True, reply
+        assert registry.read_bytes() == pending_bytes, 'verify changed the pending registry'
+    finally:
+        try:
+            (out / 'pending-verify-before-restore.json').write_bytes(registry.read_bytes())
+        finally:
+            registry.write_bytes(installed_registry)
+        assert registry.read_bytes() == installed_registry
+    observations.append('owned live Pending record refuses ordinary selection but explicit verify invokes its fixed request without changing registry')
     # A constructed historical registry record on a current host proves that
     # the execution gate does not prevent inspection or owned cleanup. It does
     # not establish RPC behavior against a historical service implementation.

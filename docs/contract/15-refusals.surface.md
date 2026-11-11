@@ -86,13 +86,24 @@ defines: "value"
 
 Each code's condition remains attached to its owning input rule. This list supplies current examples for the open code vocabulary.
 
-### Compound-error precedence controls {compound_order: gap}
+### Branch-local refusal precedence {compound_order: definition}
 
 ```contract
-kind: "evidence"
+defines: "value"
 ```
 
-The source defines deterministic branch-local precedence. Paired controls covering every combination of identity, unknown fields, capacity and semantic errors remain to be assembled; this draft credits only the inspected identity and bounded-path controls.
+Each entry reports the first failure reached in its own traversal. CLI parsing, controller identity and selector checks, augmentation, host decoding, capacity and meaning admission remain distinct boundaries. Representative compound-error neighbours and one-component corrections identify the boundary reached by each input.
+
+#### Disposition support {disposition_support: owner}
+
+```contract
+grade: "check_read"
+source: [{"path":"controller/src/run_flow.rs","symbol":"fn run(args:"},{"path":"runner/Sources/PWRunnerCore/ProbeRunner.swift","symbol":"sandboxCheckFailure"}]
+pins: "Controller preparation and typed host meaning admission have their own ordered branches."
+context: "Static review of the cited producer and assertion branches."
+check: [{"path":"tests/suites/runner_outcome_bad_request/contract.py","symbol":"refusal_workflows","form":"test"}]
+limits: "The matrix checks selected neighbouring failures and their corrections through actual CLI and direct-host entries."
+```
 
 ### Support {support: owner}
 
@@ -101,7 +112,7 @@ scope: "subtree"
 grade: "check_read"
 source: [{"path": "runner/Sources/PWRunnerCore/PWRunnerRequest.swift", "symbol": "PWRunnerRequestFailure"}, {"path": "runner/Sources/PWRunnerCore/PWRunnerService.swift", "symbol": "requestDecodeFailure"}, {"path": "runner/Sources/PWRunnerCore/PWRunnerCoding.swift", "symbol": "rejectUnknownRequestKeys"}, {"path": "runner/Sources/PWRunnerCore/ProbeRunner.swift", "symbol": "admitSpecimen"}, {"path": "runner/Sources/PWRunnerCore/ActorPlan.swift", "symbol": "normalizeActorPlan"}]
 pins: "The adjacent meanings follow the named request, producer and observation branches."
-context: "Current source read for this draft."
+context: "Review of the named producer branches."
 limits: "Read identity-before-unknown, unknown-field and actor parameter-path assertions. The code examples are source-derived, with the reference-family details owned by extensions."
 check: [{"path": "runner/Tests/PWRunnerCoreTests/RequestContractTests.swift", "symbol": "runRequestContractTests", "form": "test"}]
 ```
@@ -157,8 +168,8 @@ scope: "subtree"
 grade: "check_read"
 source: [{"path": "controller/src/request_patch.rs", "symbol": "validate_contract"}, {"path": "controller/src/run_flow.rs", "symbol": "bad_request"}, {"path": "controller/src/run_flow.rs", "symbol": "parse_arguments"}]
 pins: "The adjacent meanings follow the named request, producer and observation branches."
-context: "Current source read for this draft."
-limits: "Source inspection supplies these branch meanings; this draft credits no execution."
+context: "Review of the named producer branches."
+limits: "The checks cover exact identity admission and UTF-8 path-component and depth withholding."
 check: [{"path": "controller/src/request_patch.rs", "symbol": "request_contract_is_exact_and_required", "form": "test"}, {"path": "controller/src/request_patch.rs", "symbol": "request_failure_path_components_use_utf8_bytes_and_withhold_the_whole_path", "form": "test"}, {"path": "controller/src/request_patch.rs", "symbol": "request_failure_path_depth_retains_eight_and_withholds_nine", "form": "test"}]
 ```
 
@@ -196,8 +207,8 @@ scope: "subtree"
 grade: "source_read"
 source: [{"path": "controller/src/run_flow.rs", "symbol": "RequestFailureProjection"}, {"path": "controller/src/run_flow.rs", "symbol": "RequestFailureProjection::Runner"}]
 pins: "The adjacent meanings follow the named request, producer and observation branches."
-context: "Current source read for this draft."
-limits: "Source inspection supplies these branch meanings; this draft credits no execution."
+context: "Review of the named producer branches."
+limits: "The checks cover exact identity admission and UTF-8 path-component and depth withholding."
 ```
 
 
@@ -273,8 +284,8 @@ scope: "subtree"
 grade: "check_read"
 source: [{"path": "runner/Sources/PWRunnerCore/CWorkerRequestPlanning.swift", "symbol": "admissionRefusalReply"}, {"path": "runner/Sources/PWRunnerCore/CWorkerRequestPlanning.swift", "symbol": "requestCapacityFailure"}, {"path": "runner/Sources/PWRunnerCore/PWRunnerRequest.swift", "symbol": "PWRunnerAdmissionFailure"}]
 pins: "The adjacent meanings follow the named request, producer and observation branches."
-context: "Current source read for this draft."
-limits: "Read actor parameter count, UTF-8 boundary, NUL, safe-key and path-withholding controls. Other capacity fixtures are inherited evidence until release validation."
+context: "Review of the named producer branches."
+limits: "The cited controls cover actor parameter count, UTF-8 and NUL boundaries, safe keys and path withholding."
 check: [{"path": "runner/Tests/PWRunnerCoreTests/RequestContractTests.swift", "symbol": "runRequestContractTests", "form": "test"}]
 ```
 
@@ -294,13 +305,24 @@ A target-absence check made by a teaching control is separate evidence of the fi
 
 A paired probe can query `file-write-create` with a path that does not exist at planning time, then attempt `file/create` at that path. The planner reports `prediction_unavailable`; the attempt remains eligible to run. A successful native create/open and an independent newly-created-file check answer different observations. Later realpath diagnostics can resolve a path the earlier query planner could not resolve.
 
-### Example workflow evidence {workflow: gap}
+### Refusal correction workflows {workflow: definition}
 
 ```contract
-kind: "evidence"
+defines: "value"
 ```
 
-The request example corpus and its decode/admission harness were read. Full CLI/XPC execution, target-before/after observations and guide recovery commands for these examples must be checked at the release boundary; this draft credits no live effect.
+The capture correction chain changes the misspelled capture option, then supplies a valid nonce, then reaches application and capture. The same intent is exercised through CLI and direct-host entries. Each refused input retains its first diagnostic and no child effect; each successful correction retains its request, reply and independently checked target effect.
+
+#### Disposition support {disposition_support: owner}
+
+```contract
+grade: "check_read"
+source: {"path":"controller/src/run_flow.rs","symbol":"fn run(args:"}
+pins: "Controller refusals precede invocation at their own preparation boundaries."
+context: "Static review of the cited producer and assertion branches."
+check: [{"path":"tests/suites/runner_outcome_bad_request/contract.py","symbol":"refusal_workflows","form":"test"}]
+limits: "This owner describes the concrete correction chain; the guide presentation has its own workflow validation."
+```
 
 ### Support {support: owner}
 
@@ -309,8 +331,8 @@ scope: "subtree"
 grade: "check_read"
 source: [{"path": "runner/Sources/PWRunnerCore/PWRunnerCoding.swift", "symbol": "rejectUnknownRequestKeys"}, {"path": "runner/Sources/PWRunnerCore/CWorkerRequestPlanning.swift", "symbol": "pathFilterIsUnresolvable"}, {"path": "controller/tools/pw_probe_runner/pw_probe_runner.c", "symbol": "attempt_file_create"}]
 pins: "The adjacent meanings follow the named request, producer and observation branches."
-context: "Current source read for this draft."
-limits: "Read the corpus-loop assertions and relevant producer branches. Runtime file-effect assertions were not read or executed in this drafting pass."
+context: "Review of the named producer branches."
+limits: "The request corpus checks refusal fields; the correction workflow and independent file effects have their own support."
 check: [{"path": "runner/Tests/PWRunnerCoreTests/RequestContractTests.swift", "symbol": "runRequestContractTests", "form": "test"}]
 ```
 
@@ -330,10 +352,20 @@ A client `xpc_timeout` records expiry of the client's wait without a host reply.
 
 Worker or validator launch failure belongs to the respective child record. A missing completed slot leaves its operation result unresolved. `runner_reporting_failed` carries the reporting failure's explicit retention account and original summary when available. Preserve the records that were actually received while reading each failure at its own scope.
 
-### Late-failure evidence join {evidence: gap}
+### Later-outcome observation owners {evidence: definition}
 
 ```contract
-kind: "evidence"
+defines: "value"
 ```
 
-The full late-outcome catalog, capture retention, reporting fallback and refusal precedence belong to the transport, reply, lifecycle and envelope surfaces. Their runtime source/check owners must support those shared distinctions during integration; this surface supplies the request-refusal account.
+Transport delivery and capture admission, host publication, worker and validator lifecycle, and controller disposition have separate owners. Their accounts retain the available raw evidence and identify the boundary that refused or withheld a conclusion. Rich reporting retains observations with removed comparisons; minimal reporting retains scalar context and original summary diagnostics; empty publication reaches receiver decoding failure.
+
+#### Disposition support {disposition_support: owner}
+
+```contract
+grade: "source_read"
+source: [{"path":"controller/src/runner_client.rs","symbol":"parse_runner_client_output"},{"path":"runner/Sources/PWRunnerCore/PWRunnerService.swift","symbol":"pwRunnerReportData"},{"path":"controller/src/run_flow.rs","symbol":"admit_reply"}]
+pins: "Delivery/capture precedence, successive reporting writers and controller reply admission retain separate consequences."
+context: "Static review of the cited production branches."
+limits: "Constructed writer and reader controls, source-built child controls and native selected-app outcomes retain their individual evidence grades."
+```

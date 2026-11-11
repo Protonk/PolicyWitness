@@ -529,6 +529,31 @@ The positive cases require issuance/consumption/access coverage; a native refusa
 retained as missing coverage, never reclassified as sandbox enforcement failure.
 An intervening release is observed without assuming it revokes access.
 
+Two additional three-actor requests distinguish an evaluated gate failure from
+an unreached gate. The first uses the existing post-apply sleep override to
+keep the source alive after its final phase completes, through the normal
+five-second termination wait. It requires global schedule cancellation: both
+the dependent and a later unrelated actor retain unactivated phases,
+uninvoked validators and terminal unpublished attempt records. Source cleanup
+reaps after the failed gate closes. The second gives the dependent invalid SBPL:
+its compilation failure leaves the gate unreached, and a later unrelated actor
+must complete a fresh read of the known contents and file identity. Both
+requests require output collected after a confirmed reap for all three workers.
+The captures exercise the signed candidate's production scheduler and native
+workers; the first request supplies a deliberate sleep through the test seam.
+
+A paired ordinary/actor control supplies `worker_timeout_ms: 200` and
+`worker_post_apply_hang_ms: 500`. The ordinary empty phase completes after
+application, then its recorded 200 ms sentinel allowance expires. The actor
+request keeps the normal setup/execution allowances: source completes an empty
+phase, a natural owned-reap gate admits reader, and reader obtains the known
+fresh-file bytes and identity. Charged actor execution exceeds 200 ms while its
+recorded allowance remains 120,000 ms. The file observation and gate/reap
+association accompany that timing discriminator; the requested sleep alone
+establishes neither its reached boundary nor an elapsed duration. Both captures
+require confirmed worker reaps before the existing fixture cleanup. Final done
+and natural exit during grace accompany the earlier ordinary sentinel timeout.
+
 `extension_redelegation` runs the principal three-actor specimen through
 the public CLI against a test-owned file, then a positive calibration and four
 narrow contrasts. The witnessing assertions concern the apparatus: `A`, `B` and

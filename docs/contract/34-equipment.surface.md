@@ -530,17 +530,24 @@ already selected by the scheduler. Static `bound` and live `matched` express
 their respective observations; the signature entitlement dictionary supplies
 the values assessed at each boundary.
 
-### Live-inspection evidence limit {live_evidence: gap}
+### Live-inspection evidence limit {live_evidence: definition}
 
 ```contract
-kind: "evidence"
+defines: "value"
 ```
 
-The read unit controls construct failing Security-call results and verify the
-retained attempted prefix and ineligible execution. The signed-product
-acceptance evidence still needs a case reaching runtime inspection failure
-and asserting cancellation with earlier application observations retained.
-The optional additional deadline after an unavailable orchestration clock sample is source-read; this draft credits no control of that initial failure followed by valid inspection clocks.
+Constructed Security-call failures establish attempted-prefix retention, inspection_failed and ineligibility. Signed normal observations establish association of the selected worker with its live inspection. Spontaneous native Security failure after application remains unobserved. The optional deadline after an unavailable initial orchestration clock sample is source-supported; later inspection-clock controls concern their own samples.
+
+#### Disposition support {disposition_support: owner}
+
+```contract
+grade: "check_read"
+source: [{"path":"runner/Sources/PWRunnerCore/ActorEquipment.swift","symbol":"inspect"},{"path":"runner/Sources/PWRunnerCore/ActorOrchestration.swift","symbol":"runActors"}]
+pins: "Live-inspection classification and the optional additional orchestration deadline have distinct inputs."
+context: "Static review of the cited producer and assertion branches."
+check: [{"path":"runner/Tests/PWRunnerCoreTests/ActorEquipmentTests.swift","symbol":"runActorEquipmentTests","form":"test"}]
+limits: "Injected failure prefixes and later clock controls supply constructed observations. Ownership loss or a mismatch has a different outcome from native inspection failure."
+```
 
 ## Live inspection call {native_observation: subject}
 

@@ -230,6 +230,235 @@ def assert_composition(envelope, runner, spec, resources, prefix, failed_actor=N
                 native_releases={e['step_id']: e.get('native_result') for e in events.values() if e['operation'] == 'release'})
 
 
+def gate_specimen(target, unavailable_dependent):
+    spec = dict(contract=build_context.candidate_contract(),
+        specimen_id='gate_unreached' if unavailable_dependent else 'gate_cancels_schedule',
+        actors=[actors.apply_actor(name, actors.CALIBRATION_POLICY)
+                for name in ('source', 'dependent', 'unrelated')], phases=[
+            dict(phase_id='source_final', actor_id='source', actions=[]),
+            dict(phase_id='dependent', actor_id='dependent',
+                 after_termination=dict(actor_id='source'),
+                 actions=[actors.read_probe('dependent_read', target)]),
+            dict(phase_id='unrelated', actor_id='unrelated',
+                 actions=[actors.read_probe('unrelated_read', target)])])
+    if unavailable_dependent:
+        spec['actors'][1]['sandbox']['policy']['sbpl_source'] = '(version 1) (allow'
+    else:
+        # The existing seam sleeps after the worker's final phase, before done.
+        # Only source reaches that sleep: the other actors remain unactivated.
+        # Keep normal host allowances so an overall deadline cannot stand in
+        # for the failed gate's cancellation of later unrelated work.
+        spec['_test_overrides'] = dict(worker_post_apply_hang_ms=10000)
+    return spec
+
+
+def assert_unactivated(phase, step):
+    assert phase.get('activation_observation') is None and phase.get('visit_timing') is None
+    assert phase['arrival_observed'] is False and phase['completion_observed'] is False
+    assert phase['collection_status'] == 'not_reached' and phase.get('validator_subprocess') is None
+    ordering = phase['ordering']
+    assert ordering['collection_closed_before_proceed'] is False
+    assert ordering['proceed_set'] is False and ordering['proceed_observed'] is False
+    assert ordering['validator_disposition'] == 'not_invoked' and ordering['protocol_violations'] == []
+    attempt = step['attempt']
+    assert attempt['result_source'] == 'synthetic' and attempt['missing_reason'] == 'slot_incomplete'
+    assert attempt['outcome'] == 'no_completed_result' and attempt.get('fresh_read') is None
+    lifecycle = attempt['lifecycle']
+    assert lifecycle['summary'] == 'not_reached'
+    assert lifecycle['boundary']['state'] == 'supported' and lifecycle['boundary']['answer'] == 'not_reached'
+    assert lifecycle['result']['state'] == 'supported' and lifecycle['result']['answer'] == 'unpublished'
+    assert step['sandbox_check']['result_source'] == 'synthetic'
+    assert step['sandbox_check']['missing_reason'] == 'validator_not_invoked'
+    assert step['comparison']['order'] == 'unestablished'
+
+
+def assert_gate_schedule(runner, spec, target, unavailable_dependent):
+    assert runner['normalized_outcome'] == 'runner_failed'
+    assert [actor['actor_id'] for actor in runner['actors']] == ['source', 'dependent', 'unrelated']
+    assert [phase['phase_id'] for phase in runner['phases']] == ['source_final', 'dependent', 'unrelated']
+    assert [step['step_id'] for step in runner['steps']] == ['dependent_read', 'unrelated_read']
+    actor_records = {actor['actor_id']: actor for actor in runner['actors']}
+    pids = [actor['launch']['pid'] for actor in runner['actors']]
+    assert len(set(pids)) == 3 and all(pid > 0 for pid in pids)
+    for expected, actual in zip(spec['actors'], runner['actors']):
+        failed = unavailable_dependent and expected['actor_id'] == 'dependent'
+        assert actual['setup_status'] == ('setup_failed' if failed else 'applied')
+        assert actual['applied'] is (not failed) and actual['application_count'] == (0 if failed else 1)
+        digest = hashlib.sha256(expected['sandbox']['policy']['sbpl_source'].encode()).hexdigest()
+        assert actual['policy_sha256'] == actual['policy_received_sha256'] == digest
+        assert actual['launch']['parent_pid'] == runner['pid']
+        sub = actual['subprocess']
+        assert sub['pid'] == actual['launch']['pid'] and sub['reaped'] is True
+        # Final collection remains observable for each launched actor, including
+        # both parked actors after cancellation and the setup failure neighbour.
+        assert sub['collection_basis'] == 'after_confirmed_reap'
+        assert isinstance(sub.get('worker_evidence'), dict) and isinstance(sub.get('disposition'), dict)
+        reap = actual['owned_reap']
+        assert reap['pid'] == reap['native_rc'] == sub['pid'] and reap['ownership_unbroken'] is True
+    source, dependent, unrelated = runner['phases']
+    assert source['arrival_observed'] is True and source['completion_observed'] is True
+    assert source['collection_status'] == 'not_needed'
+    assert source['ordering']['collection_closed_before_proceed'] is True
+    assert source['ordering']['proceed_set'] is True and source['ordering']['proceed_observed'] is True
+    assert source['ordering']['protocol_violations'] == []
+    assert unrelated.get('termination_gate') is None
+    assert_unactivated(dependent, runner['steps'][0])
+    gate = dependent['termination_gate']
+    assert gate['source_actor_id'] == 'source' and gate['source_final_phase_id'] == 'source_final'
+    assert gate['activation_eligible'] is False
+    execution = runner['schedule']['execution_wait']
+    assert execution['clock_fault'] is False and execution['elapsed_ms'] < execution['budget_ms']
+    if unavailable_dependent:
+        assert gate['outcome'] == 'not_reached'
+        assert all(gate.get(name) is None for name in ('wait', 'observation', 'capture_ordinal'))
+        assert runner['schedule'].get('cancelled') is None and execution['stop'] == 'schedule_complete'
+        assert unrelated['activation_observation']['capture_ordinal'] > 0
+        assert unrelated['arrival_observed'] is True and unrelated['completion_observed'] is True
+        assert unrelated['collection_status'] == 'collected' and unrelated['validator_subprocess']['reaped'] is True
+        ordering = unrelated['ordering']
+        assert ordering['collection_closed_before_proceed'] is True
+        assert ordering['proceed_set'] is True and ordering['proceed_observed'] is True
+        assert ordering['protocol_violations'] == []
+        step = runner['steps'][1]
+        assert step['sandbox_check']['result_source'] == 'validator'
+        assert step['sandbox_check']['pid'] == actor_records['unrelated']['launch']['pid']
+        assert step['comparison']['order'] == 'query_first'
+        attempt = step['attempt']
+        assert attempt['result_source'] == 'worker' and attempt['rc'] == 0
+        fresh = attempt['fresh_read']
+        assert fresh['open_rc'] >= 0 and bytes.fromhex(fresh['content_hex']) == target['contents']
+        assert fresh['identity']['device'] == target['device'] and fresh['identity']['inode'] == target['inode']
+    else:
+        assert gate['outcome'] == 'timed_out' and gate.get('observation') is None
+        assert gate['wait']['budget_ms'] == 5000 and gate['wait']['stop'] == 'timed_out'
+        assert gate['wait']['clock_fault'] is False
+        assert runner['schedule']['cancelled'] == 'termination_dependency:timed_out'
+        assert execution['stop'] == 'dependency_failed'
+        assert source['activation_observation']['capture_ordinal'] < gate['capture_ordinal']
+        assert actor_records['source']['owned_reap']['capture_ordinal'] > gate['capture_ordinal']
+        assert actor_records['source']['subprocess']['exit_requested'] is True
+        assert_unactivated(unrelated, runner['steps'][1])
+    return dict(gate=gate, schedule=runner['schedule'],
+                phases=runner['phases'], attempts=runner['steps'],
+                final_collection={name: actor['subprocess'] for name, actor in actor_records.items()})
+
+
+
+def timeout_applicability_specimens(target):
+    # The ordinary sentinel starts after readiness and excludes collection.
+    # Actor execution keeps its separate allowance. The same post-phase sleep
+    # is shorter than the separate final cleanup grace in both forms.
+    overrides = dict(worker_timeout_ms=200, worker_post_apply_hang_ms=500)
+    ordinary = dict(contract=build_context.candidate_contract(),
+        specimen_id='ordinary_worker_timeout',
+        policy=dict(format='sbpl', sbpl_source=actors.CALIBRATION_POLICY),
+        probe_plan=[], _test_overrides=dict(overrides))
+    actor = dict(contract=build_context.candidate_contract(),
+        specimen_id='actor_ignores_worker_timeout',
+        actors=[actors.apply_actor(name, actors.CALIBRATION_POLICY) for name in ('source', 'reader')],
+        phases=[dict(phase_id='source_final', actor_id='source', actions=[]),
+            dict(phase_id='read_after_source', actor_id='reader',
+                after_termination=dict(actor_id='source'),
+                actions=[actors.read_probe('read_after_source', target)])],
+        _test_overrides=dict(overrides))
+    return [('ordinary_worker_timeout', ordinary, False), ('actor_ignores_worker_timeout', actor, True)]
+
+
+def assert_timeout_applicability(runner, spec, target, actor_form):
+    assert runner['specimen_id'] == spec['specimen_id']
+    assert runner['test_overrides'] == spec['_test_overrides']
+    assert runner.get('request_failure') is None
+    if not actor_form:
+        assert runner['normalized_outcome'] == 'runner_timeout' and runner['rc'] == 1
+        assert runner['sandboxed_after_apply'] is True
+        assert runner['steps'] == [] and len(runner['phases']) == 1
+        phase = runner['phases'][0]
+        assert phase['phase_id'] == 'main' and phase['action_ids'] == []
+        assert phase['arrival_observed'] is True and phase['completion_observed'] is True
+        assert phase['collection_status'] == 'not_needed' and phase.get('validator_subprocess') is None
+        assert phase['ordering']['proceed_observed'] is True
+        sub = runner['runner_subprocess']
+        assert sub['pid'] == runner['pid'] and sub['pid'] > 0 and sub['reaped'] is True
+        assert sub['ready_byte_received'] is True and sub['collection_basis'] == 'after_confirmed_reap'
+        assert sub['done_observed'] is True and sub['exit_code'] == 0 and sub.get('term_signal') is None
+        assert sub.get('termination_request') is None and sub['grace_end'] == 'reaped_during_grace'
+        assert sub['poll_stop_reason'] == 'sentinel_deadline' and sub['partial_steps'] is False
+        wait = sub['sentinel_wait']
+        assert wait['budget_ms'] == 200 and wait['stop'] == 'sentinel_deadline' and wait['clock_fault'] is False
+        assert type(wait['elapsed_ms']) is int and type(wait['excluded_ms']) is int
+        assert wait['elapsed_ms'] - wait['excluded_ms'] >= 200
+        # Final done and a natural exit in grace establish that the worker
+        # passed its post-phase seam; they do not rewrite the earlier timeout.
+        return dict(sentinel_wait=wait, subprocess=sub, phase=phase)
+    assert runner['execution_form'] == 'actors'
+    assert runner['normalized_outcome'] == 'finished' and runner['rc'] == 0
+    assert [a['actor_id'] for a in runner['actors']] == ['source', 'reader']
+    assert [p['phase_id'] for p in runner['phases']] == ['source_final', 'read_after_source']
+    assert [s['step_id'] for s in runner['steps']] == ['read_after_source']
+    source_actor, reader_actor = runner['actors']
+    assert source_actor['launch']['pid'] != reader_actor['launch']['pid']
+    digest = hashlib.sha256(actors.CALIBRATION_POLICY.encode()).hexdigest()
+    for actual in runner['actors']:
+        assert actual['setup_status'] == 'applied' and actual['applied'] is True and actual['application_count'] == 1
+        assert actual['application'] == dict(state='observed', basis='applied_publication')
+        assert actual['policy_sha256'] == actual['policy_received_sha256'] == digest
+        assert actual['launch']['parent_pid'] == runner['pid']
+        sub = actual['subprocess']
+        assert sub['pid'] == actual['launch']['pid'] and sub['pid'] > 0
+        assert sub['reaped'] is True and sub['exit_code'] == 0 and sub.get('term_signal') is None
+        assert sub['ready_byte_received'] is True and sub['done_observed'] is True
+        assert sub['collection_basis'] == 'after_confirmed_reap' and sub.get('sentinel_wait') is None
+        assert sub.get('termination_request') is None
+    schedule = runner['schedule']
+    assert schedule.get('cancelled') is None and schedule['setup_wait']['budget_ms'] == 10000
+    execution = schedule['execution_wait']
+    assert execution['budget_ms'] == 120000 and execution['stop'] == 'schedule_complete'
+    assert execution['clock_fault'] is False
+    assert type(execution['elapsed_ms']) is int and type(execution['excluded_ms']) is int
+    charged_ms = execution['elapsed_ms'] - execution['excluded_ms']
+    assert 200 < charged_ms < 120000, execution
+    source_phase, reader_phase = runner['phases']
+    assert source_phase['action_ids'] == [] and reader_phase['action_ids'] == ['read_after_source']
+    for phase in runner['phases']:
+        assert phase['arrival_observed'] is True and phase['completion_observed'] is True
+        assert phase['ordering']['collection_closed_before_proceed'] is True
+        assert phase['ordering']['proceed_set'] is True and phase['ordering']['proceed_observed'] is True
+        assert phase['ordering']['protocol_violations'] == []
+    assert source_phase['collection_status'] == 'not_needed'
+    assert reader_phase['collection_status'] == 'collected' and reader_phase['validator_subprocess']['reaped'] is True
+    gate, reap = reader_phase['termination_gate'], source_actor['owned_reap']
+    assert gate['outcome'] == 'satisfied' and gate['activation_eligible'] is True
+    assert gate['source_actor_id'] == 'source' and gate['source_final_phase_id'] == 'source_final'
+    assert gate['wait']['budget_ms'] == 5000 and gate['wait']['stop'] == 'satisfied'
+    assert gate['wait']['clock_fault'] is False
+    assert gate['observation'] == dict(capture_ordinal=reap['capture_ordinal'])
+    assert reap['pid'] == reap['native_rc'] == source_actor['launch']['pid']
+    assert reap['ownership_unbroken'] is True and reap['departure_requested'] is False and reap['raw_status'] == 0
+    assert source_phase['activation_observation']['capture_ordinal'] < reap['capture_ordinal'] < gate['capture_ordinal']
+    # Source ordinals share one child sequence. Reader ordinals are separate;
+    # their clock observations, not their ordinals, establish this time order.
+    assert source_phase['activation_observation']['observed_ns'] <= reap['observed_ns'] <= reader_phase['activation_observation']['observed_ns']
+    step = runner['steps'][0]
+    assert step['phase_id'] == 'read_after_source' and step['actor_id'] == 'reader'
+    assert step['sandbox_check']['result_source'] == 'validator'
+    assert step['sandbox_check']['pid'] == reader_actor['launch']['pid']
+    assert step['comparison']['order'] == 'query_first'
+    attempt = step['attempt']
+    assert attempt['result_source'] == 'worker' and attempt['outcome'] == 'ok' and attempt['rc'] == 0
+    assert attempt['requested_kind'] == 'file' and attempt['requested_action'] == 'read_fresh'
+    assert attempt['requested_path'] == str(target['path'])
+    fresh = attempt['fresh_read']
+    assert fresh['open_rc'] >= 0 and fresh['stat_rc'] == 0 and fresh['close_rc'] == 0
+    assert fresh['read_rc'] == len(target['contents']) and bytes.fromhex(fresh['content_hex']) == target['contents']
+    identity = (target['device'], target['inode'])
+    assert (fresh['identity']['device'], fresh['identity']['inode']) == identity
+    after = target['path'].stat()
+    assert (after.st_dev, after.st_ino) == identity and target['path'].read_bytes() == target['contents']
+    return dict(schedule=schedule, charged_execution_ms=charged_ms, gate=gate,
+        source_reap=reap, reader_subprocess=reader_actor['subprocess'], fresh_read=fresh,
+        independent_file=dict(path=str(target['path']), content_hex=target['contents'].hex(),
+                              device=identity[0], inode=identity[1]))
+
 def main(pw, out):
     out.mkdir(parents=True, exist_ok=True)
     report = {}
@@ -272,6 +501,19 @@ def main(pw, out):
                 assert 'B: compiled_profile requires worker/before_apply context' in errors, errors
                 (out / 'capture-context-control.json').write_text(json.dumps(dict(
                     mutation='actor B compiled_profile.producer = host', errors=errors), indent=2) + '\n')
+        for name, unavailable in [('gate_cancels_schedule', False), ('gate_unreached', True)]:
+            request = gate_specimen(resources['x']['path'], unavailable)
+            envelope, runner = capture(pw, out, name, request, expected_rc=1)
+            assert worker_exit_witness(envelope)[0], worker_exit_witness(envelope)
+            ownership['reaped_captures'].append(name)
+            receipt()
+            report[name] = assert_gate_schedule(runner, request, resources['x'], unavailable)
+        for name, request, actor_form in timeout_applicability_specimens(resources['x']['path']):
+            envelope, runner = capture(pw, out, name, request, expected_rc=0 if actor_form else 1)
+            assert worker_exit_witness(envelope)[0], worker_exit_witness(envelope)
+            ownership['reaped_captures'].append(name)
+            receipt()
+            report[name] = assert_timeout_applicability(runner, request, resources['x'], actor_form)
         for target in resources.values():
             assert target['path'].read_bytes() == target['contents']
     except BaseException:
@@ -284,7 +526,7 @@ def main(pw, out):
     ownership['state'] = 'removed_after_host_reap'
     (out / 'ownership.json').write_text(json.dumps(ownership, indent=2) + '\n')
     (out / 'report.json').write_text(json.dumps(report, indent=2) + '\n')
-    print('four public compositions preserve resource associations, independent progress after recipient failure and per-actor compiled-profile receipts')
+    print('public compositions preserve resources, profiles and gate scope; ordinary worker timeout leaves actor scheduling allowances intact')
 
 
 if __name__ == '__main__':

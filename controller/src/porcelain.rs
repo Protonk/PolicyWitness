@@ -453,6 +453,190 @@ mod tests {
         out.extend_from_slice(bytes);
         out
     }
+    fn framed_value(kind: u8, payload: &[u8]) -> Vec<u8> {
+        let mut bytes = b"PWP1".to_vec();
+        bytes.extend(crate::porcelain_records::FINGERPRINT);
+        bytes.extend(value(kind, payload));
+        bytes
+    }
+
+    #[test]
+    fn ordered_maps_require_unique_ascending_keys_in_actual_frames() {
+        fn map(keys: [&str; 2]) -> Vec<u8> {
+            let mut payload = 2u32.to_le_bytes().to_vec();
+            for (key, number) in keys.into_iter().zip([7i64, -3]) {
+                payload.extend(value(4, key.as_bytes()));
+                payload.extend(value(2, &number.to_le_bytes()));
+            }
+            framed_value(8, &payload)
+        }
+        assert_eq!(
+            decode::<OrderedMap<i64>>(&map(["a", "b"])).unwrap(),
+            OrderedMap(vec![("a".into(), 7), ("b".into(), -3)])
+        );
+        for keys in [["a", "a"], ["b", "a"]] {
+            assert_eq!(
+                decode::<OrderedMap<i64>>(&map(keys)),
+                Err(FrameError::Malformed(
+                    "duplicate or unordered map key".into()
+                )),
+                "keys {keys:?}"
+            );
+        }
+    }
+
+    #[test]
+    fn list_counts_item_kinds_and_trailing_items_refuse_in_actual_frames() {
+        let first = value(2, &7i64.to_le_bytes());
+        let second = value(2, &(-3i64).to_le_bytes());
+        let mut valid = 2u32.to_le_bytes().to_vec();
+        valid.extend(&first);
+        valid.extend(&second);
+        assert_eq!(
+            decode::<Vec<i64>>(&framed_value(7, &valid)).unwrap(),
+            [7, -3]
+        );
+
+        assert_eq!(
+            decode::<Vec<i64>>(&framed_value(7, &u32::MAX.to_le_bytes())),
+            Err(FrameError::Malformed("impossible collection count".into()))
+        );
+        let mut mixed = 2u32.to_le_bytes().to_vec();
+        mixed.extend(&first);
+        mixed.extend(value(4, b"x"));
+        assert_eq!(
+            decode::<Vec<i64>>(&framed_value(7, &mixed)),
+            Err(FrameError::Malformed("wrong scalar/record kind".into()))
+        );
+        let mut uncounted = 0u32.to_le_bytes().to_vec();
+        uncounted.extend(first);
+        assert_eq!(
+            decode::<Vec<i64>>(&framed_value(7, &uncounted)),
+            Err(FrameError::Malformed("trailing wire data".into()))
+        );
+    }
+
+    #[test]
+    fn generated_capture_byte_field_requires_the_byte_kind() {
+        use crate::porcelain_records::PWRunnerReplyCapture;
+        fn capture(kind: u8) -> Vec<u8> {
+            // Literal record 51: received, retained, truncated, raw data.
+            let mut payload = 51u16.to_le_bytes().to_vec();
+            for (tag, bytes) in [
+                (1u16, value(2, &3i64.to_le_bytes())),
+                (2, value(2, &3i64.to_le_bytes())),
+                (3, value(1, &[0])),
+                (4, value(kind, b"raw")),
+            ] {
+                payload.extend(tag.to_le_bytes());
+                payload.extend(bytes);
+            }
+            framed_value(6, &payload)
+        }
+        let decoded = decode::<PWRunnerReplyCapture>(&capture(5)).unwrap();
+        assert_eq!(
+            (
+                decoded.bytes_received,
+                decoded.bytes_retained,
+                decoded.truncated
+            ),
+            (3, 3, false)
+        );
+        assert_eq!(decoded.data.as_slice(), b"raw");
+        // Identical, valid UTF-8 payload; only the wire kind changes.
+        assert_eq!(
+            decode::<PWRunnerReplyCapture>(&capture(4)),
+            Err(FrameError::Malformed("expected bytes".into()))
+        );
+    }
+
+    #[test]
+    fn generated_disposition_variant_checks_tag_payload_and_complete_body() {
+        use crate::porcelain_records::{PWDispositionValue, PWRunnerTerminationRequest};
+        fn encoded(tag: u16, body: &[u8]) -> Vec<u8> {
+            let mut payload = tag.to_le_bytes().to_vec();
+            payload.extend(body);
+            framed_value(9, &payload)
+        }
+        let integer = value(2, &(-7i64).to_le_bytes());
+        assert_eq!(
+            decode::<PWDispositionValue>(&encoded(1, &integer)).unwrap(),
+            PWDispositionValue::Integer(-7)
+        );
+        let mut request = 63u16.to_le_bytes().to_vec();
+        request.extend(1u16.to_le_bytes());
+        request.extend(value(2, &9i64.to_le_bytes()));
+        request.extend(2u16.to_le_bytes());
+        request.extend(value(2, &0i64.to_le_bytes()));
+        assert_eq!(
+            decode::<PWDispositionValue>(&encoded(2, &value(6, &request))).unwrap(),
+            PWDispositionValue::Request(PWRunnerTerminationRequest {
+                signal: 9,
+                rc: 0,
+                errno: None
+            })
+        );
+        assert_eq!(
+            decode::<PWDispositionValue>(&encoded(3, &integer)),
+            Err(FrameError::Malformed("unknown variant".into()))
+        );
+        for (tag, body) in [(1, value(4, b"-7")), (2, integer.clone())] {
+            assert_eq!(
+                decode::<PWDispositionValue>(&encoded(tag, &body)),
+                Err(FrameError::Malformed("wrong scalar/record kind".into()))
+            );
+        }
+        let mut trailing = integer;
+        trailing.push(0);
+        assert_eq!(
+            decode::<PWDispositionValue>(&encoded(1, &trailing)),
+            Err(FrameError::Malformed("trailing wire data".into()))
+        );
+    }
+
+    #[test]
+    fn actual_nested_container_frames_reach_but_do_not_exceed_depth_32() {
+        // Public record definitions are nonrecursive. This test-only wrapper
+        // reaches the generic production Vec decoder recursively; it declares
+        // no new public shape and implements no alternate wire traversal.
+        #[derive(Debug)]
+        struct NestedList(Vec<NestedList>);
+        impl WireRead for NestedList {
+            const KIND: u8 = 7;
+            fn read_payload(
+                data: &[u8],
+                depth: usize,
+                budget: &Cell<usize>,
+            ) -> Result<Self, String> {
+                Vec::<Self>::read_payload(data, depth, budget).map(Self)
+            }
+        }
+        fn nested(levels: usize) -> Vec<u8> {
+            // Root is depth 1. Each literal one-item list adds one value;
+            // the innermost empty list adds no child past its own depth.
+            let mut payload = 0u32.to_le_bytes().to_vec();
+            for _ in 1..levels {
+                let mut outer = 1u32.to_le_bytes().to_vec();
+                outer.extend(value(7, &payload));
+                payload = outer;
+            }
+            framed_value(7, &payload)
+        }
+        let decoded = decode::<NestedList>(&nested(32)).unwrap();
+        let mut node = &decoded;
+        let mut levels = 1;
+        while !node.0.is_empty() {
+            assert_eq!(node.0.len(), 1);
+            node = &node.0[0];
+            levels += 1;
+        }
+        assert_eq!(levels, 32);
+        assert_eq!(
+            decode::<NestedList>(&nested(33)).unwrap_err(),
+            FrameError::Malformed("wire depth".into())
+        );
+    }
+
     #[test]
     fn documented_porcelain_budgets() {
         let manifest: serde_json::Value =

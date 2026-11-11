@@ -76,6 +76,9 @@ runActorAuthorityTests(tk)
 runActorEquipmentTests(tk)
 // Setup ownership, application uncertainty and natural-reap evidence controls.
 runActorAccountTests(tk)
+// Typed admitted/refused neighbours with separate host, controller, general
+// consumer and retained-lifecycle judgments in the runner_unit replay.
+runReaderCorpusTests(tk)
 runActorReplyTests(tk)
 // Production host driver against the separately built ABI fixture with
 // controlled kill/waitpid faults and delayed or absent ready bytes; host

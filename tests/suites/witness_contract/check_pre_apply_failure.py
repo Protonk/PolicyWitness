@@ -9,6 +9,7 @@ import json
 from pathlib import Path
 import re
 import secrets
+import subprocess
 import sys
 import tempfile
 
@@ -289,6 +290,54 @@ def main():
             assert 'ordering' not in runner, runner
             assert all(s['comparison']['order'] == 'unestablished' for s in runner['steps']), runner
             assert not consumer.validate(value, build_context.candidate_contract()), consumer.validate(value, build_context.candidate_contract())
+
+        # These values pass request decoding but exceed the native worker's
+        # argument grammar. Observe direct argv refusal separately from the
+        # same selected worker's launched CLI path and unchanged file effects.
+        worker_path = Path(pw).parents[2] / 'Contents/XPCServices/PWRunner.xpc/Contents/MacOS/pw-probe-runner'
+        for field, value, flag in [
+            ('worker_post_apply_hang_ms', 60001, '--post-apply-hang-ms'),
+            ('worker_pre_ready_hang_ms', 60001, '--pre-ready-hang-ms'),
+            ('worker_post_apply_kill_signal', 32, '--post-apply-kill-signal'),
+            ('worker_kill_before_publish_slot', 256, '--kill-before-publish-slot'),
+        ]:
+            request = dict(specimen, _test_overrides={field: value})
+            capture = RunCapture(pw, out / ('argv-refusal-' + field), request, cli_args=[])
+            argv = [str(worker_path), '--shm-fd', '3', '--ready-fd', '4', '--step-count', '2', flag, str(value)]
+            native = subprocess.run(argv, capture_output=True, timeout=10)
+            (capture.out / 'native.stdout').write_bytes(native.stdout)
+            (capture.out / 'native.stderr').write_bytes(native.stderr)
+            (capture.out / 'native-command.json').write_text(json.dumps(dict(argv=argv, returncode=native.returncode), indent=2) + '\n')
+            assert native.returncode == 2, (field, native.returncode, native.stderr)
+            assert flag.encode() in native.stderr and b'out of range' in native.stderr, (field, native.stderr)
+            for i, (path, seed) in enumerate(zip(paths, seeds)):
+                path.write_bytes(seed)
+                (capture.out / f'file{i}.before').write_bytes(path.read_bytes())
+            original = capture.request_path.read_bytes()
+            with capture as run:
+                rc = run.wait(timeout=20)
+                after = [path.read_bytes() for path in paths]
+                for i, contents in enumerate(after):
+                    (run.out / f'file{i}.after').write_bytes(contents)
+                envelope = run.load_json()
+            assert capture.request_path.read_bytes() == original
+            assert after == seeds, (field, 'argument refusal changed file effects')
+            runner = envelope['data']['runner_result']
+            assert rc == 1 and envelope['result']['normalized_outcome'] == 'runner_failed', envelope
+            assert runner['normalized_outcome'] == 'runner_failed' and runner['test_overrides'] == {field: value}, runner
+            assert envelope['data'].get('request_failure') is None and runner.get('request_failure') is None, runner
+            child = runner['runner_subprocess']
+            assert child['pid'] > 0 and child['reaped'] is True, child
+            assert child['exit_code'] == 2 and child.get('term_signal') is None, child
+            assert child['ready_byte_received'] is False and child['done_observed'] is False, child
+            assert runner.get('sandboxed_after_apply') is not True, runner
+            assert all(p.get('validator_subprocess') is None for p in runner.get('phases', [])), runner
+            assert [s['step_id'] for s in runner['steps']] == [s['step_id'] for s in specimen['probe_plan']], runner
+            assert all(s['attempt']['outcome'] == 'no_completed_result' for s in runner['steps']), runner
+            assert all(s['comparison']['order'] == 'unestablished' for s in runner['steps']), runner
+            assert not library_claims(runner), runner
+            assert not consumer.validate(envelope, build_context.candidate_contract()), consumer.validate(envelope, build_context.candidate_contract())
+
 
     assert all(result['passed'] for result in results), 'contract failures retained in assertions.json'
 

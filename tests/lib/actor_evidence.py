@@ -190,6 +190,36 @@ def _application(actor, setup):
     errors = []
     if set(assessment) != {'state', 'basis'} or not isinstance(state, str) or not isinstance(basis, str) or not supported.get((state, basis), False):
         errors.append('application assessment lacks its eligible source')
+    # Independent ordered interpretation: eligibility of a lower-priority pair
+    # does not erase a higher-priority publication.
+    terminal = setup.get('publication') == 'observed' and setup.get('disposition') == 'terminal_required_failure'
+    if mode == 'unapplied':
+        expected = ('not_requested', 'unapplied_declaration')
+    elif actor.get('launch') is None:
+        expected = ('not_attempted', 'worker_not_launched')
+    elif applied:
+        expected = ('observed', 'applied_publication')
+    elif terminal and setup.get('integrity_errors') is None:
+        expected = ('not_attempted', 'terminal_authority_setup_refusal')
+    elif published and op == 8 and code == 1 and kind == 1 and integer(failure.get('native_result'), -(1 << 63), (1 << 63)-1) and failure['native_result'] != 0:
+        expected = ('observed', 'apply_failure_publication')
+    elif input_refusal:
+        expected = ('not_attempted', 'terminal_input_refusal')
+    elif parameter_refusal:
+        expected = ('not_attempted', 'terminal_parameter_refusal')
+    elif compile_refusal:
+        expected = ('not_attempted', 'terminal_compile_refusal')
+    elif timing_refusal:
+        expected = ('not_attempted', 'terminal_timing_refusal')
+    elif progress.get('operation') == 8 and progress.get('stage') in (1, 2):
+        expected = ('unobserved', 'apply_call_boundary_without_result')
+    else:
+        expected = ('unobserved', 'no_eligible_apply_publication')
+    if (state, basis) != expected:
+        errors.append('application assessment violates source precedence')
+    if applied and (mode == 'unapplied' or actor.get('launch') is None or terminal or
+                    published and op in (1, 2, 3, 4, 5, 8, 12)):
+        errors.append('contradictory application publication')
     if type(actor.get('application_count')) is not int or actor['application_count'] not in (0, 1) or (actor['application_count'] == 1) != applied:
         errors.append('application count contradicts successful publication')
     return errors
@@ -434,17 +464,27 @@ def preparation_failure_valid(runner):
             any(array(obj(runner.get('resources')).get(k)) for k in ('tokens', 'deliveries', 'handles')) or \
             obj(obj(obj(runner.get('authority_setup')).get('host')).get('run')).get('disposition') != 'not_attempted' or \
             any(obj(obj(p).get('ordering')).get(k) is True for p in phases for k in ('proceed_set', 'proceed_observed')) or \
-            any(obj(p).get('collection_status') != 'not_reached' for p in phases) or runner.get('request_failure') is not None:
+            any(obj(p).get('collection_status') != 'not_reached' or obj(p).get('arrival_observed') is not False or
+                obj(p).get('completion_observed') is not False for p in phases) or runner.get('request_failure') is not None or \
+            any(array(obj(obj(runner.get('authority_setup')).get('host')).get(k)) for k in ('regions', 'custody')):
         return False
     return len(identities) <= 256 and all(bounded(i, 63) for i in identities) and len(set(identities)) == len(identities)
 
 
 def validate_actor_evidence(runner):
+    """Ordinary actor relationship findings; degradation retains these assertions.
+
+    The containing report's degradation form is checked by the general consumer.
+    An empty list here on that branch means this rule family is inapplicable.
+    """
+    if runner.get('reporting_failure') is not None:
+        return []
     errors = []
     if 'extensions' in runner:
         errors.append('removed declaration reply field')
     if runner.get('execution_form') != 'actors':
-        if runner.get('extension_events') or isinstance(runner.get('authority_setup'), dict) or isinstance(runner.get('equipment_inventory'), dict):
+        if runner.get('extension_events') or any(runner.get(k) is not None for k in
+                ('authority_setup', 'equipment_inventory', 'equipment_bindings', 'equipment_entitlements', 'preparation_failure')):
             errors.append('ordinary reply carries actor authority evidence')
         return errors
     if 'preparation_failure' in runner and not preparation_failure_valid(runner):
@@ -456,4 +496,25 @@ def validate_actor_evidence(runner):
     for index, actor in enumerate(actors):
         errors += _application(obj(actor), obj(workers[index]) if index < len(workers) else {})
     errors += _gates(runner, actors)
+    phases = array(runner.get('phases'))
+    ids = [obj(a).get('actor_id') for a in actors]
+    for index, actor in enumerate(actors):
+        actor = obj(actor)
+        if not bounded(actor.get('actor_id'), 63) or actor.get('index') != index:
+            errors.append('actor index or identity conflict')
+        declared = [i + 1 for i, p in enumerate(phases) if obj(p).get('actor_id') == actor.get('actor_id')]
+        if actor.get('visits') != declared:
+            errors.append('actor visits disagree with schedule')
+    seen = {}
+    for phase in phases:
+        phase = obj(phase)
+        owner = phase.get('actor_id')
+        if not isinstance(owner, str) or owner not in ids:
+            errors.append('phase actor is absent')
+            continue
+        seen[owner] = seen.get(owner, 0) + 1
+        if phase.get('actor_visit') != seen[owner]:
+            errors.append("phase actor_visit disagrees with that actor's visit order")
+        if not bounded(phase.get('phase_id'), 63) or any(not bounded(i, 63) for i in array(phase.get('action_ids'))):
+            errors.append('phase/action identity exceeds admitted grammar')
     return errors

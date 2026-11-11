@@ -90,6 +90,13 @@
           "omission": "Option::is_none",
           "optional": true,
           "swift_type": "Int64?"
+        },
+        "subject_path": {
+          "json_null": false,
+          "name": "subject_path",
+          "omission": "Option::is_none",
+          "optional": true,
+          "swift_type": "[String]?"
         }
       },
       "input": false

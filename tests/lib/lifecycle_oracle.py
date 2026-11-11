@@ -485,11 +485,17 @@ def check_actor_records(envelope, expected_contract):
     per_actor = aggregate.get('actors') if isinstance(aggregate.get('actors'), list) else []
     findings = []
     actors = runner.get('actors')
+    degraded = runner.get('reporting_failure') is not None
     if not isinstance(actors, list) or not actors:
+        if degraded and actors in (None, []):
+            if aggregate.get('process_disposition') not in ('no_worker', 'withheld'):
+                return [_finding('D7', 'aggregate_projection', 'retained actor-free report invented a worker projection')]
+            return []
         return [_finding('D8', 'malformed_record', 'actor-form reply without actor records')]
     from extension_evidence import validate_extensions
-    for error in validate_extensions(runner):
-        findings.append(_finding('D6', 'extension_evidence', error))
+    if not degraded:
+        for error in validate_extensions(runner):
+            findings.append(_finding('D6', 'extension_evidence', error))
     launched = False
     all_valid = True
     for actor in actors:
@@ -523,7 +529,11 @@ def check_actor_records(envelope, expected_contract):
 
 
 def check_record(envelope, expected_contract):
-    """Findings for one envelope; empty means the record and projections satisfy the contract."""
+    """Assess retained lifecycle claims and projections at their own scope.
+
+    Findings on retained degraded evidence do not reject the containing report's
+    degradation form; consumer.validate owns that separate validity question.
+    """
     errors = version_errors(envelope, expected_contract)
     if errors:
         error = errors[0]
@@ -577,7 +587,7 @@ def check_record(envelope, expected_contract):
         findings.append(_finding('D8', 'unknown_question', f'question {extra!r} is not registered', extra))
     from extension_evidence import ordered_actions, validate_extensions
     runner_steps = ordered_actions(envelope['data']['runner_result'])
-    if not runner.get('_actor_view'):
+    if not runner.get('_actor_view') and runner.get('reporting_failure') is None:
         for error in validate_extensions(envelope['data']['runner_result']):
             findings.append(_finding('D6', 'extension_evidence', error))
     if len(view['steps']) != len(runner_steps):

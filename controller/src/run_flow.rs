@@ -42,8 +42,8 @@ const DEFAULT_TIMEOUT_MS: u64 = 240_000;
 struct ExecutionData {
     pub specimen: Specimen,
     pub policy_check: Option<PolicyCheckCapture>,
-    /// The actor form's fallback compilations, one per apply actor in request
-    /// order; absent for the legacy form and when no fallback ran.
+    /// Fallback compilations for carried actor policy objects, in request
+    /// order; absent for the ordinary form and when no fallback ran.
     #[serde(skip_serializing_if = "Option::is_none")]
     pub actor_policy_checks: Option<Vec<ActorPolicyCheck>>,
     pub timeout_ms: Option<u64>,
@@ -53,7 +53,7 @@ struct ExecutionData {
     pub request_failure: Option<RequestFailureProjection>,
 }
 
-/// One apply actor's fallback compilation capture.
+/// One carried actor policy object's fallback compilation capture.
 #[derive(Serialize)]
 pub(crate) struct ActorPolicyCheck {
     pub actor_id: Option<String>,
@@ -378,7 +378,7 @@ fn fallback_policy_check(
     Some(run().unwrap_or_else(PolicyCheckCapture::unavailable))
 }
 
-/// The actor form's fallback compilations: each apply actor's resolved policy
+/// The actor form's fallback compilations: each carried resolved policy
 /// object is checked on its own, never applied to another actor, and the
 /// captures keep request order. None when the legacy rule withholds the
 /// fallback or no actor carries a policy object.
@@ -811,6 +811,7 @@ mod tests {
         IntegrityIssue {
             kind: kind.into(),
             detail,
+            subject_path: None,
             rule: None,
             question: None,
             step_index: None,
@@ -1248,6 +1249,269 @@ if e['data']['runner_result']['specimen_id']=='refused' and e['data']['runner_re
     }
 
     #[test]
+    #[ignore = "requires constructed Swift receipts; default runner_unit invokes this exact test"]
+    fn reader_definition_corpus_cross_readers() {
+        use std::process::Command;
+        let directory =
+            std::path::PathBuf::from(std::env::var("PW_POLICY_TRANSFER_REPLIES").unwrap())
+                .join("reader-corpus");
+        let manifest: Value =
+            serde_json::from_slice(&std::fs::read(directory.join("swift.json")).unwrap()).unwrap();
+        let mut cases = manifest["cases"].as_array().unwrap().clone();
+        let writer_receipt: Value = serde_json::from_slice(
+            &std::fs::read(directory.join("../porcelain-replies/writer-cap-receipt.json")).unwrap(),
+        )
+        .unwrap();
+        cases.push(json!({"id": "writer-cap-minimal",
+            "raw_file": "../porcelain-replies/writer-cap-minimal.pwp",
+            "origin": "production_writer_capacity_refusal", "expected_semantic": true,
+            "rule": "actual rich text budget refusal emits default minimal reporting",
+            "writer_receipt": writer_receipt, "required_issues": [], "required_consumer_issues": []}));
+        let mut rows = Vec::new();
+        let mut problems = Vec::new();
+        for case in &cases {
+            let id = case["id"].as_str().unwrap();
+            let filename = case["raw_file"]
+                .as_str()
+                .map(str::to_owned)
+                .unwrap_or_else(|| format!("{id}.pwp"));
+            let raw = std::fs::read(directory.join(filename)).unwrap();
+            let typed: PWRunnerRunResult = crate::porcelain::decode(&raw).unwrap();
+            let reply = serde_json::to_value(&typed).unwrap();
+            if let Some(receipt) = case.get("writer_receipt") {
+                if receipt["input"] != "constructed attempt.error"
+                    || receipt["input_utf8_bytes"] != 134_217_729_u64
+                    || receipt["frame_limit_bytes"] != 134_217_728_u64
+                    || receipt["writer_calls"] != 2
+                    || receipt["writer_failures"]
+                        != json!(["text exceeds byte limit", "text exceeds byte limit"])
+                    || receipt["emitted_bytes"] != json!(raw.len())
+                    || reply["reporting_failure"]["evidence_retained"] != false
+                    || reply["steps"] != json!([])
+                    || reply["phases"] != json!([])
+                {
+                    problems.push(format!(
+                        "{id}: actual writer-failure receipt or minimal consequence changed"
+                    ));
+                }
+            }
+            if let Some(expected) = case.get("application_expected") {
+                let actor = reply["actors"]
+                    .as_array()
+                    .unwrap()
+                    .iter()
+                    .find(|actor| actor["actor_id"] == expected["actor_id"])
+                    .unwrap();
+                if actor["application"]["state"] != expected["state"]
+                    || actor["application"]["basis"] != expected["basis"]
+                {
+                    problems.push(format!(
+                        "{id}: decoded application pair changed from its eligible source"
+                    ));
+                }
+            }
+            let issues = porcelain_admission::admit_reply(&typed)
+                .err()
+                .unwrap_or_default();
+            let admitted = issues.is_empty();
+            if admitted != case["expected_semantic"].as_bool().unwrap() {
+                problems.push(format!("{id}: semantic admission {admitted}; {issues:?}"));
+            }
+            let issue_json = serde_json::to_value(&issues).unwrap();
+            let mut previous_issue = None;
+            for expected in case["required_issues"].as_array().into_iter().flatten() {
+                match issues
+                    .iter()
+                    .position(|issue| issue.detail == expected.as_str().unwrap())
+                {
+                    Some(position) => {
+                        if previous_issue.is_some_and(|previous| previous >= position) {
+                            problems
+                                .push(format!("{id}: required issue order changed; {issues:?}"));
+                        }
+                        previous_issue = Some(position);
+                    }
+                    None => {
+                        problems.push(format!("{id}: missing exact issue {expected}; {issues:?}"))
+                    }
+                }
+            }
+            let outcome = typed.normalized_outcome.clone();
+            let (result, data, code) =
+                execution_envelope(complete_execution(driver_execution(typed, &raw)));
+            let envelope: Value = serde_json::from_str(
+                &json_contract::render_envelope("run", result, &data).unwrap(),
+            )
+            .unwrap();
+            if envelope["data"]["runner_result"] != reply {
+                problems.push(format!("{id}: assembly changed retained reply"));
+            }
+            if code != (if outcome == "finished" { 0 } else { 1 })
+                || envelope["result"]["ok"] != json!(outcome == "finished")
+                || envelope["result"]["normalized_outcome"] != json!(outcome)
+            {
+                problems.push(format!("{id}: semantic findings changed outer result/exit"));
+            }
+            let diagnostics = &envelope["data"]["runner_sandbox_diagnostics"];
+            for expected in case["required_subject_issues"]
+                .as_array()
+                .into_iter()
+                .flatten()
+            {
+                let matched = diagnostics["disposition_issues"]
+                    .as_array()
+                    .into_iter()
+                    .flatten()
+                    .filter(|issue| {
+                        issue["detail"] == expected["detail"]
+                            && issue["subject_path"] == expected["subject_path"]
+                    })
+                    .count();
+                if matched != 1 {
+                    problems.push(format!(
+                        "{id}: expected exactly one finding at the inspected subject {expected}; {diagnostics}"
+                    ));
+                }
+            }
+            if !admitted
+                && (diagnostics["process_disposition"] != "withheld"
+                    || diagnostics["termination_cause"] != "unknown"
+                    || diagnostics["disposition_integrity"] != "invalid")
+            {
+                problems.push(format!(
+                    "{id}: rejected semantic record retained an aggregate certification"
+                ));
+            }
+            let mut row = case.clone();
+            row["rust_accepts"] = json!(admitted);
+            row["issues"] = issue_json;
+            row["reply"] = reply;
+            row["envelope"] = envelope;
+            row["exit_code"] = json!(code);
+            rows.push(row);
+        }
+        // JSON-only inputs have no typed Swift equivalent. Deserialize is a
+        // test helper, not a production reply transport. Preserve both views.
+        let actor = rows.iter().find(|r| r["id"] == "actor-complete").unwrap()["reply"].clone();
+        let preparation =
+            rows.iter().find(|r| r["id"] == "preparation-0").unwrap()["reply"].clone();
+        let ordinary = rows.iter().find(|r| r["id"] == "ordinary").unwrap()["reply"].clone();
+        let mut json_rows = Vec::new();
+        for (id, base, field, replacement, typed_expected, raw_expected) in [
+            (
+                "actor-preparation-null",
+                &actor,
+                "preparation_failure",
+                Some(Value::Null),
+                Some(true),
+                false,
+            ),
+            (
+                "ordinary-preparation-null",
+                &ordinary,
+                "preparation_failure",
+                Some(Value::Null),
+                Some(true),
+                true,
+            ),
+            (
+                "preparation-events-absent",
+                &preparation,
+                "extension_events",
+                None,
+                Some(false),
+                false,
+            ),
+            (
+                "preparation-events-null",
+                &preparation,
+                "extension_events",
+                Some(Value::Null),
+                Some(false),
+                false,
+            ),
+            (
+                "preparation-events-empty",
+                &preparation,
+                "extension_events",
+                Some(json!([])),
+                Some(true),
+                true,
+            ),
+            (
+                "preparation-events-wrong-type",
+                &preparation,
+                "extension_events",
+                Some(json!("list")),
+                None,
+                false,
+            ),
+            (
+                "actor-preparation-wrong-type",
+                &actor,
+                "preparation_failure",
+                Some(json!(false)),
+                None,
+                false,
+            ),
+        ] {
+            let mut input = base.clone();
+            if let Some(value) = replacement {
+                input[field] = value;
+            } else {
+                input.as_object_mut().unwrap().remove(field);
+            }
+            let mut row = json!({"id": id, "origin": "json_test_only", "input": input,
+                "expected_raw_consumer": raw_expected, "expected_normalized_semantic": typed_expected});
+            match serde_json::from_value::<PWRunnerRunResult>(input) {
+                Ok(typed) => {
+                    let issues = porcelain_admission::admit_reply(&typed)
+                        .err()
+                        .unwrap_or_default();
+                    if Some(issues.is_empty()) != typed_expected {
+                        problems.push(format!("{id}: unexpected normalized admission; {issues:?}"));
+                    }
+                    row["typed_decode"] = json!(true);
+                    row["normalized"] = serde_json::to_value(&typed).unwrap();
+                    row["issues"] = serde_json::to_value(&issues).unwrap();
+                    row["rust_accepts"] = json!(issues.is_empty());
+                }
+                Err(error) => {
+                    if typed_expected.is_some() {
+                        problems.push(format!("{id}: {error}"));
+                    }
+                    row["typed_decode"] = json!(false);
+                    row["typed_error"] = json!(error.to_string());
+                }
+            }
+            json_rows.push(row);
+        }
+        let report = json!({"domain": manifest["domain"], "cases": rows, "json_only": json_rows,
+            "rust_failures": problems});
+        std::fs::write(
+            directory.join("rust.json"),
+            serde_json::to_vec_pretty(&report).unwrap(),
+        )
+        .unwrap();
+        let python = std::env::var("PW_PYTHON").unwrap_or_else(|_| "/usr/bin/python3".into());
+        let script = std::path::Path::new(env!("CARGO_MANIFEST_DIR"))
+            .join("../tests/suites/runner_unit/reader_corpus.py");
+        let output = Command::new(python)
+            .arg("-B")
+            .arg(script)
+            .arg(&directory)
+            .output()
+            .unwrap();
+        assert!(problems.is_empty(), "{}", problems.join("\n"));
+        assert!(
+            output.status.success(),
+            "{}\n{}",
+            String::from_utf8_lossy(&output.stdout),
+            String::from_utf8_lossy(&output.stderr)
+        );
+    }
+
+    #[test]
     #[ignore = "requires real Swift driver receipts; default runner_unit invokes this exact test"]
     fn actor_driver_replies_cross_readers() {
         use std::io::Write;
@@ -1268,6 +1532,24 @@ if e['data']['runner_result']['specimen_id']=='refused' and e['data']['runner_re
             .unwrap();
             let typed: PWRunnerRunResult = crate::porcelain::decode(&raw).unwrap();
             let reply = serde_json::to_value(&typed).unwrap();
+            if name == "late-setup" {
+                let actor = &reply["actors"][1];
+                assert_eq!(actor["setup_status"], "setup_timeout");
+                assert_eq!(actor["applied"], true);
+                assert_eq!(actor["application_count"], 1);
+                assert_eq!(actor["application"]["state"], "observed");
+                assert_eq!(actor["application"]["basis"], "applied_publication");
+                assert!(
+                    reply["phases"]
+                        .as_array()
+                        .unwrap()
+                        .iter()
+                        .filter(|phase| phase["actor_id"] == actor["actor_id"])
+                        .all(|phase| phase["arrival_observed"] == false
+                            && phase["completion_observed"] == false
+                            && phase["collection_status"] == "not_reached")
+                );
+            }
             controls.push(json!({"name": name, "reply": reply, "accepted": true}));
             let changes = match name {
                 "complete" => vec![
@@ -2713,6 +2995,130 @@ else:
         }
 
         #[test]
+        fn actor_fallback_uses_held_policy_objects_before_host_mode_admission() {
+            // Exercise controller orchestration with controlled transport and
+            // compilation. These invalid actor forms never reach a real host.
+            let root = scratch("actor-fallback-raw");
+            let app = synthetic_app(&root);
+            install_manifest(&app, ManifestState::Valid);
+            let allow = json!({"format":"sbpl", "sbpl_source":"(version 1) (allow default)"});
+            let deny = json!({"format":"sbpl", "sbpl_source":"(version 1) (deny default)"});
+            let path = root.join("request.json");
+            for (first, last) in [(&allow, &deny), (&deny, &allow)] {
+                let raw = r#"{
+                    "contract":"BUILD_CONTRACT", "specimen_id":"raw-actor-fallback",
+                    "runner":{"mode":"standard"}, "actors":[
+                        {"actor_id":"future", "sandbox":{"mode":"future", "policy":FIRST_POLICY, "policy":LAST_POLICY}},
+                        {"actor_id":"unapplied", "sandbox":{"mode":"unapplied", "policy":ALLOW_POLICY}},
+                        {"sandbox":{"policy":DENY_POLICY}},
+                        {"actor_id":17, "sandbox":{"mode":9, "policy":ALLOW_POLICY}},
+                        {"actor_id":"absent", "sandbox":{"mode":"apply"}},
+                        {"actor_id":"scalar", "sandbox":{"mode":"apply", "policy":"ignored"}}
+                    ], "phases":[]
+                }"#
+                    .replace("BUILD_CONTRACT", json_contract::BUILD_CONTRACT)
+                    .replace("FIRST_POLICY", &first.to_string())
+                    .replace("LAST_POLICY", &last.to_string())
+                    .replace("ALLOW_POLICY", &allow.to_string())
+                    .replace("DENY_POLICY", &deny.to_string());
+                // Independent expected held object: the duplicate's last value,
+                // the original actor order and removal of controller options.
+                let expected = json!({
+                    "contract":json_contract::BUILD_CONTRACT, "specimen_id":"raw-actor-fallback",
+                    "actors":[
+                        {"actor_id":"future", "sandbox":{"mode":"future", "policy":last}},
+                        {"actor_id":"unapplied", "sandbox":{"mode":"unapplied", "policy":allow}},
+                        {"sandbox":{"policy":deny}},
+                        {"actor_id":17, "sandbox":{"mode":9, "policy":allow}},
+                        {"actor_id":"absent", "sandbox":{"mode":"apply"}},
+                        {"actor_id":"scalar", "sandbox":{"mode":"apply", "policy":"ignored"}}
+                    ], "phases":[]
+                });
+                for delivered_refusal in [false, true] {
+                    write(&path, raw.as_bytes());
+                    let reply = delivered_refusal.then(|| {
+                        json!({
+                            "producer": crate::reply_fixtures::producer(),
+                            "normalized_outcome":"bad_request", "rc":1, "pid":77,
+                            "specimen_id":"raw-actor-fallback", "steps":[], "phases":[],
+                            "error":"controlled host refusal"
+                        })
+                    });
+                    let capture = client_run(reply.as_ref());
+                    let captured = serde_json::to_value(&capture).unwrap();
+                    let pending = RefCell::new(Some((capture, reply.clone().map(fixture_reply))));
+                    let client_inputs = RefCell::new(Vec::new());
+                    let helper_inputs = RefCell::new(Vec::new());
+                    let client = |_: &str, held: &str, _: u64, _: &RunnerConnectionKind| {
+                        client_inputs.borrow_mut().push(held.to_owned());
+                        write(&path, b"changed after the request was held");
+                        Ok(pending.borrow_mut().take().unwrap())
+                    };
+                    let helper = |held: &str| {
+                        helper_inputs.borrow_mut().push(held.to_owned());
+                        Err("controlled compiler unavailable".to_owned())
+                    };
+                    let deps = RunDependencies {
+                        app_root: &|| Ok(app.clone()),
+                        load_manifest: &evidence::load_manifest,
+                        registry_path: None,
+                        client: &client,
+                        policy_check: &helper,
+                    };
+                    let output = run(&[path.as_os_str().to_owned()], &deps).unwrap();
+                    let (wire, exit_code) = envelope_of(&output);
+                    let inputs = client_inputs.borrow();
+                    assert_eq!(inputs.len(), 1, "one client invocation");
+                    assert_eq!(serde_json::from_str::<Value>(&inputs[0]).unwrap(), expected);
+                    assert_eq!(wire["data"]["runner_client"], captured);
+                    assert_eq!(wire["data"]["runner_result"], json!(reply));
+                    assert_eq!(exit_code, 1);
+                    assert!(!wire["result"]["ok"].as_bool().unwrap());
+                    if delivered_refusal {
+                        assert_eq!(wire["result"]["normalized_outcome"], "bad_request");
+                        assert!(helper_inputs.borrow().is_empty());
+                        assert!(wire["data"]["policy_check"].is_null());
+                        assert!(wire["data"].get("actor_policy_checks").is_none());
+                    } else {
+                        assert_eq!(wire["result"]["normalized_outcome"], "xpc_error");
+                        assert_eq!(
+                            *helper_inputs.borrow(),
+                            vec![
+                                inputs[0].clone(),
+                                json!({"policy":last}).to_string(),
+                                json!({"policy":allow}).to_string(),
+                                json!({"policy":deny}).to_string(),
+                                json!({"policy":allow}).to_string(),
+                            ]
+                        );
+                        let checks = wire["data"]["actor_policy_checks"].as_array().unwrap();
+                        assert_eq!(checks.len(), 4);
+                        assert_eq!(
+                            checks
+                                .iter()
+                                .map(|row| row["actor_id"].clone())
+                                .collect::<Vec<_>>(),
+                            vec![
+                                json!("future"),
+                                json!("unapplied"),
+                                Value::Null,
+                                Value::Null
+                            ]
+                        );
+                        assert!(
+                            checks
+                                .iter()
+                                .all(|row| row["policy_check"]["status"] == "unavailable")
+                        );
+                        assert_eq!(wire["data"]["policy_check"]["status"], "unavailable");
+                        assert!(wire["data"]["runner_sandbox_diagnostics"].is_null());
+                    }
+                }
+            }
+            fs::remove_dir_all(&root).unwrap();
+        }
+
+        #[test]
         fn actor_fallback_preserves_resolved_inputs_order_and_transport_evidence() {
             // These are valid actor-form inputs, but the controlled client does
             // not contact a host. Admitted terminal xpc_error authorizes only
@@ -3449,10 +3855,10 @@ else:
                     termination_cause: Some("host_sentinel_deadline"),
                     stop_reason: Some("done".into()),
                     disposition_integrity: Some("valid"),
-                    disposition_issues: vec![integrity_issue(
-                        "missing_record",
-                        "constructed".into(),
-                    )],
+                    disposition_issues: vec![IntegrityIssue {
+                        subject_path: Some(vec!["steps".into()]),
+                        ..integrity_issue("missing_record", "constructed".into())
+                    }],
                     actors: Some(vec![
                         crate::porcelain_admission::ActorExecutionDiagnostics {
                             actor_id: Some("B".into()),
@@ -3460,10 +3866,10 @@ else:
                             termination_cause: Some("host_sentinel_deadline"),
                             stop_reason: Some("done".into()),
                             disposition_integrity: Some("valid"),
-                            disposition_issues: vec![integrity_issue(
-                                "missing_record",
-                                "constructed".into(),
-                            )],
+                            disposition_issues: vec![IntegrityIssue {
+                                subject_path: Some(vec!["steps".into()]),
+                                ..integrity_issue("missing_record", "constructed".into())
+                            }],
                         },
                     ]),
                 }),

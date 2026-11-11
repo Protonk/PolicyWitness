@@ -1834,6 +1834,106 @@ mod tests {
     }
 
     #[test]
+    fn validation_keeps_entitlement_errors_distinct_from_failed_read_back() {
+        use std::cell::RefCell;
+
+        let fixture = RegistryFixture::new();
+        let bundle = fixture.0.join("Runner.xpc");
+        let mut baseline = recovery_record();
+        baseline.bundle_path = bundle.to_string_lossy().into_owned();
+        baseline.executable_path = bundle
+            .join("Contents/MacOS/PWRunner")
+            .to_string_lossy()
+            .into_owned();
+        baseline.contract = BUILD_CONTRACT.into();
+        let roles = [
+            ("host", "entitlements", "signature"),
+            ("worker", "worker_entitlements", "worker_signature"),
+            ("validator", "validator_entitlements", "validator_signature"),
+        ];
+        for (failed_role, _, _) in roles {
+            for failed_read_back in [false, true] {
+                let mut record = baseline.clone();
+                let calls = RefCell::new(Vec::new());
+                let error = format!(
+                    "controlled {failed_role} {}",
+                    if failed_read_back {
+                        "metadata read failed"
+                    } else {
+                        "entitlement read failed"
+                    }
+                );
+                let read = |path: &Path| {
+                    let role = match path.file_name().unwrap().to_str().unwrap() {
+                        "PWRunner" => "host",
+                        "pw-probe-runner" => "worker",
+                        "sb_api_validator" => "validator",
+                        other => panic!("unexpected validation subject {other}"),
+                    };
+                    calls.borrow_mut().push(role);
+                    if role == failed_role && failed_read_back {
+                        return Err(error.clone());
+                    }
+                    let signature = RunnerSignature {
+                        extra: Default::default(),
+                        team_id: Some("TEAM".into()),
+                        identity: Some(path.display().to_string()),
+                        cdhash: None,
+                        valid: true,
+                        adhoc: false,
+                    };
+                    let mut entitlements = entitlements_from_json(&json!({}));
+                    if role == failed_role {
+                        entitlements.error = Some(error.clone());
+                    }
+                    Ok((signature, entitlements))
+                };
+                let failures = validate_record(&mut record, &|_| Ok(()), &|_| Ok(()), &read);
+                assert_eq!(*calls.borrow(), ["host", "worker", "validator"]);
+                if failed_read_back {
+                    assert_eq!(
+                        failures,
+                        vec![ValidateFailure {
+                            runner_id: record.id.clone(),
+                            service_name: record.service_name.clone(),
+                            binary: failed_role.into(),
+                            error: error.clone(),
+                        }]
+                    );
+                } else {
+                    assert!(
+                        failures.is_empty(),
+                        "entitlement metadata alone changed the failure list: {failures:?}"
+                    );
+                }
+                // Inspect the public registry projection as well as the failure
+                // list. A successful metadata read keeps its signature verdict;
+                // the Result::Err neighbour records an unreadable signature.
+                let wire = serde_json::to_value(&record).unwrap();
+                for (role, entitlements, signature) in roles {
+                    let expected_error = if role != failed_role {
+                        None
+                    } else if failed_read_back {
+                        Some(format!("{role} read-back failed"))
+                    } else {
+                        Some(error.clone())
+                    };
+                    assert_eq!(
+                        wire[entitlements]["error"].as_str(),
+                        expected_error.as_deref()
+                    );
+                    assert_eq!(
+                        wire[signature]["valid"],
+                        !(role == failed_role && failed_read_back)
+                    );
+                    assert_eq!(wire[entitlements]["keys"], json!([]));
+                    assert_eq!(wire[entitlements]["granted"], json!([]));
+                }
+            }
+        }
+    }
+
+    #[test]
     fn validation_reports_the_bundle_and_each_binary_that_fails() {
         let mut record: RunnerRecord = serde_json::from_value(json!({
             "id": "runner-v", "service_name": "com.example.v", "bundle_path": "/v/Runner.xpc",

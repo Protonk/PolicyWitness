@@ -1177,6 +1177,7 @@
         "value": {
           "phase_id": "consume",
           "actor_id": "subject",
+          "actor_visit": 2,
           "ordinal": 3,
           "arrival_observed": false,
           "completion_observed": false,
@@ -1217,6 +1218,7 @@
         "value": {
           "phase_id": "consume",
           "actor_id": "subject",
+          "actor_visit": 2,
           "ordinal": 3,
           "arrival_observed": false,
           "completion_observed": false,
@@ -1261,6 +1263,7 @@
         "value": {
           "phase_id": "consume",
           "actor_id": "subject",
+          "actor_visit": 2,
           "ordinal": 3,
           "arrival_observed": false,
           "completion_observed": false,
@@ -1305,6 +1308,7 @@
         "value": {
           "phase_id": "consume",
           "actor_id": "subject",
+          "actor_visit": 2,
           "ordinal": 3,
           "arrival_observed": false,
           "completion_observed": false,
@@ -1349,6 +1353,7 @@
         "value": {
           "phase_id": "consume",
           "actor_id": "subject",
+          "actor_visit": 2,
           "ordinal": 3,
           "arrival_observed": false,
           "completion_observed": false,

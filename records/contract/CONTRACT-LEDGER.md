@@ -12,7 +12,120 @@ sections hold and when they are updated; a check-in reads them first.
 
 ## Standing
 
-**Stage one complete: `v0.3.7` accepted and archived; stage two begins.**
+**Final review boundary.** The maintainer has directed a pause before the
+`v0.3.8` tag, with completed changes committed and pre-tag checks finished.
+Another agent's review and the maintainer's line-by-line contract reading
+will occur then. Tagged rehearsal and Apple submission wait for the
+instruction to continue after that review.
+
+**Stage two complete; stage three is next.**
+The reviewed 33-file candidate was applied after commit `b6ce6d26`, with all
+preimages matching. It adds the common constructed reader corpus, reconciles
+preparation/degradation applicability, adds optional finding subject paths,
+and adds controls for previously unsupported boundary claims. The authored
+definitions change with their corresponding reader behavior. Worker identity
+was regenerated as
+`764ca292609245dd223fbc25791934cc24773e8db36fdc931b3c4c13042806a2`.
+The Rust shape and direct-host duplicate-key observations have been reviewed
+and pinned. The matching signed development app has completed the default
+battery; its individual results and the corrected reader replay are recorded
+below. All selected additional boundary controls have completed.
+
+Initial Rust shape collection, `contract-stage-two-shape-20261111`
+(`20261111T154302Z_010eb41e`), compiled successfully: 237 main-binary tests
+passed and the sole failure named the two new `subject_path` keys. The actual
+candidate adds only those keys at aggregate and actor issue locations. After
+review it replaced the envelope golden; contract generation refreshed the
+diagnostics surface shape and derived document/snapshot/stamps. Porcelain and
+worker-identity checks passed.
+
+The focused `unit-readers` run (`20261111T154446Z_cba61cb1`) passed Rust
+semantics but found formatting differences and missing `actor_visit` in the
+old constructed actor subaccount fixtures. `cargo fmt` repaired formatting.
+The `reader-fixtures` retry (`20261111T154608Z_d4fb76f3`) passed all four unit
+cases, then exposed the same omission in another fixture. The full family
+audit covered seven authored fixture files; the `reader-fixtures-complete`
+retry (`20261111T154727Z_8aa72768`) then exposed replacement phase objects
+inside five mutation cases. All now carry their independently stated declared
+visit numbers: 1, 1, 2, 3, 4, 5 in the shared six-phase schedule. These are
+fixture repairs against the producer's existing per-actor counting rule,
+not relaxed reader expectations or altered native evidence.
+`contract-stage-two-reader-schedules-20261111`
+(`20261111T154906Z_01abd4e7`) passed both `unit/rust.unit` and
+`blackbox_e2e/checker_controls`. All these runs recorded zero sleep.
+Their earlier failed summaries remain intact. The successful focused run
+establishes constructed interpretation; signed native work follows.
+
+The signed stage-two development build passed with SDK 27.2, seven thin arm64
+executables, seven executable signatures and two seals with secure timestamps.
+It reports version `0.3.7`, build 1335, source `b6ce6d26` with the reviewed
+changes uncommitted, and
+`development:1445cd80509c983c6894339523f9f13ad08f5e003de4cb29ce1c398527c42f28`.
+The staged guide equals its source. This is a new development app; the `.7`
+archive remains the accepted release.
+
+The duplicate characterization run (`20261111T155122Z_c5a128d6`) reached its
+intentional final assertion after all 48 observations and the preceding
+canonical, composite-parameter and nineteen correction/precedence workflows.
+Root reviewed every saved input/result/effect receipt and decoded all 24 XPC
+captures against their saved replies. The twelve direct-host raw orders show
+first-member selection for contract, policy, step ID and attempt target;
+the controller's selected cases use last-member selection. Both orders of
+the two controller-owned runner selectors yield the host's exact
+`unknown_field` at `["runner"]`. The host table now pins eight `first`
+expectations and four exact refusal dictionaries. Root's review receipt is
+`/private/tmp/pw-contract-stage-two-duplicate-review-20261111.json`.
+The fresh canonical retry, `contract-stage-two-duplicate-pinned-20261111`
+(`20261111T155254Z_db3c98b7`), passed with no harness errors or system sleep
+and valid, unchanged app bytes. These observations establish the tested fields,
+orders and platform; they do not impose a common duplicate-key policy on
+the distinct entry boundaries.
+
+The default battery, `contract-stage-two-default-20261111`
+(`20261111T155411Z_29ef0802`), completed all 229 cases: 228 passed and
+`runner_unit/pwrunner_core_unit_executable` failed. There were no skipped or
+unrun cases and every case recorded zero system sleep. App inspection was
+valid before execution and its bytes remained unchanged. The harness records
+the failed runner-unit invocation; the whole battery is not accepted.
+
+The new corpus's Rust replay produced its receipt without a recorded mismatch.
+Its Python replay then expected `test:fixture`, the authored JSON fixture
+identity, for records produced by Swift and Rust unit builds whose independent
+declarations both specify `test:policy-witness`. The replay now expects that
+unit producer identity while retaining strict producer equality and bound-frame
+decoding. This test-only correction changes neither retained evidence nor
+product admission. The reviewed patch's before, patch and after SHA-256 values
+matched on application. The fresh selection, `contract-stage-two-opt-ins-20261111`
+(`20261111T162345Z_3d6c7242`), passed all fifteen selected cases: the entire
+runner-unit case and fourteen named boundary controls. It recorded no skipped
+or unrun cases, harness errors or system sleep; the app was valid before the
+run and remained unchanged. The whole runner-unit case passed 604/604 Swift
+checks and completed its exact-one-test Rust and independent Python replay.
+The corpus retains 142 Swift frames, 143 Rust/Python frames including the
+actual minimal writer fallback, and seven JSON-only inputs; both replay
+failure arrays are empty. The earlier default failure remains recorded.
+
+Source, assertion and raw-artifact reviews cover the boundary matrix, later
+outcomes, reader interpretations, native effects and all nine selected BYOXPC
+owners. Controlled native-call substitutions, constructed reporting records,
+actual kernel/process observations and independently observed file effects
+retain their separate scopes. Every owned external-runner session completed
+its recorded cleanup verification. The setup-oracle sensitivity case passed
+by exposing three independently observed counterexamples accepted by its
+legacy checker; it establishes that checker limitation.
+
+The reviewed gap dispositions now accompany the implementation repairs.
+Current behavior is defined, attainable missing controls have their scoped
+receipts, and bounded source/platform limitations remain explicit. Seven
+substantive choices remain reserved for the maintainer. Exact adjudication,
+source snapshots and artifact joins are retained with the stage-two decision
+record. The final source-drift run, `20261111T164421Z_d3893973`, passed all ten
+cases with no skips, unrun cases, harness errors or system sleep. These offline
+controls carry no app execution claim. Strict contract-history checks passed.
+Stage three now firms up structured expressions and the derived account, then
+subjects the frozen rendered contract to a new isolated reading.
+
+**Stage one release completed.**
 The annotated local tag names `0487956a85b8c1a83d081e55526b0eaf58aa1269`.
 Apple accepted submission `a7524f04-382b-4199-8118-f76b4cabda61`.
 Acceptance `accept-dca94dacf7d64575949501bb7bfbaabe`, battery
@@ -63,12 +176,13 @@ The latter exits 1 solely because one private patch preimage needs rebasing:
 the preflight README gained the annotated-tag/ancestry fixture explanation.
 Storage eligibility passed. The separate historical-storage reader removal
 preserves that explanation. Its dispatcher run,
-`contract-historical-storage-removal-20261111`, passed all thirteen selected
+`contract-historical-storage-removal-20261111`
+(`20261111T153215Z_3342e815`), passed all thirteen selected
 cases: release publication, release rotation, dispatcher retention and all ten
 source-drift cases. There were no skips, unrun cases, harness errors or system
 sleep. This app-independent selection supplies no new native-app observation.
-Next are the reviewed stage-two changes and their canonical controls.
-Later-stage candidates remain private.
+The historical-storage removal is committed as `b6ce6d26`. Stage-two
+verification is current above; stage-three and guide candidates remain private.
 
 The signed development build passed outside the automation sandbox. Its full
 default battery, `contract-stage-one-development-20261110`
@@ -305,6 +419,50 @@ Four agents have been dispatched in total, with earlier agents reused.
 
 ## Decisions
 
+**Producer-grounded reader definitions (R-14/R-36).** Adopt preparation as
+the actor-form reply assembled before scheduler launch, retaining admitted
+declarations and equipment observations with empty execution tables and no
+child progress. Actor/phase identifiers and actor action identifiers are
+nonempty within their admitted UTF-8/NUL bounds; ordinary action identifiers
+may be empty. Visits are the exact ordered declared phase ordinals. Presence,
+uniqueness and membership are separate obligations. Apply ordinary actor and
+extension relationships on the ordinary semantic path. A reporting-failure
+reply retains its required record types and degradation/profile requirements;
+the lifecycle reader separately assesses carried worker claims. These rules
+come from the producer and admitted forms, not a majority vote among readers.
+The integrated repairs align readers within those scopes. Their common corpus
+is pending execution. Stronger required associations for degraded reports remain
+reserved for the maintainer; changing that choice would alter the published
+form's guarantee and requires revisiting both reporting fallback and readers.
+
+**Locate findings without changing their conclusions (R-38).** Add optional
+`subject_path`, a list of keys and canonical zero-based decimal array positions
+relative to `data.runner_result`. The empty list names the root; existing null
+values are addressable endpoints. Both aggregate and actor-contained issues
+use that same root. Fourteen existing gate-family predicates annotate their
+inspected owned-reap, activation or gate assertion by position. Existing issue
+details/order, outer success and withholding/projection meanings are preserved.
+This additive reference lets a consumer locate a finding's subject; it does
+not decide which other conclusions depend on it. Actual producer shape and
+reference/corpus controls remain pending. Reversal would remove the optional
+output and its consumers; no request acceptance change is selected.
+
+**Retain boundary-specific behavior.** Keep the helper's profile-and-no-diagnostic
+success rule and the worker's non-null-profile apply path; they answer at
+different boundaries. Keep first-argument version dispatch, actor fixed budgets
+despite the common timeout decoder, ordinary empty action labels, native
+validator direct/plain/batch classifications and last-parsed recognized strings,
+explicit verification of Pending runner records, entitlement-error metadata
+distinct from failed read-back, and durable cleanup's checked recorded location.
+These source/history decisions preserve existing caller meanings. The new
+controls establish their individual scope; they remain pending, and exact
+direct-host duplicate precedence will be pinned from real observations rather
+than inferred from the controller. A narrower accepted grammar or changed
+action reach would return to the maintainer's authority. The private decision
+draft records the source/history arguments and bounded evidence limitations;
+its gap-by-gap dispositions will be adopted only with their required receipts
+or an explicitly accepted limitation.
+
 **Retire the expired storage interpreter.** After `v0.3.7` archival, ordinary
 retention removed the last schema-1 archive, `v0.3.3`, and its pointer.
 A fresh owner check verified all retained archives as schema 3, with no
@@ -449,7 +607,7 @@ under the strain register, gives the evidence found for each row.
 | `R-29`, an ordinary build | A build from a source copy without release history passes a narrower stamp check, against requiring history. | Requiring it stops builds from source copies. | The narrower check passes and says so. |
 | `R-15`, one source | Three hand-written copies of a rule held together by a check, against generating them from one table. | Generation removes the independence that exposed `R-36`. | Three copies, with a check across them. |
 | What ships | A release archives the guide and not the contract. After stage one the guide's surface table names surfaces defined only in the contract. | A reader holding only the release cannot follow the table to a definition. | The table stays in the guide and the archive's contents are unchanged. |
-| The reading before `v0.3.8` | The final checkpoint is cut after the maintainer has read the settled contract and ruled on this list, or has said to cut without that. | A change to shipped source after the final archive needs another release. | Stage four proceeds; the final tag waits. |
+| The reading before `v0.3.8` | Pause before tagging the completed, committed changes, after pre-tag checks. The maintainer will arrange another agent's review and read the contract line by line. | Review can change the source before tagged rehearsal and Apple submission. | Stage four and pre-tag verification proceed; the final tag waits for the instruction to continue. |
 | Contract size | The stage-one rendering has 4,494 lines and 59,989 words, including 1,671 table lines; authored body and field meanings are counted above. | This exceeds the plan's 2,200-line reporting threshold. | Stage three examines repetition and generated presentation while retaining field meanings and boundary distinctions. |
 | `v0.3.7` at publication | Published as a release, against only its tag pushed. | `make publish` pushes one tag, and a clone with `main` and the earlier tags but without `v0.3.7` fails the stamp check. | Nothing is pushed; notes are drafted for both versions. |
 

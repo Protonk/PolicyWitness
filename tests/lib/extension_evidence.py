@@ -161,7 +161,8 @@ def validate_actor_extensions(runner):
     references resolve in the resource tables to their owners, transfers carry
     no native result, and each status is published only by the shape it claims."""
     events = runner.get('extension_events')
-    events = events if isinstance(events, list) else []
+    if not isinstance(events, list):
+        return ['actor form lacks extension event table']
     actors = runner.get('actors')
     resources = runner.get('resources')
     transfers = runner.get('transfers')
@@ -375,6 +376,9 @@ def validate_actor_extensions(runner):
 
 
 def validate_extensions(runner):
+    """Applicable ordinary relationships; degradation form has a separate owner."""
+    if runner.get('reporting_failure') is not None:
+        return []
     from actor_evidence import validate_actor_evidence
     errors = validate_actor_evidence(runner)
     if runner.get('execution_form') == 'actors':

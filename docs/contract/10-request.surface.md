@@ -123,13 +123,24 @@ This template applies a policy with no probe actions. Replace the assertion with
 {"contract":"<reported-contract>","specimen_id":"apply-only","policy":{"format":"sbpl","sbpl_source":"(version 1) (allow default)"},"probe_plan":[]}
 ```
 
-### Duplicate-key decoding {duplicate_keys: gap}
+### Repeated members at each entry {duplicate_keys: definition}
 
 ```contract
-kind: "evidence"
+defines: "value"
 ```
 
-The exact handling of repeated JSON object keys across the controller parser and Swift decoder still requires a paired boundary control. The closed-field and branch-order obligations above concern the object each decoder produces.
+For the paired repeated-member cases, CLI entry keeps the last contract, policy, probe step_id, attempt target, runner selector or runner.mode value, then holds the parsed object’s serialization. Direct host entry keeps the first contract, policy, probe step_id or attempt target value in either tested order. Direct-host runner and runner.mode cases refuse with unknown_field at ["runner"] in either order. These observations concern the listed raw-input pairs, their canonical neighbours and independent file effects on the observed platform.
+
+#### Disposition support {disposition_support: owner}
+
+```contract
+grade: "check_read"
+source: {"path":"controller/src/request_patch.rs","symbol":"parse_request"}
+pins: "The controller parses raw JSON before holding its object; the direct-host cases use retained raw request bytes."
+context: "Static review of the cited producer and assertion branches."
+check: [{"path":"tests/suites/runner_outcome_bad_request/contract.py","symbol":"duplicate_entries","form":"test"}]
+limits: "The pinned matrix distinguishes both member orders and canonical neighbours for six fields at CLI and direct host entries. Its selected field/value pairs bound the observation."
+```
 
 ### Support {support: owner}
 
@@ -381,21 +392,43 @@ uses: ["equipment.binding"]
 
 A caller whose connection passes host authorization can supply these controls. Actor equipment preparation checks the packaged inventory and both packaged role bindings before considering fixture override bindings. It retains the packaged and test_override rows with their respective implementation identities.
 
-### Override quantities and applicability {override_inventory: gap}
+### Override quantities and applicability {override_inventory: definition}
 
 ```contract
-kind: "meaning"
+defines: "value"
 ```
 
-The signal-number bound 31 remains a source-owned grammar value. Collection floors are selected by the production planning helpers and checked against the limits inventory. The ordinary worker floor and fixture-delay caps have controls calling the production planning helper and argument parser. Actor admission currently accepts worker_timeout_ms although actor execution uses its fixed allowance. Whether to refuse that inapplicable override remains an admission decision.
+Override applicability follows the selected execution form and owning boundary. Ordinary worker timeout planning uses worker_timeout_ms with its documented floor; actor admission accepts that field while the actor scheduler uses its fixed setup and execution allowances. The signal-number bound 31 is argument grammar. Host decoding, planning floors and caps, worker argument refusal, and fixture behavior retain their separate boundaries.
 
-### Override fixture coverage {override_coverage: gap}
+#### Disposition support {disposition_support: owner}
 
 ```contract
-kind: "evidence"
+grade: "check_read"
+source: {"path":"runner/Sources/PWRunnerCore/ActorOrchestration.swift","symbol":"runActors"}
+pins: "Actor orchestration constructs the scheduler input with its fixed allowances."
+context: "Static review of the cited producer and assertion branches."
+check: [{"path":"tests/suites/witness_contract/check_actor_compositions.py","symbol":"assert_timeout_applicability","form":"test"}]
+limits: "The paired control uses a 200 ms override and a 500 ms delay, checking an ordinary timeout and actor completion with a later dependent file read."
 ```
 
-The draft has inspected the decoder and timeout planning. Existing signed-app cases exercise several overrides; a complete mapping of overrides to boundary assertions and applicable release results remains to be assembled, including downstream worker-argument refusal for excessive values. This gap records incomplete evidence attribution across the override set.
+### Override observation scope {override_coverage: definition}
+
+```contract
+defines: "value"
+```
+
+An override is interpreted at its owning selection, planning, launch or worker-argument boundary. Host admission of a positive fixture value can be followed by worker argument refusal before application. Executable overrides retain their selected-file, spawn and live-inspection observations at those respective boundaries. Timeout and fixture-delay evidence is scoped to the submitted value and execution form.
+
+#### Disposition support {disposition_support: owner}
+
+```contract
+grade: "check_read"
+source: {"path":"runner/Sources/PWRunnerCore/ActorOrchestration.swift","symbol":"runActors"}
+pins: "The actor path retains equipment preparation and fixed scheduler applicability separately."
+context: "Static review of the cited producer and assertion branches."
+check: [{"path":"tests/suites/witness_contract/check_pre_apply_failure.py","symbol":"main","form":"test"}]
+limits: "Excessive positive fixture values are sent through the selected CLI and checked at the downstream worker argument boundary."
+```
 
 ### Support {support: owner}
 

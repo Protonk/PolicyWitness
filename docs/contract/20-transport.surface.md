@@ -113,13 +113,23 @@ Continuous time includes machine sleep. Client clock failure ends with `local_er
 
 A capture can contain `acquisition_stop: "granted"`, `submission: {"state":"invoked"}` and `terminal: "xpc_error"` while `runner_reply` is absent. The client crossed its execution-call boundary once; the reply was unavailable. Retrying the specimen would be a new caller decision with possible repeated effects. A capture rejected by the controller instead leaves the controller’s `submission` projection `unknown`.
 
-### Live transport evidence {live_evidence: gap}
+### Transport evidence scope {live_evidence: definition}
 
 ```contract
-kind: "evidence"
+defines: "value"
 ```
 
-Controlled connections cover foreign control identity before submission and post-invocation failure without replay. A genuine foreign signed host’s receiving boundary, unbound peer branches and the full native request/reply fault matrix still need separately identified observations. Constructed retention checks leave live outcomes between the <!-- span limits.client_reply_retention.value_unit -->96,468,992 bytes<!-- /span --> client-retention cap and <!-- span limits.porcelain_frame_bytes.value_unit -->134,217,728 bytes<!-- /span --> frame limit unresolved.
+Controlled client connections establish the observed control-identity refusal and once-only submission behavior. Signed reservation and single-use observations concern their selected service and binaries. A foreign signed host’s receiving boundary, unbound-peer branches and native request/reply faults require their own observations. Native outcomes between the <!-- span limits.client_reply_retention.value_unit -->96,468,992 bytes<!-- /span --> client-retention cap and <!-- span limits.porcelain_frame_bytes.value_unit -->134,217,728 bytes<!-- /span --> frame limit remain unobserved in this account.
+
+#### Disposition support {disposition_support: owner}
+
+```contract
+grade: "source_read"
+source: {"path":"runner/Clients/PWRunnerClient/PWRunnerClientSession.swift","symbol":"reservationReply"}
+pins: "Control admission and submission phase changes preserve the once-only client boundary."
+context: "Static review of the cited production branches."
+limits: "A substituted foreign control is a controlled receive observation. Native cap-interval behavior and a complete native fault matrix remain outside that observation."
+```
 
 ## Reservation request {reservation: subject}
 

@@ -149,6 +149,165 @@ fn plain_cargo_build_cannot_admit_public_requests() {
 }
 
 #[test]
+fn version_dispatch_uses_the_first_argument() {
+    if !integration_enabled() {
+        return;
+    }
+    let bin = require_pw_bin();
+    let reference = run_pw(&bin, &["--version"]);
+    assert_eq!(reference.status.code(), Some(0));
+    let expected: serde_json::Value = serde_json::from_slice(&reference.stdout).unwrap();
+    for args in [
+        vec!["version"],
+        vec!["version", "unrecognized"],
+        vec!["--version", "run", "/a/request/that/does/not/exist"],
+        vec!["--version", "--invalid"],
+    ] {
+        let output = run_pw(&bin, &args);
+        assert_eq!(output.status.code(), Some(0), "{args:?}");
+        assert!(output.stderr.is_empty(), "{args:?}");
+        let value: serde_json::Value = serde_json::from_slice(&output.stdout).unwrap();
+        // Per-invocation timestamps belong to the envelope header; compare the
+        // identity, result and version data rather than those fresh observations.
+        for field in ["kind", "build", "result", "data"] {
+            assert_eq!(value[field], expected[field], "{args:?}: {field}");
+        }
+    }
+}
+
+#[test]
+fn supplied_direct_cargo_identity_is_embedded_without_release_provenance() {
+    use sha2::Digest;
+
+    if !integration_enabled() {
+        return;
+    }
+    let artifacts = PathBuf::from(env::var_os("PW_TEST_ARTIFACTS").expect("dispatcher artifacts"))
+        .join("direct-cargo-contract");
+    let target = PathBuf::from(env::var_os("PW_TEST_SCRATCH").expect("dispatcher scratch"))
+        .join("direct-cargo-contract");
+    std::fs::create_dir(&artifacts).unwrap();
+    std::fs::create_dir_all(target.parent().unwrap()).unwrap();
+    std::fs::create_dir(&target).unwrap();
+    let manifest = repo_root().join("controller/Cargo.toml");
+    let binary = target.join("aarch64-apple-darwin/debug/policy-witness");
+    let stamp_keys = [
+        "PW_BUILD_CONTRACT",
+        "PW_BUILD_VERSION",
+        "PW_BUILD_NUMBER",
+        "PW_BUILD_DESCRIBE",
+        "PW_BUILD_COMMIT",
+    ];
+    let mut observations = Vec::new();
+    // Reuse only this fresh target directory: each changed environment must
+    // rebuild the non-test binary rather than answer with the previous value.
+    for (label, supplied, expected) in [
+        (
+            "foreign",
+            Some("test:direct-cargo-foreign"),
+            "test:direct-cargo-foreign",
+        ),
+        ("release_form", Some("release:v9.9.9"), "release:v9.9.9"),
+        ("empty", Some(""), "unbound"),
+        ("absent", None, "unbound"),
+    ] {
+        let directory = artifacts.join(label);
+        std::fs::create_dir(&directory).unwrap();
+        let mut build = Command::new("cargo");
+        build
+            .args([
+                "build",
+                "--locked",
+                "--offline",
+                "--bin",
+                "policy-witness",
+                "--target",
+                "aarch64-apple-darwin",
+                "--target-dir",
+            ])
+            .arg(&target)
+            .arg("--manifest-path")
+            .arg(&manifest);
+        for key in stamp_keys {
+            build.env_remove(key);
+        }
+        if let Some(value) = supplied {
+            build.env("PW_BUILD_CONTRACT", value);
+        }
+        std::fs::write(directory.join("build-command.txt"), format!("{build:?}\n")).unwrap();
+        let built = build.output().expect("direct Cargo build");
+        std::fs::write(directory.join("build.stdout"), &built.stdout).unwrap();
+        std::fs::write(directory.join("build.stderr"), &built.stderr).unwrap();
+        assert!(
+            built.status.success(),
+            "{label}: see {}",
+            directory.display()
+        );
+
+        let bytes = std::fs::read(&binary).unwrap();
+        let binary_hash = format!("{:x}", sha2::Sha256::digest(&bytes));
+        std::fs::write(
+            directory.join("binary.json"),
+            serde_json::to_vec_pretty(
+                &serde_json::json!({"path": binary, "bytes": bytes.len(), "sha256": binary_hash}),
+            )
+            .unwrap(),
+        )
+        .unwrap();
+        let version = run_pw(&binary, &["--version"]);
+        std::fs::write(directory.join("version.json"), &version.stdout).unwrap();
+        std::fs::write(directory.join("version.stderr"), &version.stderr).unwrap();
+        assert!(version.status.success(), "{label}: version failed");
+        let value: serde_json::Value = serde_json::from_slice(&version.stdout).unwrap();
+        assert_eq!(value["build"]["contract"], expected, "{label}");
+        assert_eq!(value["data"]["contract"], expected, "{label}");
+        for key in ["version", "number", "describe", "commit"] {
+            assert_eq!(value["build"][key], "unknown", "{label}: provenance {key}");
+        }
+
+        // A matching bound assertion reaches selector admission; a mismatch,
+        // empty binding or unbound producer stops at identity admission. No
+        // app, host or worker is needed to observe either controller boundary.
+        for (entry, asserted) in [("matching", expected), ("mismatch", "test:other")] {
+            let request = directory.join(format!("{entry}.request.json"));
+            let bytes = serde_json::to_vec(&serde_json::json!({
+                "contract": asserted, "runner": false,
+            }))
+            .unwrap();
+            std::fs::write(&request, &bytes).unwrap();
+            let result = run_pw(&binary, &["run", request.to_str().unwrap()]);
+            std::fs::write(directory.join(format!("{entry}.json")), &result.stdout).unwrap();
+            std::fs::write(directory.join(format!("{entry}.stderr")), &result.stderr).unwrap();
+            assert_eq!(std::fs::read(&request).unwrap(), bytes);
+            assert_eq!(result.status.code(), Some(1), "{label}/{entry}");
+            let envelope: serde_json::Value = serde_json::from_slice(&result.stdout).unwrap();
+            let expected_failure = if entry == "matching" && expected != "unbound" {
+                serde_json::json!({"code": "type_mismatch", "path": ["runner"]})
+            } else {
+                serde_json::json!({"code": "unsupported_contract", "path": ["contract"],
+                                   "expected_contract": expected})
+            };
+            assert_eq!(
+                envelope["data"]["request_failure"], expected_failure,
+                "{label}/{entry}"
+            );
+            assert_eq!(envelope["result"]["normalized_outcome"], "bad_request");
+            assert_eq!(envelope["build"]["contract"], expected);
+            assert!(envelope["data"]["runner_client"].is_null());
+            assert!(envelope["data"]["runner_result"].is_null());
+            observations.push(serde_json::json!({"build": label, "supplied": supplied,
+                "expected_identity": expected, "entry": entry, "asserted": asserted,
+                "request_failure": expected_failure}));
+            std::fs::write(
+                artifacts.join("observations.json"),
+                serde_json::to_vec_pretty(&observations).unwrap(),
+            )
+            .unwrap();
+        }
+    }
+}
+
+#[test]
 fn version_flag_reports_build_stamp_and_contract() {
     if !integration_enabled() {
         return;
@@ -311,9 +470,23 @@ fn sbpl_check_verdicts_follow_the_native_compiler() {
     let path_param = "(version 1) (deny default) (allow file-read* (subpath (param \"ROOT\")))";
     let cases: Vec<(&str, &str, Option<serde_json::Value>, &str, i32)> = vec![
         (
-            "plain success",
+            "parameters omitted",
             "(version 1) (allow default)",
             None,
+            "ok",
+            0,
+        ),
+        (
+            "parameters null",
+            "(version 1) (allow default)",
+            Some(serde_json::Value::Null),
+            "ok",
+            0,
+        ),
+        (
+            "parameters empty map",
+            "(version 1) (allow default)",
+            Some(serde_json::json!({})),
             "ok",
             0,
         ),
@@ -335,6 +508,20 @@ fn sbpl_check_verdicts_follow_the_native_compiler() {
             "required path parameter absent",
             path_param,
             None,
+            "compile_error",
+            1,
+        ),
+        (
+            "required path parameter null map",
+            path_param,
+            Some(serde_json::Value::Null),
+            "compile_error",
+            1,
+        ),
+        (
+            "required path parameter empty map",
+            path_param,
+            Some(serde_json::json!({})),
             "compile_error",
             1,
         ),
@@ -381,6 +568,9 @@ fn sbpl_check_verdicts_follow_the_native_compiler() {
             0,
         ),
     ];
+    let artifacts = PathBuf::from(env::var_os("PW_TEST_ARTIFACTS").expect("dispatcher artifacts"))
+        .join("native-parameter-cases");
+    std::fs::create_dir(&artifacts).expect("fresh helper artifacts");
     for (index, (label, source, params, outcome, exit)) in cases.into_iter().enumerate() {
         let mut policy = serde_json::json!({"format": "sbpl", "sbpl_source": source});
         if let Some(params) = &params {
@@ -388,7 +578,17 @@ fn sbpl_check_verdicts_follow_the_native_compiler() {
         }
         let request = serde_json::json!({"policy": policy, "probe_plan": []}).to_string();
         // Alternate file and stdin delivery across the table.
-        let out = run_sbpl_check_request(&bin, &request, index % 2 == 1);
+        let via_stdin = index % 2 == 1;
+        let out = run_sbpl_check_request(&bin, &request, via_stdin);
+        let case = artifacts.join(format!("{index:02}"));
+        std::fs::create_dir(&case).unwrap();
+        std::fs::write(case.join("request.json"), &request).unwrap();
+        std::fs::write(case.join("stdout.json"), &out.stdout).unwrap();
+        std::fs::write(case.join("stderr"), &out.stderr).unwrap();
+        std::fs::write(case.join("receipt.json"), serde_json::to_vec_pretty(&serde_json::json!({
+            "label": label, "binary": bin, "delivery": if via_stdin {"stdin"} else {"file"},
+            "expected_outcome": outcome, "expected_exit": exit, "observed_exit": out.status.code()
+        })).unwrap()).unwrap();
         let stdout = String::from_utf8_lossy(&out.stdout);
         let envelope: serde_json::Value = serde_json::from_str(&stdout).unwrap_or_else(|err| {
             panic!(
@@ -419,12 +619,15 @@ fn sbpl_check_verdicts_follow_the_native_compiler() {
             Some(64),
             "{label}"
         );
-        assert_eq!(data["params_present"], params.is_some(), "{label}");
-        assert_eq!(
-            data["params_count"],
-            params.as_ref().map_or(0, |p| p.as_object().unwrap().len()),
-            "{label}"
-        );
+        // Null and omission both decode as absent; an empty object remains
+        // present even though all three pass zero entries to the compiler.
+        let (present, count) = match &params {
+            None | Some(serde_json::Value::Null) => (false, 0),
+            Some(serde_json::Value::Object(map)) => (true, map.len()),
+            other => panic!("invalid parameter fixture: {other:?}"),
+        };
+        assert_eq!(data["params_present"], present, "{label}");
+        assert_eq!(data["params_count"], count, "{label}");
         assert_eq!(data["compile"]["stage"], "compile", "{label}: {envelope}");
         assert_eq!(data["compile"]["ok"], exit == 0, "{label}: {envelope}");
         let inventory = &data["import_inventory"];

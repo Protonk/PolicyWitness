@@ -301,6 +301,15 @@ struct PWRunnerRunResult {
                   (runner_subprocess == nil || !phases.isEmpty) else {
                 throw PWRunnerReportingValidationError(message: "phase identities and ordered actions must partition the reply")
             }
+            // These are the admitted declarations carried by the reply. Ordinary
+            // step IDs may be empty; phase IDs and actor action IDs may not.
+            func admittedIdentity(_ value: String, allowEmpty: Bool) -> Bool {
+                (allowEmpty || !value.isEmpty) && value.utf8.count <= 63 && !value.utf8.contains(0)
+            }
+            guard phaseIDs.allSatisfy({ admittedIdentity($0, allowEmpty: false) }),
+                  actionIDs.allSatisfy({ admittedIdentity($0, allowEmpty: execution_form != "actors") }) else {
+                throw PWRunnerReportingValidationError(message: "phase/action identity exceeds admitted grammar")
+            }
             for (index, phase) in phases.enumerated() {
                 guard phase.collectionEvidenceConsistent else {
                     throw PWRunnerReportingValidationError(message: "phase collection status contradicts validator evidence")
@@ -381,6 +390,7 @@ extension PWRunnerRunResult {
         guard let actors, !actors.isEmpty, actors.count <= PWActorLimits.actors,
               runner_subprocess == nil, policy_sha256 == nil, sandboxed_after_apply == nil else { return "actor form carries singular projections" }
         guard let resources, let transfers else { return "actor form lacks resource or transfer tables" }
+        guard extension_events != nil else { return "actor form lacks extension event table" }
         guard let equipment_inventory, let equipment_bindings, let equipment_entitlements, let authority_setup,
               actors.allSatisfy({ $0.equipment != nil && $0.application != nil }) else { return "actor form lacks setup/equipment/application account" }
         if let problem = pwRunnerEquipmentProblems(inventory: equipment_inventory, bindings: equipment_bindings,
@@ -416,7 +426,8 @@ extension PWRunnerRunResult {
                 resources.deliveries.isEmpty, resources.handles.isEmpty,
                 authority_setup.host.run.disposition == "not_attempted",
                 authority_setup.host.regions.isEmpty, authority_setup.host.custody.isEmpty,
-                phases.allSatisfy({ !$0.arrival_observed && !$0.completion_observed && $0.collection_status == "not_reached" })
+                phases.allSatisfy({ !$0.arrival_observed && !$0.completion_observed && $0.collection_status == "not_reached"
+                    && $0.ordering?.proceed_set != true && $0.ordering?.proceed_observed != true })
                 else { return "preparation refusal contains execution evidence" }
         }
         let failedInspection = actors.contains { actor in
@@ -474,6 +485,17 @@ extension PWRunnerRunResult {
         let actorIDs = Set(actors.map { $0.actor_id })
         guard actorIDs.count == actors.count, phases.allSatisfy({ $0.actor_id.map(actorIDs.contains) == true && ($0.actor_visit ?? 0) >= 1 }),
               steps.allSatisfy({ $0.actor_id.map(actorIDs.contains) == true }) else { return "actor association on phases or steps" }
+        for (index, actor) in actors.enumerated() {
+            guard actor.index == index, validReference(actor.actor_id) else { return "actor index or identity conflict" }
+            let declared = phases.enumerated().compactMap { $0.element.actor_id == actor.actor_id ? $0.offset + 1 : nil }
+            guard actor.visits == declared else { return "actor visits disagree with schedule" }
+        }
+        var visits: [String: Int] = [:]
+        for phase in phases {
+            let actor = phase.actor_id! // The association check above established this owner.
+            visits[actor, default: 0] += 1
+            guard phase.actor_visit == visits[actor] else { return "phase actor_visit disagrees with that actor's visit order" }
+        }
         for actor in actors {
             guard [0, 1].contains(actor.application_count), (actor.application_count == 1) == (actor.applied == true),
                   actor.setup_status != "applied" || actor.applied == true else { return "application count contradicts application publication" }

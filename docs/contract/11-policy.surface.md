@@ -83,21 +83,43 @@ A source may combine a parameter with a literal suffix:
 
 `"params":{"ROOT":"/etc"}` supplies the value used by this expression. An unused `OPTIONAL` parameter and a referenced but missing `ROOT` exercise different compiler paths. Inspect the native compile record for the latter's outcome.
 
-### Parameter example execution {parameter_evidence: gap}
+### Parameter example observations {parameter_evidence: definition}
 
 ```contract
-kind: "evidence"
+defines: "value"
 ```
 
-The parameter teaching examples are preserved from the guide and prior examination. Their native outcomes require the release's helper and worker controls; none is credited as executed by this draft.
+The helper records parameter-map presence and count separately: omission and null decode as absent; an empty map remains present with zero entries. Native compiler examples concern the helper invocation that produced the verdict. Worker examples use the consumed source and parameter values, then observe application and the requested fresh-file effects on concrete targets. Record the selected binaries, policy and platform with each native observation.
 
-### Worker and helper compile classification {compile_classification: gap}
+#### Disposition support {disposition_support: owner}
 
 ```contract
-kind: "behavior"
+grade: "check_read"
+source: {"path":"controller/src/bin/sbpl-check.rs","symbol":"check"}
+pins: "Helper metadata and native verdict are retained together."
+context: "Static review of the cited producer and assertion branches."
+check: [{"path":"controller/integration/cli_contract.rs","symbol":"sbpl_check_verdicts_follow_the_native_compiler","form":"test"},{"path":"tests/suites/runner_outcome_bad_request/contract.py","symbol":"composite_parameters","form":"test"}]
+limits: "Helper omitted/null/empty neighbours and worker ROOT twins have distinct oracles; worker target bytes and descriptor identity are checked independently."
 ```
 
-The worker treats a null compiled-profile pointer as failure and proceeds with a non-null pointer. The helper also treats a non-null native diagnostic as failure. A simultaneous profile and diagnostic therefore takes different branches in these producers. Whether to align that behavior, and how to dispose of that diagnostic in the worker branch, remains unresolved.
+### Worker and helper compile classification {compile_classification: definition}
+
+```contract
+defines: "value"
+```
+
+The worker treats a null compiled-profile pointer as failure and proceeds to capture and application with a non-null profile. The helper requires a profile and no native diagnostic for success, and frees the returned profile, parameters and diagnostic it owns. A simultaneous profile and diagnostic therefore has different classifications at these two boundaries. The helper branch has an injected native-return control; native occurrence of the worker combination remains unobserved.
+
+#### Disposition support {disposition_support: owner}
+
+```contract
+grade: "check_read"
+source: [{"path":"controller/tools/pw_probe_runner/pw_probe_runner.c","symbol":"sandbox_compile_string(policy_buf"},{"path":"controller/src/bin/sbpl-check.rs","symbol":"compile_with"}]
+pins: "Worker pointer acceptance and helper diagnostic-sensitive classification are separate producer rules."
+context: "Static review of the cited producer and assertion branches."
+check: [{"path":"controller/src/bin/sbpl-check.rs","symbol":"a_profile_succeeds_alone_and_fails_beside_an_error_buffer","form":"test"}]
+limits: "Injected helper returns check verdict and free counts. Worker simultaneous profile/diagnostic occurrence has source support only."
+```
 
 ### Support {support: owner}
 
@@ -106,7 +128,7 @@ scope: "subtree"
 grade: "source_read"
 source: [{"path": "runner/Sources/PWRunnerCore/PWRunnerRequest.swift", "symbol": "PWRunnerPolicySpec"}, {"path": "runner/Sources/PWRunnerCore/ProbeRunner.swift", "symbol": "policyMeaningFailure"}, {"path": "runner/Sources/PWRunnerCore/CWorkerRequestPlanning.swift", "symbol": "workerParamsFromPolicy"}, {"path": "controller/tools/pw_probe_runner/pw_probe_runner.c", "symbol": "sandbox_set_param"}]
 pins: "The adjacent field meanings and operations follow the named implementation."
-context: "Current source read for this draft."
+context: "Review of the named producer branches."
 limits: "Decoder, meaning checks, parameter ordering, worker parameter snapshot/setup and compilation branches read. Native execution is not credited."
 ```
 
@@ -158,13 +180,23 @@ defines: "value"
 
 The `file-read*` allowance is unconditional. Using this augment changes the selected policy's file-read authority and can mask the denial a file-read experiment intended to observe. Its documented derivation used macOS 14.8.3, build 23J220, and the repository's dynamic exec helper.
 
-### Augment semantics and historical environment {augment_semantics: gap}
+### Augment evidence scope {augment_semantics: definition}
 
 ```contract
-kind: "evidence"
+defines: "value"
 ```
 
-The resolver enforces names, ordered reads and append behavior. The allow-only intent of packaged fragments, SBPL rule-composition behavior, and the baseline's sufficient prerequisites on another macOS build require their own native evidence.
+The resolver validates all names before file access, reads fragments in requested order and appends each with a leading newline. Native behavior is scoped to the exact fragment bytes, base policy and macOS build observed. The packaged exec_baseline fragment includes broad file-read allowance; additional prerequisites and SBPL composition on another platform require their own observations.
+
+#### Disposition support {disposition_support: owner}
+
+```contract
+grade: "source_read"
+source: {"path":"controller/src/augments.rs","symbol":"resolve_policy_augments"}
+pins: "Resolver validation, ordered reads and source append define the produced policy text."
+context: "Static review of the cited production branches."
+limits: "Resolver correctness and selected native fragment observations have distinct scopes."
+```
 
 ### Support {support: owner}
 
@@ -173,7 +205,7 @@ scope: "subtree"
 grade: "check_read"
 source: [{"path": "controller/src/augments.rs", "symbol": "resolve_policy_augments"}, {"path": "controller/src/augments.rs", "symbol": "resolve_actor_augments"}, {"path": "runner/augments/exec_baseline.sb", "symbol": "(allow process-exec*)"}]
 pins: "The adjacent field meanings and operations follow the named implementation."
-context: "Current source read for this draft."
+context: "Review of the named producer branches."
 limits: "Read append/no-partial-replacement and actor-order controls. The packaged baseline source was read; its historical derivation is inherited evidence."
 check: [{"path": "controller/src/augments.rs", "symbol": "applies_and_strips_field", "form": "test"}, {"path": "controller/src/augments.rs", "symbol": "unknown_name_is_bad_request_without_partial_apply", "form": "test"}, {"path": "controller/src/augments.rs", "symbol": "actor_policies_resolve_at_their_own_paths_and_stop_at_the_first_refusal", "form": "test"}]
 ```
@@ -213,7 +245,7 @@ scope: "subtree"
 grade: "source_read"
 source: [{"path": "controller/src/bin/sbpl-check.rs", "symbol": "CheckRequest"}, {"path": "controller/src/bin/sbpl-check.rs", "symbol": "fn main"}]
 pins: "The adjacent field meanings and operations follow the named implementation."
-context: "Current source read for this draft."
+context: "Review of the named producer branches."
 limits: "Source inspection supplies the stated branch behavior; this draft credits no execution."
 ```
 
@@ -266,7 +298,7 @@ scope: "subtree"
 grade: "source_read"
 source: [{"path": "controller/src/bin/sbpl-check.rs", "symbol": "admit"}, {"path": "controller/src/bin/sbpl-check.rs", "symbol": "CheckPolicy"}]
 pins: "The adjacent field meanings and operations follow the named implementation."
-context: "Current source read for this draft."
+context: "Review of the named producer branches."
 limits: "Source inspection supplies the stated branch behavior; this draft credits no execution."
 ```
 
@@ -330,7 +362,7 @@ scope: "subtree"
 grade: "source_read"
 source: [{"path": "controller/src/bin/sbpl-check.rs", "symbol": "check"}, {"path": "controller/src/bin/sbpl-check.rs", "symbol": "CheckData"}]
 pins: "The adjacent field meanings and operations follow the named implementation."
-context: "Current source read for this draft."
+context: "Review of the named producer branches."
 limits: "Source inspection supplies the stated branch behavior; this draft credits no execution."
 ```
 
@@ -384,7 +416,7 @@ scope: "subtree"
 grade: "source_read"
 source: [{"path": "controller/src/bin/sbpl-check.rs", "symbol": "compile_with"}, {"path": "controller/src/bin/sbpl-check.rs", "symbol": "CompileRecord"}]
 pins: "The adjacent field meanings and operations follow the named implementation."
-context: "Current source read for this draft."
+context: "Review of the named producer branches."
 limits: "Native wrapper branches read. Scripted native-result controls and platform execution still need to be joined as graded owners."
 ```
 
@@ -429,13 +461,23 @@ free.effect: Bind each digest to the bytes held by its producing read. The contr
 
 The saved file is held once by the controller, selected source is held after augmentation, and the serialized request is held once for delivery. Files named by imports can change between these independent reads. A literal inventory describes the producer's walk; the worker compiled-profile receipt has its own observation boundary.
 
-### Import resolver agreement {native_import_agreement: gap}
+### Literal import evidence scope {native_import_agreement: definition}
 
 ```contract
-kind: "evidence"
+defines: "value"
 ```
 
-The inventory source implements its two-directory search order by convention. Native compiler agreement on collisions between those directories, macro-generated imports and cross-read file changes remains outside the evidence credited to this draft.
+The inventory walks literal imports using its documented two-directory search order and records the bytes read during that walk. The directory order is a platform convention. Native compilation examples establish their selected literal imports; collision precedence, macro-generated dependencies and files changing between independent reads retain their own evidence limits.
+
+#### Disposition support {disposition_support: owner}
+
+```contract
+grade: "source_read"
+source: {"path":"controller/src/sbpl_imports.rs","symbol":"resolve_import_path"}
+pins: "The scanner follows IMPORT_SEARCH_PATHS and records each resolved file read."
+context: "Static review of the cited production branches."
+limits: "The source records that collision precedence was not established by the cited platform exploration."
+```
 
 ### Support {support: owner}
 
@@ -444,7 +486,7 @@ scope: "subtree"
 grade: "source_read"
 source: [{"path": "controller/src/sbpl_imports.rs", "symbol": "resolve_imports"}, {"path": "controller/src/sbpl_imports.rs", "symbol": "read_regular_file"}, {"path": "controller/src/sbpl_imports.rs", "symbol": "compute_closure_hash"}, {"path": "controller/src/bin/sbpl-check.rs", "symbol": "ImportInventory"}]
 pins: "The adjacent field meanings and operations follow the named implementation."
-context: "Current source read for this draft."
+context: "Review of the named producer branches."
 limits: "Full inventory traversal and hashing implementation read. Native search-order observations are inherited from the source comments, not reproduced here."
 ```
 
@@ -543,7 +585,7 @@ scope: "subtree"
 grade: "check_read"
 source: [{"path": "controller/src/policy_check.rs", "symbol": "parse_policy_check_output"}, {"path": "controller/src/policy_check.rs", "symbol": "supported_outcome"}, {"path": "controller/src/run_flow.rs", "symbol": "fallback_policy_check"}, {"path": "controller/src/runner_client.rs", "symbol": "pub fn fallback_eligible"}, {"path": "controller/src/run_flow.rs", "symbol": "let actor_policies:"}]
 pins: "The adjacent field meanings and operations follow the named implementation."
-context: "Current source read for this draft."
+context: "Review of the named producer branches."
 limits: "Capture parsing, fallback eligibility and call sites, supported-outcome control and constructed fallback-selection control read; no execution credited. The malformed actor-mode policy-object path is source-read. Detailed text-byte capture mechanics are shared with the transport surface."
 check: [{"path": "controller/src/policy_check.rs", "symbol": "supported_outcomes_are_copied_into_status_without_a_second_verdict", "form": "test"}, {"path": "controller/src/run_flow.rs", "symbol": "fallback_compilation_is_requested_only_for_an_admitted_xpc_error", "form": "test"}]
 ```
@@ -575,6 +617,6 @@ scope: "subtree"
 grade: "source_read"
 source: [{"path": "controller/src/run_flow.rs", "symbol": "actor_fallback_checks"}, {"path": "controller/src/run_flow.rs", "symbol": "actor_policies"}]
 pins: "The adjacent field meanings and operations follow the named implementation."
-context: "Current source read for this draft."
+context: "Review of the named producer branches."
 limits: "Source inspection supplies the stated branch behavior; this draft credits no execution."
 ```

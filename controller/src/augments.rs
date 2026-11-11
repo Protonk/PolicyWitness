@@ -80,7 +80,7 @@ pub fn resolve_augments(request_value: &mut Value, app_root: &Path) -> AugmentRe
     resolve_policy_augments(policy, &["policy"], app_root)
 }
 
-/// One apply actor's resolution in the actor form. `original_source` and
+/// One actor's policy resolution in the actor form. `original_source` and
 /// `selected_source` are the string sources before and after resolution, when
 /// they existed; the actor's id and mode are copied for the dossier.
 pub struct ActorAugmentResolution {

@@ -224,8 +224,84 @@ if [[ "${ASSERT_RC}" -ne 0 ]]; then
   test_fail "${MSG}" "{\"log\":\"${ASSERT_LOG}\"}"
 fi
 
+test_step "direct-batch" "check repeated keys, RAW zero and direct result meanings through the shipped helper"
+test_check_python "${PW_TEST_ARTIFACTS}/direct-batch.log" "direct/batch validator meanings changed" \
+  - "${SB_VALIDATOR}" "${TARGET_PID}" "${PW_TEST_ARTIFACTS}/direct-batch" "${RESPONSE_FILE}" <<'PY_DIRECT_BATCH'
+import json, subprocess, sys
+from pathlib import Path
+
+validator, pid, artifact_path, existing_path = sys.argv[1:]
+artifacts = Path(artifact_path)
+artifacts.mkdir()
+report = {}
+
+def invoke(name, args, text=None):
+    argv = [validator, *args]
+    if text is not None:
+        (artifacts / (name + '.stdin')).write_text(text)
+    completed = subprocess.run(argv, input=None if text is None else text.encode(),
+                               capture_output=True, timeout=5)
+    (artifacts / (name + '.stdout')).write_bytes(completed.stdout)
+    (artifacts / (name + '.stderr')).write_bytes(completed.stderr)
+    report[name] = dict(argv=argv, exit_code=completed.returncode)
+    (artifacts / 'commands.json').write_text(json.dumps(report, indent=2) + '\n')
+    return completed.returncode, completed.stdout
+
+for index, filter_type in enumerate(('RAW:', 'RAW:0')):
+    rc, raw = invoke(f'raw{index}_direct', ['--json', pid, 'network-outbound', filter_type])
+    direct = json.loads(raw)
+    assert rc == 0 and direct['kind'] == 'sb_api_validator_result'
+    assert direct['filter_type'] == filter_type and direct['filter_type_id'] == 0 and direct['filter_value'] is None
+    rc, raw = invoke(f'raw{index}_direct_extra', ['--json', pid, 'network-outbound', filter_type, 'unused'])
+    assert rc == 2 and json.loads(raw)['error'] == 'unexpected_filter_value_for_none'
+    query = dict(step_id='zero', operation='network-outbound', filter_type=filter_type)
+    rc, raw = invoke(f'raw{index}_batch_missing', ['--batch', pid], json.dumps(query) + '\n')
+    assert rc == 0 and json.loads(raw)['outcome'] == 'parse_error'
+    query['filter_value'] = 'unused'
+    rc, raw = invoke(f'raw{index}_batch_value', ['--batch', pid], json.dumps(query) + '\n')
+    batch = json.loads(raw)
+    assert rc == 0 and batch['kind'] == 'sb_api_validator_verdict'
+    assert batch['filter_type'] == filter_type and batch['filter_type_id'] == 0 and batch['filter_value'] == 'unused'
+    assert isinstance(batch['rc'], int) and isinstance(batch['errno'], int)
+
+# Preserve duplicate JSON member order in the submitted text. Each recognized
+# key occurs twice; opposite orders must echo opposite final strings.
+sets = [dict(step_id='first', operation='network-outbound', filter_type='RAW:0', filter_value='first-value'),
+        dict(step_id='second', operation='this-op-does-not-exist', filter_type='RAW:', filter_value='second-value')]
+for order in range(2):
+    pairs = list(sets[order].items()) + list(sets[1-order].items())
+    query = '{' + ','.join(json.dumps(key) + ':' + json.dumps(value) for key, value in pairs) + '}\n'
+    rc, raw = invoke(f'duplicate_order{order}', ['--batch', pid], query)
+    result = json.loads(raw)
+    assert rc == 0 and result['kind'] == 'sb_api_validator_verdict'
+    assert all(result[key] == value for key, value in sets[1-order].items())
+    assert result['filter_type_id'] == 0
+
+# Reuse the existing batch case's actual deny and unsupported-operation
+# observations against its still-owned sandboxed child. These are native calls
+# through the shipped helper, separately from the constructed source control.
+existing = {record.get('step_id'): record for record in
+            map(json.loads, Path(existing_path).read_text().splitlines())}
+for name, outcome in [('s_path_deny', 'deny'), ('s_op_error', 'unsupported_operation')]:
+    batch = existing[name]
+    args = [pid, batch['operation'], batch['filter_type']]
+    if batch['filter_value'] is not None:
+        args.append(batch['filter_value'])
+    rc, raw = invoke(name + '_direct_json', ['--json', *args])
+    direct = json.loads(raw)
+    assert rc == 0 and direct['kind'] == 'sb_api_validator_result'
+    assert (direct['rc'], direct['errno']) == (batch['rc'], batch['errno'])
+    assert direct['allowed'] is False and direct['denied'] is True
+    assert 'outcome' not in direct and 'error' not in direct
+    assert batch['outcome'] == outcome
+    assert (batch['error'] is None) if outcome == 'deny' else isinstance(batch['error'], str)
+    rc, raw = invoke(name + '_direct_plain', args)
+    assert rc == 1 and raw.decode() == f"rc={batch['rc']} errno={batch['errno']}\n"
+print('ok: shipped helper preserves repeated-key order, RAW-zero value grammar and direct/batch native-result meanings')
+PY_DIRECT_BATCH
+
 SUMMARY="$(tail -1 "${ASSERT_LOG}")"
-test_pass "${SUMMARY}" "{\"request\":\"${REQUEST_FILE}\",\"response\":\"${RESPONSE_FILE}\"}"
+test_pass "${SUMMARY}; direct/batch boundary controls passed" "{\"request\":\"${REQUEST_FILE}\",\"response\":\"${RESPONSE_FILE}\"}"
 }
 
 if test_selected "${PW_TEST_ID}"; then
@@ -241,12 +317,12 @@ fi
 # it needs no kernel query, sandbox or child.
 if test_selected predictions_do_not_report; then
   test_begin "${PW_TEST_SUITE}" predictions_do_not_report
-  test_step build "compile the validator source with a recording sandbox_check and drive both query modes"
+  test_step build "compile the production validator with constructed native results and drive both query modes"
   CONTROL="${PW_TEST_ARTIFACTS}/no-report"
   test_build_fixture "${ROOT_DIR}/tests/fixtures/validator/build_no_report.sh" "${CONTROL}"
   if "${CONTROL}" >"${PW_TEST_ARTIFACTS}/control.log" 2>&1; then
     test_pass "$(tail -1 "${PW_TEST_ARTIFACTS}/control.log")" "{\"log\":\"${PW_TEST_ARTIFACTS}/control.log\"}"
   else
-    test_fail "a validator query reports to the kernel: $(tail -1 "${PW_TEST_ARTIFACTS}/control.log")" "{\"log\":\"${PW_TEST_ARTIFACTS}/control.log\"}"
+    test_fail "validator source control failed: $(tail -1 "${PW_TEST_ARTIFACTS}/control.log")" "{\"log\":\"${PW_TEST_ARTIFACTS}/control.log\"}"
   fi
 fi

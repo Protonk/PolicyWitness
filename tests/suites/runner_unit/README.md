@@ -23,6 +23,25 @@ their public projection and records its size separately from conservative actor
 component allowances. Those constructed populations do not establish a maximum
 for every binary reply or a native execution footprint.
 
+`ReaderCorpusTests` retains constructed typed replies and a host judgment before
+encoding, including refused neighbours. The registered Rust replay reads those
+same frames, preserves the reply through envelope assembly, and records semantic
+findings, worker projections, outer result and exit. An independent Python frame
+reader compares its canonical projection and applies the general consumer,
+ordinary actor/extension readers and retained-lifecycle oracle at their separate
+scopes. `reader-corpus/{swift,rust,python}.json` records those judgments. JSON-only
+null/type controls separately expose Rust's test-only optional normalization;
+they carry no Swift judgment. These controls establish reader behavior over
+constructed records; the existing live actor receipts supply native producer
+evidence. The real oversized-text writer refusal's emitted minimal frame and
+small failure receipt also pass through this route, carrying distinct producer
+provenance beside the separately constructed minimal-form control.
+Every application state/basis pair has a full-reply positive built
+through the production assembler and resolver, an adjacent incorrect assessment,
+and retained source observations. Terminal pre-apply and failed-apply contexts
+also check contradictory applied flags. The corpus records constructed reader
+evidence; native occurrence of each context requires separate observations.
+
 ## Invariants
 
 - Runs the `PWRunnerCoreTests` executable target defined in

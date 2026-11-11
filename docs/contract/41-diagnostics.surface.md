@@ -210,19 +210,47 @@ context: "Typed controller implementation and the named constructed tests were r
 limits: "Actor/native family entry points and the complete gate checks were read; their detailed operation predicates have separate source owners. The scope example combines separately inspected projection and outer-result controls."
 ```
 
-### Shared reader evidence {reader_evidence: gap}
+### Reader judgments {reader_evidence: definition}
 
 ```contract
-kind: "evidence"
+uses: ["actor_evidence.actor.reader_scope"]
 ```
 
-The host self-check, controller reader and harness reader are separate
-implementations of the public relationships. The prior constructed
-comparison found divergent judgments. Shared acceptance and refusal
-controls still need to be reconciled around each rule's applicability,
-including preparation failures and reporting failures. This draft credits
-the controller branches and inspected controls above; integrated release
-execution remains to be attached.
+Host reporting validation, controller semantic admission and canonical-JSON
+consumption interpret the same typed records at their stated scopes. Worker
+lifecycle assessment remains a separate judgment over the retained native
+account and its projection. A reporting failure can retain observations that
+produce a lifecycle finding while satisfying the degradation form.
+
+The shared corpus carries constructed Swift records through binary encoding,
+Rust decoding and envelope assembly, and independent Python decoding and
+consumption. Its cases retain each judgment, the raw reply, outer result and
+exit, and independently projected actor endings. JSON-only null and omission
+controls retain their authored input and test-decoder normalization separately.
+These cases check reader behavior against independently authored expectations;
+native producer observations have their own owners.
+
+#### Corpus support {support: owner}
+
+```contract
+grade: "executed"
+source: [{"path":"controller/src/porcelain_admission.rs","symbol":"execution_diagnostics"},{"path":"tests/lib/consumer.py","symbol":"_validate_reply"},{"path":"tests/lib/lifecycle_oracle.py","symbol":"check_actor_records"}]
+check: [{"path":"controller/src/run_flow.rs","symbol":"reader_definition_corpus_cross_readers","form":"test"},{"path":"tests/suites/runner_unit/reader_corpus.py","symbol":"replay","form":"test"}]
+pins: "Preparation, identifier, membership, application precedence and degradation cases check their own expected judgments and retained consequences across the actual readers."
+context: "Whole canonical runner-unit case passed with zero recorded system sleep. Swift judgments over 142 typed frames were retained before encoding; exact-one Rust replay carried 143 frames including the real writer-cap fallback through envelopes, then independent Python readers completed all rows and seven JSON-only controls."
+limits: "The corpus uses constructed records and independently expected interpretations. Eleven application-positive pairs, degradation admission, the exact contradictory-worker D1 finding and retained actor projections have separate assertions. JSON-only normalization has its own domain. Native occurrence of each constructed context has separate observation owners."
+run: "20261111T162345Z_3d6c7242"
+case: "runner_unit/pwrunner_core_unit_executable"
+source_snapshot: "reviewed-inputs sha256:af396aadf41ba79a0d072b62d9c3f4ff1df5b5fa30d6c4ff267c53e8437dd51d (b6ce6d26 dirty; replay identity correction)"
+```
+
+#### Independent semantic classifiers {classifier_generation: gap}
+
+```contract
+kind: "behavior"
+```
+
+The host, controller and test readers retain independently written semantic classifiers checked against the stated definitions. Whether to generate those classifiers from one implementation remains a maintainer decision.
 
 ## One actor's diagnostics {actor: subject}
 
@@ -284,6 +312,14 @@ defines: "assessment"
 
 The `unconfirmed` value merges the two host states while the retained
 host claim preserves which state and reason it supplied.
+
+#### Unconfirmed vocabulary {vocabulary_choice: gap}
+
+```contract
+kind: "behavior"
+```
+
+The controller maps both unresolved and inapplicable host final-status claims to unconfirmed while retaining the host claim. Whether to retain that merged controller vocabulary remains a maintainer decision.
 
 ### Host-cleanup attribution {cause: acts}
 
@@ -347,6 +383,19 @@ Human-readable explanation of the failed relationship or copied host
 conflict. Some controller details embed a step label or position; other
 actor and gate findings carry a general explanation.
 
+### subject_path {subject_path: field}
+
+Optional location of the inspected assertion within `data.runner_result`.
+The path is an ordered list of object keys and canonical zero-based decimal
+array positions. An empty path names the whole host result; a present null
+value remains an addressable target. For example,
+`["phases","2","termination_gate"]` names the third phase's carried gate,
+even when phase labels are duplicated or invalid.
+The controller supplies this field for owned-reap, phase-activation and
+termination-gate findings. Its association identifies the inspected record;
+projection and retention effects follow the producing check's scope.
+Other controller findings and copied host conflicts omit this field.
+
 ### rule {rule: field}
 
 Host conflict rule copied from the retained disposition issue, such as
@@ -376,20 +425,56 @@ where: "integrity finding construction"
 entry: ["cli_run"]
 recipient: ["report_reader"]
 report: ["execution_diagnostics", "actor_execution_diagnostics"]
-free.effect: Publish controller findings as kind and detail. Copy validated host conflicts with their rule, question, step index and observation references. Preserve the host reply independently of both forms.
+free.effect: Publish controller findings as kind and detail, with subject_path for the owned-reap, phase-activation and termination-gate checks. Copy validated host conflicts with their rule, question, step index and observation references. Preserve the host reply independently of both forms.
 ```
 
-### Structured finding subjects {subject_gap: gap}
+### Finding association and effect {subject: definition}
 
 ```contract
-kind: "meaning"
+uses: ["diagnostics.issue.subject_path", "diagnostics.execution.reply_checks", "diagnostics.execution.project"]
 ```
 
-Controller-generated findings currently identify their affected phase or
-actor through surrounding scope and, where supplied, human detail.
-A structured reference to the specific phase, actor or assertion remains
-unimplemented. Adding that reference must preserve the existing distinction
-between worker-local projection findings and reply-wide findings.
+A subject path associates the finding with the retained assertion that its
+check inspected. A gate's source and dependent records remain operands of
+that check. Reply-wide findings withhold the aggregate projection and retain
+the separately computed actor projections. Worker-local findings affect
+that worker's projection.
+
+#### Reply-wide withholding scope {withholding_scope: gap}
+
+```contract
+kind: "behavior"
+```
+
+A reply-wide finding withholds the aggregate projection and retains separately computed actor projections. Whether that finding should also withhold the actor conclusions remains a maintainer decision.
+
+#### Executed gate finding locations {gate_execution: owner}
+
+```contract
+grade: "executed"
+source: {"path":"controller/src/porcelain_actor.rs","symbol":"fn gates"}
+check: {"path":"controller/src/porcelain_actor.rs","symbol":"gate_findings_locate_each_retained_assertion_by_position","form":"test"}
+pins: "The constructed check retains both equal-label gates by positions 2 and 6, then checks owned-reap, activation and dependent-gate subjects with exact finding details/order and unchanged input records."
+context: "The named control passed in the completed zero-sleep unit/rust.unit case; its assertions inspect the findings returned by the production gate checker."
+limits: "Execution covers the constructed owned-reap, activation and selected gate cases. Remaining predicate-location assignments retain their source support. Reference resolution and action-wide withholding choices have separate owners."
+run: "20261111T155411Z_29ef0802"
+case: "unit/rust.unit"
+source_snapshot: "reviewed-inputs sha256:b5298841bceaea7af57843a0e2ab68de2dd2ed85edf21fd07b16ac91d5a8838e (b6ce6d26 dirty)"
+```
+
+#### Executed reference-form controls {reference_execution: owner}
+
+```contract
+grade: "executed"
+source: [{"path":"tests/lib/consumer.py","symbol":"_subject_path_problem"},{"path":"tests/lib/consumer.py","symbol":"_validate_diagnostic_subjects"}]
+check: {"path":"tests/suites/blackbox_e2e/checker_controls.py","symbol":"diagnostic_subject_controls","form":"test"}
+pins: "Forty-two retained controls cover optional/root/object/scalar/null targets, canonical array positions, malformed or unresolved paths, aggregate and actor issue locations, version gating and accumulated independent faults; 12 accept and 30 refuse."
+context: "The completed blackbox_e2e/checker_controls case passed with zero recorded system sleep. Each constructed input and its exact findings remain in consumer_subject_*.json and *.errors.json."
+limits: "These controls establish reference reading and unchanged carried documents. Product predicate-to-subject selection is checked by the gate and full-reply corpus owners; reserved withholding policy remains explicit."
+run: "20261111T155411Z_29ef0802"
+case: "blackbox_e2e/checker_controls"
+source_snapshot: "reviewed-inputs sha256:b5298841bceaea7af57843a0e2ab68de2dd2ed85edf21fd07b16ac91d5a8838e (b6ce6d26 dirty)"
+```
 
 ### Finding construction support {support: owner}
 
@@ -397,7 +482,7 @@ between worker-local projection findings and reply-wide findings.
 scope: "subtree"
 grade: "source_read"
 source: [{"path":"controller/src/porcelain_admission.rs","symbol":"IntegrityIssue"},{"path":"controller/src/porcelain_admission.rs","symbol":"fn issue"},{"path":"controller/src/porcelain_admission.rs","symbol":"for i in &sub.disposition"},{"path":"controller/src/porcelain_actor.rs","symbol":"fn require"},{"path":"controller/src/porcelain_actor.rs","symbol":"fn gates"},{"path":"controller/src/porcelain_native.rs","symbol":"pub(super) fn validate"}]
-pins: "Generic controller findings omit optional host-conflict metadata; copied host issues preserve it. Gate findings use the generic actor-evidence constructor."
+pins: "Gate-family findings carry locations in the retained reply while preserving existing predicates, detail, order and projection scope. Copied host issues preserve their own metadata."
 context: "Constructors, projection copy, actor gate checks and native validator dispatch read."
-limits: "The proposed structured subject is a visible gap, not a field added by this draft."
+limits: "Locations identify inspected retained records. Existing worker-local and reply-wide projection rules govern the findings independently."
 ```

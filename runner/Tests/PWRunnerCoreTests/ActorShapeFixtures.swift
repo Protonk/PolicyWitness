@@ -618,3 +618,195 @@ func attachConstructedActorAccounts(_ reply: inout PWRunnerRunResult, plan: Acto
         run: PWRunnerAuthorityScope(disposition: plan.authorityRequired ? "ready" : "not_required")), workers: workers)
     reply.authority_setup?.bind(actorIDs: plan.actors.map { $0.id }, tokenRefs: plan.tokens.map { $0.ref })
 }
+
+/// Full replies for each application pair. Only scheduler/worker observations
+/// are constructed; request normalization, translation, disposition resolution,
+/// step/event construction and application assessment use production helpers.
+struct ReaderApplicationFixture {
+    let id: String
+    let actorID: String
+    let expected: PWRunnerActorApplication
+    let reply: PWRunnerRunResult
+}
+
+func readerApplicationFixtures() throws -> [ReaderApplicationFixture] {
+    let pairs: [(String, String)] = [
+        ("not_requested", "unapplied_declaration"),
+        ("not_attempted", "worker_not_launched"),
+        ("not_attempted", "terminal_authority_setup_refusal"),
+        ("not_attempted", "terminal_input_refusal"),
+        ("not_attempted", "terminal_parameter_refusal"),
+        ("not_attempted", "terminal_compile_refusal"),
+        ("not_attempted", "terminal_timing_refusal"),
+        ("observed", "applied_publication"),
+        ("observed", "apply_failure_publication"),
+        ("unobserved", "apply_call_boundary_without_result"),
+        ("unobserved", "no_eligible_apply_publication"),
+    ]
+    return try pairs.map { state, basis in
+        let unapplied = basis == "unapplied_declaration"
+        let authority = basis == "terminal_authority_setup_refusal"
+        let successful = unapplied || basis == "applied_publication"
+        let source = basis == "terminal_compile_refusal" ? "("
+            : basis == "terminal_input_refusal" ? "(version 1)(allow default)\n;" + String(repeating: "p", count: 70_000)
+            : "(version 1)(allow default)"
+        let sandbox: [String: Any] = unapplied ? ["mode": "unapplied"] : ["mode": "apply", "policy": [
+            "format": "sbpl", "sbpl_source": source, "params": ["corpus": "value"]]]
+        let action: [String: Any] = authority
+            ? ["step_id": "action", "extension": ["operation": "issue", "family": "file",
+                "authority": "read", "target": "/private/reader-corpus", "token_ref": "token"]]
+            : ["step_id": "action", "sandbox_check": ["operation": "file-read-data",
+                "filter": ["kind": "path", "value": "/etc/hosts"]],
+                "attempt": ["kind": "file", "action": "open_read", "target": "/etc/hosts"]]
+        let request: [String: Any] = ["contract": testRequestContract, "specimen_id": "application-" + basis,
+            "actors": [["actor_id": "subject", "sandbox": sandbox]],
+            "phases": [["phase_id": "visit", "actor_id": "subject", "actions": [action]]]]
+        let parsed = try testDecodeJSON(PWRunnerRunSpec.self, from: JSONSerialization.data(withJSONObject: request))
+        guard case .success(let plan) = normalizeActorPlan(parsed) else {
+            throw TestFailure(message: "application fixture request refused: " + basis)
+        }
+        let translation = try ActorTranslation(plan: plan, parsed: parsed,
+            workerExecutablePaths: ["/constructed/pw-probe-runner"])
+        let input = translation.inputs[0]
+        var output: CWorkerOutput? = successful
+            ? actorOutput(input, index: 0, applies: !unapplied)
+            : failedSetupOutput(input, index: 0)
+        var status: ActorSetupStatus = successful ? (unapplied ? .unappliedDeclared : .applied) : .setupFailed
+        if var observed = output {
+            // These identities and counts come from the admitted input. The
+            // constructed case changes them only at the actual earlier boundary.
+            observed.policyReceivedSha256 = sha256Digest(Data(input.policy.utf8))
+            observed.workerEvidence?.readiness = successful ? PWWorkerReadiness(rc: 0, errno: nil) : nil
+            observed.readyByteReceived = successful
+            observed.readyWait = nil; observed.graceWait = nil
+            if !successful {
+                observed.workerEvidence?.failure_publication = 0
+                observed.workerEvidence?.failure_state = "absent"
+                observed.workerEvidence?.failure = nil
+                observed.workerEvidence?.progress = nil
+                observed.workerEvidence?.diagnostic = PWWorkerDiagnostic(state: 0, status: "absent", length: 0, text: nil)
+                observed.pollStopReason = "setup_failed"
+                observed.cleanupTrigger = "setup_failed"
+            }
+            output = observed
+        }
+        func publish(_ failure: PWWorkerFailure, progress: PWWorkerProgress) {
+            output!.workerEvidence!.failure_publication = 1
+            output!.workerEvidence!.failure_state = "published"
+            output!.workerEvidence!.failure = failure
+            output!.workerEvidence!.progress = progress
+        }
+        func beforeReadyExit(_ code: Int32) {
+            output!.done = false; output!.readyByteReceived = false
+            output!.exitCode = code; output!.policyReceivedSha256 = nil
+            output!.workerEvidence!.readiness = nil
+            output!.pollStopReason = "exited_before_setup"
+            output!.cleanupTrigger = "exited_before_setup"
+            output!.graceEnd = "not_entered"
+            status = .exitedBeforeSetup
+        }
+        switch basis {
+        case "unapplied_declaration", "applied_publication": break
+        case "worker_not_launched":
+            output = nil; status = .launchRefused
+        case "terminal_authority_setup_refusal":
+            // prepare_authority fails fstat before policy read, publishes its
+            // required decision, closes its descriptor and publishes done.
+            status = .authoritySetupFailed
+            output!.workerEvidence!.policy_read = nil
+            output!.policyReceivedSha256 = nil
+            output!.workerEvidence!.progress = shapeProgress(1, 1)
+            output!.pollStopReason = "authority_setup_failed"
+            output!.cleanupTrigger = "authority_setup_failed"
+            output!.authoritySetup = PWRunnerAuthorityScope(actor_index: 0, required: true,
+                publication: "observed", disposition: "terminal_required_failure", primary_operation: 5,
+                operations: [
+                    PWRunnerAuthorityOperation(slot: 0, operation: "issue_symbol", role: "setup", state: "available", native_kind: "symbol"),
+                    PWRunnerAuthorityOperation(slot: 1, operation: "consume_symbol", role: "setup", state: "available", native_kind: "symbol"),
+                    PWRunnerAuthorityOperation(slot: 2, operation: "release_symbol", role: "setup", state: "available", native_kind: "symbol"),
+                    PWRunnerAuthorityOperation(slot: 3, operation: "core_limit", role: "setup", state: "succeeded", native_kind: "integer", native_rc: 0),
+                    PWRunnerAuthorityOperation(slot: 4, operation: "descriptor_presence", role: "setup", state: "accepted", native_kind: "validation"),
+                    PWRunnerAuthorityOperation(slot: 5, operation: "fstat", role: "setup", state: "failed", native_kind: "integer", native_rc: -1, errno: 9),
+                    PWRunnerAuthorityOperation(slot: 9, operation: "descriptor_close", role: "cleanup", state: "succeeded", native_kind: "integer", native_rc: 0),
+                ], ownership: ["descriptor": "released", "mapping": "not_acquired", "shared_erasure": "not_present"])
+        case "terminal_input_refusal":
+            // A partial large transfer reaches its deadline and closes the
+            // pipe; the worker's own short EOF receipt precedes ready/done/hash.
+            let received = 4096
+            beforeReadyExit(11)
+            status = .transferFailed
+            output!.policyTransferTimeout = PWWorkerPolicyTransferTimeout(budget_ms: input.policyTransferTimeoutMs,
+                elapsed_ms: UInt64(input.policyTransferTimeoutMs), bytes_written: received, bytes_expected: input.policy.utf8.count)
+            output!.pollStopReason = "policy_transfer_deadline"
+            output!.cleanupTrigger = "policy_transfer_timeout"
+            output!.graceEnd = "reaped_during_grace"
+            output!.workerEvidence!.policy_read = PWWorkerPolicyRead(bytes_expected: input.policy.utf8.count, bytes_received: received)
+            publish(PWWorkerFailure(operation: 2, code: 13, native_kind: 0, native_result: nil,
+                errno: nil, index: nil, detail: UInt32(received)), progress: shapeProgress(2, 2))
+        case "terminal_parameter_refusal":
+            // The admitted nonempty parameter map reaches params creation.
+            publish(PWWorkerFailure(operation: 3, code: 1, native_kind: 2, native_result: 0,
+                errno: nil, index: nil, detail: 0), progress: shapeProgress(3, 2))
+        case "terminal_compile_refusal":
+            publish(PWWorkerFailure(operation: 5, code: 1, native_kind: 2, native_result: 0,
+                errno: nil, index: nil, detail: 0), progress: shapeProgress(5, 2))
+        case "terminal_timing_refusal":
+            // An already-past actor cutoff returns before any policy byte.
+            beforeReadyExit(12)
+            output!.workerEvidence!.policy_read = nil
+            publish(PWWorkerFailure(operation: 12, code: 15, native_kind: 0, native_result: nil,
+                errno: nil, index: nil, detail: 1), progress: shapeProgress(12, 2))
+        case "apply_failure_publication":
+            output!.readyByteReceived = true
+            output!.workerEvidence!.readiness = PWWorkerReadiness(rc: 0, errno: nil)
+            output!.applyRC = -1; output!.applyErrno = 1
+            publish(PWWorkerFailure(operation: 8, code: 1, native_kind: 1, native_result: -1,
+                errno: 1, index: nil, detail: 0), progress: shapeProgress(8, 2))
+        case "apply_call_boundary_without_result":
+            // Setup expires while the published progress is inside apply. The
+            // host's cleanup kill and reap do not supply an apply result.
+            status = .setupTimeout
+            output!.readyByteReceived = true; output!.done = false
+            output!.workerEvidence!.readiness = PWWorkerReadiness(rc: 0, errno: nil)
+            output!.workerEvidence!.progress = shapeProgress(8, 1)
+            output!.exitCode = nil; output!.termSignal = 9
+            output!.terminationRequest = PWRunnerTerminationRequest(signal: 9, rc: 0, errno: nil)
+            output!.pollStopReason = "setup_timeout"; output!.cleanupTrigger = "setup_timeout"
+            output!.graceEnd = "exhausted"
+        case "no_eligible_apply_publication":
+            // Death during header validation leaves no eligible apply source.
+            beforeReadyExit(0)
+            output!.exitCode = nil; output!.termSignal = 11
+            output!.workerEvidence!.progress = shapeProgress(1, 1)
+            output!.workerEvidence!.policy_read = nil
+            output!.authoritySetup = PWRunnerAuthorityScope(actor_index: 0, required: false, publication: "not_observed")
+        default: throw TestFailure(message: "unhandled application fixture: " + basis)
+        }
+        var actor = ActorSessionRecord(index: 0)
+        actor.setupStatus = status; actor.output = output
+        actor.applicationCount = output?.applied == true ? 1 : 0
+        actor.pid = output?.workerPid; actor.parentPid = 42
+        actor.quiescence = output == nil ? "never_launched" : "reaped"
+        actor.authorityRegion = plan.authorityRequired ? "mapped" : nil
+        if output == nil { actor.launchFailure = .spawnFailed("constructed launch refusal") }
+        if basis == "terminal_input_refusal" {
+            actor.launchFailure = .policyTransferTimedOut("constructed partial delivery deadline")
+        }
+        var visit = ActorVisitRecord(phaseIndex: 0, actorIndex: 0, visit: 0)
+        visit.endReason = successful ? "completed" : "actor_unavailable"
+        if successful {
+            visit.activationStored = true; visit.arrivalObserved = true; visit.collectionInvoked = true
+            visit.collectionClosed = true; visit.releaseStored = true; visit.acknowledgementObserved = true
+            visit.completionObserved = true
+        }
+        let outcome = ActorScheduleOutcome(actors: [actor], visits: [visit], lifetimeCutoffTicks: 1,
+            setupWait: nil, executionWait: nil, cancelled: nil)
+        let queries = plan.phases.map { planValidatorQueries($0.actions.compactMap { $0.probe }) }
+        var reply = assembleActorReply(parsed: parsed, plan: plan, translation: translation, outcome: outcome,
+            queryPlans: queries, validatorResults: [nil], collectionStatuses: [successful ? "collected" : "not_reached"],
+            bundleId: "reader-application")
+        attachConstructedActorAccounts(&reply, plan: plan, outcome: outcome)
+        return ReaderApplicationFixture(id: basis, actorID: "subject",
+            expected: PWRunnerActorApplication(state: state, basis: basis), reply: reply)
+    }
+}

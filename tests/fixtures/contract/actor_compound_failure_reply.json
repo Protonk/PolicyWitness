@@ -639,6 +639,7 @@
     {
       "phase_id": "baseline",
       "actor_id": "subject",
+      "actor_visit": 1,
       "ordinal": 1,
       "arrival_observed": false,
       "completion_observed": false,
@@ -647,6 +648,7 @@
     {
       "phase_id": "supply",
       "actor_id": "issuer",
+      "actor_visit": 1,
       "ordinal": 2,
       "arrival_observed": false,
       "completion_observed": false,
@@ -655,6 +657,7 @@
     {
       "phase_id": "consume",
       "actor_id": "subject",
+      "actor_visit": 2,
       "ordinal": 3,
       "arrival_observed": false,
       "completion_observed": false,
@@ -663,6 +666,7 @@
     {
       "phase_id": "access",
       "actor_id": "subject",
+      "actor_visit": 3,
       "ordinal": 4,
       "arrival_observed": false,
       "completion_observed": false,
@@ -671,6 +675,7 @@
     {
       "phase_id": "release",
       "actor_id": "subject",
+      "actor_visit": 4,
       "ordinal": 5,
       "arrival_observed": false,
       "completion_observed": false,
@@ -679,6 +684,7 @@
     {
       "phase_id": "after_release",
       "actor_id": "subject",
+      "actor_visit": 5,
       "ordinal": 6,
       "arrival_observed": false,
       "completion_observed": false,

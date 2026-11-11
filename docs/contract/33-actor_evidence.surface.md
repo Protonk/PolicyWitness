@@ -20,6 +20,8 @@ The host emits actors in request order. Each actor owns its launch, worker publi
 ### actor_id {actor_id: field}
 
 Submitted actor identifier that binds this row to its phases and resources.
+Ordinary semantic replies require nonempty, NUL-free actor identifiers within
+their admitted UTF-8 capacity, distinct identifiers and request order.
 
 ### index {index: field}
 
@@ -79,7 +81,9 @@ Receipt from this actor's requested compiled-profile capture, when the host has 
 
 ### visits {visits: field}
 
-One-based global phase ordinals declared for this actor, including visits whose activation never occurred.
+In an ordinary semantic reply, the exact ordered list of one-based global
+phase ordinals declared for this actor, including visits whose activation
+never occurred. Membership comes from each phase's declared owner.
 
 ### equipment {equipment: field}
 
@@ -112,21 +116,51 @@ removed. Its applicable guarantee is the degraded report's form: retained
 actor, phase and resource associations remain available for inspection as
 assembled. Ordinary consistency assessments apply on the ordinary reply path.
 
-### Reader scope requiring reconciliation {reader_scope: gap}
+### Reader applicability {reader_scope: definition}
 
 ```contract
-kind: "behavior"
+defines: "condition"
+uses: ["diagnostics.execution.families", "reply.failure.publish"]
 ```
 
-The host and controller apply actor/equipment/gate assessment on the ordinary
-reporting path. The Python lifecycle receipt reader checks those predicates
-for actor-form reporting-failure replies too. The general JSON consumer skips
-its extension checks there but still checks actor identities, launch and
-phase/step associations. Its preparation partition exception requires a valid
-preparation-failure shape. The degraded form guarantee and preservation of
-assembled observations above govern retained reporting failures. These reader
-scopes still need reconciliation and a common corpus; a gate-specific
-disagreement remains an unestablished case.
+The host self-check, controller semantic reader and general canonical-JSON
+consumer check ordinary actor relationships when `reporting_failure` is
+absent. A preparation refusal belongs to the actor execution form and retains
+its admitted declarations: actor order, IDs and visits, phase order and owner,
+actor visit numbers and action IDs. It carries no launch, arrival, completion,
+proceed publication, step, extension-event, transfer or resource entry. Each
+actor has zero successful applications. Its host authority scope is
+`not_attempted`, with empty region and custody tables. The actor event table
+is present, including when empty.
+
+Phase and actor identifiers are nonempty and NUL-free within their admitted
+UTF-8 capacities. Action identifiers use that same capacity and NUL rule;
+ordinary-form actions admit an empty identifier, while actor-form actions require a
+nonempty one. Declaration uniqueness and exact schedule membership apply
+separately from that string grammar.
+
+A reporting-failure reply is checked for its degradation form and applicable
+compiled-profile context. Host validation, controller admission and the general consumer apply that
+scope. The actor/extension readers check ordinary semantic relationships when
+the reporting-failure record is absent. The lifecycle receipt reader separately checks each
+retained worker's claims and controller projection; findings from that
+assessment describe the retained worker evidence. Ordinary actor, phase and
+resource association requirements remain conditional on the ordinary semantic
+reply path.
+
+#### Reader definition support {support: owner}
+
+```contract
+grade: "executed"
+source: [{"path":"runner/Sources/PWRunnerCore/ActorOrchestration.swift","symbol":"actorPreparationRefusal"},{"path":"runner/Sources/PWRunnerCore/ActorPlan.swift","symbol":"normalizeActorPlan"},{"path":"runner/Sources/PWRunnerCore/PWRunnerReply.swift","symbol":"actorExtensionEvidenceProblem"},{"path":"runner/Sources/PWRunnerCore/PWRunnerReply.swift","symbol":"validateForReporting"},{"path":"controller/src/porcelain_admission.rs","symbol":"admission_problem"},{"path":"controller/src/porcelain_actor.rs","symbol":"preparation_failure_valid"},{"path":"tests/lib/consumer.py","symbol":"_validate_reply"},{"path":"tests/lib/lifecycle_oracle.py","symbol":"check_actor_records"}]
+check: [{"path":"runner/Tests/PWRunnerCoreTests/ReaderCorpusTests.swift","symbol":"runReaderCorpusTests","form":"test"},{"path":"controller/src/run_flow.rs","symbol":"reader_definition_corpus_cross_readers","form":"test"}]
+pins: "Constructed typed preparation, declaration and degradation neighbours retain separate host, controller, general-consumer and worker-lifecycle judgments."
+context: "Whole canonical runner-unit case passed with zero recorded system sleep. Swift judgments over 142 typed frames were retained before encoding; exact-one Rust replay carried 143 frames including the real writer-cap fallback through envelopes, then independent Python readers completed all rows and seven JSON-only controls."
+limits: "The corpus uses constructed records and independently expected interpretations. Eleven application-positive pairs, degradation admission, the exact contradictory-worker D1 finding and retained actor projections have separate assertions. JSON-only normalization has its own domain. Native occurrence of each constructed context has separate observation owners."
+run: "20261111T162345Z_3d6c7242"
+case: "runner_unit/pwrunner_core_unit_executable"
+source_snapshot: "reviewed-inputs sha256:af396aadf41ba79a0d072b62d9c3f4ff1df5b5fa30d6c4ff267c53e8437dd51d (b6ce6d26 dirty; replay identity correction)"
+```
 
 ## Actor launch context {launch: subject}
 
@@ -289,16 +323,24 @@ value: ["unobserved", "no_eligible_apply_publication"]
 
 The preceding evidence branches did not establish another pair.
 
-### Setup deadline and later application {late_application: gap}
+### Setup deadline and later application {late_application: definition}
 
 ```contract
-kind: "evidence"
+defines: "value"
 ```
 
-Final actor collection preserves a later applied publication and derives
-`application_count` from it even after setup eligibility ended. The exact
-combination of `setup_timeout` with an observed applied publication still
-needs an owning behavioral check; the current account is supported by source.
+Final collection preserves a later applied publication and derives application_count from it after setup eligibility has ended. A setup_timeout can therefore coexist with applied true, count 1 and application state observed with basis applied_publication. The affected actor remains ineligible for phase activation and query collection.
+
+#### Disposition support {disposition_support: owner}
+
+```contract
+grade: "check_read"
+source: {"path":"runner/Sources/PWRunnerCore/ActorScheduler.swift","symbol":"ActorScheduler"}
+pins: "Final collection retains application independently of earlier setup eligibility."
+context: "Static review of the cited producer and assertion branches."
+check: [{"path":"runner/Tests/PWRunnerCoreTests/ActorSchedulerTests.swift","symbol":"runActorSchedulerTests","form":"test"},{"path":"runner/Tests/PWRunnerCoreTests/ActorReplyTests.swift","symbol":"runActorReplyTests","form":"test"}]
+limits: "The read controls use 40 ms setup, 150 ms pre-ready delay and 1000 ms grace, then retain the production reply. Their timing observation is bounded to that schedule."
+```
 
 ## Phase collection and execution {phase: subject}
 
@@ -312,6 +354,8 @@ The host reports phases in declared schedule order. Observation fields record ac
 ### phase_id {phase_id: field}
 
 Submitted phase identifier used by its action records and validator collection.
+Ordinary semantic replies require a nonempty, NUL-free identifier within its
+admitted UTF-8 capacity. The declared phase order determines its ordinal.
 
 ### ordinal {ordinal: field}
 
@@ -616,7 +660,7 @@ match.f: reply.phases[f].phase_id == reply.phases[p].termination_gate.source_fin
 when: absent(reply.reporting_failure) and present(reply.phases[p].termination_gate)
 failure: "accumulate"
 free.condition: Resolve source and final-phase joins before using s or f; missing, nonfinal, same-actor or nonpreceding associations are findings. Check owned PID/native-status agreement, all conditional gate captures, independent actor setup/equipment eligibility and activation timing.
-free.effect: Add actor_evidence issues for failed requirements; set top-level disposition_integrity invalid, process_disposition withheld and termination_cause unknown. Preserve the host reply, each actor's independently projected disposition, run result and exit status.
+free.effect: Add actor_evidence issues for failed requirements, with subject_path naming the inspected termination_gate. Set top-level disposition_integrity invalid, process_disposition withheld and termination_cause unknown. Preserve the host reply, each actor's independently projected disposition, run result and exit status.
 ```
 
 #### Unreached shape {unreached: condition}
@@ -654,16 +698,6 @@ test: implies(reply.phases[p].termination_gate.activation_eligible == True, repl
 free.condition: True eligibility also requires the dependent actor's applied or unapplied_declared setup and eligible equipment. False eligibility requires absent activation/visit timing, false arrival/proceed flags and collection not_reached.
 ```
 
-#### Finding subject {finding_subject: gap}
-
-```contract
-kind: "behavior"
-```
-
-Gate findings carry `actor_evidence` and a detail sentence. They currently
-lack a structured actor or phase reference joining the issue to its gate.
-The host's gate fields remain present beside the controller's overall finding.
-
 ### A timeout followed by cleanup {timeout_example: example}
 
 The source completes its final phase but remains alive when the dependency
@@ -682,16 +716,24 @@ context: "Real fixture child with post-apply hang and 50 ms execution allowance;
 limits: "No execution credit; this assertion covers scheduler observations with shortened allowance, not public JSON or an additional later actor."
 ```
 
-### Cancellation-scope evidence {cancellation_evidence: gap}
+### Termination cancellation reach {cancellation_evidence: gap}
 
 ```contract
-kind: "evidence"
+kind: "behavior"
 ```
 
-The scheduler source cancels every phase after a failed evaluated gate. The
-read timeout check covers the dependent phase; a focused check still needs
-to assert an additional later phase owned by another actor and its public
-cancellation account.
+A failed evaluated termination dependency cancels every remaining scheduled phase, including later work owned by another actor. A dependent actor that is ineligible before gate evaluation has a not_reached gate and does not create that dependency failure. Whether cancellation should have narrower reach remains a maintainer decision.
+
+#### Disposition support {disposition_support: owner}
+
+```contract
+grade: "check_read"
+source: {"path":"runner/Sources/PWRunnerCore/ActorScheduler.swift","symbol":"ActorScheduler"}
+pins: "An evaluated failed gate sets global schedule cancellation; an unreached gate has a different path."
+context: "Static review of the cited producer and assertion branches."
+check: [{"path":"tests/suites/witness_contract/check_actor_compositions.py","symbol":"assert_gate_schedule","form":"test"}]
+limits: "The control distinguishes a three-worker evaluated timeout from an ineligible-dependent neighbour and retains final collection."
+```
 
 ## Observation sequences {owned_endings: subject}
 

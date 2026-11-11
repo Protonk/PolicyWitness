@@ -71,13 +71,24 @@ A role baseline must be the unique entry at the expected path and kind with a 64
 
 If a caller changes the input JSON after the controller has parsed it, the client and fallback compiler still receive the controller’s held serialization. An import file changed between dossier collection and fallback compilation may produce different import observations. Compare the source hash and the separately reported closures at their named boundaries.
 
-### Import and execution evidence {native_gap: gap}
+### Held input and file observation scope {native_gap: definition}
 
 ```contract
-kind: "evidence"
+defines: "value"
 ```
 
-The scanner’s `complete` status exhausts its literal import search. Its search order follows the recorded platform convention; collision precedence and parity with native compilation remain unverified. A signed held-request change experiment and independent observations tying selected-file hashes to executing images remain open.
+The controller resolves and serializes the request once, then delivers that held text to the selected client and applicable helper calls. The dossier scanner and selected-file hashes describe their own reads. Literal import completeness belongs to the scanner convention; actor live equipment supplies its separate process association. Ordinary selected-file hashes remain file observations at collection time.
+
+#### Disposition support {disposition_support: owner}
+
+```contract
+grade: "check_read"
+source: [{"path":"controller/src/run_flow.rs","symbol":"fn run(args:"},{"path":"controller/src/sbpl_imports.rs","symbol":"resolve_import_path"},{"path":"controller/src/dossier.rs","symbol":"fn compare"}]
+pins: "Held request delivery, import reads and selected-file comparison have distinct boundaries."
+context: "Static review of the cited producer and assertion branches."
+check: [{"path":"controller/src/run_flow.rs","symbol":"actor_fallback_uses_held_policy_objects_before_host_mode_admission","form":"test"}]
+limits: "The file-replacement control uses controlled client/helper callbacks and exact independent held inputs; selected-file hashes do not supply an ordinary executing-image association."
+```
 
 ## Run dossier {specimen: subject}
 

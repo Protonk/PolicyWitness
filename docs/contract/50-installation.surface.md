@@ -96,13 +96,24 @@ free.effect: Send a fresh fixed SBPL allow-all request with specimen_id runner_v
 
 The timeout defaults to <!-- span limits.runner_verify_wait.value_unit -->5,000 milliseconds<!-- /span --> and is clamped to at least one. The returned PID comes from an admitted host reply’s `pid`; read its subject according to that reply’s lifecycle. An empty successful plan establishes the verification request’s application and completion. It supplies no per-operation prediction or attempt observations.
 
-### Pending verification {pending_verify: gap}
+### Pending verification {pending_verify: definition}
 
 ```contract
-kind: "behavior"
+defines: "value"
 ```
 
-Ordinary specimen selection refuses a pending installation. `runner verify` currently looks up the same pending record, checks its kind and contract, and can invoke it. Whether verification should share the pending-state gate remains unresolved; the existing pending-selection recovery control does not establish that decision.
+Ordinary specimen selection refuses a Pending installation. Explicit runner verify can address that recorded service after kind and contract checks, using the fixed verification request and retaining the recorded Pending state. Verification leaves the registry bytes unchanged.
+
+#### Disposition support {disposition_support: owner}
+
+```contract
+grade: "check_read"
+source: [{"path":"controller/src/runner_commands.rs","symbol":"cmd_runner_verify"},{"path":"tests/suites/runner_byoxpc/opt_in/registry_recovery.py","symbol":"live-pending-verify"}]
+pins: "Explicit verification selects by recorded identity and kind/contract, independently of ordinary Pending selection."
+context: "Static review of the cited producer and assertion branches."
+check: [{"path":"tests/suites/runner_byoxpc/opt_in/registry_recovery.sh","symbol":"registry_recovery","form":"test"}]
+limits: "The control uses an owned live current service with a constructed Pending registry state and snapshots the registry around both operations."
+```
 
 ### Refresh validation metadata {validate: acts}
 
@@ -118,13 +129,24 @@ free.effect: Visit every record in runners, refresh available per-binary signatu
 
 A missing host executable increments `missing`, marks the host signature invalid and records its entitlement error, then skips further verification for that row. Bundle/binary verification, signature-metadata readback and equipment-inventory failures increment `invalid` once per affected row and retain each named failure. Entitlement read errors also remain in their individual metadata objects. `updated` counts every visited runner. A completed validate command reports `result.ok: true` and exit 0 even when missing/invalid is positive; inspect those fields. Pending cleanup records remain recovery records.
 
-### Entitlement read errors and summary counts {entitlement_errors: gap}
+### Entitlement read errors and summary counts {entitlement_errors: definition}
 
 ```contract
-kind: "behavior"
+defines: "value"
 ```
 
-An entitlement-read error can coexist with successful signature readback and an empty validation failures list. Equipment-inventory verification independently checks current worker entitlements; host and validator entitlement errors alone remain in their metadata. Whether the validation summary should count every such read error remains unresolved.
+A successful metadata read can retain an entitlement error alongside a valid signature without adding a validation failure. A failed read-back contributes a failure and unreadable signature metadata. Equipment validation applies its own entitlement requirements. The command counts invalid runners after combining the applicable failures; host and validator entitlement metadata errors alone retain their metadata scope.
+
+#### Disposition support {disposition_support: owner}
+
+```contract
+grade: "check_read"
+source: [{"path":"controller/src/runner_manager.rs","symbol":"validate_record"},{"path":"controller/src/runner_commands.rs","symbol":"cmd_runner_validate"}]
+pins: "Read-back failure and entitlement metadata are separate validation results."
+context: "Static review of the cited producer and assertion branches."
+check: [{"path":"controller/src/runner_manager.rs","symbol":"validation_keeps_entitlement_errors_distinct_from_failed_read_back","form":"test"}]
+limits: "The injected seam checks per-role metadata and failure lists. Whole-command invalid-count consequences remain source-read alongside the separate equipment checks."
+```
 
 ### Reconcile observations {reconcile: acts}
 
@@ -168,25 +190,46 @@ free.effect: Classify service ownership from present service executable equality
 
 A present service with a different executable is unowned; one with no unique executable observation is ambiguous. Absent resources are classified ambiguous for ownership and retain their independently observed absent presence. Unknown presence produces unknown ownership. Recorded cleanup paths must be absolute, have no parent traversal, end in the expected service plist, and have an immediate parent named LaunchAgents for user scope or LaunchDaemons for system scope. The location check also requires the executable parent to equal the recorded bundle’s Contents/MacOS and refuses symlinked plist ancestors. The recorded ownership supplies the full parent path. Legacy records without ownership derive the conventional plist path and use the content checks.
 
-### Recorded cleanup directory {ownership_location: gap}
+### Recorded cleanup directory {ownership_location: definition}
 
 ```contract
-kind: "behavior"
+defines: "value"
 ```
 
-Recorded ownership can select an absolute directory whose last component matches the scope name. Whether cleanup should also compare the entire parent path with the conventional scope directory remains unresolved.
+Durable ownership supplies the recorded absolute plist path. Cleanup checks its owner UID and launchd domain, excludes parent traversal and symlinked ancestors, requires the scope parent basename and service plist filename, and checks the executable-to-bundle relationship. Plist content and recorded hash/UID and service executable observations then establish their resource ownership. A conventional full parent path is used for records without durable ownership.
+
+#### Disposition support {disposition_support: owner}
+
+```contract
+grade: "source_read"
+source: [{"path":"controller/src/runner_manager.rs","symbol":"record_location"},{"path":"controller/src/runner_manager.rs","symbol":"plist_ownership"},{"path":"controller/src/runner_manager.rs","symbol":"service_ownership"}]
+pins: "Location and resource ownership checks use the recorded path and complete associated identities."
+context: "Static review of the cited production branches."
+limits: "Acceptance of a nonconventional full parent is source-supported; this owner supplies no native occurrence for that path."
+```
 
 ### Retained cleanup example {recovery: example}
 
 If bootout succeeds and plist removal succeeds but the final launchctl read is unknown, the command reports both action booleans true and cleanup_retained true. Keep the recorded bundle and any operator recovery state, inspect reconcile, and repeat removal until service/plist absence and registry retirement are observed.
 
-### Legacy values and evidence {legacy: gap}
+### Legacy registry values and recovery {legacy: definition}
 
 ```contract
-kind: "evidence"
+defines: "value"
 ```
 
-Offline controls cover preservation of unknown nested JSON and historical cleanup forms. The complete live install/list/reconcile/remove sequence carrying unusual opaque metadata remains an evidence obligation. Legacy `machme` and `debuggable` kinds normalize to byoxpc on registry load while new CLI input rejects those aliases. That deliberate compatibility behavior and the pending-verification distinction need to stay visible during review.
+Registry loading normalizes legacy machme and debuggable kinds to byoxpc; new CLI input rejects those aliases. Unknown nested metadata and historical cleanup records survive inspection and unrelated saves. Owned recovery follows the durable registry after the original diagnostic output is gone and retains cleanup state until service and plist absence are established.
+
+#### Disposition support {disposition_support: owner}
+
+```contract
+grade: "check_read"
+source: [{"path":"controller/src/runner_manager.rs","symbol":"pub enum RunnerKind"},{"path":"controller/src/runner_manager.rs","symbol":"pub fn parse"},{"path":"tests/suites/runner_byoxpc/opt_in/registry_recovery.py","symbol":"historical-after-remove"}]
+pins: "Registry normalization and durable cleanup preserve historical records and opaque metadata."
+context: "Static review of the cited producer and assertion branches."
+check: [{"path":"tests/suites/runner_byoxpc/opt_in/registry_recovery.sh","symbol":"registry_recovery","form":"test"},{"path":"controller/src/runner_manager.rs","symbol":"legacy_machme_kind_deserializes_as_byoxpc","form":"test"},{"path":"controller/src/runner_manager.rs","symbol":"legacy_debuggable_kind_deserializes_as_byoxpc","form":"test"},{"path":"controller/src/runner_manager.rs","symbol":"caller_facing_parse_rejects_legacy_aliases","form":"test"}]
+limits: "The live workflow uses a current owned service and a constructed historical debuggable record; both retired aliases have separate offline controls."
+```
 
 ## Runner registry {registry: subject}
 

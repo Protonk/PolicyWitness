@@ -6,6 +6,22 @@ fn require(out: &mut Vec<IntegrityIssue>, condition: bool, detail: &str) {
         issue(out, "actor_evidence", detail);
     }
 }
+/// Locate the inspected assertion in the retained reply, including when its
+/// labels are invalid or repeated. This adds provenance to the existing issue.
+fn require_at(
+    out: &mut Vec<IntegrityIssue>,
+    collection: &str,
+    index: usize,
+    field: &str,
+    condition: bool,
+    detail: &str,
+) {
+    if !condition {
+        issue(out, "actor_evidence", detail);
+        out.last_mut().expect("issue was appended").subject_path =
+            Some(vec![collection.into(), index.to_string(), field.into()]);
+    }
+}
 fn bounded(s: &str, bytes: usize) -> bool {
     !s.is_empty() && s.len() <= bytes && !s.contains('\0')
 }
@@ -883,10 +899,13 @@ fn owned_reap_valid(a: &PWRunnerActorResult) -> bool {
         && bounded(&r.stage, 64)
 }
 fn gates(reply: &PWRunnerRunResult, actors: &[PWRunnerActorResult], out: &mut Vec<IntegrityIssue>) {
-    for a in actors {
+    for (i, a) in actors.iter().enumerate() {
         if a.owned_reap.is_some() {
-            require(
+            require_at(
                 out,
+                "actors",
+                i,
+                "owned_reap",
                 owned_reap_valid(a),
                 "owned reap disagrees with child identity or wait status",
             );
@@ -894,8 +913,11 @@ fn gates(reply: &PWRunnerRunResult, actors: &[PWRunnerActorResult], out: &mut Ve
     }
     for (i, p) in reply.phases.iter().enumerate() {
         if let Some(a) = &p.activation_observation {
-            require(
+            require_at(
                 out,
+                "phases",
+                i,
+                "activation_observation",
                 a.capture_ordinal > 0,
                 "invalid phase activation observation",
             );
@@ -904,21 +926,30 @@ fn gates(reply: &PWRunnerRunResult, actors: &[PWRunnerActorResult], out: &mut Ve
             continue;
         };
         if g.outcome == "not_reached" {
-            require(
+            require_at(
                 out,
+                "phases",
+                i,
+                "termination_gate",
                 g.observation.is_none() && g.capture_ordinal.is_none() && g.wait.is_none(),
                 "unreached termination gate fabricates capture",
             );
         }
         if let Some(wait) = &g.wait {
-            require(
+            require_at(
                 out,
+                "phases",
+                i,
+                "termination_gate",
                 (0..=5000).contains(&wait.budget_ms) && wait.excluded_ms.is_none(),
                 "termination gate wait budget or accounting",
             );
         }
-        require(
+        require_at(
             out,
+            "phases",
+            i,
+            "termination_gate",
             g.activation_eligible
                 || (p.activation_observation.is_none()
                     && p.visit_timing.is_none()
@@ -935,8 +966,11 @@ fn gates(reply: &PWRunnerRunResult, actors: &[PWRunnerActorResult], out: &mut Ve
             .phases
             .iter()
             .position(|p| p.phase_id == g.source_final_phase_id);
-        require(
+        require_at(
             out,
+            "phases",
+            i,
+            "termination_gate",
             g.condition == "terminated"
                 && source.is_some()
                 && Some(g.source_actor_id.as_str()) != p.actor_id.as_deref()
@@ -949,8 +983,11 @@ fn gates(reply: &PWRunnerRunResult, actors: &[PWRunnerActorResult], out: &mut Ve
                 }),
             "termination dependency source or ordering",
         );
-        require(
+        require_at(
             out,
+            "phases",
+            i,
+            "termination_gate",
             [
                 "not_reached",
                 "satisfied",
@@ -965,8 +1002,11 @@ fn gates(reply: &PWRunnerRunResult, actors: &[PWRunnerActorResult], out: &mut Ve
             "termination gate outcome",
         );
         if g.outcome != "not_reached" {
-            require(
+            require_at(
                 out,
+                "phases",
+                i,
+                "termination_gate",
                 g.wait.as_ref().is_some_and(|w| {
                     (0..=5000).contains(&w.budget_ms)
                         && w.stop == g.outcome
@@ -977,8 +1017,11 @@ fn gates(reply: &PWRunnerRunResult, actors: &[PWRunnerActorResult], out: &mut Ve
         }
         let reap = source.and_then(|a| a.owned_reap.as_ref());
         if let Some(observation) = &g.observation {
-            require(
+            require_at(
                 out,
+                "phases",
+                i,
+                "termination_gate",
                 observation.capture_ordinal > 0
                     && reap.is_some_and(|r| {
                         r.capture_ordinal == observation.capture_ordinal
@@ -999,8 +1042,11 @@ fn gates(reply: &PWRunnerRunResult, actors: &[PWRunnerActorResult], out: &mut Ve
                 .and_then(|a| a.observed_ns)
                 .zip(reap.and_then(|r| r.observed_ns))
                 .is_some_and(|(a, r)| a <= r);
-            require(
+            require_at(
                 out,
+                "phases",
+                i,
+                "termination_gate",
                 source.is_some_and(owned_reap_valid)
                     && reap.is_some_and(|r| {
                         r.ownership_unbroken
@@ -1015,8 +1061,11 @@ fn gates(reply: &PWRunnerRunResult, actors: &[PWRunnerActorResult], out: &mut Ve
                     && time,
                 "satisfied termination gate lacks natural owned reap after final activation",
             );
-            require(
+            require_at(
                 out,
+                "phases",
+                i,
+                "termination_gate",
                 g.wait.as_ref().is_some_and(|w| {
                     (1..=5000).contains(&w.budget_ms)
                         && !w.clock_fault
@@ -1026,8 +1075,11 @@ fn gates(reply: &PWRunnerRunResult, actors: &[PWRunnerActorResult], out: &mut Ve
                 "satisfied termination gate lacks a timely clocked wait",
             );
             if let Some(a) = &p.activation_observation {
-                require(
+                require_at(
                     out,
+                    "phases",
+                    i,
+                    "termination_gate",
                     a.observed_ns.is_none()
                         || reap
                             .and_then(|r| r.observed_ns)
@@ -1037,8 +1089,11 @@ fn gates(reply: &PWRunnerRunResult, actors: &[PWRunnerActorResult], out: &mut Ve
                 );
             }
         } else {
-            require(
+            require_at(
                 out,
+                "phases",
+                i,
+                "termination_gate",
                 !g.activation_eligible
                     && p.activation_observation.is_none()
                     && !p
@@ -1050,8 +1105,11 @@ fn gates(reply: &PWRunnerRunResult, actors: &[PWRunnerActorResult], out: &mut Ve
             );
         }
         if g.activation_eligible {
-            require(
+            require_at(
                 out,
+                "phases",
+                i,
+                "termination_gate",
                 g.outcome == "satisfied"
                     && actors.iter().any(|a| {
                         Some(a.actor_id.as_str()) == p.actor_id.as_deref()
@@ -2022,6 +2080,108 @@ mod tests {
         gates(reply, actors, &mut out);
         out
     }
+    #[test]
+    fn gate_findings_locate_each_retained_assertion_by_position() {
+        let reply: PWRunnerRunResult =
+            serde_json::from_value(fixture("actor_gate_reply.json")).unwrap();
+        let mut findings = Vec::new();
+        gates(&reply, reply.actors.as_deref().unwrap(), &mut findings);
+        assert!(findings.is_empty(), "{findings:?}");
+
+        let mut changed = reply.clone();
+        changed.phases[2]
+            .termination_gate
+            .as_mut()
+            .unwrap()
+            .wait
+            .as_mut()
+            .unwrap()
+            .elapsed_ms = Some(5001);
+        // Repeated labels must still leave each inspected gate separately addressable.
+        changed.phases.push(changed.phases[2].clone());
+        let before = changed.clone();
+        gates(&changed, changed.actors.as_deref().unwrap(), &mut findings);
+        assert_eq!(changed, before);
+        assert_eq!(findings.len(), 2, "{findings:?}");
+        for (finding, index) in findings.iter().zip([2, 6]) {
+            assert_eq!(finding.kind, "actor_evidence");
+            assert_eq!(
+                finding.detail,
+                "satisfied termination gate lacks a timely clocked wait"
+            );
+            assert_eq!(
+                finding.subject_path,
+                Some(vec![
+                    "phases".into(),
+                    index.to_string(),
+                    "termination_gate".into()
+                ])
+            );
+            let encoded = serde_json::to_value(finding).unwrap();
+            assert_eq!(
+                encoded["subject_path"],
+                json!(["phases", index.to_string(), "termination_gate"])
+            );
+            assert!(encoded.get("rule").is_none() && encoded.get("question").is_none());
+            assert!(encoded.get("step_index").is_none() && encoded.get("observations").is_none());
+        }
+
+        let mut combined = reply.clone();
+        combined.actors.as_mut().unwrap()[0]
+            .owned_reap
+            .as_mut()
+            .unwrap()
+            .native_rc = 0;
+        combined.phases[1]
+            .activation_observation
+            .as_mut()
+            .unwrap()
+            .capture_ordinal = 0;
+        let before = combined.clone();
+        findings.clear();
+        gates(
+            &combined,
+            combined.actors.as_deref().unwrap(),
+            &mut findings,
+        );
+        assert_eq!(combined, before);
+        assert_eq!(
+            findings[0].subject_path,
+            Some(vec!["actors".into(), "0".into(), "owned_reap".into()])
+        );
+        assert_eq!(
+            findings[1].subject_path,
+            Some(vec![
+                "phases".into(),
+                "1".into(),
+                "activation_observation".into()
+            ])
+        );
+        assert!(findings[2..].iter().all(|finding| finding.subject_path
+            == Some(vec!["phases".into(), "2".into(), "termination_gate".into()])));
+        assert_eq!(
+            findings
+                .iter()
+                .map(|finding| finding.detail.as_str())
+                .collect::<Vec<_>>(),
+            vec![
+                "owned reap disagrees with child identity or wait status",
+                "invalid phase activation observation",
+                "termination gate observation does not resolve to its source owned reap",
+                "satisfied termination gate lacks natural owned reap after final activation",
+            ]
+        );
+
+        let mut unrelated = Vec::new();
+        require(&mut unrelated, false, "a separate relationship");
+        assert!(
+            serde_json::to_value(&unrelated[0])
+                .unwrap()
+                .get("subject_path")
+                .is_none()
+        );
+    }
+
     #[test]
     fn typed_setup_equipment_application_and_gate_corpus() {
         let cases: Value = serde_json::from_str(include_str!(

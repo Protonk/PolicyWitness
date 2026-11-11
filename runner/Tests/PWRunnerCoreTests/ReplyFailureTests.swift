@@ -244,6 +244,73 @@ func runReplyFailureTests(_ tk: TestKit) {
             try expectTrue(bytes.starts(with: Data("PWP1".utf8)))
             try expectTrue(bytes.count < (try pwPorcelainEncode(result)).count)
         }
+        tk.run("actual text budget failure reaches independent minimal reporting") {
+            guard let artifacts = ProcessInfo.processInfo.environment["PW_TEST_ARTIFACTS"] else {
+                throw TestFailure(message: "PW_TEST_ARTIFACTS is required for writer-cap receipts")
+            }
+            let root = URL(fileURLWithPath: artifacts).appendingPathComponent("porcelain-replies", isDirectory: true)
+            try FileManager.default.createDirectory(at: root, withIntermediateDirectories: true)
+            var result = try replyFixture()
+            let baseline = try pwPorcelainEncode(result)
+            try expectEqual(pwRunnerPorcelainReplyData(result), baseline)
+            // A constructed diagnostic, not a native producer observation.
+            // One ASCII string exceeds the literal 128 MiB frame budget;
+            // String's real guard rejects before constructing its Data copy.
+            let oversizedBytes = 134_217_729
+            try expectEqual(pwPorcelainByteLimit, 134_217_728)
+            result.steps[0].attempt.error = String(repeating: "x", count: oversizedBytes)
+            try result.validateForReporting()
+            let originalError = result.error
+            var calls = 0
+            var failures: [String] = []
+            let emitted = pwRunnerPorcelainReplyData(result, encode: { candidate in
+                calls += 1
+                try expectEqual(candidate.steps[0].attempt.error?.utf8.count, oversizedBytes)
+                if calls == 1 {
+                    try expectNil(candidate.reporting_failure)
+                    try expectEqual(candidate.error, originalError)
+                } else {
+                    try expectEqual(candidate.reporting_failure?.evidence_retained, true)
+                    try expectEqual(candidate.reporting_failure?.original_error, originalError)
+                    try expectNil(candidate.steps[0].comparison)
+                }
+                // Forward to the actual production writer. No fabricated
+                // exception supplies either of the two failure observations.
+                do { return try pwPorcelainEncode(candidate) }
+                catch let error as PWPorcelainError {
+                    switch error { case .invalid(let reason): failures.append(reason) }
+                    throw error
+                }
+            })
+            try expectEqual(calls, 2)
+            try expectEqual(failures, ["text exceeds byte limit", "text exceeds byte limit"])
+            let cause = String(describing: PWPorcelainError.invalid("text exceeds byte limit"))
+            let diagnostic = "\(cause); evidence-preserving encoding also failed: \(cause)"
+            // Independent minimal writer drops rich records. Compare its
+            // actual frame with a manually authored typed minimal expectation,
+            // encoded by the ordinary generated writer, including lost-evidence
+            // status and the retained original summary and scalar identity.
+            let expected = PWRunnerRunResult(specimen_id: result.specimen_id, run_kind: result.run_kind,
+                rc: 1, normalized_outcome: "runner_reporting_failed", error: diagnostic,
+                pid: result.pid, bundle_id: result.bundle_id, policy_format: result.policy_format,
+                policy_sha256: result.policy_sha256, steps: [], phases: [],
+                reporting_failure: PWRunnerReportingFailure(diagnostic: diagnostic,
+                    original_rc: result.rc, original_normalized_outcome: result.normalized_outcome,
+                    original_error: originalError, evidence_retained: false))
+            try expected.validateForReporting()
+            try expectEqual(emitted, try pwPorcelainEncode(expected))
+            try expectTrue(emitted.starts(with: Data("PWP1".utf8)) && emitted.count < 4096)
+            try emitted.write(to: root.appendingPathComponent("writer-cap-minimal.pwp"))
+            let receipt: [String: Any] = ["input": "constructed attempt.error",
+                "input_utf8_bytes": oversizedBytes, "frame_limit_bytes": 134_217_728,
+                "writer_calls": calls, "writer_failures": failures, "emitted_bytes": emitted.count,
+                "normalized_outcome": "runner_reporting_failed", "evidence_retained": false,
+                "steps": 0, "phases": 0, "original_normalized_outcome": result.normalized_outcome,
+                "original_rc": result.rc]
+            try JSONSerialization.data(withJSONObject: receipt, options: [.prettyPrinted, .sortedKeys])
+                .write(to: root.appendingPathComponent("writer-cap-receipt.json"))
+        }
+
         tk.run("minimal emission failure returns an undecodable empty receipt") {
             let result = try replyFixture()
             var richCalls = 0

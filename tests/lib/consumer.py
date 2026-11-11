@@ -97,15 +97,25 @@ def _reply(document):
 # Path forms
 # ---------------------------------------------------------------------------
 
-def validate_path_diagnostics(path, *, forms=PATH_FORMS):
-    """Validate the compact three-state representation without inferring resolution."""
+def _path_diagnostics_shape(path):
+    """Required member types, independent of retained path-form relationships."""
     if not isinstance(path, dict) or not isinstance(path.get('input'), str):
         return ['path diagnostics require a string input']
     if 'same_as_input' not in path:
         return ['path diagnostics require same_as_input']
     same = path.get('same_as_input')
-    if not isinstance(same, list) or any(not isinstance(x, str) for x in same) or \
-            len(set(same)) != len(same) or any(x not in forms for x in same):
+    if not isinstance(same, list) or any(not isinstance(x, str) for x in same):
+        return ['same_as_input must be an array of strings']
+    return []
+
+
+def validate_path_diagnostics(path, *, forms=PATH_FORMS):
+    """Validate the compact three-state representation without inferring resolution."""
+    errors = _path_diagnostics_shape(path)
+    if errors:
+        return errors
+    same = path['same_as_input']
+    if len(set(same)) != len(same) or any(x not in forms for x in same):
         return ['same_as_input must contain unique supported form names']
     errors = []
     for name in forms:
@@ -440,7 +450,8 @@ def validate_exec_observation(attempt):
     return [] if valid else fail('reap stop contradicts final wait or branch priority')
 
 
-def _validate_step(runner, step, failed_reporting):
+def _step_record_shape(step):
+    """The carried query/attempt records keep their required member types."""
     errors = []
     sid = step.get('step_id')
     query = step.get('sandbox_check')
@@ -451,19 +462,27 @@ def _validate_step(runner, step, failed_reporting):
     if not isinstance(attempt, dict):
         errors.append(f'{sid}: missing attempt')
         attempt = {}
-    for key in ('requested_kind', 'requested_action'):
-        if not isinstance(attempt.get(key), str):
-            errors.append(f'{sid}: missing attempt.{key}')
     if type(attempt.get('rc')) is not int:
         errors.append(f'{sid}: invalid attempt.rc')
     if attempt.get('errno') is not None and type(attempt.get('errno')) is not int:
         errors.append(f'{sid}: invalid attempt.errno')
+    if not isinstance(query.get('operation'), str) or not isinstance(query.get('filter_kind'), str):
+        errors.append(f'{sid}: missing sandbox_check.operation or filter_kind')
+    return errors
+
+
+def _validate_step(runner, step, failed_reporting):
+    errors = _step_record_shape(step)
+    sid = step.get('step_id')
+    query = step.get('sandbox_check') if isinstance(step.get('sandbox_check'), dict) else {}
+    attempt = step.get('attempt') if isinstance(step.get('attempt'), dict) else {}
+    for key in ('requested_kind', 'requested_action'):
+        if not isinstance(attempt.get(key), str):
+            errors.append(f'{sid}: missing attempt.{key}')
     errors.extend(f'{sid}: {error}' for error in validate_fresh_read(attempt))
     errors.extend(f'{sid}: {error}' for error in validate_fresh_write(attempt))
     if not failed_reporting:
         errors.extend(f'{sid}: {error}' for error in validate_exec_observation(attempt))
-    if not isinstance(query.get('operation'), str) or not isinstance(query.get('filter_kind'), str):
-        errors.append(f'{sid}: missing sandbox_check.operation or filter_kind')
     if query.get('outcome') == 'prediction_unavailable' and query.get('rc') != -1:
         errors.append(f'{sid}: unavailable prediction requires rc=-1')
     path = query.get('path_diagnostics')
@@ -583,7 +602,28 @@ def _validate_reply(runner):
         if not isinstance(step, dict):
             errors.append('step is not an object')
             continue
-        errors.extend(_validate_step(runner, step, failed_reporting))
+        if failed_reporting:
+            errors.extend(_step_record_shape(step))
+            for field in ('sandbox_check', 'attempt'):
+                record = step.get(field)
+                if isinstance(record, dict) and record.get('path_diagnostics') is not None:
+                    errors.extend(f"{step.get('step_id')}: {field} {error}" for error in
+                                  _path_diagnostics_shape(record['path_diagnostics']))
+            if step.get('comparison') is not None:
+                errors.append(f"{step.get('step_id')}: reporting failure must withhold every comparison")
+        else:
+            errors.extend(_validate_step(runner, step, failed_reporting))
+    if failed_reporting:
+        # Shape/producer/profile admission still applies. The retained ordinary
+        # relationships belong to separately scoped evidence assessments.
+        errors.extend(_worker_receipt_shape(runner.get('runner_subprocess')))
+        if isinstance(runner.get('actors'), list):
+            for actor in runner['actors']:
+                if not isinstance(actor, dict):
+                    errors.append('actor is not an object')
+                else:
+                    errors.extend(_worker_receipt_shape(actor.get('subprocess')))
+        return errors
     if not failed_reporting:
         errors.extend(_validate_phases(runner))
         errors.extend(validate_extensions(runner))
@@ -646,6 +686,10 @@ def _validate_actors(runner, failed_reporting, steps_value):
         visits = actor.get('visits')
         if not isinstance(visits, list) or any(type(v) is not int or v < 1 for v in visits):
             errors.append('invalid actor visits')
+        declared = [i + 1 for i, p in enumerate(runner.get('phases') or [])
+                    if isinstance(p, dict) and p.get('actor_id') == actor_id]
+        if visits != declared:
+            errors.append('actor visits disagree with schedule')
     if len(set(ids)) != len(ids):
         errors.append('duplicate actor_id')
     phases = [p for p in runner.get('phases', []) if isinstance(p, dict)]
@@ -666,15 +710,34 @@ def _validate_actors(runner, failed_reporting, steps_value):
     return errors
 
 
-def _validate_worker(runner, sub, failed_reporting, steps_value):
-    """One worker record's transfer, readiness and policy-read observations."""
+def _worker_receipt_shape(sub):
+    """Required receipt members survive degradation; values stay uninterpreted."""
     errors = []
+    if sub is not None and not isinstance(sub, dict):
+        return ['worker subprocess is not an object']
     if isinstance(sub, dict) and sub.get('policy_transfer_timeout') is not None:
         timeout = sub['policy_transfer_timeout']
-        if not isinstance(timeout, dict) or any(type(timeout.get(k)) is not int or timeout[k] < 0
-                for k in ('budget_ms','elapsed_ms','bytes_written','bytes_expected')) or \
-                timeout['budget_ms'] <= 0 or timeout['elapsed_ms'] < timeout['budget_ms'] or \
-                timeout['bytes_written'] > timeout['bytes_expected']:
+        if not isinstance(timeout, dict) or any(type(timeout.get(k)) is not int
+                for k in ('budget_ms', 'elapsed_ms', 'bytes_written', 'bytes_expected')):
+            errors.append('invalid policy_transfer_timeout observation')
+    evidence = sub.get('worker_evidence') if isinstance(sub, dict) else None
+    read = evidence.get('policy_read') if isinstance(evidence, dict) else None
+    if read is not None and (not isinstance(read, dict) or
+            set(read) != {'bytes_expected', 'bytes_received'} or any(type(read[k]) is not int for k in read)):
+        errors.append('invalid worker_evidence.policy_read receipt')
+    return errors
+
+
+def _validate_worker(runner, sub, failed_reporting, steps_value):
+    """One worker record's transfer, readiness and policy-read observations."""
+    errors = _worker_receipt_shape(sub)
+    if not failed_reporting and isinstance(sub, dict) and sub.get('policy_transfer_timeout') is not None:
+        timeout = sub['policy_transfer_timeout']
+        if isinstance(timeout, dict) and all(type(timeout.get(k)) is int
+                for k in ('budget_ms', 'elapsed_ms', 'bytes_written', 'bytes_expected')) and (
+                any(timeout[k] < 0 for k in ('budget_ms', 'elapsed_ms', 'bytes_written', 'bytes_expected')) or
+                timeout['budget_ms'] <= 0 or timeout['elapsed_ms'] < timeout['budget_ms'] or
+                timeout['bytes_written'] > timeout['bytes_expected']):
             errors.append('invalid policy_transfer_timeout observation')
         if sub.get('policy_transfer_error') is not None or sub.get('poll_stop_reason') != 'policy_transfer_deadline':
             errors.append('policy_transfer_timeout conflicts with transfer stop/error')
@@ -689,7 +752,7 @@ def _validate_worker(runner, sub, failed_reporting, steps_value):
         # retains contradictory values without comparisons; structure still applies.
         if not isinstance(read, dict) or set(read) != {'bytes_expected', 'bytes_received'} or \
                 any(type(read[k]) is not int for k in read):
-            errors.append('invalid worker_evidence.policy_read receipt')
+            pass  # The retained-receipt shape check already reports this.
         elif not failed_reporting:
             if any(not 0 <= read[k] <= POLICY_SOURCE_BYTES for k in read):
                 errors.append('invalid worker_evidence.policy_read receipt')
@@ -740,7 +803,8 @@ def _validate_phases(runner):
         if type(phase.get('ordinal')) is not int or phase['ordinal'] != index + 1:
             errors.append('phase ordinal disagrees with sequence')
         action_ids = phase.get('action_ids')
-        if not isinstance(action_ids, list) or any(not isinstance(x, str) for x in action_ids):
+        if not isinstance(action_ids, list) or any(not isinstance(x, str) or
+                len(x.encode('utf-8')) > 63 or '\0' in x or actors and not x for x in action_ids):
             errors.append('invalid phase action_ids')
         else:
             actions.extend(action_ids)
@@ -846,6 +910,49 @@ def _validate_ordering(runner, phase):
     return errors
 
 
+def _subject_path_problem(root, path):
+    """Resolve a present location without interpreting its target or issue."""
+    if not isinstance(path, list) or any(not isinstance(part, str) for part in path):
+        return 'must be an array of strings'
+    current = root
+    for position, part in enumerate(path):
+        if isinstance(current, dict):
+            if part not in current:
+                return f'component {position} names an absent object key'
+            current = current[part]
+        elif isinstance(current, list):
+            if not (part.isascii() and part.isdecimal() and (part == '0' or not part.startswith('0'))):
+                return f'component {position} is not a canonical array position'
+            # Bound the decimal conversion by the actual collection size;
+            # an arbitrarily long numeric component is simply out of range.
+            if len(part) > len(str(len(current))) or int(part) >= len(current):
+                return f'component {position} is outside the retained array'
+            current = current[int(part)]
+        else:
+            return f'component {position} traverses a non-container'
+    return None
+
+
+def _validate_diagnostic_subjects(diagnostics, runner):
+    errors = []
+    scopes = [('data.runner_sandbox_diagnostics', diagnostics)]
+    actors = diagnostics.get('actors')
+    if isinstance(actors, list):
+        scopes.extend((f'data.runner_sandbox_diagnostics.actors[{index}]', actor)
+                      for index, actor in enumerate(actors) if isinstance(actor, dict))
+    for location, scope in scopes:
+        issues = scope.get('disposition_issues')
+        if not isinstance(issues, list):
+            continue  # The envelope's shape owner checks containers.
+        for index, issue in enumerate(issues):
+            if not isinstance(issue, dict) or 'subject_path' not in issue:
+                continue
+            problem = _subject_path_problem(runner, issue['subject_path'])
+            if problem is not None:
+                errors.append(f'{location}.disposition_issues[{index}].subject_path {problem}')
+    return errors
+
+
 def _validate_envelope(document, expected_contract, *, allow_fixture_json=False):
     errors = []
     data = document.get('data')
@@ -892,6 +999,8 @@ def _validate_envelope(document, expected_contract, *, allow_fixture_json=False)
     diagnostics = data.get('runner_sandbox_diagnostics')
     if diagnostics is not None and not isinstance(diagnostics, dict):
         errors.append('data.runner_sandbox_diagnostics is not an object')
+    if isinstance(diagnostics, dict):
+        errors.extend(_validate_diagnostic_subjects(diagnostics, data.get('runner_result')))
     if diagnostics is not None and data.get('runner_result') is None:
         errors.append('client observations cannot supply host-derived sandbox diagnostics')
     return errors

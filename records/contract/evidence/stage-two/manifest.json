@@ -1,0 +1,464 @@
+{
+  "files": [
+    {
+      "bytes": 910,
+      "encoding": "gzip",
+      "path": "boundaries/manifest.json.gz",
+      "source": "/private/tmp/pw-contract-stage-two-p127-gate-audit-20261111/manifest.json",
+      "source_sha256": "54d4f05bd91ec15e712de34e84eed71b32a63094161fdcaaf6d2064716399b8b",
+      "stored_bytes": 516,
+      "stored_sha256": "d5397599d6b1cc77874b7568978f25ff20d07b110574cc59c9bb1144e52cfd06"
+    },
+    {
+      "bytes": 704168,
+      "encoding": "gzip",
+      "path": "boundaries/observations.json.gz",
+      "source": "/private/tmp/pw-contract-stage-two-p127-gate-audit-20261111/observations.json",
+      "source_sha256": "44a4cb9aee68bce03d76057e96925be91478b214f220e3d44d50c8c94bcf67ef",
+      "stored_bytes": 58656,
+      "stored_sha256": "2dd1d1d5164e8351cd7b29ed24bdbe7b1d98341ab87e461c2b19dcd2aa4b8dcd"
+    },
+    {
+      "bytes": 2538,
+      "encoding": "gzip",
+      "path": "boundaries/preparation.json.gz",
+      "source": "/private/tmp/pw-contract-stage-two-p127-gate-audit-20261111/preparation.json",
+      "source_sha256": "8a0daafc3c7795ab9d71948d97a09c33f424c1306108c6651d70fef4528cbc57",
+      "stored_bytes": 1131,
+      "stored_sha256": "5930a3981176a8527199fd0264020383bf295763a430039e95c50f3b482d4318"
+    },
+    {
+      "bytes": 1113,
+      "encoding": "gzip",
+      "path": "boundaries/source-and-app-join.json.gz",
+      "source": "/private/tmp/pw-contract-stage-two-p127-gate-audit-20261111/source-and-app-join.json",
+      "source_sha256": "f137a70c55fb53525796db5030d8317076fb6c60ab403ebe26ce560b57b6c18e",
+      "stored_bytes": 596,
+      "stored_sha256": "29bd1717669af79342fe12e9151b25a4afafa65708b70faeb91f03bc870ce67a"
+    },
+    {
+      "bytes": 18400,
+      "encoding": "identity",
+      "path": "boundaries/AUDIT.md",
+      "source": "/private/tmp/pw-contract-stage-two-p127-gate-audit-20261111/AUDIT.md",
+      "source_sha256": "6b4f13c82dfbc4a96bd4488eeda3172e85fb6b3ed2f8faa9aaefdcc6bb3b6399",
+      "stored_bytes": 18400,
+      "stored_sha256": "6b4f13c82dfbc4a96bd4488eeda3172e85fb6b3ed2f8faa9aaefdcc6bb3b6399"
+    },
+    {
+      "bytes": 31688,
+      "encoding": "gzip",
+      "path": "native/audit-inputs.json.gz",
+      "source": "/private/tmp/pw-contract-stage-two-p9-audit/audit-inputs.json",
+      "source_sha256": "07276116c0cc472ee8f57a719c2970e8036e88f3a83307b5d529d28fa9d2f393",
+      "stored_bytes": 6252,
+      "stored_sha256": "896e9fd7c944dc678500c2a10543a3432e466bfee39d2ae9d8235deba7270f91"
+    },
+    {
+      "bytes": 9891,
+      "encoding": "gzip",
+      "path": "native/file-effect-observations.json.gz",
+      "source": "/private/tmp/pw-contract-stage-two-p9-audit/file-effect-observations.json",
+      "source_sha256": "7581fb40b0410555c96cc1539adcacda5ef6af3d0a7254e43560314ae67bbc59",
+      "stored_bytes": 1285,
+      "stored_sha256": "a5834c49153b79c84b017614be1aaa50da39c1c588c6f72bbf51deca9598c8d8"
+    },
+    {
+      "bytes": 980,
+      "encoding": "gzip",
+      "path": "native/manifest.json.gz",
+      "source": "/private/tmp/pw-contract-stage-two-p9-audit/manifest.json",
+      "source_sha256": "19df34d2b87eee11bea197ad11de14ac79d2c3fbd8619b8aab6f70d3bbe9e11b",
+      "stored_bytes": 613,
+      "stored_sha256": "81c79a258cf9f48c2dff09f90b20c741ffd2a8215e58803560557f57d690d49d"
+    },
+    {
+      "bytes": 17253,
+      "encoding": "gzip",
+      "path": "native/manual-joins.json.gz",
+      "source": "/private/tmp/pw-contract-stage-two-p9-audit/manual-joins.json",
+      "source_sha256": "aab01c82877bf1d5ee58e7c51dc7f7491ca470f35c8084a943ddfadc400119d1",
+      "stored_bytes": 5618,
+      "stored_sha256": "2108efb0bfc10198c719f8c292b5e18fee4241d5339b34077e54e9b5094a72e4"
+    },
+    {
+      "bytes": 2068819,
+      "encoding": "gzip",
+      "path": "native/receipt.json.gz",
+      "source": "/private/tmp/pw-contract-stage-two-p9-audit/receipt.json",
+      "source_sha256": "faf24536c8f892635986e64938cf5962f1e45fbc507bfb2dc082bce143ceed9b",
+      "stored_bytes": 225722,
+      "stored_sha256": "c92d52e6c89ddfc053cf78751f9843afb832111d7b26ce951ff2028aac4e8d93"
+    },
+    {
+      "bytes": 3702,
+      "encoding": "gzip",
+      "path": "native/supplemental-unit-join.json.gz",
+      "source": "/private/tmp/pw-contract-stage-two-p9-audit/supplemental-unit-join.json",
+      "source_sha256": "a6bbc0e367d86f020ecb5a07736e8ec544c535f2a9e142ef0a38c720fed359bc",
+      "stored_bytes": 1465,
+      "stored_sha256": "4533c9c8bff4e41f8f64373846082ed35bbf83c0a14997864d48e08c23220b31"
+    },
+    {
+      "bytes": 2737,
+      "encoding": "gzip",
+      "path": "native/sysctl-source-join.json.gz",
+      "source": "/private/tmp/pw-contract-stage-two-p9-audit/sysctl-source-join.json",
+      "source_sha256": "076367cbe7c278eacf3c247a3882a9efe761aeec4813cfab42d623a2a38b7fe4",
+      "stored_bytes": 800,
+      "stored_sha256": "a3add971b258744305d984792d788625e17c47045f10f42a2e6b7cae48eb1830"
+    },
+    {
+      "bytes": 7677,
+      "encoding": "identity",
+      "path": "native/G07-overrides.md",
+      "source": "/private/tmp/pw-contract-stage-two-p9-audit/G07-overrides.md",
+      "source_sha256": "d1e6a114d198f3e74ad11a0791c2c31438993dc5f46bb13617b948f926656a27",
+      "stored_bytes": 7677,
+      "stored_sha256": "d1e6a114d198f3e74ad11a0791c2c31438993dc5f46bb13617b948f926656a27"
+    },
+    {
+      "bytes": 42795,
+      "encoding": "gzip",
+      "path": "native/REPORT.md.gz",
+      "source": "/private/tmp/pw-contract-stage-two-p9-audit/REPORT.md",
+      "source_sha256": "3f15db7142d867c51fa88b724891faf421a46a293a09eb42aa577b2777f92534",
+      "stored_bytes": 10806,
+      "stored_sha256": "cce36d83dc0d7b7f0ddeb79bb929860352667b4cabe13ac1c731fb1bab89d38e"
+    },
+    {
+      "bytes": 3805,
+      "encoding": "identity",
+      "path": "native/extensions-example-owner-followup.md",
+      "source": "/private/tmp/pw-contract-stage-two-p9-audit/extensions-example-owner-followup.md",
+      "source_sha256": "a33674b0a589987f9ebe45975cb57bf36260503f71de293ce3cc6a609fb2cfeb",
+      "stored_bytes": 3805,
+      "stored_sha256": "a33674b0a589987f9ebe45975cb57bf36260503f71de293ce3cc6a609fb2cfeb"
+    },
+    {
+      "bytes": 13444,
+      "encoding": "gzip",
+      "path": "readers/app-association.json.gz",
+      "source": "/private/tmp/pw-contract-stage-two-fresh-reader-audit/app-association.json",
+      "source_sha256": "82883a6a3eb8aa576d2994e2103a9974c88fbe66e7fca3d416c256de27c15457",
+      "stored_bytes": 2788,
+      "stored_sha256": "4954c0a306bc95220fe1f13604029a84a3ecb93fea172d656a2df7e7aae63a20"
+    },
+    {
+      "bytes": 12785,
+      "encoding": "gzip",
+      "path": "readers/case-status.json.gz",
+      "source": "/private/tmp/pw-contract-stage-two-fresh-reader-audit/case-status.json",
+      "source_sha256": "385aed9204e6127bf0385affcdb2ed4d9001f19721e5c36decf0bdcd578c9270",
+      "stored_bytes": 2670,
+      "stored_sha256": "5711c63573e97af119c5725af2d811277d3b1651392263157e3858db4abe54e1"
+    },
+    {
+      "bytes": 52711,
+      "encoding": "gzip",
+      "path": "readers/checker-evidence.json.gz",
+      "source": "/private/tmp/pw-contract-stage-two-fresh-reader-audit/checker-evidence.json",
+      "source_sha256": "b6415633282537eaf8b179069355c2d2ca6f8fdcd14a1d620d05bad975b1aabc",
+      "stored_bytes": 7027,
+      "stored_sha256": "7875525d17e6b86748f8d66946db3b0d6bfce417aedec6b5678bc36e904096dd"
+    },
+    {
+      "bytes": 5580,
+      "encoding": "gzip",
+      "path": "readers/client-source-join.json.gz",
+      "source": "/private/tmp/pw-contract-stage-two-fresh-reader-audit/client-source-join.json",
+      "source_sha256": "214d33295eff7f299a72ae929d5c859c01f518fc3f1054d79f489fc361bcefb1",
+      "stored_bytes": 1548,
+      "stored_sha256": "42d48e91f6eb5714d96a056fa427ff49675b483f3a95f5ea1a28533c9ec21081"
+    },
+    {
+      "bytes": 26751,
+      "encoding": "gzip",
+      "path": "readers/effect-evidence.json.gz",
+      "source": "/private/tmp/pw-contract-stage-two-fresh-reader-audit/effect-evidence.json",
+      "source_sha256": "66c0367bdcde959a1b3430413516e6a0ff71db4269ed481f5568b5a476904f98",
+      "stored_bytes": 3415,
+      "stored_sha256": "f210c40b3c5dd1ddcb593c444afaa217d6765f2a89b5d8a471cc88ee65fdfe9a"
+    },
+    {
+      "bytes": 3244,
+      "encoding": "gzip",
+      "path": "readers/final-manifest.json.gz",
+      "source": "/private/tmp/pw-contract-stage-two-fresh-reader-audit/final-manifest.json",
+      "source_sha256": "acb92cce76ff49d6d61edbc9d3935c6b588133801004dc1527559cbaa71a6483",
+      "stored_bytes": 1556,
+      "stored_sha256": "89f0d89ef7e65aaff011391f3147e8c119bb6e43ffb88f19abd71103d2373543"
+    },
+    {
+      "bytes": 2752,
+      "encoding": "gzip",
+      "path": "readers/late-setup-evidence.json.gz",
+      "source": "/private/tmp/pw-contract-stage-two-fresh-reader-audit/late-setup-evidence.json",
+      "source_sha256": "8cb70ccbcd27e8dce18457addf7c584a2eefe15d1caa093f0d35c3c5176c1a6f",
+      "stored_bytes": 588,
+      "stored_sha256": "13a3ba62bf609fe862ca96fdf126e51443e71306ddc8aab134c9d947046be568"
+    },
+    {
+      "bytes": 611,
+      "encoding": "gzip",
+      "path": "readers/late-setup-fresh-evidence.json.gz",
+      "source": "/private/tmp/pw-contract-stage-two-fresh-reader-audit/late-setup-fresh-evidence.json",
+      "source_sha256": "ea60623d9adcad81e6d134ea30b27f53a8e9d5877b483949fdc16a8f89fcdc65",
+      "stored_bytes": 399,
+      "stored_sha256": "f90d4f3c1964ec77c7f528903bb67f0db8166a4063dbdc7e5e44bd90e5382057"
+    },
+    {
+      "bytes": 2370,
+      "encoding": "gzip",
+      "path": "readers/manifest.json.gz",
+      "source": "/private/tmp/pw-contract-stage-two-fresh-reader-audit/manifest.json",
+      "source_sha256": "f1296ac8db2d94a38e3894556d4fb4bef2622db07f5ede65d4f33fb4e762480a",
+      "stored_bytes": 1294,
+      "stored_sha256": "2ec7a262fbf643d6e0d1734f7dfc8fd6f1e27b926a5a49edab6e0ff93e0926b2"
+    },
+    {
+      "bytes": 408674,
+      "encoding": "gzip",
+      "path": "readers/native-observations.json.gz",
+      "source": "/private/tmp/pw-contract-stage-two-fresh-reader-audit/native-observations.json",
+      "source_sha256": "ba9be8749ca7567a82af9a4f4ec875eacaa5dbfdcc887264010d152dc007491f",
+      "stored_bytes": 16187,
+      "stored_sha256": "29bf1e41fe9fc0ce2266dd3cf4a10e782c9a866b8cd5a0467a1242a12e0b86b7"
+    },
+    {
+      "bytes": 7779,
+      "encoding": "gzip",
+      "path": "readers/prior-source-reading-join.json.gz",
+      "source": "/private/tmp/pw-contract-stage-two-fresh-reader-audit/prior-source-reading-join.json",
+      "source_sha256": "efc3fe59cc9eab819445f29fcb64f0a53ac97a7bc9e5f310c3544a0e0b19cbc5",
+      "stored_bytes": 2139,
+      "stored_sha256": "463eeb6e2acc5695bccfabebd4959a8013bdddfdf43878c7c1592914392c384e"
+    },
+    {
+      "bytes": 60790,
+      "encoding": "gzip",
+      "path": "readers/reader-replay-evidence.json.gz",
+      "source": "/private/tmp/pw-contract-stage-two-fresh-reader-audit/reader-replay-evidence.json",
+      "source_sha256": "8eb27692a0ec517b9f595c4aea10a18a71e48a2bfb99acb1e894a8cd016a44cf",
+      "stored_bytes": 10634,
+      "stored_sha256": "6e6395e23bb2b6ace090326c7016a6695bf330efbc7b428311701fd1a74cf4d2"
+    },
+    {
+      "bytes": 17650,
+      "encoding": "gzip",
+      "path": "readers/runner-unit-failure-evidence.json.gz",
+      "source": "/private/tmp/pw-contract-stage-two-fresh-reader-audit/runner-unit-failure-evidence.json",
+      "source_sha256": "fb520d7f8aa682e6858a9568c6c02ba0d7c44c14f78f485beeaa739c03cc80cd",
+      "stored_bytes": 2665,
+      "stored_sha256": "fd18d32e0e44d09a1b1f5316592822099c0d3e080c65fc1f09c5e43462f62114"
+    },
+    {
+      "bytes": 7309,
+      "encoding": "gzip",
+      "path": "readers/rust-evidence.json.gz",
+      "source": "/private/tmp/pw-contract-stage-two-fresh-reader-audit/rust-evidence.json",
+      "source_sha256": "4dedaa69b0e9b45c4e6fddb4bd6bace5391060061057d6eedbda228e644c9536",
+      "stored_bytes": 1534,
+      "stored_sha256": "d313fb71c36662fa310599b7b9da3e423cca03731bd5c109d03eb629c30df931"
+    },
+    {
+      "bytes": 2142,
+      "encoding": "gzip",
+      "path": "readers/scope.json.gz",
+      "source": "/private/tmp/pw-contract-stage-two-fresh-reader-audit/scope.json",
+      "source_sha256": "e78d56935c75014da8c1f332c4c5583b89a4e287cd2d49e6a4b108b3feca1bb2",
+      "stored_bytes": 1139,
+      "stored_sha256": "c34af5e2c6db196b16927d82f9fae0019bd9ad159632415a3401b151c23401f0"
+    },
+    {
+      "bytes": 226,
+      "encoding": "gzip",
+      "path": "readers/source-changes-after-default.json.gz",
+      "source": "/private/tmp/pw-contract-stage-two-fresh-reader-audit/source-changes-after-default.json",
+      "source_sha256": "a6fc5388788833486d5ba09933ccd386722481d38e76ae5a74e73700f430e7e7",
+      "stored_bytes": 190,
+      "stored_sha256": "400c351924829a11eca0e99a692f30685902dd3d711819e3c96966a0741e6d7d"
+    },
+    {
+      "bytes": 7993,
+      "encoding": "gzip",
+      "path": "readers/transfer-evidence-default.json.gz",
+      "source": "/private/tmp/pw-contract-stage-two-fresh-reader-audit/transfer-evidence-default.json",
+      "source_sha256": "f8675bb2cad801d12246621d5f9eefcb02642ce2233b8c18ce063506f0ef0c9a",
+      "stored_bytes": 1413,
+      "stored_sha256": "832425608a89cd5fb7df9301591cbd02b2a2d6fa74cdaeaf823befe308df7aab"
+    },
+    {
+      "bytes": 5866,
+      "encoding": "gzip",
+      "path": "readers/transfer-evidence.json.gz",
+      "source": "/private/tmp/pw-contract-stage-two-fresh-reader-audit/transfer-evidence.json",
+      "source_sha256": "8569078c6bccb6e45995f55abba76d7dd6919b24146e917b9f742d8c0ff6f1f1",
+      "stored_bytes": 1218,
+      "stored_sha256": "9f85e6663b55392b56dc4cb59359e88989d8a59bb033c15dbcedb0ad07870bc4"
+    },
+    {
+      "bytes": 8342,
+      "encoding": "gzip",
+      "path": "readers/validator-transcript-joins.json.gz",
+      "source": "/private/tmp/pw-contract-stage-two-fresh-reader-audit/validator-transcript-joins.json",
+      "source_sha256": "3e7be432cccc8a42c4af2b48345d627c6999757a64cb49ab304d120cd36c0b1b",
+      "stored_bytes": 1707,
+      "stored_sha256": "5cff5253bbbd12f96b5ca11186c1f68ded030ed4bf5065eb9ea1ec18280e5d61"
+    },
+    {
+      "bytes": 22510,
+      "encoding": "identity",
+      "path": "readers/REPORT.md",
+      "source": "/private/tmp/pw-contract-stage-two-fresh-reader-audit/REPORT.md",
+      "source_sha256": "3f42eb6d5529261d90b8571fdd7525937e1a3e58485a8df72556dfa262a91c4e",
+      "stored_bytes": 22510,
+      "stored_sha256": "3f42eb6d5529261d90b8571fdd7525937e1a3e58485a8df72556dfa262a91c4e"
+    },
+    {
+      "bytes": 3708,
+      "encoding": "gzip",
+      "path": "mutations/inputs.json.gz",
+      "source": "/private/tmp/pw-contract-stage-two-opt-in-audit/inputs.json",
+      "source_sha256": "79f721e833e5d35c471ecdad1cbb3558cbb7309d239d1f3450771b85fe5cc244",
+      "stored_bytes": 1391,
+      "stored_sha256": "ddf766d1838acf09c14c338ad10edf644e4b41b386c822d7196d992418f8e9f4"
+    },
+    {
+      "bytes": 418,
+      "encoding": "gzip",
+      "path": "mutations/manifest.json.gz",
+      "source": "/private/tmp/pw-contract-stage-two-opt-in-audit/manifest.json",
+      "source_sha256": "00bed2181bf838ced82b27162a68ef9b5a1157091d6e81ceb681ff9d05630721",
+      "stored_bytes": 295,
+      "stored_sha256": "cc62f776501e5ced533fe18f84048830acfdf7243462950e539905308b664cf3"
+    },
+    {
+      "bytes": 3090,
+      "encoding": "gzip",
+      "path": "mutations/manual.json.gz",
+      "source": "/private/tmp/pw-contract-stage-two-opt-in-audit/manual.json",
+      "source_sha256": "55778390f549b90a056284a81b174ce501c97b0b6c0f150258d36bdc1b4f3d1a",
+      "stored_bytes": 1444,
+      "stored_sha256": "df5e41437933b0c16d4df2ef12539f38a5950872cccf707ebf7f12514f0e7519"
+    },
+    {
+      "bytes": 654977,
+      "encoding": "gzip",
+      "path": "mutations/receipt.json.gz",
+      "source": "/private/tmp/pw-contract-stage-two-opt-in-audit/receipt.json",
+      "source_sha256": "d010ecd6b47b85f5637b50bfff9d56336ae13b08ea1319c53ffb03f919d291e0",
+      "stored_bytes": 79520,
+      "stored_sha256": "46c234a5538f3906eb176d0587d0bb94dc10a4d3409e1bb264b5a1d64046475f"
+    },
+    {
+      "bytes": 8632,
+      "encoding": "gzip",
+      "path": "mutations/REPORT.md.gz",
+      "source": "/private/tmp/pw-contract-stage-two-opt-in-audit/REPORT.md",
+      "source_sha256": "23703d0510aafee376bcaad892ec138a67e7394b936312fed1bcf13dfdc64719",
+      "stored_bytes": 3386,
+      "stored_sha256": "37a210a898eb18868e536cdab69864cf9d0029b7c132b97b5c481bf9c6ce3b85"
+    },
+    {
+      "bytes": 2006,
+      "encoding": "gzip",
+      "path": "byoxpc/joins.json.gz",
+      "source": "/private/tmp/pw-contract-stage-two-byoxpc-audit-20261111/joins.json",
+      "source_sha256": "0747c14fca664d91556396eee506ce92bafd4959972c5937549cbe4636e5cb0b",
+      "stored_bytes": 950,
+      "stored_sha256": "e78fa7ffed6e6b72bb773738c2fd544c057d1ac0948ff529a721209203cfd479"
+    },
+    {
+      "bytes": 628,
+      "encoding": "gzip",
+      "path": "byoxpc/manifest.json.gz",
+      "source": "/private/tmp/pw-contract-stage-two-byoxpc-audit-20261111/manifest.json",
+      "source_sha256": "ca9538280d7a808233e140337a5ef9092ff575a3e5a7c481e4f14e50f07228e4",
+      "stored_bytes": 368,
+      "stored_sha256": "6cb47d979cb0ce4d8fe23ada8f597dc991aa44292c93a757e610d18322e60597"
+    },
+    {
+      "bytes": 1438111,
+      "encoding": "gzip",
+      "path": "byoxpc/observations.json.gz",
+      "source": "/private/tmp/pw-contract-stage-two-byoxpc-audit-20261111/observations.json",
+      "source_sha256": "018bffe201c295003722616daf845efb2bb4babf3180974651085a3d95e8759f",
+      "stored_bytes": 159573,
+      "stored_sha256": "6989f584702038a903b3ebe7c0a9fb5c7549da50a61177d58b1152e59b14ee1f"
+    },
+    {
+      "bytes": 9663,
+      "encoding": "identity",
+      "path": "byoxpc/AUDIT.md",
+      "source": "/private/tmp/pw-contract-stage-two-byoxpc-audit-20261111/AUDIT.md",
+      "source_sha256": "77ac8e4ab86d3172b793e18dec2a83e555ea13a87e08778480e041afe9add1a7",
+      "stored_bytes": 9663,
+      "stored_sha256": "77ac8e4ab86d3172b793e18dec2a83e555ea13a87e08778480e041afe9add1a7"
+    },
+    {
+      "bytes": 2920,
+      "encoding": "identity",
+      "path": "readers/default-source-snapshot.json",
+      "source": "/private/tmp/pw-contract-stage-two-fresh-reader-audit/owner-execution-evidence/default-source-snapshot.json",
+      "source_sha256": "b5298841bceaea7af57843a0e2ab68de2dd2ed85edf21fd07b16ac91d5a8838e",
+      "stored_bytes": 2920,
+      "stored_sha256": "b5298841bceaea7af57843a0e2ab68de2dd2ed85edf21fd07b16ac91d5a8838e"
+    },
+    {
+      "bytes": 2917,
+      "encoding": "identity",
+      "path": "readers/fresh-source-snapshot.json",
+      "source": "/private/tmp/pw-contract-stage-two-fresh-reader-audit/owner-execution-evidence/fresh-source-snapshot.json",
+      "source_sha256": "af396aadf41ba79a0d072b62d9c3f4ff1df5b5fa30d6c4ff267c53e8437dd51d",
+      "stored_bytes": 2917,
+      "stored_sha256": "af396aadf41ba79a0d072b62d9c3f4ff1df5b5fa30d6c4ff267c53e8437dd51d"
+    },
+    {
+      "bytes": 1219479,
+      "encoding": "gzip",
+      "path": "runs/default.json.gz",
+      "source": "/Users/raccoon/Desktop/Security/PolicyWitness/tests/out/runs/contract-stage-two-default-20261111/run.json",
+      "source_sha256": "aee87e1116d2c0bdb4e24fb8167b7dd5a4756a30e6517885a66d27d6f2c145b9",
+      "stored_bytes": 118159,
+      "stored_sha256": "025f8e16d67025fdab9552db1c495852824b36ead81d82d7c970f536802656e0"
+    },
+    {
+      "bytes": 285708,
+      "encoding": "gzip",
+      "path": "runs/opt-ins.json.gz",
+      "source": "/Users/raccoon/Desktop/Security/PolicyWitness/tests/out/runs/contract-stage-two-opt-ins-20261111/run.json",
+      "source_sha256": "19d359c1c41665e56721c3e2e8658462332af9b316f362619242b50e3c6ecb85",
+      "stored_bytes": 41954,
+      "stored_sha256": "6423e064ee944e41d671da4fe7a196e0560c97b77d49ef6346ec43447b2429b0"
+    },
+    {
+      "bytes": 260581,
+      "encoding": "gzip",
+      "path": "runs/source-drift.json.gz",
+      "source": "tests/out/runs/contract-stage-two-settled-source-20261111/run.json",
+      "source_sha256": "117ec318c29cd0803eba06060b817a772455ebbbbf0a4aa22d76feaa7d1fe7a7",
+      "stored_bytes": 40144,
+      "stored_sha256": "58dea86788b5f8db0f65847e59d39a5bf98471cfb47c29f79833b4c89ce90d14"
+    },
+    {
+      "bytes": 61488,
+      "encoding": "gzip",
+      "path": "decision-inputs/DECISIONS.md.gz",
+      "source": "/private/tmp/pw-contract-stage-two-decision-record-20261111/DECISIONS.md",
+      "source_sha256": "22f0e6bf995e365556936ae4043b85a31b416b0dc5417e9ade66fde0adff77e4",
+      "stored_bytes": 21640,
+      "stored_sha256": "af460c90b0da11f3c063a9562ac9378e2e60b1ed8c3b6f5ea794a22c73841d81"
+    },
+    {
+      "bytes": 1952,
+      "encoding": "gzip",
+      "path": "decision-inputs/manifest.json.gz",
+      "source": "/private/tmp/pw-contract-stage-two-decision-record-20261111/manifest.json",
+      "source_sha256": "39eb8580da221249e15cb94c38f7cf29431a5feee83b00470d6230d807226f01",
+      "stored_bytes": 1044,
+      "stored_sha256": "581cb5e8f5a43aab9683200e017b9507e64fbb7e34deb6f78176507119a3b1d5"
+    }
+  ],
+  "scope": "Exact bytes retained from frozen independent reviews; gzip decoding restores each source_sha256."
+}

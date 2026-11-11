@@ -25,6 +25,10 @@ The [stage-one reading journal](../records/contract/readings/stage-one/JOURNAL.m
 and [targeted revision reading](../records/contract/readings/stage-one/REVISION-READING.md)
 retain the frozen-input reading separately from subsequent truth corrections.
 
+Stage-two records: the [decisions](../records/contract/STAGE-TWO-DECISIONS.md)
+and [scoped evidence](../records/contract/evidence/stage-two/README.md) retain
+the implementation dispositions, observed controls and remaining choices.
+
 ## The stages
 
 | Stage | What it does | Changes product behavior | Ends with |
@@ -222,6 +226,12 @@ tag, and `make release`, which builds afresh, submits the build to Apple
 for notarization, runs acceptance against the extracted app and archives
 the result. The executor does not run `make publish` and pushes no tag. The
 version is the tag; no file carries a number to bump.
+
+For the final checkpoint, complete the changes, commits and pre-tag checks,
+then pause before creating `v0.3.8`. The maintainer will arrange another
+agent's review and read the contract line by line at that boundary. Tagged
+rehearsal and Apple submission follow that review and the instruction to
+continue.
 
 **A failed attempt is the checkpoint doing its work.** The checkpoints
 exist to find disagreements between the parts, and the acceptance battery

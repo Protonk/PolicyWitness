@@ -263,13 +263,23 @@ free.effect: Erase host-private custody at the last declared transfer (or after 
 
 A last transfer retires custody even when the recipient is unavailable. Payload erasure is a memory-lifetime action; a native release request and the later access observation are separate operations.
 
-### Native private-library behavior {native_library: gap}
+### Native extension evidence scope {native_library: definition}
 
 ```contract
-kind: "evidence"
+defines: "value"
 ```
 
-Native extension calls use private entry points discovered at setup. Their allocations, opaque token meaning and platform-specific issuance/revocation behavior require observed native results on the tested OS build. The controlled custody protocol has source support here; its integrated interruption controls have not been executed for this draft.
+Native extension issuance, consumption and release observations are scoped to the concrete policy, entitlements, resource, token bytes and macOS build. Host custody records describe the controlled publication, copying and erasure protocol. A release return records that native call; subsequent access is established by the corresponding access observation.
+
+#### Disposition support {disposition_support: owner}
+
+```contract
+grade: "source_read"
+source: {"path":"runner/Sources/PWRunnerCore/AuthorityCustody.swift","symbol":"serviceTransfer"}
+pins: "Host transfer observations record custody, copying, recipient acknowledgement and equality separately."
+context: "Static review of the cited production branches."
+limits: "Private-library allocation and opaque token behavior retain the scope of their native observations."
+```
 
 ### Support {support: owner}
 
@@ -306,13 +316,36 @@ Declare `A`, `B` and `C` with their own sandbox and equipment choices. Read the 
 
 The second issuance is `B`'s own native action under its then-current state. Keep the two issue events, two custody/delivery chains, two candidate handles and the readers' file observations distinct. `read_write` may name an absolute directory target; fresh writes or exclusive creation within that directory expose their own file effects.
 
-### Experiment execution {execution: gap}
+### Instantiated extension schedules {execution: definition}
 
 ```contract
-kind: "evidence"
+defines: "value"
 ```
 
-These schedules preserve the guide and EXTENSIONS teaching cases. They require concrete policies, entitlements, paths and expected platform observations before native execution can establish a particular outcome. The remaining evidence gap is association of each schedule with its concrete input and retained native observations.
+An executed extension schedule fixes concrete actor roles, policies, entitlements, paths and phase boundaries. Its account distinguishes native issue/consume/release returns, host custody and transfers, and fresh access before and after the operations. Those inputs and retained observations identify the schedule supported by that execution.
+
+#### Disposition support {disposition_support: owner}
+
+```contract
+grade: "source_read"
+source: {"path":"runner/Sources/PWRunnerCore/ActorOrchestration.swift","symbol":"assembleActorReply"}
+pins: "Reply assembly retains extension events, transfer observations and resource accounts by their declared actions."
+context: "Static review of the cited production branches."
+limits: "Native examples require their concrete input and selected-platform observations."
+```
+
+#### Native schedule execution support {execution_support: owner}
+
+```contract
+grade: "executed"
+source: [{"path":"controller/tools/pw_probe_runner/pw_probe_runner.c","symbol":"attempt_extension_issue"},{"path":"controller/tools/pw_probe_runner/pw_probe_runner.c","symbol":"attempt_file_read_fresh"},{"path":"runner/Sources/PWRunnerCore/ActorOrchestration.swift","symbol":"assembleActorReply"}]
+check: [{"path":"tests/suites/witness_contract/check_extensions.py","symbol":"run_targets","form":"test"},{"path":"tests/suites/witness_contract/check_extension_redelegation.py","symbol":"chain","form":"test"},{"path":"tests/suites/witness_contract/check_extension_directory.py","symbol":"run","form":"test"}]
+pins: "Concrete before/during/after access, the extracted guide JSON example, credited three-actor redelegation and separate directory authority retain native calls, custody/transfer observations and independently identified file effects."
+context: "Passed signed-CLI cases with their recorded policies, equipment, paths and macOS 26.7.1/25G241 arm64 environment; inspected native results, principal credit, file observations and owned cleanup."
+limits: "The before/during/after instance splits reader actions across visits. Redelegation includes B/C control-path reads and the retained policies. Directory writes and exclusive creation form a separate experiment. The extracted guide JSON and the guide's full shell workflows have separate execution scopes."
+run: "20261111T155411Z_29ef0802; witness_contract/extensions, witness_contract/extension_redelegation and witness_contract/extension_directory"
+build: "Signed candidate build 1335, version 0.3.7, b6ce6d266ff281fafdae44c32061ceff018485bb dirty; development:1445cd80509c983c6894339523f9f13ad08f5e003de4cb29ce1c398527c42f28"
+```
 
 ### Example support {support: owner}
 
@@ -321,8 +354,8 @@ scope: "subtree"
 grade: "source_read"
 source: [{"path": "runner/Sources/PWRunnerCore/ActorPlan.swift", "symbol": "normalizeActorPlan"}, {"path": "controller/tools/pw_probe_runner/pw_probe_runner.c", "symbol": "attempt_extension_issue"}, {"path": "controller/tools/pw_probe_runner/pw_probe_runner.c", "symbol": "attempt_file_read_fresh"}]
 pins: "Admission supports these resource chains and native operations."
-context: "Source-backed teaching schedules; historical examples retained."
-limits: "No native outcome or effect is asserted for these unexecuted schedules."
+context: "Admission and native-operation source for the teaching schedules."
+limits: "Native examples are scoped to their recorded policies, equipment, targets and platform. Before/during/after access was observed with an unapplied unentitled issuer and an applied selected subject, with reader actions split across visits. Three-actor redelegation was observed with the retained B/C policies and added control-path reads. Directory read-write authority was exercised separately through fresh writes and exclusive creation. Release results and later access observations retain their individual meanings."
 ```
 
 

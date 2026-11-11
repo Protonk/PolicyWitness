@@ -101,13 +101,23 @@ These exact pairs are excluded by the planner:
 
 The exclusion belongs to the pair. Other operations using the same filter follow their own eligibility and native result.
 
-### Prediction-exclusion basis {exclusion_evidence: gap}
+### Prediction-exclusion evidence scope {exclusion_evidence: definition}
 
 ```contract
-kind: "evidence"
+defines: "value"
 ```
 
-The IOKit and sysctl exclusions inherit the recorded 2026-05-29 exploration of filter IDs 1–200. The local Mach mapping remains conservatively unresolved. This draft inspected the exclusion table and planner, and has not reproduced those native observations.
+The IOKit and sysctl exclusions retain the dated 2026-05-29 exploration of filter IDs 1–200. The local Mach mapping remains conservatively unresolved. Each native filter observation belongs to its recorded operation, target and platform; the finite exploration bounds the basis for the current exclusion table.
+
+#### Disposition support {disposition_support: owner}
+
+```contract
+grade: "source_read"
+source: {"path":"runner/Sources/PWRunnerCore/ProbeRunner.swift","symbol":"predictionUnavailableOpFilters"}
+pins: "The table preserves the dated IOKit/sysctl exploration and conservative local-Mach choice."
+context: "Static review of the cited production branches."
+limits: "This owner reads the recorded basis and current table; it adds no native rerun credit."
+```
 
 ### Support {support: owner}
 
@@ -258,13 +268,23 @@ uses: ["extensions.operation"]
 
 
 
-### Operation controls to attach {operation_evidence: gap}
+### Operation observation scope {operation_evidence: definition}
 
 ```contract
-kind: "evidence"
+defines: "value"
 ```
 
-The worker operation implementations and exec setup branches were read. Fresh-file effects, closed-descriptor inheritance, syscall buffers and cleanup behavior still need their existing control runs attached to the release evidence. The legacy open operations intentionally retain their open-boundary aggregate meaning.
+Fresh-file records retain the reached descriptor operations and the bytes or object identity observed by those operations. Exec records distinguish child creation, final child status, captured output and cleanup. The legacy open operations keep their open-boundary aggregate meaning. Independent target and process observations supply the evidence for effects claimed by a concrete operation control.
+
+#### Disposition support {disposition_support: owner}
+
+```contract
+grade: "source_read"
+source: [{"path":"controller/tools/pw_probe_runner/pw_probe_runner.c","symbol":"attempt_file_read_fresh"},{"path":"controller/tools/pw_probe_runner/pw_probe_runner.c","symbol":"attempt_file_write_fresh"},{"path":"runner/Sources/PWRunnerCore/CWorkerStepResults.swift","symbol":"buildAttemptResult"}]
+pins: "Native operation details and aggregate return/errno projection have their own report fields."
+context: "Static review of the cited production branches."
+limits: "This owner is source-read. Selected fresh-file, descriptor, sysctl-buffer and exec-cleanup executions need their exact operation owners."
+```
 
 ### Support {support: owner}
 

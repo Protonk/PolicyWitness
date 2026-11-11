@@ -1,0 +1,30 @@
+{
+  "base_commit": "b6ce6d266ff281fafdae44c32061ceff018485bb",
+  "scope": "Exact reviewed producer/check/fixture bytes, not a complete compilation-input attestation.",
+  "sources": {
+    "controller/src/json_contract.rs": "e97b69e7509c60ad34b3b508b30fa8a46be399021a5d0ad32db6b9964d666a27",
+    "controller/src/porcelain.rs": "70b7648c4c9d9f7395de602c9c59792557da3af08cfea242422cab4efebd2cb1",
+    "controller/src/porcelain_actor.rs": "be7eb820a547c7859f8b01ea91199d15fb6f55ae2479630e567ea73ee0c0782c",
+    "controller/src/porcelain_admission.rs": "19f071e85e9887240eff2a6bae7c6dabc671394c1ebca8c32677c40b830c230f",
+    "controller/src/run_flow.rs": "b6d5fae7a1783c543cc85173c98b512787047abfb7245fd761eb1cde20ffa821",
+    "runner/Sources/PWRunnerCore/ActorOrchestration.swift": "160dfcff38c9d07e0182f931ac1369ca04931f1792d173851b54782f0fcacef1",
+    "runner/Sources/PWRunnerCore/ActorPlan.swift": "25a27f0b778069519de3245cb12430ced40a64606d81dbf45a0fb3bb0cb08857",
+    "runner/Sources/PWRunnerCore/PWPorcelain.swift": "b8e6d4eee29707b92933009b7d2da243004d7f647d65037fd4b53d353ba1ec6c",
+    "runner/Sources/PWRunnerCore/PWRunnerAPI.swift": "b00aa9c74917484a2aa3a964fff13f092f279e7df768643840b7df369ae3a7ac",
+    "runner/Sources/PWRunnerCore/PWRunnerReply.swift": "7c959614fbd2063ec02688eda9a4f96a517079a8bc4a6d86cc7e3c9e8d08bd6f",
+    "runner/Sources/PWRunnerCore/PWRunnerService.swift": "9bac2b0cf74a143e73350b6321e6c476befbb4e9d796d2f580cd65a2cd98858c",
+    "runner/Tests/PWRunnerCoreTests/ReaderCorpusTests.swift": "4a2aa8a6f6767b49e8d4164321733aa1db246aa96e423c43c29180b675f97ff4",
+    "runner/Tests/PWRunnerCoreTests/ReplyFailureTests.swift": "7029d0b521e269324bd271af1e2a2ae4d1fa97c0ab30b8f38fafcdc3e25b7ef0",
+    "tests/fixtures/contract/actor_gate_reply.json": "6cf8b4762c10583e979afd5f6cbf1370120564e4f75f088dffa60f6b19f12f92",
+    "tests/fixtures/contract/normal_reply.json": "8f5590acf19cb40c5cd4bc4d261805ea77795018431ff91c97061fd716245d06",
+    "tests/lib/build_context.py": "a5ce27d0064447c64fd381e06b63bfbca6a8abe4d8892fdbfe681b29b33a8f05",
+    "tests/lib/consumer.py": "bf26169ce69e4f54fef07c406b881d387bcdeef5f83273581717f37bc6f96cc0",
+    "tests/lib/lifecycle_oracle.py": "4cd4c96ec2bcf0b369038fe5eb142538c1b8b7c5a89a1c75b4e5e1cb2fd0405e",
+    "tests/lib/porcelain.py": "c1bc3bcf7ae0b00ac54e4736263ca929c2ea2efb2f4ced15bc78904cf8bbebdb",
+    "tests/suites/blackbox_e2e/checker_controls.py": "51a934ed51f7a723c1b515f4ec0e4ff36c0a7a97a008e5e6f8a9bfb4ece51401",
+    "tests/suites/runner_unit/porcelain_replies.py": "7b3bf72bc1c9842e654e04a3045418718bb1acace207d457fc94af8c6f2abc48",
+    "tests/suites/runner_unit/reader_corpus.py": "869e659debbed113ed38e00677340b520a7e34ea1a4c54ab102563d156dca820",
+    "tests/suites/runner_unit/run.sh": "5cc710c2241b09780560938259c2341be53d40bb37da27e7b1dec2a0232d7e1a"
+  },
+  "worktree": "stage-two integration, format/fixture fixes before replay identity correction"
+}

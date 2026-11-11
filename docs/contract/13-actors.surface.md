@@ -82,7 +82,7 @@ grade: "source_read"
 source: [{"path": "runner/Sources/PWRunnerCore/PWRunnerActors.swift", "symbol": "PWRunnerActor"}, {"path": "runner/Sources/PWRunnerCore/ActorPlan.swift", "symbol": "normalizeActorPlan"}, {"path": "runner/Sources/PWRunnerCore/ActorOrchestration.swift", "symbol": "actorApplicationAssessment"}]
 pins: "The adjacent field meanings and obligations follow the named producer and admission branches."
 context: "Source inspection of the current implementation; no execution is credited."
-limits: "Declaration and normalization source read. Worker setup and application evidence have separate source owners; native execution has not been credited here."
+limits: "Normalization concerns admitted declarations; worker setup and application observations have separate owners."
 ```
 
 
@@ -167,13 +167,23 @@ uses: ["identity.definitions.phase", "identity.definitions.prediction"]
 
 
 
-### Barrier execution evidence {barrier_evidence: gap}
+### Barrier observation scope {barrier_evidence: definition}
 
 ```contract
-kind: "evidence"
+defines: "value"
 ```
 
-The phase-order source has been inspected in the wider examination. Integrated order-barrier and mutation controls must be attached to the completed release account; this draft credits no execution of those controls.
+Query ordering joins whole-batch collection, host release, worker acknowledgement and the associated attempt. Phase records retain each observation and the established order. Integrated controls and mutation controls assess this sequence at their selected execution boundary; source ordering alone has source-read support.
+
+#### Disposition support {disposition_support: owner}
+
+```contract
+grade: "source_read"
+source: {"path":"runner/Sources/PWRunnerCore/PWRunnerStepEvidence.swift","symbol":"eligibleOrderedStep"}
+pins: "The ordering claim requires a complete chain and a unique matching native prediction for the owned worker."
+context: "Static review of the cited production branches."
+limits: "The source owner describes eligibility. Integrated collection/release and mutation observations retain their own execution owners."
+```
 
 ### Support {support: owner}
 
@@ -267,13 +277,24 @@ uses: ["probes.step", "extensions.action"]
 
 
 
-### Empty ordinary identifiers {empty_id: gap}
+### Form-specific action identifiers {empty_id: definition}
 
 ```contract
-kind: "behavior"
+defines: "value"
 ```
 
-The ordinary and actor forms currently differ on empty step IDs. Aligning them requires an explicit admission decision; this draft preserves the implemented distinction.
+Ordinary-form action identifiers may be empty. Actor-form action identifiers must be nonempty so declared actions can be resolved in the actor schedule. UTF-8 capacity, NUL exclusion, uniqueness and membership are separate requirements at their owning admission boundary.
+
+#### Disposition support {disposition_support: owner}
+
+```contract
+grade: "check_read"
+source: [{"path":"runner/Sources/PWRunnerCore/ActorPlan.swift","symbol":"normalizeActorPlan"},{"path":"runner/Sources/PWRunnerCore/ProbeRunner.swift","symbol":"requestMeaningFailure"}]
+pins: "Actor normalization rejects an empty action step_id before constructing its slot map; ordinary meaning admission tests uniqueness without a nonempty condition."
+context: "Static review of the cited producer and assertion branches."
+check: [{"path":"runner/Tests/PWRunnerCoreTests/ReaderCorpusTests.swift","symbol":"runReaderCorpusTests","form":"test"}]
+limits: "The corpus emits separate ordinary-empty and actor-empty declaration neighbours through reporting admission; it is constructed reader evidence."
+```
 
 ### Support {support: owner}
 

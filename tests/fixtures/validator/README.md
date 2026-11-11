@@ -60,3 +60,16 @@ The unfamiliar diagnostic omits query metadata and native results.
 fixture with SIGKILL. This unmaskable signal works even with the XPC host's
 inherited signal state. Direct controls require exit by signal 9 and exactly one
 record; the CLI case requires the corresponding retained subprocess evidence.
+
+## Validator source control
+
+`build_no_report.sh OUTPUT` compiles `no_report.c` with the production validator
+source and a recording replacement for `sandbox_check`. It records operation,
+filter and applicable value arguments; supplies explicit native rc/errno pairs;
+and captures the production parser/emitter's output and process return.
+`validator_batch_mode/predictions_do_not_report` uses it to check the no-report
+flag, each repeated recognized key in both orders, `RAW:`/`RAW:0` mode-specific
+value handling, and direct versus batch result classification. This control
+establishes behavior under constructed native results. Its log retains inputs,
+configured pairs and output; the suite's shipped-helper calls retain separate
+native observations.
