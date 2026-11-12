@@ -77,7 +77,7 @@ uses: ["identity.public.contract", "request.specimen.contract", "identity.produc
 ````
 
 - `specimen` is identity-free and label-free. Two members are derived, each from its own authority: the controller supplies `contract` from the binary, and the generator supplies `specimen_id` as the node's full identifier. An envelope produced from the emitted example therefore names the contract node that defines it in `runner_result.specimen_id`, with no new field.
-- `uses` names the public definitions and rules that execution of the example is checked against. It is the existing relationship, so referenced nodes already flow into the surface's public payload. The exact list is the executor's to settle against the tree; the list above is the intended selection.
+- `uses` names the public definitions and rules that execution of the example is checked against. It is the existing relationship, so referenced nodes already flow into the surface's public payload. The list above is the intended selection. The executor settles it in step 4 under the coverage rule in section 3.4, and the maintainer reviews it at the evaluation point.
 - The existing step fragment `probes.step.read_hosts` stays as it is.
 
 The policy is `(allow default)` and the one probe is the read of `/etc/hosts` already used by the contract's teaching example. It writes nothing, needs no fixture, and makes no claim about a policy's effect. The deny variant is the README example and `smoke/specimen_file_read_deny`.
@@ -143,7 +143,28 @@ The ordering row is a biconditional over the envelope's evidence. It does not as
 | Attempt | `outcome` is `ok`, `rc` is 0; the comparison's `observation` is `succeeded` with basis `completed_worker_status` |
 | Effect | The target's bytes and metadata, read by the test before and after, are unchanged |
 
-The report keeps the two groups apart. A prerequisite the case cannot observe is reported as unestablished equipment, not as a PolicyWitness result. A native expectation that fails while its prerequisites hold fails the case under its own heading, and the contract relationships are still evaluated and reported. Nothing in either group states that prediction and enforcement agree.
+Nothing in either group states that prediction and enforcement agree.
+
+**Status and classification.** The case has two statuses, pass and fail. It declares no skip, and the dispatcher's equipment check does not cover these prerequisites, so no row below is an unrun case. The report's classification carries the distinction the status cannot.
+
+| Situation | Contract relationships | Native expectations | Status | Classification |
+| --- | --- | --- | --- | --- |
+| Everything holds | Evaluated, passing | Evaluated, passing | pass | none |
+| A contract relationship fails, at emission, admission or in the reply | Evaluated, failing | Evaluated when their prerequisites hold | fail | `contract_relationship` |
+| The run yields no admitted reply (service unreachable, tool error) | Emission and controller-side relationships only; nothing is credited or faulted from the missing reply | Not evaluated | fail | `execution_unavailable` |
+| A target prerequisite is not observed | Evaluated; they do not depend on it | Not evaluated | fail | `prerequisite_unestablished` |
+| Prerequisites hold and a native expectation fails | Evaluated, passing | Evaluated, failing | fail | `native_observation` |
+
+More than one classification can apply, and the report lists each.
+
+**Release consequence.** Every failing row fails the default battery and therefore release acceptance; that attempt produces no archive. The classification says where the remedy lies, not whether the release may proceed:
+
+- `contract_relationship` is a defect in the product, the contract or the checker. Fix it where it lives; a product or example fix is new shipped source and a new build.
+- `execution_unavailable` is environmental until diagnosed, under the repository's sandboxed-harness guidance. A passing rerun outside the sandbox supports that explanation and is the run that gets credited.
+- `prerequisite_unestablished` is not a PolicyWitness result. The machine cannot run this example's native check, and acceptance belongs on one that can.
+- `native_observation` is an observation about this machine or build. Retain the evidence and establish the cause before attributing it.
+
+In no row is the case removed from the default battery, given a skip, or pointed at another target to obtain a pass. Changing the target changes the public example and the build identity, which is a design change for the maintainer.
 
 ### 3.4 How conformity is independently established
 
@@ -158,7 +179,28 @@ The checker's oracles are separate from the generated material:
 - It compares the emitted members with the authored `specimen` fact, read from the surface file. This is a comparison, never a substitution: a mismatch means the app does not contain the tree's example (a stale app fails here, as a stale worker identity already fails the smoke case).
 - It makes its own observations of the target file and reads `PWContract` itself.
 
-**`witness_contract/emitted_example_checker_controls`** (default; offline). The checker is run over a constructed passing envelope and over single-fault variants, each of which must be rejected with its own diagnostic: a different producer contract, a different transport contract, a changed step identifier, a missing attempt channel, `query_first` claimed without the supporting chain, `unestablished` despite a complete chain, and a mismatched relation. A combined-fault variant must report every fault. Build these from the existing constructed-envelope helpers in [blackbox.py](../tests/lib/blackbox.py) and the reply fixtures under `tests/fixtures/contract/`; the case generates no replacement fixtures.
+**`witness_contract/emitted_example_checker_controls`** (default; offline). Every assertion that can fail the live case has an identifier in the checker. All of the checker's inputs are retained files, so every assertion can be handed a constructed input that violates it. The rule is that each assertion has at least one rejected control with its own diagnostic, unless the suite account lists it as resting on other evidence and says why. The control case ends with a completeness assertion over the checker's own table of identifiers, so an assertion added without a control fails the case. Build the inputs from the existing constructed-envelope helpers in [blackbox.py](../tests/lib/blackbox.py) and the reply fixtures under `tests/fixtures/contract/`; the case generates no replacement fixtures.
+
+| Group | Rejected controls required |
+| --- | --- |
+| Emission | The version identity differs; the plist identity differs; the identity is not in a packaged form; two emissions differ; `specimen_id` is not the node identifier; a member differs from the authored fact |
+| Intent | A write action; test overrides; a runner selector; a second step |
+| Admission | Submitted bytes differ from the emitted bytes; a nonzero exit; a `request_failure`; each policy digest differing |
+| Producer identity | Each of the three identities differing, separately |
+| Step association | The echoed `specimen_id` differs; an extra, missing or renamed step; the phase or its `action_ids` disagree; the query echo differs; the attempt echo differs |
+| Two channels | A missing channel; a comparison value outside the vocabulary; each relation mismatched |
+| Ordering | `query_first` without the supporting chain; `unestablished` despite a complete chain |
+| Native | A prediction other than `allow`, an attempt that failed and a changed target, each with prerequisites held: the result must be `native_observation` with contract relationships still passing. An unobserved prerequisite: the result must be `prerequisite_unestablished` with native expectations not evaluated |
+| Refusals | For each refusal control: an accepted run in its place; the wrong code; a missing or wrong expected identity; a client capture on a controller-side refusal |
+| Classification | A combined-fault input reports every fault; an input with no admitted reply is `execution_unavailable` and credits or faults nothing from the reply |
+
+Three things rest on other evidence, and the suite account says so:
+
+- Shape and record validity come from `consumer.validate`, whose rejected controls belong to `blackbox_e2e/checker_controls`. This case adds one control showing that a consumer error fails the case.
+- That the app is validly signed and unchanged comes from the dispatcher's inspection and inventory, controlled in the `dispatcher` suite.
+- The usage matrix, the cross-build controls and the generation controls are direct assertions on real binaries and source copies. They are not a checker over retained documents, and each already pairs a passing case with refused ones.
+
+**Coverage statement.** The `uses` list in section 3.2 is the intended selection, and it becomes final in step 4. The suite README then carries one row for each final entry: the relationship asserted, the assertion identifier, its rejected controls, and the limit of what the assertion establishes. A node enters `uses` only if it has such a row, and the row names the relationship, never the whole node. Limits known now: one specimen, one policy, one target and one platform; a reference to a subject such as `steps.attempt` covers the echo and channel relationships listed, not every field's meaning; the policy digests show that the dossier and the reply describe the submitted source, not that the request was read and serialized once.
 
 **Refusal controls in the live case.** Each starts from the emitted bytes and makes exactly one change. The unmodified bytes pass in the same case, so each refusal is attributable to its change.
 
@@ -226,9 +268,40 @@ Not touched: `build.sh`, `meson.build`, `build_contract.py`, the bundle layout, 
 
 **Step 3. Signed build and CLI checks.** Build through the signed pipeline, then add the usage matrix and cross-build controls. Done when `tests/run.sh --suite integration` passes against that build.
 
-**Step 4. Conformance.** Write the checker, its offline controls and the live case; register both; update the suite accounts; add the `uses` drift rule. Done when both cases pass by `--case` against the step 3 build with a fresh `PW_TEST_OUT_DIR`.
+**Step 4. Conformance.** Write the checker, its offline controls and the live case; register both; settle the final `uses` list and write the coverage statement in the suite account; add the `uses` drift rule. Done when both cases pass by `--case` against the step 3 build with a fresh `PW_TEST_OUT_DIR`, and the control case's completeness assertion covers every assertion identifier.
 
-**Evaluation point.** Stop here and present the first complete result before anything else is built on it: the emitted specimen, the version envelope, the run envelope, the refusal inputs and outputs, and the checker's report with its two groups. This is the point at which the capability can be judged on its own.
+**Evaluation point.** Stop here and present the first complete result before anything else is built on it: the emitted specimen, the version envelope, the run envelope, the refusal inputs and outputs, the checker's report with its groups, and the coverage statement. Before presenting, run the live case ten times against the same build, each with a fresh output directory, and report every commitment's result across the runs. This is the point at which the capability can be judged on its own.
+
+Passing tests are necessary here and not sufficient. The maintainer decides, on these criteria.
+
+*Accept, and go on to step 5, when all of these hold:*
+
+- The two commands in section 1 work from the usage text alone, and the emitted document reads as a specimen a user would write.
+- Each row of the coverage statement is a fair test of its contract node: read side by side, the assertion would fail if the node's statement were false of this run. No `uses` entry lacks a row.
+- No expected value in the checker comes from generated material. The authored fact is read only for the packaging comparison.
+- Both identity sensitivities were observed: an example edit changes the build identity, and an unrelated contract edit does not.
+- The ten runs agree on every contract relationship and every native expectation.
+- A deliberately faulted input produces a diagnostic that names the commitment and the classification without a reader opening the checker.
+- Nothing in section 4's not-touched list changed, the free-text baseline did not grow, and no harness machinery was added.
+
+*Revise, keeping the design, when:*
+
+- An assertion is true but weaker than its node's statement, or compares the envelope only with itself. Strengthen it, or remove the node from `uses`.
+- The command name, usage text, exit statuses or emitted layout are awkward in use. A section 9 commitment can still be reversed here at the cost of the controller change and its tests.
+- The report blurs contract relationships and native observations, or a failure is hard to attribute from the report.
+- The ten runs differ only in a native expectation. The stated prerequisites are then incomplete; find the missing one before relying on the native group.
+- The example needed an evidence gap or a deviation from this plan that the maintainer has not seen.
+
+*Stop, and reconsider the design, when:*
+
+- A not-touched component had to change.
+- The binding does not hold: unrelated contract edits move the build identity, or the example can change without moving it.
+- The checker could not be made independent: a relationship could be asserted only by reading generated expectations or re-running a production classifier.
+- The ten runs differ in a contract relationship. Either the relationship is not deterministic or the product has a defect; both come before this plan.
+- Execution contradicts the contract node's text. That is a contract or product defect with its own change, not a test to adjust.
+- The emission rule cannot be authored without free-text growth and the maintainer does not want the baseline raised.
+
+**Recording the decision.** In the commit that completes step 4, the executor adds an "Evaluation record" section to this plan: the build identity and commit, the run identifiers with their availability (development evidence, disposable), the coverage statement's results, the ten-run comparison, and every deviation from the plan. The maintainer's decision goes into that section in its own commit, in the maintainer's words: accept, revise with the changes listed, or stop with the reason. Step 5 does not begin before that commit exists.
 
 **Step 5. Support and accounts.** Replace the evidence gap with owners that cite the emitter, the generator and the checks, with their limits stated; regenerate. Owner metadata is outside both the public payload and the generated source, so the build identity must be unchanged by this step. Confirm that it is; if it changed, the generated source carries more than it should.
 
@@ -244,8 +317,8 @@ Not touched: `build.sh`, `meson.build`, `build_contract.py`, the bundle layout, 
 | The emission rule needs a `free.*` fact | Generation refuses free-text growth | Restructure the rule; otherwise stop and raise it |
 | A `uses` reference pulls a large subtree into the `request` payload | A large `public.json` diff | Expected, since references are shared content; review that the references are the intended ones |
 | The host refuses the authored example | The live case fails at admission with a `request_failure` | The example is invalid for this build. Fix the authored node; do not relax admission |
-| `/etc/hosts` is unreadable or absent | The prerequisite observation fails | Reported as unestablished equipment. Do not substitute a fixture file silently; changing the target changes the public example |
-| The prediction is unavailable or the attempt fails with prerequisites established | The native group fails while contract relationships pass | A real observation about this machine or build. Retain the evidence and investigate before attributing it |
+| `/etc/hosts` is unreadable or absent | The case fails as `prerequisite_unestablished` | Section 3.3's release consequence. Do not substitute a fixture file; changing the target changes the public example |
+| The prediction is unavailable or the attempt fails with prerequisites established | The case fails as `native_observation` while contract relationships pass | A real observation about this machine or build. Retain the evidence and investigate before attributing it |
 | A passing checker that checks nothing | The offline controls accept a faulted envelope | The controls must reject every single fault and report combined faults |
 | The case passes against a release-form identity only by string luck | The identity-form assertions never see a `release:` value | Covered at candidate entry by the nested acceptance, whose fixture reports a release identity |
 | The dispatcher's inventory differs after the case | Artifact-integrity failure | The command wrote into the app; it must not. Fix the command |
