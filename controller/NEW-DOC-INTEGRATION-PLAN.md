@@ -3,7 +3,7 @@
 This plan establishes `docs/CONTROLLER.md` as an explanatory peer of
 [WORKER.md](../docs/WORKER.md), and uses the authored public contract to examine
 the authority assigned to the controller. Its implementation baseline is
-**unset**. Set it only after the CLI contract-conformance work's contractual
+**unset**. Set it only after the CLI example work's contractual
 changes and reductions are settled, using the entry gate below.
 
 The controller is PolicyWitness's control plane: it admits and prepares work,
@@ -30,16 +30,14 @@ or exercising native helpers. Follow additional directory guidance where work
 lands. These rules apply to every agent, including evidence retention and
 checkout locking.
 
-This planning inspection used `4ba369ce` on 2026-11-12. That is a reference for
-the observations below, **not** the execution baseline. At that inspection the
-[CLI plan](../docs/CONTRACT-EXAMPLE-PLAN.md) described an emitted example,
-independent conformance checks, a maintainer evaluation and later support and
-candidate work. It had no evaluation record; the inspected command dispatch
-and catalog did not yet contain the proposed example command or cases. Those
-observations say nothing about work pending elsewhere or the state when this
-plan is executed.
+This plan expects the completed design in the
+[CLI example plan](../docs/CONTRACT-EXAMPLE-PLAN.md), as read at `a7b78957`.
+That identifies the dependency's design, **not** an implementation baseline or
+execution evidence. The coordinator must inspect the actual completed code,
+contract and results at the entry gate. The source routes below are starting
+points to recheck, not findings about the future implementation.
 
-The inspection found these useful entry points, without adjudicating them:
+Useful entry points, without adjudicating their allocation:
 
 | Starting evidence | Why the investigation needs it |
 | --- | --- |
@@ -56,7 +54,10 @@ current contract's questions about success in the presence of integrity
 findings, withholding scope, degraded associations and classifier ownership
 are investigation inputs, not decisions this plan resolves. Read their
 surviving nodes and any settled CLI decisions; do not resurrect deleted
-obligations from this planning snapshot.
+obligations from this planning snapshot. The CLI consumer's new result rule
+checks the current outcome mapping. It does not settle whether integrity
+findings should change command success; that remains a separate question if
+the settled contract still leaves it open.
 
 This work may change controller code, cooperating components, public meanings,
 tests and explanatory documentation when justified. It does not authorize a
@@ -64,6 +65,28 @@ generic runner factory, a plugin framework, interchangeable-runner protocols,
 speculative backends or a general controller framework. Use PolicyWitness's
 actual built-in and external-runner arrangements. Tagging, notarization,
 publication and unrelated release preparation are outside this plan.
+
+### Expected CLI completion and settled constraints
+
+The completed CLI work is expected to establish the following arrangement.
+Treat the CLI plan's settled principles as design constraints; do not reopen
+them merely to simplify this investigation.
+
+| Area | Expected arrangement and its limit |
+| --- | --- |
+| Definition and presentation | `controller/src/example.rs` owns one handwritten `EXAMPLE_DOCUMENT` constant. `request.specimen.example` cites it through the `document` fact; the contract extracts its rendering and parsed public payload. There is no generated Rust example source or path from documentation into shipped code. The contract remains normative for public meanings. |
+| Public entrance | `policy-witness example` takes no arguments and originates an input for `run`. Successful emission promises a document the same build admits. Contents, layout and labels have no stability promise between builds; successful native execution is not part of that emission guarantee. |
+| Admission | The controller gates identity and prepares controller-owned options; the Swift host owns request grammar admission. `run` remains the way to ask whether a caller's specimen is accepted. Add no admission query, validation mode, dry run or alternative submission route. |
+| Publication | The command prepares and gates the document before output, writes it with one framing LF and explicitly flushes. Any emission failure is exit 2 and requires discarding stdout, even when it parses as a complete document. Stderr explains the failure to a person and supplies no classification interface. |
+| Testing and interpretation | The live round-trip case gets its specimen from the app, perturbs it before submission, observes the machine beside execution and uses existing readers afterward. It does not author a specimen or add a fourth interpreter. Constructed documents remain legitimate inputs to offline checker controls. |
+| Scope | The command is public and currently intended for project verification. Usage and the contract disclose it; user-guide presentation is deferred. `runner verify` retains its separate apply-only purpose. Neither sharing its storage nor introducing named examples is required here. |
+
+The controller therefore originates some inputs as well as admitting caller
+inputs. Its self-gate establishes only the checks it performs; host admission
+comes from executing `run`. A's inventory should preserve that distinction
+without treating the rendered example's particular target or labels as stable
+public obligations. The paired/read-only purpose and native expectations belong
+to the current test, separately from the narrow public emission promise.
 
 ## 2. Entry gate: a settled CLI contract baseline
 
@@ -82,45 +105,77 @@ after the gate so they examine the same settled subject.
 
 The coordinator writes `records/controller-authority/BASELINE.md` with:
 
-1. The actual CLI work's disposition: links to its current plan and decision
-   records, the maintainer's evaluation decision, and the commits settling
-   public commitments, reductions and final support. Inspect the CLI plan's
-   evaluation record and the decisions corresponding to its commitment table.
+1. The actual CLI work's disposition: the final plan, recorded decisions for
+   the distinctions it leaves to confirm before step 1, the maintainer's step 3
+   evaluation decision, and the commits settling contractual changes,
+   reductions and step 4 support. Do not ask again about its settled principles
+   or commitments already confirmed. Inspect the evaluation record and its
+   later entries, not just the initial acceptance decision.
    If work was revised, replaced or stopped, record the maintainer's explicit
    disposition and the resulting retained behavior instead of requiring the
    original design to exist.
 2. The final authored surfaces, generated public snapshot and relevant output
-   artifacts. Review the CLI work's diff, including deletions, shared references,
-   example `uses` and support changes. No open CLI decision may still change an
-   obligation or boundary this investigation would inventory. An unrelated
-   release task may remain open; identify why it cannot change this baseline.
-3. The relevant CLI results: actual emitted input and run/refusal outputs if the
-   capability exists, its coverage statement, checker controls, identity
-   sensitivity controls, repeated-run evaluation and accepted deviations. Read
-   assertions and retained reports, not just a passing summary. Use the actual
-   case names if the implementation changed. Missing development artifacts are
-   missing evidence; rerun applicable checks or obtain an explicit disposition
-   of the unsupported claim before opening the gate.
-4. A provenance and applicability assessment tying those results to source,
-   tests, fixtures and the selected app. Distinguish current results from older
-   runs that exercised changed dependencies. The CLI evaluation's original
-   build is not automatically the final supported build.
-5. An exact commit and worktree state for investigation, relevant annotated
+   artifacts. Inspect `example.rs`, `request.specimen.emit_example`, the example's
+   `document` citation, extraction validation, declared generator inputs and
+   support. Review deletions and shared/inherited effects elsewhere in the
+   contract. Check stale-rendering refusals and the example edit's effects on
+   rendering, the request surface and build identity. No open CLI decision may
+   still change an inventoried obligation or boundary. Identify unrelated
+   release tasks that may remain open.
+3. The signed-app evidence from `witness_contract/example_round_trip`: emitted
+   and submitted bytes, version and property-list identities, run and perturbed
+   `run` captures, target observations and assertion results. Inspect
+   `example_round_trip_controls` for independently expected and actual diagnostic
+   sets, identifiers that earned coverage and documented exceptions. Include
+   cross-build refusals and usage checks. An executed control or generic
+   rejection is not verified assertion coverage.
+4. The exact preparation and publication controls: the emitted file passes
+   through actual `run` preparation under `test:policy-witness` and its document
+   without the framing LF equals the captured client callback string. Record
+   this scope separately from the signed app's delivery-length observation.
+   Read the renderer, gate, short-write, partial-failure and explicit-flush
+   controls; do not infer a built-app parse/gate failure from a unit control.
+5. The shared consumer's new admitted reply-to-envelope result rule and
+   `blackbox_e2e/checker_controls`, including admission applicability, field
+   types, missing fields, independent and combined faults and preserved refusal
+   boundaries. Review changes to `envelope_skeleton` and its callers: distinguish
+   corrected accidental mismatches from deliberate result faults. Inspect the
+   complete default battery required before the CLI evaluation, since this rule
+   reaches readers outside the two new cases. Re-discover the caller inventory
+   rather than assuming the planning-time count remains correct.
+6. The bounded ten-run evaluation sample, every failed assertion's disposition
+   under the CLI plan's section 4.6, and subsequent corrective/replacement runs.
+   Ten identical or consecutive passes are not required. Read candidate-stage
+   dispositions appended to the same record if that verification has run; a
+   later pass or a new build identity is not itself a disposition. Outstanding
+   objections relevant to this baseline keep the gate closed.
+7. An exact commit and worktree state for investigation, relevant annotated
    tags, generator checks, public build contract, wire and worker identities,
    and the selected app's provenance if execution is credited. Require a clean
    source snapshot for shared investigation; record later evidence-record
    commits separately. Record environment and unavailable equipment explicitly.
 
+Tie each result to its source, tests, fixtures and selected app; the evaluation's
+original build is not automatically the final supported build. Missing
+development artifacts are missing evidence. Rerun applicable checks or obtain
+an explicit disposition of the unsupported claim; do not recreate successful
+historical credit. Use actual case and node names if an accepted implementation
+deviation changed them, and record why the deviation fits the settled design.
+
 Check the actual release/stamp state. A prepared, untagged tree may intentionally
 refuse ordinary generation or a build. Do not manufacture a tag, bypass history
 checks or overwrite the prepared stamp state to force admission. Use the settled
-project's supported development-state procedure in an isolated branch/worktree if needed, record
-the exact stamp-only transition, and establish that it leaves the investigated
-public meanings intact. Preserve the prepared release tree. If the supported
+project's supported development-state procedure in an isolated branch/worktree
+if needed, record the exact stamp-only transition, and establish that it leaves
+the investigated public meanings intact. Preserve the prepared release tree. If the supported
 transition is unclear, settle it with the maintainer before dependent builds.
 
 The gate requires settled contractual work and applicable evidence, not release
-publication or an unrelated expensive rehearsal. If the CLI project requires
+publication or an unrelated expensive rehearsal. The pre-evaluation default
+battery is relevant because the consumer changed; later release-form credit
+comes from the CLI plan's candidate rehearsal and is not supplied by a
+development run. Do not require candidate completion just to open this gate,
+or credit candidate results before they exist. If the CLI project requires
 an evaluation decision and none exists, keep the gate closed. The coordinator
 may determine readiness from recorded decisions and evidence without asking
 for their confirmation again. Record which pending matters are unrelated.
@@ -218,6 +273,14 @@ preservation and publication; an obligation may span more than one category.
 Identify overlaps, ambiguous subjects, inherited promises and absence of an
 express assignment.
 
+For the imported example, inventory the normative emission promise separately
+from the example's contents and the checks supporting it. The app's authority
+over its example does not make every implementation choice a public promise,
+or transfer ownership of the host's request grammar to the controller. Identify
+the controller's publication obligation even though this command emits a bare
+specimen and does not invoke the apparatus. Read its extracted presentation in
+the contract; leave source realization to B until cross-examination.
+
 Evaluate whether the declared component could fulfill the obligation given the
 contract's stated capabilities and inputs. Mark implementation capability
 unverified where it requires code or observation. Keep separate columns for
@@ -245,6 +308,14 @@ fallback compilation and the separately dispatched registry commands. Follow
 calls across Rust, the Swift client, the host, worker and validator where needed
 to identify who decides or observes; source directory placement is not ownership.
 
+Include the code-defined example and its path into the contract rendering,
+identity inputs and emitted output. Trace rendering/gating before the first
+write, completion of short writes, partial failure and explicit flush. Follow
+the emitted input through actual preparation, distinguishing the unit test's
+client callback capture from signed-app pipe-length evidence and host receipt.
+Keep `runner verify`'s existing apply-only request separate; duplication alone
+does not warrant unifying the two operations.
+
 For each consequential decision, record inputs and when they are acquired,
 mutation/serialization boundaries, resources held, lifetime, call/return and
 failure paths, delegation, enforcement mechanism, observations retained and
@@ -252,6 +323,13 @@ public projection. Distinguish controller intent, client submission, host
 admission, worker progress and externally observed effects. Track independent
 compile checks separately from worker execution. Inspect tests for what they
 actually exercise, not only their names or README claims.
+
+Trace reply assessment, outer-result assembly and independent consumer reading
+as separate operations. Inspect the shared result rule's admission boundary
+and callers, including fixture corrections. The controller's clean assessment
+of a reply does not independently validate the envelope it assembles afterward.
+An independent reader's interpretation evidence likewise does not establish
+that a native producer emitted its constructed input.
 
 Produce a decision-and-authority account with source symbols and paths, state
 transitions, resource/observation lifetimes and evidence grades. Separate what
@@ -277,19 +355,26 @@ Start with these families; refine their premises against the settled tree:
 
 | Family | Question to make concrete |
 | --- | --- |
-| Admission/preparation | Can an invalid contract, a shadowed selector, failed augment or changed file reach a later reader? Which bytes were selected and who can establish their delivery? |
+| Admission/preparation | Can an invalid contract, a shadowed selector, failed augment or changed file reach a later reader? Where does the example's self-gate stop and host admission begin? Which bytes were selected, and what distinguishes callback equality, pipe length and host receipt? |
 | Uncertain invocation | Distinguish failure before submission, lost reservation reply, lost execution reply and lost helper capture. Who can prevent replay, and what remains unknown after a successful write or a deadline? |
 | Rejected evidence | Can an unsupported producer, malformed/truncated frame or failed request delivery acquire semantic authority through a fallback or partial decoding? What exact bytes and diagnostics survive? |
 | Contradictory/degraded reports | What follows from `finished` alongside an integrity finding, conflicting lifecycle evidence, an unassociated retained record or incomplete actor/phase evidence? Which conclusions must be withheld, and at what scope? |
+| Result consistency | Can changing a result field disable the rule checking it? Does an admitted reply with an unrelated record error still expose a result mismatch, while a rejected reply's retained bytes supply no outcome mapping? Does a coherent native failure remain consistent despite nonzero process exit? |
 | Effects without publications | Can an operation have happened without a usable result? Does the controller report uncertainty without asserting absence or reconstructing a missing worker observation? |
 | Equipment and cleanup | Do selected paths, registry assertions, signing/entitlement read-back and observed running identities establish the same thing? Who may remove a service, and what does unknown cleanup permit? |
-| Public output and helpers | What survives failed/truncated publication or controller interruption? Does independent compilation, a log candidate or other secondary observation get mistaken for execution evidence? |
+| Public output and helpers | What survives failed/truncated publication or controller interruption? Can complete-looking example stdout accompany exit 2 after a flush failure, and does the caller discard it? Does independent compilation, a log candidate or other secondary observation get mistaken for execution evidence? |
 
 For each case identify who has the information, who can act, who can enforce,
 who can draw the proposed conclusion and who owes the public guarantee. Include
 one plausible challenge even where contract and code appear to agree. Seek a
 discriminating small experiment or counterexample, not broad recommendations.
 Report counterevidence and benign interpretations as well as suspected defects.
+
+Use the CLI plan's failure dispositions, carried into section 10 below, when
+interpreting its runs. Distinguish consistent inability to execute from a
+defect or unresolved challenge to the native expectation. Do not demand hidden
+OS causes where the specified disposition needs only a fresh qualifying run,
+or treat later success as an explanation for an earlier discrepancy.
 
 Produce a boundary challenge report with reproducer/fixture, actual boundary
 reached, expected distinction, observations, alternative explanations and scope
@@ -315,6 +400,14 @@ documentary claim must either have scoped support, identify an admitted limit,
 or create a concrete investigation/change task. An implementation mechanism
 outside the adjudicated authority creates a candidate refactor, not an automatic
 mandate to relocate it.
+
+Keep originating the example, admitting its contract, submitting it for host
+admission, interpreting returned evidence and completing public output distinct
+in the account. Explain imported example content without turning it into a
+second specimen definition or a stability promise. Preserve the evidence scopes
+of the CLI work rather than making the narrative imply exact signed-app byte
+delivery, successful execution from emission alone, or independent validation
+of the outer result by the controller's own reply assessment.
 
 D may resolve organization, wording and duplicate exposition within agreed
 meanings. D may not silently choose between disputed owners, strengthen a
@@ -432,14 +525,15 @@ The following are opportunities, not sixteen mandatory tasks:
 
 | Dispatch point and trigger | Bounded assignment and required evidence | Independent check/integration |
 | --- | --- | --- |
-| Initial evidence review: a contractual assertion rests on a generated expectation or shared classifier | **Oracle-independence audit.** Trace one test's expected and actual values through definitions, generators, fixtures, codecs and production functions. Return a dependency sketch, the common failure that could pass, and a hand-authored discriminating control. Distinguish legitimate shared encoding from shared semantic expectations. | Coordinator or another principal reads the dataflow and executes/reviews the control with fixed independent expectations. Credit only the asserted relationship, not the entire suite. |
-| Initial evidence review: a fixture or mocked seam claims coverage of a production boundary | **Fixture and seam audit.** Trace public entry to the exact exercised symbol, replacements and bypassed gates. Return fixture/source hashes, invocation, trace or independent effect, and a mutation that should break the asserted behavior. | B checks production reachability; C verifies that the mutation fails for the intended assertion rather than compilation, equipment or an unrelated earlier gate. |
+| Initial evidence review: a contractual assertion rests on a generated expectation or shared classifier | **Oracle-independence audit.** Trace one test's expected and actual values through definitions, generators, fixtures, codecs and production functions. Return a dependency sketch, the common failure that could pass, and a discriminating control with independent expected diagnostics. Distinguish valid identity/echo expectations derived from the emitted input from independent claims about its adequacy or native execution. | Coordinator or another principal checks dataflow and control diagnostics. Keep interpretive rules in their existing owners and credit only the asserted relationship, not the entire suite. |
+| Initial evidence review: a fixture or mocked seam claims coverage of a production boundary | **Fixture and seam audit.** Trace public entry to the exact exercised symbol, replacements and bypassed gates. Return fixture/source/build identities, boundary reached and a mutation that should break the assertion. For example preparation, distinguish the test-identity callback capture from signed-app delivery-length evidence. | B checks reachability; C verifies the intended assertion/classification fails, rather than compilation, equipment or an earlier gate. A generic consumer rejection cannot stand in for a targeted identity failure. |
+| Baseline review: the shared consumer change affects older constructed envelopes | Audit one group of reader callers and their fixture corrections. Identify accidental result incoherence, deliberately faulted results and the assertion preserved by each change; inspect whether the reader normalizes or repairs an input it should reject. | B reviews actual call paths and the coordinator replays valid, invalid and combined controls. Fixture repair cannot narrow rule applicability or erase deliberate fault coverage. |
 | A/B cross-examination: a shared or inherited obligation has conflicting readings | Expand one effective context/reference chain and its failure effects; return exact node paths and before/after applicability for a proposed move. | A manually checks the expansion against authored parents and references; the coordinator compares it with the generator's view. |
 | Adjudication: one responsibility seems to cross several owners | Trace one obligation through producer, transport, admission, consumer and public projection, including dropped or retained evidence. | A checks the promise, B checks calls/fields and C supplies a missing/contradictory-record control. |
-| Adjudication: validators nominally enforce the same rule | Compare one requirement across host, controller and independent consumer. Return a common hand-authored valid/invalid corpus, each result, and legitimate entry/applicability differences. | A decides whether requirements really are identical; B verifies the corpus reaches each validator. Agreement is insufficient if all share their expected values. |
+| Adjudication: validators nominally enforce the same rule | Compare one requirement across host, controller and independent consumer. Return a common hand-authored valid/invalid corpus, each result, and legitimate entry/applicability differences. Use constructed inputs to test readers without introducing a public admission query or a second specimen in the live example case. | A decides whether requirements really are identical; B verifies the corpus reaches each validator. Agreement is insufficient if all share their expected values. |
 | Before refactoring: invocation uncertainty would change the proposed owner | Reproduce one lost-reply/delivery boundary using an existing seam, independent invocation count/effect and retained bytes. | C checks competing explanations; coordinator reruns the discriminating arrangement and records fixture timing/observability limits. |
 | Before refactoring: selection or cleanup evidence is ambiguous | Examine one identity/read-back/ownership transition or one unknown-versus-absent cleanup case. Return exact inputs, durable ownership and native or constructed observations. | B checks the responsible implementation; coordinator verifies cleanup through existing recovery tools. No prefix-based ownership inference. |
-| Implementation slice: a source-to-test citation may be decorative | Damage the cited relationship in an isolated copy and show whether its claimed case detects it. Return the minimal diff, unchanged control, failing assertion and restoration. | Coordinator confirms the mutation executed and the failure was behavioral. If it survives, revise the coverage claim or test before crediting the slice. |
+| Implementation slice: a source-to-test citation may be decorative | Damage the cited relationship in an isolated copy and show whether its claimed case detects it. Return the minimal diff, passing baseline, expected and actual diagnostic sets, targeted assertion and restoration. | Coordinator confirms the mutation reached the boundary and earned targeted coverage. A wrong-reason rejection is a coverage failure. Revise the claim or test before crediting the slice. |
 | D's integration: a diagram/document claim lacks a resource or lifetime owner | Check one resource, state transition or retained observation from acquisition to publication and cleanup. Return source, measurement if available, and explicit unobserved intervals. | B reviews the path; D narrows the prose or adds the justified implementation task. |
 | Returning review: a newly combined failure loses a prior guarantee | Supply one combined-fault or reordered-evidence regression, preserving independent expectations for both failures. | Original challenger reviews diagnostics and preservation; coordinator reruns baseline, damaged and restored variants. |
 
@@ -477,20 +571,25 @@ adjudicated account without losing these questions:
 1. **Authority and limits.** How caller requests, CLI/configuration, packaged
    identity, selected equipment and operating-system credentials authorize or
    constrain action. Distinguish product responsibility from OS privilege.
-2. **Admitting and preparing work.** Refusal order, selected policy and augments,
-   held bytes, dossiers, read dependencies and the authority retained by direct
-   XPC callers or standalone helpers.
+2. **Originating, admitting and preparing work.** The code-defined example,
+   its narrow same-build admission promise and its extracted contract account;
+   refusal order, selected policy and augments, held bytes, dossiers and read
+   dependencies. Distinguish the controller gate from the host's grammar and
+   retain direct XPC callers' and standalone helpers' separate boundaries.
 3. **Selecting and directing the apparatus.** What is selected, checked and
    delegated; how control passes to the client and host; why worker/validator
-   responsibilities remain with them. Include existing example/version paths
-   in their proper scope without pretending they execute a specimen.
+   responsibilities remain with them. Explain the example/version paths
+   without implying that they invoke the apparatus or execute a specimen.
 4. **Invocation and uncertainty.** Reservation, submission, deadlines and
    terminal states; acquisition retry versus execution replay; what receipt,
    completion and loss do and do not establish.
-5. **Receiving, evaluating and preserving evidence.** Transport/producer
+5. **Receiving, evaluating, preserving and publishing evidence.** Transport/producer
    admission, native observations versus host claims and controller inference,
    association, contradictory/degraded results, withholding and fallback
-   compilation. Explain success and failure publication without overclaiming.
+   compilation. Separate reply assessment, outer-result assembly and independent
+   reading. Explain output completion, partial writes and flush failures;
+   complete-looking example stdout is unusable on exit 2. Do not turn stderr
+   wording into a machine-readable contract.
 6. **Equipment administration and recovery.** Registry authority, lock and
    durable state ownership, signing/read-back, launchd actions, inspection and
    observed absence. Distinguish these commands from per-specimen execution.
@@ -510,6 +609,9 @@ or evidence changes hands, and a resource/observation table when prose obscures
 ownership or lifetime. A diagram edge labeled "observe" must not look like a
 guarantee of enforcement. State source-only, constructed and native support
 separately; copy no evidence credit from WORKER.md without checking applicability.
+Explain the controlled preparation test's exact-byte claim and the signed
+app's length-only observation at their respective boundaries. Their difference
+is a limit of current evidence, not an automatic task to add production capture.
 
 The authored contract remains normative for public meanings. The new tour
 explains their realization and dependencies, links to their nodes and supporting
@@ -517,7 +619,9 @@ symbols/checks, and avoids becoming a second field dictionary. Keep CLI usage
 and the module map in [controller/README.md](README.md), workflows in the user
 guide and working rules in AGENTS files. Update inbound navigation in the root
 README, controller README and architecture/worker tours where useful; preserve
-anchors or update callers.
+anchors or update callers. Keep example workflow presentation out of the user
+guide while the settled CLI scope defers it. The tour may explain this public
+command's control responsibilities without expanding its audience or promises.
 
 For a generated representation, extend [architecture.json](../docs/architecture.json)
 and [generate_architecture.py](../docs/generate_architecture.py), rather than
@@ -584,6 +688,19 @@ is not a negative control. Include combined faults where one error might mask
 another and state legitimate masking/precedence explicitly. For an unchanged
 claim, review applicability of existing controls before adding duplicates.
 
+For checker controls, independently specify the expected assertion identifiers
+and classifications, including necessary consequences of a logical fault.
+Match expected and actual sets before crediting a targeted assertion. Carry
+forward the CLI plan's specific allowance for the aggregate
+`(consumer_validation, consistency)` diagnostic: retain all underlying errors,
+require the aggregate in its dedicated propagation control, and earn no coverage
+from its incidental presence in another control. It is not permission to ignore
+other unexpected diagnostics. Completeness counts identifiers with matched
+targeted controls or documented other evidence, not registered tests.
+Check combined faults and unevaluated groups explicitly. In particular, failed
+emission prevents submission even if stdout parses; it cannot create an
+execution-unavailable claim about a run never attempted.
+
 An oracle audit follows expected values to their origin. Sharing a structural
 codec or shape inventory may be appropriate; deriving both expected semantics
 and actual classification from the same rule cannot independently establish
@@ -591,6 +708,36 @@ that rule. Compare hand-authored cases and independent file/process/native
 observations where available. Likewise, matching declarations linking a source
 and case do not show that the case exercises the source. Confirm this with
 reachability evidence and meaningful damage to the asserted relationship.
+
+Apply that audit without creating a second definition of the example or a
+fourth interpreter. Identity, digest and echo expectations taken from the
+emitted document establish relationships to that input; independently pinned
+paired/read-only bounds, refused neighbors and native expectations establish
+different things. Ordering, vocabulary and outcome mapping stay with their
+existing readers and controls. The live example case supplies no specimen of
+its own, while constructed inputs remain appropriate for testing those readers
+and the offline checker. A missing interpretive check belongs in its owning
+reader, with independent controls, rather than a duplicate rule in the example
+checker.
+
+For the shared result rule, establish applicability from version, transport
+and reply-admission evidence, independently of the three result fields being
+checked. An admitted reply maps its outcome to `result.normalized_outcome`,
+`result.ok` (true exactly for `finished`) and `result.exit_code` (0 for
+`finished`, 1 otherwise). Missing/null/wrongly typed fields fail; booleans and
+integers are distinct. An unrelated record error in an admitted reply must not
+hide a result mismatch. A reply refused for compiled-profile context, an absent
+reply or a rejected client capture must not acquire this mapping from retained
+bytes. Keep process-exit comparison separate: the case observes the actual
+exit, while the consumer checks the reported relationship. Review fixture
+corrections and deliberate faults without normalizing input in the consumer.
+
+For the example's exact-byte claim, retain the unit-test input and callback
+comparison through actual preparation under the test identity. Rendering a
+development or release identity does not extend that observation to a signed
+binary. On the signed app, `bytes_written` observes bytes accepted by the client
+stdin pipe, not their contents or host receipt. Preserve both evidence scopes;
+do not require a production capture field merely to make them coincide.
 
 Use the settled catalog, not names assumed from this plan. Inspect selections
 with `tests/run.sh --all --list` or the relevant selector plus `--list`, then
@@ -600,7 +747,9 @@ The likely verification routes are:
 | Changed boundary | Required selection/account |
 | --- | --- |
 | Controller orchestration, preparation or selection | `unit`, applicable `integration/cli.integration`, and public-run controls establishing held inputs, refusal order and invocation count. Include ordinary and actor paths when both consume the changed mechanism. |
+| Example definition, emission or its extracted account | Renderer/gate/write/flush and exact-preparation controls in `unit`, signed usage and cross-build checks in `integration/cli.integration`, `witness_contract/example_round_trip` and `example_round_trip_controls`, plus extraction/stale-output/identity checks in `source_drift`. Preserve the distinction between the controlled and signed boundaries. |
 | Admission, evidence interpretation or validator receiver | Follow the coordinated selection in tests/AGENTS: `failure_boundaries`, `runner_unit`, `runner_abi_layout`, `runner_c_worker_harness`, `unit`, plus applicable `runner_validator_failure`, `blackbox_e2e` and `witness_contract` assertions. Trace all readers, not only Rust. |
+| Shared consumer result mapping or fixture coherence | `blackbox_e2e/checker_controls`, the affected caller controls and a complete default battery against the applicable app. Inspect the actual callers, incidental fixture corrections and preserved deliberate faults; the example cases alone do not establish the shared rule's reach. |
 | Reservation, submission, uncertain invocation or capture | Applicable client/host controls and `runner_byoxpc/reservation_controls`; see [change verification](../tests/CHANGE-VERIFICATION.md#byoxpc-reservation-and-lost-reply-controls). Retain independent invocation/effect observations and raw received bytes. |
 | Registry, selection equipment, installation or cleanup | Applicable selection/registry unit controls and BYOXPC recovery, entitlement, ownership and cleanup cases from the settled catalog and change guide. Observe actual owners; unknown inspection is not absence. |
 | Public output or interrupted preservation | Relevant CLI, consumer and public-output interruption controls, including failures after execution but before a complete public report. |
@@ -624,21 +773,42 @@ aligned if build behavior changes. Process/channel/boundary changes update
 `docs/architecture.json` and its generated account.
 
 Record build contract, worker and wire identities before and after each relevant
-slice and explain differences from actual input sets. Contract text/support and
-generated code affect these identities differently; the settled CLI emitter may
-add generated example source to the build inputs. Do not assume a prose-only
-edit changes no identity or that unchanged shape means unchanged contract.
-Preserve release history and never manufacture a release stamp for this work.
+slice and explain differences from actual input sets. The handwritten
+`controller/src/example.rs` is already a development-digest input through its
+path and suffix. Its parsed document enters the request surface's public
+payload. A content change can move both accounts after regeneration; a source
+formatting change can move the digest without changing that payload. Contract
+prose and support do not feed shipped example code or its development digest;
+support metadata also stays outside the public payload. Release-form identity
+still depends on the tagged source and clean-checkout conditions. Verify these
+distinctions from actual input sets, stale-output controls and reviewed diffs;
+unchanged shape does not mean unchanged contract. Preserve release history and
+never manufacture a release stamp for this work.
 
 When shipped source changes, including behavior-preserving refactors, build
 through the signed pipeline and finish with a complete default battery on the
-final candidate, plus affected opt-in
-boundary controls. Compare before/after behavior with independent expectations
-where a refactor claims preservation; normalize only justified nondeterminism,
+final candidate, plus affected opt-in boundary controls. Compare before/after
+behavior with independent expectations where a refactor claims preservation;
+normalize only justified nondeterminism,
 and account separately for build identity changes. If investigation concludes
 that only explanatory documentation changes are justified, use documentation
 checks and reviewed applicability of existing behavioral evidence rather than
 creating an unrelated binary change or forcing unnecessary native runs.
+
+When crediting CLI example runs, use the CLI plan's section 4.6 dispositions.
+Keep consistency separate from native success: an admitted non-finished reply
+may pass consistency, and the native group may still fail. A valid recorded
+validator spawn failure or timeout with honest ordering can be superseded by
+a complete passing run without diagnosing an underlying OS cause. Missing
+prerequisites, observed sleep and confirmed automation-sandbox refusals have
+their specified exclusions. Unexpected denial, failed reads, sampled target
+changes and consistency faults require their stated dispositions; later
+success alone does not settle them. Target equality is only a before/after
+observation, and difference does not identify a writer. Preserve the bounded
+ten-run sample, individual failed assertions and corrective/replacement runs;
+never restart it to obtain ten consecutive passes. These rules do not waive a
+complete passing default battery or automatically apply to other investigations
+with different prerequisites and guarantees.
 
 Every credited run records canonical cases, source/test/fixture snapshots, app
 identity, configuration, raw inputs/outputs and limits. Reuse evidence only
@@ -670,7 +840,9 @@ Completion requires all of the following:
 
 - The CLI baseline and evidence applicability are recorded; the original A/B/C
   artifacts, freeze and cross-examination remain distinguishable from later
-  conclusions.
+  conclusions. The baseline reflects the code-defined example, shared-consumer
+  changes and accepted failure dispositions, without extending their evidence
+  scopes or reopening the settled CLI principles.
 - Every identified controller obligation has a disposition and traceable
   realization or explicitly accepted public limit. Every ownership/meaning
   change has the required decision and before/after account. No row disappears
