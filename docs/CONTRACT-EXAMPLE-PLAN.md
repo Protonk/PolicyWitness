@@ -51,12 +51,20 @@ The MVP defines one name, `paired-probe`.
 | `example paired-probe` on a bound build | The specimen document and one trailing newline, nothing else | empty | 0 |
 | `example` with no name, an unknown name, or extra arguments | empty | Usage naming the available example names | 2 |
 | `example paired-probe` when the binary's identity is empty or `unbound` | empty | One line stating that this build has no public identity | 2 |
+| `example paired-probe` on a bound build whose embedded example does not parse or fails the binary's own contract gate | empty | One line naming the example and the request-failure code | 2 |
+| The write to stdout fails | Whatever the system accepted, possibly an incomplete document | One line, if stderr is writable | 2 |
 
 The command reads no file, resolves no app root, loads no manifest or registry and launches nothing. Its output is a function of the binary. `print_usage` gains the command; that listing and the usage error are the whole of its discoverability.
 
 **The output is the specimen itself, not an envelope.** The specimen already carries the identity in `contract`, which is where the contract says a specimen carries it. `run` takes a file, so redirecting stdout yields a submittable file with no extraction tool. An envelope would need a JSON tool to unwrap, and would add an envelope kind to the shape goldens for no added binding.
 
 **Refusing on an unbound build** keeps the command from printing a document that no build can admit. The emitter enforces this by construction: it renders the document, parses it with `parse_request`, applies `validate_request_contract`, and prints only on success. The binary never emits a specimen its own controller gate would refuse.
+
+**The embedded-example failure is defined although a build from the signed pipeline cannot reach it.** The generator builds the document text from a serialized object, and `build.sh` refuses a generated source that differs from the generator's output. JSON encoding of the identity round-trips exactly, so on such a build the document parses and its `contract` equals the binary's identity for every bound identity. The gate can fire only through a generator defect, or in a direct Cargo build given an identity and a generated source edited by hand. It stays as a second barrier, and its behavior is fixed so that no failure prints a partial or inadmissible document: the emitter renders the whole document in memory, gates it, and writes nothing to stdout unless the gate passes. Exit 2 is the controller's existing status for a tool failure. Callers are given one distinction, exit 0 with a complete document or exit 2 with none they can use; the reason is on stderr for a person and is not a classification interface.
+
+Three things back this. The gate takes the document text and the expected identity as parameters and returns a typed reason, so unit tests drive it with a document that does not parse and one whose `contract` member is misplaced, and match the reason, not the message. A unit test renders every table entry under several identity spellings and requires each to pass the gate. The generator refuses to write a document in which the identity position is not the single top-level `contract` value. The coverage limit is stated with the rule's support: this branch has source and unit-test support and no built-app observation.
+
+**A failed write is the one failure a correct build can meet.** The emitter writes the document in one call and maps a write error to exit 2 without panicking. Exit 0 therefore means the process handed the complete document to stdout. A truncated file left by a failed write is not admissible: the live case's truncated-document control shows the same app refusing it as `invalid_json`.
 
 Rejected alternatives: `policy-witness contract ...` (invites the browser this plan excludes); a `--list` flag or an envelope describing examples (a catalog); emitting to a path argument (adds file-writing behavior and an overwrite decision to a read-only command).
 
@@ -79,6 +87,22 @@ uses: ["identity.public.contract", "request.specimen.contract", "identity.produc
 - `specimen` is identity-free and label-free. Two members are derived, each from its own authority: the controller supplies `contract` from the binary, and the generator supplies `specimen_id` as the node's full identifier. An envelope produced from the emitted example therefore names the contract node that defines it in `runner_result.specimen_id`, with no new field.
 - `uses` names the public definitions and rules that execution of the example is checked against. It is the existing relationship, so referenced nodes already flow into the surface's public payload. The list above is the intended selection. The executor settles it in step 4 under the coverage rule in section 3.4, and the maintainer reviews it at the evaluation point.
 - The existing step fragment `probes.step.read_hosts` stays as it is.
+
+**What the name promises across releases.** The emit name is the public handle. It denotes a scenario, and the promise begins with the first release that ships the name. `paired-probe` denotes:
+
+- a complete ordinary-form specimen that the emitting build admits as emitted;
+- exactly one paired probe, a file read whose query and attempt name the same submitted operation and target;
+- no effect on the machine: nothing is created, written, removed or executed, and no fixture or setup is needed;
+- the built-in runner, with no selection, entitlement requirement or test override;
+- a policy that does not restrict the probed read, so the stated native expectation is an `allow` prediction and a successful attempt.
+
+Everything else can differ between builds while the name stays: the target path, the step label, the policy's spelling, member order and layout, members a later contract requires, and `specimen_id` if the node moves. Each such change still moves the build identity, and the surface stamp when public content changes. A user regenerates the example from the build that will run it and does not depend on its bytes.
+
+A change outside the scenario takes a new name: another probe, phases or actors, any effect on the machine, a runner or entitlement requirement, a different expected native result, or a document that needs values filled in before submission. A released name is never reused for a different scenario. It can be removed; the command then exits 2 with the usage listing, and the release notes say so.
+
+After an upgrade, a user can therefore expect three things: `example paired-probe` yields a document carrying the new identity that fits the scenario above; a document saved from the earlier build is refused with `unsupported_contract` and the expected identity; and a removed name is a usage error that lists the current names.
+
+The scenario is stated in the example node's public prose, so it is stamped contract content, and the authoring rule goes into [contract/AGENTS.md](contract/AGENTS.md). The checker's intent assertions in section 3.4 are the executable form of the scenario: a change that leaves it fails them unless the name changes with it. Nothing in the MVP compares names with released snapshots; section 10 notes that route.
 
 The policy is `(allow default)` and the one probe is the read of `/etc/hosts` already used by the contract's teaching example. It writes nothing, needs no fixture, and makes no claim about a policy's effect. The deny variant is the README example and `smoke/specimen_file_read_deny`.
 
@@ -197,7 +221,7 @@ One live case and one offline control case, both in `witness_contract`.
 The checker's oracles are separate from the generated material:
 
 - Its relationship assertions are written by hand against the envelope and keyed by contract node identifier. It uses `consumer.validate` and `consumer.eligible_order` as shared readers and adds the relationships above itself.
-- It pins the scenario's intent by hand: exactly one step, a read-only attempt action, no test overrides, no runner selection.
+- It pins the scenario's intent by hand, as section 3.2 states it for the name: the ordinary form, exactly one step, a file-read query paired with a read-only file action on the same target, no test overrides, no runner selection or entitlement requirement.
 - It compares the emitted members with the authored `specimen` fact, read from the surface file. This is a comparison, never a substitution: a mismatch means the app does not contain the tree's example (a stale app fails here, as a stale worker identity already fails the smoke case).
 - It makes its own observations of the target file and reads `PWContract` itself.
 
@@ -214,7 +238,7 @@ The checker and control case establish coverage as follows:
 | Group | Rejected controls required |
 | --- | --- |
 | Emission | The version identity differs; the plist identity differs; the identity is not in a packaged form; two emissions differ; `specimen_id` is not the node identifier; a member differs from the authored fact |
-| Intent | A write action; test overrides; a runner selector; a second step |
+| Intent | A write action; an exec action; test overrides; a runner selector; a required entitlement; a second step; phases in place of the plan; a query and attempt naming different targets |
 | Admission | Submitted bytes differ from the emitted bytes; a `request_failure` or `bad_request` outcome; each policy digest differing |
 | Outcome consistency | The envelope outcome differs from the admitted reply's; `result.ok` disagrees with that outcome; the reported or captured exit disagrees with the outcome's required exit |
 | Producer identity | Each of the three identities differing, separately |
@@ -256,9 +280,10 @@ The first five stop at the controller and need no XPC. The last shows that a cor
 - After regeneration, the generated source differs, `build_contract.identity` differs and the `request` surface payload differs.
 - An edit to unrelated contract prose leaves the generated source and the build identity unchanged.
 - Invalid examples are refused with their source line: a specimen carrying `contract`, `specimen_id`, `_test_overrides` or a selection key; a non-object; an unknown top-level member; `emit` without `specimen` and the reverse; a duplicate or malformed name.
+- The generator refuses to write a document whose identity position is not the single top-level `contract` value.
 - A drift rule compares the checker's commitment identifiers with the example's `uses` list, so neither can drop a commitment alone.
 
-**Unit tests** in the controller cover the renderer (identity spliced as JSON, including a spelling that needs escaping), the self-admission gate, the unbound and empty refusals, and dispatch.
+**Unit tests** in the controller cover the renderer (identity spliced as JSON, including a spelling that needs escaping), the self-admission gate with its typed reasons for a document that does not parse and one whose `contract` is misplaced, every table entry passing the gate, the unbound and empty refusals, a failed write mapped to exit 2, and dispatch.
 
 ### 3.5 Test boundary
 
@@ -383,12 +408,14 @@ The plan ends at that prepared, untagged state with the maintainer's review pend
 
 ## 9. Commitments to confirm
 
-The design settles these; each creates public behavior, so each is stated for confirmation before step 2.
+The design settles these; each creates public behavior, so each is stated for confirmation before step 2. On 2026-11-12 the maintainer confirmed the last two rows, on the single failure status and on what a name denotes. The first five await confirmation.
 
 | Distinction | Why it matters | Commitment |
 | --- | --- | --- |
 | The command prints a bare specimen, not an envelope | It is the first controller output that is not an envelope, so "every output is an envelope" stops being true of the CLI | `example` output is a request document; envelopes remain the form of every report |
 | An unbound build refuses instead of emitting | A direct Cargo build gets exit 2 from a command that otherwise cannot fail | The app emits only specimens its own controller gate admits |
+| Every failure to emit is exit 2 with no usable document | Usage errors, an unbound build, a failed gate and a failed write share one status; the reason is stderr text, not a field a caller can branch on | Callers get exit 0 with the complete document, or exit 2 |
+| The name denotes a scenario, not bytes | Scripts and documents that name `paired-probe` keep working across releases, and nobody may rely on the target, labels or policy text | A released name keeps its scenario, is never reused for another, and can be removed only as a usage error noted in the release notes |
 | `specimen_id` is the contract node identifier | Renaming the node changes emitted bytes and the build identity; users who copy the example inherit a label that names the contract | Emitted examples are traceable to their defining node through an existing field |
 | The example text is a build-identity input | Correcting the example invalidates specimens saved for the previous development build; other contract edits do not | Shipped example material is bound to the identity it is emitted under |
 | Native expectations fail the case when their prerequisites hold | A machine where `sandbox_check` gives no answer for this read fails the default battery and release acceptance | The battery asserts the native result only under observed prerequisites, and reports it apart from contract relationships |
@@ -403,6 +430,7 @@ The pieces are shaped so later material adds rows, not machinery:
 - **Runner selection** needs values that exist only on the user's machine. That calls for a declared-prerequisite or parameter fact on the example and a decision about emitting templates that are not directly submittable; the live test would belong with the opt-in BYOXPC cases.
 - **Refusals** need an expected-outcome fact, so an example can state that submission is refused and how. The refusal controls in this plan are the test-side shape of that.
 - **Output interpretation** is not a request. It would be a different emitted artifact and deserves its own design.
+- **Name history.** Released public snapshots carry each example's `emit` fact. A later generator check can compare current names and scenarios with those snapshots and refuse a reused name, as the stamp table keeps removal rows for surfaces. The MVP has one unreleased name and relies on the authoring rule.
 - **Support grade.** After an archived release acceptance includes the live case, the example's owner can move from `check_read` to release credit naming that release and case.
 
 Suitability for public expression and suitability for executable verification are separate questions for each candidate. This plan handles one item that satisfies both.
