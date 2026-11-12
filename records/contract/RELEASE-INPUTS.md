@@ -30,7 +30,7 @@ Four are outside the contract.
 | Item | Question | Kept meanwhile |
 | --- | --- | --- |
 | What ships | A release archives the guide and not the contract, while the guide's surface table names surfaces defined only in the contract. | The table stays in the guide; the archive's contents are unchanged. |
-| `v0.3.7` at publication | Published as a release, or only its tag pushed. `make publish` pushes one tag, and both tags must reach the remote. | Nothing is published. |
+| `v0.3.7` at publication | When it goes up, and with which step: `make publish` pushes one tag, and both tags must reach the remote. Its notes are published as archived. | Nothing is published. |
 | Footprint sample at controller exit | `witness_contract/response_footprint` refuses a final process sample whose identity read succeeds and whose re-read returns `ESRCH`. The case is in the default battery, so a small share of acceptance runs can fail on it. One battery on `d18d4925` did. | The refusal and its controls are unchanged. |
 | Support in the rendered contract | Support paragraphs are about a tenth of the document. Rendering them without pins and context would remove about 3,400 words and move no stamp. | Support renders in full. |
 
@@ -49,6 +49,6 @@ The [release procedure](../../docs/SIGNING.md#release-procedure) covers the comm
 
 ## Release notes
 
-[RELEASE-NOTES-v0.3.8.md](RELEASE-NOTES-v0.3.8.md) is a working draft. It holds the surface-by-surface account of which surfaces changed in behavior and which only in their account, which the notes owe readers because every stamp moved across these two releases. Its verification paragraphs describe the rehearsals named above and need revising against the runs that precede the tag.
+[RELEASE-NOTES-v0.3.8.md](RELEASE-NOTES-v0.3.8.md) is a working draft. It holds the surface-by-surface account of which surfaces changed in behavior and which only in their account, which the notes owe readers because every stamp moved across these two releases. Its verification paragraphs describe the rehearsals named above. The maintainer evaluates the notes when accepting the release version.
 
-The `v0.3.7` notes were written without the maintainer's supervision and are not a model for format. Their bytes are in `dist/archive/v0.3.7/evidence/release-notes.md` (gitignored, local only), which `make publish` uses unless `RELEASE_NOTES=` overrides it.
+The `v0.3.7` notes go up as they are when publication happens. Their bytes are in `dist/archive/v0.3.7/evidence/release-notes.md` (gitignored, local only), which `make publish` uses unless `RELEASE_NOTES=` overrides it. They were written without the maintainer's supervision and do not establish a repository convention for notes.
