@@ -14,11 +14,11 @@ $PW run /tmp/example.json > /tmp/result.json
 
 - One definition of the example exists, in controller source.
 - `example` prints that definition with the binary's own identity, in the serialization the controller itself holds and delivers.
-- `run` admits those bytes and delivers them unchanged.
+- `run` admits the printed document and delivers its bytes without the single trailing framing newline.
 - The contract's rendering of the example is extracted from that source.
 - A default-battery case follows the passage on the signed app. It supplies no specimen of its own.
 
-For this release the audience is the project: PolicyWitness is tested against its own expression at release. The command is a small entrance for that pipeline, not a published feature. It is the first step toward examples that keep statements of what PolicyWitness accepts out of the user guide.
+For this release the audience is the project: PolicyWitness is tested against its own expression at release. This is a public command currently intended for project verification; user-guide presentation is deferred. It is the first step toward examples that keep statements of what PolicyWitness accepts out of the user guide.
 
 ## 2. Principles
 
@@ -34,9 +34,9 @@ The maintainer settled these on 2026-11-12.
 - *beside*, by observing the machine itself: the target file, the process exit status;
 - *after*, by reading the envelope with the independently written consumer and requiring the controller's own assessment to be clean.
 
-A fixture does not restate the app's interpretive rules. Those have three independent readers already (host, controller, test consumer), and this plan does not add a fourth.
+A fixture does not restate the app's interpretive rules. Those belong to the host, controller and test consumer; a missing consumer check is added there with its controls. This plan does not add a fourth interpreter. The live case still has independent expectations: the document must contain at least one paired, read-only probe, and the native results must satisfy the expectations pinned to the present example. These expectations state the test's purpose without copying its specimen, policy, target or labels.
 
-**Promise almost nothing.** A shipped binary has no private commands, so the entrance is stated truthfully in the contract. Its single promise is that the emitting build admits what it prints. Content, layout and labels can change in any build.
+**Make a narrow public promise.** Successful emission gives a document that the same build admits through `run`. Content, layout and labels carry no stability promise between builds. The exit and output rules are public behavior, even while the command's intended audience is the project.
 
 ## 3. Starting state
 
@@ -46,7 +46,7 @@ Observed on `main` on 2026-11-12. Re-check any that the work depends on.
 
 **Identity.** [build_contract.py](build_contract.py) derives `release:vX.Y.Z` for a clean checkout at one annotated release tag whose selected bytes equal the tag's blobs, and `development:<sha256>` otherwise. The digest covers every `.rs` file under `controller/src`. [json_contract.rs](../controller/src/json_contract.rs) embeds the value as `BUILD_CONTRACT`; a plain Cargo build is `unbound`.
 
-**Admission and the held request.** `validate_contract` in [request_patch.rs](../controller/src/request_patch.rs) requires `contract` to equal the binary's identity and refuses an empty or `unbound` identity; a refusal is exit 1, `bad_request`, with `data.request_failure`. The controller owns that gate, selectors and augments. The request grammar belongs to the Swift host. [run_flow.rs](../controller/src/run_flow.rs) parses the file once, removes controller selection fields, and holds one `serde_json::to_string_pretty` serialization that it delivers to the client. A retained smoke run confirms the form: its `request_delivery.bytes_written` of 576 equals the length of the submitted specimen serialized with sorted keys and two-space indentation.
+**Admission and the held request.** `validate_contract` in [request_patch.rs](../controller/src/request_patch.rs) requires `contract` to equal the binary's identity and refuses an empty or `unbound` identity; a refusal is exit 1, `bad_request`, with `data.request_failure`. The controller owns that gate, selectors and augments. The request grammar belongs to the Swift host. [run_flow.rs](../controller/src/run_flow.rs) parses the file once, resolves augments, removes controller selection fields, and holds one `serde_json::to_string_pretty` serialization that it delivers to the client without a trailing newline. A retained smoke run reports `request_delivery.bytes_written` of 576, matching the length computed from the submitted specimen; this is a length observation, not proof of byte identity. The existing controlled orchestration tests capture the exact string passed to `RunDependencies.client`, which can establish the example's byte-preservation property through the actual preparation path.
 
 **The controller already originates one specimen.** `verify_request()` in [runner_commands.rs](../controller/src/runner_commands.rs) builds an apply-only request with the binary's identity and sends it on `runner verify`. The contract's `request.specimen.apply_only` example is a separate hand-typed document.
 
@@ -54,7 +54,7 @@ Observed on `main` on 2026-11-12. Re-check any that the work depends on.
 
 **Contract tree.** Example nodes carry prose and support and no kind-specific facts. A node's facts enter the canonical public payload, so they move the surface stamp. Strict loading requires each rule and example to have graded support or an explicit evidence gap. The tree already takes shapes from code: [record_definitions.py](contract/record_definitions.py) imports field declarations, and [runtime.py](contract/runtime.py) reads selector constants out of `runner_select.rs`. Generation refuses growth in `free.*` relationship counts.
 
-**Readers and harness.** [consumer.py](../tests/lib/consumer.py) validates an envelope against the shape goldens and record rules, including `order` against its supporting chain, without consulting specimen policy or production classifiers. The controller reports its own assessment under `data.runner_sandbox_diagnostics` (`disposition_integrity`, `disposition_issues`). [run_capture.py](../tests/lib/run_capture.py) re-serializes a specimen, so it cannot submit bytes unchanged. Release acceptance runs the default battery with no selectors ([SIGNING.md](SIGNING.md#release-procedure)). The opt-in `preflight/build_refusal_controls` rehearsal runs that battery against a disposable fixture reporting `release:v1.0.0`.
+**Readers and harness.** [consumer.py](../tests/lib/consumer.py) validates an envelope against the shape goldens and record rules, including `order` against its supporting chain, without consulting specimen policy or production classifiers. It does not currently bind the envelope's `result.normalized_outcome`, `result.ok` and `result.exit_code` to the admitted reply's outcome. This plan adds that relationship to the consumer with its own controls. The controller reports its assessment of the runner reply under `data.runner_sandbox_diagnostics` (`disposition_integrity`, `disposition_issues`); that assessment does not validate the outer result assembled afterward. [run_capture.py](../tests/lib/run_capture.py) re-serializes a specimen, so it cannot submit bytes unchanged. Release acceptance runs the default battery with no selectors ([SIGNING.md](SIGNING.md#release-procedure)). The opt-in `preflight/build_refusal_controls` rehearsal runs that battery against a disposable fixture reporting `release:v1.0.0`.
 
 ## 4. Design
 
@@ -75,11 +75,11 @@ The command builds its output from that constant with the functions `run` alread
 3. `validate_request_contract` gates the result.
 4. `serde_json::to_string_pretty` serializes it, the call that produces `run`'s held request.
 
-Two consequences follow, and the test checks both. The emitter cannot print a document its own controller gate refuses. And the printed document is a fixed point of `run`: it carries no selection field, so `run` parses it and holds the identical serialization. The bytes the user sees are the bytes the client is given.
+The emitter cannot print a document its own controller gate refuses; host admission is established by the live `run`. For this example, the emitted JSON document without its one trailing framing newline must be a fixed point of `run`'s preparation. The example carries neither selection fields nor augments. A controlled orchestration test submits the emitted file through `run` and compares the exact string captured at `RunDependencies.client` with that document, including all JSON encoding choices. It exercises the real preparation path rather than reproducing serialization in Python. The live case separately observes the delivery length and the returned evidence; those observations alone do not prove byte identity.
 
 The file is hand-written Rust under `controller/src`. It is a build-identity input with no change to `build_contract.py`, no generated source and no build step. `build.sh` does not change.
 
-The module's constant is the example's only definition. `verify_request()` stays as it is; section 10 notes the later unification.
+The module's constant is the example's only definition. `verify_request()` stays as it is; section 11 describes optional sharing of storage or extraction without unifying its apply-only behavior with this paired probe.
 
 ### 4.2 The command
 
@@ -97,9 +97,9 @@ It takes no argument. Naming and selecting examples wait until a second example 
 | `example` when the constant does not parse or the gate refuses on a bound build | empty | One line with the request-failure code | 2 |
 | The write to stdout fails | Whatever the system accepted, possibly an incomplete document | One line, if stderr is writable | 2 |
 
-The command reads no file, resolves no app root, loads no manifest or registry and launches nothing. The whole document is rendered in memory and gated before any byte is written, and the write is one call whose failure maps to exit 2 without a panic. Callers get one distinction: exit 0 with the complete document, or exit 2 with none they can use. The stderr line is for a person and is not a classification interface.
+The command reads no file, resolves no app root, loads no manifest or registry and launches nothing. The whole document is rendered in memory and gated before any byte is written, and the write is one call whose failure maps to exit 2 without a panic. Exit 0 supplies the complete document. On exit 2 callers must discard stdout, even if the bytes they received happen to form a complete document. The stderr line is for a person and is not a classification interface.
 
-The fourth row cannot occur in a build from the signed pipeline: the contract generator's check, which `build.sh` runs before compiling, refuses a constant that is not an admissible-looking object (section 4.3), and JSON encoding of the identity round-trips exactly. The row is defined so that no failure can print a partial or inadmissible document. It has source and unit-test support and no built-app observation.
+The fourth row cannot occur in a build from the signed pipeline: the contract generator's check, which `build.sh` runs before compiling, refuses a constant that is not an admissible-looking object (section 4.3), and JSON encoding of the identity round-trips exactly. Parse or gate failure occurs before output and therefore prints no document; a later write failure has the separate behavior in the fifth row. The fourth row has source and unit-test support and no built-app observation.
 
 The output is the specimen itself, not an envelope. The document carries the identity in `contract`, where the contract says a specimen carries it, and redirecting stdout yields a file `run` accepts with no extraction step.
 
@@ -107,7 +107,7 @@ The output is the specimen itself, not an envelope. The document carries the ide
 
 ### 4.3 The contract's account
 
-**One rule.** Under `request.specimen`, add `emit_example {emit_example: reports}`: the controller, at entry `cli_example`, reports a specimen with `set_value(specimen.contract, ref("identity.build.contract"))`. Its prose states the single promise, that the emitting build's `run` admits the printed document, the two exit statuses, and that content and layout carry no promise between builds. Author it without `free.*` facts. If one proves unavoidable, stop and raise it; do not raise the baseline. No new subject or record is needed, so no shape golden changes.
+**One rule.** Under `request.specimen`, add `emit_example {emit_example: reports}`: the controller, at entry `cli_example`, reports a specimen with `set_value(specimen.contract, ref("identity.build.contract"))`. Its prose states that successful emission gives a document the same build's `run` admits, the two exit statuses and the requirement to discard stdout on exit 2, and that content, layout and labels carry no stability promise between builds. Author it without `free.*` facts. If one proves unavoidable, stop and raise it; do not raise the baseline. No new subject or record is needed, so no shape golden changes.
 
 **One example node, rendered from code.** Add `request.specimen.example {example: example}` with one new example fact, a citation in the shared `path` and `symbol` vocabulary:
 
@@ -150,18 +150,18 @@ The emitted document is `S` and the run envelope for `S` is `E`. Every assertion
 | Group | Demand | Intervention |
 | --- | --- | --- |
 | Passage | `S.contract` equals `--version`'s `build.contract` and `data.contract` and the `PWContract` the case reads from the app's property list; it has a packaged `release:` or `development:` form; two emissions are byte-identical | after |
-| Passage | `S` re-serialized by the case, with sorted keys and two-space indentation, equals `S`'s bytes; `E`'s `request_delivery.bytes_written` equals the document's length without its final newline | after |
+| Passage | `S` ends with one framing newline; `E`'s `request_delivery.bytes_written` equals the byte length after removing exactly that newline. This is a delivery-length check; exact bytes at the client boundary are checked through controlled `run` orchestration | after |
 | Passage | `S` without `contract` equals the contract's rendered example, read from the snapshot | after |
-| What the case will run | `S` is the ordinary form with a `probe_plan`; every attempt is a read-only file action; no `_test_overrides`; no selection or entitlement requirement. The case refuses to run a document outside these bounds | before |
+| What the case will run | `S` is the ordinary form with a nonempty `probe_plan` containing at least one step with both a `sandbox_check` and a read-only file attempt; every attempt is a read-only file action; no `_test_overrides`, selection fields, augments or entitlement requirement. The case refuses to run a document outside these bounds | before |
 | Admission | No `request_failure` and no `bad_request` outcome; the dossier's `policy.augmentation.original_sha256` and the reply's `policy_sha256` equal the SHA-256 of `S`'s policy source | after |
 | Identity | `E.build.contract`, `data.runner_client.transport.contract` and `runner_result.producer.contract` each equal `S.contract` | after |
 | Echo | `runner_result.specimen_id` equals `S.specimen_id`; the reply's step identifiers are `S`'s, in order; each query echoes its submitted operation and filter; each attempt echoes its submitted kind, action and target | after |
-| Reported against observed | The CLI exit status the case captured equals `result.exit_code`; the target files' bytes and metadata, read by the case before and after, are unchanged | beside |
+| Reported against observed | The CLI exit status the case captured equals `result.exit_code` | beside |
 | Existing readers | `consumer.validate` reports no error; the controller's `disposition_integrity` is `valid` with no `disposition_issues` | after |
 
-Every expected value in the passage, admission, identity and echo groups comes from `S` or from another output of the same app. The case knows the document's form and nothing of its content.
+Identity, digest and echo expectations are derived from `S` or another output of the same app. The case also states its purpose independently: there must be a paired probe, and its native results must meet the pinned expectations below. It does not copy the specimen, policy text, target or labels.
 
-The comparison with the snapshot is a comparison, never a substitution: a mismatch means the app and the tree disagree, which a stale app produces. Ordering, comparison vocabulary and outcome mapping are not restated here. The consumer checks them, and its rejected controls belong to `blackbox_e2e/checker_controls`.
+The comparison with the snapshot is a comparison, never a substitution: a mismatch means the app and the tree disagree, which a stale app produces. Ordering, comparison vocabulary and outcome mapping are not restated here. The consumer owns them, including the missing envelope-result relationship added under section 4.8, and its rejected controls belong to `blackbox_e2e/checker_controls`.
 
 **Native expectations.** These depend on the machine. The case takes its targets from `S` and observes its prerequisites itself: each attempt target resolves to a regular file the test user can open and read. The expectations are pinned to the present example and change with it.
 
@@ -171,6 +171,9 @@ The comparison with the snapshot is a comparison, never a substitution: a mismat
 | Prediction | `result_source` is `validator`, `outcome` is `allow`, `native_rc` is 0 |
 | Order | Given that prediction, `order` is `query_first` |
 | Attempt | `outcome` is `ok`, `rc` is 0 |
+| Target observation | Each target's bytes and the selected metadata are unchanged between the case's before and after observations |
+
+The case records each resolved target path, its bytes, and `st_dev`, `st_ino`, `st_mode`, `st_uid`, `st_gid`, `st_size`, `st_mtime_ns` and `st_ctime_ns` before and after execution. Access time is excluded because the observations themselves read the file. A changed target is a `native_observation` failure, not a contradiction in the app's report or evidence that PolicyWitness caused the change. These observations establish equality or difference at the sampled boundaries, not the absence of intervening changes. Section 4.6 governs its disposition.
 
 Nothing in either group states that prediction and enforcement agree.
 
@@ -218,6 +221,7 @@ In no row is the case removed from the default battery, given a skip, or handed 
 | A target prerequisite was not observed, the dispatcher recorded system sleep overlapping the failure, or an automation-sandbox refusal was confirmed by the prescribed unchanged-artifact rerun | Record that exclusion and credit a fresh run that establishes the prerequisites and completes without it. Explaining why the target was unavailable, the machine slept or the harness imposed the restriction is unnecessary. Use the existing dispatcher sleep record and sandboxed-harness procedure. |
 | The validator produced no answer, with a valid recorded spawn failure or timeout and honest `unestablished` ordering | A complete passing run can supersede this trial without explaining the underlying scheduling or OS cause. The earlier run supplies no successful native-observation credit. Its available evidence must satisfy the consistency assertions; a generic error without evidence locating the failure does not establish this disposition. |
 | The validator answered `deny`, or the worker failed `open_read`, while the stated prerequisites were observed | Resolve the challenge to the native expectation through a justified correction to its applicability, a checker correction or a product fix. Later successes alone do not settle it. |
+| A target's bytes or selected metadata changed between observations | Report `native_observation` without assigning a writer. Review target applicability and the observation code, and record the evidence supporting any environmental exclusion or correction. A later unchanged sample alone does not explain the earlier difference; an unsupported disposition leaves evaluation pending. |
 | An identity, policy digest, echo or reported-against-observed assertion is wrong, or an existing reader reports an error | Resolve the product, checker or contract discrepancy before acceptance. These must hold even when native execution fails. |
 
 The example must demonstrate successful execution. This work does not require an explanation of every correctly reported inability to execute. A failure without a disposition supported by this table leaves evaluation pending, including a native discrepancy that the table does not cover. Do not infer an exclusion from a later pass or classify every `execution_unavailable` result as environmental.
@@ -244,14 +248,14 @@ The checker and control case establish coverage as follows:
 
 | Group | Rejected controls required |
 | --- | --- |
-| Passage | The version identity differs; the property-list identity differs; the identity is not in a packaged form; two emissions differ; the document is not in the held serialization; `bytes_written` differs from the document's length; a member differs from the contract's rendered example |
-| What the case will run | A write action; an exec action; test overrides; a runner selector; a required entitlement; phases in place of the plan |
+| Passage | The version identity differs; the property-list identity differs; the identity is not in a packaged form; two emissions differ; the framing newline is missing; `bytes_written` differs from the document's length without that newline; a member differs from the contract's rendered example |
+| What the case will run | An empty plan; a plan without a paired probe; a write action; an exec action; test overrides; a runner selector; augments; a required entitlement; phases in place of the plan |
 | Admission | A `request_failure` or `bad_request` outcome; each policy digest differing |
 | Identity | Each of the three identities differing, separately |
 | Echo | The echoed `specimen_id` differs; an extra, missing or renamed step; the query echo differs; the attempt echo differs |
-| Reported against observed | The captured exit differs from `result.exit_code`; a changed target |
+| Reported against observed | The captured exit differs from `result.exit_code` |
 | Existing readers | The dedicated consumer propagation control; `disposition_integrity` not `valid`; a nonempty `disposition_issues` |
-| Native | A coherent `validator_spawn_failed` reply with a missing prediction and honest `unestablished` ordering; a prediction other than `allow`; an attempt that failed. With prerequisites held, each must produce `native_observation` with consistency still passing. An unobserved prerequisite must produce `prerequisite_unestablished` with native expectations not evaluated |
+| Native | A coherent `validator_spawn_failed` reply with a missing prediction and honest `unestablished` ordering; a prediction other than `allow`; an attempt that failed; changed target bytes or selected metadata with the envelope unchanged. With prerequisites held, each must produce `native_observation` with consistency still passing. An unobserved prerequisite must produce `prerequisite_unestablished` with native expectations not evaluated |
 | Refusals | For each refusal control: an accepted run in its place; the wrong code; a missing or wrong expected identity; a client capture on a controller-side refusal |
 | Classification | A combined-fault input reports every fault; an input with no admitted reply is `execution_unavailable` and credits or faults nothing from the reply |
 
@@ -259,10 +263,12 @@ The coherent `validator_spawn_failed` control has matching reported and captured
 
 Two things rest on other evidence, and the suite account says so:
 
-- Shape and record validity, including ordering, come from `consumer.validate`, whose rejected controls belong to `blackbox_e2e/checker_controls`. This case's propagation control requires `(consumer_validation, consistency)` and establishes that a consumer error fails the case; incidental consumer diagnostics in other controls do not cover it.
+- Shape and record validity, including ordering and the envelope-result relationship added in section 4.8, come from `consumer.validate`, whose rejected controls belong to `blackbox_e2e/checker_controls`. This case's propagation control requires `(consumer_validation, consistency)` and establishes that a consumer error fails the case; incidental consumer diagnostics in other controls do not cover it.
 - That the app is validly signed and unchanged comes from the dispatcher's inspection and inventory, controlled in the `dispatcher` suite.
 
 ### 4.8 Other controls
+
+**Consumer result consistency.** Extend `consumer.validate` for admitted runner replies: `result.normalized_outcome` equals the reply's outcome, `result.ok` is true exactly for `finished`, and `result.exit_code` is 0 for `finished` and 1 otherwise. Apply this behind the existing version and reply-admission boundaries; a body retained after admission failed cannot supply the mapping, and controller failures without an admitted reply keep their own result rules. Add controls to `blackbox_e2e/checker_controls` for valid finished and non-finished admitted replies, each envelope result field changed independently, and combined faults alongside existing record errors. Keep the refusal and unsupported-body controls passing. These are consumer assertions; the example checker only propagates the consumer's result and compares the reported exit with the process exit it observed.
 
 **Cross-build controls** extend [cli_contract.rs](../controller/integration/cli_contract.rs), which already builds isolated non-test controllers with supplied and absent stamps. The unbound build's `example` exits 2 with empty stdout. The build given another identity emits that identity, and the signed app's `run` refuses the resulting document with `unsupported_contract` and its own expected identity. The same file takes the usage rows of section 4.2 against the signed app.
 
@@ -272,17 +278,18 @@ Two things rest on other evidence, and the suite account says so:
 - After regeneration, the rendered contract, the `request` surface payload and `build_contract.identity` all differ.
 - The extraction refuses, naming the source: a missing symbol; two definitions; a constant that is not a raw string; a value that is not a JSON object; a `contract` member; `_test_overrides`; a selection key; an unknown top-level member.
 
-**Unit tests** in the controller cover the renderer under several identity spellings, including one that needs escaping; the fixed-point property, by parsing the output and holding it as `run` does; the gate's typed refusals for an unbound identity and an unparsable constant; a failed write mapped to exit 2; and dispatch. The gate takes the document and the expected identity as parameters, so the tests match the returned reason and not a message.
+**Unit tests** in the controller cover the renderer under several identity spellings, including one that needs escaping; the gate's typed refusals for an unbound identity and an unparsable constant; a failed write mapped to exit 2; and dispatch. The gate takes the document and the expected identity as parameters, so the tests match the returned reason and not a message. Extend the existing controlled orchestration tests in `run_flow.rs` to write the emitted example as the input file, call the actual `run` path, and capture the exact request at `RunDependencies.client`. It must equal the emitted bytes after removing exactly one trailing newline. This checks the chosen example through real augmentation resolution and selector removal. It neither constructs another specimen nor reimplements the Rust serialization in another language; the app root, manifest and client remain controlled as in the existing tests.
 
 ### 4.9 Test boundary
 
 | Stage | What is checked | Equipment | Home |
 | --- | --- | --- | --- |
 | Generation | Extraction and its refusals, stale rendering, stamp and identity sensitivity | Python | `source_drift` (existing cases) |
-| Compilation | Rendering, fixed point, gate, failed write, dispatch | Cargo | `unit/rust.unit`, `unit/rust.fmt` |
+| Compilation | Rendering, exact request bytes at the controlled client boundary through `run`, gate, failed write, dispatch | Cargo | `unit/rust.unit`, `unit/rust.fmt` |
 | Packaging | No new layout or build step. Existing gates: generator check before compilation, identity recomputation before signing | Build toolchain and identity | `make build`; `preflight/build_refusal_controls` at candidate entry |
 | Signed-app inspection | Usage rows, cross-build controls | Signed app; Cargo for the isolated builds; no XPC | `integration/cli.integration` |
 | Checker | Matched rejected controls and completeness | Python | `witness_contract/example_round_trip_controls` |
+| Shared consumer | Admitted reply-to-envelope result mapping, independent and combined faults, preserved refusal boundaries | Python | `blackbox_e2e/checker_controls` |
 | Actual execution | Passage, admission, identity, echo, existing readers, native expectations, refusals through `run` | Signed app and XPC | `witness_contract/example_round_trip` |
 
 Only the last row observes native execution, and only its native group depends on the machine. Both new cases are default members: they are read-only, need no signing identity, GUI session or network, and add a handful of CLI invocations. Default membership places the live case in release acceptance with no further wiring.
@@ -291,11 +298,11 @@ Only the last row observes native execution, and only its native group depends o
 
 | Area | Files | Change |
 | --- | --- | --- |
-| Controller | `controller/src/example.rs` (new), `main.rs`, `cli.rs`, `controller/README.md` | The constant, the command, unit tests, usage and CLI block |
+| Controller | `controller/src/example.rs` (new), `main.rs`, `cli.rs`, controlled tests in `run_flow.rs`, `controller/README.md` | The constant, the command, unit tests including exact client-boundary capture, usage and CLI block |
 | Contract authoring | `docs/contract/10-request.surface.md` | The rule and the example node, with support |
 | Contract model | `docs/contract/tree.py`, `README.md`, `AGENTS.md`; `docs/generate_contract_stamps.py` | The `document` fact, its extraction, validation and rendering; the cited source as a declared input; authoring reference |
 | Generated | `docs/CONTRACT.md`, `docs/contract/public.json` | Regenerated, never hand-edited |
-| Tests | `tests/catalog.json`; `tests/suites/witness_contract/` (two case scripts, one checker, README); `controller/integration/cli_contract.rs`; `tests/suites/source_drift/` (`contract_tree_controls.py`, `generators.py`, `build_contracts.py`); `tests/README.md`, `tests/COVERAGE.md` where applicable | Cases, controls, registry and suite accounts |
+| Tests | `tests/catalog.json`; `tests/suites/witness_contract/` (two case scripts, one checker, README); `tests/lib/consumer.py`; `tests/suites/blackbox_e2e/checker_controls.py` and README; `controller/integration/cli_contract.rs`; `tests/suites/source_drift/` (`contract_tree_controls.py`, `generators.py`, `build_contracts.py`); `tests/README.md`, `tests/COVERAGE.md` where applicable | Cases, shared outcome-consistency checks and controls, registry and suite accounts |
 | Possibly | `docs/architecture.json` | Only if its account enumerates CLI entries; check and regenerate if so |
 
 Not touched: `build.sh`, `meson.build`, `build_contract.py`, the bundle layout, the evidence manifest, the wire schema, the host, the worker, the validator, the dispatcher, `runner verify` and the user guide. A need to change any of these is a signal to stop and reconsider, not a routine extension.
@@ -304,11 +311,11 @@ Not touched: `build.sh`, `meson.build`, `build_contract.py`, the bundle layout, 
 
 **Step 0. Return the stamps to `unreleased`.** Follow the `d18d4925` precedent so the tree can be generated, built and tested. Done when `generate_contract_stamps.py --check --require-history` passes and the three stamp artifacts are the only difference from the starting commit.
 
-**Step 1. The example and its account, together.** Add the module and command with their unit tests, usage text and README block; extend the tree with the `document` fact; author the rule and the example node, with an explicit evidence gap until the checks exist; regenerate; add the generation controls. The command does not land without the contract's statement of it. Done when `--tree-check` and `--check --require-history` pass and `tests/run.sh --suite unit --suite source_drift` passes outside the automation sandbox.
+**Step 1. The example and its account, together.** Add the module and command with their unit tests, including exact request capture through the existing controlled `run` path, usage text and README block; extend the tree with the `document` fact; author the rule and the example node, with an explicit evidence gap until the checks exist; regenerate; add the generation controls. The command does not land without the contract's statement of it. Done when `--tree-check` and `--check --require-history` pass and `tests/run.sh --suite unit --suite source_drift` passes outside the automation sandbox.
 
 **Step 2. Signed build and CLI checks.** Build through the signed pipeline, then add the usage rows and cross-build controls. Done when `tests/run.sh --suite integration` passes against that build.
 
-**Step 3. The round trip.** Write the checker, its offline controls and the live case; register both; update the suite accounts. Done when both cases pass by `--case` against the step 2 build with a fresh `PW_TEST_OUT_DIR`, and the control case's completeness assertion accounts for every assertion identifier through matched expected diagnostics or documented other evidence under section 4.7.
+**Step 3. The round trip.** Add the missing envelope-result relationship to the shared consumer and its controls, then write the example checker, its offline controls and the live case; register both new cases; update the suite accounts. Done when `blackbox_e2e/checker_controls` and both new cases pass by `--case` against the step 2 build with a fresh `PW_TEST_OUT_DIR`, and the control case's completeness assertion accounts for every assertion identifier through matched expected diagnostics or documented other evidence under section 4.7.
 
 **Evaluation point.** Stop here and present the first complete result before anything else is built on it: the emitted document, the version envelope, the run envelope, the refusal inputs and outputs, and the checker's report with its groups. Before presenting, run the live case ten times against the same build, each with a fresh output directory, and report every assertion's result and each failure's disposition under section 4.6. This is a bounded evaluation sample; do not restart it to obtain ten consecutive passes. Record subsequent corrective or replacement runs separately, including changes to their inputs, build or operating conditions.
 
@@ -317,9 +324,9 @@ Passing tests are necessary here and not sufficient. Failures awaiting a disposi
 *Accept, and go on to step 4, when all of these hold:*
 
 - The two commands in section 1 work from the usage text alone.
-- The passage is direct: the command's output comes from the one constant through the functions `run` uses, with no intermediate copy, generated source or build step, and the fixed-point assertions pass.
-- The fixtures author no specimen. The live case contains no document, and what it knows about the document is limited to the bounds on what it will run and the native expectations pinned to the present example.
-- The checker restates no interpretive rule that the consumer or the controller already owns.
+- The passage is direct: the command's output comes from the one constant through the functions `run` uses, with no intermediate copy, generated source or build step. The exact string captured at the controlled client boundary equals the emitted document without its framing newline; the live delivery-length observation is credited separately.
+- The fixtures author no specimen. The live case contains no document and independently requires a nonempty plan with a paired, read-only probe, in addition to the execution bounds and native expectations pinned to the present example.
+- The checker restates no interpretive rule owned by the consumer or controller. The shared consumer's outcome-consistency controls establish the newly assigned relationship.
 - Nothing answers whether PolicyWitness accepts a shape except `run`.
 - The final build has a complete passing live case, and every earlier failed assertion has a disposition supported by section 4.6. Different values supported by each reply's evidence do not themselves fail evaluation.
 - A deliberately faulted input produces a diagnostic that names the assertion and the classification without a reader opening the checker.
@@ -330,13 +337,14 @@ Passing tests are necessary here and not sufficient. Failures awaiting a disposi
 - An assertion compares the envelope only with itself, or duplicates a consumer rule.
 - The usage text, exit statuses or printed form are awkward in use.
 - The report blurs consistency and native observations, or a failure is hard to attribute from the report.
+- The byte comparison fails because the chosen example contains a preparation input such as an augment, or because the assertion mishandles framing or encoding. Correct the constant or assertion and rerun the actual preparation path; do not infer a defect in `run` from the mismatch alone.
 - Evidence establishes a checker defect or a concrete condition requiring correction to a native expectation's applicability. Make and verify that correction under section 4.6; variation alone does not establish incomplete prerequisites.
 - The work needed an evidence gap or a deviation from this plan that the maintainer has not seen.
 
 *Stop, and reconsider the design, when:*
 
 - A not-touched component had to change.
-- The printed document is not a fixed point of `run`: the controller adds, removes or reorders something between the user's file and the client. That is a finding about `run` and comes before this plan.
+- After accounting for the example's restrictions and its framing newline, exact request capture establishes an unexpected transformation in `run`'s preparation. Investigate that behavior separately before changing the production path. `run`'s intended augmentation and selector handling are not defects merely because they transform other requests.
 - The case could pass only by carrying a specimen of its own or by re-running a production classifier.
 - The work called for a second way to ask what `run` answers.
 - The rule cannot be authored without free-text growth and the maintainer does not want the baseline raised.
@@ -359,6 +367,7 @@ Continue the same record through section 9. For each later disposition, append t
 | The rule needs a `free.*` fact | Generation refuses free-text growth | Restructure the rule; otherwise stop and raise it |
 | The host refuses the example | The live case fails at admission with a `request_failure` | The example is invalid for this build. Fix the constant; do not relax admission |
 | A target is unreadable or absent | The case fails as `prerequisite_unestablished` | Section 4.6's release consequence. Do not hand the case another document |
+| A target's bytes or selected metadata differ after the run | The case fails as `native_observation` while a consistent envelope still passes its readers | Record the sampled change and follow section 4.6 without attributing a writer or treating it as a false app report |
 | The prediction is unavailable with a valid recorded spawn failure or timeout | The case fails as `native_observation` while consistency passes | Apply section 4.6's earlier-run rules: a complete passing run can supersede the trial without diagnosing the underlying OS cause |
 | The prediction is `deny` or `open_read` fails with prerequisites established | The case fails as `native_observation` while consistency passes | Resolve the challenge to the native expectation under section 4.6; later successes alone do not settle it |
 | A passing checker that checks nothing or rejects for the wrong reason | The offline controls accept a faulted input or its diagnostics differ from the expected set | Match each control's intended diagnostics and classification before crediting coverage; preserve independent combined faults and check unevaluated groups |
@@ -369,7 +378,7 @@ Continue the same record through section 9. For each later disposition, append t
 ## 8. Acceptance criteria
 
 1. In the `unreleased` stamp state, `generate_contract_stamps.py --check --require-history` passes, and a second generation writes nothing.
-2. A signed development build of the final source prints, for `example`, a document whose `contract` equals `--version`'s `build.contract` and the app's `PWContract`. `run` on those bytes is admitted, delivers a request of the same length, and exits 0 with `finished`.
+2. A signed development build of the final source prints, for `example`, a document whose `contract` equals `--version`'s `build.contract` and the app's `PWContract`. The live case requires at least one paired, read-only probe. `run` on the emitted file is admitted, reports delivery of the document's byte length without its framing newline, and exits 0 with `finished`. Separately, the controlled orchestration test establishes exact equality between the emitted document without that newline and the string passed to the client through the actual `run` preparation path.
 3. `witness_contract/example_round_trip` and `example_round_trip_controls` pass inside a complete default battery with no skips, unrun cases or harness errors, and with the app inventory unchanged. The live case's artifacts hold the emitted bytes, the version envelope, the run envelope, every refusal input and output, the target-file observations, and a report giving each assertion's result and each failure's identifier and classification, consistency apart from native observations. The offline case retains expected and actual diagnostic sets and verified coverage under section 4.7.
 4. Each refusal control in section 4.5 produces its stated code, path and expected identity through `run`, and the controller-side controls show no client capture.
 5. The cross-build controls pass: the unbound build emits nothing and exits 2; the signed app refuses a document emitted under another identity.
@@ -377,6 +386,7 @@ Continue the same record through section 9. For each later disposition, append t
 7. The contract's rendered example equals the app's emitted document without its identity.
 8. Every component in section 5's not-touched list, and the worker identity, are unchanged from the starting commit.
 9. The repository contains one definition of the example. No test, fixture or document holds a copy that is not extracted from it.
+10. `blackbox_e2e/checker_controls` establishes the shared consumer's admitted reply-to-envelope result mapping, including independent and combined faults, without interpreting retained inadmissible bodies. The example checker propagates that reader's errors and contains no duplicate mapping.
 
 ## 9. Entering the 0.3.8 candidate
 
@@ -398,14 +408,14 @@ The plan ends at that prepared, untagged state with the maintainer's review pend
 | --- | --- |
 | One way to hold PolicyWitness | No admission query or second submission path, here or later on this route. `example` answers nothing about a caller's document |
 | The app is the authority for the example | One definition in controller source; the contract extracts it; tests obtain it from the built app |
-| The entrance promises one thing | The emitting build admits what it prints. Content, layout and labels can change in any build. The earlier name and scenario promise, and the convention that `specimen_id` names a contract node, are withdrawn |
-| Every failure to emit is exit 2 with no usable document | Usage errors, an unbound build, a failed gate and a failed write share one status; the reason is stderr text |
+| A narrow public guarantee | Successful emission gives a document the same build admits through `run`. Content, layout and labels carry no stability promise between builds. The command is public and currently intended for project verification |
+| Every failure to emit is exit 2 and requires discarding stdout | Usage errors, an unbound build, a failed gate and a failed write share one status; the reason is stderr text. A write failure does not establish exactly which bytes reached the caller |
 
 **To confirm before step 1.** Each creates behavior a caller can see.
 
 | Distinction | Why it matters | Commitment |
 | --- | --- | --- |
-| The command prints a bare specimen, in the controller's held serialization, not an envelope | It is the first controller output that is not an envelope, and its key order is the serializer's, not an author's | `example` output is a request document; envelopes remain the form of every report |
+| The command prints a bare specimen, in the controller's held serialization, not an envelope | It is the first controller output that is not an envelope, and its key order is the serializer's, not an author's | `example` output is a request document with one trailing framing newline; `run`'s held request omits that newline. Envelopes remain the form of every report |
 | The command is listed in usage and stated in the contract, and absent from the user guide | A reader of the guide alone does not learn of it; a reader of `--help` does | The entrance is disclosed where the CLI is defined and is not presented as a workflow in this release |
 | Native expectations fail the case when their prerequisites hold | A machine where `sandbox_check` gives no answer for this read fails the default battery and release acceptance, subject to section 4.6's dispositions | The battery asserts the native result only under observed prerequisites, and reports it apart from consistency |
 
@@ -413,10 +423,10 @@ The plan ends at that prepared, untagged state with the maintainer's review pend
 
 Out of scope: more than one example, selection by name, external runner examples, expected-refusal examples, response fixtures, any documentation interface, and any query other than `run`.
 
-Later steps on this route keep the same direction, from code to presentation:
+Possible later steps keep the same direction, from code to presentation; they are not prerequisites or promised follow-up work:
 
 - **The guide and README.** Their hand-substituted `BUILD_CONTRACT` examples can shrink to the two commands in section 1 once the entrance is presented to users. That is the point at which the promise in section 10 is reconsidered.
-- **The verify request.** `verify_request()` and the contract's `apply_only` example are a second code definition and a hand-typed document for one more specimen the app originates. They can move into the same module and the same extraction.
+- **The verify request.** `verify_request()` and the contract's `apply_only` example may share storage or extraction later if that removes useful duplication. Verification's apply-only request serves a different purpose from the paired example, and its behavior need not be unified with this command. No such refactor is required by this plan.
 - **A second example.** It needs a way to select among examples and, with that, a statement of what a selection denotes across releases. Neither is designed here.
 - **Refusal examples.** A document the app prints so that `run` refuses it would let refusal guidance come from the app as well. Its expected outcome is obtained by running it, in keeping with section 2.
 - **Support grade.** After an archived release acceptance includes the live case, the example's owner can move from `check_read` to release credit naming that release and case.
