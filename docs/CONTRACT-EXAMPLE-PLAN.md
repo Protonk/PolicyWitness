@@ -72,7 +72,7 @@ One authored node supplies the scenario. The node sits in the tree that defines 
 ```contract
 emit: "paired-probe"
 specimen: {"policy":{"format":"sbpl","sbpl_source":"(version 1) (allow default)"},"probe_plan":[{"step_id":"read-hosts","sandbox_check":{"operation":"file-read-data","filter":{"kind":"path","value":"/etc/hosts"}},"attempt":{"kind":"file","action":"open_read","target":"/etc/hosts"}}]}
-uses: ["identity.public.contract", "request.specimen.contract", "identity.producer.contract", "steps.step", "steps.query", "steps.attempt", "steps.comparison", "steps.assessment.order"]
+uses: ["identity.public.contract", "request.specimen.contract", "identity.producer.contract", "envelope.data.select.finished", "envelope.data.select.other", "steps.step", "steps.query", "steps.attempt", "steps.comparison", "steps.assessment.order"]
 ```
 ````
 
@@ -120,13 +120,14 @@ One property to know: the public snapshot sorts object keys, so reordering membe
 
 The emitted document is called `S` below, and `E` is the run envelope for `S`. Commitments are named by contract node so the checker and the example's `uses` list can be compared.
 
-**Contract relationships.** These hold for any run of `S` that the app completes, whatever the native results.
+**Contract relationships.** These check admission and evidence consistency, whatever the native results. A non-`finished` admitted reply can satisfy them; successful execution is a separate native expectation below. When no admitted reply exists, evaluate only the emission and controller-side relationships specified in the classification table.
 
 | Group | Relationship checked | Contract node |
 | --- | --- | --- |
 | Emission | `S.contract` equals `--version` `build.contract` and `data.contract`, and the independently read `PWContract`; it has the packaged `release:` or `development:` form; two emissions are byte-identical | `identity.public.contract`, `request.specimen.emit_example` |
 | Emission | `S.specimen_id` is `request.specimen.paired_probe`; the remaining members equal the authored `specimen` fact | `request.specimen.paired_probe` |
-| Admission | The submitted file's bytes are `S`; exit 0; `kind` is `run`; `result.ok` is true; `normalized_outcome` is `finished`; no `request_failure`; the dossier's `policy.augmentation.original_sha256` and the reply's `policy_sha256` equal the SHA-256 of `S`'s policy source | `request.specimen.contract`, `request.specimen.hold` |
+| Admission | The submitted file's bytes are `S`; `kind` is `run`; no `request_failure` or `bad_request` outcome; the dossier's `policy.augmentation.original_sha256` and the reply's `policy_sha256` equal the SHA-256 of `S`'s policy source | `request.specimen.contract`, `request.specimen.hold` |
+| Outcome consistency | For an admitted reply, `result.normalized_outcome` equals `runner_result.normalized_outcome`; `result.ok` is true exactly when that outcome is `finished`; `result.exit_code` and the captured CLI exit are both 0 for `finished`, otherwise both 1 | `envelope.data.select.finished`, `envelope.data.select.other` |
 | Producer identity | `E.build.contract`, `data.runner_client.transport.contract` and `runner_result.producer.contract` each equal `S.contract` | `identity.build.contract`, `identity.producer.contract` |
 | Step association | `runner_result.specimen_id` equals `S.specimen_id`; `steps` has exactly the submitted step identifiers in order; the step's `phase_id` is `main` and that phase's `action_ids` name it; the query echoes the submitted operation and filter; the attempt echoes the submitted kind, action and target | `steps.step`, `steps.query`, `steps.attempt` |
 | Two channels | The step has a `sandbox_check` and an `attempt`, each with its `result_source`, and a comparison record in the closed vocabulary; `operation_relation` is `matched` and `target_relation` is `same_submitted`, which follow from the submitted strings | `steps.comparison` |
@@ -138,6 +139,7 @@ The ordering row is a biconditional over the envelope's evidence. It does not as
 
 | Observation | Expectation under the prerequisites |
 | --- | --- |
+| Completion | `runner_result.normalized_outcome` is `finished` |
 | Prediction | `result_source` is `validator`, `outcome` is `allow`, `native_rc` is 0 |
 | Order | Given that prediction, the phase's ordering record shows the complete chain with `validator_disposition` `reaped`, and `order` is `query_first` |
 | Attempt | `outcome` is `ok`, `rc` is 0; the comparison's `observation` is `succeeded` with basis `completed_worker_status` |
@@ -184,7 +186,7 @@ For failures requiring a correction, the evidence needed to close the issue is b
 - **Product defect:** identify the faulty behavior and establish its correction with a focused control and the applicable verification. Explaining precisely why it occurred intermittently is unnecessary. Changes to section 4's not-touched components remain separate work.
 - **Incorrect prerequisite or expectation:** identify the concrete condition that changes applicability and how the case observes it. Passing after a reboot alone does not establish that condition.
 
-Record the failed assertion, the relevant retained observation and its disposition in the evaluation record, with any correction and replacement run. A new build identity or ten later passes is not itself a disposition; name the relevant change. Preserve original results under the repository's evidence-retention rules rather than rewriting a failed historical run as passing.
+Record the failed assertion, the relevant retained observation and its disposition in the evaluation record, with any correction and replacement run. Continue that record through section 8's untagged candidate verification, including dispositions that need no product correction. A new build identity or ten later passes is not itself a disposition; name the relevant change. Preserve original results under the repository's evidence-retention rules rather than rewriting a failed historical run as passing.
 
 ### 3.4 How conformity is independently established
 
@@ -203,8 +205,9 @@ The checker's oracles are separate from the generated material:
 
 The checker and control case establish coverage as follows:
 
-- Start with an input that passes with no failure diagnostics. Each rejected control introduces one logical fault and names its target assertions and the exact expected set of `(assertion identifier, classification)` pairs, authored independently of the checker's output. If the fault necessarily triggers another assertion, include that consequence explicitly. Missing or unexpected diagnostics fail the control.
-- A control earns coverage for its target assertions only after the actual diagnostic set matches the expected set and includes their failures. Registering or executing a control earns no coverage. For example, changing the producer contract must produce the producer-identity assertion's diagnostic with `contract_relationship`; a generic consumer error alone cannot satisfy that control.
+- Start with an input that passes with no failure diagnostics. Each rejected control introduces one logical fault and names its target assertions and the exact expected set of `(assertion identifier, classification)` pairs, authored independently of the checker's output. If the fault necessarily triggers another example-specific assertion, include that consequence explicitly. Missing or unexpected diagnostics fail the control, with only the shared-consumer allowance below.
+- A control earns coverage for its target assertions only after the actual diagnostic set matches the expected set under that allowance and includes their failures. Registering or executing a control earns no coverage. For example, changing the producer contract must produce the producer-identity assertion's diagnostic with `contract_relationship`; a generic consumer error alone cannot satisfy that control. Check producer identity before semantic reading; the consumer's version rejection still prevents assertions about the unsupported reply's semantics.
+- Report all `consumer.validate` errors under one aggregate assertion, `consumer_validation`, classified as `contract_relationship`, and retain every underlying message. Its dedicated propagation control requires that diagnostic exactly. Other rejected controls permit that one diagnostic in addition to their exact expected set; its presence there earns no coverage. Consumer errors still fail the live case and the passing baseline. The allowance applies only when matching negative-control diagnostics and does not suppress consumer output or permit another unexpected assertion.
 - A combined-fault input must retain the diagnostics of its independent faults. Check unevaluated groups explicitly: a missing prerequisite requires `prerequisite_unestablished` and native expectations not evaluated; a missing admitted reply requires `execution_unavailable` and no credit or fault from the absent reply. A rejection alone does not establish these results.
 - The completeness assertion compares the checker's full assertion table with the identifiers whose targeted controls actually matched, plus the documented exceptions resting on other evidence below. An assertion without verified coverage or a documented exception fails the case. The control results retain expected and actual diagnostic sets and the identifiers that earned coverage.
 
@@ -212,18 +215,21 @@ The checker and control case establish coverage as follows:
 | --- | --- |
 | Emission | The version identity differs; the plist identity differs; the identity is not in a packaged form; two emissions differ; `specimen_id` is not the node identifier; a member differs from the authored fact |
 | Intent | A write action; test overrides; a runner selector; a second step |
-| Admission | Submitted bytes differ from the emitted bytes; a nonzero exit; a `request_failure`; each policy digest differing |
+| Admission | Submitted bytes differ from the emitted bytes; a `request_failure` or `bad_request` outcome; each policy digest differing |
+| Outcome consistency | The envelope outcome differs from the admitted reply's; `result.ok` disagrees with that outcome; the reported or captured exit disagrees with the outcome's required exit |
 | Producer identity | Each of the three identities differing, separately |
 | Step association | The echoed `specimen_id` differs; an extra, missing or renamed step; the phase or its `action_ids` disagree; the query echo differs; the attempt echo differs |
 | Two channels | A missing channel; a comparison value outside the vocabulary; each relation mismatched |
 | Ordering | `query_first` without the supporting chain; `unestablished` despite a complete chain |
-| Native | A prediction other than `allow`, an attempt that failed and a changed target, each with prerequisites held: the result must be `native_observation` with contract relationships still passing. An unobserved prerequisite: the result must be `prerequisite_unestablished` with native expectations not evaluated |
+| Native | A coherent `validator_spawn_failed` reply with a missing prediction and honest `unestablished` ordering; a prediction other than `allow`; an attempt that failed; a changed target. With prerequisites held, each must produce `native_observation` with contract relationships still passing. An unobserved prerequisite must produce `prerequisite_unestablished` with native expectations not evaluated |
 | Refusals | For each refusal control: an accepted run in its place; the wrong code; a missing or wrong expected identity; a client capture on a controller-side refusal |
 | Classification | A combined-fault input reports every fault; an input with no admitted reply is `execution_unavailable` and credits or faults nothing from the reply |
 
+The coherent `validator_spawn_failed` control has matching envelope and reply outcomes, `result.ok` false, and reported and captured exits of 1. It fails the native completion and prediction expectations without failing outcome consistency. A second control changes only its captured CLI exit to 0 and must add the exit-consistency diagnostic under `contract_relationship` while retaining the native diagnostics. This establishes that nonzero exit alone is not a contract fault.
+
 Three things rest on other evidence, and the suite account says so:
 
-- Shape and record validity come from `consumer.validate`, whose rejected controls belong to `blackbox_e2e/checker_controls`. This case adds one control showing that a consumer error fails the case.
+- Shape and record validity come from `consumer.validate`, whose rejected controls belong to `blackbox_e2e/checker_controls`. This case's dedicated propagation control requires `(consumer_validation, contract_relationship)` and establishes that a consumer error fails the case; incidental consumer diagnostics in other controls do not cover it.
 - That the app is validly signed and unchanged comes from the dispatcher's inspection and inventory, controlled in the `dispatcher` suite.
 - The usage matrix, the cross-build controls and the generation controls are direct assertions on real binaries and source copies. They are not a checker over retained documents, and each already pairs a passing case with refused ones.
 
@@ -329,6 +335,8 @@ Passing tests are necessary here and not sufficient. Failures awaiting a disposi
 
 **Recording the decision.** In the commit that completes step 4, the executor adds an "Evaluation record" section to this plan: the build identity and commit, the run identifiers with their availability (development evidence, disposable), the coverage statement's results, the ten-run comparison, each failed assertion with its relevant observation and disposition, any correction and replacement run, and every deviation from the plan. The maintainer's decision goes into that section in its own commit, in the maintainer's words: accept, revise with the changes listed, or stop with the reason. Step 5 does not begin before that commit exists.
 
+Continue the same record through section 8. For each later disposition, append the verification stage, case and failed assertion, failed and replacement run identifiers, applicable build identities, supporting observation and disposition. Commit the evidence update even when no product correction was needed. Later entries preserve the step 4 decision and make subsequent verification available for candidate review.
+
 **Step 5. Support and accounts.** Replace the evidence gap with owners that cite the emitter, the generator and the checks, with their limits stated; regenerate. Owner metadata is outside both the public payload and the generated source, so the build identity must be unchanged by this step. Confirm that it is; if it changed, the generated source carries more than it should.
 
 **Step 6. Candidate verification** (section 8).
@@ -368,10 +376,10 @@ Earlier pre-tag evidence does not carry over. This work changes the CLI, the bui
 1. A signed development build, and a complete default battery against it (about half an hour on this machine as of 2026-11-11).
 2. The complete `preflight/build_refusal_controls` rehearsal (about two and a quarter hours), because the generator and its build gate changed. Its nested extracted-ZIP acceptance runs the default battery, including the new live case, against a fixture that reports a `release:` identity. That run is this plan's evidence for the release form; record the identity the case saw.
 3. A reviewed applicability statement for `witness_contract/order_barrier_mutations`: it is not required if the worker wait, release store and eligibility rule are untouched, which criterion 7 and an unchanged worker identity support. State this as a judgment, not as a mechanical fact.
-4. Then prepare again: `generate_contract_stamps.py --release v0.3.8 --require-history`, changing only the two stamp tables and the snapshot history; confirm that the ordinary check gives exactly the expected missing-tag refusal; run the same prepared-commit checks as before (baselines against `v0.3.7`, footprint attribution).
+4. Confirm that the evaluation record includes the candidate battery and rehearsal results and all later dispositions, with their replacement runs. Commit any outstanding evidence update, including when no product correction was needed. Then prepare again: `generate_contract_stamps.py --release v0.3.8 --require-history`, changing only the two stamp tables and the snapshot history; confirm that the ordinary check gives exactly the expected missing-tag refusal; run the same prepared-commit checks as before (baselines against `v0.3.7`, footprint attribution).
 5. Revise the prepared notes in [RELEASE-NOTES-v0.3.8.md](../records/contract/RELEASE-NOTES-v0.3.8.md): the `request` row gains an additive command, and the verification paragraph cites the new runs with their scopes.
 
-The plan ends at that prepared, untagged state with the maintainer's review pending. Tagging, the tagged rehearsal, notarization and publication are separate decisions and are not steps here; the release inputs record the open decisions and checkpoint rules they will need. If the maintainer prefers to tag 0.3.8 without this work, steps 0 to 5 can equally sit on a branch of the `unreleased` state; nothing in the design depends on the release number.
+The plan ends at that prepared, untagged state with the maintainer's review pending. Its disposition-recording procedure covers this untagged candidate work; it does not alter the [tagged-release checkpoint rules](../records/contract/RELEASE-INPUTS.md#checkpoint-rules-the-release-procedure-does-not-state), including restrictions on working-tree writes and the correcting-commit procedure. Tagging, the tagged rehearsal, notarization and publication are separate decisions and are not steps here; the release inputs record the open decisions and checkpoint rules they will need. If the maintainer prefers to tag 0.3.8 without this work, steps 0 to 5 can equally sit on a branch of the `unreleased` state; nothing in the design depends on the release number.
 
 ## 9. Commitments to confirm
 
