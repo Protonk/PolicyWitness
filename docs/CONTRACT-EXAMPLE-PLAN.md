@@ -160,11 +160,31 @@ More than one classification can apply, and the report lists each.
 **Release consequence.** Every failing row fails the default battery and therefore release acceptance; that attempt produces no archive. The classification says where the remedy lies, not whether the release may proceed:
 
 - `contract_relationship` is a defect in the product, the contract or the checker. Fix it where it lives; a product or example fix is new shipped source and a new build.
-- `execution_unavailable` is environmental until diagnosed, under the repository's sandboxed-harness guidance. A passing rerun outside the sandbox supports that explanation and is the run that gets credited.
+- `execution_unavailable` locates missing execution evidence without assigning a cause. For an observed automation-sandbox refusal, follow the repository's sandboxed-harness guidance: rerun the same command once outside it with the artifact unchanged. A passing rerun supports that explanation and is the run that gets credited.
 - `prerequisite_unestablished` is not a PolicyWitness result. The machine cannot run this example's native check, and acceptance belongs on one that can.
-- `native_observation` is an observation about this machine or build. Retain the evidence and establish the cause before attributing it.
+- `native_observation` is an observation about this machine or build. Retain the evidence without assigning a cause; the rules below determine whether acceptance needs a correction or a fresh qualifying run.
 
 In no row is the case removed from the default battery, given a skip, or pointed at another target to obtain a pass. Changing the target changes the public example and the build identity, which is a design change for the maintainer.
+
+**Earlier runs and variation.** A failed run remains failed. The following rules determine which earlier failures a fresh qualifying run can supersede and which remain objections to acceptance. They do not change the case's assertions or statuses, add automatic retries, or replace the complete passing default battery required by section 7. Review every failed assertion separately: an interruption does not excuse an independent identity, association or ordering defect.
+
+| Earlier observation | Required disposition |
+| --- | --- |
+| One reply reports `query_first` and another `unestablished`, each supported by its own evidence | Evaluate the ordering biconditional in each reply. The difference needs no explanation for contract conformance. The latter run still fails the native ordering expectation; apply the remaining rows to that failure. |
+| A target prerequisite was not observed, the dispatcher recorded system sleep overlapping the failure, or an automation-sandbox refusal was confirmed by the prescribed unchanged-artifact rerun | Record that exclusion and credit a fresh run that establishes the prerequisites and completes without it. Explaining why the target was unavailable, the machine slept or the harness imposed the restriction is unnecessary. Use the existing dispatcher sleep record and sandboxed-harness procedure. |
+| The validator produced no answer, with a valid recorded spawn failure or timeout and honest `unestablished` ordering | A complete passing run can supersede this trial without explaining the underlying scheduling or OS cause. The earlier run supplies no successful native-observation credit. Its available evidence must satisfy the contract relationships; a generic error without evidence locating the failure does not establish this disposition. |
+| The validator answered `deny`, or the worker failed `open_read`, while the stated prerequisites were observed | Resolve the challenge to the native expectation through a justified correction to its applicability, a checker correction or a product fix. Later successes alone do not settle it. |
+| A producer identity, policy digest or step association is wrong, or `query_first` lacks supporting evidence | Resolve the product, checker or contract discrepancy before acceptance. These relationships must hold even when native execution fails. |
+
+The example must demonstrate successful execution. This work does not require an explanation of every correctly reported inability to execute. A failure without a disposition supported by this table leaves evaluation pending, including a native discrepancy that the table does not cover. Do not infer an exclusion from a later pass or classify every `execution_unavailable` result as environmental.
+
+For failures requiring a correction, the evidence needed to close the issue is bounded:
+
+- **Checker defect:** replay the retained failing input through the corrected checker and show that the affected assertion's rejected control still works. Reproducing the original live event is unnecessary.
+- **Product defect:** identify the faulty behavior and establish its correction with a focused control and the applicable verification. Explaining precisely why it occurred intermittently is unnecessary. Changes to section 4's not-touched components remain separate work.
+- **Incorrect prerequisite or expectation:** identify the concrete condition that changes applicability and how the case observes it. Passing after a reboot alone does not establish that condition.
+
+Record the failed assertion, the relevant retained observation and its disposition in the evaluation record, with any correction and replacement run. A new build identity or ten later passes is not itself a disposition; name the relevant change. Preserve original results under the repository's evidence-retention rules rather than rewriting a failed historical run as passing.
 
 ### 3.4 How conformity is independently established
 
@@ -270,9 +290,9 @@ Not touched: `build.sh`, `meson.build`, `build_contract.py`, the bundle layout, 
 
 **Step 4. Conformance.** Write the checker, its offline controls and the live case; register both; settle the final `uses` list and write the coverage statement in the suite account; add the `uses` drift rule. Done when both cases pass by `--case` against the step 3 build with a fresh `PW_TEST_OUT_DIR`, and the control case's completeness assertion covers every assertion identifier.
 
-**Evaluation point.** Stop here and present the first complete result before anything else is built on it: the emitted specimen, the version envelope, the run envelope, the refusal inputs and outputs, the checker's report with its groups, and the coverage statement. Before presenting, run the live case ten times against the same build, each with a fresh output directory, and report every commitment's result across the runs. This is the point at which the capability can be judged on its own.
+**Evaluation point.** Stop here and present the first complete result before anything else is built on it: the emitted specimen, the version envelope, the run envelope, the refusal inputs and outputs, the checker's report with its groups, and the coverage statement. Before presenting, run the live case ten times against the same build, each with a fresh output directory, and report every commitment's result and each failure's disposition under section 3.3. This is a bounded evaluation sample; do not restart it to obtain ten consecutive passes. Record subsequent corrective or replacement runs separately, including changes to their inputs, build or operating conditions. This is the point at which the capability can be judged on its own.
 
-Passing tests are necessary here and not sufficient. The maintainer decides, on these criteria.
+Passing tests are necessary here and not sufficient. Failures awaiting a disposition under section 3.3 leave evaluation pending and prevent step 5. The maintainer decides, on these criteria.
 
 *Accept, and go on to step 5, when all of these hold:*
 
@@ -280,7 +300,7 @@ Passing tests are necessary here and not sufficient. The maintainer decides, on 
 - Each row of the coverage statement is a fair test of its contract node: read side by side, the assertion would fail if the node's statement were false of this run. No `uses` entry lacks a row.
 - No expected value in the checker comes from generated material. The authored fact is read only for the packaging comparison.
 - Both identity sensitivities were observed: an example edit changes the build identity, and an unrelated contract edit does not.
-- The ten runs agree on every contract relationship and every native expectation.
+- The final build has a complete passing live case, and every earlier failed assertion has a disposition supported by section 3.3. Different values supported by each reply's evidence do not themselves fail evaluation.
 - A deliberately faulted input produces a diagnostic that names the commitment and the classification without a reader opening the checker.
 - Nothing in section 4's not-touched list changed, the free-text baseline did not grow, and no harness machinery was added.
 
@@ -289,7 +309,7 @@ Passing tests are necessary here and not sufficient. The maintainer decides, on 
 - An assertion is true but weaker than its node's statement, or compares the envelope only with itself. Strengthen it, or remove the node from `uses`.
 - The command name, usage text, exit statuses or emitted layout are awkward in use. A section 9 commitment can still be reversed here at the cost of the controller change and its tests.
 - The report blurs contract relationships and native observations, or a failure is hard to attribute from the report.
-- The ten runs differ only in a native expectation. The stated prerequisites are then incomplete; find the missing one before relying on the native group.
+- Evidence establishes a checker defect or a concrete condition requiring correction to a native expectation's applicability. Make and verify that correction under section 3.3; variation alone does not establish incomplete prerequisites.
 - The example needed an evidence gap or a deviation from this plan that the maintainer has not seen.
 
 *Stop, and reconsider the design, when:*
@@ -297,11 +317,10 @@ Passing tests are necessary here and not sufficient. The maintainer decides, on 
 - A not-touched component had to change.
 - The binding does not hold: unrelated contract edits move the build identity, or the example can change without moving it.
 - The checker could not be made independent: a relationship could be asserted only by reading generated expectations or re-running a production classifier.
-- The ten runs differ in a contract relationship. Either the relationship is not deterministic or the product has a defect; both come before this plan.
 - Execution contradicts the contract node's text. That is a contract or product defect with its own change, not a test to adjust.
 - The emission rule cannot be authored without free-text growth and the maintainer does not want the baseline raised.
 
-**Recording the decision.** In the commit that completes step 4, the executor adds an "Evaluation record" section to this plan: the build identity and commit, the run identifiers with their availability (development evidence, disposable), the coverage statement's results, the ten-run comparison, and every deviation from the plan. The maintainer's decision goes into that section in its own commit, in the maintainer's words: accept, revise with the changes listed, or stop with the reason. Step 5 does not begin before that commit exists.
+**Recording the decision.** In the commit that completes step 4, the executor adds an "Evaluation record" section to this plan: the build identity and commit, the run identifiers with their availability (development evidence, disposable), the coverage statement's results, the ten-run comparison, each failed assertion with its relevant observation and disposition, any correction and replacement run, and every deviation from the plan. The maintainer's decision goes into that section in its own commit, in the maintainer's words: accept, revise with the changes listed, or stop with the reason. Step 5 does not begin before that commit exists.
 
 **Step 5. Support and accounts.** Replace the evidence gap with owners that cite the emitter, the generator and the checks, with their limits stated; regenerate. Owner metadata is outside both the public payload and the generated source, so the build identity must be unchanged by this step. Confirm that it is; if it changed, the generated source carries more than it should.
 
@@ -318,7 +337,8 @@ Passing tests are necessary here and not sufficient. The maintainer decides, on 
 | A `uses` reference pulls a large subtree into the `request` payload | A large `public.json` diff | Expected, since references are shared content; review that the references are the intended ones |
 | The host refuses the authored example | The live case fails at admission with a `request_failure` | The example is invalid for this build. Fix the authored node; do not relax admission |
 | `/etc/hosts` is unreadable or absent | The case fails as `prerequisite_unestablished` | Section 3.3's release consequence. Do not substitute a fixture file; changing the target changes the public example |
-| The prediction is unavailable or the attempt fails with prerequisites established | The case fails as `native_observation` while contract relationships pass | A real observation about this machine or build. Retain the evidence and investigate before attributing it |
+| The prediction is unavailable with a valid recorded spawn failure or timeout | The case fails as `native_observation` while contract relationships pass | Apply section 3.3's earlier-run rules: a complete passing run can supersede the trial without diagnosing the underlying OS cause |
+| The prediction is `deny` or `open_read` fails with prerequisites established | The case fails as `native_observation` while contract relationships pass | Resolve the challenge to the native expectation under section 3.3; later successes alone do not settle it |
 | A passing checker that checks nothing | The offline controls accept a faulted envelope | The controls must reject every single fault and report combined faults |
 | The case passes against a release-form identity only by string luck | The identity-form assertions never see a `release:` value | Covered at candidate entry by the nested acceptance, whose fixture reports a release identity |
 | The dispatcher's inventory differs after the case | Artifact-integrity failure | The command wrote into the app; it must not. Fix the command |
