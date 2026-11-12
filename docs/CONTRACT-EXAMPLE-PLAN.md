@@ -77,6 +77,8 @@ The command builds its output from that constant with the functions `run` alread
 
 The emitter cannot print a document its own controller gate refuses; host admission is established by the live `run`. For this example, the emitted JSON document without its one trailing framing newline must be a fixed point of `run`'s preparation. The example carries neither selection fields nor augments. A controlled orchestration test submits the emitted file through `run` and compares the exact string captured at `RunDependencies.client` with that document, including all JSON encoding choices. It exercises the real preparation path rather than reproducing serialization in Python. The live case separately observes the delivery length and the returned evidence; those observations alone do not prove byte identity.
 
+The exact comparison uses the test-compiled controller's `test:policy-witness` identity and ends at the client callback. It establishes request preparation for that build, not exact delivery by the signed development or release binary. On the signed app, `bytes_written` records bytes accepted by the client's stdin pipe; it does not record their contents or prove receipt by the host. Keep these scopes explicit in support and evaluation records. This plan adds no production capture or transport field to close that gap.
+
 The file is hand-written Rust under `controller/src`. It is a build-identity input with no change to `build_contract.py`, no generated source and no build step. `build.sh` does not change.
 
 The module's constant is the example's only definition. `verify_request()` stays as it is; section 11 describes optional sharing of storage or extraction without unifying its apply-only behavior with this paired probe.
@@ -95,9 +97,9 @@ It takes no argument. Naming and selecting examples wait until a second example 
 | `example` with any argument | empty | Usage | 2 |
 | `example` when the binary's identity is empty or `unbound` | empty | One line stating that this build has no public identity | 2 |
 | `example` when the constant does not parse or the gate refuses on a bound build | empty | One line with the request-failure code | 2 |
-| The write to stdout fails | Whatever the system accepted, possibly an incomplete document | One line, if stderr is writable | 2 |
+| Writing or flushing stdout fails | Whatever the system accepted, possibly an incomplete document | One line, if stderr is writable | 2 |
 
-The command reads no file, resolves no app root, loads no manifest or registry and launches nothing. The whole document is rendered in memory and gated before any byte is written, and the write is one call whose failure maps to exit 2 without a panic. Exit 0 supplies the complete document. On exit 2 callers must discard stdout, even if the bytes they received happen to form a complete document. The stderr line is for a person and is not a classification interface.
+The command reads no file, resolves no app root, loads no manifest or registry and launches nothing. The whole document, including its framing newline, is rendered in memory and gated before any byte is written. Use `write_all` and an explicit flush; either failure maps to exit 2 without a panic. A short successful `write` is not completion, and a flush error must not be lost during writer destruction. Exit 0 supplies the complete document. On exit 2 callers must discard stdout, even if the bytes they received happen to form a complete document. The stderr line is for a person and is not a classification interface.
 
 The fourth row cannot occur in a build from the signed pipeline: the contract generator's check, which `build.sh` runs before compiling, refuses a constant that is not an admissible-looking object (section 4.3), and JSON encoding of the identity round-trips exactly. Parse or gate failure occurs before output and therefore prints no document; a later write failure has the separate behavior in the fifth row. The fourth row has source and unit-test support and no built-app observation.
 
@@ -141,16 +143,19 @@ No path runs from documentation into shipped code. Editing contract prose cannot
 
 ### 4.5 The round-trip case
 
-**`witness_contract/example_round_trip`** (default; requires the app). A shell case in the style of the smoke case runs the selected app directly and retains raw stdout, stderr and exit status for every invocation: `--version`, two emissions, the `run` of the emitted bytes, and each perturbed `run`. A Python checker then reads the retained files. The emitted bytes are submitted unchanged; the case does not route them through `RunCapture`. The case contains no specimen document.
+**`witness_contract/example_round_trip`** (default; requires the app). A shell case in the style of the smoke case runs the selected app directly and retains raw stdout, stderr and exit status for every invocation: `--version`, two emissions, the `run` of the emitted bytes, and each perturbed `run`. A Python checker reads the retained files before submission and after execution. The emitted bytes are submitted unchanged; the case does not route them through `RunCapture`. The case contains no specimen document.
 
 The emitted document is `S` and the run envelope for `S` is `E`. Every assertion has a stable identifier and belongs to one group.
+
+Before submitting or perturbing `S`, the case checks the emission requirements and the bounds on what it will run below, using the same checker. A failed command cannot supply the specimen even when its stdout parses. A failure at this stage is `consistency`; retain the captures and report dependent run assertions as not evaluated, without invoking `run` or inventing an `execution_unavailable` failure for a run never attempted.
 
 **Consistency.** These hold whatever the native results. A non-`finished` admitted reply can satisfy them. When no admitted reply exists, only the passage and controller-side assertions are evaluated.
 
 | Group | Demand | Intervention |
 | --- | --- | --- |
+| Emission | `--version` and both `example` invocations exit 0; both emissions have empty stderr and each stdout is one JSON object followed by exactly one LF | before |
 | Passage | `S.contract` equals `--version`'s `build.contract` and `data.contract` and the `PWContract` the case reads from the app's property list; it has a packaged `release:` or `development:` form; two emissions are byte-identical | after |
-| Passage | `S` ends with one framing newline; `E`'s `request_delivery.bytes_written` equals the byte length after removing exactly that newline. This is a delivery-length check; exact bytes at the client boundary are checked through controlled `run` orchestration | after |
+| Passage | `E`'s `request_delivery.bytes_written` equals `S`'s byte length after removing exactly its one framing newline. This is a delivery-length check; exact bytes at the client boundary are checked through controlled `run` orchestration | after |
 | Passage | `S` without `contract` equals the contract's rendered example, read from the snapshot | after |
 | What the case will run | `S` is the ordinary form with a nonempty `probe_plan` containing at least one step with both a `sandbox_check` and a read-only file attempt; every attempt is a read-only file action; no `_test_overrides`, selection fields, augments or entitlement requirement. The case refuses to run a document outside these bounds | before |
 | Admission | No `request_failure` and no `bad_request` outcome; the dossier's `policy.augmentation.original_sha256` and the reply's `policy_sha256` equal the SHA-256 of `S`'s policy source | after |
@@ -185,7 +190,7 @@ Nothing in either group states that prediction and enforcement agree.
 | Other release | `contract` set to `release:v0.0.0` | The same |
 | Unbound | `contract` set to `unbound` | The same |
 | Absent identity | `contract` removed | Code `missing_field`, the same path and expected identity |
-| Truncated document | Final byte of the object removed | Code `invalid_json`; no client capture |
+| Truncated document | Closing `}` immediately before the framing LF removed; LF retained | Exit 1, `bad_request`, code `invalid_json`, path `[]`; no client capture or runner reply |
 | Unknown member | One unknown top-level member added, identity intact | Exit 1, `bad_request` from the host with code `unknown_field` and a path naming the member; no step results |
 
 The first five stop at the controller. The last shows that a correct identity does not carry an invalid document past the host. Together they show that `run` distinguishes the example from its neighbors, which the app's acceptance of its own example cannot show.
@@ -197,7 +202,7 @@ The first five stop at the controller. The last shows that a correct identity do
 | Situation | Consistency | Native expectations | Status | Classification |
 | --- | --- | --- | --- | --- |
 | Everything holds | Evaluated, passing | Evaluated, passing | pass | none |
-| A consistency assertion fails, at emission, admission or in the reply | Evaluated, failing | Evaluated when their prerequisites hold | fail | `consistency` |
+| A consistency assertion fails, at emission, admission or in the reply | Evaluated, failing | Evaluated when an admitted reply and their prerequisites are available | fail | `consistency` |
 | The run yields no admitted reply (service unreachable, tool error) | Passage and controller-side assertions only; nothing is credited or faulted from the missing reply | Not evaluated | fail | `execution_unavailable` |
 | A target prerequisite is not observed | Evaluated; they do not depend on it | Not evaluated | fail | `prerequisite_unestablished` |
 | Prerequisites hold and a native expectation fails | Evaluated, passing | Evaluated, failing | fail | `native_observation` |
@@ -248,7 +253,8 @@ The checker and control case establish coverage as follows:
 
 | Group | Rejected controls required |
 | --- | --- |
-| Passage | The version identity differs; the property-list identity differs; the identity is not in a packaged form; two emissions differ; the framing newline is missing; `bytes_written` differs from the document's length without that newline; a member differs from the contract's rendered example |
+| Emission | A nonzero version exit; either emission exits 2 with otherwise valid stdout; nonempty emission stderr; malformed or non-object JSON; a missing or extra framing LF. Each prevents submission and leaves dependent run assertions unevaluated |
+| Passage | The version identity differs; the property-list identity differs; the identity is not in a packaged form; two emissions differ; `bytes_written` differs from the document's length without its framing newline; a member differs from the contract's rendered example |
 | What the case will run | An empty plan; a plan without a paired probe; a write action; an exec action; test overrides; a runner selector; augments; a required entitlement; phases in place of the plan |
 | Admission | A `request_failure` or `bad_request` outcome; each policy digest differing |
 | Identity | Each of the three identities differing, separately |
@@ -256,8 +262,8 @@ The checker and control case establish coverage as follows:
 | Reported against observed | The captured exit differs from `result.exit_code` |
 | Existing readers | The dedicated consumer propagation control; `disposition_integrity` not `valid`; a nonempty `disposition_issues` |
 | Native | A coherent `validator_spawn_failed` reply with a missing prediction and honest `unestablished` ordering; a prediction other than `allow`; an attempt that failed; changed target bytes or selected metadata with the envelope unchanged. With prerequisites held, each must produce `native_observation` with consistency still passing. An unobserved prerequisite must produce `prerequisite_unestablished` with native expectations not evaluated |
-| Refusals | For each refusal control: an accepted run in its place; the wrong code; a missing or wrong expected identity; a client capture on a controller-side refusal |
-| Classification | A combined-fault input reports every fault; an input with no admitted reply is `execution_unavailable` and credits or faults nothing from the reply |
+| Refusals | For each refusal control: an accepted run in its place; the wrong code or path; a missing or wrong expected identity where section 4.5 requires one; a client capture on a controller-side refusal |
+| Classification | A combined-fault input reports every fault; an attempted run with no admitted reply is `execution_unavailable` and credits or faults nothing from the reply |
 
 The coherent `validator_spawn_failed` control has matching reported and captured exits of 1 and a clean consumer reading. It fails the native completion and prediction expectations without failing consistency. A second control changes only its captured exit to 0 and must add the reported-against-observed diagnostic under `consistency` while retaining the native diagnostics. This establishes that a nonzero exit alone is not a consistency fault.
 
@@ -270,7 +276,9 @@ Two things rest on other evidence, and the suite account says so:
 
 **Consumer result consistency.** Extend `consumer.validate` for admitted runner replies: `result.normalized_outcome` equals the reply's outcome, `result.ok` is true exactly for `finished`, and `result.exit_code` is 0 for `finished` and 1 otherwise. Apply this behind the existing version and reply-admission boundaries; a body retained after admission failed cannot supply the mapping, and controller failures without an admitted reply keep their own result rules. Add controls to `blackbox_e2e/checker_controls` for valid finished and non-finished admitted replies, each envelope result field changed independently, and combined faults alongside existing record errors. Keep the refusal and unsupported-body controls passing. These are consumer assertions; the example checker only propagates the consumer's result and compares the reported exit with the process exit it observed.
 
-The new rule reaches every existing reader of an envelope, not only this plan's cases: 35 tracked test files call the consumer's readers. Constructed envelopes need attention first. `envelope_skeleton` in [blackbox.py](../tests/lib/blackbox.py) sets `result.ok` and `result.exit_code` from an `ok` argument that defaults to true whatever the reply's outcome, and it has five call sites, three of which pass `ok` explicitly. Derive the skeleton's result from the reply's outcome, or correct each caller, so that a constructed envelope states a coherent result unless its control is about that incoherence. A constructed control that fails the new rule is a fixture to correct, with the correction stated; it is not a reason to narrow the rule.
+Determine applicability from the version, transport and reply-admission evidence independently of the result fields being checked. Changing only `result.normalized_outcome` to `tool_error` or a refusal spelling must not disable the relationship. Require all three result fields with their proper JSON types; controls remove them, set them to null and substitute booleans for integers or integers for booleans. Distinguish admission failures from later record errors: a retained reply rejected for its compiled-profile context supplies no outcome mapping, while an admitted reply with an unrelated record error must still expose an independent result mismatch. Preserve both diagnostics in that combined control. Controls also cover absent replies and rejected client captures without deriving outcomes from their retained bytes.
+
+The new rule reaches every existing reader of an envelope, not only this plan's cases: 35 tracked test files call the consumer's readers. Constructed envelopes need attention first. `envelope_skeleton` in [blackbox.py](../tests/lib/blackbox.py) sets `result.ok` and `result.exit_code` from an `ok` argument that defaults to true whatever the reply's outcome, and it has five call sites, three of which pass `ok` explicitly. Derive the skeleton's result from the reply's outcome, or correct each caller, so that a constructed envelope states a coherent result unless its control is about that incoherence. Correct accidental fixture mismatches and state the correction; preserve deliberate result faults and require their diagnostics. Do not normalize the result in `consumer.validate` or repair a control after its deliberate mutation. A fixture correction is not a reason to narrow the rule.
 
 **Cross-build controls** extend [cli_contract.rs](../controller/integration/cli_contract.rs), which already builds isolated non-test controllers with supplied and absent stamps. The unbound build's `example` exits 2 with empty stdout. The build given another identity emits that identity, and the signed app's `run` refuses the resulting document with `unsupported_contract` and its own expected identity. The same file takes the usage rows of section 4.2 against the signed app.
 
@@ -280,14 +288,14 @@ The new rule reaches every existing reader of an envelope, not only this plan's 
 - After regeneration, the rendered contract, the `request` surface payload and `build_contract.identity` all differ.
 - The extraction refuses, naming the source: a missing symbol; two definitions; a constant that is not a raw string; a value that is not a JSON object; a `contract` member; `_test_overrides`; a selection key; an unknown top-level member.
 
-**Unit tests** in the controller cover the renderer under several identity spellings, including one that needs escaping; the gate's typed refusals for an unbound identity and an unparsable constant; a failed write mapped to exit 2; and dispatch. The gate takes the document and the expected identity as parameters, so the tests match the returned reason and not a message. Extend the existing controlled orchestration tests in `run_flow.rs` to write the emitted example as the input file, call the actual `run` path, and capture the exact request at `RunDependencies.client`. It must equal the emitted bytes after removing exactly one trailing newline. This checks the chosen example through real augmentation resolution and selector removal. It neither constructs another specimen nor reimplements the Rust serialization in another language; the app root, manifest and client remain controlled as in the existing tests.
+**Unit tests** in the controller cover the renderer under test, development and release identities and one that needs escaping; the gate's typed refusals for an unbound identity and an unparsable constant; and dispatch. Writer controls cover short writes that eventually complete, a failure after partial output, and a flush failure after all bytes have been accepted; only complete output with a successful flush exits 0. The gate takes the document and the expected identity as parameters, so the tests match the returned reason and not a message. Extend the existing controlled orchestration tests in `run_flow.rs` to write the emitted example as the input file, call the actual `run` path, and capture the exact request at `RunDependencies.client`. It must equal the emitted bytes after removing exactly one trailing newline. This checks the chosen example through real augmentation resolution and selector removal under `test:policy-witness`; rendering other identity spellings does not extend that orchestration evidence to signed builds. It neither constructs another specimen nor reimplements the Rust serialization in another language; the app root, manifest and client remain controlled as in the existing tests.
 
 ### 4.9 Test boundary
 
 | Stage | What is checked | Equipment | Home |
 | --- | --- | --- | --- |
 | Generation | Extraction and its refusals, stale rendering, stamp and identity sensitivity | Python | `source_drift` (existing cases) |
-| Compilation | Rendering, exact request bytes at the controlled client boundary through `run`, gate, failed write, dispatch | Cargo | `unit/rust.unit`, `unit/rust.fmt` |
+| Compilation | Rendering, exact request bytes at the controlled client boundary through `run` under the test identity, gate, write and flush behavior, dispatch | Cargo | `unit/rust.unit`, `unit/rust.fmt` |
 | Packaging | No new layout or build step. Existing gates: generator check before compilation, identity recomputation before signing | Build toolchain and identity | `make build`; `preflight/build_refusal_controls` at candidate entry |
 | Signed-app inspection | Usage rows, cross-build controls | Signed app; Cargo for the isolated builds; no XPC | `integration/cli.integration` |
 | Checker | Matched rejected controls and completeness | Python | `witness_contract/example_round_trip_controls` |
@@ -374,7 +382,7 @@ Continue the same record through section 9. For each later disposition, append t
 | The prediction is `deny` or `open_read` fails with prerequisites established | The case fails as `native_observation` while consistency passes | Resolve the challenge to the native expectation under section 4.6; later successes alone do not settle it |
 | A passing checker that checks nothing or rejects for the wrong reason | The offline controls accept a faulted input or its diagnostics differ from the expected set | Match each control's intended diagnostics and classification before crediting coverage; preserve independent combined faults and check unevaluated groups |
 | The case passes against a release-form identity only by string luck | The identity-form assertions never see a `release:` value | Covered at candidate entry by the nested acceptance, whose fixture reports a release identity |
-| The consumer's new result rule fails cases outside this plan | Constructed controls or live cases elsewhere in the battery report a result that disagrees with the reply's outcome | For a constructed envelope, correct the fixture or `envelope_skeleton` and state the correction. For a live envelope, it is a product finding about result assembly and comes before this plan |
+| The consumer's new result rule fails cases outside this plan | Constructed controls or live cases elsewhere in the battery report a result that disagrees with the reply's outcome | First establish that the reply was admitted and the reader applied the rule correctly. Correct accidental fixture mismatches and preserve deliberate faults under section 4.8. A confirmed mismatch in a live admitted reply is a product finding about result assembly and comes before this plan |
 | The checker grows back into a second specification | New assertions about ordering, vocabulary or outcome mapping appear in it | They belong to the consumer. Add them there with its controls, or not at all |
 | The dispatcher's inventory differs after the case | Artifact-integrity failure | The command wrote into the app; it must not. Fix the command |
 
