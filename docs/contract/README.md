@@ -6,7 +6,7 @@ fields, rules, conditions, effects, examples and support. Structured facts
 sit beside the prose in `contract` fences.
 
 `tree.py` parses the tree through the repository Markdown reader and derives
-the document, field tables, applicability, findings and known-gap views.
+the document, field entries, applicability, findings and known-gap views.
 `record_definitions.py` imports existing field declarations for the authored
 meanings. The identity surface declares public coverage, requiring every
 imported record to have one authored subject and every field a meaning.
@@ -142,8 +142,17 @@ An evidence gap can explicitly cover a subtree. Metadata stays separate
 from stamped public content, while public gaps, definitions, examples,
 field meanings and relationship facts enter the public snapshot.
 
-The renderer joins field meanings to public JSON types and presence,
-compacts condition/effect/outcome siblings into tables, and derives
+The renderer joins field meanings to public JSON types and presence in
+record-local lists. A bare type requires its key; `T?` omits an absent field,
+while `T ∪ null` keeps its key and represents absence as null. These signatures
+apply to the entire field, including a collection; input and serialization
+exceptions remain explicit. The public snapshot retains its full type and
+presence descriptions independently of this display notation.
+
+Expressions use the existing checked function names with their complete
+operands, grouping and lists. The generated reading key defines every form,
+including quantifier scope, effect operands and ordering. Full paths remain
+visible. The renderer compacts condition/effect/outcome siblings into tables and derives
 applicability, controller-finding and known-gap views. A subordinate row
 follows its parent row in the same table and carries the parent's title.
 The controller index selects checks whose `who` references
@@ -156,7 +165,8 @@ performs. Operand paths, assigned values, free effects and consequence prose
 remain at the linked rule and rows. The entry point fills
 the surface-table marker after the opening identity material. Statistics
 report rendered lines and words, table content, authored prose, field
-meanings and free-text relationships separately.
+meanings and free-text relationships separately. Field-entry and rule-table
+counts are distinct; Markdown word counts include list/table scaffolding.
 
 ## Quantified relationships and decision cases
 

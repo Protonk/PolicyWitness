@@ -12,6 +12,25 @@ sections hold and when they are updated; a check-in reads them first.
 
 ## Standing
 
+**Second reduction applied at the same pre-tag boundary.** The contract now
+uses record-local field lists and a complete reading key for compact expression
+and presence notation. It has 5,227 lines and 63,816 Markdown-counted words,
+from 5,482 and 73,314; visible words fall from 61,976 to 57,175. There is no
+companion, canonical change or removed contractual proposition. All 1,004 field
+meanings and 145 support blocks remain. Independent preservation review found
+no remaining defect after correcting one new notation explanation.
+`records/contract/SECOND-REDUCTION-ACCOUNT.md` separates formatting elimination,
+compression, declined prototypes, evidence scope and final verification.
+Final verification `20261112T150401Z_58ea9f44` passed all twelve selected
+cases: ten source-drift cases plus build-entry refusal and release/publication
+controls. It has no skips, unrun cases, harness errors or recorded sleep. The
+first selection remains failed on sandbox-refused builder queries. Prospective
+outputs reproduce exactly, canonical and shape content is unchanged, and the
+ordinary strict check refuses only the absent `v0.3.8` tag. The revised account
+records why the prior native and ZIP rehearsals remain applicable in their
+stated scopes. The checkout stops before tagging and the tagged rehearsal.
+The earlier standing paragraphs below describe their own prepared states.
+
 **First reduction applied before the tag.** At the maintainer's direction the
 prepared contract was reduced at the pre-tag boundary, so the reduced account
 becomes the `v0.3.8` surface. `records/contract/FIRST-REDUCTION-ACCOUNT.md`

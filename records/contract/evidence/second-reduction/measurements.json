@@ -1,0 +1,163 @@
+{
+  "baseline_commit": "6f65612b",
+  "main_before": {
+    "lines": 5482,
+    "words": 73314,
+    "bytes": 725572,
+    "visible_words": 61976,
+    "sha256": "c11f7170abc31fc5d7a7a545d4d7e18ce84c8eb175a28282a55d2020504385ec"
+  },
+  "main_after": {
+    "lines": 5227,
+    "words": 63816,
+    "bytes": 706584,
+    "visible_words": 57175,
+    "sha256": "4d8e40e1d7a4fba1df60b8f12a7d28fdebd1bd80ad08564af83db2eca6e304d7"
+  },
+  "stages": {
+    "baseline_body": {
+      "lines": 5458,
+      "words": 73090,
+      "bytes": 724287,
+      "visible_words": 61858,
+      "sha256": "2a6d088c3615c3a9ce16769f9349b7687731dc742eed1ad364da4dbf0387410a"
+    },
+    "compact_expressions": {
+      "lines": 5458,
+      "words": 70320,
+      "bytes": 723107,
+      "visible_words": 59088,
+      "sha256": "b53656fc332ee7a493dac5741cccd38798e3b3be0396833f83ca67734c0832a4"
+    },
+    "compact_signatures": {
+      "lines": 5458,
+      "words": 68690,
+      "bytes": 710441,
+      "visible_words": 57458,
+      "sha256": "0bf80e35bac95a1fa9969a78d7d339d8ab1a5243a9f777952181007250dd1cba"
+    },
+    "field_lists_without_key": {
+      "lines": 5142,
+      "words": 62992,
+      "bytes": 701175,
+      "visible_words": 56510,
+      "sha256": "a24d70a7be50d18224f853e097bf5f39f035f17d2b5be71ab406c09f52f62371"
+    },
+    "with_key": {
+      "lines": 5203,
+      "words": 63592,
+      "bytes": 705299,
+      "visible_words": 57057,
+      "sha256": "448f9614258dddc301af5d121a3d90a8866fc64596007c94c0e207a6a1f9029e"
+    }
+  },
+  "field_tables_replaced": 158,
+  "fields": 1004,
+  "canonical": [
+    {
+      "surface": "identity",
+      "public_equal": true,
+      "surface_hash": "132e5cea282f54a234b6810d62201f0d6a28866eb3d8a44f4e091070192de057"
+    },
+    {
+      "surface": "request",
+      "public_equal": true,
+      "surface_hash": "a338f8afc75e3e0e8f7190f0524d7db5de39241db4dc21822bd12bbb53bf1716"
+    },
+    {
+      "surface": "policy",
+      "public_equal": true,
+      "surface_hash": "367fb8921003855bf13b952bbb2d8aa24449aa799f10a697fb52f7315ce21536"
+    },
+    {
+      "surface": "probes",
+      "public_equal": true,
+      "surface_hash": "ce47a073f5a83dcb3429f5da4f9f4788a6e2260c8c5540deeccad022e6be8389"
+    },
+    {
+      "surface": "actors",
+      "public_equal": true,
+      "surface_hash": "d927dd879619dc4d7714e3b4247750848953f92f539d7ceb1ea78983207e96fb"
+    },
+    {
+      "surface": "extensions",
+      "public_equal": true,
+      "surface_hash": "2fc74c5340c48816fdab806dc7082b78dc9fdc4fcc32ceede90cac13945c6004"
+    },
+    {
+      "surface": "refusals",
+      "public_equal": true,
+      "surface_hash": "b893ec96b764ff5c430fbacb1d588b525eb49f1650573bcc258ac8228ac076a8"
+    },
+    {
+      "surface": "transport",
+      "public_equal": true,
+      "surface_hash": "2db02aede9b2997e918815d79ec23091dbf320b4263ed5ca57905627ef88769f"
+    },
+    {
+      "surface": "wire",
+      "public_equal": true,
+      "surface_hash": "8a7df9bd8044f43f909e32601b7b53a821ed1799e96c033c16a5b35a4ef75c49"
+    },
+    {
+      "surface": "reply",
+      "public_equal": true,
+      "surface_hash": "2f14c645cef877d11d878037cf429cb2b58c43707adf636a493488f01eb41e1b"
+    },
+    {
+      "surface": "steps",
+      "public_equal": true,
+      "surface_hash": "808df174d8d82d3ddddd8ba1c372c62633e4678a0f40747abf0dd874db876cd3"
+    },
+    {
+      "surface": "lifecycle",
+      "public_equal": true,
+      "surface_hash": "b8e5295c40372e2497aa96015f63f2924070e6b48040cf060ca329cc4a6e3831"
+    },
+    {
+      "surface": "actor_evidence",
+      "public_equal": true,
+      "surface_hash": "23bd3d981a90c3778341f2f31c295c5d671888d8a5086e5786660f492c2e32c2"
+    },
+    {
+      "surface": "equipment",
+      "public_equal": true,
+      "surface_hash": "0f13c7eed940b8bf272f264f7d031388aa0e89eb8ee08528e6ca8406eec42ef8"
+    },
+    {
+      "surface": "profile",
+      "public_equal": true,
+      "surface_hash": "67a05b38eac099713a42b0f9ba50483180049a0d6a879c2fb608af506937f3be"
+    },
+    {
+      "surface": "envelope",
+      "public_equal": true,
+      "surface_hash": "398f6afe1fbf378bf372e1768d26eb49fd34c31d856ee00bc4d257bb80c8233c"
+    },
+    {
+      "surface": "diagnostics",
+      "public_equal": true,
+      "surface_hash": "2049155d8c07ec769422fe2cb16eeea4f782ed92b1284e0e85950126e3738251"
+    },
+    {
+      "surface": "dossier",
+      "public_equal": true,
+      "surface_hash": "be2ff12322d4afc63fd6e530adb6477739aaa5deb603e3587d65a2a6b5817b08"
+    },
+    {
+      "surface": "installation",
+      "public_equal": true,
+      "surface_hash": "11eff1e94a9ccc3638c8dcbf3e9c0e1b8826f779f229b0b8d24f46c9de5226bb"
+    }
+  ],
+  "companion": null,
+  "authored_surfaces_before_and_after": {
+    "lines": 13790,
+    "words": 63146,
+    "bytes": 629372,
+    "visible_words": 58348,
+    "sha256": "0bd0ff62083c84f0523c60cc9bcd4b05dd2ed6e2b046ff4e5e3230293e62f9cc"
+  },
+  "authored_body_words": 13323,
+  "field_meaning_words": 14397
+}

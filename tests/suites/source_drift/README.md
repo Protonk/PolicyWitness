@@ -591,6 +591,10 @@ The authoring controls exercise legal node nesting, field joins, typed
 references, applicability narrowing, explicit check order, effect scope,
 evidence grades and the free-text ratchet. They distinguish retained records
 from withheld assessments and public meanings from supporting metadata.
+Presentation controls preserve every field anchor and meaning, nullable versus
+omitted fields and serialization exceptions, field-local obligations, expression
+grouping and complete operands. The reading key defines the compact forms;
+first-match order, narrowed contexts and subordinate scopes retain their controls.
 The record-reader controls mutate source declarations and serialization forms;
 unrecognized forms refuse instead of supplying guessed types. Retained-reader
 controls use independent preimages for legacy regions and public snapshots,

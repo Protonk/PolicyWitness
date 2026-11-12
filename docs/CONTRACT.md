@@ -219,13 +219,11 @@ Record `build_stamp`: `rust.BuildStamp`.
 Every controller and compiler-helper envelope carries these string fields
 under `build`. They identify the emitting binary's compiled context.
 
-| Field | JSON type and presence | Meaning |
-| --- | --- | --- |
-| <a id="contract-identity-build-contract"></a>`contract` | string; required | The public identity embedded in the emitting binary. Receiving boundaries use the exact value according to their identity-admission rule. Uses [Exact admission identity](#contract-identity-public-contract), [Release and development forms](#contract-identity-public-forms), [Direct compilation contexts](#contract-identity-public-direct). |
-| <a id="contract-identity-build-version"></a>`version` | string; required | The packaged build's version string. `build.sh` uses nonempty `PW_VERSION` when supplied; otherwise it takes the leading three-part version from its Git describe value, falling back to `0.0.0`. Direct Rust compilation reads `PW_BUILD_VERSION`, falling back to `unknown` when absent. |
-| <a id="contract-identity-build-number"></a>`number` | string; required | The build-number string. `build.sh` uses nonempty `PW_BUILD_NUMBER` when supplied, otherwise the Git commit count, falling back to `0`. Direct Rust compilation reads `PW_BUILD_NUMBER`, falling back to `unknown` when absent. |
-| <a id="contract-identity-build-describe"></a>`describe` | string; required | The descriptive source coordinate compiled into the producer. `build.sh` uses `git describe --tags --match 'v[0-9]*' --always --dirty`, falling back to `unknown`. Direct Rust compilation reads `PW_BUILD_DESCRIBE` with an absent value falling back to `unknown`. |
-| <a id="contract-identity-build-commit"></a>`commit` | string; required | The Git HEAD object name observed by the packaged build, or `unknown` when unavailable. Direct Rust compilation reads `PW_BUILD_COMMIT` with an absent value falling back to `unknown`. Describe and commit report provenance; identity admission compares the contract field. |
+- <a id="contract-identity-build-contract"></a>**`contract`** (string): The public identity embedded in the emitting binary. Receiving boundaries use the exact value according to their identity-admission rule. Uses [Exact admission identity](#contract-identity-public-contract), [Release and development forms](#contract-identity-public-forms), [Direct compilation contexts](#contract-identity-public-direct).
+- <a id="contract-identity-build-version"></a>**`version`** (string): The packaged build's version string. `build.sh` uses nonempty `PW_VERSION` when supplied; otherwise it takes the leading three-part version from its Git describe value, falling back to `0.0.0`. Direct Rust compilation reads `PW_BUILD_VERSION`, falling back to `unknown` when absent.
+- <a id="contract-identity-build-number"></a>**`number`** (string): The build-number string. `build.sh` uses nonempty `PW_BUILD_NUMBER` when supplied, otherwise the Git commit count, falling back to `0`. Direct Rust compilation reads `PW_BUILD_NUMBER`, falling back to `unknown` when absent.
+- <a id="contract-identity-build-describe"></a>**`describe`** (string): The descriptive source coordinate compiled into the producer. `build.sh` uses `git describe --tags --match 'v[0-9]*' --always --dirty`, falling back to `unknown`. Direct Rust compilation reads `PW_BUILD_DESCRIBE` with an absent value falling back to `unknown`.
+- <a id="contract-identity-build-commit"></a>**`commit`** (string): The Git HEAD object name observed by the packaged build, or `unknown` when unavailable. Direct Rust compilation reads `PW_BUILD_COMMIT` with an absent value falling back to `unknown`. Describe and commit report provenance; identity admission compares the contract field.
 
 **Support: [check read](#contract-support-grades) for [Build identification](#contract-identity-build) and its descendants.** Envelope build fields are strings, contract is embedded, and the version command's reported contract matches the independently read candidate plist. Context: Read build shell derivation and shared Rust serializer; read unit checks and integration command/plist assertions. Evidence limit: Integration checks populated packaged provenance; override and missing-Git fallback branches have source support. Source: [json_contract.rs](../controller/src/json_contract.rs): `build_stamp`; [build.sh](../build.sh): `# ---- Build stamp`, `stamp_info_plist`. Check: [json_contract.rs](../controller/src/json_contract.rs): `every_envelope_carries_a_complete_build_stamp`, `public_identity_is_in_the_build_frame`; [cli_contract.rs](../controller/integration/cli_contract.rs): `version_flag_reports_build_stamp_and_contract`.
 
@@ -237,11 +235,9 @@ Record `producer`: `PWProducer`.
 The host's typed reply carries this producer record. Each field comes from the
 host's compiled build context.
 
-| Field | JSON type and presence | Meaning |
-| --- | --- | --- |
-| <a id="contract-identity-producer-contract"></a>`contract` | string; required | The host's public identity, independently compared by a receiver before the reply's execution records supply interpretations. Uses [Exact admission identity](#contract-identity-public-contract), [Release and development forms](#contract-identity-public-forms), [Direct compilation contexts](#contract-identity-public-direct). |
-| <a id="contract-identity-producer-describe"></a>`describe` | string; required | The host build's descriptive Git coordinate, or `unknown` in the ordinary unbound Swift build context. Packaged context generation supplies the observed build description. Uses [Describe](#contract-identity-build-describe). |
-| <a id="contract-identity-producer-commit"></a>`commit` | string; required | The host build's observed Git HEAD object name, or `unknown` when the compiled context has no such observation. Identity admission uses `contract`; this field retains the host's provenance. Uses [Commit](#contract-identity-build-commit). |
+- <a id="contract-identity-producer-contract"></a>**`contract`** (string): The host's public identity, independently compared by a receiver before the reply's execution records supply interpretations. Uses [Exact admission identity](#contract-identity-public-contract), [Release and development forms](#contract-identity-public-forms), [Direct compilation contexts](#contract-identity-public-direct).
+- <a id="contract-identity-producer-describe"></a>**`describe`** (string): The host build's descriptive Git coordinate, or `unknown` in the ordinary unbound Swift build context. Packaged context generation supplies the observed build description. Uses [Describe](#contract-identity-build-describe).
+- <a id="contract-identity-producer-commit"></a>**`commit`** (string): The host build's observed Git HEAD object name, or `unknown` when the compiled context has no such observation. Identity admission uses `contract`; this field retains the host's provenance. Uses [Commit](#contract-identity-build-commit).
 
 **Support: [source read](#contract-support-grades) for [Host producer identification](#contract-identity-producer) and its descendants.** PWProducer.current copies the compiled contract/describe/commit context; bound reply decoding compares producer.contract before decoding descendants. Context: Read the complete producer declaration/current constructor, generated Swift context producer, ordinary fallback context and Rust bound-frame path. Evidence limit: Source reading only; component signing, live peer association and a fresh packaged producer run require their respective evidence. Source: [PWRunnerAPI.swift](../runner/Sources/PWRunnerCore/PWRunnerAPI.swift): `PWProducer`; [build_contract.py](../docs/build_contract.py): `swift`; [porcelain.rs](../controller/src/porcelain.rs): `decode_bound`.
 
@@ -268,6 +264,8 @@ host's compiled build context.
 | `transport` | Reservation, invocation and client capture | v0.3.8 |
 | `wire` | Binary response primitives and validator record transport | v0.3.8 |
 <!-- END GENERATED CONTRACT STAMPS -->
+
+Field entries and rules use the [notation below](#contract-notation).
 
 ## Definitions
 
@@ -519,16 +517,14 @@ Record `specimen`: `PWRunnerRunSpec`.
 
 The host request objects have closed field sets. Parameter-map keys and caller labels are data within their own bounds.
 
-| Field | JSON type and presence | Meaning |
-| --- | --- | --- |
-| <a id="contract-request-specimen-contract"></a>`contract` | string; as defined below | Required non-null string asserting the exact public contract identity. The controller checks it before selector parsing and augmentation; the host checks it before other request fields. Obtain the current value from the packaged version envelope. `unbound` is refused. Uses [Exact admission identity](#contract-identity-public-contract). |
-| <a id="contract-request-specimen-specimen_id"></a>`specimen_id` | string; as defined below | Required non-null string caller label, echoed when it fits <!-- span limits.specimen_id.value_unit -->255 UTF-8 bytes<!-- /span -->. It may be empty. Its identity is independent of the worker PID or an actor ID. |
-| <a id="contract-request-specimen-run_kind"></a>`run_kind` | string; as defined below | Optional caller label, bounded by <!-- span limits.request_label.value_unit -->63 UTF-8 bytes<!-- /span -->. Omission and null have the same meaning; it selects no execution mode. Default: `null`. |
-| <a id="contract-request-specimen-policy"></a>`policy` | [Worker policy input](#contract-policy-spec); as defined below | Policy for the ordinary form. With no non-null `actors`, the policy object is required. In the actor form a non-null top-level policy is refused; each actor declares its own sandbox mode and policy. |
-| <a id="contract-request-specimen-probe_plan"></a>`probe_plan` | array of [Paired probe](#contract-probes-step); as defined below | Ordinary paired probes, including an empty array for apply-only execution. Exactly one of this field and `phases` must be non-null in the ordinary form. The host represents this plan as the `main` phase. |
-| <a id="contract-request-specimen-phases"></a>`phases` | array of [Phase declaration](#contract-actors-phase); as defined below | Ordered phase declarations. The ordinary form requires a nonempty array, forbids actor ownership, termination dependencies and extension actions, and uses one worker across its phases. The actor form requires phases and forbids a non-null `probe_plan`. |
-| <a id="contract-request-specimen-actors"></a>`actors` | array of [Actor declaration](#contract-actors-actor); as defined below | A non-null actor array selects the actor form; an empty array is refused. Each declared actor has its own fresh worker and at least one declared visit. Omission or null selects the ordinary form. |
-| <a id="contract-request-specimen-_test_overrides"></a>`_test_overrides` | [Execution overrides](#contract-request-overrides); as defined below | Optional execution controls accepted by the host request decoder. Each declared control retains its stated scope and meaning; unknown override fields are refused. |
+- <a id="contract-request-specimen-contract"></a>**`contract`** (string; as defined below): Required non-null string asserting the exact public contract identity. The controller checks it before selector parsing and augmentation; the host checks it before other request fields. Obtain the current value from the packaged version envelope. `unbound` is refused. Uses [Exact admission identity](#contract-identity-public-contract).
+- <a id="contract-request-specimen-specimen_id"></a>**`specimen_id`** (string; as defined below): Required non-null string caller label, echoed when it fits <!-- span limits.specimen_id.value_unit -->255 UTF-8 bytes<!-- /span -->. It may be empty. Its identity is independent of the worker PID or an actor ID.
+- <a id="contract-request-specimen-run_kind"></a>**`run_kind`** (string; as defined below): Optional caller label, bounded by <!-- span limits.request_label.value_unit -->63 UTF-8 bytes<!-- /span -->. Omission and null have the same meaning; it selects no execution mode. Default: `null`.
+- <a id="contract-request-specimen-policy"></a>**`policy`** ([Worker policy input](#contract-policy-spec); as defined below): Policy for the ordinary form. With no non-null `actors`, the policy object is required. In the actor form a non-null top-level policy is refused; each actor declares its own sandbox mode and policy.
+- <a id="contract-request-specimen-probe_plan"></a>**`probe_plan`** (array of [Paired probe](#contract-probes-step); as defined below): Ordinary paired probes, including an empty array for apply-only execution. Exactly one of this field and `phases` must be non-null in the ordinary form. The host represents this plan as the `main` phase.
+- <a id="contract-request-specimen-phases"></a>**`phases`** (array of [Phase declaration](#contract-actors-phase); as defined below): Ordered phase declarations. The ordinary form requires a nonempty array, forbids actor ownership, termination dependencies and extension actions, and uses one worker across its phases. The actor form requires phases and forbids a non-null `probe_plan`.
+- <a id="contract-request-specimen-actors"></a>**`actors`** (array of [Actor declaration](#contract-actors-actor); as defined below): A non-null actor array selects the actor form; an empty array is refused. Each declared actor has its own fresh worker and at least one declared visit. Omission or null selects the ordinary form.
+- <a id="contract-request-specimen-_test_overrides"></a>**`_test_overrides`** ([Execution overrides](#contract-request-overrides); as defined below): Optional execution controls accepted by the host request decoder. Each declared control retains its stated scope and meaning; unknown override fields are refused.
 
 <a id="contract-request-specimen-hold"></a>
 ##### Hold and deliver the selected request
@@ -556,13 +552,13 @@ Native C-string inputs also refuse embedded NUL. A paired query and attempt cons
 
 | Item | Requirement or consequence |
 | --- | --- |
-| <a id="contract-request-specimen-capacity-ordinary_source"></a>Ordinary source bytes | Applies when (`specimen.actors` is absent and `specimen.policy` is present and `specimen.policy.sbpl_source` is present). Requires UTF-8 byte length of `specimen.policy.sbpl_source` ≤ `262,143 UTF-8 bytes` (`policy_source`) . |
-| <a id="contract-request-specimen-capacity-actor_source"></a>Actor source bytes | Binding `a`: entry in `specimen.actors`. For each `a`. Applies when (`specimen.actors` is present and `specimen.actors[a].sandbox.policy` is present and `specimen.actors[a].sandbox.policy.sbpl_source` is present). Requires UTF-8 byte length of `specimen.actors[a].sandbox.policy.sbpl_source` ≤ `262,143 UTF-8 bytes` (`policy_source`) . |
-| <a id="contract-request-specimen-capacity-flat_actions"></a>Flat action count | Applies when (`specimen.actors` is absent and `specimen.probe_plan` is present). Requires count of `specimen.probe_plan` ≤ `256 items` (`probe_steps`) . |
-| <a id="contract-request-specimen-capacity-phase_actions"></a>Phased action count | Binding `p`: entry in `specimen.phases`. Applies when `specimen.phases` is present. Requires sum over `p` of count of `specimen.phases[p].actions` ≤ `256 items` (`probe_steps`) . |
-| <a id="contract-request-specimen-capacity-ordinary_phases"></a>Ordinary phase count | Applies when (`specimen.actors` is absent and `specimen.phases` is present). Requires count of `specimen.phases` ≤ `8 items` (`phase_count`) . |
-| <a id="contract-request-specimen-capacity-actor_phases"></a>Actor phase count | Applies when (`specimen.actors` is present and `specimen.phases` is present). Requires count of `specimen.phases` ≤ `16 items` (`actor_phases`) . |
-| <a id="contract-request-specimen-capacity-failure"></a>Refusal consequence | On failure, performs [Stop children and preserve safe metadata](#contract-refusals-request-consequence) for `request`. |
+| <a id="contract-request-specimen-capacity-ordinary_source"></a>Ordinary source bytes | Applies when (absent(`specimen.actors`) and present(`specimen.policy`) and present(`specimen.policy.sbpl_source`)). Requires utf8_length(`specimen.policy.sbpl_source`) ≤ `262,143 UTF-8 bytes` (`policy_source`) . |
+| <a id="contract-request-specimen-capacity-actor_source"></a>Actor source bytes | Binding `a`: entry in `specimen.actors`. For each `a`. Applies when (present(`specimen.actors`) and present(`specimen.actors[a].sandbox.policy`) and present(`specimen.actors[a].sandbox.policy.sbpl_source`)). Requires utf8_length(`specimen.actors[a].sandbox.policy.sbpl_source`) ≤ `262,143 UTF-8 bytes` (`policy_source`) . |
+| <a id="contract-request-specimen-capacity-flat_actions"></a>Flat action count | Applies when (absent(`specimen.actors`) and present(`specimen.probe_plan`)). Requires count(`specimen.probe_plan`) ≤ `256 items` (`probe_steps`) . |
+| <a id="contract-request-specimen-capacity-phase_actions"></a>Phased action count | Binding `p`: entry in `specimen.phases`. Applies when present(`specimen.phases`). Requires sum_over(`p`, count(`specimen.phases[p].actions`)) ≤ `256 items` (`probe_steps`) . |
+| <a id="contract-request-specimen-capacity-ordinary_phases"></a>Ordinary phase count | Applies when (absent(`specimen.actors`) and present(`specimen.phases`)). Requires count(`specimen.phases`) ≤ `8 items` (`phase_count`) . |
+| <a id="contract-request-specimen-capacity-actor_phases"></a>Actor phase count | Applies when (present(`specimen.actors`) and present(`specimen.phases`)). Requires count(`specimen.phases`) ≤ `16 items` (`actor_phases`) . |
+| <a id="contract-request-specimen-capacity-failure"></a>Refusal consequence | On failure, perform([Stop children and preserve safe metadata](#contract-refusals-request-consequence), `request`). |
 
 <a id="contract-request-specimen-apply_only"></a>
 ##### Apply-only specimen
@@ -589,13 +585,11 @@ Record `options`: `ControllerSelectionOptions`.
 
 These fields extend the saved-file root at the controller entry. The controller strips all five before client delivery. A direct XPC request carrying them reaches the host unknown-field refusal.
 
-| Field | JSON type and presence | Meaning |
-| --- | --- | --- |
-| <a id="contract-request-options-runner"></a>`runner` | [Nested runner selector](#contract-request-selector); null when absent | Optional nested selector object. Null means absent. Unknown nested keys are refused. |
-| <a id="contract-request-options-runner_id"></a>`runner_id` | string; null when absent | Legacy registry ID selector. Null means absent; a non-string value refuses even when nested `runner.id` would override it. |
-| <a id="contract-request-options-runner_service"></a>`runner_service` | string; null when absent | Legacy explicit Mach service selector. Null means absent; a non-string value refuses before nested precedence is applied. |
-| <a id="contract-request-options-required_entitlements"></a>`required_entitlements` | array of string; null when absent | Legacy list of selected-worker entitlement keys required to be boolean true. Null means absent. Values must be strings. |
-| <a id="contract-request-options-runner_mode"></a>`runner_mode` | string; null when absent | Legacy runner mode. Null means absent. The accepted values are `standard` and `byoxpc`. Admitted vocabulary: closed; displayed list: exhaustive: `"standard"`, `"byoxpc"`. |
+- <a id="contract-request-options-runner"></a>**`runner`** ([Nested runner selector](#contract-request-selector) ∪ null): Optional nested selector object. Null means absent. Unknown nested keys are refused.
+- <a id="contract-request-options-runner_id"></a>**`runner_id`** (string ∪ null): Legacy registry ID selector. Null means absent; a non-string value refuses even when nested `runner.id` would override it.
+- <a id="contract-request-options-runner_service"></a>**`runner_service`** (string ∪ null): Legacy explicit Mach service selector. Null means absent; a non-string value refuses before nested precedence is applied.
+- <a id="contract-request-options-required_entitlements"></a>**`required_entitlements`** (array of string ∪ null): Legacy list of selected-worker entitlement keys required to be boolean true. Null means absent. Values must be strings.
+- <a id="contract-request-options-runner_mode"></a>**`runner_mode`** (string ∪ null): Legacy runner mode. Null means absent. The accepted values are `standard` and `byoxpc`. Admitted vocabulary: closed; displayed list: exhaustive: `"standard"`, `"byoxpc"`.
 
 <a id="contract-request-options-precedence"></a>
 ##### Selector precedence
@@ -616,12 +610,10 @@ CLI `--runner-mode` is parsed before reading the request and is injected into it
 
 Record `selector`: `ControllerRunnerSelector`.
 
-| Field | JSON type and presence | Meaning |
-| --- | --- | --- |
-| <a id="contract-request-selector-id"></a>`id` | string; null when absent | Registry ID for an installed external runner. |
-| <a id="contract-request-selector-service"></a>`service` | string; null when absent | Explicit external Mach service name. |
-| <a id="contract-request-selector-required_entitlements"></a>`required_entitlements` | array of string; null when absent | Selected-worker entitlement keys that must read back as boolean true for selection. This demand is separate from each actor's required_entitlements. |
-| <a id="contract-request-selector-mode"></a>`mode` | string; null when absent | Mode constraint applied to selection. With no mode or external selector, selection uses the packaged standard runner. Admitted vocabulary: closed; displayed list: exhaustive: `"standard"`, `"byoxpc"`. |
+- <a id="contract-request-selector-id"></a>**`id`** (string ∪ null): Registry ID for an installed external runner.
+- <a id="contract-request-selector-service"></a>**`service`** (string ∪ null): Explicit external Mach service name.
+- <a id="contract-request-selector-required_entitlements"></a>**`required_entitlements`** (array of string ∪ null): Selected-worker entitlement keys that must read back as boolean true for selection. This demand is separate from each actor's required_entitlements.
+- <a id="contract-request-selector-mode"></a>**`mode`** (string ∪ null): Mode constraint applied to selection. With no mode or external selector, selection uses the packaged standard runner. Admitted vocabulary: closed; displayed list: exhaustive: `"standard"`, `"byoxpc"`.
 
 **Support: [source read](#contract-support-grades) for [Nested runner selector](#contract-request-selector) and its descendants.** The adjacent field meanings and obligations follow the named producer and admission branches. Source: [runner_select.rs](../controller/src/runner_select.rs): `RunnerSelector`, `parse_runner_selector_value`.
 
@@ -632,18 +624,16 @@ Record `overrides`: `PWRunnerTestOverrides`.
 
 These controls are admitted as request data in the current implementation, including packaged hosts. Their names identify test use; the parser applies the documented grammar and capacities. Host admission of a positive fixture value can be followed by worker argument refusal before application.
 
-| Field | JSON type and presence | Meaning |
-| --- | --- | --- |
-| <a id="contract-request-overrides-worker_executable_path"></a>`worker_executable_path` | string; omitted when absent | Ordinary-worker executable override, bounded by <!-- span limits.test_override_path.value_unit -->1,023 UTF-8 bytes<!-- /span -->. Actor-form admission refuses this singular override. |
-| <a id="contract-request-overrides-worker_timeout_ms"></a>`worker_timeout_ms` | integer; omitted when absent | Ordinary worker sentinel budget override in milliseconds. The host floors the supplied allowance at <!-- span limits.worker_timeout_override_floor.value_unit -->50 milliseconds<!-- /span -->; omission uses <!-- span limits.worker_sentinel_wait.value_unit -->120,000 milliseconds<!-- /span -->. Actor scheduling uses its fixed setup allowance and its fixed <!-- span limits.actor_execution_allowance.value_unit -->120,000 milliseconds<!-- /span --> execution allowance even when this field is supplied. |
-| <a id="contract-request-overrides-actor_equipment_executable_paths"></a>`actor_equipment_executable_paths` | object with string keys and string values; omitted when absent | Actor equipment role-to-path map. Present maps must be nonempty and use only `selected` and `unentitled` keys; actor admission requires absolute paths. The ordinary form refuses this map. |
-| <a id="contract-request-overrides-validator_executable_path"></a>`validator_executable_path` | string; omitted when absent | Validator executable override, bounded by <!-- span limits.test_override_path.value_unit -->1,023 UTF-8 bytes<!-- /span -->. The validator remains a separate child and receives query work through its own channel. |
-| <a id="contract-request-overrides-validator_total_timeout_ms"></a>`validator_total_timeout_ms` | integer; omitted when absent | Cumulative validator collection budget override in milliseconds, spanning phases. Both schedulers clamp it to a minimum of <!-- span limits.validator_collection_override_floor.value_unit -->1 millisecond<!-- /span --> and their configured maximum: <!-- span limits.phase_collection_wait.value_unit -->30,000 milliseconds<!-- /span --> for the ordinary form and <!-- span limits.actor_collection_allowance.value_unit -->30,000 milliseconds<!-- /span --> for actors. Omission uses that maximum. |
-| <a id="contract-request-overrides-validator_io_timeout_ms"></a>`validator_io_timeout_ms` | integer; omitted when absent | Per-validator I/O timeout override in milliseconds. The host floors the proposed allowance at <!-- span limits.validator_io_override_floor.value_unit -->50 milliseconds<!-- /span -->; omission uses <!-- span limits.validator_io_wait.value_unit -->30,000 milliseconds<!-- /span -->. The remaining aggregate collection allowance can reduce the effective timeout below that floor. |
-| <a id="contract-request-overrides-worker_post_apply_hang_ms"></a>`worker_post_apply_hang_ms` | integer; omitted when absent | Positive fixture delay in milliseconds after all declared visits and actions, before terminal publication. The host forwards positive values; the worker argument parser accepts through <!-- span limits.worker_fixture_delay.value_unit -->60,000 milliseconds<!-- /span -->. A larger forwarded value causes worker argument refusal after launch. Zero and negative values are omitted by the host. |
-| <a id="contract-request-overrides-worker_post_apply_kill_signal"></a>`worker_post_apply_kill_signal` | integer; omitted when absent | Positive fixture signal requested after completed actions and before terminal publication, including an unapplied actor's visits. The host forwards positive values; the worker accepts signal numbers through 31. A larger value causes worker argument refusal after launch. Zero and negative values are omitted. A signal request can return without termination; final process observations decide the ending. |
-| <a id="contract-request-overrides-worker_pre_ready_hang_ms"></a>`worker_pre_ready_hang_ms` | integer; omitted when absent | Positive fixture delay in milliseconds after compilation and optional capture, before an apply worker's readiness byte and policy application. The host forwards positive values; the worker argument parser accepts through <!-- span limits.worker_fixture_delay.value_unit -->60,000 milliseconds<!-- /span -->. A larger value causes worker argument refusal after launch. Zero and negative values are omitted. The unapplied actor branch bypasses this compile/readiness path. |
-| <a id="contract-request-overrides-worker_kill_before_publish_slot"></a>`worker_kill_before_publish_slot` | integer; omitted when absent | Nonnegative zero-based slot in each worker's own plan. After that attempt returns and its result payload is written, the worker raises SIGKILL before publishing completion. Negative values are omitted. The worker argument parser requires an index below <!-- span limits.probe_steps.value_unit -->256 items<!-- /span -->; an index beyond the worker's actual plan has no reached action to trigger it. |
+- <a id="contract-request-overrides-worker_executable_path"></a>**`worker_executable_path`** (string?): Ordinary-worker executable override, bounded by <!-- span limits.test_override_path.value_unit -->1,023 UTF-8 bytes<!-- /span -->. Actor-form admission refuses this singular override.
+- <a id="contract-request-overrides-worker_timeout_ms"></a>**`worker_timeout_ms`** (integer?): Ordinary worker sentinel budget override in milliseconds. The host floors the supplied allowance at <!-- span limits.worker_timeout_override_floor.value_unit -->50 milliseconds<!-- /span -->; omission uses <!-- span limits.worker_sentinel_wait.value_unit -->120,000 milliseconds<!-- /span -->. Actor scheduling uses its fixed setup allowance and its fixed <!-- span limits.actor_execution_allowance.value_unit -->120,000 milliseconds<!-- /span --> execution allowance even when this field is supplied.
+- <a id="contract-request-overrides-actor_equipment_executable_paths"></a>**`actor_equipment_executable_paths`** (object with string keys and string values?): Actor equipment role-to-path map. Present maps must be nonempty and use only `selected` and `unentitled` keys; actor admission requires absolute paths. The ordinary form refuses this map.
+- <a id="contract-request-overrides-validator_executable_path"></a>**`validator_executable_path`** (string?): Validator executable override, bounded by <!-- span limits.test_override_path.value_unit -->1,023 UTF-8 bytes<!-- /span -->. The validator remains a separate child and receives query work through its own channel.
+- <a id="contract-request-overrides-validator_total_timeout_ms"></a>**`validator_total_timeout_ms`** (integer?): Cumulative validator collection budget override in milliseconds, spanning phases. Both schedulers clamp it to a minimum of <!-- span limits.validator_collection_override_floor.value_unit -->1 millisecond<!-- /span --> and their configured maximum: <!-- span limits.phase_collection_wait.value_unit -->30,000 milliseconds<!-- /span --> for the ordinary form and <!-- span limits.actor_collection_allowance.value_unit -->30,000 milliseconds<!-- /span --> for actors. Omission uses that maximum.
+- <a id="contract-request-overrides-validator_io_timeout_ms"></a>**`validator_io_timeout_ms`** (integer?): Per-validator I/O timeout override in milliseconds. The host floors the proposed allowance at <!-- span limits.validator_io_override_floor.value_unit -->50 milliseconds<!-- /span -->; omission uses <!-- span limits.validator_io_wait.value_unit -->30,000 milliseconds<!-- /span -->. The remaining aggregate collection allowance can reduce the effective timeout below that floor.
+- <a id="contract-request-overrides-worker_post_apply_hang_ms"></a>**`worker_post_apply_hang_ms`** (integer?): Positive fixture delay in milliseconds after all declared visits and actions, before terminal publication. The host forwards positive values; the worker argument parser accepts through <!-- span limits.worker_fixture_delay.value_unit -->60,000 milliseconds<!-- /span -->. A larger forwarded value causes worker argument refusal after launch. Zero and negative values are omitted by the host.
+- <a id="contract-request-overrides-worker_post_apply_kill_signal"></a>**`worker_post_apply_kill_signal`** (integer?): Positive fixture signal requested after completed actions and before terminal publication, including an unapplied actor's visits. The host forwards positive values; the worker accepts signal numbers through 31. A larger value causes worker argument refusal after launch. Zero and negative values are omitted. A signal request can return without termination; final process observations decide the ending.
+- <a id="contract-request-overrides-worker_pre_ready_hang_ms"></a>**`worker_pre_ready_hang_ms`** (integer?): Positive fixture delay in milliseconds after compilation and optional capture, before an apply worker's readiness byte and policy application. The host forwards positive values; the worker argument parser accepts through <!-- span limits.worker_fixture_delay.value_unit -->60,000 milliseconds<!-- /span -->. A larger value causes worker argument refusal after launch. Zero and negative values are omitted. The unapplied actor branch bypasses this compile/readiness path.
+- <a id="contract-request-overrides-worker_kill_before_publish_slot"></a>**`worker_kill_before_publish_slot`** (integer?): Nonnegative zero-based slot in each worker's own plan. After that attempt returns and its result payload is written, the worker raises SIGKILL before publishing completion. Negative values are omitted. The worker argument parser requires an index below <!-- span limits.probe_steps.value_unit -->256 items<!-- /span -->; an index beyond the worker's actual plan has no reached action to trigger it.
 
 **Support: [check read](#contract-support-grades) for [worker_timeout_ms](#contract-request-overrides-worker_timeout_ms).** Calls the production helper to compare its floor to the limits inventory; independent below/equal/above cases retain the minimum and the uncapped larger override. Context: Planning helper and newly authored constructed assertions read. Evidence limit: No test execution is credited; the check establishes the planning value, not elapsed worker time. Source: [CWorkerRequestPlanning.swift](../runner/Sources/PWRunnerCore/CWorkerRequestPlanning.swift): `timeoutMsForCWorker`. Check: [LimitsContractTests.swift](../runner/Tests/PWRunnerCoreTests/LimitsContractTests.swift): `runLimitsContractTests`.
 
@@ -670,14 +660,12 @@ Record `spec`: `PWRunnerPolicySpec`.
 
 Each apply actor owns a separate policy. The host bounds the selected source string and parameter map before starting workers or validators.
 
-| Field | JSON type and presence | Meaning |
-| --- | --- | --- |
-| <a id="contract-policy-spec-format"></a>`format` | string; as defined below | The accepted policy representation is `sbpl`; another value is refused before worker launch. Admitted vocabulary: closed; displayed list: exhaustive: `"sbpl"`. |
-| <a id="contract-policy-spec-sbpl_source"></a>`sbpl_source` | string; as defined below | Required string when applying a policy. An empty string reaches native compilation. The final source after augmentation fits <!-- span limits.policy_source.value_unit -->262,143 UTF-8 bytes<!-- /span -->, and embedded NUL is refused before child launch. |
-| <a id="contract-policy-spec-params"></a>`params` | object with string keys and string values; as defined below | Optional string-to-string compiler parameter map. Omission, null and an empty map produce no native parameter setup. Supplied names remain open data. At most <!-- span limits.policy_parameters.value_unit -->1,024 items<!-- /span --> fit each policy, with keys bounded by <!-- span limits.parameter_key.value_unit -->127 UTF-8 bytes<!-- /span --> and values by <!-- span limits.parameter_value.value_unit -->383 UTF-8 bytes<!-- /span -->; native strings must be NUL-free. |
-| <a id="contract-policy-spec-capture_compiled_profile"></a>`capture_compiled_profile` | boolean; as defined below | When true, request a compiled-profile receipt from the worker before application and require a valid capture_nonce. Omission, null and false leave capture unrequested. Default: `false`. |
-| <a id="contract-policy-spec-capture_nonce"></a>`capture_nonce` | string; as defined below | Required with enabled capture: exactly 32 lowercase hexadecimal characters encoding the caller's nonce. A non-null nonce with capture disabled is an inapplicable-field refusal. Receipt publication and consistency checks belong to the compiled-profile surface. Required when `spec.capture_compiled_profile` = `true`. Present when `spec.capture_compiled_profile` = `true`. |
-| <a id="contract-policy-spec-augments"></a>`augments` | array of string; as defined below | Controller-resolved list of named packaged SBPL fragments. Omission, null and an empty list are no-ops. The controller strips the field before delivery. The host accepts the no-op forms and refuses a nonempty unresolved list. |
+- <a id="contract-policy-spec-format"></a>**`format`** (string; as defined below): The accepted policy representation is `sbpl`; another value is refused before worker launch. Admitted vocabulary: closed; displayed list: exhaustive: `"sbpl"`.
+- <a id="contract-policy-spec-sbpl_source"></a>**`sbpl_source`** (string; as defined below): Required string when applying a policy. An empty string reaches native compilation. The final source after augmentation fits <!-- span limits.policy_source.value_unit -->262,143 UTF-8 bytes<!-- /span -->, and embedded NUL is refused before child launch.
+- <a id="contract-policy-spec-params"></a>**`params`** (object with string keys and string values; as defined below): Optional string-to-string compiler parameter map. Omission, null and an empty map produce no native parameter setup. Supplied names remain open data. At most <!-- span limits.policy_parameters.value_unit -->1,024 items<!-- /span --> fit each policy, with keys bounded by <!-- span limits.parameter_key.value_unit -->127 UTF-8 bytes<!-- /span --> and values by <!-- span limits.parameter_value.value_unit -->383 UTF-8 bytes<!-- /span -->; native strings must be NUL-free.
+- <a id="contract-policy-spec-capture_compiled_profile"></a>**`capture_compiled_profile`** (boolean; as defined below): When true, request a compiled-profile receipt from the worker before application and require a valid capture_nonce. Omission, null and false leave capture unrequested. Default: `false`.
+- <a id="contract-policy-spec-capture_nonce"></a>**`capture_nonce`** (string; as defined below): Required with enabled capture: exactly 32 lowercase hexadecimal characters encoding the caller's nonce. A non-null nonce with capture disabled is an inapplicable-field refusal. Receipt publication and consistency checks belong to the compiled-profile surface. Required when `spec.capture_compiled_profile` = `true`. Present when `spec.capture_compiled_profile` = `true`.
+- <a id="contract-policy-spec-augments"></a>**`augments`** (array of string; as defined below): Controller-resolved list of named packaged SBPL fragments. Omission, null and an empty list are no-ops. The controller strips the field before delivery. The host accepts the no-op forms and refuses a nonempty unresolved list.
 
 <a id="contract-policy-spec-parameters"></a>
 ##### Prepare native compiler input
@@ -761,9 +749,7 @@ Record `helper_request`: `rust.CheckRequest`.
 
 `sbpl-check --request <path>` reads a policy request file; `--request -` reads stdin. This decoder selects the policy object and ignores other root fields. It accepts input without a public-contract assertion.
 
-| Field | JSON type and presence | Meaning |
-| --- | --- | --- |
-| <a id="contract-policy-helper_request-policy"></a>`policy` | [Compiler-helper policy](#contract-policy-helper_policy); as defined below | Required compiler-helper policy object. |
+- <a id="contract-policy-helper_request-policy"></a>**`policy`** ([Compiler-helper policy](#contract-policy-helper_policy); as defined below): Required compiler-helper policy object.
 
 <a id="contract-policy-helper_request-read"></a>
 ##### Read helper input
@@ -779,24 +765,22 @@ Record `helper_policy` locations: `helper_request.policy`.
 
 The helper decoder ignores policy members outside this record, including capture and augment requests. Controller fallback supplies the already normalized policy source.
 
-| Field | JSON type and presence | Meaning |
-| --- | --- | --- |
-| <a id="contract-policy-helper_policy-format"></a>`format` | string; as defined below | Require `sbpl` at helper admission. Admitted vocabulary: closed; displayed list: exhaustive: `"sbpl"`. |
-| <a id="contract-policy-helper_policy-sbpl_source"></a>`sbpl_source` | string; as defined below | Require a string source at helper admission; allow an empty string for the native compiler. Bound its UTF-8 bytes by <!-- span limits.helper_source.value_unit -->4,194,304 bytes<!-- /span -->, then require a NUL-free C string. |
-| <a id="contract-policy-helper_policy-params"></a>`params` | object with string keys and string values; as defined below | Optional string map. Null and absence mean no map; an empty map is present for reporting but needs no native parameter object. Reject embedded NUL in each key and value before inventory or native calls. |
+- <a id="contract-policy-helper_policy-format"></a>**`format`** (string; as defined below): Require `sbpl` at helper admission. Admitted vocabulary: closed; displayed list: exhaustive: `"sbpl"`.
+- <a id="contract-policy-helper_policy-sbpl_source"></a>**`sbpl_source`** (string; as defined below): Require a string source at helper admission; allow an empty string for the native compiler. Bound its UTF-8 bytes by <!-- span limits.helper_source.value_unit -->4,194,304 bytes<!-- /span -->, then require a NUL-free C string.
+- <a id="contract-policy-helper_policy-params"></a>**`params`** (object with string keys and string values; as defined below): Optional string map. Null and absence mean no map; an empty map is present for reporting but needs no native parameter object. Reject embedded NUL in each key and value before inventory or native calls.
 
 <a id="contract-policy-helper_policy-admit"></a>
 ##### Helper admission order
 
-[Compiler helper](#contract-identity-definitions-helper) acts at pre-inventory admission. Entry: standalone helper, controller helper stdin. Recipient: caller, report reader. Reports: helper envelope. Binding `k`: entry in `helper_policy.params`. Association restriction for `k`: (`k` contains `"\u0000"` or `helper_policy.params[k]` contains `"\u0000"`). Select the first matching case in the listed order. Stop at the first admission refusal. After format, source-presence and source-extent checks pass, construct the source C string and then parameter key/value C strings in map order; a failed conversion prevents later conversions and retains its diagnostic.
+[Compiler helper](#contract-identity-definitions-helper) acts at pre-inventory admission. Entry: standalone helper, controller helper stdin. Recipient: caller, report reader. Reports: helper envelope. Binding `k`: entry in `helper_policy.params`. Association restriction for `k`: (contains(`k`, `"\u0000"`) or contains(`helper_policy.params[k]`, `"\u0000"`)). Select the first matching case in the listed order. Stop at the first admission refusal. After format, source-presence and source-extent checks pass, construct the source C string and then parameter key/value C strings in map order; a failed conversion prevents later conversions and retains its diagnostic.
 
 | Case | When | Consequence |
 | --- | --- | --- |
-| <a id="contract-policy-helper_policy-admit-format"></a>1. Unsupported format | `helper_policy.format` ≠ `"sbpl"` | sets `helper_envelope.result.ok` to `false`, sets `helper_envelope.result.exit_code` to `1`, sets `helper_envelope.result.normalized_outcome` to `"bad_request"`, sets `helper_envelope.data.policy_sha256` to `null`, sets `helper_envelope.data.compile` to `null`, sets `helper_envelope.data.import_inventory` to `null`. |
-| <a id="contract-policy-helper_policy-admit-source"></a>2. Missing source | `helper_policy.sbpl_source` is absent | sets `helper_envelope.result.ok` to `false`, sets `helper_envelope.result.exit_code` to `1`, sets `helper_envelope.result.normalized_outcome` to `"bad_request"`, sets `helper_envelope.data.policy_sha256` to `null`, sets `helper_envelope.data.compile` to `null`, sets `helper_envelope.data.import_inventory` to `null`. |
-| <a id="contract-policy-helper_policy-admit-extent"></a>3. Oversized source | (`helper_policy.sbpl_source` is present and UTF-8 byte length of `helper_policy.sbpl_source` > `4,194,304 bytes` (`helper_source`) ) | sets `helper_envelope.result.ok` to `false`, sets `helper_envelope.result.exit_code` to `1`, sets `helper_envelope.result.normalized_outcome` to `"policy_too_large"`, sets `helper_envelope.data.policy_sha256` to `null`, sets `helper_envelope.data.compile` to `null`, sets `helper_envelope.data.import_inventory` to `null`. |
-| <a id="contract-policy-helper_policy-admit-source_nul"></a>4. Source NUL | (`helper_policy.sbpl_source` is present and `helper_policy.sbpl_source` contains `"\u0000"`) | sets `helper_envelope.result.ok` to `false`, sets `helper_envelope.result.exit_code` to `1`, sets `helper_envelope.result.normalized_outcome` to `"bad_request"`, sets `helper_envelope.data.policy_sha256` to `null`, sets `helper_envelope.data.compile` to `null`, sets `helper_envelope.data.import_inventory` to `null`. |
-| <a id="contract-policy-helper_policy-admit-parameter_nul"></a>5. Parameter NUL | (`helper_policy.params` is present and number of matching entries for `k` > `0`) | sets `helper_envelope.result.ok` to `false`, sets `helper_envelope.result.exit_code` to `1`, sets `helper_envelope.result.normalized_outcome` to `"bad_request"`, sets `helper_envelope.data.policy_sha256` to `null`, sets `helper_envelope.data.compile` to `null`, sets `helper_envelope.data.import_inventory` to `null`. |
+| <a id="contract-policy-helper_policy-admit-format"></a>1. Unsupported format | `helper_policy.format` ≠ `"sbpl"` | [set_value(`helper_envelope.result.ok`, `false`), set_value(`helper_envelope.result.exit_code`, `1`), set_value(`helper_envelope.result.normalized_outcome`, `"bad_request"`), set_value(`helper_envelope.data.policy_sha256`, `null`), set_value(`helper_envelope.data.compile`, `null`), set_value(`helper_envelope.data.import_inventory`, `null`)]. |
+| <a id="contract-policy-helper_policy-admit-source"></a>2. Missing source | absent(`helper_policy.sbpl_source`) | [set_value(`helper_envelope.result.ok`, `false`), set_value(`helper_envelope.result.exit_code`, `1`), set_value(`helper_envelope.result.normalized_outcome`, `"bad_request"`), set_value(`helper_envelope.data.policy_sha256`, `null`), set_value(`helper_envelope.data.compile`, `null`), set_value(`helper_envelope.data.import_inventory`, `null`)]. |
+| <a id="contract-policy-helper_policy-admit-extent"></a>3. Oversized source | (present(`helper_policy.sbpl_source`) and utf8_length(`helper_policy.sbpl_source`) > `4,194,304 bytes` (`helper_source`) ) | [set_value(`helper_envelope.result.ok`, `false`), set_value(`helper_envelope.result.exit_code`, `1`), set_value(`helper_envelope.result.normalized_outcome`, `"policy_too_large"`), set_value(`helper_envelope.data.policy_sha256`, `null`), set_value(`helper_envelope.data.compile`, `null`), set_value(`helper_envelope.data.import_inventory`, `null`)]. |
+| <a id="contract-policy-helper_policy-admit-source_nul"></a>4. Source NUL | (present(`helper_policy.sbpl_source`) and contains(`helper_policy.sbpl_source`, `"\u0000"`)) | [set_value(`helper_envelope.result.ok`, `false`), set_value(`helper_envelope.result.exit_code`, `1`), set_value(`helper_envelope.result.normalized_outcome`, `"bad_request"`), set_value(`helper_envelope.data.policy_sha256`, `null`), set_value(`helper_envelope.data.compile`, `null`), set_value(`helper_envelope.data.import_inventory`, `null`)]. |
+| <a id="contract-policy-helper_policy-admit-parameter_nul"></a>5. Parameter NUL | (present(`helper_policy.params`) and matches(`k`) > `0`) | [set_value(`helper_envelope.result.ok`, `false`), set_value(`helper_envelope.result.exit_code`, `1`), set_value(`helper_envelope.result.normalized_outcome`, `"bad_request"`), set_value(`helper_envelope.data.policy_sha256`, `null`), set_value(`helper_envelope.data.compile`, `null`), set_value(`helper_envelope.data.import_inventory`, `null`)]. |
 
 **Support: [source read](#contract-support-grades) for [Compiler-helper policy](#contract-policy-helper_policy) and its descendants.** The adjacent field meanings and operations follow the named implementation. Source: [sbpl-check.rs](../controller/src/bin/sbpl-check.rs): `admit`, `CheckPolicy`.
 
@@ -810,11 +794,9 @@ Record `step`: `PWRunnerProbeStep`.
 
 One paired probe contributes one action and at most one eligible validator query.
 
-| Field | JSON type and presence | Meaning |
-| --- | --- | --- |
-| <a id="contract-probes-step-step_id"></a>`step_id` | string; as defined below | Caller label associating a query with its attempt and result. It is unique across all actions and fits <!-- span limits.step_id.value_unit -->63 UTF-8 bytes<!-- /span --> and is NUL-free. Actor plans require it to be nonempty; ordinary plans currently accept a unique empty value. |
-| <a id="contract-probes-step-sandbox_check"></a>`sandbox_check` | [Sandbox query](#contract-probes-query); as defined below | Requested prediction operation and filter. Admission validates this request independently from the attempt. |
-| <a id="contract-probes-step-attempt"></a>`attempt` | [Attempt request](#contract-probes-attempt); as defined below | Requested native operation. |
+- <a id="contract-probes-step-step_id"></a>**`step_id`** (string; as defined below): Caller label associating a query with its attempt and result. It is unique across all actions and fits <!-- span limits.step_id.value_unit -->63 UTF-8 bytes<!-- /span --> and is NUL-free. Actor plans require it to be nonempty; ordinary plans currently accept a unique empty value.
+- <a id="contract-probes-step-sandbox_check"></a>**`sandbox_check`** ([Sandbox query](#contract-probes-query); as defined below): Requested prediction operation and filter. Admission validates this request independently from the attempt.
+- <a id="contract-probes-step-attempt"></a>**`attempt`** ([Attempt request](#contract-probes-attempt); as defined below): Requested native operation.
 
 <a id="contract-probes-step-read_hosts"></a>
 ##### Read-hosts pair
@@ -834,10 +816,8 @@ The open-read operation's success establishes its open boundary. A `read_fresh` 
 
 Record `query`: `PWRunnerSandboxCheck`.
 
-| Field | JSON type and presence | Meaning |
-| --- | --- | --- |
-| <a id="contract-probes-query-operation"></a>`operation` | string; as defined below | Nonempty after whitespace trimming for admission, bounded by <!-- span limits.query_operation.value_unit -->127 UTF-8 bytes<!-- /span -->, NUL-free operation string passed unchanged to prediction planning. Accepted strings remain open to native operation support. |
-| <a id="contract-probes-query-filter"></a>`filter` | [Sandbox filter](#contract-probes-filter); as defined below | Closed filter kind with its applicable optional value. |
+- <a id="contract-probes-query-operation"></a>**`operation`** (string; as defined below): Nonempty after whitespace trimming for admission, bounded by <!-- span limits.query_operation.value_unit -->127 UTF-8 bytes<!-- /span -->, NUL-free operation string passed unchanged to prediction planning. Accepted strings remain open to native operation support.
+- <a id="contract-probes-query-filter"></a>**`filter`** ([Sandbox filter](#contract-probes-filter); as defined below): Closed filter kind with its applicable optional value.
 
 <a id="contract-probes-query-eligibility"></a>
 ##### Admission and eligibility
@@ -849,9 +829,9 @@ A path created by the attempt can be unresolved at planning and resolve in later
 | Item | Requirement or consequence |
 | --- | --- |
 | <a id="contract-probes-query-eligibility-trimmed"></a>Whitespace-trimmed query inputs | The operation is nonempty after trimming whitespace and newlines. For a known non-none filter, its supplied value is also nonempty after that trimming. |
-| <a id="contract-probes-query-eligibility-known_filter"></a>Known filter | Requires `query.filter.kind` is one of `"none"`, `"path"`, `"global_name"`, `"local_name"`, `"iokit_registry_entry_class"`, `"iokit_user_client_class"`, `"sysctl_name"`. |
-| <a id="contract-probes-query-eligibility-value_presence"></a>Applicable value | Requires ((if `query.filter.kind` = `"none"`, then `query.filter.value` is absent) and (if `query.filter.kind` ≠ `"none"`, then `query.filter.value` is present)). |
-| <a id="contract-probes-query-eligibility-failure"></a>Whole-request refusal | On failure, performs [Stop children and preserve safe metadata](#contract-refusals-request-consequence) for `request`. |
+| <a id="contract-probes-query-eligibility-known_filter"></a>Known filter | Requires `query.filter.kind` ∈ [`"none"`, `"path"`, `"global_name"`, `"local_name"`, `"iokit_registry_entry_class"`, `"iokit_user_client_class"`, `"sysctl_name"`]. |
+| <a id="contract-probes-query-eligibility-value_presence"></a>Applicable value | Requires (implies(`query.filter.kind` = `"none"`, absent(`query.filter.value`)) and implies(`query.filter.kind` ≠ `"none"`, present(`query.filter.value`))). |
+| <a id="contract-probes-query-eligibility-failure"></a>Whole-request refusal | On failure, [perform([Stop children and preserve safe metadata](#contract-refusals-request-consequence), `request`)]. |
 
 <a id="contract-probes-query-excluded"></a>
 ##### Excluded prediction pairs
@@ -876,10 +856,8 @@ The IOKit and sysctl exclusions retain the dated 2026-05-29 exploration of filte
 
 Record `filter`: `PWRunnerSandboxFilter`.
 
-| Field | JSON type and presence | Meaning |
-| --- | --- | --- |
-| <a id="contract-probes-filter-kind"></a>`kind` | string; as defined below | Filter representation admitted by the host. Admitted vocabulary: closed; displayed list: exhaustive: `"none"`, `"path"`, `"global_name"`, `"local_name"`, `"iokit_registry_entry_class"`, `"iokit_user_client_class"`, `"sysctl_name"`. |
-| <a id="contract-probes-filter-value"></a>`value` | string; as defined below | For `none`, require absence or null. Every other kind requires a string nonempty after whitespace trimming, bounded by <!-- span limits.query_filter_value.value_unit -->511 UTF-8 bytes<!-- /span --> and NUL-free. The original string is retained and passed through unchanged. |
+- <a id="contract-probes-filter-kind"></a>**`kind`** (string; as defined below): Filter representation admitted by the host. Admitted vocabulary: closed; displayed list: exhaustive: `"none"`, `"path"`, `"global_name"`, `"local_name"`, `"iokit_registry_entry_class"`, `"iokit_user_client_class"`, `"sysctl_name"`.
+- <a id="contract-probes-filter-value"></a>**`value`** (string; as defined below): For `none`, require absence or null. Every other kind requires a string nonempty after whitespace trimming, bounded by <!-- span limits.query_filter_value.value_unit -->511 UTF-8 bytes<!-- /span --> and NUL-free. The original string is retained and passed through unchanged.
 
 **Support: [source read](#contract-support-grades) for [Sandbox filter](#contract-probes-filter) and its descendants.** The adjacent field meanings and operations follow the named implementation. Source: [ProbeRunner.swift](../runner/Sources/PWRunnerCore/ProbeRunner.swift): `sandboxCheckFailure`; [PWRunnerRequest.swift](../runner/Sources/PWRunnerCore/PWRunnerRequest.swift): `PWRunnerSandboxFilter`.
 
@@ -888,12 +866,10 @@ Record `filter`: `PWRunnerSandboxFilter`.
 
 Record `attempt`: `PWRunnerAttempt`.
 
-| Field | JSON type and presence | Meaning |
-| --- | --- | --- |
-| <a id="contract-probes-attempt-kind"></a>`kind` | string; as defined below | Native operation family selected with action. Admitted vocabulary: closed; displayed list: exhaustive: `"file"`, `"mach_lookup"`, `"sysctl"`, `"exec"`. |
-| <a id="contract-probes-attempt-action"></a>`action` | string; as defined below | Closed action within its family, listed in the operation table below. An unsupported pair refuses the complete request before children. |
-| <a id="contract-probes-attempt-target"></a>`target` | string; as defined below | Operation target, bounded by <!-- span limits.attempt_target.value_unit -->511 UTF-8 bytes<!-- /span --> and NUL-free. Exec requires an absolute path. Other admitted targets retain their supplied native-operation meaning. |
-| <a id="contract-probes-attempt-args"></a>`args` | array of string; as defined below | Exec-only argument strings appended after target as argv[0]. Omission and null mean an empty list. A supplied array on another kind, including an empty array, is refused. At most <!-- span limits.exec_arguments.value_unit -->15 items<!-- /span --> are admitted, each NUL-free and bounded by <!-- span limits.exec_argument.value_unit -->127 UTF-8 bytes<!-- /span -->. Default: `[]`. |
+- <a id="contract-probes-attempt-kind"></a>**`kind`** (string; as defined below): Native operation family selected with action. Admitted vocabulary: closed; displayed list: exhaustive: `"file"`, `"mach_lookup"`, `"sysctl"`, `"exec"`.
+- <a id="contract-probes-attempt-action"></a>**`action`** (string; as defined below): Closed action within its family, listed in the operation table below. An unsupported pair refuses the complete request before children.
+- <a id="contract-probes-attempt-target"></a>**`target`** (string; as defined below): Operation target, bounded by <!-- span limits.attempt_target.value_unit -->511 UTF-8 bytes<!-- /span --> and NUL-free. Exec requires an absolute path. Other admitted targets retain their supplied native-operation meaning.
+- <a id="contract-probes-attempt-args"></a>**`args`** (array of string; as defined below): Exec-only argument strings appended after target as argv[0]. Omission and null mean an empty list. A supplied array on another kind, including an empty array, is refused. At most <!-- span limits.exec_arguments.value_unit -->15 items<!-- /span --> are admitted, each NUL-free and bounded by <!-- span limits.exec_argument.value_unit -->127 UTF-8 bytes<!-- /span -->. Default: `[]`.
 
 <a id="contract-probes-attempt-operations"></a>
 ##### Native operations
@@ -933,7 +909,7 @@ A successful spawn supplies a child PID even if the child later exits nonzero. T
 <a id="contract-probes-attempt-extension_exec"></a>
 ##### Extension participant restriction
 
-[Runner host](#contract-identity-definitions-host) acts at actor admission. Entry: xpc execute. Recipient: caller, report reader. Reports: runner reply. Applies when (`request.actors` is present and `request.phases` is present). performs [Exclude exec in participating actors](#contract-extensions-operation-exec) for `request`. Uses [Extension operation](#contract-extensions-operation).
+[Runner host](#contract-identity-definitions-host) acts at actor admission. Entry: xpc execute. Recipient: caller, report reader. Reports: runner reply. Applies when (present(`request.actors`) and present(`request.phases`)). perform([Exclude exec in participating actors](#contract-extensions-operation-exec), `request`). Uses [Extension operation](#contract-extensions-operation).
 
 **Support: [source read](#contract-support-grades) for [Attempt request](#contract-probes-attempt) and its descendants.** The adjacent field meanings and operations follow the named implementation. Source: [CWorkerRequestPlanning.swift](../runner/Sources/PWRunnerCore/CWorkerRequestPlanning.swift): `mapAttemptKind`; [pw_probe_runner.c](../controller/tools/pw_probe_runner/pw_probe_runner.c): `attempt_file_open_read`, `attempt_file_write_fresh`, `attempt_sysctl_read`; [pw_worker_exec.h](../controller/tools/pw_probe_runner/pw_worker_exec.h): `attempt_exec_spawn`; [ActorPlan.swift](../runner/Sources/PWRunnerCore/ActorPlan.swift): `normalizeActorPlan`; [pw_worker_timing.h](../controller/tools/pw_probe_runner/pw_worker_timing.h): `PW_EXEC_ATTEMPT_BUDGET_MS_DEFAULT`, `pw_timing_setup`.
 
@@ -947,32 +923,30 @@ Record `actor`: `PWRunnerActor`.
 
 A specimen admits at most <!-- span limits.actors.value_unit -->8 items<!-- /span -->.
 
-| Field | JSON type and presence | Meaning |
-| --- | --- | --- |
-| <a id="contract-actors-actor-actor_id"></a>`actor_id` | string; as defined below | Nonempty specimen-local actor identifier, unique across actors and bounded by <!-- span limits.actor_id.value_unit -->63 UTF-8 bytes<!-- /span -->. Native transport also requires NUL-free bytes. |
-| <a id="contract-actors-actor-sandbox"></a>`sandbox` | [Actor sandbox declaration](#contract-actors-sandbox); as defined below | The actor's explicit apply or unapplied declaration; application assessment is reported separately from this request. |
-| <a id="contract-actors-actor-equipment"></a>`equipment` | string; as defined below | Equipment role: `selected` uses the selected runner worker; `unentitled` uses the packaged unentitled worker. Omission selects `selected`; present null is refused. Default: `"selected"`. Admitted vocabulary: closed; displayed list: exhaustive: `"selected"`, `"unentitled"`. |
-| <a id="contract-actors-actor-required_entitlements"></a>`required_entitlements` | array of string; as defined below | Static and live read-back demand for boolean-true entitlement keys on this actor's executable. Omission supplies an empty list; present null is refused. Default: `[]`. |
+- <a id="contract-actors-actor-actor_id"></a>**`actor_id`** (string; as defined below): Nonempty specimen-local actor identifier, unique across actors and bounded by <!-- span limits.actor_id.value_unit -->63 UTF-8 bytes<!-- /span -->. Native transport also requires NUL-free bytes.
+- <a id="contract-actors-actor-sandbox"></a>**`sandbox`** ([Actor sandbox declaration](#contract-actors-sandbox); as defined below): The actor's explicit apply or unapplied declaration; application assessment is reported separately from this request.
+- <a id="contract-actors-actor-equipment"></a>**`equipment`** (string; as defined below): Equipment role: `selected` uses the selected runner worker; `unentitled` uses the packaged unentitled worker. Omission selects `selected`; present null is refused. Default: `"selected"`. Admitted vocabulary: closed; displayed list: exhaustive: `"selected"`, `"unentitled"`.
+- <a id="contract-actors-actor-required_entitlements"></a>**`required_entitlements`** (array of string; as defined below): Static and live read-back demand for boolean-true entitlement keys on this actor's executable. Omission supplies an empty list; present null is refused. Default: `[]`.
 
 <a id="contract-actors-actor-normalize"></a>
 ##### Normalize actors before launch
 
-[Runner host](#contract-identity-definitions-host) acts at actor-plan admission. Entry: xpc execute. Recipient: caller, report reader. Reports: runner reply. Binding `a`: entry in `request.actors`. Binding `b`: entry in `request.actors`. Binding `p`: entry in `request.phases`. Association restriction for `b`: `request.actors[b].actor_id` = `request.actors[a].actor_id`. Association restriction for `p`: `request.phases[p].actor_id` = `request.actors[a].actor_id`. Applies when (`request.actors` is present and `request.phases` is present). Uses [Actor equipment selection](#contract-equipment-actor), [Static worker binding](#contract-equipment-binding). Resolve the admitted actor and resource references once into the plan indexes used for execution.
+[Runner host](#contract-identity-definitions-host) acts at actor-plan admission. Entry: xpc execute. Recipient: caller, report reader. Reports: runner reply. Binding `a`: entry in `request.actors`. Binding `b`: entry in `request.actors`. Binding `p`: entry in `request.phases`. Association restriction for `b`: `request.actors[b].actor_id` = `request.actors[a].actor_id`. Association restriction for `p`: `request.phases[p].actor_id` = `request.actors[a].actor_id`. Applies when (present(`request.actors`) and present(`request.phases`)). Uses [Actor equipment selection](#contract-equipment-actor), [Static worker binding](#contract-equipment-binding). Resolve the admitted actor and resource references once into the plan indexes used for execution.
 
 | Item | Requirement or consequence |
 | --- | --- |
-| <a id="contract-actors-actor-normalize-identity"></a>Actor identity | For each `a`. Requires (`request.actors[a].actor_id` ≠ `""` and number of matching entries for `b` = `1` and UTF-8 byte length of `request.actors[a].actor_id` ≤ `63 UTF-8 bytes` (`actor_id`) and not (`request.actors[a].actor_id` contains `"\u0000"`)). |
-| <a id="contract-actors-actor-normalize-role"></a>Known equipment role | For each `a`. Requires (if `request.actors[a].equipment` is present, then `request.actors[a].equipment` is one of `"selected"`, `"unentitled"`). |
-| <a id="contract-actors-actor-normalize-visits"></a>At least one declared visit | For each `a`. Requires number of matching entries for `p` > `0`. |
-| <a id="contract-actors-actor-normalize-sandbox"></a>Sandbox declaration | For each `a`. Requires (`request.actors[a].sandbox.mode` is one of `"apply"`, `"unapplied"` and (if `request.actors[a].sandbox.mode` = `"apply"`, then `request.actors[a].sandbox.policy` is present) and (if `request.actors[a].sandbox.mode` = `"unapplied"`, then `request.actors[a].sandbox.policy` is absent)). |
-| <a id="contract-actors-actor-normalize-entitlement_count"></a>Entitlement list capacity | For each `a`. Requires count of `request.actors[a].required_entitlements` ≤ `64 items` (`actor_required_entitlements`) . |
-| <a id="contract-actors-actor-normalize-entitlement_identity"></a>Required entitlement identity | Binding `e`: entry in `request.actors[a].required_entitlements`. Binding `f`: entry in `request.actors[a].required_entitlements`. Association restriction for `f`: `request.actors[a].required_entitlements[f]` = `request.actors[a].required_entitlements[e]`. For each `a`, `e`. Requires (`request.actors[a].required_entitlements[e]` ≠ `""` and number of matching entries for `f` = `1` and UTF-8 byte length of `request.actors[a].required_entitlements[e]` ≤ `255 UTF-8 bytes` (`actor_entitlement_key`) and not (`request.actors[a].required_entitlements[e]` contains `"\u0000"`)). |
-| <a id="contract-actors-actor-normalize-failure"></a>Refusal consequence | On failure, performs [Stop children and preserve safe metadata](#contract-refusals-request-consequence) for `request`. |
+| <a id="contract-actors-actor-normalize-identity"></a>Actor identity | For each `a`. Requires (`request.actors[a].actor_id` ≠ `""` and matches(`b`) = `1` and utf8_length(`request.actors[a].actor_id`) ≤ `63 UTF-8 bytes` (`actor_id`) and not (contains(`request.actors[a].actor_id`, `"\u0000"`))). |
+| <a id="contract-actors-actor-normalize-role"></a>Known equipment role | For each `a`. Requires implies(present(`request.actors[a].equipment`), `request.actors[a].equipment` ∈ [`"selected"`, `"unentitled"`]). |
+| <a id="contract-actors-actor-normalize-visits"></a>At least one declared visit | For each `a`. Requires matches(`p`) > `0`. |
+| <a id="contract-actors-actor-normalize-sandbox"></a>Sandbox declaration | For each `a`. Requires (`request.actors[a].sandbox.mode` ∈ [`"apply"`, `"unapplied"`] and implies(`request.actors[a].sandbox.mode` = `"apply"`, present(`request.actors[a].sandbox.policy`)) and implies(`request.actors[a].sandbox.mode` = `"unapplied"`, absent(`request.actors[a].sandbox.policy`))). |
+| <a id="contract-actors-actor-normalize-entitlement_count"></a>Entitlement list capacity | For each `a`. Requires count(`request.actors[a].required_entitlements`) ≤ `64 items` (`actor_required_entitlements`) . |
+| <a id="contract-actors-actor-normalize-entitlement_identity"></a>Required entitlement identity | Binding `e`: entry in `request.actors[a].required_entitlements`. Binding `f`: entry in `request.actors[a].required_entitlements`. Association restriction for `f`: `request.actors[a].required_entitlements[f]` = `request.actors[a].required_entitlements[e]`. For each `a`, `e`. Requires (`request.actors[a].required_entitlements[e]` ≠ `""` and matches(`f`) = `1` and utf8_length(`request.actors[a].required_entitlements[e]`) ≤ `255 UTF-8 bytes` (`actor_entitlement_key`) and not (contains(`request.actors[a].required_entitlements[e]`, `"\u0000"`))). |
+| <a id="contract-actors-actor-normalize-failure"></a>Refusal consequence | On failure, perform([Stop children and preserve safe metadata](#contract-refusals-request-consequence), `request`). |
 
 <a id="contract-actors-actor-fresh"></a>
 ##### Fresh process and retained policy
 
-[Runner host](#contract-identity-definitions-host), [Worker](#contract-identity-definitions-worker) acts at actor process lifecycle. Entry: xpc execute. Recipient: caller, report reader. Reports: runner reply. Applies when `request.actors` is present. Uses [Application assessment](#contract-actor_evidence-application). Launch one fresh worker for each actor. An apply worker compiles and applies its own declared policy once before its visits; an unapplied worker publishes that declaration and executes under the restrictions already inherited by its process. Keep that worker for its successive visits.
+[Runner host](#contract-identity-definitions-host), [Worker](#contract-identity-definitions-worker) acts at actor process lifecycle. Entry: xpc execute. Recipient: caller, report reader. Reports: runner reply. Applies when present(`request.actors`). Uses [Application assessment](#contract-actor_evidence-application). Launch one fresh worker for each actor. An apply worker compiles and applies its own declared policy once before its visits; an unapplied worker publishes that declaration and executes under the restrictions already inherited by its process. Keep that worker for its successive visits.
 
 **Support: [source read](#contract-support-grades) for [Actor declaration](#contract-actors-actor) and its descendants.** The adjacent field meanings and obligations follow the named producer and admission branches. Evidence limit: Normalization concerns admitted declarations; worker setup and application observations have separate owners. Source: [PWRunnerActors.swift](../runner/Sources/PWRunnerCore/PWRunnerActors.swift): `PWRunnerActor`; [ActorPlan.swift](../runner/Sources/PWRunnerCore/ActorPlan.swift): `normalizeActorPlan`, `actorAdmissionFailure`; [ActorOrchestration.swift](../runner/Sources/PWRunnerCore/ActorOrchestration.swift): `actorApplicationAssessment`; [CWorkerRequestPlanning.swift](../runner/Sources/PWRunnerCore/CWorkerRequestPlanning.swift): `requestAdmissionFailure`.
 
@@ -981,10 +955,8 @@ A specimen admits at most <!-- span limits.actors.value_unit -->8 items<!-- /spa
 
 Record `sandbox`: `PWRunnerActorSandbox`.
 
-| Field | JSON type and presence | Meaning |
-| --- | --- | --- |
-| <a id="contract-actors-sandbox-mode"></a>`mode` | string; as defined below | `apply` requires a policy and asks the worker to compile/apply it; `unapplied` requires policy absence or null and records the inherited process restrictions as its starting condition. Admitted vocabulary: closed; displayed list: exhaustive: `"apply"`, `"unapplied"`. |
-| <a id="contract-actors-sandbox-policy"></a>`policy` | [Worker policy input](#contract-policy-spec); as defined below | Required non-null policy for `apply`; a non-null policy is refused for `unapplied`. Each apply policy has its own source, parameters, augmentation and capture request. Required when `sandbox.mode` = `"apply"`. Present when `sandbox.mode` = `"apply"`. |
+- <a id="contract-actors-sandbox-mode"></a>**`mode`** (string; as defined below): `apply` requires a policy and asks the worker to compile/apply it; `unapplied` requires policy absence or null and records the inherited process restrictions as its starting condition. Admitted vocabulary: closed; displayed list: exhaustive: `"apply"`, `"unapplied"`.
+- <a id="contract-actors-sandbox-policy"></a>**`policy`** ([Worker policy input](#contract-policy-spec); as defined below): Required non-null policy for `apply`; a non-null policy is refused for `unapplied`. Each apply policy has its own source, parameters, augmentation and capture request. Required when `sandbox.mode` = `"apply"`. Present when `sandbox.mode` = `"apply"`.
 
 **Support: [source read](#contract-support-grades) for [Actor sandbox declaration](#contract-actors-sandbox) and its descendants.** The adjacent field meanings and obligations follow the named producer and admission branches. Source: [PWRunnerActors.swift](../runner/Sources/PWRunnerCore/PWRunnerActors.swift): `PWRunnerActorSandbox`; [ActorPlan.swift](../runner/Sources/PWRunnerCore/ActorPlan.swift): `normalizeActorPlan`.
 
@@ -993,18 +965,16 @@ Record `sandbox`: `PWRunnerActorSandbox`.
 
 Record `phase`: `PWRunnerPhase`.
 
-| Field | JSON type and presence | Meaning |
-| --- | --- | --- |
-| <a id="contract-actors-phase-phase_id"></a>`phase_id` | string; as defined below | Nonempty identifier unique across the specimen's phases and bounded by <!-- span limits.phase_id.value_unit -->63 UTF-8 bytes<!-- /span --> and NUL-free. |
-| <a id="contract-actors-phase-actor_id"></a>`actor_id` | string; as defined below | Required known actor owner in the actor form. The ordinary form requires absence or null. |
-| <a id="contract-actors-phase-actions"></a>`actions` | array of [Phase action variants](#contract-actors-action); as defined below | Actions in declaration order, including an empty array. Ordinary phases contain paired probes. Actor phases may also contain extension actions. Action identifiers are unique across the whole specimen. |
-| <a id="contract-actors-phase-after_termination"></a>`after_termination` | [Termination dependency](#contract-actors-after_termination); as defined below | Optional owned-termination dependency in the actor form. Absence supplies no dependency; present null is refused. The ordinary form refuses a supplied dependency. |
+- <a id="contract-actors-phase-phase_id"></a>**`phase_id`** (string; as defined below): Nonempty identifier unique across the specimen's phases and bounded by <!-- span limits.phase_id.value_unit -->63 UTF-8 bytes<!-- /span --> and NUL-free.
+- <a id="contract-actors-phase-actor_id"></a>**`actor_id`** (string; as defined below): Required known actor owner in the actor form. The ordinary form requires absence or null.
+- <a id="contract-actors-phase-actions"></a>**`actions`** (array of [Phase action variants](#contract-actors-action); as defined below): Actions in declaration order, including an empty array. Ordinary phases contain paired probes. Actor phases may also contain extension actions. Action identifiers are unique across the whole specimen.
+- <a id="contract-actors-phase-after_termination"></a>**`after_termination`** ([Termination dependency](#contract-actors-after_termination); as defined below): Optional owned-termination dependency in the actor form. Absence supplies no dependency; present null is refused. The ordinary form refuses a supplied dependency.
 
 **phase_id.**
 
 | Item | Requirement or consequence |
 | --- | --- |
-| <a id="contract-actors-phase-phase_id-identity"></a>Required phase identity | Requires (`phase.phase_id` ≠ `""` and UTF-8 byte length of `phase.phase_id` ≤ `63 UTF-8 bytes` (`phase_id`) and not (`phase.phase_id` contains `"\u0000"`)). |
+| <a id="contract-actors-phase-phase_id-identity"></a>Required phase identity | Requires (`phase.phase_id` ≠ `""` and utf8_length(`phase.phase_id`) ≤ `63 UTF-8 bytes` (`phase_id`) and not (contains(`phase.phase_id`, `"\u0000"`))). |
 
 <a id="contract-actors-phase-order"></a>
 ##### Collect, release and advance
@@ -1022,27 +992,25 @@ Record `after_termination`: `PWRunnerAfterTermination`.
 
 The declaration names a source actor, while the gate reports the host's owned observation of its ending.
 
-| Field | JSON type and presence | Meaning |
-| --- | --- | --- |
-| <a id="contract-actors-after_termination-actor_id"></a>`actor_id` | string; as defined below | Known actor whose final declared phase occurs earlier than the dependent phase. It must differ from the dependent phase's actor. |
+- <a id="contract-actors-after_termination-actor_id"></a>**`actor_id`** (string; as defined below): Known actor whose final declared phase occurs earlier than the dependent phase. It must differ from the dependent phase's actor.
 
 <a id="contract-actors-after_termination-gate"></a>
 ##### Validate and evaluate the dependency
 
-[Runner host](#contract-identity-definitions-host) acts at actor admission and phase activation. Entry: xpc execute. Recipient: caller, report reader. Reports: runner reply. Applies when `request.actors` is present. Uses [Termination dependency](#contract-actor_evidence-gate). Before activating the dependent actor or collecting its predictions, evaluate the owned natural-reap gate. A failed evaluated gate cancels every remaining scheduled phase.
+[Runner host](#contract-identity-definitions-host) acts at actor admission and phase activation. Entry: xpc execute. Recipient: caller, report reader. Reports: runner reply. Applies when present(`request.actors`). Uses [Termination dependency](#contract-actor_evidence-gate). Before activating the dependent actor or collecting its predictions, evaluate the owned natural-reap gate. A failed evaluated gate cancels every remaining scheduled phase.
 
 **Support: [source read](#contract-support-grades) for [Termination dependency](#contract-actors-after_termination) and its descendants.** The adjacent field meanings and obligations follow the named producer and admission branches. Evidence limit: Admission source read; the referenced actor-evidence rule owns the runtime gate and global cancellation consequence. Source: [PWRunnerActors.swift](../runner/Sources/PWRunnerCore/PWRunnerActors.swift): `PWRunnerAfterTermination`; [ActorPlan.swift](../runner/Sources/PWRunnerCore/ActorPlan.swift): `normalizeActorPlan`.
 
 <a id="contract-actors-after_termination-declaration"></a>
 ##### Admit the declared dependency
 
-[Runner host](#contract-identity-definitions-host) acts at actor plan admission before child launch. Entry: xpc execute. Recipient: report reader. Reports: runner reply. Binding `p`: entry in `request.phases`. Binding `a`: entry in `request.actors`. Binding `q`: entry in `request.phases`. Association restriction for `a`: `request.actors[a].actor_id` = `request.phases[p].after_termination.actor_id`. Association restriction for `q`: `request.phases[q].actor_id` = `request.phases[p].after_termination.actor_id`. For each `p`. Applies when (`request.actors` is present and `request.phases` is present).
+[Runner host](#contract-identity-definitions-host) acts at actor plan admission before child launch. Entry: xpc execute. Recipient: report reader. Reports: runner reply. Binding `p`: entry in `request.phases`. Binding `a`: entry in `request.actors`. Binding `q`: entry in `request.phases`. Association restriction for `a`: `request.actors[a].actor_id` = `request.phases[p].after_termination.actor_id`. Association restriction for `q`: `request.phases[q].actor_id` = `request.phases[p].after_termination.actor_id`. For each `p`. Applies when (present(`request.actors`) and present(`request.phases`)).
 
 | Item | Requirement or consequence |
 | --- | --- |
-| <a id="contract-actors-after_termination-declaration-source"></a>Source actor and visit | Applies when `request.phases[p].after_termination` is present. Requires (number of matching entries for `a` = `1` and `request.phases[p].after_termination.actor_id` ≠ `request.phases[p].actor_id` and number of matching entries for `q` > `0`). |
-| <a id="contract-actors-after_termination-declaration-earlier"></a>Every source visit precedes this phase | For each `p`, `q`. Applies when (`request.phases[p].after_termination` is present and `request.phases[q].actor_id` = `request.phases[p].after_termination.actor_id`). Requires `q` < `p`. |
-| <a id="contract-actors-after_termination-declaration-failure"></a>Refusal consequence | On failure, performs [Stop children and preserve safe metadata](#contract-refusals-request-consequence) for `request`. |
+| <a id="contract-actors-after_termination-declaration-source"></a>Source actor and visit | Applies when present(`request.phases[p].after_termination`). Requires (matches(`a`) = `1` and `request.phases[p].after_termination.actor_id` ≠ `request.phases[p].actor_id` and matches(`q`) > `0`). |
+| <a id="contract-actors-after_termination-declaration-earlier"></a>Every source visit precedes this phase | For each `p`, `q`. Applies when (present(`request.phases[p].after_termination`) and `request.phases[q].actor_id` = `request.phases[p].after_termination.actor_id`). Requires `q` < `p`. |
+| <a id="contract-actors-after_termination-declaration-failure"></a>Refusal consequence | On failure, perform([Stop children and preserve safe metadata](#contract-refusals-request-consequence), `request`). |
 
 **Support: [source read](#contract-support-grades) for [Admit the declared dependency](#contract-actors-after_termination-declaration).** The dependency names a different declared actor whose final declared phase precedes the dependent phase. Source: [ActorPlan.swift](../runner/Sources/PWRunnerCore/ActorPlan.swift): `normalizeActorPlan`.
 
@@ -1065,10 +1033,10 @@ An action is one JSON object in the phase actions array. The decoder chooses an 
 
 | Item | Requirement or consequence |
 | --- | --- |
-| <a id="contract-actors-action-identity-flat"></a>Flat probe identities | Binding `i`: entry in `request.probe_plan`. Binding `j`: entry in `request.probe_plan`. Association restriction for `j`: `request.probe_plan[j].step_id` = `request.probe_plan[i].step_id`. For each `i`. Applies when (`request.actors` is absent and `request.probe_plan` is present). Requires number of matching entries for `j` = `1`. |
-| <a id="contract-actors-action-identity-probe"></a>Phased probe identities | Binding `p`: entry in `request.phases`. Binding `a`: entry in `request.phases[p].actions`. Binding `q`: entry in `request.phases`. Binding `b`: entry in `request.phases[q].actions`. Association restriction for `b`: ((`request.phases[q].actions[b]` has alternative `"probe"` and `variant(request.phases[q].actions[b], 'probe').step_id` = `variant(request.phases[p].actions[a], 'probe').step_id`) or (`request.phases[q].actions[b]` has alternative `"extensionAction"` and `variant(request.phases[q].actions[b], 'extensionAction').step_id` = `variant(request.phases[p].actions[a], 'probe').step_id`)). For each `p`, `a`. Applies when (`request.phases` is present and `request.phases[p].actions[a]` has alternative `"probe"`). Requires (sum over `q` of number of matching entries for `b` = `1` and (if `request.actors` is present, then `variant(request.phases[p].actions[a], 'probe').step_id` ≠ `""`)). |
-| <a id="contract-actors-action-identity-extension"></a>Phased extension identities | Binding `p`: entry in `request.phases`. Binding `a`: entry in `request.phases[p].actions`. Binding `q`: entry in `request.phases`. Binding `b`: entry in `request.phases[q].actions`. Association restriction for `b`: ((`request.phases[q].actions[b]` has alternative `"probe"` and `variant(request.phases[q].actions[b], 'probe').step_id` = `variant(request.phases[p].actions[a], 'extensionAction').step_id`) or (`request.phases[q].actions[b]` has alternative `"extensionAction"` and `variant(request.phases[q].actions[b], 'extensionAction').step_id` = `variant(request.phases[p].actions[a], 'extensionAction').step_id`)). For each `p`, `a`. Applies when (`request.phases` is present and `request.phases[p].actions[a]` has alternative `"extensionAction"`). Requires (sum over `q` of number of matching entries for `b` = `1` and (if `request.actors` is present, then `variant(request.phases[p].actions[a], 'extensionAction').step_id` ≠ `""`)). |
-| <a id="contract-actors-action-identity-failure"></a>Refusal consequence | On failure, performs [Stop children and preserve safe metadata](#contract-refusals-request-consequence) for `request`. |
+| <a id="contract-actors-action-identity-flat"></a>Flat probe identities | Binding `i`: entry in `request.probe_plan`. Binding `j`: entry in `request.probe_plan`. Association restriction for `j`: `request.probe_plan[j].step_id` = `request.probe_plan[i].step_id`. For each `i`. Applies when (absent(`request.actors`) and present(`request.probe_plan`)). Requires matches(`j`) = `1`. |
+| <a id="contract-actors-action-identity-probe"></a>Phased probe identities | Binding `p`: entry in `request.phases`. Binding `a`: entry in `request.phases[p].actions`. Binding `q`: entry in `request.phases`. Binding `b`: entry in `request.phases[q].actions`. Association restriction for `b`: ((is_variant(`request.phases[q].actions[b]`, `"probe"`) and `variant(request.phases[q].actions[b], 'probe').step_id` = `variant(request.phases[p].actions[a], 'probe').step_id`) or (is_variant(`request.phases[q].actions[b]`, `"extensionAction"`) and `variant(request.phases[q].actions[b], 'extensionAction').step_id` = `variant(request.phases[p].actions[a], 'probe').step_id`)). For each `p`, `a`. Applies when (present(`request.phases`) and is_variant(`request.phases[p].actions[a]`, `"probe"`)). Requires (sum_over(`q`, matches(`b`)) = `1` and implies(present(`request.actors`), `variant(request.phases[p].actions[a], 'probe').step_id` ≠ `""`)). |
+| <a id="contract-actors-action-identity-extension"></a>Phased extension identities | Binding `p`: entry in `request.phases`. Binding `a`: entry in `request.phases[p].actions`. Binding `q`: entry in `request.phases`. Binding `b`: entry in `request.phases[q].actions`. Association restriction for `b`: ((is_variant(`request.phases[q].actions[b]`, `"probe"`) and `variant(request.phases[q].actions[b], 'probe').step_id` = `variant(request.phases[p].actions[a], 'extensionAction').step_id`) or (is_variant(`request.phases[q].actions[b]`, `"extensionAction"`) and `variant(request.phases[q].actions[b], 'extensionAction').step_id` = `variant(request.phases[p].actions[a], 'extensionAction').step_id`)). For each `p`, `a`. Applies when (present(`request.phases`) and is_variant(`request.phases[p].actions[a]`, `"extensionAction"`)). Requires (sum_over(`q`, matches(`b`)) = `1` and implies(present(`request.actors`), `variant(request.phases[p].actions[a], 'extensionAction').step_id` ≠ `""`)). |
+| <a id="contract-actors-action-identity-failure"></a>Refusal consequence | On failure, perform([Stop children and preserve safe metadata](#contract-refusals-request-consequence), `request`). |
 
 <a id="contract-actors-action-empty_id"></a>
 ##### Form-specific action identifiers
@@ -1089,10 +1057,8 @@ The actor form carries explicit issue, transfer, consume and release actions. A 
 
 Record `action`: `PWRunnerExtensionAction`.
 
-| Field | JSON type and presence | Meaning |
-| --- | --- | --- |
-| <a id="contract-extensions-action-step_id"></a>`step_id` | string; as defined below | Unique nonempty identifier across all specimen actions, bounded by <!-- span limits.step_id.value_unit -->63 UTF-8 bytes<!-- /span -->. |
-| <a id="contract-extensions-action-extension"></a>`extension` | [Extension operation](#contract-extensions-operation); as defined below | Closed extension operation for the active actor. Its presence selects extension-action decoding; a null object is refused. |
+- <a id="contract-extensions-action-step_id"></a>**`step_id`** (string; as defined below): Unique nonempty identifier across all specimen actions, bounded by <!-- span limits.step_id.value_unit -->63 UTF-8 bytes<!-- /span -->.
+- <a id="contract-extensions-action-extension"></a>**`extension`** ([Extension operation](#contract-extensions-operation); as defined below): Closed extension operation for the active actor. Its presence selects extension-action decoding; a null object is refused.
 
 **Support: [source read](#contract-support-grades) for [Extension action](#contract-extensions-action) and its descendants.** The adjacent meanings follow the named request, producer and observation branches. Source: [PWRunnerExtension.swift](../runner/Sources/PWRunnerCore/PWRunnerExtension.swift): `PWRunnerExtensionAction`; [ActorPlan.swift](../runner/Sources/PWRunnerCore/ActorPlan.swift): `normalizeActorPlan`.
 
@@ -1103,16 +1069,14 @@ Record `operation`: `PWRunnerExtensionOperation`.
 
 References are nonempty, NUL-free and bounded by <!-- span limits.extension_reference.value_unit -->63 UTF-8 bytes<!-- /span -->.
 
-| Field | JSON type and presence | Meaning |
-| --- | --- | --- |
-| <a id="contract-extensions-operation-operation"></a>`operation` | string; as defined below | Select the operation and its exact applicable operands. Admitted vocabulary: closed; displayed list: exhaustive: `"issue"`, `"transfer"`, `"consume"`, `"release"`. |
-| <a id="contract-extensions-operation-token_ref"></a>`token_ref` | string; as defined below | Required new token reference for issue; required previously assigned token owned by the active actor for transfer. Required when `operation.operation` is one of `"issue"`, `"transfer"`. Present when `operation.operation` is one of `"issue"`, `"transfer"`. |
-| <a id="contract-extensions-operation-handle_ref"></a>`handle_ref` | string; as defined below | Required new handle reference for consume; required previously assigned handle owned by the active actor for release. Required when `operation.operation` is one of `"consume"`, `"release"`. Present when `operation.operation` is one of `"consume"`, `"release"`. |
-| <a id="contract-extensions-operation-family"></a>`family` | string; as defined below | Required `file` for issue. Required when `operation.operation` = `"issue"`. Present when `operation.operation` = `"issue"`. |
-| <a id="contract-extensions-operation-target"></a>`target` | string; as defined below | Required absolute file or directory path for issue, bounded by <!-- span limits.extension_issue_target.value_unit -->1,023 UTF-8 bytes<!-- /span -->. The exact submitted bytes reach native issuance. Required when `operation.operation` = `"issue"`. Present when `operation.operation` = `"issue"`. |
-| <a id="contract-extensions-operation-authority"></a>`authority` | string; as defined below | Required `read` or `read_write` for issue, selecting `com.apple.app-sandbox.read` or `com.apple.app-sandbox.read-write`. Required when `operation.operation` = `"issue"`. Present when `operation.operation` = `"issue"`. |
-| <a id="contract-extensions-operation-recipient"></a>`recipient` | string; as defined below | Required known actor ID for transfer; may name the active actor itself. Required when `operation.operation` = `"transfer"`. Present when `operation.operation` = `"transfer"`. |
-| <a id="contract-extensions-operation-delivery_ref"></a>`delivery_ref` | string; as defined below | Required new delivery reference for transfer; required previously assigned delivery owned by the active recipient for consume. Required when `operation.operation` is one of `"transfer"`, `"consume"`. Present when `operation.operation` is one of `"transfer"`, `"consume"`. |
+- <a id="contract-extensions-operation-operation"></a>**`operation`** (string; as defined below): Select the operation and its exact applicable operands. Admitted vocabulary: closed; displayed list: exhaustive: `"issue"`, `"transfer"`, `"consume"`, `"release"`.
+- <a id="contract-extensions-operation-token_ref"></a>**`token_ref`** (string; as defined below): Required new token reference for issue; required previously assigned token owned by the active actor for transfer. Required when `operation.operation` ∈ [`"issue"`, `"transfer"`]. Present when `operation.operation` ∈ [`"issue"`, `"transfer"`].
+- <a id="contract-extensions-operation-handle_ref"></a>**`handle_ref`** (string; as defined below): Required new handle reference for consume; required previously assigned handle owned by the active actor for release. Required when `operation.operation` ∈ [`"consume"`, `"release"`]. Present when `operation.operation` ∈ [`"consume"`, `"release"`].
+- <a id="contract-extensions-operation-family"></a>**`family`** (string; as defined below): Required `file` for issue. Required when `operation.operation` = `"issue"`. Present when `operation.operation` = `"issue"`.
+- <a id="contract-extensions-operation-target"></a>**`target`** (string; as defined below): Required absolute file or directory path for issue, bounded by <!-- span limits.extension_issue_target.value_unit -->1,023 UTF-8 bytes<!-- /span -->. The exact submitted bytes reach native issuance. Required when `operation.operation` = `"issue"`. Present when `operation.operation` = `"issue"`.
+- <a id="contract-extensions-operation-authority"></a>**`authority`** (string; as defined below): Required `read` or `read_write` for issue, selecting `com.apple.app-sandbox.read` or `com.apple.app-sandbox.read-write`. Required when `operation.operation` = `"issue"`. Present when `operation.operation` = `"issue"`.
+- <a id="contract-extensions-operation-recipient"></a>**`recipient`** (string; as defined below): Required known actor ID for transfer; may name the active actor itself. Required when `operation.operation` = `"transfer"`. Present when `operation.operation` = `"transfer"`.
+- <a id="contract-extensions-operation-delivery_ref"></a>**`delivery_ref`** (string; as defined below): Required new delivery reference for transfer; required previously assigned delivery owned by the active recipient for consume. Required when `operation.operation` ∈ [`"transfer"`, `"consume"`]. Present when `operation.operation` ∈ [`"transfer"`, `"consume"`].
 
 <a id="contract-extensions-operation-grammar"></a>
 ##### Operation grammar
@@ -1129,43 +1093,43 @@ Each other operand must be absent. A required null operand is missing for this g
 <a id="contract-extensions-operation-references"></a>
 ##### Resolve references and ownership
 
-[Runner host](#contract-identity-definitions-host) acts at whole actor-plan admission. Entry: xpc execute. Recipient: caller, report reader. Reports: runner reply. Applies when (`request.actors` is present and `request.phases` is present). Construct the token, delivery and handle assignments and their execution indexes once from the admitted ordered resource declarations.
+[Runner host](#contract-identity-definitions-host) acts at whole actor-plan admission. Entry: xpc execute. Recipient: caller, report reader. Reports: runner reply. Applies when (present(`request.actors`) and present(`request.phases`)). Construct the token, delivery and handle assignments and their execution indexes once from the admitted ordered resource declarations.
 
 The same token may be transferred to multiple recipients or repeatedly to one recipient using distinct delivery references. A delivery may be consumed repeatedly using distinct handle references. Syntactic ordering establishes which resource is requested; the later resource record establishes what was observed.
 
 | Item | Requirement or consequence |
 | --- | --- |
-| <a id="contract-extensions-operation-references-unique_issue"></a>Unique issue assignment | Binding `p`: entry in `request.phases`. Binding `a`: entry in `request.phases[p].actions`. Binding `q`: entry in `request.phases`. Binding `b`: entry in `request.phases[q].actions`. Association restriction for `b`: (`request.phases[q].actions[b]` has alternative `"extensionAction"` and ((`variant(request.phases[q].actions[b], 'extensionAction').extension.operation` = `"issue"` and `variant(request.phases[q].actions[b], 'extensionAction').extension.token_ref` = `variant(request.phases[p].actions[a], 'extensionAction').extension.token_ref`) or (`variant(request.phases[q].actions[b], 'extensionAction').extension.operation` = `"transfer"` and `variant(request.phases[q].actions[b], 'extensionAction').extension.delivery_ref` = `variant(request.phases[p].actions[a], 'extensionAction').extension.token_ref`) or (`variant(request.phases[q].actions[b], 'extensionAction').extension.operation` = `"consume"` and `variant(request.phases[q].actions[b], 'extensionAction').extension.handle_ref` = `variant(request.phases[p].actions[a], 'extensionAction').extension.token_ref`))). For each `p`, `a`. Applies when (`request.phases[p].actions[a]` has alternative `"extensionAction"` and `variant(request.phases[p].actions[a], 'extensionAction').extension.operation` = `"issue"`). Requires sum over `q` of number of matching entries for `b` = `1`. |
-| <a id="contract-extensions-operation-references-unique_transfer"></a>Unique transfer assignment | Binding `p`: entry in `request.phases`. Binding `a`: entry in `request.phases[p].actions`. Binding `q`: entry in `request.phases`. Binding `b`: entry in `request.phases[q].actions`. Association restriction for `b`: (`request.phases[q].actions[b]` has alternative `"extensionAction"` and ((`variant(request.phases[q].actions[b], 'extensionAction').extension.operation` = `"issue"` and `variant(request.phases[q].actions[b], 'extensionAction').extension.token_ref` = `variant(request.phases[p].actions[a], 'extensionAction').extension.delivery_ref`) or (`variant(request.phases[q].actions[b], 'extensionAction').extension.operation` = `"transfer"` and `variant(request.phases[q].actions[b], 'extensionAction').extension.delivery_ref` = `variant(request.phases[p].actions[a], 'extensionAction').extension.delivery_ref`) or (`variant(request.phases[q].actions[b], 'extensionAction').extension.operation` = `"consume"` and `variant(request.phases[q].actions[b], 'extensionAction').extension.handle_ref` = `variant(request.phases[p].actions[a], 'extensionAction').extension.delivery_ref`))). For each `p`, `a`. Applies when (`request.phases[p].actions[a]` has alternative `"extensionAction"` and `variant(request.phases[p].actions[a], 'extensionAction').extension.operation` = `"transfer"`). Requires sum over `q` of number of matching entries for `b` = `1`. |
-| <a id="contract-extensions-operation-references-unique_consume"></a>Unique consume assignment | Binding `p`: entry in `request.phases`. Binding `a`: entry in `request.phases[p].actions`. Binding `q`: entry in `request.phases`. Binding `b`: entry in `request.phases[q].actions`. Association restriction for `b`: (`request.phases[q].actions[b]` has alternative `"extensionAction"` and ((`variant(request.phases[q].actions[b], 'extensionAction').extension.operation` = `"issue"` and `variant(request.phases[q].actions[b], 'extensionAction').extension.token_ref` = `variant(request.phases[p].actions[a], 'extensionAction').extension.handle_ref`) or (`variant(request.phases[q].actions[b], 'extensionAction').extension.operation` = `"transfer"` and `variant(request.phases[q].actions[b], 'extensionAction').extension.delivery_ref` = `variant(request.phases[p].actions[a], 'extensionAction').extension.handle_ref`) or (`variant(request.phases[q].actions[b], 'extensionAction').extension.operation` = `"consume"` and `variant(request.phases[q].actions[b], 'extensionAction').extension.handle_ref` = `variant(request.phases[p].actions[a], 'extensionAction').extension.handle_ref`))). For each `p`, `a`. Applies when (`request.phases[p].actions[a]` has alternative `"extensionAction"` and `variant(request.phases[p].actions[a], 'extensionAction').extension.operation` = `"consume"`). Requires sum over `q` of number of matching entries for `b` = `1`. |
-| <a id="contract-extensions-operation-references-producer_transfer"></a>Earlier owned producer for transfer | Binding `p`: entry in `request.phases`. Binding `a`: entry in `request.phases[p].actions`. Binding `q`: entry in `request.phases`. Binding `b`: entry in `request.phases[q].actions`. Association restriction for `b`: (`request.phases[q].actions[b]` has alternative `"extensionAction"` and `variant(request.phases[q].actions[b], 'extensionAction').extension.operation` = `"issue"` and `variant(request.phases[q].actions[b], 'extensionAction').extension.token_ref` = `variant(request.phases[p].actions[a], 'extensionAction').extension.token_ref` and (`q` < `p` or (`q` = `p` and `b` < `a`)) and `request.phases[q].actor_id` = `request.phases[p].actor_id`). For each `p`, `a`. Applies when (`request.phases[p].actions[a]` has alternative `"extensionAction"` and `variant(request.phases[p].actions[a], 'extensionAction').extension.operation` = `"transfer"`). Requires sum over `q` of number of matching entries for `b` = `1`. |
-| <a id="contract-extensions-operation-references-producer_consume"></a>Earlier owned producer for consume | Binding `p`: entry in `request.phases`. Binding `a`: entry in `request.phases[p].actions`. Binding `q`: entry in `request.phases`. Binding `b`: entry in `request.phases[q].actions`. Association restriction for `b`: (`request.phases[q].actions[b]` has alternative `"extensionAction"` and `variant(request.phases[q].actions[b], 'extensionAction').extension.operation` = `"transfer"` and `variant(request.phases[q].actions[b], 'extensionAction').extension.delivery_ref` = `variant(request.phases[p].actions[a], 'extensionAction').extension.delivery_ref` and (`q` < `p` or (`q` = `p` and `b` < `a`)) and `variant(request.phases[q].actions[b], 'extensionAction').extension.recipient` = `request.phases[p].actor_id`). For each `p`, `a`. Applies when (`request.phases[p].actions[a]` has alternative `"extensionAction"` and `variant(request.phases[p].actions[a], 'extensionAction').extension.operation` = `"consume"`). Requires sum over `q` of number of matching entries for `b` = `1`. |
-| <a id="contract-extensions-operation-references-producer_release"></a>Earlier owned producer for release | Binding `p`: entry in `request.phases`. Binding `a`: entry in `request.phases[p].actions`. Binding `q`: entry in `request.phases`. Binding `b`: entry in `request.phases[q].actions`. Association restriction for `b`: (`request.phases[q].actions[b]` has alternative `"extensionAction"` and `variant(request.phases[q].actions[b], 'extensionAction').extension.operation` = `"consume"` and `variant(request.phases[q].actions[b], 'extensionAction').extension.handle_ref` = `variant(request.phases[p].actions[a], 'extensionAction').extension.handle_ref` and (`q` < `p` or (`q` = `p` and `b` < `a`)) and `request.phases[q].actor_id` = `request.phases[p].actor_id`). For each `p`, `a`. Applies when (`request.phases[p].actions[a]` has alternative `"extensionAction"` and `variant(request.phases[p].actions[a], 'extensionAction').extension.operation` = `"release"`). Requires sum over `q` of number of matching entries for `b` = `1`. |
-| <a id="contract-extensions-operation-references-single_release"></a>At most one handle release | Binding `p`: entry in `request.phases`. Binding `a`: entry in `request.phases[p].actions`. Binding `q`: entry in `request.phases`. Binding `b`: entry in `request.phases[q].actions`. Association restriction for `b`: (`request.phases[q].actions[b]` has alternative `"extensionAction"` and `variant(request.phases[q].actions[b], 'extensionAction').extension.operation` = `"release"` and `variant(request.phases[q].actions[b], 'extensionAction').extension.handle_ref` = `variant(request.phases[p].actions[a], 'extensionAction').extension.handle_ref`). For each `p`, `a`. Applies when (`request.phases[p].actions[a]` has alternative `"extensionAction"` and `variant(request.phases[p].actions[a], 'extensionAction').extension.operation` = `"consume"`). Requires sum over `q` of number of matching entries for `b` ≤ `1`. |
-| <a id="contract-extensions-operation-references-failure"></a>Refusal consequence | On failure, performs [Stop children and preserve safe metadata](#contract-refusals-request-consequence) for `request`. |
+| <a id="contract-extensions-operation-references-unique_issue"></a>Unique issue assignment | Binding `p`: entry in `request.phases`. Binding `a`: entry in `request.phases[p].actions`. Binding `q`: entry in `request.phases`. Binding `b`: entry in `request.phases[q].actions`. Association restriction for `b`: (is_variant(`request.phases[q].actions[b]`, `"extensionAction"`) and ((`variant(request.phases[q].actions[b], 'extensionAction').extension.operation` = `"issue"` and `variant(request.phases[q].actions[b], 'extensionAction').extension.token_ref` = `variant(request.phases[p].actions[a], 'extensionAction').extension.token_ref`) or (`variant(request.phases[q].actions[b], 'extensionAction').extension.operation` = `"transfer"` and `variant(request.phases[q].actions[b], 'extensionAction').extension.delivery_ref` = `variant(request.phases[p].actions[a], 'extensionAction').extension.token_ref`) or (`variant(request.phases[q].actions[b], 'extensionAction').extension.operation` = `"consume"` and `variant(request.phases[q].actions[b], 'extensionAction').extension.handle_ref` = `variant(request.phases[p].actions[a], 'extensionAction').extension.token_ref`))). For each `p`, `a`. Applies when (is_variant(`request.phases[p].actions[a]`, `"extensionAction"`) and `variant(request.phases[p].actions[a], 'extensionAction').extension.operation` = `"issue"`). Requires sum_over(`q`, matches(`b`)) = `1`. |
+| <a id="contract-extensions-operation-references-unique_transfer"></a>Unique transfer assignment | Binding `p`: entry in `request.phases`. Binding `a`: entry in `request.phases[p].actions`. Binding `q`: entry in `request.phases`. Binding `b`: entry in `request.phases[q].actions`. Association restriction for `b`: (is_variant(`request.phases[q].actions[b]`, `"extensionAction"`) and ((`variant(request.phases[q].actions[b], 'extensionAction').extension.operation` = `"issue"` and `variant(request.phases[q].actions[b], 'extensionAction').extension.token_ref` = `variant(request.phases[p].actions[a], 'extensionAction').extension.delivery_ref`) or (`variant(request.phases[q].actions[b], 'extensionAction').extension.operation` = `"transfer"` and `variant(request.phases[q].actions[b], 'extensionAction').extension.delivery_ref` = `variant(request.phases[p].actions[a], 'extensionAction').extension.delivery_ref`) or (`variant(request.phases[q].actions[b], 'extensionAction').extension.operation` = `"consume"` and `variant(request.phases[q].actions[b], 'extensionAction').extension.handle_ref` = `variant(request.phases[p].actions[a], 'extensionAction').extension.delivery_ref`))). For each `p`, `a`. Applies when (is_variant(`request.phases[p].actions[a]`, `"extensionAction"`) and `variant(request.phases[p].actions[a], 'extensionAction').extension.operation` = `"transfer"`). Requires sum_over(`q`, matches(`b`)) = `1`. |
+| <a id="contract-extensions-operation-references-unique_consume"></a>Unique consume assignment | Binding `p`: entry in `request.phases`. Binding `a`: entry in `request.phases[p].actions`. Binding `q`: entry in `request.phases`. Binding `b`: entry in `request.phases[q].actions`. Association restriction for `b`: (is_variant(`request.phases[q].actions[b]`, `"extensionAction"`) and ((`variant(request.phases[q].actions[b], 'extensionAction').extension.operation` = `"issue"` and `variant(request.phases[q].actions[b], 'extensionAction').extension.token_ref` = `variant(request.phases[p].actions[a], 'extensionAction').extension.handle_ref`) or (`variant(request.phases[q].actions[b], 'extensionAction').extension.operation` = `"transfer"` and `variant(request.phases[q].actions[b], 'extensionAction').extension.delivery_ref` = `variant(request.phases[p].actions[a], 'extensionAction').extension.handle_ref`) or (`variant(request.phases[q].actions[b], 'extensionAction').extension.operation` = `"consume"` and `variant(request.phases[q].actions[b], 'extensionAction').extension.handle_ref` = `variant(request.phases[p].actions[a], 'extensionAction').extension.handle_ref`))). For each `p`, `a`. Applies when (is_variant(`request.phases[p].actions[a]`, `"extensionAction"`) and `variant(request.phases[p].actions[a], 'extensionAction').extension.operation` = `"consume"`). Requires sum_over(`q`, matches(`b`)) = `1`. |
+| <a id="contract-extensions-operation-references-producer_transfer"></a>Earlier owned producer for transfer | Binding `p`: entry in `request.phases`. Binding `a`: entry in `request.phases[p].actions`. Binding `q`: entry in `request.phases`. Binding `b`: entry in `request.phases[q].actions`. Association restriction for `b`: (is_variant(`request.phases[q].actions[b]`, `"extensionAction"`) and `variant(request.phases[q].actions[b], 'extensionAction').extension.operation` = `"issue"` and `variant(request.phases[q].actions[b], 'extensionAction').extension.token_ref` = `variant(request.phases[p].actions[a], 'extensionAction').extension.token_ref` and (`q` < `p` or (`q` = `p` and `b` < `a`)) and `request.phases[q].actor_id` = `request.phases[p].actor_id`). For each `p`, `a`. Applies when (is_variant(`request.phases[p].actions[a]`, `"extensionAction"`) and `variant(request.phases[p].actions[a], 'extensionAction').extension.operation` = `"transfer"`). Requires sum_over(`q`, matches(`b`)) = `1`. |
+| <a id="contract-extensions-operation-references-producer_consume"></a>Earlier owned producer for consume | Binding `p`: entry in `request.phases`. Binding `a`: entry in `request.phases[p].actions`. Binding `q`: entry in `request.phases`. Binding `b`: entry in `request.phases[q].actions`. Association restriction for `b`: (is_variant(`request.phases[q].actions[b]`, `"extensionAction"`) and `variant(request.phases[q].actions[b], 'extensionAction').extension.operation` = `"transfer"` and `variant(request.phases[q].actions[b], 'extensionAction').extension.delivery_ref` = `variant(request.phases[p].actions[a], 'extensionAction').extension.delivery_ref` and (`q` < `p` or (`q` = `p` and `b` < `a`)) and `variant(request.phases[q].actions[b], 'extensionAction').extension.recipient` = `request.phases[p].actor_id`). For each `p`, `a`. Applies when (is_variant(`request.phases[p].actions[a]`, `"extensionAction"`) and `variant(request.phases[p].actions[a], 'extensionAction').extension.operation` = `"consume"`). Requires sum_over(`q`, matches(`b`)) = `1`. |
+| <a id="contract-extensions-operation-references-producer_release"></a>Earlier owned producer for release | Binding `p`: entry in `request.phases`. Binding `a`: entry in `request.phases[p].actions`. Binding `q`: entry in `request.phases`. Binding `b`: entry in `request.phases[q].actions`. Association restriction for `b`: (is_variant(`request.phases[q].actions[b]`, `"extensionAction"`) and `variant(request.phases[q].actions[b], 'extensionAction').extension.operation` = `"consume"` and `variant(request.phases[q].actions[b], 'extensionAction').extension.handle_ref` = `variant(request.phases[p].actions[a], 'extensionAction').extension.handle_ref` and (`q` < `p` or (`q` = `p` and `b` < `a`)) and `request.phases[q].actor_id` = `request.phases[p].actor_id`). For each `p`, `a`. Applies when (is_variant(`request.phases[p].actions[a]`, `"extensionAction"`) and `variant(request.phases[p].actions[a], 'extensionAction').extension.operation` = `"release"`). Requires sum_over(`q`, matches(`b`)) = `1`. |
+| <a id="contract-extensions-operation-references-single_release"></a>At most one handle release | Binding `p`: entry in `request.phases`. Binding `a`: entry in `request.phases[p].actions`. Binding `q`: entry in `request.phases`. Binding `b`: entry in `request.phases[q].actions`. Association restriction for `b`: (is_variant(`request.phases[q].actions[b]`, `"extensionAction"`) and `variant(request.phases[q].actions[b], 'extensionAction').extension.operation` = `"release"` and `variant(request.phases[q].actions[b], 'extensionAction').extension.handle_ref` = `variant(request.phases[p].actions[a], 'extensionAction').extension.handle_ref`). For each `p`, `a`. Applies when (is_variant(`request.phases[p].actions[a]`, `"extensionAction"`) and `variant(request.phases[p].actions[a], 'extensionAction').extension.operation` = `"consume"`). Requires sum_over(`q`, matches(`b`)) ≤ `1`. |
+| <a id="contract-extensions-operation-references-failure"></a>Refusal consequence | On failure, perform([Stop children and preserve safe metadata](#contract-refusals-request-consequence), `request`). |
 
 <a id="contract-extensions-operation-capacity"></a>
 ##### Bound the declared resource plan
 
-[Runner host](#contract-identity-definitions-host) acts at pre-child admission. Entry: xpc execute. Recipient: caller, report reader. Reports: runner reply. Binding `p`: entry in `request.phases`. Binding `a`: entry in `request.phases[p].actions`. Applies when (`request.actors` is present and `request.phases` is present). Uses [Specimen](#contract-request-specimen).
+[Runner host](#contract-identity-definitions-host) acts at pre-child admission. Entry: xpc execute. Recipient: caller, report reader. Reports: runner reply. Binding `p`: entry in `request.phases`. Binding `a`: entry in `request.phases[p].actions`. Applies when (present(`request.actors`) and present(`request.phases`)). Uses [Specimen](#contract-request-specimen).
 
 | Item | Requirement or consequence |
 | --- | --- |
-| <a id="contract-extensions-operation-capacity-issue"></a>Issue count | Association restriction for `a`: (`request.phases[p].actions[a]` has alternative `"extensionAction"` and `variant(request.phases[p].actions[a], 'extensionAction').extension.operation` = `"issue"`). Requires sum over `p` of number of matching entries for `a` ≤ `32 items` (`actor_issues`) . |
-| <a id="contract-extensions-operation-capacity-transfer"></a>Transfer count | Association restriction for `a`: (`request.phases[p].actions[a]` has alternative `"extensionAction"` and `variant(request.phases[p].actions[a], 'extensionAction').extension.operation` = `"transfer"`). Requires sum over `p` of number of matching entries for `a` ≤ `64 items` (`actor_deliveries`) . |
-| <a id="contract-extensions-operation-capacity-consume"></a>Consume count | Association restriction for `a`: (`request.phases[p].actions[a]` has alternative `"extensionAction"` and `variant(request.phases[p].actions[a], 'extensionAction').extension.operation` = `"consume"`). Requires sum over `p` of number of matching entries for `a` ≤ `64 items` (`actor_handles`) . |
-| <a id="contract-extensions-operation-capacity-release"></a>Release count | Association restriction for `a`: (`request.phases[p].actions[a]` has alternative `"extensionAction"` and `variant(request.phases[p].actions[a], 'extensionAction').extension.operation` = `"release"`). Requires sum over `p` of number of matching entries for `a` ≤ `64 items` (`actor_releases`) . |
-| <a id="contract-extensions-operation-capacity-failure"></a>Refusal consequence | On failure, performs [Stop children and preserve safe metadata](#contract-refusals-request-consequence) for `request`. |
+| <a id="contract-extensions-operation-capacity-issue"></a>Issue count | Association restriction for `a`: (is_variant(`request.phases[p].actions[a]`, `"extensionAction"`) and `variant(request.phases[p].actions[a], 'extensionAction').extension.operation` = `"issue"`). Requires sum_over(`p`, matches(`a`)) ≤ `32 items` (`actor_issues`) . |
+| <a id="contract-extensions-operation-capacity-transfer"></a>Transfer count | Association restriction for `a`: (is_variant(`request.phases[p].actions[a]`, `"extensionAction"`) and `variant(request.phases[p].actions[a], 'extensionAction').extension.operation` = `"transfer"`). Requires sum_over(`p`, matches(`a`)) ≤ `64 items` (`actor_deliveries`) . |
+| <a id="contract-extensions-operation-capacity-consume"></a>Consume count | Association restriction for `a`: (is_variant(`request.phases[p].actions[a]`, `"extensionAction"`) and `variant(request.phases[p].actions[a], 'extensionAction').extension.operation` = `"consume"`). Requires sum_over(`p`, matches(`a`)) ≤ `64 items` (`actor_handles`) . |
+| <a id="contract-extensions-operation-capacity-release"></a>Release count | Association restriction for `a`: (is_variant(`request.phases[p].actions[a]`, `"extensionAction"`) and `variant(request.phases[p].actions[a], 'extensionAction').extension.operation` = `"release"`). Requires sum_over(`p`, matches(`a`)) ≤ `64 items` (`actor_releases`) . |
+| <a id="contract-extensions-operation-capacity-failure"></a>Refusal consequence | On failure, perform([Stop children and preserve safe metadata](#contract-refusals-request-consequence), `request`). |
 
 <a id="contract-extensions-operation-exec"></a>
 ##### Exclude exec in participating actors
 
-[Runner host](#contract-identity-definitions-host) acts at actor-plan admission. Entry: xpc execute. Recipient: caller, report reader. Reports: runner reply. Binding `a`: entry in `request.actors`. Binding `p`: entry in `request.phases`. Binding `x`: entry in `request.phases[p].actions`. Binding `q`: entry in `request.phases`. Binding `y`: entry in `request.phases[q].actions`. Association restriction for `x`: (`request.phases[p].actions[x]` has alternative `"extensionAction"` and (`request.phases[p].actor_id` = `request.actors[a].actor_id` or (`variant(request.phases[p].actions[x], 'extensionAction').extension.operation` = `"transfer"` and `variant(request.phases[p].actions[x], 'extensionAction').extension.recipient` = `request.actors[a].actor_id`))). Association restriction for `y`: (`request.phases[q].actor_id` = `request.actors[a].actor_id` and `request.phases[q].actions[y]` has alternative `"probe"` and `variant(request.phases[q].actions[y], 'probe').attempt.kind` = `"exec"`). Applies when (`request.actors` is present and `request.phases` is present). Uses [Attempt request](#contract-probes-attempt).
+[Runner host](#contract-identity-definitions-host) acts at actor-plan admission. Entry: xpc execute. Recipient: caller, report reader. Reports: runner reply. Binding `a`: entry in `request.actors`. Binding `p`: entry in `request.phases`. Binding `x`: entry in `request.phases[p].actions`. Binding `q`: entry in `request.phases`. Binding `y`: entry in `request.phases[q].actions`. Association restriction for `x`: (is_variant(`request.phases[p].actions[x]`, `"extensionAction"`) and (`request.phases[p].actor_id` = `request.actors[a].actor_id` or (`variant(request.phases[p].actions[x], 'extensionAction').extension.operation` = `"transfer"` and `variant(request.phases[p].actions[x], 'extensionAction').extension.recipient` = `request.actors[a].actor_id`))). Association restriction for `y`: (`request.phases[q].actor_id` = `request.actors[a].actor_id` and is_variant(`request.phases[q].actions[y]`, `"probe"`) and `variant(request.phases[q].actions[y], 'probe').attempt.kind` = `"exec"`). Applies when (present(`request.actors`) and present(`request.phases`)). Uses [Attempt request](#contract-probes-attempt).
 
 | Item | Requirement or consequence |
 | --- | --- |
-| <a id="contract-extensions-operation-exec-participants"></a>Participant exec exclusion | For each `a`. Requires (if sum over `p` of number of matching entries for `x` > `0`, then sum over `q` of number of matching entries for `y` = `0`). |
-| <a id="contract-extensions-operation-exec-failure"></a>Refusal consequence | On failure, performs [Stop children and preserve safe metadata](#contract-refusals-request-consequence) for `request`. |
+| <a id="contract-extensions-operation-exec-participants"></a>Participant exec exclusion | For each `a`. Requires implies(sum_over(`p`, matches(`x`)) > `0`, sum_over(`q`, matches(`y`)) = `0`). |
+| <a id="contract-extensions-operation-exec-failure"></a>Refusal consequence | On failure, perform([Stop children and preserve safe metadata](#contract-refusals-request-consequence), `request`). |
 
 **Support: [source read](#contract-support-grades) for [Extension operation](#contract-extensions-operation) and its descendants.** The adjacent meanings follow the named request, producer and observation branches. Source: [PWRunnerExtension.swift](../runner/Sources/PWRunnerCore/PWRunnerExtension.swift): `actorOperands`; [ActorPlan.swift](../runner/Sources/PWRunnerCore/ActorPlan.swift): `normalizeActorPlan`, `actorAdmissionFailure`.
 
@@ -1177,7 +1141,7 @@ Authority payloads occupy bounded native storage assigned to the admitted resour
 <a id="contract-extensions-custody-prepare"></a>
 ##### Prepare before use
 
-[Runner host](#contract-identity-definitions-host), [Worker](#contract-identity-definitions-worker) acts at host custody preparation before launch and actor setup before application or unapplied declaration. Entry: xpc execute. Recipient: caller, report reader. Reports: runner reply. Applies when `request.actors` is present. Uses [Authority setup account](#contract-equipment-authority_setup). When the admitted resource plan contains a token or delivery, the host attempts to disable core dumps; after that succeeds, it prepares one authority region for every actor and a bounded custody buffer for each token. Failure of this host custody preparation prevents every actor launch. Each actor worker reaching authority setup looks up extension symbols and attempts its own core-dump limit. Required setup publishes ready after mapping and validating its assigned region; a primary failure publishes terminal_required_failure and ends the worker before policy setup. Unneeded authority selects not_required without mapping, including when the core-limit attempt failed. These worker setup operations precede application or the actor's unapplied declaration. A reached extension action reports unavailability for missing required apparatus or symbols.
+[Runner host](#contract-identity-definitions-host), [Worker](#contract-identity-definitions-worker) acts at host custody preparation before launch and actor setup before application or unapplied declaration. Entry: xpc execute. Recipient: caller, report reader. Reports: runner reply. Applies when present(`request.actors`). Uses [Authority setup account](#contract-equipment-authority_setup). When the admitted resource plan contains a token or delivery, the host attempts to disable core dumps; after that succeeds, it prepares one authority region for every actor and a bounded custody buffer for each token. Failure of this host custody preparation prevents every actor launch. Each actor worker reaching authority setup looks up extension symbols and attempts its own core-dump limit. Required setup publishes ready after mapping and validating its assigned region; a primary failure publishes terminal_required_failure and ends the worker before policy setup. Unneeded authority selects not_required without mapping, including when the core-limit attempt failed. These worker setup operations precede application or the actor's unapplied declaration. A reached extension action reports unavailability for missing required apparatus or symbols.
 
 <a id="contract-extensions-custody-issue"></a>
 ##### Issue and transfer payload ownership
@@ -1196,12 +1160,12 @@ A parked recipient validates framing. A self-transfer also services inbound work
 <a id="contract-extensions-custody-source_answer"></a>
 ##### Observe the source answer
 
-[Runner host](#contract-identity-definitions-host) acts at reply assembly after transfer. Entry: xpc execute. Recipient: caller, report reader. Reports: runner reply. Applies when `request.actors` is present. Set source_acknowledged only when the source action completed and its published transfer status matches the host's nonzero acknowledgement. Preserve late host answers independently of an unpublished or differently completed source action.
+[Runner host](#contract-identity-definitions-host) acts at reply assembly after transfer. Entry: xpc execute. Recipient: caller, report reader. Reports: runner reply. Applies when present(`request.actors`). Set source_acknowledged only when the source action completed and its published transfer status matches the host's nonzero acknowledgement. Preserve late host answers independently of an unpublished or differently completed source action.
 
 <a id="contract-extensions-custody-erase"></a>
 ##### Erase at declared last use and teardown
 
-[Runner host](#contract-identity-definitions-host), [Worker](#contract-identity-definitions-worker) acts at resource retirement. Entry: xpc execute. Recipient: caller, report reader. Reports: runner reply. Applies when `request.actors` is present. Erase host-private custody at the last declared transfer (or after issue when never transferred) and at teardown. Erase worker-owned inbound payloads after their last declared consume and at normal exit once host settlement transfers ownership. At host teardown erase shared regions only for actors whose termination is established; otherwise detach the host mapping.
+[Runner host](#contract-identity-definitions-host), [Worker](#contract-identity-definitions-worker) acts at resource retirement. Entry: xpc execute. Recipient: caller, report reader. Reports: runner reply. Applies when present(`request.actors`). Erase host-private custody at the last declared transfer (or after issue when never transferred) and at teardown. Erase worker-owned inbound payloads after their last declared consume and at normal exit once host settlement transfers ownership. At host teardown erase shared regions only for actors whose termination is established; otherwise detach the host mapping.
 
 A last transfer retires custody even when the recipient is unavailable. Payload erasure is a memory-lifetime action; a native release request and the later access observation are separate operations.
 
@@ -1285,16 +1249,16 @@ Both reservation requests and admitted control replies reject unknown keys after
 
 | Item | Requirement or consequence |
 | --- | --- |
-| <a id="contract-transport-delivery-admit_control-identity"></a>Typed control identity | Requires (`control.host_pid` > `0` and `control.host_pid` ≤ `2147483647` and UTF-8 byte length of `control.host_instance` = `36`). |
-| <a id="contract-transport-delivery-admit_control-status"></a>Admitted status forms | Requires `control.status` is one of `"granted"`, `"occupied"`, `"reservation_refused"`. |
-| <a id="contract-transport-delivery-admit_control-grant"></a>Granted reservation fields | Requires (if `control.status` = `"granted"`, then (`control.attempt_id` is present and `control.reason` is absent and `control.reservation_id` is present and UTF-8 byte length of `control.reservation_id` = `36` and `control.lease_ms` is present and `control.lease_ms` > `0` and `control.lease_ms` ≤ `5,000 milliseconds` (`reservation_lease`) )). |
-| <a id="contract-transport-delivery-admit_control-occupied"></a>Occupied reservation fields | Requires (if `control.status` = `"occupied"`, then (`control.attempt_id` is present and `control.reason` is absent and `control.reservation_id` is absent and `control.lease_ms` is absent)). |
-| <a id="contract-transport-delivery-admit_control-refusal"></a>Submission refusal fields | Requires (if `control.status` = `"reservation_refused"`, then (`control.attempt_id` is absent and `control.reservation_id` is absent and `control.lease_ms` is absent and `control.reason` is one of `"wrong"`, `"expired"`, `"absent"`, `"consumed"`, `"clock_error"`)). |
+| <a id="contract-transport-delivery-admit_control-identity"></a>Typed control identity | Requires (`control.host_pid` > `0` and `control.host_pid` ≤ `2147483647` and utf8_length(`control.host_instance`) = `36`). |
+| <a id="contract-transport-delivery-admit_control-status"></a>Admitted status forms | Requires `control.status` ∈ [`"granted"`, `"occupied"`, `"reservation_refused"`]. |
+| <a id="contract-transport-delivery-admit_control-grant"></a>Granted reservation fields | Requires implies(`control.status` = `"granted"`, (present(`control.attempt_id`) and absent(`control.reason`) and present(`control.reservation_id`) and utf8_length(`control.reservation_id`) = `36` and present(`control.lease_ms`) and `control.lease_ms` > `0` and `control.lease_ms` ≤ `5,000 milliseconds` (`reservation_lease`) )). |
+| <a id="contract-transport-delivery-admit_control-occupied"></a>Occupied reservation fields | Requires implies(`control.status` = `"occupied"`, (present(`control.attempt_id`) and absent(`control.reason`) and absent(`control.reservation_id`) and absent(`control.lease_ms`))). |
+| <a id="contract-transport-delivery-admit_control-refusal"></a>Submission refusal fields | Requires implies(`control.status` = `"reservation_refused"`, (absent(`control.attempt_id`) and absent(`control.reservation_id`) and absent(`control.lease_ms`) and `control.reason` ∈ [`"wrong"`, `"expired"`, `"absent"`, `"consumed"`, `"clock_error"`])). |
 
 <a id="contract-transport-delivery-invoke"></a>
 ##### Invoke execution once
 
-[Runner client](#contract-identity-definitions-client) acts at runReservedSpecimen invocation on the granting connection. Entry: cli run, runner verify. Recipient: runner host. Reports: client capture. sets `capture.submission.state` to `"invoked"`. A grant was admitted and a fresh continuous-clock sample is before the original deadline. Record the sampled invocation elapsed time before acquiring/calling the execution proxy. Make one execution invocation and preserve its observation through later error, timeout or refusal; never replay the specimen.
+[Runner client](#contract-identity-definitions-client) acts at runReservedSpecimen invocation on the granting connection. Entry: cli run, runner verify. Recipient: runner host. Reports: client capture. set_value(`capture.submission.state`, `"invoked"`). A grant was admitted and a fresh continuous-clock sample is before the original deadline. Record the sampled invocation elapsed time before acquiring/calling the execution proxy. Make one execution invocation and preserve its observation through later error, timeout or refusal; never replay the specimen.
 
 The host checks the connection-bound credential before interpreting the specimen. A transport error after invocation leaves receipt and execution uncertain until independent observations resolve them.
 
@@ -1322,51 +1286,45 @@ Controlled client connections establish the observed control-identity refusal an
 
 Record `reservation`: `PWRunnerReservationRequest`.
 
-| Field | JSON type and presence | Meaning |
-| --- | --- | --- |
-| <a id="contract-transport-reservation-contract"></a>`contract` | string; as defined below | The client’s exact public identity. The host compares it before decoding the rest of this control. |
-| <a id="contract-transport-reservation-attempt_id"></a>`attempt_id` | string; as defined below | UUID naming one acquisition attempt, echoed by granted or occupied control responses. |
-| <a id="contract-transport-reservation-lease_ms"></a>`lease_ms` | integer; as defined below | Positive requested reservation lifetime in milliseconds; the host caps an accepted lease at 5,000. |
+- <a id="contract-transport-reservation-contract"></a>**`contract`** (string; as defined below): The client’s exact public identity. The host compares it before decoding the rest of this control.
+- <a id="contract-transport-reservation-attempt_id"></a>**`attempt_id`** (string; as defined below): UUID naming one acquisition attempt, echoed by granted or occupied control responses.
+- <a id="contract-transport-reservation-lease_ms"></a>**`lease_ms`** (integer; as defined below): Positive requested reservation lifetime in milliseconds; the host caps an accepted lease at 5,000.
 
 <a id="contract-transport-control"></a>
 #### Host control reply
 
 Record `control`: `PWRunnerControlReply`.
 
-| Field | JSON type and presence | Meaning |
-| --- | --- | --- |
-| <a id="contract-transport-control-contract"></a>`contract` | string; required | The host’s compiled public identity, checked by the client before reading the control body. |
-| <a id="contract-transport-control-status"></a>`status` | string; required | The host reports `granted`, `occupied`, `invalid_request`, `unsupported_protocol` or `reservation_refused` at the corresponding boundary. |
-| <a id="contract-transport-control-attempt_id"></a>`attempt_id` | string; omitted when absent | Acquisition attempt echoed when available; submission-refusal replies omit it. |
-| <a id="contract-transport-control-host_pid"></a>`host_pid` | integer; required | Host-reported process identifier. A client-admitted control requires a positive value representable as signed 32-bit. |
-| <a id="contract-transport-control-host_instance"></a>`host_instance` | string; required | Host-generated UUID for its admission owner, reported by that host. |
-| <a id="contract-transport-control-reservation_id"></a>`reservation_id` | string; omitted when absent | Single-use UUID credential returned by a grant and supplied only on the granting connection’s execution call. Capture projection omits this credential. |
-| <a id="contract-transport-control-lease_ms"></a>`lease_ms` | integer; omitted when absent | Lifetime granted in milliseconds. A client accepts a positive value no greater than the requested lease. |
-| <a id="contract-transport-control-reason"></a>`reason` | string; omitted when absent | Control refusal diagnostic. Submission refusals use `wrong`, `expired`, `absent`, `consumed` or `clock_error`; invalid/unsupported acquisition controls have their own reason. |
+- <a id="contract-transport-control-contract"></a>**`contract`** (string): The host’s compiled public identity, checked by the client before reading the control body.
+- <a id="contract-transport-control-status"></a>**`status`** (string): The host reports `granted`, `occupied`, `invalid_request`, `unsupported_protocol` or `reservation_refused` at the corresponding boundary.
+- <a id="contract-transport-control-attempt_id"></a>**`attempt_id`** (string?): Acquisition attempt echoed when available; submission-refusal replies omit it.
+- <a id="contract-transport-control-host_pid"></a>**`host_pid`** (integer): Host-reported process identifier. A client-admitted control requires a positive value representable as signed 32-bit.
+- <a id="contract-transport-control-host_instance"></a>**`host_instance`** (string): Host-generated UUID for its admission owner, reported by that host.
+- <a id="contract-transport-control-reservation_id"></a>**`reservation_id`** (string?): Single-use UUID credential returned by a grant and supplied only on the granting connection’s execution call. Capture projection omits this credential.
+- <a id="contract-transport-control-lease_ms"></a>**`lease_ms`** (integer?): Lifetime granted in milliseconds. A client accepts a positive value no greater than the requested lease.
+- <a id="contract-transport-control-reason"></a>**`reason`** (string?): Control refusal diagnostic. Submission refusals use `wrong`, `expired`, `absent`, `consumed` or `clock_error`; invalid/unsupported acquisition controls have their own reason.
 
 <a id="contract-transport-capture"></a>
 #### Client capture
 
 Record `capture`: `PWRunnerClientCapture`.
 
-| Field | JSON type and presence | Meaning |
-| --- | --- | --- |
-| <a id="contract-transport-capture-kind"></a>`kind` | string; required | `runner_client_capture` identifies the client observation record. |
-| <a id="contract-transport-capture-contract"></a>`contract` | string; required | Client producer’s public identity. The controller admits it independently of the embedded host reply’s producer. |
-| <a id="contract-transport-capture-client_pid"></a>`client_pid` | integer; required | PID reported by the runner-client process; distinct from every host, worker and validator PID. |
-| <a id="contract-transport-capture-clock"></a>`clock` | string; required | `mach_continuous_time_ns` names the capture’s continuous-clock readings. |
-| <a id="contract-transport-capture-clock_available"></a>`clock_available` | boolean; required | Whether the client retained a usable monotonic continuous clock through its terminal decision. False accompanies a clock_error local failure. |
-| <a id="contract-transport-capture-started_continuous_ns"></a>`started_continuous_ns` | integer; omitted when absent | Client session’s initial valid clock reading in nanoseconds, when available. |
-| <a id="contract-transport-capture-deadline_continuous_ns"></a>`deadline_continuous_ns` | integer; omitted when absent | Absolute deadline in the same clock coordinate, inherited from the controller or derived locally when invoked directly. |
-| <a id="contract-transport-capture-ended_continuous_ns"></a>`ended_continuous_ns` | integer; omitted when absent | Last valid sample at terminal completion; absent after clock failure. |
-| <a id="contract-transport-capture-timeout_ms"></a>`timeout_ms` | integer; required | Positive nominal allowance supplied to the client, in milliseconds. The inherited absolute deadline accounts for time already spent before the session starts. |
-| <a id="contract-transport-capture-attempts"></a>`attempts` | array of [Acquisition attempt](#contract-transport-acquisition); required | Acquisition attempts in invocation order, with one-based ordinals and unique attempt UUIDs. |
-| <a id="contract-transport-capture-acquisition_stop"></a>`acquisition_stop` | string; required | `granted`, `overall_deadline`, `attempt_limit`, `protocol_error` or `local_error`. Granted remains true even if a later pre-invocation stop prevents submission. |
-| <a id="contract-transport-capture-submission"></a>`submission` | [Submission observation](#contract-transport-invocation); required | The client’s irreversible execution-invocation observation. |
-| <a id="contract-transport-capture-terminal"></a>`terminal` | string; required | One of `runner_reply`, `submission_refused`, `xpc_error`, `xpc_timeout`, `acquisition_failed`, `protocol_error` or `local_error`, naming the client’s final event. |
-| <a id="contract-transport-capture-error"></a>`error` | [Client error](#contract-transport-error); omitted when absent | Bounded client-local or XPC diagnostic associated with a failure terminal. |
-| <a id="contract-transport-capture-runner_reply"></a>`runner_reply` | [Retained host reply](#contract-transport-retained_reply); omitted when absent | Host-result bytes accepted by the client before its deadline. Presence establishes receipt of the result callback; the controller separately admits the frame and evidence. |
-| <a id="contract-transport-capture-submission_refusal"></a>`submission_refusal` | [Retained control observation](#contract-transport-control_observation); omitted when absent | Count/hash and, after control admission, status and reason of a host submission refusal. Malformed control bytes retain only count/hash. |
+- <a id="contract-transport-capture-kind"></a>**`kind`** (string): `runner_client_capture` identifies the client observation record.
+- <a id="contract-transport-capture-contract"></a>**`contract`** (string): Client producer’s public identity. The controller admits it independently of the embedded host reply’s producer.
+- <a id="contract-transport-capture-client_pid"></a>**`client_pid`** (integer): PID reported by the runner-client process; distinct from every host, worker and validator PID.
+- <a id="contract-transport-capture-clock"></a>**`clock`** (string): `mach_continuous_time_ns` names the capture’s continuous-clock readings.
+- <a id="contract-transport-capture-clock_available"></a>**`clock_available`** (boolean): Whether the client retained a usable monotonic continuous clock through its terminal decision. False accompanies a clock_error local failure.
+- <a id="contract-transport-capture-started_continuous_ns"></a>**`started_continuous_ns`** (integer?): Client session’s initial valid clock reading in nanoseconds, when available.
+- <a id="contract-transport-capture-deadline_continuous_ns"></a>**`deadline_continuous_ns`** (integer?): Absolute deadline in the same clock coordinate, inherited from the controller or derived locally when invoked directly.
+- <a id="contract-transport-capture-ended_continuous_ns"></a>**`ended_continuous_ns`** (integer?): Last valid sample at terminal completion; absent after clock failure.
+- <a id="contract-transport-capture-timeout_ms"></a>**`timeout_ms`** (integer): Positive nominal allowance supplied to the client, in milliseconds. The inherited absolute deadline accounts for time already spent before the session starts.
+- <a id="contract-transport-capture-attempts"></a>**`attempts`** (array of [Acquisition attempt](#contract-transport-acquisition)): Acquisition attempts in invocation order, with one-based ordinals and unique attempt UUIDs.
+- <a id="contract-transport-capture-acquisition_stop"></a>**`acquisition_stop`** (string): `granted`, `overall_deadline`, `attempt_limit`, `protocol_error` or `local_error`. Granted remains true even if a later pre-invocation stop prevents submission.
+- <a id="contract-transport-capture-submission"></a>**`submission`** ([Submission observation](#contract-transport-invocation)): The client’s irreversible execution-invocation observation.
+- <a id="contract-transport-capture-terminal"></a>**`terminal`** (string): One of `runner_reply`, `submission_refused`, `xpc_error`, `xpc_timeout`, `acquisition_failed`, `protocol_error` or `local_error`, naming the client’s final event.
+- <a id="contract-transport-capture-error"></a>**`error`** ([Client error](#contract-transport-error)?): Bounded client-local or XPC diagnostic associated with a failure terminal.
+- <a id="contract-transport-capture-runner_reply"></a>**`runner_reply`** ([Retained host reply](#contract-transport-retained_reply)?): Host-result bytes accepted by the client before its deadline. Presence establishes receipt of the result callback; the controller separately admits the frame and evidence.
+- <a id="contract-transport-capture-submission_refusal"></a>**`submission_refusal`** ([Retained control observation](#contract-transport-control_observation)?): Count/hash and, after control admission, status and reason of a host submission refusal. Malformed control bytes retain only count/hash.
 
 **timeout_ms.**
 
@@ -1378,71 +1336,63 @@ Record `capture`: `PWRunnerClientCapture`.
 
 | Item | Requirement or consequence |
 | --- | --- |
-| <a id="contract-transport-capture-attempts-bounded"></a>Bounded acquisition count | Requires count of `capture.attempts` ≤ `256 items` (`reservation_attempts`) . |
+| <a id="contract-transport-capture-attempts-bounded"></a>Bounded acquisition count | Requires count(`capture.attempts`) ≤ `256 items` (`reservation_attempts`) . |
 
 <a id="contract-transport-acquisition"></a>
 #### Acquisition attempt
 
 Record `acquisition`: `PWRunnerAcquisitionAttempt`.
 
-| Field | JSON type and presence | Meaning |
-| --- | --- | --- |
-| <a id="contract-transport-acquisition-ordinal"></a>`ordinal` | integer; required | One-based position in the capture’s acquisition-attempt array. |
-| <a id="contract-transport-acquisition-attempt_id"></a>`attempt_id` | string; required | UUID generated for this attempt. The client requires matching acquisition replies. |
-| <a id="contract-transport-acquisition-started_elapsed_ms"></a>`started_elapsed_ms` | integer; omitted when absent | Elapsed whole milliseconds from the client session’s initial continuous-clock sample at attempt start, when available. |
-| <a id="contract-transport-acquisition-ended_elapsed_ms"></a>`ended_elapsed_ms` | integer; omitted when absent | Elapsed whole milliseconds when this attempt ended, when available; a later clock fault can leave it absent. |
-| <a id="contract-transport-acquisition-outcome"></a>`outcome` | string; required | `granted`, `occupied`, `transport_error`, `timeout`, `protocol_error` or `local_error`. Only acquisition transport loss, occupied status and an RPC timeout can lead to another acquisition attempt. |
-| <a id="contract-transport-acquisition-control"></a>`control` | [Retained control observation](#contract-transport-control_observation); omitted when absent | Received reservation-control count/hash and any admitted peer fields. |
-| <a id="contract-transport-acquisition-error"></a>`error` | [Client error](#contract-transport-error); omitted when absent | Failure diagnostic for this attempt. A granted or occupied attempt instead carries its admitted control. |
+- <a id="contract-transport-acquisition-ordinal"></a>**`ordinal`** (integer): One-based position in the capture’s acquisition-attempt array.
+- <a id="contract-transport-acquisition-attempt_id"></a>**`attempt_id`** (string): UUID generated for this attempt. The client requires matching acquisition replies.
+- <a id="contract-transport-acquisition-started_elapsed_ms"></a>**`started_elapsed_ms`** (integer?): Elapsed whole milliseconds from the client session’s initial continuous-clock sample at attempt start, when available.
+- <a id="contract-transport-acquisition-ended_elapsed_ms"></a>**`ended_elapsed_ms`** (integer?): Elapsed whole milliseconds when this attempt ended, when available; a later clock fault can leave it absent.
+- <a id="contract-transport-acquisition-outcome"></a>**`outcome`** (string): `granted`, `occupied`, `transport_error`, `timeout`, `protocol_error` or `local_error`. Only acquisition transport loss, occupied status and an RPC timeout can lead to another acquisition attempt.
+- <a id="contract-transport-acquisition-control"></a>**`control`** ([Retained control observation](#contract-transport-control_observation)?): Received reservation-control count/hash and any admitted peer fields.
+- <a id="contract-transport-acquisition-error"></a>**`error`** ([Client error](#contract-transport-error)?): Failure diagnostic for this attempt. A granted or occupied attempt instead carries its admitted control.
 
 <a id="contract-transport-control_observation"></a>
 #### Retained control observation
 
 Record `control_observation`: `PWRunnerControlObservation`.
 
-| Field | JSON type and presence | Meaning |
-| --- | --- | --- |
-| <a id="contract-transport-control_observation-bytes_received"></a>`bytes_received` | integer; required | Byte count of the complete received control data, including a control that fails admission. |
-| <a id="contract-transport-control_observation-sha256"></a>`sha256` | string (hex); required | SHA-256 of those complete bytes, projected as lowercase hexadecimal. |
-| <a id="contract-transport-control_observation-status"></a>`status` | string; omitted when absent | Control status retained only after the client admits the control. |
-| <a id="contract-transport-control_observation-host_pid"></a>`host_pid` | integer; omitted when absent | Admitted peer-reported host PID. |
-| <a id="contract-transport-control_observation-host_instance"></a>`host_instance` | string; omitted when absent | Admitted peer-reported admission-owner UUID. |
-| <a id="contract-transport-control_observation-lease_ms"></a>`lease_ms` | integer; omitted when absent | Admitted grant lifetime when the control carries one. |
-| <a id="contract-transport-control_observation-reason"></a>`reason` | string; omitted when absent | Admitted submission-refusal reason when present. |
+- <a id="contract-transport-control_observation-bytes_received"></a>**`bytes_received`** (integer): Byte count of the complete received control data, including a control that fails admission.
+- <a id="contract-transport-control_observation-sha256"></a>**`sha256`** (string (hex)): SHA-256 of those complete bytes, projected as lowercase hexadecimal.
+- <a id="contract-transport-control_observation-status"></a>**`status`** (string?): Control status retained only after the client admits the control.
+- <a id="contract-transport-control_observation-host_pid"></a>**`host_pid`** (integer?): Admitted peer-reported host PID.
+- <a id="contract-transport-control_observation-host_instance"></a>**`host_instance`** (string?): Admitted peer-reported admission-owner UUID.
+- <a id="contract-transport-control_observation-lease_ms"></a>**`lease_ms`** (integer?): Admitted grant lifetime when the control carries one.
+- <a id="contract-transport-control_observation-reason"></a>**`reason`** (string?): Admitted submission-refusal reason when present.
 
 <a id="contract-transport-invocation"></a>
 #### Submission observation
 
 Record `invocation`: `PWRunnerSubmission`.
 
-| Field | JSON type and presence | Meaning |
-| --- | --- | --- |
-| <a id="contract-transport-invocation-state"></a>`state` | string; required | `not_invoked` until the client crosses its execution-call boundary, then permanently `invoked`. |
-| <a id="contract-transport-invocation-invoked_elapsed_ms"></a>`invoked_elapsed_ms` | integer; omitted when absent | Elapsed whole milliseconds at that boundary. Absent for not_invoked; clock-failure capture retains only a value actually sampled. |
+- <a id="contract-transport-invocation-state"></a>**`state`** (string): `not_invoked` until the client crosses its execution-call boundary, then permanently `invoked`.
+- <a id="contract-transport-invocation-invoked_elapsed_ms"></a>**`invoked_elapsed_ms`** (integer?): Elapsed whole milliseconds at that boundary. Absent for not_invoked; clock-failure capture retains only a value actually sampled.
 
 <a id="contract-transport-retained_reply"></a>
 #### Retained host reply
 
 Record `retained_reply`: `PWRunnerReplyCapture`.
 
-| Field | JSON type and presence | Meaning |
-| --- | --- | --- |
-| <a id="contract-transport-retained_reply-bytes_received"></a>`bytes_received` | integer; required | Length of the complete host-result Data received by the client. |
-| <a id="contract-transport-retained_reply-bytes_retained"></a>`bytes_retained` | integer; required | Length of its retained prefix, the smaller of bytes_received and <!-- span limits.client_reply_retention.value_unit -->96,468,992 bytes<!-- /span -->. |
-| <a id="contract-transport-retained_reply-truncated"></a>`truncated` | boolean; required | True exactly when bytes_retained is smaller than bytes_received. The controller refuses a truncated host frame before structural decoding. |
-| <a id="contract-transport-retained_reply-data_base64"></a>`data_base64` | string (base64); required | Exact retained host bytes, kept as bytes internally and rendered as base64 at public JSON projection. |
+- <a id="contract-transport-retained_reply-bytes_received"></a>**`bytes_received`** (integer): Length of the complete host-result Data received by the client.
+- <a id="contract-transport-retained_reply-bytes_retained"></a>**`bytes_retained`** (integer): Length of its retained prefix, the smaller of bytes_received and <!-- span limits.client_reply_retention.value_unit -->96,468,992 bytes<!-- /span -->.
+- <a id="contract-transport-retained_reply-truncated"></a>**`truncated`** (boolean): True exactly when bytes_retained is smaller than bytes_received. The controller refuses a truncated host frame before structural decoding.
+- <a id="contract-transport-retained_reply-data_base64"></a>**`data_base64`** (string (base64)): Exact retained host bytes, kept as bytes internally and rendered as base64 at public JSON projection.
 
 **truncated.**
 
 | Item | Requirement or consequence |
 | --- | --- |
-| <a id="contract-transport-retained_reply-truncated-arithmetic"></a>Retention arithmetic | Requires (`retained_reply.truncated` = `retained_reply.bytes_retained` < `retained_reply.bytes_received` and `retained_reply.bytes_retained` ≤ `retained_reply.bytes_received` and `retained_reply.bytes_retained` ≤ `96,468,992 bytes` (`client_reply_retention`) and (if `retained_reply.bytes_received` ≤ `96,468,992 bytes` (`client_reply_retention`) , then `retained_reply.bytes_retained` = `retained_reply.bytes_received`) and (if `retained_reply.bytes_received` > `96,468,992 bytes` (`client_reply_retention`) , then `retained_reply.bytes_retained` = `96,468,992 bytes` (`client_reply_retention`) )). |
+| <a id="contract-transport-retained_reply-truncated-arithmetic"></a>Retention arithmetic | Requires (`retained_reply.truncated` = `retained_reply.bytes_retained` < `retained_reply.bytes_received` and `retained_reply.bytes_retained` ≤ `retained_reply.bytes_received` and `retained_reply.bytes_retained` ≤ `96,468,992 bytes` (`client_reply_retention`) and implies(`retained_reply.bytes_received` ≤ `96,468,992 bytes` (`client_reply_retention`) , `retained_reply.bytes_retained` = `retained_reply.bytes_received`) and implies(`retained_reply.bytes_received` > `96,468,992 bytes` (`client_reply_retention`) , `retained_reply.bytes_retained` = `96,468,992 bytes` (`client_reply_retention`) )). |
 
 **data_base64.**
 
 | Item | Requirement or consequence |
 | --- | --- |
-| <a id="contract-transport-retained_reply-data_base64-extent"></a>Exact retained byte extent | Requires decoded byte length of `retained_reply.data_base64` = `retained_reply.bytes_retained`. |
+| <a id="contract-transport-retained_reply-data_base64-extent"></a>Exact retained byte extent | Requires byte_length(`retained_reply.data_base64`) = `retained_reply.bytes_retained`. |
 
 **Support: [source read](#contract-support-grades) for [Retained host reply](#contract-transport-retained_reply) and its descendants.** The constructor retains the bounded Data prefix, its original and retained lengths, and their inequality flag. Source: [PWRunnerTransport.swift](../runner/Sources/PWRunnerCore/PWRunnerTransport.swift): `struct PWRunnerReplyCapture`.
 
@@ -1451,43 +1401,39 @@ Record `retained_reply`: `PWRunnerReplyCapture`.
 
 Record `error`: `PWRunnerTransportError`.
 
-| Field | JSON type and presence | Meaning |
-| --- | --- | --- |
-| <a id="contract-transport-error-stage"></a>`stage` | string; required | Boundary at which the client reported the error: `local`, `acquisition` or `submission`. |
-| <a id="contract-transport-error-reason"></a>`reason` | string; required | Machine classification for the boundary, including `clock_error`, `encoding_failed`, `input_read_failed`, `xpc_error`, `proxy_type_mismatch`, `rpc_timeout`, `overall_deadline`, `attempt_limit`, `control_too_large`, `unsupported_protocol` and `invalid_control`. The capture reader checks stage/reason/terminal compatibility. |
-| <a id="contract-transport-error-domain"></a>`domain` | string; omitted when absent | Native NSError domain when available, bounded to <!-- span limits.client_error_domain.value_unit -->128 UTF-8 bytes<!-- /span --> without splitting a scalar. |
-| <a id="contract-transport-error-code"></a>`code` | integer; omitted when absent | Native NSError numeric code when available. Its value belongs to that error domain. |
-| <a id="contract-transport-error-message"></a>`message` | string; required | Native debug diagnostic when available, otherwise localized or supplied client text; bounded to <!-- span limits.client_error_message.value_unit -->1,024 UTF-8 bytes<!-- /span --> without splitting a scalar. |
-| <a id="contract-transport-error-domain_truncated"></a>`domain_truncated` | boolean; required | Whether the original native domain exceeded its retained-byte allowance. |
-| <a id="contract-transport-error-message_truncated"></a>`message_truncated` | boolean; required | Whether the original message exceeded its retained-byte allowance. |
+- <a id="contract-transport-error-stage"></a>**`stage`** (string): Boundary at which the client reported the error: `local`, `acquisition` or `submission`.
+- <a id="contract-transport-error-reason"></a>**`reason`** (string): Machine classification for the boundary, including `clock_error`, `encoding_failed`, `input_read_failed`, `xpc_error`, `proxy_type_mismatch`, `rpc_timeout`, `overall_deadline`, `attempt_limit`, `control_too_large`, `unsupported_protocol` and `invalid_control`. The capture reader checks stage/reason/terminal compatibility.
+- <a id="contract-transport-error-domain"></a>**`domain`** (string?): Native NSError domain when available, bounded to <!-- span limits.client_error_domain.value_unit -->128 UTF-8 bytes<!-- /span --> without splitting a scalar.
+- <a id="contract-transport-error-code"></a>**`code`** (integer?): Native NSError numeric code when available. Its value belongs to that error domain.
+- <a id="contract-transport-error-message"></a>**`message`** (string): Native debug diagnostic when available, otherwise localized or supplied client text; bounded to <!-- span limits.client_error_message.value_unit -->1,024 UTF-8 bytes<!-- /span --> without splitting a scalar.
+- <a id="contract-transport-error-domain_truncated"></a>**`domain_truncated`** (boolean): Whether the original native domain exceeded its retained-byte allowance.
+- <a id="contract-transport-error-message_truncated"></a>**`message_truncated`** (boolean): Whether the original message exceeded its retained-byte allowance.
 
 <a id="contract-transport-client"></a>
 #### Controller observation of the client process
 
 Record `client`: `rust.RunnerClientRun`.
 
-| Field | JSON type and presence | Meaning |
-| --- | --- | --- |
-| <a id="contract-transport-client-argv"></a>`argv` | array of string; required | Controller-selected client executable and arguments, including connection flags, deadline and stdin-request mode. |
-| <a id="contract-transport-client-started_at_unix_ms"></a>`started_at_unix_ms` | integer; required | Controller wall-clock milliseconds immediately before launching and feeding the client. |
-| <a id="contract-transport-client-ended_at_unix_ms"></a>`ended_at_unix_ms` | integer; required | Controller wall-clock milliseconds after child-output collection and request-writer completion. Wall-clock reversals remain visible. |
-| <a id="contract-transport-client-exit_code"></a>`exit_code` | integer; required | Client process exit code, or 1 when process status supplies no numeric exit code. A zero client exit accompanies delivery of host-result bytes and leaves host outcome to its own report. |
-| <a id="contract-transport-client-request_delivery"></a>`request_delivery` | [Request stdin delivery](#contract-transport-request_delivery); null when absent | Controller’s stdin-writer observation for the one held serialized request. |
-| <a id="contract-transport-client-transport"></a>`transport` | [Transport alternatives](#contract-transport-transport_value); null when absent | Admitted typed client capture or a rejected retained-byte projection; null when no bytes are retained. |
-| <a id="contract-transport-client-transport_admission"></a>`transport_admission` | string; required | `accepted`, `missing`, `unsupported`, `malformed` or `delivery_failed`, naming the controller’s client-capture admission decision. |
-| <a id="contract-transport-client-transport_error"></a>`transport_error` | string; null when absent | Diagnostic explaining capture refusal or absence; null for accepted capture. |
-| <a id="contract-transport-client-submission"></a>`submission` | string; required | Admitted capture’s invoked/not_invoked state, otherwise `unknown`. |
-| <a id="contract-transport-client-runner_reply_error"></a>`runner_reply_error` | string; null when absent | Diagnostic for a truncated, unsupported or malformed embedded host frame. Its exact retained bytes remain in the admitted client capture. |
-| <a id="contract-transport-client-stdout_parse_error"></a>`stdout_parse_error` | string; null when absent | Binary frame/schema/producer decoding diagnostic when decoding was attempted. Retention loss is recorded independently before decoding. |
-| <a id="contract-transport-client-stdout_truncated"></a>`stdout_truncated` | boolean; required | Whether complete client stdout exceeded the retained prefix allowance. |
-| <a id="contract-transport-client-stdout_capture_error"></a>`stdout_capture_error` | string; null when absent | Retention-loss diagnostic; this blocks capture decoding even if the prefix resembles a valid frame. |
-| <a id="contract-transport-client-stdout_bytes_received"></a>`stdout_bytes_received` | integer; null when absent | Original stdout byte count after complete process-output collection. |
-| <a id="contract-transport-client-stdout_bytes_retained"></a>`stdout_bytes_retained` | integer; null when absent | Retained stdout prefix length, before binary frame admission. |
-| <a id="contract-transport-client-stderr_bytes_received"></a>`stderr_bytes_received` | integer; null when absent | Original stderr byte count after complete process-output collection. |
-| <a id="contract-transport-client-stderr_bytes_retained"></a>`stderr_bytes_retained` | integer; null when absent | Retained stderr prefix length before diagnostic text conversion. |
-| <a id="contract-transport-client-capture_limit_bytes"></a>`capture_limit_bytes` | integer; required | Per-stream prefix-retention allowance, currently <!-- span limits.controller_output.value_unit -->285,212,672 bytes<!-- /span --> for the runner client. |
-| <a id="contract-transport-client-stderr"></a>`stderr` | string; required | Retained stderr converted to UTF-8 text with replacement for invalid bytes. |
-| <a id="contract-transport-client-stderr_truncated"></a>`stderr_truncated` | boolean; required | Whether complete stderr exceeded its retained prefix allowance. |
+- <a id="contract-transport-client-argv"></a>**`argv`** (array of string): Controller-selected client executable and arguments, including connection flags, deadline and stdin-request mode.
+- <a id="contract-transport-client-started_at_unix_ms"></a>**`started_at_unix_ms`** (integer): Controller wall-clock milliseconds immediately before launching and feeding the client.
+- <a id="contract-transport-client-ended_at_unix_ms"></a>**`ended_at_unix_ms`** (integer): Controller wall-clock milliseconds after child-output collection and request-writer completion. Wall-clock reversals remain visible.
+- <a id="contract-transport-client-exit_code"></a>**`exit_code`** (integer): Client process exit code, or 1 when process status supplies no numeric exit code. A zero client exit accompanies delivery of host-result bytes and leaves host outcome to its own report.
+- <a id="contract-transport-client-request_delivery"></a>**`request_delivery`** ([Request stdin delivery](#contract-transport-request_delivery) ∪ null): Controller’s stdin-writer observation for the one held serialized request.
+- <a id="contract-transport-client-transport"></a>**`transport`** ([Transport alternatives](#contract-transport-transport_value) ∪ null): Admitted typed client capture or a rejected retained-byte projection; null when no bytes are retained.
+- <a id="contract-transport-client-transport_admission"></a>**`transport_admission`** (string): `accepted`, `missing`, `unsupported`, `malformed` or `delivery_failed`, naming the controller’s client-capture admission decision.
+- <a id="contract-transport-client-transport_error"></a>**`transport_error`** (string ∪ null): Diagnostic explaining capture refusal or absence; null for accepted capture.
+- <a id="contract-transport-client-submission"></a>**`submission`** (string): Admitted capture’s invoked/not_invoked state, otherwise `unknown`.
+- <a id="contract-transport-client-runner_reply_error"></a>**`runner_reply_error`** (string ∪ null): Diagnostic for a truncated, unsupported or malformed embedded host frame. Its exact retained bytes remain in the admitted client capture.
+- <a id="contract-transport-client-stdout_parse_error"></a>**`stdout_parse_error`** (string ∪ null): Binary frame/schema/producer decoding diagnostic when decoding was attempted. Retention loss is recorded independently before decoding.
+- <a id="contract-transport-client-stdout_truncated"></a>**`stdout_truncated`** (boolean): Whether complete client stdout exceeded the retained prefix allowance.
+- <a id="contract-transport-client-stdout_capture_error"></a>**`stdout_capture_error`** (string ∪ null): Retention-loss diagnostic; this blocks capture decoding even if the prefix resembles a valid frame.
+- <a id="contract-transport-client-stdout_bytes_received"></a>**`stdout_bytes_received`** (integer ∪ null): Original stdout byte count after complete process-output collection.
+- <a id="contract-transport-client-stdout_bytes_retained"></a>**`stdout_bytes_retained`** (integer ∪ null): Retained stdout prefix length, before binary frame admission.
+- <a id="contract-transport-client-stderr_bytes_received"></a>**`stderr_bytes_received`** (integer ∪ null): Original stderr byte count after complete process-output collection.
+- <a id="contract-transport-client-stderr_bytes_retained"></a>**`stderr_bytes_retained`** (integer ∪ null): Retained stderr prefix length before diagnostic text conversion.
+- <a id="contract-transport-client-capture_limit_bytes"></a>**`capture_limit_bytes`** (integer): Per-stream prefix-retention allowance, currently <!-- span limits.controller_output.value_unit -->285,212,672 bytes<!-- /span --> for the runner client.
+- <a id="contract-transport-client-stderr"></a>**`stderr`** (string): Retained stderr converted to UTF-8 text with replacement for invalid bytes.
+- <a id="contract-transport-client-stderr_truncated"></a>**`stderr_truncated`** (boolean): Whether complete stderr exceeded its retained prefix allowance.
 
 <a id="contract-transport-client-admit"></a>
 ##### Admit client and host observations
@@ -1498,9 +1444,9 @@ Delivery failure yields controller `tool_error` and exit 2 while retaining avail
 
 | Item | Requirement or consequence |
 | --- | --- |
-| <a id="contract-transport-client-admit-delivery"></a>Input delivery takes precedence | Requires (if (`client.request_delivery` is present and `client.request_delivery.error` is present), then (`client.transport_admission` = `"delivery_failed"` and `client.transport_error` = `client.request_delivery.error` and `client.submission` = `"unknown"` and `client.stdout_parse_error` is absent and `client.runner_reply_error` is absent)). |
-| <a id="contract-transport-client-admit-retention"></a>Retention loss precedes decoding | Requires (if (not ((`client.request_delivery` is present and `client.request_delivery.error` is present)) and `client.stdout_capture_error` is present), then (`client.transport_admission` = `"malformed"` and `client.transport_error` = `client.stdout_capture_error` and `client.submission` = `"unknown"` and `client.stdout_parse_error` is absent and `client.runner_reply_error` is absent)). |
-| <a id="contract-transport-client-admit-missing"></a>Empty retained capture | Requires (if (not ((`client.request_delivery` is present and `client.request_delivery.error` is present)) and `client.stdout_capture_error` is absent and `client.stdout_bytes_retained` = `0`), then (`client.transport_admission` = `"missing"` and `client.transport_error` = `"runner client produced no capture"` and `client.submission` = `"unknown"` and `client.stdout_parse_error` is absent and `client.runner_reply_error` is absent)). |
+| <a id="contract-transport-client-admit-delivery"></a>Input delivery takes precedence | Requires implies((present(`client.request_delivery`) and present(`client.request_delivery.error`)), (`client.transport_admission` = `"delivery_failed"` and `client.transport_error` = `client.request_delivery.error` and `client.submission` = `"unknown"` and absent(`client.stdout_parse_error`) and absent(`client.runner_reply_error`))). |
+| <a id="contract-transport-client-admit-retention"></a>Retention loss precedes decoding | Requires implies((not ((present(`client.request_delivery`) and present(`client.request_delivery.error`))) and present(`client.stdout_capture_error`)), (`client.transport_admission` = `"malformed"` and `client.transport_error` = `client.stdout_capture_error` and `client.submission` = `"unknown"` and absent(`client.stdout_parse_error`) and absent(`client.runner_reply_error`))). |
+| <a id="contract-transport-client-admit-missing"></a>Empty retained capture | Requires implies((not ((present(`client.request_delivery`) and present(`client.request_delivery.error`))) and absent(`client.stdout_capture_error`) and `client.stdout_bytes_retained` = `0`), (`client.transport_admission` = `"missing"` and `client.transport_error` = `"runner client produced no capture"` and `client.submission` = `"unknown"` and absent(`client.stdout_parse_error`) and absent(`client.runner_reply_error`))). |
 
 **Support: [source read](#contract-support-grades) for [Admit client and host observations](#contract-transport-client-admit).** Completed collection first selects input-delivery error, then retained-output loss, then an empty capture. These paths preserve unknown submission and skip both frame decoders. Source: [runner_client.rs](../controller/src/runner_client.rs): `parse_runner_client_output`.
 
@@ -1509,10 +1455,8 @@ Delivery failure yields controller `tool_error` and exit 2 while retaining avail
 
 Record `request_delivery`: `rust.RequestDelivery`.
 
-| Field | JSON type and presence | Meaning |
-| --- | --- | --- |
-| <a id="contract-transport-request_delivery-bytes_written"></a>`bytes_written` | integer; required | Number of request bytes accepted by the child’s stdin pipe according to the controller’s writes. |
-| <a id="contract-transport-request_delivery-error"></a>`error` | string; null when absent | First terminal write error, including a zero-length write. Null records successful delivery by the writer; child receipt remains a separate observation. |
+- <a id="contract-transport-request_delivery-bytes_written"></a>**`bytes_written`** (integer): Number of request bytes accepted by the child’s stdin pipe according to the controller’s writes.
+- <a id="contract-transport-request_delivery-error"></a>**`error`** (string ∪ null): First terminal write error, including a zero-length write. Null records successful delivery by the writer; child receipt remains a separate observation.
 
 <a id="contract-transport-transport_value"></a>
 #### Transport alternatives
@@ -1531,10 +1475,8 @@ The Rust enum is untagged: JSON contains the chosen alternative’s fields direc
 
 Record `rejected`: `rust.TransportCapture.Rejected`.
 
-| Field | JSON type and presence | Meaning |
-| --- | --- | --- |
-| <a id="contract-transport-rejected-format"></a>`format` | string; required | `porcelain` identifies the expected client-output encoding at this collection boundary. |
-| <a id="contract-transport-rejected-data_base64"></a>`data_base64` | string (base64); required | Exact retained stdout prefix, projected as base64. It can contain arbitrary, malformed or foreign bytes. |
+- <a id="contract-transport-rejected-format"></a>**`format`** (string): `porcelain` identifies the expected client-output encoding at this collection boundary.
+- <a id="contract-transport-rejected-data_base64"></a>**`data_base64`** (string (base64)): Exact retained stdout prefix, projected as base64. It can contain arbitrary, malformed or foreign bytes.
 
 <a id="contract-wire"></a>
 ### Response encoding
@@ -1688,12 +1630,10 @@ Direct JSON denied means native rc is nonzero, including a native error; success
 
 Record `standalone_status`: `ValidatorDirectStatus`.
 
-| Field | JSON type and presence | Meaning |
-| --- | --- | --- |
-| <a id="contract-wire-standalone_status-kind"></a>`kind` | string; required | sb_api_validator_status identifies the PID-only JSON branch. |
-| <a id="contract-wire-standalone_status-schema_version"></a>`schema_version` | integer; required | Version 1 of this direct JSON object. |
-| <a id="contract-wire-standalone_status-pid"></a>`pid` | integer; required | Positive PID accepted by argument parsing. |
-| <a id="contract-wire-standalone_status-error"></a>`error` | JSON value; required | Always null on this status branch. |
+- <a id="contract-wire-standalone_status-kind"></a>**`kind`** (string): sb_api_validator_status identifies the PID-only JSON branch.
+- <a id="contract-wire-standalone_status-schema_version"></a>**`schema_version`** (integer): Version 1 of this direct JSON object.
+- <a id="contract-wire-standalone_status-pid"></a>**`pid`** (integer): Positive PID accepted by argument parsing.
+- <a id="contract-wire-standalone_status-error"></a>**`error`** (JSON value): Always null on this status branch.
 
 **kind.**
 
@@ -1724,20 +1664,18 @@ Record `standalone_status`: `ValidatorDirectStatus`.
 
 Record `standalone_result`: `ValidatorDirectResult`.
 
-| Field | JSON type and presence | Meaning |
-| --- | --- | --- |
-| <a id="contract-wire-standalone_result-kind"></a>`kind` | string; required | sb_api_validator_result identifies one direct native query. |
-| <a id="contract-wire-standalone_result-schema_version"></a>`schema_version` | integer; required | Version 1 of this direct JSON object. |
-| <a id="contract-wire-standalone_result-pid"></a>`pid` | integer; required | Parsed PID passed to sandbox_check. |
-| <a id="contract-wire-standalone_result-operation"></a>`operation` | string; required | Operation argument passed to the native call. |
-| <a id="contract-wire-standalone_result-filter_type"></a>`filter_type` | string; required | Supplied symbolic or RAW filter spelling. |
-| <a id="contract-wire-standalone_result-filter_type_id"></a>`filter_type_id` | integer; required | Resolved numeric filter ID before OR with SANDBOX_CHECK_NO_REPORT. |
-| <a id="contract-wire-standalone_result-filter_value"></a>`filter_value` | string; null when absent | Filter string passed for a nonzero ID; null for ID zero. |
-| <a id="contract-wire-standalone_result-extra"></a>`extra` | JSON value; required | Always null in this producer. |
-| <a id="contract-wire-standalone_result-rc"></a>`rc` | integer; required | Exact native sandbox_check return. |
-| <a id="contract-wire-standalone_result-errno"></a>`errno` | integer; required | Native errno after clearing it before the call. |
-| <a id="contract-wire-standalone_result-allowed"></a>`allowed` | boolean; required | True exactly when native rc is zero. |
-| <a id="contract-wire-standalone_result-denied"></a>`denied` | boolean; required | True exactly when native rc is nonzero, including native errors. |
+- <a id="contract-wire-standalone_result-kind"></a>**`kind`** (string): sb_api_validator_result identifies one direct native query.
+- <a id="contract-wire-standalone_result-schema_version"></a>**`schema_version`** (integer): Version 1 of this direct JSON object.
+- <a id="contract-wire-standalone_result-pid"></a>**`pid`** (integer): Parsed PID passed to sandbox_check.
+- <a id="contract-wire-standalone_result-operation"></a>**`operation`** (string): Operation argument passed to the native call.
+- <a id="contract-wire-standalone_result-filter_type"></a>**`filter_type`** (string): Supplied symbolic or RAW filter spelling.
+- <a id="contract-wire-standalone_result-filter_type_id"></a>**`filter_type_id`** (integer): Resolved numeric filter ID before OR with SANDBOX_CHECK_NO_REPORT.
+- <a id="contract-wire-standalone_result-filter_value"></a>**`filter_value`** (string ∪ null): Filter string passed for a nonzero ID; null for ID zero.
+- <a id="contract-wire-standalone_result-extra"></a>**`extra`** (JSON value): Always null in this producer.
+- <a id="contract-wire-standalone_result-rc"></a>**`rc`** (integer): Exact native sandbox_check return.
+- <a id="contract-wire-standalone_result-errno"></a>**`errno`** (integer): Native errno after clearing it before the call.
+- <a id="contract-wire-standalone_result-allowed"></a>**`allowed`** (boolean): True exactly when native rc is zero.
+- <a id="contract-wire-standalone_result-denied"></a>**`denied`** (boolean): True exactly when native rc is nonzero, including native errors.
 
 **kind.**
 
@@ -1761,7 +1699,7 @@ Record `standalone_result`: `ValidatorDirectResult`.
 
 | Item | Requirement or consequence |
 | --- | --- |
-| <a id="contract-wire-standalone_result-filter_value-numeric"></a>Numeric filter argument relation | Requires ((if `standalone_result.filter_type_id` = `0`, then `standalone_result.filter_value` is absent) and (if `standalone_result.filter_type_id` ≠ `0`, then `standalone_result.filter_value` is present)). |
+| <a id="contract-wire-standalone_result-filter_value-numeric"></a>Numeric filter argument relation | Requires (implies(`standalone_result.filter_type_id` = `0`, absent(`standalone_result.filter_value`)) and implies(`standalone_result.filter_type_id` ≠ `0`, present(`standalone_result.filter_value`))). |
 
 **extra.**
 
@@ -1786,13 +1724,11 @@ Record `standalone_result`: `ValidatorDirectResult`.
 
 Record `standalone_error`: `ValidatorDirectError`.
 
-| Field | JSON type and presence | Meaning |
-| --- | --- | --- |
-| <a id="contract-wire-standalone_error-kind"></a>`kind` | string; required | sb_api_validator_error identifies a JSON-mode argument refusal. |
-| <a id="contract-wire-standalone_error-schema_version"></a>`schema_version` | integer; required | Version 1 of this direct JSON object. |
-| <a id="contract-wire-standalone_error-error"></a>`error` | string; required | pid_missing, missing_args, bad_filter, unexpected_filter_value_for_none, missing_filter_value or unexpected_extra_args names the reached refusal. |
-| <a id="contract-wire-standalone_error-pid"></a>`pid` | integer; omitted when absent | Parsed PID, or -1 for pid_missing; omitted for bad_filter. |
-| <a id="contract-wire-standalone_error-filter"></a>`filter` | string; omitted when absent | Rejected filter spelling for bad_filter; omitted for other errors. |
+- <a id="contract-wire-standalone_error-kind"></a>**`kind`** (string): sb_api_validator_error identifies a JSON-mode argument refusal.
+- <a id="contract-wire-standalone_error-schema_version"></a>**`schema_version`** (integer): Version 1 of this direct JSON object.
+- <a id="contract-wire-standalone_error-error"></a>**`error`** (string): pid_missing, missing_args, bad_filter, unexpected_filter_value_for_none, missing_filter_value or unexpected_extra_args names the reached refusal.
+- <a id="contract-wire-standalone_error-pid"></a>**`pid`** (integer?): Parsed PID, or -1 for pid_missing; omitted for bad_filter.
+- <a id="contract-wire-standalone_error-filter"></a>**`filter`** (string?): Rejected filter spelling for bad_filter; omitted for other errors.
 
 ## The host's report
 
@@ -1801,15 +1737,13 @@ Record `standalone_error`: `ValidatorDirectError`.
 
 Record `check_data` locations: `helper_envelope.data`.
 
-| Field | JSON type and presence | Meaning |
-| --- | --- | --- |
-| <a id="contract-policy-check_data-policy_format"></a>`policy_format` | string; required | The decoded policy format, including a refused format. |
-| <a id="contract-policy-check_data-policy_sha256"></a>`policy_sha256` | string; null when absent | SHA-256 of the admitted source's UTF-8 bytes; null when input admission failed before hashing. |
-| <a id="contract-policy-check_data-macos_build_version"></a>`macos_build_version` | string; null when absent | The host macOS build observed by the helper, or null when unavailable. |
-| <a id="contract-policy-check_data-params_present"></a>`params_present` | boolean; required | True when params decoded as a map, including an empty map; false for omission or null. |
-| <a id="contract-policy-check_data-params_count"></a>`params_count` | integer; required | Number of decoded parameter-map entries. |
-| <a id="contract-policy-check_data-compile"></a>`compile` | [Last native compile stage](#contract-policy-compile); null when absent | The last native stage attempted and its result. Null means the helper refused the input before native setup or compilation. |
-| <a id="contract-policy-check_data-import_inventory"></a>`import_inventory` | [Literal import inventory](#contract-policy-imports); null when absent | The helper's literal-import walk performed before native compilation. Null means admission prevented the walk; an empty records list is a performed walk with no import records. |
+- <a id="contract-policy-check_data-policy_format"></a>**`policy_format`** (string): The decoded policy format, including a refused format.
+- <a id="contract-policy-check_data-policy_sha256"></a>**`policy_sha256`** (string ∪ null): SHA-256 of the admitted source's UTF-8 bytes; null when input admission failed before hashing.
+- <a id="contract-policy-check_data-macos_build_version"></a>**`macos_build_version`** (string ∪ null): The host macOS build observed by the helper, or null when unavailable.
+- <a id="contract-policy-check_data-params_present"></a>**`params_present`** (boolean): True when params decoded as a map, including an empty map; false for omission or null.
+- <a id="contract-policy-check_data-params_count"></a>**`params_count`** (integer): Number of decoded parameter-map entries.
+- <a id="contract-policy-check_data-compile"></a>**`compile`** ([Last native compile stage](#contract-policy-compile) ∪ null): The last native stage attempted and its result. Null means the helper refused the input before native setup or compilation.
+- <a id="contract-policy-check_data-import_inventory"></a>**`import_inventory`** ([Literal import inventory](#contract-policy-imports) ∪ null): The helper's literal-import walk performed before native compilation. Null means admission prevented the walk; an empty records list is a performed walk with no import records.
 
 <a id="contract-policy-check_data-run_compile"></a>
 #### Inventory, compile and report
@@ -1823,26 +1757,26 @@ The helper compiles in its own process. The fallback capture reports this indepe
 <a id="contract-policy-check_data-verdict"></a>
 #### Select the helper verdict
 
-[Compiler helper](#contract-identity-definitions-helper) reports at last native-stage record to helper result. Entry: standalone helper, controller helper stdin. Recipient: report reader. Reports: helper envelope. Select the first matching case in the listed order. Applies when `helper_envelope.data.compile` is present.
+[Compiler helper](#contract-identity-definitions-helper) reports at last native-stage record to helper result. Entry: standalone helper, controller helper stdin. Recipient: report reader. Reports: helper envelope. Select the first matching case in the listed order. Applies when present(`helper_envelope.data.compile`).
 
 | Case | When | Consequence |
 | --- | --- | --- |
-| <a id="contract-policy-check_data-verdict-ok"></a>1. Successful last stage | `helper_envelope.data.compile.ok` | sets `helper_envelope.result.ok` to `true`, sets `helper_envelope.result.exit_code` to `0`, sets `helper_envelope.result.normalized_outcome` to `"ok"`, sets `helper_envelope.result.error` to `null`. |
-| <a id="contract-policy-check_data-verdict-compile_diagnostic"></a>2. Compile failure with a diagnostic | (`helper_envelope.data.compile.stage` = `"compile"` and `helper_envelope.data.compile.error` is present) | sets `helper_envelope.result.ok` to `false`, sets `helper_envelope.result.exit_code` to `1`, sets `helper_envelope.result.normalized_outcome` to `"compile_error"`, sets `helper_envelope.result.error` to `helper_envelope.data.compile.error`. |
-| <a id="contract-policy-check_data-verdict-compile_no_diagnostic"></a>3. Compile failure without a diagnostic | `helper_envelope.data.compile.stage` = `"compile"` | sets `helper_envelope.result.ok` to `false`, sets `helper_envelope.result.exit_code` to `1`, sets `helper_envelope.result.normalized_outcome` to `"compile_error"`, sets `helper_envelope.result.error` to `"sandbox_compile_string returned NULL without a diagnostic"`. |
-| <a id="contract-policy-check_data-verdict-setup"></a>4. Native setup failure | `true` | sets `helper_envelope.result.ok` to `false`, sets `helper_envelope.result.exit_code` to `1`, sets `helper_envelope.result.normalized_outcome` to `"setup_error"`, sets `helper_envelope.result.error` to `helper_envelope.data.compile.error`. |
+| <a id="contract-policy-check_data-verdict-ok"></a>1. Successful last stage | `helper_envelope.data.compile.ok` | [set_value(`helper_envelope.result.ok`, `true`), set_value(`helper_envelope.result.exit_code`, `0`), set_value(`helper_envelope.result.normalized_outcome`, `"ok"`), set_value(`helper_envelope.result.error`, `null`)]. |
+| <a id="contract-policy-check_data-verdict-compile_diagnostic"></a>2. Compile failure with a diagnostic | (`helper_envelope.data.compile.stage` = `"compile"` and present(`helper_envelope.data.compile.error`)) | [set_value(`helper_envelope.result.ok`, `false`), set_value(`helper_envelope.result.exit_code`, `1`), set_value(`helper_envelope.result.normalized_outcome`, `"compile_error"`), set_value(`helper_envelope.result.error`, `helper_envelope.data.compile.error`)]. |
+| <a id="contract-policy-check_data-verdict-compile_no_diagnostic"></a>3. Compile failure without a diagnostic | `helper_envelope.data.compile.stage` = `"compile"` | [set_value(`helper_envelope.result.ok`, `false`), set_value(`helper_envelope.result.exit_code`, `1`), set_value(`helper_envelope.result.normalized_outcome`, `"compile_error"`), set_value(`helper_envelope.result.error`, `"sandbox_compile_string returned NULL without a diagnostic"`)]. |
+| <a id="contract-policy-check_data-verdict-setup"></a>4. Native setup failure | `true` | [set_value(`helper_envelope.result.ok`, `false`), set_value(`helper_envelope.result.exit_code`, `1`), set_value(`helper_envelope.result.normalized_outcome`, `"setup_error"`), set_value(`helper_envelope.result.error`, `helper_envelope.data.compile.error`)]. |
 
 **Support: [source read](#contract-support-grades) for [Select the helper verdict](#contract-policy-check_data-verdict).** The helper selects its result from the last native-stage record. Source: [sbpl-check.rs](../controller/src/bin/sbpl-check.rs): `verdict`.
 
 <a id="contract-policy-check_data-metadata"></a>
 #### Decoded policy metadata
 
-[Compiler helper](#contract-identity-definitions-helper) reports at decoded helper input to report metadata. Entry: standalone helper, controller helper stdin. Recipient: report reader. Reports: helper envelope. sets `check_data.policy_format` to `helper_request.policy.format`, sets `check_data.params_present` to `helper_request.policy.params` is present.
+[Compiler helper](#contract-identity-definitions-helper) reports at decoded helper input to report metadata. Entry: standalone helper, controller helper stdin. Recipient: report reader. Reports: helper envelope. [set_value(`check_data.policy_format`, `helper_request.policy.format`), set_value(`check_data.params_present`, present(`helper_request.policy.params`))].
 
 | Item | Requirement or consequence |
 | --- | --- |
-| <a id="contract-policy-check_data-metadata-present"></a>Present parameter map | Applies when `helper_request.policy.params` is present. sets `check_data.params_count` to count of `helper_request.policy.params`. |
-| <a id="contract-policy-check_data-metadata-absent"></a>Absent parameter map | Applies when `helper_request.policy.params` is absent. sets `check_data.params_count` to `0`. |
+| <a id="contract-policy-check_data-metadata-present"></a>Present parameter map | Applies when present(`helper_request.policy.params`). set_value(`check_data.params_count`, count(`helper_request.policy.params`)). |
+| <a id="contract-policy-check_data-metadata-absent"></a>Absent parameter map | Applies when absent(`helper_request.policy.params`). set_value(`check_data.params_count`, `0`). |
 
 **Support: [source read](#contract-support-grades) for [Decoded policy metadata](#contract-policy-check_data-metadata).** Metadata retains decoded format and optional-map presence/count, including an empty present map. Source: [sbpl-check.rs](../controller/src/bin/sbpl-check.rs): `check`.
 
@@ -1851,11 +1785,9 @@ The helper compiles in its own process. The fallback capture reports this indepe
 
 Record `compile` locations: `helper_envelope.data.compile`.
 
-| Field | JSON type and presence | Meaning |
-| --- | --- | --- |
-| <a id="contract-policy-compile-stage"></a>`stage` | string; required | Last native stage attempted: parameter object creation, one parameter assignment, or source compilation. `compile` means required parameter setup completed. Admitted vocabulary: closed; displayed list: exhaustive: `"params_create"`, `"param_set"`, `"compile"`. |
-| <a id="contract-policy-compile-ok"></a>`ok` | boolean; required | Whether that last stage supplied the helper's successful native result. Compilation succeeds only when the profile is non-null and the native diagnostic pointer is null. |
-| <a id="contract-policy-compile-error"></a>`error` | string; null when absent | At setup failure, helper text identifies the call and, for parameter assignment, the key. At compile, copy the native diagnostic as lossily decoded UTF-8, preserving an empty diagnostic as an empty string. A null profile with no diagnostic leaves this field null and supplies a separate explanatory summary. |
+- <a id="contract-policy-compile-stage"></a>**`stage`** (string): Last native stage attempted: parameter object creation, one parameter assignment, or source compilation. `compile` means required parameter setup completed. Admitted vocabulary: closed; displayed list: exhaustive: `"params_create"`, `"param_set"`, `"compile"`.
+- <a id="contract-policy-compile-ok"></a>**`ok`** (boolean): Whether that last stage supplied the helper's successful native result. Compilation succeeds only when the profile is non-null and the native diagnostic pointer is null.
+- <a id="contract-policy-compile-error"></a>**`error`** (string ∪ null): At setup failure, helper text identifies the call and, for parameter assignment, the key. At compile, copy the native diagnostic as lossily decoded UTF-8, preserving an empty diagnostic as an empty string. A null profile with no diagnostic leaves this field null and supplies a separate explanatory summary.
 
 <a id="contract-policy-compile-release"></a>
 #### Release native resources
@@ -1864,7 +1796,7 @@ Record `compile` locations: `helper_envelope.data.compile`.
 
 | Item | Requirement or consequence |
 | --- | --- |
-| <a id="contract-policy-compile-release-diagnostic"></a>Retained compile diagnostic | Requires (if (`compile.stage` = `"compile"` and `compile.error` is present), then `compile.ok` = `false`). An empty native diagnostic remains present and therefore also rules out helper compile success. |
+| <a id="contract-policy-compile-release-diagnostic"></a>Retained compile diagnostic | Requires implies((`compile.stage` = `"compile"` and present(`compile.error`)), `compile.ok` = `false`). An empty native diagnostic remains present and therefore also rules out helper compile success. |
 
 **Support: [source read](#contract-support-grades) for [Last native compile stage](#contract-policy-compile) and its descendants.** The adjacent field meanings and operations follow the named implementation. Evidence limit: Native wrapper branches read. Scripted native-result controls and platform execution still need to be joined as graded owners. Source: [sbpl-check.rs](../controller/src/bin/sbpl-check.rs): `compile_with`, `CompileRecord`.
 
@@ -1875,12 +1807,10 @@ Record `imports`: `rust.ImportInventory`.
 
 Absolute import names are checked as supplied. Other names are sought first under `/System/Library/Sandbox/Profiles`, then `/usr/share/sandbox`, with the literal name unchanged. The resolver follows literal imports recursively; an unevaluable import argument, unreadable/nonregular file or invalid UTF-8 scan input records an incomplete inventory.
 
-| Field | JSON type and presence | Meaning |
-| --- | --- | --- |
-| <a id="contract-policy-imports-records"></a>`records` | array of [One import observation](#contract-dossier-import_record); required | Observed import records sorted by resolved path (empty for unresolved), then literal name. Each resolved file is opened once, checked as a regular file, and its held bytes are both hashed and scanned. Canonical resolved files and unresolved names are deduplicated. |
-| <a id="contract-policy-imports-truncated"></a>`truncated` | boolean; required | True when the walk reached its <!-- span limits.helper_import_depth.value_unit -->8 levels<!-- /span --> depth bound or <!-- span limits.helper_import_count.value_unit -->64 records<!-- /span --> record bound; retained records describe the partial walk. |
-| <a id="contract-policy-imports-cycle"></a>`cycle` | array of string; null when absent | First cycle found by revisiting a canonical path already in the active traversal chain, reported in literal import-name order. Null means the walk found no cycle. |
-| <a id="contract-policy-imports-policy_closure_sha256"></a>`policy_closure_sha256` | string; required | SHA-256 of source bytes, byte 0x1F, then newline-joined sorted strings of each successfully hashed resolved path, one space and its SHA-256. The separator is included for an empty inventory. Failed imports remain error records and contribute no path/hash line. |
+- <a id="contract-policy-imports-records"></a>**`records`** (array of [One import observation](#contract-dossier-import_record)): Observed import records sorted by resolved path (empty for unresolved), then literal name. Each resolved file is opened once, checked as a regular file, and its held bytes are both hashed and scanned. Canonical resolved files and unresolved names are deduplicated.
+- <a id="contract-policy-imports-truncated"></a>**`truncated`** (boolean): True when the walk reached its <!-- span limits.helper_import_depth.value_unit -->8 levels<!-- /span --> depth bound or <!-- span limits.helper_import_count.value_unit -->64 records<!-- /span --> record bound; retained records describe the partial walk.
+- <a id="contract-policy-imports-cycle"></a>**`cycle`** (array of string ∪ null): First cycle found by revisiting a canonical path already in the active traversal chain, reported in literal import-name order. Null means the walk found no cycle.
+- <a id="contract-policy-imports-policy_closure_sha256"></a>**`policy_closure_sha256`** (string): SHA-256 of source bytes, byte 0x1F, then newline-joined sorted strings of each successfully hashed resolved path, one space and its SHA-256. The separator is included for an empty inventory. Failed imports remain error records and contribute no path/hash line.
 
 <a id="contract-policy-imports-holds"></a>
 #### Separate reads and their identities
@@ -1903,22 +1833,20 @@ The inventory walks literal imports using its documented two-directory search or
 
 Record `fallback`: `rust.PolicyCheckCapture`.
 
-| Field | JSON type and presence | Meaning |
-| --- | --- | --- |
-| <a id="contract-policy-fallback-status"></a>`status` | string; required | Capture result, or the exact normalized_outcome from a supported helper envelope. Current capture statuses are unavailable, capture_error, parse_error, tool_error and invalid_reply. Admitted vocabulary: open; displayed list: illustrative: `"unavailable"`, `"capture_error"`, `"parse_error"`, `"tool_error"`, `"invalid_reply"`, `"ok"`, `"compile_error"`, `"setup_error"`, `"bad_request"`, `"policy_too_large"`. Unfamiliar values: A nonempty unfamiliar helper outcome is copied when kind and public identity are supported; its meaning remains producer-supplied. |
-| <a id="contract-policy-fallback-tool_exit_code"></a>`tool_exit_code` | integer; required | Helper process exit code, or the capture's fallback value when unavailable. |
-| <a id="contract-policy-fallback-envelope"></a>`envelope` | JSON value; null when absent | Whole parsed helper envelope retained unchanged when stdout parsed, including unsupported envelopes. Null means no retained parsed object. |
-| <a id="contract-policy-fallback-stdout_raw"></a>`stdout_raw` | string; null when absent | Retained textual stdout used for capture diagnosis. |
-| <a id="contract-policy-fallback-stdout_parse_error"></a>`stdout_parse_error` | string; null when absent | Parse diagnosis when retained stdout could not be decoded as the helper JSON value. |
-| <a id="contract-policy-fallback-stdout_truncated"></a>`stdout_truncated` | boolean; required | Whether stdout retention truncated the child's output; truncation prevents interpreting a parsed prefix as the complete reply. |
-| <a id="contract-policy-fallback-stdout_capture_error"></a>`stdout_capture_error` | string; null when absent | Capture loss diagnosis, which takes precedence over parsing and helper interpretation. |
-| <a id="contract-policy-fallback-stdout_bytes_received"></a>`stdout_bytes_received` | integer; null when absent | Count of stdout bytes observed by capture. |
-| <a id="contract-policy-fallback-stdout_bytes_retained"></a>`stdout_bytes_retained` | integer; null when absent | Count of stdout bytes retained within the capture limit. |
-| <a id="contract-policy-fallback-stderr_bytes_received"></a>`stderr_bytes_received` | integer; null when absent | Count of stderr bytes observed by capture. |
-| <a id="contract-policy-fallback-stderr_bytes_retained"></a>`stderr_bytes_retained` | integer; null when absent | Count of stderr bytes retained within the capture limit. |
-| <a id="contract-policy-fallback-capture_limit_bytes"></a>`capture_limit_bytes` | integer; required | Per-stream retention limit, <!-- span limits.policy_helper_output.value_unit -->8,388,608 bytes<!-- /span -->. |
-| <a id="contract-policy-fallback-stderr"></a>`stderr` | string; required | Retained stderr text, including diagnostic output when the helper produced no envelope. |
-| <a id="contract-policy-fallback-stderr_truncated"></a>`stderr_truncated` | boolean; required | Whether stderr exceeded its retained capture capacity. |
+- <a id="contract-policy-fallback-status"></a>**`status`** (string): Capture result, or the exact normalized_outcome from a supported helper envelope. Current capture statuses are unavailable, capture_error, parse_error, tool_error and invalid_reply. Admitted vocabulary: open; displayed list: illustrative: `"unavailable"`, `"capture_error"`, `"parse_error"`, `"tool_error"`, `"invalid_reply"`, `"ok"`, `"compile_error"`, `"setup_error"`, `"bad_request"`, `"policy_too_large"`. Unfamiliar values: A nonempty unfamiliar helper outcome is copied when kind and public identity are supported; its meaning remains producer-supplied.
+- <a id="contract-policy-fallback-tool_exit_code"></a>**`tool_exit_code`** (integer): Helper process exit code, or the capture's fallback value when unavailable.
+- <a id="contract-policy-fallback-envelope"></a>**`envelope`** (JSON value ∪ null): Whole parsed helper envelope retained unchanged when stdout parsed, including unsupported envelopes. Null means no retained parsed object.
+- <a id="contract-policy-fallback-stdout_raw"></a>**`stdout_raw`** (string ∪ null): Retained textual stdout used for capture diagnosis.
+- <a id="contract-policy-fallback-stdout_parse_error"></a>**`stdout_parse_error`** (string ∪ null): Parse diagnosis when retained stdout could not be decoded as the helper JSON value.
+- <a id="contract-policy-fallback-stdout_truncated"></a>**`stdout_truncated`** (boolean): Whether stdout retention truncated the child's output; truncation prevents interpreting a parsed prefix as the complete reply.
+- <a id="contract-policy-fallback-stdout_capture_error"></a>**`stdout_capture_error`** (string ∪ null): Capture loss diagnosis, which takes precedence over parsing and helper interpretation.
+- <a id="contract-policy-fallback-stdout_bytes_received"></a>**`stdout_bytes_received`** (integer ∪ null): Count of stdout bytes observed by capture.
+- <a id="contract-policy-fallback-stdout_bytes_retained"></a>**`stdout_bytes_retained`** (integer ∪ null): Count of stdout bytes retained within the capture limit.
+- <a id="contract-policy-fallback-stderr_bytes_received"></a>**`stderr_bytes_received`** (integer ∪ null): Count of stderr bytes observed by capture.
+- <a id="contract-policy-fallback-stderr_bytes_retained"></a>**`stderr_bytes_retained`** (integer ∪ null): Count of stderr bytes retained within the capture limit.
+- <a id="contract-policy-fallback-capture_limit_bytes"></a>**`capture_limit_bytes`** (integer): Per-stream retention limit, <!-- span limits.policy_helper_output.value_unit -->8,388,608 bytes<!-- /span -->.
+- <a id="contract-policy-fallback-stderr"></a>**`stderr`** (string): Retained stderr text, including diagnostic output when the helper produced no envelope.
+- <a id="contract-policy-fallback-stderr_truncated"></a>**`stderr_truncated`** (boolean): Whether stderr exceeded its retained capture capacity.
 
 <a id="contract-policy-fallback-classify"></a>
 #### Fallback eligibility and classification
@@ -1936,10 +1864,8 @@ Record `actor_check`: `rust.ActorPolicyCheck`.
 
 When fallback is eligible, the controller checks each actor carrying a policy object in request order, sending a separate policy-only request. A malformed mode remains a host-admission question; the controller collected these policy objects before host execution.
 
-| Field | JSON type and presence | Meaning |
-| --- | --- | --- |
-| <a id="contract-policy-actor_check-actor_id"></a>`actor_id` | string; null when absent | Actor label copied from the policy-bearing actor declaration when it is a string; null otherwise. |
-| <a id="contract-policy-actor_check-policy_check"></a>`policy_check` | [Fallback helper capture](#contract-policy-fallback); required | Independent helper capture for this actor's selected policy object. |
+- <a id="contract-policy-actor_check-actor_id"></a>**`actor_id`** (string ∪ null): Actor label copied from the policy-bearing actor declaration when it is a string; null otherwise.
+- <a id="contract-policy-actor_check-policy_check"></a>**`policy_check`** ([Fallback helper capture](#contract-policy-fallback)): Independent helper capture for this actor's selected policy object.
 
 **Support: [source read](#contract-support-grades) for [Per-actor fallback capture](#contract-policy-actor_check) and its descendants.** The adjacent field meanings and operations follow the named implementation. Source: [run_flow.rs](../controller/src/run_flow.rs): `actor_fallback_checks`, `actor_policies`.
 
@@ -1948,35 +1874,33 @@ When fallback is eligible, the controller checks each actor carrying a policy ob
 
 Record `event`: `PWRunnerExtensionEvent`.
 
-| Field | JSON type and presence | Meaning |
-| --- | --- | --- |
-| <a id="contract-extensions-event-phase_id"></a>`phase_id` | string; required | Declared phase containing the action. |
-| <a id="contract-extensions-event-step_id"></a>`step_id` | string; required | Declared action identifier. |
-| <a id="contract-extensions-event-operation"></a>`operation` | string; required | Requested issue, transfer, consume or release operation. |
-| <a id="contract-extensions-event-token_ref"></a>`token_ref` | string; omitted when absent | Declared token reference for issue and transfer; omitted for consume and release. |
-| <a id="contract-extensions-event-handle_ref"></a>`handle_ref` | string; omitted when absent | Declared handle reference for consume and release; omitted for issue and transfer. |
-| <a id="contract-extensions-event-call_boundary_observed"></a>`call_boundary_observed` | boolean; required | Whether the host observed the worker's release-published marker immediately before a native issue, consume or release call. Transfer uses its separate request publication. |
-| <a id="contract-extensions-event-result_published"></a>`result_published` | boolean; required | Whether the action's result slot was completed and observed. A false value withholds native result fields even if a call boundary was observed. |
-| <a id="contract-extensions-event-status"></a>`status` | string; required | `returned` when a completed native result exists; `unavailable` for a published no-call reason; `unresolved` for missing action publication; `invalid` for a completed inconsistent slot. Transfer uses its acknowledgement status. |
-| <a id="contract-extensions-event-native_result"></a>`native_result` | integer; omitted when absent | Published signed native result: issue uses 1 for non-null or 0 for null; consume and release retain their signed result. Consume -1 supplies no handle; another published consume result is the candidate handle. |
-| <a id="contract-extensions-event-errno"></a>`errno` | integer; omitted when absent | Errno captured immediately after the native call when a native result was published. Its value remains paired with that result, including zero. |
-| <a id="contract-extensions-event-unavailable_reason"></a>`unavailable_reason` | string; omitted when absent | Published apparatus reason such as token_unavailable, handle_unavailable, native_api_unavailable, repeated_action, authority_channel_unavailable or delivery_unavailable; omitted when no reason was published. |
-| <a id="contract-extensions-event-lifecycle"></a>`lifecycle` | [Per-attempt lifecycle projection](#contract-lifecycle-attempt); omitted when absent | Assessment of the action's observed boundary/publication from its actor's disposition evidence. |
-| <a id="contract-extensions-event-actor_id"></a>`actor_id` | string; omitted when absent | Actor owning this action. |
-| <a id="contract-extensions-event-family"></a>`family` | string; omitted when absent | The implemented extension family, `file`. |
-| <a id="contract-extensions-event-target"></a>`target` | string; omitted when absent | Exact declared issue target, present for issue. |
-| <a id="contract-extensions-event-extension_class"></a>`extension_class` | string; omitted when absent | Native issue class selected from read/read_write, present for issue. |
-| <a id="contract-extensions-event-flags"></a>`flags` | integer; omitted when absent | Native issue flags; the implementation supplies zero. |
-| <a id="contract-extensions-event-delivery_ref"></a>`delivery_ref` | string; omitted when absent | Declared delivery reference for transfer and consume. |
-| <a id="contract-extensions-event-native_nonnull"></a>`native_nonnull` | boolean; omitted when absent | Issue result projected as true for published native 1 and false for another published native value; absent without a native result. |
-| <a id="contract-extensions-event-token_length"></a>`token_length` | integer; omitted when absent | Length carried by a completed issue publication, including zero when no bounded token was published. Public payload length excludes the NUL terminator. |
+- <a id="contract-extensions-event-phase_id"></a>**`phase_id`** (string): Declared phase containing the action.
+- <a id="contract-extensions-event-step_id"></a>**`step_id`** (string): Declared action identifier.
+- <a id="contract-extensions-event-operation"></a>**`operation`** (string): Requested issue, transfer, consume or release operation.
+- <a id="contract-extensions-event-token_ref"></a>**`token_ref`** (string?): Declared token reference for issue and transfer; omitted for consume and release.
+- <a id="contract-extensions-event-handle_ref"></a>**`handle_ref`** (string?): Declared handle reference for consume and release; omitted for issue and transfer.
+- <a id="contract-extensions-event-call_boundary_observed"></a>**`call_boundary_observed`** (boolean): Whether the host observed the worker's release-published marker immediately before a native issue, consume or release call. Transfer uses its separate request publication.
+- <a id="contract-extensions-event-result_published"></a>**`result_published`** (boolean): Whether the action's result slot was completed and observed. A false value withholds native result fields even if a call boundary was observed.
+- <a id="contract-extensions-event-status"></a>**`status`** (string): `returned` when a completed native result exists; `unavailable` for a published no-call reason; `unresolved` for missing action publication; `invalid` for a completed inconsistent slot. Transfer uses its acknowledgement status.
+- <a id="contract-extensions-event-native_result"></a>**`native_result`** (integer?): Published signed native result: issue uses 1 for non-null or 0 for null; consume and release retain their signed result. Consume -1 supplies no handle; another published consume result is the candidate handle.
+- <a id="contract-extensions-event-errno"></a>**`errno`** (integer?): Errno captured immediately after the native call when a native result was published. Its value remains paired with that result, including zero.
+- <a id="contract-extensions-event-unavailable_reason"></a>**`unavailable_reason`** (string?): Published apparatus reason such as token_unavailable, handle_unavailable, native_api_unavailable, repeated_action, authority_channel_unavailable or delivery_unavailable; omitted when no reason was published.
+- <a id="contract-extensions-event-lifecycle"></a>**`lifecycle`** ([Per-attempt lifecycle projection](#contract-lifecycle-attempt)?): Assessment of the action's observed boundary/publication from its actor's disposition evidence.
+- <a id="contract-extensions-event-actor_id"></a>**`actor_id`** (string?): Actor owning this action.
+- <a id="contract-extensions-event-family"></a>**`family`** (string?): The implemented extension family, `file`.
+- <a id="contract-extensions-event-target"></a>**`target`** (string?): Exact declared issue target, present for issue.
+- <a id="contract-extensions-event-extension_class"></a>**`extension_class`** (string?): Native issue class selected from read/read_write, present for issue.
+- <a id="contract-extensions-event-flags"></a>**`flags`** (integer?): Native issue flags; the implementation supplies zero.
+- <a id="contract-extensions-event-delivery_ref"></a>**`delivery_ref`** (string?): Declared delivery reference for transfer and consume.
+- <a id="contract-extensions-event-native_nonnull"></a>**`native_nonnull`** (boolean?): Issue result projected as true for published native 1 and false for another published native value; absent without a native result.
+- <a id="contract-extensions-event-token_length"></a>**`token_length`** (integer?): Length carried by a completed issue publication, including zero when no bounded token was published. Public payload length excludes the NUL terminator.
 
 **Support: [source read](#contract-support-grades) for [Extension event](#contract-extensions-event) and its descendants.** The adjacent meanings follow the named request, producer and observation branches. Source: [PWRunnerExtension.swift](../runner/Sources/PWRunnerCore/PWRunnerExtension.swift): `PWRunnerExtensionEvent`; [ActorOrchestration.swift](../runner/Sources/PWRunnerCore/ActorOrchestration.swift): `assembleActorReply`; [pw_probe_runner.c](../controller/tools/pw_probe_runner/pw_probe_runner.c): `attempt_extension_issue`, `attempt_extension_consume_actor`.
 
 <a id="contract-extensions-event-issue_projection"></a>
 #### Project a published issue result
 
-[Runner host](#contract-identity-definitions-host) reports at completed issue event projection. Entry: xpc execute. Recipient: report reader. Reports: runner reply. Applies when (`event.operation` = `"issue"` and `event.result_published` and `event.native_result` is present). sets `event.native_nonnull` to `event.native_result` = `1`.
+[Runner host](#contract-identity-definitions-host) reports at completed issue event projection. Entry: xpc execute. Recipient: report reader. Reports: runner reply. Applies when (`event.operation` = `"issue"` and `event.result_published` and present(`event.native_result`)). set_value(`event.native_nonnull`, `event.native_result` = `1`).
 
 **Support: [source read](#contract-support-grades) for [Project a published issue result](#contract-extensions-event-issue_projection).** A published issue native value projects to native_nonnull; the host custody record carries token acceptance. Source: [ActorOrchestration.swift](../runner/Sources/PWRunnerCore/ActorOrchestration.swift): `assembleActorReply`.
 
@@ -1987,23 +1911,21 @@ Record `transfer`: `PWRunnerTransferRecord`.
 
 The transfer table reports host servicing observations. A worker can time out before the host's answer; source acknowledgement preserves this difference.
 
-| Field | JSON type and presence | Meaning |
-| --- | --- | --- |
-| <a id="contract-extensions-transfer-phase_id"></a>`phase_id` | string; required | Phase in which this transfer action was declared. |
-| <a id="contract-extensions-transfer-step_id"></a>`step_id` | string; required | Transfer action identifier. |
-| <a id="contract-extensions-transfer-source_actor_id"></a>`source_actor_id` | string; required | Actor owning the token and requesting the transfer. |
-| <a id="contract-extensions-transfer-recipient_actor_id"></a>`recipient_actor_id` | string; required | Actor assigned the inbound delivery. |
-| <a id="contract-extensions-transfer-token_ref"></a>`token_ref` | string; required | Requested source token. |
-| <a id="contract-extensions-transfer-delivery_ref"></a>`delivery_ref` | string; required | Assigned delivery resource. |
-| <a id="contract-extensions-transfer-request_published"></a>`request_published` | boolean; required | Whether the host observed the explicit transfer request publication. |
-| <a id="contract-extensions-transfer-custody_status"></a>`custody_status` | string; required | `held` when the host found accepted, unerased custody for this request; otherwise `unavailable`. |
-| <a id="contract-extensions-transfer-copy_status"></a>`copy_status` | string; required | `copied` after the host copied custody into the inbound slot; otherwise `not_copied`. |
-| <a id="contract-extensions-transfer-equality"></a>`equality` | string; required | `equal` or `unequal` after comparing acknowledged recipient bytes to custody; otherwise `not_compared`. |
-| <a id="contract-extensions-transfer-recipient_acknowledged"></a>`recipient_acknowledged` | boolean; required | True when the recipient published either framing acceptance or rejection. Read status to distinguish which. |
-| <a id="contract-extensions-transfer-source_acknowledged"></a>`source_acknowledged` | boolean; required | True only when the source published a completed action carrying the matching host acknowledgement. |
-| <a id="contract-extensions-transfer-status"></a>`status` | string; required | Host acknowledgement name: none, delivered, custody_unavailable, recipient_rejected, recipient_timeout, recipient_unavailable, request_invalid, host_timeout, clock_fault or copy_mismatch. Unrecognized raw acknowledgement values are retained as strings by this producer. |
-| <a id="contract-extensions-transfer-lifecycle"></a>`lifecycle` | [Per-attempt lifecycle projection](#contract-lifecycle-attempt); omitted when absent | Source action's lifecycle assessment when available. |
-| <a id="contract-extensions-transfer-recipient_wait"></a>`recipient_wait` | [Measured host wait](#contract-lifecycle-host_wait); omitted when absent | Host clock and stop observation for the bounded recipient-acknowledgement wait, when that wait was entered. |
+- <a id="contract-extensions-transfer-phase_id"></a>**`phase_id`** (string): Phase in which this transfer action was declared.
+- <a id="contract-extensions-transfer-step_id"></a>**`step_id`** (string): Transfer action identifier.
+- <a id="contract-extensions-transfer-source_actor_id"></a>**`source_actor_id`** (string): Actor owning the token and requesting the transfer.
+- <a id="contract-extensions-transfer-recipient_actor_id"></a>**`recipient_actor_id`** (string): Actor assigned the inbound delivery.
+- <a id="contract-extensions-transfer-token_ref"></a>**`token_ref`** (string): Requested source token.
+- <a id="contract-extensions-transfer-delivery_ref"></a>**`delivery_ref`** (string): Assigned delivery resource.
+- <a id="contract-extensions-transfer-request_published"></a>**`request_published`** (boolean): Whether the host observed the explicit transfer request publication.
+- <a id="contract-extensions-transfer-custody_status"></a>**`custody_status`** (string): `held` when the host found accepted, unerased custody for this request; otherwise `unavailable`.
+- <a id="contract-extensions-transfer-copy_status"></a>**`copy_status`** (string): `copied` after the host copied custody into the inbound slot; otherwise `not_copied`.
+- <a id="contract-extensions-transfer-equality"></a>**`equality`** (string): `equal` or `unequal` after comparing acknowledged recipient bytes to custody; otherwise `not_compared`.
+- <a id="contract-extensions-transfer-recipient_acknowledged"></a>**`recipient_acknowledged`** (boolean): True when the recipient published either framing acceptance or rejection. Read status to distinguish which.
+- <a id="contract-extensions-transfer-source_acknowledged"></a>**`source_acknowledged`** (boolean): True only when the source published a completed action carrying the matching host acknowledgement.
+- <a id="contract-extensions-transfer-status"></a>**`status`** (string): Host acknowledgement name: none, delivered, custody_unavailable, recipient_rejected, recipient_timeout, recipient_unavailable, request_invalid, host_timeout, clock_fault or copy_mismatch. Unrecognized raw acknowledgement values are retained as strings by this producer.
+- <a id="contract-extensions-transfer-lifecycle"></a>**`lifecycle`** ([Per-attempt lifecycle projection](#contract-lifecycle-attempt)?): Source action's lifecycle assessment when available.
+- <a id="contract-extensions-transfer-recipient_wait"></a>**`recipient_wait`** ([Measured host wait](#contract-lifecycle-host_wait)?): Host clock and stop observation for the bounded recipient-acknowledgement wait, when that wait was entered.
 
 **Support: [source read](#contract-support-grades) for [Host transfer observation](#contract-extensions-transfer) and its descendants.** The adjacent meanings follow the named request, producer and observation branches. Source: [AuthorityCustody.swift](../runner/Sources/PWRunnerCore/AuthorityCustody.swift): `TransferObservation`, `serviceTransfer`; [ActorOrchestration.swift](../runner/Sources/PWRunnerCore/ActorOrchestration.swift): `PWRunnerTransferRecord`.
 
@@ -2023,12 +1945,12 @@ The custody rule describes native framing and settlement.
 <a id="contract-extensions-transfer-source_association"></a>
 #### Source acknowledgement association
 
-[Runner host](#contract-identity-definitions-host) reports at ordinary actor report transfer and source-event projection. Entry: xpc execute. Recipient: report reader. Reports: runner reply. Binding `t`: entry in `reply.transfers`. Binding `e`: entry in `reply.extension_events`. Association restriction for `e`: (`reply.extension_events[e].phase_id` = `reply.transfers[t].phase_id` and `reply.extension_events[e].step_id` = `reply.transfers[t].step_id` and `reply.extension_events[e].actor_id` = `reply.transfers[t].source_actor_id` and `reply.extension_events[e].operation` = `"transfer"`). For each `t`. Applies when (`reply.reporting_failure` is absent and `reply.transfers` is present and `reply.extension_events` is present).
+[Runner host](#contract-identity-definitions-host) reports at ordinary actor report transfer and source-event projection. Entry: xpc execute. Recipient: report reader. Reports: runner reply. Binding `t`: entry in `reply.transfers`. Binding `e`: entry in `reply.extension_events`. Association restriction for `e`: (`reply.extension_events[e].phase_id` = `reply.transfers[t].phase_id` and `reply.extension_events[e].step_id` = `reply.transfers[t].step_id` and `reply.extension_events[e].actor_id` = `reply.transfers[t].source_actor_id` and `reply.extension_events[e].operation` = `"transfer"`). For each `t`. Applies when (absent(`reply.reporting_failure`) and present(`reply.transfers`) and present(`reply.extension_events`)).
 
 | Item | Requirement or consequence |
 | --- | --- |
-| <a id="contract-extensions-transfer-source_association-unique"></a>Exactly one published source event | Applies when `reply.transfers[t].source_acknowledged`. Requires number of matching entries for `e` = `1`. |
-| <a id="contract-extensions-transfer-source_association-published"></a>Published matching acknowledgement | For each `t`, `e`. Applies when (`reply.transfers[t].source_acknowledged` and `reply.extension_events[e].phase_id` = `reply.transfers[t].phase_id` and `reply.extension_events[e].step_id` = `reply.transfers[t].step_id` and `reply.extension_events[e].actor_id` = `reply.transfers[t].source_actor_id` and `reply.extension_events[e].operation` = `"transfer"`). Requires (`reply.extension_events[e].result_published` and `reply.transfers[t].status` ≠ `"none"` and (if `reply.transfers[t].status` is one of `"delivered"`, `"custody_unavailable"`, `"recipient_rejected"`, `"recipient_timeout"`, `"recipient_unavailable"`, `"request_invalid"`, `"host_timeout"`, `"clock_fault"`, `"copy_mismatch"`, then `reply.extension_events[e].status` = `reply.transfers[t].status`)). Unknown raw acknowledgement names and degraded records retain their raw evidence; the status equality applies to ordinary records with the listed known acknowledgement names. |
+| <a id="contract-extensions-transfer-source_association-unique"></a>Exactly one published source event | Applies when `reply.transfers[t].source_acknowledged`. Requires matches(`e`) = `1`. |
+| <a id="contract-extensions-transfer-source_association-published"></a>Published matching acknowledgement | For each `t`, `e`. Applies when (`reply.transfers[t].source_acknowledged` and `reply.extension_events[e].phase_id` = `reply.transfers[t].phase_id` and `reply.extension_events[e].step_id` = `reply.transfers[t].step_id` and `reply.extension_events[e].actor_id` = `reply.transfers[t].source_actor_id` and `reply.extension_events[e].operation` = `"transfer"`). Requires (`reply.extension_events[e].result_published` and `reply.transfers[t].status` ≠ `"none"` and implies(`reply.transfers[t].status` ∈ [`"delivered"`, `"custody_unavailable"`, `"recipient_rejected"`, `"recipient_timeout"`, `"recipient_unavailable"`, `"request_invalid"`, `"host_timeout"`, `"clock_fault"`, `"copy_mismatch"`], `reply.extension_events[e].status` = `reply.transfers[t].status`)). Unknown raw acknowledgement names and degraded records retain their raw evidence; the status equality applies to ordinary records with the listed known acknowledgement names. |
 
 **Support: [source read](#contract-support-grades) for [Source acknowledgement association](#contract-extensions-transfer-source_association).** Custody requires a completed source slot with the matching nonzero acknowledgement. Admitted unique actions and consistent delivery assignments identify one source transfer event; assembly maps known acknowledgement values to the same event and transfer status names. Source: [AuthorityCustody.swift](../runner/Sources/PWRunnerCore/AuthorityCustody.swift): `recordSourceAcknowledgements`; [ActorOrchestration.swift](../runner/Sources/PWRunnerCore/ActorOrchestration.swift): `assembleActorReply`; [ActorPlan.swift](../runner/Sources/PWRunnerCore/ActorPlan.swift): `normalizeActorPlan`, `actorPlanAssignmentsConsistent`.
 
@@ -2039,11 +1961,9 @@ Record `resources`: `PWRunnerResourceTables`.
 
 The tables retain admitted resources whose producing action was not reached or remains unresolved. Declaration establishes the reference; the status supplies observed production.
 
-| Field | JSON type and presence | Meaning |
-| --- | --- | --- |
-| <a id="contract-extensions-resources-tokens"></a>`tokens` | array of [Token resource](#contract-extensions-token); required | Every admitted issue resource in plan order, with its observed production and custody status. |
-| <a id="contract-extensions-resources-deliveries"></a>`deliveries` | array of [Delivery resource](#contract-extensions-delivery); required | Every admitted transfer resource in plan order, with its observed delivery status. |
-| <a id="contract-extensions-resources-handles"></a>`handles` | array of [Handle resource](#contract-extensions-handle); required | Every admitted consume resource in plan order, with its candidate handle and declared release observations. |
+- <a id="contract-extensions-resources-tokens"></a>**`tokens`** (array of [Token resource](#contract-extensions-token)): Every admitted issue resource in plan order, with its observed production and custody status.
+- <a id="contract-extensions-resources-deliveries"></a>**`deliveries`** (array of [Delivery resource](#contract-extensions-delivery)): Every admitted transfer resource in plan order, with its observed delivery status.
+- <a id="contract-extensions-resources-handles"></a>**`handles`** (array of [Handle resource](#contract-extensions-handle)): Every admitted consume resource in plan order, with its candidate handle and declared release observations.
 
 **Support: [source read](#contract-support-grades) for [Resource tables](#contract-extensions-resources) and its descendants.** The adjacent meanings follow the named request, producer and observation branches. Source: [PWRunnerActors.swift](../runner/Sources/PWRunnerCore/PWRunnerActors.swift): `PWRunnerResourceTables`; [ActorOrchestration.swift](../runner/Sources/PWRunnerCore/ActorOrchestration.swift): `tokenRecords`.
 
@@ -2052,15 +1972,13 @@ The tables retain admitted resources whose producing action was not reached or r
 
 Record `token`: `PWRunnerTokenRecord`.
 
-| Field | JSON type and presence | Meaning |
-| --- | --- | --- |
-| <a id="contract-extensions-token-token_ref"></a>`token_ref` | string; required | Declared token identifier. |
-| <a id="contract-extensions-token-actor_id"></a>`actor_id` | string; required | Issuing actor. |
-| <a id="contract-extensions-token-step_id"></a>`step_id` | string; required | Issue action identifier. |
-| <a id="contract-extensions-token-family"></a>`family` | string; required | Declared extension family. |
-| <a id="contract-extensions-token-status"></a>`status` | string; required | `issued` requires a completed non-null issue result and accepted host custody; `issued_uncustodied` retains a completed non-null result without accepted custody; `null` records native null; `unavailable` records a no-call reason; `invalid` records an inconsistent completed result. Missing publication becomes `not_reached` only with supported boundary evidence, otherwise `unresolved`. |
-| <a id="contract-extensions-token-token_length"></a>`token_length` | integer; omitted when absent | Length available from the issue slot's extension publication, when present. |
-| <a id="contract-extensions-token-last_use_step_id"></a>`last_use_step_id` | string; omitted when absent | Final declared transfer using this token, or the issue itself when no transfer is declared. |
+- <a id="contract-extensions-token-token_ref"></a>**`token_ref`** (string): Declared token identifier.
+- <a id="contract-extensions-token-actor_id"></a>**`actor_id`** (string): Issuing actor.
+- <a id="contract-extensions-token-step_id"></a>**`step_id`** (string): Issue action identifier.
+- <a id="contract-extensions-token-family"></a>**`family`** (string): Declared extension family.
+- <a id="contract-extensions-token-status"></a>**`status`** (string): `issued` requires a completed non-null issue result and accepted host custody; `issued_uncustodied` retains a completed non-null result without accepted custody; `null` records native null; `unavailable` records a no-call reason; `invalid` records an inconsistent completed result. Missing publication becomes `not_reached` only with supported boundary evidence, otherwise `unresolved`.
+- <a id="contract-extensions-token-token_length"></a>**`token_length`** (integer?): Length available from the issue slot's extension publication, when present.
+- <a id="contract-extensions-token-last_use_step_id"></a>**`last_use_step_id`** (string?): Final declared transfer using this token, or the issue itself when no transfer is declared.
 
 **Support: [source read](#contract-support-grades) for [Token resource](#contract-extensions-token) and its descendants.** The adjacent meanings follow the named request, producer and observation branches. Source: [ActorOrchestration.swift](../runner/Sources/PWRunnerCore/ActorOrchestration.swift): `tokenRecords`, `unpublishedResourceStatus`.
 
@@ -2069,17 +1987,15 @@ Record `token`: `PWRunnerTokenRecord`.
 
 Record `delivery`: `PWRunnerDeliveryRecord`.
 
-| Field | JSON type and presence | Meaning |
-| --- | --- | --- |
-| <a id="contract-extensions-delivery-delivery_ref"></a>`delivery_ref` | string; required | Declared delivery identifier. |
-| <a id="contract-extensions-delivery-token_ref"></a>`token_ref` | string; required | Token selected for delivery. |
-| <a id="contract-extensions-delivery-source_actor_id"></a>`source_actor_id` | string; required | Token owner and transfer source. |
-| <a id="contract-extensions-delivery-recipient_actor_id"></a>`recipient_actor_id` | string; required | Actor assigned the delivery. |
-| <a id="contract-extensions-delivery-step_id"></a>`step_id` | string; required | Transfer action identifier. |
-| <a id="contract-extensions-delivery-status"></a>`status` | string; required | Host acknowledgement when a transfer observation exists; otherwise the completed slot's unavailable reason or `unrequested`. Missing publication becomes `not_reached` only with supported boundary evidence, otherwise `unresolved`. |
-| <a id="contract-extensions-delivery-delivered_length"></a>`delivered_length` | integer; omitted when absent | Host custody length only when the acknowledgement is delivered. |
-| <a id="contract-extensions-delivery-equality"></a>`equality` | string; omitted when absent | Host equality comparison when a transfer observation exists. |
-| <a id="contract-extensions-delivery-last_use_step_id"></a>`last_use_step_id` | string; omitted when absent | Last declared consume using this delivery, or its transfer action when no consume is declared. |
+- <a id="contract-extensions-delivery-delivery_ref"></a>**`delivery_ref`** (string): Declared delivery identifier.
+- <a id="contract-extensions-delivery-token_ref"></a>**`token_ref`** (string): Token selected for delivery.
+- <a id="contract-extensions-delivery-source_actor_id"></a>**`source_actor_id`** (string): Token owner and transfer source.
+- <a id="contract-extensions-delivery-recipient_actor_id"></a>**`recipient_actor_id`** (string): Actor assigned the delivery.
+- <a id="contract-extensions-delivery-step_id"></a>**`step_id`** (string): Transfer action identifier.
+- <a id="contract-extensions-delivery-status"></a>**`status`** (string): Host acknowledgement when a transfer observation exists; otherwise the completed slot's unavailable reason or `unrequested`. Missing publication becomes `not_reached` only with supported boundary evidence, otherwise `unresolved`.
+- <a id="contract-extensions-delivery-delivered_length"></a>**`delivered_length`** (integer?): Host custody length only when the acknowledgement is delivered.
+- <a id="contract-extensions-delivery-equality"></a>**`equality`** (string?): Host equality comparison when a transfer observation exists.
+- <a id="contract-extensions-delivery-last_use_step_id"></a>**`last_use_step_id`** (string?): Last declared consume using this delivery, or its transfer action when no consume is declared.
 
 **Support: [source read](#contract-support-grades) for [Delivery resource](#contract-extensions-delivery) and its descendants.** The adjacent meanings follow the named request, producer and observation branches. Source: [ActorOrchestration.swift](../runner/Sources/PWRunnerCore/ActorOrchestration.swift): `deliveryRecords`.
 
@@ -2088,17 +2004,15 @@ Record `delivery`: `PWRunnerDeliveryRecord`.
 
 Record `handle`: `PWRunnerHandleRecord`.
 
-| Field | JSON type and presence | Meaning |
-| --- | --- | --- |
-| <a id="contract-extensions-handle-handle_ref"></a>`handle_ref` | string; required | Declared handle identifier. |
-| <a id="contract-extensions-handle-delivery_ref"></a>`delivery_ref` | string; required | Delivery consumed to produce this candidate. |
-| <a id="contract-extensions-handle-actor_id"></a>`actor_id` | string; required | Consuming actor and handle owner. |
-| <a id="contract-extensions-handle-step_id"></a>`step_id` | string; required | Consume action identifier. |
-| <a id="contract-extensions-handle-status"></a>`status` | string; required | `produced` requires a completed native result other than -1; `consume_failed` records completed -1; `unavailable` records a no-call reason; `invalid` records inconsistent completed evidence. Missing publication becomes `not_reached` only with supported boundary evidence, otherwise `unresolved`. |
-| <a id="contract-extensions-handle-native_handle"></a>`native_handle` | integer; omitted when absent | Candidate signed handle only when status is produced. |
-| <a id="contract-extensions-handle-raw_equal_handles"></a>`raw_equal_handles` | array of string; required | Other declared handle references in the same actor whose slot has an equal raw native result. Equality relates raw numbers; declarations retain distinct reference identity. |
-| <a id="contract-extensions-handle-release_step_id"></a>`release_step_id` | string; omitted when absent | Declared release action for this handle, or null/absence when no release was declared. |
-| <a id="contract-extensions-handle-release_attempted"></a>`release_attempted` | boolean; required | Whether the declared release action has an observed native call-boundary marker. |
+- <a id="contract-extensions-handle-handle_ref"></a>**`handle_ref`** (string): Declared handle identifier.
+- <a id="contract-extensions-handle-delivery_ref"></a>**`delivery_ref`** (string): Delivery consumed to produce this candidate.
+- <a id="contract-extensions-handle-actor_id"></a>**`actor_id`** (string): Consuming actor and handle owner.
+- <a id="contract-extensions-handle-step_id"></a>**`step_id`** (string): Consume action identifier.
+- <a id="contract-extensions-handle-status"></a>**`status`** (string): `produced` requires a completed native result other than -1; `consume_failed` records completed -1; `unavailable` records a no-call reason; `invalid` records inconsistent completed evidence. Missing publication becomes `not_reached` only with supported boundary evidence, otherwise `unresolved`.
+- <a id="contract-extensions-handle-native_handle"></a>**`native_handle`** (integer?): Candidate signed handle only when status is produced.
+- <a id="contract-extensions-handle-raw_equal_handles"></a>**`raw_equal_handles`** (array of string): Other declared handle references in the same actor whose slot has an equal raw native result. Equality relates raw numbers; declarations retain distinct reference identity.
+- <a id="contract-extensions-handle-release_step_id"></a>**`release_step_id`** (string?): Declared release action for this handle, or null/absence when no release was declared.
+- <a id="contract-extensions-handle-release_attempted"></a>**`release_attempted`** (boolean): Whether the declared release action has an observed native call-boundary marker.
 
 **Support: [source read](#contract-support-grades) for [Handle resource](#contract-extensions-handle) and its descendants.** The adjacent meanings follow the named request, producer and observation branches. Source: [ActorOrchestration.swift](../runner/Sources/PWRunnerCore/ActorOrchestration.swift): `handleRecords`.
 
@@ -2114,11 +2028,9 @@ Record `request_failure`: `PWRunnerRequestFailure`.
 
 The host supplies this record for decoding, meaning and capacity refusal. Its human error string explains the category; readers use the structured fields for machine classification.
 
-| Field | JSON type and presence | Meaning |
-| --- | --- | --- |
-| <a id="contract-refusals-request-code"></a>`code` | string; required | Producer's refusal category. Admitted vocabulary: open; displayed list: illustrative: `"invalid_json"`, `"missing_field"`, `"missing_value"`, `"type_mismatch"`, `"unknown_field"`, `"unsupported_contract"`, `"admission_refused"`. Unfamiliar values: An unfamiliar code remains an unclassified refusal category; its producer text and path are retained as evidence. |
-| <a id="contract-refusals-request-path"></a>`path` | array of string; null when absent | Object keys and decimal array indexes locating the rejected input; [] names the root. Retain the entire path only through <!-- span limits.request_failure_path_components.value_unit -->8 items<!-- /span -->, with each component through <!-- span limits.request_failure_path_component.value_unit -->63 UTF-8 bytes<!-- /span -->; otherwise null withholds it. |
-| <a id="contract-refusals-request-expected_contract"></a>`expected_contract` | string; omitted when absent | Current expected public identity supplied for refusal at `contract`; omitted otherwise. It identifies the receiver's expected assertion. |
+- <a id="contract-refusals-request-code"></a>**`code`** (string): Producer's refusal category. Admitted vocabulary: open; displayed list: illustrative: `"invalid_json"`, `"missing_field"`, `"missing_value"`, `"type_mismatch"`, `"unknown_field"`, `"unsupported_contract"`, `"admission_refused"`. Unfamiliar values: An unfamiliar code remains an unclassified refusal category; its producer text and path are retained as evidence.
+- <a id="contract-refusals-request-path"></a>**`path`** (array of string ∪ null): Object keys and decimal array indexes locating the rejected input; [] names the root. Retain the entire path only through <!-- span limits.request_failure_path_components.value_unit -->8 items<!-- /span -->, with each component through <!-- span limits.request_failure_path_component.value_unit -->63 UTF-8 bytes<!-- /span -->; otherwise null withholds it.
+- <a id="contract-refusals-request-expected_contract"></a>**`expected_contract`** (string?): Current expected public identity supplied for refusal at `contract`; omitted otherwise. It identifies the receiver's expected assertion.
 
 <a id="contract-refusals-request-select"></a>
 ##### Refuse at the first reached boundary
@@ -2130,7 +2042,7 @@ The ordinary and actor plan branches have different required fields and ordered 
 <a id="contract-refusals-request-consequence"></a>
 ##### Stop children and preserve safe metadata
 
-[Runner host](#contract-identity-definitions-host) acts at pre-child request refusal. Entry: xpc execute. Recipient: caller, report reader. Reports: runner reply. sets `reply.normalized_outcome` to `"bad_request"`, sets `reply.rc` to `1`, sets `reply.steps` to an empty array. Uses [Specimen](#contract-request-specimen). Start no worker or validator for the refused request. Retain metadata under its independent echo rule.
+[Runner host](#contract-identity-definitions-host) acts at pre-child request refusal. Entry: xpc execute. Recipient: caller, report reader. Reports: runner reply. [set_value(`reply.normalized_outcome`, `"bad_request"`), set_value(`reply.rc`, `1`), set_value(`reply.steps`, [])]. Uses [Specimen](#contract-request-specimen). Start no worker or validator for the refused request. Retain metadata under its independent echo rule.
 
 <a id="contract-refusals-request-families"></a>
 ##### Current refusal families
@@ -2164,24 +2076,22 @@ Record `controller`: `rust.RequestFailure`.
 
 The controller supplies this shape for its JSON, assertion, selector and augmentation boundaries. Its location has the same bounded whole-path meaning as the runner shape.
 
-| Field | JSON type and presence | Meaning |
-| --- | --- | --- |
-| <a id="contract-refusals-controller-code"></a>`code` | string; required | Producer's refusal category. Admitted vocabulary: open; displayed list: illustrative: `"invalid_json"`, `"missing_field"`, `"missing_value"`, `"type_mismatch"`, `"unknown_field"`, `"unsupported_contract"`, `"admission_refused"`. Unfamiliar values: An unfamiliar code remains an unclassified refusal category; its producer text and path are retained as evidence. |
-| <a id="contract-refusals-controller-path"></a>`path` | array of string; null when absent | Object keys and decimal array indexes locating the rejected input; [] names the root. Retain the entire path only through <!-- span limits.request_failure_path_components.value_unit -->8 items<!-- /span -->, with each component through <!-- span limits.request_failure_path_component.value_unit -->63 UTF-8 bytes<!-- /span -->; otherwise null withholds it. |
-| <a id="contract-refusals-controller-expected_contract"></a>`expected_contract` | string; omitted when absent | Current expected public identity supplied for refusal at `contract`; omitted otherwise. It identifies the receiver's expected assertion. |
+- <a id="contract-refusals-controller-code"></a>**`code`** (string): Producer's refusal category. Admitted vocabulary: open; displayed list: illustrative: `"invalid_json"`, `"missing_field"`, `"missing_value"`, `"type_mismatch"`, `"unknown_field"`, `"unsupported_contract"`, `"admission_refused"`. Unfamiliar values: An unfamiliar code remains an unclassified refusal category; its producer text and path are retained as evidence.
+- <a id="contract-refusals-controller-path"></a>**`path`** (array of string ∪ null): Object keys and decimal array indexes locating the rejected input; [] names the root. Retain the entire path only through <!-- span limits.request_failure_path_components.value_unit -->8 items<!-- /span -->, with each component through <!-- span limits.request_failure_path_component.value_unit -->63 UTF-8 bytes<!-- /span -->; otherwise null withholds it.
+- <a id="contract-refusals-controller-expected_contract"></a>**`expected_contract`** (string?): Current expected public identity supplied for refusal at `contract`; omitted otherwise. It identifies the receiver's expected assertion.
 
 <a id="contract-refusals-controller-consequence"></a>
 ##### Controller pre-invocation refusal
 
-[Controller](#contract-identity-definitions-controller) acts at CLI preparation. Entry: cli run. Recipient: caller, report reader. Reports: run envelope. sets `envelope.result.ok` to `false`, sets `envelope.data.runner_client` to `null`, sets `envelope.data.runner_result` to `null`, sets `envelope.data.runner_sandbox_diagnostics` to `null`, retains the records `envelope.data.specimen`. Uses [Controller selection options](#contract-request-options), [Augment resolution](#contract-policy-augments). Select bad_request for malformed JSON, missing or wrong contract assertions, malformed selector values or augmentation refusal. Select tool_error for argument parsing, missing or unreadable input and target resolution. Argument parsing precedes input reading; a retained target-resolution error takes precedence over an augmentation error. Preserve the diagnostic and structured refusal available at that stage.
+[Controller](#contract-identity-definitions-controller) acts at CLI preparation. Entry: cli run. Recipient: caller, report reader. Reports: run envelope. [set_value(`envelope.result.ok`, `false`), set_value(`envelope.data.runner_client`, `null`), set_value(`envelope.data.runner_result`, `null`), set_value(`envelope.data.runner_sandbox_diagnostics`, `null`), retain_records(`envelope.data.specimen`)]. Uses [Controller selection options](#contract-request-options), [Augment resolution](#contract-policy-augments). Select bad_request for malformed JSON, missing or wrong contract assertions, malformed selector values or augmentation refusal. Select tool_error for argument parsing, missing or unreadable input and target resolution. Argument parsing precedes input reading; a retained target-resolution error takes precedence over an augmentation error. Preserve the diagnostic and structured refusal available at that stage.
 
 These results identify local refusal, while the client capture owns whether a later invocation was attempted.
 
 | Item | Requirement or consequence |
 | --- | --- |
-| <a id="contract-refusals-controller-consequence-request_refusal"></a>Selected request refusal | Requires `envelope.result.normalized_outcome` = `"bad_request"`. sets `envelope.result.exit_code` to `1`. |
-| <a id="contract-refusals-controller-consequence-tool_failure"></a>Selected tool failure | Requires `envelope.result.normalized_outcome` = `"tool_error"`. sets `envelope.result.exit_code` to `2`. |
-| <a id="contract-refusals-controller-consequence-class"></a>Selected local class | Requires `envelope.result.normalized_outcome` is one of `"bad_request"`, `"tool_error"`. |
+| <a id="contract-refusals-controller-consequence-request_refusal"></a>Selected request refusal | Requires `envelope.result.normalized_outcome` = `"bad_request"`. [set_value(`envelope.result.exit_code`, `1`)]. |
+| <a id="contract-refusals-controller-consequence-tool_failure"></a>Selected tool failure | Requires `envelope.result.normalized_outcome` = `"tool_error"`. [set_value(`envelope.result.exit_code`, `2`)]. |
+| <a id="contract-refusals-controller-consequence-class"></a>Selected local class | Requires `envelope.result.normalized_outcome` ∈ [`"bad_request"`, `"tool_error"`]. |
 
 **Support: [check read](#contract-support-grades) for [Controller request refusal](#contract-refusals-controller) and its descendants.** The adjacent meanings follow the named request, producer and observation branches. Context: Review of the named producer branches. Evidence limit: The checks cover exact identity admission and UTF-8 path-component and depth withholding. Source: [request_patch.rs](../controller/src/request_patch.rs): `validate_contract`; [run_flow.rs](../controller/src/run_flow.rs): `bad_request`, `parse_arguments`. Check: [request_patch.rs](../controller/src/request_patch.rs): `request_contract_is_exact_and_required`, `request_failure_path_components_use_utf8_bytes_and_withhold_the_whole_path`, `request_failure_path_depth_retains_eight_and_withholds_nine`.
 
@@ -2216,17 +2126,15 @@ Record `admission`: `PWRunnerAdmissionFailure`.
 
 Counts describe the complete submitted value. The reply uses the same admission rules to select a refusal and to decide which metadata it can echo.
 
-| Field | JSON type and presence | Meaning |
-| --- | --- | --- |
-| <a id="contract-refusals-admission-origin"></a>`origin` | string; required | Admission authority. Current pre-launch capacity refusals use `runner_host`. |
-| <a id="contract-refusals-admission-field"></a>`field` | string; required | The capacity rule's field name, including actor policy ownership where retained. |
-| <a id="contract-refusals-admission-actual"></a>`actual` | integer; required | Measured submitted count in the named unit. |
-| <a id="contract-refusals-admission-maximum"></a>`maximum` | integer; required | Maximum accepted count in the same unit; embedded-NUL rules use zero. |
-| <a id="contract-refusals-admission-unit"></a>`unit` | string; required | `utf8_bytes` counts encoded string bytes, `items` counts collection members, and `nul_bytes` counts embedded zero bytes in a native C-string input. Admitted vocabulary: closed; displayed list: exhaustive: `"utf8_bytes"`, `"items"`, `"nul_bytes"`. |
-| <a id="contract-refusals-admission-step_id"></a>`step_id` | string; omitted when absent | Associated step label when it is independently safe to echo; withheld when the label itself fails its bound. |
-| <a id="contract-refusals-admission-step_index"></a>`step_index` | integer; omitted when absent | Flattened probe position when the capacity rule refers to a probe. The host reconstructs phase/action paths from the original plan. |
-| <a id="contract-refusals-admission-parameter_key"></a>`parameter_key` | string; omitted when absent | Affected parameter key only when it can be echoed in full within its own key bound. Key failures withhold the key; value failures may retain a safe key. |
-| <a id="contract-refusals-admission-index"></a>`index` | integer; omitted when absent | Associated item position, such as argv or phase position, supplied by the specific capacity rule. |
+- <a id="contract-refusals-admission-origin"></a>**`origin`** (string): Admission authority. Current pre-launch capacity refusals use `runner_host`.
+- <a id="contract-refusals-admission-field"></a>**`field`** (string): The capacity rule's field name, including actor policy ownership where retained.
+- <a id="contract-refusals-admission-actual"></a>**`actual`** (integer): Measured submitted count in the named unit.
+- <a id="contract-refusals-admission-maximum"></a>**`maximum`** (integer): Maximum accepted count in the same unit; embedded-NUL rules use zero.
+- <a id="contract-refusals-admission-unit"></a>**`unit`** (string): `utf8_bytes` counts encoded string bytes, `items` counts collection members, and `nul_bytes` counts embedded zero bytes in a native C-string input. Admitted vocabulary: closed; displayed list: exhaustive: `"utf8_bytes"`, `"items"`, `"nul_bytes"`.
+- <a id="contract-refusals-admission-step_id"></a>**`step_id`** (string?): Associated step label when it is independently safe to echo; withheld when the label itself fails its bound.
+- <a id="contract-refusals-admission-step_index"></a>**`step_index`** (integer?): Flattened probe position when the capacity rule refers to a probe. The host reconstructs phase/action paths from the original plan.
+- <a id="contract-refusals-admission-parameter_key"></a>**`parameter_key`** (string?): Affected parameter key only when it can be echoed in full within its own key bound. Key failures withhold the key; value failures may retain a safe key.
+- <a id="contract-refusals-admission-index"></a>**`index`** (integer?): Associated item position, such as argv or phase position, supplied by the specific capacity rule.
 
 <a id="contract-refusals-admission-echo"></a>
 ##### Sanitize every echoed field
@@ -2289,38 +2197,36 @@ The host produces this record after execution or as a refusal. A received
 record's admissibility and supported assessments have their respective
 recipient boundaries.
 
-| Field | JSON type and presence | Meaning |
-| --- | --- | --- |
-| <a id="contract-reply-record-producer"></a>`producer` | [Host producer identification](#contract-identity-producer); required | The host build context. Its public contract string is checked before a recipient interprets the body. |
-| <a id="contract-reply-record-specimen_id"></a>`specimen_id` | string; required | The admitted specimen identifier. A JSON-decode refusal uses `<decode_failed>`; refusal construction sanitizes an unavailable or over-capacity identifier. |
-| <a id="contract-reply-record-run_kind"></a>`run_kind` | string; omitted when absent | The caller's optional label, echoed when available and within admitted bounds. It labels the experiment and does not select an execution algorithm. |
-| <a id="contract-reply-record-rc"></a>`rc` | integer; required | Zero for `finished`, one for a classified refusal or failure. Native operations and child exit statuses have separate fields. |
-| <a id="contract-reply-record-normalized_outcome"></a>`normalized_outcome` | string; required | The host outcome, with the meanings below. |
-| <a id="contract-reply-record-error"></a>`error` | string; omitted when absent | Human-readable diagnostic, omitted on ordinary success. Published failure, host supervision and collection details can coexist here; their structured observations retain their own origins. |
-| <a id="contract-reply-record-pid"></a>`pid` | integer; required | For ordinary execution, the collected worker PID when worker output exists, otherwise the host PID. For actor execution, the host PID. Actor launch and subprocess records identify each worker. |
-| <a id="contract-reply-record-bundle_id"></a>`bundle_id` | string; omitted when absent | The host bundle's CFBundleIdentifier when available. |
-| <a id="contract-reply-record-policy_format"></a>`policy_format` | string; omitted when absent | The ordinary policy format when available; decode refusal uses `unknown`. Actor policies carry their formats in actor records. |
-| <a id="contract-reply-record-policy_sha256"></a>`policy_sha256` | string (hex); omitted when absent | SHA-256 of the ordinary supplied source's UTF-8 bytes, as lowercase hexadecimal. It identifies the source observed by the host. Compiled-object and consumed-parameter identities have separate receipt fields. Actor form uses per-actor source hashes. |
-| <a id="contract-reply-record-compiled_profile"></a>`compiled_profile` | [Receipt](#contract-profile-receipt); omitted when absent | The ordinary worker's opt-in receipt when collected output supplies it. Actor receipts belong to their actor records. |
-| <a id="contract-reply-record-sandboxed_after_apply"></a>`sandboxed_after_apply` | boolean; omitted when absent | The ordinary driver's observed applied publication when worker output exists. False leaves application unobserved by this flag; native failure publications and actor application assessments supply their own evidence. Actor form omits this top-level flag. |
-| <a id="contract-reply-record-steps"></a>`steps` | array of [Probe result](#contract-steps-step); required | Probe rows in declared action order, with query, attempt and comparison observations. Refusals before worker execution and the minimal reporting fallback use an empty array. |
-| <a id="contract-reply-record-runner_subprocess"></a>`runner_subprocess` | [Worker subprocess](#contract-lifecycle-worker); omitted when absent | Collected worker supervision, publication and disposition. Absent when no worker output supplies it; actor subprocess accounts live in actor records. |
-| <a id="contract-reply-record-admission_failure"></a>`admission_failure` | [Capacity refusal](#contract-refusals-admission); omitted when absent | Capacity or embedded-NUL refusal details when that admission branch is reached. |
-| <a id="contract-reply-record-request_failure"></a>`request_failure` | [Runner request refusal](#contract-refusals-request); omitted when absent | Structured code/path and, when applicable, expected identity for the refusal selected by the reached decoding or admission branch. |
-| <a id="contract-reply-record-phases"></a>`phases` | array of [Phase collection and execution](#contract-actor_evidence-phase); required | Declared phases in schedule order, including reached and unreached phases when orchestration produces that account. Rows separate arrival, collection, completion and ordering. |
-| <a id="contract-reply-record-extension_events"></a>`extension_events` | array of [Extension event](#contract-extensions-event); omitted when absent | Extension action observations with actor, phase and action association. Ordinary probe-only execution can omit this field; actor assembly supplies its event array. |
-| <a id="contract-reply-record-test_overrides"></a>`test_overrides` | [Execution overrides](#contract-request-overrides); omitted when absent | Accepted instrumentation echoed by orchestration, with refusal sanitation where required. It identifies the selected execution configuration. |
-| <a id="contract-reply-record-reporting_failure"></a>`reporting_failure` | [Reporting failure](#contract-reply-failure); omitted when absent | Host validation or encoding failure and the fallback's retention state. |
-| <a id="contract-reply-record-execution_form"></a>`execution_form` | string; omitted when absent | `actors` identifies actor assembly. The ordinary producer omits the field. Recipient checks define the consequence of other carried values. |
-| <a id="contract-reply-record-actors"></a>`actors` | array of [Actor process account](#contract-actor_evidence-actor); omitted when absent | Per-actor declaration, setup, application, launch and subprocess accounts. Preparation refusal can supply declaration records before launch; their presence alone does not establish launch. |
-| <a id="contract-reply-record-transfers"></a>`transfers` | array of [Host transfer observation](#contract-extensions-transfer); omitted when absent | Host observations of extension delivery attempts and recipient acknowledgements. |
-| <a id="contract-reply-record-resources"></a>`resources` | [Resource tables](#contract-extensions-resources); omitted when absent | Specimen-local token, delivery and handle records with their ownership and available production/use observations. |
-| <a id="contract-reply-record-schedule"></a>`schedule` | [Schedule account](#contract-actor_evidence-schedule); omitted when absent | Actor scheduling waits, budgets and cancellation. Cancellation is a scheduling decision, separate from each actor's collected exit evidence. |
-| <a id="contract-reply-record-preparation_failure"></a>`preparation_failure` | [Actor preparation refusal](#contract-equipment-preparation_failure); omitted when absent | Actor preparation failure selected before scheduler launch. Declarations and equipment observations from that preparation can remain present. |
-| <a id="contract-reply-record-equipment_inventory"></a>`equipment_inventory` | [Observed service inventory](#contract-equipment-inventory); omitted when absent | Host read and validation of the sealed worker inventory. |
-| <a id="contract-reply-record-equipment_bindings"></a>`equipment_bindings` | array of [Static worker binding](#contract-equipment-binding); omitted when absent | Static worker binding observations referenced by actor equipment assignments and preparation failures. |
-| <a id="contract-reply-record-equipment_entitlements"></a>`equipment_entitlements` | array of [Entitlement read-back](#contract-equipment-entitlements); omitted when absent | Requested and observed entitlements used by preparation and live association. |
-| <a id="contract-reply-record-authority_setup"></a>`authority_setup` | [Authority setup account](#contract-equipment-authority_setup); omitted when absent | Host and worker authority-setup publications, including acquired operation cells and cleanup evidence under their own publication rules. |
+- <a id="contract-reply-record-producer"></a>**`producer`** ([Host producer identification](#contract-identity-producer)): The host build context. Its public contract string is checked before a recipient interprets the body.
+- <a id="contract-reply-record-specimen_id"></a>**`specimen_id`** (string): The admitted specimen identifier. A JSON-decode refusal uses `<decode_failed>`; refusal construction sanitizes an unavailable or over-capacity identifier.
+- <a id="contract-reply-record-run_kind"></a>**`run_kind`** (string?): The caller's optional label, echoed when available and within admitted bounds. It labels the experiment and does not select an execution algorithm.
+- <a id="contract-reply-record-rc"></a>**`rc`** (integer): Zero for `finished`, one for a classified refusal or failure. Native operations and child exit statuses have separate fields.
+- <a id="contract-reply-record-normalized_outcome"></a>**`normalized_outcome`** (string): The host outcome, with the meanings below.
+- <a id="contract-reply-record-error"></a>**`error`** (string?): Human-readable diagnostic, omitted on ordinary success. Published failure, host supervision and collection details can coexist here; their structured observations retain their own origins.
+- <a id="contract-reply-record-pid"></a>**`pid`** (integer): For ordinary execution, the collected worker PID when worker output exists, otherwise the host PID. For actor execution, the host PID. Actor launch and subprocess records identify each worker.
+- <a id="contract-reply-record-bundle_id"></a>**`bundle_id`** (string?): The host bundle's CFBundleIdentifier when available.
+- <a id="contract-reply-record-policy_format"></a>**`policy_format`** (string?): The ordinary policy format when available; decode refusal uses `unknown`. Actor policies carry their formats in actor records.
+- <a id="contract-reply-record-policy_sha256"></a>**`policy_sha256`** (string (hex)?): SHA-256 of the ordinary supplied source's UTF-8 bytes, as lowercase hexadecimal. It identifies the source observed by the host. Compiled-object and consumed-parameter identities have separate receipt fields. Actor form uses per-actor source hashes.
+- <a id="contract-reply-record-compiled_profile"></a>**`compiled_profile`** ([Receipt](#contract-profile-receipt)?): The ordinary worker's opt-in receipt when collected output supplies it. Actor receipts belong to their actor records.
+- <a id="contract-reply-record-sandboxed_after_apply"></a>**`sandboxed_after_apply`** (boolean?): The ordinary driver's observed applied publication when worker output exists. False leaves application unobserved by this flag; native failure publications and actor application assessments supply their own evidence. Actor form omits this top-level flag.
+- <a id="contract-reply-record-steps"></a>**`steps`** (array of [Probe result](#contract-steps-step)): Probe rows in declared action order, with query, attempt and comparison observations. Refusals before worker execution and the minimal reporting fallback use an empty array.
+- <a id="contract-reply-record-runner_subprocess"></a>**`runner_subprocess`** ([Worker subprocess](#contract-lifecycle-worker)?): Collected worker supervision, publication and disposition. Absent when no worker output supplies it; actor subprocess accounts live in actor records.
+- <a id="contract-reply-record-admission_failure"></a>**`admission_failure`** ([Capacity refusal](#contract-refusals-admission)?): Capacity or embedded-NUL refusal details when that admission branch is reached.
+- <a id="contract-reply-record-request_failure"></a>**`request_failure`** ([Runner request refusal](#contract-refusals-request)?): Structured code/path and, when applicable, expected identity for the refusal selected by the reached decoding or admission branch.
+- <a id="contract-reply-record-phases"></a>**`phases`** (array of [Phase collection and execution](#contract-actor_evidence-phase)): Declared phases in schedule order, including reached and unreached phases when orchestration produces that account. Rows separate arrival, collection, completion and ordering.
+- <a id="contract-reply-record-extension_events"></a>**`extension_events`** (array of [Extension event](#contract-extensions-event)?): Extension action observations with actor, phase and action association. Ordinary probe-only execution can omit this field; actor assembly supplies its event array.
+- <a id="contract-reply-record-test_overrides"></a>**`test_overrides`** ([Execution overrides](#contract-request-overrides)?): Accepted instrumentation echoed by orchestration, with refusal sanitation where required. It identifies the selected execution configuration.
+- <a id="contract-reply-record-reporting_failure"></a>**`reporting_failure`** ([Reporting failure](#contract-reply-failure)?): Host validation or encoding failure and the fallback's retention state.
+- <a id="contract-reply-record-execution_form"></a>**`execution_form`** (string?): `actors` identifies actor assembly. The ordinary producer omits the field. Recipient checks define the consequence of other carried values.
+- <a id="contract-reply-record-actors"></a>**`actors`** (array of [Actor process account](#contract-actor_evidence-actor)?): Per-actor declaration, setup, application, launch and subprocess accounts. Preparation refusal can supply declaration records before launch; their presence alone does not establish launch.
+- <a id="contract-reply-record-transfers"></a>**`transfers`** (array of [Host transfer observation](#contract-extensions-transfer)?): Host observations of extension delivery attempts and recipient acknowledgements.
+- <a id="contract-reply-record-resources"></a>**`resources`** ([Resource tables](#contract-extensions-resources)?): Specimen-local token, delivery and handle records with their ownership and available production/use observations.
+- <a id="contract-reply-record-schedule"></a>**`schedule`** ([Schedule account](#contract-actor_evidence-schedule)?): Actor scheduling waits, budgets and cancellation. Cancellation is a scheduling decision, separate from each actor's collected exit evidence.
+- <a id="contract-reply-record-preparation_failure"></a>**`preparation_failure`** ([Actor preparation refusal](#contract-equipment-preparation_failure)?): Actor preparation failure selected before scheduler launch. Declarations and equipment observations from that preparation can remain present.
+- <a id="contract-reply-record-equipment_inventory"></a>**`equipment_inventory`** ([Observed service inventory](#contract-equipment-inventory)?): Host read and validation of the sealed worker inventory.
+- <a id="contract-reply-record-equipment_bindings"></a>**`equipment_bindings`** (array of [Static worker binding](#contract-equipment-binding)?): Static worker binding observations referenced by actor equipment assignments and preparation failures.
+- <a id="contract-reply-record-equipment_entitlements"></a>**`equipment_entitlements`** (array of [Entitlement read-back](#contract-equipment-entitlements)?): Requested and observed entitlements used by preparation and live association.
+- <a id="contract-reply-record-authority_setup"></a>**`authority_setup`** ([Authority setup account](#contract-equipment-authority_setup)?): Host and worker authority-setup publications, including acquired operation cells and cleanup evidence under their own publication rules.
 
 <a id="contract-reply-record-assemble"></a>
 ##### Assemble execution evidence
@@ -2356,14 +2262,12 @@ remain. Actor orchestration reports each actor and selects an aggregate outcome.
 
 Record `failure`: `PWRunnerReportingFailure`.
 
-| Field | JSON type and presence | Meaning |
-| --- | --- | --- |
-| <a id="contract-reply-failure-origin"></a>`origin` | string; required | `runner_host` identifies whose validation or encoding failed. |
-| <a id="contract-reply-failure-diagnostic"></a>`diagnostic` | string; required | The failed validation/encoding diagnostic. The minimal fallback also includes the subsequent rich-fallback failure. |
-| <a id="contract-reply-failure-original_rc"></a>`original_rc` | integer; required | Code from the original assembled report, retained as diagnostic context. |
-| <a id="contract-reply-failure-original_normalized_outcome"></a>`original_normalized_outcome` | string; required | Outcome from the original assembled report, retained as diagnostic context. |
-| <a id="contract-reply-failure-original_error"></a>`original_error` | string; omitted when absent | Original aggregate error when present. |
-| <a id="contract-reply-failure-evidence_retained"></a>`evidence_retained` | boolean; required | True identifies the rich fallback: original fields remain apart from the producer/summary/reporting-failure metadata and removed step comparisons. False identifies the independent minimal fallback with scalar context and empty steps/phases. |
+- <a id="contract-reply-failure-origin"></a>**`origin`** (string): `runner_host` identifies whose validation or encoding failed.
+- <a id="contract-reply-failure-diagnostic"></a>**`diagnostic`** (string): The failed validation/encoding diagnostic. The minimal fallback also includes the subsequent rich-fallback failure.
+- <a id="contract-reply-failure-original_rc"></a>**`original_rc`** (integer): Code from the original assembled report, retained as diagnostic context.
+- <a id="contract-reply-failure-original_normalized_outcome"></a>**`original_normalized_outcome`** (string): Outcome from the original assembled report, retained as diagnostic context.
+- <a id="contract-reply-failure-original_error"></a>**`original_error`** (string?): Original aggregate error when present.
+- <a id="contract-reply-failure-evidence_retained"></a>**`evidence_retained`** (boolean): True identifies the rich fallback: original fields remain apart from the producer/summary/reporting-failure metadata and removed step comparisons. False identifies the independent minimal fallback with scalar context and empty steps/phases.
 
 <a id="contract-reply-failure-publish"></a>
 ##### Publish a report or fallback
@@ -2375,10 +2279,10 @@ recipient's decoding failure.
 
 | Item | Requirement or consequence |
 | --- | --- |
-| <a id="contract-reply-failure-publish-summary"></a>Fallback summary | Applies when `reply.reporting_failure` is present. sets `reply.rc` to `1`, sets `reply.normalized_outcome` to `"runner_reporting_failed"`, sets `reply.reporting_failure.origin` to `"runner_host"`. |
-| <a id="contract-reply-failure-publish-rich"></a>Rich fallback comparisons | Binding `s`: entry in `reply.steps`. For each `s`. Applies when (`reply.reporting_failure` is present and `reply.reporting_failure.evidence_retained`). withholds `reply.steps[s].comparison`. |
-| <a id="contract-reply-failure-publish-minimal"></a>Minimal fallback arrays | Applies when (`reply.reporting_failure` is present and not (`reply.reporting_failure.evidence_retained`)). sets `reply.steps` to an empty array, sets `reply.phases` to an empty array. |
-| <a id="contract-reply-failure-publish-producer"></a>Fallback producer identity | Applies when `reply.reporting_failure` is present. sets `reply.producer.contract` to [Contract](#contract-identity-build-contract), sets `reply.producer.describe` to [Describe](#contract-identity-build-describe), sets `reply.producer.commit` to [Commit](#contract-identity-build-commit). |
+| <a id="contract-reply-failure-publish-summary"></a>Fallback summary | Applies when present(`reply.reporting_failure`). [set_value(`reply.rc`, `1`), set_value(`reply.normalized_outcome`, `"runner_reporting_failed"`), set_value(`reply.reporting_failure.origin`, `"runner_host"`)]. |
+| <a id="contract-reply-failure-publish-rich"></a>Rich fallback comparisons | Binding `s`: entry in `reply.steps`. For each `s`. Applies when (present(`reply.reporting_failure`) and `reply.reporting_failure.evidence_retained`). [withhold(`reply.steps[s].comparison`)]. |
+| <a id="contract-reply-failure-publish-minimal"></a>Minimal fallback arrays | Applies when (present(`reply.reporting_failure`) and not (`reply.reporting_failure.evidence_retained`)). [set_value(`reply.steps`, []), set_value(`reply.phases`, [])]. |
+| <a id="contract-reply-failure-publish-producer"></a>Fallback producer identity | Applies when present(`reply.reporting_failure`). [set_value(`reply.producer.contract`, [Contract](#contract-identity-build-contract)), set_value(`reply.producer.describe`, [Describe](#contract-identity-build-describe)), set_value(`reply.producer.commit`, [Commit](#contract-identity-build-commit))]. |
 
 <a id="contract-reply-failure-publish-associations"></a>
 ###### Known gap: Reporting-failure associations
@@ -2401,200 +2305,176 @@ Actor: [Runner host](#contract-identity-definitions-host). Boundary: step eviden
 
 Record `step`: `PWRunnerStepResult`.
 
-| Field | JSON type and presence | Meaning |
-| --- | --- | --- |
-| <a id="contract-steps-step-phase_id"></a>`phase_id` | string; required | Identifier of the containing declared phase; normalized flat-step requests use `main`. |
-| <a id="contract-steps-step-step_id"></a>`step_id` | string; required | Identifier of the declared probe action, associated within its phase and actor. |
-| <a id="contract-steps-step-sandbox_check"></a>`sandbox_check` | [Query-channel result](#contract-steps-query); required | Query-channel result from the associated validator record or a synthetic unavailable result. |
-| <a id="contract-steps-step-attempt"></a>`attempt` | [Attempt-channel result](#contract-steps-attempt); required | Worker action result, including publication provenance and retained native observations. |
-| <a id="contract-steps-step-comparison"></a>`comparison` | [Comparison assessment](#contract-steps-comparison); omitted when absent | Host assessment of observation, submitted scopes and reply.phases[p].ordering. |
-| <a id="contract-steps-step-actor_id"></a>`actor_id` | string; omitted when absent | Actor whose process owns this probe in actor form; omitted in ordinary execution. |
+- <a id="contract-steps-step-phase_id"></a>**`phase_id`** (string): Identifier of the containing declared phase; normalized flat-step requests use `main`.
+- <a id="contract-steps-step-step_id"></a>**`step_id`** (string): Identifier of the declared probe action, associated within its phase and actor.
+- <a id="contract-steps-step-sandbox_check"></a>**`sandbox_check`** ([Query-channel result](#contract-steps-query)): Query-channel result from the associated validator record or a synthetic unavailable result.
+- <a id="contract-steps-step-attempt"></a>**`attempt`** ([Attempt-channel result](#contract-steps-attempt)): Worker action result, including publication provenance and retained native observations.
+- <a id="contract-steps-step-comparison"></a>**`comparison`** ([Comparison assessment](#contract-steps-comparison)?): Host assessment of observation, submitted scopes and reply.phases[p].ordering.
+- <a id="contract-steps-step-actor_id"></a>**`actor_id`** (string?): Actor whose process owns this probe in actor form; omitted in ordinary execution.
 
 <a id="contract-steps-query"></a>
 #### Query-channel result
 
 Record `query`: `PWRunnerSandboxCheckResult`.
 
-| Field | JSON type and presence | Meaning |
-| --- | --- | --- |
-| <a id="contract-steps-query-result_source"></a>`result_source` | string; omitted when absent | `validator` means a uniquely associated accepted record supplied the result; `synthetic` means the host constructed an unavailable result. |
-| <a id="contract-steps-query-native_rc"></a>`native_rc` | integer; present when result_source has a value; may be null | Native return carried by an associated allow, deny or error record. Synthetic results carry explicit null when result_source is present. |
-| <a id="contract-steps-query-missing_reason"></a>`missing_reason` | string; omitted when absent | `query_not_requested` for a planner exclusion, `validator_not_invoked` when collection never ran, or `validator_no_verdict` when it produced no associated record. |
-| <a id="contract-steps-query-rc"></a>`rc` | integer; required | An associated record supplies its carried return, or -1 if that record omits the return. A planner exclusion uses -1. With no associated verdict, the host supplies 0 and an error outcome. Provenance and outcome qualify this number. |
-| <a id="contract-steps-query-outcome"></a>`outcome` | string; required | `allow` or `deny` is the associated answer; `unsupported_operation` retains that diagnostic. Other accepted diagnostics project as `error`. Planner exclusion yields `prediction_unavailable`. |
-| <a id="contract-steps-query-pid"></a>`pid` | integer; null when absent | PID targeted by this phase's validator collection when worker output supplies it. The ordering assessment states whether the required live-worker interval was established. |
-| <a id="contract-steps-query-operation"></a>`operation` | string; required | The admitted query operation. |
-| <a id="contract-steps-query-filter_kind"></a>`filter_kind` | string; required | The normalized query filter name. |
-| <a id="contract-steps-query-filter_value"></a>`filter_value` | string; null when absent | The supplied request value. A none-filter native query uses no value even when this echoed field is present. |
-| <a id="contract-steps-query-filter_type_id"></a>`filter_type_id` | integer; null when absent | Native filter identifier retained from the associated record when supplied. |
-| <a id="contract-steps-query-errno"></a>`errno` | integer; null when absent | Errno retained from the validator record, belonging to the query channel. |
-| <a id="contract-steps-query-error"></a>`error` | string; null when absent | The validator diagnostic or host explanation of an unavailable result. |
-| <a id="contract-steps-query-path_diagnostics"></a>`path_diagnostics` | [Query path observations](#contract-steps-query_paths); omitted when absent | Host observations after orchestration for a nonempty path-filter value. |
+- <a id="contract-steps-query-result_source"></a>**`result_source`** (string?): `validator` means a uniquely associated accepted record supplied the result; `synthetic` means the host constructed an unavailable result.
+- <a id="contract-steps-query-native_rc"></a>**`native_rc`** (integer; present when result_source has a value; may be null): Native return carried by an associated allow, deny or error record. Synthetic results carry explicit null when result_source is present.
+- <a id="contract-steps-query-missing_reason"></a>**`missing_reason`** (string?): `query_not_requested` for a planner exclusion, `validator_not_invoked` when collection never ran, or `validator_no_verdict` when it produced no associated record.
+- <a id="contract-steps-query-rc"></a>**`rc`** (integer): An associated record supplies its carried return, or -1 if that record omits the return. A planner exclusion uses -1. With no associated verdict, the host supplies 0 and an error outcome. Provenance and outcome qualify this number.
+- <a id="contract-steps-query-outcome"></a>**`outcome`** (string): `allow` or `deny` is the associated answer; `unsupported_operation` retains that diagnostic. Other accepted diagnostics project as `error`. Planner exclusion yields `prediction_unavailable`.
+- <a id="contract-steps-query-pid"></a>**`pid`** (integer ∪ null): PID targeted by this phase's validator collection when worker output supplies it. The ordering assessment states whether the required live-worker interval was established.
+- <a id="contract-steps-query-operation"></a>**`operation`** (string): The admitted query operation.
+- <a id="contract-steps-query-filter_kind"></a>**`filter_kind`** (string): The normalized query filter name.
+- <a id="contract-steps-query-filter_value"></a>**`filter_value`** (string ∪ null): The supplied request value. A none-filter native query uses no value even when this echoed field is present.
+- <a id="contract-steps-query-filter_type_id"></a>**`filter_type_id`** (integer ∪ null): Native filter identifier retained from the associated record when supplied.
+- <a id="contract-steps-query-errno"></a>**`errno`** (integer ∪ null): Errno retained from the validator record, belonging to the query channel.
+- <a id="contract-steps-query-error"></a>**`error`** (string ∪ null): The validator diagnostic or host explanation of an unavailable result.
+- <a id="contract-steps-query-path_diagnostics"></a>**`path_diagnostics`** ([Query path observations](#contract-steps-query_paths)?): Host observations after orchestration for a nonempty path-filter value.
 
 <a id="contract-steps-verdict"></a>
 #### Accepted validator record
 
 Record `verdict`: `ValidatorVerdict`.
 
-| Field | JSON type and presence | Meaning |
-| --- | --- | --- |
-| <a id="contract-steps-verdict-step_id"></a>`step_id` | string; null when absent | Step identifier carried by the frame, or null when absent. Unknown, duplicate and unassigned records remain retained as received. |
-| <a id="contract-steps-verdict-operation"></a>`operation` | string; omitted when absent | Operation carried by the frame, omitted when absent. |
-| <a id="contract-steps-verdict-filter_type"></a>`filter_type` | string; omitted when absent | Filter spelling carried by the frame, omitted when absent. |
-| <a id="contract-steps-verdict-filter_type_id"></a>`filter_type_id` | integer; omitted when absent | Numeric native filter identifier carried by the frame, omitted when absent. |
-| <a id="contract-steps-verdict-filter_value"></a>`filter_value` | string; omitted when absent | Value carried by the frame, omitted when absent; a NONE query has no native filter value. |
-| <a id="contract-steps-verdict-rc"></a>`rc` | integer; omitted when absent | Native or diagnostic return carried by the frame, omitted when absent. |
-| <a id="contract-steps-verdict-errno"></a>`errno` | integer; omitted when absent | Query errno carried by the frame, omitted when absent. |
-| <a id="contract-steps-verdict-outcome"></a>`outcome` | string; required | The accepted frame's outcome string. Admitted vocabulary: open; displayed list: illustrative: `"allow"`, `"deny"`, `"error"`, `"unsupported_operation"`. Unfamiliar values: Retain an unfamiliar diagnostic outcome with its error string; assign only its recorded diagnostic meaning. |
-| <a id="contract-steps-verdict-error"></a>`error` | string; omitted when absent | The frame diagnostic, omitted when absent. |
-| <a id="contract-steps-verdict-raw_line"></a>`raw_line` | string; required | Accepted UTF-8 frame text. A receiver-owned decode-fault record retains rejected frame bytes separately. |
+- <a id="contract-steps-verdict-step_id"></a>**`step_id`** (string ∪ null): Step identifier carried by the frame, or null when absent. Unknown, duplicate and unassigned records remain retained as received.
+- <a id="contract-steps-verdict-operation"></a>**`operation`** (string?): Operation carried by the frame, omitted when absent.
+- <a id="contract-steps-verdict-filter_type"></a>**`filter_type`** (string?): Filter spelling carried by the frame, omitted when absent.
+- <a id="contract-steps-verdict-filter_type_id"></a>**`filter_type_id`** (integer?): Numeric native filter identifier carried by the frame, omitted when absent.
+- <a id="contract-steps-verdict-filter_value"></a>**`filter_value`** (string?): Value carried by the frame, omitted when absent; a NONE query has no native filter value.
+- <a id="contract-steps-verdict-rc"></a>**`rc`** (integer?): Native or diagnostic return carried by the frame, omitted when absent.
+- <a id="contract-steps-verdict-errno"></a>**`errno`** (integer?): Query errno carried by the frame, omitted when absent.
+- <a id="contract-steps-verdict-outcome"></a>**`outcome`** (string): The accepted frame's outcome string. Admitted vocabulary: open; displayed list: illustrative: `"allow"`, `"deny"`, `"error"`, `"unsupported_operation"`. Unfamiliar values: Retain an unfamiliar diagnostic outcome with its error string; assign only its recorded diagnostic meaning.
+- <a id="contract-steps-verdict-error"></a>**`error`** (string?): The frame diagnostic, omitted when absent.
+- <a id="contract-steps-verdict-raw_line"></a>**`raw_line`** (string): Accepted UTF-8 frame text. A receiver-owned decode-fault record retains rejected frame bytes separately.
 
 <a id="contract-steps-attempt"></a>
 #### Attempt-channel result
 
 Record `attempt`: `PWRunnerAttemptResult`.
 
-| Field | JSON type and presence | Meaning |
-| --- | --- | --- |
-| <a id="contract-steps-attempt-requested_kind"></a>`requested_kind` | string; omitted when absent | Declared attempt kind, echoed independently of completion. |
-| <a id="contract-steps-attempt-requested_action"></a>`requested_action` | string; omitted when absent | Declared action, echoed independently of completion. |
-| <a id="contract-steps-attempt-result_source"></a>`result_source` | string; omitted when absent | `worker` means a supported action's slot published completion; `synthetic` means the host supplied an unavailable or unsupported result. |
-| <a id="contract-steps-attempt-missing_reason"></a>`missing_reason` | string; omitted when absent | `attempt_not_supported`, `slot_absent` or `slot_incomplete` identifies the synthetic result's reason. |
-| <a id="contract-steps-attempt-lifecycle"></a>`lifecycle` | [Per-attempt lifecycle projection](#contract-lifecycle-attempt); omitted when absent | Resolved reach, entry, completion and interruption claims under the subprocess disposition's supporting observations. |
-| <a id="contract-steps-attempt-fresh_read"></a>`fresh_read` | [Fresh-descriptor read](#contract-steps-fresh_read); omitted when absent | Completed read_fresh action's open, descriptor-stat, bounded read and close observations. |
-| <a id="contract-steps-attempt-fresh_write"></a>`fresh_write` | [Fresh-descriptor write or creation](#contract-steps-fresh_write); omitted when absent | Completed write_fresh or create_fresh action's native sequence and descriptor metadata. |
-| <a id="contract-steps-attempt-exec_observation"></a>`exec_observation` | [Spawned-command observation](#contract-lifecycle-exec); omitted when absent | Worker observations of spawn, child wait, output collection and cleanup. |
-| <a id="contract-steps-attempt-rc"></a>`rc` | integer; required | Completed worker slot return; zero maps to ok. Synthetic unsupported or incomplete actions use -1. Exec can return nonzero after successful spawning because of the child's result. |
-| <a id="contract-steps-attempt-errno"></a>`errno` | integer; null when absent | Completed slot's nonzero errno, when retained. Fresh-operation details separately record their own failed calls. |
-| <a id="contract-steps-attempt-outcome"></a>`outcome` | string; required | A completed zero return yields `ok`. Nonzero returns map by action to `open_failed`, `read_failed`, `write_failed`, `unlink_failed`, `access_failed`, `lookup_failed`, `sysctl_failed` or `exec_failed`. Synthetic slots yield `no_completed_result` or `unsupported`. |
-| <a id="contract-steps-attempt-error"></a>`error` | string; omitted when absent | Action diagnostic from the completed slot or explanation of a synthetic result. |
-| <a id="contract-steps-attempt-requested_path"></a>`requested_path` | string; null when absent | Submitted target string, including service and sysctl names for those kinds. |
-| <a id="contract-steps-attempt-path_diagnostics"></a>`path_diagnostics` | [Attempt path observations](#contract-steps-attempt_paths); omitted when absent | Host observations after orchestration for a nonempty file or exec target. |
-| <a id="contract-steps-attempt-observed_path"></a>`observed_path` | string; null when absent | Path observation supplied by the worker slot when available. |
-| <a id="contract-steps-attempt-child_pid"></a>`child_pid` | integer; omitted when absent | Completed exec slot's child PID: zero when no child was spawned. A positive value supports the comparison's spawned_child observation. |
-| <a id="contract-steps-attempt-child_exit_code"></a>`child_exit_code` | integer; omitted when absent | Completed exec slot's child exit code, using -1 until a normal child exit is observed. |
-| <a id="contract-steps-attempt-child_term_signal"></a>`child_term_signal` | integer; omitted when absent | Completed exec slot's terminating signal, using zero until a signaled child termination is observed. |
-| <a id="contract-steps-attempt-stdout"></a>`stdout` | string; omitted when absent | Captured child stdout, omitted when empty. The worker retains at most <!-- span limits.exec_stream.value_unit -->1,023 bytes<!-- /span --> for this stream; an overflow marker occupies part of that allowance. |
-| <a id="contract-steps-attempt-stderr"></a>`stderr` | string; omitted when absent | Captured child stderr, omitted when empty. The worker retains at most <!-- span limits.exec_stream.value_unit -->1,023 bytes<!-- /span --> for this stream; an overflow marker occupies part of that allowance. |
+- <a id="contract-steps-attempt-requested_kind"></a>**`requested_kind`** (string?): Declared attempt kind, echoed independently of completion.
+- <a id="contract-steps-attempt-requested_action"></a>**`requested_action`** (string?): Declared action, echoed independently of completion.
+- <a id="contract-steps-attempt-result_source"></a>**`result_source`** (string?): `worker` means a supported action's slot published completion; `synthetic` means the host supplied an unavailable or unsupported result.
+- <a id="contract-steps-attempt-missing_reason"></a>**`missing_reason`** (string?): `attempt_not_supported`, `slot_absent` or `slot_incomplete` identifies the synthetic result's reason.
+- <a id="contract-steps-attempt-lifecycle"></a>**`lifecycle`** ([Per-attempt lifecycle projection](#contract-lifecycle-attempt)?): Resolved reach, entry, completion and interruption claims under the subprocess disposition's supporting observations.
+- <a id="contract-steps-attempt-fresh_read"></a>**`fresh_read`** ([Fresh-descriptor read](#contract-steps-fresh_read)?): Completed read_fresh action's open, descriptor-stat, bounded read and close observations.
+- <a id="contract-steps-attempt-fresh_write"></a>**`fresh_write`** ([Fresh-descriptor write or creation](#contract-steps-fresh_write)?): Completed write_fresh or create_fresh action's native sequence and descriptor metadata.
+- <a id="contract-steps-attempt-exec_observation"></a>**`exec_observation`** ([Spawned-command observation](#contract-lifecycle-exec)?): Worker observations of spawn, child wait, output collection and cleanup.
+- <a id="contract-steps-attempt-rc"></a>**`rc`** (integer): Completed worker slot return; zero maps to ok. Synthetic unsupported or incomplete actions use -1. Exec can return nonzero after successful spawning because of the child's result.
+- <a id="contract-steps-attempt-errno"></a>**`errno`** (integer ∪ null): Completed slot's nonzero errno, when retained. Fresh-operation details separately record their own failed calls.
+- <a id="contract-steps-attempt-outcome"></a>**`outcome`** (string): A completed zero return yields `ok`. Nonzero returns map by action to `open_failed`, `read_failed`, `write_failed`, `unlink_failed`, `access_failed`, `lookup_failed`, `sysctl_failed` or `exec_failed`. Synthetic slots yield `no_completed_result` or `unsupported`.
+- <a id="contract-steps-attempt-error"></a>**`error`** (string?): Action diagnostic from the completed slot or explanation of a synthetic result.
+- <a id="contract-steps-attempt-requested_path"></a>**`requested_path`** (string ∪ null): Submitted target string, including service and sysctl names for those kinds.
+- <a id="contract-steps-attempt-path_diagnostics"></a>**`path_diagnostics`** ([Attempt path observations](#contract-steps-attempt_paths)?): Host observations after orchestration for a nonempty file or exec target.
+- <a id="contract-steps-attempt-observed_path"></a>**`observed_path`** (string ∪ null): Path observation supplied by the worker slot when available.
+- <a id="contract-steps-attempt-child_pid"></a>**`child_pid`** (integer?): Completed exec slot's child PID: zero when no child was spawned. A positive value supports the comparison's spawned_child observation.
+- <a id="contract-steps-attempt-child_exit_code"></a>**`child_exit_code`** (integer?): Completed exec slot's child exit code, using -1 until a normal child exit is observed.
+- <a id="contract-steps-attempt-child_term_signal"></a>**`child_term_signal`** (integer?): Completed exec slot's terminating signal, using zero until a signaled child termination is observed.
+- <a id="contract-steps-attempt-stdout"></a>**`stdout`** (string?): Captured child stdout, omitted when empty. The worker retains at most <!-- span limits.exec_stream.value_unit -->1,023 bytes<!-- /span --> for this stream; an overflow marker occupies part of that allowance.
+- <a id="contract-steps-attempt-stderr"></a>**`stderr`** (string?): Captured child stderr, omitted when empty. The worker retains at most <!-- span limits.exec_stream.value_unit -->1,023 bytes<!-- /span --> for this stream; an overflow marker occupies part of that allowance.
 
 <a id="contract-steps-comparison"></a>
 #### Comparison assessment
 
 Record `comparison`: `PWRunnerComparison`.
 
-| Field | JSON type and presence | Meaning |
-| --- | --- | --- |
-| <a id="contract-steps-comparison-observation"></a>`observation` | string; required | `succeeded`, `permission_failure`, `other_failure` or `unavailable`, classified from the attempt channel by the rule below. |
-| <a id="contract-steps-comparison-observation_basis"></a>`observation_basis` | string; required | Supporting observation: `spawned_child`, `completed_worker_status`, `permission_errno`, `bootstrap_permission_result` or `no_completed_worker_result`. |
-| <a id="contract-steps-comparison-operation_relation"></a>`operation_relation` | string; required | `matched` means the query equals the action's mapped operation; `different` means those strings differ; `unresolved` means the mapping cannot assign a single operation. |
-| <a id="contract-steps-comparison-target_relation"></a>`target_relation` | string; required | `same_submitted` or `different_submitted` compares submitted strings when the query filter matches the action's mapped filter and both strings exist; otherwise `unresolved`. |
-| <a id="contract-steps-comparison-order"></a>`order` | string; required | `query_first` places this eligible prediction before this phase's attempt batch with required worker lifetime and setup established. `unestablished` retains the channels without that temporal assessment. |
-| <a id="contract-steps-comparison-limitations"></a>`limitations` | array of string; required | Planner exclusions as `query_plan:path_unresolved_at_planning`, `query_plan:prediction_unavailable_pair` or `query_plan:unrecognized_filter_kind`. Lifecycle summaries add `attempt:started_without_result`, `attempt:not_reached`, `attempt:unsupported`, `attempt:lifecycle_unresolved` or `attempt:lifecycle_conflicting` for their corresponding noncompleted state; completed adds none. Ordinary reporting and controller checks require this closed vocabulary. |
+- <a id="contract-steps-comparison-observation"></a>**`observation`** (string): `succeeded`, `permission_failure`, `other_failure` or `unavailable`, classified from the attempt channel by the rule below.
+- <a id="contract-steps-comparison-observation_basis"></a>**`observation_basis`** (string): Supporting observation: `spawned_child`, `completed_worker_status`, `permission_errno`, `bootstrap_permission_result` or `no_completed_worker_result`.
+- <a id="contract-steps-comparison-operation_relation"></a>**`operation_relation`** (string): `matched` means the query equals the action's mapped operation; `different` means those strings differ; `unresolved` means the mapping cannot assign a single operation.
+- <a id="contract-steps-comparison-target_relation"></a>**`target_relation`** (string): `same_submitted` or `different_submitted` compares submitted strings when the query filter matches the action's mapped filter and both strings exist; otherwise `unresolved`.
+- <a id="contract-steps-comparison-order"></a>**`order`** (string): `query_first` places this eligible prediction before this phase's attempt batch with required worker lifetime and setup established. `unestablished` retains the channels without that temporal assessment.
+- <a id="contract-steps-comparison-limitations"></a>**`limitations`** (array of string): Planner exclusions as `query_plan:path_unresolved_at_planning`, `query_plan:prediction_unavailable_pair` or `query_plan:unrecognized_filter_kind`. Lifecycle summaries add `attempt:started_without_result`, `attempt:not_reached`, `attempt:unsupported`, `attempt:lifecycle_unresolved` or `attempt:lifecycle_conflicting` for their corresponding noncompleted state; completed adds none. Ordinary reporting and controller checks require this closed vocabulary.
 
 <a id="contract-steps-ordering"></a>
 #### Collection and release observations
 
 Record `ordering`: `PWRunnerOrdering`.
 
-| Field | JSON type and presence | Meaning |
-| --- | --- | --- |
-| <a id="contract-steps-ordering-collection_closed_before_proceed"></a>`collection_closed_before_proceed` | boolean; required | The host closed this phase's collection before performing its release store. |
-| <a id="contract-steps-ordering-proceed_set"></a>`proceed_set` | boolean; required | The host performed this phase's release store. |
-| <a id="contract-steps-ordering-proceed_observed"></a>`proceed_observed` | boolean; required | The worker published acknowledgement of this phase's release. |
-| <a id="contract-steps-ordering-validator_disposition"></a>`validator_disposition` | string; required | `not_invoked` when the hook never ran; `not_needed` when it ran without queries; `not_spawned` when queries existed without validator output; `reaped` for confirmed reap; otherwise `unconfirmed`. |
-| <a id="contract-steps-ordering-worker_lifetime_established"></a>`worker_lifetime_established` | boolean; required | Host-established worker ownership through release acknowledgement. Later cleanup has its own disposition. |
-| <a id="contract-steps-ordering-protocol_violations"></a>`protocol_violations` | array of string; required | Sorted unique driver and assembly findings about the collection/release/acknowledgement protocol. |
+- <a id="contract-steps-ordering-collection_closed_before_proceed"></a>**`collection_closed_before_proceed`** (boolean): The host closed this phase's collection before performing its release store.
+- <a id="contract-steps-ordering-proceed_set"></a>**`proceed_set`** (boolean): The host performed this phase's release store.
+- <a id="contract-steps-ordering-proceed_observed"></a>**`proceed_observed`** (boolean): The worker published acknowledgement of this phase's release.
+- <a id="contract-steps-ordering-validator_disposition"></a>**`validator_disposition`** (string): `not_invoked` when the hook never ran; `not_needed` when it ran without queries; `not_spawned` when queries existed without validator output; `reaped` for confirmed reap; otherwise `unconfirmed`.
+- <a id="contract-steps-ordering-worker_lifetime_established"></a>**`worker_lifetime_established`** (boolean): Host-established worker ownership through release acknowledgement. Later cleanup has its own disposition.
+- <a id="contract-steps-ordering-protocol_violations"></a>**`protocol_violations`** (array of string): Sorted unique driver and assembly findings about the collection/release/acknowledgement protocol.
 
 <a id="contract-steps-query_paths"></a>
 #### Query path observations
 
 Record `query_paths`: `PWRunnerPathDiagnostics`.
 
-| Field | JSON type and presence | Meaning |
-| --- | --- | --- |
-| <a id="contract-steps-query_paths-observer"></a>`observer` | string; omitted when absent | `runner_host` identifies the observing component. |
-| <a id="contract-steps-query_paths-stage"></a>`stage` | string; omitted when absent | `after_orchestration` identifies the observation interval. |
-| <a id="contract-steps-query_paths-input"></a>`input` | string; required | Nonempty submitted path-filter value. |
-| <a id="contract-steps-query_paths-realpath_resolved"></a>`realpath_resolved` | string; omitted when named in same_as_input; otherwise present, possibly null | Successful host realpath result, or null when resolution failed after orchestration. |
-| <a id="contract-steps-query_paths-firmlink_resolved"></a>`firmlink_resolved` | string; omitted when named in same_as_input; otherwise present, possibly null | Firmlink-mapped realpath result, or mapped input after standard /etc, /tmp and /var substitutions when realpath failed. Null means no mapping was available. |
-| <a id="contract-steps-query_paths-same_as_input"></a>`same_as_input` | array of string; required | Names of available resolved fields whose UTF-8 bytes equal input; those equal-valued keys are omitted. A differing form is carried as a string; an unavailable form is explicit null. |
+- <a id="contract-steps-query_paths-observer"></a>**`observer`** (string?): `runner_host` identifies the observing component.
+- <a id="contract-steps-query_paths-stage"></a>**`stage`** (string?): `after_orchestration` identifies the observation interval.
+- <a id="contract-steps-query_paths-input"></a>**`input`** (string): Nonempty submitted path-filter value.
+- <a id="contract-steps-query_paths-realpath_resolved"></a>**`realpath_resolved`** (string; omitted when named in same_as_input; otherwise present, possibly null): Successful host realpath result, or null when resolution failed after orchestration.
+- <a id="contract-steps-query_paths-firmlink_resolved"></a>**`firmlink_resolved`** (string; omitted when named in same_as_input; otherwise present, possibly null): Firmlink-mapped realpath result, or mapped input after standard /etc, /tmp and /var substitutions when realpath failed. Null means no mapping was available.
+- <a id="contract-steps-query_paths-same_as_input"></a>**`same_as_input`** (array of string): Names of available resolved fields whose UTF-8 bytes equal input; those equal-valued keys are omitted. A differing form is carried as a string; an unavailable form is explicit null.
 
 <a id="contract-steps-attempt_paths"></a>
 #### Attempt path observations
 
 Record `attempt_paths`: `PWRunnerAttemptPathDiagnostics`.
 
-| Field | JSON type and presence | Meaning |
-| --- | --- | --- |
-| <a id="contract-steps-attempt_paths-observer"></a>`observer` | string; omitted when absent | `runner_host` identifies the observing component. |
-| <a id="contract-steps-attempt_paths-stage"></a>`stage` | string; omitted when absent | `after_orchestration` identifies the observation interval. |
-| <a id="contract-steps-attempt_paths-input"></a>`input` | string; required | Nonempty submitted file or exec target. |
-| <a id="contract-steps-attempt_paths-realpath_resolved"></a>`realpath_resolved` | string; omitted when named in same_as_input; otherwise present, possibly null | Successful host realpath result after orchestration, following the leaf, or null when unavailable. |
-| <a id="contract-steps-attempt_paths-parent_realpath_resolved"></a>`parent_realpath_resolved` | string; omitted when named in same_as_input; otherwise present, possibly null | Realpath-resolved parent with the literal leaf appended for an eligible absolute path, or null when unavailable. A symlink leaf remains named by this form. |
-| <a id="contract-steps-attempt_paths-same_as_input"></a>`same_as_input` | array of string; required | Names of available resolved fields whose UTF-8 bytes equal input; those equal-valued keys are omitted. A differing form is carried as a string; an unavailable form is explicit null. |
+- <a id="contract-steps-attempt_paths-observer"></a>**`observer`** (string?): `runner_host` identifies the observing component.
+- <a id="contract-steps-attempt_paths-stage"></a>**`stage`** (string?): `after_orchestration` identifies the observation interval.
+- <a id="contract-steps-attempt_paths-input"></a>**`input`** (string): Nonempty submitted file or exec target.
+- <a id="contract-steps-attempt_paths-realpath_resolved"></a>**`realpath_resolved`** (string; omitted when named in same_as_input; otherwise present, possibly null): Successful host realpath result after orchestration, following the leaf, or null when unavailable.
+- <a id="contract-steps-attempt_paths-parent_realpath_resolved"></a>**`parent_realpath_resolved`** (string; omitted when named in same_as_input; otherwise present, possibly null): Realpath-resolved parent with the literal leaf appended for an eligible absolute path, or null when unavailable. A symlink leaf remains named by this form.
+- <a id="contract-steps-attempt_paths-same_as_input"></a>**`same_as_input`** (array of string): Names of available resolved fields whose UTF-8 bytes equal input; those equal-valued keys are omitted. A differing form is carried as a string; an unavailable form is explicit null.
 
 <a id="contract-steps-identity"></a>
 #### File identity observation
 
 Record `identity`: `PWFileIdentity`.
 
-| Field | JSON type and presence | Meaning |
-| --- | --- | --- |
-| <a id="contract-steps-identity-device"></a>`device` | integer; required | The stat observation's device number. |
-| <a id="contract-steps-identity-inode"></a>`inode` | integer; required | The stat observation's inode number. |
-| <a id="contract-steps-identity-mode"></a>`mode` | integer; required | The stat observation's file type and mode bits. |
-| <a id="contract-steps-identity-uid"></a>`uid` | integer; required | The stat observation's owning user identifier. |
-| <a id="contract-steps-identity-gid"></a>`gid` | integer; required | The stat observation's owning group identifier. |
+- <a id="contract-steps-identity-device"></a>**`device`** (integer): The stat observation's device number.
+- <a id="contract-steps-identity-inode"></a>**`inode`** (integer): The stat observation's inode number.
+- <a id="contract-steps-identity-mode"></a>**`mode`** (integer): The stat observation's file type and mode bits.
+- <a id="contract-steps-identity-uid"></a>**`uid`** (integer): The stat observation's owning user identifier.
+- <a id="contract-steps-identity-gid"></a>**`gid`** (integer): The stat observation's owning group identifier.
 
 <a id="contract-steps-stat"></a>
 #### File metadata observation
 
 Record `stat`: `PWRunnerFileStat`.
 
-| Field | JSON type and presence | Meaning |
-| --- | --- | --- |
-| <a id="contract-steps-stat-rc"></a>`rc` | integer; required | Native lstat or fstat return at this position in the operation sequence. |
-| <a id="contract-steps-stat-errno"></a>`errno` | integer; omitted when absent | Errno from a failed metadata call. |
-| <a id="contract-steps-stat-identity"></a>`identity` | [File identity observation](#contract-steps-identity); omitted when absent | Device, inode, mode, uid and gid from a successful metadata call. |
-| <a id="contract-steps-stat-size"></a>`size` | integer; omitted when absent | Byte length from a successful metadata call. |
+- <a id="contract-steps-stat-rc"></a>**`rc`** (integer): Native lstat or fstat return at this position in the operation sequence.
+- <a id="contract-steps-stat-errno"></a>**`errno`** (integer?): Errno from a failed metadata call.
+- <a id="contract-steps-stat-identity"></a>**`identity`** ([File identity observation](#contract-steps-identity)?): Device, inode, mode, uid and gid from a successful metadata call.
+- <a id="contract-steps-stat-size"></a>**`size`** (integer?): Byte length from a successful metadata call.
 
 <a id="contract-steps-fresh_read"></a>
 #### Fresh-descriptor read
 
 Record `fresh_read`: `PWRunnerFreshRead`.
 
-| Field | JSON type and presence | Meaning |
-| --- | --- | --- |
-| <a id="contract-steps-fresh_read-open_rc"></a>`open_rc` | integer; required | Descriptor from open with O_RDONLY and O_CLOEXEC, or -1 on failure. |
-| <a id="contract-steps-fresh_read-open_errno"></a>`open_errno` | integer; omitted when absent | Errno from failed open. |
-| <a id="contract-steps-fresh_read-read_rc"></a>`read_rc` | integer; omitted when absent | Byte count from the bounded read, or -1 on failure; absent when open failed. |
-| <a id="contract-steps-fresh_read-read_errno"></a>`read_errno` | integer; omitted when absent | Errno from failed read. |
-| <a id="contract-steps-fresh_read-stat_rc"></a>`stat_rc` | integer; omitted when absent | Return from descriptor fstat, present after successful open. |
-| <a id="contract-steps-fresh_read-stat_errno"></a>`stat_errno` | integer; omitted when absent | Errno from failed descriptor stat. |
-| <a id="contract-steps-fresh_read-identity"></a>`identity` | [File identity observation](#contract-steps-identity); omitted when absent | Identity from successful descriptor stat. |
-| <a id="contract-steps-fresh_read-close_rc"></a>`close_rc` | integer; omitted when absent | Return from closing the descriptor, present after successful open. |
-| <a id="contract-steps-fresh_read-close_errno"></a>`close_errno` | integer; omitted when absent | Errno from failed close. |
-| <a id="contract-steps-fresh_read-content_hex"></a>`content_hex` | string (hex); omitted when absent | Bytes actually read as hexadecimal, including the empty string for a zero-byte read. Absent when no valid read result supplied bytes. |
+- <a id="contract-steps-fresh_read-open_rc"></a>**`open_rc`** (integer): Descriptor from open with O_RDONLY and O_CLOEXEC, or -1 on failure.
+- <a id="contract-steps-fresh_read-open_errno"></a>**`open_errno`** (integer?): Errno from failed open.
+- <a id="contract-steps-fresh_read-read_rc"></a>**`read_rc`** (integer?): Byte count from the bounded read, or -1 on failure; absent when open failed.
+- <a id="contract-steps-fresh_read-read_errno"></a>**`read_errno`** (integer?): Errno from failed read.
+- <a id="contract-steps-fresh_read-stat_rc"></a>**`stat_rc`** (integer?): Return from descriptor fstat, present after successful open.
+- <a id="contract-steps-fresh_read-stat_errno"></a>**`stat_errno`** (integer?): Errno from failed descriptor stat.
+- <a id="contract-steps-fresh_read-identity"></a>**`identity`** ([File identity observation](#contract-steps-identity)?): Identity from successful descriptor stat.
+- <a id="contract-steps-fresh_read-close_rc"></a>**`close_rc`** (integer?): Return from closing the descriptor, present after successful open.
+- <a id="contract-steps-fresh_read-close_errno"></a>**`close_errno`** (integer?): Errno from failed close.
+- <a id="contract-steps-fresh_read-content_hex"></a>**`content_hex`** (string (hex)?): Bytes actually read as hexadecimal, including the empty string for a zero-byte read. Absent when no valid read result supplied bytes.
 
 <a id="contract-steps-fresh_write"></a>
 #### Fresh-descriptor write or creation
 
 Record `fresh_write`: `PWRunnerFreshWrite`.
 
-| Field | JSON type and presence | Meaning |
-| --- | --- | --- |
-| <a id="contract-steps-fresh_write-open_rc"></a>`open_rc` | integer; required | Descriptor from open with O_WRONLY and O_CLOEXEC, additionally O_CREAT and O_EXCL with mode 0600 for creation, or -1 on failure. |
-| <a id="contract-steps-fresh_write-open_errno"></a>`open_errno` | integer; omitted when absent | Errno from failed open. |
-| <a id="contract-steps-fresh_write-truncate_rc"></a>`truncate_rc` | integer; omitted when absent | Return from ftruncate(fd, 0) for write_fresh after successful open; absent for creation or failed open. |
-| <a id="contract-steps-fresh_write-truncate_errno"></a>`truncate_errno` | integer; omitted when absent | Errno from failed truncate. |
-| <a id="contract-steps-fresh_write-write_rc"></a>`write_rc` | integer; omitted when absent | Return from writing byte x after creation or successful truncation. One is complete, zero is a short write, -1 is failure; absent when writing was not reached. |
-| <a id="contract-steps-fresh_write-write_errno"></a>`write_errno` | integer; omitted when absent | Errno from a failed write. A short write retains its count without an invented errno. |
-| <a id="contract-steps-fresh_write-close_rc"></a>`close_rc` | integer; omitted when absent | Return from closing an opened descriptor. |
-| <a id="contract-steps-fresh_write-close_errno"></a>`close_errno` | integer; omitted when absent | Errno from failed close. |
-| <a id="contract-steps-fresh_write-preopen_stat"></a>`preopen_stat` | [File metadata observation](#contract-steps-stat); omitted when absent | Creation's pre-open lstat diagnostic, including absence or existing-object metadata. |
-| <a id="contract-steps-fresh_write-opened_stat"></a>`opened_stat` | [File metadata observation](#contract-steps-stat); omitted when absent | Descriptor metadata immediately after successful open. |
-| <a id="contract-steps-fresh_write-truncated_stat"></a>`truncated_stat` | [File metadata observation](#contract-steps-stat); omitted when absent | Descriptor metadata after the write_fresh truncate call, including a failed truncate. |
-| <a id="contract-steps-fresh_write-written_stat"></a>`written_stat` | [File metadata observation](#contract-steps-stat); omitted when absent | Descriptor metadata after the attempted write, including a failed or short write. |
+- <a id="contract-steps-fresh_write-open_rc"></a>**`open_rc`** (integer): Descriptor from open with O_WRONLY and O_CLOEXEC, additionally O_CREAT and O_EXCL with mode 0600 for creation, or -1 on failure.
+- <a id="contract-steps-fresh_write-open_errno"></a>**`open_errno`** (integer?): Errno from failed open.
+- <a id="contract-steps-fresh_write-truncate_rc"></a>**`truncate_rc`** (integer?): Return from ftruncate(fd, 0) for write_fresh after successful open; absent for creation or failed open.
+- <a id="contract-steps-fresh_write-truncate_errno"></a>**`truncate_errno`** (integer?): Errno from failed truncate.
+- <a id="contract-steps-fresh_write-write_rc"></a>**`write_rc`** (integer?): Return from writing byte x after creation or successful truncation. One is complete, zero is a short write, -1 is failure; absent when writing was not reached.
+- <a id="contract-steps-fresh_write-write_errno"></a>**`write_errno`** (integer?): Errno from a failed write. A short write retains its count without an invented errno.
+- <a id="contract-steps-fresh_write-close_rc"></a>**`close_rc`** (integer?): Return from closing an opened descriptor.
+- <a id="contract-steps-fresh_write-close_errno"></a>**`close_errno`** (integer?): Errno from failed close.
+- <a id="contract-steps-fresh_write-preopen_stat"></a>**`preopen_stat`** ([File metadata observation](#contract-steps-stat)?): Creation's pre-open lstat diagnostic, including absence or existing-object metadata.
+- <a id="contract-steps-fresh_write-opened_stat"></a>**`opened_stat`** ([File metadata observation](#contract-steps-stat)?): Descriptor metadata immediately after successful open.
+- <a id="contract-steps-fresh_write-truncated_stat"></a>**`truncated_stat`** ([File metadata observation](#contract-steps-stat)?): Descriptor metadata after the write_fresh truncate call, including a failed truncate.
+- <a id="contract-steps-fresh_write-written_stat"></a>**`written_stat`** ([File metadata observation](#contract-steps-stat)?): Descriptor metadata after the attempted write, including a failed or short write.
 
 <a id="contract-steps-assessment"></a>
 #### Interpreting the observations
@@ -2616,17 +2496,17 @@ the ordering assessment supplies its live-worker temporal meaning.
 <a id="contract-steps-assessment-order"></a>
 ##### Establish query order
 
-[Runner host](#contract-identity-definitions-host) checks at per-step ordering assessment. Entry: xpc execute. Recipient: controller, xpc caller. Reports: runner reply. For each `p`, `s`. Applies when (`reply.reporting_failure` is absent and `reply.steps[s].comparison` is present). The first failed condition selects the consequence.
+[Runner host](#contract-identity-definitions-host) checks at per-step ordering assessment. Entry: xpc execute. Recipient: controller, xpc caller. Reports: runner reply. For each `p`, `s`. Applies when (absent(`reply.reporting_failure`) and present(`reply.steps[s].comparison`)). The first failed condition selects the consequence.
 
 | Item | Requirement or consequence |
 | --- | --- |
-| <a id="contract-steps-assessment-order-success"></a>Established order | On success, sets `reply.steps[s].comparison.order` to `"query_first"`. |
-| <a id="contract-steps-assessment-order-failure"></a>Unestablished order | On failure, sets `reply.steps[s].comparison.order` to `"unestablished"`. |
-| <a id="contract-steps-assessment-order-chain"></a>Collection chain | Requires (`reply.phases[p].ordering` is present and `reply.phases[p].ordering.collection_closed_before_proceed` and `reply.phases[p].ordering.proceed_set` and `reply.phases[p].ordering.proceed_observed` and `reply.phases[p].ordering.worker_lifetime_established` and count of `reply.phases[p].ordering.protocol_violations` = `0`). |
+| <a id="contract-steps-assessment-order-success"></a>Established order | On success, set_value(`reply.steps[s].comparison.order`, `"query_first"`). |
+| <a id="contract-steps-assessment-order-failure"></a>Unestablished order | On failure, set_value(`reply.steps[s].comparison.order`, `"unestablished"`). |
+| <a id="contract-steps-assessment-order-chain"></a>Collection chain | Requires (present(`reply.phases[p].ordering`) and `reply.phases[p].ordering.collection_closed_before_proceed` and `reply.phases[p].ordering.proceed_set` and `reply.phases[p].ordering.proceed_observed` and `reply.phases[p].ordering.worker_lifetime_established` and count(`reply.phases[p].ordering.protocol_violations`) = `0`). |
 | <a id="contract-steps-assessment-order-setup"></a>Setup | Ordinary execution has observed successful application; actor execution has established the actor's declared applied or unapplied setup. |
-| <a id="contract-steps-assessment-order-native"></a>Native answer | Requires (`reply.steps[s].sandbox_check.result_source` = `"validator"` and `reply.steps[s].sandbox_check.native_rc` is present and `reply.steps[s].sandbox_check.errno` is present and `reply.steps[s].sandbox_check.rc` = `reply.steps[s].sandbox_check.native_rc` and ((`reply.steps[s].sandbox_check.outcome` = `"allow"` and `reply.steps[s].sandbox_check.native_rc` = `0`) or (`reply.steps[s].sandbox_check.outcome` = `"deny"` and `reply.steps[s].sandbox_check.native_rc` = `1` and `reply.steps[s].sandbox_check.errno` = `0`))). |
-| <a id="contract-steps-assessment-order-association"></a>Unique association | Binding `v`: entry in `reply.phases[p].validator_subprocess.records`. Association restriction for `v`: `reply.phases[p].validator_subprocess.records[v].step_id` = `reply.steps[s].step_id`. Requires (`reply.phases[p].validator_subprocess` is present and `reply.phases[p].validator_subprocess.records` is present and number of matching entries for `v` = `1`). The query targets the associated live worker PID. For a filter kind outside the known request vocabulary, the native filter type is the uppercase spelling of that kind. |
-| <a id="contract-steps-assessment-order-association-identity"></a>Unique association › Exact retained query identity | For each `p`, `s`, `v`. Requires (`reply.phases[p].validator_subprocess.records[v].operation` = `reply.steps[s].sandbox_check.operation` and `reply.phases[p].validator_subprocess.records[v].outcome` = `reply.steps[s].sandbox_check.outcome` and `reply.phases[p].validator_subprocess.records[v].rc` = `reply.steps[s].sandbox_check.native_rc` and `reply.phases[p].validator_subprocess.records[v].errno` = `reply.steps[s].sandbox_check.errno` and (if `reply.steps[s].sandbox_check.filter_kind` is one of `"none"`, `"path"`, `"global_name"`, `"local_name"`, `"iokit_registry_entry_class"`, `"iokit_user_client_class"`, `"sysctl_name"`, then ((`reply.steps[s].sandbox_check.filter_kind` = `"none"` and `reply.phases[p].validator_subprocess.records[v].filter_type` = `"NONE"`) or (`reply.steps[s].sandbox_check.filter_kind` = `"path"` and `reply.phases[p].validator_subprocess.records[v].filter_type` = `"PATH"`) or (`reply.steps[s].sandbox_check.filter_kind` = `"global_name"` and `reply.phases[p].validator_subprocess.records[v].filter_type` = `"GLOBAL_NAME"`) or (`reply.steps[s].sandbox_check.filter_kind` = `"local_name"` and `reply.phases[p].validator_subprocess.records[v].filter_type` = `"LOCAL_NAME"`) or (`reply.steps[s].sandbox_check.filter_kind` = `"iokit_registry_entry_class"` and `reply.phases[p].validator_subprocess.records[v].filter_type` = `"IOKIT_REGISTRY_ENTRY_CLASS"`) or (`reply.steps[s].sandbox_check.filter_kind` = `"iokit_user_client_class"` and `reply.phases[p].validator_subprocess.records[v].filter_type` = `"IOKIT_USER_CLIENT_CLASS"`) or (`reply.steps[s].sandbox_check.filter_kind` = `"sysctl_name"` and `reply.phases[p].validator_subprocess.records[v].filter_type` = `"SYSCTL_NAME"`))) and ((`reply.steps[s].sandbox_check.filter_kind` = `"none"` and `reply.phases[p].validator_subprocess.records[v].filter_value` is absent) or (`reply.steps[s].sandbox_check.filter_kind` ≠ `"none"` and `reply.phases[p].validator_subprocess.records[v].filter_value` = `reply.steps[s].sandbox_check.filter_value`))). |
+| <a id="contract-steps-assessment-order-native"></a>Native answer | Requires (`reply.steps[s].sandbox_check.result_source` = `"validator"` and present(`reply.steps[s].sandbox_check.native_rc`) and present(`reply.steps[s].sandbox_check.errno`) and `reply.steps[s].sandbox_check.rc` = `reply.steps[s].sandbox_check.native_rc` and ((`reply.steps[s].sandbox_check.outcome` = `"allow"` and `reply.steps[s].sandbox_check.native_rc` = `0`) or (`reply.steps[s].sandbox_check.outcome` = `"deny"` and `reply.steps[s].sandbox_check.native_rc` = `1` and `reply.steps[s].sandbox_check.errno` = `0`))). |
+| <a id="contract-steps-assessment-order-association"></a>Unique association | Binding `v`: entry in `reply.phases[p].validator_subprocess.records`. Association restriction for `v`: `reply.phases[p].validator_subprocess.records[v].step_id` = `reply.steps[s].step_id`. Requires (present(`reply.phases[p].validator_subprocess`) and present(`reply.phases[p].validator_subprocess.records`) and matches(`v`) = `1`). The query targets the associated live worker PID. For a filter kind outside the known request vocabulary, the native filter type is the uppercase spelling of that kind. |
+| <a id="contract-steps-assessment-order-association-identity"></a>Unique association › Exact retained query identity | For each `p`, `s`, `v`. Requires (`reply.phases[p].validator_subprocess.records[v].operation` = `reply.steps[s].sandbox_check.operation` and `reply.phases[p].validator_subprocess.records[v].outcome` = `reply.steps[s].sandbox_check.outcome` and `reply.phases[p].validator_subprocess.records[v].rc` = `reply.steps[s].sandbox_check.native_rc` and `reply.phases[p].validator_subprocess.records[v].errno` = `reply.steps[s].sandbox_check.errno` and implies(`reply.steps[s].sandbox_check.filter_kind` ∈ [`"none"`, `"path"`, `"global_name"`, `"local_name"`, `"iokit_registry_entry_class"`, `"iokit_user_client_class"`, `"sysctl_name"`], ((`reply.steps[s].sandbox_check.filter_kind` = `"none"` and `reply.phases[p].validator_subprocess.records[v].filter_type` = `"NONE"`) or (`reply.steps[s].sandbox_check.filter_kind` = `"path"` and `reply.phases[p].validator_subprocess.records[v].filter_type` = `"PATH"`) or (`reply.steps[s].sandbox_check.filter_kind` = `"global_name"` and `reply.phases[p].validator_subprocess.records[v].filter_type` = `"GLOBAL_NAME"`) or (`reply.steps[s].sandbox_check.filter_kind` = `"local_name"` and `reply.phases[p].validator_subprocess.records[v].filter_type` = `"LOCAL_NAME"`) or (`reply.steps[s].sandbox_check.filter_kind` = `"iokit_registry_entry_class"` and `reply.phases[p].validator_subprocess.records[v].filter_type` = `"IOKIT_REGISTRY_ENTRY_CLASS"`) or (`reply.steps[s].sandbox_check.filter_kind` = `"iokit_user_client_class"` and `reply.phases[p].validator_subprocess.records[v].filter_type` = `"IOKIT_USER_CLIENT_CLASS"`) or (`reply.steps[s].sandbox_check.filter_kind` = `"sysctl_name"` and `reply.phases[p].validator_subprocess.records[v].filter_type` = `"SYSCTL_NAME"`))) and ((`reply.steps[s].sandbox_check.filter_kind` = `"none"` and absent(`reply.phases[p].validator_subprocess.records[v].filter_value`)) or (`reply.steps[s].sandbox_check.filter_kind` ≠ `"none"` and `reply.phases[p].validator_subprocess.records[v].filter_value` = `reply.steps[s].sandbox_check.filter_value`))). |
 
 **Support: [source read](#contract-support-grades) for [Establish query order](#contract-steps-assessment-order) and its descendants.** Ordering first counts all records for the step ID, then compares the selected record and native value. Production supplies its live worker PID; reporting validation supplies the associated reported worker PID. Source: [PWRunnerStepEvidence.swift](../runner/Sources/PWRunnerCore/PWRunnerStepEvidence.swift): `eligibleOrderedStep`; [PWRunnerReply.swift](../runner/Sources/PWRunnerCore/PWRunnerReply.swift): `validateForReporting`.
 
@@ -2643,7 +2523,7 @@ observations retain their respective intervals and identities.
 <a id="contract-steps-assessment-observe"></a>
 ##### Classify an observation
 
-[Runner host](#contract-identity-definitions-host) checks at step evidence assembly. Entry: xpc execute. Recipient: controller, xpc caller. Reports: runner reply. Binding `r`: entry in `reply.steps`. For each `r`. Select the first matching case in the listed order. Applies when `reply.steps[r].comparison` is present.
+[Runner host](#contract-identity-definitions-host) checks at step evidence assembly. Entry: xpc execute. Recipient: controller, xpc caller. Reports: runner reply. Binding `r`: entry in `reply.steps`. For each `r`. Select the first matching case in the listed order. Applies when present(`reply.steps[r].comparison`).
 
 A permission classification records the shape of the native failure.
 Attribution to a particular enforcing mechanism requires supporting
@@ -2651,12 +2531,12 @@ evidence.
 
 | Case | When | Consequence |
 | --- | --- | --- |
-| <a id="contract-steps-assessment-observe-spawned"></a>1. Spawn observed | (`reply.steps[r].attempt.result_source` = `"worker"` and `reply.steps[r].attempt.requested_kind` = `"exec"` and `reply.steps[r].attempt.child_pid` is present and `reply.steps[r].attempt.child_pid` > `0`) | sets `reply.steps[r].comparison.observation` to `"succeeded"`, sets `reply.steps[r].comparison.observation_basis` to `"spawned_child"`. A positive child PID records spawning even when the child's later status fails. |
-| <a id="contract-steps-assessment-observe-completed"></a>2. Completed success | (`reply.steps[r].attempt.result_source` = `"worker"` and `reply.steps[r].attempt.outcome` = `"ok"` and `reply.steps[r].attempt.rc` = `0`) | sets `reply.steps[r].comparison.observation` to `"succeeded"`, sets `reply.steps[r].comparison.observation_basis` to `"completed_worker_status"`. |
-| <a id="contract-steps-assessment-observe-permission"></a>3. Permission errno | (`reply.steps[r].attempt.result_source` = `"worker"` and `reply.steps[r].attempt.rc` ≠ `0` and `reply.steps[r].attempt.outcome` is one of `"open_failed"`, `"read_failed"`, `"write_failed"`, `"unlink_failed"`, `"access_failed"`, `"sysctl_failed"`, `"exec_failed"` and `reply.steps[r].attempt.errno` is one of `1`, `13`) | sets `reply.steps[r].comparison.observation` to `"permission_failure"`, sets `reply.steps[r].comparison.observation_basis` to `"permission_errno"`. Darwin EPERM and EACCES supply the numeric errno alternatives at this boundary. |
-| <a id="contract-steps-assessment-observe-bootstrap"></a>4. Bootstrap permission result | (`reply.steps[r].attempt.result_source` = `"worker"` and `reply.steps[r].attempt.rc` ≠ `0` and `reply.steps[r].attempt.outcome` = `"lookup_failed"` and `reply.steps[r].attempt.error` = `"bootstrap_look_up: kr=1100"`) | sets `reply.steps[r].comparison.observation` to `"permission_failure"`, sets `reply.steps[r].comparison.observation_basis` to `"bootstrap_permission_result"`. |
-| <a id="contract-steps-assessment-observe-other"></a>5. Other completed failure | (`reply.steps[r].attempt.result_source` = `"worker"` and `reply.steps[r].attempt.rc` ≠ `0`) | sets `reply.steps[r].comparison.observation` to `"other_failure"`, sets `reply.steps[r].comparison.observation_basis` to `"completed_worker_status"`. |
-| <a id="contract-steps-assessment-observe-unavailable"></a>6. Unavailable observation | `true` | sets `reply.steps[r].comparison.observation` to `"unavailable"`, sets `reply.steps[r].comparison.observation_basis` to `"no_completed_worker_result"`. |
+| <a id="contract-steps-assessment-observe-spawned"></a>1. Spawn observed | (`reply.steps[r].attempt.result_source` = `"worker"` and `reply.steps[r].attempt.requested_kind` = `"exec"` and present(`reply.steps[r].attempt.child_pid`) and `reply.steps[r].attempt.child_pid` > `0`) | [set_value(`reply.steps[r].comparison.observation`, `"succeeded"`), set_value(`reply.steps[r].comparison.observation_basis`, `"spawned_child"`)]. A positive child PID records spawning even when the child's later status fails. |
+| <a id="contract-steps-assessment-observe-completed"></a>2. Completed success | (`reply.steps[r].attempt.result_source` = `"worker"` and `reply.steps[r].attempt.outcome` = `"ok"` and `reply.steps[r].attempt.rc` = `0`) | [set_value(`reply.steps[r].comparison.observation`, `"succeeded"`), set_value(`reply.steps[r].comparison.observation_basis`, `"completed_worker_status"`)]. |
+| <a id="contract-steps-assessment-observe-permission"></a>3. Permission errno | (`reply.steps[r].attempt.result_source` = `"worker"` and `reply.steps[r].attempt.rc` ≠ `0` and `reply.steps[r].attempt.outcome` ∈ [`"open_failed"`, `"read_failed"`, `"write_failed"`, `"unlink_failed"`, `"access_failed"`, `"sysctl_failed"`, `"exec_failed"`] and `reply.steps[r].attempt.errno` ∈ [`1`, `13`]) | [set_value(`reply.steps[r].comparison.observation`, `"permission_failure"`), set_value(`reply.steps[r].comparison.observation_basis`, `"permission_errno"`)]. Darwin EPERM and EACCES supply the numeric errno alternatives at this boundary. |
+| <a id="contract-steps-assessment-observe-bootstrap"></a>4. Bootstrap permission result | (`reply.steps[r].attempt.result_source` = `"worker"` and `reply.steps[r].attempt.rc` ≠ `0` and `reply.steps[r].attempt.outcome` = `"lookup_failed"` and `reply.steps[r].attempt.error` = `"bootstrap_look_up: kr=1100"`) | [set_value(`reply.steps[r].comparison.observation`, `"permission_failure"`), set_value(`reply.steps[r].comparison.observation_basis`, `"bootstrap_permission_result"`)]. |
+| <a id="contract-steps-assessment-observe-other"></a>5. Other completed failure | (`reply.steps[r].attempt.result_source` = `"worker"` and `reply.steps[r].attempt.rc` ≠ `0`) | [set_value(`reply.steps[r].comparison.observation`, `"other_failure"`), set_value(`reply.steps[r].comparison.observation_basis`, `"completed_worker_status"`)]. |
+| <a id="contract-steps-assessment-observe-unavailable"></a>6. Unavailable observation | `true` | [set_value(`reply.steps[r].comparison.observation`, `"unavailable"`), set_value(`reply.steps[r].comparison.observation_basis`, `"no_completed_worker_result"`)]. |
 
 <a id="contract-steps-assessment-relations"></a>
 ##### Submitted operation and target
@@ -2709,54 +2589,54 @@ comparison operands remain preserved.
 
 | Item | Requirement or consequence |
 | --- | --- |
-| <a id="contract-steps-assessment-paths-attempt"></a>Attempt path input | Applies when (`reply.steps[s].attempt.requested_kind` is one of `"file"`, `"exec"` and `reply.steps[s].attempt.requested_path` is present and `reply.steps[s].attempt.requested_path` ≠ `""`). sets `reply.steps[s].attempt.path_diagnostics.input` to `reply.steps[s].attempt.requested_path`, sets `reply.steps[s].attempt.path_diagnostics.observer` to `"runner_host"`, sets `reply.steps[s].attempt.path_diagnostics.stage` to `"after_orchestration"`. |
-| <a id="contract-steps-assessment-paths-attempt_presence"></a>Attempt path input applicability | Requires (if (`reply.steps[s].attempt.requested_kind` is one of `"file"`, `"exec"` and `reply.steps[s].attempt.requested_path` is present and `reply.steps[s].attempt.requested_path` ≠ `""`), then `reply.steps[s].attempt.path_diagnostics` is present). |
-| <a id="contract-steps-assessment-paths-query"></a>Query path input | Applies when (`reply.steps[s].sandbox_check.filter_kind` = `"path"` and `reply.steps[s].sandbox_check.filter_value` is present and `reply.steps[s].sandbox_check.filter_value` ≠ `""`). sets `reply.steps[s].sandbox_check.path_diagnostics.input` to `reply.steps[s].sandbox_check.filter_value`, sets `reply.steps[s].sandbox_check.path_diagnostics.observer` to `"runner_host"`, sets `reply.steps[s].sandbox_check.path_diagnostics.stage` to `"after_orchestration"`. |
-| <a id="contract-steps-assessment-paths-query_presence"></a>Query path input applicability | Requires (if (`reply.steps[s].sandbox_check.filter_kind` = `"path"` and `reply.steps[s].sandbox_check.filter_value` is present and `reply.steps[s].sandbox_check.filter_value` ≠ `""`), then `reply.steps[s].sandbox_check.path_diagnostics` is present). |
+| <a id="contract-steps-assessment-paths-attempt"></a>Attempt path input | Applies when (`reply.steps[s].attempt.requested_kind` ∈ [`"file"`, `"exec"`] and present(`reply.steps[s].attempt.requested_path`) and `reply.steps[s].attempt.requested_path` ≠ `""`). [set_value(`reply.steps[s].attempt.path_diagnostics.input`, `reply.steps[s].attempt.requested_path`), set_value(`reply.steps[s].attempt.path_diagnostics.observer`, `"runner_host"`), set_value(`reply.steps[s].attempt.path_diagnostics.stage`, `"after_orchestration"`)]. |
+| <a id="contract-steps-assessment-paths-attempt_presence"></a>Attempt path input applicability | Requires implies((`reply.steps[s].attempt.requested_kind` ∈ [`"file"`, `"exec"`] and present(`reply.steps[s].attempt.requested_path`) and `reply.steps[s].attempt.requested_path` ≠ `""`), present(`reply.steps[s].attempt.path_diagnostics`)). |
+| <a id="contract-steps-assessment-paths-query"></a>Query path input | Applies when (`reply.steps[s].sandbox_check.filter_kind` = `"path"` and present(`reply.steps[s].sandbox_check.filter_value`) and `reply.steps[s].sandbox_check.filter_value` ≠ `""`). [set_value(`reply.steps[s].sandbox_check.path_diagnostics.input`, `reply.steps[s].sandbox_check.filter_value`), set_value(`reply.steps[s].sandbox_check.path_diagnostics.observer`, `"runner_host"`), set_value(`reply.steps[s].sandbox_check.path_diagnostics.stage`, `"after_orchestration"`)]. |
+| <a id="contract-steps-assessment-paths-query_presence"></a>Query path input applicability | Requires implies((`reply.steps[s].sandbox_check.filter_kind` = `"path"` and present(`reply.steps[s].sandbox_check.filter_value`) and `reply.steps[s].sandbox_check.filter_value` ≠ `""`), present(`reply.steps[s].sandbox_check.path_diagnostics`)). |
 
 **Support: [check read](#contract-support-grades) for [Add host path observations](#contract-steps-assessment-paths).** Path controls create parents and symlinks, distinguish missing and symlink leaves, skip non-path attempts and preserve separate query observations. Context: Read enrichment, helpers and path controls, including exact UTF-8 retention. Evidence limit: Check reading; the observations retain the host's after-orchestration interval. Source: [PWRunnerService.swift](../runner/Sources/PWRunnerCore/PWRunnerService.swift): `enrichPathDiagnostics`; [PathUtils.swift](../runner/Sources/PWRunnerCore/PathUtils.swift): `parentRealpathResolved`, `firmlinkResolved`. Check: [PathDiagnosticsTests.swift](../runner/Tests/PWRunnerCoreTests/PathDiagnosticsTests.swift): `runPathDiagnosticsTests`.
 
 <a id="contract-steps-assessment-fresh_read_aggregate"></a>
 ##### Project the fresh-read aggregate
 
-[Worker](#contract-identity-definitions-worker), [Runner host](#contract-identity-definitions-host) reports at completed native aggregate projection. Entry: xpc execute. Recipient: controller, xpc caller. Reports: runner reply. For each `p`, `s`. Select the first matching case in the listed order. Applies when (`reply.steps[s].attempt.requested_kind` = `"file"` and `reply.steps[s].attempt.requested_action` = `"read_fresh"` and `reply.steps[s].attempt.result_source` = `"worker"` and `reply.steps[s].attempt.fresh_read` is present).
+[Worker](#contract-identity-definitions-worker), [Runner host](#contract-identity-definitions-host) reports at completed native aggregate projection. Entry: xpc execute. Recipient: controller, xpc caller. Reports: runner reply. For each `p`, `s`. Select the first matching case in the listed order. Applies when (`reply.steps[s].attempt.requested_kind` = `"file"` and `reply.steps[s].attempt.requested_action` = `"read_fresh"` and `reply.steps[s].attempt.result_source` = `"worker"` and present(`reply.steps[s].attempt.fresh_read`)).
 
 | Case | When | Consequence |
 | --- | --- | --- |
-| <a id="contract-steps-assessment-fresh_read_aggregate-open_errno"></a>1. open failure with errno | (`reply.steps[s].attempt.fresh_read.open_rc` is present and `reply.steps[s].attempt.fresh_read.open_rc` < `0` and `reply.steps[s].attempt.fresh_read.open_errno` is present and `reply.steps[s].attempt.fresh_read.open_errno` ≠ `0`) | sets `reply.steps[s].attempt.rc` to `-1`, sets `reply.steps[s].attempt.outcome` to `"read_failed"`, sets `reply.steps[s].attempt.errno` to `reply.steps[s].attempt.fresh_read.open_errno`. |
-| <a id="contract-steps-assessment-fresh_read_aggregate-open_zero"></a>2. open failure without nonzero errno | (`reply.steps[s].attempt.fresh_read.open_rc` is present and `reply.steps[s].attempt.fresh_read.open_rc` < `0`) | sets `reply.steps[s].attempt.rc` to `-1`, sets `reply.steps[s].attempt.outcome` to `"read_failed"`, sets `reply.steps[s].attempt.errno` to `null`. |
-| <a id="contract-steps-assessment-fresh_read_aggregate-stat_errno"></a>3. stat failure with errno | (`reply.steps[s].attempt.fresh_read.stat_rc` is present and `reply.steps[s].attempt.fresh_read.stat_rc` ≠ `0` and `reply.steps[s].attempt.fresh_read.stat_errno` is present and `reply.steps[s].attempt.fresh_read.stat_errno` ≠ `0`) | sets `reply.steps[s].attempt.rc` to `-1`, sets `reply.steps[s].attempt.outcome` to `"read_failed"`, sets `reply.steps[s].attempt.errno` to `reply.steps[s].attempt.fresh_read.stat_errno`. |
-| <a id="contract-steps-assessment-fresh_read_aggregate-stat_zero"></a>4. stat failure without nonzero errno | (`reply.steps[s].attempt.fresh_read.stat_rc` is present and `reply.steps[s].attempt.fresh_read.stat_rc` ≠ `0`) | sets `reply.steps[s].attempt.rc` to `-1`, sets `reply.steps[s].attempt.outcome` to `"read_failed"`, sets `reply.steps[s].attempt.errno` to `null`. |
-| <a id="contract-steps-assessment-fresh_read_aggregate-read_errno"></a>5. read failure with errno | (`reply.steps[s].attempt.fresh_read.read_rc` is present and `reply.steps[s].attempt.fresh_read.read_rc` < `0` and `reply.steps[s].attempt.fresh_read.read_errno` is present and `reply.steps[s].attempt.fresh_read.read_errno` ≠ `0`) | sets `reply.steps[s].attempt.rc` to `-1`, sets `reply.steps[s].attempt.outcome` to `"read_failed"`, sets `reply.steps[s].attempt.errno` to `reply.steps[s].attempt.fresh_read.read_errno`. |
-| <a id="contract-steps-assessment-fresh_read_aggregate-read_zero"></a>6. read failure without nonzero errno | (`reply.steps[s].attempt.fresh_read.read_rc` is present and `reply.steps[s].attempt.fresh_read.read_rc` < `0`) | sets `reply.steps[s].attempt.rc` to `-1`, sets `reply.steps[s].attempt.outcome` to `"read_failed"`, sets `reply.steps[s].attempt.errno` to `null`. |
-| <a id="contract-steps-assessment-fresh_read_aggregate-close_errno"></a>7. close failure with errno | (`reply.steps[s].attempt.fresh_read.close_rc` is present and `reply.steps[s].attempt.fresh_read.close_rc` ≠ `0` and `reply.steps[s].attempt.fresh_read.close_errno` is present and `reply.steps[s].attempt.fresh_read.close_errno` ≠ `0`) | sets `reply.steps[s].attempt.rc` to `-1`, sets `reply.steps[s].attempt.outcome` to `"read_failed"`, sets `reply.steps[s].attempt.errno` to `reply.steps[s].attempt.fresh_read.close_errno`. |
-| <a id="contract-steps-assessment-fresh_read_aggregate-close_zero"></a>8. close failure without nonzero errno | (`reply.steps[s].attempt.fresh_read.close_rc` is present and `reply.steps[s].attempt.fresh_read.close_rc` ≠ `0`) | sets `reply.steps[s].attempt.rc` to `-1`, sets `reply.steps[s].attempt.outcome` to `"read_failed"`, sets `reply.steps[s].attempt.errno` to `null`. |
-| <a id="contract-steps-assessment-fresh_read_aggregate-success"></a>9. Successful aggregate | `true` | sets `reply.steps[s].attempt.rc` to `0`, sets `reply.steps[s].attempt.outcome` to `"ok"`, sets `reply.steps[s].attempt.errno` to `null`. |
+| <a id="contract-steps-assessment-fresh_read_aggregate-open_errno"></a>1. open failure with errno | (present(`reply.steps[s].attempt.fresh_read.open_rc`) and `reply.steps[s].attempt.fresh_read.open_rc` < `0` and present(`reply.steps[s].attempt.fresh_read.open_errno`) and `reply.steps[s].attempt.fresh_read.open_errno` ≠ `0`) | [set_value(`reply.steps[s].attempt.rc`, `-1`), set_value(`reply.steps[s].attempt.outcome`, `"read_failed"`), set_value(`reply.steps[s].attempt.errno`, `reply.steps[s].attempt.fresh_read.open_errno`)]. |
+| <a id="contract-steps-assessment-fresh_read_aggregate-open_zero"></a>2. open failure without nonzero errno | (present(`reply.steps[s].attempt.fresh_read.open_rc`) and `reply.steps[s].attempt.fresh_read.open_rc` < `0`) | [set_value(`reply.steps[s].attempt.rc`, `-1`), set_value(`reply.steps[s].attempt.outcome`, `"read_failed"`), set_value(`reply.steps[s].attempt.errno`, `null`)]. |
+| <a id="contract-steps-assessment-fresh_read_aggregate-stat_errno"></a>3. stat failure with errno | (present(`reply.steps[s].attempt.fresh_read.stat_rc`) and `reply.steps[s].attempt.fresh_read.stat_rc` ≠ `0` and present(`reply.steps[s].attempt.fresh_read.stat_errno`) and `reply.steps[s].attempt.fresh_read.stat_errno` ≠ `0`) | [set_value(`reply.steps[s].attempt.rc`, `-1`), set_value(`reply.steps[s].attempt.outcome`, `"read_failed"`), set_value(`reply.steps[s].attempt.errno`, `reply.steps[s].attempt.fresh_read.stat_errno`)]. |
+| <a id="contract-steps-assessment-fresh_read_aggregate-stat_zero"></a>4. stat failure without nonzero errno | (present(`reply.steps[s].attempt.fresh_read.stat_rc`) and `reply.steps[s].attempt.fresh_read.stat_rc` ≠ `0`) | [set_value(`reply.steps[s].attempt.rc`, `-1`), set_value(`reply.steps[s].attempt.outcome`, `"read_failed"`), set_value(`reply.steps[s].attempt.errno`, `null`)]. |
+| <a id="contract-steps-assessment-fresh_read_aggregate-read_errno"></a>5. read failure with errno | (present(`reply.steps[s].attempt.fresh_read.read_rc`) and `reply.steps[s].attempt.fresh_read.read_rc` < `0` and present(`reply.steps[s].attempt.fresh_read.read_errno`) and `reply.steps[s].attempt.fresh_read.read_errno` ≠ `0`) | [set_value(`reply.steps[s].attempt.rc`, `-1`), set_value(`reply.steps[s].attempt.outcome`, `"read_failed"`), set_value(`reply.steps[s].attempt.errno`, `reply.steps[s].attempt.fresh_read.read_errno`)]. |
+| <a id="contract-steps-assessment-fresh_read_aggregate-read_zero"></a>6. read failure without nonzero errno | (present(`reply.steps[s].attempt.fresh_read.read_rc`) and `reply.steps[s].attempt.fresh_read.read_rc` < `0`) | [set_value(`reply.steps[s].attempt.rc`, `-1`), set_value(`reply.steps[s].attempt.outcome`, `"read_failed"`), set_value(`reply.steps[s].attempt.errno`, `null`)]. |
+| <a id="contract-steps-assessment-fresh_read_aggregate-close_errno"></a>7. close failure with errno | (present(`reply.steps[s].attempt.fresh_read.close_rc`) and `reply.steps[s].attempt.fresh_read.close_rc` ≠ `0` and present(`reply.steps[s].attempt.fresh_read.close_errno`) and `reply.steps[s].attempt.fresh_read.close_errno` ≠ `0`) | [set_value(`reply.steps[s].attempt.rc`, `-1`), set_value(`reply.steps[s].attempt.outcome`, `"read_failed"`), set_value(`reply.steps[s].attempt.errno`, `reply.steps[s].attempt.fresh_read.close_errno`)]. |
+| <a id="contract-steps-assessment-fresh_read_aggregate-close_zero"></a>8. close failure without nonzero errno | (present(`reply.steps[s].attempt.fresh_read.close_rc`) and `reply.steps[s].attempt.fresh_read.close_rc` ≠ `0`) | [set_value(`reply.steps[s].attempt.rc`, `-1`), set_value(`reply.steps[s].attempt.outcome`, `"read_failed"`), set_value(`reply.steps[s].attempt.errno`, `null`)]. |
+| <a id="contract-steps-assessment-fresh_read_aggregate-success"></a>9. Successful aggregate | `true` | [set_value(`reply.steps[s].attempt.rc`, `0`), set_value(`reply.steps[s].attempt.outcome`, `"ok"`), set_value(`reply.steps[s].attempt.errno`, `null`)]. |
 
 **Support: [source read](#contract-support-grades) for [Project the fresh-read aggregate](#contract-steps-assessment-fresh_read_aggregate) and its descendants.** Native code preserves the first failed reached descriptor operation; the host maps the completed aggregate rc and converts errno zero to null. Creation pre-open stat stays diagnostic. Source: [pw_probe_runner.c](../controller/tools/pw_probe_runner/pw_probe_runner.c): `attempt_file_read_fresh`; [CWorkerStepResults.swift](../runner/Sources/PWRunnerCore/CWorkerStepResults.swift): `buildAttemptResult`.
 
 <a id="contract-steps-assessment-fresh_write_aggregate"></a>
 ##### Project the fresh-write aggregate
 
-[Worker](#contract-identity-definitions-worker), [Runner host](#contract-identity-definitions-host) reports at completed native aggregate projection. Entry: xpc execute. Recipient: controller, xpc caller. Reports: runner reply. For each `p`, `s`. Select the first matching case in the listed order. Applies when (`reply.steps[s].attempt.requested_kind` = `"file"` and `reply.steps[s].attempt.requested_action` is one of `"write_fresh"`, `"create_fresh"` and `reply.steps[s].attempt.result_source` = `"worker"` and `reply.steps[s].attempt.fresh_write` is present).
+[Worker](#contract-identity-definitions-worker), [Runner host](#contract-identity-definitions-host) reports at completed native aggregate projection. Entry: xpc execute. Recipient: controller, xpc caller. Reports: runner reply. For each `p`, `s`. Select the first matching case in the listed order. Applies when (`reply.steps[s].attempt.requested_kind` = `"file"` and `reply.steps[s].attempt.requested_action` ∈ [`"write_fresh"`, `"create_fresh"`] and `reply.steps[s].attempt.result_source` = `"worker"` and present(`reply.steps[s].attempt.fresh_write`)).
 
 | Case | When | Consequence |
 | --- | --- | --- |
-| <a id="contract-steps-assessment-fresh_write_aggregate-open_errno"></a>1. open failure with errno | (`reply.steps[s].attempt.fresh_write.open_rc` is present and `reply.steps[s].attempt.fresh_write.open_rc` < `0` and `reply.steps[s].attempt.fresh_write.open_errno` is present and `reply.steps[s].attempt.fresh_write.open_errno` ≠ `0`) | sets `reply.steps[s].attempt.rc` to `-1`, sets `reply.steps[s].attempt.outcome` to `"write_failed"`, sets `reply.steps[s].attempt.errno` to `reply.steps[s].attempt.fresh_write.open_errno`. |
-| <a id="contract-steps-assessment-fresh_write_aggregate-open_zero"></a>2. open failure without nonzero errno | (`reply.steps[s].attempt.fresh_write.open_rc` is present and `reply.steps[s].attempt.fresh_write.open_rc` < `0`) | sets `reply.steps[s].attempt.rc` to `-1`, sets `reply.steps[s].attempt.outcome` to `"write_failed"`, sets `reply.steps[s].attempt.errno` to `null`. |
-| <a id="contract-steps-assessment-fresh_write_aggregate-opened_stat_errno"></a>3. opened stat failure with errno | (`reply.steps[s].attempt.fresh_write.opened_stat` is present and `reply.steps[s].attempt.fresh_write.opened_stat.rc` is present and `reply.steps[s].attempt.fresh_write.opened_stat.rc` ≠ `0` and `reply.steps[s].attempt.fresh_write.opened_stat.errno` is present and `reply.steps[s].attempt.fresh_write.opened_stat.errno` ≠ `0`) | sets `reply.steps[s].attempt.rc` to `-1`, sets `reply.steps[s].attempt.outcome` to `"write_failed"`, sets `reply.steps[s].attempt.errno` to `reply.steps[s].attempt.fresh_write.opened_stat.errno`. |
-| <a id="contract-steps-assessment-fresh_write_aggregate-opened_stat_zero"></a>4. opened stat failure without nonzero errno | (`reply.steps[s].attempt.fresh_write.opened_stat` is present and `reply.steps[s].attempt.fresh_write.opened_stat.rc` is present and `reply.steps[s].attempt.fresh_write.opened_stat.rc` ≠ `0`) | sets `reply.steps[s].attempt.rc` to `-1`, sets `reply.steps[s].attempt.outcome` to `"write_failed"`, sets `reply.steps[s].attempt.errno` to `null`. |
-| <a id="contract-steps-assessment-fresh_write_aggregate-truncate_errno"></a>5. truncate failure with errno | (`reply.steps[s].attempt.requested_action` = `"write_fresh"` and `reply.steps[s].attempt.fresh_write.truncate_rc` is present and `reply.steps[s].attempt.fresh_write.truncate_rc` ≠ `0` and `reply.steps[s].attempt.fresh_write.truncate_errno` is present and `reply.steps[s].attempt.fresh_write.truncate_errno` ≠ `0`) | sets `reply.steps[s].attempt.rc` to `-1`, sets `reply.steps[s].attempt.outcome` to `"write_failed"`, sets `reply.steps[s].attempt.errno` to `reply.steps[s].attempt.fresh_write.truncate_errno`. |
-| <a id="contract-steps-assessment-fresh_write_aggregate-truncate_zero"></a>6. truncate failure without nonzero errno | (`reply.steps[s].attempt.requested_action` = `"write_fresh"` and `reply.steps[s].attempt.fresh_write.truncate_rc` is present and `reply.steps[s].attempt.fresh_write.truncate_rc` ≠ `0`) | sets `reply.steps[s].attempt.rc` to `-1`, sets `reply.steps[s].attempt.outcome` to `"write_failed"`, sets `reply.steps[s].attempt.errno` to `null`. |
-| <a id="contract-steps-assessment-fresh_write_aggregate-truncated_stat_errno"></a>7. truncated stat failure with errno | (`reply.steps[s].attempt.requested_action` = `"write_fresh"` and `reply.steps[s].attempt.fresh_write.truncated_stat` is present and `reply.steps[s].attempt.fresh_write.truncated_stat.rc` is present and `reply.steps[s].attempt.fresh_write.truncated_stat.rc` ≠ `0` and `reply.steps[s].attempt.fresh_write.truncated_stat.errno` is present and `reply.steps[s].attempt.fresh_write.truncated_stat.errno` ≠ `0`) | sets `reply.steps[s].attempt.rc` to `-1`, sets `reply.steps[s].attempt.outcome` to `"write_failed"`, sets `reply.steps[s].attempt.errno` to `reply.steps[s].attempt.fresh_write.truncated_stat.errno`. |
-| <a id="contract-steps-assessment-fresh_write_aggregate-truncated_stat_zero"></a>8. truncated stat failure without nonzero errno | (`reply.steps[s].attempt.requested_action` = `"write_fresh"` and `reply.steps[s].attempt.fresh_write.truncated_stat` is present and `reply.steps[s].attempt.fresh_write.truncated_stat.rc` is present and `reply.steps[s].attempt.fresh_write.truncated_stat.rc` ≠ `0`) | sets `reply.steps[s].attempt.rc` to `-1`, sets `reply.steps[s].attempt.outcome` to `"write_failed"`, sets `reply.steps[s].attempt.errno` to `null`. |
-| <a id="contract-steps-assessment-fresh_write_aggregate-write_errno"></a>9. write failure with errno | (`reply.steps[s].attempt.fresh_write.write_rc` is present and `reply.steps[s].attempt.fresh_write.write_rc` ≠ `1` and `reply.steps[s].attempt.fresh_write.write_errno` is present and `reply.steps[s].attempt.fresh_write.write_errno` ≠ `0`) | sets `reply.steps[s].attempt.rc` to `-1`, sets `reply.steps[s].attempt.outcome` to `"write_failed"`, sets `reply.steps[s].attempt.errno` to `reply.steps[s].attempt.fresh_write.write_errno`. |
-| <a id="contract-steps-assessment-fresh_write_aggregate-write_zero"></a>10. write failure without nonzero errno | (`reply.steps[s].attempt.fresh_write.write_rc` is present and `reply.steps[s].attempt.fresh_write.write_rc` ≠ `1`) | sets `reply.steps[s].attempt.rc` to `-1`, sets `reply.steps[s].attempt.outcome` to `"write_failed"`, sets `reply.steps[s].attempt.errno` to `null`. |
-| <a id="contract-steps-assessment-fresh_write_aggregate-written_stat_errno"></a>11. written stat failure with errno | (`reply.steps[s].attempt.fresh_write.written_stat` is present and `reply.steps[s].attempt.fresh_write.written_stat.rc` is present and `reply.steps[s].attempt.fresh_write.written_stat.rc` ≠ `0` and `reply.steps[s].attempt.fresh_write.written_stat.errno` is present and `reply.steps[s].attempt.fresh_write.written_stat.errno` ≠ `0`) | sets `reply.steps[s].attempt.rc` to `-1`, sets `reply.steps[s].attempt.outcome` to `"write_failed"`, sets `reply.steps[s].attempt.errno` to `reply.steps[s].attempt.fresh_write.written_stat.errno`. |
-| <a id="contract-steps-assessment-fresh_write_aggregate-written_stat_zero"></a>12. written stat failure without nonzero errno | (`reply.steps[s].attempt.fresh_write.written_stat` is present and `reply.steps[s].attempt.fresh_write.written_stat.rc` is present and `reply.steps[s].attempt.fresh_write.written_stat.rc` ≠ `0`) | sets `reply.steps[s].attempt.rc` to `-1`, sets `reply.steps[s].attempt.outcome` to `"write_failed"`, sets `reply.steps[s].attempt.errno` to `null`. |
-| <a id="contract-steps-assessment-fresh_write_aggregate-close_errno"></a>13. close failure with errno | (`reply.steps[s].attempt.fresh_write.close_rc` is present and `reply.steps[s].attempt.fresh_write.close_rc` ≠ `0` and `reply.steps[s].attempt.fresh_write.close_errno` is present and `reply.steps[s].attempt.fresh_write.close_errno` ≠ `0`) | sets `reply.steps[s].attempt.rc` to `-1`, sets `reply.steps[s].attempt.outcome` to `"write_failed"`, sets `reply.steps[s].attempt.errno` to `reply.steps[s].attempt.fresh_write.close_errno`. |
-| <a id="contract-steps-assessment-fresh_write_aggregate-close_zero"></a>14. close failure without nonzero errno | (`reply.steps[s].attempt.fresh_write.close_rc` is present and `reply.steps[s].attempt.fresh_write.close_rc` ≠ `0`) | sets `reply.steps[s].attempt.rc` to `-1`, sets `reply.steps[s].attempt.outcome` to `"write_failed"`, sets `reply.steps[s].attempt.errno` to `null`. |
-| <a id="contract-steps-assessment-fresh_write_aggregate-success"></a>15. Successful aggregate | `true` | sets `reply.steps[s].attempt.rc` to `0`, sets `reply.steps[s].attempt.outcome` to `"ok"`, sets `reply.steps[s].attempt.errno` to `null`. |
+| <a id="contract-steps-assessment-fresh_write_aggregate-open_errno"></a>1. open failure with errno | (present(`reply.steps[s].attempt.fresh_write.open_rc`) and `reply.steps[s].attempt.fresh_write.open_rc` < `0` and present(`reply.steps[s].attempt.fresh_write.open_errno`) and `reply.steps[s].attempt.fresh_write.open_errno` ≠ `0`) | [set_value(`reply.steps[s].attempt.rc`, `-1`), set_value(`reply.steps[s].attempt.outcome`, `"write_failed"`), set_value(`reply.steps[s].attempt.errno`, `reply.steps[s].attempt.fresh_write.open_errno`)]. |
+| <a id="contract-steps-assessment-fresh_write_aggregate-open_zero"></a>2. open failure without nonzero errno | (present(`reply.steps[s].attempt.fresh_write.open_rc`) and `reply.steps[s].attempt.fresh_write.open_rc` < `0`) | [set_value(`reply.steps[s].attempt.rc`, `-1`), set_value(`reply.steps[s].attempt.outcome`, `"write_failed"`), set_value(`reply.steps[s].attempt.errno`, `null`)]. |
+| <a id="contract-steps-assessment-fresh_write_aggregate-opened_stat_errno"></a>3. opened stat failure with errno | (present(`reply.steps[s].attempt.fresh_write.opened_stat`) and present(`reply.steps[s].attempt.fresh_write.opened_stat.rc`) and `reply.steps[s].attempt.fresh_write.opened_stat.rc` ≠ `0` and present(`reply.steps[s].attempt.fresh_write.opened_stat.errno`) and `reply.steps[s].attempt.fresh_write.opened_stat.errno` ≠ `0`) | [set_value(`reply.steps[s].attempt.rc`, `-1`), set_value(`reply.steps[s].attempt.outcome`, `"write_failed"`), set_value(`reply.steps[s].attempt.errno`, `reply.steps[s].attempt.fresh_write.opened_stat.errno`)]. |
+| <a id="contract-steps-assessment-fresh_write_aggregate-opened_stat_zero"></a>4. opened stat failure without nonzero errno | (present(`reply.steps[s].attempt.fresh_write.opened_stat`) and present(`reply.steps[s].attempt.fresh_write.opened_stat.rc`) and `reply.steps[s].attempt.fresh_write.opened_stat.rc` ≠ `0`) | [set_value(`reply.steps[s].attempt.rc`, `-1`), set_value(`reply.steps[s].attempt.outcome`, `"write_failed"`), set_value(`reply.steps[s].attempt.errno`, `null`)]. |
+| <a id="contract-steps-assessment-fresh_write_aggregate-truncate_errno"></a>5. truncate failure with errno | (`reply.steps[s].attempt.requested_action` = `"write_fresh"` and present(`reply.steps[s].attempt.fresh_write.truncate_rc`) and `reply.steps[s].attempt.fresh_write.truncate_rc` ≠ `0` and present(`reply.steps[s].attempt.fresh_write.truncate_errno`) and `reply.steps[s].attempt.fresh_write.truncate_errno` ≠ `0`) | [set_value(`reply.steps[s].attempt.rc`, `-1`), set_value(`reply.steps[s].attempt.outcome`, `"write_failed"`), set_value(`reply.steps[s].attempt.errno`, `reply.steps[s].attempt.fresh_write.truncate_errno`)]. |
+| <a id="contract-steps-assessment-fresh_write_aggregate-truncate_zero"></a>6. truncate failure without nonzero errno | (`reply.steps[s].attempt.requested_action` = `"write_fresh"` and present(`reply.steps[s].attempt.fresh_write.truncate_rc`) and `reply.steps[s].attempt.fresh_write.truncate_rc` ≠ `0`) | [set_value(`reply.steps[s].attempt.rc`, `-1`), set_value(`reply.steps[s].attempt.outcome`, `"write_failed"`), set_value(`reply.steps[s].attempt.errno`, `null`)]. |
+| <a id="contract-steps-assessment-fresh_write_aggregate-truncated_stat_errno"></a>7. truncated stat failure with errno | (`reply.steps[s].attempt.requested_action` = `"write_fresh"` and present(`reply.steps[s].attempt.fresh_write.truncated_stat`) and present(`reply.steps[s].attempt.fresh_write.truncated_stat.rc`) and `reply.steps[s].attempt.fresh_write.truncated_stat.rc` ≠ `0` and present(`reply.steps[s].attempt.fresh_write.truncated_stat.errno`) and `reply.steps[s].attempt.fresh_write.truncated_stat.errno` ≠ `0`) | [set_value(`reply.steps[s].attempt.rc`, `-1`), set_value(`reply.steps[s].attempt.outcome`, `"write_failed"`), set_value(`reply.steps[s].attempt.errno`, `reply.steps[s].attempt.fresh_write.truncated_stat.errno`)]. |
+| <a id="contract-steps-assessment-fresh_write_aggregate-truncated_stat_zero"></a>8. truncated stat failure without nonzero errno | (`reply.steps[s].attempt.requested_action` = `"write_fresh"` and present(`reply.steps[s].attempt.fresh_write.truncated_stat`) and present(`reply.steps[s].attempt.fresh_write.truncated_stat.rc`) and `reply.steps[s].attempt.fresh_write.truncated_stat.rc` ≠ `0`) | [set_value(`reply.steps[s].attempt.rc`, `-1`), set_value(`reply.steps[s].attempt.outcome`, `"write_failed"`), set_value(`reply.steps[s].attempt.errno`, `null`)]. |
+| <a id="contract-steps-assessment-fresh_write_aggregate-write_errno"></a>9. write failure with errno | (present(`reply.steps[s].attempt.fresh_write.write_rc`) and `reply.steps[s].attempt.fresh_write.write_rc` ≠ `1` and present(`reply.steps[s].attempt.fresh_write.write_errno`) and `reply.steps[s].attempt.fresh_write.write_errno` ≠ `0`) | [set_value(`reply.steps[s].attempt.rc`, `-1`), set_value(`reply.steps[s].attempt.outcome`, `"write_failed"`), set_value(`reply.steps[s].attempt.errno`, `reply.steps[s].attempt.fresh_write.write_errno`)]. |
+| <a id="contract-steps-assessment-fresh_write_aggregate-write_zero"></a>10. write failure without nonzero errno | (present(`reply.steps[s].attempt.fresh_write.write_rc`) and `reply.steps[s].attempt.fresh_write.write_rc` ≠ `1`) | [set_value(`reply.steps[s].attempt.rc`, `-1`), set_value(`reply.steps[s].attempt.outcome`, `"write_failed"`), set_value(`reply.steps[s].attempt.errno`, `null`)]. |
+| <a id="contract-steps-assessment-fresh_write_aggregate-written_stat_errno"></a>11. written stat failure with errno | (present(`reply.steps[s].attempt.fresh_write.written_stat`) and present(`reply.steps[s].attempt.fresh_write.written_stat.rc`) and `reply.steps[s].attempt.fresh_write.written_stat.rc` ≠ `0` and present(`reply.steps[s].attempt.fresh_write.written_stat.errno`) and `reply.steps[s].attempt.fresh_write.written_stat.errno` ≠ `0`) | [set_value(`reply.steps[s].attempt.rc`, `-1`), set_value(`reply.steps[s].attempt.outcome`, `"write_failed"`), set_value(`reply.steps[s].attempt.errno`, `reply.steps[s].attempt.fresh_write.written_stat.errno`)]. |
+| <a id="contract-steps-assessment-fresh_write_aggregate-written_stat_zero"></a>12. written stat failure without nonzero errno | (present(`reply.steps[s].attempt.fresh_write.written_stat`) and present(`reply.steps[s].attempt.fresh_write.written_stat.rc`) and `reply.steps[s].attempt.fresh_write.written_stat.rc` ≠ `0`) | [set_value(`reply.steps[s].attempt.rc`, `-1`), set_value(`reply.steps[s].attempt.outcome`, `"write_failed"`), set_value(`reply.steps[s].attempt.errno`, `null`)]. |
+| <a id="contract-steps-assessment-fresh_write_aggregate-close_errno"></a>13. close failure with errno | (present(`reply.steps[s].attempt.fresh_write.close_rc`) and `reply.steps[s].attempt.fresh_write.close_rc` ≠ `0` and present(`reply.steps[s].attempt.fresh_write.close_errno`) and `reply.steps[s].attempt.fresh_write.close_errno` ≠ `0`) | [set_value(`reply.steps[s].attempt.rc`, `-1`), set_value(`reply.steps[s].attempt.outcome`, `"write_failed"`), set_value(`reply.steps[s].attempt.errno`, `reply.steps[s].attempt.fresh_write.close_errno`)]. |
+| <a id="contract-steps-assessment-fresh_write_aggregate-close_zero"></a>14. close failure without nonzero errno | (present(`reply.steps[s].attempt.fresh_write.close_rc`) and `reply.steps[s].attempt.fresh_write.close_rc` ≠ `0`) | [set_value(`reply.steps[s].attempt.rc`, `-1`), set_value(`reply.steps[s].attempt.outcome`, `"write_failed"`), set_value(`reply.steps[s].attempt.errno`, `null`)]. |
+| <a id="contract-steps-assessment-fresh_write_aggregate-success"></a>15. Successful aggregate | `true` | [set_value(`reply.steps[s].attempt.rc`, `0`), set_value(`reply.steps[s].attempt.outcome`, `"ok"`), set_value(`reply.steps[s].attempt.errno`, `null`)]. |
 
 **Support: [source read](#contract-support-grades) for [Project the fresh-write aggregate](#contract-steps-assessment-fresh_write_aggregate) and its descendants.** Native code preserves the first failed reached descriptor operation; the host maps the completed aggregate rc and converts errno zero to null. Creation pre-open stat stays diagnostic. Source: [pw_probe_runner.c](../controller/tools/pw_probe_runner/pw_probe_runner.c): `attempt_file_write_fresh`; [CWorkerStepResults.swift](../runner/Sources/PWRunnerCore/CWorkerStepResults.swift): `buildAttemptResult`.
 
@@ -2772,81 +2652,79 @@ Record `lc_worker`: `PWRunnerSubprocess`.
 
 The host retains one process account for the fresh worker. Actor replies put this account on its actor; single-worker replies put it at run scope.
 
-| Field | JSON type and presence | Meaning |
-| --- | --- | --- |
-| <a id="contract-lifecycle-worker-pid"></a>`pid` | integer; required | PID returned by successful worker spawn and used for host waits and cleanup. |
-| <a id="contract-lifecycle-worker-term_signal"></a>`term_signal` | integer; omitted when absent | Signal decoded from a successful waitpid result for this child. A recorded cleanup request alone supplies no value here. |
-| <a id="contract-lifecycle-worker-exit_code"></a>`exit_code` | integer; omitted when absent | Exit status decoded after waitpid returned this child; zero is an observed exit status. Missing status stays unknown. |
-| <a id="contract-lifecycle-worker-partial_steps"></a>`partial_steps` | boolean; required | True when the canonical disposition contains any slot other than completed; false means all represented slots completed. |
-| <a id="contract-lifecycle-worker-worker_evidence"></a>`worker_evidence` | [Worker publication snapshot](#contract-lifecycle-worker_evidence); omitted when absent | Acquired worker publication snapshot, including independent progress, failure, diagnostic and policy-read observations. |
-| <a id="contract-lifecycle-worker-policy_transfer_timeout"></a>`policy_transfer_timeout` | [Policy-pipe timeout](#contract-lifecycle-transfer_timeout); omitted when absent | Host policy-pipe deadline observation with accepted-write counts. |
-| <a id="contract-lifecycle-worker-policy_transfer_error"></a>`policy_transfer_error` | [Policy-pipe write error](#contract-lifecycle-transfer_error); omitted when absent | Host policy-pipe native write failure with accepted-write counts. |
-| <a id="contract-lifecycle-worker-ready_byte_received"></a>`ready_byte_received` | boolean; omitted when absent | Whether the host read the worker's readiness byte. False records the missing hint at that boundary. |
-| <a id="contract-lifecycle-worker-done_observed"></a>`done_observed` | boolean; omitted when absent | Final acquire observation of the worker's done flag after cleanup. Earlier polling termination remains in poll_stop_reason. |
-| <a id="contract-lifecycle-worker-poll_stop_reason"></a>`poll_stop_reason` | string; omitted when absent | Why host publication polling ended. Only sentinel_deadline names exhaustion of that polling allowance; later cleanup preserves this recorded reason. Admitted vocabulary: open; displayed list: illustrative: `"done"`, `"child_reaped"`, `"sentinel_deadline"`, `"wait_error"`, `"policy_write_error"`, `"policy_transfer_deadline"`. Unfamiliar values: The host string is retained; an unfamiliar reason establishes only that recorded reason, and gains no known timeout or cause meaning. |
-| <a id="contract-lifecycle-worker-exit_requested"></a>`exit_requested` | boolean; omitted when absent | Whether the host performed the release store asking the worker to exit. Worker receipt is a separate observation. |
-| <a id="contract-lifecycle-worker-termination_request"></a>`termination_request` | [Host termination request](#contract-lifecycle-termination); omitted when absent | Host kill call, its requested signal and native return. Absence means no retained request. |
-| <a id="contract-lifecycle-worker-reaped"></a>`reaped` | boolean; omitted when absent | True when waitpid returned this child PID; false explicitly records unconfirmed disposition. Absence means the observation is unavailable. |
-| <a id="contract-lifecycle-worker-wait_errors"></a>`wait_errors` | array of [Failed host wait](#contract-lifecycle-wait_error); omitted when absent | Failed host waitpid calls, including recovered EINTR. Empty means none observed; absence means unavailable. |
-| <a id="contract-lifecycle-worker-cleanup_trigger"></a>`cleanup_trigger` | string; omitted when absent | Host fact recorded when it requests exit: deadline_expiry, completion, child_reaped, poll_wait_error, policy_transfer_error or policy_transfer_timeout. |
-| <a id="contract-lifecycle-worker-grace_end"></a>`grace_end` | string; omitted when absent | How the post-request grace stage ended: not_entered, reaped_during_grace, exhausted or wait_error. |
-| <a id="contract-lifecycle-worker-collection_basis"></a>`collection_basis` | string; omitted when absent | Whether final reads followed a confirmed reap: after_confirmed_reap, execution_may_continue or unavailable. This controls terminal absence claims. |
-| <a id="contract-lifecycle-worker-ready_wait"></a>`ready_wait` | [Measured host wait](#contract-lifecycle-host_wait); omitted when absent | Measured monotonic wait for the readiness hint, present when that stage ran. The production allowance is <!-- span limits.worker_ready_wait.value_unit -->1,000 milliseconds<!-- /span --> after successful policy delivery and readiness-pipe setup; actor setup can reduce it to the remaining shared setup allowance. The record carries the allowance actually assigned. Expiry leaves the readiness hint absent and execution continues. |
-| <a id="contract-lifecycle-worker-sentinel_wait"></a>`sentinel_wait` | [Measured host wait](#contract-lifecycle-host_wait); omitted when absent | Measured publication wait, with synchronous validator collection charged separately through excluded_ms. |
-| <a id="contract-lifecycle-worker-exit_grace_wait"></a>`exit_grace_wait` | [Measured host wait](#contract-lifecycle-host_wait); omitted when absent | Measured monotonic wait for departure after the host exit request, present when that stage ran. Its production allowance is <!-- span limits.worker_exit_grace.value_unit -->1,000 milliseconds<!-- /span -->; subsequent termination and final reap retain their own observations. |
-| <a id="contract-lifecycle-worker-disposition"></a>`disposition` | [Canonical worker disposition](#contract-lifecycle-disposition); omitted when absent | Host-resolved lifecycle questions, step claims and conflicts. Ordinary subprocess reporting supplies this account and derives compatibility fields from it. |
+- <a id="contract-lifecycle-worker-pid"></a>**`pid`** (integer): PID returned by successful worker spawn and used for host waits and cleanup.
+- <a id="contract-lifecycle-worker-term_signal"></a>**`term_signal`** (integer?): Signal decoded from a successful waitpid result for this child. A recorded cleanup request alone supplies no value here.
+- <a id="contract-lifecycle-worker-exit_code"></a>**`exit_code`** (integer?): Exit status decoded after waitpid returned this child; zero is an observed exit status. Missing status stays unknown.
+- <a id="contract-lifecycle-worker-partial_steps"></a>**`partial_steps`** (boolean): True when the canonical disposition contains any slot other than completed; false means all represented slots completed.
+- <a id="contract-lifecycle-worker-worker_evidence"></a>**`worker_evidence`** ([Worker publication snapshot](#contract-lifecycle-worker_evidence)?): Acquired worker publication snapshot, including independent progress, failure, diagnostic and policy-read observations.
+- <a id="contract-lifecycle-worker-policy_transfer_timeout"></a>**`policy_transfer_timeout`** ([Policy-pipe timeout](#contract-lifecycle-transfer_timeout)?): Host policy-pipe deadline observation with accepted-write counts.
+- <a id="contract-lifecycle-worker-policy_transfer_error"></a>**`policy_transfer_error`** ([Policy-pipe write error](#contract-lifecycle-transfer_error)?): Host policy-pipe native write failure with accepted-write counts.
+- <a id="contract-lifecycle-worker-ready_byte_received"></a>**`ready_byte_received`** (boolean?): Whether the host read the worker's readiness byte. False records the missing hint at that boundary.
+- <a id="contract-lifecycle-worker-done_observed"></a>**`done_observed`** (boolean?): Final acquire observation of the worker's done flag after cleanup. Earlier polling termination remains in poll_stop_reason.
+- <a id="contract-lifecycle-worker-poll_stop_reason"></a>**`poll_stop_reason`** (string?): Why host publication polling ended. Only sentinel_deadline names exhaustion of that polling allowance; later cleanup preserves this recorded reason. Admitted vocabulary: open; displayed list: illustrative: `"done"`, `"child_reaped"`, `"sentinel_deadline"`, `"wait_error"`, `"policy_write_error"`, `"policy_transfer_deadline"`. Unfamiliar values: The host string is retained; an unfamiliar reason establishes only that recorded reason, and gains no known timeout or cause meaning.
+- <a id="contract-lifecycle-worker-exit_requested"></a>**`exit_requested`** (boolean?): Whether the host performed the release store asking the worker to exit. Worker receipt is a separate observation.
+- <a id="contract-lifecycle-worker-termination_request"></a>**`termination_request`** ([Host termination request](#contract-lifecycle-termination)?): Host kill call, its requested signal and native return. Absence means no retained request.
+- <a id="contract-lifecycle-worker-reaped"></a>**`reaped`** (boolean?): True when waitpid returned this child PID; false explicitly records unconfirmed disposition. Absence means the observation is unavailable.
+- <a id="contract-lifecycle-worker-wait_errors"></a>**`wait_errors`** (array of [Failed host wait](#contract-lifecycle-wait_error)?): Failed host waitpid calls, including recovered EINTR. Empty means none observed; absence means unavailable.
+- <a id="contract-lifecycle-worker-cleanup_trigger"></a>**`cleanup_trigger`** (string?): Host fact recorded when it requests exit: deadline_expiry, completion, child_reaped, poll_wait_error, policy_transfer_error or policy_transfer_timeout.
+- <a id="contract-lifecycle-worker-grace_end"></a>**`grace_end`** (string?): How the post-request grace stage ended: not_entered, reaped_during_grace, exhausted or wait_error.
+- <a id="contract-lifecycle-worker-collection_basis"></a>**`collection_basis`** (string?): Whether final reads followed a confirmed reap: after_confirmed_reap, execution_may_continue or unavailable. This controls terminal absence claims.
+- <a id="contract-lifecycle-worker-ready_wait"></a>**`ready_wait`** ([Measured host wait](#contract-lifecycle-host_wait)?): Measured monotonic wait for the readiness hint, present when that stage ran. The production allowance is <!-- span limits.worker_ready_wait.value_unit -->1,000 milliseconds<!-- /span --> after successful policy delivery and readiness-pipe setup; actor setup can reduce it to the remaining shared setup allowance. The record carries the allowance actually assigned. Expiry leaves the readiness hint absent and execution continues.
+- <a id="contract-lifecycle-worker-sentinel_wait"></a>**`sentinel_wait`** ([Measured host wait](#contract-lifecycle-host_wait)?): Measured publication wait, with synchronous validator collection charged separately through excluded_ms.
+- <a id="contract-lifecycle-worker-exit_grace_wait"></a>**`exit_grace_wait`** ([Measured host wait](#contract-lifecycle-host_wait)?): Measured monotonic wait for departure after the host exit request, present when that stage ran. Its production allowance is <!-- span limits.worker_exit_grace.value_unit -->1,000 milliseconds<!-- /span -->; subsequent termination and final reap retain their own observations.
+- <a id="contract-lifecycle-worker-disposition"></a>**`disposition`** ([Canonical worker disposition](#contract-lifecycle-disposition)?): Host-resolved lifecycle questions, step claims and conflicts. Ordinary subprocess reporting supplies this account and derives compatibility fields from it.
 
 **partial_steps.**
 
 | Item | Requirement or consequence |
 | --- | --- |
-| <a id="contract-lifecycle-worker-partial_steps-canonical"></a>Canonical incomplete-slot flag | Binding `c`: entry in `lc_worker.disposition.steps`. Association restriction for `c`: `lc_worker.disposition.steps[c].slot` ≠ `"completed"`. Requires (if `lc_worker.disposition` is present, then `lc_worker.partial_steps` = number of matching entries for `c` > `0`). |
+| <a id="contract-lifecycle-worker-partial_steps-canonical"></a>Canonical incomplete-slot flag | Binding `c`: entry in `lc_worker.disposition.steps`. Association restriction for `c`: `lc_worker.disposition.steps[c].slot` ≠ `"completed"`. Requires implies(present(`lc_worker.disposition`), `lc_worker.partial_steps` = matches(`c`) > `0`). |
 
 **disposition.**
 
 | Item | Requirement or consequence |
 | --- | --- |
-| <a id="contract-lifecycle-worker-disposition-signal_value"></a>Supported signal value | Requires (if (`lc_worker.disposition` is present and `lc_worker.disposition.questions.final_status.state` = `"supported"` and `lc_worker.disposition.questions.final_status.answer` = `"signal"`), then (`lc_worker.disposition.questions.final_status.value` is present and `lc_worker.disposition.questions.final_status.value` has alternative `"Integer"` and `"Integer"` alternative of `lc_worker.disposition.questions.final_status.value` = `lc_worker.term_signal`)). |
-| <a id="contract-lifecycle-worker-disposition-exit_value"></a>Supported exit_code value | Requires (if (`lc_worker.disposition` is present and `lc_worker.disposition.questions.final_status.state` = `"supported"` and `lc_worker.disposition.questions.final_status.answer` = `"exit_code"`), then (`lc_worker.disposition.questions.final_status.value` is present and `lc_worker.disposition.questions.final_status.value` has alternative `"Integer"` and `"Integer"` alternative of `lc_worker.disposition.questions.final_status.value` = `lc_worker.exit_code`)). |
-| <a id="contract-lifecycle-worker-disposition-status_issue_exists"></a>Conflicting status issue exists | Requires (if (`lc_worker.disposition` is present and `lc_worker.disposition.questions.final_status.state` = `"conflicting"`), then count of `lc_worker.disposition.issues` > `0`). |
-| <a id="contract-lifecycle-worker-disposition-status_issue"></a>First status conflict issue | Binding `i`: entry in `lc_worker.disposition.issues`. Association restriction for `i`: `i` = `0`. For each `i`. Requires (if (`lc_worker.disposition` is present and `lc_worker.disposition.questions.final_status.state` = `"conflicting"`), then (`lc_worker.disposition.issues[i].kind` = `"conflict"` and `lc_worker.disposition.issues[i].rule` = `"D1"` and `lc_worker.disposition.issues[i].question` = `"final_status"` and `lc_worker.disposition.issues[i].step_index` is absent and `lc_worker.disposition.issues[i].observations` = `"exit_code"`, `"term_signal"`)). |
+| <a id="contract-lifecycle-worker-disposition-signal_value"></a>Supported signal value | Requires implies((present(`lc_worker.disposition`) and `lc_worker.disposition.questions.final_status.state` = `"supported"` and `lc_worker.disposition.questions.final_status.answer` = `"signal"`), (present(`lc_worker.disposition.questions.final_status.value`) and is_variant(`lc_worker.disposition.questions.final_status.value`, `"Integer"`) and variant(`lc_worker.disposition.questions.final_status.value`, `"Integer"`) = `lc_worker.term_signal`)). |
+| <a id="contract-lifecycle-worker-disposition-exit_value"></a>Supported exit_code value | Requires implies((present(`lc_worker.disposition`) and `lc_worker.disposition.questions.final_status.state` = `"supported"` and `lc_worker.disposition.questions.final_status.answer` = `"exit_code"`), (present(`lc_worker.disposition.questions.final_status.value`) and is_variant(`lc_worker.disposition.questions.final_status.value`, `"Integer"`) and variant(`lc_worker.disposition.questions.final_status.value`, `"Integer"`) = `lc_worker.exit_code`)). |
+| <a id="contract-lifecycle-worker-disposition-status_issue_exists"></a>Conflicting status issue exists | Requires implies((present(`lc_worker.disposition`) and `lc_worker.disposition.questions.final_status.state` = `"conflicting"`), count(`lc_worker.disposition.issues`) > `0`). |
+| <a id="contract-lifecycle-worker-disposition-status_issue"></a>First status conflict issue | Binding `i`: entry in `lc_worker.disposition.issues`. Association restriction for `i`: `i` = `0`. For each `i`. Requires implies((present(`lc_worker.disposition`) and `lc_worker.disposition.questions.final_status.state` = `"conflicting"`), (`lc_worker.disposition.issues[i].kind` = `"conflict"` and `lc_worker.disposition.issues[i].rule` = `"D1"` and `lc_worker.disposition.issues[i].question` = `"final_status"` and absent(`lc_worker.disposition.issues[i].step_index`) and `lc_worker.disposition.issues[i].observations` = [`"exit_code"`, `"term_signal"`])). |
 
 <a id="contract-lifecycle-worker-final_status"></a>
 ##### Resolve the final process status
 
-[Runner host](#contract-identity-definitions-host) reports at worker disposition assembly. Entry: xpc execute. Recipient: controller, xpc caller. Reports: runner reply. Select the first matching case in the listed order. Applies when `lc_worker.disposition` is present.
+[Runner host](#contract-identity-definitions-host) reports at worker disposition assembly. Entry: xpc execute. Recipient: controller, xpc caller. Reports: runner reply. Select the first matching case in the listed order. Applies when present(`lc_worker.disposition`).
 
 | Case | When | Consequence |
 | --- | --- | --- |
-| <a id="contract-lifecycle-worker-final_status-unreaped"></a>1. No successful reap | `lc_worker.reaped` ≠ `true` | sets `lc_worker.disposition.questions.final_status.state` to `"unresolved"`, sets `lc_worker.disposition.questions.final_status.reason` to `"no_successful_reap"`, sets `lc_worker.disposition.questions.final_status.basis` to `"reaped"`, withholds `lc_worker.disposition.questions.final_status.answer`, withholds `lc_worker.disposition.questions.final_status.value`, withholds `lc_worker.disposition.questions.final_status.issue`. |
-| <a id="contract-lifecycle-worker-final_status-conflict"></a>2. Competing status forms | (`lc_worker.exit_code` is present and `lc_worker.term_signal` is present) | sets `lc_worker.disposition.questions.final_status.state` to `"conflicting"`, sets `lc_worker.disposition.questions.final_status.issue` to `0`, withholds `lc_worker.disposition.questions.final_status.answer`, withholds `lc_worker.disposition.questions.final_status.value`, withholds `lc_worker.disposition.questions.final_status.reason`, withholds `lc_worker.disposition.questions.final_status.basis`. |
-| <a id="contract-lifecycle-worker-final_status-signal"></a>3. Observed terminating signal | `lc_worker.term_signal` is present | sets `lc_worker.disposition.questions.final_status.state` to `"supported"`, sets `lc_worker.disposition.questions.final_status.answer` to `"signal"`, sets `lc_worker.disposition.questions.final_status.basis` to `"reaped"`, `"term_signal"`, withholds `lc_worker.disposition.questions.final_status.reason`, withholds `lc_worker.disposition.questions.final_status.issue`. |
-| <a id="contract-lifecycle-worker-final_status-exit"></a>4. Observed exit status | `lc_worker.exit_code` is present | sets `lc_worker.disposition.questions.final_status.state` to `"supported"`, sets `lc_worker.disposition.questions.final_status.answer` to `"exit_code"`, sets `lc_worker.disposition.questions.final_status.basis` to `"reaped"`, `"exit_code"`, withholds `lc_worker.disposition.questions.final_status.reason`, withholds `lc_worker.disposition.questions.final_status.issue`. |
-| <a id="contract-lifecycle-worker-final_status-missing"></a>5. Unusable owned status | `true` | sets `lc_worker.disposition.questions.final_status.state` to `"unresolved"`, sets `lc_worker.disposition.questions.final_status.reason` to `"status_unusable"`, sets `lc_worker.disposition.questions.final_status.basis` to `"reaped"`, withholds `lc_worker.disposition.questions.final_status.answer`, withholds `lc_worker.disposition.questions.final_status.value`, withholds `lc_worker.disposition.questions.final_status.issue`. |
+| <a id="contract-lifecycle-worker-final_status-unreaped"></a>1. No successful reap | `lc_worker.reaped` ≠ `true` | [set_value(`lc_worker.disposition.questions.final_status.state`, `"unresolved"`), set_value(`lc_worker.disposition.questions.final_status.reason`, `"no_successful_reap"`), set_value(`lc_worker.disposition.questions.final_status.basis`, [`"reaped"`]), withhold(`lc_worker.disposition.questions.final_status.answer`), withhold(`lc_worker.disposition.questions.final_status.value`), withhold(`lc_worker.disposition.questions.final_status.issue`)]. |
+| <a id="contract-lifecycle-worker-final_status-conflict"></a>2. Competing status forms | (present(`lc_worker.exit_code`) and present(`lc_worker.term_signal`)) | [set_value(`lc_worker.disposition.questions.final_status.state`, `"conflicting"`), set_value(`lc_worker.disposition.questions.final_status.issue`, `0`), withhold(`lc_worker.disposition.questions.final_status.answer`), withhold(`lc_worker.disposition.questions.final_status.value`), withhold(`lc_worker.disposition.questions.final_status.reason`), withhold(`lc_worker.disposition.questions.final_status.basis`)]. |
+| <a id="contract-lifecycle-worker-final_status-signal"></a>3. Observed terminating signal | present(`lc_worker.term_signal`) | [set_value(`lc_worker.disposition.questions.final_status.state`, `"supported"`), set_value(`lc_worker.disposition.questions.final_status.answer`, `"signal"`), set_value(`lc_worker.disposition.questions.final_status.basis`, [`"reaped"`, `"term_signal"`]), withhold(`lc_worker.disposition.questions.final_status.reason`), withhold(`lc_worker.disposition.questions.final_status.issue`)]. |
+| <a id="contract-lifecycle-worker-final_status-exit"></a>4. Observed exit status | present(`lc_worker.exit_code`) | [set_value(`lc_worker.disposition.questions.final_status.state`, `"supported"`), set_value(`lc_worker.disposition.questions.final_status.answer`, `"exit_code"`), set_value(`lc_worker.disposition.questions.final_status.basis`, [`"reaped"`, `"exit_code"`]), withhold(`lc_worker.disposition.questions.final_status.reason`), withhold(`lc_worker.disposition.questions.final_status.issue`)]. |
+| <a id="contract-lifecycle-worker-final_status-missing"></a>5. Unusable owned status | `true` | [set_value(`lc_worker.disposition.questions.final_status.state`, `"unresolved"`), set_value(`lc_worker.disposition.questions.final_status.reason`, `"status_unusable"`), set_value(`lc_worker.disposition.questions.final_status.basis`, [`"reaped"`]), withhold(`lc_worker.disposition.questions.final_status.answer`), withhold(`lc_worker.disposition.questions.final_status.value`), withhold(`lc_worker.disposition.questions.final_status.issue`)]. |
 
 **Support: [source read](#contract-support-grades) for [Resolve the final process status](#contract-lifecycle-worker-final_status) and its descendants.** The first five branches derive the final-status claim and place the D1 conflict first in the issue array. Source: [CWorkerDisposition.swift](../runner/Sources/PWRunnerCore/CWorkerDisposition.swift): `resolveDisposition`.
 
 <a id="contract-lifecycle-worker-resolve_stop_reason"></a>
 ##### Copy the polling stop
 
-[Runner host](#contract-identity-definitions-host) reports at worker disposition assembly. Entry: xpc execute. Recipient: controller, xpc caller. Reports: runner reply. Select the first matching case in the listed order. Applies when `lc_worker.disposition` is present.
+[Runner host](#contract-identity-definitions-host) reports at worker disposition assembly. Entry: xpc execute. Recipient: controller, xpc caller. Reports: runner reply. Select the first matching case in the listed order. Applies when present(`lc_worker.disposition`).
 
 | Case | When | Consequence |
 | --- | --- | --- |
-| <a id="contract-lifecycle-worker-resolve_stop_reason-recorded"></a>1. Recorded observation | `lc_worker.poll_stop_reason` is present | sets `lc_worker.disposition.questions.stop_reason.state` to `"supported"`, sets `lc_worker.disposition.questions.stop_reason.answer` to `lc_worker.poll_stop_reason`, sets `lc_worker.disposition.questions.stop_reason.basis` to `"poll_stop_reason"`, withholds `lc_worker.disposition.questions.stop_reason.value`, withholds `lc_worker.disposition.questions.stop_reason.reason`, withholds `lc_worker.disposition.questions.stop_reason.issue`. |
-| <a id="contract-lifecycle-worker-resolve_stop_reason-missing"></a>2. Unrecorded observation | `true` | sets `lc_worker.disposition.questions.stop_reason.state` to `"unresolved"`, sets `lc_worker.disposition.questions.stop_reason.reason` to `"not_recorded"`, withholds `lc_worker.disposition.questions.stop_reason.answer`, withholds `lc_worker.disposition.questions.stop_reason.value`, withholds `lc_worker.disposition.questions.stop_reason.issue`, withholds `lc_worker.disposition.questions.stop_reason.basis`. |
+| <a id="contract-lifecycle-worker-resolve_stop_reason-recorded"></a>1. Recorded observation | present(`lc_worker.poll_stop_reason`) | [set_value(`lc_worker.disposition.questions.stop_reason.state`, `"supported"`), set_value(`lc_worker.disposition.questions.stop_reason.answer`, `lc_worker.poll_stop_reason`), set_value(`lc_worker.disposition.questions.stop_reason.basis`, [`"poll_stop_reason"`]), withhold(`lc_worker.disposition.questions.stop_reason.value`), withhold(`lc_worker.disposition.questions.stop_reason.reason`), withhold(`lc_worker.disposition.questions.stop_reason.issue`)]. |
+| <a id="contract-lifecycle-worker-resolve_stop_reason-missing"></a>2. Unrecorded observation | `true` | [set_value(`lc_worker.disposition.questions.stop_reason.state`, `"unresolved"`), set_value(`lc_worker.disposition.questions.stop_reason.reason`, `"not_recorded"`), withhold(`lc_worker.disposition.questions.stop_reason.answer`), withhold(`lc_worker.disposition.questions.stop_reason.value`), withhold(`lc_worker.disposition.questions.stop_reason.issue`), withhold(`lc_worker.disposition.questions.stop_reason.basis`)]. |
 
 **Support: [source read](#contract-support-grades) for [Copy the polling stop](#contract-lifecycle-worker-resolve_stop_reason) and its descendants.** A present host string is copied verbatim with its basis; absence produces the unresolved not_recorded claim. Source: [CWorkerDisposition.swift](../runner/Sources/PWRunnerCore/CWorkerDisposition.swift): `resolveDisposition`.
 
 <a id="contract-lifecycle-worker-resolve_collection_basis"></a>
 ##### Copy the final collection basis
 
-[Runner host](#contract-identity-definitions-host) reports at worker disposition assembly. Entry: xpc execute. Recipient: controller, xpc caller. Reports: runner reply. Select the first matching case in the listed order. Applies when `lc_worker.disposition` is present.
+[Runner host](#contract-identity-definitions-host) reports at worker disposition assembly. Entry: xpc execute. Recipient: controller, xpc caller. Reports: runner reply. Select the first matching case in the listed order. Applies when present(`lc_worker.disposition`).
 
 | Case | When | Consequence |
 | --- | --- | --- |
-| <a id="contract-lifecycle-worker-resolve_collection_basis-recorded"></a>1. Recorded observation | `lc_worker.collection_basis` is present | sets `lc_worker.disposition.questions.collection_basis.state` to `"supported"`, sets `lc_worker.disposition.questions.collection_basis.answer` to `lc_worker.collection_basis`, sets `lc_worker.disposition.questions.collection_basis.basis` to `"collection_basis"`, withholds `lc_worker.disposition.questions.collection_basis.value`, withholds `lc_worker.disposition.questions.collection_basis.reason`, withholds `lc_worker.disposition.questions.collection_basis.issue`. |
-| <a id="contract-lifecycle-worker-resolve_collection_basis-missing"></a>2. Unrecorded observation | `true` | sets `lc_worker.disposition.questions.collection_basis.state` to `"unresolved"`, sets `lc_worker.disposition.questions.collection_basis.reason` to `"not_recorded"`, withholds `lc_worker.disposition.questions.collection_basis.answer`, withholds `lc_worker.disposition.questions.collection_basis.value`, withholds `lc_worker.disposition.questions.collection_basis.issue`, withholds `lc_worker.disposition.questions.collection_basis.basis`. |
+| <a id="contract-lifecycle-worker-resolve_collection_basis-recorded"></a>1. Recorded observation | present(`lc_worker.collection_basis`) | [set_value(`lc_worker.disposition.questions.collection_basis.state`, `"supported"`), set_value(`lc_worker.disposition.questions.collection_basis.answer`, `lc_worker.collection_basis`), set_value(`lc_worker.disposition.questions.collection_basis.basis`, [`"collection_basis"`]), withhold(`lc_worker.disposition.questions.collection_basis.value`), withhold(`lc_worker.disposition.questions.collection_basis.reason`), withhold(`lc_worker.disposition.questions.collection_basis.issue`)]. |
+| <a id="contract-lifecycle-worker-resolve_collection_basis-missing"></a>2. Unrecorded observation | `true` | [set_value(`lc_worker.disposition.questions.collection_basis.state`, `"unresolved"`), set_value(`lc_worker.disposition.questions.collection_basis.reason`, `"not_recorded"`), withhold(`lc_worker.disposition.questions.collection_basis.answer`), withhold(`lc_worker.disposition.questions.collection_basis.value`), withhold(`lc_worker.disposition.questions.collection_basis.issue`), withhold(`lc_worker.disposition.questions.collection_basis.basis`)]. |
 
 **Support: [source read](#contract-support-grades) for [Copy the final collection basis](#contract-lifecycle-worker-resolve_collection_basis) and its descendants.** A present host string is copied verbatim with its basis; absence produces the unresolved not_recorded claim. Source: [CWorkerDisposition.swift](../runner/Sources/PWRunnerCore/CWorkerDisposition.swift): `resolveDisposition`.
 
@@ -2857,14 +2735,12 @@ Record `lc_host_wait`: `PWHostWait`.
 
 A wait records the host boundary at which it moved on. Budgets and elapsed values use milliseconds on CLOCK_MONOTONIC.
 
-| Field | JSON type and presence | Meaning |
-| --- | --- | --- |
-| <a id="contract-lifecycle-host_wait-budget_ms"></a>`budget_ms` | integer; required | Allowance assigned to this wait; its owning operation defines the cap and whether other work is excluded. |
-| <a id="contract-lifecycle-host_wait-elapsed_ms"></a>`elapsed_ms` | integer; omitted when absent | Measured interval at stop. Absence records that the clock could not supply a valid nondecreasing interval. |
-| <a id="contract-lifecycle-host_wait-stop"></a>`stop` | string; required | Owning operation's reason for ending this wait. clock_unavailable denotes failed or backward time with bounded sleep fallback; setup_failed denotes an unavailable nonblocking prerequisite. |
-| <a id="contract-lifecycle-host_wait-excluded_ms"></a>`excluded_ms` | integer; omitted when absent | Measured synchronous work excluded from this wait's allowance. For sentinel waiting, consumed allowance is elapsed_ms minus excluded_ms; absence means this exclusion is unreported or inapplicable. |
-| <a id="contract-lifecycle-host_wait-native_errno"></a>`native_errno` | integer; omitted when absent | Native error captured by the wait's failing prerequisite or observation, when that branch supplies one. |
-| <a id="contract-lifecycle-host_wait-clock_fault"></a>`clock_fault` | boolean; required | Whether the monotonic clock failed or moved backward during this wait. |
+- <a id="contract-lifecycle-host_wait-budget_ms"></a>**`budget_ms`** (integer): Allowance assigned to this wait; its owning operation defines the cap and whether other work is excluded.
+- <a id="contract-lifecycle-host_wait-elapsed_ms"></a>**`elapsed_ms`** (integer?): Measured interval at stop. Absence records that the clock could not supply a valid nondecreasing interval.
+- <a id="contract-lifecycle-host_wait-stop"></a>**`stop`** (string): Owning operation's reason for ending this wait. clock_unavailable denotes failed or backward time with bounded sleep fallback; setup_failed denotes an unavailable nonblocking prerequisite.
+- <a id="contract-lifecycle-host_wait-excluded_ms"></a>**`excluded_ms`** (integer?): Measured synchronous work excluded from this wait's allowance. For sentinel waiting, consumed allowance is elapsed_ms minus excluded_ms; absence means this exclusion is unreported or inapplicable.
+- <a id="contract-lifecycle-host_wait-native_errno"></a>**`native_errno`** (integer?): Native error captured by the wait's failing prerequisite or observation, when that branch supplies one.
+- <a id="contract-lifecycle-host_wait-clock_fault"></a>**`clock_fault`** (boolean): Whether the monotonic clock failed or moved backward during this wait.
 
 <a id="contract-lifecycle-termination"></a>
 #### Host termination request
@@ -2873,11 +2749,9 @@ Record `lc_termination`: `PWRunnerTerminationRequest`.
 
 Each record preserves one host kill call. The return establishes whether the request was accepted by that call; the child's ending is reported by reaping.
 
-| Field | JSON type and presence | Meaning |
-| --- | --- | --- |
-| <a id="contract-lifecycle-termination-signal"></a>`signal` | integer; required | Signed 32-bit signal argument passed to kill. |
-| <a id="contract-lifecycle-termination-rc"></a>`rc` | integer; required | Signed 32-bit native kill return, retained without a signal-result allowlist. |
-| <a id="contract-lifecycle-termination-errno"></a>`errno` | integer; omitted when absent | Immediately captured errno when rc is -1; absent after another return. |
+- <a id="contract-lifecycle-termination-signal"></a>**`signal`** (integer): Signed 32-bit signal argument passed to kill.
+- <a id="contract-lifecycle-termination-rc"></a>**`rc`** (integer): Signed 32-bit native kill return, retained without a signal-result allowlist.
+- <a id="contract-lifecycle-termination-errno"></a>**`errno`** (integer?): Immediately captured errno when rc is -1; absent after another return.
 
 <a id="contract-lifecycle-wait_error"></a>
 #### Failed host wait
@@ -2886,11 +2760,9 @@ Record `lc_wait_error`: `PWRunnerWaitError`.
 
 The host records each failed waitpid call even if a later retry reaps the child.
 
-| Field | JSON type and presence | Meaning |
-| --- | --- | --- |
-| <a id="contract-lifecycle-wait_error-stage"></a>`stage` | string; required | Host stage of the call, including poll, exit_grace and after_termination. Admitted vocabulary: open; displayed list: illustrative: `"poll"`, `"exit_grace"`, `"after_termination"`. Unfamiliar values: The recorded stage and native error remain available without an invented known-stage interpretation. |
-| <a id="contract-lifecycle-wait_error-rc"></a>`rc` | integer; required | Native waitpid return; producer records this object for -1. |
-| <a id="contract-lifecycle-wait_error-errno"></a>`errno` | integer; required | Error captured before another native call; EINTR may be followed by a recovered wait. |
+- <a id="contract-lifecycle-wait_error-stage"></a>**`stage`** (string): Host stage of the call, including poll, exit_grace and after_termination. Admitted vocabulary: open; displayed list: illustrative: `"poll"`, `"exit_grace"`, `"after_termination"`. Unfamiliar values: The recorded stage and native error remain available without an invented known-stage interpretation.
+- <a id="contract-lifecycle-wait_error-rc"></a>**`rc`** (integer): Native waitpid return; producer records this object for -1.
+- <a id="contract-lifecycle-wait_error-errno"></a>**`errno`** (integer): Error captured before another native call; EINTR may be followed by a recovered wait.
 
 <a id="contract-lifecycle-transfer_timeout"></a>
 #### Policy-pipe timeout
@@ -2899,12 +2771,10 @@ Record `lc_transfer_timeout`: `PWWorkerPolicyTransferTimeout`.
 
 Host write counts and worker read receipts describe separate ends of the policy pipe.
 
-| Field | JSON type and presence | Meaning |
-| --- | --- | --- |
-| <a id="contract-lifecycle-transfer_timeout-budget_ms"></a>`budget_ms` | integer; required | Host policy-transfer allowance in milliseconds. Production assigns <!-- span limits.worker_policy_transfer.value_unit -->5,000 milliseconds<!-- /span --> from an absolute monotonic deadline established immediately after spawn; partial writes and interrupted calls keep that deadline. Actor delivery is additionally capped by the remaining shared setup allowance. This field reports the assigned allowance. |
-| <a id="contract-lifecycle-transfer_timeout-elapsed_ms"></a>`elapsed_ms` | integer; required | Measured transfer interval when its deadline expired. |
-| <a id="contract-lifecycle-transfer_timeout-bytes_written"></a>`bytes_written` | integer; required | UTF-8 policy bytes accepted by host write calls before timeout. |
-| <a id="contract-lifecycle-transfer_timeout-bytes_expected"></a>`bytes_expected` | integer; required | Total UTF-8 policy bytes the host attempted to send. |
+- <a id="contract-lifecycle-transfer_timeout-budget_ms"></a>**`budget_ms`** (integer): Host policy-transfer allowance in milliseconds. Production assigns <!-- span limits.worker_policy_transfer.value_unit -->5,000 milliseconds<!-- /span --> from an absolute monotonic deadline established immediately after spawn; partial writes and interrupted calls keep that deadline. Actor delivery is additionally capped by the remaining shared setup allowance. This field reports the assigned allowance.
+- <a id="contract-lifecycle-transfer_timeout-elapsed_ms"></a>**`elapsed_ms`** (integer): Measured transfer interval when its deadline expired.
+- <a id="contract-lifecycle-transfer_timeout-bytes_written"></a>**`bytes_written`** (integer): UTF-8 policy bytes accepted by host write calls before timeout.
+- <a id="contract-lifecycle-transfer_timeout-bytes_expected"></a>**`bytes_expected`** (integer): Total UTF-8 policy bytes the host attempted to send.
 
 <a id="contract-lifecycle-transfer_error"></a>
 #### Policy-pipe write error
@@ -2913,11 +2783,9 @@ Record `lc_transfer_error`: `PWWorkerPolicyTransferError`.
 
 This record belongs to the host's transport of the selected source bytes.
 
-| Field | JSON type and presence | Meaning |
-| --- | --- | --- |
-| <a id="contract-lifecycle-transfer_error-errno"></a>`errno` | integer; required | Native errno captured from the failed policy-pipe write. |
-| <a id="contract-lifecycle-transfer_error-bytes_written"></a>`bytes_written` | integer; required | Policy bytes accepted by preceding writes before this failure. |
-| <a id="contract-lifecycle-transfer_error-bytes_expected"></a>`bytes_expected` | integer; required | Total selected policy bytes the host attempted to send. |
+- <a id="contract-lifecycle-transfer_error-errno"></a>**`errno`** (integer): Native errno captured from the failed policy-pipe write.
+- <a id="contract-lifecycle-transfer_error-bytes_written"></a>**`bytes_written`** (integer): Policy bytes accepted by preceding writes before this failure.
+- <a id="contract-lifecycle-transfer_error-bytes_expected"></a>**`bytes_expected`** (integer): Total selected policy bytes the host attempted to send.
 
 <a id="contract-lifecycle-worker_evidence"></a>
 #### Worker publication snapshot
@@ -2926,16 +2794,14 @@ Record `lc_worker_evidence`: `PWWorkerEvidence`.
 
 The host first checks the shared region's worker identity, then acquire-reads each publication independently. Available publications retain their own scopes.
 
-| Field | JSON type and presence | Meaning |
-| --- | --- | --- |
-| <a id="contract-lifecycle-worker_evidence-abi_identity"></a>`abi_identity` | string (hex); required | Host-selected worker protocol identity copied into the report after the region identity check. |
-| <a id="contract-lifecycle-worker_evidence-progress"></a>`progress` | [Worker progress](#contract-lifecycle-progress); omitted when absent | Last acquired nonzero packed worker progress word, decoded into operation, stage and optional index. |
-| <a id="contract-lifecycle-worker_evidence-failure_publication"></a>`failure_publication` | integer; required | Raw terminal-failure publication word, including unfamiliar numeric values. Admitted vocabulary: open; displayed list: illustrative: `0`, `1`, `2`. Unfamiliar values: The numeric value remains in the report. Known-branch assessments require their own recognized code and publication conditions. |
-| <a id="contract-lifecycle-worker_evidence-failure_state"></a>`failure_state` | string; required | Host interpretation of the publication and eligible failure payload: absent, incomplete, published or invalid. Admitted vocabulary: closed; displayed list: exhaustive: `"absent"`, `"incomplete"`, `"published"`, `"invalid"`. |
-| <a id="contract-lifecycle-worker_evidence-failure"></a>`failure` | [Terminal worker failure](#contract-lifecycle-failure); omitted when absent | Terminal worker failure payload when its publication and layout guards allow decoding. |
-| <a id="contract-lifecycle-worker_evidence-readiness"></a>`readiness` | [Readiness-write result](#contract-lifecycle-readiness); omitted when absent | Worker publication of the readiness-write native result, independent of the host's receipt of the byte. |
-| <a id="contract-lifecycle-worker_evidence-diagnostic"></a>`diagnostic` | [Worker diagnostic](#contract-lifecycle-diagnostic); required | Diagnostic publication state and eligible bounded diagnostic text. |
-| <a id="contract-lifecycle-worker_evidence-policy_read"></a>`policy_read` | [Worker policy receipt](#contract-lifecycle-policy_read); omitted when absent | Worker EOF receipt, published before comparing received and expected lengths; missing receipt leaves delivery unknown. |
+- <a id="contract-lifecycle-worker_evidence-abi_identity"></a>**`abi_identity`** (string (hex)): Host-selected worker protocol identity copied into the report after the region identity check.
+- <a id="contract-lifecycle-worker_evidence-progress"></a>**`progress`** ([Worker progress](#contract-lifecycle-progress)?): Last acquired nonzero packed worker progress word, decoded into operation, stage and optional index.
+- <a id="contract-lifecycle-worker_evidence-failure_publication"></a>**`failure_publication`** (integer): Raw terminal-failure publication word, including unfamiliar numeric values. Admitted vocabulary: open; displayed list: illustrative: `0`, `1`, `2`. Unfamiliar values: The numeric value remains in the report. Known-branch assessments require their own recognized code and publication conditions.
+- <a id="contract-lifecycle-worker_evidence-failure_state"></a>**`failure_state`** (string): Host interpretation of the publication and eligible failure payload: absent, incomplete, published or invalid. Admitted vocabulary: closed; displayed list: exhaustive: `"absent"`, `"incomplete"`, `"published"`, `"invalid"`.
+- <a id="contract-lifecycle-worker_evidence-failure"></a>**`failure`** ([Terminal worker failure](#contract-lifecycle-failure)?): Terminal worker failure payload when its publication and layout guards allow decoding.
+- <a id="contract-lifecycle-worker_evidence-readiness"></a>**`readiness`** ([Readiness-write result](#contract-lifecycle-readiness)?): Worker publication of the readiness-write native result, independent of the host's receipt of the byte.
+- <a id="contract-lifecycle-worker_evidence-diagnostic"></a>**`diagnostic`** ([Worker diagnostic](#contract-lifecycle-diagnostic)): Diagnostic publication state and eligible bounded diagnostic text.
+- <a id="contract-lifecycle-worker_evidence-policy_read"></a>**`policy_read`** ([Worker policy receipt](#contract-lifecycle-policy_read)?): Worker EOF receipt, published before comparing received and expected lengths; missing receipt leaves delivery unknown.
 
 <a id="contract-lifecycle-progress"></a>
 #### Worker progress
@@ -2944,12 +2810,10 @@ Record `lc_progress`: `PWWorkerProgress`.
 
 Progress is an acquired protocol position. Numeric operation and stage codes are open; the lifecycle resolver names an unfamiliar position progress_unrecognized.
 
-| Field | JSON type and presence | Meaning |
-| --- | --- | --- |
-| <a id="contract-lifecycle-progress-raw"></a>`raw` | integer; required | Packed UInt32 progress value: operation in the high byte, stage in the next four bits, and one-based optional item in the low twenty bits. |
-| <a id="contract-lifecycle-progress-operation"></a>`operation` | integer; required | Numeric worker operation decoded from raw; known protocol order runs header validation, clock setup, policy read, parameter/compile/apply work, activation/release waits, attempts and completion. Admitted vocabulary: open; displayed list: illustrative: `1`, `2`, `3`, `4`, `5`, `6`, `7`, `8`, `9`, `10`, `11`, `12`, `13`. Unfamiliar values: The numeric value remains in the report. Known-branch assessments require their own recognized code and publication conditions. |
-| <a id="contract-lifecycle-progress-stage"></a>`stage` | integer; required | Numeric boundary stage decoded from raw; 1 is entry and 2 is return for recognized lifecycle positions. Admitted vocabulary: open; displayed list: illustrative: `1`, `2`. Unfamiliar values: The numeric value remains in the report. Known-branch assessments require their own recognized code and publication conditions. |
-| <a id="contract-lifecycle-progress-index"></a>`index` | integer; omitted when absent | Zero-based item decoded from the low bits; attempts use the plan slot, parameter setup uses its parameter, and actor waits identify the next visit's first slot. |
+- <a id="contract-lifecycle-progress-raw"></a>**`raw`** (integer): Packed UInt32 progress value: operation in the high byte, stage in the next four bits, and one-based optional item in the low twenty bits.
+- <a id="contract-lifecycle-progress-operation"></a>**`operation`** (integer): Numeric worker operation decoded from raw; known protocol order runs header validation, clock setup, policy read, parameter/compile/apply work, activation/release waits, attempts and completion. Admitted vocabulary: open; displayed list: illustrative: `1`, `2`, `3`, `4`, `5`, `6`, `7`, `8`, `9`, `10`, `11`, `12`, `13`. Unfamiliar values: The numeric value remains in the report. Known-branch assessments require their own recognized code and publication conditions.
+- <a id="contract-lifecycle-progress-stage"></a>**`stage`** (integer): Numeric boundary stage decoded from raw; 1 is entry and 2 is return for recognized lifecycle positions. Admitted vocabulary: open; displayed list: illustrative: `1`, `2`. Unfamiliar values: The numeric value remains in the report. Known-branch assessments require their own recognized code and publication conditions.
+- <a id="contract-lifecycle-progress-index"></a>**`index`** (integer?): Zero-based item decoded from the low bits; attempts use the plan slot, parameter setup uses its parameter, and actor waits identify the next visit's first slot.
 
 <a id="contract-lifecycle-failure"></a>
 #### Terminal worker failure
@@ -2958,15 +2822,13 @@ Record `lc_failure`: `PWWorkerFailure`.
 
 Numeric codes retain unfamiliar values.
 
-| Field | JSON type and presence | Meaning |
-| --- | --- | --- |
-| <a id="contract-lifecycle-failure-operation"></a>`operation` | integer; required | Worker operation at which the terminal failure was published. Admitted vocabulary: open; displayed list: illustrative: `1`, `2`, `3`, `4`, `5`, `8`, `12`. Unfamiliar values: The numeric value remains in the report. Known-branch assessments require their own recognized code and publication conditions. |
-| <a id="contract-lifecycle-failure-code"></a>`code` | integer; required | PW failure classification within that operation. Admitted vocabulary: open; displayed list: illustrative: `1`. Unfamiliar values: The numeric value remains in the report. Known-branch assessments require their own recognized code and publication conditions. |
-| <a id="contract-lifecycle-failure-native_kind"></a>`native_kind` | integer; required | Discriminator for the retained native observation: 0 has no native result, 1 is an integer return, 2 is a null-pointer result represented by zero; unfamiliar codes retain their number. Admitted vocabulary: open; displayed list: illustrative: `0`, `1`, `2`. Unfamiliar values: The numeric value remains in the report. Known-branch assessments require their own recognized code and publication conditions. |
-| <a id="contract-lifecycle-failure-native_result"></a>`native_result` | integer; omitted when absent | Signed native return when native_kind supplies one; a null-pointer result is zero. |
-| <a id="contract-lifecycle-failure-errno"></a>`errno` | integer; omitted when absent | Native errno when the publication marks it present. |
-| <a id="contract-lifecycle-failure-index"></a>`index` | integer; omitted when absent | Operation-specific zero-based item, such as a parameter or attempt; absence represents the worker's no-index sentinel. |
-| <a id="contract-lifecycle-failure-detail"></a>`detail` | integer; required | Additional operation-specific numeric classification retained alongside the primary failure code. Admitted vocabulary: open; displayed list: illustrative: `0`. Unfamiliar values: The numeric value remains in the report. Known-branch assessments require their own recognized code and publication conditions. |
+- <a id="contract-lifecycle-failure-operation"></a>**`operation`** (integer): Worker operation at which the terminal failure was published. Admitted vocabulary: open; displayed list: illustrative: `1`, `2`, `3`, `4`, `5`, `8`, `12`. Unfamiliar values: The numeric value remains in the report. Known-branch assessments require their own recognized code and publication conditions.
+- <a id="contract-lifecycle-failure-code"></a>**`code`** (integer): PW failure classification within that operation. Admitted vocabulary: open; displayed list: illustrative: `1`. Unfamiliar values: The numeric value remains in the report. Known-branch assessments require their own recognized code and publication conditions.
+- <a id="contract-lifecycle-failure-native_kind"></a>**`native_kind`** (integer): Discriminator for the retained native observation: 0 has no native result, 1 is an integer return, 2 is a null-pointer result represented by zero; unfamiliar codes retain their number. Admitted vocabulary: open; displayed list: illustrative: `0`, `1`, `2`. Unfamiliar values: The numeric value remains in the report. Known-branch assessments require their own recognized code and publication conditions.
+- <a id="contract-lifecycle-failure-native_result"></a>**`native_result`** (integer?): Signed native return when native_kind supplies one; a null-pointer result is zero.
+- <a id="contract-lifecycle-failure-errno"></a>**`errno`** (integer?): Native errno when the publication marks it present.
+- <a id="contract-lifecycle-failure-index"></a>**`index`** (integer?): Operation-specific zero-based item, such as a parameter or attempt; absence represents the worker's no-index sentinel.
+- <a id="contract-lifecycle-failure-detail"></a>**`detail`** (integer): Additional operation-specific numeric classification retained alongside the primary failure code. Admitted vocabulary: open; displayed list: illustrative: `0`. Unfamiliar values: The numeric value remains in the report. Known-branch assessments require their own recognized code and publication conditions.
 
 <a id="contract-lifecycle-readiness"></a>
 #### Readiness-write result
@@ -2975,10 +2837,8 @@ Record `lc_readiness`: `PWWorkerReadiness`.
 
 This is the worker's own publication of the readiness helper result. The helper retries EINTR and converts a one-byte write to success.
 
-| Field | JSON type and presence | Meaning |
-| --- | --- | --- |
-| <a id="contract-lifecycle-readiness-rc"></a>`rc` | integer; required | Readiness-helper result: zero after one byte was written; -1 after a persistent failure. |
-| <a id="contract-lifecycle-readiness-errno"></a>`errno` | integer; omitted when absent | Worker-captured errno accompanying a nonzero helper result; absent for rc zero. |
+- <a id="contract-lifecycle-readiness-rc"></a>**`rc`** (integer): Readiness-helper result: zero after one byte was written; -1 after a persistent failure.
+- <a id="contract-lifecycle-readiness-errno"></a>**`errno`** (integer?): Worker-captured errno accompanying a nonzero helper result; absent for rc zero.
 
 <a id="contract-lifecycle-diagnostic"></a>
 #### Worker diagnostic
@@ -2987,12 +2847,10 @@ Record `lc_diagnostic`: `PWWorkerDiagnostic`.
 
 The host exposes text only after acquiring a complete or truncated publication with a bounded length and terminating NUL.
 
-| Field | JSON type and presence | Meaning |
-| --- | --- | --- |
-| <a id="contract-lifecycle-diagnostic-state"></a>`state` | integer; required | Raw diagnostic publication word: 0 absent, 1 complete, 2 truncated, 3 incomplete; other values remain numeric. Admitted vocabulary: open; displayed list: illustrative: `0`, `1`, `2`, `3`. Unfamiliar values: The numeric value remains in the report. Known-branch assessments require their own recognized code and publication conditions. |
-| <a id="contract-lifecycle-diagnostic-status"></a>`status` | string; required | Host interpretation: absent, incomplete, unknown, complete, truncated or invalid. Invalid identifies an eligible publication whose length or terminator failed validation. Admitted vocabulary: closed; displayed list: exhaustive: `"absent"`, `"incomplete"`, `"unknown"`, `"complete"`, `"truncated"`, `"invalid"`. |
-| <a id="contract-lifecycle-diagnostic-length"></a>`length` | integer; omitted when absent | Retained diagnostic-byte length excluding its terminating NUL, at most <!-- span limits.worker_diagnostic.value_unit -->4,095 bytes<!-- /span --> when validation permits text extraction. |
-| <a id="contract-lifecycle-diagnostic-text"></a>`text` | string; omitted when absent | Diagnostic bytes decoded as UTF-8 with replacement for invalid sequences. The <!-- span limits.worker_diagnostic.value_unit -->4,095 bytes<!-- /span --> bound applies before replacement decoding. The diagnostic status carries whether the worker truncated its buffer. |
+- <a id="contract-lifecycle-diagnostic-state"></a>**`state`** (integer): Raw diagnostic publication word: 0 absent, 1 complete, 2 truncated, 3 incomplete; other values remain numeric. Admitted vocabulary: open; displayed list: illustrative: `0`, `1`, `2`, `3`. Unfamiliar values: The numeric value remains in the report. Known-branch assessments require their own recognized code and publication conditions.
+- <a id="contract-lifecycle-diagnostic-status"></a>**`status`** (string): Host interpretation: absent, incomplete, unknown, complete, truncated or invalid. Invalid identifies an eligible publication whose length or terminator failed validation. Admitted vocabulary: closed; displayed list: exhaustive: `"absent"`, `"incomplete"`, `"unknown"`, `"complete"`, `"truncated"`, `"invalid"`.
+- <a id="contract-lifecycle-diagnostic-length"></a>**`length`** (integer?): Retained diagnostic-byte length excluding its terminating NUL, at most <!-- span limits.worker_diagnostic.value_unit -->4,095 bytes<!-- /span --> when validation permits text extraction.
+- <a id="contract-lifecycle-diagnostic-text"></a>**`text`** (string?): Diagnostic bytes decoded as UTF-8 with replacement for invalid sequences. The <!-- span limits.worker_diagnostic.value_unit -->4,095 bytes<!-- /span --> bound applies before replacement decoding. The diagnostic status carries whether the worker truncated its buffer.
 
 <a id="contract-lifecycle-policy_read"></a>
 #### Worker policy receipt
@@ -3001,10 +2859,8 @@ Record `lc_policy_read`: `PWWorkerPolicyRead`.
 
 At EOF the worker publishes both counts before comparing them. A header refusal, read failure or overflow leaves this receipt unavailable; both counts must fit the <!-- span limits.policy_source.value -->262,143<!-- /span -->-byte source capacity.
 
-| Field | JSON type and presence | Meaning |
-| --- | --- | --- |
-| <a id="contract-lifecycle-policy_read-bytes_expected"></a>`bytes_expected` | integer; required | Host-selected UTF-8 byte count from the worker's immutable header input. |
-| <a id="contract-lifecycle-policy_read-bytes_received"></a>`bytes_received` | integer; required | Bytes the worker read from the policy pipe when it observed EOF. Equality with bytes_expected establishes length agreement with the submitted bytes. |
+- <a id="contract-lifecycle-policy_read-bytes_expected"></a>**`bytes_expected`** (integer): Host-selected UTF-8 byte count from the worker's immutable header input.
+- <a id="contract-lifecycle-policy_read-bytes_received"></a>**`bytes_received`** (integer): Bytes the worker read from the policy pipe when it observed EOF. Equality with bytes_expected establishes length agreement with the submitted bytes.
 
 <a id="contract-lifecycle-disposition"></a>
 #### Canonical worker disposition
@@ -3013,11 +2869,9 @@ Record `lc_disposition`: `PWDispositionRecord`.
 
 Run questions and per-step questions keep their individual support and conflicts.
 
-| Field | JSON type and presence | Meaning |
-| --- | --- | --- |
-| <a id="contract-lifecycle-disposition-questions"></a>`questions` | [Run lifecycle questions](#contract-lifecycle-run_questions); required | Fixed set of run-level lifecycle claims. |
-| <a id="contract-lifecycle-disposition-steps"></a>`steps` | array of [Step lifecycle account](#contract-lifecycle-step); required | Plan-ordered lifecycle claims for each requested step, joined only to uniquely identified worker slots. |
-| <a id="contract-lifecycle-disposition-issues"></a>`issues` | array of [Lifecycle conflict](#contract-lifecycle-issue); required | Conflicting observations referenced by conflicting claims; indices are zero-based within this array. |
+- <a id="contract-lifecycle-disposition-questions"></a>**`questions`** ([Run lifecycle questions](#contract-lifecycle-run_questions)): Fixed set of run-level lifecycle claims.
+- <a id="contract-lifecycle-disposition-steps"></a>**`steps`** (array of [Step lifecycle account](#contract-lifecycle-step)): Plan-ordered lifecycle claims for each requested step, joined only to uniquely identified worker slots.
+- <a id="contract-lifecycle-disposition-issues"></a>**`issues`** (array of [Lifecycle conflict](#contract-lifecycle-issue)): Conflicting observations referenced by conflicting claims; indices are zero-based within this array.
 
 <a id="contract-lifecycle-disposition-resolve"></a>
 ##### Resolving lifecycle claims
@@ -3036,26 +2890,26 @@ publication and an `unsupported` lifecycle summary.
 <a id="contract-lifecycle-disposition-ordinary_projection"></a>
 ##### Project ordinary canonical step claims
 
-[Runner host](#contract-identity-definitions-host) reports at per-step canonical lifecycle projection. Entry: xpc execute. Recipient: controller, xpc caller. Reports: runner reply. Binding `s`: entry in `reply.steps`. Binding `c`: entry in `reply.runner_subprocess.disposition.steps`. Binding `d`: entry in `reply.runner_subprocess.disposition.steps`. Association restriction for `c`: `reply.runner_subprocess.disposition.steps[c].step_id` = `reply.steps[s].step_id`. Association restriction for `d`: (`reply.runner_subprocess.disposition.steps[d].step_id` = `reply.steps[s].step_id` and `d` < `c`). For each `s`, `c`. Applies when (`reply.runner_subprocess` is present and `reply.runner_subprocess.disposition` is present and number of matching entries for `d` = `0`).
+[Runner host](#contract-identity-definitions-host) reports at per-step canonical lifecycle projection. Entry: xpc execute. Recipient: controller, xpc caller. Reports: runner reply. Binding `s`: entry in `reply.steps`. Binding `c`: entry in `reply.runner_subprocess.disposition.steps`. Binding `d`: entry in `reply.runner_subprocess.disposition.steps`. Association restriction for `c`: `reply.runner_subprocess.disposition.steps[c].step_id` = `reply.steps[s].step_id`. Association restriction for `d`: (`reply.runner_subprocess.disposition.steps[d].step_id` = `reply.steps[s].step_id` and `d` < `c`). For each `s`, `c`. Applies when (present(`reply.runner_subprocess`) and present(`reply.runner_subprocess.disposition`) and matches(`d`) = `0`).
 
 | Item | Requirement or consequence |
 | --- | --- |
-| <a id="contract-lifecycle-disposition-ordinary_projection-presence"></a>Both canonical claims produce the projection | Requires (if (`reply.runner_subprocess.disposition.steps[c].questions.step_boundary_reached` is present and `reply.runner_subprocess.disposition.steps[c].questions.step_result_published` is present), then `reply.steps[s].attempt.lifecycle` is present). |
-| <a id="contract-lifecycle-disposition-ordinary_projection-copy"></a>Copy the canonical claims | Applies when (`reply.runner_subprocess.disposition.steps[c].questions.step_boundary_reached` is present and `reply.runner_subprocess.disposition.steps[c].questions.step_result_published` is present). sets `reply.steps[s].attempt.lifecycle.boundary` to `reply.runner_subprocess.disposition.steps[c].questions.step_boundary_reached`, sets `reply.steps[s].attempt.lifecycle.result` to `reply.runner_subprocess.disposition.steps[c].questions.step_result_published`. |
-| <a id="contract-lifecycle-disposition-ordinary_projection-missing"></a>Missing canonical claim | Applies when not ((`reply.runner_subprocess.disposition.steps[c].questions.step_boundary_reached` is present and `reply.runner_subprocess.disposition.steps[c].questions.step_result_published` is present)). withholds `reply.steps[s].attempt.lifecycle`. |
+| <a id="contract-lifecycle-disposition-ordinary_projection-presence"></a>Both canonical claims produce the projection | Requires implies((present(`reply.runner_subprocess.disposition.steps[c].questions.step_boundary_reached`) and present(`reply.runner_subprocess.disposition.steps[c].questions.step_result_published`)), present(`reply.steps[s].attempt.lifecycle`)). |
+| <a id="contract-lifecycle-disposition-ordinary_projection-copy"></a>Copy the canonical claims | Applies when (present(`reply.runner_subprocess.disposition.steps[c].questions.step_boundary_reached`) and present(`reply.runner_subprocess.disposition.steps[c].questions.step_result_published`)). [set_value(`reply.steps[s].attempt.lifecycle.boundary`, `reply.runner_subprocess.disposition.steps[c].questions.step_boundary_reached`), set_value(`reply.steps[s].attempt.lifecycle.result`, `reply.runner_subprocess.disposition.steps[c].questions.step_result_published`)]. |
+| <a id="contract-lifecycle-disposition-ordinary_projection-missing"></a>Missing canonical claim | Applies when not ((present(`reply.runner_subprocess.disposition.steps[c].questions.step_boundary_reached`) and present(`reply.runner_subprocess.disposition.steps[c].questions.step_result_published`))). [withhold(`reply.steps[s].attempt.lifecycle`)]. |
 
 **Support: [source read](#contract-support-grades) for [Project ordinary canonical step claims](#contract-lifecycle-disposition-ordinary_projection) and its descendants.** The ordinary and actor builders select the first matching canonical step; attemptLifecycle copies both claims when present and returns nil otherwise. Source: [CWorkerDisposition.swift](../runner/Sources/PWRunnerCore/CWorkerDisposition.swift): `attemptLifecycle`; [CWorkerStepResults.swift](../runner/Sources/PWRunnerCore/CWorkerStepResults.swift): `buildStepResults`; [ActorOrchestration.swift](../runner/Sources/PWRunnerCore/ActorOrchestration.swift): `assembleActorReply`.
 
 <a id="contract-lifecycle-disposition-actor_projection"></a>
 ##### Project actor canonical step claims
 
-[Runner host](#contract-identity-definitions-host) reports at per-step canonical lifecycle projection. Entry: xpc execute. Recipient: controller, xpc caller. Reports: runner reply. Binding `a`: entry in `reply.actors`. Binding `s`: entry in `reply.steps`. Binding `c`: entry in `reply.actors[a].subprocess.disposition.steps`. Binding `d`: entry in `reply.actors[a].subprocess.disposition.steps`. Association restriction for `c`: `reply.actors[a].subprocess.disposition.steps[c].step_id` = `reply.steps[s].step_id`. Association restriction for `d`: (`reply.actors[a].subprocess.disposition.steps[d].step_id` = `reply.steps[s].step_id` and `d` < `c`). Association restriction for `s`: `reply.steps[s].actor_id` = `reply.actors[a].actor_id`. For each `a`, `s`, `c`. Applies when (`reply.actors` is present and `reply.actors[a].subprocess` is present and `reply.actors[a].subprocess.disposition` is present and number of matching entries for `d` = `0`).
+[Runner host](#contract-identity-definitions-host) reports at per-step canonical lifecycle projection. Entry: xpc execute. Recipient: controller, xpc caller. Reports: runner reply. Binding `a`: entry in `reply.actors`. Binding `s`: entry in `reply.steps`. Binding `c`: entry in `reply.actors[a].subprocess.disposition.steps`. Binding `d`: entry in `reply.actors[a].subprocess.disposition.steps`. Association restriction for `c`: `reply.actors[a].subprocess.disposition.steps[c].step_id` = `reply.steps[s].step_id`. Association restriction for `d`: (`reply.actors[a].subprocess.disposition.steps[d].step_id` = `reply.steps[s].step_id` and `d` < `c`). Association restriction for `s`: `reply.steps[s].actor_id` = `reply.actors[a].actor_id`. For each `a`, `s`, `c`. Applies when (present(`reply.actors`) and present(`reply.actors[a].subprocess`) and present(`reply.actors[a].subprocess.disposition`) and matches(`d`) = `0`).
 
 | Item | Requirement or consequence |
 | --- | --- |
-| <a id="contract-lifecycle-disposition-actor_projection-presence"></a>Both canonical claims produce the projection | Requires (if (`reply.actors[a].subprocess.disposition.steps[c].questions.step_boundary_reached` is present and `reply.actors[a].subprocess.disposition.steps[c].questions.step_result_published` is present), then `reply.steps[s].attempt.lifecycle` is present). |
-| <a id="contract-lifecycle-disposition-actor_projection-copy"></a>Copy the canonical claims | Applies when (`reply.actors[a].subprocess.disposition.steps[c].questions.step_boundary_reached` is present and `reply.actors[a].subprocess.disposition.steps[c].questions.step_result_published` is present). sets `reply.steps[s].attempt.lifecycle.boundary` to `reply.actors[a].subprocess.disposition.steps[c].questions.step_boundary_reached`, sets `reply.steps[s].attempt.lifecycle.result` to `reply.actors[a].subprocess.disposition.steps[c].questions.step_result_published`. |
-| <a id="contract-lifecycle-disposition-actor_projection-missing"></a>Missing canonical claim | Applies when not ((`reply.actors[a].subprocess.disposition.steps[c].questions.step_boundary_reached` is present and `reply.actors[a].subprocess.disposition.steps[c].questions.step_result_published` is present)). withholds `reply.steps[s].attempt.lifecycle`. |
+| <a id="contract-lifecycle-disposition-actor_projection-presence"></a>Both canonical claims produce the projection | Requires implies((present(`reply.actors[a].subprocess.disposition.steps[c].questions.step_boundary_reached`) and present(`reply.actors[a].subprocess.disposition.steps[c].questions.step_result_published`)), present(`reply.steps[s].attempt.lifecycle`)). |
+| <a id="contract-lifecycle-disposition-actor_projection-copy"></a>Copy the canonical claims | Applies when (present(`reply.actors[a].subprocess.disposition.steps[c].questions.step_boundary_reached`) and present(`reply.actors[a].subprocess.disposition.steps[c].questions.step_result_published`)). [set_value(`reply.steps[s].attempt.lifecycle.boundary`, `reply.actors[a].subprocess.disposition.steps[c].questions.step_boundary_reached`), set_value(`reply.steps[s].attempt.lifecycle.result`, `reply.actors[a].subprocess.disposition.steps[c].questions.step_result_published`)]. |
+| <a id="contract-lifecycle-disposition-actor_projection-missing"></a>Missing canonical claim | Applies when not ((present(`reply.actors[a].subprocess.disposition.steps[c].questions.step_boundary_reached`) and present(`reply.actors[a].subprocess.disposition.steps[c].questions.step_result_published`))). [withhold(`reply.steps[s].attempt.lifecycle`)]. |
 
 **Support: [source read](#contract-support-grades) for [Project actor canonical step claims](#contract-lifecycle-disposition-actor_projection) and its descendants.** The ordinary and actor builders select the first matching canonical step; attemptLifecycle copies both claims when present and returns nil otherwise. Source: [CWorkerDisposition.swift](../runner/Sources/PWRunnerCore/CWorkerDisposition.swift): `attemptLifecycle`; [CWorkerStepResults.swift](../runner/Sources/PWRunnerCore/CWorkerStepResults.swift): `buildStepResults`; [ActorOrchestration.swift](../runner/Sources/PWRunnerCore/ActorOrchestration.swift): `assembleActorReply`.
 
@@ -3066,14 +2920,12 @@ Record `lc_claim`: `PWDispositionClaim`.
 
 A supported claim names its answer and observation references. An unresolved or inapplicable claim names its reason; a conflicting claim points to its issue.
 
-| Field | JSON type and presence | Meaning |
-| --- | --- | --- |
-| <a id="contract-lifecycle-claim-state"></a>`state` | string; required | supported, unresolved, conflicting or inapplicable, determining which accompanying fields carry the claim. Admitted vocabulary: closed; displayed list: exhaustive: `"supported"`, `"unresolved"`, `"conflicting"`, `"inapplicable"`. |
-| <a id="contract-lifecycle-claim-answer"></a>`answer` | string; omitted when absent | Question-specific supported answer, such as signal, exit_code, reached, published or an observed host stop reason. |
-| <a id="contract-lifecycle-claim-value"></a>`value` | [Lifecycle answer value](#contract-lifecycle-claim_value); omitted when absent | Answer payload: an exit code, signal or item index as an integer, or the observed termination-request object. |
-| <a id="contract-lifecycle-claim-reason"></a>`reason` | string; omitted when absent | Reason the question is unresolved or inapplicable, preserving missing, unusable, nonterminal and unsupported evidence distinctions. |
-| <a id="contract-lifecycle-claim-issue"></a>`issue` | integer; omitted when absent | Zero-based pointer to the matching conflict in disposition.issues. |
-| <a id="contract-lifecycle-claim-basis"></a>`basis` | array of string; omitted when absent | Observation references supporting the answer or explaining uncertainty: raw run fields, progress, worker_failure, plan, slot and attempt_support in their question's scope. |
+- <a id="contract-lifecycle-claim-state"></a>**`state`** (string): supported, unresolved, conflicting or inapplicable, determining which accompanying fields carry the claim. Admitted vocabulary: closed; displayed list: exhaustive: `"supported"`, `"unresolved"`, `"conflicting"`, `"inapplicable"`.
+- <a id="contract-lifecycle-claim-answer"></a>**`answer`** (string?): Question-specific supported answer, such as signal, exit_code, reached, published or an observed host stop reason.
+- <a id="contract-lifecycle-claim-value"></a>**`value`** ([Lifecycle answer value](#contract-lifecycle-claim_value)?): Answer payload: an exit code, signal or item index as an integer, or the observed termination-request object.
+- <a id="contract-lifecycle-claim-reason"></a>**`reason`** (string?): Reason the question is unresolved or inapplicable, preserving missing, unusable, nonterminal and unsupported evidence distinctions.
+- <a id="contract-lifecycle-claim-issue"></a>**`issue`** (integer?): Zero-based pointer to the matching conflict in disposition.issues.
+- <a id="contract-lifecycle-claim-basis"></a>**`basis`** (array of string?): Observation references supporting the answer or explaining uncertainty: raw run fields, progress, worker_failure, plan, slot and attempt_support in their question's scope.
 
 <a id="contract-lifecycle-claim_value"></a>
 #### Lifecycle answer value
@@ -3090,14 +2942,12 @@ Record `lc_claim_value`: `PWDispositionValue`.
 
 Record `lc_issue`: `PWDispositionIssue`.
 
-| Field | JSON type and presence | Meaning |
-| --- | --- | --- |
-| <a id="contract-lifecycle-issue-kind"></a>`kind` | string; required | conflict for a resolver-created disagreement among observations. |
-| <a id="contract-lifecycle-issue-rule"></a>`rule` | string; required | D1 for competing terminal status representations; D5 for incompatible terminal progress and slot publication. |
-| <a id="contract-lifecycle-issue-question"></a>`question` | string; required | Lifecycle question affected by this issue. |
-| <a id="contract-lifecycle-issue-step_index"></a>`step_index` | integer; omitted when absent | Zero-based plan step for a step issue; absent for a run-level issue. |
-| <a id="contract-lifecycle-issue-observations"></a>`observations` | array of string; required | Named observations involved in the conflict, resolved in the same run or step scope. |
-| <a id="contract-lifecycle-issue-detail"></a>`detail` | string; required | Human-readable description of the incompatible observations. |
+- <a id="contract-lifecycle-issue-kind"></a>**`kind`** (string): conflict for a resolver-created disagreement among observations.
+- <a id="contract-lifecycle-issue-rule"></a>**`rule`** (string): D1 for competing terminal status representations; D5 for incompatible terminal progress and slot publication.
+- <a id="contract-lifecycle-issue-question"></a>**`question`** (string): Lifecycle question affected by this issue.
+- <a id="contract-lifecycle-issue-step_index"></a>**`step_index`** (integer?): Zero-based plan step for a step issue; absent for a run-level issue.
+- <a id="contract-lifecycle-issue-observations"></a>**`observations`** (array of string): Named observations involved in the conflict, resolved in the same run or step scope.
+- <a id="contract-lifecycle-issue-detail"></a>**`detail`** (string): Human-readable description of the incompatible observations.
 
 <a id="contract-lifecycle-run_questions"></a>
 #### Run lifecycle questions
@@ -3106,28 +2956,24 @@ Record `lc_run_questions`: `PWDispositionRunQuestions`.
 
 Ordinary resolution supplies every question; absent slots preserve partial or rejected evidence for readers.
 
-| Field | JSON type and presence | Meaning |
-| --- | --- | --- |
-| <a id="contract-lifecycle-run_questions-final_status"></a>`final_status` | [Lifecycle claim](#contract-lifecycle-claim); omitted when absent | Whether a successful owned reap supplies an exit code or terminating signal; competing representations produce a D1 conflict. |
-| <a id="contract-lifecycle-run_questions-stop_reason"></a>`stop_reason` | [Lifecycle claim](#contract-lifecycle-claim); omitted when absent | Host polling-stop observation, or unresolved when it was not recorded. |
-| <a id="contract-lifecycle-run_questions-cleanup_trigger"></a>`cleanup_trigger` | [Lifecycle claim](#contract-lifecycle-claim); omitted when absent | Recorded reason for requesting exit; inapplicable when exit_requested is false. |
-| <a id="contract-lifecycle-run_questions-grace_end"></a>`grace_end` | [Lifecycle claim](#contract-lifecycle-claim); omitted when absent | Recorded end of the exit-grace stage; inapplicable when exit_requested is false. |
-| <a id="contract-lifecycle-run_questions-kill_request_and_result"></a>`kill_request_and_result` | [Lifecycle claim](#contract-lifecycle-claim); omitted when absent | The observed termination request, a supported none after a recorded exit request, or the corresponding unresolved/inapplicable state. |
-| <a id="contract-lifecycle-run_questions-collection_basis"></a>`collection_basis` | [Lifecycle claim](#contract-lifecycle-claim); omitted when absent | Host fact stating whether final reads followed confirmed reaping or execution might continue. |
-| <a id="contract-lifecycle-run_questions-progress_association"></a>`progress_association` | [Lifecycle claim](#contract-lifecycle-claim); omitted when absent | Association of the packed progress word with no item, a step index or a parameter index; invalid packing is distinguished from an unfamiliar operation/stage. |
+- <a id="contract-lifecycle-run_questions-final_status"></a>**`final_status`** ([Lifecycle claim](#contract-lifecycle-claim)?): Whether a successful owned reap supplies an exit code or terminating signal; competing representations produce a D1 conflict.
+- <a id="contract-lifecycle-run_questions-stop_reason"></a>**`stop_reason`** ([Lifecycle claim](#contract-lifecycle-claim)?): Host polling-stop observation, or unresolved when it was not recorded.
+- <a id="contract-lifecycle-run_questions-cleanup_trigger"></a>**`cleanup_trigger`** ([Lifecycle claim](#contract-lifecycle-claim)?): Recorded reason for requesting exit; inapplicable when exit_requested is false.
+- <a id="contract-lifecycle-run_questions-grace_end"></a>**`grace_end`** ([Lifecycle claim](#contract-lifecycle-claim)?): Recorded end of the exit-grace stage; inapplicable when exit_requested is false.
+- <a id="contract-lifecycle-run_questions-kill_request_and_result"></a>**`kill_request_and_result`** ([Lifecycle claim](#contract-lifecycle-claim)?): The observed termination request, a supported none after a recorded exit request, or the corresponding unresolved/inapplicable state.
+- <a id="contract-lifecycle-run_questions-collection_basis"></a>**`collection_basis`** ([Lifecycle claim](#contract-lifecycle-claim)?): Host fact stating whether final reads followed confirmed reaping or execution might continue.
+- <a id="contract-lifecycle-run_questions-progress_association"></a>**`progress_association`** ([Lifecycle claim](#contract-lifecycle-claim)?): Association of the packed progress word with no item, a step index or a parameter index; invalid packing is distinguished from an unfamiliar operation/stage.
 
 <a id="contract-lifecycle-step"></a>
 #### Step lifecycle account
 
 Record `lc_step`: `PWDispositionStep`.
 
-| Field | JSON type and presence | Meaning |
-| --- | --- | --- |
-| <a id="contract-lifecycle-step-index"></a>`index` | integer; required | Zero-based position of this step in the owning worker's plan. |
-| <a id="contract-lifecycle-step-step_id"></a>`step_id` | string; required | Submitted step identifier used to join its worker slot and public step. |
-| <a id="contract-lifecycle-step-slot"></a>`slot` | string; required | completed, incomplete or absent according to the uniquely associated worker slot and its completion publication. Admitted vocabulary: closed; displayed list: exhaustive: `"completed"`, `"incomplete"`, `"absent"`. |
-| <a id="contract-lifecycle-step-attempt_support"></a>`attempt_support` | string; required | supported or unsupported according to whether the requested attempt has an implemented worker mapping. Admitted vocabulary: closed; displayed list: exhaustive: `"supported"`, `"unsupported"`. |
-| <a id="contract-lifecycle-step-questions"></a>`questions` | [Step lifecycle questions](#contract-lifecycle-step_questions); required | Boundary, result-publication and requested-operation applicability claims for this step. |
+- <a id="contract-lifecycle-step-index"></a>**`index`** (integer): Zero-based position of this step in the owning worker's plan.
+- <a id="contract-lifecycle-step-step_id"></a>**`step_id`** (string): Submitted step identifier used to join its worker slot and public step.
+- <a id="contract-lifecycle-step-slot"></a>**`slot`** (string): completed, incomplete or absent according to the uniquely associated worker slot and its completion publication. Admitted vocabulary: closed; displayed list: exhaustive: `"completed"`, `"incomplete"`, `"absent"`.
+- <a id="contract-lifecycle-step-attempt_support"></a>**`attempt_support`** (string): supported or unsupported according to whether the requested attempt has an implemented worker mapping. Admitted vocabulary: closed; displayed list: exhaustive: `"supported"`, `"unsupported"`.
+- <a id="contract-lifecycle-step-questions"></a>**`questions`** ([Step lifecycle questions](#contract-lifecycle-step_questions)): Boundary, result-publication and requested-operation applicability claims for this step.
 
 <a id="contract-lifecycle-step_questions"></a>
 #### Step lifecycle questions
@@ -3136,11 +2982,9 @@ Record `lc_step_questions`: `PWDispositionStepQuestions`.
 
 The result and boundary questions preserve distinct observations: a call can start without publishing a completed result.
 
-| Field | JSON type and presence | Meaning |
-| --- | --- | --- |
-| <a id="contract-lifecycle-step_questions-step_boundary_reached"></a>`step_boundary_reached` | [Lifecycle claim](#contract-lifecycle-claim); omitted when absent | Whether recognized progress or a supported completed slot establishes entry; terminal earlier progress can establish not_reached or conflict with a completed slot. |
-| <a id="contract-lifecycle-step_questions-step_result_published"></a>`step_result_published` | [Lifecycle claim](#contract-lifecycle-claim); omitted when absent | Whether a supported completed slot is published; incomplete terminal collection can establish unpublished, while live collection remains unresolved. |
-| <a id="contract-lifecycle-step_questions-step_requested_operation_applicability"></a>`step_requested_operation_applicability` | [Lifecycle claim](#contract-lifecycle-claim); omitted when absent | Whether this requested attempt maps to an implemented worker operation, as stated by attempt_support. |
+- <a id="contract-lifecycle-step_questions-step_boundary_reached"></a>**`step_boundary_reached`** ([Lifecycle claim](#contract-lifecycle-claim)?): Whether recognized progress or a supported completed slot establishes entry; terminal earlier progress can establish not_reached or conflict with a completed slot.
+- <a id="contract-lifecycle-step_questions-step_result_published"></a>**`step_result_published`** ([Lifecycle claim](#contract-lifecycle-claim)?): Whether a supported completed slot is published; incomplete terminal collection can establish unpublished, while live collection remains unresolved.
+- <a id="contract-lifecycle-step_questions-step_requested_operation_applicability"></a>**`step_requested_operation_applicability`** ([Lifecycle claim](#contract-lifecycle-claim)?): Whether this requested attempt maps to an implemented worker operation, as stated by attempt_support.
 
 <a id="contract-lifecycle-attempt"></a>
 #### Per-attempt lifecycle projection
@@ -3149,36 +2993,30 @@ Record `lc_attempt`: `PWAttemptLifecycle`.
 
 A step or extension event carries this compact projection of its canonical disposition claims.
 
-| Field | JSON type and presence | Meaning |
-| --- | --- | --- |
-| <a id="contract-lifecycle-attempt-summary"></a>`summary` | string; required | The current producer derives completed, started_without_result, not_reached, unsupported, unresolved or conflicting from the boundary/result claims and attempt support. The controller retains unfamiliar summary strings; it checks the recognized summaries against their corresponding claims. Admitted vocabulary: open; displayed list: illustrative: `"completed"`, `"started_without_result"`, `"not_reached"`, `"unsupported"`, `"unresolved"`, `"conflicting"`. Unfamiliar values: The controller retains an unfamiliar summary and checks the independently carried boundary and result claims. |
-| <a id="contract-lifecycle-attempt-boundary"></a>`boundary` | [Lifecycle claim](#contract-lifecycle-claim); required | Copy of the owning disposition step's step_boundary_reached claim. |
-| <a id="contract-lifecycle-attempt-result"></a>`result` | [Lifecycle claim](#contract-lifecycle-claim); required | Copy of the owning disposition step's step_result_published claim. |
+- <a id="contract-lifecycle-attempt-summary"></a>**`summary`** (string): The current producer derives completed, started_without_result, not_reached, unsupported, unresolved or conflicting from the boundary/result claims and attempt support. The controller retains unfamiliar summary strings; it checks the recognized summaries against their corresponding claims. Admitted vocabulary: open; displayed list: illustrative: `"completed"`, `"started_without_result"`, `"not_reached"`, `"unsupported"`, `"unresolved"`, `"conflicting"`. Unfamiliar values: The controller retains an unfamiliar summary and checks the independently carried boundary and result claims.
+- <a id="contract-lifecycle-attempt-boundary"></a>**`boundary`** ([Lifecycle claim](#contract-lifecycle-claim)): Copy of the owning disposition step's step_boundary_reached claim.
+- <a id="contract-lifecycle-attempt-result"></a>**`result`** ([Lifecycle claim](#contract-lifecycle-claim)): Copy of the owning disposition step's step_result_published claim.
 
 <a id="contract-lifecycle-owned_reap"></a>
 #### Owned child ending
 
 Record `lc_owned_reap`: `PWOwnedReapObservation`.
 
-| Field | JSON type and presence | Meaning |
-| --- | --- | --- |
-| <a id="contract-lifecycle-owned_reap-pid"></a>`pid` | integer; required | Owned child PID for which the host obtained terminal wait status. |
-| <a id="contract-lifecycle-owned_reap-native_rc"></a>`native_rc` | integer; required | Native waitpid return equal to pid for this captured ending. |
-| <a id="contract-lifecycle-owned_reap-raw_status"></a>`raw_status` | integer; required | Raw terminal wait status, from which the corresponding exit code or signal is decoded. |
-| <a id="contract-lifecycle-owned_reap-stage"></a>`stage` | string; required | Host capture stage, including schedule, termination_gate and cleanup stages; the gate admits schedule or termination_gate for natural-departure support. |
-| <a id="contract-lifecycle-owned_reap-observed_ns"></a>`observed_ns` | integer; omitted when absent | Host monotonic capture time in nanoseconds, when available. |
-| <a id="contract-lifecycle-owned_reap-ownership_unbroken"></a>`ownership_unbroken` | boolean; required | Whether the host retained uninterrupted ownership through this wait observation. |
-| <a id="contract-lifecycle-owned_reap-departure_requested"></a>`departure_requested` | boolean; required | Whether the host had already requested this child's departure when it captured the ending. |
-| <a id="contract-lifecycle-owned_reap-capture_ordinal"></a>`capture_ordinal` | integer; required | Positive ordinal in this child's host-observation sequence, shared with its activations and gate captures. |
+- <a id="contract-lifecycle-owned_reap-pid"></a>**`pid`** (integer): Owned child PID for which the host obtained terminal wait status.
+- <a id="contract-lifecycle-owned_reap-native_rc"></a>**`native_rc`** (integer): Native waitpid return equal to pid for this captured ending.
+- <a id="contract-lifecycle-owned_reap-raw_status"></a>**`raw_status`** (integer): Raw terminal wait status, from which the corresponding exit code or signal is decoded.
+- <a id="contract-lifecycle-owned_reap-stage"></a>**`stage`** (string): Host capture stage, including schedule, termination_gate and cleanup stages; the gate admits schedule or termination_gate for natural-departure support.
+- <a id="contract-lifecycle-owned_reap-observed_ns"></a>**`observed_ns`** (integer?): Host monotonic capture time in nanoseconds, when available.
+- <a id="contract-lifecycle-owned_reap-ownership_unbroken"></a>**`ownership_unbroken`** (boolean): Whether the host retained uninterrupted ownership through this wait observation.
+- <a id="contract-lifecycle-owned_reap-departure_requested"></a>**`departure_requested`** (boolean): Whether the host had already requested this child's departure when it captured the ending.
+- <a id="contract-lifecycle-owned_reap-capture_ordinal"></a>**`capture_ordinal`** (integer): Positive ordinal in this child's host-observation sequence, shared with its activations and gate captures.
 
 <a id="contract-lifecycle-reap_reference"></a>
 #### Owned-ending reference
 
 Record `lc_reap_reference`: `PWOwnedReapReference`.
 
-| Field | JSON type and presence | Meaning |
-| --- | --- | --- |
-| <a id="contract-lifecycle-reap_reference-capture_ordinal"></a>`capture_ordinal` | integer; required | Ordinal of the source actor's owned ending; its association must match that source's owned_reap record. |
+- <a id="contract-lifecycle-reap_reference-capture_ordinal"></a>**`capture_ordinal`** (integer): Ordinal of the source actor's owned ending; its association must match that source's owned_reap record.
 
 <a id="contract-lifecycle-spawn_failure"></a>
 #### Native spawn failure
@@ -3187,13 +3025,11 @@ Record `lc_spawn_failure`: `PWRunnerSpawnFailure`.
 
 The host retains the failed spawn operation as a separate record before a child process exists.
 
-| Field | JSON type and presence | Meaning |
-| --- | --- | --- |
-| <a id="contract-lifecycle-spawn_failure-origin"></a>`origin` | string; required | Component reporting the failure, supplied by the runner host. |
-| <a id="contract-lifecycle-spawn_failure-operation"></a>`operation` | string; required | Failed native spawn operation, such as posix_spawn. |
-| <a id="contract-lifecycle-spawn_failure-executable_path"></a>`executable_path` | string; required | Executable path passed to the attempted spawn. |
-| <a id="contract-lifecycle-spawn_failure-return_code"></a>`return_code` | integer; required | Native spawn return code, whose error-code convention is distinct from a child exit status. |
-| <a id="contract-lifecycle-spawn_failure-diagnostic"></a>`diagnostic` | string; required | Human-readable native error explanation of the spawn failure. |
+- <a id="contract-lifecycle-spawn_failure-origin"></a>**`origin`** (string): Component reporting the failure, supplied by the runner host.
+- <a id="contract-lifecycle-spawn_failure-operation"></a>**`operation`** (string): Failed native spawn operation, such as posix_spawn.
+- <a id="contract-lifecycle-spawn_failure-executable_path"></a>**`executable_path`** (string): Executable path passed to the attempted spawn.
+- <a id="contract-lifecycle-spawn_failure-return_code"></a>**`return_code`** (integer): Native spawn return code, whose error-code convention is distinct from a child exit status.
+- <a id="contract-lifecycle-spawn_failure-diagnostic"></a>**`diagnostic`** (string): Human-readable native error explanation of the spawn failure.
 
 <a id="contract-lifecycle-validator"></a>
 #### Validator subprocess
@@ -3204,32 +3040,30 @@ The host binds each validator collection to its phase and retains accepted recor
 
 For N submitted queries, the collector assigns a record allowance of max(1, N) multiplied by <!-- span limits.validator_records_per_query.value -->2<!-- /span --> and a stdout retention allowance of max(1, N) multiplied by <!-- span limits.validator_reply_bytes_per_query.value_unit -->16,384 bytes<!-- /span -->. The allowances are sized before writing the query batch. On byte overflow the host counts all bytes received, keeps the bounded prefix through its last complete LF frame, closes collection and reports byte_limit. Decoding retains complete accepted records before the first refused frame or record-count excess.
 
-| Field | JSON type and presence | Meaning |
-| --- | --- | --- |
-| <a id="contract-lifecycle-validator-phase_id"></a>`phase_id` | string; omitted when absent | Host-stamped phase identifier served by this collection; agrees with the containing phase. |
-| <a id="contract-lifecycle-validator-ordinal"></a>`ordinal` | integer; omitted when absent | Host-stamped one-based phase ordinal for this collection. |
-| <a id="contract-lifecycle-validator-pid"></a>`pid` | integer; required | Spawned validator PID used for collection and owned cleanup. |
-| <a id="contract-lifecycle-validator-term_signal"></a>`term_signal` | integer; omitted when absent | Signal decoded only from a successful waitpid result for this validator. |
-| <a id="contract-lifecycle-validator-exit_code"></a>`exit_code` | integer; omitted when absent | Exit status decoded only from a successful waitpid result for this validator. |
-| <a id="contract-lifecycle-validator-reaped"></a>`reaped` | boolean; omitted when absent | True for a confirmed owned reap, false for an unconfirmed ending, absent when unreported. |
-| <a id="contract-lifecycle-validator-termination_request"></a>`termination_request` | [Host termination request](#contract-lifecycle-termination); omitted when absent | Host kill request and native return, if requested during validator cleanup. |
-| <a id="contract-lifecycle-validator-wait_errors"></a>`wait_errors` | array of [Failed host wait](#contract-lifecycle-wait_error); omitted when absent | Failed waitpid observations from validator cleanup, including recovered interruptions. |
-| <a id="contract-lifecycle-validator-read_error"></a>`read_error` | string; omitted when absent | Host diagnostic for stdout-read failure, separate from accepted record contents. |
-| <a id="contract-lifecycle-validator-stdout_collection_stop"></a>`stdout_collection_stop` | string; omitted when absent | Host reason for stopping stdout collection: eof, clock_error, deadline, poll_error, byte_limit or read_error. This is fixed before the exit-grace stage. |
-| <a id="contract-lifecycle-validator-stdout_bytes_received"></a>`stdout_bytes_received` | integer; omitted when absent | Total stdout bytes received by the host, including bytes later rejected by frame decoding. |
-| <a id="contract-lifecycle-validator-probe_bytes_written"></a>`probe_bytes_written` | integer; omitted when absent | Request bytes accepted by host writes to the validator input pipe. |
-| <a id="contract-lifecycle-validator-probe_bytes_expected"></a>`probe_bytes_expected` | integer; omitted when absent | Serialized request-batch byte count the host intended to write. |
-| <a id="contract-lifecycle-validator-io_error"></a>`io_error` | string; omitted when absent | Host transport diagnostic for the first request-write or stdout-read failure selected for this collection. |
-| <a id="contract-lifecycle-validator-decode_fault"></a>`decode_fault` | [Rejected validator frame](#contract-lifecycle-decode_fault); omitted when absent | First rejected stdout frame's receiver-owned diagnostic and bounded byte prefix. |
-| <a id="contract-lifecycle-validator-records"></a>`records` | array of [Accepted validator record](#contract-steps-verdict); omitted when absent | Accepted verdict records in received order, including diagnostic, unexpected-ID and null-ID records, within this phase collector's record allowance. |
-| <a id="contract-lifecycle-validator-expected_step_ids"></a>`expected_step_ids` | array of string; omitted when absent | Submitted query IDs in the planned collection; used to check missing, duplicate and unexpected associations. |
-| <a id="contract-lifecycle-validator-association_issues"></a>`association_issues` | array of [Validator query association](#contract-lifecycle-association_issue); omitted when absent | Host-computed join problems; an empty array records a complete unambiguous join for the expected queries. |
-| <a id="contract-lifecycle-validator-exit_grace_wait"></a>`exit_grace_wait` | [Measured host wait](#contract-lifecycle-host_wait); omitted when absent | Measured monotonic host wait after collection closed, with production allowance <!-- span limits.validator_exit_grace.value_unit -->1,000 milliseconds<!-- /span -->, before any further termination/reap work. Those later operations can continue beyond this allowance. |
+- <a id="contract-lifecycle-validator-phase_id"></a>**`phase_id`** (string?): Host-stamped phase identifier served by this collection; agrees with the containing phase.
+- <a id="contract-lifecycle-validator-ordinal"></a>**`ordinal`** (integer?): Host-stamped one-based phase ordinal for this collection.
+- <a id="contract-lifecycle-validator-pid"></a>**`pid`** (integer): Spawned validator PID used for collection and owned cleanup.
+- <a id="contract-lifecycle-validator-term_signal"></a>**`term_signal`** (integer?): Signal decoded only from a successful waitpid result for this validator.
+- <a id="contract-lifecycle-validator-exit_code"></a>**`exit_code`** (integer?): Exit status decoded only from a successful waitpid result for this validator.
+- <a id="contract-lifecycle-validator-reaped"></a>**`reaped`** (boolean?): True for a confirmed owned reap, false for an unconfirmed ending, absent when unreported.
+- <a id="contract-lifecycle-validator-termination_request"></a>**`termination_request`** ([Host termination request](#contract-lifecycle-termination)?): Host kill request and native return, if requested during validator cleanup.
+- <a id="contract-lifecycle-validator-wait_errors"></a>**`wait_errors`** (array of [Failed host wait](#contract-lifecycle-wait_error)?): Failed waitpid observations from validator cleanup, including recovered interruptions.
+- <a id="contract-lifecycle-validator-read_error"></a>**`read_error`** (string?): Host diagnostic for stdout-read failure, separate from accepted record contents.
+- <a id="contract-lifecycle-validator-stdout_collection_stop"></a>**`stdout_collection_stop`** (string?): Host reason for stopping stdout collection: eof, clock_error, deadline, poll_error, byte_limit or read_error. This is fixed before the exit-grace stage.
+- <a id="contract-lifecycle-validator-stdout_bytes_received"></a>**`stdout_bytes_received`** (integer?): Total stdout bytes received by the host, including bytes later rejected by frame decoding.
+- <a id="contract-lifecycle-validator-probe_bytes_written"></a>**`probe_bytes_written`** (integer?): Request bytes accepted by host writes to the validator input pipe.
+- <a id="contract-lifecycle-validator-probe_bytes_expected"></a>**`probe_bytes_expected`** (integer?): Serialized request-batch byte count the host intended to write.
+- <a id="contract-lifecycle-validator-io_error"></a>**`io_error`** (string?): Host transport diagnostic for the first request-write or stdout-read failure selected for this collection.
+- <a id="contract-lifecycle-validator-decode_fault"></a>**`decode_fault`** ([Rejected validator frame](#contract-lifecycle-decode_fault)?): First rejected stdout frame's receiver-owned diagnostic and bounded byte prefix.
+- <a id="contract-lifecycle-validator-records"></a>**`records`** (array of [Accepted validator record](#contract-steps-verdict)?): Accepted verdict records in received order, including diagnostic, unexpected-ID and null-ID records, within this phase collector's record allowance.
+- <a id="contract-lifecycle-validator-expected_step_ids"></a>**`expected_step_ids`** (array of string?): Submitted query IDs in the planned collection; used to check missing, duplicate and unexpected associations.
+- <a id="contract-lifecycle-validator-association_issues"></a>**`association_issues`** (array of [Validator query association](#contract-lifecycle-association_issue)?): Host-computed join problems; an empty array records a complete unambiguous join for the expected queries.
+- <a id="contract-lifecycle-validator-exit_grace_wait"></a>**`exit_grace_wait`** ([Measured host wait](#contract-lifecycle-host_wait)?): Measured monotonic host wait after collection closed, with production allowance <!-- span limits.validator_exit_grace.value_unit -->1,000 milliseconds<!-- /span -->, before any further termination/reap work. Those later operations can continue beyond this allowance.
 
 <a id="contract-lifecycle-validator-associate"></a>
 ##### Joining accepted validator records
 
-[Runner host](#contract-identity-definitions-host) reports at closed phase query collection. Entry: xpc execute. Recipient: xpc caller, runner client, controller. Reports: runner reply. retains the records `lc_validator.records`. Uses [Count expected and unexpected associations](#contract-lifecycle-validator-cardinality). A unique expected-ID record enters the per-step join only when every supplied query metadata value agrees with the submitted query. Allow/deny records must supply the complete submitted query identity. Publish association issues in expected-query order, then unexpected IDs in sorted order, then a null-ID issue when present. Withhold each failed per-step join while retaining accepted records.
+[Runner host](#contract-identity-definitions-host) reports at closed phase query collection. Entry: xpc execute. Recipient: xpc caller, runner client, controller. Reports: runner reply. retain_records(`lc_validator.records`). Uses [Count expected and unexpected associations](#contract-lifecycle-validator-cardinality). A unique expected-ID record enters the per-step join only when every supplied query metadata value agrees with the submitted query. Allow/deny records must supply the complete submitted query identity. Publish association issues in expected-query order, then unexpected IDs in sorted order, then a null-ID issue when present. Withhold each failed per-step join while retaining accepted records.
 
 Duplicate IDs leave every record of that group at collection scope. Null IDs
 remain unassociated. Diagnostic outcomes may omit query metadata; any supplied
@@ -3238,17 +3072,17 @@ metadata must agree.
 <a id="contract-lifecycle-validator-cardinality"></a>
 ##### Count expected and unexpected associations
 
-[Runner host](#contract-identity-definitions-host) reports at closed validator collection association. Entry: xpc execute. Recipient: controller, xpc caller. Reports: runner reply. Applies when (`lc_validator.records` is present and `lc_validator.expected_step_ids` is present and `lc_validator.association_issues` is present).
+[Runner host](#contract-identity-definitions-host) reports at closed validator collection association. Entry: xpc execute. Recipient: controller, xpc caller. Reports: runner reply. Applies when (present(`lc_validator.records`) and present(`lc_validator.expected_step_ids`) and present(`lc_validator.association_issues`)).
 
 | Item | Requirement or consequence |
 | --- | --- |
-| <a id="contract-lifecycle-validator-cardinality-expected"></a>Expected identifier groups | Binding `e`: entry in `lc_validator.expected_step_ids`. Binding `f`: entry in `lc_validator.expected_step_ids`. Binding `v`: entry in `lc_validator.records`. Binding `i`: entry in `lc_validator.association_issues`. Association restriction for `f`: `lc_validator.expected_step_ids[f]` = `lc_validator.expected_step_ids[e]`. Association restriction for `v`: `lc_validator.records[v].step_id` = `lc_validator.expected_step_ids[e]`. Association restriction for `i`: `lc_validator.association_issues[i].step_id` = `lc_validator.expected_step_ids[e]`. For each `e`. Requires (if number of matching entries for `v` ≠ `1`, then number of matching entries for `i` = number of matching entries for `f`). |
-| <a id="contract-lifecycle-validator-cardinality-expected-missing"></a>Expected identifier groups › Missing group | For each `e`, `i`. Requires (if number of matching entries for `v` = `0`, then (`lc_validator.association_issues[i].kind` = `"missing_id"` and `lc_validator.association_issues[i].count` = `0`)). |
-| <a id="contract-lifecycle-validator-cardinality-expected-duplicate"></a>Expected identifier groups › Duplicate group | For each `e`, `i`. Requires (if number of matching entries for `v` > `1`, then (`lc_validator.association_issues[i].kind` = `"duplicate_id"` and `lc_validator.association_issues[i].count` = number of matching entries for `v`)). |
-| <a id="contract-lifecycle-validator-cardinality-unexpected"></a>Unexpected identifier groups | Binding `v`: entry in `lc_validator.records`. Binding `e`: entry in `lc_validator.expected_step_ids`. Binding `g`: entry in `lc_validator.records`. Binding `i`: entry in `lc_validator.association_issues`. Association restriction for `e`: `lc_validator.expected_step_ids[e]` = `lc_validator.records[v].step_id`. Association restriction for `g`: `lc_validator.records[g].step_id` = `lc_validator.records[v].step_id`. Association restriction for `i`: `lc_validator.association_issues[i].step_id` = `lc_validator.records[v].step_id`. For each `v`. Requires (if (`lc_validator.records[v].step_id` is present and number of matching entries for `e` = `0`), then number of matching entries for `i` = `1`). |
-| <a id="contract-lifecycle-validator-cardinality-unexpected-count"></a>Unexpected identifier groups › Unexpected group count | For each `v`, `i`. Requires (if (`lc_validator.records[v].step_id` is present and number of matching entries for `e` = `0`), then (`lc_validator.association_issues[i].kind` = `"unexpected_id"` and `lc_validator.association_issues[i].count` = number of matching entries for `g`)). |
-| <a id="contract-lifecycle-validator-cardinality-unassociated"></a>Unassociated records | Binding `v`: entry in `lc_validator.records`. Binding `i`: entry in `lc_validator.association_issues`. Association restriction for `v`: `lc_validator.records[v].step_id` is absent. Association restriction for `i`: (`lc_validator.association_issues[i].step_id` is absent and `lc_validator.association_issues[i].kind` = `"unassociated"`). Requires ((if number of matching entries for `v` > `0`, then number of matching entries for `i` = `1`) and (if number of matching entries for `v` = `0`, then number of matching entries for `i` = `0`)). |
-| <a id="contract-lifecycle-validator-cardinality-unassociated-count"></a>Unassociated records › Unassociated count | For each `i`. Requires `lc_validator.association_issues[i].count` = number of matching entries for `v`. |
+| <a id="contract-lifecycle-validator-cardinality-expected"></a>Expected identifier groups | Binding `e`: entry in `lc_validator.expected_step_ids`. Binding `f`: entry in `lc_validator.expected_step_ids`. Binding `v`: entry in `lc_validator.records`. Binding `i`: entry in `lc_validator.association_issues`. Association restriction for `f`: `lc_validator.expected_step_ids[f]` = `lc_validator.expected_step_ids[e]`. Association restriction for `v`: `lc_validator.records[v].step_id` = `lc_validator.expected_step_ids[e]`. Association restriction for `i`: `lc_validator.association_issues[i].step_id` = `lc_validator.expected_step_ids[e]`. For each `e`. Requires implies(matches(`v`) ≠ `1`, matches(`i`) = matches(`f`)). |
+| <a id="contract-lifecycle-validator-cardinality-expected-missing"></a>Expected identifier groups › Missing group | For each `e`, `i`. Requires implies(matches(`v`) = `0`, (`lc_validator.association_issues[i].kind` = `"missing_id"` and `lc_validator.association_issues[i].count` = `0`)). |
+| <a id="contract-lifecycle-validator-cardinality-expected-duplicate"></a>Expected identifier groups › Duplicate group | For each `e`, `i`. Requires implies(matches(`v`) > `1`, (`lc_validator.association_issues[i].kind` = `"duplicate_id"` and `lc_validator.association_issues[i].count` = matches(`v`))). |
+| <a id="contract-lifecycle-validator-cardinality-unexpected"></a>Unexpected identifier groups | Binding `v`: entry in `lc_validator.records`. Binding `e`: entry in `lc_validator.expected_step_ids`. Binding `g`: entry in `lc_validator.records`. Binding `i`: entry in `lc_validator.association_issues`. Association restriction for `e`: `lc_validator.expected_step_ids[e]` = `lc_validator.records[v].step_id`. Association restriction for `g`: `lc_validator.records[g].step_id` = `lc_validator.records[v].step_id`. Association restriction for `i`: `lc_validator.association_issues[i].step_id` = `lc_validator.records[v].step_id`. For each `v`. Requires implies((present(`lc_validator.records[v].step_id`) and matches(`e`) = `0`), matches(`i`) = `1`). |
+| <a id="contract-lifecycle-validator-cardinality-unexpected-count"></a>Unexpected identifier groups › Unexpected group count | For each `v`, `i`. Requires implies((present(`lc_validator.records[v].step_id`) and matches(`e`) = `0`), (`lc_validator.association_issues[i].kind` = `"unexpected_id"` and `lc_validator.association_issues[i].count` = matches(`g`))). |
+| <a id="contract-lifecycle-validator-cardinality-unassociated"></a>Unassociated records | Binding `v`: entry in `lc_validator.records`. Binding `i`: entry in `lc_validator.association_issues`. Association restriction for `v`: absent(`lc_validator.records[v].step_id`). Association restriction for `i`: (absent(`lc_validator.association_issues[i].step_id`) and `lc_validator.association_issues[i].kind` = `"unassociated"`). Requires (implies(matches(`v`) > `0`, matches(`i`) = `1`) and implies(matches(`v`) = `0`, matches(`i`) = `0`)). |
+| <a id="contract-lifecycle-validator-cardinality-unassociated-count"></a>Unassociated records › Unassociated count | For each `i`. Requires `lc_validator.association_issues[i].count` = matches(`v`). |
 
 **Support: [source read](#contract-support-grades) for [Count expected and unexpected associations](#contract-lifecycle-validator-cardinality) and its descendants.** Groups are formed from every accepted non-null ID before metadata comparison; missing/duplicate/unexpected/null-ID groups preserve their actual counts. Source: [PWRunnerPredictionEvidence.swift](../runner/Sources/PWRunnerCore/PWRunnerPredictionEvidence.swift): `validatorAssociationIssues`.
 
@@ -3257,28 +3091,24 @@ metadata must agree.
 
 Record `lc_decode_fault`: `PWValidatorDecodeFault`.
 
-| Field | JSON type and presence | Meaning |
-| --- | --- | --- |
-| <a id="contract-lifecycle-decode_fault-origin"></a>`origin` | string; required | runner_host, identifying the rejecting receiver. |
-| <a id="contract-lifecycle-decode_fault-kind"></a>`kind` | string; required | Receiver category utf8, json or structure for the first rejected frame. Admitted vocabulary: closed; displayed list: exhaustive: `"utf8"`, `"json"`, `"structure"`. |
-| <a id="contract-lifecycle-decode_fault-message"></a>`message` | string; required | Human-readable reason the frame failed structural admission. |
-| <a id="contract-lifecycle-decode_fault-byte_offset"></a>`byte_offset` | integer; required | Zero-based offset of the rejected frame's first byte in received stdout. |
-| <a id="contract-lifecycle-decode_fault-frame_bytes"></a>`frame_bytes` | integer; required | Length of that frame in bytes, excluding its LF separator. |
-| <a id="contract-lifecycle-decode_fault-retained_bytes"></a>`retained_bytes` | integer; required | Number of prefix bytes retained, capped at 256. |
-| <a id="contract-lifecycle-decode_fault-context_b64"></a>`context_b64` | string (base64); required | Base64 encoding of the retained received-byte prefix. Decoding yields those exact bytes. |
-| <a id="contract-lifecycle-decode_fault-context_truncated"></a>`context_truncated` | boolean; required | True when frame_bytes exceeds retained_bytes. |
+- <a id="contract-lifecycle-decode_fault-origin"></a>**`origin`** (string): runner_host, identifying the rejecting receiver.
+- <a id="contract-lifecycle-decode_fault-kind"></a>**`kind`** (string): Receiver category utf8, json or structure for the first rejected frame. Admitted vocabulary: closed; displayed list: exhaustive: `"utf8"`, `"json"`, `"structure"`.
+- <a id="contract-lifecycle-decode_fault-message"></a>**`message`** (string): Human-readable reason the frame failed structural admission.
+- <a id="contract-lifecycle-decode_fault-byte_offset"></a>**`byte_offset`** (integer): Zero-based offset of the rejected frame's first byte in received stdout.
+- <a id="contract-lifecycle-decode_fault-frame_bytes"></a>**`frame_bytes`** (integer): Length of that frame in bytes, excluding its LF separator.
+- <a id="contract-lifecycle-decode_fault-retained_bytes"></a>**`retained_bytes`** (integer): Number of prefix bytes retained, capped at 256.
+- <a id="contract-lifecycle-decode_fault-context_b64"></a>**`context_b64`** (string (base64)): Base64 encoding of the retained received-byte prefix. Decoding yields those exact bytes.
+- <a id="contract-lifecycle-decode_fault-context_truncated"></a>**`context_truncated`** (boolean): True when frame_bytes exceeds retained_bytes.
 
 <a id="contract-lifecycle-association_issue"></a>
 #### Validator query association
 
 Record `lc_association_issue`: `PWValidatorAssociationIssue`.
 
-| Field | JSON type and presence | Meaning |
-| --- | --- | --- |
-| <a id="contract-lifecycle-association_issue-origin"></a>`origin` | string; required | runner_host, identifying the component computing the association issue. |
-| <a id="contract-lifecycle-association_issue-kind"></a>`kind` | string; required | missing_id, duplicate_id, query_mismatch, unexpected_id or unassociated. Admitted vocabulary: closed; displayed list: exhaustive: `"missing_id"`, `"duplicate_id"`, `"query_mismatch"`, `"unexpected_id"`, `"unassociated"`. |
-| <a id="contract-lifecycle-association_issue-step_id"></a>`step_id` | string; omitted when absent | Expected or unexpected ID concerned by the issue; absent for records whose verdict ID is null. |
-| <a id="contract-lifecycle-association_issue-count"></a>`count` | integer; required | Number of accepted records involved: zero for missing_id, one for query_mismatch, the group size for duplicate/unexpected IDs, or total null-ID records for unassociated. |
+- <a id="contract-lifecycle-association_issue-origin"></a>**`origin`** (string): runner_host, identifying the component computing the association issue.
+- <a id="contract-lifecycle-association_issue-kind"></a>**`kind`** (string): missing_id, duplicate_id, query_mismatch, unexpected_id or unassociated. Admitted vocabulary: closed; displayed list: exhaustive: `"missing_id"`, `"duplicate_id"`, `"query_mismatch"`, `"unexpected_id"`, `"unassociated"`.
+- <a id="contract-lifecycle-association_issue-step_id"></a>**`step_id`** (string?): Expected or unexpected ID concerned by the issue; absent for records whose verdict ID is null.
+- <a id="contract-lifecycle-association_issue-count"></a>**`count`** (integer): Number of accepted records involved: zero for missing_id, one for query_mismatch, the group size for duplicate/unexpected IDs, or total null-ID records for unassociated.
 
 <a id="contract-lifecycle-exec"></a>
 #### Spawned-command observation
@@ -3287,11 +3117,9 @@ Record `lc_exec`: `PWExecObservation`.
 
 A completed worker exec slot separates collection, cleanup requests and the owned leader reap. Collection facts are frozen before termination requests.
 
-| Field | JSON type and presence | Meaning |
-| --- | --- | --- |
-| <a id="contract-lifecycle-exec-collection"></a>`collection` | [Exec collection](#contract-lifecycle-exec_collection); required | Leader-exit and pipe observations up to the collection stop. |
-| <a id="contract-lifecycle-exec-cleanup"></a>`cleanup` | [Exec cleanup](#contract-lifecycle-exec_cleanup); required | Requests to terminate the spawned process group and any leader fallback. |
-| <a id="contract-lifecycle-exec-reap"></a>`reap` | [Exec leader reap](#contract-lifecycle-exec_reap); required | Final bounded wait account for the owned leader after collection and cleanup. |
+- <a id="contract-lifecycle-exec-collection"></a>**`collection`** ([Exec collection](#contract-lifecycle-exec_collection)): Leader-exit and pipe observations up to the collection stop.
+- <a id="contract-lifecycle-exec-cleanup"></a>**`cleanup`** ([Exec cleanup](#contract-lifecycle-exec_cleanup)): Requests to terminate the spawned process group and any leader fallback.
+- <a id="contract-lifecycle-exec-reap"></a>**`reap`** ([Exec leader reap](#contract-lifecycle-exec_reap)): Final bounded wait account for the owned leader after collection and cleanup.
 
 <a id="contract-lifecycle-exec_collection"></a>
 #### Exec collection
@@ -3300,38 +3128,32 @@ Record `lc_exec_collection`: `PWExecCollectionObservation`.
 
 The collector can observe leader exit and pipe EOF independently; descendants may keep a stream open after the leader exits.
 
-| Field | JSON type and presence | Meaning |
-| --- | --- | --- |
-| <a id="contract-lifecycle-exec_collection-stop_reason"></a>`stop_reason` | string; required | leader_exit_and_eof, deadline, observation_error or clock_fault, recording the branch that stopped collection. Admitted vocabulary: closed; displayed list: exhaustive: `"leader_exit_and_eof"`, `"deadline"`, `"observation_error"`, `"clock_fault"`. |
-| <a id="contract-lifecycle-exec_collection-leader_exit_observed"></a>`leader_exit_observed` | boolean; required | Whether waitid observed the owned leader's exit during collection. |
-| <a id="contract-lifecycle-exec_collection-stdout"></a>`stdout` | [Exec stream observation](#contract-lifecycle-exec_stream); required | EOF or native read/poll failure retained for stdout. |
-| <a id="contract-lifecycle-exec_collection-stderr"></a>`stderr` | [Exec stream observation](#contract-lifecycle-exec_stream); required | EOF or native read/poll failure retained for stderr. |
-| <a id="contract-lifecycle-exec_collection-deadline_kind"></a>`deadline_kind` | string; omitted when absent | child or plan when the selected collection deadline expires; absent on other stop branches. The child allowance and remaining per-worker active-plan allowance are defined by the exec operation. Uses [Exec setup and child inputs](#contract-probes-attempt-exec). Admitted vocabulary: closed; displayed list: exhaustive: `"child"`, `"plan"`. |
-| <a id="contract-lifecycle-exec_collection-waitid_errno"></a>`waitid_errno` | integer; omitted when absent | Native waitid failure which stopped leader observation; recovered EINTR is excluded. |
-| <a id="contract-lifecycle-exec_collection-poll_errno"></a>`poll_errno` | integer; omitted when absent | Native poll failure which stopped stream observation; recovered EINTR is excluded. |
-| <a id="contract-lifecycle-exec_collection-clock_fault"></a>`clock_fault` | integer; omitted when absent | Local numeric clock-fault observation when collection stopped for failed/backward time. |
+- <a id="contract-lifecycle-exec_collection-stop_reason"></a>**`stop_reason`** (string): leader_exit_and_eof, deadline, observation_error or clock_fault, recording the branch that stopped collection. Admitted vocabulary: closed; displayed list: exhaustive: `"leader_exit_and_eof"`, `"deadline"`, `"observation_error"`, `"clock_fault"`.
+- <a id="contract-lifecycle-exec_collection-leader_exit_observed"></a>**`leader_exit_observed`** (boolean): Whether waitid observed the owned leader's exit during collection.
+- <a id="contract-lifecycle-exec_collection-stdout"></a>**`stdout`** ([Exec stream observation](#contract-lifecycle-exec_stream)): EOF or native read/poll failure retained for stdout.
+- <a id="contract-lifecycle-exec_collection-stderr"></a>**`stderr`** ([Exec stream observation](#contract-lifecycle-exec_stream)): EOF or native read/poll failure retained for stderr.
+- <a id="contract-lifecycle-exec_collection-deadline_kind"></a>**`deadline_kind`** (string?): child or plan when the selected collection deadline expires; absent on other stop branches. The child allowance and remaining per-worker active-plan allowance are defined by the exec operation. Uses [Exec setup and child inputs](#contract-probes-attempt-exec). Admitted vocabulary: closed; displayed list: exhaustive: `"child"`, `"plan"`.
+- <a id="contract-lifecycle-exec_collection-waitid_errno"></a>**`waitid_errno`** (integer?): Native waitid failure which stopped leader observation; recovered EINTR is excluded.
+- <a id="contract-lifecycle-exec_collection-poll_errno"></a>**`poll_errno`** (integer?): Native poll failure which stopped stream observation; recovered EINTR is excluded.
+- <a id="contract-lifecycle-exec_collection-clock_fault"></a>**`clock_fault`** (integer?): Local numeric clock-fault observation when collection stopped for failed/backward time.
 
 <a id="contract-lifecycle-exec_stream"></a>
 #### Exec stream observation
 
 Record `lc_exec_stream`: `PWExecStreamObservation`.
 
-| Field | JSON type and presence | Meaning |
-| --- | --- | --- |
-| <a id="contract-lifecycle-exec_stream-eof"></a>`eof` | boolean; required | Whether the worker read EOF on this stream before collection stopped. |
-| <a id="contract-lifecycle-exec_stream-read_errno"></a>`read_errno` | integer; omitted when absent | Terminal read errno, excluding recovered EINTR and EAGAIN. |
-| <a id="contract-lifecycle-exec_stream-poll_revents"></a>`poll_revents` | integer; omitted when absent | Terminal error/invalid descriptor poll bits retained when they ended observation; ordinary readable/EOF handling uses its own read observation. |
+- <a id="contract-lifecycle-exec_stream-eof"></a>**`eof`** (boolean): Whether the worker read EOF on this stream before collection stopped.
+- <a id="contract-lifecycle-exec_stream-read_errno"></a>**`read_errno`** (integer?): Terminal read errno, excluding recovered EINTR and EAGAIN.
+- <a id="contract-lifecycle-exec_stream-poll_revents"></a>**`poll_revents`** (integer?): Terminal error/invalid descriptor poll bits retained when they ended observation; ordinary readable/EOF handling uses its own read observation.
 
 <a id="contract-lifecycle-exec_cleanup"></a>
 #### Exec cleanup
 
 Record `lc_exec_cleanup`: `PWExecCleanupObservation`.
 
-| Field | JSON type and presence | Meaning |
-| --- | --- | --- |
-| <a id="contract-lifecycle-exec_cleanup-state"></a>`state` | string; required | not_requested after leader_exit_and_eof; ownership_unconfirmed when waitid failed; requested when an eligible process-group cleanup was attempted. Admitted vocabulary: closed; displayed list: exhaustive: `"not_requested"`, `"ownership_unconfirmed"`, `"requested"`. |
-| <a id="contract-lifecycle-exec_cleanup-group_request"></a>`group_request` | [Exec signal request](#contract-lifecycle-exec_signal); omitted when absent | SIGKILL request to negative leader PID for the owned process group, when cleanup is requested. |
-| <a id="contract-lifecycle-exec_cleanup-leader_fallback"></a>`leader_fallback` | [Exec signal request](#contract-lifecycle-exec_signal); omitted when absent | SIGKILL request to the positive leader PID after a failed group request with errno other than ESRCH. |
+- <a id="contract-lifecycle-exec_cleanup-state"></a>**`state`** (string): not_requested after leader_exit_and_eof; ownership_unconfirmed when waitid failed; requested when an eligible process-group cleanup was attempted. Admitted vocabulary: closed; displayed list: exhaustive: `"not_requested"`, `"ownership_unconfirmed"`, `"requested"`.
+- <a id="contract-lifecycle-exec_cleanup-group_request"></a>**`group_request`** ([Exec signal request](#contract-lifecycle-exec_signal)?): SIGKILL request to negative leader PID for the owned process group, when cleanup is requested.
+- <a id="contract-lifecycle-exec_cleanup-leader_fallback"></a>**`leader_fallback`** ([Exec signal request](#contract-lifecycle-exec_signal)?): SIGKILL request to the positive leader PID after a failed group request with errno other than ESRCH.
 
 <a id="contract-lifecycle-exec_signal"></a>
 #### Exec signal request
@@ -3340,12 +3162,10 @@ Record `lc_exec_signal`: `PWExecSignalRequest`.
 
 This is the worker's native kill call for a spawned command, scoped to the target named here.
 
-| Field | JSON type and presence | Meaning |
-| --- | --- | --- |
-| <a id="contract-lifecycle-exec_signal-target"></a>`target` | integer; required | Negative leader PID for a process-group request, or positive leader PID for the fallback request. |
-| <a id="contract-lifecycle-exec_signal-signal"></a>`signal` | integer; required | Signal passed to kill; the exec cleanup path uses SIGKILL. |
-| <a id="contract-lifecycle-exec_signal-rc"></a>`rc` | integer; required | Native kill return, zero or -1. |
-| <a id="contract-lifecycle-exec_signal-errno"></a>`errno` | integer; omitted when absent | Positive native errno captured for rc -1; absent after success. |
+- <a id="contract-lifecycle-exec_signal-target"></a>**`target`** (integer): Negative leader PID for a process-group request, or positive leader PID for the fallback request.
+- <a id="contract-lifecycle-exec_signal-signal"></a>**`signal`** (integer): Signal passed to kill; the exec cleanup path uses SIGKILL.
+- <a id="contract-lifecycle-exec_signal-rc"></a>**`rc`** (integer): Native kill return, zero or -1.
+- <a id="contract-lifecycle-exec_signal-errno"></a>**`errno`** (integer?): Positive native errno captured for rc -1; absent after success.
 
 <a id="contract-lifecycle-exec_reap"></a>
 #### Exec leader reap
@@ -3354,22 +3174,18 @@ Record `lc_exec_reap`: `PWExecReapObservation`.
 
 Final wait facts concern the spawned leader owned by the worker. After collection ends, the production reap allowance is <!-- span limits.exec_reap_grace.value_unit -->1,000 milliseconds<!-- /span --> of continuous time. Earlier ownership or group-request failures retain their branch priority; a recorded request and an observed reap remain separate.
 
-| Field | JSON type and presence | Meaning |
-| --- | --- | --- |
-| <a id="contract-lifecycle-exec_reap-stop_reason"></a>`stop_reason` | string; required | reaped, wait_error, ownership_unconfirmed, group_request_failed, clock_fault or deadline; branch priority preserves earlier ownership/group-request failures. Admitted vocabulary: closed; displayed list: exhaustive: `"reaped"`, `"wait_error"`, `"ownership_unconfirmed"`, `"group_request_failed"`, `"clock_fault"`, `"deadline"`. |
-| <a id="contract-lifecycle-exec_reap-last_wait"></a>`last_wait` | [Exec leader wait result](#contract-lifecycle-exec_wait); required | Last native waitpid result, with status only when the owned leader PID returned. |
-| <a id="contract-lifecycle-exec_reap-clock_fault"></a>`clock_fault` | integer; omitted when absent | Local numeric clock fault encountered by the reap wait, when observed. |
+- <a id="contract-lifecycle-exec_reap-stop_reason"></a>**`stop_reason`** (string): reaped, wait_error, ownership_unconfirmed, group_request_failed, clock_fault or deadline; branch priority preserves earlier ownership/group-request failures. Admitted vocabulary: closed; displayed list: exhaustive: `"reaped"`, `"wait_error"`, `"ownership_unconfirmed"`, `"group_request_failed"`, `"clock_fault"`, `"deadline"`.
+- <a id="contract-lifecycle-exec_reap-last_wait"></a>**`last_wait`** ([Exec leader wait result](#contract-lifecycle-exec_wait)): Last native waitpid result, with status only when the owned leader PID returned.
+- <a id="contract-lifecycle-exec_reap-clock_fault"></a>**`clock_fault`** (integer?): Local numeric clock fault encountered by the reap wait, when observed.
 
 <a id="contract-lifecycle-exec_wait"></a>
 #### Exec leader wait result
 
 Record `lc_exec_wait`: `PWExecWaitObservation`.
 
-| Field | JSON type and presence | Meaning |
-| --- | --- | --- |
-| <a id="contract-lifecycle-exec_wait-rc"></a>`rc` | integer; required | Native waitpid return: zero pending, -1 failure, or owned leader PID when reaped. |
-| <a id="contract-lifecycle-exec_wait-errno"></a>`errno` | integer; omitted when absent | Positive captured errno for rc -1, including EINTR; absent otherwise. |
-| <a id="contract-lifecycle-exec_wait-status"></a>`status` | integer; omitted when absent | Raw terminal wait status present exactly when rc is the owned leader PID, agreeing with the attempt's leader exit/signal fields. |
+- <a id="contract-lifecycle-exec_wait-rc"></a>**`rc`** (integer): Native waitpid return: zero pending, -1 failure, or owned leader PID when reaped.
+- <a id="contract-lifecycle-exec_wait-errno"></a>**`errno`** (integer?): Positive captured errno for rc -1, including EINTR; absent otherwise.
+- <a id="contract-lifecycle-exec_wait-status"></a>**`status`** (integer?): Raw terminal wait status present exactly when rc is the owned leader PID, agreeing with the attempt's leader exit/signal fields.
 
 **Support: [source read](#contract-support-grades) for [Process and operation observations](#contract-lifecycle) and its descendants.** Imported public field definitions joined to producer/decoder/assessment meanings; explicit rule and evidence gaps preserve scope. Source: [PWRunnerLifecycleEvidence.swift](../runner/Sources/PWRunnerCore/PWRunnerLifecycleEvidence.swift): `PWRunnerSubprocess`; [CWorker.swift](../runner/Sources/PWRunnerCore/CWorker.swift): `decodeWorkerEvidence`, `CWorkerInput`; [CWorkerDisposition.swift](../runner/Sources/PWRunnerCore/CWorkerDisposition.swift): `resolveDisposition`; [PWRunnerDisposition.swift](../runner/Sources/PWRunnerCore/PWRunnerDisposition.swift): `lifecycleSummary`; [PWRunnerPredictionEvidence.swift](../runner/Sources/PWRunnerCore/PWRunnerPredictionEvidence.swift): `validatorAssociationIssues`; [ValidatorClient.swift](../runner/Sources/PWRunnerCore/ValidatorClient.swift): `decodeValidatorFrames`, `runValidator`; [PWRunnerAttemptEvidence.swift](../runner/Sources/PWRunnerCore/PWRunnerAttemptEvidence.swift): `execObservationEvidenceProblem`; [PWRunnerAuthoritySetup.swift](../runner/Sources/PWRunnerCore/PWRunnerAuthoritySetup.swift): `PWOwnedReapObservation`; [pw_probe_runner.c](../controller/tools/pw_probe_runner/pw_probe_runner.c): `write_ready_byte`; [ActorSession.swift](../runner/Sources/PWRunnerCore/ActorSession.swift): `readyBudgetMs`; [pw_probe_runner_abi.h](../controller/tools/pw_probe_runner/pw_probe_runner_abi.h): `PW_SHM_DIAGNOSTIC_BYTES`; [pw_worker_timing.h](../controller/tools/pw_probe_runner/pw_worker_timing.h): `PW_EXEC_REAP_GRACE_MS`.
 
@@ -3383,29 +3199,27 @@ Record `ae_actor`: `PWRunnerActorResult`.
 
 The host emits actors in request order. Each actor owns its launch, worker publications, policy receipt, equipment read-back and lifecycle account.
 
-| Field | JSON type and presence | Meaning |
-| --- | --- | --- |
-| <a id="contract-actor_evidence-actor-actor_id"></a>`actor_id` | string; required | Submitted actor identifier that binds this row to its phases and resources. Ordinary semantic replies require nonempty, NUL-free actor identifiers within their admitted UTF-8 capacity, distinct identifiers and request order. |
-| <a id="contract-actor_evidence-actor-index"></a>`index` | integer; required | Zero-based position in the admitted actor list. |
-| <a id="contract-actor_evidence-actor-mode"></a>`mode` | string; required | Submitted sandbox mode, apply or unapplied. Admitted vocabulary: closed; displayed list: exhaustive: `"apply"`, `"unapplied"`. |
-| <a id="contract-actor_evidence-actor-policy_format"></a>`policy_format` | string; omitted when absent | Selected policy representation for an apply actor, when provided. |
-| <a id="contract-actor_evidence-actor-policy_sha256"></a>`policy_sha256` | string (hex); omitted when absent | Host SHA-256 of the selected submitted source bytes after controller augmentation. |
-| <a id="contract-actor_evidence-actor-policy_received_sha256"></a>`policy_received_sha256` | string (hex); omitted when absent | Worker SHA-256 of the bytes it actually read before compilation, when published. |
-| <a id="contract-actor_evidence-actor-setup_status"></a>`setup_status` | string; required | Host setup classification: not_launched, launch_refused, transfer_failed, applied, unapplied_declared, setup_failed, authority_setup_failed, exited_before_setup or setup_timeout. Admitted vocabulary: closed; displayed list: exhaustive: `"not_launched"`, `"launch_refused"`, `"transfer_failed"`, `"applied"`, `"unapplied_declared"`, `"setup_failed"`, `"authority_setup_failed"`, `"exited_before_setup"`, `"setup_timeout"`. |
-| <a id="contract-actor_evidence-actor-applied"></a>`applied` | boolean; omitted when absent | Acquired worker applied flag for apply mode when output exists; absent for an unapplied declaration or unavailable output. |
-| <a id="contract-actor_evidence-actor-application_count"></a>`application_count` | integer; required | Zero or one from the final acquired applied publication, retained even when a setup deadline already ended eligibility. |
-| <a id="contract-actor_evidence-actor-launch"></a>`launch` | [Actor launch context](#contract-actor_evidence-launch); omitted when absent | Host-arranged launch context once this actor process was spawned. |
-| <a id="contract-actor_evidence-actor-subprocess"></a>`subprocess` | [Worker subprocess](#contract-lifecycle-worker); omitted when absent | This actor's worker lifecycle and publication account. |
-| <a id="contract-actor_evidence-actor-compiled_profile"></a>`compiled_profile` | [Receipt](#contract-profile-receipt); omitted when absent | Receipt from this actor's requested compiled-profile capture, when the host has a capture result. |
-| <a id="contract-actor_evidence-actor-visits"></a>`visits` | array of integer; required | In an ordinary semantic reply, the exact ordered list of one-based global phase ordinals declared for this actor, including visits whose activation never occurred. Membership comes from each phase's declared owner. |
-| <a id="contract-actor_evidence-actor-equipment"></a>`equipment` | [Actor equipment selection](#contract-equipment-actor); omitted when absent | Requested and resolved worker role, entitlement requirement assessment and live execution observation. |
-| <a id="contract-actor_evidence-actor-application"></a>`application` | [Application assessment](#contract-actor_evidence-application); omitted when absent | Host application-boundary assessment with its evidence basis. |
-| <a id="contract-actor_evidence-actor-owned_reap"></a>`owned_reap` | [Owned child ending](#contract-lifecycle-owned_reap); omitted when absent | Host-owned waitpid ending retained for this actor and referenced by dependent termination gates. |
+- <a id="contract-actor_evidence-actor-actor_id"></a>**`actor_id`** (string): Submitted actor identifier that binds this row to its phases and resources. Ordinary semantic replies require nonempty, NUL-free actor identifiers within their admitted UTF-8 capacity, distinct identifiers and request order.
+- <a id="contract-actor_evidence-actor-index"></a>**`index`** (integer): Zero-based position in the admitted actor list.
+- <a id="contract-actor_evidence-actor-mode"></a>**`mode`** (string): Submitted sandbox mode, apply or unapplied. Admitted vocabulary: closed; displayed list: exhaustive: `"apply"`, `"unapplied"`.
+- <a id="contract-actor_evidence-actor-policy_format"></a>**`policy_format`** (string?): Selected policy representation for an apply actor, when provided.
+- <a id="contract-actor_evidence-actor-policy_sha256"></a>**`policy_sha256`** (string (hex)?): Host SHA-256 of the selected submitted source bytes after controller augmentation.
+- <a id="contract-actor_evidence-actor-policy_received_sha256"></a>**`policy_received_sha256`** (string (hex)?): Worker SHA-256 of the bytes it actually read before compilation, when published.
+- <a id="contract-actor_evidence-actor-setup_status"></a>**`setup_status`** (string): Host setup classification: not_launched, launch_refused, transfer_failed, applied, unapplied_declared, setup_failed, authority_setup_failed, exited_before_setup or setup_timeout. Admitted vocabulary: closed; displayed list: exhaustive: `"not_launched"`, `"launch_refused"`, `"transfer_failed"`, `"applied"`, `"unapplied_declared"`, `"setup_failed"`, `"authority_setup_failed"`, `"exited_before_setup"`, `"setup_timeout"`.
+- <a id="contract-actor_evidence-actor-applied"></a>**`applied`** (boolean?): Acquired worker applied flag for apply mode when output exists; absent for an unapplied declaration or unavailable output.
+- <a id="contract-actor_evidence-actor-application_count"></a>**`application_count`** (integer): Zero or one from the final acquired applied publication, retained even when a setup deadline already ended eligibility.
+- <a id="contract-actor_evidence-actor-launch"></a>**`launch`** ([Actor launch context](#contract-actor_evidence-launch)?): Host-arranged launch context once this actor process was spawned.
+- <a id="contract-actor_evidence-actor-subprocess"></a>**`subprocess`** ([Worker subprocess](#contract-lifecycle-worker)?): This actor's worker lifecycle and publication account.
+- <a id="contract-actor_evidence-actor-compiled_profile"></a>**`compiled_profile`** ([Receipt](#contract-profile-receipt)?): Receipt from this actor's requested compiled-profile capture, when the host has a capture result.
+- <a id="contract-actor_evidence-actor-visits"></a>**`visits`** (array of integer): In an ordinary semantic reply, the exact ordered list of one-based global phase ordinals declared for this actor, including visits whose activation never occurred. Membership comes from each phase's declared owner.
+- <a id="contract-actor_evidence-actor-equipment"></a>**`equipment`** ([Actor equipment selection](#contract-equipment-actor)?): Requested and resolved worker role, entitlement requirement assessment and live execution observation.
+- <a id="contract-actor_evidence-actor-application"></a>**`application`** ([Application assessment](#contract-actor_evidence-application)?): Host application-boundary assessment with its evidence basis.
+- <a id="contract-actor_evidence-actor-owned_reap"></a>**`owned_reap`** ([Owned child ending](#contract-lifecycle-owned_reap)?): Host-owned waitpid ending retained for this actor and referenced by dependent termination gates.
 
 <a id="contract-actor_evidence-actor-account"></a>
 ##### Actor ownership and reporting scope
 
-[Runner host](#contract-identity-definitions-host) reports at actor reply assembly. Entry: xpc execute. Recipient: xpc caller, runner client, controller. Reports: runner reply. Applies when `request.actors` is present. Assemble each actor's row from its declaration, launch/driver output and its own shared publications; phases retain their declared actor and action ownership. Retain the actor-indexed account and separately report schedule observations. In an ordinary executed reply, each declared action has its ordered step or extension-event record even when execution evidence is unresolved. Preparation refusals and retained reporting failures carry the distinct contents stated below.
+[Runner host](#contract-identity-definitions-host) reports at actor reply assembly. Entry: xpc execute. Recipient: xpc caller, runner client, controller. Reports: runner reply. Applies when present(`request.actors`). Assemble each actor's row from its declaration, launch/driver output and its own shared publications; phases retain their declared actor and action ownership. Retain the actor-indexed account and separately report schedule observations. In an ordinary executed reply, each declared action has its ordered step or extension-event record even when execution evidence is unresolved. Preparation refusals and retained reporting failures carry the distinct contents stated below.
 
 A preparation refusal retains declarations and preparation observations while
 its execution tables remain empty. A retained reporting-failure reply carries
@@ -3451,37 +3265,33 @@ Record `ae_launch`: `PWRunnerActorLaunch`.
 
 The host starts each actor as a fresh process with explicit standard streams and descriptor inheritance.
 
-| Field | JSON type and presence | Meaning |
-| --- | --- | --- |
-| <a id="contract-actor_evidence-launch-pid"></a>`pid` | integer; required | PID obtained from this actor's successful spawn. |
-| <a id="contract-actor_evidence-launch-parent_pid"></a>`parent_pid` | integer; required | PID of the runner host that spawned the actor. |
-| <a id="contract-actor_evidence-launch-environment"></a>`environment` | string; required | empty: the host supplies an empty environment to the actor process. |
-| <a id="contract-actor_evidence-launch-standard_streams"></a>`standard_streams` | string; required | stdin_policy_pipe_stdout_stderr_null_device: stdin carries policy bytes, while stdout and stderr are attached to the null device. |
-| <a id="contract-actor_evidence-launch-inherited_descriptors"></a>`inherited_descriptors` | array of integer; required | Explicit inherited descriptor numbers: 0 policy input, 3 shared evidence, 4 readiness, and 5 only when an authority region is mapped for the actor. |
+- <a id="contract-actor_evidence-launch-pid"></a>**`pid`** (integer): PID obtained from this actor's successful spawn.
+- <a id="contract-actor_evidence-launch-parent_pid"></a>**`parent_pid`** (integer): PID of the runner host that spawned the actor.
+- <a id="contract-actor_evidence-launch-environment"></a>**`environment`** (string): empty: the host supplies an empty environment to the actor process.
+- <a id="contract-actor_evidence-launch-standard_streams"></a>**`standard_streams`** (string): stdin_policy_pipe_stdout_stderr_null_device: stdin carries policy bytes, while stdout and stderr are attached to the null device.
+- <a id="contract-actor_evidence-launch-inherited_descriptors"></a>**`inherited_descriptors`** (array of integer): Explicit inherited descriptor numbers: 0 policy input, 3 shared evidence, 4 readiness, and 5 only when an authority region is mapped for the actor.
 
 <a id="contract-actor_evidence-application"></a>
 #### Application assessment
 
 Record `ae_application`: `PWRunnerActorApplication`.
 
-| Field | JSON type and presence | Meaning |
-| --- | --- | --- |
-| <a id="contract-actor_evidence-application-state"></a>`state` | string; required | not_requested, not_attempted, observed or unobserved. observed identifies evidence of the apply boundary, including a native apply failure; unobserved retains an unresolved result. Admitted vocabulary: closed; displayed list: exhaustive: `"not_requested"`, `"not_attempted"`, `"observed"`, `"unobserved"`. |
-| <a id="contract-actor_evidence-application-basis"></a>`basis` | string; required | The specific declaration, launch state or worker/authority publication supporting state. The eleven permitted state/basis pairs are defined by the application rule below. Admitted vocabulary: closed; displayed list: exhaustive: `"unapplied_declaration"`, `"worker_not_launched"`, `"applied_publication"`, `"terminal_authority_setup_refusal"`, `"apply_failure_publication"`, `"terminal_input_refusal"`, `"terminal_parameter_refusal"`, `"terminal_compile_refusal"`, `"terminal_timing_refusal"`, `"apply_call_boundary_without_result"`, `"no_eligible_apply_publication"`. |
+- <a id="contract-actor_evidence-application-state"></a>**`state`** (string): not_requested, not_attempted, observed or unobserved. observed identifies evidence of the apply boundary, including a native apply failure; unobserved retains an unresolved result. Admitted vocabulary: closed; displayed list: exhaustive: `"not_requested"`, `"not_attempted"`, `"observed"`, `"unobserved"`.
+- <a id="contract-actor_evidence-application-basis"></a>**`basis`** (string): The specific declaration, launch state or worker/authority publication supporting state. The eleven permitted state/basis pairs are defined by the application rule below. Admitted vocabulary: closed; displayed list: exhaustive: `"unapplied_declaration"`, `"worker_not_launched"`, `"applied_publication"`, `"terminal_authority_setup_refusal"`, `"apply_failure_publication"`, `"terminal_input_refusal"`, `"terminal_parameter_refusal"`, `"terminal_compile_refusal"`, `"terminal_timing_refusal"`, `"apply_call_boundary_without_result"`, `"no_eligible_apply_publication"`.
 
 <a id="contract-actor_evidence-application-authority_association"></a>
 ##### Associated authority rows
 
-[Runner host](#contract-identity-definitions-host) reports at actor reply assembly. Entry: xpc execute. Recipient: xpc caller, runner client, controller. Reports: runner reply. Binding `a`: entry in `reply.actors`. Binding `w`: entry in `reply.authority_setup.workers`. Association restriction for `w`: (`w` = `a` and `reply.authority_setup.workers[w].actor_index` is present and `reply.authority_setup.workers[w].actor_index` = `a` and `reply.authority_setup.workers[w].actor_id` is present and `reply.authority_setup.workers[w].actor_id` = `reply.actors[a].actor_id`). For each `a`. Applies when (`request.actors` is present and `reply.actors` is present and `reply.execution_form` = `"actors"` and `reply.reporting_failure` is absent).
+[Runner host](#contract-identity-definitions-host) reports at actor reply assembly. Entry: xpc execute. Recipient: xpc caller, runner client, controller. Reports: runner reply. Binding `a`: entry in `reply.actors`. Binding `w`: entry in `reply.authority_setup.workers`. Association restriction for `w`: (`w` = `a` and present(`reply.authority_setup.workers[w].actor_index`) and `reply.authority_setup.workers[w].actor_index` = `a` and present(`reply.authority_setup.workers[w].actor_id`) and `reply.authority_setup.workers[w].actor_id` = `reply.actors[a].actor_id`). For each `a`. Applies when (present(`request.actors`) and present(`reply.actors`) and `reply.execution_form` = `"actors"` and absent(`reply.reporting_failure`)).
 
 | Item | Requirement or consequence |
 | --- | --- |
-| <a id="contract-actor_evidence-application-authority_association-entry"></a>One associated entry for each actor | Requires (`reply.authority_setup` is present and count of `reply.authority_setup.workers` = count of `reply.actors` and number of matching entries for `w` = `1`). |
+| <a id="contract-actor_evidence-application-authority_association-entry"></a>One associated entry for each actor | Requires (present(`reply.authority_setup`) and count(`reply.authority_setup.workers`) = count(`reply.actors`) and matches(`w`) = `1`). |
 
 <a id="contract-actor_evidence-application-classify"></a>
 ##### Application classification
 
-[Runner host](#contract-identity-definitions-host) reports at actor reply assembly. Entry: xpc execute. Recipient: xpc caller, runner client, controller. Reports: runner reply. Binding `a`: entry in `reply.actors`. Binding `t`: entry in `reply.authority_setup.workers`. Association restriction for `t`: (`t` = `a` and `reply.authority_setup.workers[t].publication` is present and `reply.authority_setup.workers[t].publication` = `"observed"` and `reply.authority_setup.workers[t].disposition` is present and `reply.authority_setup.workers[t].disposition` = `"terminal_required_failure"` and `reply.authority_setup.workers[t].integrity_errors` is absent). For each `a`. Select the first matching case in the listed order. Applies when (`request.actors` is present and `reply.actors` is present and `reply.execution_form` = `"actors"` and `reply.reporting_failure` is absent).
+[Runner host](#contract-identity-definitions-host) reports at actor reply assembly. Entry: xpc execute. Recipient: xpc caller, runner client, controller. Reports: runner reply. Binding `a`: entry in `reply.actors`. Binding `t`: entry in `reply.authority_setup.workers`. Association restriction for `t`: (`t` = `a` and present(`reply.authority_setup.workers[t].publication`) and `reply.authority_setup.workers[t].publication` = `"observed"` and present(`reply.authority_setup.workers[t].disposition`) and `reply.authority_setup.workers[t].disposition` = `"terminal_required_failure"` and absent(`reply.authority_setup.workers[t].integrity_errors`)). For each `a`. Select the first matching case in the listed order. Applies when (present(`request.actors`) and present(`reply.actors`) and `reply.execution_form` = `"actors"` and absent(`reply.reporting_failure`)).
 
 Preparation refusals classify their
 unlaunched rows through the first two branches. An unavailable native
@@ -3494,17 +3304,17 @@ its own reporting scope.
 
 | Case | When | Consequence |
 | --- | --- | --- |
-| <a id="contract-actor_evidence-application-classify-unapplied"></a>1. Unapplied declaration | `reply.actors[a].mode` = `"unapplied"` | sets `reply.actors[a].application.state` to `"not_requested"`, sets `reply.actors[a].application.basis` to `"unapplied_declaration"`. |
-| <a id="contract-actor_evidence-application-classify-unlaunched"></a>2. Worker absent | `reply.actors[a].launch` is absent | sets `reply.actors[a].application.state` to `"not_attempted"`, sets `reply.actors[a].application.basis` to `"worker_not_launched"`. |
-| <a id="contract-actor_evidence-application-classify-applied"></a>3. Applied flag | (`reply.actors[a].applied` is present and `reply.actors[a].applied` = `true`) | sets `reply.actors[a].application.state` to `"observed"`, sets `reply.actors[a].application.basis` to `"applied_publication"`. |
-| <a id="contract-actor_evidence-application-classify-authority"></a>4. Authority refusal | (`reply.authority_setup` is present and number of matching entries for `t` = `1`) | sets `reply.actors[a].application.state` to `"not_attempted"`, sets `reply.actors[a].application.basis` to `"terminal_authority_setup_refusal"`. |
-| <a id="contract-actor_evidence-application-classify-apply_failure"></a>5. Native apply failure | (`reply.actors[a].subprocess` is present and `reply.actors[a].subprocess.worker_evidence` is present and `reply.actors[a].subprocess.worker_evidence.failure_state` = `"published"` and `reply.actors[a].subprocess.worker_evidence.failure` is present and `reply.actors[a].subprocess.worker_evidence.failure.operation` = `8` and `reply.actors[a].subprocess.worker_evidence.failure.code` = `1` and `reply.actors[a].subprocess.worker_evidence.failure.native_kind` = `1` and `reply.actors[a].subprocess.worker_evidence.failure.native_result` is present and `reply.actors[a].subprocess.worker_evidence.failure.native_result` ≠ `0`) | sets `reply.actors[a].application.state` to `"observed"`, sets `reply.actors[a].application.basis` to `"apply_failure_publication"`. |
-| <a id="contract-actor_evidence-application-classify-input"></a>6. Input refusal | (`reply.actors[a].subprocess` is present and `reply.actors[a].subprocess.worker_evidence` is present and `reply.actors[a].subprocess.worker_evidence.failure_state` = `"published"` and `reply.actors[a].subprocess.worker_evidence.failure` is present and ((`reply.actors[a].subprocess.worker_evidence.failure.operation` = `1` and `reply.actors[a].subprocess.worker_evidence.failure.code` is one of `4`, `7`, `10`, `12` and `reply.actors[a].subprocess.worker_evidence.failure.native_kind` = `0`) or (`reply.actors[a].subprocess.worker_evidence.failure.operation` = `2` and `reply.actors[a].subprocess.worker_evidence.failure.code` is one of `2`, `3`, `9`, `13`))) | sets `reply.actors[a].application.state` to `"not_attempted"`, sets `reply.actors[a].application.basis` to `"terminal_input_refusal"`. |
-| <a id="contract-actor_evidence-application-classify-parameter"></a>7. Parameter refusal | (`reply.actors[a].subprocess` is present and `reply.actors[a].subprocess.worker_evidence` is present and `reply.actors[a].subprocess.worker_evidence.failure_state` = `"published"` and `reply.actors[a].subprocess.worker_evidence.failure` is present and ((`reply.actors[a].subprocess.worker_evidence.failure.operation` = `1` and `reply.actors[a].subprocess.worker_evidence.failure.code` = `5` and `reply.actors[a].subprocess.worker_evidence.failure.native_kind` = `0`) or (`reply.actors[a].subprocess.worker_evidence.failure.operation` = `3` and `reply.actors[a].subprocess.worker_evidence.failure.code` = `1` and `reply.actors[a].subprocess.worker_evidence.failure.native_kind` = `2`) or (`reply.actors[a].subprocess.worker_evidence.failure.operation` = `4` and ((`reply.actors[a].subprocess.worker_evidence.failure.code` = `1` and `reply.actors[a].subprocess.worker_evidence.failure.native_kind` = `1`) or (`reply.actors[a].subprocess.worker_evidence.failure.code` = `6` and `reply.actors[a].subprocess.worker_evidence.failure.native_kind` = `0`))))) | sets `reply.actors[a].application.state` to `"not_attempted"`, sets `reply.actors[a].application.basis` to `"terminal_parameter_refusal"`. |
-| <a id="contract-actor_evidence-application-classify-compile"></a>8. Compile refusal | (`reply.actors[a].subprocess` is present and `reply.actors[a].subprocess.worker_evidence` is present and `reply.actors[a].subprocess.worker_evidence.failure_state` = `"published"` and `reply.actors[a].subprocess.worker_evidence.failure` is present and `reply.actors[a].subprocess.worker_evidence.failure.operation` = `5` and `reply.actors[a].subprocess.worker_evidence.failure.code` = `1` and `reply.actors[a].subprocess.worker_evidence.failure.native_kind` = `2`) | sets `reply.actors[a].application.state` to `"not_attempted"`, sets `reply.actors[a].application.basis` to `"terminal_compile_refusal"`. |
-| <a id="contract-actor_evidence-application-classify-timing"></a>9. Timing refusal | (`reply.actors[a].subprocess` is present and `reply.actors[a].subprocess.worker_evidence` is present and `reply.actors[a].subprocess.worker_evidence.failure_state` = `"published"` and `reply.actors[a].subprocess.worker_evidence.failure` is present and `reply.actors[a].subprocess.worker_evidence.failure.operation` = `12` and ((`reply.actors[a].subprocess.worker_evidence.failure.code` = `1` and `reply.actors[a].subprocess.worker_evidence.failure.native_kind` = `1`) or (`reply.actors[a].subprocess.worker_evidence.failure.code` = `14` and `reply.actors[a].subprocess.worker_evidence.failure.native_kind` = `0`) or (`reply.actors[a].subprocess.worker_evidence.failure.code` = `15` and `reply.actors[a].subprocess.worker_evidence.failure.detail` = `1` and `reply.actors[a].subprocess.worker_evidence.failure.native_kind` = `0`))) | sets `reply.actors[a].application.state` to `"not_attempted"`, sets `reply.actors[a].application.basis` to `"terminal_timing_refusal"`. |
-| <a id="contract-actor_evidence-application-classify-boundary"></a>10. Apply boundary without result | (`reply.actors[a].subprocess` is present and `reply.actors[a].subprocess.worker_evidence` is present and `reply.actors[a].subprocess.worker_evidence.progress` is present and `reply.actors[a].subprocess.worker_evidence.progress.operation` = `8` and `reply.actors[a].subprocess.worker_evidence.progress.stage` is one of `1`, `2`) | sets `reply.actors[a].application.state` to `"unobserved"`, sets `reply.actors[a].application.basis` to `"apply_call_boundary_without_result"`. |
-| <a id="contract-actor_evidence-application-classify-remaining"></a>11. Remaining evidence | `true` | sets `reply.actors[a].application.state` to `"unobserved"`, sets `reply.actors[a].application.basis` to `"no_eligible_apply_publication"`. |
+| <a id="contract-actor_evidence-application-classify-unapplied"></a>1. Unapplied declaration | `reply.actors[a].mode` = `"unapplied"` | [set_value(`reply.actors[a].application.state`, `"not_requested"`), set_value(`reply.actors[a].application.basis`, `"unapplied_declaration"`)]. |
+| <a id="contract-actor_evidence-application-classify-unlaunched"></a>2. Worker absent | absent(`reply.actors[a].launch`) | [set_value(`reply.actors[a].application.state`, `"not_attempted"`), set_value(`reply.actors[a].application.basis`, `"worker_not_launched"`)]. |
+| <a id="contract-actor_evidence-application-classify-applied"></a>3. Applied flag | (present(`reply.actors[a].applied`) and `reply.actors[a].applied` = `true`) | [set_value(`reply.actors[a].application.state`, `"observed"`), set_value(`reply.actors[a].application.basis`, `"applied_publication"`)]. |
+| <a id="contract-actor_evidence-application-classify-authority"></a>4. Authority refusal | (present(`reply.authority_setup`) and matches(`t`) = `1`) | [set_value(`reply.actors[a].application.state`, `"not_attempted"`), set_value(`reply.actors[a].application.basis`, `"terminal_authority_setup_refusal"`)]. |
+| <a id="contract-actor_evidence-application-classify-apply_failure"></a>5. Native apply failure | (present(`reply.actors[a].subprocess`) and present(`reply.actors[a].subprocess.worker_evidence`) and `reply.actors[a].subprocess.worker_evidence.failure_state` = `"published"` and present(`reply.actors[a].subprocess.worker_evidence.failure`) and `reply.actors[a].subprocess.worker_evidence.failure.operation` = `8` and `reply.actors[a].subprocess.worker_evidence.failure.code` = `1` and `reply.actors[a].subprocess.worker_evidence.failure.native_kind` = `1` and present(`reply.actors[a].subprocess.worker_evidence.failure.native_result`) and `reply.actors[a].subprocess.worker_evidence.failure.native_result` ≠ `0`) | [set_value(`reply.actors[a].application.state`, `"observed"`), set_value(`reply.actors[a].application.basis`, `"apply_failure_publication"`)]. |
+| <a id="contract-actor_evidence-application-classify-input"></a>6. Input refusal | (present(`reply.actors[a].subprocess`) and present(`reply.actors[a].subprocess.worker_evidence`) and `reply.actors[a].subprocess.worker_evidence.failure_state` = `"published"` and present(`reply.actors[a].subprocess.worker_evidence.failure`) and ((`reply.actors[a].subprocess.worker_evidence.failure.operation` = `1` and `reply.actors[a].subprocess.worker_evidence.failure.code` ∈ [`4`, `7`, `10`, `12`] and `reply.actors[a].subprocess.worker_evidence.failure.native_kind` = `0`) or (`reply.actors[a].subprocess.worker_evidence.failure.operation` = `2` and `reply.actors[a].subprocess.worker_evidence.failure.code` ∈ [`2`, `3`, `9`, `13`]))) | [set_value(`reply.actors[a].application.state`, `"not_attempted"`), set_value(`reply.actors[a].application.basis`, `"terminal_input_refusal"`)]. |
+| <a id="contract-actor_evidence-application-classify-parameter"></a>7. Parameter refusal | (present(`reply.actors[a].subprocess`) and present(`reply.actors[a].subprocess.worker_evidence`) and `reply.actors[a].subprocess.worker_evidence.failure_state` = `"published"` and present(`reply.actors[a].subprocess.worker_evidence.failure`) and ((`reply.actors[a].subprocess.worker_evidence.failure.operation` = `1` and `reply.actors[a].subprocess.worker_evidence.failure.code` = `5` and `reply.actors[a].subprocess.worker_evidence.failure.native_kind` = `0`) or (`reply.actors[a].subprocess.worker_evidence.failure.operation` = `3` and `reply.actors[a].subprocess.worker_evidence.failure.code` = `1` and `reply.actors[a].subprocess.worker_evidence.failure.native_kind` = `2`) or (`reply.actors[a].subprocess.worker_evidence.failure.operation` = `4` and ((`reply.actors[a].subprocess.worker_evidence.failure.code` = `1` and `reply.actors[a].subprocess.worker_evidence.failure.native_kind` = `1`) or (`reply.actors[a].subprocess.worker_evidence.failure.code` = `6` and `reply.actors[a].subprocess.worker_evidence.failure.native_kind` = `0`))))) | [set_value(`reply.actors[a].application.state`, `"not_attempted"`), set_value(`reply.actors[a].application.basis`, `"terminal_parameter_refusal"`)]. |
+| <a id="contract-actor_evidence-application-classify-compile"></a>8. Compile refusal | (present(`reply.actors[a].subprocess`) and present(`reply.actors[a].subprocess.worker_evidence`) and `reply.actors[a].subprocess.worker_evidence.failure_state` = `"published"` and present(`reply.actors[a].subprocess.worker_evidence.failure`) and `reply.actors[a].subprocess.worker_evidence.failure.operation` = `5` and `reply.actors[a].subprocess.worker_evidence.failure.code` = `1` and `reply.actors[a].subprocess.worker_evidence.failure.native_kind` = `2`) | [set_value(`reply.actors[a].application.state`, `"not_attempted"`), set_value(`reply.actors[a].application.basis`, `"terminal_compile_refusal"`)]. |
+| <a id="contract-actor_evidence-application-classify-timing"></a>9. Timing refusal | (present(`reply.actors[a].subprocess`) and present(`reply.actors[a].subprocess.worker_evidence`) and `reply.actors[a].subprocess.worker_evidence.failure_state` = `"published"` and present(`reply.actors[a].subprocess.worker_evidence.failure`) and `reply.actors[a].subprocess.worker_evidence.failure.operation` = `12` and ((`reply.actors[a].subprocess.worker_evidence.failure.code` = `1` and `reply.actors[a].subprocess.worker_evidence.failure.native_kind` = `1`) or (`reply.actors[a].subprocess.worker_evidence.failure.code` = `14` and `reply.actors[a].subprocess.worker_evidence.failure.native_kind` = `0`) or (`reply.actors[a].subprocess.worker_evidence.failure.code` = `15` and `reply.actors[a].subprocess.worker_evidence.failure.detail` = `1` and `reply.actors[a].subprocess.worker_evidence.failure.native_kind` = `0`))) | [set_value(`reply.actors[a].application.state`, `"not_attempted"`), set_value(`reply.actors[a].application.basis`, `"terminal_timing_refusal"`)]. |
+| <a id="contract-actor_evidence-application-classify-boundary"></a>10. Apply boundary without result | (present(`reply.actors[a].subprocess`) and present(`reply.actors[a].subprocess.worker_evidence`) and present(`reply.actors[a].subprocess.worker_evidence.progress`) and `reply.actors[a].subprocess.worker_evidence.progress.operation` = `8` and `reply.actors[a].subprocess.worker_evidence.progress.stage` ∈ [`1`, `2`]) | [set_value(`reply.actors[a].application.state`, `"unobserved"`), set_value(`reply.actors[a].application.basis`, `"apply_call_boundary_without_result"`)]. |
+| <a id="contract-actor_evidence-application-classify-remaining"></a>11. Remaining evidence | `true` | [set_value(`reply.actors[a].application.state`, `"unobserved"`), set_value(`reply.actors[a].application.basis`, `"no_eligible_apply_publication"`)]. |
 
 <a id="contract-actor_evidence-application-late_application"></a>
 ##### Setup deadline and later application
@@ -3520,32 +3330,28 @@ Record `ae_phase`: `PWRunnerPhaseResult`.
 
 The host reports phases in declared schedule order. Observation fields record activation's consequences separately from the declared phase and action identities.
 
-| Field | JSON type and presence | Meaning |
-| --- | --- | --- |
-| <a id="contract-actor_evidence-phase-phase_id"></a>`phase_id` | string; required | Submitted phase identifier used by its action records and validator collection. Ordinary semantic replies require a nonempty, NUL-free identifier within its admitted UTF-8 capacity. The declared phase order determines its ordinal. |
-| <a id="contract-actor_evidence-phase-ordinal"></a>`ordinal` | integer; required | One-based position in the global phase schedule. |
-| <a id="contract-actor_evidence-phase-action_ids"></a>`action_ids` | array of string; required | Declared action identifiers in phase order, retained even when actions produce no execution observations. |
-| <a id="contract-actor_evidence-phase-arrival_observed"></a>`arrival_observed` | boolean; required | Whether the host acquired the active worker's arrival publication for this visit. |
-| <a id="contract-actor_evidence-phase-completion_observed"></a>`completion_observed` | boolean; required | Whether the host acquired completion for this visit. |
-| <a id="contract-actor_evidence-phase-collection_status"></a>`collection_status` | string; required | collected, not_needed, budget_exhausted, clock_unavailable or not_reached. collected identifies an invoked collection even when validator I/O or decoding later fails. Admitted vocabulary: closed; displayed list: exhaustive: `"collected"`, `"not_needed"`, `"budget_exhausted"`, `"clock_unavailable"`, `"not_reached"`. |
-| <a id="contract-actor_evidence-phase-ordering"></a>`ordering` | [Collection and release observations](#contract-steps-ordering); omitted when absent | Collection/release order observations for this phase, including host proceed store and worker acknowledgement. |
-| <a id="contract-actor_evidence-phase-validator_subprocess"></a>`validator_subprocess` | [Validator subprocess](#contract-lifecycle-validator); omitted when absent | Child-process and accepted-verdict account for this phase's validator collection. |
-| <a id="contract-actor_evidence-phase-validator_spawn_failure"></a>`validator_spawn_failure` | [Native spawn failure](#contract-lifecycle-spawn_failure); omitted when absent | Native validator spawn failure before a validator child existed. |
-| <a id="contract-actor_evidence-phase-actor_id"></a>`actor_id` | string; omitted when absent | Actor owning this phase in actor form; absent for the single-worker form. |
-| <a id="contract-actor_evidence-phase-actor_visit"></a>`actor_visit` | integer; omitted when absent | One-based visit number within this actor's declared visits, distinct from global ordinal. |
-| <a id="contract-actor_evidence-phase-visit_timing"></a>`visit_timing` | [Visit intervals](#contract-actor_evidence-timing); omitted when absent | Host-measured intervals for reached visit boundaries; missing intervals retain unavailable clock/boundary observations. |
-| <a id="contract-actor_evidence-phase-termination_gate"></a>`termination_gate` | [Termination dependency](#contract-actor_evidence-gate); omitted when absent | Dependency observation for a phase declaring after_termination, including gates left not_reached. |
-| <a id="contract-actor_evidence-phase-activation_observation"></a>`activation_observation` | [Host activation observation](#contract-actor_evidence-activation); omitted when absent | Host release-store observation which activates this phase, with its actor-local capture ordinal and optional time. |
+- <a id="contract-actor_evidence-phase-phase_id"></a>**`phase_id`** (string): Submitted phase identifier used by its action records and validator collection. Ordinary semantic replies require a nonempty, NUL-free identifier within its admitted UTF-8 capacity. The declared phase order determines its ordinal.
+- <a id="contract-actor_evidence-phase-ordinal"></a>**`ordinal`** (integer): One-based position in the global phase schedule.
+- <a id="contract-actor_evidence-phase-action_ids"></a>**`action_ids`** (array of string): Declared action identifiers in phase order, retained even when actions produce no execution observations.
+- <a id="contract-actor_evidence-phase-arrival_observed"></a>**`arrival_observed`** (boolean): Whether the host acquired the active worker's arrival publication for this visit.
+- <a id="contract-actor_evidence-phase-completion_observed"></a>**`completion_observed`** (boolean): Whether the host acquired completion for this visit.
+- <a id="contract-actor_evidence-phase-collection_status"></a>**`collection_status`** (string): collected, not_needed, budget_exhausted, clock_unavailable or not_reached. collected identifies an invoked collection even when validator I/O or decoding later fails. Admitted vocabulary: closed; displayed list: exhaustive: `"collected"`, `"not_needed"`, `"budget_exhausted"`, `"clock_unavailable"`, `"not_reached"`.
+- <a id="contract-actor_evidence-phase-ordering"></a>**`ordering`** ([Collection and release observations](#contract-steps-ordering)?): Collection/release order observations for this phase, including host proceed store and worker acknowledgement.
+- <a id="contract-actor_evidence-phase-validator_subprocess"></a>**`validator_subprocess`** ([Validator subprocess](#contract-lifecycle-validator)?): Child-process and accepted-verdict account for this phase's validator collection.
+- <a id="contract-actor_evidence-phase-validator_spawn_failure"></a>**`validator_spawn_failure`** ([Native spawn failure](#contract-lifecycle-spawn_failure)?): Native validator spawn failure before a validator child existed.
+- <a id="contract-actor_evidence-phase-actor_id"></a>**`actor_id`** (string?): Actor owning this phase in actor form; absent for the single-worker form.
+- <a id="contract-actor_evidence-phase-actor_visit"></a>**`actor_visit`** (integer?): One-based visit number within this actor's declared visits, distinct from global ordinal.
+- <a id="contract-actor_evidence-phase-visit_timing"></a>**`visit_timing`** ([Visit intervals](#contract-actor_evidence-timing)?): Host-measured intervals for reached visit boundaries; missing intervals retain unavailable clock/boundary observations.
+- <a id="contract-actor_evidence-phase-termination_gate"></a>**`termination_gate`** ([Termination dependency](#contract-actor_evidence-gate)?): Dependency observation for a phase declaring after_termination, including gates left not_reached.
+- <a id="contract-actor_evidence-phase-activation_observation"></a>**`activation_observation`** ([Host activation observation](#contract-actor_evidence-activation)?): Host release-store observation which activates this phase, with its actor-local capture ordinal and optional time.
 
 <a id="contract-actor_evidence-activation"></a>
 #### Host activation observation
 
 Record `ae_activation`: `PWRunnerActorActivation`.
 
-| Field | JSON type and presence | Meaning |
-| --- | --- | --- |
-| <a id="contract-actor_evidence-activation-capture_ordinal"></a>`capture_ordinal` | integer; required | Positive sequence position of this host activation store among observations of the same child. |
-| <a id="contract-actor_evidence-activation-observed_ns"></a>`observed_ns` | integer; omitted when absent | Host monotonic time in nanoseconds after the store, when the clock supplied it. |
+- <a id="contract-actor_evidence-activation-capture_ordinal"></a>**`capture_ordinal`** (integer): Positive sequence position of this host activation store among observations of the same child.
+- <a id="contract-actor_evidence-activation-observed_ns"></a>**`observed_ns`** (integer?): Host monotonic time in nanoseconds after the store, when the clock supplied it.
 
 <a id="contract-actor_evidence-timing"></a>
 #### Visit intervals
@@ -3554,25 +3360,21 @@ Record `ae_timing`: `PWRunnerVisitTiming`.
 
 Each interval measures two host observations in milliseconds; an unavailable or backward clock leaves that interval absent.
 
-| Field | JSON type and presence | Meaning |
-| --- | --- | --- |
-| <a id="contract-actor_evidence-timing-activation_to_arrival_ms"></a>`activation_to_arrival_ms` | integer; omitted when absent | Time between the host activation store and acquired worker arrival. |
-| <a id="contract-actor_evidence-timing-collection_ms"></a>`collection_ms` | integer; omitted when absent | Time spent in the phase's synchronous query-collection hook. |
-| <a id="contract-actor_evidence-timing-arrival_to_release_ms"></a>`arrival_to_release_ms` | integer; omitted when absent | Time from observed arrival to the host proceed release store. |
-| <a id="contract-actor_evidence-timing-release_to_completion_ms"></a>`release_to_completion_ms` | integer; omitted when absent | Time from the release store to acquired worker completion. |
+- <a id="contract-actor_evidence-timing-activation_to_arrival_ms"></a>**`activation_to_arrival_ms`** (integer?): Time between the host activation store and acquired worker arrival.
+- <a id="contract-actor_evidence-timing-collection_ms"></a>**`collection_ms`** (integer?): Time spent in the phase's synchronous query-collection hook.
+- <a id="contract-actor_evidence-timing-arrival_to_release_ms"></a>**`arrival_to_release_ms`** (integer?): Time from observed arrival to the host proceed release store.
+- <a id="contract-actor_evidence-timing-release_to_completion_ms"></a>**`release_to_completion_ms`** (integer?): Time from the release store to acquired worker completion.
 
 <a id="contract-actor_evidence-schedule"></a>
 #### Schedule account
 
 Record `ae_schedule`: `PWRunnerScheduleRecord`.
 
-| Field | JSON type and presence | Meaning |
-| --- | --- | --- |
-| <a id="contract-actor_evidence-schedule-setup_wait"></a>`setup_wait` | [Measured host wait](#contract-lifecycle-host_wait); omitted when absent | Measured shared setup wait for the actor set. |
-| <a id="contract-actor_evidence-schedule-execution_wait"></a>`execution_wait` | [Measured host wait](#contract-lifecycle-host_wait); omitted when absent | Measured schedule traversal wait, with collection excluded when separately budgeted. |
-| <a id="contract-actor_evidence-schedule-lifetime_budget_ms"></a>`lifetime_budget_ms` | integer; required | Overall actor-run lifetime allowance, <!-- span limits.actor_lifetime_cutoff.value_unit -->180,000 milliseconds<!-- /span --> in the production plan. |
-| <a id="contract-actor_evidence-schedule-collection_budget_ms"></a>`collection_budget_ms` | integer; required | Recorded production maximum for aggregate query collection across actor phases: <!-- span limits.actor_collection_allowance.value_unit -->30,000 milliseconds<!-- /span -->. The host reports this maximum even when `_test_overrides.validator_total_timeout_ms` reduces the allowance used for collection. |
-| <a id="contract-actor_evidence-schedule-cancelled"></a>`cancelled` | string; omitted when absent | Recorded schedule cancellation reason, such as preparation_refused, execution_allowance_exhausted, an equipment failure or termination_dependency followed by its outcome; absent when no cancellation was recorded. |
+- <a id="contract-actor_evidence-schedule-setup_wait"></a>**`setup_wait`** ([Measured host wait](#contract-lifecycle-host_wait)?): Measured shared setup wait for the actor set.
+- <a id="contract-actor_evidence-schedule-execution_wait"></a>**`execution_wait`** ([Measured host wait](#contract-lifecycle-host_wait)?): Measured schedule traversal wait, with collection excluded when separately budgeted.
+- <a id="contract-actor_evidence-schedule-lifetime_budget_ms"></a>**`lifetime_budget_ms`** (integer): Overall actor-run lifetime allowance, <!-- span limits.actor_lifetime_cutoff.value_unit -->180,000 milliseconds<!-- /span --> in the production plan.
+- <a id="contract-actor_evidence-schedule-collection_budget_ms"></a>**`collection_budget_ms`** (integer): Recorded production maximum for aggregate query collection across actor phases: <!-- span limits.actor_collection_allowance.value_unit -->30,000 milliseconds<!-- /span -->. The host reports this maximum even when `_test_overrides.validator_total_timeout_ms` reduces the allowance used for collection.
+- <a id="contract-actor_evidence-schedule-cancelled"></a>**`cancelled`** (string?): Recorded schedule cancellation reason, such as preparation_refused, execution_allowance_exhausted, an equipment failure or termination_dependency followed by its outcome; absent when no cancellation was recorded.
 
 <a id="contract-actor_evidence-gate"></a>
 #### Termination dependency
@@ -3581,31 +3383,29 @@ Record `ae_gate`: `PWRunnerTerminationGate`.
 
 The gate belongs to the dependent phase and observes the named source actor after that source’s final scheduled visit was activated.
 
-| Field | JSON type and presence | Meaning |
-| --- | --- | --- |
-| <a id="contract-actor_evidence-gate-source_actor_id"></a>`source_actor_id` | string; required | Different actor named by the dependent phase's after_termination declaration. |
-| <a id="contract-actor_evidence-gate-source_final_phase_id"></a>`source_final_phase_id` | string; required | Source actor's last declared phase, which must precede the dependent phase in the global schedule. |
-| <a id="contract-actor_evidence-gate-condition"></a>`condition` | string; required | terminated, the supported dependency condition. Admitted vocabulary: closed; displayed list: exhaustive: `"terminated"`. |
-| <a id="contract-actor_evidence-gate-outcome"></a>`outcome` | string; required | not_reached, satisfied, timed_out, ownership_lost, clock_unavailable, source_unavailable, source_departure_requested or execution_allowance_exhausted; each is defined by the gate rule below. Admitted vocabulary: closed; displayed list: exhaustive: `"not_reached"`, `"satisfied"`, `"timed_out"`, `"ownership_lost"`, `"clock_unavailable"`, `"source_unavailable"`, `"source_departure_requested"`, `"execution_allowance_exhausted"`. |
-| <a id="contract-actor_evidence-gate-wait"></a>`wait` | [Measured host wait](#contract-lifecycle-host_wait); omitted when absent | Host dependency wait, with budget capped at <!-- span limits.actor_termination_wait.value_unit -->5,000 milliseconds<!-- /span --> and charged to remaining execution allowance. Absent for not_reached. |
-| <a id="contract-actor_evidence-gate-observation"></a>`observation` | [Owned-ending reference](#contract-lifecycle-reap_reference); omitted when absent | Reference to the source actor's owned ending captured by the evaluated gate, when available; a late ending can remain beside a failed gate. |
-| <a id="contract-actor_evidence-gate-activation_eligible"></a>`activation_eligible` | boolean; required | True exactly for a satisfied gate, allowing this dependent phase to proceed to activation. |
-| <a id="contract-actor_evidence-gate-capture_ordinal"></a>`capture_ordinal` | integer; omitted when absent | Capture of the gate result in the source child's host-observation sequence; absent for not_reached and when no source session supplies a sequence. |
+- <a id="contract-actor_evidence-gate-source_actor_id"></a>**`source_actor_id`** (string): Different actor named by the dependent phase's after_termination declaration.
+- <a id="contract-actor_evidence-gate-source_final_phase_id"></a>**`source_final_phase_id`** (string): Source actor's last declared phase, which must precede the dependent phase in the global schedule.
+- <a id="contract-actor_evidence-gate-condition"></a>**`condition`** (string): terminated, the supported dependency condition. Admitted vocabulary: closed; displayed list: exhaustive: `"terminated"`.
+- <a id="contract-actor_evidence-gate-outcome"></a>**`outcome`** (string): not_reached, satisfied, timed_out, ownership_lost, clock_unavailable, source_unavailable, source_departure_requested or execution_allowance_exhausted; each is defined by the gate rule below. Admitted vocabulary: closed; displayed list: exhaustive: `"not_reached"`, `"satisfied"`, `"timed_out"`, `"ownership_lost"`, `"clock_unavailable"`, `"source_unavailable"`, `"source_departure_requested"`, `"execution_allowance_exhausted"`.
+- <a id="contract-actor_evidence-gate-wait"></a>**`wait`** ([Measured host wait](#contract-lifecycle-host_wait)?): Host dependency wait, with budget capped at <!-- span limits.actor_termination_wait.value_unit -->5,000 milliseconds<!-- /span --> and charged to remaining execution allowance. Absent for not_reached.
+- <a id="contract-actor_evidence-gate-observation"></a>**`observation`** ([Owned-ending reference](#contract-lifecycle-reap_reference)?): Reference to the source actor's owned ending captured by the evaluated gate, when available; a late ending can remain beside a failed gate.
+- <a id="contract-actor_evidence-gate-activation_eligible"></a>**`activation_eligible`** (boolean): True exactly for a satisfied gate, allowing this dependent phase to proceed to activation.
+- <a id="contract-actor_evidence-gate-capture_ordinal"></a>**`capture_ordinal`** (integer?): Capture of the gate result in the source child's host-observation sequence; absent for not_reached and when no source session supplies a sequence.
 
 <a id="contract-actor_evidence-gate-prepared_association"></a>
 ##### Prepared actor phase and gate records
 
-[Runner host](#contract-identity-definitions-host) reports at prepared actor reply assembly. Entry: xpc execute. Recipient: xpc caller, runner client, controller. Reports: runner reply. Binding `q`: entry in `request.phases`. Binding `p`: entry in `reply.phases`. Association restriction for `p`: `p` = `q`. Applies when (`request.actors` is present and `reply.execution_form` = `"actors"` and `reply.preparation_failure` is absent and `reply.reporting_failure` is absent).
+[Runner host](#contract-identity-definitions-host) reports at prepared actor reply assembly. Entry: xpc execute. Recipient: xpc caller, runner client, controller. Reports: runner reply. Binding `q`: entry in `request.phases`. Binding `p`: entry in `reply.phases`. Association restriction for `p`: `p` = `q`. Applies when (present(`request.actors`) and `reply.execution_form` = `"actors"` and absent(`reply.preparation_failure`) and absent(`reply.reporting_failure`)).
 
 | Item | Requirement or consequence |
 | --- | --- |
-| <a id="contract-actor_evidence-gate-prepared_association-cardinality"></a>Phase cardinality | Requires (`request.phases` is present and count of `reply.phases` = count of `request.phases`). |
-| <a id="contract-actor_evidence-gate-prepared_association-rows"></a>Each phase and declared gate | For each `q`, `p`. Requires (`reply.phases[p].phase_id` = `request.phases[q].phase_id` and `reply.phases[p].ordinal` = (`q` + `1`) and `reply.phases[p].actor_id` = `request.phases[q].actor_id` and (if `request.phases[q].after_termination` is present, then (`reply.phases[p].termination_gate` is present and `reply.phases[p].termination_gate.source_actor_id` = `request.phases[q].after_termination.actor_id`)) and (if `request.phases[q].after_termination` is absent, then `reply.phases[p].termination_gate` is absent)). The scheduler installs every declared gate before cancellation, allowance and dependent availability checks, then assembly copies that gate into the phase row. Its source final phase comes from the source actor's last preceding phase in the normalized plan. Preparation refusals carry their separate before-launch phase account. |
+| <a id="contract-actor_evidence-gate-prepared_association-cardinality"></a>Phase cardinality | Requires (present(`request.phases`) and count(`reply.phases`) = count(`request.phases`)). |
+| <a id="contract-actor_evidence-gate-prepared_association-rows"></a>Each phase and declared gate | For each `q`, `p`. Requires (`reply.phases[p].phase_id` = `request.phases[q].phase_id` and `reply.phases[p].ordinal` = (`q` + `1`) and `reply.phases[p].actor_id` = `request.phases[q].actor_id` and implies(present(`request.phases[q].after_termination`), (present(`reply.phases[p].termination_gate`) and `reply.phases[p].termination_gate.source_actor_id` = `request.phases[q].after_termination.actor_id`)) and implies(absent(`request.phases[q].after_termination`), absent(`reply.phases[p].termination_gate`))). The scheduler installs every declared gate before cancellation, allowance and dependent availability checks, then assembly copies that gate into the phase row. Its source final phase comes from the source actor's last preceding phase in the normalized plan. Preparation refusals carry their separate before-launch phase account. |
 
 <a id="contract-actor_evidence-gate-evaluate"></a>
 ##### Evaluating and applying the dependency
 
-[Runner host](#contract-identity-definitions-host) acts at serial actor schedule before dependent activation. Entry: xpc execute. Recipient: xpc caller, runner client, controller. Reports: runner reply. Binding `q`: entry in `request.phases`. Binding `p`: entry in `reply.phases`. Association restriction for `p`: `p` = `q`. For each `q`, `p`. Applies when (`request.actors` is present and `request.phases` is present and `request.phases[q].after_termination` is present and `reply.execution_form` = `"actors"` and `reply.preparation_failure` is absent and `reply.reporting_failure` is absent). Requires [Phase cardinality](#contract-actor_evidence-gate-prepared_association-cardinality), [Each phase and declared gate](#contract-actor_evidence-gate-prepared_association-rows). Evaluate only after the schedule remains uncancelled, its allowance is positive, and the dependent actor session, usable setup, unstopped state and visit are available. Evaluation first checks the source session and final declared phase activation; unavailable source evidence gives source_unavailable. A failed evaluated gate prevents dependent activation, collection and release, and cancels every later scheduled phase regardless of its actor. Cleanup and final collection continue for launched actors.
+[Runner host](#contract-identity-definitions-host) acts at serial actor schedule before dependent activation. Entry: xpc execute. Recipient: xpc caller, runner client, controller. Reports: runner reply. Binding `q`: entry in `request.phases`. Binding `p`: entry in `reply.phases`. Association restriction for `p`: `p` = `q`. For each `q`, `p`. Applies when (present(`request.actors`) and present(`request.phases`) and present(`request.phases[q].after_termination`) and `reply.execution_form` = `"actors"` and absent(`reply.preparation_failure`) and absent(`reply.reporting_failure`)). Requires [Phase cardinality](#contract-actor_evidence-gate-prepared_association-cardinality), [Each phase and declared gate](#contract-actor_evidence-gate-prepared_association-rows). Evaluate only after the schedule remains uncancelled, its allowance is positive, and the dependent actor session, usable setup, unstopped state and visit are available. Evaluation first checks the source session and final declared phase activation; unavailable source evidence gives source_unavailable. A failed evaluated gate prevents dependent activation, collection and release, and cancels every later scheduled phase regardless of its actor. Cleanup and final collection continue for launched actors.
 
 The dependency wait observes the owned source child without requesting its
 departure. Its budget is the lesser of <!-- span limits.actor_termination_wait.value_unit -->5,000 milliseconds<!-- /span --> and the remaining
@@ -3622,7 +3422,7 @@ reference captured during its evaluation.
 
 | Item | Requirement or consequence |
 | --- | --- |
-| <a id="contract-actor_evidence-gate-evaluate-eligibility_assignment"></a>Eligibility assigned by evaluation | sets `reply.phases[p].termination_gate.activation_eligible` to `reply.phases[p].termination_gate.outcome` = `"satisfied"`. |
+| <a id="contract-actor_evidence-gate-evaluate-eligibility_assignment"></a>Eligibility assigned by evaluation | set_value(`reply.phases[p].termination_gate.activation_eligible`, `reply.phases[p].termination_gate.outcome` = `"satisfied"`). |
 | <a id="contract-actor_evidence-gate-evaluate-satisfied"></a>Satisfied | Value: `"satisfied"`. The source final activation precedes a natural owned reap in its child sequence; both timestamps exist and activation time is at most reap time. Ownership is unbroken, departure_requested is false, budget is positive, deadline samples permit the reap, and final wait has a valid elapsed interval at most budget. The gate closes after the source's owned ending. A normal exit or signaled ending can qualify; natural means the host had not requested departure. Source final-phase completion is a separate observation from activation and owned termination. |
 | <a id="contract-actor_evidence-gate-evaluate-not_reached"></a>Unreached | Value: `"not_reached"`. Cancellation, exhausted schedule allowance or an unavailable dependent actor or visit stopped traversal before this gate was evaluated. Its wait, observation and capture ordinal are absent and eligibility is false. An unavailable dependent actor can leave this gate unreached while later otherwise eligible phases remain schedulable. |
 | <a id="contract-actor_evidence-gate-evaluate-source_unavailable"></a>Source unavailable | Value: `"source_unavailable"`. The source session, final activation, or required activation-before-ending order was unavailable. |
@@ -3635,15 +3435,15 @@ reference captured during its evaluation.
 <a id="contract-actor_evidence-gate-check"></a>
 ##### Checking a carried gate
 
-[Controller](#contract-identity-definitions-controller) checks at semantic assessment after reply admission. Entry: cli run. Recipient: cli caller. Reports: runner reply. Binding `p`: entry in `reply.phases`. Binding `s`: entry in `reply.actors`. Binding `f`: entry in `reply.phases`. Association restriction for `s`: `reply.actors[s].actor_id` = `reply.phases[p].termination_gate.source_actor_id`. Association restriction for `f`: `reply.phases[f].phase_id` = `reply.phases[p].termination_gate.source_final_phase_id`. Applies when (`reply.reporting_failure` is absent and `reply.execution_form` = `"actors"` and `reply.phases[p].termination_gate` is present). The check retains each failed condition it finds. Resolve source and final-phase joins before using s or f; missing, nonfinal, same-actor or nonpreceding associations are findings. Check owned PID/native-status agreement, all conditional gate captures, independent actor setup/equipment eligibility and activation timing.
+[Controller](#contract-identity-definitions-controller) checks at semantic assessment after reply admission. Entry: cli run. Recipient: cli caller. Reports: runner reply. Binding `p`: entry in `reply.phases`. Binding `s`: entry in `reply.actors`. Binding `f`: entry in `reply.phases`. Association restriction for `s`: `reply.actors[s].actor_id` = `reply.phases[p].termination_gate.source_actor_id`. Association restriction for `f`: `reply.phases[f].phase_id` = `reply.phases[p].termination_gate.source_final_phase_id`. Applies when (absent(`reply.reporting_failure`) and `reply.execution_form` = `"actors"` and present(`reply.phases[p].termination_gate`)). The check retains each failed condition it finds. Resolve source and final-phase joins before using s or f; missing, nonfinal, same-actor or nonpreceding associations are findings. Check owned PID/native-status agreement, all conditional gate captures, independent actor setup/equipment eligibility and activation timing.
 
 | Item | Requirement or consequence |
 | --- | --- |
-| <a id="contract-actor_evidence-gate-check-failed"></a>Failed carried-gate requirement | On failure, sets `envelope.data.runner_sandbox_diagnostics.disposition_integrity` to `"invalid"`, sets `envelope.data.runner_sandbox_diagnostics.process_disposition` to `"withheld"`, sets `envelope.data.runner_sandbox_diagnostics.termination_cause` to `"unknown"`, retains the records `reply`, keeps the assessment `envelope.data.runner_sandbox_diagnostics.actors`. Uses [Select the public result](#contract-envelope-data-select). Append the actor_evidence finding for the failed requirement, with subject_path naming this phase's inspected termination_gate. Run result and exit status continue to follow their result-selection rule. |
-| <a id="contract-actor_evidence-gate-check-unreached"></a>Unreached shape | Requires (if `reply.phases[p].termination_gate.outcome` = `"not_reached"`, then (`reply.phases[p].termination_gate.wait` is absent and `reply.phases[p].termination_gate.observation` is absent and `reply.phases[p].termination_gate.capture_ordinal` is absent)). |
-| <a id="contract-actor_evidence-gate-check-timely"></a>Timely satisfied wait | Requires (if `reply.phases[p].termination_gate.outcome` = `"satisfied"`, then (`reply.phases[p].termination_gate.wait` is present and `reply.phases[p].termination_gate.wait.budget_ms` > `0` and `reply.phases[p].termination_gate.wait.budget_ms` ≤ `5000` and `reply.phases[p].termination_gate.wait.elapsed_ms` is present and `reply.phases[p].termination_gate.wait.elapsed_ms` ≤ `reply.phases[p].termination_gate.wait.budget_ms` and `reply.phases[p].termination_gate.wait.clock_fault` = `false` and `reply.phases[p].termination_gate.wait.native_errno` is absent)). Every present gate wait has budget 0–5000 and absent excluded time. An evaluated gate has a wait whose stop matches its outcome. |
-| <a id="contract-actor_evidence-gate-check-sequence"></a>Source sequence | Requires (if `reply.phases[p].termination_gate.outcome` = `"satisfied"`, then (`reply.phases[f].activation_observation` is present and `reply.actors[s].owned_reap` is present and `reply.phases[f].activation_observation.capture_ordinal` < `reply.actors[s].owned_reap.capture_ordinal` and `reply.actors[s].owned_reap.capture_ordinal` < `reply.phases[p].termination_gate.capture_ordinal` and `reply.actors[s].owned_reap.ownership_unbroken` = `true` and `reply.actors[s].owned_reap.departure_requested` = `false`)). The referenced ending matches the source actor's valid PID/native wait status, has stage `schedule` or `termination_gate`, and has the reference's positive ordinal. Final activation and reap timestamps must exist in nondecreasing order; a timestamped dependent activation is at or after the reap. |
-| <a id="contract-actor_evidence-gate-check-eligibility"></a>Eligibility consequence | Binding `d`: entry in `reply.actors`. Association restriction for `d`: (`reply.phases[p].actor_id` is present and `reply.actors[d].actor_id` = `reply.phases[p].actor_id` and `reply.actors[d].setup_status` is one of `"applied"`, `"unapplied_declared"` and `reply.actors[d].equipment` is present and `reply.actors[d].equipment.execution.eligible` = `true`). For each `p`. Requires ((if `reply.phases[p].termination_gate.activation_eligible` = `true`, then (`reply.phases[p].termination_gate.outcome` = `"satisfied"` and `reply.actors` is present and number of matching entries for `d` > `0`)) and (if `reply.phases[p].termination_gate.activation_eligible` = `false`, then (`reply.phases[p].activation_observation` is absent and `reply.phases[p].visit_timing` is absent and `reply.phases[p].arrival_observed` = `false` and `reply.phases[p].collection_status` = `"not_reached"` and (`reply.phases[p].ordering` is absent or (`reply.phases[p].ordering.proceed_set` = `false` and `reply.phases[p].ordering.proceed_observed` = `false`))))). |
+| <a id="contract-actor_evidence-gate-check-failed"></a>Failed carried-gate requirement | On failure, [set_value(`envelope.data.runner_sandbox_diagnostics.disposition_integrity`, `"invalid"`), set_value(`envelope.data.runner_sandbox_diagnostics.process_disposition`, `"withheld"`), set_value(`envelope.data.runner_sandbox_diagnostics.termination_cause`, `"unknown"`), retain_records(`reply`), retain_assessments(`envelope.data.runner_sandbox_diagnostics.actors`)]. Uses [Select the public result](#contract-envelope-data-select). Append the actor_evidence finding for the failed requirement, with subject_path naming this phase's inspected termination_gate. Run result and exit status continue to follow their result-selection rule. |
+| <a id="contract-actor_evidence-gate-check-unreached"></a>Unreached shape | Requires implies(`reply.phases[p].termination_gate.outcome` = `"not_reached"`, (absent(`reply.phases[p].termination_gate.wait`) and absent(`reply.phases[p].termination_gate.observation`) and absent(`reply.phases[p].termination_gate.capture_ordinal`))). |
+| <a id="contract-actor_evidence-gate-check-timely"></a>Timely satisfied wait | Requires implies(`reply.phases[p].termination_gate.outcome` = `"satisfied"`, (present(`reply.phases[p].termination_gate.wait`) and `reply.phases[p].termination_gate.wait.budget_ms` > `0` and `reply.phases[p].termination_gate.wait.budget_ms` ≤ `5000` and present(`reply.phases[p].termination_gate.wait.elapsed_ms`) and `reply.phases[p].termination_gate.wait.elapsed_ms` ≤ `reply.phases[p].termination_gate.wait.budget_ms` and `reply.phases[p].termination_gate.wait.clock_fault` = `false` and absent(`reply.phases[p].termination_gate.wait.native_errno`))). Every present gate wait has budget 0–5000 and absent excluded time. An evaluated gate has a wait whose stop matches its outcome. |
+| <a id="contract-actor_evidence-gate-check-sequence"></a>Source sequence | Requires implies(`reply.phases[p].termination_gate.outcome` = `"satisfied"`, (present(`reply.phases[f].activation_observation`) and present(`reply.actors[s].owned_reap`) and `reply.phases[f].activation_observation.capture_ordinal` < `reply.actors[s].owned_reap.capture_ordinal` and `reply.actors[s].owned_reap.capture_ordinal` < `reply.phases[p].termination_gate.capture_ordinal` and `reply.actors[s].owned_reap.ownership_unbroken` = `true` and `reply.actors[s].owned_reap.departure_requested` = `false`)). The referenced ending matches the source actor's valid PID/native wait status, has stage `schedule` or `termination_gate`, and has the reference's positive ordinal. Final activation and reap timestamps must exist in nondecreasing order; a timestamped dependent activation is at or after the reap. |
+| <a id="contract-actor_evidence-gate-check-eligibility"></a>Eligibility consequence | Binding `d`: entry in `reply.actors`. Association restriction for `d`: (present(`reply.phases[p].actor_id`) and `reply.actors[d].actor_id` = `reply.phases[p].actor_id` and `reply.actors[d].setup_status` ∈ [`"applied"`, `"unapplied_declared"`] and present(`reply.actors[d].equipment`) and `reply.actors[d].equipment.execution.eligible` = `true`). For each `p`. Requires (implies(`reply.phases[p].termination_gate.activation_eligible` = `true`, (`reply.phases[p].termination_gate.outcome` = `"satisfied"` and present(`reply.actors`) and matches(`d`) > `0`)) and implies(`reply.phases[p].termination_gate.activation_eligible` = `false`, (absent(`reply.phases[p].activation_observation`) and absent(`reply.phases[p].visit_timing`) and `reply.phases[p].arrival_observed` = `false` and `reply.phases[p].collection_status` = `"not_reached"` and (absent(`reply.phases[p].ordering`) or (`reply.phases[p].ordering.proceed_set` = `false` and `reply.phases[p].ordering.proceed_observed` = `false`))))). |
 
 <a id="contract-actor_evidence-gate-timeout_example"></a>
 ##### A timeout followed by cleanup
@@ -3686,17 +3486,15 @@ Record `eq_inventory`: `PWRunnerEquipmentInventory`.
 
 The host inspects the selected service seal and reads its bounded worker-equipment.json before launching any actor.
 
-| Field | JSON type and presence | Meaning |
-| --- | --- | --- |
-| <a id="contract-equipment-inventory-path"></a>`path` | string; required | Absolute path of the service-local worker-equipment.json selected for inspection. |
-| <a id="contract-equipment-inventory-status"></a>`status` | string; required | verified after seal, inventory decoding and expected-identity checks; refused after a retained failure; unobserved before inspection. Admitted vocabulary: closed; displayed list: exhaustive: `"verified"`, `"refused"`, `"unobserved"`. |
-| <a id="contract-equipment-inventory-sha256"></a>`sha256` | string (hex); omitted when absent | SHA-256 of inventory bytes actually read, when available. Uses [SHA-256 hexadecimal width](#contract-identity-other-sha256_hex). |
-| <a id="contract-equipment-inventory-schema_version"></a>`schema_version` | integer; omitted when absent | Decoded inventory schema; verified inventory has version 1. |
-| <a id="contract-equipment-inventory-worker_identity"></a>`worker_identity` | string (hex); omitted when absent | Decoded worker protocol identity, required to equal the host's selected worker identity for verification. Uses [SHA-256 hexadecimal width](#contract-identity-other-sha256_hex). |
-| <a id="contract-equipment-inventory-unsigned_worker_sha256"></a>`unsigned_worker_sha256` | string (hex); omitted when absent | Decoded digest identifying the shared unsigned worker input named by the inventory. Uses [SHA-256 hexadecimal width](#contract-identity-other-sha256_hex). |
-| <a id="contract-equipment-inventory-seal_osstatus"></a>`seal_osstatus` | integer; omitted when absent | Native service-signature validity result, when supplied by static inspection; verified inventory requires zero. |
-| <a id="contract-equipment-inventory-reason"></a>`reason` | string; omitted when absent | Refusal classification describing the failed inventory/seal boundary; absent for verified inventory. |
-| <a id="contract-equipment-inventory-error"></a>`error` | [Equipment diagnostic](#contract-equipment-error); omitted when absent | Structured native or decoding diagnostic retained at the failed boundary. |
+- <a id="contract-equipment-inventory-path"></a>**`path`** (string): Absolute path of the service-local worker-equipment.json selected for inspection.
+- <a id="contract-equipment-inventory-status"></a>**`status`** (string): verified after seal, inventory decoding and expected-identity checks; refused after a retained failure; unobserved before inspection. Admitted vocabulary: closed; displayed list: exhaustive: `"verified"`, `"refused"`, `"unobserved"`.
+- <a id="contract-equipment-inventory-sha256"></a>**`sha256`** (string (hex)?): SHA-256 of inventory bytes actually read, when available. Uses [SHA-256 hexadecimal width](#contract-identity-other-sha256_hex).
+- <a id="contract-equipment-inventory-schema_version"></a>**`schema_version`** (integer?): Decoded inventory schema; verified inventory has version 1.
+- <a id="contract-equipment-inventory-worker_identity"></a>**`worker_identity`** (string (hex)?): Decoded worker protocol identity, required to equal the host's selected worker identity for verification. Uses [SHA-256 hexadecimal width](#contract-identity-other-sha256_hex).
+- <a id="contract-equipment-inventory-unsigned_worker_sha256"></a>**`unsigned_worker_sha256`** (string (hex)?): Decoded digest identifying the shared unsigned worker input named by the inventory. Uses [SHA-256 hexadecimal width](#contract-identity-other-sha256_hex).
+- <a id="contract-equipment-inventory-seal_osstatus"></a>**`seal_osstatus`** (integer?): Native service-signature validity result, when supplied by static inspection; verified inventory requires zero.
+- <a id="contract-equipment-inventory-reason"></a>**`reason`** (string?): Refusal classification describing the failed inventory/seal boundary; absent for verified inventory.
+- <a id="contract-equipment-inventory-error"></a>**`error`** ([Equipment diagnostic](#contract-equipment-error)?): Structured native or decoding diagnostic retained at the failed boundary.
 
 <a id="contract-equipment-manifest"></a>
 #### Sealed equipment inventory file
@@ -3705,13 +3503,11 @@ Record `eq_manifest`: `ActorEquipmentManifest`.
 
 The package places this JSON inventory inside each service seal after signing both worker roles. Its hashes use lowercase hexadecimal text.
 
-| Field | JSON type and presence | Meaning |
-| --- | --- | --- |
-| <a id="contract-equipment-manifest-schema_version"></a>`schema_version` | integer; as defined below | Inventory format version; the host accepts 1. |
-| <a id="contract-equipment-manifest-contract"></a>`contract` | string; as defined below | Exact public build identity which must match the host's expected contract. |
-| <a id="contract-equipment-manifest-worker_identity"></a>`worker_identity` | string; as defined below | Lowercase hexadecimal worker protocol identity expected by the host. Uses [SHA-256 hexadecimal width](#contract-identity-other-sha256_hex). |
-| <a id="contract-equipment-manifest-unsigned_worker_sha256"></a>`unsigned_worker_sha256` | string; as defined below | Lowercase hexadecimal common unsigned worker input digest. Uses [SHA-256 hexadecimal width](#contract-identity-other-sha256_hex). |
-| <a id="contract-equipment-manifest-workers"></a>`workers` | array of [Inventory worker row](#contract-equipment-manifest_worker); as defined below | Exactly two distinct role rows, selected and unentitled, providing expected signed file and entitlement identities. |
+- <a id="contract-equipment-manifest-schema_version"></a>**`schema_version`** (integer; as defined below): Inventory format version; the host accepts 1.
+- <a id="contract-equipment-manifest-contract"></a>**`contract`** (string; as defined below): Exact public build identity which must match the host's expected contract.
+- <a id="contract-equipment-manifest-worker_identity"></a>**`worker_identity`** (string; as defined below): Lowercase hexadecimal worker protocol identity expected by the host. Uses [SHA-256 hexadecimal width](#contract-identity-other-sha256_hex).
+- <a id="contract-equipment-manifest-unsigned_worker_sha256"></a>**`unsigned_worker_sha256`** (string; as defined below): Lowercase hexadecimal common unsigned worker input digest. Uses [SHA-256 hexadecimal width](#contract-identity-other-sha256_hex).
+- <a id="contract-equipment-manifest-workers"></a>**`workers`** (array of [Inventory worker row](#contract-equipment-manifest_worker); as defined below): Exactly two distinct role rows, selected and unentitled, providing expected signed file and entitlement identities.
 
 <a id="contract-equipment-manifest_worker"></a>
 #### Inventory worker row
@@ -3720,15 +3516,13 @@ Record `eq_manifest_worker`: `ActorEquipmentManifest.Worker`.
 
 Each row states the signed identity expected at a fixed service-relative worker path.
 
-| Field | JSON type and presence | Meaning |
-| --- | --- | --- |
-| <a id="contract-equipment-manifest_worker-role"></a>`role` | string; as defined below | selected or unentitled, identifying the worker role. Admitted vocabulary: closed; displayed list: exhaustive: `"selected"`, `"unentitled"`. |
-| <a id="contract-equipment-manifest_worker-relative_path"></a>`relative_path` | string; as defined below | Contents/MacOS/pw-probe-runner for selected; Contents/MacOS/pw-probe-runner-unentitled for unentitled. |
-| <a id="contract-equipment-manifest_worker-sha256"></a>`sha256` | string; as defined below | Lowercase hexadecimal SHA-256 of the signed worker file. Uses [SHA-256 hexadecimal width](#contract-identity-other-sha256_hex). |
-| <a id="contract-equipment-manifest_worker-cdhash"></a>`cdhash` | string; as defined below | Lowercase hexadecimal worker CodeDirectory hash. Uses [CodeDirectory hexadecimal width](#contract-identity-other-cdhash_hex). |
-| <a id="contract-equipment-manifest_worker-identifier"></a>`identifier` | string; as defined below | Nonempty signing identifier expected from static code inspection, bounded to <!-- span limits.equipment_signing_text.value_unit -->255 UTF-8 bytes<!-- /span -->. |
-| <a id="contract-equipment-manifest_worker-team_id"></a>`team_id` | string; required; may be null | Required key whose value is the expected signing team or null; a string is nonempty and at most <!-- span limits.equipment_signing_text.value_unit -->255 UTF-8 bytes<!-- /span -->. |
-| <a id="contract-equipment-manifest_worker-entitlements_xml"></a>`entitlements_xml` | string; as defined below | Entitlement dictionary serialized as an XML property list, at most <!-- span limits.equipment_entitlement_bytes.value_unit -->65,536 UTF-8 bytes<!-- /span -->; unentitled has an empty dictionary. |
+- <a id="contract-equipment-manifest_worker-role"></a>**`role`** (string; as defined below): selected or unentitled, identifying the worker role. Admitted vocabulary: closed; displayed list: exhaustive: `"selected"`, `"unentitled"`.
+- <a id="contract-equipment-manifest_worker-relative_path"></a>**`relative_path`** (string; as defined below): Contents/MacOS/pw-probe-runner for selected; Contents/MacOS/pw-probe-runner-unentitled for unentitled.
+- <a id="contract-equipment-manifest_worker-sha256"></a>**`sha256`** (string; as defined below): Lowercase hexadecimal SHA-256 of the signed worker file. Uses [SHA-256 hexadecimal width](#contract-identity-other-sha256_hex).
+- <a id="contract-equipment-manifest_worker-cdhash"></a>**`cdhash`** (string; as defined below): Lowercase hexadecimal worker CodeDirectory hash. Uses [CodeDirectory hexadecimal width](#contract-identity-other-cdhash_hex).
+- <a id="contract-equipment-manifest_worker-identifier"></a>**`identifier`** (string; as defined below): Nonempty signing identifier expected from static code inspection, bounded to <!-- span limits.equipment_signing_text.value_unit -->255 UTF-8 bytes<!-- /span -->.
+- <a id="contract-equipment-manifest_worker-team_id"></a>**`team_id`** (string; required; may be null): Required key whose value is the expected signing team or null; a string is nonempty and at most <!-- span limits.equipment_signing_text.value_unit -->255 UTF-8 bytes<!-- /span -->.
+- <a id="contract-equipment-manifest_worker-entitlements_xml"></a>**`entitlements_xml`** (string; as defined below): Entitlement dictionary serialized as an XML property list, at most <!-- span limits.equipment_entitlement_bytes.value_unit -->65,536 UTF-8 bytes<!-- /span -->; unentitled has an empty dictionary.
 
 <a id="contract-equipment-binding"></a>
 #### Static worker binding
@@ -3737,30 +3531,28 @@ Record `eq_binding`: `PWRunnerEquipmentBinding`.
 
 The host emits one row per inspected role and source. Binding establishes the chosen file’s observed identity and entitlement read-back; actors select rows by zero-based index.
 
-| Field | JSON type and presence | Meaning |
-| --- | --- | --- |
-| <a id="contract-equipment-binding-role"></a>`role` | string; required | selected or unentitled, the equipment role inspected. Admitted vocabulary: closed; displayed list: exhaustive: `"selected"`, `"unentitled"`. |
-| <a id="contract-equipment-binding-source"></a>`source` | string; required | packaged for service inventory equipment; test_override for an explicitly selected fixture path. Admitted vocabulary: closed; displayed list: exhaustive: `"packaged"`, `"test_override"`. |
-| <a id="contract-equipment-binding-implementation_identity"></a>`implementation_identity` | string; required | inventory_verified for packaged rows or unverified_fixture for test overrides, identifying the source of expected implementation identity. Admitted vocabulary: closed; displayed list: exhaustive: `"inventory_verified"`, `"unverified_fixture"`. |
-| <a id="contract-equipment-binding-relative_path"></a>`relative_path` | string; omitted when absent | Fixed service-relative path for packaged equipment; absent for an override path. |
-| <a id="contract-equipment-binding-path"></a>`path` | string; required | Absolute resolved worker path inspected for launch, bounded to <!-- span limits.equipment_path.value_unit -->1,023 UTF-8 bytes<!-- /span -->. |
-| <a id="contract-equipment-binding-status"></a>`status` | string; required | bound when path, executable, hash/signature and applicable expected-identity checks pass; refused when a boundary fails. Admitted vocabulary: closed; displayed list: exhaustive: `"bound"`, `"refused"`. |
-| <a id="contract-equipment-binding-reason"></a>`reason` | string; omitted when absent | Refusal reason: missing, not_regular, not_executable, outside_bundle, signature_invalid, signature_unreadable, entitlements_unreadable, worker_identity_mismatch or inspection_failed. Admitted vocabulary: closed; displayed list: exhaustive: `"missing"`, `"not_regular"`, `"not_executable"`, `"outside_bundle"`, `"signature_invalid"`, `"signature_unreadable"`, `"entitlements_unreadable"`, `"worker_identity_mismatch"`, `"inspection_failed"`. |
-| <a id="contract-equipment-binding-expected_sha256"></a>`expected_sha256` | string (hex); omitted when absent | Signed-file SHA-256 digest from the packaged inventory; absent for test overrides. Uses [SHA-256 hexadecimal width](#contract-identity-other-sha256_hex). |
-| <a id="contract-equipment-binding-expected_cdhash"></a>`expected_cdhash` | string (hex); omitted when absent | CodeDirectory hash from the packaged inventory; absent for test overrides. Uses [CodeDirectory hexadecimal width](#contract-identity-other-cdhash_hex). |
-| <a id="contract-equipment-binding-sha256"></a>`sha256` | string (hex); omitted when absent | SHA-256 of the inspected file's actual bytes, when hashing completed. Uses [SHA-256 hexadecimal width](#contract-identity-other-sha256_hex). |
-| <a id="contract-equipment-binding-cdhash"></a>`cdhash` | string (hex); omitted when absent | CodeDirectory hash read from the inspected static signature, when available. Uses [CodeDirectory hexadecimal width](#contract-identity-other-cdhash_hex). |
-| <a id="contract-equipment-binding-identifier"></a>`identifier` | string; omitted when absent | Signing identifier read from static inspection, when available. |
-| <a id="contract-equipment-binding-team_id"></a>`team_id` | string; present when identifier has a value; may be null | Signing team read from static inspection, or null when the signature has none or read-back is unavailable. |
-| <a id="contract-equipment-binding-entitlements_ref"></a>`entitlements_ref` | integer; omitted when absent | Zero-based index of this binding's observed or failed entitlement read-back in equipment_entitlements. |
-| <a id="contract-equipment-binding-signature_osstatus"></a>`signature_osstatus` | integer; omitted when absent | Native static-signature validity result; a bound row requires zero. |
-| <a id="contract-equipment-binding-entitlements_match"></a>`entitlements_match` | boolean; omitted when absent | Whether packaged inventory entitlements equal the observed dictionary; absent for an override or when that comparison was unavailable. |
-| <a id="contract-equipment-binding-error"></a>`error` | [Equipment diagnostic](#contract-equipment-error); omitted when absent | Structured native or decoding error at the failed inspection boundary, when available. |
+- <a id="contract-equipment-binding-role"></a>**`role`** (string): selected or unentitled, the equipment role inspected. Admitted vocabulary: closed; displayed list: exhaustive: `"selected"`, `"unentitled"`.
+- <a id="contract-equipment-binding-source"></a>**`source`** (string): packaged for service inventory equipment; test_override for an explicitly selected fixture path. Admitted vocabulary: closed; displayed list: exhaustive: `"packaged"`, `"test_override"`.
+- <a id="contract-equipment-binding-implementation_identity"></a>**`implementation_identity`** (string): inventory_verified for packaged rows or unverified_fixture for test overrides, identifying the source of expected implementation identity. Admitted vocabulary: closed; displayed list: exhaustive: `"inventory_verified"`, `"unverified_fixture"`.
+- <a id="contract-equipment-binding-relative_path"></a>**`relative_path`** (string?): Fixed service-relative path for packaged equipment; absent for an override path.
+- <a id="contract-equipment-binding-path"></a>**`path`** (string): Absolute resolved worker path inspected for launch, bounded to <!-- span limits.equipment_path.value_unit -->1,023 UTF-8 bytes<!-- /span -->.
+- <a id="contract-equipment-binding-status"></a>**`status`** (string): bound when path, executable, hash/signature and applicable expected-identity checks pass; refused when a boundary fails. Admitted vocabulary: closed; displayed list: exhaustive: `"bound"`, `"refused"`.
+- <a id="contract-equipment-binding-reason"></a>**`reason`** (string?): Refusal reason: missing, not_regular, not_executable, outside_bundle, signature_invalid, signature_unreadable, entitlements_unreadable, worker_identity_mismatch or inspection_failed. Admitted vocabulary: closed; displayed list: exhaustive: `"missing"`, `"not_regular"`, `"not_executable"`, `"outside_bundle"`, `"signature_invalid"`, `"signature_unreadable"`, `"entitlements_unreadable"`, `"worker_identity_mismatch"`, `"inspection_failed"`.
+- <a id="contract-equipment-binding-expected_sha256"></a>**`expected_sha256`** (string (hex)?): Signed-file SHA-256 digest from the packaged inventory; absent for test overrides. Uses [SHA-256 hexadecimal width](#contract-identity-other-sha256_hex).
+- <a id="contract-equipment-binding-expected_cdhash"></a>**`expected_cdhash`** (string (hex)?): CodeDirectory hash from the packaged inventory; absent for test overrides. Uses [CodeDirectory hexadecimal width](#contract-identity-other-cdhash_hex).
+- <a id="contract-equipment-binding-sha256"></a>**`sha256`** (string (hex)?): SHA-256 of the inspected file's actual bytes, when hashing completed. Uses [SHA-256 hexadecimal width](#contract-identity-other-sha256_hex).
+- <a id="contract-equipment-binding-cdhash"></a>**`cdhash`** (string (hex)?): CodeDirectory hash read from the inspected static signature, when available. Uses [CodeDirectory hexadecimal width](#contract-identity-other-cdhash_hex).
+- <a id="contract-equipment-binding-identifier"></a>**`identifier`** (string?): Signing identifier read from static inspection, when available.
+- <a id="contract-equipment-binding-team_id"></a>**`team_id`** (string; present when identifier has a value; may be null): Signing team read from static inspection, or null when the signature has none or read-back is unavailable.
+- <a id="contract-equipment-binding-entitlements_ref"></a>**`entitlements_ref`** (integer?): Zero-based index of this binding's observed or failed entitlement read-back in equipment_entitlements.
+- <a id="contract-equipment-binding-signature_osstatus"></a>**`signature_osstatus`** (integer?): Native static-signature validity result; a bound row requires zero.
+- <a id="contract-equipment-binding-entitlements_match"></a>**`entitlements_match`** (boolean?): Whether packaged inventory entitlements equal the observed dictionary; absent for an override or when that comparison was unavailable.
+- <a id="contract-equipment-binding-error"></a>**`error`** ([Equipment diagnostic](#contract-equipment-error)?): Structured native or decoding error at the failed inspection boundary, when available.
 
 <a id="contract-equipment-binding-bind"></a>
 ##### Binding before launch
 
-[Runner host](#contract-identity-definitions-host) acts at actor preparation before spawn. Entry: xpc execute. Recipient: xpc caller, runner client, controller. Reports: runner reply. Applies when `request.actors` is present. Inspect the service seal, bounded inventory and both packaged worker roles; compare signed hashes, signing identity/team and entitlement dictionaries with the inventory. Resolve every actor's role and Boolean-true entitlement requirements. A preparation failure withholds every actor launch and records equipment_binding_refused with retained inspection evidence. Successful preparation selects the requested role/source path for each actor.
+[Runner host](#contract-identity-definitions-host) acts at actor preparation before spawn. Entry: xpc execute. Recipient: xpc caller, runner client, controller. Reports: runner reply. Applies when present(`request.actors`). Inspect the service seal, bounded inventory and both packaged worker roles; compare signed hashes, signing identity/team and entitlement dictionaries with the inventory. Resolve every actor's role and Boolean-true entitlement requirements. A preparation failure withholds every actor launch and records equipment_binding_refused with retained inspection evidence. Successful preparation selects the requested role/source path for each actor.
 
 Both packaged roles are checked even if the specimen uses only one. Explicit
 fixture overrides are inspected as additional `test_override` rows; their
@@ -3779,7 +3571,7 @@ Packaged binding includes the retained digest and entitlement equalities. Test-o
 
 | Item | Requirement or consequence |
 | --- | --- |
-| <a id="contract-equipment-binding-bound_values-fields"></a>Produced field relationships | Requires (`eq_binding.sha256` is present and `eq_binding.expected_sha256` is present and `eq_binding.sha256` = `eq_binding.expected_sha256` and `eq_binding.cdhash` is present and `eq_binding.expected_cdhash` is present and `eq_binding.cdhash` = `eq_binding.expected_cdhash` and `eq_binding.entitlements_match` = `true`). |
+| <a id="contract-equipment-binding-bound_values-fields"></a>Produced field relationships | Requires (present(`eq_binding.sha256`) and present(`eq_binding.expected_sha256`) and `eq_binding.sha256` = `eq_binding.expected_sha256` and present(`eq_binding.cdhash`) and present(`eq_binding.expected_cdhash`) and `eq_binding.cdhash` = `eq_binding.expected_cdhash` and `eq_binding.entitlements_match` = `true`). |
 
 **Support: [source read](#contract-support-grades) for [Packaged bound-row equalities](#contract-equipment-binding-bound_values) and its descendants.** Packaged binding compares retained expected and observed digests and decoded entitlement equality before marking a row bound. Source: [ActorEquipment.swift](../runner/Sources/PWRunnerCore/ActorEquipment.swift): `bindOne`.
 
@@ -3790,14 +3582,12 @@ Record `eq_entitlements`: `PWRunnerEquipmentEntitlements`.
 
 Each table row belongs either to one static binding or to one running actor inspected against that binding.
 
-| Field | JSON type and presence | Meaning |
-| --- | --- | --- |
-| <a id="contract-equipment-entitlements-source"></a>`source` | string; required | binding for static signed-file read-back; execution for live actor read-back. Admitted vocabulary: closed; displayed list: exhaustive: `"binding"`, `"execution"`. |
-| <a id="contract-equipment-entitlements-binding_ref"></a>`binding_ref` | integer; required | Zero-based index of the equipment binding this read-back describes. |
-| <a id="contract-equipment-entitlements-actor_id"></a>`actor_id` | string; omitted when absent | Actor identifier for execution read-back; absent for binding read-back. |
-| <a id="contract-equipment-entitlements-status"></a>`status` | string; required | observed when raw_plist contains a valid bounded dictionary; failed when an error record describes unavailable read-back. Admitted vocabulary: closed; displayed list: exhaustive: `"observed"`, `"failed"`. |
-| <a id="contract-equipment-entitlements-raw_plist"></a>`raw_plist` | string; omitted when absent | Actual entitlement dictionary serialized as an XML property list, at most <!-- span limits.equipment_entitlement_bytes.value_unit -->65,536 UTF-8 bytes<!-- /span -->; absent for failed read-back. |
-| <a id="contract-equipment-entitlements-error"></a>`error` | [Equipment diagnostic](#contract-equipment-error); omitted when absent | Read-back failure diagnostic, required for failed status and absent for observed status. |
+- <a id="contract-equipment-entitlements-source"></a>**`source`** (string): binding for static signed-file read-back; execution for live actor read-back. Admitted vocabulary: closed; displayed list: exhaustive: `"binding"`, `"execution"`.
+- <a id="contract-equipment-entitlements-binding_ref"></a>**`binding_ref`** (integer): Zero-based index of the equipment binding this read-back describes.
+- <a id="contract-equipment-entitlements-actor_id"></a>**`actor_id`** (string?): Actor identifier for execution read-back; absent for binding read-back.
+- <a id="contract-equipment-entitlements-status"></a>**`status`** (string): observed when raw_plist contains a valid bounded dictionary; failed when an error record describes unavailable read-back. Admitted vocabulary: closed; displayed list: exhaustive: `"observed"`, `"failed"`.
+- <a id="contract-equipment-entitlements-raw_plist"></a>**`raw_plist`** (string?): Actual entitlement dictionary serialized as an XML property list, at most <!-- span limits.equipment_entitlement_bytes.value_unit -->65,536 UTF-8 bytes<!-- /span -->; absent for failed read-back.
+- <a id="contract-equipment-entitlements-error"></a>**`error`** ([Equipment diagnostic](#contract-equipment-error)?): Read-back failure diagnostic, required for failed status and absent for observed status.
 
 <a id="contract-equipment-error"></a>
 #### Equipment diagnostic
@@ -3806,12 +3596,10 @@ Record `eq_error`: `PWRunnerEquipmentError`.
 
 Error metadata belongs to the named operation. Native errors carry their domain/code pair; decode or contract diagnostics may carry only a message.
 
-| Field | JSON type and presence | Meaning |
-| --- | --- | --- |
-| <a id="contract-equipment-error-operation"></a>`operation` | string; required | Failing boundary: service_seal, inventory_read, inventory_decode, worker_path, worker_hash, worker_signature, worker_entitlements, guest_code, dynamic_validity, associated_static_code or signing_information. |
-| <a id="contract-equipment-error-domain"></a>`domain` | string; omitted when absent | Native error domain, bounded to <!-- span limits.equipment_error_domain.value_unit -->128 UTF-8 bytes<!-- /span -->; supplied together with code. |
-| <a id="contract-equipment-error-code"></a>`code` | integer; omitted when absent | Native error code in domain, such as OSStatus or POSIX errno; absent together with domain for message-only diagnostics. |
-| <a id="contract-equipment-error-message"></a>`message` | string; omitted when absent | Human-readable diagnostic bounded to <!-- span limits.equipment_diagnostic_bytes.value_unit -->1,024 UTF-8 bytes<!-- /span -->, when supplied. |
+- <a id="contract-equipment-error-operation"></a>**`operation`** (string): Failing boundary: service_seal, inventory_read, inventory_decode, worker_path, worker_hash, worker_signature, worker_entitlements, guest_code, dynamic_validity, associated_static_code or signing_information.
+- <a id="contract-equipment-error-domain"></a>**`domain`** (string?): Native error domain, bounded to <!-- span limits.equipment_error_domain.value_unit -->128 UTF-8 bytes<!-- /span -->; supplied together with code.
+- <a id="contract-equipment-error-code"></a>**`code`** (integer?): Native error code in domain, such as OSStatus or POSIX errno; absent together with domain for message-only diagnostics.
+- <a id="contract-equipment-error-message"></a>**`message`** (string?): Human-readable diagnostic bounded to <!-- span limits.equipment_diagnostic_bytes.value_unit -->1,024 UTF-8 bytes<!-- /span -->, when supplied.
 
 <a id="contract-equipment-actor"></a>
 #### Actor equipment selection
@@ -3820,15 +3608,13 @@ Record `eq_actor`: `PWRunnerActorEquipment`.
 
 Selection resolves the actor’s role, binds its entitlement requirements and carries the live inspection result used for activation eligibility.
 
-| Field | JSON type and presence | Meaning |
-| --- | --- | --- |
-| <a id="contract-equipment-actor-requested"></a>`requested` | string; null when absent | Explicit selected or unentitled request; null when the request omitted equipment. Admitted vocabulary: closed; displayed list: exhaustive: `"selected"`, `"unentitled"`. |
-| <a id="contract-equipment-actor-resolved"></a>`resolved` | string; required | Requested role, defaulting to selected when omitted. Admitted vocabulary: closed; displayed list: exhaustive: `"selected"`, `"unentitled"`. |
-| <a id="contract-equipment-actor-binding_ref"></a>`binding_ref` | integer; null when absent | Zero-based index of the selected role/source row in equipment_bindings once that row exists. |
-| <a id="contract-equipment-actor-required_entitlements"></a>`required_entitlements` | array of string; required | Distinct requested entitlement keys, at most <!-- span limits.actor_required_entitlements.value -->64<!-- /span -->; each nonempty key is at most <!-- span limits.actor_entitlement_key.value_unit -->255 UTF-8 bytes<!-- /span -->. |
-| <a id="contract-equipment-actor-requirements_status"></a>`requirements_status` | string; required | satisfied or unsatisfied from the static entitlement dictionary; unobserved when read-back is unavailable. Admitted vocabulary: closed; displayed list: exhaustive: `"satisfied"`, `"unsatisfied"`, `"unobserved"`. |
-| <a id="contract-equipment-actor-missing_requirements"></a>`missing_requirements` | array of string; omitted when absent | Requested keys whose values are absent or are not Boolean true, in request order. Empty means all satisfied; absence accompanies unobserved. |
-| <a id="contract-equipment-actor-execution"></a>`execution` | [Live actor inspection](#contract-equipment-execution); required | Live code and entitlement observation for the owned actor process before activation. |
+- <a id="contract-equipment-actor-requested"></a>**`requested`** (string ∪ null): Explicit selected or unentitled request; null when the request omitted equipment. Admitted vocabulary: closed; displayed list: exhaustive: `"selected"`, `"unentitled"`.
+- <a id="contract-equipment-actor-resolved"></a>**`resolved`** (string): Requested role, defaulting to selected when omitted. Admitted vocabulary: closed; displayed list: exhaustive: `"selected"`, `"unentitled"`.
+- <a id="contract-equipment-actor-binding_ref"></a>**`binding_ref`** (integer ∪ null): Zero-based index of the selected role/source row in equipment_bindings once that row exists.
+- <a id="contract-equipment-actor-required_entitlements"></a>**`required_entitlements`** (array of string): Distinct requested entitlement keys, at most <!-- span limits.actor_required_entitlements.value -->64<!-- /span -->; each nonempty key is at most <!-- span limits.actor_entitlement_key.value_unit -->255 UTF-8 bytes<!-- /span -->.
+- <a id="contract-equipment-actor-requirements_status"></a>**`requirements_status`** (string): satisfied or unsatisfied from the static entitlement dictionary; unobserved when read-back is unavailable. Admitted vocabulary: closed; displayed list: exhaustive: `"satisfied"`, `"unsatisfied"`, `"unobserved"`.
+- <a id="contract-equipment-actor-missing_requirements"></a>**`missing_requirements`** (array of string?): Requested keys whose values are absent or are not Boolean true, in request order. Empty means all satisfied; absence accompanies unobserved.
+- <a id="contract-equipment-actor-execution"></a>**`execution`** ([Live actor inspection](#contract-equipment-execution)): Live code and entitlement observation for the owned actor process before activation.
 
 <a id="contract-equipment-execution"></a>
 #### Live actor inspection
@@ -3837,25 +3623,23 @@ Record `eq_execution`: `PWRunnerEquipmentExecution`.
 
 For a setup-usable owned actor, the host inspects guest code, dynamic validity, associated static code and signing information before schedule activation.
 
-| Field | JSON type and presence | Meaning |
-| --- | --- | --- |
-| <a id="contract-equipment-execution-status"></a>`status` | string; required | matched when every comparison and time/ownership guard succeeds; mismatched for a differing executable/signature/entitlement requirement; inspection_failed for an unavailable inspection boundary; unobserved before eligible inspection. Admitted vocabulary: closed; displayed list: exhaustive: `"matched"`, `"mismatched"`, `"inspection_failed"`, `"unobserved"`. |
-| <a id="contract-equipment-execution-pid"></a>`pid` | integer; omitted when absent | Inspected actor PID, agreeing with its launch record when present. |
-| <a id="contract-equipment-execution-parent_pid"></a>`parent_pid` | integer; omitted when absent | Runner host PID recorded when inspection begins. |
-| <a id="contract-equipment-execution-observed_at_monotonic_ns"></a>`observed_at_monotonic_ns` | integer; omitted when absent | Host monotonic observation time in nanoseconds. A matched record requires valid inspection start and final clock samples, a nondecreasing final time, and both samples before the additional inspection deadline when that deadline was established. The scheduler separately guards the shared setup allowance. |
-| <a id="contract-equipment-execution-path"></a>`path` | string; omitted when absent | Executable path reported by live code inspection, when available. |
-| <a id="contract-equipment-execution-cdhash"></a>`cdhash` | string (hex); omitted when absent | Live code's CodeDirectory hash, when available. Uses [CodeDirectory hexadecimal width](#contract-identity-other-cdhash_hex). |
-| <a id="contract-equipment-execution-identifier"></a>`identifier` | string; omitted when absent | Live signing identifier, when available. |
-| <a id="contract-equipment-execution-team_id"></a>`team_id` | string; present when identifier has a value; may be null | Live signing team, when supplied by the signature. |
-| <a id="contract-equipment-execution-entitlements_ref"></a>`entitlements_ref` | integer; omitted when absent | Zero-based index of this actor's live entitlement read-back, when reached. |
-| <a id="contract-equipment-execution-native_observations"></a>`native_observations` | array of [Live inspection call](#contract-equipment-native_observation); required | Ordered attempted prefix of guest_code, dynamic_validity, associated_static_code and signing_information, preserving each OSStatus. |
-| <a id="contract-equipment-execution-reason"></a>`reason` | string; omitted when absent | Ineligible reason: not_launched, setup_unavailable, process_unavailable, ownership_unresolved, code_lookup_failed, dynamic_validation_failed, signing_readback_failed, executable_mismatch, signature_identity_mismatch, entitlement_mismatch, requirements_unsatisfied or inspection_deadline. Admitted vocabulary: closed; displayed list: exhaustive: `"not_launched"`, `"setup_unavailable"`, `"process_unavailable"`, `"ownership_unresolved"`, `"code_lookup_failed"`, `"dynamic_validation_failed"`, `"signing_readback_failed"`, `"executable_mismatch"`, `"signature_identity_mismatch"`, `"entitlement_mismatch"`, `"requirements_unsatisfied"`, `"inspection_deadline"`. |
-| <a id="contract-equipment-execution-eligible"></a>`eligible` | boolean; required | True for matched execution, making this setup-usable actor eligible for activation; false preserves the failed or unavailable inspection state. |
+- <a id="contract-equipment-execution-status"></a>**`status`** (string): matched when every comparison and time/ownership guard succeeds; mismatched for a differing executable/signature/entitlement requirement; inspection_failed for an unavailable inspection boundary; unobserved before eligible inspection. Admitted vocabulary: closed; displayed list: exhaustive: `"matched"`, `"mismatched"`, `"inspection_failed"`, `"unobserved"`.
+- <a id="contract-equipment-execution-pid"></a>**`pid`** (integer?): Inspected actor PID, agreeing with its launch record when present.
+- <a id="contract-equipment-execution-parent_pid"></a>**`parent_pid`** (integer?): Runner host PID recorded when inspection begins.
+- <a id="contract-equipment-execution-observed_at_monotonic_ns"></a>**`observed_at_monotonic_ns`** (integer?): Host monotonic observation time in nanoseconds. A matched record requires valid inspection start and final clock samples, a nondecreasing final time, and both samples before the additional inspection deadline when that deadline was established. The scheduler separately guards the shared setup allowance.
+- <a id="contract-equipment-execution-path"></a>**`path`** (string?): Executable path reported by live code inspection, when available.
+- <a id="contract-equipment-execution-cdhash"></a>**`cdhash`** (string (hex)?): Live code's CodeDirectory hash, when available. Uses [CodeDirectory hexadecimal width](#contract-identity-other-cdhash_hex).
+- <a id="contract-equipment-execution-identifier"></a>**`identifier`** (string?): Live signing identifier, when available.
+- <a id="contract-equipment-execution-team_id"></a>**`team_id`** (string; present when identifier has a value; may be null): Live signing team, when supplied by the signature.
+- <a id="contract-equipment-execution-entitlements_ref"></a>**`entitlements_ref`** (integer?): Zero-based index of this actor's live entitlement read-back, when reached.
+- <a id="contract-equipment-execution-native_observations"></a>**`native_observations`** (array of [Live inspection call](#contract-equipment-native_observation)): Ordered attempted prefix of guest_code, dynamic_validity, associated_static_code and signing_information, preserving each OSStatus.
+- <a id="contract-equipment-execution-reason"></a>**`reason`** (string?): Ineligible reason: not_launched, setup_unavailable, process_unavailable, ownership_unresolved, code_lookup_failed, dynamic_validation_failed, signing_readback_failed, executable_mismatch, signature_identity_mismatch, entitlement_mismatch, requirements_unsatisfied or inspection_deadline. Admitted vocabulary: closed; displayed list: exhaustive: `"not_launched"`, `"setup_unavailable"`, `"process_unavailable"`, `"ownership_unresolved"`, `"code_lookup_failed"`, `"dynamic_validation_failed"`, `"signing_readback_failed"`, `"executable_mismatch"`, `"signature_identity_mismatch"`, `"entitlement_mismatch"`, `"requirements_unsatisfied"`, `"inspection_deadline"`.
+- <a id="contract-equipment-execution-eligible"></a>**`eligible`** (boolean): True for matched execution, making this setup-usable actor eligible for activation; false preserves the failed or unavailable inspection state.
 
 <a id="contract-equipment-execution-inspect"></a>
 ##### Associating the owned process
 
-[Runner host](#contract-identity-definitions-host) acts at after setup and before any actor activation. Entry: xpc execute. Recipient: xpc caller, runner client, controller. Reports: runner reply. Applies when `request.actors` is present. For each setup-usable child with retained ownership, inspect live code and compare path, CodeDirectory hash, identifier, team and entitlement dictionary to its bound row; recheck each required Boolean-true entitlement and the inspection deadline. Matched inspection permits activation eligibility. Mismatch or inspection failure cancels all scheduling, retains earlier setup/application publications and leaves all phases unactivated and uncollected. An unavailable setup can coexist with other usable actors when no inspection failure cancels them.
+[Runner host](#contract-identity-definitions-host) acts at after setup and before any actor activation. Entry: xpc execute. Recipient: xpc caller, runner client, controller. Reports: runner reply. Applies when present(`request.actors`). For each setup-usable child with retained ownership, inspect live code and compare path, CodeDirectory hash, identifier, team and entitlement dictionary to its bound row; recheck each required Boolean-true entitlement and the inspection deadline. Matched inspection permits activation eligibility. Mismatch or inspection failure cancels all scheduling, retains earlier setup/application publications and leaves all phases unactivated and uncollected. An unavailable setup can coexist with other usable actors when no inspection failure cancels them.
 
 The scheduler includes inspection in its shared <!-- span limits.actor_setup_allowance.value_unit -->10,000 milliseconds<!-- /span --> monotonic setup allowance. It requires valid clock samples before and after each inspection and records inspection_deadline, cancelling scheduling, when an otherwise successful inspection reaches or exceeds that setup deadline. Before the scheduler runs, orchestration also attempts to establish an additional monotonic deadline <!-- span limits.actor_lifetime_cutoff.value_unit -->180,000 milliseconds<!-- /span --> from that initial clock sample, reusing the configured actor-lifetime duration. This additional deadline has its own clock and origin, separate from the workers' shared continuous-clock cutoff. When its initial sample is unavailable, the additional deadline comparison is absent; the scheduler's setup guard and the inspection's valid start/final clock samples still apply. When present, the additional deadline requires both inspection samples strictly before it.
 
@@ -3879,8 +3663,8 @@ Constructed Security-call failures establish attempted-prefix retention, inspect
 
 | Case | When | Consequence |
 | --- | --- | --- |
-| <a id="contract-equipment-execution-eligibility-matched"></a>1. Matched inspection | `eq_execution.status` = `"matched"` | sets `eq_execution.eligible` to `true`, sets `eq_execution.reason` to `null`. |
-| <a id="contract-equipment-execution-eligibility-refused"></a>2. Refused inspection | `eq_execution.status` is one of `"mismatched"`, `"inspection_failed"` | sets `eq_execution.eligible` to `false`. |
+| <a id="contract-equipment-execution-eligibility-matched"></a>1. Matched inspection | `eq_execution.status` = `"matched"` | [set_value(`eq_execution.eligible`, `true`), set_value(`eq_execution.reason`, `null`)]. |
+| <a id="contract-equipment-execution-eligibility-refused"></a>2. Refused inspection | `eq_execution.status` ∈ [`"mismatched"`, `"inspection_failed"`] | set_value(`eq_execution.eligible`, `false`). |
 
 **Support: [source read](#contract-support-grades) for [Inspection result eligibility](#contract-equipment-execution-eligibility).** A matched live inspection publishes eligibility; mismatched or failed inspection remains ineligible. Native ownership/deadline/entitlement checks precede these states. Source: [ActorEquipment.swift](../runner/Sources/PWRunnerCore/ActorEquipment.swift): `inspect`.
 
@@ -3891,11 +3675,9 @@ Record `eq_native_observation`: `PWRunnerEquipmentNativeObservation`.
 
 Each row identifies one attempted Security-framework boundary in its observed order.
 
-| Field | JSON type and presence | Meaning |
-| --- | --- | --- |
-| <a id="contract-equipment-native_observation-operation"></a>`operation` | string; required | guest_code, dynamic_validity, associated_static_code or signing_information, in that order as reached. Admitted vocabulary: closed; displayed list: exhaustive: `"guest_code"`, `"dynamic_validity"`, `"associated_static_code"`, `"signing_information"`. |
-| <a id="contract-equipment-native_observation-attempted"></a>`attempted` | boolean; required | True for the recorded call; the observed prefix ends at the first failing boundary. |
-| <a id="contract-equipment-native_observation-osstatus"></a>`osstatus` | integer; omitted when absent | Native OSStatus returned by this operation, including zero for success. |
+- <a id="contract-equipment-native_observation-operation"></a>**`operation`** (string): guest_code, dynamic_validity, associated_static_code or signing_information, in that order as reached. Admitted vocabulary: closed; displayed list: exhaustive: `"guest_code"`, `"dynamic_validity"`, `"associated_static_code"`, `"signing_information"`.
+- <a id="contract-equipment-native_observation-attempted"></a>**`attempted`** (boolean): True for the recorded call; the observed prefix ends at the first failing boundary.
+- <a id="contract-equipment-native_observation-osstatus"></a>**`osstatus`** (integer?): Native OSStatus returned by this operation, including zero for success.
 
 <a id="contract-equipment-preparation_failure"></a>
 #### Actor preparation refusal
@@ -3904,18 +3686,16 @@ Record `eq_preparation_failure`: `PWRunnerPreparationFailure`.
 
 Preparation stops before actor launch when the resolved plan is inconsistent or static equipment cannot be bound.
 
-| Field | JSON type and presence | Meaning |
-| --- | --- | --- |
-| <a id="contract-equipment-preparation_failure-stage"></a>`stage` | string; required | resolved_plan or equipment, identifying the refusing preparation boundary. Admitted vocabulary: closed; displayed list: exhaustive: `"resolved_plan"`, `"equipment"`. |
-| <a id="contract-equipment-preparation_failure-code"></a>`code` | string; required | inconsistent_assignment for resolved_plan; equipment_binding_refused for equipment. Admitted vocabulary: closed; displayed list: exhaustive: `"inconsistent_assignment"`, `"equipment_binding_refused"`. |
-| <a id="contract-equipment-preparation_failure-actor_id"></a>`actor_id` | string; omitted when absent | Actor whose entitlement requirement caused the refusal, when associated. |
-| <a id="contract-equipment-preparation_failure-binding_ref"></a>`binding_ref` | integer; omitted when absent | Zero-based refused binding row when one was produced or identified. |
-| <a id="contract-equipment-preparation_failure-reason"></a>`reason` | string; omitted when absent | Equipment refusal classification, when the failure arose from equipment preparation. |
+- <a id="contract-equipment-preparation_failure-stage"></a>**`stage`** (string): resolved_plan or equipment, identifying the refusing preparation boundary. Admitted vocabulary: closed; displayed list: exhaustive: `"resolved_plan"`, `"equipment"`.
+- <a id="contract-equipment-preparation_failure-code"></a>**`code`** (string): inconsistent_assignment for resolved_plan; equipment_binding_refused for equipment. Admitted vocabulary: closed; displayed list: exhaustive: `"inconsistent_assignment"`, `"equipment_binding_refused"`.
+- <a id="contract-equipment-preparation_failure-actor_id"></a>**`actor_id`** (string?): Actor whose entitlement requirement caused the refusal, when associated.
+- <a id="contract-equipment-preparation_failure-binding_ref"></a>**`binding_ref`** (integer?): Zero-based refused binding row when one was produced or identified.
+- <a id="contract-equipment-preparation_failure-reason"></a>**`reason`** (string?): Equipment refusal classification, when the failure arose from equipment preparation.
 
 <a id="contract-equipment-preparation_failure-retain"></a>
 ##### Preparation refusal contents
 
-[Runner host](#contract-identity-definitions-host) reports at actor preparation refusal before launch. Entry: xpc execute. Recipient: xpc caller, runner client, controller. Reports: runner reply. Applies when (`request.actors` is present and `request.phases` is present). sets `reply.execution_form` to `"actors"`, sets `reply.normalized_outcome` to `"runner_failed"`, sets `reply.rc` to `1`, sets `reply.steps` to an empty array, sets `reply.extension_events` to an empty array, sets `reply.transfers` to an empty array, sets `reply.resources.tokens` to an empty array, sets `reply.resources.deliveries` to an empty array, sets `reply.resources.handles` to an empty array, sets `reply.schedule.cancelled` to `"preparation_refused"`, sets `reply.authority_setup.host.run.disposition` to `"not_attempted"`, sets `reply.authority_setup.host.regions` to an empty array, sets `reply.authority_setup.host.custody` to an empty array, retains the records `reply.equipment_inventory`, retains the records `reply.equipment_bindings`, retains the records `reply.equipment_entitlements`. The resolved plan is inconsistent or equipment binding fails before actor launch.
+[Runner host](#contract-identity-definitions-host) reports at actor preparation refusal before launch. Entry: xpc execute. Recipient: xpc caller, runner client, controller. Reports: runner reply. Applies when (present(`request.actors`) and present(`request.phases`)). [set_value(`reply.execution_form`, `"actors"`), set_value(`reply.normalized_outcome`, `"runner_failed"`), set_value(`reply.rc`, `1`), set_value(`reply.steps`, []), set_value(`reply.extension_events`, []), set_value(`reply.transfers`, []), set_value(`reply.resources.tokens`, []), set_value(`reply.resources.deliveries`, []), set_value(`reply.resources.handles`, []), set_value(`reply.schedule.cancelled`, `"preparation_refused"`), set_value(`reply.authority_setup.host.run.disposition`, `"not_attempted"`), set_value(`reply.authority_setup.host.regions`, []), set_value(`reply.authority_setup.host.custody`, []), retain_records(`reply.equipment_inventory`), retain_records(`reply.equipment_bindings`), retain_records(`reply.equipment_entitlements`)]. The resolved plan is inconsistent or equipment binding fails before actor launch.
 
 Actors have `launch_refused` setup, absent launch/subprocess, and application
 assessment from their declaration and unlaunched state. Phases keep their
@@ -3927,13 +3707,13 @@ setup scopes identify their declared actors with decision `not_observed`.
 
 | Item | Requirement or consequence |
 | --- | --- |
-| <a id="contract-equipment-preparation_failure-retain-counts"></a>Declaration row counts | Requires (count of `reply.actors` = count of `request.actors` and count of `reply.phases` = count of `request.phases`). |
-| <a id="contract-equipment-preparation_failure-retain-actors"></a>Unlaunched actor rows | Binding `a`: entry in `reply.actors`. For each `a`. sets `reply.actors[a].setup_status` to `"launch_refused"`, sets `reply.actors[a].application_count` to `0`, withholds `reply.actors[a].launch`, withholds `reply.actors[a].subprocess`. |
-| <a id="contract-equipment-preparation_failure-retain-phases"></a>Unactivated phase rows | Binding `p`: entry in `reply.phases`. For each `p`. sets `reply.phases[p].arrival_observed` to `false`, sets `reply.phases[p].completion_observed` to `false`, sets `reply.phases[p].collection_status` to `"not_reached"`. |
+| <a id="contract-equipment-preparation_failure-retain-counts"></a>Declaration row counts | Requires (count(`reply.actors`) = count(`request.actors`) and count(`reply.phases`) = count(`request.phases`)). |
+| <a id="contract-equipment-preparation_failure-retain-actors"></a>Unlaunched actor rows | Binding `a`: entry in `reply.actors`. For each `a`. [set_value(`reply.actors[a].setup_status`, `"launch_refused"`), set_value(`reply.actors[a].application_count`, `0`), withhold(`reply.actors[a].launch`), withhold(`reply.actors[a].subprocess`)]. |
+| <a id="contract-equipment-preparation_failure-retain-phases"></a>Unactivated phase rows | Binding `p`: entry in `reply.phases`. For each `p`. [set_value(`reply.phases[p].arrival_observed`, `false`), set_value(`reply.phases[p].completion_observed`, `false`), set_value(`reply.phases[p].collection_status`, `"not_reached"`)]. |
 | <a id="contract-equipment-preparation_failure-retain-actor_identity"></a>Actor identity in declaration order | Binding `a`: entry in `request.actors`. Binding `b`: entry in `reply.actors`. For each `a`, `b`. Applies when `a` = `b`. Requires (`request.actors[a].actor_id` = `reply.actors[b].actor_id` and `request.actors[a].sandbox.mode` = `reply.actors[b].mode` and `reply.actors[b].index` = `a`). |
-| <a id="contract-equipment-preparation_failure-retain-phase_identity"></a>Phase identity in declaration order | Binding `p`: entry in `request.phases`. Binding `q`: entry in `reply.phases`. For each `p`, `q`. Applies when `p` = `q`. Requires (`request.phases[p].phase_id` = `reply.phases[q].phase_id` and `request.phases[p].actor_id` = `reply.phases[q].actor_id` and `reply.phases[q].ordinal` = (`p` + `1`) and count of `reply.phases[q].action_ids` = count of `request.phases[p].actions`). |
-| <a id="contract-equipment-preparation_failure-retain-action_probe"></a>Retained probe action identity | Binding `p`: entry in `request.phases`. Binding `q`: entry in `reply.phases`. Binding `a`: entry in `request.phases[p].actions`. Binding `b`: entry in `reply.phases[q].action_ids`. For each `p`, `q`, `a`, `b`. Applies when (`p` = `q` and `a` = `b` and `request.phases[p].actions[a]` has alternative `"probe"`). Requires `reply.phases[q].action_ids[b]` = `variant(request.phases[p].actions[a], 'probe').step_id`. |
-| <a id="contract-equipment-preparation_failure-retain-action_extensionaction"></a>Retained extensionAction action identity | Binding `p`: entry in `request.phases`. Binding `q`: entry in `reply.phases`. Binding `a`: entry in `request.phases[p].actions`. Binding `b`: entry in `reply.phases[q].action_ids`. For each `p`, `q`, `a`, `b`. Applies when (`p` = `q` and `a` = `b` and `request.phases[p].actions[a]` has alternative `"extensionAction"`). Requires `reply.phases[q].action_ids[b]` = `variant(request.phases[p].actions[a], 'extensionAction').step_id`. |
+| <a id="contract-equipment-preparation_failure-retain-phase_identity"></a>Phase identity in declaration order | Binding `p`: entry in `request.phases`. Binding `q`: entry in `reply.phases`. For each `p`, `q`. Applies when `p` = `q`. Requires (`request.phases[p].phase_id` = `reply.phases[q].phase_id` and `request.phases[p].actor_id` = `reply.phases[q].actor_id` and `reply.phases[q].ordinal` = (`p` + `1`) and count(`reply.phases[q].action_ids`) = count(`request.phases[p].actions`)). |
+| <a id="contract-equipment-preparation_failure-retain-action_probe"></a>Retained probe action identity | Binding `p`: entry in `request.phases`. Binding `q`: entry in `reply.phases`. Binding `a`: entry in `request.phases[p].actions`. Binding `b`: entry in `reply.phases[q].action_ids`. For each `p`, `q`, `a`, `b`. Applies when (`p` = `q` and `a` = `b` and is_variant(`request.phases[p].actions[a]`, `"probe"`)). Requires `reply.phases[q].action_ids[b]` = `variant(request.phases[p].actions[a], 'probe').step_id`. |
+| <a id="contract-equipment-preparation_failure-retain-action_extensionaction"></a>Retained extensionAction action identity | Binding `p`: entry in `request.phases`. Binding `q`: entry in `reply.phases`. Binding `a`: entry in `request.phases[p].actions`. Binding `b`: entry in `reply.phases[q].action_ids`. For each `p`, `q`, `a`, `b`. Applies when (`p` = `q` and `a` = `b` and is_variant(`request.phases[p].actions[a]`, `"extensionAction"`)). Requires `reply.phases[q].action_ids[b]` = `variant(request.phases[p].actions[a], 'extensionAction').step_id`. |
 
 **Support: [source read](#contract-support-grades) for [Preparation refusal contents](#contract-equipment-preparation_failure-retain).** Before-launch plan or equipment refusal enumerates the already-admitted request actors, phases and action IDs in declaration order, preserving available equipment beside empty execution collections and unlaunched/unactivated states. Source: [ActorOrchestration.swift](../runner/Sources/PWRunnerCore/ActorOrchestration.swift): `runActors`, `actorPreparationRefusal`.
 
@@ -3944,10 +3724,8 @@ Record `eq_authority_setup`: `PWRunnerAuthoritySetup`.
 
 The host retains its own setup/cleanup observations and each worker’s separately acquired setup publications.
 
-| Field | JSON type and presence | Meaning |
-| --- | --- | --- |
-| <a id="contract-equipment-authority_setup-host"></a>`host` | [Host authority scopes](#contract-equipment-authority_host); required | Host-owned run, shared-region and custody scopes. |
-| <a id="contract-equipment-authority_setup-workers"></a>`workers` | array of [Authority operation scope](#contract-equipment-authority_scope); required | Actor-indexed worker setup scopes, one per declared actor and bound to that actor's identifier. |
+- <a id="contract-equipment-authority_setup-host"></a>**`host`** ([Host authority scopes](#contract-equipment-authority_host)): Host-owned run, shared-region and custody scopes.
+- <a id="contract-equipment-authority_setup-workers"></a>**`workers`** (array of [Authority operation scope](#contract-equipment-authority_scope)): Actor-indexed worker setup scopes, one per declared actor and bound to that actor's identifier.
 
 <a id="contract-equipment-authority_host"></a>
 #### Host authority scopes
@@ -3956,11 +3734,9 @@ Record `eq_authority_host`: `PWRunnerAuthorityHost`.
 
 The host separates run prerequisites, actor shared regions and token custody into their owning scopes.
 
-| Field | JSON type and presence | Meaning |
-| --- | --- | --- |
-| <a id="contract-equipment-authority_host-run"></a>`run` | [Authority operation scope](#contract-equipment-authority_scope); required | Run-wide prerequisite account, including core-limit setup. |
-| <a id="contract-equipment-authority_host-regions"></a>`regions` | array of [Authority operation scope](#contract-equipment-authority_scope); required | Per-actor shared authority-region allocation, initialization, descriptor and cleanup observations. |
-| <a id="contract-equipment-authority_host-custody"></a>`custody` | array of [Authority operation scope](#contract-equipment-authority_scope); required | Per-token host-private custody allocation, erasure and unmap observations. |
+- <a id="contract-equipment-authority_host-run"></a>**`run`** ([Authority operation scope](#contract-equipment-authority_scope)): Run-wide prerequisite account, including core-limit setup.
+- <a id="contract-equipment-authority_host-regions"></a>**`regions`** (array of [Authority operation scope](#contract-equipment-authority_scope)): Per-actor shared authority-region allocation, initialization, descriptor and cleanup observations.
+- <a id="contract-equipment-authority_host-custody"></a>**`custody`** (array of [Authority operation scope](#contract-equipment-authority_scope)): Per-token host-private custody allocation, erasure and unmap observations.
 
 <a id="contract-equipment-authority_scope"></a>
 #### Authority operation scope
@@ -3969,25 +3745,23 @@ Record `eq_authority_scope`: `PWRunnerAuthorityScope`.
 
 A scope retains operation cells, its setup decision and ownership state. A decision and individual operation publications have separate acquisition boundaries.
 
-| Field | JSON type and presence | Meaning |
-| --- | --- | --- |
-| <a id="contract-equipment-authority_scope-actor_id"></a>`actor_id` | string; omitted when absent | Bound actor identifier for worker or region scope, when applicable. |
-| <a id="contract-equipment-authority_scope-actor_index"></a>`actor_index` | integer; omitted when absent | Zero-based actor position for worker or region scope. |
-| <a id="contract-equipment-authority_scope-token_ref"></a>`token_ref` | string; omitted when absent | Bound token identifier for custody scope, when applicable. |
-| <a id="contract-equipment-authority_scope-token_index"></a>`token_index` | integer; omitted when absent | Zero-based token position for custody scope. |
-| <a id="contract-equipment-authority_scope-required"></a>`required` | boolean; omitted when absent | Whether authority setup is required for the worker's admitted actor plan. |
-| <a id="contract-equipment-authority_scope-publication"></a>`publication` | string; omitted when absent | Worker decision acquisition: observed or not_observed; host-recorded scopes use their directly recorded disposition. Admitted vocabulary: closed; displayed list: exhaustive: `"observed"`, `"not_observed"`. |
-| <a id="contract-equipment-authority_scope-disposition"></a>`disposition` | string; omitted when absent | Worker decision ready, not_required or terminal_required_failure when observed; host scope state such as not_attempted, ready or failed records its own preparation. |
-| <a id="contract-equipment-authority_scope-primary_operation"></a>`primary_operation` | integer; omitted when absent | Slot of the first failed/rejected operation supporting the scope decision; worker terminal_required_failure requires that published primary cell. |
-| <a id="contract-equipment-authority_scope-operations"></a>`operations` | array of [Authority operation cell](#contract-equipment-authority_operation); required | Independently observed operation cells in slot order, including cleanup after a setup failure. |
-| <a id="contract-equipment-authority_scope-ownership"></a>`ownership` | object with string keys and string values; required | Named ownership states: object_name, descriptor and mapping use not_acquired, held, released or unresolved; shared_erasure/private_erasure use not_present, performed, withheld_not_quiescent or unobserved. |
-| <a id="contract-equipment-authority_scope-cleanup_reference"></a>`cleanup_reference` | [Unresolved shared-memory name](#contract-equipment-cleanup_reference); omitted when absent | Retained unresolved shared-memory name after successful creation and failed unlink, requiring ownership-aware recovery. |
-| <a id="contract-equipment-authority_scope-integrity_errors"></a>`integrity_errors` | array of string; omitted when absent | Detected malformed, repeated, missing-primary or mismatched-association publications; absence means the decoder found none. |
+- <a id="contract-equipment-authority_scope-actor_id"></a>**`actor_id`** (string?): Bound actor identifier for worker or region scope, when applicable.
+- <a id="contract-equipment-authority_scope-actor_index"></a>**`actor_index`** (integer?): Zero-based actor position for worker or region scope.
+- <a id="contract-equipment-authority_scope-token_ref"></a>**`token_ref`** (string?): Bound token identifier for custody scope, when applicable.
+- <a id="contract-equipment-authority_scope-token_index"></a>**`token_index`** (integer?): Zero-based token position for custody scope.
+- <a id="contract-equipment-authority_scope-required"></a>**`required`** (boolean?): Whether authority setup is required for the worker's admitted actor plan.
+- <a id="contract-equipment-authority_scope-publication"></a>**`publication`** (string?): Worker decision acquisition: observed or not_observed; host-recorded scopes use their directly recorded disposition. Admitted vocabulary: closed; displayed list: exhaustive: `"observed"`, `"not_observed"`.
+- <a id="contract-equipment-authority_scope-disposition"></a>**`disposition`** (string?): Worker decision ready, not_required or terminal_required_failure when observed; host scope state such as not_attempted, ready or failed records its own preparation.
+- <a id="contract-equipment-authority_scope-primary_operation"></a>**`primary_operation`** (integer?): Slot of the first failed/rejected operation supporting the scope decision; worker terminal_required_failure requires that published primary cell.
+- <a id="contract-equipment-authority_scope-operations"></a>**`operations`** (array of [Authority operation cell](#contract-equipment-authority_operation)): Independently observed operation cells in slot order, including cleanup after a setup failure.
+- <a id="contract-equipment-authority_scope-ownership"></a>**`ownership`** (object with string keys and string values): Named ownership states: object_name, descriptor and mapping use not_acquired, held, released or unresolved; shared_erasure/private_erasure use not_present, performed, withheld_not_quiescent or unobserved.
+- <a id="contract-equipment-authority_scope-cleanup_reference"></a>**`cleanup_reference`** ([Unresolved shared-memory name](#contract-equipment-cleanup_reference)?): Retained unresolved shared-memory name after successful creation and failed unlink, requiring ownership-aware recovery.
+- <a id="contract-equipment-authority_scope-integrity_errors"></a>**`integrity_errors`** (array of string?): Detected malformed, repeated, missing-primary or mismatched-association publications; absence means the decoder found none.
 
 <a id="contract-equipment-authority_scope-acquire"></a>
 ##### Acquiring setup decisions and operations
 
-[Runner host](#contract-identity-definitions-host) reports at worker shared-region collection. Entry: xpc execute. Recipient: xpc caller, runner client, controller. Reports: runner reply. Applies when `request.actors` is present. After worker-identity agreement, acquire-load the decision snapshot first, then independently acquire-load each published operation cell. Retain independently valid operation cells even when the decision is absent. For an observed decision, validate its raw actor/required association before projecting the decision and its primary operation.
+[Runner host](#contract-identity-definitions-host) reports at worker shared-region collection. Entry: xpc execute. Recipient: xpc caller, runner client, controller. Reports: runner reply. Applies when present(`request.actors`). After worker-identity agreement, acquire-load the decision snapshot first, then independently acquire-load each published operation cell. Retain independently valid operation cells even when the decision is absent. For an observed decision, validate its raw actor/required association before projecting the decision and its primary operation.
 
 The decision's release orders prerequisite cells. Reading the decision first
 keeps a newly observed decision joined to its earlier primary publication.
@@ -3998,8 +3772,8 @@ remain available.
 
 | Item | Requirement or consequence |
 | --- | --- |
-| <a id="contract-equipment-authority_scope-acquire-primary"></a>Retained primary support | Binding `o`: entry in `eq_authority_scope.operations`. Association restriction for `o`: (`eq_authority_scope.operations[o].slot` = `eq_authority_scope.primary_operation` and `eq_authority_scope.operations[o].state` is one of `"failed"`, `"rejected"`). Applies when (`eq_authority_scope.publication` = `"observed"` and `eq_authority_scope.primary_operation` is present). Requires (if number of matching entries for `o` = `0`, then (`eq_authority_scope.integrity_errors` is present and `"setup_primary_unpublished"` is one of `eq_authority_scope.integrity_errors`)). A missing primary cell adds an integrity error alongside the decision and independently valid cells. |
-| <a id="contract-equipment-authority_scope-acquire-decision"></a>Observed decision applicability | Applies when `eq_authority_scope.publication` = `"observed"`. Requires ((if `eq_authority_scope.disposition` = `"terminal_required_failure"`, then (`eq_authority_scope.required` and `eq_authority_scope.primary_operation` is present)) and (if `eq_authority_scope.disposition` = `"ready"`, then `eq_authority_scope.required`) and (if `eq_authority_scope.disposition` = `"not_required"`, then `eq_authority_scope.required` = `false`)). |
+| <a id="contract-equipment-authority_scope-acquire-primary"></a>Retained primary support | Binding `o`: entry in `eq_authority_scope.operations`. Association restriction for `o`: (`eq_authority_scope.operations[o].slot` = `eq_authority_scope.primary_operation` and `eq_authority_scope.operations[o].state` ∈ [`"failed"`, `"rejected"`]). Applies when (`eq_authority_scope.publication` = `"observed"` and present(`eq_authority_scope.primary_operation`)). Requires implies(matches(`o`) = `0`, (present(`eq_authority_scope.integrity_errors`) and `"setup_primary_unpublished"` ∈ `eq_authority_scope.integrity_errors`)). A missing primary cell adds an integrity error alongside the decision and independently valid cells. |
+| <a id="contract-equipment-authority_scope-acquire-decision"></a>Observed decision applicability | Applies when `eq_authority_scope.publication` = `"observed"`. Requires (implies(`eq_authority_scope.disposition` = `"terminal_required_failure"`, (`eq_authority_scope.required` and present(`eq_authority_scope.primary_operation`))) and implies(`eq_authority_scope.disposition` = `"ready"`, `eq_authority_scope.required`) and implies(`eq_authority_scope.disposition` = `"not_required"`, `eq_authority_scope.required` = `false`)). |
 
 **Support: [check read](#contract-support-grades) for [Authority operation scope](#contract-equipment-authority_scope) and its descendants.** Constructed published cleanup cell survives absent decision, preserves native failure and cleanup role; corrupted publication flags yield invalid_setup_cell. Context: Constructed shared-memory buffer decoded by the production host decoder; source and assertions read. Evidence limit: The check covers cell eligibility and corrupted flags; source supplies decision-first acquisition and primary-cell validation. No execution credit. Source: [AuthoritySetupRuntime.swift](../runner/Sources/PWRunnerCore/AuthoritySetupRuntime.swift): `decodeAuthoritySetup`. Check: [ActorAuthorityTests.swift](../runner/Tests/PWRunnerCoreTests/ActorAuthorityTests.swift): `runActorAuthorityTests`.
 
@@ -4010,17 +3784,15 @@ Record `eq_authority_operation`: `PWRunnerAuthorityOperation`.
 
 Each fixed slot identifies one operation once. Kind controls which native fields are meaningful; cleanup cells retain their own failures alongside the primary setup failure.
 
-| Field | JSON type and presence | Meaning |
-| --- | --- | --- |
-| <a id="contract-equipment-authority_operation-slot"></a>`slot` | integer; required | Zero-based fixed operation-cell position within its worker, region, custody or run scope. |
-| <a id="contract-equipment-authority_operation-operation"></a>`operation` | string; required | Operation registered for that scope and slot, such as descriptor_close, header_binding, shm_unlink or final_erase. |
-| <a id="contract-equipment-authority_operation-role"></a>`role` | string; required | setup or cleanup, according to the operation's boundary. Admitted vocabulary: closed; displayed list: exhaustive: `"setup"`, `"cleanup"`. |
-| <a id="contract-equipment-authority_operation-state"></a>`state` | string; required | succeeded/failed for native integer or mapping operations; accepted/rejected for validation; available/unavailable for symbols; performed for memory operations; not_attempted for an explicitly unattempted cell. Admitted vocabulary: closed; displayed list: exhaustive: `"succeeded"`, `"failed"`, `"accepted"`, `"rejected"`, `"available"`, `"unavailable"`, `"performed"`, `"not_attempted"`. |
-| <a id="contract-equipment-authority_operation-native_kind"></a>`native_kind` | string; omitted when absent | integer, error_code, mapping, symbol, validation or memory, identifying the observation convention. Admitted vocabulary: closed; displayed list: exhaustive: `"integer"`, `"error_code"`, `"mapping"`, `"symbol"`, `"validation"`, `"memory"`. |
-| <a id="contract-equipment-authority_operation-native_rc"></a>`native_rc` | integer; omitted when absent | Recorded return for integer/error_code operations; absent for mapping, symbol, validation and memory observations. |
-| <a id="contract-equipment-authority_operation-errno"></a>`errno` | integer; omitted when absent | Captured native errno on failed integer/mapping operations; absent for other states and kinds. |
-| <a id="contract-equipment-authority_operation-detail"></a>`detail` | string; omitted when absent | Operation-specific validation reason, including descriptor_missing or header magic/identity/actor_index/slot_counts/region_extent mismatch. |
-| <a id="contract-equipment-authority_operation-value"></a>`value` | integer; omitted when absent | Operation-specific unsigned native observation when the cell marks a value present, such as object/page size. |
+- <a id="contract-equipment-authority_operation-slot"></a>**`slot`** (integer): Zero-based fixed operation-cell position within its worker, region, custody or run scope.
+- <a id="contract-equipment-authority_operation-operation"></a>**`operation`** (string): Operation registered for that scope and slot, such as descriptor_close, header_binding, shm_unlink or final_erase.
+- <a id="contract-equipment-authority_operation-role"></a>**`role`** (string): setup or cleanup, according to the operation's boundary. Admitted vocabulary: closed; displayed list: exhaustive: `"setup"`, `"cleanup"`.
+- <a id="contract-equipment-authority_operation-state"></a>**`state`** (string): succeeded/failed for native integer or mapping operations; accepted/rejected for validation; available/unavailable for symbols; performed for memory operations; not_attempted for an explicitly unattempted cell. Admitted vocabulary: closed; displayed list: exhaustive: `"succeeded"`, `"failed"`, `"accepted"`, `"rejected"`, `"available"`, `"unavailable"`, `"performed"`, `"not_attempted"`.
+- <a id="contract-equipment-authority_operation-native_kind"></a>**`native_kind`** (string?): integer, error_code, mapping, symbol, validation or memory, identifying the observation convention. Admitted vocabulary: closed; displayed list: exhaustive: `"integer"`, `"error_code"`, `"mapping"`, `"symbol"`, `"validation"`, `"memory"`.
+- <a id="contract-equipment-authority_operation-native_rc"></a>**`native_rc`** (integer?): Recorded return for integer/error_code operations; absent for mapping, symbol, validation and memory observations.
+- <a id="contract-equipment-authority_operation-errno"></a>**`errno`** (integer?): Captured native errno on failed integer/mapping operations; absent for other states and kinds.
+- <a id="contract-equipment-authority_operation-detail"></a>**`detail`** (string?): Operation-specific validation reason, including descriptor_missing or header magic/identity/actor_index/slot_counts/region_extent mismatch.
+- <a id="contract-equipment-authority_operation-value"></a>**`value`** (integer?): Operation-specific unsigned native observation when the cell marks a value present, such as object/page size.
 
 <a id="contract-equipment-authority_operation-slots"></a>
 ##### Registered operation slots
@@ -4038,13 +3810,11 @@ Record `eq_cleanup_reference`: `PWAuthorityCleanupReference`.
 
 A successful shm_open followed by failed shm_unlink retains this recovery reference while preserving unresolved ownership.
 
-| Field | JSON type and presence | Meaning |
-| --- | --- | --- |
-| <a id="contract-equipment-cleanup_reference-kind"></a>`kind` | string; required | posix_shm_name, the retained resource name form. Admitted vocabulary: closed; displayed list: exhaustive: `"posix_shm_name"`. |
-| <a id="contract-equipment-cleanup_reference-name"></a>`name` | string; required | Absolute POSIX shared-memory name beginning with slash, at most <!-- span limits.authority_cleanup_name.value_unit -->31 UTF-8 bytes<!-- /span -->. |
-| <a id="contract-equipment-cleanup_reference-host_pid"></a>`host_pid` | integer; required | Host PID recorded when the name was created. |
-| <a id="contract-equipment-cleanup_reference-session_nonce"></a>`session_nonce` | integer; required | Run nonce associated with creation of this named region. |
-| <a id="contract-equipment-cleanup_reference-recovery_state"></a>`recovery_state` | string; required | unresolved_manual: recovery must establish current ownership before acting because a reused name can identify another object. Admitted vocabulary: closed; displayed list: exhaustive: `"unresolved_manual"`. |
+- <a id="contract-equipment-cleanup_reference-kind"></a>**`kind`** (string): posix_shm_name, the retained resource name form. Admitted vocabulary: closed; displayed list: exhaustive: `"posix_shm_name"`.
+- <a id="contract-equipment-cleanup_reference-name"></a>**`name`** (string): Absolute POSIX shared-memory name beginning with slash, at most <!-- span limits.authority_cleanup_name.value_unit -->31 UTF-8 bytes<!-- /span -->.
+- <a id="contract-equipment-cleanup_reference-host_pid"></a>**`host_pid`** (integer): Host PID recorded when the name was created.
+- <a id="contract-equipment-cleanup_reference-session_nonce"></a>**`session_nonce`** (integer): Run nonce associated with creation of this named region.
+- <a id="contract-equipment-cleanup_reference-recovery_state"></a>**`recovery_state`** (string): unresolved_manual: recovery must establish current ownership before acting because a reused name can identify another object. Admitted vocabulary: closed; displayed list: exhaustive: `"unresolved_manual"`.
 
 **Support: [source read](#contract-support-grades) for [Equipment and authority setup](#contract-equipment) and its descendants.** Imported public field definitions joined to producer/decoder/assessment meanings; explicit rule and evidence gaps preserve scope. Source: [ActorEquipment.swift](../runner/Sources/PWRunnerCore/ActorEquipment.swift): `ActorEquipmentPreparation`; [PWRunnerEquipment.swift](../runner/Sources/PWRunnerCore/PWRunnerEquipment.swift): `pwRunnerEquipmentProblems`; [AuthoritySetupRuntime.swift](../runner/Sources/PWRunnerCore/AuthoritySetupRuntime.swift): `decodeAuthoritySetup`; [PWRunnerAuthoritySetup.swift](../runner/Sources/PWRunnerCore/PWRunnerAuthoritySetup.swift): `authoritySetupIntegrityErrors`; [ActorOrchestration.swift](../runner/Sources/PWRunnerCore/ActorOrchestration.swift): `actorPreparationRefusal`, `inspectionDeadline`; [PWRunnerReply.swift](../runner/Sources/PWRunnerCore/PWRunnerReply.swift): `actorExtensionEvidenceProblem`; [ActorScheduler.swift](../runner/Sources/PWRunnerCore/ActorScheduler.swift): `didSetUp`; [MonotonicDeadline.swift](../runner/Sources/PWRunnerCore/MonotonicDeadline.swift): `static func now`.
 
@@ -4062,34 +3832,32 @@ Binding `a`: entry in `reply.actors`. Record `receipt` locations: `reply.compile
 
 The containing reply's producer contract identifies the receipt's contract.
 
-| Field | JSON type and presence | Meaning |
-| --- | --- | --- |
-| <a id="contract-profile-receipt-status"></a>`status` | string; required | `captured` states that the host's capture checks passed. `unavailable` states that a capture condition failed. Admitted vocabulary: closed; displayed list: exhaustive: `"captured"`, `"unavailable"`. |
-| <a id="contract-profile-receipt-reason"></a>`reason` | string; omitted when absent | The host names the first failing capture condition. The controller's label check accepts the carried reason string. Boundary: controller reply admission. Admitted vocabulary: open; displayed list: illustrative: `"successful_application_unconfirmed"`, `"worker_not_complete"`, `"capture_nonce_mismatch"`. Unfamiliar values: retained as the host's reason string. |
-| <a id="contract-profile-receipt-worker_pid"></a>`worker_pid` | integer; required | The process identifier of the worker whose output the host collected. |
-| <a id="contract-profile-receipt-producer"></a>`producer` | string; omitted when absent | `worker` on a captured receipt identifies the component that captured the bytes. |
-| <a id="contract-profile-receipt-capture_stage"></a>`capture_stage` | string; omitted when absent | `before_apply` on a captured receipt identifies when the worker captured the bytes. |
-| <a id="contract-profile-receipt-request_nonce"></a>`request_nonce` | string; omitted when absent | The host returns the request's capture nonce after comparing it with the worker's recorded bytes. A comparison with a separately retained request nonce supplies a consumer's request association; the controller's carried-label check has no request-nonce operand. |
-| <a id="contract-profile-receipt-profile_type"></a>`profile_type` | integer; omitted when absent | The supported compiler result representation is `0`. |
-| <a id="contract-profile-receipt-bytecode_length"></a>`bytecode_length` | integer; omitted when absent | The number of raw bytes copied from the compiled object, positive and at most <!-- span limits.compiled_profile.value_unit -->1,048,576 bytes<!-- /span -->. It counts the decoded bytes represented by `bytecode_b64`, separately for each opted-in worker. |
-| <a id="contract-profile-receipt-bytecode_sha256"></a>`bytecode_sha256` | string (hex); omitted when absent | The host's SHA-256 digest of the captured bytes, presented as lowercase hexadecimal. |
-| <a id="contract-profile-receipt-bytecode_b64"></a>`bytecode_b64` | string (base64); omitted when absent | The bytes copied from the compiler object passed to `sandbox_apply`, presented as base64. |
-| <a id="contract-profile-receipt-source_sha256"></a>`source_sha256` | string (hex); omitted when absent | The SHA-256 digest of the UTF-8 C-string source passed to compilation, presented as lowercase hexadecimal. The host compares it with its supplied source bytes; an embedded NUL cannot establish the full source identity. |
-| <a id="contract-profile-receipt-source_length"></a>`source_length` | integer; omitted when absent | The supplied source's UTF-8 byte count. |
-| <a id="contract-profile-receipt-params_sha256"></a>`params_sha256` | string (hex); omitted when absent | The order-independent digest of parameter names and values consumed by the worker, presented as lowercase hexadecimal. |
-| <a id="contract-profile-receipt-parameter_count"></a>`parameter_count` | integer; omitted when absent | The count of parameters supplied to the worker. |
+- <a id="contract-profile-receipt-status"></a>**`status`** (string): `captured` states that the host's capture checks passed. `unavailable` states that a capture condition failed. Admitted vocabulary: closed; displayed list: exhaustive: `"captured"`, `"unavailable"`.
+- <a id="contract-profile-receipt-reason"></a>**`reason`** (string?): The host names the first failing capture condition. The controller's label check accepts the carried reason string. Boundary: controller reply admission. Admitted vocabulary: open; displayed list: illustrative: `"successful_application_unconfirmed"`, `"worker_not_complete"`, `"capture_nonce_mismatch"`. Unfamiliar values: retained as the host's reason string.
+- <a id="contract-profile-receipt-worker_pid"></a>**`worker_pid`** (integer): The process identifier of the worker whose output the host collected.
+- <a id="contract-profile-receipt-producer"></a>**`producer`** (string?): `worker` on a captured receipt identifies the component that captured the bytes.
+- <a id="contract-profile-receipt-capture_stage"></a>**`capture_stage`** (string?): `before_apply` on a captured receipt identifies when the worker captured the bytes.
+- <a id="contract-profile-receipt-request_nonce"></a>**`request_nonce`** (string?): The host returns the request's capture nonce after comparing it with the worker's recorded bytes. A comparison with a separately retained request nonce supplies a consumer's request association; the controller's carried-label check has no request-nonce operand.
+- <a id="contract-profile-receipt-profile_type"></a>**`profile_type`** (integer?): The supported compiler result representation is `0`.
+- <a id="contract-profile-receipt-bytecode_length"></a>**`bytecode_length`** (integer?): The number of raw bytes copied from the compiled object, positive and at most <!-- span limits.compiled_profile.value_unit -->1,048,576 bytes<!-- /span -->. It counts the decoded bytes represented by `bytecode_b64`, separately for each opted-in worker.
+- <a id="contract-profile-receipt-bytecode_sha256"></a>**`bytecode_sha256`** (string (hex)?): The host's SHA-256 digest of the captured bytes, presented as lowercase hexadecimal.
+- <a id="contract-profile-receipt-bytecode_b64"></a>**`bytecode_b64`** (string (base64)?): The bytes copied from the compiler object passed to `sandbox_apply`, presented as base64.
+- <a id="contract-profile-receipt-source_sha256"></a>**`source_sha256`** (string (hex)?): The SHA-256 digest of the UTF-8 C-string source passed to compilation, presented as lowercase hexadecimal. The host compares it with its supplied source bytes; an embedded NUL cannot establish the full source identity.
+- <a id="contract-profile-receipt-source_length"></a>**`source_length`** (integer?): The supplied source's UTF-8 byte count.
+- <a id="contract-profile-receipt-params_sha256"></a>**`params_sha256`** (string (hex)?): The order-independent digest of parameter names and values consumed by the worker, presented as lowercase hexadecimal.
+- <a id="contract-profile-receipt-parameter_count"></a>**`parameter_count`** (integer?): The count of parameters supplied to the worker.
 
 **Bytecode length.**
 
 | Item | Requirement or consequence |
 | --- | --- |
-| <a id="contract-profile-receipt-bytecode_length-captured"></a>Captured byte extent | Requires (if `receipt.status` = `"captured"`, then (`receipt.bytecode_length` is present and `receipt.bytecode_length` > `0` and `receipt.bytecode_length` ≤ `1,048,576 bytes` (`compiled_profile`) )). |
+| <a id="contract-profile-receipt-bytecode_length-captured"></a>Captured byte extent | Requires implies(`receipt.status` = `"captured"`, (present(`receipt.bytecode_length`) and `receipt.bytecode_length` > `0` and `receipt.bytecode_length` ≤ `1,048,576 bytes` (`compiled_profile`) )). |
 
 **Bytecode.**
 
 | Item | Requirement or consequence |
 | --- | --- |
-| <a id="contract-profile-receipt-bytecode_b64-extent"></a>Captured payload extent | Applies when `receipt.status` = `"captured"`. Requires decoded byte length of `receipt.bytecode_b64` = `receipt.bytecode_length`. |
+| <a id="contract-profile-receipt-bytecode_b64-extent"></a>Captured payload extent | Applies when `receipt.status` = `"captured"`. Requires byte_length(`receipt.bytecode_b64`) = `receipt.bytecode_length`. |
 
 <a id="contract-profile-receipt-identity"></a>
 ##### Captured input identity
@@ -4113,42 +3881,42 @@ Passing every condition produces `captured` with the capture fields.
 | Item | Requirement or consequence |
 | --- | --- |
 | <a id="contract-profile-receipt-host-application"></a>Application | Application was observed and its return code was zero. |
-| <a id="contract-profile-receipt-host-application-failure"></a>Application › First failed guard reason | On failure, sets `receipt.reason` to `"successful_application_unconfirmed"`. |
+| <a id="contract-profile-receipt-host-application-failure"></a>Application › First failed guard reason | On failure, [set_value(`receipt.reason`, `"successful_application_unconfirmed"`)]. |
 | <a id="contract-profile-receipt-host-completion"></a>Worker completion | Follows [Application](#contract-profile-receipt-host-application). The worker published done and the collected exit code is zero with no terminating signal. |
-| <a id="contract-profile-receipt-host-completion-failure"></a>Worker completion › First failed guard reason | On failure, sets `receipt.reason` to `"worker_not_complete"`. |
+| <a id="contract-profile-receipt-host-completion-failure"></a>Worker completion › First failed guard reason | On failure, [set_value(`receipt.reason`, `"worker_not_complete"`)]. |
 | <a id="contract-profile-receipt-host-capture"></a>Capture completion | Follows [Worker completion](#contract-profile-receipt-host-completion). The worker published capture completion. |
-| <a id="contract-profile-receipt-host-capture-failure"></a>Capture completion › First failed guard reason | On failure, sets `receipt.reason` to `"capture_not_complete"`. |
+| <a id="contract-profile-receipt-host-capture-failure"></a>Capture completion › First failed guard reason | On failure, [set_value(`receipt.reason`, `"capture_not_complete"`)]. |
 | <a id="contract-profile-receipt-host-status"></a>Capture status | Follows [Capture completion](#contract-profile-receipt-host-capture). The recorded capture status was accepted. |
-| <a id="contract-profile-receipt-host-status-failure"></a>Capture status › First failed guard reason | On failure, sets `receipt.reason` to `"worker_capture_refused"`. |
+| <a id="contract-profile-receipt-host-status-failure"></a>Capture status › First failed guard reason | On failure, [set_value(`receipt.reason`, `"worker_capture_refused"`)]. |
 | <a id="contract-profile-receipt-host-pid"></a>Process association | Follows [Capture status](#contract-profile-receipt-host-status). The recorded PID equals the worker PID collected by the host. |
-| <a id="contract-profile-receipt-host-pid-failure"></a>Process association › First failed guard reason | On failure, sets `receipt.reason` to `"capture_worker_mismatch"`. |
+| <a id="contract-profile-receipt-host-pid-failure"></a>Process association › First failed guard reason | On failure, [set_value(`receipt.reason`, `"capture_worker_mismatch"`)]. |
 | <a id="contract-profile-receipt-host-nonce"></a>Nonce association | Follows [Process association](#contract-profile-receipt-host-pid). The recorded nonce bytes equal the valid request nonce. |
-| <a id="contract-profile-receipt-host-nonce-failure"></a>Nonce association › First failed guard reason | On failure, sets `receipt.reason` to `"capture_nonce_mismatch"`. |
+| <a id="contract-profile-receipt-host-nonce-failure"></a>Nonce association › First failed guard reason | On failure, [set_value(`receipt.reason`, `"capture_nonce_mismatch"`)]. |
 | <a id="contract-profile-receipt-host-extent"></a>Extent and type | Follows [Nonce association](#contract-profile-receipt-host-nonce). The profile type is zero and its raw byte count is positive and at most <!-- span limits.compiled_profile.value_unit -->1,048,576 bytes<!-- /span -->. |
-| <a id="contract-profile-receipt-host-extent-failure"></a>Extent and type › First failed guard reason | On failure, sets `receipt.reason` to `"capture_extent_or_type_invalid"`. |
+| <a id="contract-profile-receipt-host-extent-failure"></a>Extent and type › First failed guard reason | On failure, [set_value(`receipt.reason`, `"capture_extent_or_type_invalid"`)]. |
 | <a id="contract-profile-receipt-host-digest"></a>Payload digest | Follows [Extent and type](#contract-profile-receipt-host-extent). SHA-256 of the captured bytes equals the recorded digest. |
-| <a id="contract-profile-receipt-host-digest-failure"></a>Payload digest › First failed guard reason | On failure, sets `receipt.reason` to `"capture_bytecode_digest_mismatch"`. |
+| <a id="contract-profile-receipt-host-digest-failure"></a>Payload digest › First failed guard reason | On failure, [set_value(`receipt.reason`, `"capture_bytecode_digest_mismatch"`)]. |
 | <a id="contract-profile-receipt-host-input"></a>Consumed input | Follows [Payload digest](#contract-profile-receipt-host-digest). The recorded source length and digest and parameter count and digest equal the host's supplied inputs. |
-| <a id="contract-profile-receipt-host-input-failure"></a>Consumed input › First failed guard reason | On failure, sets `receipt.reason` to `"capture_consumed_input_mismatch"`. |
-| <a id="contract-profile-receipt-host-failure"></a>Capture failure | On failure, sets `receipt.status` to `"unavailable"`, withholds `receipt.producer`, withholds `receipt.capture_stage`, withholds `receipt.request_nonce`, withholds `receipt.profile_type`, withholds `receipt.bytecode_length`, withholds `receipt.bytecode_sha256`, withholds `receipt.bytecode_b64`, withholds `receipt.source_sha256`, withholds `receipt.source_length`, withholds `receipt.params_sha256`, withholds `receipt.parameter_count`, keeps the assessment `reply.normalized_outcome`. |
-| <a id="contract-profile-receipt-host-success"></a>Successful receipt | On success, sets `receipt.status` to `"captured"`, sets `receipt.producer` to `"worker"`, sets `receipt.capture_stage` to `"before_apply"`, sets `receipt.profile_type` to `0`, withholds `receipt.reason`. |
+| <a id="contract-profile-receipt-host-input-failure"></a>Consumed input › First failed guard reason | On failure, [set_value(`receipt.reason`, `"capture_consumed_input_mismatch"`)]. |
+| <a id="contract-profile-receipt-host-failure"></a>Capture failure | On failure, [set_value(`receipt.status`, `"unavailable"`), withhold(`receipt.producer`), withhold(`receipt.capture_stage`), withhold(`receipt.request_nonce`), withhold(`receipt.profile_type`), withhold(`receipt.bytecode_length`), withhold(`receipt.bytecode_sha256`), withhold(`receipt.bytecode_b64`), withhold(`receipt.source_sha256`), withhold(`receipt.source_length`), withhold(`receipt.params_sha256`), withhold(`receipt.parameter_count`), retain_assessments(`reply.normalized_outcome`)]. |
+| <a id="contract-profile-receipt-host-success"></a>Successful receipt | On success, [set_value(`receipt.status`, `"captured"`), set_value(`receipt.producer`, `"worker"`), set_value(`receipt.capture_stage`, `"before_apply"`), set_value(`receipt.profile_type`, `0`), withhold(`receipt.reason`)]. |
 
 **Support: [check read](#contract-support-grades) for [The host decides capture availability](#contract-profile-receipt-host).** The read checks construct worker bytes, corrupt each capture input and assert unavailability and withheld bytecode. Context: Constructed shared-memory bytes and injected application/termination arguments. Evidence limit: This owner credits source and check reading. The shared-memory fixture establishes host checks; the native same-pointer capture is source-supported here. Source: [CWorker.swift](../runner/Sources/PWRunnerCore/CWorker.swift): `decodeProfileCapture`. Check: [CompiledProfileCaptureTests.swift](../runner/Tests/PWRunnerCoreTests/CompiledProfileCaptureTests.swift): `runCompiledProfileCaptureTests`.
 
 <a id="contract-profile-receipt-labels"></a>
 ##### The controller checks carried labels
 
-[Controller](#contract-identity-definitions-controller) checks at reply admission. Entry: cli run, runner verify. Recipient: cli caller. Reports: runner reply. Applies when `receipt` is present.
+[Controller](#contract-identity-definitions-controller) checks at reply admission. Entry: cli run, runner verify. Recipient: cli caller. Reports: runner reply. Applies when present(`receipt`).
 
 After public producer admission and reply-capacity checks, the controller applies these conditions to every present receipt, including actor, preparation-failure and reporting-failure records. The retained nonce, bytecode, digests, lengths and counts remain the host's assertions; their production checks belong to the host capture rule.
 
 | Item | Requirement or consequence |
 | --- | --- |
-| <a id="contract-profile-receipt-labels-status"></a>Status vocabulary | Requires `receipt.status` is one of `"captured"`, `"unavailable"`. |
-| <a id="contract-profile-receipt-labels-captured"></a>Captured labels | Requires (if `receipt.status` = `"captured"`, then (`receipt.producer` = `"worker"` and `receipt.capture_stage` = `"before_apply"`)). |
-| <a id="contract-profile-receipt-labels-unavailable"></a>Unavailable labels | Requires (if `receipt.status` = `"unavailable"`, then (`receipt.producer` is absent and `receipt.capture_stage` is absent)). |
-| <a id="contract-profile-receipt-labels-failure"></a>A failed label check for run | Entry: cli run. On failure, sets `envelope.result.normalized_outcome` to `"malformed_runner_response"`, sets `envelope.result.ok` to `false`, withholds `envelope.data.runner_sandbox_diagnostics`, retains the records `reply`. For `run`, the controller refuses admission of the containing report, reports a failed result and exits with status 1. The retained report remains the host's account. |
-| <a id="contract-profile-receipt-labels-verify_failure"></a>A failed label check for runner verify | Entry: runner verify. On failure, sets `result.ok` to `false`, sets `result.exit_code` to `1`, sets `result.normalized_outcome` to `"malformed_runner_response"`, sets `runner_verify.normalized_outcome` to `"malformed_runner_response"`, sets `runner_verify.runner_pid` to `null`, retains the records `runner_verify.runner_client`, retains the records `runner_verify.runner_result`. `runner verify` emits its verification envelope and exits with status 1. |
+| <a id="contract-profile-receipt-labels-status"></a>Status vocabulary | Requires `receipt.status` ∈ [`"captured"`, `"unavailable"`]. |
+| <a id="contract-profile-receipt-labels-captured"></a>Captured labels | Requires implies(`receipt.status` = `"captured"`, (`receipt.producer` = `"worker"` and `receipt.capture_stage` = `"before_apply"`)). |
+| <a id="contract-profile-receipt-labels-unavailable"></a>Unavailable labels | Requires implies(`receipt.status` = `"unavailable"`, (absent(`receipt.producer`) and absent(`receipt.capture_stage`))). |
+| <a id="contract-profile-receipt-labels-failure"></a>A failed label check for run | Entry: cli run. On failure, [set_value(`envelope.result.normalized_outcome`, `"malformed_runner_response"`), set_value(`envelope.result.ok`, `false`), withhold(`envelope.data.runner_sandbox_diagnostics`), retain_records(`reply`)]. For `run`, the controller refuses admission of the containing report, reports a failed result and exits with status 1. The retained report remains the host's account. |
+| <a id="contract-profile-receipt-labels-verify_failure"></a>A failed label check for runner verify | Entry: runner verify. On failure, [set_value(`result.ok`, `false`), set_value(`result.exit_code`, `1`), set_value(`result.normalized_outcome`, `"malformed_runner_response"`), set_value(`runner_verify.normalized_outcome`, `"malformed_runner_response"`), set_value(`runner_verify.runner_pid`, `null`), retain_records(`runner_verify.runner_client`), retain_records(`runner_verify.runner_result`)]. `runner verify` emits its verification envelope and exits with status 1. |
 
 **Support: [executed](#contract-support-grades) for [A failed label check for run](#contract-profile-receipt-labels-failure) and its descendants.** The constructed check follows admission through the public outcome, exit status, result, retained decoded report and diagnostic presence. Context: Constructed typed replies carried through the run command admission and envelope path. Evidence limit: The unit case passed against the source committed as 5e51300d; its development run is disposable. Constructed replies establish admission and retention, while native capture is a separate observation. Source: [porcelain_admission.rs](../controller/src/porcelain_admission.rs): `admission_problem`. Check: [run_flow.rs](../controller/src/run_flow.rs): `compiled_profile_labels_determine_the_public_admission_outcome`. Run: `20261110T195016Z_0d197151`. Source snapshot: `5e51300d620e2a3ead419380977212d2c3e41ba1`.
 
@@ -4173,71 +3941,63 @@ A current-build reply carries a captured receipt whose producer is `future`. The
 
 Actor: [Controller](#contract-identity-definitions-controller). Boundary: run envelope presentation. Entry: cli run. Recipient: cli caller. Reports: run envelope. Record `run_envelope`: `rust.RunEnvelope`.
 
-| Field | JSON type and presence | Meaning |
-| --- | --- | --- |
-| <a id="contract-envelope-run-build"></a>`build` | [Build identification](#contract-identity-build); required | The emitting binary's embedded build stamp, separate from nested producers. |
-| <a id="contract-envelope-run-data"></a>`data` | [Run payload](#contract-envelope-data); required | Run payload, retaining observations under their admission and collection conditions. |
-| <a id="contract-envelope-run-generated_at_unix_ms"></a>`generated_at_unix_ms` | integer; required | Emitter wall-clock time at rendering, in milliseconds since the Unix epoch. An unavailable pre-epoch duration becomes zero. Child spans and continuous-clock ordering have separate observations. |
-| <a id="contract-envelope-run-kind"></a>`kind` | string; required | `run` identifies specimen execution. |
-| <a id="contract-envelope-run-result"></a>`result` | [Operation result](#contract-envelope-result); required | The controller operation's result. Nested native and child returns retain their own scopes. |
+- <a id="contract-envelope-run-build"></a>**`build`** ([Build identification](#contract-identity-build)): The emitting binary's embedded build stamp, separate from nested producers.
+- <a id="contract-envelope-run-data"></a>**`data`** ([Run payload](#contract-envelope-data)): Run payload, retaining observations under their admission and collection conditions.
+- <a id="contract-envelope-run-generated_at_unix_ms"></a>**`generated_at_unix_ms`** (integer): Emitter wall-clock time at rendering, in milliseconds since the Unix epoch. An unavailable pre-epoch duration becomes zero. Child spans and continuous-clock ordering have separate observations.
+- <a id="contract-envelope-run-kind"></a>**`kind`** (string): `run` identifies specimen execution.
+- <a id="contract-envelope-run-result"></a>**`result`** ([Operation result](#contract-envelope-result)): The controller operation's result. Nested native and child returns retain their own scopes.
 
 <a id="contract-envelope-helper"></a>
 #### Compiler-helper envelope
 
 Actor: [Compiler helper](#contract-identity-definitions-helper). Boundary: compiler-helper envelope presentation. Entry: standalone helper, controller helper stdin. Recipient: helper caller, controller. Reports: helper envelope. Record `compiler_envelope`: `rust.HelperEnvelope`.
 
-| Field | JSON type and presence | Meaning |
-| --- | --- | --- |
-| <a id="contract-envelope-helper-build"></a>`build` | [Build identification](#contract-identity-build); required | The helper binary's embedded build stamp. |
-| <a id="contract-envelope-helper-data"></a>`data` | [Compiler-helper data](#contract-policy-check_data); required | Helper policy metadata, import inventory and compilation result. |
-| <a id="contract-envelope-helper-generated_at_unix_ms"></a>`generated_at_unix_ms` | integer; required | Helper wall-clock time at rendering, in milliseconds since the Unix epoch. An unavailable pre-epoch duration becomes zero. |
-| <a id="contract-envelope-helper-kind"></a>`kind` | string; required | `sbpl_check` identifies standalone or captured helper compilation. |
-| <a id="contract-envelope-helper-result"></a>`result` | [Operation result](#contract-envelope-result); required | The helper operation's result, separate from any worker execution. |
+- <a id="contract-envelope-helper-build"></a>**`build`** ([Build identification](#contract-identity-build)): The helper binary's embedded build stamp.
+- <a id="contract-envelope-helper-data"></a>**`data`** ([Compiler-helper data](#contract-policy-check_data)): Helper policy metadata, import inventory and compilation result.
+- <a id="contract-envelope-helper-generated_at_unix_ms"></a>**`generated_at_unix_ms`** (integer): Helper wall-clock time at rendering, in milliseconds since the Unix epoch. An unavailable pre-epoch duration becomes zero.
+- <a id="contract-envelope-helper-kind"></a>**`kind`** (string): `sbpl_check` identifies standalone or captured helper compilation.
+- <a id="contract-envelope-helper-result"></a>**`result`** ([Operation result](#contract-envelope-result)): The helper operation's result, separate from any worker execution.
 
 <a id="contract-envelope-result"></a>
 #### Operation result
 
 Record `result`: `rust.JsonResult`.
 
-| Field | JSON type and presence | Meaning |
-| --- | --- | --- |
-| <a id="contract-envelope-result-ok"></a>`ok` | boolean; required | For an admitted specimen result, true exactly when the host outcome is `finished`. Evidence findings and failed individual attempts can coexist with true. Other commands define success for their own operation. |
-| <a id="contract-envelope-result-rc"></a>`rc` | integer; null when absent | Optional native-style result slot. Controller/helper-created results leave it null; native attempt returns remain in their nested records. |
-| <a id="contract-envelope-result-exit_code"></a>`exit_code` | integer; null when absent | Selected controller/helper exit status. For a run: zero for admitted `finished`, one for an execution/refusal outcome, two for tool or input-handling errors. |
-| <a id="contract-envelope-result-normalized_outcome"></a>`normalized_outcome` | string; null when absent | Selected operation label. An admitted host outcome is copied; controller and client admission failures use the classifications below. |
-| <a id="contract-envelope-result-errno"></a>`errno` | integer; null when absent | Optional native errno slot. Controller/helper-created results leave it null; nested errno values concern their own operations. |
-| <a id="contract-envelope-result-error"></a>`error` | string; null when absent | Human-readable diagnostic, null on successful controller/helper results. After execution admission, precedence is host error, client `stdout_capture_error`, client `stdout_parse_error`, then a generic unsuccessful-run message. |
-| <a id="contract-envelope-result-stderr"></a>`stderr` | string; null when absent | Optional captured text slot. Controller/helper-created results leave it null; client and child capture text stays in its own record. |
-| <a id="contract-envelope-result-stdout"></a>`stdout` | string; null when absent | Optional captured text slot. Controller/helper-created results leave it null; typed nested data carries the report. |
+- <a id="contract-envelope-result-ok"></a>**`ok`** (boolean): For an admitted specimen result, true exactly when the host outcome is `finished`. Evidence findings and failed individual attempts can coexist with true. Other commands define success for their own operation.
+- <a id="contract-envelope-result-rc"></a>**`rc`** (integer ∪ null): Optional native-style result slot. Controller/helper-created results leave it null; native attempt returns remain in their nested records.
+- <a id="contract-envelope-result-exit_code"></a>**`exit_code`** (integer ∪ null): Selected controller/helper exit status. For a run: zero for admitted `finished`, one for an execution/refusal outcome, two for tool or input-handling errors.
+- <a id="contract-envelope-result-normalized_outcome"></a>**`normalized_outcome`** (string ∪ null): Selected operation label. An admitted host outcome is copied; controller and client admission failures use the classifications below.
+- <a id="contract-envelope-result-errno"></a>**`errno`** (integer ∪ null): Optional native errno slot. Controller/helper-created results leave it null; nested errno values concern their own operations.
+- <a id="contract-envelope-result-error"></a>**`error`** (string ∪ null): Human-readable diagnostic, null on successful controller/helper results. After execution admission, precedence is host error, client `stdout_capture_error`, client `stdout_parse_error`, then a generic unsuccessful-run message.
+- <a id="contract-envelope-result-stderr"></a>**`stderr`** (string ∪ null): Optional captured text slot. Controller/helper-created results leave it null; client and child capture text stays in its own record.
+- <a id="contract-envelope-result-stdout"></a>**`stdout`** (string ∪ null): Optional captured text slot. Controller/helper-created results leave it null; typed nested data carries the report.
 
 <a id="contract-envelope-data"></a>
 #### Run payload
 
 Actor: [Controller](#contract-identity-definitions-controller). Boundary: run payload assembly. Entry: cli run. Recipient: cli caller. Reports: run envelope. Record `run_data`: `rust.RunData`.
 
-| Field | JSON type and presence | Meaning |
-| --- | --- | --- |
-| <a id="contract-envelope-data-runner_sandbox_diagnostics"></a>`runner_sandbox_diagnostics` | [Execution diagnostics](#contract-diagnostics-execution); null when absent | Assessments after client/reply admission. Null for earlier refusals and tool errors. An admitted execution with no host report can still produce the controller's no-worker assessment. |
-| <a id="contract-envelope-data-specimen"></a>`specimen` | [Run dossier](#contract-dossier-specimen); required | Held-input, equipment and provenance observations, including partial records on failure. |
-| <a id="contract-envelope-data-policy_check"></a>`policy_check` | [Fallback helper capture](#contract-policy-fallback); null when absent | Independent helper capture after an eligible admitted client-terminal `xpc_error`. Null when fallback was not invoked. |
-| <a id="contract-envelope-data-actor_policy_checks"></a>`actor_policy_checks` | array of [Per-actor fallback capture](#contract-policy-actor_check); omitted when absent | Captures for actor declarations carrying a sandbox.policy object, in request order, when fallback is eligible. Collection of these policy objects precedes host admission of sandbox mode. Omitted when fallback is ineligible or the request contains no actor policy objects. |
-| <a id="contract-envelope-data-timeout_ms"></a>`timeout_ms` | integer; null when absent | Selected runner-client wait budget in milliseconds when argument parsing supplied it; null when no usable configuration was obtained. |
-| <a id="contract-envelope-data-runner_client"></a>`runner_client` | [Controller observation of the client process](#contract-transport-client); null when absent | Client invocation, capture and delivery account. Null when the client was not invoked or launch failed before a capture returned. |
-| <a id="contract-envelope-data-runner_result"></a>`runner_result` | [Execution record](#contract-reply-record); null when absent | Structurally decoded host reply when available, retained even if a later label gate refuses admission. Null when there is no decodable reply; an accepted capture can retain its exact bytes separately. |
-| <a id="contract-envelope-data-request_failure"></a>`request_failure` | [Projected request refusal](#contract-refusals-projection); omitted when absent | Controller refusal code/path, or the host refusal projected from an admitted `bad_request` reply. Omitted when the selected result supplies none. |
+- <a id="contract-envelope-data-runner_sandbox_diagnostics"></a>**`runner_sandbox_diagnostics`** ([Execution diagnostics](#contract-diagnostics-execution) ∪ null): Assessments after client/reply admission. Null for earlier refusals and tool errors. An admitted execution with no host report can still produce the controller's no-worker assessment.
+- <a id="contract-envelope-data-specimen"></a>**`specimen`** ([Run dossier](#contract-dossier-specimen)): Held-input, equipment and provenance observations, including partial records on failure.
+- <a id="contract-envelope-data-policy_check"></a>**`policy_check`** ([Fallback helper capture](#contract-policy-fallback) ∪ null): Independent helper capture after an eligible admitted client-terminal `xpc_error`. Null when fallback was not invoked.
+- <a id="contract-envelope-data-actor_policy_checks"></a>**`actor_policy_checks`** (array of [Per-actor fallback capture](#contract-policy-actor_check)?): Captures for actor declarations carrying a sandbox.policy object, in request order, when fallback is eligible. Collection of these policy objects precedes host admission of sandbox mode. Omitted when fallback is ineligible or the request contains no actor policy objects.
+- <a id="contract-envelope-data-timeout_ms"></a>**`timeout_ms`** (integer ∪ null): Selected runner-client wait budget in milliseconds when argument parsing supplied it; null when no usable configuration was obtained.
+- <a id="contract-envelope-data-runner_client"></a>**`runner_client`** ([Controller observation of the client process](#contract-transport-client) ∪ null): Client invocation, capture and delivery account. Null when the client was not invoked or launch failed before a capture returned.
+- <a id="contract-envelope-data-runner_result"></a>**`runner_result`** ([Execution record](#contract-reply-record) ∪ null): Structurally decoded host reply when available, retained even if a later label gate refuses admission. Null when there is no decodable reply; an accepted capture can retain its exact bytes separately.
+- <a id="contract-envelope-data-request_failure"></a>**`request_failure`** ([Projected request refusal](#contract-refusals-projection)?): Controller refusal code/path, or the host refusal projected from an admitted `bad_request` reply. Omitted when the selected result supplies none.
 
 <a id="contract-envelope-data-select"></a>
 ##### Select the public result
 
-[Controller](#contract-identity-definitions-controller) reports at run completion after admission. Entry: cli run. Recipient: cli caller. Reports: run envelope. Select the first matching case in the listed order. Applies when `envelope.data.runner_result` is present. Client capture and host reply admission have succeeded. Follows [Apply reply-wide findings](#contract-diagnostics-execution-reply_checks). Compute diagnostics independently of the admitted host outcome and the selected run result.
+[Controller](#contract-identity-definitions-controller) reports at run completion after admission. Entry: cli run. Recipient: cli caller. Reports: run envelope. Select the first matching case in the listed order. Applies when present(`envelope.data.runner_result`). Client capture and host reply admission have succeeded. Follows [Apply reply-wide findings](#contract-diagnostics-execution-reply_checks). Compute diagnostics independently of the admitted host outcome and the selected run result.
 
 `finished` can coexist with a failed file open or an integrity finding.
 The observations and supported assessments state what the run establishes.
 
 | Case | When | Consequence |
 | --- | --- | --- |
-| <a id="contract-envelope-data-select-finished"></a>1. Admitted finished outcome | `envelope.data.runner_result.normalized_outcome` = `"finished"` | sets `envelope.result.ok` to `true`, sets `envelope.result.exit_code` to `0`, sets `envelope.result.normalized_outcome` to `envelope.data.runner_result.normalized_outcome`, retains the records `envelope.data.runner_result`. |
-| <a id="contract-envelope-data-select-other"></a>2. Other admitted outcome | `true` | sets `envelope.result.ok` to `false`, sets `envelope.result.exit_code` to `1`, sets `envelope.result.normalized_outcome` to `envelope.data.runner_result.normalized_outcome`, retains the records `envelope.data.runner_result`. |
+| <a id="contract-envelope-data-select-finished"></a>1. Admitted finished outcome | `envelope.data.runner_result.normalized_outcome` = `"finished"` | [set_value(`envelope.result.ok`, `true`), set_value(`envelope.result.exit_code`, `0`), set_value(`envelope.result.normalized_outcome`, `envelope.data.runner_result.normalized_outcome`), retain_records(`envelope.data.runner_result`)]. |
+| <a id="contract-envelope-data-select-other"></a>2. Other admitted outcome | `true` | [set_value(`envelope.result.ok`, `false`), set_value(`envelope.result.exit_code`, `1`), set_value(`envelope.result.normalized_outcome`, `envelope.data.runner_result.normalized_outcome`), retain_records(`envelope.data.runner_result`)]. |
 
 <a id="contract-envelope-data-select-success_findings"></a>
 ###### Known gap: Success and findings
@@ -4297,55 +4057,53 @@ conditions.
 
 Record `diagnostics` locations: `envelope.data.runner_sandbox_diagnostics`.
 
-| Field | JSON type and presence | Meaning |
-| --- | --- | --- |
-| <a id="contract-diagnostics-execution-process_disposition"></a>`process_disposition` | string; required | The controller's disposition projection. An ordinary worker supplies its validated lifecycle result. `no_worker` means this projection had no worker subprocess record to assess. Admitted vocabulary: closed; displayed list: exhaustive: `"no_worker"`, `"clean_exit"`, `"nonzero_exit"`, `"signaled"`, `"conflicting"`, `"unconfirmed"`, `"unrecognized"`, `"withheld"`, `"per_actor"`. |
-| <a id="contract-diagnostics-execution-termination_cause"></a>`termination_cause` | string; null when absent | A controller attribution selected from the validated lifecycle chain. Actor-form top-level diagnostics begin with null because causes belong to the actor entries. |
-| <a id="contract-diagnostics-execution-stop_reason"></a>`stop_reason` | string; null when absent | Supported ordinary-worker stop observation when its answer is one of `sentinel_deadline`, `done`, `child_reaped`, `wait_error`, `policy_write_error` or `policy_transfer_deadline`; otherwise null. Actor stop reasons belong to their actor entries. |
-| <a id="contract-diagnostics-execution-disposition_integrity"></a>`disposition_integrity` | string; null when absent | `valid` means the applicable controller checks for this projection passed; `invalid` means they produced a finding. Null means there was no worker projection to validate. When at least one actor has a worker projection, actor aggregation is valid when every actor projection is valid or has null integrity; it becomes invalid when any actor projection is invalid. With no worker projections, aggregate integrity remains null. A host's supported conflict can accompany valid integrity: the controller has checked the conflict's own evidence. |
-| <a id="contract-diagnostics-execution-disposition_issues"></a>`disposition_issues` | array of [Integrity finding](#contract-diagnostics-issue); required | Controller findings at this scope, followed or preceded according to the producing check order by copied host conflict records where applicable. Actor-local findings remain in the actor entry. |
-| <a id="contract-diagnostics-execution-actors"></a>`actors` | array of [One actor's diagnostics](#contract-diagnostics-actor); omitted when absent | Present for `execution_form: "actors"`, in the host's actor order. Each entry is derived from that actor's subprocess and its actions selected through the phase plan. |
+- <a id="contract-diagnostics-execution-process_disposition"></a>**`process_disposition`** (string): The controller's disposition projection. An ordinary worker supplies its validated lifecycle result. `no_worker` means this projection had no worker subprocess record to assess. Admitted vocabulary: closed; displayed list: exhaustive: `"no_worker"`, `"clean_exit"`, `"nonzero_exit"`, `"signaled"`, `"conflicting"`, `"unconfirmed"`, `"unrecognized"`, `"withheld"`, `"per_actor"`.
+- <a id="contract-diagnostics-execution-termination_cause"></a>**`termination_cause`** (string ∪ null): A controller attribution selected from the validated lifecycle chain. Actor-form top-level diagnostics begin with null because causes belong to the actor entries.
+- <a id="contract-diagnostics-execution-stop_reason"></a>**`stop_reason`** (string ∪ null): Supported ordinary-worker stop observation when its answer is one of `sentinel_deadline`, `done`, `child_reaped`, `wait_error`, `policy_write_error` or `policy_transfer_deadline`; otherwise null. Actor stop reasons belong to their actor entries.
+- <a id="contract-diagnostics-execution-disposition_integrity"></a>**`disposition_integrity`** (string ∪ null): `valid` means the applicable controller checks for this projection passed; `invalid` means they produced a finding. Null means there was no worker projection to validate. When at least one actor has a worker projection, actor aggregation is valid when every actor projection is valid or has null integrity; it becomes invalid when any actor projection is invalid. With no worker projections, aggregate integrity remains null. A host's supported conflict can accompany valid integrity: the controller has checked the conflict's own evidence.
+- <a id="contract-diagnostics-execution-disposition_issues"></a>**`disposition_issues`** (array of [Integrity finding](#contract-diagnostics-issue)): Controller findings at this scope, followed or preceded according to the producing check order by copied host conflict records where applicable. Actor-local findings remain in the actor entry.
+- <a id="contract-diagnostics-execution-actors"></a>**`actors`** (array of [One actor's diagnostics](#contract-diagnostics-actor)?): Present for `execution_form: "actors"`, in the host's actor order. Each entry is derived from that actor's subprocess and its actions selected through the phase plan.
 
 <a id="contract-diagnostics-execution-geometry"></a>
 ##### Decoded response collection bounds
 
-[Controller](#contract-identity-definitions-controller) checks at decoded response-context admission after delivery, capture and public identity admission. Entry: cli run, runner verify. Recipient: caller, report reader. Reports: run envelope, runner verify. Binding `p`: entry in `reply.phases`. Binding `a`: entry in `reply.actors`. Applies when `reply` is present.
+[Controller](#contract-identity-definitions-controller) checks at decoded response-context admission after delivery, capture and public identity admission. Entry: cli run, runner verify. Recipient: caller, report reader. Reports: run envelope, runner verify. Binding `p`: entry in `reply.phases`. Binding `a`: entry in `reply.actors`. Applies when present(`reply`).
 
 These bounds apply to every structurally decoded reply reaching this gate, including preparation and reporting-failure replies. Counts use the retained rows before semantic association.
 
 | Item | Requirement or consequence |
 | --- | --- |
-| <a id="contract-diagnostics-execution-geometry-plan"></a>Phase and action tables | Requires ((if `reply.execution_form` = `"actors"`, then count of `reply.phases` ≤ `16 items` (`actor_phases`) ) and (if (`reply.execution_form` is absent or (`reply.execution_form` is present and `reply.execution_form` ≠ `"actors"`)), then count of `reply.phases` ≤ `8 items` (`phase_count`) ) and count of `reply.steps` ≤ `256 items` (`probe_steps`) and (if `reply.extension_events` is present, then count of `reply.extension_events` ≤ (`256 items` (`probe_steps`) − count of `reply.steps`)) and sum over `p` of count of `reply.phases[p].action_ids` ≤ `256 items` (`probe_steps`) ). |
-| <a id="contract-diagnostics-execution-geometry-actors_transfers"></a>Actor and transfer tables | Requires ((if `reply.actors` is present, then count of `reply.actors` ≤ `8 items` (`actors`) ) and (if `reply.transfers` is present, then count of `reply.transfers` ≤ `64 items` (`actor_deliveries`) )). |
-| <a id="contract-diagnostics-execution-geometry-resources"></a>Resource tables | Applies when `reply.resources` is present. Requires (count of `reply.resources.tokens` ≤ `32 items` (`actor_issues`) and count of `reply.resources.deliveries` ≤ `64 items` (`actor_deliveries`) and count of `reply.resources.handles` ≤ `64 items` (`actor_handles`) ). |
-| <a id="contract-diagnostics-execution-geometry-equal_handles"></a>Equal-handle references | Binding `h`: entry in `reply.resources.handles`. For each `h`. Applies when `reply.resources` is present. Requires count of `reply.resources.handles[h].raw_equal_handles` ≤ (`64 items` (`actor_handles`) − `1`). |
-| <a id="contract-diagnostics-execution-geometry-validator"></a>Validator collection tables | Binding `s`: entry in `reply.steps`. Association restriction for `s`: (`reply.steps[s].phase_id` = `reply.phases[p].phase_id` and `reply.steps[s].sandbox_check.missing_reason` ≠ `"query_not_requested"`). For each `p`. Applies when `reply.phases[p].validator_subprocess` is present. An absent missing_reason is included. |
-| <a id="contract-diagnostics-execution-geometry-validator-expected"></a>Validator collection tables › Expected identifiers | Requires (if `reply.phases[p].validator_subprocess.expected_step_ids` is present, then count of `reply.phases[p].validator_subprocess.expected_step_ids` ≤ `256 items` (`probe_steps`) ). |
-| <a id="contract-diagnostics-execution-geometry-validator-records"></a>Validator collection tables › Retained validator records | Applies when `reply.phases[p].validator_subprocess.records` is present. Requires ((if number of matching entries for `s` = `0`, then count of `reply.phases[p].validator_subprocess.records` ≤ `2 items` (`validator_records_per_query`) ) and (if number of matching entries for `s` > `0`, then count of `reply.phases[p].validator_subprocess.records` ≤ (number of matching entries for `s` × `2 items` (`validator_records_per_query`)))). |
-| <a id="contract-diagnostics-execution-geometry-validator-issues"></a>Validator collection tables › Association issue allowance | Applies when `reply.phases[p].validator_subprocess.association_issues` is present. Requires ((if `reply.phases[p].validator_subprocess.records` is present, then count of `reply.phases[p].validator_subprocess.association_issues` ≤ ((number of matching entries for `s` + count of `reply.phases[p].validator_subprocess.records`) + `1`)) and (if `reply.phases[p].validator_subprocess.records` is absent, then count of `reply.phases[p].validator_subprocess.association_issues` ≤ (number of matching entries for `s` + `1`))). |
-| <a id="contract-diagnostics-execution-geometry-equipment"></a>Equipment tables | Requires ((if `reply.equipment_bindings` is present, then count of `reply.equipment_bindings` ≤ `4 items` (`equipment_static_bindings`) ) and (if `reply.equipment_entitlements` is present, then count of `reply.equipment_entitlements` ≤ `12 items` (`equipment_entitlement_records`) )). |
-| <a id="contract-diagnostics-execution-geometry-authority"></a>Authority scope tables | Applies when `reply.authority_setup` is present. Requires (count of `reply.authority_setup.workers` ≤ `8 items` (`actors`) and count of `reply.authority_setup.host.regions` ≤ `8 items` (`actors`) and count of `reply.authority_setup.host.custody` ≤ `32 items` (`actor_issues`) ). |
-| <a id="contract-diagnostics-execution-geometry-host_scope"></a>Host run authority scope | Applies when `reply.authority_setup` is present. Requires (count of `reply.authority_setup.host.run.operations` ≤ `4` and count of `reply.authority_setup.host.run.ownership` ≤ `5` and (if `reply.authority_setup.host.run.integrity_errors` is present, then count of `reply.authority_setup.host.run.integrity_errors` ≤ `16`)). |
-| <a id="contract-diagnostics-execution-geometry-worker_scopes"></a>Worker authority scopes | Binding `w`: entry in `reply.authority_setup.workers`. For each `w`. Applies when `reply.authority_setup` is present. Requires (count of `reply.authority_setup.workers[w].operations` ≤ `16 items` (`authority_setup_cells`) and count of `reply.authority_setup.workers[w].ownership` ≤ `5` and (if `reply.authority_setup.workers[w].integrity_errors` is present, then count of `reply.authority_setup.workers[w].integrity_errors` ≤ `16`)). |
-| <a id="contract-diagnostics-execution-geometry-region_scopes"></a>Host region authority scopes | Binding `r`: entry in `reply.authority_setup.host.regions`. For each `r`. Applies when `reply.authority_setup` is present. Requires (count of `reply.authority_setup.host.regions[r].operations` ≤ `16 items` (`authority_setup_cells`) and count of `reply.authority_setup.host.regions[r].ownership` ≤ `5` and (if `reply.authority_setup.host.regions[r].integrity_errors` is present, then count of `reply.authority_setup.host.regions[r].integrity_errors` ≤ `16`)). |
-| <a id="contract-diagnostics-execution-geometry-custody_scopes"></a>Host custody authority scopes | Binding `c`: entry in `reply.authority_setup.host.custody`. For each `c`. Applies when `reply.authority_setup` is present. Requires (count of `reply.authority_setup.host.custody[c].operations` ≤ `4` and count of `reply.authority_setup.host.custody[c].ownership` ≤ `5` and (if `reply.authority_setup.host.custody[c].integrity_errors` is present, then count of `reply.authority_setup.host.custody[c].integrity_errors` ≤ `16`)). |
-| <a id="contract-diagnostics-execution-geometry-visits"></a>Actor visits | For each `a`. Applies when `reply.actors` is present. Requires count of `reply.actors[a].visits` ≤ `16 items` (`actor_phases`) . |
-| <a id="contract-diagnostics-execution-geometry-actor_equipment"></a>Actor equipment observations | For each `a`. Applies when (`reply.actors` is present and `reply.actors[a].equipment` is present). Requires (count of `reply.actors[a].equipment.required_entitlements` ≤ `64 items` (`actor_required_entitlements`) and (if `reply.actors[a].equipment.missing_requirements` is present, then count of `reply.actors[a].equipment.missing_requirements` ≤ `64 items` (`actor_required_entitlements`) ) and count of `reply.actors[a].equipment.execution.native_observations` ≤ `4`). |
-| <a id="contract-diagnostics-execution-geometry-ordinary_lifecycle"></a>Ordinary worker disposition | Binding `d`: entry in `reply.runner_subprocess.disposition.steps`. Binding `i`: entry in `reply.runner_subprocess.disposition.issues`. Applies when (`reply.runner_subprocess` is present and `reply.runner_subprocess.disposition` is present). |
-| <a id="contract-diagnostics-execution-geometry-ordinary_lifecycle-rows"></a>Ordinary worker disposition › Disposition rows | Requires (count of `reply.runner_subprocess.disposition.steps` ≤ `256 items` (`probe_steps`) and count of `reply.runner_subprocess.disposition.issues` ≤ (`1` + (`2` × `256 items` (`probe_steps`)))). |
-| <a id="contract-diagnostics-execution-geometry-ordinary_lifecycle-run_references"></a>Ordinary worker disposition › Run claim references | Requires ((if `reply.runner_subprocess.disposition.questions.final_status` is present, then (if `reply.runner_subprocess.disposition.questions.final_status.basis` is present, then count of `reply.runner_subprocess.disposition.questions.final_status.basis` ≤ `14`)) and (if `reply.runner_subprocess.disposition.questions.stop_reason` is present, then (if `reply.runner_subprocess.disposition.questions.stop_reason.basis` is present, then count of `reply.runner_subprocess.disposition.questions.stop_reason.basis` ≤ `14`)) and (if `reply.runner_subprocess.disposition.questions.cleanup_trigger` is present, then (if `reply.runner_subprocess.disposition.questions.cleanup_trigger.basis` is present, then count of `reply.runner_subprocess.disposition.questions.cleanup_trigger.basis` ≤ `14`)) and (if `reply.runner_subprocess.disposition.questions.grace_end` is present, then (if `reply.runner_subprocess.disposition.questions.grace_end.basis` is present, then count of `reply.runner_subprocess.disposition.questions.grace_end.basis` ≤ `14`)) and (if `reply.runner_subprocess.disposition.questions.kill_request_and_result` is present, then (if `reply.runner_subprocess.disposition.questions.kill_request_and_result.basis` is present, then count of `reply.runner_subprocess.disposition.questions.kill_request_and_result.basis` ≤ `14`)) and (if `reply.runner_subprocess.disposition.questions.collection_basis` is present, then (if `reply.runner_subprocess.disposition.questions.collection_basis.basis` is present, then count of `reply.runner_subprocess.disposition.questions.collection_basis.basis` ≤ `14`)) and (if `reply.runner_subprocess.disposition.questions.progress_association` is present, then (if `reply.runner_subprocess.disposition.questions.progress_association.basis` is present, then count of `reply.runner_subprocess.disposition.questions.progress_association.basis` ≤ `14`))). |
-| <a id="contract-diagnostics-execution-geometry-ordinary_lifecycle-step_references"></a>Ordinary worker disposition › Step claim references | For each `d`. Requires ((if `reply.runner_subprocess.disposition.steps[d].questions.step_boundary_reached` is present, then (if `reply.runner_subprocess.disposition.steps[d].questions.step_boundary_reached.basis` is present, then count of `reply.runner_subprocess.disposition.steps[d].questions.step_boundary_reached.basis` ≤ `16`)) and (if `reply.runner_subprocess.disposition.steps[d].questions.step_result_published` is present, then (if `reply.runner_subprocess.disposition.steps[d].questions.step_result_published.basis` is present, then count of `reply.runner_subprocess.disposition.steps[d].questions.step_result_published.basis` ≤ `16`)) and (if `reply.runner_subprocess.disposition.steps[d].questions.step_requested_operation_applicability` is present, then (if `reply.runner_subprocess.disposition.steps[d].questions.step_requested_operation_applicability.basis` is present, then count of `reply.runner_subprocess.disposition.steps[d].questions.step_requested_operation_applicability.basis` ≤ `16`))). |
-| <a id="contract-diagnostics-execution-geometry-ordinary_lifecycle-issue_references"></a>Ordinary worker disposition › Conflict observation references | For each `i`. Requires ((if `reply.runner_subprocess.disposition.issues[i].step_index` is present, then count of `reply.runner_subprocess.disposition.issues[i].observations` ≤ `16`) and (if `reply.runner_subprocess.disposition.issues[i].step_index` is absent, then count of `reply.runner_subprocess.disposition.issues[i].observations` ≤ `14`)). |
-| <a id="contract-diagnostics-execution-geometry-actor_lifecycle"></a>Actor worker disposition | Binding `d`: entry in `reply.actors[a].subprocess.disposition.steps`. Binding `i`: entry in `reply.actors[a].subprocess.disposition.issues`. For each `a`. Applies when (`reply.actors` is present and `reply.actors[a].subprocess` is present and `reply.actors[a].subprocess.disposition` is present). |
-| <a id="contract-diagnostics-execution-geometry-actor_lifecycle-rows"></a>Actor worker disposition › Disposition rows | Requires (count of `reply.actors[a].subprocess.disposition.steps` ≤ `256 items` (`probe_steps`) and count of `reply.actors[a].subprocess.disposition.issues` ≤ (`1` + (`2` × `256 items` (`probe_steps`)))). |
-| <a id="contract-diagnostics-execution-geometry-actor_lifecycle-run_references"></a>Actor worker disposition › Run claim references | Requires ((if `reply.actors[a].subprocess.disposition.questions.final_status` is present, then (if `reply.actors[a].subprocess.disposition.questions.final_status.basis` is present, then count of `reply.actors[a].subprocess.disposition.questions.final_status.basis` ≤ `14`)) and (if `reply.actors[a].subprocess.disposition.questions.stop_reason` is present, then (if `reply.actors[a].subprocess.disposition.questions.stop_reason.basis` is present, then count of `reply.actors[a].subprocess.disposition.questions.stop_reason.basis` ≤ `14`)) and (if `reply.actors[a].subprocess.disposition.questions.cleanup_trigger` is present, then (if `reply.actors[a].subprocess.disposition.questions.cleanup_trigger.basis` is present, then count of `reply.actors[a].subprocess.disposition.questions.cleanup_trigger.basis` ≤ `14`)) and (if `reply.actors[a].subprocess.disposition.questions.grace_end` is present, then (if `reply.actors[a].subprocess.disposition.questions.grace_end.basis` is present, then count of `reply.actors[a].subprocess.disposition.questions.grace_end.basis` ≤ `14`)) and (if `reply.actors[a].subprocess.disposition.questions.kill_request_and_result` is present, then (if `reply.actors[a].subprocess.disposition.questions.kill_request_and_result.basis` is present, then count of `reply.actors[a].subprocess.disposition.questions.kill_request_and_result.basis` ≤ `14`)) and (if `reply.actors[a].subprocess.disposition.questions.collection_basis` is present, then (if `reply.actors[a].subprocess.disposition.questions.collection_basis.basis` is present, then count of `reply.actors[a].subprocess.disposition.questions.collection_basis.basis` ≤ `14`)) and (if `reply.actors[a].subprocess.disposition.questions.progress_association` is present, then (if `reply.actors[a].subprocess.disposition.questions.progress_association.basis` is present, then count of `reply.actors[a].subprocess.disposition.questions.progress_association.basis` ≤ `14`))). |
-| <a id="contract-diagnostics-execution-geometry-actor_lifecycle-step_references"></a>Actor worker disposition › Step claim references | For each `a`, `d`. Requires ((if `reply.actors[a].subprocess.disposition.steps[d].questions.step_boundary_reached` is present, then (if `reply.actors[a].subprocess.disposition.steps[d].questions.step_boundary_reached.basis` is present, then count of `reply.actors[a].subprocess.disposition.steps[d].questions.step_boundary_reached.basis` ≤ `16`)) and (if `reply.actors[a].subprocess.disposition.steps[d].questions.step_result_published` is present, then (if `reply.actors[a].subprocess.disposition.steps[d].questions.step_result_published.basis` is present, then count of `reply.actors[a].subprocess.disposition.steps[d].questions.step_result_published.basis` ≤ `16`)) and (if `reply.actors[a].subprocess.disposition.steps[d].questions.step_requested_operation_applicability` is present, then (if `reply.actors[a].subprocess.disposition.steps[d].questions.step_requested_operation_applicability.basis` is present, then count of `reply.actors[a].subprocess.disposition.steps[d].questions.step_requested_operation_applicability.basis` ≤ `16`))). |
-| <a id="contract-diagnostics-execution-geometry-actor_lifecycle-issue_references"></a>Actor worker disposition › Conflict observation references | For each `a`, `i`. Requires ((if `reply.actors[a].subprocess.disposition.issues[i].step_index` is present, then count of `reply.actors[a].subprocess.disposition.issues[i].observations` ≤ `16`) and (if `reply.actors[a].subprocess.disposition.issues[i].step_index` is absent, then count of `reply.actors[a].subprocess.disposition.issues[i].observations` ≤ `14`)). |
-| <a id="contract-diagnostics-execution-geometry-step_copies"></a>Attempt lifecycle copies | Binding `s`: entry in `reply.steps`. For each `s`. Applies when `reply.steps[s].attempt.lifecycle` is present. Requires ((if `reply.steps[s].attempt.lifecycle.boundary.basis` is present, then count of `reply.steps[s].attempt.lifecycle.boundary.basis` ≤ `16`) and (if `reply.steps[s].attempt.lifecycle.result.basis` is present, then count of `reply.steps[s].attempt.lifecycle.result.basis` ≤ `16`)). |
-| <a id="contract-diagnostics-execution-geometry-extension_copies"></a>Extension lifecycle copies | Binding `e`: entry in `reply.extension_events`. For each `e`. Applies when (`reply.extension_events` is present and `reply.extension_events[e].lifecycle` is present). Requires ((if `reply.extension_events[e].lifecycle.boundary.basis` is present, then count of `reply.extension_events[e].lifecycle.boundary.basis` ≤ `16`) and (if `reply.extension_events[e].lifecycle.result.basis` is present, then count of `reply.extension_events[e].lifecycle.result.basis` ≤ `16`)). |
-| <a id="contract-diagnostics-execution-geometry-failed"></a>Failed collection bound | On failure, sets `result.normalized_outcome` to `"malformed_runner_response"`, sets `result.ok` to `false`, sets `result.exit_code` to `1`, retains the records `reply`. |
-| <a id="contract-diagnostics-execution-geometry-run_refusal"></a>Run assessment after refusal | Entry: cli run. On failure, sets `envelope.data.runner_sandbox_diagnostics` to `null`. |
-| <a id="contract-diagnostics-execution-geometry-verify_refusal"></a>Verification completion after refusal | Entry: runner verify. On failure, sets `runner_verify.normalized_outcome` to `"malformed_runner_response"`, sets `runner_verify.runner_pid` to `null`. |
+| <a id="contract-diagnostics-execution-geometry-plan"></a>Phase and action tables | Requires (implies(`reply.execution_form` = `"actors"`, count(`reply.phases`) ≤ `16 items` (`actor_phases`) ) and implies((absent(`reply.execution_form`) or (present(`reply.execution_form`) and `reply.execution_form` ≠ `"actors"`)), count(`reply.phases`) ≤ `8 items` (`phase_count`) ) and count(`reply.steps`) ≤ `256 items` (`probe_steps`) and implies(present(`reply.extension_events`), count(`reply.extension_events`) ≤ (`256 items` (`probe_steps`) − count(`reply.steps`))) and sum_over(`p`, count(`reply.phases[p].action_ids`)) ≤ `256 items` (`probe_steps`) ). |
+| <a id="contract-diagnostics-execution-geometry-actors_transfers"></a>Actor and transfer tables | Requires (implies(present(`reply.actors`), count(`reply.actors`) ≤ `8 items` (`actors`) ) and implies(present(`reply.transfers`), count(`reply.transfers`) ≤ `64 items` (`actor_deliveries`) )). |
+| <a id="contract-diagnostics-execution-geometry-resources"></a>Resource tables | Applies when present(`reply.resources`). Requires (count(`reply.resources.tokens`) ≤ `32 items` (`actor_issues`) and count(`reply.resources.deliveries`) ≤ `64 items` (`actor_deliveries`) and count(`reply.resources.handles`) ≤ `64 items` (`actor_handles`) ). |
+| <a id="contract-diagnostics-execution-geometry-equal_handles"></a>Equal-handle references | Binding `h`: entry in `reply.resources.handles`. For each `h`. Applies when present(`reply.resources`). Requires count(`reply.resources.handles[h].raw_equal_handles`) ≤ (`64 items` (`actor_handles`) − `1`). |
+| <a id="contract-diagnostics-execution-geometry-validator"></a>Validator collection tables | Binding `s`: entry in `reply.steps`. Association restriction for `s`: (`reply.steps[s].phase_id` = `reply.phases[p].phase_id` and `reply.steps[s].sandbox_check.missing_reason` ≠ `"query_not_requested"`). For each `p`. Applies when present(`reply.phases[p].validator_subprocess`). An absent missing_reason is included. |
+| <a id="contract-diagnostics-execution-geometry-validator-expected"></a>Validator collection tables › Expected identifiers | Requires implies(present(`reply.phases[p].validator_subprocess.expected_step_ids`), count(`reply.phases[p].validator_subprocess.expected_step_ids`) ≤ `256 items` (`probe_steps`) ). |
+| <a id="contract-diagnostics-execution-geometry-validator-records"></a>Validator collection tables › Retained validator records | Applies when present(`reply.phases[p].validator_subprocess.records`). Requires (implies(matches(`s`) = `0`, count(`reply.phases[p].validator_subprocess.records`) ≤ `2 items` (`validator_records_per_query`) ) and implies(matches(`s`) > `0`, count(`reply.phases[p].validator_subprocess.records`) ≤ (matches(`s`) × `2 items` (`validator_records_per_query`)))). |
+| <a id="contract-diagnostics-execution-geometry-validator-issues"></a>Validator collection tables › Association issue allowance | Applies when present(`reply.phases[p].validator_subprocess.association_issues`). Requires (implies(present(`reply.phases[p].validator_subprocess.records`), count(`reply.phases[p].validator_subprocess.association_issues`) ≤ ((matches(`s`) + count(`reply.phases[p].validator_subprocess.records`)) + `1`)) and implies(absent(`reply.phases[p].validator_subprocess.records`), count(`reply.phases[p].validator_subprocess.association_issues`) ≤ (matches(`s`) + `1`))). |
+| <a id="contract-diagnostics-execution-geometry-equipment"></a>Equipment tables | Requires (implies(present(`reply.equipment_bindings`), count(`reply.equipment_bindings`) ≤ `4 items` (`equipment_static_bindings`) ) and implies(present(`reply.equipment_entitlements`), count(`reply.equipment_entitlements`) ≤ `12 items` (`equipment_entitlement_records`) )). |
+| <a id="contract-diagnostics-execution-geometry-authority"></a>Authority scope tables | Applies when present(`reply.authority_setup`). Requires (count(`reply.authority_setup.workers`) ≤ `8 items` (`actors`) and count(`reply.authority_setup.host.regions`) ≤ `8 items` (`actors`) and count(`reply.authority_setup.host.custody`) ≤ `32 items` (`actor_issues`) ). |
+| <a id="contract-diagnostics-execution-geometry-host_scope"></a>Host run authority scope | Applies when present(`reply.authority_setup`). Requires (count(`reply.authority_setup.host.run.operations`) ≤ `4` and count(`reply.authority_setup.host.run.ownership`) ≤ `5` and implies(present(`reply.authority_setup.host.run.integrity_errors`), count(`reply.authority_setup.host.run.integrity_errors`) ≤ `16`)). |
+| <a id="contract-diagnostics-execution-geometry-worker_scopes"></a>Worker authority scopes | Binding `w`: entry in `reply.authority_setup.workers`. For each `w`. Applies when present(`reply.authority_setup`). Requires (count(`reply.authority_setup.workers[w].operations`) ≤ `16 items` (`authority_setup_cells`) and count(`reply.authority_setup.workers[w].ownership`) ≤ `5` and implies(present(`reply.authority_setup.workers[w].integrity_errors`), count(`reply.authority_setup.workers[w].integrity_errors`) ≤ `16`)). |
+| <a id="contract-diagnostics-execution-geometry-region_scopes"></a>Host region authority scopes | Binding `r`: entry in `reply.authority_setup.host.regions`. For each `r`. Applies when present(`reply.authority_setup`). Requires (count(`reply.authority_setup.host.regions[r].operations`) ≤ `16 items` (`authority_setup_cells`) and count(`reply.authority_setup.host.regions[r].ownership`) ≤ `5` and implies(present(`reply.authority_setup.host.regions[r].integrity_errors`), count(`reply.authority_setup.host.regions[r].integrity_errors`) ≤ `16`)). |
+| <a id="contract-diagnostics-execution-geometry-custody_scopes"></a>Host custody authority scopes | Binding `c`: entry in `reply.authority_setup.host.custody`. For each `c`. Applies when present(`reply.authority_setup`). Requires (count(`reply.authority_setup.host.custody[c].operations`) ≤ `4` and count(`reply.authority_setup.host.custody[c].ownership`) ≤ `5` and implies(present(`reply.authority_setup.host.custody[c].integrity_errors`), count(`reply.authority_setup.host.custody[c].integrity_errors`) ≤ `16`)). |
+| <a id="contract-diagnostics-execution-geometry-visits"></a>Actor visits | For each `a`. Applies when present(`reply.actors`). Requires count(`reply.actors[a].visits`) ≤ `16 items` (`actor_phases`) . |
+| <a id="contract-diagnostics-execution-geometry-actor_equipment"></a>Actor equipment observations | For each `a`. Applies when (present(`reply.actors`) and present(`reply.actors[a].equipment`)). Requires (count(`reply.actors[a].equipment.required_entitlements`) ≤ `64 items` (`actor_required_entitlements`) and implies(present(`reply.actors[a].equipment.missing_requirements`), count(`reply.actors[a].equipment.missing_requirements`) ≤ `64 items` (`actor_required_entitlements`) ) and count(`reply.actors[a].equipment.execution.native_observations`) ≤ `4`). |
+| <a id="contract-diagnostics-execution-geometry-ordinary_lifecycle"></a>Ordinary worker disposition | Binding `d`: entry in `reply.runner_subprocess.disposition.steps`. Binding `i`: entry in `reply.runner_subprocess.disposition.issues`. Applies when (present(`reply.runner_subprocess`) and present(`reply.runner_subprocess.disposition`)). |
+| <a id="contract-diagnostics-execution-geometry-ordinary_lifecycle-rows"></a>Ordinary worker disposition › Disposition rows | Requires (count(`reply.runner_subprocess.disposition.steps`) ≤ `256 items` (`probe_steps`) and count(`reply.runner_subprocess.disposition.issues`) ≤ (`1` + (`2` × `256 items` (`probe_steps`)))). |
+| <a id="contract-diagnostics-execution-geometry-ordinary_lifecycle-run_references"></a>Ordinary worker disposition › Run claim references | Requires (implies(present(`reply.runner_subprocess.disposition.questions.final_status`), implies(present(`reply.runner_subprocess.disposition.questions.final_status.basis`), count(`reply.runner_subprocess.disposition.questions.final_status.basis`) ≤ `14`)) and implies(present(`reply.runner_subprocess.disposition.questions.stop_reason`), implies(present(`reply.runner_subprocess.disposition.questions.stop_reason.basis`), count(`reply.runner_subprocess.disposition.questions.stop_reason.basis`) ≤ `14`)) and implies(present(`reply.runner_subprocess.disposition.questions.cleanup_trigger`), implies(present(`reply.runner_subprocess.disposition.questions.cleanup_trigger.basis`), count(`reply.runner_subprocess.disposition.questions.cleanup_trigger.basis`) ≤ `14`)) and implies(present(`reply.runner_subprocess.disposition.questions.grace_end`), implies(present(`reply.runner_subprocess.disposition.questions.grace_end.basis`), count(`reply.runner_subprocess.disposition.questions.grace_end.basis`) ≤ `14`)) and implies(present(`reply.runner_subprocess.disposition.questions.kill_request_and_result`), implies(present(`reply.runner_subprocess.disposition.questions.kill_request_and_result.basis`), count(`reply.runner_subprocess.disposition.questions.kill_request_and_result.basis`) ≤ `14`)) and implies(present(`reply.runner_subprocess.disposition.questions.collection_basis`), implies(present(`reply.runner_subprocess.disposition.questions.collection_basis.basis`), count(`reply.runner_subprocess.disposition.questions.collection_basis.basis`) ≤ `14`)) and implies(present(`reply.runner_subprocess.disposition.questions.progress_association`), implies(present(`reply.runner_subprocess.disposition.questions.progress_association.basis`), count(`reply.runner_subprocess.disposition.questions.progress_association.basis`) ≤ `14`))). |
+| <a id="contract-diagnostics-execution-geometry-ordinary_lifecycle-step_references"></a>Ordinary worker disposition › Step claim references | For each `d`. Requires (implies(present(`reply.runner_subprocess.disposition.steps[d].questions.step_boundary_reached`), implies(present(`reply.runner_subprocess.disposition.steps[d].questions.step_boundary_reached.basis`), count(`reply.runner_subprocess.disposition.steps[d].questions.step_boundary_reached.basis`) ≤ `16`)) and implies(present(`reply.runner_subprocess.disposition.steps[d].questions.step_result_published`), implies(present(`reply.runner_subprocess.disposition.steps[d].questions.step_result_published.basis`), count(`reply.runner_subprocess.disposition.steps[d].questions.step_result_published.basis`) ≤ `16`)) and implies(present(`reply.runner_subprocess.disposition.steps[d].questions.step_requested_operation_applicability`), implies(present(`reply.runner_subprocess.disposition.steps[d].questions.step_requested_operation_applicability.basis`), count(`reply.runner_subprocess.disposition.steps[d].questions.step_requested_operation_applicability.basis`) ≤ `16`))). |
+| <a id="contract-diagnostics-execution-geometry-ordinary_lifecycle-issue_references"></a>Ordinary worker disposition › Conflict observation references | For each `i`. Requires (implies(present(`reply.runner_subprocess.disposition.issues[i].step_index`), count(`reply.runner_subprocess.disposition.issues[i].observations`) ≤ `16`) and implies(absent(`reply.runner_subprocess.disposition.issues[i].step_index`), count(`reply.runner_subprocess.disposition.issues[i].observations`) ≤ `14`)). |
+| <a id="contract-diagnostics-execution-geometry-actor_lifecycle"></a>Actor worker disposition | Binding `d`: entry in `reply.actors[a].subprocess.disposition.steps`. Binding `i`: entry in `reply.actors[a].subprocess.disposition.issues`. For each `a`. Applies when (present(`reply.actors`) and present(`reply.actors[a].subprocess`) and present(`reply.actors[a].subprocess.disposition`)). |
+| <a id="contract-diagnostics-execution-geometry-actor_lifecycle-rows"></a>Actor worker disposition › Disposition rows | Requires (count(`reply.actors[a].subprocess.disposition.steps`) ≤ `256 items` (`probe_steps`) and count(`reply.actors[a].subprocess.disposition.issues`) ≤ (`1` + (`2` × `256 items` (`probe_steps`)))). |
+| <a id="contract-diagnostics-execution-geometry-actor_lifecycle-run_references"></a>Actor worker disposition › Run claim references | Requires (implies(present(`reply.actors[a].subprocess.disposition.questions.final_status`), implies(present(`reply.actors[a].subprocess.disposition.questions.final_status.basis`), count(`reply.actors[a].subprocess.disposition.questions.final_status.basis`) ≤ `14`)) and implies(present(`reply.actors[a].subprocess.disposition.questions.stop_reason`), implies(present(`reply.actors[a].subprocess.disposition.questions.stop_reason.basis`), count(`reply.actors[a].subprocess.disposition.questions.stop_reason.basis`) ≤ `14`)) and implies(present(`reply.actors[a].subprocess.disposition.questions.cleanup_trigger`), implies(present(`reply.actors[a].subprocess.disposition.questions.cleanup_trigger.basis`), count(`reply.actors[a].subprocess.disposition.questions.cleanup_trigger.basis`) ≤ `14`)) and implies(present(`reply.actors[a].subprocess.disposition.questions.grace_end`), implies(present(`reply.actors[a].subprocess.disposition.questions.grace_end.basis`), count(`reply.actors[a].subprocess.disposition.questions.grace_end.basis`) ≤ `14`)) and implies(present(`reply.actors[a].subprocess.disposition.questions.kill_request_and_result`), implies(present(`reply.actors[a].subprocess.disposition.questions.kill_request_and_result.basis`), count(`reply.actors[a].subprocess.disposition.questions.kill_request_and_result.basis`) ≤ `14`)) and implies(present(`reply.actors[a].subprocess.disposition.questions.collection_basis`), implies(present(`reply.actors[a].subprocess.disposition.questions.collection_basis.basis`), count(`reply.actors[a].subprocess.disposition.questions.collection_basis.basis`) ≤ `14`)) and implies(present(`reply.actors[a].subprocess.disposition.questions.progress_association`), implies(present(`reply.actors[a].subprocess.disposition.questions.progress_association.basis`), count(`reply.actors[a].subprocess.disposition.questions.progress_association.basis`) ≤ `14`))). |
+| <a id="contract-diagnostics-execution-geometry-actor_lifecycle-step_references"></a>Actor worker disposition › Step claim references | For each `a`, `d`. Requires (implies(present(`reply.actors[a].subprocess.disposition.steps[d].questions.step_boundary_reached`), implies(present(`reply.actors[a].subprocess.disposition.steps[d].questions.step_boundary_reached.basis`), count(`reply.actors[a].subprocess.disposition.steps[d].questions.step_boundary_reached.basis`) ≤ `16`)) and implies(present(`reply.actors[a].subprocess.disposition.steps[d].questions.step_result_published`), implies(present(`reply.actors[a].subprocess.disposition.steps[d].questions.step_result_published.basis`), count(`reply.actors[a].subprocess.disposition.steps[d].questions.step_result_published.basis`) ≤ `16`)) and implies(present(`reply.actors[a].subprocess.disposition.steps[d].questions.step_requested_operation_applicability`), implies(present(`reply.actors[a].subprocess.disposition.steps[d].questions.step_requested_operation_applicability.basis`), count(`reply.actors[a].subprocess.disposition.steps[d].questions.step_requested_operation_applicability.basis`) ≤ `16`))). |
+| <a id="contract-diagnostics-execution-geometry-actor_lifecycle-issue_references"></a>Actor worker disposition › Conflict observation references | For each `a`, `i`. Requires (implies(present(`reply.actors[a].subprocess.disposition.issues[i].step_index`), count(`reply.actors[a].subprocess.disposition.issues[i].observations`) ≤ `16`) and implies(absent(`reply.actors[a].subprocess.disposition.issues[i].step_index`), count(`reply.actors[a].subprocess.disposition.issues[i].observations`) ≤ `14`)). |
+| <a id="contract-diagnostics-execution-geometry-step_copies"></a>Attempt lifecycle copies | Binding `s`: entry in `reply.steps`. For each `s`. Applies when present(`reply.steps[s].attempt.lifecycle`). Requires (implies(present(`reply.steps[s].attempt.lifecycle.boundary.basis`), count(`reply.steps[s].attempt.lifecycle.boundary.basis`) ≤ `16`) and implies(present(`reply.steps[s].attempt.lifecycle.result.basis`), count(`reply.steps[s].attempt.lifecycle.result.basis`) ≤ `16`)). |
+| <a id="contract-diagnostics-execution-geometry-extension_copies"></a>Extension lifecycle copies | Binding `e`: entry in `reply.extension_events`. For each `e`. Applies when (present(`reply.extension_events`) and present(`reply.extension_events[e].lifecycle`)). Requires (implies(present(`reply.extension_events[e].lifecycle.boundary.basis`), count(`reply.extension_events[e].lifecycle.boundary.basis`) ≤ `16`) and implies(present(`reply.extension_events[e].lifecycle.result.basis`), count(`reply.extension_events[e].lifecycle.result.basis`) ≤ `16`)). |
+| <a id="contract-diagnostics-execution-geometry-failed"></a>Failed collection bound | On failure, [set_value(`result.normalized_outcome`, `"malformed_runner_response"`), set_value(`result.ok`, `false`), set_value(`result.exit_code`, `1`), retain_records(`reply`)]. |
+| <a id="contract-diagnostics-execution-geometry-run_refusal"></a>Run assessment after refusal | Entry: cli run. On failure, set_value(`envelope.data.runner_sandbox_diagnostics`, `null`). |
+| <a id="contract-diagnostics-execution-geometry-verify_refusal"></a>Verification completion after refusal | Entry: runner verify. On failure, [set_value(`runner_verify.normalized_outcome`, `"malformed_runner_response"`), set_value(`runner_verify.runner_pid`, `null`)]. |
 
 **Support: [check read](#contract-support-grades) for [Decoded response collection bounds](#contract-diagnostics-execution-geometry) and its descendants.** Collection bounds precede semantic joins and profile-context checking on run and verification admission; their refusal retains the decoded reply. Context: Read every geometry guard, both public call paths and the named constructed-control bodies. Evidence limit: The controls assert selected excess tables, reference lists, an accepted boundary and unchanged raw records. The remaining enumerated collection bounds and verification-specific projection are supported by their source branches. Source: [porcelain_admission.rs](../controller/src/porcelain_admission.rs): `claim_geometry`, `lifecycle_geometry`, `scope_geometry`, `reply_geometry`, `admission_problem`; [run_flow.rs](../controller/src/run_flow.rs): `admit_reply`; [runner_commands.rs](../controller/src/runner_commands.rs): `cmd_runner_verify`. Check: [porcelain_admission.rs](../controller/src/porcelain_admission.rs): `typed_geometry_refuses_before_projection_and_retains_every_raw_record`, `typed_reference_geometry_is_checked_before_claims_and_admission_contexts`.
 
@@ -4362,7 +4120,7 @@ preconditions for the execution-assessment path described here.
 
 | Item | Requirement or consequence |
 | --- | --- |
-| <a id="contract-diagnostics-execution-admit-context_refusal"></a>Decoded response-context refusal | sets `envelope.result.normalized_outcome` to `"malformed_runner_response"`, sets `envelope.result.ok` to `false`, sets `envelope.result.exit_code` to `1`, sets `envelope.data.runner_sandbox_diagnostics` to `null`, retains the records `reply`. The controller's response geometry or compiled-profile context check rejects a structurally decoded host reply. The controller returns the selected exit status with the decoded host reply still available in the envelope. |
+| <a id="contract-diagnostics-execution-admit-context_refusal"></a>Decoded response-context refusal | [set_value(`envelope.result.normalized_outcome`, `"malformed_runner_response"`), set_value(`envelope.result.ok`, `false`), set_value(`envelope.result.exit_code`, `1`), set_value(`envelope.data.runner_sandbox_diagnostics`, `null`), retain_records(`reply`)]. The controller's response geometry or compiled-profile context check rejects a structurally decoded host reply. The controller returns the selected exit status with the decoded host reply still available in the envelope. |
 
 <a id="contract-diagnostics-execution-project"></a>
 ##### Project one worker or aggregate actors
@@ -4384,13 +4142,13 @@ invocation, including retained reporting-failure replies.
 
 | Item | Requirement or consequence |
 | --- | --- |
-| <a id="contract-diagnostics-execution-actor_rows-coverage"></a>Positional coverage | Requires (`envelope.data.runner_sandbox_diagnostics.actors` is present and (if `reply.actors` is present, then count of `envelope.data.runner_sandbox_diagnostics.actors` = count of `reply.actors`) and (if `reply.actors` is absent, then count of `envelope.data.runner_sandbox_diagnostics.actors` = `0`)). |
+| <a id="contract-diagnostics-execution-actor_rows-coverage"></a>Positional coverage | Requires (present(`envelope.data.runner_sandbox_diagnostics.actors`) and implies(present(`reply.actors`), count(`envelope.data.runner_sandbox_diagnostics.actors`) = count(`reply.actors`)) and implies(absent(`reply.actors`), count(`envelope.data.runner_sandbox_diagnostics.actors`) = `0`)). |
 | <a id="contract-diagnostics-execution-actor_rows-identity"></a>Copied actor identity | For each `a`, `d`. Requires `envelope.data.runner_sandbox_diagnostics.actors[d].actor_id` = `reply.actors[a].actor_id`. Its label is copied even when that actor has no subprocess. Duplicate labels retain their separate positions and remain subject to the reply-wide association checks. |
 
 <a id="contract-diagnostics-execution-ordinary"></a>
 ##### Ordinary worker projection
 
-Actor: [Controller](#contract-identity-definitions-controller). Boundary: worker projection after response admission. Entry: cli run. Recipient: report reader. Reports: execution diagnostics, actor execution diagnostics. Applies when ((`reply.execution_form` is absent or (`reply.execution_form` is present and `reply.execution_form` ≠ `"actors"`)) and `reply.runner_subprocess` is present).
+Actor: [Controller](#contract-identity-definitions-controller). Boundary: worker projection after response admission. Entry: cli run. Recipient: report reader. Reports: execution diagnostics, actor execution diagnostics. Applies when ((absent(`reply.execution_form`) or (present(`reply.execution_form`) and `reply.execution_form` ≠ `"actors"`)) and present(`reply.runner_subprocess`)).
 
 The source is `reply.runner_subprocess`; the output is the ordinary
 execution diagnostic record, before reply-wide findings are appended.
@@ -4398,71 +4156,71 @@ execution diagnostic record, before reply-wide findings are appended.
 <a id="contract-diagnostics-execution-ordinary-lifecycle_check"></a>
 ###### Worker lifecycle validation
 
-[Controller](#contract-identity-definitions-controller) checks at one worker lifecycle validation before projection. Entry: cli run. Recipient: report reader. Reports: execution diagnostics, actor execution diagnostics. Applies when ((`reply.execution_form` is absent or (`reply.execution_form` is present and `reply.execution_form` ≠ `"actors"`)) and `reply.runner_subprocess` is present). For reply.runner_subprocess and its assigned actions under the carried reporting form, the controller's lifecycle validation returns no failed-check findings, before validated host conflicts are copied.
+[Controller](#contract-identity-definitions-controller) checks at one worker lifecycle validation before projection. Entry: cli run. Recipient: report reader. Reports: execution diagnostics, actor execution diagnostics. Applies when ((absent(`reply.execution_form`) or (present(`reply.execution_form`) and `reply.execution_form` ≠ `"actors"`)) and present(`reply.runner_subprocess`)). For reply.runner_subprocess and its assigned actions under the carried reporting form, the controller's lifecycle validation returns no failed-check findings, before validated host conflicts are copied.
 
 | Item | Requirement or consequence |
 | --- | --- |
-| <a id="contract-diagnostics-execution-ordinary-lifecycle_check-local_failure"></a>Local lifecycle findings | On failure, sets `envelope.data.runner_sandbox_diagnostics.process_disposition` to `"withheld"`, sets `envelope.data.runner_sandbox_diagnostics.termination_cause` to `"unknown"`, sets `envelope.data.runner_sandbox_diagnostics.disposition_integrity` to `"invalid"`, sets `envelope.data.runner_sandbox_diagnostics.stop_reason` to `null`. |
+| <a id="contract-diagnostics-execution-ordinary-lifecycle_check-local_failure"></a>Local lifecycle findings | On failure, [set_value(`envelope.data.runner_sandbox_diagnostics.process_disposition`, `"withheld"`), set_value(`envelope.data.runner_sandbox_diagnostics.termination_cause`, `"unknown"`), set_value(`envelope.data.runner_sandbox_diagnostics.disposition_integrity`, `"invalid"`), set_value(`envelope.data.runner_sandbox_diagnostics.stop_reason`, `null`)]. |
 
 <a id="contract-diagnostics-execution-ordinary-mapping"></a>
 ###### Ending mapping
 
-[Controller](#contract-identity-definitions-controller) reports at validated worker ending projection. Entry: cli run. Recipient: report reader. Reports: execution diagnostics, actor execution diagnostics. Select the first matching case in the listed order. Applies when (((`reply.execution_form` is absent or (`reply.execution_form` is present and `reply.execution_form` ≠ `"actors"`)) and `reply.runner_subprocess` is present) and (`reply.runner_subprocess.disposition` is present and `reply.runner_subprocess.disposition.questions.final_status` is present)). Requires [Worker lifecycle validation](#contract-diagnostics-execution-ordinary-lifecycle_check).
+[Controller](#contract-identity-definitions-controller) reports at validated worker ending projection. Entry: cli run. Recipient: report reader. Reports: execution diagnostics, actor execution diagnostics. Select the first matching case in the listed order. Applies when (((absent(`reply.execution_form`) or (present(`reply.execution_form`) and `reply.execution_form` ≠ `"actors"`)) and present(`reply.runner_subprocess`)) and (present(`reply.runner_subprocess.disposition`) and present(`reply.runner_subprocess.disposition.questions.final_status`))). Requires [Worker lifecycle validation](#contract-diagnostics-execution-ordinary-lifecycle_check).
 
 | Case | When | Consequence |
 | --- | --- | --- |
-| <a id="contract-diagnostics-execution-ordinary-mapping-clean"></a>1. Clean exit | (`reply.runner_subprocess.disposition.questions.final_status.state` = `"supported"` and `reply.runner_subprocess.disposition.questions.final_status.answer` = `"exit_code"` and `reply.runner_subprocess.disposition.questions.final_status.value` is present and `reply.runner_subprocess.disposition.questions.final_status.value` has alternative `"Integer"` and `"Integer"` alternative of `reply.runner_subprocess.disposition.questions.final_status.value` = `0`) | sets `envelope.data.runner_sandbox_diagnostics.process_disposition` to `"clean_exit"`, sets `envelope.data.runner_sandbox_diagnostics.termination_cause` to `null`. |
-| <a id="contract-diagnostics-execution-ordinary-mapping-nonzero"></a>2. Other exit status | (`reply.runner_subprocess.disposition.questions.final_status.state` = `"supported"` and `reply.runner_subprocess.disposition.questions.final_status.answer` = `"exit_code"`) | sets `envelope.data.runner_sandbox_diagnostics.process_disposition` to `"nonzero_exit"`, sets `envelope.data.runner_sandbox_diagnostics.termination_cause` to `"unknown"`. |
-| <a id="contract-diagnostics-execution-ordinary-mapping-signal"></a>3. Signaled ending | (`reply.runner_subprocess.disposition.questions.final_status.state` = `"supported"` and `reply.runner_subprocess.disposition.questions.final_status.answer` = `"signal"`) | sets `envelope.data.runner_sandbox_diagnostics.process_disposition` to `"signaled"`, sets `envelope.data.runner_sandbox_diagnostics.termination_cause` to `"unknown"`. |
-| <a id="contract-diagnostics-execution-ordinary-mapping-conflict"></a>4. Supported conflict | `reply.runner_subprocess.disposition.questions.final_status.state` = `"conflicting"` | sets `envelope.data.runner_sandbox_diagnostics.process_disposition` to `"conflicting"`, sets `envelope.data.runner_sandbox_diagnostics.termination_cause` to `"unknown"`. |
-| <a id="contract-diagnostics-execution-ordinary-mapping-unconfirmed"></a>5. Unresolved or inapplicable ending | `reply.runner_subprocess.disposition.questions.final_status.state` is one of `"unresolved"`, `"inapplicable"` | sets `envelope.data.runner_sandbox_diagnostics.process_disposition` to `"unconfirmed"`, sets `envelope.data.runner_sandbox_diagnostics.termination_cause` to `"unknown"`. |
-| <a id="contract-diagnostics-execution-ordinary-mapping-other"></a>6. Other admitted ending | `true` | sets `envelope.data.runner_sandbox_diagnostics.process_disposition` to `"unrecognized"`, sets `envelope.data.runner_sandbox_diagnostics.termination_cause` to `"unknown"`. Lifecycle validation has already checked the integer exit value and supported-conflict evidence. |
+| <a id="contract-diagnostics-execution-ordinary-mapping-clean"></a>1. Clean exit | (`reply.runner_subprocess.disposition.questions.final_status.state` = `"supported"` and `reply.runner_subprocess.disposition.questions.final_status.answer` = `"exit_code"` and present(`reply.runner_subprocess.disposition.questions.final_status.value`) and is_variant(`reply.runner_subprocess.disposition.questions.final_status.value`, `"Integer"`) and variant(`reply.runner_subprocess.disposition.questions.final_status.value`, `"Integer"`) = `0`) | [set_value(`envelope.data.runner_sandbox_diagnostics.process_disposition`, `"clean_exit"`), set_value(`envelope.data.runner_sandbox_diagnostics.termination_cause`, `null`)]. |
+| <a id="contract-diagnostics-execution-ordinary-mapping-nonzero"></a>2. Other exit status | (`reply.runner_subprocess.disposition.questions.final_status.state` = `"supported"` and `reply.runner_subprocess.disposition.questions.final_status.answer` = `"exit_code"`) | [set_value(`envelope.data.runner_sandbox_diagnostics.process_disposition`, `"nonzero_exit"`), set_value(`envelope.data.runner_sandbox_diagnostics.termination_cause`, `"unknown"`)]. |
+| <a id="contract-diagnostics-execution-ordinary-mapping-signal"></a>3. Signaled ending | (`reply.runner_subprocess.disposition.questions.final_status.state` = `"supported"` and `reply.runner_subprocess.disposition.questions.final_status.answer` = `"signal"`) | [set_value(`envelope.data.runner_sandbox_diagnostics.process_disposition`, `"signaled"`), set_value(`envelope.data.runner_sandbox_diagnostics.termination_cause`, `"unknown"`)]. |
+| <a id="contract-diagnostics-execution-ordinary-mapping-conflict"></a>4. Supported conflict | `reply.runner_subprocess.disposition.questions.final_status.state` = `"conflicting"` | [set_value(`envelope.data.runner_sandbox_diagnostics.process_disposition`, `"conflicting"`), set_value(`envelope.data.runner_sandbox_diagnostics.termination_cause`, `"unknown"`)]. |
+| <a id="contract-diagnostics-execution-ordinary-mapping-unconfirmed"></a>5. Unresolved or inapplicable ending | `reply.runner_subprocess.disposition.questions.final_status.state` ∈ [`"unresolved"`, `"inapplicable"`] | [set_value(`envelope.data.runner_sandbox_diagnostics.process_disposition`, `"unconfirmed"`), set_value(`envelope.data.runner_sandbox_diagnostics.termination_cause`, `"unknown"`)]. |
+| <a id="contract-diagnostics-execution-ordinary-mapping-other"></a>6. Other admitted ending | `true` | [set_value(`envelope.data.runner_sandbox_diagnostics.process_disposition`, `"unrecognized"`), set_value(`envelope.data.runner_sandbox_diagnostics.termination_cause`, `"unknown"`)]. Lifecycle validation has already checked the integer exit value and supported-conflict evidence. |
 
 <a id="contract-diagnostics-execution-ordinary-stop"></a>
 ###### Supported stop reason
 
-[Controller](#contract-identity-definitions-controller) reports at validated worker ending projection. Entry: cli run. Recipient: report reader. Reports: execution diagnostics, actor execution diagnostics. Select the first matching case in the listed order. Applies when (((`reply.execution_form` is absent or (`reply.execution_form` is present and `reply.execution_form` ≠ `"actors"`)) and `reply.runner_subprocess` is present) and `reply.runner_subprocess.disposition` is present). Follows [Host-cleanup attribution](#contract-diagnostics-execution-ordinary-cause). Requires [Worker lifecycle validation](#contract-diagnostics-execution-ordinary-lifecycle_check).
+[Controller](#contract-identity-definitions-controller) reports at validated worker ending projection. Entry: cli run. Recipient: report reader. Reports: execution diagnostics, actor execution diagnostics. Select the first matching case in the listed order. Applies when (((absent(`reply.execution_form`) or (present(`reply.execution_form`) and `reply.execution_form` ≠ `"actors"`)) and present(`reply.runner_subprocess`)) and present(`reply.runner_subprocess.disposition`)). Follows [Host-cleanup attribution](#contract-diagnostics-execution-ordinary-cause). Requires [Worker lifecycle validation](#contract-diagnostics-execution-ordinary-lifecycle_check).
 
 | Case | When | Consequence |
 | --- | --- | --- |
-| <a id="contract-diagnostics-execution-ordinary-stop-recognized"></a>1. Recognized supported stop | (`reply.runner_subprocess.disposition.questions.stop_reason` is present and `reply.runner_subprocess.disposition.questions.stop_reason.state` = `"supported"` and `reply.runner_subprocess.disposition.questions.stop_reason.answer` is present and `reply.runner_subprocess.disposition.questions.stop_reason.answer` is one of `"sentinel_deadline"`, `"done"`, `"child_reaped"`, `"wait_error"`, `"policy_write_error"`, `"policy_transfer_deadline"`) | sets `envelope.data.runner_sandbox_diagnostics.stop_reason` to `reply.runner_subprocess.disposition.questions.stop_reason.answer`, sets `envelope.data.runner_sandbox_diagnostics.disposition_integrity` to `"valid"`. |
-| <a id="contract-diagnostics-execution-ordinary-stop-absent"></a>2. No supported recognized stop | `true` | sets `envelope.data.runner_sandbox_diagnostics.stop_reason` to `null`, sets `envelope.data.runner_sandbox_diagnostics.disposition_integrity` to `"valid"`. |
+| <a id="contract-diagnostics-execution-ordinary-stop-recognized"></a>1. Recognized supported stop | (present(`reply.runner_subprocess.disposition.questions.stop_reason`) and `reply.runner_subprocess.disposition.questions.stop_reason.state` = `"supported"` and present(`reply.runner_subprocess.disposition.questions.stop_reason.answer`) and `reply.runner_subprocess.disposition.questions.stop_reason.answer` ∈ [`"sentinel_deadline"`, `"done"`, `"child_reaped"`, `"wait_error"`, `"policy_write_error"`, `"policy_transfer_deadline"`]) | [set_value(`envelope.data.runner_sandbox_diagnostics.stop_reason`, `reply.runner_subprocess.disposition.questions.stop_reason.answer`), set_value(`envelope.data.runner_sandbox_diagnostics.disposition_integrity`, `"valid"`)]. |
+| <a id="contract-diagnostics-execution-ordinary-stop-absent"></a>2. No supported recognized stop | `true` | [set_value(`envelope.data.runner_sandbox_diagnostics.stop_reason`, `null`), set_value(`envelope.data.runner_sandbox_diagnostics.disposition_integrity`, `"valid"`)]. |
 
 <a id="contract-diagnostics-execution-ordinary-cause_chain"></a>
 ###### Carried host-cleanup chain
 
 | Item | Requirement or consequence |
 | --- | --- |
-| <a id="contract-diagnostics-execution-ordinary-cause_chain-facts"></a>Required claims and native request result | Requires (`reply.runner_subprocess.disposition` is present and `reply.runner_subprocess.disposition.questions.final_status` is present and `reply.runner_subprocess.disposition.questions.final_status.state` = `"supported"` and `reply.runner_subprocess.disposition.questions.final_status.answer` = `"signal"` and `reply.runner_subprocess.disposition.questions.final_status.value` is present and `reply.runner_subprocess.disposition.questions.final_status.value` has alternative `"Integer"` and `reply.runner_subprocess.disposition.questions.cleanup_trigger` is present and `reply.runner_subprocess.disposition.questions.cleanup_trigger.state` = `"supported"` and `reply.runner_subprocess.disposition.questions.grace_end` is present and `reply.runner_subprocess.disposition.questions.grace_end.state` = `"supported"` and `reply.runner_subprocess.disposition.questions.grace_end.answer` = `"exhausted"` and `reply.runner_subprocess.disposition.questions.kill_request_and_result` is present and `reply.runner_subprocess.disposition.questions.kill_request_and_result.state` = `"supported"` and `reply.runner_subprocess.disposition.questions.kill_request_and_result.answer` = `"requested"` and `reply.runner_subprocess.disposition.questions.kill_request_and_result.value` is present and `reply.runner_subprocess.disposition.questions.kill_request_and_result.value` has alternative `"Request"` and `variant(reply.runner_subprocess.disposition.questions.kill_request_and_result.value, 'Request').rc` = `0` and `variant(reply.runner_subprocess.disposition.questions.kill_request_and_result.value, 'Request').signal` = `"Integer"` alternative of `reply.runner_subprocess.disposition.questions.final_status.value`). |
+| <a id="contract-diagnostics-execution-ordinary-cause_chain-facts"></a>Required claims and native request result | Requires (present(`reply.runner_subprocess.disposition`) and present(`reply.runner_subprocess.disposition.questions.final_status`) and `reply.runner_subprocess.disposition.questions.final_status.state` = `"supported"` and `reply.runner_subprocess.disposition.questions.final_status.answer` = `"signal"` and present(`reply.runner_subprocess.disposition.questions.final_status.value`) and is_variant(`reply.runner_subprocess.disposition.questions.final_status.value`, `"Integer"`) and present(`reply.runner_subprocess.disposition.questions.cleanup_trigger`) and `reply.runner_subprocess.disposition.questions.cleanup_trigger.state` = `"supported"` and present(`reply.runner_subprocess.disposition.questions.grace_end`) and `reply.runner_subprocess.disposition.questions.grace_end.state` = `"supported"` and `reply.runner_subprocess.disposition.questions.grace_end.answer` = `"exhausted"` and present(`reply.runner_subprocess.disposition.questions.kill_request_and_result`) and `reply.runner_subprocess.disposition.questions.kill_request_and_result.state` = `"supported"` and `reply.runner_subprocess.disposition.questions.kill_request_and_result.answer` = `"requested"` and present(`reply.runner_subprocess.disposition.questions.kill_request_and_result.value`) and is_variant(`reply.runner_subprocess.disposition.questions.kill_request_and_result.value`, `"Request"`) and `variant(reply.runner_subprocess.disposition.questions.kill_request_and_result.value, 'Request').rc` = `0` and `variant(reply.runner_subprocess.disposition.questions.kill_request_and_result.value, 'Request').signal` = variant(`reply.runner_subprocess.disposition.questions.final_status.value`, `"Integer"`)). |
 
 <a id="contract-diagnostics-execution-ordinary-cause"></a>
 ###### Host-cleanup attribution
 
-[Controller](#contract-identity-definitions-controller) acts at validated worker ending projection. Entry: cli run. Recipient: report reader. Reports: execution diagnostics, actor execution diagnostics. Select the first matching case in the listed order. Applies when (((`reply.execution_form` is absent or (`reply.execution_form` is present and `reply.execution_form` ≠ `"actors"`)) and `reply.runner_subprocess` is present) and (`reply.runner_subprocess.disposition` is present and `reply.runner_subprocess.disposition.questions.final_status` is present and `reply.runner_subprocess.disposition.questions.final_status.state` = `"supported"` and `reply.runner_subprocess.disposition.questions.final_status.answer` = `"signal"`)). Follows [Ending mapping](#contract-diagnostics-execution-ordinary-mapping). Requires [Worker lifecycle validation](#contract-diagnostics-execution-ordinary-lifecycle_check).
+[Controller](#contract-identity-definitions-controller) acts at validated worker ending projection. Entry: cli run. Recipient: report reader. Reports: execution diagnostics, actor execution diagnostics. Select the first matching case in the listed order. Applies when (((absent(`reply.execution_form`) or (present(`reply.execution_form`) and `reply.execution_form` ≠ `"actors"`)) and present(`reply.runner_subprocess`)) and (present(`reply.runner_subprocess.disposition`) and present(`reply.runner_subprocess.disposition.questions.final_status`) and `reply.runner_subprocess.disposition.questions.final_status.state` = `"supported"` and `reply.runner_subprocess.disposition.questions.final_status.answer` = `"signal"`)). Follows [Ending mapping](#contract-diagnostics-execution-ordinary-mapping). Requires [Worker lifecycle validation](#contract-diagnostics-execution-ordinary-lifecycle_check).
 
 | Case | When | Consequence |
 | --- | --- | --- |
-| <a id="contract-diagnostics-execution-ordinary-cause-deadline_expiry"></a>1. Deadline expiry | ([Required claims and native request result](#contract-diagnostics-execution-ordinary-cause_chain-facts) and `reply.runner_subprocess.disposition.questions.cleanup_trigger.answer` = `"deadline_expiry"`) | sets `envelope.data.runner_sandbox_diagnostics.termination_cause` to `"host_sentinel_deadline"`. |
-| <a id="contract-diagnostics-execution-ordinary-cause-completion"></a>2. Completion | ([Required claims and native request result](#contract-diagnostics-execution-ordinary-cause_chain-facts) and `reply.runner_subprocess.disposition.questions.cleanup_trigger.answer` = `"completion"`) | sets `envelope.data.runner_sandbox_diagnostics.termination_cause` to `"host_exit_grace_exhausted"`. |
-| <a id="contract-diagnostics-execution-ordinary-cause-poll_wait_error"></a>3. Poll wait error | ([Required claims and native request result](#contract-diagnostics-execution-ordinary-cause_chain-facts) and `reply.runner_subprocess.disposition.questions.cleanup_trigger.answer` = `"poll_wait_error"`) | sets `envelope.data.runner_sandbox_diagnostics.termination_cause` to `"host_cleanup_after_wait_error"`. |
-| <a id="contract-diagnostics-execution-ordinary-cause-policy_transfer_error"></a>4. Policy transfer error | ([Required claims and native request result](#contract-diagnostics-execution-ordinary-cause_chain-facts) and `reply.runner_subprocess.disposition.questions.cleanup_trigger.answer` = `"policy_transfer_error"`) | sets `envelope.data.runner_sandbox_diagnostics.termination_cause` to `"host_cleanup_after_transfer_error"`. |
-| <a id="contract-diagnostics-execution-ordinary-cause-policy_transfer_timeout"></a>5. Policy transfer timeout | ([Required claims and native request result](#contract-diagnostics-execution-ordinary-cause_chain-facts) and `reply.runner_subprocess.disposition.questions.cleanup_trigger.answer` = `"policy_transfer_timeout"`) | sets `envelope.data.runner_sandbox_diagnostics.termination_cause` to `"host_cleanup_after_transfer_timeout"`. |
-| <a id="contract-diagnostics-execution-ordinary-cause-unknown"></a>6. No eligible recognized cleanup cause | `true` | sets `envelope.data.runner_sandbox_diagnostics.termination_cause` to `"unknown"`. The request result, exhausted grace and owned final status are independent observations in this chain. A successful signal request supplies its own request result; attribution requires the other carried claims and the preceding lifecycle validation. |
+| <a id="contract-diagnostics-execution-ordinary-cause-deadline_expiry"></a>1. Deadline expiry | ([Required claims and native request result](#contract-diagnostics-execution-ordinary-cause_chain-facts) and `reply.runner_subprocess.disposition.questions.cleanup_trigger.answer` = `"deadline_expiry"`) | set_value(`envelope.data.runner_sandbox_diagnostics.termination_cause`, `"host_sentinel_deadline"`). |
+| <a id="contract-diagnostics-execution-ordinary-cause-completion"></a>2. Completion | ([Required claims and native request result](#contract-diagnostics-execution-ordinary-cause_chain-facts) and `reply.runner_subprocess.disposition.questions.cleanup_trigger.answer` = `"completion"`) | set_value(`envelope.data.runner_sandbox_diagnostics.termination_cause`, `"host_exit_grace_exhausted"`). |
+| <a id="contract-diagnostics-execution-ordinary-cause-poll_wait_error"></a>3. Poll wait error | ([Required claims and native request result](#contract-diagnostics-execution-ordinary-cause_chain-facts) and `reply.runner_subprocess.disposition.questions.cleanup_trigger.answer` = `"poll_wait_error"`) | set_value(`envelope.data.runner_sandbox_diagnostics.termination_cause`, `"host_cleanup_after_wait_error"`). |
+| <a id="contract-diagnostics-execution-ordinary-cause-policy_transfer_error"></a>4. Policy transfer error | ([Required claims and native request result](#contract-diagnostics-execution-ordinary-cause_chain-facts) and `reply.runner_subprocess.disposition.questions.cleanup_trigger.answer` = `"policy_transfer_error"`) | set_value(`envelope.data.runner_sandbox_diagnostics.termination_cause`, `"host_cleanup_after_transfer_error"`). |
+| <a id="contract-diagnostics-execution-ordinary-cause-policy_transfer_timeout"></a>5. Policy transfer timeout | ([Required claims and native request result](#contract-diagnostics-execution-ordinary-cause_chain-facts) and `reply.runner_subprocess.disposition.questions.cleanup_trigger.answer` = `"policy_transfer_timeout"`) | set_value(`envelope.data.runner_sandbox_diagnostics.termination_cause`, `"host_cleanup_after_transfer_timeout"`). |
+| <a id="contract-diagnostics-execution-ordinary-cause-unknown"></a>6. No eligible recognized cleanup cause | `true` | set_value(`envelope.data.runner_sandbox_diagnostics.termination_cause`, `"unknown"`). The request result, exhausted grace and owned final status are independent observations in this chain. A successful signal request supplies its own request result; attribution requires the other carried claims and the preceding lifecycle validation. |
 
 <a id="contract-diagnostics-execution-ordinary-host_conflicts"></a>
 ###### Copy validated host conflicts
 
-[Controller](#contract-identity-definitions-controller) reports at worker projection after response admission. Entry: cli run. Recipient: report reader. Reports: execution diagnostics, actor execution diagnostics. Binding `i`: entry in `reply.runner_subprocess.disposition.issues`. Binding `j`: entry in `envelope.data.runner_sandbox_diagnostics.disposition_issues`. Association restriction for `j`: `j` = `i`. Applies when (((`reply.execution_form` is absent or (`reply.execution_form` is present and `reply.execution_form` ≠ `"actors"`)) and `reply.runner_subprocess` is present) and `reply.runner_subprocess.disposition` is present). Follows [Supported stop reason](#contract-diagnostics-execution-ordinary-stop). Requires [Worker lifecycle validation](#contract-diagnostics-execution-ordinary-lifecycle_check).
+[Controller](#contract-identity-definitions-controller) reports at worker projection after response admission. Entry: cli run. Recipient: report reader. Reports: execution diagnostics, actor execution diagnostics. Binding `i`: entry in `reply.runner_subprocess.disposition.issues`. Binding `j`: entry in `envelope.data.runner_sandbox_diagnostics.disposition_issues`. Association restriction for `j`: `j` = `i`. Applies when (((absent(`reply.execution_form`) or (present(`reply.execution_form`) and `reply.execution_form` ≠ `"actors"`)) and present(`reply.runner_subprocess`)) and present(`reply.runner_subprocess.disposition`)). Follows [Supported stop reason](#contract-diagnostics-execution-ordinary-stop). Requires [Worker lifecycle validation](#contract-diagnostics-execution-ordinary-lifecycle_check).
 
 | Item | Requirement or consequence |
 | --- | --- |
-| <a id="contract-diagnostics-execution-ordinary-host_conflicts-coverage"></a>Copy cardinality | Requires count of `envelope.data.runner_sandbox_diagnostics.disposition_issues` = count of `reply.runner_subprocess.disposition.issues`. |
-| <a id="contract-diagnostics-execution-ordinary-host_conflicts-copy"></a>Copy each conflict's fields | For each `i`, `j`. sets `envelope.data.runner_sandbox_diagnostics.disposition_issues[j].kind` to `reply.runner_subprocess.disposition.issues[i].kind`, sets `envelope.data.runner_sandbox_diagnostics.disposition_issues[j].detail` to `reply.runner_subprocess.disposition.issues[i].detail`, sets `envelope.data.runner_sandbox_diagnostics.disposition_issues[j].subject_path` to `null`, sets `envelope.data.runner_sandbox_diagnostics.disposition_issues[j].rule` to `reply.runner_subprocess.disposition.issues[i].rule`, sets `envelope.data.runner_sandbox_diagnostics.disposition_issues[j].question` to `reply.runner_subprocess.disposition.issues[i].question`, sets `envelope.data.runner_sandbox_diagnostics.disposition_issues[j].step_index` to `reply.runner_subprocess.disposition.issues[i].step_index`, sets `envelope.data.runner_sandbox_diagnostics.disposition_issues[j].observations` to `reply.runner_subprocess.disposition.issues[i].observations`. |
+| <a id="contract-diagnostics-execution-ordinary-host_conflicts-coverage"></a>Copy cardinality | Requires count(`envelope.data.runner_sandbox_diagnostics.disposition_issues`) = count(`reply.runner_subprocess.disposition.issues`). |
+| <a id="contract-diagnostics-execution-ordinary-host_conflicts-copy"></a>Copy each conflict's fields | For each `i`, `j`. [set_value(`envelope.data.runner_sandbox_diagnostics.disposition_issues[j].kind`, `reply.runner_subprocess.disposition.issues[i].kind`), set_value(`envelope.data.runner_sandbox_diagnostics.disposition_issues[j].detail`, `reply.runner_subprocess.disposition.issues[i].detail`), set_value(`envelope.data.runner_sandbox_diagnostics.disposition_issues[j].subject_path`, `null`), set_value(`envelope.data.runner_sandbox_diagnostics.disposition_issues[j].rule`, `reply.runner_subprocess.disposition.issues[i].rule`), set_value(`envelope.data.runner_sandbox_diagnostics.disposition_issues[j].question`, `reply.runner_subprocess.disposition.issues[i].question`), set_value(`envelope.data.runner_sandbox_diagnostics.disposition_issues[j].step_index`, `reply.runner_subprocess.disposition.issues[i].step_index`), set_value(`envelope.data.runner_sandbox_diagnostics.disposition_issues[j].observations`, `reply.runner_subprocess.disposition.issues[i].observations`)]. |
 
 <a id="contract-diagnostics-execution-reply_checks"></a>
 ##### Apply reply-wide findings
 
-[Controller](#contract-identity-definitions-controller) acts at typed reply relationship checks after worker projections. Entry: cli run. Recipient: report reader. Reports: execution diagnostics. sets `diagnostics.process_disposition` to `"withheld"`, sets `diagnostics.termination_cause` to `"unknown"`, sets `diagnostics.disposition_integrity` to `"invalid"`, retains the records `reply`, keeps the assessment `diagnostics.actors`. Follows [Project one worker or aggregate actors](#contract-diagnostics-execution-project). One or more applicable reply-wide checks finds an invalid relationship.
+[Controller](#contract-identity-definitions-controller) acts at typed reply relationship checks after worker projections. Entry: cli run. Recipient: report reader. Reports: execution diagnostics. [set_value(`diagnostics.process_disposition`, `"withheld"`), set_value(`diagnostics.termination_cause`, `"unknown"`), set_value(`diagnostics.disposition_integrity`, `"invalid"`), retain_records(`reply`), retain_assessments(`diagnostics.actors`)]. Follows [Project one worker or aggregate actors](#contract-diagnostics-execution-project). One or more applicable reply-wide checks finds an invalid relationship.
 
 The controller appends these findings to top-level `disposition_issues`.
 It preserves the actor entries, an ordinary stop reason already derived,
@@ -4558,19 +4316,17 @@ The host, controller and test readers retain independently written semantic clas
 
 Record `actor_diagnostics`: `rust.ActorExecutionDiagnostics`.
 
-| Field | JSON type and presence | Meaning |
-| --- | --- | --- |
-| <a id="contract-diagnostics-actor-actor_id"></a>`actor_id` | string; null when absent | The host actor label copied into an actor-form diagnostic entry. The underlying projection helper begins with null; actor assembly supplies the label even when that actor has no subprocess record. |
-| <a id="contract-diagnostics-actor-process_disposition"></a>`process_disposition` | string; required | The actor's own worker projection, chosen by the actor-worker mapping below after its lifecycle checks pass. Local findings yield `withheld`; a missing subprocess record yields `no_worker`. |
-| <a id="contract-diagnostics-actor-termination_cause"></a>`termination_cause` | string; null when absent | Null for `clean_exit` or `no_worker`, otherwise `unknown` unless the validated host-cleanup chain supplies a named cause below. |
-| <a id="contract-diagnostics-actor-stop_reason"></a>`stop_reason` | string; null when absent | The actor worker's supported stop reason from the recognized set listed for execution diagnostics. Null when no supported recognized answer was projected, including when local lifecycle validation failed. |
-| <a id="contract-diagnostics-actor-disposition_integrity"></a>`disposition_integrity` | string; null when absent | `valid` when this worker's lifecycle checks passed, `invalid` when they produced a finding, and null when its subprocess record is absent. A reply-wide finding preserves this actor-local value. |
-| <a id="contract-diagnostics-actor-disposition_issues"></a>`disposition_issues` | array of [Integrity finding](#contract-diagnostics-issue); required | Findings from this actor's lifecycle validation, or copied validated host conflicts after successful validation. Reply-wide actor-association or equipment findings appear in the execution-level issue list. |
+- <a id="contract-diagnostics-actor-actor_id"></a>**`actor_id`** (string ∪ null): The host actor label copied into an actor-form diagnostic entry. The underlying projection helper begins with null; actor assembly supplies the label even when that actor has no subprocess record.
+- <a id="contract-diagnostics-actor-process_disposition"></a>**`process_disposition`** (string): The actor's own worker projection, chosen by the actor-worker mapping below after its lifecycle checks pass. Local findings yield `withheld`; a missing subprocess record yields `no_worker`.
+- <a id="contract-diagnostics-actor-termination_cause"></a>**`termination_cause`** (string ∪ null): Null for `clean_exit` or `no_worker`, otherwise `unknown` unless the validated host-cleanup chain supplies a named cause below.
+- <a id="contract-diagnostics-actor-stop_reason"></a>**`stop_reason`** (string ∪ null): The actor worker's supported stop reason from the recognized set listed for execution diagnostics. Null when no supported recognized answer was projected, including when local lifecycle validation failed.
+- <a id="contract-diagnostics-actor-disposition_integrity"></a>**`disposition_integrity`** (string ∪ null): `valid` when this worker's lifecycle checks passed, `invalid` when they produced a finding, and null when its subprocess record is absent. A reply-wide finding preserves this actor-local value.
+- <a id="contract-diagnostics-actor-disposition_issues"></a>**`disposition_issues`** (array of [Integrity finding](#contract-diagnostics-issue)): Findings from this actor's lifecycle validation, or copied validated host conflicts after successful validation. Reply-wide actor-association or equipment findings appear in the execution-level issue list.
 
 <a id="contract-diagnostics-actor-projection"></a>
 ##### Actor worker projections
 
-Actor: [Controller](#contract-identity-definitions-controller). Boundary: worker projection after response admission. Entry: cli run. Recipient: report reader. Reports: execution diagnostics, actor execution diagnostics. Binding `a`: entry in `reply.actors`. Binding `d`: entry in `envelope.data.runner_sandbox_diagnostics.actors`. Association restriction for `d`: `d` = `a`. For each `a`, `d`. Applies when (`reply.execution_form` = `"actors"` and `reply.actors` is present and `reply.actors[a].subprocess` is present).
+Actor: [Controller](#contract-identity-definitions-controller). Boundary: worker projection after response admission. Entry: cli run. Recipient: report reader. Reports: execution diagnostics, actor execution diagnostics. Binding `a`: entry in `reply.actors`. Binding `d`: entry in `envelope.data.runner_sandbox_diagnostics.actors`. Association restriction for `d`: `d` = `a`. For each `a`, `d`. Applies when (`reply.execution_form` = `"actors"` and present(`reply.actors`) and present(`reply.actors[a].subprocess`)).
 
 This scope addresses each existing subprocess, including
 its degraded reporting form, before later reply-wide findings.
@@ -4578,35 +4334,35 @@ its degraded reporting form, before later reply-wide findings.
 <a id="contract-diagnostics-actor-projection-lifecycle_check"></a>
 ###### Worker lifecycle validation
 
-[Controller](#contract-identity-definitions-controller) checks at one worker lifecycle validation before projection. Entry: cli run. Recipient: report reader. Reports: execution diagnostics, actor execution diagnostics. For each `a`, `d`. Applies when (`reply.execution_form` = `"actors"` and `reply.actors` is present and `reply.actors[a].subprocess` is present). For reply.actors[a].subprocess and its assigned actions under the carried reporting form, the controller's lifecycle validation returns no failed-check findings, before validated host conflicts are copied.
+[Controller](#contract-identity-definitions-controller) checks at one worker lifecycle validation before projection. Entry: cli run. Recipient: report reader. Reports: execution diagnostics, actor execution diagnostics. For each `a`, `d`. Applies when (`reply.execution_form` = `"actors"` and present(`reply.actors`) and present(`reply.actors[a].subprocess`)). For reply.actors[a].subprocess and its assigned actions under the carried reporting form, the controller's lifecycle validation returns no failed-check findings, before validated host conflicts are copied.
 
 | Item | Requirement or consequence |
 | --- | --- |
-| <a id="contract-diagnostics-actor-projection-lifecycle_check-local_failure"></a>Local lifecycle findings | On failure, sets `envelope.data.runner_sandbox_diagnostics.actors[d].process_disposition` to `"withheld"`, sets `envelope.data.runner_sandbox_diagnostics.actors[d].termination_cause` to `"unknown"`, sets `envelope.data.runner_sandbox_diagnostics.actors[d].disposition_integrity` to `"invalid"`, sets `envelope.data.runner_sandbox_diagnostics.actors[d].stop_reason` to `null`. |
+| <a id="contract-diagnostics-actor-projection-lifecycle_check-local_failure"></a>Local lifecycle findings | On failure, [set_value(`envelope.data.runner_sandbox_diagnostics.actors[d].process_disposition`, `"withheld"`), set_value(`envelope.data.runner_sandbox_diagnostics.actors[d].termination_cause`, `"unknown"`), set_value(`envelope.data.runner_sandbox_diagnostics.actors[d].disposition_integrity`, `"invalid"`), set_value(`envelope.data.runner_sandbox_diagnostics.actors[d].stop_reason`, `null`)]. |
 
 <a id="contract-diagnostics-actor-projection-mapping"></a>
 ###### Ending mapping
 
-[Controller](#contract-identity-definitions-controller) reports at validated worker ending projection. Entry: cli run. Recipient: report reader. Reports: execution diagnostics, actor execution diagnostics. For each `a`, `d`. Select the first matching case in the listed order. Applies when ((`reply.execution_form` = `"actors"` and `reply.actors` is present and `reply.actors[a].subprocess` is present) and (`reply.actors[a].subprocess.disposition` is present and `reply.actors[a].subprocess.disposition.questions.final_status` is present)). Requires [Worker lifecycle validation](#contract-diagnostics-actor-projection-lifecycle_check).
+[Controller](#contract-identity-definitions-controller) reports at validated worker ending projection. Entry: cli run. Recipient: report reader. Reports: execution diagnostics, actor execution diagnostics. For each `a`, `d`. Select the first matching case in the listed order. Applies when ((`reply.execution_form` = `"actors"` and present(`reply.actors`) and present(`reply.actors[a].subprocess`)) and (present(`reply.actors[a].subprocess.disposition`) and present(`reply.actors[a].subprocess.disposition.questions.final_status`))). Requires [Worker lifecycle validation](#contract-diagnostics-actor-projection-lifecycle_check).
 
 | Case | When | Consequence |
 | --- | --- | --- |
-| <a id="contract-diagnostics-actor-projection-mapping-clean"></a>1. Clean exit | (`reply.actors[a].subprocess.disposition.questions.final_status.state` = `"supported"` and `reply.actors[a].subprocess.disposition.questions.final_status.answer` = `"exit_code"` and `reply.actors[a].subprocess.disposition.questions.final_status.value` is present and `reply.actors[a].subprocess.disposition.questions.final_status.value` has alternative `"Integer"` and `"Integer"` alternative of `reply.actors[a].subprocess.disposition.questions.final_status.value` = `0`) | sets `envelope.data.runner_sandbox_diagnostics.actors[d].process_disposition` to `"clean_exit"`, sets `envelope.data.runner_sandbox_diagnostics.actors[d].termination_cause` to `null`. |
-| <a id="contract-diagnostics-actor-projection-mapping-nonzero"></a>2. Other exit status | (`reply.actors[a].subprocess.disposition.questions.final_status.state` = `"supported"` and `reply.actors[a].subprocess.disposition.questions.final_status.answer` = `"exit_code"`) | sets `envelope.data.runner_sandbox_diagnostics.actors[d].process_disposition` to `"nonzero_exit"`, sets `envelope.data.runner_sandbox_diagnostics.actors[d].termination_cause` to `"unknown"`. |
-| <a id="contract-diagnostics-actor-projection-mapping-signal"></a>3. Signaled ending | (`reply.actors[a].subprocess.disposition.questions.final_status.state` = `"supported"` and `reply.actors[a].subprocess.disposition.questions.final_status.answer` = `"signal"`) | sets `envelope.data.runner_sandbox_diagnostics.actors[d].process_disposition` to `"signaled"`, sets `envelope.data.runner_sandbox_diagnostics.actors[d].termination_cause` to `"unknown"`. |
-| <a id="contract-diagnostics-actor-projection-mapping-conflict"></a>4. Supported conflict | `reply.actors[a].subprocess.disposition.questions.final_status.state` = `"conflicting"` | sets `envelope.data.runner_sandbox_diagnostics.actors[d].process_disposition` to `"conflicting"`, sets `envelope.data.runner_sandbox_diagnostics.actors[d].termination_cause` to `"unknown"`. |
-| <a id="contract-diagnostics-actor-projection-mapping-unconfirmed"></a>5. Unresolved or inapplicable ending | `reply.actors[a].subprocess.disposition.questions.final_status.state` is one of `"unresolved"`, `"inapplicable"` | sets `envelope.data.runner_sandbox_diagnostics.actors[d].process_disposition` to `"unconfirmed"`, sets `envelope.data.runner_sandbox_diagnostics.actors[d].termination_cause` to `"unknown"`. |
-| <a id="contract-diagnostics-actor-projection-mapping-other"></a>6. Other admitted ending | `true` | sets `envelope.data.runner_sandbox_diagnostics.actors[d].process_disposition` to `"unrecognized"`, sets `envelope.data.runner_sandbox_diagnostics.actors[d].termination_cause` to `"unknown"`. Lifecycle validation has already checked the integer exit value and supported-conflict evidence. |
+| <a id="contract-diagnostics-actor-projection-mapping-clean"></a>1. Clean exit | (`reply.actors[a].subprocess.disposition.questions.final_status.state` = `"supported"` and `reply.actors[a].subprocess.disposition.questions.final_status.answer` = `"exit_code"` and present(`reply.actors[a].subprocess.disposition.questions.final_status.value`) and is_variant(`reply.actors[a].subprocess.disposition.questions.final_status.value`, `"Integer"`) and variant(`reply.actors[a].subprocess.disposition.questions.final_status.value`, `"Integer"`) = `0`) | [set_value(`envelope.data.runner_sandbox_diagnostics.actors[d].process_disposition`, `"clean_exit"`), set_value(`envelope.data.runner_sandbox_diagnostics.actors[d].termination_cause`, `null`)]. |
+| <a id="contract-diagnostics-actor-projection-mapping-nonzero"></a>2. Other exit status | (`reply.actors[a].subprocess.disposition.questions.final_status.state` = `"supported"` and `reply.actors[a].subprocess.disposition.questions.final_status.answer` = `"exit_code"`) | [set_value(`envelope.data.runner_sandbox_diagnostics.actors[d].process_disposition`, `"nonzero_exit"`), set_value(`envelope.data.runner_sandbox_diagnostics.actors[d].termination_cause`, `"unknown"`)]. |
+| <a id="contract-diagnostics-actor-projection-mapping-signal"></a>3. Signaled ending | (`reply.actors[a].subprocess.disposition.questions.final_status.state` = `"supported"` and `reply.actors[a].subprocess.disposition.questions.final_status.answer` = `"signal"`) | [set_value(`envelope.data.runner_sandbox_diagnostics.actors[d].process_disposition`, `"signaled"`), set_value(`envelope.data.runner_sandbox_diagnostics.actors[d].termination_cause`, `"unknown"`)]. |
+| <a id="contract-diagnostics-actor-projection-mapping-conflict"></a>4. Supported conflict | `reply.actors[a].subprocess.disposition.questions.final_status.state` = `"conflicting"` | [set_value(`envelope.data.runner_sandbox_diagnostics.actors[d].process_disposition`, `"conflicting"`), set_value(`envelope.data.runner_sandbox_diagnostics.actors[d].termination_cause`, `"unknown"`)]. |
+| <a id="contract-diagnostics-actor-projection-mapping-unconfirmed"></a>5. Unresolved or inapplicable ending | `reply.actors[a].subprocess.disposition.questions.final_status.state` ∈ [`"unresolved"`, `"inapplicable"`] | [set_value(`envelope.data.runner_sandbox_diagnostics.actors[d].process_disposition`, `"unconfirmed"`), set_value(`envelope.data.runner_sandbox_diagnostics.actors[d].termination_cause`, `"unknown"`)]. |
+| <a id="contract-diagnostics-actor-projection-mapping-other"></a>6. Other admitted ending | `true` | [set_value(`envelope.data.runner_sandbox_diagnostics.actors[d].process_disposition`, `"unrecognized"`), set_value(`envelope.data.runner_sandbox_diagnostics.actors[d].termination_cause`, `"unknown"`)]. Lifecycle validation has already checked the integer exit value and supported-conflict evidence. |
 
 <a id="contract-diagnostics-actor-projection-stop"></a>
 ###### Supported stop reason
 
-[Controller](#contract-identity-definitions-controller) reports at validated worker ending projection. Entry: cli run. Recipient: report reader. Reports: execution diagnostics, actor execution diagnostics. For each `a`, `d`. Select the first matching case in the listed order. Applies when ((`reply.execution_form` = `"actors"` and `reply.actors` is present and `reply.actors[a].subprocess` is present) and `reply.actors[a].subprocess.disposition` is present). Follows [Host-cleanup attribution](#contract-diagnostics-actor-projection-cause). Requires [Worker lifecycle validation](#contract-diagnostics-actor-projection-lifecycle_check).
+[Controller](#contract-identity-definitions-controller) reports at validated worker ending projection. Entry: cli run. Recipient: report reader. Reports: execution diagnostics, actor execution diagnostics. For each `a`, `d`. Select the first matching case in the listed order. Applies when ((`reply.execution_form` = `"actors"` and present(`reply.actors`) and present(`reply.actors[a].subprocess`)) and present(`reply.actors[a].subprocess.disposition`)). Follows [Host-cleanup attribution](#contract-diagnostics-actor-projection-cause). Requires [Worker lifecycle validation](#contract-diagnostics-actor-projection-lifecycle_check).
 
 | Case | When | Consequence |
 | --- | --- | --- |
-| <a id="contract-diagnostics-actor-projection-stop-recognized"></a>1. Recognized supported stop | (`reply.actors[a].subprocess.disposition.questions.stop_reason` is present and `reply.actors[a].subprocess.disposition.questions.stop_reason.state` = `"supported"` and `reply.actors[a].subprocess.disposition.questions.stop_reason.answer` is present and `reply.actors[a].subprocess.disposition.questions.stop_reason.answer` is one of `"sentinel_deadline"`, `"done"`, `"child_reaped"`, `"wait_error"`, `"policy_write_error"`, `"policy_transfer_deadline"`) | sets `envelope.data.runner_sandbox_diagnostics.actors[d].stop_reason` to `reply.actors[a].subprocess.disposition.questions.stop_reason.answer`, sets `envelope.data.runner_sandbox_diagnostics.actors[d].disposition_integrity` to `"valid"`. |
-| <a id="contract-diagnostics-actor-projection-stop-absent"></a>2. No supported recognized stop | `true` | sets `envelope.data.runner_sandbox_diagnostics.actors[d].stop_reason` to `null`, sets `envelope.data.runner_sandbox_diagnostics.actors[d].disposition_integrity` to `"valid"`. |
+| <a id="contract-diagnostics-actor-projection-stop-recognized"></a>1. Recognized supported stop | (present(`reply.actors[a].subprocess.disposition.questions.stop_reason`) and `reply.actors[a].subprocess.disposition.questions.stop_reason.state` = `"supported"` and present(`reply.actors[a].subprocess.disposition.questions.stop_reason.answer`) and `reply.actors[a].subprocess.disposition.questions.stop_reason.answer` ∈ [`"sentinel_deadline"`, `"done"`, `"child_reaped"`, `"wait_error"`, `"policy_write_error"`, `"policy_transfer_deadline"`]) | [set_value(`envelope.data.runner_sandbox_diagnostics.actors[d].stop_reason`, `reply.actors[a].subprocess.disposition.questions.stop_reason.answer`), set_value(`envelope.data.runner_sandbox_diagnostics.actors[d].disposition_integrity`, `"valid"`)]. |
+| <a id="contract-diagnostics-actor-projection-stop-absent"></a>2. No supported recognized stop | `true` | [set_value(`envelope.data.runner_sandbox_diagnostics.actors[d].stop_reason`, `null`), set_value(`envelope.data.runner_sandbox_diagnostics.actors[d].disposition_integrity`, `"valid"`)]. |
 
 <a id="contract-diagnostics-actor-projection-cause_chain"></a>
 ###### Carried host-cleanup chain
@@ -4615,31 +4371,31 @@ For each `a`, `d`.
 
 | Item | Requirement or consequence |
 | --- | --- |
-| <a id="contract-diagnostics-actor-projection-cause_chain-facts"></a>Required claims and native request result | Requires (`reply.actors[a].subprocess.disposition` is present and `reply.actors[a].subprocess.disposition.questions.final_status` is present and `reply.actors[a].subprocess.disposition.questions.final_status.state` = `"supported"` and `reply.actors[a].subprocess.disposition.questions.final_status.answer` = `"signal"` and `reply.actors[a].subprocess.disposition.questions.final_status.value` is present and `reply.actors[a].subprocess.disposition.questions.final_status.value` has alternative `"Integer"` and `reply.actors[a].subprocess.disposition.questions.cleanup_trigger` is present and `reply.actors[a].subprocess.disposition.questions.cleanup_trigger.state` = `"supported"` and `reply.actors[a].subprocess.disposition.questions.grace_end` is present and `reply.actors[a].subprocess.disposition.questions.grace_end.state` = `"supported"` and `reply.actors[a].subprocess.disposition.questions.grace_end.answer` = `"exhausted"` and `reply.actors[a].subprocess.disposition.questions.kill_request_and_result` is present and `reply.actors[a].subprocess.disposition.questions.kill_request_and_result.state` = `"supported"` and `reply.actors[a].subprocess.disposition.questions.kill_request_and_result.answer` = `"requested"` and `reply.actors[a].subprocess.disposition.questions.kill_request_and_result.value` is present and `reply.actors[a].subprocess.disposition.questions.kill_request_and_result.value` has alternative `"Request"` and `variant(reply.actors[a].subprocess.disposition.questions.kill_request_and_result.value, 'Request').rc` = `0` and `variant(reply.actors[a].subprocess.disposition.questions.kill_request_and_result.value, 'Request').signal` = `"Integer"` alternative of `reply.actors[a].subprocess.disposition.questions.final_status.value`). |
+| <a id="contract-diagnostics-actor-projection-cause_chain-facts"></a>Required claims and native request result | Requires (present(`reply.actors[a].subprocess.disposition`) and present(`reply.actors[a].subprocess.disposition.questions.final_status`) and `reply.actors[a].subprocess.disposition.questions.final_status.state` = `"supported"` and `reply.actors[a].subprocess.disposition.questions.final_status.answer` = `"signal"` and present(`reply.actors[a].subprocess.disposition.questions.final_status.value`) and is_variant(`reply.actors[a].subprocess.disposition.questions.final_status.value`, `"Integer"`) and present(`reply.actors[a].subprocess.disposition.questions.cleanup_trigger`) and `reply.actors[a].subprocess.disposition.questions.cleanup_trigger.state` = `"supported"` and present(`reply.actors[a].subprocess.disposition.questions.grace_end`) and `reply.actors[a].subprocess.disposition.questions.grace_end.state` = `"supported"` and `reply.actors[a].subprocess.disposition.questions.grace_end.answer` = `"exhausted"` and present(`reply.actors[a].subprocess.disposition.questions.kill_request_and_result`) and `reply.actors[a].subprocess.disposition.questions.kill_request_and_result.state` = `"supported"` and `reply.actors[a].subprocess.disposition.questions.kill_request_and_result.answer` = `"requested"` and present(`reply.actors[a].subprocess.disposition.questions.kill_request_and_result.value`) and is_variant(`reply.actors[a].subprocess.disposition.questions.kill_request_and_result.value`, `"Request"`) and `variant(reply.actors[a].subprocess.disposition.questions.kill_request_and_result.value, 'Request').rc` = `0` and `variant(reply.actors[a].subprocess.disposition.questions.kill_request_and_result.value, 'Request').signal` = variant(`reply.actors[a].subprocess.disposition.questions.final_status.value`, `"Integer"`)). |
 
 <a id="contract-diagnostics-actor-projection-cause"></a>
 ###### Host-cleanup attribution
 
-[Controller](#contract-identity-definitions-controller) acts at validated worker ending projection. Entry: cli run. Recipient: report reader. Reports: execution diagnostics, actor execution diagnostics. For each `a`, `d`. Select the first matching case in the listed order. Applies when ((`reply.execution_form` = `"actors"` and `reply.actors` is present and `reply.actors[a].subprocess` is present) and (`reply.actors[a].subprocess.disposition` is present and `reply.actors[a].subprocess.disposition.questions.final_status` is present and `reply.actors[a].subprocess.disposition.questions.final_status.state` = `"supported"` and `reply.actors[a].subprocess.disposition.questions.final_status.answer` = `"signal"`)). Follows [Ending mapping](#contract-diagnostics-actor-projection-mapping). Requires [Worker lifecycle validation](#contract-diagnostics-actor-projection-lifecycle_check).
+[Controller](#contract-identity-definitions-controller) acts at validated worker ending projection. Entry: cli run. Recipient: report reader. Reports: execution diagnostics, actor execution diagnostics. For each `a`, `d`. Select the first matching case in the listed order. Applies when ((`reply.execution_form` = `"actors"` and present(`reply.actors`) and present(`reply.actors[a].subprocess`)) and (present(`reply.actors[a].subprocess.disposition`) and present(`reply.actors[a].subprocess.disposition.questions.final_status`) and `reply.actors[a].subprocess.disposition.questions.final_status.state` = `"supported"` and `reply.actors[a].subprocess.disposition.questions.final_status.answer` = `"signal"`)). Follows [Ending mapping](#contract-diagnostics-actor-projection-mapping). Requires [Worker lifecycle validation](#contract-diagnostics-actor-projection-lifecycle_check).
 
 | Case | When | Consequence |
 | --- | --- | --- |
-| <a id="contract-diagnostics-actor-projection-cause-deadline_expiry"></a>1. Deadline expiry | ([Required claims and native request result](#contract-diagnostics-actor-projection-cause_chain-facts) and `reply.actors[a].subprocess.disposition.questions.cleanup_trigger.answer` = `"deadline_expiry"`) | sets `envelope.data.runner_sandbox_diagnostics.actors[d].termination_cause` to `"host_sentinel_deadline"`. |
-| <a id="contract-diagnostics-actor-projection-cause-completion"></a>2. Completion | ([Required claims and native request result](#contract-diagnostics-actor-projection-cause_chain-facts) and `reply.actors[a].subprocess.disposition.questions.cleanup_trigger.answer` = `"completion"`) | sets `envelope.data.runner_sandbox_diagnostics.actors[d].termination_cause` to `"host_exit_grace_exhausted"`. |
-| <a id="contract-diagnostics-actor-projection-cause-poll_wait_error"></a>3. Poll wait error | ([Required claims and native request result](#contract-diagnostics-actor-projection-cause_chain-facts) and `reply.actors[a].subprocess.disposition.questions.cleanup_trigger.answer` = `"poll_wait_error"`) | sets `envelope.data.runner_sandbox_diagnostics.actors[d].termination_cause` to `"host_cleanup_after_wait_error"`. |
-| <a id="contract-diagnostics-actor-projection-cause-policy_transfer_error"></a>4. Policy transfer error | ([Required claims and native request result](#contract-diagnostics-actor-projection-cause_chain-facts) and `reply.actors[a].subprocess.disposition.questions.cleanup_trigger.answer` = `"policy_transfer_error"`) | sets `envelope.data.runner_sandbox_diagnostics.actors[d].termination_cause` to `"host_cleanup_after_transfer_error"`. |
-| <a id="contract-diagnostics-actor-projection-cause-policy_transfer_timeout"></a>5. Policy transfer timeout | ([Required claims and native request result](#contract-diagnostics-actor-projection-cause_chain-facts) and `reply.actors[a].subprocess.disposition.questions.cleanup_trigger.answer` = `"policy_transfer_timeout"`) | sets `envelope.data.runner_sandbox_diagnostics.actors[d].termination_cause` to `"host_cleanup_after_transfer_timeout"`. |
-| <a id="contract-diagnostics-actor-projection-cause-unknown"></a>6. No eligible recognized cleanup cause | `true` | sets `envelope.data.runner_sandbox_diagnostics.actors[d].termination_cause` to `"unknown"`. The request result, exhausted grace and owned final status are independent observations in this chain. A successful signal request supplies its own request result; attribution requires the other carried claims and the preceding lifecycle validation. |
+| <a id="contract-diagnostics-actor-projection-cause-deadline_expiry"></a>1. Deadline expiry | ([Required claims and native request result](#contract-diagnostics-actor-projection-cause_chain-facts) and `reply.actors[a].subprocess.disposition.questions.cleanup_trigger.answer` = `"deadline_expiry"`) | set_value(`envelope.data.runner_sandbox_diagnostics.actors[d].termination_cause`, `"host_sentinel_deadline"`). |
+| <a id="contract-diagnostics-actor-projection-cause-completion"></a>2. Completion | ([Required claims and native request result](#contract-diagnostics-actor-projection-cause_chain-facts) and `reply.actors[a].subprocess.disposition.questions.cleanup_trigger.answer` = `"completion"`) | set_value(`envelope.data.runner_sandbox_diagnostics.actors[d].termination_cause`, `"host_exit_grace_exhausted"`). |
+| <a id="contract-diagnostics-actor-projection-cause-poll_wait_error"></a>3. Poll wait error | ([Required claims and native request result](#contract-diagnostics-actor-projection-cause_chain-facts) and `reply.actors[a].subprocess.disposition.questions.cleanup_trigger.answer` = `"poll_wait_error"`) | set_value(`envelope.data.runner_sandbox_diagnostics.actors[d].termination_cause`, `"host_cleanup_after_wait_error"`). |
+| <a id="contract-diagnostics-actor-projection-cause-policy_transfer_error"></a>4. Policy transfer error | ([Required claims and native request result](#contract-diagnostics-actor-projection-cause_chain-facts) and `reply.actors[a].subprocess.disposition.questions.cleanup_trigger.answer` = `"policy_transfer_error"`) | set_value(`envelope.data.runner_sandbox_diagnostics.actors[d].termination_cause`, `"host_cleanup_after_transfer_error"`). |
+| <a id="contract-diagnostics-actor-projection-cause-policy_transfer_timeout"></a>5. Policy transfer timeout | ([Required claims and native request result](#contract-diagnostics-actor-projection-cause_chain-facts) and `reply.actors[a].subprocess.disposition.questions.cleanup_trigger.answer` = `"policy_transfer_timeout"`) | set_value(`envelope.data.runner_sandbox_diagnostics.actors[d].termination_cause`, `"host_cleanup_after_transfer_timeout"`). |
+| <a id="contract-diagnostics-actor-projection-cause-unknown"></a>6. No eligible recognized cleanup cause | `true` | set_value(`envelope.data.runner_sandbox_diagnostics.actors[d].termination_cause`, `"unknown"`). The request result, exhausted grace and owned final status are independent observations in this chain. A successful signal request supplies its own request result; attribution requires the other carried claims and the preceding lifecycle validation. |
 
 <a id="contract-diagnostics-actor-projection-host_conflicts"></a>
 ###### Copy validated host conflicts
 
-[Controller](#contract-identity-definitions-controller) reports at worker projection after response admission. Entry: cli run. Recipient: report reader. Reports: execution diagnostics, actor execution diagnostics. Binding `i`: entry in `reply.actors[a].subprocess.disposition.issues`. Binding `j`: entry in `envelope.data.runner_sandbox_diagnostics.actors[d].disposition_issues`. Association restriction for `j`: `j` = `i`. For each `a`, `d`. Applies when ((`reply.execution_form` = `"actors"` and `reply.actors` is present and `reply.actors[a].subprocess` is present) and `reply.actors[a].subprocess.disposition` is present). Follows [Supported stop reason](#contract-diagnostics-actor-projection-stop). Requires [Worker lifecycle validation](#contract-diagnostics-actor-projection-lifecycle_check).
+[Controller](#contract-identity-definitions-controller) reports at worker projection after response admission. Entry: cli run. Recipient: report reader. Reports: execution diagnostics, actor execution diagnostics. Binding `i`: entry in `reply.actors[a].subprocess.disposition.issues`. Binding `j`: entry in `envelope.data.runner_sandbox_diagnostics.actors[d].disposition_issues`. Association restriction for `j`: `j` = `i`. For each `a`, `d`. Applies when ((`reply.execution_form` = `"actors"` and present(`reply.actors`) and present(`reply.actors[a].subprocess`)) and present(`reply.actors[a].subprocess.disposition`)). Follows [Supported stop reason](#contract-diagnostics-actor-projection-stop). Requires [Worker lifecycle validation](#contract-diagnostics-actor-projection-lifecycle_check).
 
 | Item | Requirement or consequence |
 | --- | --- |
-| <a id="contract-diagnostics-actor-projection-host_conflicts-coverage"></a>Copy cardinality | Requires count of `envelope.data.runner_sandbox_diagnostics.actors[d].disposition_issues` = count of `reply.actors[a].subprocess.disposition.issues`. |
-| <a id="contract-diagnostics-actor-projection-host_conflicts-copy"></a>Copy each conflict's fields | For each `a`, `d`, `i`, `j`. sets `envelope.data.runner_sandbox_diagnostics.actors[d].disposition_issues[j].kind` to `reply.actors[a].subprocess.disposition.issues[i].kind`, sets `envelope.data.runner_sandbox_diagnostics.actors[d].disposition_issues[j].detail` to `reply.actors[a].subprocess.disposition.issues[i].detail`, sets `envelope.data.runner_sandbox_diagnostics.actors[d].disposition_issues[j].subject_path` to `null`, sets `envelope.data.runner_sandbox_diagnostics.actors[d].disposition_issues[j].rule` to `reply.actors[a].subprocess.disposition.issues[i].rule`, sets `envelope.data.runner_sandbox_diagnostics.actors[d].disposition_issues[j].question` to `reply.actors[a].subprocess.disposition.issues[i].question`, sets `envelope.data.runner_sandbox_diagnostics.actors[d].disposition_issues[j].step_index` to `reply.actors[a].subprocess.disposition.issues[i].step_index`, sets `envelope.data.runner_sandbox_diagnostics.actors[d].disposition_issues[j].observations` to `reply.actors[a].subprocess.disposition.issues[i].observations`. |
+| <a id="contract-diagnostics-actor-projection-host_conflicts-coverage"></a>Copy cardinality | Requires count(`envelope.data.runner_sandbox_diagnostics.actors[d].disposition_issues`) = count(`reply.actors[a].subprocess.disposition.issues`). |
+| <a id="contract-diagnostics-actor-projection-host_conflicts-copy"></a>Copy each conflict's fields | For each `a`, `d`, `i`, `j`. [set_value(`envelope.data.runner_sandbox_diagnostics.actors[d].disposition_issues[j].kind`, `reply.actors[a].subprocess.disposition.issues[i].kind`), set_value(`envelope.data.runner_sandbox_diagnostics.actors[d].disposition_issues[j].detail`, `reply.actors[a].subprocess.disposition.issues[i].detail`), set_value(`envelope.data.runner_sandbox_diagnostics.actors[d].disposition_issues[j].subject_path`, `null`), set_value(`envelope.data.runner_sandbox_diagnostics.actors[d].disposition_issues[j].rule`, `reply.actors[a].subprocess.disposition.issues[i].rule`), set_value(`envelope.data.runner_sandbox_diagnostics.actors[d].disposition_issues[j].question`, `reply.actors[a].subprocess.disposition.issues[i].question`), set_value(`envelope.data.runner_sandbox_diagnostics.actors[d].disposition_issues[j].step_index`, `reply.actors[a].subprocess.disposition.issues[i].step_index`), set_value(`envelope.data.runner_sandbox_diagnostics.actors[d].disposition_issues[j].observations`, `reply.actors[a].subprocess.disposition.issues[i].observations`)]. |
 
 **Support: [check read](#contract-support-grades) for [One actor's diagnostics](#contract-diagnostics-actor) and its descendants.** The mapping follows admitted final-status claims; named host causes require the supported cleanup/request/ending chain. Context: Full projection and lifecycle validation read; constructed cleanup and scope controls read. Evidence limit: The read cleanup test covers completion, deadline, wait-error and future-trigger cases. Transfer-error and transfer-timeout causes were read in source; no execution is credited. Source: [porcelain_admission.rs](../controller/src/porcelain_admission.rs): `project`, `validate_lifecycle`, `check_claim`. Check: [porcelain_admission.rs](../controller/src/porcelain_admission.rs): `typed_host_cleanup_cause_requires_all_independent_observations`, `typed_invalid_actor_account_keeps_independent_actor_endings`.
 
@@ -4648,20 +4404,18 @@ For each `a`, `d`.
 
 Record `integrity_issue`: `rust.IntegrityIssue`.
 
-| Field | JSON type and presence | Meaning |
-| --- | --- | --- |
-| <a id="contract-diagnostics-issue-kind"></a>`kind` | string; required | Category supplied by the controller check or copied from a host conflict. Admitted vocabulary: open; displayed list: illustrative: `"missing_record"`, `"malformed_record"`, `"invalid_claim"`, `"unresolved_reference"`, `"phase_collection"`, `"ordering"`, `"policy_read"`, `"fresh_read"`, `"fresh_write"`, `"exec_observation"`, `"actor_evidence"`, `"reporting_failure"`, `"conflict"`. Unfamiliar values: An unfamiliar category remains a finding with its carried detail and scope; interpreting its specific condition requires that producer's definition. |
-| <a id="contract-diagnostics-issue-detail"></a>`detail` | string; required | Human-readable explanation of the failed relationship or copied host conflict. Some controller details embed a step label or position; other actor and gate findings carry a general explanation. |
-| <a id="contract-diagnostics-issue-subject_path"></a>`subject_path` | array of string; omitted when absent | Optional location of the inspected assertion within `data.runner_result`. The path is an ordered list of object keys and canonical zero-based decimal array positions. An empty path names the whole host result; a present null value remains an addressable target. For example, `["phases","2","termination_gate"]` names the third phase's carried gate, even when phase labels are duplicated or invalid. The controller supplies this field for owned-reap, phase-activation and termination-gate findings. Its association identifies the inspected record; projection and retention effects follow the producing check's scope. Other controller findings and copied host conflicts omit this field. |
-| <a id="contract-diagnostics-issue-rule"></a>`rule` | string; omitted when absent | Host conflict rule copied from the retained disposition issue, such as D1 for a final-status conflict or D5 for the supported step conflicts. Controller-created findings currently omit this field. |
-| <a id="contract-diagnostics-issue-question"></a>`question` | string; omitted when absent | Host question associated with a copied conflict. Controller-created findings currently omit this field even when a detail names the question. |
-| <a id="contract-diagnostics-issue-step_index"></a>`step_index` | integer; omitted when absent | Worker-local step index copied from a host conflict when it has step scope. A copied run-level conflict and controller-created findings omit it. |
-| <a id="contract-diagnostics-issue-observations"></a>`observations` | array of string; omitted when absent | Host observation-reference list copied from a validated conflict. Controller-created findings currently omit this field. |
+- <a id="contract-diagnostics-issue-kind"></a>**`kind`** (string): Category supplied by the controller check or copied from a host conflict. Admitted vocabulary: open; displayed list: illustrative: `"missing_record"`, `"malformed_record"`, `"invalid_claim"`, `"unresolved_reference"`, `"phase_collection"`, `"ordering"`, `"policy_read"`, `"fresh_read"`, `"fresh_write"`, `"exec_observation"`, `"actor_evidence"`, `"reporting_failure"`, `"conflict"`. Unfamiliar values: An unfamiliar category remains a finding with its carried detail and scope; interpreting its specific condition requires that producer's definition.
+- <a id="contract-diagnostics-issue-detail"></a>**`detail`** (string): Human-readable explanation of the failed relationship or copied host conflict. Some controller details embed a step label or position; other actor and gate findings carry a general explanation.
+- <a id="contract-diagnostics-issue-subject_path"></a>**`subject_path`** (array of string?): Optional location of the inspected assertion within `data.runner_result`. The path is an ordered list of object keys and canonical zero-based decimal array positions. An empty path names the whole host result; a present null value remains an addressable target. For example, `["phases","2","termination_gate"]` names the third phase's carried gate, even when phase labels are duplicated or invalid. The controller supplies this field for owned-reap, phase-activation and termination-gate findings. Its association identifies the inspected record; projection and retention effects follow the producing check's scope. Other controller findings and copied host conflicts omit this field.
+- <a id="contract-diagnostics-issue-rule"></a>**`rule`** (string?): Host conflict rule copied from the retained disposition issue, such as D1 for a final-status conflict or D5 for the supported step conflicts. Controller-created findings currently omit this field.
+- <a id="contract-diagnostics-issue-question"></a>**`question`** (string?): Host question associated with a copied conflict. Controller-created findings currently omit this field even when a detail names the question.
+- <a id="contract-diagnostics-issue-step_index"></a>**`step_index`** (integer?): Worker-local step index copied from a host conflict when it has step scope. A copied run-level conflict and controller-created findings omit it.
+- <a id="contract-diagnostics-issue-observations"></a>**`observations`** (array of string?): Host observation-reference list copied from a validated conflict. Controller-created findings currently omit this field.
 
 <a id="contract-diagnostics-issue-retain"></a>
 ##### Retain observation and finding separately
 
-[Controller](#contract-identity-definitions-controller) acts at integrity finding construction. Entry: cli run. Recipient: report reader. Reports: execution diagnostics, actor execution diagnostics. retains the records `reply`. Construct controller findings from the failed check's kind and detail, attaching subject_path for the owned-reap, phase-activation and termination-gate checks. Publish each finding and copied validated host conflict at its producing validation scope and in the producing order.
+[Controller](#contract-identity-definitions-controller) acts at integrity finding construction. Entry: cli run. Recipient: report reader. Reports: execution diagnostics, actor execution diagnostics. retain_records(`reply`). Construct controller findings from the failed check's kind and detail, attaching subject_path for the owned-reap, phase-activation and termination-gate checks. Publish each finding and copied validated host conflict at its producing validation scope and in the producing order.
 
 <a id="contract-diagnostics-issue-subject"></a>
 ##### Finding association and effect
@@ -4733,49 +4487,41 @@ The controller resolves and serializes the request once, then delivers that held
 
 Record `specimen`: `rust.Specimen`. Uses [Specimen](#contract-identity-definitions-specimen).
 
-| Field | JSON type and presence | Meaning |
-| --- | --- | --- |
-| <a id="contract-dossier-specimen-request_path"></a>`request_path` | string; null when absent | Request-file path reported by the controller when available; null when preparation did not establish one. |
-| <a id="contract-dossier-specimen-policy"></a>`policy` | [Policy dossier](#contract-dossier-policy); required | Legacy-form policy dossier. In actor form, the actor entries carry their policy observations and this slot is not applicable. |
-| <a id="contract-dossier-specimen-host"></a>`host` | [Controller host context](#contract-dossier-host); required | Controller-collected operating-system context; each failed sysctl read remains null. |
-| <a id="contract-dossier-specimen-runner_provenance"></a>`runner_provenance` | [Selected runner provenance](#contract-dossier-runner); null when absent | Selected runner metadata when selection succeeded; null when no target was established. These facts precede invocation. |
-| <a id="contract-dossier-specimen-app_provenance"></a>`app_provenance` | [App provenance](#contract-dossier-app); null when absent | Parsed app evidence-manifest provenance when available; null when its read or supported-schema parse failed. |
-| <a id="contract-dossier-specimen-binaries"></a>`binaries` | [Selected binary observations](#contract-dossier-binaries); required | Role-by-role selected-file observations; the meaning of a null role is defined beside that role. |
-| <a id="contract-dossier-specimen-actors"></a>`actors` | array of [Actor policy dossier](#contract-dossier-actor); omitted when absent | Actor-form policy dossiers in request order; omitted for the legacy form. |
+- <a id="contract-dossier-specimen-request_path"></a>**`request_path`** (string ∪ null): Request-file path reported by the controller when available; null when preparation did not establish one.
+- <a id="contract-dossier-specimen-policy"></a>**`policy`** ([Policy dossier](#contract-dossier-policy)): Legacy-form policy dossier. In actor form, the actor entries carry their policy observations and this slot is not applicable.
+- <a id="contract-dossier-specimen-host"></a>**`host`** ([Controller host context](#contract-dossier-host)): Controller-collected operating-system context; each failed sysctl read remains null.
+- <a id="contract-dossier-specimen-runner_provenance"></a>**`runner_provenance`** ([Selected runner provenance](#contract-dossier-runner) ∪ null): Selected runner metadata when selection succeeded; null when no target was established. These facts precede invocation.
+- <a id="contract-dossier-specimen-app_provenance"></a>**`app_provenance`** ([App provenance](#contract-dossier-app) ∪ null): Parsed app evidence-manifest provenance when available; null when its read or supported-schema parse failed.
+- <a id="contract-dossier-specimen-binaries"></a>**`binaries`** ([Selected binary observations](#contract-dossier-binaries)): Role-by-role selected-file observations; the meaning of a null role is defined beside that role.
+- <a id="contract-dossier-specimen-actors"></a>**`actors`** (array of [Actor policy dossier](#contract-dossier-actor)?): Actor-form policy dossiers in request order; omitted for the legacy form.
 
 <a id="contract-dossier-actor"></a>
 #### Actor policy dossier
 
 Record `actor`: `rust.ActorDossier`.
 
-| Field | JSON type and presence | Meaning |
-| --- | --- | --- |
-| <a id="contract-dossier-actor-actor_id"></a>`actor_id` | string; null when absent | Actor identifier copied if the request value is a string; otherwise null. This copy precedes actor admission. |
-| <a id="contract-dossier-actor-mode"></a>`mode` | string; null when absent | Actor mode copied if it is a string; otherwise null. Unapplied actors receive a not-applicable policy dossier. |
-| <a id="contract-dossier-actor-policy"></a>`policy` | [Policy dossier](#contract-dossier-policy); required | Policy augmentation and import observations for this actor. Missing or malformed policy objects produce not-applicable observations. |
+- <a id="contract-dossier-actor-actor_id"></a>**`actor_id`** (string ∪ null): Actor identifier copied if the request value is a string; otherwise null. This copy precedes actor admission.
+- <a id="contract-dossier-actor-mode"></a>**`mode`** (string ∪ null): Actor mode copied if it is a string; otherwise null. Unapplied actors receive a not-applicable policy dossier.
+- <a id="contract-dossier-actor-policy"></a>**`policy`** ([Policy dossier](#contract-dossier-policy)): Policy augmentation and import observations for this actor. Missing or malformed policy objects produce not-applicable observations.
 
 <a id="contract-dossier-policy"></a>
 #### Policy dossier
 
 Record `policy`: `rust.PolicyDossier`.
 
-| Field | JSON type and presence | Meaning |
-| --- | --- | --- |
-| <a id="contract-dossier-policy-augmentation"></a>`augmentation` | [Augmentation observation](#contract-dossier-augmentation); required | Controller policy-selection outcome and hashes of source strings that existed at that boundary. |
-| <a id="contract-dossier-policy-imports"></a>`imports` | [Import scan](#contract-dossier-imports); required | Literal import observations for the source selected for invocation, or the reason that scan was unavailable. |
+- <a id="contract-dossier-policy-augmentation"></a>**`augmentation`** ([Augmentation observation](#contract-dossier-augmentation)): Controller policy-selection outcome and hashes of source strings that existed at that boundary.
+- <a id="contract-dossier-policy-imports"></a>**`imports`** ([Import scan](#contract-dossier-imports)): Literal import observations for the source selected for invocation, or the reason that scan was unavailable.
 
 <a id="contract-dossier-augmentation"></a>
 #### Augmentation observation
 
 Record `augmentation`: `rust.Augmentation`.
 
-| Field | JSON type and presence | Meaning |
-| --- | --- | --- |
-| <a id="contract-dossier-augmentation-status"></a>`status` | string; required | `not_requested` retains unchanged source hashes; `applied` records selected augmentation output; `failed` records refusal; `not_applicable` identifies a policy slot with no applicable source preparation. |
-| <a id="contract-dossier-augmentation-applied"></a>`applied` | array of string; required | Applied augmentation names in controller order. |
-| <a id="contract-dossier-augmentation-original_sha256"></a>`original_sha256` | string; null when absent | SHA-256 of pre-augmentation source string UTF-8 bytes when such a string existed; otherwise null. |
-| <a id="contract-dossier-augmentation-applied_sha256"></a>`applied_sha256` | string; null when absent | SHA-256 of the selected source string, including unchanged source for not_requested. Null for failed/not_applicable and when no source string existed. |
-| <a id="contract-dossier-augmentation-error"></a>`error` | string; null when absent | Augmentation failure text for failed; otherwise null. |
+- <a id="contract-dossier-augmentation-status"></a>**`status`** (string): `not_requested` retains unchanged source hashes; `applied` records selected augmentation output; `failed` records refusal; `not_applicable` identifies a policy slot with no applicable source preparation.
+- <a id="contract-dossier-augmentation-applied"></a>**`applied`** (array of string): Applied augmentation names in controller order.
+- <a id="contract-dossier-augmentation-original_sha256"></a>**`original_sha256`** (string ∪ null): SHA-256 of pre-augmentation source string UTF-8 bytes when such a string existed; otherwise null.
+- <a id="contract-dossier-augmentation-applied_sha256"></a>**`applied_sha256`** (string ∪ null): SHA-256 of the selected source string, including unchanged source for not_requested. Null for failed/not_applicable and when no source string existed.
+- <a id="contract-dossier-augmentation-error"></a>**`error`** (string ∪ null): Augmentation failure text for failed; otherwise null.
 
 <a id="contract-dossier-augmentation-relationships"></a>
 ##### Augmentation record relationships
@@ -4786,7 +4532,7 @@ Equal optional digests on not_requested include the case where no string source 
 
 | Item | Requirement or consequence |
 | --- | --- |
-| <a id="contract-dossier-augmentation-relationships-fields"></a>Produced field relationships | Requires ((if `augmentation.status` is one of `"not_requested"`, `"failed"`, `"not_applicable"`, then count of `augmentation.applied` = `0`) and (if `augmentation.status` is one of `"failed"`, `"not_applicable"`, then `augmentation.applied_sha256` is absent) and (if `augmentation.status` = `"not_requested"`, then `augmentation.original_sha256` = `augmentation.applied_sha256`) and (if `augmentation.status` = `"failed"`, then `augmentation.error` is present) and (if `augmentation.status` is one of `"not_requested"`, `"applied"`, `"not_applicable"`, then `augmentation.error` is absent)). |
+| <a id="contract-dossier-augmentation-relationships-fields"></a>Produced field relationships | Requires (implies(`augmentation.status` ∈ [`"not_requested"`, `"failed"`, `"not_applicable"`], count(`augmentation.applied`) = `0`) and implies(`augmentation.status` ∈ [`"failed"`, `"not_applicable"`], absent(`augmentation.applied_sha256`)) and implies(`augmentation.status` = `"not_requested"`, `augmentation.original_sha256` = `augmentation.applied_sha256`) and implies(`augmentation.status` = `"failed"`, present(`augmentation.error`)) and implies(`augmentation.status` ∈ [`"not_requested"`, `"applied"`, `"not_applicable"`], absent(`augmentation.error`))). |
 
 **Support: [source read](#contract-support-grades) for [Augmentation record relationships](#contract-dossier-augmentation-relationships) and its descendants.** The four constructors preserve optional original/selected hashes and distinct failure/error states. Source: [dossier.rs](../controller/src/dossier.rs): `Augmentation`.
 
@@ -4795,25 +4541,23 @@ Equal optional digests on not_requested include the case where no string source 
 
 Record `imports`: `rust.Imports`.
 
-| Field | JSON type and presence | Meaning |
-| --- | --- | --- |
-| <a id="contract-dossier-imports-status"></a>`status` | string; required | `complete` exhausted the literal closure without a reported problem; `incomplete` retained a partial/problematic scan; `failed` could not perform the scan; `not_applicable` skipped it because source preparation did not apply. |
-| <a id="contract-dossier-imports-closure_sha256"></a>`closure_sha256` | string; null when absent | Digest of the selected source plus successfully read import path/hash pairs using the defined framing. |
-| <a id="contract-dossier-imports-records"></a>`records` | array of [One import observation](#contract-dossier-import_record); required | Sorted observed import records, including unresolved and failed reads. Empty when there were no imports or no scan. |
-| <a id="contract-dossier-imports-cycle"></a>`cycle` | array of string; null when absent | First detected cycle as an ordered name chain; null when no cycle was observed. |
-| <a id="contract-dossier-imports-exceeded"></a>`exceeded` | string; null when absent | First reached traversal bound, `depth` or `count`; null when neither was recorded. |
-| <a id="contract-dossier-imports-failure"></a>`failure` | string; null when absent | First collection problem, scan setup failure or reason for a not-applicable scan; null when none was recorded. |
+- <a id="contract-dossier-imports-status"></a>**`status`** (string): `complete` exhausted the literal closure without a reported problem; `incomplete` retained a partial/problematic scan; `failed` could not perform the scan; `not_applicable` skipped it because source preparation did not apply.
+- <a id="contract-dossier-imports-closure_sha256"></a>**`closure_sha256`** (string ∪ null): Digest of the selected source plus successfully read import path/hash pairs using the defined framing.
+- <a id="contract-dossier-imports-records"></a>**`records`** (array of [One import observation](#contract-dossier-import_record)): Sorted observed import records, including unresolved and failed reads. Empty when there were no imports or no scan.
+- <a id="contract-dossier-imports-cycle"></a>**`cycle`** (array of string ∪ null): First detected cycle as an ordered name chain; null when no cycle was observed.
+- <a id="contract-dossier-imports-exceeded"></a>**`exceeded`** (string ∪ null): First reached traversal bound, `depth` or `count`; null when neither was recorded.
+- <a id="contract-dossier-imports-failure"></a>**`failure`** (string ∪ null): First collection problem, scan setup failure or reason for a not-applicable scan; null when none was recorded.
 
 <a id="contract-dossier-imports-scope"></a>
 ##### Retained scan scope
 
-[Controller](#contract-identity-definitions-controller) reports at literal import dossier projection. Entry: cli run. Recipient: report reader. Reports: specimen dossier. Binding `r`: entry in `imports.records`. Association restriction for `r`: `imports.records[r].error` is present.
+[Controller](#contract-identity-definitions-controller) reports at literal import dossier projection. Entry: cli run. Recipient: report reader. Reports: specimen dossier. Binding `r`: entry in `imports.records`. Association restriction for `r`: present(`imports.records[r].error`).
 
 These are necessary conditions for complete. The scan also classifies nonliteral forms, an observation with no dedicated carried Boolean.
 
 | Item | Requirement or consequence |
 | --- | --- |
-| <a id="contract-dossier-imports-scope-fields"></a>Produced field relationships | Requires ((if `imports.status` is one of `"complete"`, `"incomplete"`, then `imports.closure_sha256` is present) and (if `imports.status` is one of `"failed"`, `"not_applicable"`, then (`imports.closure_sha256` is absent and count of `imports.records` = `0` and `imports.cycle` is absent and `imports.exceeded` is absent)) and (if `imports.status` = `"complete"`, then (`imports.cycle` is absent and `imports.exceeded` is absent and number of matching entries for `r` = `0`))). |
+| <a id="contract-dossier-imports-scope-fields"></a>Produced field relationships | Requires (implies(`imports.status` ∈ [`"complete"`, `"incomplete"`], present(`imports.closure_sha256`)) and implies(`imports.status` ∈ [`"failed"`, `"not_applicable"`], (absent(`imports.closure_sha256`) and count(`imports.records`) = `0` and absent(`imports.cycle`) and absent(`imports.exceeded`))) and implies(`imports.status` = `"complete"`, (absent(`imports.cycle`) and absent(`imports.exceeded`) and matches(`r`) = `0`))). |
 
 **Support: [source read](#contract-support-grades) for [Retained scan scope](#contract-dossier-imports-scope) and its descendants.** Performed complete/incomplete scans retain a closure; skipped/failed scans have no records. Complete scans have no carried cycle, exceeded bound or record errors. Source: [dossier.rs](../controller/src/dossier.rs): `Imports`.
 
@@ -4822,36 +4566,30 @@ These are necessary conditions for complete. The scan also classifies nonliteral
 
 Record `import_record`: `rust.ImportRecord`.
 
-| Field | JSON type and presence | Meaning |
-| --- | --- | --- |
-| <a id="contract-dossier-import_record-name"></a>`name` | string; required | Literal import name found in source, retained for successful resolution and unresolved-name diagnostics. |
-| <a id="contract-dossier-import_record-resolved_path"></a>`resolved_path` | string; null when absent | Resolved path when lookup established one; null for an unresolved name. |
-| <a id="contract-dossier-import_record-sha256"></a>`sha256` | string; null when absent | SHA-256 of bytes read from the opened regular file; null when that read failed or never occurred. |
-| <a id="contract-dossier-import_record-size_bytes"></a>`size_bytes` | integer; null when absent | File size reported by metadata on the opened descriptor, when available. The hash identifies the bytes actually read. |
-| <a id="contract-dossier-import_record-mtime_unix"></a>`mtime_unix` | integer; null when absent | Opened file’s available modification time in Unix seconds; null on unavailable conversion/read. |
-| <a id="contract-dossier-import_record-error"></a>`error` | string; null when absent | Resolution, regular-file, read, text-decoding or traversal diagnostic for this entry; null when the entry was collected without such a problem. |
+- <a id="contract-dossier-import_record-name"></a>**`name`** (string): Literal import name found in source, retained for successful resolution and unresolved-name diagnostics.
+- <a id="contract-dossier-import_record-resolved_path"></a>**`resolved_path`** (string ∪ null): Resolved path when lookup established one; null for an unresolved name.
+- <a id="contract-dossier-import_record-sha256"></a>**`sha256`** (string ∪ null): SHA-256 of bytes read from the opened regular file; null when that read failed or never occurred.
+- <a id="contract-dossier-import_record-size_bytes"></a>**`size_bytes`** (integer ∪ null): File size reported by metadata on the opened descriptor, when available. The hash identifies the bytes actually read.
+- <a id="contract-dossier-import_record-mtime_unix"></a>**`mtime_unix`** (integer ∪ null): Opened file’s available modification time in Unix seconds; null on unavailable conversion/read.
+- <a id="contract-dossier-import_record-error"></a>**`error`** (string ∪ null): Resolution, regular-file, read, text-decoding or traversal diagnostic for this entry; null when the entry was collected without such a problem.
 
 <a id="contract-dossier-host"></a>
 #### Controller host context
 
 Record `host`: `rust.HostFacts`.
 
-| Field | JSON type and presence | Meaning |
-| --- | --- | --- |
-| <a id="contract-dossier-host-macos_version"></a>`macos_version` | string; null when absent | String read from kern.osproductversion, or null when unavailable. |
-| <a id="contract-dossier-host-macos_build"></a>`macos_build` | string; null when absent | String read from kern.osversion, or null when unavailable. |
-| <a id="contract-dossier-host-kernel_release"></a>`kernel_release` | string; null when absent | String read from kern.osrelease, or null when unavailable. |
-| <a id="contract-dossier-host-arch"></a>`arch` | string; null when absent | String read from hw.machine, or null when unavailable. This is the controller host’s hardware context. |
+- <a id="contract-dossier-host-macos_version"></a>**`macos_version`** (string ∪ null): String read from kern.osproductversion, or null when unavailable.
+- <a id="contract-dossier-host-macos_build"></a>**`macos_build`** (string ∪ null): String read from kern.osversion, or null when unavailable.
+- <a id="contract-dossier-host-kernel_release"></a>**`kernel_release`** (string ∪ null): String read from kern.osrelease, or null when unavailable.
+- <a id="contract-dossier-host-arch"></a>**`arch`** (string ∪ null): String read from hw.machine, or null when unavailable. This is the controller host’s hardware context.
 
 <a id="contract-dossier-app"></a>
 #### App provenance
 
 Record `app`: `rust.AppProvenance`.
 
-| Field | JSON type and presence | Meaning |
-| --- | --- | --- |
-| <a id="contract-dossier-app-evidence_manifest_path"></a>`evidence_manifest_path` | string; required | Path to the parsed embedded evidence manifest used by this run’s controller. |
-| <a id="contract-dossier-app-evidence_verify"></a>`evidence_verify` | [Manifest hash verification](#contract-dossier-verification); null when absent | Manifest-declared hash verification when PW_VERIFY_EVIDENCE is exactly `1`; otherwise null. |
+- <a id="contract-dossier-app-evidence_manifest_path"></a>**`evidence_manifest_path`** (string): Path to the parsed embedded evidence manifest used by this run’s controller.
+- <a id="contract-dossier-app-evidence_verify"></a>**`evidence_verify`** ([Manifest hash verification](#contract-dossier-verification) ∪ null): Manifest-declared hash verification when PW_VERIFY_EVIDENCE is exactly `1`; otherwise null.
 
 <a id="contract-dossier-binaries"></a>
 #### Selected binary observations
@@ -4860,25 +4598,21 @@ Record `binaries`: `rust.Binaries`.
 
 A null role records use of its shipped manifest description. If selection or a manifest baseline is unavailable, the controller emits an unavailable record with the facts it could retain. Actor equipment selection has its own records.
 
-| Field | JSON type and presence | Meaning |
-| --- | --- | --- |
-| <a id="contract-dossier-binaries-service"></a>`service` | [One selected binary](#contract-dossier-binary); null when absent | Selected host executable comparison when it needs an individual record. Null when the shipped service is described by the manifest. |
-| <a id="contract-dossier-binaries-worker"></a>`worker` | [One selected binary](#contract-dossier-binary); null when absent | Selected normal worker comparison, including an admitted observable override path. Null when the shipped worker is described by the manifest. |
-| <a id="contract-dossier-binaries-validator"></a>`validator` | [One selected binary](#contract-dossier-binary); null when absent | Selected validator comparison, including an admitted observable override path. Null when the shipped validator is described by the manifest. |
-| <a id="contract-dossier-binaries-unentitled_worker"></a>`unentitled_worker` | [One selected binary](#contract-dossier-binary); null when absent | Selected unentitled-worker comparison. Null when the shipped role is described by the manifest. |
+- <a id="contract-dossier-binaries-service"></a>**`service`** ([One selected binary](#contract-dossier-binary) ∪ null): Selected host executable comparison when it needs an individual record. Null when the shipped service is described by the manifest.
+- <a id="contract-dossier-binaries-worker"></a>**`worker`** ([One selected binary](#contract-dossier-binary) ∪ null): Selected normal worker comparison, including an admitted observable override path. Null when the shipped worker is described by the manifest.
+- <a id="contract-dossier-binaries-validator"></a>**`validator`** ([One selected binary](#contract-dossier-binary) ∪ null): Selected validator comparison, including an admitted observable override path. Null when the shipped validator is described by the manifest.
+- <a id="contract-dossier-binaries-unentitled_worker"></a>**`unentitled_worker`** ([One selected binary](#contract-dossier-binary) ∪ null): Selected unentitled-worker comparison. Null when the shipped role is described by the manifest.
 
 <a id="contract-dossier-binary"></a>
 #### One selected binary
 
 Record `binary`: `rust.BinaryRecord`.
 
-| Field | JSON type and presence | Meaning |
-| --- | --- | --- |
-| <a id="contract-dossier-binary-path"></a>`path` | string; null when absent | Selected path when the controller may retain it; null when selection or safe override projection was unavailable. |
-| <a id="contract-dossier-binary-actual_sha256"></a>`actual_sha256` | string; null when absent | Hash of selected on-disk bytes successfully read; retained independently of baseline availability. |
-| <a id="contract-dossier-binary-baseline_sha256"></a>`baseline_sha256` | string; null when absent | Normalized SHA-256 from the shipped app manifest’s unique typed role entry; null if that baseline is unavailable. |
-| <a id="contract-dossier-binary-verification"></a>`verification` | string; required | `match` or `mismatch` compares the two available hashes. `unavailable` means the controller could not establish that comparison. |
-| <a id="contract-dossier-binary-reason"></a>`reason` | string; null when absent | Diagnostic explaining mismatch or unavailability; null for match. |
+- <a id="contract-dossier-binary-path"></a>**`path`** (string ∪ null): Selected path when the controller may retain it; null when selection or safe override projection was unavailable.
+- <a id="contract-dossier-binary-actual_sha256"></a>**`actual_sha256`** (string ∪ null): Hash of selected on-disk bytes successfully read; retained independently of baseline availability.
+- <a id="contract-dossier-binary-baseline_sha256"></a>**`baseline_sha256`** (string ∪ null): Normalized SHA-256 from the shipped app manifest’s unique typed role entry; null if that baseline is unavailable.
+- <a id="contract-dossier-binary-verification"></a>**`verification`** (string): `match` or `mismatch` compares the two available hashes. `unavailable` means the controller could not establish that comparison.
+- <a id="contract-dossier-binary-reason"></a>**`reason`** (string ∪ null): Diagnostic explaining mismatch or unavailability; null for match.
 
 <a id="contract-dossier-binary-classify"></a>
 ##### Classify the retained digest pair
@@ -4889,9 +4623,9 @@ This rule applies to a constructed binary record. A null shipped-role record rem
 
 | Case | When | Consequence |
 | --- | --- | --- |
-| <a id="contract-dossier-binary-classify-match"></a>1. Equal available digests | (`binary.actual_sha256` is present and `binary.baseline_sha256` is present and `binary.actual_sha256` = `binary.baseline_sha256`) | sets `binary.verification` to `"match"`, sets `binary.reason` to `null`. |
-| <a id="contract-dossier-binary-classify-mismatch"></a>2. Different available digests | (`binary.actual_sha256` is present and `binary.baseline_sha256` is present) | sets `binary.verification` to `"mismatch"`. |
-| <a id="contract-dossier-binary-classify-unavailable"></a>3. Unavailable comparison operand | `true` | sets `binary.verification` to `"unavailable"`. |
+| <a id="contract-dossier-binary-classify-match"></a>1. Equal available digests | (present(`binary.actual_sha256`) and present(`binary.baseline_sha256`) and `binary.actual_sha256` = `binary.baseline_sha256`) | [set_value(`binary.verification`, `"match"`), set_value(`binary.reason`, `null`)]. |
+| <a id="contract-dossier-binary-classify-mismatch"></a>2. Different available digests | (present(`binary.actual_sha256`) and present(`binary.baseline_sha256`)) | set_value(`binary.verification`, `"mismatch"`). |
+| <a id="contract-dossier-binary-classify-unavailable"></a>3. Unavailable comparison operand | `true` | set_value(`binary.verification`, `"unavailable"`). |
 
 **Support: [source read](#contract-support-grades) for [Classify the retained digest pair](#contract-dossier-binary-classify).** Available expected/actual digests select match or mismatch; missing operands retain unavailable with the collection diagnosis. Source: [dossier.rs](../controller/src/dossier.rs): `compare`.
 
@@ -4900,22 +4634,20 @@ This rule applies to a constructed binary record. A null shipped-role record rem
 
 Record `runner`: `rust.RunnerProvenance`. Uses [Signature observation](#contract-installation-signature), [Entitlement observation](#contract-installation-entitlements).
 
-| Field | JSON type and presence | Meaning |
-| --- | --- | --- |
-| <a id="contract-dossier-runner-runner_kind"></a>`runner_kind` | string; required | Selected connection kind, standard or byoxpc. |
-| <a id="contract-dossier-runner-runner_registry_id"></a>`runner_registry_id` | string; null when absent | Registry ID for a selected external runner; null for a built-in target. |
-| <a id="contract-dossier-runner-runner_service_name"></a>`runner_service_name` | string; required | Selected XPC service name to which the controller intends to connect. |
-| <a id="contract-dossier-runner-runner_bundle_id"></a>`runner_bundle_id` | string; null when absent | Selected bundle identity when available. |
-| <a id="contract-dossier-runner-runner_bundle_path"></a>`runner_bundle_path` | string; null when absent | Selected bundle path when available; this is selection metadata. |
-| <a id="contract-dossier-runner-runner_executable_path"></a>`runner_executable_path` | string; null when absent | Selected host executable path when available. |
-| <a id="contract-dossier-runner-runner_signature"></a>`runner_signature` | [Signature observation](#contract-installation-signature); null when absent | Recorded external-host signature readback; null when no such metadata is supplied. |
-| <a id="contract-dossier-runner-runner_entitlements"></a>`runner_entitlements` | [Entitlement observation](#contract-installation-entitlements); null when absent | Selected host entitlement metadata from the external registry or shipped evidence manifest when available. |
-| <a id="contract-dossier-runner-runner_worker_signature"></a>`runner_worker_signature` | [Signature observation](#contract-installation-signature); null when absent | Recorded normal-worker signature readback for the selected target when available. |
-| <a id="contract-dossier-runner-runner_worker_entitlements"></a>`runner_worker_entitlements` | [Entitlement observation](#contract-installation-entitlements); null when absent | Recorded normal-worker entitlement metadata when available. |
-| <a id="contract-dossier-runner-runner_validator_signature"></a>`runner_validator_signature` | [Signature observation](#contract-installation-signature); null when absent | Recorded validator signature readback when available. |
-| <a id="contract-dossier-runner-runner_validator_entitlements"></a>`runner_validator_entitlements` | [Entitlement observation](#contract-installation-entitlements); null when absent | Recorded validator entitlement metadata when available. |
-| <a id="contract-dossier-runner-runner_unentitled_worker_signature"></a>`runner_unentitled_worker_signature` | [Signature observation](#contract-installation-signature); null when absent | Recorded unentitled-worker signature readback when available. |
-| <a id="contract-dossier-runner-runner_unentitled_worker_entitlements"></a>`runner_unentitled_worker_entitlements` | [Entitlement observation](#contract-installation-entitlements); null when absent | Recorded unentitled-worker entitlement metadata when available. |
+- <a id="contract-dossier-runner-runner_kind"></a>**`runner_kind`** (string): Selected connection kind, standard or byoxpc.
+- <a id="contract-dossier-runner-runner_registry_id"></a>**`runner_registry_id`** (string ∪ null): Registry ID for a selected external runner; null for a built-in target.
+- <a id="contract-dossier-runner-runner_service_name"></a>**`runner_service_name`** (string): Selected XPC service name to which the controller intends to connect.
+- <a id="contract-dossier-runner-runner_bundle_id"></a>**`runner_bundle_id`** (string ∪ null): Selected bundle identity when available.
+- <a id="contract-dossier-runner-runner_bundle_path"></a>**`runner_bundle_path`** (string ∪ null): Selected bundle path when available; this is selection metadata.
+- <a id="contract-dossier-runner-runner_executable_path"></a>**`runner_executable_path`** (string ∪ null): Selected host executable path when available.
+- <a id="contract-dossier-runner-runner_signature"></a>**`runner_signature`** ([Signature observation](#contract-installation-signature) ∪ null): Recorded external-host signature readback; null when no such metadata is supplied.
+- <a id="contract-dossier-runner-runner_entitlements"></a>**`runner_entitlements`** ([Entitlement observation](#contract-installation-entitlements) ∪ null): Selected host entitlement metadata from the external registry or shipped evidence manifest when available.
+- <a id="contract-dossier-runner-runner_worker_signature"></a>**`runner_worker_signature`** ([Signature observation](#contract-installation-signature) ∪ null): Recorded normal-worker signature readback for the selected target when available.
+- <a id="contract-dossier-runner-runner_worker_entitlements"></a>**`runner_worker_entitlements`** ([Entitlement observation](#contract-installation-entitlements) ∪ null): Recorded normal-worker entitlement metadata when available.
+- <a id="contract-dossier-runner-runner_validator_signature"></a>**`runner_validator_signature`** ([Signature observation](#contract-installation-signature) ∪ null): Recorded validator signature readback when available.
+- <a id="contract-dossier-runner-runner_validator_entitlements"></a>**`runner_validator_entitlements`** ([Entitlement observation](#contract-installation-entitlements) ∪ null): Recorded validator entitlement metadata when available.
+- <a id="contract-dossier-runner-runner_unentitled_worker_signature"></a>**`runner_unentitled_worker_signature`** ([Signature observation](#contract-installation-signature) ∪ null): Recorded unentitled-worker signature readback when available.
+- <a id="contract-dossier-runner-runner_unentitled_worker_entitlements"></a>**`runner_unentitled_worker_entitlements`** ([Entitlement observation](#contract-installation-entitlements) ∪ null): Recorded unentitled-worker entitlement metadata when available.
 
 <a id="contract-dossier-verification"></a>
 #### Manifest hash verification
@@ -4924,27 +4656,23 @@ Record `verification`: `rust.VerifyReport`.
 
 Each comparison concerns a file read under the app root.
 
-| Field | JSON type and presence | Meaning |
-| --- | --- | --- |
-| <a id="contract-dossier-verification-ok"></a>`ok` | boolean; required | True when every checked manifest entry was readable and matched its declared hash; false when mismatches contains an entry. |
-| <a id="contract-dossier-verification-checked"></a>`checked` | integer; required | Number of manifest entries carrying a declared hash and considered by verification, including missing/unreadable files. |
-| <a id="contract-dossier-verification-mismatches"></a>`mismatches` | array of [One verification failure](#contract-dossier-mismatch); required | Entries whose file was missing, unreadable or had different bytes. |
-| <a id="contract-dossier-verification-manifest_path"></a>`manifest_path` | string; required | Manifest path attached to this verification. |
-| <a id="contract-dossier-verification-schema_version"></a>`schema_version` | integer; required | Schema version read from the supported manifest. |
-| <a id="contract-dossier-verification-notes"></a>`notes` | array of string; null when absent | Notes carried by that manifest, or null when absent. |
+- <a id="contract-dossier-verification-ok"></a>**`ok`** (boolean): True when every checked manifest entry was readable and matched its declared hash; false when mismatches contains an entry.
+- <a id="contract-dossier-verification-checked"></a>**`checked`** (integer): Number of manifest entries carrying a declared hash and considered by verification, including missing/unreadable files.
+- <a id="contract-dossier-verification-mismatches"></a>**`mismatches`** (array of [One verification failure](#contract-dossier-mismatch)): Entries whose file was missing, unreadable or had different bytes.
+- <a id="contract-dossier-verification-manifest_path"></a>**`manifest_path`** (string): Manifest path attached to this verification.
+- <a id="contract-dossier-verification-schema_version"></a>**`schema_version`** (integer): Schema version read from the supported manifest.
+- <a id="contract-dossier-verification-notes"></a>**`notes`** (array of string ∪ null): Notes carried by that manifest, or null when absent.
 
 <a id="contract-dossier-mismatch"></a>
 #### One verification failure
 
 Record `mismatch`: `rust.VerifyMismatch`.
 
-| Field | JSON type and presence | Meaning |
-| --- | --- | --- |
-| <a id="contract-dossier-mismatch-id"></a>`id` | string; required | Manifest entry identifier for the failed comparison. |
-| <a id="contract-dossier-mismatch-rel_path"></a>`rel_path` | string; required | Manifest-relative file path attempted under the app root. |
-| <a id="contract-dossier-mismatch-expected_sha256"></a>`expected_sha256` | string; null when absent | Declared expected hash retained for this failure. |
-| <a id="contract-dossier-mismatch-actual_sha256"></a>`actual_sha256` | string; null when absent | Hash actually read when available; null for missing/unreadable files. |
-| <a id="contract-dossier-mismatch-error"></a>`error` | string; null when absent | Missing-file or read-error text when bytes were unavailable; null for a completed read whose actual hash differs from expected. |
+- <a id="contract-dossier-mismatch-id"></a>**`id`** (string): Manifest entry identifier for the failed comparison.
+- <a id="contract-dossier-mismatch-rel_path"></a>**`rel_path`** (string): Manifest-relative file path attempted under the app root.
+- <a id="contract-dossier-mismatch-expected_sha256"></a>**`expected_sha256`** (string ∪ null): Declared expected hash retained for this failure.
+- <a id="contract-dossier-mismatch-actual_sha256"></a>**`actual_sha256`** (string ∪ null): Hash actually read when available; null for missing/unreadable files.
+- <a id="contract-dossier-mismatch-error"></a>**`error`** (string ∪ null): Missing-file or read-error text when bytes were unavailable; null for a completed read whose actual hash differs from expected.
 
 <a id="contract-installation"></a>
 ## Managing runners
@@ -4987,7 +4715,7 @@ User scope writes HOME/Library/LaunchAgents and targets gui/<uid>, requiring acc
 <a id="contract-installation-commands-verify"></a>
 #### Verify a selected service
 
-[Controller](#contract-identity-definitions-controller), [Runner client](#contract-identity-definitions-client) acts at fixed verification specimen through reservation and execution. Entry: runner verify. Recipient: cli caller, runner host. Reports: runner verify. sets `request.contract` to [Contract](#contract-identity-build-contract), sets `request.specimen_id` to `"runner_verify"`, sets `request.run_kind` to `"runner_verify"`, sets `request.policy.format` to `"sbpl"`, sets `request.policy.sbpl_source` to `"(version 1)\n(allow default)\n"`, sets `request.probe_plan` to an empty array, withholds `request.actors`, withholds `request.phases`, withholds `request._test_overrides`. Uses [Select the verification operation result](#contract-installation-verify-select), [Request delivery failure](#contract-installation-verify-delivery_failure), [Decoded response collection bounds](#contract-diagnostics-execution-geometry). Lookup finds an external runner record. Send the held fixed verification request in a fresh invocation and apply ordinary delivery and reply admission. Under successful admission, copy a supported reply's PID and outcome; an absent reply selects runner_response_unavailable and no PID. A refused boundary selects its admission classification and no PID. The selected verification outcome and independent delivery error determine the operation result below.
+[Controller](#contract-identity-definitions-controller), [Runner client](#contract-identity-definitions-client) acts at fixed verification specimen through reservation and execution. Entry: runner verify. Recipient: cli caller, runner host. Reports: runner verify. [set_value(`request.contract`, [Contract](#contract-identity-build-contract)), set_value(`request.specimen_id`, `"runner_verify"`), set_value(`request.run_kind`, `"runner_verify"`), set_value(`request.policy.format`, `"sbpl"`), set_value(`request.policy.sbpl_source`, `"(version 1)\n(allow default)\n"`), set_value(`request.probe_plan`, []), withhold(`request.actors`), withhold(`request.phases`), withhold(`request._test_overrides`)]. Uses [Select the verification operation result](#contract-installation-verify-select), [Request delivery failure](#contract-installation-verify-delivery_failure), [Decoded response collection bounds](#contract-diagnostics-execution-geometry). Lookup finds an external runner record. Send the held fixed verification request in a fresh invocation and apply ordinary delivery and reply admission. Under successful admission, copy a supported reply's PID and outcome; an absent reply selects runner_response_unavailable and no PID. A refused boundary selects its admission classification and no PID. The selected verification outcome and independent delivery error determine the operation result below.
 
 The timeout defaults to <!-- span limits.runner_verify_wait.value_unit -->5,000 milliseconds<!-- /span --> and is clamped to at least one. An empty successful plan establishes the verification request’s application and completion. It supplies no per-operation prediction or attempt observations.
 
@@ -5049,11 +4777,9 @@ If bootout succeeds and plist removal succeeds but the final launchctl read is u
 
 Record `registry`: `rust.RunnerRegistry`.
 
-| Field | JSON type and presence | Meaning |
-| --- | --- | --- |
-| <a id="contract-installation-registry-schema_version"></a>`schema_version` | integer; required | Supported registry layout version, currently 1. |
-| <a id="contract-installation-registry-runners"></a>`runners` | array of [One runner record](#contract-installation-runner); required | Active installation records, including pending installations and installed records. |
-| <a id="contract-installation-registry-pending_cleanup"></a>`pending_cleanup` | array of [Retained cleanup transaction](#contract-installation-pending_cleanup); required | Retained cleanup transactions, including nested runner identity and accumulated observations; empty by default when absent in a historical registry. |
+- <a id="contract-installation-registry-schema_version"></a>**`schema_version`** (integer): Supported registry layout version, currently 1.
+- <a id="contract-installation-registry-runners"></a>**`runners`** (array of [One runner record](#contract-installation-runner)): Active installation records, including pending installations and installed records.
+- <a id="contract-installation-registry-pending_cleanup"></a>**`pending_cleanup`** (array of [Retained cleanup transaction](#contract-installation-pending_cleanup)): Retained cleanup transactions, including nested runner identity and accumulated observations; empty by default when absent in a historical registry.
 
 <a id="contract-installation-runner"></a>
 ### One runner record
@@ -5062,32 +4788,30 @@ Record `runner`: `rust.RunnerRecord`.
 
 Recorded signature, entitlement and inventory values describe their named reads; later execution has its own admission and live observations.
 
-| Field | JSON type and presence | Meaning |
-| --- | --- | --- |
-| <a id="contract-installation-runner-state"></a>`state` | string; required | `pending` means installation ownership was saved before completion; `installed` means the requested installation transaction completed. Missing historical state defaults to installed. |
-| <a id="contract-installation-runner-ownership"></a>`ownership` | [Recorded cleanup ownership](#contract-installation-ownership); null when absent | Recorded plist identity and location used by cleanup, or null for a historical record without it. |
-| <a id="contract-installation-runner-id"></a>`id` | string; required | Controller-generated registry identifier for this installation. |
-| <a id="contract-installation-runner-service_name"></a>`service_name` | string; required | Mach service identity selected from the bundle identifier and used for lookup/launchd. |
-| <a id="contract-installation-runner-bundle_path"></a>`bundle_path` | string; required | Canonical bundle location retained at installation. |
-| <a id="contract-installation-runner-executable_path"></a>`executable_path` | string; required | Host executable path derived from the bundle metadata. |
-| <a id="contract-installation-runner-bundle_id"></a>`bundle_id` | string; null when absent | Recorded CFBundleIdentifier, or null in a historical record without it. |
-| <a id="contract-installation-runner-scope"></a>`scope` | string; required | `user` selects the current gui domain; `system` selects the system launchd domain. |
-| <a id="contract-installation-runner-contract"></a>`contract` | string; omitted when empty | Public identity recorded from the verified bundle. Omitted if empty in a historical record; execution requires exact current identity. |
-| <a id="contract-installation-runner-signature"></a>`signature` | [Signature observation](#contract-installation-signature); required | Host signature observation retained from installation or validation. |
-| <a id="contract-installation-runner-entitlements"></a>`entitlements` | [Entitlement observation](#contract-installation-entitlements); required | Host entitlement readback and any read error. |
-| <a id="contract-installation-runner-installed_at_unix_ms"></a>`installed_at_unix_ms` | integer; required | Controller wall-clock Unix milliseconds recorded while preparing installation, including a pending transaction. |
-| <a id="contract-installation-runner-kind"></a>`kind` | string; omitted when absent | Known runner kind when recorded. Historical machme/debuggable deserialize to byoxpc; absent kind can be inferred by the selecting command. |
-| <a id="contract-installation-runner-worker_signature"></a>`worker_signature` | [Signature observation](#contract-installation-signature); omitted when absent | Normal-worker signature observation when available; omitted in records without it. |
-| <a id="contract-installation-runner-worker_entitlements"></a>`worker_entitlements` | [Entitlement observation](#contract-installation-entitlements); omitted when absent | Normal-worker entitlement readback when available. |
-| <a id="contract-installation-runner-unentitled_worker_signature"></a>`unentitled_worker_signature` | [Signature observation](#contract-installation-signature); omitted when absent | Unentitled-worker signature observation when available. |
-| <a id="contract-installation-runner-unentitled_worker_entitlements"></a>`unentitled_worker_entitlements` | [Entitlement observation](#contract-installation-entitlements); omitted when absent | Unentitled-worker entitlement readback when available. |
-| <a id="contract-installation-runner-unentitled_worker_sha256"></a>`unentitled_worker_sha256` | string; omitted when absent | Unentitled-worker file hash retained at installation when available. |
-| <a id="contract-installation-runner-worker_equipment_inventory"></a>`worker_equipment_inventory` | JSON value; omitted when absent | Post-signing sealed equipment snapshot retained as JSON. Current execution separately validates its on-disk inventory and role artifacts. |
-| <a id="contract-installation-runner-source_worker_equipment_inventory"></a>`source_worker_equipment_inventory` | JSON value; omitted when absent | Verified source equipment snapshot retained before installer signing, as JSON. |
-| <a id="contract-installation-runner-validator_signature"></a>`validator_signature` | [Signature observation](#contract-installation-signature); omitted when absent | Validator signature observation when available. |
-| <a id="contract-installation-runner-validator_entitlements"></a>`validator_entitlements` | [Entitlement observation](#contract-installation-entitlements); omitted when absent | Validator entitlement readback when available. |
-| <a id="contract-installation-runner-issuer_signature"></a>`issuer_signature` | [Signature observation](#contract-installation-signature); omitted when absent | Historical extension-issuer signature metadata when available. Current install leaves it absent. |
-| <a id="contract-installation-runner-issuer_entitlements"></a>`issuer_entitlements` | [Entitlement observation](#contract-installation-entitlements); omitted when absent | Historical extension-issuer entitlement metadata when available. Current install leaves it absent. |
+- <a id="contract-installation-runner-state"></a>**`state`** (string): `pending` means installation ownership was saved before completion; `installed` means the requested installation transaction completed. Missing historical state defaults to installed.
+- <a id="contract-installation-runner-ownership"></a>**`ownership`** ([Recorded cleanup ownership](#contract-installation-ownership) ∪ null): Recorded plist identity and location used by cleanup, or null for a historical record without it.
+- <a id="contract-installation-runner-id"></a>**`id`** (string): Controller-generated registry identifier for this installation.
+- <a id="contract-installation-runner-service_name"></a>**`service_name`** (string): Mach service identity selected from the bundle identifier and used for lookup/launchd.
+- <a id="contract-installation-runner-bundle_path"></a>**`bundle_path`** (string): Canonical bundle location retained at installation.
+- <a id="contract-installation-runner-executable_path"></a>**`executable_path`** (string): Host executable path derived from the bundle metadata.
+- <a id="contract-installation-runner-bundle_id"></a>**`bundle_id`** (string ∪ null): Recorded CFBundleIdentifier, or null in a historical record without it.
+- <a id="contract-installation-runner-scope"></a>**`scope`** (string): `user` selects the current gui domain; `system` selects the system launchd domain.
+- <a id="contract-installation-runner-contract"></a>**`contract`** (string; omitted when empty): Public identity recorded from the verified bundle. Omitted if empty in a historical record; execution requires exact current identity.
+- <a id="contract-installation-runner-signature"></a>**`signature`** ([Signature observation](#contract-installation-signature)): Host signature observation retained from installation or validation.
+- <a id="contract-installation-runner-entitlements"></a>**`entitlements`** ([Entitlement observation](#contract-installation-entitlements)): Host entitlement readback and any read error.
+- <a id="contract-installation-runner-installed_at_unix_ms"></a>**`installed_at_unix_ms`** (integer): Controller wall-clock Unix milliseconds recorded while preparing installation, including a pending transaction.
+- <a id="contract-installation-runner-kind"></a>**`kind`** (string?): Known runner kind when recorded. Historical machme/debuggable deserialize to byoxpc; absent kind can be inferred by the selecting command.
+- <a id="contract-installation-runner-worker_signature"></a>**`worker_signature`** ([Signature observation](#contract-installation-signature)?): Normal-worker signature observation when available; omitted in records without it.
+- <a id="contract-installation-runner-worker_entitlements"></a>**`worker_entitlements`** ([Entitlement observation](#contract-installation-entitlements)?): Normal-worker entitlement readback when available.
+- <a id="contract-installation-runner-unentitled_worker_signature"></a>**`unentitled_worker_signature`** ([Signature observation](#contract-installation-signature)?): Unentitled-worker signature observation when available.
+- <a id="contract-installation-runner-unentitled_worker_entitlements"></a>**`unentitled_worker_entitlements`** ([Entitlement observation](#contract-installation-entitlements)?): Unentitled-worker entitlement readback when available.
+- <a id="contract-installation-runner-unentitled_worker_sha256"></a>**`unentitled_worker_sha256`** (string?): Unentitled-worker file hash retained at installation when available.
+- <a id="contract-installation-runner-worker_equipment_inventory"></a>**`worker_equipment_inventory`** (JSON value?): Post-signing sealed equipment snapshot retained as JSON. Current execution separately validates its on-disk inventory and role artifacts.
+- <a id="contract-installation-runner-source_worker_equipment_inventory"></a>**`source_worker_equipment_inventory`** (JSON value?): Verified source equipment snapshot retained before installer signing, as JSON.
+- <a id="contract-installation-runner-validator_signature"></a>**`validator_signature`** ([Signature observation](#contract-installation-signature)?): Validator signature observation when available.
+- <a id="contract-installation-runner-validator_entitlements"></a>**`validator_entitlements`** ([Entitlement observation](#contract-installation-entitlements)?): Validator entitlement readback when available.
+- <a id="contract-installation-runner-issuer_signature"></a>**`issuer_signature`** ([Signature observation](#contract-installation-signature)?): Historical extension-issuer signature metadata when available. Current install leaves it absent.
+- <a id="contract-installation-runner-issuer_entitlements"></a>**`issuer_entitlements`** ([Entitlement observation](#contract-installation-entitlements)?): Historical extension-issuer entitlement metadata when available. Current install leaves it absent.
 
 **Support: [check read](#contract-support-grades) for [kind](#contract-installation-runner-kind).** Registry normalization and durable cleanup preserve historical records and opaque metadata. Context: Static review of the cited producer and assertion branches. Evidence limit: The live workflow uses a current owned service and a constructed historical debuggable record; both retired aliases have separate offline controls. Source: [runner_manager.rs](../controller/src/runner_manager.rs): `pub enum RunnerKind`, `pub fn parse`; [registry_recovery.py](../tests/suites/runner_byoxpc/opt_in/registry_recovery.py): `historical-after-remove`. Check: [registry_recovery.sh](../tests/suites/runner_byoxpc/opt_in/registry_recovery.sh): `registry_recovery`; [runner_manager.rs](../controller/src/runner_manager.rs): `legacy_machme_kind_deserializes_as_byoxpc`, `legacy_debuggable_kind_deserializes_as_byoxpc`, `caller_facing_parse_rejects_legacy_aliases`.
 
@@ -5096,12 +4820,10 @@ Recorded signature, entitlement and inventory values describe their named reads;
 
 Record `ownership`: `rust.RunnerOwnership`.
 
-| Field | JSON type and presence | Meaning |
-| --- | --- | --- |
-| <a id="contract-installation-ownership-plist_path"></a>`plist_path` | string; required | Absolute launchd plist path reserved by installation. |
-| <a id="contract-installation-ownership-launchd_domain"></a>`launchd_domain` | string; required | Recorded gui/<uid> or system domain for that scope. |
-| <a id="contract-installation-ownership-owner_uid"></a>`owner_uid` | integer; required | Installer’s numeric UID, compared with the acting user and observed plist owner for cleanup. |
-| <a id="contract-installation-ownership-plist_sha256"></a>`plist_sha256` | string; required | Hash of the exact generated plist bytes, compared with the current file before cleanup. |
+- <a id="contract-installation-ownership-plist_path"></a>**`plist_path`** (string): Absolute launchd plist path reserved by installation.
+- <a id="contract-installation-ownership-launchd_domain"></a>**`launchd_domain`** (string): Recorded gui/<uid> or system domain for that scope.
+- <a id="contract-installation-ownership-owner_uid"></a>**`owner_uid`** (integer): Installer’s numeric UID, compared with the acting user and observed plist owner for cleanup.
+- <a id="contract-installation-ownership-plist_sha256"></a>**`plist_sha256`** (string): Hash of the exact generated plist bytes, compared with the current file before cleanup.
 
 <a id="contract-installation-signature"></a>
 ### Signature observation
@@ -5110,13 +4832,11 @@ Record `signature`: `rust.RunnerSignature`.
 
 Signature facts belong to the recorded file and read time. Preserve unknown members during registry recovery.
 
-| Field | JSON type and presence | Meaning |
-| --- | --- | --- |
-| <a id="contract-installation-signature-team_id"></a>`team_id` | string; null when absent | TeamIdentifier string read from codesign metadata when available; null when absent. |
-| <a id="contract-installation-signature-identity"></a>`identity` | string; null when absent | First Authority line read from codesign metadata when available; null for unavailable authority. |
-| <a id="contract-installation-signature-cdhash"></a>`cdhash` | string; null when absent | CDHash string read from codesign metadata when available. |
-| <a id="contract-installation-signature-valid"></a>`valid` | boolean; required | Recorded success of the owning signature-read/verification path. During validation, host validity also requires recursive bundle verification; each helper requires its own binary verification. Failed metadata reads produce false. |
-| <a id="contract-installation-signature-adhoc"></a>`adhoc` | boolean; required | Whether the read signature metadata identifies ad-hoc signing. |
+- <a id="contract-installation-signature-team_id"></a>**`team_id`** (string ∪ null): TeamIdentifier string read from codesign metadata when available; null when absent.
+- <a id="contract-installation-signature-identity"></a>**`identity`** (string ∪ null): First Authority line read from codesign metadata when available; null for unavailable authority.
+- <a id="contract-installation-signature-cdhash"></a>**`cdhash`** (string ∪ null): CDHash string read from codesign metadata when available.
+- <a id="contract-installation-signature-valid"></a>**`valid`** (boolean): Recorded success of the owning signature-read/verification path. During validation, host validity also requires recursive bundle verification; each helper requires its own binary verification. Failed metadata reads produce false.
+- <a id="contract-installation-signature-adhoc"></a>**`adhoc`** (boolean): Whether the read signature metadata identifies ad-hoc signing.
 
 <a id="contract-installation-entitlements"></a>
 ### Entitlement observation
@@ -5125,12 +4845,10 @@ Record `entitlements`: `rust.RunnerEntitlements`.
 
 An empty keys/granted list with an error describes unavailable parsing. Boolean false, strings and integers do not enter granted.
 
-| Field | JSON type and presence | Meaning |
-| --- | --- | --- |
-| <a id="contract-installation-entitlements-raw_plist"></a>`raw_plist` | string; null when absent | Entitlement plist text returned by codesign, or null when none was emitted or the read was unavailable. |
-| <a id="contract-installation-entitlements-keys"></a>`keys` | array of string; required | Sorted names of every key in a parsed entitlement dictionary, regardless of value. |
-| <a id="contract-installation-entitlements-granted"></a>`granted` | array of string; required | Sorted keys whose values are JSON boolean true after plist conversion. Missing historical granted defaults to an empty list. |
-| <a id="contract-installation-entitlements-error"></a>`error` | string; null when absent | Command, byte-cap or plist-conversion failure text when readback failed; null for a completed read. |
+- <a id="contract-installation-entitlements-raw_plist"></a>**`raw_plist`** (string ∪ null): Entitlement plist text returned by codesign, or null when none was emitted or the read was unavailable.
+- <a id="contract-installation-entitlements-keys"></a>**`keys`** (array of string): Sorted names of every key in a parsed entitlement dictionary, regardless of value.
+- <a id="contract-installation-entitlements-granted"></a>**`granted`** (array of string): Sorted keys whose values are JSON boolean true after plist conversion. Missing historical granted defaults to an empty list.
+- <a id="contract-installation-entitlements-error"></a>**`error`** (string ∪ null): Command, byte-cap or plist-conversion failure text when readback failed; null for a completed read.
 
 <a id="contract-installation-pending_cleanup"></a>
 ### Retained cleanup transaction
@@ -5139,27 +4857,23 @@ Record `pending_cleanup`: `rust.PendingCleanup`. Uses [Current cleanup observati
 
 The reader accepts historical flattened cleanup records and writes the nested runner form. Unknown members at each level preserve their own nesting, including runner members named observations or cleanup_started_at_unix_ms.
 
-| Field | JSON type and presence | Meaning |
-| --- | --- | --- |
-| <a id="contract-installation-pending_cleanup-runner"></a>`runner` | [One runner record](#contract-installation-runner); required | Nested retained runner record, including unknown runner/ownership/signature/entitlement members. |
-| <a id="contract-installation-pending_cleanup-cleanup_started_at_unix_ms"></a>`cleanup_started_at_unix_ms` | integer; required | Controller wall-clock Unix milliseconds when the active record entered cleanup. |
-| <a id="contract-installation-pending_cleanup-observations"></a>`observations` | array of JSON value; required | Accumulated JSON observations. Current removal appends before/after records when location checks permit inspection; historical entries remain opaque. |
+- <a id="contract-installation-pending_cleanup-runner"></a>**`runner`** ([One runner record](#contract-installation-runner)): Nested retained runner record, including unknown runner/ownership/signature/entitlement members.
+- <a id="contract-installation-pending_cleanup-cleanup_started_at_unix_ms"></a>**`cleanup_started_at_unix_ms`** (integer): Controller wall-clock Unix milliseconds when the active record entered cleanup.
+- <a id="contract-installation-pending_cleanup-observations"></a>**`observations`** (array of JSON value): Accumulated JSON observations. Current removal appends before/after records when location checks permit inspection; historical entries remain opaque.
 
 <a id="contract-installation-cleanup"></a>
 ### Removal result
 
 Record `cleanup`: `rust.CleanupReport`.
 
-| Field | JSON type and presence | Meaning |
-| --- | --- | --- |
-| <a id="contract-installation-cleanup-runner_id"></a>`runner_id` | string; required | Registry identifier of the cleanup target. |
-| <a id="contract-installation-cleanup-service_name"></a>`service_name` | string; required | Recorded service name of that target. |
-| <a id="contract-installation-cleanup-plist_path"></a>`plist_path` | string; required | Resolved cleanup path, recorded ownership path when resolution failed, or empty when neither was available. |
-| <a id="contract-installation-cleanup-booted_out"></a>`booted_out` | boolean; required | True only when this removal’s launchctl bootout call succeeded. |
-| <a id="contract-installation-cleanup-plist_removed"></a>`plist_removed` | boolean; required | True only when this removal’s unlink call succeeded. |
-| <a id="contract-installation-cleanup-cleanup_retained"></a>`cleanup_retained` | boolean; required | True when verified absence/clean completion or publication of retirement was unavailable; continue recovery using the retained record. |
-| <a id="contract-installation-cleanup-retained_record"></a>`retained_record` | [Retained cleanup transaction](#contract-installation-pending_cleanup); omitted when absent | Recovery snapshot when cleanup remains retained; omitted after retirement. |
-| <a id="contract-installation-cleanup-warnings"></a>`warnings` | array of string; omitted when empty | Diagnostics for refused, failed, uncertain or unpersisted cleanup; omitted when empty. |
+- <a id="contract-installation-cleanup-runner_id"></a>**`runner_id`** (string): Registry identifier of the cleanup target.
+- <a id="contract-installation-cleanup-service_name"></a>**`service_name`** (string): Recorded service name of that target.
+- <a id="contract-installation-cleanup-plist_path"></a>**`plist_path`** (string): Resolved cleanup path, recorded ownership path when resolution failed, or empty when neither was available.
+- <a id="contract-installation-cleanup-booted_out"></a>**`booted_out`** (boolean): True only when this removal’s launchctl bootout call succeeded.
+- <a id="contract-installation-cleanup-plist_removed"></a>**`plist_removed`** (boolean): True only when this removal’s unlink call succeeded.
+- <a id="contract-installation-cleanup-cleanup_retained"></a>**`cleanup_retained`** (boolean): True when verified absence/clean completion or publication of retirement was unavailable; continue recovery using the retained record.
+- <a id="contract-installation-cleanup-retained_record"></a>**`retained_record`** ([Retained cleanup transaction](#contract-installation-pending_cleanup)?): Recovery snapshot when cleanup remains retained; omitted after retirement.
+- <a id="contract-installation-cleanup-warnings"></a>**`warnings`** (array of string; omitted when empty): Diagnostics for refused, failed, uncertain or unpersisted cleanup; omitted when empty.
 
 <a id="contract-installation-cleanup-retention"></a>
 #### Retained recovery account
@@ -5168,7 +4882,7 @@ Record `cleanup`: `rust.CleanupReport`.
 
 | Item | Requirement or consequence |
 | --- | --- |
-| <a id="contract-installation-cleanup-retention-fields"></a>Produced recovery fields | Requires (`cleanup.cleanup_retained` = `cleanup.retained_record` is present and (if (`cleanup.warnings` is present and count of `cleanup.warnings` > `0`), then `cleanup.cleanup_retained`)). |
+| <a id="contract-installation-cleanup-retention-fields"></a>Produced recovery fields | Requires (`cleanup.cleanup_retained` = present(`cleanup.retained_record`) and implies((present(`cleanup.warnings`) and count(`cleanup.warnings`) > `0`), `cleanup.cleanup_retained`)). |
 
 **Support: [source read](#contract-support-grades) for [Retained recovery account](#contract-installation-cleanup-retention) and its descendants.** An incomplete or unpersisted cleanup retains its recovery snapshot; warnings prevent clean retirement. Source: [runner_manager.rs](../controller/src/runner_manager.rs): `remove_record`.
 
@@ -5177,18 +4891,16 @@ Record `cleanup`: `rust.CleanupReport`.
 
 Record `install`: `rust.RunnerInstallData`.
 
-| Field | JSON type and presence | Meaning |
-| --- | --- | --- |
-| <a id="contract-installation-install-state"></a>`state` | string; required | Installed state after the requested transaction and final registry save. |
-| <a id="contract-installation-install-loaded"></a>`loaded` | [Observed service](#contract-installation-service); required | Independent launchctl service observation after installation. |
-| <a id="contract-installation-install-runner"></a>`runner` | [One runner record](#contract-installation-runner); required | Complete recorded runner, including signature readbacks, inventories and cleanup ownership. |
-| <a id="contract-installation-install-plist_path"></a>`plist_path` | string; required | Path where the installer published the launchd plist. |
-| <a id="contract-installation-install-bootstrapped"></a>`bootstrapped` | boolean; required | True when this command requested and successfully completed bootstrap; false with skip-bootstrap. |
+- <a id="contract-installation-install-state"></a>**`state`** (string): Installed state after the requested transaction and final registry save.
+- <a id="contract-installation-install-loaded"></a>**`loaded`** ([Observed service](#contract-installation-service)): Independent launchctl service observation after installation.
+- <a id="contract-installation-install-runner"></a>**`runner`** ([One runner record](#contract-installation-runner)): Complete recorded runner, including signature readbacks, inventories and cleanup ownership.
+- <a id="contract-installation-install-plist_path"></a>**`plist_path`** (string): Path where the installer published the launchd plist.
+- <a id="contract-installation-install-bootstrapped"></a>**`bootstrapped`** (boolean): True when this command requested and successfully completed bootstrap; false with skip-bootstrap.
 
 <a id="contract-installation-install-state_copy"></a>
 #### Published installation state
 
-[Controller](#contract-identity-definitions-controller) reports at runner install result projection. Entry: runner install. Recipient: report reader. Reports: runner install. sets `install.state` to `install.runner.state`.
+[Controller](#contract-identity-definitions-controller) reports at runner install result projection. Entry: runner install. Recipient: report reader. Reports: runner install. set_value(`install.state`, `install.runner.state`).
 
 **Support: [source read](#contract-support-grades) for [Published installation state](#contract-installation-install-state_copy).** RunnerInstallData copies the returned record state. Source: [runner_commands.rs](../controller/src/runner_commands.rs): `cmd_runner_install`.
 
@@ -5199,20 +4911,18 @@ Record `verify`: `rust.RunnerVerifyData`. Uses [Controller observation of the cl
 
 This is the completion record for a selected registry entry after the client invocation returns its capture. An unmatched lookup uses RunnerNotFoundData with not_found and exit code 2. Earlier argument, registry, setup or invocation failures return without this record.
 
-| Field | JSON type and presence | Meaning |
-| --- | --- | --- |
-| <a id="contract-installation-verify-runner_client"></a>`runner_client` | [Controller observation of the client process](#contract-transport-client); null when absent | Client subprocess result, capture and delivery admission when available. |
-| <a id="contract-installation-verify-runner_result"></a>`runner_result` | [Execution record](#contract-reply-record); null when absent | Decoded host result when available; its presence alone precedes the controller’s full reply admission. |
-| <a id="contract-installation-verify-state"></a>`state` | string; required | Registry installation state read when selecting this verification target. |
-| <a id="contract-installation-verify-runner_id"></a>`runner_id` | string; null when absent | Selected registry identifier when available. |
-| <a id="contract-installation-verify-service_name"></a>`service_name` | string; required | Selected service to which verification was addressed. |
-| <a id="contract-installation-verify-runner_pid"></a>`runner_pid` | integer; null when absent | PID projected only from an admitted host result. Its worker/host role follows the host result’s lifecycle. |
-| <a id="contract-installation-verify-normalized_outcome"></a>`normalized_outcome` | string; required | Controller verification classification, also supplied in the envelope result. |
+- <a id="contract-installation-verify-runner_client"></a>**`runner_client`** ([Controller observation of the client process](#contract-transport-client) ∪ null): Client subprocess result, capture and delivery admission when available.
+- <a id="contract-installation-verify-runner_result"></a>**`runner_result`** ([Execution record](#contract-reply-record) ∪ null): Decoded host result when available; its presence alone precedes the controller’s full reply admission.
+- <a id="contract-installation-verify-state"></a>**`state`** (string): Registry installation state read when selecting this verification target.
+- <a id="contract-installation-verify-runner_id"></a>**`runner_id`** (string ∪ null): Selected registry identifier when available.
+- <a id="contract-installation-verify-service_name"></a>**`service_name`** (string): Selected service to which verification was addressed.
+- <a id="contract-installation-verify-runner_pid"></a>**`runner_pid`** (integer ∪ null): PID projected only from an admitted host result. Its worker/host role follows the host result’s lifecycle.
+- <a id="contract-installation-verify-normalized_outcome"></a>**`normalized_outcome`** (string): Controller verification classification, also supplied in the envelope result.
 
 <a id="contract-installation-verify-delivery_failure"></a>
 #### Request delivery failure
 
-[Controller](#contract-identity-definitions-controller) reports at runner verify completion before reply interpretation. Entry: runner verify. Recipient: report reader. Reports: runner verify. Applies when (`verify.runner_client` is present and `verify.runner_client.request_delivery` is present and `verify.runner_client.request_delivery.error` is present). sets `result.ok` to `false`, sets `result.exit_code` to `2`, sets `result.normalized_outcome` to `"tool_error"`, sets `result.error` to `verify.runner_client.request_delivery.error`, sets `verify.normalized_outcome` to `"tool_error"`, sets `verify.runner_pid` to `null`, retains the records `verify.runner_client`, retains the records `verify.runner_result`.
+[Controller](#contract-identity-definitions-controller) reports at runner verify completion before reply interpretation. Entry: runner verify. Recipient: report reader. Reports: runner verify. Applies when (present(`verify.runner_client`) and present(`verify.runner_client.request_delivery`) and present(`verify.runner_client.request_delivery.error`)). [set_value(`result.ok`, `false`), set_value(`result.exit_code`, `2`), set_value(`result.normalized_outcome`, `"tool_error"`), set_value(`result.error`, `verify.runner_client.request_delivery.error`), set_value(`verify.normalized_outcome`, `"tool_error"`), set_value(`verify.runner_pid`, `null`), retain_records(`verify.runner_client`), retain_records(`verify.runner_result`)].
 
 **Support: [source read](#contract-support-grades) for [Request delivery failure](#contract-installation-verify-delivery_failure).** DeliveryFailed precedes capture/reply interpretation and preserves the returned observations. Source: [runner_commands.rs](../controller/src/runner_commands.rs): `cmd_runner_verify`.
 
@@ -5223,9 +4933,9 @@ This is the completion record for a selected registry entry after the client inv
 
 | Case | When | Consequence |
 | --- | --- | --- |
-| <a id="contract-installation-verify-select-delivery"></a>1. Delivery error has precedence | (`verify.runner_client` is present and `verify.runner_client.request_delivery` is present and `verify.runner_client.request_delivery.error` is present) | sets `result.ok` to `false`, sets `result.exit_code` to `2`, sets `result.normalized_outcome` to `"tool_error"`. |
-| <a id="contract-installation-verify-select-finished"></a>2. Selected finished outcome | `verify.normalized_outcome` = `"finished"` | sets `result.ok` to `true`, sets `result.exit_code` to `0`, sets `result.normalized_outcome` to `verify.normalized_outcome`. |
-| <a id="contract-installation-verify-select-other"></a>3. Other selected outcome | `true` | sets `result.ok` to `false`, sets `result.exit_code` to `1`, sets `result.normalized_outcome` to `verify.normalized_outcome`. |
+| <a id="contract-installation-verify-select-delivery"></a>1. Delivery error has precedence | (present(`verify.runner_client`) and present(`verify.runner_client.request_delivery`) and present(`verify.runner_client.request_delivery.error`)) | [set_value(`result.ok`, `false`), set_value(`result.exit_code`, `2`), set_value(`result.normalized_outcome`, `"tool_error"`)]. |
+| <a id="contract-installation-verify-select-finished"></a>2. Selected finished outcome | `verify.normalized_outcome` = `"finished"` | [set_value(`result.ok`, `true`), set_value(`result.exit_code`, `0`), set_value(`result.normalized_outcome`, `verify.normalized_outcome`)]. |
+| <a id="contract-installation-verify-select-other"></a>3. Other selected outcome | `true` | [set_value(`result.ok`, `false`), set_value(`result.exit_code`, `1`), set_value(`result.normalized_outcome`, `verify.normalized_outcome`)]. |
 
 **Support: [source read](#contract-support-grades) for [Select the verification operation result](#contract-installation-verify-select).** The verification result uses delivery failure precedence and the already selected operation outcome; unsupported retained host fields do not supply a PID. Source: [runner_commands.rs](../controller/src/runner_commands.rs): `cmd_runner_verify`.
 
@@ -5234,45 +4944,37 @@ This is the completion record for a selected registry entry after the client inv
 
 Record `validate`: `rust.RunnerValidateData`.
 
-| Field | JSON type and presence | Meaning |
-| --- | --- | --- |
-| <a id="contract-installation-validate-updated"></a>`updated` | integer; required | Number of runners visited and saved, including missing/invalid entries. |
-| <a id="contract-installation-validate-missing"></a>`missing` | integer; required | Rows whose recorded host executable did not exist; further verification was skipped for those rows. |
-| <a id="contract-installation-validate-invalid"></a>`invalid` | integer; required | Other rows with at least one bundle/binary verification, signature-metadata readback or inventory failure. |
-| <a id="contract-installation-validate-failures"></a>`failures` | array of [One validation failure](#contract-installation-failure); required | Individual failure records, potentially multiple for one invalid runner. |
+- <a id="contract-installation-validate-updated"></a>**`updated`** (integer): Number of runners visited and saved, including missing/invalid entries.
+- <a id="contract-installation-validate-missing"></a>**`missing`** (integer): Rows whose recorded host executable did not exist; further verification was skipped for those rows.
+- <a id="contract-installation-validate-invalid"></a>**`invalid`** (integer): Other rows with at least one bundle/binary verification, signature-metadata readback or inventory failure.
+- <a id="contract-installation-validate-failures"></a>**`failures`** (array of [One validation failure](#contract-installation-failure)): Individual failure records, potentially multiple for one invalid runner.
 
 <a id="contract-installation-failure"></a>
 ### One validation failure
 
 Record `failure`: `rust.ValidateFailure`.
 
-| Field | JSON type and presence | Meaning |
-| --- | --- | --- |
-| <a id="contract-installation-failure-runner_id"></a>`runner_id` | string; required | Registry identifier of the row that failed this check. |
-| <a id="contract-installation-failure-service_name"></a>`service_name` | string; required | Service name recorded in that row. |
-| <a id="contract-installation-failure-binary"></a>`binary` | string; required | Failed role or check: bundle, host, worker, unentitled_worker, validator, issuer or equipment_inventory as applicable. |
-| <a id="contract-installation-failure-error"></a>`error` | string; required | Failure text from the named verification/readback. |
+- <a id="contract-installation-failure-runner_id"></a>**`runner_id`** (string): Registry identifier of the row that failed this check.
+- <a id="contract-installation-failure-service_name"></a>**`service_name`** (string): Service name recorded in that row.
+- <a id="contract-installation-failure-binary"></a>**`binary`** (string): Failed role or check: bundle, host, worker, unentitled_worker, validator, issuer or equipment_inventory as applicable.
+- <a id="contract-installation-failure-error"></a>**`error`** (string): Failure text from the named verification/readback.
 
 <a id="contract-installation-not_found"></a>
 ### Unmatched lookup
 
 Record `not_found`: `rust.RunnerNotFoundData`.
 
-| Field | JSON type and presence | Meaning |
-| --- | --- | --- |
-| <a id="contract-installation-not_found-requested_id"></a>`requested_id` | string; omitted when absent | Supplied ID, omitted when none was supplied. |
-| <a id="contract-installation-not_found-requested_service_name"></a>`requested_service_name` | string; omitted when absent | Supplied service name, omitted when none was supplied. |
+- <a id="contract-installation-not_found-requested_id"></a>**`requested_id`** (string?): Supplied ID, omitted when none was supplied.
+- <a id="contract-installation-not_found-requested_service_name"></a>**`requested_service_name`** (string?): Supplied service name, omitted when none was supplied.
 
 <a id="contract-installation-service"></a>
 ### Observed service
 
 Record `service`: `rust.ServiceObservation`.
 
-| Field | JSON type and presence | Meaning |
-| --- | --- | --- |
-| <a id="contract-installation-service-presence"></a>`presence` | string; required | `present` for successful launchctl print, `absent` only for its specific missing-service diagnostic naming the requested service, otherwise `unknown`. |
-| <a id="contract-installation-service-executable_path"></a>`executable_path` | string; null when absent | The unique program = line from a successful launchctl print; null when missing, ambiguous or unavailable. |
-| <a id="contract-installation-service-error"></a>`error` | string; null when absent | Inspection diagnostic for unknown presence; null for recognized present/absent. |
+- <a id="contract-installation-service-presence"></a>**`presence`** (string): `present` for successful launchctl print, `absent` only for its specific missing-service diagnostic naming the requested service, otherwise `unknown`.
+- <a id="contract-installation-service-executable_path"></a>**`executable_path`** (string ∪ null): The unique program = line from a successful launchctl print; null when missing, ambiguous or unavailable.
+- <a id="contract-installation-service-error"></a>**`error`** (string ∪ null): Inspection diagnostic for unknown presence; null for recognized present/absent.
 
 <a id="contract-installation-service-ownership"></a>
 #### Service ownership assessment
@@ -5288,11 +4990,11 @@ A raw reconciliation row containing only unknown presence after location failure
 
 | Case | When | Consequence |
 | --- | --- | --- |
-| <a id="contract-installation-service-classify-unknown"></a>1. Unknown presence | `service.presence` = `"unknown"` | sets [Service ownership assessment](#contract-installation-service-ownership) to `"unknown"`. |
-| <a id="contract-installation-service-classify-absent"></a>2. Absent service | `service.presence` = `"absent"` | sets [Service ownership assessment](#contract-installation-service-ownership) to `"ambiguous"`. |
-| <a id="contract-installation-service-classify-owned"></a>3. Matching executable | (`service.presence` = `"present"` and `service.executable_path` is present and `service.executable_path` = `runner_record.executable_path`) | sets [Service ownership assessment](#contract-installation-service-ownership) to `"owned"`. |
-| <a id="contract-installation-service-classify-unowned"></a>4. Different executable | (`service.presence` = `"present"` and `service.executable_path` is present) | sets [Service ownership assessment](#contract-installation-service-ownership) to `"unowned"`. |
-| <a id="contract-installation-service-classify-ambiguous"></a>5. No usable executable | (`service.presence` = `"present"` and `service.executable_path` is absent) | sets [Service ownership assessment](#contract-installation-service-ownership) to `"ambiguous"`. |
+| <a id="contract-installation-service-classify-unknown"></a>1. Unknown presence | `service.presence` = `"unknown"` | set_value([Service ownership assessment](#contract-installation-service-ownership), `"unknown"`). |
+| <a id="contract-installation-service-classify-absent"></a>2. Absent service | `service.presence` = `"absent"` | set_value([Service ownership assessment](#contract-installation-service-ownership), `"ambiguous"`). |
+| <a id="contract-installation-service-classify-owned"></a>3. Matching executable | (`service.presence` = `"present"` and present(`service.executable_path`) and `service.executable_path` = `runner_record.executable_path`) | set_value([Service ownership assessment](#contract-installation-service-ownership), `"owned"`). |
+| <a id="contract-installation-service-classify-unowned"></a>4. Different executable | (`service.presence` = `"present"` and present(`service.executable_path`)) | set_value([Service ownership assessment](#contract-installation-service-ownership), `"unowned"`). |
+| <a id="contract-installation-service-classify-ambiguous"></a>5. No usable executable | (`service.presence` = `"present"` and absent(`service.executable_path`)) | set_value([Service ownership assessment](#contract-installation-service-ownership), `"ambiguous"`). |
 
 **Support: [source read](#contract-support-grades) for [Classify the typed service observation](#contract-installation-service-classify).** The typed presence and observed/recorded executable paths determine service ownership; plist ownership is independent. Source: [runner_manager.rs](../controller/src/runner_manager.rs): `service_ownership`.
 
@@ -5301,14 +5003,12 @@ A raw reconciliation row containing only unknown presence after location failure
 
 Record `plist`: `rust.PlistObservation`.
 
-| Field | JSON type and presence | Meaning |
-| --- | --- | --- |
-| <a id="contract-installation-plist-presence"></a>`presence` | string; required | `absent` for a missing path; `present` for observed metadata, including invalid content; `unknown` for inspection/read failure that prevents a reliable observation. |
-| <a id="contract-installation-plist-config"></a>`config` | JSON value; null when absent | Parsed plist JSON dictionary/value when conversion succeeded; otherwise null. |
-| <a id="contract-installation-plist-sha256"></a>`sha256` | string; null when absent | Hash of bytes read from the plist when available, including bytes whose plist conversion failed. |
-| <a id="contract-installation-plist-owner_uid"></a>`owner_uid` | integer; null when absent | Filesystem owner UID read from symlink metadata when available. |
-| <a id="contract-installation-plist-regular"></a>`regular` | boolean; required | True when the observed path metadata identifies a regular file; false for another type or unavailable metadata. |
-| <a id="contract-installation-plist-error"></a>`error` | string; null when absent | Metadata, regular-file, read or conversion diagnostic when present; otherwise null. |
+- <a id="contract-installation-plist-presence"></a>**`presence`** (string): `absent` for a missing path; `present` for observed metadata, including invalid content; `unknown` for inspection/read failure that prevents a reliable observation.
+- <a id="contract-installation-plist-config"></a>**`config`** (JSON value ∪ null): Parsed plist JSON dictionary/value when conversion succeeded; otherwise null.
+- <a id="contract-installation-plist-sha256"></a>**`sha256`** (string ∪ null): Hash of bytes read from the plist when available, including bytes whose plist conversion failed.
+- <a id="contract-installation-plist-owner_uid"></a>**`owner_uid`** (integer ∪ null): Filesystem owner UID read from symlink metadata when available.
+- <a id="contract-installation-plist-regular"></a>**`regular`** (boolean): True when the observed path metadata identifies a regular file; false for another type or unavailable metadata.
+- <a id="contract-installation-plist-error"></a>**`error`** (string ∪ null): Metadata, regular-file, read or conversion diagnostic when present; otherwise null.
 
 <a id="contract-installation-reconcile"></a>
 ### Reconciliation result
@@ -5317,57 +5017,49 @@ Record `reconcile`: `RunnerReconcileData`.
 
 The result reports successful reconciliation execution even when individual inspections remain unknown.
 
-| Field | JSON type and presence | Meaning |
-| --- | --- | --- |
-| <a id="contract-installation-reconcile-registry_path"></a>`registry_path` | string; required | Registry path used for this read. |
-| <a id="contract-installation-reconcile-records"></a>`records` | array of [One recorded reconciliation](#contract-installation-reconcile_record); required | Recorded runners and retained cleanup entries, each with current observations or a location error. |
-| <a id="contract-installation-reconcile-candidates"></a>`candidates` | array of [Unregistered candidate](#contract-installation-candidate); required | Recognizable unregistered launchd plist candidates from readable directories. |
-| <a id="contract-installation-reconcile-inspection_errors"></a>`inspection_errors` | array of [Reconciliation inspection error](#contract-installation-inspection_error); required | Directory, path or plist inspection failures encountered during candidate discovery. |
+- <a id="contract-installation-reconcile-registry_path"></a>**`registry_path`** (string): Registry path used for this read.
+- <a id="contract-installation-reconcile-records"></a>**`records`** (array of [One recorded reconciliation](#contract-installation-reconcile_record)): Recorded runners and retained cleanup entries, each with current observations or a location error.
+- <a id="contract-installation-reconcile-candidates"></a>**`candidates`** (array of [Unregistered candidate](#contract-installation-candidate)): Recognizable unregistered launchd plist candidates from readable directories.
+- <a id="contract-installation-reconcile-inspection_errors"></a>**`inspection_errors`** (array of [Reconciliation inspection error](#contract-installation-inspection_error)): Directory, path or plist inspection failures encountered during candidate discovery.
 
 <a id="contract-installation-reconcile_record"></a>
 ### One recorded reconciliation
 
 Record `reconcile_record`: `RunnerReconcileRecord`. Uses [Observed service](#contract-installation-service), [Observed plist](#contract-installation-plist).
 
-| Field | JSON type and presence | Meaning |
-| --- | --- | --- |
-| <a id="contract-installation-reconcile_record-recorded_state"></a>`recorded_state` | string; required | pending, installed or pending_cleanup identifies its registry location/state. |
-| <a id="contract-installation-reconcile_record-runner"></a>`runner` | [One runner record](#contract-installation-runner); required | Recorded runner retained without substituting live observations. |
-| <a id="contract-installation-reconcile_record-service"></a>`service` | JSON value; required | Full ServiceObservation after valid location resolution; otherwise only {"presence":"unknown"}. |
-| <a id="contract-installation-reconcile_record-plist"></a>`plist` | JSON value; required | Full PlistObservation after valid location resolution; otherwise only {"presence":"unknown"}. |
-| <a id="contract-installation-reconcile_record-plist_path"></a>`plist_path` | string; omitted when absent | Resolved plist location; omitted on location error. |
-| <a id="contract-installation-reconcile_record-launchd_domain"></a>`launchd_domain` | string; omitted when absent | Resolved launchd domain; omitted on location error. |
-| <a id="contract-installation-reconcile_record-service_ownership"></a>`service_ownership` | string; omitted when absent | Owned, unowned, ambiguous or unknown classification serialized in lowercase; omitted on location error. |
-| <a id="contract-installation-reconcile_record-plist_ownership"></a>`plist_ownership` | string; omitted when absent | Independent plist ownership classification; omitted on location error. |
-| <a id="contract-installation-reconcile_record-ownership"></a>`ownership` | string; omitted when absent | unknown on location error; omitted after successful location resolution. |
-| <a id="contract-installation-reconcile_record-error"></a>`error` | string; omitted when absent | Location-check refusal text; omitted after successful location resolution. |
+- <a id="contract-installation-reconcile_record-recorded_state"></a>**`recorded_state`** (string): pending, installed or pending_cleanup identifies its registry location/state.
+- <a id="contract-installation-reconcile_record-runner"></a>**`runner`** ([One runner record](#contract-installation-runner)): Recorded runner retained without substituting live observations.
+- <a id="contract-installation-reconcile_record-service"></a>**`service`** (JSON value): Full ServiceObservation after valid location resolution; otherwise only {"presence":"unknown"}.
+- <a id="contract-installation-reconcile_record-plist"></a>**`plist`** (JSON value): Full PlistObservation after valid location resolution; otherwise only {"presence":"unknown"}.
+- <a id="contract-installation-reconcile_record-plist_path"></a>**`plist_path`** (string?): Resolved plist location; omitted on location error.
+- <a id="contract-installation-reconcile_record-launchd_domain"></a>**`launchd_domain`** (string?): Resolved launchd domain; omitted on location error.
+- <a id="contract-installation-reconcile_record-service_ownership"></a>**`service_ownership`** (string?): Owned, unowned, ambiguous or unknown classification serialized in lowercase; omitted on location error.
+- <a id="contract-installation-reconcile_record-plist_ownership"></a>**`plist_ownership`** (string?): Independent plist ownership classification; omitted on location error.
+- <a id="contract-installation-reconcile_record-ownership"></a>**`ownership`** (string?): unknown on location error; omitted after successful location resolution.
+- <a id="contract-installation-reconcile_record-error"></a>**`error`** (string?): Location-check refusal text; omitted after successful location resolution.
 
 <a id="contract-installation-candidate"></a>
 ### Unregistered candidate
 
 Record `candidate`: `RunnerReconcileCandidate`.
 
-| Field | JSON type and presence | Meaning |
-| --- | --- | --- |
-| <a id="contract-installation-candidate-recorded_state"></a>`recorded_state` | string; required | unregistered for each candidate. |
-| <a id="contract-installation-candidate-scope"></a>`scope` | string; required | user or system according to the directory scanned. |
-| <a id="contract-installation-candidate-service_name"></a>`service_name` | string; null when absent | Parsed Label, or null if unavailable. |
-| <a id="contract-installation-candidate-executable_path"></a>`executable_path` | string; null when absent | Parsed ProgramArguments[0], falling back to Program, or null. |
-| <a id="contract-installation-candidate-plist_path"></a>`plist_path` | string; required | Candidate path observed during directory enumeration. |
-| <a id="contract-installation-candidate-service"></a>`service` | [Observed service](#contract-installation-service); null when absent | Service observation when label/domain permitted lookup; otherwise null. |
-| <a id="contract-installation-candidate-plist"></a>`plist` | [Observed plist](#contract-installation-plist); required | Current candidate file observation. |
-| <a id="contract-installation-candidate-ownership"></a>`ownership` | string; required | unknown when config is unavailable, ambiguous when label/executable is missing, otherwise unowned. |
+- <a id="contract-installation-candidate-recorded_state"></a>**`recorded_state`** (string): unregistered for each candidate.
+- <a id="contract-installation-candidate-scope"></a>**`scope`** (string): user or system according to the directory scanned.
+- <a id="contract-installation-candidate-service_name"></a>**`service_name`** (string ∪ null): Parsed Label, or null if unavailable.
+- <a id="contract-installation-candidate-executable_path"></a>**`executable_path`** (string ∪ null): Parsed ProgramArguments[0], falling back to Program, or null.
+- <a id="contract-installation-candidate-plist_path"></a>**`plist_path`** (string): Candidate path observed during directory enumeration.
+- <a id="contract-installation-candidate-service"></a>**`service`** ([Observed service](#contract-installation-service) ∪ null): Service observation when label/domain permitted lookup; otherwise null.
+- <a id="contract-installation-candidate-plist"></a>**`plist`** ([Observed plist](#contract-installation-plist)): Current candidate file observation.
+- <a id="contract-installation-candidate-ownership"></a>**`ownership`** (string): unknown when config is unavailable, ambiguous when label/executable is missing, otherwise unowned.
 
 <a id="contract-installation-inspection_error"></a>
 ### Reconciliation inspection error
 
 Record `inspection_error`: `RunnerReconcileInspectionError`.
 
-| Field | JSON type and presence | Meaning |
-| --- | --- | --- |
-| <a id="contract-installation-inspection_error-path"></a>`path` | string; omitted when absent | Directory or plist path involved; omitted when the user LaunchAgents path could not be determined. |
-| <a id="contract-installation-inspection_error-presence"></a>`presence` | string; required | unknown for each inspection error. |
-| <a id="contract-installation-inspection_error-error"></a>`error` | string; required | Inspection or path-resolution error text. |
+- <a id="contract-installation-inspection_error-path"></a>**`path`** (string?): Directory or plist path involved; omitted when the user LaunchAgents path could not be determined.
+- <a id="contract-installation-inspection_error-presence"></a>**`presence`** (string): unknown for each inspection error.
+- <a id="contract-installation-inspection_error-error"></a>**`error`** (string): Inspection or path-resolution error text.
 
 <a id="contract-installation-cleanup_observation"></a>
 ### Current cleanup observation
@@ -5376,26 +5068,22 @@ Record `cleanup_observation`: `RunnerCleanupObservation`.
 
 This describes the current producer’s appended values within the open observations history.
 
-| Field | JSON type and presence | Meaning |
-| --- | --- | --- |
-| <a id="contract-installation-cleanup_observation-phase"></a>`phase` | string; required | before or after identifies its position around attempted actions. |
-| <a id="contract-installation-cleanup_observation-service"></a>`service` | [Observed service](#contract-installation-service); required | Independent service observation at this phase. |
-| <a id="contract-installation-cleanup_observation-plist"></a>`plist` | [Observed plist](#contract-installation-plist); required | Independent plist observation at this phase. |
-| <a id="contract-installation-cleanup_observation-service_ownership"></a>`service_ownership` | string; omitted when absent | Ownership classification supporting the before decision; omitted after actions. |
-| <a id="contract-installation-cleanup_observation-plist_ownership"></a>`plist_ownership` | string; omitted when absent | Independent before-action plist ownership classification; omitted after actions. |
-| <a id="contract-installation-cleanup_observation-teardown_wait"></a>`teardown_wait` | [Service teardown polling](#contract-installation-cleanup_wait); omitted when absent | Polling receipt on after records; omitted before actions. |
+- <a id="contract-installation-cleanup_observation-phase"></a>**`phase`** (string): before or after identifies its position around attempted actions.
+- <a id="contract-installation-cleanup_observation-service"></a>**`service`** ([Observed service](#contract-installation-service)): Independent service observation at this phase.
+- <a id="contract-installation-cleanup_observation-plist"></a>**`plist`** ([Observed plist](#contract-installation-plist)): Independent plist observation at this phase.
+- <a id="contract-installation-cleanup_observation-service_ownership"></a>**`service_ownership`** (string?): Ownership classification supporting the before decision; omitted after actions.
+- <a id="contract-installation-cleanup_observation-plist_ownership"></a>**`plist_ownership`** (string?): Independent before-action plist ownership classification; omitted after actions.
+- <a id="contract-installation-cleanup_observation-teardown_wait"></a>**`teardown_wait`** ([Service teardown polling](#contract-installation-cleanup_wait)?): Polling receipt on after records; omitted before actions.
 
 <a id="contract-installation-cleanup_wait"></a>
 ### Service teardown polling
 
 Record `cleanup_wait`: `RunnerCleanupWait`.
 
-| Field | JSON type and presence | Meaning |
-| --- | --- | --- |
-| <a id="contract-installation-cleanup_wait-reads"></a>`reads` | integer; required | Number of service observations, including the initial post-action read. |
-| <a id="contract-installation-cleanup_wait-waited_ms"></a>`waited_ms` | integer; required | Sum of nominal requested polling intervals; zero when no wait occurred. |
-| <a id="contract-installation-cleanup_wait-poll_interval_ms"></a>`poll_interval_ms` | integer; required | Current requested polling interval, <!-- span limits.runner_remove_poll_interval.value_unit -->50 milliseconds<!-- /span -->. |
-| <a id="contract-installation-cleanup_wait-budget_ms"></a>`budget_ms` | integer; required | Current nominal waiting bound, <!-- span limits.runner_remove_teardown_wait.value_unit -->1,000 milliseconds<!-- /span -->. |
+- <a id="contract-installation-cleanup_wait-reads"></a>**`reads`** (integer): Number of service observations, including the initial post-action read.
+- <a id="contract-installation-cleanup_wait-waited_ms"></a>**`waited_ms`** (integer): Sum of nominal requested polling intervals; zero when no wait occurred.
+- <a id="contract-installation-cleanup_wait-poll_interval_ms"></a>**`poll_interval_ms`** (integer): Current requested polling interval, <!-- span limits.runner_remove_poll_interval.value_unit -->50 milliseconds<!-- /span -->.
+- <a id="contract-installation-cleanup_wait-budget_ms"></a>**`budget_ms`** (integer): Current nominal waiting bound, <!-- span limits.runner_remove_teardown_wait.value_unit -->1,000 milliseconds<!-- /span -->.
 
 **Support: [source read](#contract-support-grades) for [Managing runners](#contract-installation) and its descendants.** The authored reconcile and cleanup-observation field sets match these explicit JSON producers, including location-error variants, conditional omission and null candidate observations. Context: Read the json! construction sites and their enclosing branches. Evidence limit: Field-node coverage and source review establish the declared shape; a dedicated independent output mutation control for every dynamic branch remains open. Source: [runner_commands.rs](../controller/src/runner_commands.rs): `cmd_runner_reconcile`; [runner_manager.rs](../controller/src/runner_manager.rs): `remove_record`, `service_after_bootout`.
 
@@ -5406,14 +5094,12 @@ Record `cleanup_wait`: `RunnerCleanupWait`.
 
 Record `version_data`: `VersionData`.
 
-| Field | JSON type and presence | Meaning |
-| --- | --- | --- |
-| <a id="contract-identity-version-contract"></a>`contract` | string; required | The controller's public identity, also carried in the same envelope's `build.contract`. Uses [Exact admission identity](#contract-identity-public-contract). |
+- <a id="contract-identity-version-contract"></a>**`contract`** (string): The controller's public identity, also carried in the same envelope's `build.contract`. Uses [Exact admission identity](#contract-identity-public-contract).
 
 <a id="contract-identity-version-emit"></a>
 #### Version command
 
-[Controller](#contract-identity-definitions-controller) reports at CLI version dispatch. Entry: version. Recipient: cli caller. Reports: version. sets `version_data.contract` to [Contract](#contract-identity-build-contract), sets `result.ok` to `true`, sets `result.exit_code` to `0`, sets `result.rc` to `null`, sets `result.normalized_outcome` to `null`, sets `result.errno` to `null`, sets `result.error` to `null`, sets `result.stderr` to `null`, sets `result.stdout` to `null`. Uses [Envelope](#contract-identity-definitions-envelope), [Contract](#contract-identity-build-contract). The first command argument is --version or version. Emit the version envelope with its version payload and current build context; return process exit 0 after successful rendering, or 2 when envelope rendering returns an error.
+[Controller](#contract-identity-definitions-controller) reports at CLI version dispatch. Entry: version. Recipient: cli caller. Reports: version. [set_value(`version_data.contract`, [Contract](#contract-identity-build-contract)), set_value(`result.ok`, `true`), set_value(`result.exit_code`, `0`), set_value(`result.rc`, `null`), set_value(`result.normalized_outcome`, `null`), set_value(`result.errno`, `null`), set_value(`result.error`, `null`), set_value(`result.stderr`, `null`), set_value(`result.stdout`, `null`)]. Uses [Envelope](#contract-identity-definitions-envelope), [Contract](#contract-identity-build-contract). The first command argument is --version or version. Emit the version envelope with its version payload and current build context; return process exit 0 after successful rendering, or 2 when envelope rendering returns an error.
 
 Version dispatch reports the compiled context without loading a specimen or
 starting the runner client. Remaining arguments are ignored.
@@ -5424,6 +5110,65 @@ uses zero if its system time precedes that epoch.
 **Support: [check read](#contract-support-grades) for [Version command](#contract-identity-version-emit).** --version succeeds, emits kind version and result.ok true, supplies populated packaged build fields, and reports candidate-plist identity in data and build. Context: Read dispatch and serializer branches; read integration test invoking the selected controller binary and independently extracting its app plist identity. Evidence limit: Check read without execution. Alias version, trailing arguments, exact null result fields and rendering-error exit are source-established here; the cited check exercises --version success. Source: [cli.rs](../controller/src/cli.rs): `pub fn run`; [json_contract.rs](../controller/src/json_contract.rs): `JsonResult`, `now_unix_ms`. Check: [cli_contract.rs](../controller/integration/cli_contract.rs): `version_flag_reports_build_stamp_and_contract`.
 
 **Support: [check read](#contract-support-grades) for [Version command](#contract-identity-version-emit).** Version dispatch precedes other command parsing. Context: Static review of the cited producer and assertion branches. Evidence limit: The argument matrix compares kind, build, result and data while allowing each invocation its own timestamp. Source: [cli.rs](../controller/src/cli.rs): `pub fn run`. Check: [cli_contract.rs](../controller/integration/cli_contract.rs): `version_dispatch_uses_the_first_argument`.
+
+<a id="contract-notation"></a>
+## Reading the notation
+
+Record entries state field types, presence, meanings, vocabularies and local
+requirements. Expressions state requirements,
+not executable validation or evidence that a condition occurred.
+
+**Fields.** A bare type requires the key. `T?` represents an absent value by
+omitting the key; otherwise the field carries T. It does not mean JSON null.
+`T ∪ null` keeps the key present and represents absence by JSON null.
+These suffixes apply to the whole field value, including an array or map,
+not to its elements. Exceptional omission and input requirements remain explicit.
+Array and map types describe their elements and values. Hex and base64 name
+the string projection, not a different byte payload. Vocabulary openness,
+whether its displayed values are exhaustive, and unfamiliar-value meaning
+are separate facts; field-specific conditions still apply.
+
+**Expressions.** Dotted paths select members; bracketed indices select entries
+in their declared collections. Literals use JSON spelling, including `null`,
+`true`, `false` and `[]`. Lists retain their members; an effect list groups
+consequences, whereas `set_value(path, [])` assigns an empty array. Parentheses
+preserve grouping. `and`, `or`, `not`, comparisons, `+`, `−`, `×`, `//`
+(integer division) and `%` (remainder) have their ordinary meanings. `∈` and
+`∉` mean membership and nonmembership in the displayed list.
+
+| Form | Meaning |
+| --- | --- |
+| `present(x)`, `absent(x)` | Presence or absence of x in the rule's record domain; interpret its JSON representation through the field definition. A literal null, a false value and an omitted key are distinct. |
+| `implies(c, r)` | If condition c holds, requirement r must hold; this imposes no converse. |
+| `count(x)`, `length(x)` | Entry count of a collection, or length of the operand. |
+| `utf8_length(text)`, `byte_length(payload)` | UTF-8 byte length of decoded text; decoded byte length of a byte payload, independently of its hex/base64 character width. |
+| `contains(text, fragment)` | Text contains the fragment, including a displayed embedded NUL. |
+| `is_variant(x, label)`, `variant(x, label)` | Test the declared alternative; project that alternative. The projection supplies no guard by itself. |
+| `matches(i)` | Count candidates in binding i's domain satisfying its association restriction in the current outer scope. |
+| `sum_over(i, term)` | Sum the term over that domain and restriction; zero for no candidates. |
+| `later(collection, i)` | Members of the collection after index i. |
+| `set_value(target, value)` | Set the named target to the value. |
+| `perform(action, scope)`, `prevent(action, scope)` | Perform or prevent the linked action for the named scope. |
+| `withhold(target)` | Withhold that target. |
+| `retain_records(target)`, `retain_assessments(target)` | Retain the named records; keep the named assessment. These are distinct obligations. |
+| `emit(target, value)` | Report the target as the value. |
+
+Linked definitions retain their authoritative meaning. A displayed limit gives
+its current value, unit and limit identifier. A binding declares a domain;
+its association restriction selects candidates, without asserting cardinality.
+“For each” quantifies the listed indices outermost first and applies to child
+obligations. Child indices extend that scope. An aggregate binds its own index;
+`matches(i) = 1` does not bind i for a later expression. Bindings without
+“For each” retain their stated symbolic scope.
+
+Rules state acting components, boundary, entries, recipients and reports.
+Child rows inherit context, bindings, applicability and quantified scope;
+local context is shown where it changes. Parent and child applicability conjoin.
+Subordinate rows name their parent. “First matching case” uses listed order;
+“first failed condition” and accumulation remain distinct failure policies.
+Trigger labels and explicit scopes govern effects; no notation broadens them
+to other workers, recipients or entry points.
+
 
 ## Evidence support
 

@@ -1079,9 +1079,11 @@ def _expression_text(tree, expression):
     if isinstance(value, (ast.Name, ast.Attribute, ast.Subscript)):
         return '`' + ast.unparse(value) + '`'
     if isinstance(value, (ast.List, ast.Tuple, ast.Set)):
+        if isinstance(value, ast.List):
+            return '[' + ', '.join(_expression_text(tree, x) for x in value.elts) + ']'
         if not value.elts:
-            return 'an empty array' if isinstance(value, ast.List) else 'an empty sequence'
-        return ', '.join(_expression_text(tree, x) for x in value.elts)
+            return 'an empty sequence'
+        return '(' + ', '.join(_expression_text(tree, x) for x in value.elts) + ')'
     if isinstance(value, ast.BoolOp):
         conjunction = ' and ' if isinstance(value.op, ast.And) else ' or '
         return '(' + conjunction.join(_expression_text(tree, x) for x in value.values) + ')'
@@ -1095,7 +1097,7 @@ def _expression_text(tree, expression):
         return '(' + _expression_text(tree, value.left).rstrip() + ' ' + operators[type(value.op)] + ' ' + _expression_text(tree, value.right).rstrip() + ')'
     if isinstance(value, ast.Compare):
         operators = {ast.Eq: '=', ast.NotEq: '≠', ast.Lt: '<', ast.LtE: '≤',
-                     ast.Gt: '>', ast.GtE: '≥', ast.In: 'is one of', ast.NotIn: 'is outside'}
+                     ast.Gt: '>', ast.GtE: '≥', ast.In: '∈', ast.NotIn: '∉'}
         operands = [value.left, *value.comparators]
         parts = [_expression_text(tree, operands[0])]
         for operator, operand in zip(value.ops, operands[1:]):
@@ -1109,25 +1111,8 @@ def _expression_text(tree, expression):
         if call == 'ref':
             return _link(tree.index[value.args[0].value])
         args = [_expression_text(tree, x) for x in value.args]
-        if call == 'present': return args[0] + ' is present'
-        if call == 'absent': return args[0] + ' is absent'
-        if call == 'implies': return '(if ' + args[0] + ', then ' + args[1] + ')'
-        if call == 'later': return 'members after ' + args[1] + ' in ' + args[0]
-        if call == 'set_value': return 'sets ' + args[0] + ' to ' + args[1]
-        if call == 'perform': return 'performs ' + args[0] + ' for ' + args[1]
-        if call == 'prevent': return 'prevents ' + args[0] + ' for ' + args[1]
-        if call == 'retain_records': return 'retains the records ' + args[0]
-        if call == 'retain_assessments': return 'keeps the assessment ' + args[0]
-        if call == 'withhold': return 'withholds ' + args[0]
-        if call == 'emit': return 'reports ' + args[0] + ' as ' + args[1]
-        if call in {'count', 'length'}: return call + ' of ' + args[0]
-        if call == 'variant': return args[1] + ' alternative of ' + args[0]
-        if call == 'is_variant': return args[0] + ' has alternative ' + args[1]
-        if call == 'matches': return 'number of matching entries for ' + args[0]
-        if call == 'sum_over': return 'sum over ' + args[0] + ' of ' + args[1]
-        if call == 'utf8_length': return 'UTF-8 byte length of ' + args[0]
-        if call == 'byte_length': return 'decoded byte length of ' + args[0]
-        if call == 'contains': return args[0] + ' contains ' + args[1]
+        if call in CALL_ARITY:
+            return call + '(' + ', '.join(args) + ')'
     raise ContractError('cannot render an unchecked expression')
 
 
@@ -1308,6 +1293,74 @@ def _field_type_text(tree, info):
     return record_definitions.field_type(info)
 
 
+def _field_signature(tree, member):
+    """Display presence without changing the canonical imported field account."""
+    info = _public_field(tree.records[member.parent.record], member.field_info)
+    kind = _field_type_text(tree, member.field_info)
+    return {'required': kind, 'omitted when absent': kind + '?',
+            'null when absent': kind + ' ∪ null'}.get(info['presence'], kind + '; ' + info['presence'])
+
+
+NOTATION = '''<a id="contract-notation"></a>
+## Reading the notation
+
+Record entries state field types, presence, meanings, vocabularies and local
+requirements. Expressions state requirements,
+not executable validation or evidence that a condition occurred.
+
+**Fields.** A bare type requires the key. `T?` represents an absent value by
+omitting the key; otherwise the field carries T. It does not mean JSON null.
+`T ∪ null` keeps the key present and represents absence by JSON null.
+These suffixes apply to the whole field value, including an array or map,
+not to its elements. Exceptional omission and input requirements remain explicit.
+Array and map types describe their elements and values. Hex and base64 name
+the string projection, not a different byte payload. Vocabulary openness,
+whether its displayed values are exhaustive, and unfamiliar-value meaning
+are separate facts; field-specific conditions still apply.
+
+**Expressions.** Dotted paths select members; bracketed indices select entries
+in their declared collections. Literals use JSON spelling, including `null`,
+`true`, `false` and `[]`. Lists retain their members; an effect list groups
+consequences, whereas `set_value(path, [])` assigns an empty array. Parentheses
+preserve grouping. `and`, `or`, `not`, comparisons, `+`, `−`, `×`, `//`
+(integer division) and `%` (remainder) have their ordinary meanings. `∈` and
+`∉` mean membership and nonmembership in the displayed list.
+
+| Form | Meaning |
+| --- | --- |
+| `present(x)`, `absent(x)` | Presence or absence of x in the rule's record domain; interpret its JSON representation through the field definition. A literal null, a false value and an omitted key are distinct. |
+| `implies(c, r)` | If condition c holds, requirement r must hold; this imposes no converse. |
+| `count(x)`, `length(x)` | Entry count of a collection, or length of the operand. |
+| `utf8_length(text)`, `byte_length(payload)` | UTF-8 byte length of decoded text; decoded byte length of a byte payload, independently of its hex/base64 character width. |
+| `contains(text, fragment)` | Text contains the fragment, including a displayed embedded NUL. |
+| `is_variant(x, label)`, `variant(x, label)` | Test the declared alternative; project that alternative. The projection supplies no guard by itself. |
+| `matches(i)` | Count candidates in binding i's domain satisfying its association restriction in the current outer scope. |
+| `sum_over(i, term)` | Sum the term over that domain and restriction; zero for no candidates. |
+| `later(collection, i)` | Members of the collection after index i. |
+| `set_value(target, value)` | Set the named target to the value. |
+| `perform(action, scope)`, `prevent(action, scope)` | Perform or prevent the linked action for the named scope. |
+| `withhold(target)` | Withhold that target. |
+| `retain_records(target)`, `retain_assessments(target)` | Retain the named records; keep the named assessment. These are distinct obligations. |
+| `emit(target, value)` | Report the target as the value. |
+
+Linked definitions retain their authoritative meaning. A displayed limit gives
+its current value, unit and limit identifier. A binding declares a domain;
+its association restriction selects candidates, without asserting cardinality.
+“For each” quantifies the listed indices outermost first and applies to child
+obligations. Child indices extend that scope. An aggregate binds its own index;
+`matches(i) = 1` does not bind i for a later expression. Bindings without
+“For each” retain their stated symbolic scope.
+
+Rules state acting components, boundary, entries, recipients and reports.
+Child rows inherit context, bindings, applicability and quantified scope;
+local context is shown where it changes. Parent and child applicability conjoin.
+Subordinate rows name their parent. “First matching case” uses listed order;
+“first failed condition” and accumulation remain distinct failure policies.
+Trigger labels and explicit scopes govern effects; no notation broadens them
+to other workers, recipients or entry points.
+'''
+
+
 PART_TITLES = {
     'identity': None, 'definitions': 'Definitions',
     'input': 'Running a specimen: accepted input', 'delivery': 'Delivery to the host',
@@ -1391,12 +1444,11 @@ def render(tree):
         if node.prose: output.extend([node.prose, ''])
         fields = [c for c in node.children if c.kind == 'field']
         if fields:
-            output.extend(['| Field | JSON type and presence | Meaning |', '| --- | --- | --- |'])
             for member in fields:
-                info = _public_field(tree.records[node.record], member.field_info)
                 name = member.facts.get('name', member.local)
-                output.append('| <a id="' + _anchor(member) + '"></a>`' + name + '` | ' +
-                              _cell(_field_type_text(tree, member.field_info) + '; ' + info['presence']) + ' | ' + _cell(_field_meaning(tree, member)) + ' |')
+                output.append('- <a id="' + _anchor(member) + '"></a>**`' + name + '`** (' +
+                              ' '.join(_field_signature(tree, member).split()) + '): ' +
+                              ' '.join(_field_meaning(tree, member).split()))
             output.append('')
         if node.record and tree.records[node.record].get('variants'):
             output.extend(['| Alternative | Record |', '| --- | --- |'])
@@ -1427,10 +1479,11 @@ def render(tree):
         if title and not same_title: output.extend(['## ' + title, ''])
         for node in roots[part]: visit(node, 3 if title and not same_title else 2)
         if part == 'identity':
-            output.extend(['<!-- CONTRACT SURFACE TABLE -->', ''])
+            output.extend(['<!-- CONTRACT SURFACE TABLE -->', '',
+                           'Field entries and rules use the [notation below](#contract-notation).', ''])
     if not roots['identity']:
         output[2:2] = ['<!-- CONTRACT SURFACE TABLE -->', '']
-    output.extend(['## Evidence support', '', '<a id="contract-support-grades"></a>',
+    output.extend([NOTATION, '', '## Evidence support', '', '<a id="contract-support-grades"></a>',
                    '**Support grades.** ' + ' '.join('**' + key.replace('_', ' ') + ':** ' + text
                                                      for key, text in SUPPORT_GRADES.items()), ''])
     applicability, findings, gaps = _views(tree)
@@ -1530,11 +1583,13 @@ def statistics(tree, body):
     """Counts separate rendered tables from authored prose and free-text facts."""
     lines = body.splitlines()
     table_lines = [line for line in lines if line.startswith('|')]
+    field_entries = [line for line in lines if line.startswith('- <a id="contract-')]
     authored = '\n'.join(n.prose for n in tree.nodes if n.kind not in {'field', 'owner'})
     fields = '\n'.join(n.prose for n in tree.nodes if n.kind == 'field')
     free_text = '\n'.join(value for n in tree.nodes for key, value in n.facts.items() if key.startswith('free.'))
     return {'lines': len(lines), 'words': len(body.split()),
             'table_lines': len(table_lines), 'table_words': len('\n'.join(table_lines).split()),
+            'field_entry_lines': len(field_entries), 'field_entry_words': len('\n'.join(field_entries).split()),
             'authored_body_lines': len([line for line in authored.splitlines() if line.strip()]),
             'authored_body_words': len(authored.split()), 'field_meaning_words': len(fields.split()),
             'free_text_words': len(free_text.split()), 'free_counts': tree.free_counts,

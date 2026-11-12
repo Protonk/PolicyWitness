@@ -199,6 +199,84 @@ class ContractTreeTests(receipts.TestCase):
         self.assertIn('retain_records', __import__('ast').dump(facts))
         self.assertIn('withhold', __import__('ast').dump(facts))
 
+    def test_field_entries_preserve_presence_meanings_and_child_obligations(self):
+        body = minimal_surface().replace('### Phases {phases: field}', '''#### Status required {required: condition}
+```contract
+test: present(sample.status)
+```
+### Phases {phases: field}''')
+        tree = self.load(body)
+        before = self.model.public_payload(tree, 'demo')
+        rendered = self.model.render(tree)
+        for text in (
+                '**`status`** (string): The reported state of this model.',
+                '**`phases`** (array of [Phase record](#contract-demo-phase)):',
+                '**`note`** (string ∪ null): Null records the absence of a model note.',
+                'Admitted vocabulary: open; displayed list: illustrative: `"ready"`, `"unknown"`.',
+                'Unfamiliar values: Retain an unfamiliar label without assigning the listed meanings.',
+                '**Status.**\n\n| Item | Requirement or consequence |',
+                '<a id="contract-demo-report-status-required"></a>Status required | Requires present(`sample.status`).'):
+            self.assertIn(text, rendered)
+        self.assertNotIn('| Field | JSON type and presence | Meaning |', rendered)
+        omitted = self.load(body.replace('json_null: true', 'json_null: false', 1))
+        self.assertIn('**`note`** (string?):', self.model.render(omitted))
+        self.assertNotEqual(before, self.model.public_payload(omitted, 'demo'))
+        self.assertEqual(before, self.model.public_payload(tree, 'demo'))
+        # Every production field retains its own anchor and full authored meaning.
+        current = self.model.load_tree(ROOT)
+        document = self.model.render(current)
+        entries = {line.split('</a>', 1)[0].split('id="', 1)[1].removesuffix('">'): line
+                   for line in document.splitlines() if line.startswith('- <a id="')}
+        for node in (n for n in current.nodes if n.kind == 'field'):
+            with self.subTest(field=node.id):
+                anchor = 'contract-' + node.id.replace('.', '-')
+                self.assertEqual(document.count('<a id="' + anchor + '"></a>'), 1)
+                self.assertIn(' '.join(node.prose.split()), entries[anchor])
+
+    def test_presence_exceptions_stay_explicit_in_field_entries(self):
+        tree = self.load()
+        node = tree.index['demo.report.note']
+        # Independent declarations cover the serializer exceptions, including
+        # required-null input versus optional-null output.
+        record = tree.records[node.parent.record]
+        cases = [
+            ({'input': True}, {'required_key': True, 'json_null': True}, 'string; required; may be null'),
+            ({'input': True}, {}, 'string; as defined below'),
+            ({}, {'conditional_presence': 'source'}, 'string; present when source has a value; may be null'),
+            ({}, {'omission': 'same_as_input'}, 'string; omitted when named in same_as_input; otherwise present, possibly null'),
+            ({}, {'omission': 'String::is_empty'}, 'string; omitted when empty'),
+        ]
+        original = dict(node.field_info)
+        for record_facts, field_facts, expected in cases:
+            with self.subTest(expected=expected):
+                record.pop('input', None)
+                record.update(record_facts)
+                node.field_info = {**original, **field_facts}
+                self.assertEqual(self.model._field_signature(tree, node), expected)
+
+    def test_compact_notation_preserves_literals_grouping_and_effect_scope(self):
+        import ast
+        tree = self.load()
+        expressions = {
+            '[]': '[]', '()': 'an empty sequence',
+            '[None, False, "two words"]': '[`null`, `false`, `"two words"`]',
+            'sample.status not in ["ready", "unknown"]': '`sample.status` ∉ [`"ready"`, `"unknown"`]',
+            '[set_value(sample.phases, []), retain_records(sample), withhold(sample.note)]':
+                '[set_value(`sample.phases`, []), retain_records(`sample`), withhold(`sample.note`)]',
+            'implies(present(sample.note), sample.status == "ready" or sample.status == "unknown")':
+                'implies(present(`sample.note`), (`sample.status` = `"ready"` or `sample.status` = `"unknown"`))',
+        }
+        for source, expected in expressions.items():
+            with self.subTest(expression=source):
+                self.assertEqual(self.model._expression_text(tree, ast.parse(source, mode='eval')), expected)
+        legend = self.model.NOTATION
+        for name in self.model.CALL_ARITY.keys() - {'ref', 'limit'}:
+            self.assertIn('`' + name + '(', legend)
+        for distinction in ('does not mean JSON null', 'keeps the key present',
+                            'not to its elements', 'does not bind i', 'outermost first',
+                            'no converse', 'first failed condition', 'other workers, recipients or entry points'):
+            self.assertIn(distinction, legend)
+
 
     def test_binding_domains_and_selectors_render_without_cardinality_claim(self):
         body = minimal_surface().replace('bind.p: sample.phases\n', '', 1)
@@ -239,13 +317,13 @@ class ContractTreeTests(receipts.TestCase):
                    if '#contract-demo-report-read_status)' in line)
         self.assertIn('At the rule: sets `sample.status`.', row)
         failure = '[Otherwise](#contract-demo-report-read_status-failure) (on failure): '
-        self.assertIn(failure + 'prevents [Activate a phase](#contract-demo-meanings-activate) for '
-                      'members after `p` in `sample.phases`; retains `sample`; '
+        self.assertIn(failure + 'prevent([Activate a phase](#contract-demo-meanings-activate), '
+                      'later(`sample.phases`, `p`)); retains `sample`; '
                       'withholds [Supported assessment](#contract-demo-meanings-assessment).', row)
         self.assertIn('[Successful consequence](#contract-demo-report-read_status-success) (on success).', row)
         # Assigned values, free consequences and prose belong to the linked rows.
         body = rendered.split('## Evidence support', 1)[0]
-        for text in ('sets `sample.status` to `"reviewed"`.', 'Keep the direct retained explanation.',
+        for text in ('set_value(`sample.status`, `"reviewed"`).', 'Keep the direct retained explanation.',
                      'The record remains available when the assessment is withheld.',
                      'On success, retain the successful model note.',
                      'The successful note carries its own consequence detail.'):
@@ -368,7 +446,7 @@ class ContractTreeTests(receipts.TestCase):
         rendered = self.model.render(tree)
         quantity = tree.limits['probe_steps']
         expected = f"(`{quantity['value']:,} {quantity['unit']}` (`probe_steps`) − `1`)"
-        self.assertIn('count of `sample.phases` ≤ ' + expected, rendered)
+        self.assertIn('count(`sample.phases`) ≤ ' + expected, rendered)
         self.assertNotIn("limit('probe_steps')", rendered)
 
     def test_independent_and_nested_implications_keep_distinct_scopes(self):
@@ -376,9 +454,9 @@ class ContractTreeTests(receipts.TestCase):
                             'test: implies(present(sample.note), count(sample.phases) > 0) and '
                             'implies(sample.status == "ready", implies(present(sample.note), count(sample.phases) < 3))')
         rendered = self.model.render(self.load(body))
-        self.assertIn('((if `sample.note` is present, then count of `sample.phases` > `0`) and '
-                      '(if `sample.status` = `"ready"`, then '
-                      '(if `sample.note` is present, then count of `sample.phases` < `3`)))', rendered)
+        self.assertIn('(implies(present(`sample.note`), count(`sample.phases`) > `0`) and '
+                      'implies(`sample.status` = `"ready"`, '
+                      'implies(present(`sample.note`), count(`sample.phases`) < `3`)))', rendered)
 
     def test_public_coverage_accounts_for_entire_imported_record_families(self):
         complete = self.model.load_tree(ROOT)
@@ -583,7 +661,7 @@ The item's numeric value.
         self.assertEqual(tree.index['demo.report.read_status.failure'].each, ('p',))
         rendered = self.model.render(tree)
         self.assertIn('For each `p`.', rendered)
-        self.assertIn('number of matching entries for `q` = `1`', rendered)
+        self.assertIn('matches(`q`) = `1`', rendered)
         public = self.model.public_payload(tree, 'demo')
         self.assertEqual(next(row for row in public['nodes'] if row['id'] == rule.id)['each_scope'], ['p'])
         with self.assertRaisesRegex(ValueError, 'inherited quantified index'):
@@ -591,7 +669,7 @@ The item's numeric value.
         aggregate = self.feature_fixture('bind.p: sample.phases\nbind.i: sample.phases[p].items\n'
             'test: sum_over(p, count(sample.phases[p].items)) >= 0 and '
             'sum_over(p, sum_over(i, sample.phases[p].items[i].value)) >= 0')
-        self.assertIn('sum over `p`', self.model.render(self.load(aggregate)))
+        self.assertIn('sum_over(`p`,', self.model.render(self.load(aggregate)))
         # Counting a matching candidate does not bind that candidate in effects.
         escaped = body.replace('effects: [prevent(', 'effects: [set_value(sample.phases[q].id, "escaped"), prevent(', 1)
         with self.assertRaisesRegex(ValueError, 'outside quantified scope'):
@@ -622,8 +700,8 @@ The item's numeric value.
             'byte_length(sample.payload) >= 0 and not contains(sample.status, "\\u0000")')
         tree = self.load(body)
         rendered = self.model.render(tree)
-        self.assertIn('UTF-8 byte length of `sample.status`', rendered)
-        self.assertIn('decoded byte length of `sample.payload`', rendered)
+        self.assertIn('utf8_length(`sample.status`)', rendered)
+        self.assertIn('byte_length(`sample.payload`)', rendered)
         self.assertEqual(tree.index['demo.report.read_status'].object_types['sample.payload']['projection'], 'base64')
         with self.assertRaisesRegex(ValueError, 'projection requires a Data field'):
             self.load(body.replace('type: "Data"', 'type: "String"'))
@@ -644,7 +722,7 @@ The item's numeric value.
                                     'variant(' + value + ', "probe").step_id != "")')
         # Remove the unrelated fixture effect binding: its p denotes a different collection.
         body = body.replace('bind.p: sample.phases\n', '').replace('later(sample.phases, p)', 'sample')
-        self.assertIn('has alternative `"probe"`', self.model.render(self.load(body)))
+        self.assertIn('is_variant(`request.phases[p].actions[a]`, `"probe"`)', self.model.render(self.load(body)))
         for expression in ('is_variant(sample.status, "probe")', 'is_variant(' + value + ', "missing")',
                            'is_variant(' + value + ', sample.status)'):
             with self.subTest(expression=expression), self.assertRaisesRegex(ValueError, 'unknown variant'):
@@ -653,7 +731,7 @@ The item's numeric value.
     def test_empty_list_assignment_uses_the_target_type_only_for_empty_lists(self):
         before = 'effects: [prevent(ref("demo.meanings.activate"), later(sample.phases, p)), retain_records(sample), withhold(ref("demo.meanings.assessment"))]'
         body = self.changed(before, 'effects: set_value(sample.phases, [])')
-        self.assertIn('sets `sample.phases` to an empty array', self.model.render(self.load(body)))
+        self.assertIn('set_value(`sample.phases`, [])', self.model.render(self.load(body)))
         for target, value, diagnostic in [('sample.status', '[]', 'list target'),
                 ('sample', '[]', 'list target'), ('sample.phases', '["wrong record"]', 'incompatible types'),
                 ('sample.phases', '()', 'incompatible types')]:
@@ -703,7 +781,7 @@ effects: set_value(sample.note, "fallback")
         self.assertIn('[Ready](#contract-demo-report-decision-ready) (case 1): sets `sample.note`.', finding)
         self.assertIn('[Fallback](#contract-demo-report-decision-fallback) (case 3): sets `sample.note`.', finding)
         self.assertNotIn('"fallback"', finding)
-        self.assertIn('sets `sample.note` to `"fallback"`', rendered.split('## Evidence support', 1)[0])
+        self.assertIn('set_value(`sample.note`, `"fallback"`)', rendered.split('## Evidence support', 1)[0])
         shared = component_surface().replace('The component that reads a retained model.',
             'The component that reads a retained model.').replace('defines: "component"',
             'defines: "component"\nuses: ["demo.report.decision.ready"]', 1)
@@ -782,7 +860,7 @@ effects: perform(ref("identity.procedures.refuse"), ref("demo.report"))
         body = self.changed(before, 'effects: perform(ref("identity.procedures.refuse"), sample)')
         tree = self.load(body, additions={'docs/contract/components.surface.md': shared})
         rendered = self.model.render(tree)
-        self.assertIn('performs [Refuse the model action](#contract-identity-procedures-refuse) for `sample`', rendered)
+        self.assertIn('perform([Refuse the model action](#contract-identity-procedures-refuse), `sample`)', rendered)
         public = self.model.public_payload(tree, 'demo')
         self.assertIn('identity.procedures.refuse.status', {row['id'] for row in public['shared']})
         changed = self.load(body, additions={'docs/contract/components.surface.md': shared.replace('"refused"', '"withheld"')})
@@ -793,7 +871,7 @@ effects: perform(ref("identity.procedures.refuse"), ref("demo.report"))
         dependencies = {row['id'] for row in self.model.public_payload(nested, 'demo')['shared']}
         self.assertLessEqual({'identity.procedures.validate.required', 'identity.procedures.validate.required.failure',
                               'identity.procedures.refuse.status'}, dependencies)
-        self.assertIn('performs [Validate the model request]', self.model.render(nested))
+        self.assertIn('perform([Validate the model request]', self.model.render(nested))
         for expression, diagnostic in [
                 ('perform(sample, sample)', 'referenced action'),
                 ('perform(ref("identity.definitions.controller"), sample)', 'referenced action'),
@@ -868,9 +946,9 @@ effects: perform(ref("identity.procedures.refuse"), ref("demo.report"))
         self.assertEqual(tree.index['trial.receipt.extent'].object_types['receipt.bytecode_b64']['projection'], 'base64')
         self.assertEqual(tree.free_counts, dict(condition=0, dependency=0, effect=1, when=0))
         rendered = self.model.render(tree)
-        self.assertIn('sum over `p`', rendered)
-        self.assertIn('decoded byte length of `receipt.bytecode_b64`', rendered)
-        self.assertIn('sets `host_report.steps` to an empty array', rendered)
+        self.assertIn('sum_over(`p`,', rendered)
+        self.assertIn('byte_length(`receipt.bytecode_b64`)', rendered)
+        self.assertIn('set_value(`host_report.steps`, [])', rendered)
         public = self.model.public_payload(tree, 'trial')
         order = next(row for row in public['nodes'] if row['id'] == 'trial.step.observation')['case_order']
         self.assertEqual([item.rsplit('.', 1)[1] for item in order],
@@ -923,7 +1001,7 @@ effects: perform(ref("identity.procedures.refuse"), ref("demo.report"))
                          .count('| Item | Requirement or consequence |'), 1)
         self.assertIn('Association restriction for `p`: `sample.phases[p].id` = `"expected"`.', rendered)
         self.assertIn('Association restriction for `p`: `sample.phases[p].id` ≠ `"expected"`.', rendered)
-        self.assertIn('On failure, prevents', rendered)
+        self.assertIn('On failure, [prevent(', rendered)
 
     def test_navigation_index_keeps_complete_context_at_the_rule(self):
         tree = self.load()
@@ -931,7 +1009,7 @@ effects: perform(ref("identity.procedures.refuse"), ref("demo.report"))
         rendered = self.model.render(tree)
         local = rendered.split('<a id="contract-demo-report-read_status"></a>', 1)[1].split('<a id="contract-demo-report-read_status-failure">', 1)[0]
         for text in ('controller checks at reply admission.', 'Entry: cli.', 'Recipient: controller.',
-                     'Reports: ordinary.', 'Applies when `sample.status` is present.'):
+                     'Reports: ordinary.', 'Applies when present(`sample.status`).'):
             self.assertIn(text, local)
         navigation = rendered.split('\n## Rule applicability\n', 1)[1].split('\n## Controller findings\n', 1)[0]
         self.assertIn('| Acting components | Rules |', navigation)
