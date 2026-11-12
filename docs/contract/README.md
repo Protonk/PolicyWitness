@@ -144,13 +144,16 @@ field meanings and relationship facts enter the public snapshot.
 
 The renderer joins field meanings to public JSON types and presence,
 compacts condition/effect/outcome siblings into tables, and derives
-applicability, controller-finding and known-gap views. The controller index
-selects checks whose `who` references `identity.definitions.controller`, and
-retains exact literal `"controller"` indexing for existing fixtures. Its
-consequence column includes direct structured and free effects, followed by
-child effects with their triggers and consequence prose. Structured operands
-come from conditions, applicability, binding domains and association selectors;
-free-text operands remain in the linked rule. The entry point fills
+applicability, controller-finding and known-gap views. A subordinate row
+follows its parent row in the same table and carries the parent's title.
+The controller index selects checks whose `who` references
+`identity.definitions.controller`, and retains exact literal `"controller"`
+indexing for existing fixtures. It names the record members read by each
+check's conditions, applicability, binding domains and association selectors.
+Its consequence column links each consequence with its local entry, trigger or
+case position and the targets it sets, withholds, retains, prevents or
+performs. Operand paths, assigned values, free effects and consequence prose
+remain at the linked rule and rows. The entry point fills
 the surface-table marker after the opening identity material. Statistics
 report rendered lines and words, table content, authored prose, field
 meanings and free-text relationships separately.
@@ -250,8 +253,8 @@ snapshot reader independently of current authoring syntax.
 
 
 The readable rule keeps its complete effective context and applicability.
-The final applicability view indexes rule links and acting components; the
-conditions stay beside the obligations they qualify. Support grades are defined
+The final applicability view lists rule links under each set of acting
+components; the conditions stay beside the obligations they qualify. Support grades are defined
 once, each support paragraph identifies its subject and scope, and citations
 group source paths while retaining the named symbols. Owner-only editorial
 changes and renderer layout leave the canonical public payload unchanged.

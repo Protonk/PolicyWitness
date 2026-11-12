@@ -31,27 +31,22 @@ values: ["no_worker", "clean_exit", "nonzero_exit", "signaled", "conflicting", "
 ```
 
 The controller's disposition projection. An ordinary worker supplies its
-validated lifecycle result. Actor execution uses `per_actor` when at least
-one actor has a worker projection; each actor's entry supplies that ending.
-A reply-wide finding sets this field to `withheld`. `no_worker` means this
+validated lifecycle result.
+`no_worker` means this
 projection had no worker subprocess record to assess.
 
 ### termination_cause {termination_cause: field}
 
 A controller attribution selected from the validated lifecycle chain.
-A clean ordinary exit gives null; another ordinary disposition gives
-`unknown` until the host-cleanup conditions below establish one of the
-named causes. Actor-form top-level diagnostics begin with null because
-causes belong to the actor entries. A reply-wide finding sets this field
-to `unknown`.
+Actor-form top-level diagnostics begin with null because
+causes belong to the actor entries.
 
 ### stop_reason {stop_reason: field}
 
 Supported ordinary-worker stop observation when its answer is one of
 `sentinel_deadline`, `done`, `child_reaped`, `wait_error`,
 `policy_write_error` or `policy_transfer_deadline`; otherwise null.
-Actor stop reasons belong to their actor entries. A later reply-wide
-finding preserves an already projected ordinary stop reason.
+Actor stop reasons belong to their actor entries.
 
 ### disposition_integrity {disposition_integrity: field}
 
@@ -60,8 +55,7 @@ finding preserves an already projected ordinary stop reason.
 projection to validate. When at least one actor has a worker projection,
 actor aggregation is valid when every actor projection is valid or has null
 integrity; it becomes invalid when any actor projection is invalid. With no
-worker projections, aggregate integrity remains null. A reply-wide finding
-also sets invalid.
+worker projections, aggregate integrity remains null.
 A host's supported conflict can accompany valid integrity: the controller
 has checked the conflict's own evidence.
 
@@ -69,16 +63,13 @@ has checked the conflict's own evidence.
 
 Controller findings at this scope, followed or preceded according to the
 producing check order by copied host conflict records where applicable.
-Copied host conflicts preserve rule, question, step index and observations.
-A nonempty list can accompany valid integrity when its records are
-validated host conflicts. Actor-local findings remain in the actor entry.
+Actor-local findings remain in the actor entry.
 
 ### actors {actors: field}
 
 Present for `execution_form: "actors"`, in the host's actor order. Each
 entry is derived from that actor's subprocess and its actions selected
-through the phase plan. A reply-wide finding preserves these already
-computed actor entries.
+through the phase plan.
 
 ### Decoded response collection bounds {geometry: checks}
 
@@ -93,7 +84,7 @@ bind.p: reply.phases
 bind.a: reply.actors
 ```
 
-These bounds apply to every structurally decoded reply reaching this gate, including preparation and reporting-failure replies. Optional collections are bounded when present. Counts use the retained rows before semantic association. A failed bound selects the calling operation’s response-context refusal.
+These bounds apply to every structurally decoded reply reaching this gate, including preparation and reporting-failure replies. Counts use the retained rows before semantic association.
 
 #### Phase and action tables {plan: condition}
 
@@ -132,7 +123,7 @@ bind.s: reply.steps
 match.s: reply.steps[s].phase_id == reply.phases[p].phase_id and reply.steps[s].sandbox_check.missing_reason != "query_not_requested"
 ```
 
-For this guard, the probe count includes each retained step with the same phase_id except a step whose missing_reason is query_not_requested. An absent missing_reason is included. The count uses the carried labels before their semantic uniqueness or association is checked.
+An absent missing_reason is included.
 
 ##### Expected identifiers {expected: condition}
 
@@ -384,13 +375,8 @@ retained_free: {"effect":{"kind":"native_protocol","reason":"The controller invo
 For the actor form, the controller computes each worker's projection
 separately. It then sets the top-level disposition to `per_actor` when any
 entry differs from `no_worker`, and aggregates the actor integrity values.
-This calculation occurs before the reply-wide checks below.
 
-Ordinary execution copies the helper's projection to the top-level
-execution diagnostics. Actor execution computes a projection for each actor
-in the retained actor order, copies that actor's label, and appends the
-projection. The two concrete scopes below bind each source subprocess to
-its own output fields. Their lifecycle prerequisites are the actual helper
+Their lifecycle prerequisites are the actual helper
 check in each invocation, including retained reporting-failure replies.
 
 ### Actor projection rows {actor_rows: reports}
@@ -420,9 +406,7 @@ each: ["a", "d"]
 test: envelope.data.runner_sandbox_diagnostics.actors[d].actor_id == reply.actors[a].actor_id
 ```
 
-The projection list has exactly the retained actor list's length and order.
-Position associates an input actor with its output projection; its label is
-copied even when that actor has no subprocess. Duplicate labels retain their
+Its label is copied even when that actor has no subprocess. Duplicate labels retain their
 separate positions and remain subject to the reply-wide association checks.
 
 ### Ordinary worker projection {ordinary: subject}
@@ -451,9 +435,7 @@ free.condition: For reply.runner_subprocess and its assigned actions under the c
 retained_free: {"condition":{"kind":"native_protocol","reason":"This prerequisite is the lifecycle validator's intermediate return for the selected worker, assigned actions and reporting form. Successful validation permits host conflicts to be copied into the final disposition_issues array."}}
 ```
 
-The ending, stop-reason, attribution and host-conflict copy rules require
-this result from the same worker validation. A failed prerequisite has the
-following local consequence.
+
 
 ##### Local lifecycle findings {local_failure: effect}
 
@@ -517,8 +499,7 @@ test: True
 effects: [set_value(envelope.data.runner_sandbox_diagnostics.process_disposition, "unrecognized"), set_value(envelope.data.runner_sandbox_diagnostics.termination_cause, "unknown")]
 ```
 
-The `unconfirmed` value merges the two host states while the retained
-host claim preserves which state and reason it supplied. Lifecycle validation
+Lifecycle validation
 has already checked the integer exit value and supported-conflict evidence.
 
 #### Supported stop reason {stop: reports}
@@ -647,10 +628,7 @@ each: ["i", "j"]
 effects: [set_value(envelope.data.runner_sandbox_diagnostics.disposition_issues[j].kind, reply.runner_subprocess.disposition.issues[i].kind), set_value(envelope.data.runner_sandbox_diagnostics.disposition_issues[j].detail, reply.runner_subprocess.disposition.issues[i].detail), set_value(envelope.data.runner_sandbox_diagnostics.disposition_issues[j].subject_path, None), set_value(envelope.data.runner_sandbox_diagnostics.disposition_issues[j].rule, reply.runner_subprocess.disposition.issues[i].rule), set_value(envelope.data.runner_sandbox_diagnostics.disposition_issues[j].question, reply.runner_subprocess.disposition.issues[i].question), set_value(envelope.data.runner_sandbox_diagnostics.disposition_issues[j].step_index, reply.runner_subprocess.disposition.issues[i].step_index), set_value(envelope.data.runner_sandbox_diagnostics.disposition_issues[j].observations, reply.runner_subprocess.disposition.issues[i].observations)]
 ```
 
-These assignments address the completed worker projection before reply-wide
-findings. Lifecycle validation has supplied no local failures, so the host
-conflicts occupy its issue list in source order. Later reply-wide findings
-append at the execution level; they preserve these copied records.
+
 
 ### Apply reply-wide findings {reply_checks: acts}
 
@@ -670,8 +648,7 @@ The controller appends these findings to top-level `disposition_issues`.
 It preserves the actor entries, an ordinary stop reason already derived,
 and all host fields including step comparisons and claimed gate outcomes.
 Those retained assertions can therefore appear beside the controller's
-finding about them. The finding's level determines which controller
-projection changes.
+finding about them.
 
 ### Findings beside the completion result {outer_result: definition}
 
@@ -768,13 +745,6 @@ lifecycle assessment remains a separate judgment over the retained native
 account and its projection. A reporting failure can retain observations that
 produce a lifecycle finding while satisfying the degradation form.
 
-The shared corpus carries constructed Swift records through binary encoding,
-Rust decoding and envelope assembly, and independent Python decoding and
-consumption. Its cases retain each judgment, the raw reply, outer result and
-exit, and independently projected actor endings. JSON-only null and omission
-controls retain their authored input and test-decoder normalization separately.
-These cases check reader behavior against independently authored expectations;
-native producer observations have their own owners.
 
 #### Corpus support {support: owner}
 
@@ -855,9 +825,7 @@ each: ["a", "d"]
 when: reply.execution_form == "actors" and present(reply.actors) and present(reply.actors[a].subprocess)
 ```
 
-The source at actor position `a` supplies the projection at position `d`,
-with `d == a`. The separate actor-row obligation establishes cardinality
-and label copying. This scope addresses each existing subprocess, including
+This scope addresses each existing subprocess, including
 its degraded reporting form, before later reply-wide findings.
 
 #### Worker lifecycle validation {lifecycle_check: checks}
@@ -872,9 +840,7 @@ free.condition: For reply.actors[a].subprocess and its assigned actions under th
 retained_free: {"condition":{"kind":"native_protocol","reason":"This prerequisite is the lifecycle validator's intermediate return for the selected worker, assigned actions and reporting form. Successful validation permits host conflicts to be copied into the final disposition_issues array."}}
 ```
 
-The ending, stop-reason, attribution and host-conflict copy rules require
-this result from the same worker validation. A failed prerequisite has the
-following local consequence.
+
 
 ##### Local lifecycle findings {local_failure: effect}
 
@@ -938,8 +904,7 @@ test: True
 effects: [set_value(envelope.data.runner_sandbox_diagnostics.actors[d].process_disposition, "unrecognized"), set_value(envelope.data.runner_sandbox_diagnostics.actors[d].termination_cause, "unknown")]
 ```
 
-The `unconfirmed` value merges the two host states while the retained
-host claim preserves which state and reason it supplied. Lifecycle validation
+Lifecycle validation
 has already checked the integer exit value and supported-conflict evidence.
 
 #### Supported stop reason {stop: reports}
@@ -1068,10 +1033,7 @@ each: ["i", "j"]
 effects: [set_value(envelope.data.runner_sandbox_diagnostics.actors[d].disposition_issues[j].kind, reply.actors[a].subprocess.disposition.issues[i].kind), set_value(envelope.data.runner_sandbox_diagnostics.actors[d].disposition_issues[j].detail, reply.actors[a].subprocess.disposition.issues[i].detail), set_value(envelope.data.runner_sandbox_diagnostics.actors[d].disposition_issues[j].subject_path, None), set_value(envelope.data.runner_sandbox_diagnostics.actors[d].disposition_issues[j].rule, reply.actors[a].subprocess.disposition.issues[i].rule), set_value(envelope.data.runner_sandbox_diagnostics.actors[d].disposition_issues[j].question, reply.actors[a].subprocess.disposition.issues[i].question), set_value(envelope.data.runner_sandbox_diagnostics.actors[d].disposition_issues[j].step_index, reply.actors[a].subprocess.disposition.issues[i].step_index), set_value(envelope.data.runner_sandbox_diagnostics.actors[d].disposition_issues[j].observations, reply.actors[a].subprocess.disposition.issues[i].observations)]
 ```
 
-These assignments address the completed worker projection before reply-wide
-findings. Lifecycle validation has supplied no local failures, so the host
-conflicts occupy its issue list in source order. Later reply-wide findings
-append at the execution level; they preserve these copied records.
+
 
 ### Actor projection support {support: owner}
 
@@ -1102,8 +1064,7 @@ unknown: "An unfamiliar category remains a finding with its carried detail and s
 ```
 
 Category supplied by the controller check or copied from a host conflict.
-A finding's origin and effect follow the producing scope and its carried
-fields.
+
 
 ### detail {detail: field}
 

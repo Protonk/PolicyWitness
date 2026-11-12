@@ -9,8 +9,7 @@ checks: ["failure_boundaries"]
 ```
 
 
-
-A saved specimen describes one experiment. The controller reads its file once, resolves controller options and packaged augments, and serializes the held request delivered to the client. Direct XPC callers supply the host form themselves. The standalone compiler helper accepts its own policy input.
+Direct XPC callers supply the host form themselves.
 
 ## Specimen {specimen: subject}
 
@@ -89,7 +88,7 @@ free.effect: Check contract first, decode the selected plan form and closed nest
 retained_free: {"effect": {"kind": "raw_admission", "reason": "Contract-first decoding and branch traversal consume raw objects before a complete typed request is available."}}
 ```
 
-The decoder follows its object and branch order. A capacity failure can precede a semantic failure in a successfully decoded object. Admission accepts or refuses the complete plan; it preserves declared action counts. Empty ordinary plans still compile and apply the policy.
+Admission accepts or refuses the complete plan; it preserves declared action counts.
 
 ### Null and omission {nulls: acts}
 
@@ -118,7 +117,7 @@ report: ["runner_reply"]
 retained_free: {"effect":{"kind":"serialized_grammar","reason":"Complete string transport and C-string admission describe the original encoded inputs, separate from the structured count requirements."}}
 ```
 
-Native C-string inputs also refuse embedded NUL. Host-only labels use their declared UTF-8 capacities. Unicode is counted by encoded bytes. A paired query and attempt consumes one action; an extension action consumes one action and contributes no query. Phase and actor counts do not multiply the total action capacity.
+Native C-string inputs also refuse embedded NUL. A paired query and attempt consumes one action; an extension action consumes one action and contributes no query. Phase and actor counts do not multiply the total action capacity.
 
 #### Ordinary source bytes {ordinary_source: condition}
 
@@ -325,7 +324,7 @@ record: "ControllerRunnerSelector"
 as: "selector"
 ```
 
-A nested field overrides a valid legacy value only when non-null.
+
 
 ### id {id: field}
 
@@ -388,7 +387,7 @@ record: "PWRunnerTestOverrides"
 as: "overrides"
 ```
 
-These controls are admitted as request data in the current implementation, including packaged hosts. Their names identify test use; the parser applies the documented grammar and capacities.
+These controls are admitted as request data in the current implementation, including packaged hosts. Their names identify test use; the parser applies the documented grammar and capacities. Host admission of a positive fixture value can be followed by worker argument refusal before application.
 
 ### worker_executable_path {worker_executable_path: field}
 
@@ -396,7 +395,7 @@ Ordinary-worker executable override, bounded by <!-- span limits.test_override_p
 
 ### worker_timeout_ms {worker_timeout_ms: field}
 
-Ordinary worker sentinel budget override in milliseconds. The host floors the supplied allowance at <!-- span limits.worker_timeout_override_floor.value_unit -->50 milliseconds<!-- /span -->; omission uses <!-- span limits.worker_sentinel_wait.value_unit -->120,000 milliseconds<!-- /span -->. Actor scheduling uses its fixed <!-- span limits.actor_execution_allowance.value_unit -->120,000 milliseconds<!-- /span --> allowance even when this field is supplied.
+Ordinary worker sentinel budget override in milliseconds. The host floors the supplied allowance at <!-- span limits.worker_timeout_override_floor.value_unit -->50 milliseconds<!-- /span -->; omission uses <!-- span limits.worker_sentinel_wait.value_unit -->120,000 milliseconds<!-- /span -->. Actor scheduling uses its fixed setup allowance and its fixed <!-- span limits.actor_execution_allowance.value_unit -->120,000 milliseconds<!-- /span --> execution allowance even when this field is supplied.
 
 #### Floor support {floor_support: owner}
 
@@ -407,6 +406,17 @@ check: {"path":"runner/Tests/PWRunnerCoreTests/LimitsContractTests.swift","symbo
 pins: "Calls the production helper to compare its floor to the limits inventory; independent below/equal/above cases retain the minimum and the uncapped larger override."
 context: "Planning helper and newly authored constructed assertions read."
 limits: "No test execution is credited; the check establishes the planning value, not elapsed worker time."
+```
+
+#### Actor applicability support {disposition_support: owner}
+
+```contract
+grade: "check_read"
+source: {"path":"runner/Sources/PWRunnerCore/ActorOrchestration.swift","symbol":"runActors"}
+pins: "Actor orchestration constructs the scheduler input with its fixed allowances."
+context: "Static review of the cited producer and assertion branches."
+check: [{"path":"tests/suites/witness_contract/check_actor_compositions.py","symbol":"assert_timeout_applicability","form":"test"}]
+limits: "The paired control uses a 200 ms override and a 500 ms delay, checking an ordinary timeout and actor completion with a later dependent file read."
 ```
 
 ### actor_equipment_executable_paths {actor_equipment_executable_paths: field}
@@ -450,34 +460,7 @@ uses: ["equipment.binding"]
 
 A caller whose connection passes host authorization can supply these controls. Actor equipment preparation checks the packaged inventory and both packaged role bindings before considering fixture override bindings. It retains the packaged and test_override rows with their respective implementation identities.
 
-### Override quantities and applicability {override_inventory: definition}
-
-```contract
-defines: "value"
-```
-
-Override applicability follows the selected execution form and owning boundary. Ordinary worker timeout planning uses worker_timeout_ms with its documented floor; actor admission accepts that field while the actor scheduler uses its fixed setup and execution allowances. The signal-number bound 31 is argument grammar. Host decoding, planning floors and caps, worker argument refusal, and fixture behavior retain their separate boundaries.
-
-#### Disposition support {disposition_support: owner}
-
-```contract
-grade: "check_read"
-source: {"path":"runner/Sources/PWRunnerCore/ActorOrchestration.swift","symbol":"runActors"}
-pins: "Actor orchestration constructs the scheduler input with its fixed allowances."
-context: "Static review of the cited producer and assertion branches."
-check: [{"path":"tests/suites/witness_contract/check_actor_compositions.py","symbol":"assert_timeout_applicability","form":"test"}]
-limits: "The paired control uses a 200 ms override and a 500 ms delay, checking an ordinary timeout and actor completion with a later dependent file read."
-```
-
-### Override observation scope {override_coverage: definition}
-
-```contract
-defines: "value"
-```
-
-An override is interpreted at its owning selection, planning, launch or worker-argument boundary. Host admission of a positive fixture value can be followed by worker argument refusal before application. Executable overrides retain their selected-file, spawn and live-inspection observations at those respective boundaries. Timeout and fixture-delay evidence is scoped to the submitted value and execution form.
-
-#### Disposition support {disposition_support: owner}
+### Fixture-value support {disposition_support: owner}
 
 ```contract
 grade: "check_read"

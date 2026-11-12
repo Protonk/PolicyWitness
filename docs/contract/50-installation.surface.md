@@ -8,7 +8,7 @@ goldens: ["tests/fixtures/contract/surfaces/installation.json"]
 checks: ["unit", "runner_byoxpc"]
 ```
 
-The controller manages external XPC services through a local registry and launchd. Registry state, on-disk signature observations, live service presence and a completed verification specimen establish different facts. Recovery ownership remains recorded until cleanup observes service and plist absence and publishes that retirement.
+The controller manages external XPC services through a local registry and launchd. Registry state, on-disk signature observations, live service presence and a completed verification specimen establish different facts.
 
 ## Implementation and evidence {support: owner}
 
@@ -100,7 +100,7 @@ retained_free: {"condition":{"kind":"raw_admission","reason":"Registry lookup an
 effects: [set_value(request.contract, ref("identity.build.contract")), set_value(request.specimen_id, "runner_verify"), set_value(request.run_kind, "runner_verify"), set_value(request.policy.format, "sbpl"), set_value(request.policy.sbpl_source, "(version 1)\n(allow default)\n"), set_value(request.probe_plan, []), withhold(request.actors), withhold(request.phases), withhold(request._test_overrides)]
 ```
 
-The timeout defaults to <!-- span limits.runner_verify_wait.value_unit -->5,000 milliseconds<!-- /span --> and is clamped to at least one. The returned PID comes from an admitted host reply’s `pid`; read its subject according to that reply’s lifecycle. An empty successful plan establishes the verification request’s application and completion. It supplies no per-operation prediction or attempt observations.
+The timeout defaults to <!-- span limits.runner_verify_wait.value_unit -->5,000 milliseconds<!-- /span --> and is clamped to at least one. An empty successful plan establishes the verification request’s application and completion. It supplies no per-operation prediction or attempt observations.
 
 #### Selected record identity {identity: condition}
 
@@ -140,7 +140,7 @@ free.effect: Visit every record in runners, refresh available per-binary signatu
 retained_free: {"condition":{"kind":"native_protocol","reason":"Successful registry loading and held advisory lock are native entry observations for validation, not fields of each runner row."},"effect":{"kind":"environment_observation","reason":"Each binary's current signing/entitlement and bundle/equipment observations require fresh inspection before registry/report updates."}}
 ```
 
-A missing host executable increments `missing`, marks the host signature invalid and records its entitlement error, then skips further verification for that row. Bundle/binary verification, signature-metadata readback and equipment-inventory failures increment `invalid` once per affected row and retain each named failure. Entitlement read errors also remain in their individual metadata objects. `updated` counts every visited runner. A completed validate command reports `result.ok: true` and exit 0 even when missing/invalid is positive; inspect those fields. Pending cleanup records remain recovery records.
+A missing host executable increments `missing`, marks the host signature invalid and records its entitlement error, then skips further verification for that row. A completed validate command reports `result.ok: true` and exit 0 even when missing/invalid is positive; inspect those fields. Pending cleanup records remain recovery records.
 
 ### Entitlement read errors and summary counts {entitlement_errors: definition}
 
@@ -189,7 +189,7 @@ free.effect: Move an active record to nested pending_cleanup and save before any
 retained_free: {"condition":{"kind":"raw_admission","reason":"Active or nested recovery lookup applies command selector rules before cleanup ownership is inspected."},"effect":{"kind":"native_protocol","reason":"Durable pending state, immediate ownership recheck, launchd/plist actions and warning-free absence precede recovery retirement."}}
 ```
 
-After a successful bootout, re-read a still-present service every <!-- span limits.runner_remove_poll_interval.value_unit -->50 milliseconds<!-- /span --> for at most <!-- span limits.runner_remove_teardown_wait.value_unit -->1,000 milliseconds<!-- /span --> of nominal waiting; stop at absence or unknown. A bootout or unlink success records that call’s success. Final absence is separately observed. A changed/unreadable/unowned object, failed action or failed retirement publication retains recovery and warnings. A repeated remove continues the retained record, including after the plist has disappeared. `--skip-bootout` can remove an owned plist; retirement still requires observed service absence. A completed remove command reports `result.ok: true` and exit 0 even when cleanup remains retained.
+After a successful bootout, re-read a still-present service every <!-- span limits.runner_remove_poll_interval.value_unit -->50 milliseconds<!-- /span --> for at most <!-- span limits.runner_remove_teardown_wait.value_unit -->1,000 milliseconds<!-- /span --> of nominal waiting; stop at absence or unknown. Final absence is separately observed. A changed/unreadable/unowned object, failed action or failed retirement publication retains recovery and warnings. A repeated remove continues the retained record from the durable registry, including after the plist has disappeared or the original diagnostic output is gone. `--skip-bootout` can remove an owned plist; retirement still requires observed service absence. A completed remove command reports `result.ok: true` and exit 0 even when cleanup remains retained.
 
 ### Classify cleanup ownership {ownership: checks}
 
@@ -205,23 +205,14 @@ retained_free: {"condition":{"kind":"raw_admission","reason":"Recorded domain/us
 uses: ["installation.service.classify"]
 ```
 
-A present service with a different executable is unowned; one with no unique executable observation is ambiguous. Absent resources are classified ambiguous for ownership and retain their independently observed absent presence. Unknown presence produces unknown ownership. Recorded cleanup paths must be absolute, have no parent traversal, end in the expected service plist, and have an immediate parent named LaunchAgents for user scope or LaunchDaemons for system scope. The location check also requires the executable parent to equal the recorded bundle’s Contents/MacOS and refuses symlinked plist ancestors. The recorded ownership supplies the full parent path. Legacy records without ownership derive the conventional plist path and use the content checks.
+Absent resources are classified ambiguous for ownership and retain their independently observed absent presence. Unknown presence produces unknown ownership. Recorded cleanup paths must be absolute, have no parent traversal, end in the expected service plist, and have an immediate parent named LaunchAgents for user scope or LaunchDaemons for system scope. The location check also requires the executable parent to equal the recorded bundle’s Contents/MacOS and refuses symlinked plist ancestors. The recorded ownership supplies the full parent path. Legacy records without ownership derive the conventional plist path and use the content checks.
 
-### Recorded cleanup directory {ownership_location: definition}
-
-```contract
-defines: "value"
-```
-
-Durable ownership supplies the recorded absolute plist path. Cleanup checks its owner UID and launchd domain, excludes parent traversal and symlinked ancestors, requires the scope parent basename and service plist filename, and checks the executable-to-bundle relationship. Plist content and recorded hash/UID and service executable observations then establish their resource ownership. A conventional full parent path is used for records without durable ownership.
-
-#### Disposition support {disposition_support: owner}
+#### Cleanup location support {disposition_support: owner}
 
 ```contract
 grade: "source_read"
 source: [{"path":"controller/src/runner_manager.rs","symbol":"record_location"},{"path":"controller/src/runner_manager.rs","symbol":"plist_ownership"},{"path":"controller/src/runner_manager.rs","symbol":"service_ownership"}]
 pins: "Location and resource ownership checks use the recorded path and complete associated identities."
-context: "Static review of the cited production branches."
 limits: "Acceptance of a nonconventional full parent is source-supported; this owner supplies no native occurrence for that path."
 ```
 
@@ -229,15 +220,7 @@ limits: "Acceptance of a nonconventional full parent is source-supported; this o
 
 If bootout succeeds and plist removal succeeds but the final launchctl read is unknown, the command reports both action booleans true and cleanup_retained true. Keep the recorded bundle and any operator recovery state, inspect reconcile, and repeat removal until service/plist absence and registry retirement are observed.
 
-### Legacy registry values and recovery {legacy: definition}
-
-```contract
-defines: "value"
-```
-
-Registry loading normalizes legacy machme and debuggable kinds to byoxpc; new CLI input rejects those aliases. Unknown nested metadata and historical cleanup records survive inspection and unrelated saves. Owned recovery follows the durable registry after the original diagnostic output is gone and retains cleanup state until service and plist absence are established.
-
-#### Disposition support {disposition_support: owner}
+### Legacy registry support {disposition_support: owner}
 
 ```contract
 grade: "check_read"
@@ -255,11 +238,11 @@ record: "rust.RunnerRegistry"
 as: "registry"
 ```
 
-Unknown JSON members are retained opaquely through writes. New registries start with both collections empty.
+
 
 ### schema_version {schema_version: field}
 
-Supported registry layout version, currently 1. Another value refuses loading.
+Supported registry layout version, currently 1.
 
 ### runners {runners: field}
 
@@ -276,7 +259,7 @@ record: "rust.RunnerRecord"
 as: "runner"
 ```
 
-Unknown JSON members survive unrelated writes. Recorded signature, entitlement and inventory values describe their named reads; later execution has its own admission and live observations.
+Recorded signature, entitlement and inventory values describe their named reads; later execution has its own admission and live observations.
 
 ### state {state: field}
 
@@ -381,7 +364,7 @@ record: "rust.RunnerOwnership"
 as: "ownership"
 ```
 
-Additional members remain opaque. These values combine with current service/plist observations and location checks at cleanup.
+
 
 ### plist_path {plist_path: field}
 
@@ -435,7 +418,7 @@ record: "rust.RunnerEntitlements"
 as: "entitlements"
 ```
 
-An empty keys/granted list with an error describes unavailable parsing. Boolean false, strings and integers do not enter granted. Additional members remain opaque.
+An empty keys/granted list with an error describes unavailable parsing. Boolean false, strings and integers do not enter granted.
 
 ### raw_plist {raw_plist: field}
 
@@ -524,7 +507,7 @@ recipient: ["report_reader"]
 report: ["runner_remove"]
 ```
 
-The final persistence attempt and observed absence determine cleanup completion.
+
 
 #### Produced recovery fields {fields: condition}
 
@@ -579,7 +562,7 @@ report: ["runner_install"]
 effects: set_value(install.state, install.runner.state)
 ```
 
-The returned state copies the registry record after installation publication.
+
 #### Source support {support: owner}
 
 ```contract
@@ -638,7 +621,7 @@ when: present(verify.runner_client) and present(verify.runner_client.request_del
 effects: [set_value(result.ok, False), set_value(result.exit_code, 2), set_value(result.normalized_outcome, "tool_error"), set_value(result.error, verify.runner_client.request_delivery.error), set_value(verify.normalized_outcome, "tool_error"), set_value(verify.runner_pid, None), retain_records(verify.runner_client), retain_records(verify.runner_result)]
 ```
 
-A returned capture or structurally decoded reply remains retained; neither supplies a verification PID after delivery refusal.
+
 #### Source support {support: owner}
 
 ```contract
@@ -658,7 +641,7 @@ report: ["runner_verify"]
 selection: "first_match"
 ```
 
-These assignments consume the completion outcome selected by ordinary delivery and reply admission, including refused or unavailable replies. The PID projection uses an admitted supported host reply.
+
 #### Delivery error has precedence {delivery: outcome}
 
 ```contract
@@ -702,7 +685,7 @@ Rows whose recorded host executable did not exist; further verification was skip
 
 ### invalid {invalid: field}
 
-Other rows with at least one bundle/binary verification, signature-metadata readback or inventory failure. Entitlement error fields retain their separate observations.
+Other rows with at least one bundle/binary verification, signature-metadata readback or inventory failure.
 
 ### failures {failures: field}
 
@@ -740,7 +723,7 @@ as: "not_found"
 
 ### requested_id {requested_id: field}
 
-Supplied ID, omitted when none was supplied. A supplied unmatched ID takes precedence over service_name.
+Supplied ID, omitted when none was supplied.
 
 ### requested_service_name {requested_service_name: field}
 
@@ -772,7 +755,7 @@ defines: "assessment"
 type: "String"
 ```
 
-Ownership of this observed service relative to the selected runner_record. Reconciliation and cleanup copy this assessment beside the observation. The plist ownership assessment uses the plist configuration and recorded identity.
+Ownership of this observed service relative to the selected runner_record. Reconciliation and cleanup copy this assessment beside the observation.
 ### Classify the typed service observation {classify: reports}
 
 ```contract
@@ -785,7 +768,7 @@ selection: "first_match"
 uses: ["installation.service.ownership"]
 ```
 
-This rule consumes the typed ServiceObservation and selected RunnerRecord. A raw reconciliation row containing only unknown presence after location failure has no typed ownership association.
+A raw reconciliation row containing only unknown presence after location failure has no typed ownership association.
 #### Unknown presence {unknown: outcome}
 
 ```contract
@@ -862,7 +845,7 @@ record: "RunnerReconcileData"
 as: "reconcile"
 ```
 
-This command’s data shape is authored from its JSON producer. The result reports successful reconciliation execution even when individual inspections remain unknown.
+The result reports successful reconciliation execution even when individual inspections remain unknown.
 
 ### registry_path {registry_path: field}
 
@@ -1106,7 +1089,7 @@ record: "RunnerCleanupObservation"
 as: "cleanup_observation"
 ```
 
-This describes the current producer’s appended values within the open observations history. Recovery retains older observation shapes opaquely.
+This describes the current producer’s appended values within the open observations history.
 
 ### phase {phase: field}
 

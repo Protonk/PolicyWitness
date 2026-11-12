@@ -39,6 +39,11 @@ Stage-four records: the [guide account](../records/contract/STAGE-FOUR-ACCOUNT.m
 [prepared release notes](../records/contract/RELEASE-NOTES-v0.3.8.md) retain the
 revised workflows, failed attempts, successful observations and validation limits.
 
+First-reduction records: the [reduction account](../records/contract/FIRST-REDUCTION-ACCOUNT.md)
+and [cut evidence](../records/contract/evidence/first-reduction/README.md) retain
+the pre-tag contraction of the prepared `v0.3.8` contract, its canonical
+consequences, verification and declined candidates.
+
 ## The stages
 
 | Stage | What it does | Changes product behavior | Ends with |

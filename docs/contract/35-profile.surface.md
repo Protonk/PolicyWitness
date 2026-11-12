@@ -23,7 +23,7 @@ at: ["reply.compiled_profile", "reply.actors[a].compiled_profile"]
 coverage: "complete"
 ```
 
-The containing reply's producer contract identifies the receipt's contract. The receipt's `producer` names the component that captured the policy.
+The containing reply's producer contract identifies the receipt's contract.
 
 ### Status {status: field}
 
@@ -83,7 +83,7 @@ The host's SHA-256 digest of the captured bytes, presented as lowercase hexadeci
 
 ### Bytecode {bytecode_b64: field}
 
-The bytes copied from the compiler object passed to `sandbox_apply`, presented as base64. The worker captures them before application; publication as `captured` additionally requires the host's application and completion checks.
+The bytes copied from the compiler object passed to `sandbox_apply`, presented as base64.
 
 #### Captured payload extent {extent: condition}
 
@@ -110,7 +110,7 @@ The count of parameters supplied to the worker.
 
 ### Captured input identity {identity: definition}
 
-Each parameter pair digest hashes its little-endian 32-bit key length, key bytes, little-endian 32-bit value length and value bytes. The parameter digest hashes the little-endian 32-bit count followed by sorted pair digests. The host's checks use the input supplied to the worker.
+Each parameter pair digest hashes its little-endian 32-bit key length, key bytes, little-endian 32-bit value length and value bytes. The parameter digest hashes the little-endian 32-bit count followed by sorted pair digests.
 
 ### Receipt presence {presence: reports}
 
@@ -123,7 +123,7 @@ free.effect: Include the optional capture receipt in that worker output.
 retained_free: {"when": {"kind": "native_protocol", "reason": "The selected ordinary or actor policy supplies this worker capture request. Collection supplies the worker output consumed before receipt construction."}, "effect": {"kind": "native_protocol", "reason": "Receipt insertion occurs only for collected capture output, which is an intermediate producer object rather than a final admitted report."}}
 ```
 
-The host includes a receipt in collected capture output. A failure that produces no worker output leaves the receipt absent; absence has several possible causes.
+A failure that produces no worker output leaves the receipt absent; absence has several possible causes.
 
 ### The host decides capture availability {host: reports}
 
@@ -136,7 +136,7 @@ free.when: Capture was requested for this worker and worker output was collected
 retained_free: {"when": {"kind": "native_protocol", "reason": "The selected ordinary or actor policy supplies this worker capture request. Collection supplies the worker output consumed before receipt construction."}}
 ```
 
-The host checks these conditions in order and reports the first failure as `unavailable` with its reason and the collected worker PID. Passing every condition produces `captured` with the capture fields.
+
 
 #### Application {application: condition}
 
@@ -307,7 +307,7 @@ recipient: ["cli_caller"]
 when: present(receipt)
 ```
 
-After public producer admission and reply-capacity checks, the controller applies these conditions to every present receipt, including actor, preparation-failure and reporting-failure records. It checks the status/producer/stage relationship. The retained nonce, bytecode, digests, lengths and counts remain the host's assertions; their production checks belong to the host capture rule.
+After public producer admission and reply-capacity checks, the controller applies these conditions to every present receipt, including actor, preparation-failure and reporting-failure records. The retained nonce, bytecode, digests, lengths and counts remain the host's assertions; their production checks belong to the host capture rule.
 
 #### Status vocabulary {status: condition}
 

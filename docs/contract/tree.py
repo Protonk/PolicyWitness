@@ -1218,21 +1218,34 @@ def _facts_text(tree, node, include_context=False, omit=()):
     return ' '.join(parts)
 
 
-def _finding_consequence(tree, node):
-    if node.kind in {'effect', 'outcome'}:
-        # Effect prose belongs to this consequence, along with its trigger,
-        # applicability and bindings. A check's general prose does not.
-        prefix = ''
-        if node.kind == 'outcome' and node.parent.facts.get('selection') == 'first_match':
-            cases = [child for child in node.parent.children if child.kind == 'outcome']
-            prefix = 'First-match case ' + str(cases.index(node) + 1) + ': '
-        return prefix + ' '.join(part for part in (_facts_text(tree, node), node.prose) if part)
-    parts = []
+def _finding_reach(tree, node):
+    """Name what one consequence touches; its values and prose stay at the linked row."""
+    reach = {}
     if 'effects' in node.expressions:
-        parts.append(_expression_text(tree, node.expressions['effects']) + '.')
-    if 'free.effect' in node.facts:
-        parts.append(node.facts['free.effect'])
-    return ' '.join(parts)
+        body = node.expressions['effects'].body
+        for call in (body.elts if isinstance(body, (ast.List, ast.Tuple)) else [body]):
+            verb = {'set_value': 'sets', 'withhold': 'withholds', 'retain_records': 'retains',
+                    'retain_assessments': 'keeps'}.get(call.func.id)
+            if verb:
+                reach.setdefault(verb, []).append(_expression_text(tree, call.args[0]))
+            else:
+                reach.setdefault(_expression_text(tree, call), [])
+    return '; '.join(verb + (' ' + ', '.join(targets) if targets else '') for verb, targets in reach.items())
+
+
+def _finding_consequence(tree, check, node):
+    reach = _finding_reach(tree, node)
+    if node is check:
+        return 'At the rule: ' + reach + '.' if reach else 'Stated at the linked rule.'
+    # A consequence keeps the entry and trigger that select it. Operands,
+    # assigned values and consequence prose belong to the linked row.
+    selected = [value.replace('_', ' ') for value in node.facts.get('entry', [])]
+    if node.kind == 'effect':
+        selected.append({'failure': 'on failure', 'success': 'on success', 'always': 'always'}[node.facts['on']])
+    elif node.parent.facts.get('selection') == 'first_match':
+        cases = [child for child in node.parent.children if child.kind == 'outcome']
+        selected.append('case ' + str(cases.index(node) + 1))
+    return _link(node) + (' (' + ', '.join(selected) + ')' if selected else '') + (': ' + reach if reach else '') + '.'
 
 
 def _citation_links(value, label):
@@ -1277,7 +1290,7 @@ def _field_meaning(tree, node):
         parts.append('Admitted vocabulary: ' + facts['vocabulary'] + '; displayed list: ' + facts['listed'] + ': ' +
                      ', '.join(_literal(v) for v in facts['values']) + '.')
         if 'unknown' in facts:
-            parts.append('Unfamiliar values: ' + facts['unknown'] + '.')
+            parts.append('Unfamiliar values: ' + facts['unknown'].rstrip('.') + '.')
     return ' '.join(p for p in parts if p)
 
 
@@ -1316,11 +1329,10 @@ def _views(tree):
                     if key not in {'when', 'test', 'required_when', 'present_when'} and not key.startswith(('bind.', 'match.')):
                         continue
                     for item in ast.walk(expression):
-                        if isinstance(item, (ast.Attribute, ast.Subscript)):
+                        # The index names each record member a condition reads;
+                        # the complete operand path stays in the linked rule.
+                        if isinstance(item, ast.Attribute) and isinstance(item.value, ast.Name):
                             reads.add(ast.unparse(item))
-            # Keep the most specific path when a longer one includes the same parent.
-            reads = {path for path in reads if not any(other.startswith(path + '.') or other.startswith(path + '[')
-                                                       for other in reads if other != path)}
             consequences = ([node] if 'effects' in node.expressions or 'free.effect' in node.facts else [])
             consequences.extend(c for c in node.descendants()
                                 if c.kind == 'effect' or (c.kind == 'outcome' and 'effects' in c.facts))
@@ -1349,19 +1361,25 @@ def render(tree):
         ordered = parent.facts.get('selection') == 'first_match'
         output.extend(['| Case | When | Consequence |', '| --- | --- | --- |'] if ordered
                       else ['| Item | Requirement or consequence |', '| --- | --- |'])
-        for position, child in enumerate(children, 1):
-            text = ' '.join(p for p in (_facts_text(tree, child, omit={'test'} if ordered else ()), child.prose) if p)
-            title = (str(position) + '. ' if ordered else '') + child.title
-            condition = _cell(_expression_text(tree, child.expressions['test'])) + ' | ' if ordered else ''
-            output.append('| <a id="' + _anchor(child) + '"></a>' + _cell(title) + ' | ' + condition + _cell(text) + ' |')
+        listed = []
+
+        def rows(members, within):
+            for position, child in enumerate(members, 1):
+                text = ' '.join(p for p in (_facts_text(tree, child, omit={'test'} if ordered else ()), child.prose) if p)
+                title = (str(position) + '. ' if ordered else within) + child.title
+                condition = _cell(_expression_text(tree, child.expressions['test'])) + ' | ' if ordered else ''
+                output.append('| <a id="' + _anchor(child) + '"></a>' + _cell(title) + ' | ' + condition + _cell(text) + ' |')
+                listed.append(child)
+                # A subordinate row follows the row whose bindings and trigger
+                # it inherits, and carries that row's title.
+                rows([c for c in child.children if c.kind in {'condition', 'effect', 'outcome'}],
+                     within + child.title + ' › ')
+
+        rows(children, '')
         output.append('')
-        for child in children:
-            nested = [c for c in child.children if c.kind in {'condition', 'effect', 'outcome'}]
-            if nested:
-                output.extend(['**Within ' + _link(child) + '.**', ''])
-            table(child, nested)
+        for child in listed:
             for extra in child.children:
-                if extra not in nested: visit(extra, min(parent.level + 3, 6))
+                if extra.kind not in {'condition', 'effect', 'outcome'}: visit(extra, min(child.parent.level + 3, 6))
 
     def visit(node, depth):
         if node.kind == 'owner':
@@ -1419,16 +1437,21 @@ def render(tree):
     if applicability:
         output.extend(['## Rule applicability', '',
                        'Each linked rule states its boundary, entry, recipients, reports and conditions.', '',
-                       '| Rule | Acting components |', '| --- | --- |'])
+                       '| Acting components | Rules |', '| --- | --- |'])
+        acting = {}
         for node, context in applicability:
-            output.append('| ' + _link(node) + ' | ' + _cell(_actor_text(tree, context.get('who', ''))) + ' |')
+            acting.setdefault(_actor_text(tree, context.get('who', '')), []).append(_link(node))
+        for actors, rules in acting.items():
+            output.append('| ' + _cell(actors) + ' | ' + _cell('; '.join(rules)) + ' |')
         output.append('')
     if findings:
-        output.extend(['## Controller findings', '', '| Check | Structured operands | Consequences and retained assessments |', '| --- | --- | --- |'])
+        output.extend(['## Controller findings', '',
+                       'Each row names the record members a check reads and links each consequence with what it reaches.', '',
+                       '| Check | Records read | Consequences and their reach |', '| --- | --- | --- |'])
         for node, reads, effects in findings:
             if not _controller_check(node): continue
             output.append('| ' + _link(node) + ' | ' + _cell(', '.join('`' + path + '`' for path in reads) if reads else 'See the linked rule.') +
-                          ' | ' + _cell(' '.join(_finding_consequence(tree, effect) for effect in effects)) + ' |')
+                          ' | ' + _cell(' '.join(_finding_consequence(tree, node, effect) for effect in effects) or 'See the linked rule.') + ' |')
         output.append('')
     if gaps:
         output.extend(['## Known gaps', '', '| Item | Kind |', '| --- | --- |'])

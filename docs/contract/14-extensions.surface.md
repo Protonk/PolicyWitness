@@ -47,7 +47,7 @@ record: "PWRunnerExtensionOperation"
 as: "operation"
 ```
 
-Every supplied operand is checked for applicability, including null. Required operands must contain strings. References are nonempty, NUL-free and bounded by <!-- span limits.extension_reference.value_unit -->63 UTF-8 bytes<!-- /span -->.
+References are nonempty, NUL-free and bounded by <!-- span limits.extension_reference.value_unit -->63 UTF-8 bytes<!-- /span -->.
 
 ### operation {operation: field}
 
@@ -66,7 +66,7 @@ required_when: operation.operation in ["issue", "transfer"]
 present_when: operation.operation in ["issue", "transfer"]
 ```
 
-Required new token reference for issue; required previously assigned token owned by the active actor for transfer. Other operations require this field absent.
+Required new token reference for issue; required previously assigned token owned by the active actor for transfer.
 
 ### handle_ref {handle_ref: field}
 
@@ -75,7 +75,7 @@ required_when: operation.operation in ["consume", "release"]
 present_when: operation.operation in ["consume", "release"]
 ```
 
-Required new handle reference for consume; required previously assigned handle owned by the active actor for release. Other operations require this field absent.
+Required new handle reference for consume; required previously assigned handle owned by the active actor for release.
 
 ### family {family: field}
 
@@ -84,7 +84,7 @@ required_when: operation.operation == "issue"
 present_when: operation.operation == "issue"
 ```
 
-Required `file` for issue. Other operations require this field absent.
+Required `file` for issue.
 
 ### target {target: field}
 
@@ -93,7 +93,7 @@ required_when: operation.operation == "issue"
 present_when: operation.operation == "issue"
 ```
 
-Required absolute file or directory path for issue, bounded by <!-- span limits.extension_issue_target.value_unit -->1,023 UTF-8 bytes<!-- /span -->. The exact submitted bytes reach native issuance. Other operations require this field absent.
+Required absolute file or directory path for issue, bounded by <!-- span limits.extension_issue_target.value_unit -->1,023 UTF-8 bytes<!-- /span -->. The exact submitted bytes reach native issuance.
 
 ### authority {authority: field}
 
@@ -102,7 +102,7 @@ required_when: operation.operation == "issue"
 present_when: operation.operation == "issue"
 ```
 
-Required `read` or `read_write` for issue, selecting `com.apple.app-sandbox.read` or `com.apple.app-sandbox.read-write`. Other operations require this field absent.
+Required `read` or `read_write` for issue, selecting `com.apple.app-sandbox.read` or `com.apple.app-sandbox.read-write`.
 
 ### recipient {recipient: field}
 
@@ -111,7 +111,7 @@ required_when: operation.operation == "transfer"
 present_when: operation.operation == "transfer"
 ```
 
-Required known actor ID for transfer; may name the active actor itself. Other operations require this field absent.
+Required known actor ID for transfer; may name the active actor itself.
 
 ### delivery_ref {delivery_ref: field}
 
@@ -120,7 +120,7 @@ required_when: operation.operation in ["transfer", "consume"]
 present_when: operation.operation in ["transfer", "consume"]
 ```
 
-Required new delivery reference for transfer; required previously assigned delivery owned by the active recipient for consume. Other operations require this field absent.
+Required new delivery reference for transfer; required previously assigned delivery owned by the active recipient for consume.
 
 ### Operation grammar {grammar: definition}
 
@@ -292,12 +292,6 @@ match.a: is_variant(request.phases[p].actions[a], "extensionAction") and variant
 test: sum_over(p, matches(a)) <= limit("actor_releases")
 ```
 
-#### Whole-specimen action count {actions: condition}
-
-```contract
-test: sum_over(p, count(request.phases[p].actions)) <= limit("probe_steps")
-```
-
 #### Refusal consequence {failure: effect}
 
 ```contract
@@ -441,7 +435,6 @@ Native extension issuance, consumption and release observations are scoped to th
 grade: "source_read"
 source: {"path":"runner/Sources/PWRunnerCore/AuthorityCustody.swift","symbol":"serviceTransfer"}
 pins: "Host transfer observations record custody, copying, recipient acknowledgement and equality separately."
-context: "Static review of the cited production branches."
 limits: "Private-library allocation and opaque token behavior retain the scope of their native observations."
 ```
 
@@ -479,25 +472,16 @@ Declare `A`, `B` and `C` with their own sandbox and equipment choices. Read the 
 
 The second issuance is `B`'s own native action under its then-current state. Keep the two issue events, two custody/delivery chains, two candidate handles and the readers' file observations distinct. `read_write` may name an absolute directory target; fresh writes or exclusive creation within that directory expose their own file effects.
 
-### Instantiated extension schedules {execution: definition}
-
-```contract
-defines: "value"
-```
-
-An executed extension schedule fixes concrete actor roles, policies, entitlements, paths and phase boundaries. Its account distinguishes native issue/consume/release returns, host custody and transfers, and fresh access before and after the operations. Those inputs and retained observations identify the schedule supported by that execution.
-
-#### Disposition support {disposition_support: owner}
+### Reply assembly support {disposition_support: owner}
 
 ```contract
 grade: "source_read"
 source: {"path":"runner/Sources/PWRunnerCore/ActorOrchestration.swift","symbol":"assembleActorReply"}
 pins: "Reply assembly retains extension events, transfer observations and resource accounts by their declared actions."
-context: "Static review of the cited production branches."
 limits: "Native examples require their concrete input and selected-platform observations."
 ```
 
-#### Native schedule execution support {execution_support: owner}
+### Native schedule execution support {execution_support: owner}
 
 ```contract
 grade: "executed"
@@ -731,7 +715,7 @@ report: ["runner_reply"]
 when: transfer.status == "delivered"
 ```
 
-A delivered transfer retains the listed request, custody, copy, byte-equality and recipient-acknowledgement observations. The custody rule describes native framing and settlement.
+The custody rule describes native framing and settlement.
 
 #### Produced field relationships {fields: condition}
 
@@ -776,7 +760,7 @@ when: reply.transfers[t].source_acknowledged and reply.extension_events[e].phase
 test: reply.extension_events[e].result_published and reply.transfers[t].status != "none" and implies(reply.transfers[t].status in ["delivered", "custody_unavailable", "recipient_rejected", "recipient_timeout", "recipient_unavailable", "request_invalid", "host_timeout", "clock_fault", "copy_mismatch"], reply.extension_events[e].status == reply.transfers[t].status)
 ```
 
-Source acknowledgement requires a completed source publication carrying the matching host acknowledgement. Unknown raw acknowledgement names and degraded records retain their raw evidence; the status equality applies to ordinary records with the listed known acknowledgement names.
+Unknown raw acknowledgement names and degraded records retain their raw evidence; the status equality applies to ordinary records with the listed known acknowledgement names.
 #### Source support {support: owner}
 
 ```contract

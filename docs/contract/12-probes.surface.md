@@ -17,7 +17,7 @@ record: "PWRunnerProbeStep"
 as: "step"
 ```
 
-One paired probe contributes one action and at most one eligible validator query. Its prediction is collected at the phase barrier before the attempt is released.
+One paired probe contributes one action and at most one eligible validator query.
 
 ### step_id {step_id: field}
 
@@ -29,7 +29,7 @@ Requested prediction operation and filter. Admission validates this request inde
 
 ### attempt {attempt: field}
 
-Requested native operation. The caller may intentionally pair a different query target or operation; report readers assess those relations separately.
+Requested native operation.
 
 ### Read-hosts pair {read_hosts: example}
 
@@ -139,7 +139,6 @@ The IOKit and sysctl exclusions retain the dated 2026-05-29 exploration of filte
 grade: "source_read"
 source: {"path":"runner/Sources/PWRunnerCore/ProbeRunner.swift","symbol":"predictionUnavailableOpFilters"}
 pins: "The table preserves the dated IOKit/sysctl exploration and conservative local-Mach choice."
-context: "Static review of the cited production branches."
 limits: "This owner reads the recorded basis and current table; it adds no native rerun credit."
 ```
 
@@ -260,6 +259,15 @@ uses: ["identity.definitions.observation", "identity.definitions.effect"]
 retained_free: {"effect":{"kind":"native_protocol","reason":"Native action dispatch and release publication are operation-specific procedures; result fields retain the observations they produce."}}
 ```
 
+#### Operation observation support {disposition_support: owner}
+
+```contract
+grade: "source_read"
+source: [{"path":"controller/tools/pw_probe_runner/pw_probe_runner.c","symbol":"attempt_file_read_fresh"},{"path":"controller/tools/pw_probe_runner/pw_probe_runner.c","symbol":"attempt_file_write_fresh"},{"path":"runner/Sources/PWRunnerCore/CWorkerStepResults.swift","symbol":"buildAttemptResult"}]
+pins: "Native operation details and aggregate return/errno projection have their own report fields."
+limits: "This owner is source-read. Selected fresh-file, descriptor, sysctl-buffer and exec-cleanup executions need their exact operation owners."
+```
+
 
 
 ### Exec setup and child inputs {exec: acts}
@@ -290,24 +298,6 @@ uses: ["extensions.operation"]
 ```
 
 
-
-### Operation observation scope {operation_evidence: definition}
-
-```contract
-defines: "value"
-```
-
-Fresh-file records retain the reached descriptor operations and the bytes or object identity observed by those operations. Exec records distinguish child creation, final child status, captured output and cleanup. The legacy open operations keep their open-boundary aggregate meaning. Independent target and process observations supply the evidence for effects claimed by a concrete operation control.
-
-#### Disposition support {disposition_support: owner}
-
-```contract
-grade: "source_read"
-source: [{"path":"controller/tools/pw_probe_runner/pw_probe_runner.c","symbol":"attempt_file_read_fresh"},{"path":"controller/tools/pw_probe_runner/pw_probe_runner.c","symbol":"attempt_file_write_fresh"},{"path":"runner/Sources/PWRunnerCore/CWorkerStepResults.swift","symbol":"buildAttemptResult"}]
-pins: "Native operation details and aggregate return/errno projection have their own report fields."
-context: "Static review of the cited production branches."
-limits: "This owner is source-read. Selected fresh-file, descriptor, sysctl-buffer and exec-cleanup executions need their exact operation owners."
-```
 
 ### Support {support: owner}
 

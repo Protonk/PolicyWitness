@@ -341,7 +341,7 @@ values: ["poll", "exit_grace", "after_termination"]
 unknown: "The recorded stage and native error remain available without an invented known-stage interpretation."
 ```
 
-Host stage of the call, including poll, exit_grace and after_termination. Unfamiliar stages remain transportable as recorded strings.
+Host stage of the call, including poll, exit_grace and after_termination.
 
 ### rc {rc: field}
 
@@ -497,7 +497,7 @@ record: "PWWorkerFailure"
 as: "lc_failure"
 ```
 
-The worker publishes the operation's native observation and a PW failure classification. Numeric codes retain unfamiliar values.
+Numeric codes retain unfamiliar values.
 
 ### operation {operation: field}
 
@@ -634,7 +634,7 @@ record: "PWDispositionRecord"
 as: "lc_disposition"
 ```
 
-The host resolves this account once from the worker's acquired output and submitted plan. Run questions and per-step questions keep their individual support and conflicts.
+Run questions and per-step questions keep their individual support and conflicts.
 
 ### questions {questions: field}
 
@@ -662,8 +662,7 @@ free.effect: Resolve and publish the canonical account once. Retain competing ob
 retained_free: {"condition": {"kind": "native_protocol", "reason": "Canonical lifecycle resolution uses acquired worker publication, slot identity and terminal collection; final labels cannot stand in for those raw inputs."}, "effect": {"kind": "native_protocol", "reason": "Acquired publication and progress ordering determine canonical claims and conflicts. Explicit projection rules own the first-ID association and copied boundary/result records; the summary classifier retains its existing source-defined vocabulary."}}
 ```
 
-An exit code or signal is supported after a successful reap. Both representations
-produce a D1 conflict. A completed supported slot establishes publication and
+A completed supported slot establishes publication and
 can establish entry. Recognized progress at or after an attempt's entry also
 establishes entry. A final earlier progress position establishes `not_reached`
 only after confirmed reaping and with an incomplete slot; beside a completed
@@ -816,7 +815,7 @@ record: "PWDispositionValue"
 as: "lc_claim_value"
 ```
 
-The integer alternative carries a signal, exit code or index according to the question. The request alternative carries the complete host termination request.
+
 
 ## Lifecycle conflict {issue: subject}
 
@@ -825,7 +824,7 @@ record: "PWDispositionIssue"
 as: "lc_issue"
 ```
 
-The resolver retains both incompatible observations and identifies the claim whose support they conflict over.
+
 
 ### kind {kind: field}
 
@@ -895,7 +894,7 @@ record: "PWDispositionStep"
 as: "lc_step"
 ```
 
-Step positions come from the submitted plan. Duplicate slot identifiers supply no unique slot to the join.
+
 
 ### index {index: field}
 
@@ -985,7 +984,7 @@ record: "PWOwnedReapObservation"
 as: "lc_owned_reap"
 ```
 
-A successful waitpid observation retains the host's ownership and departure-request state at capture. Actor gates refer to this observation by ordinal.
+
 
 ### pid {pid: field}
 
@@ -1026,7 +1025,7 @@ record: "PWOwnedReapReference"
 as: "lc_reap_reference"
 ```
 
-A gate references the source actor's retained owned_reap instead of copying a second ending.
+
 
 ### capture_ordinal {capture_ordinal: field}
 
@@ -1165,9 +1164,7 @@ retained_free: {"condition": {"kind": "native_protocol", "reason": "Operation/fi
 
 Duplicate IDs leave every record of that group at collection scope. Null IDs
 remain unassociated. Diagnostic outcomes may omit query metadata; any supplied
-metadata must agree. A decoding fault retains the accepted prefix and the
-rejected frame's bounded byte context. Transport or later cleanup failure
-preserves the already accepted observations.
+metadata must agree.
 
 ### Count expected and unexpected associations {cardinality: reports}
 
@@ -1262,7 +1259,7 @@ record: "PWValidatorDecodeFault"
 as: "lc_decode_fault"
 ```
 
-The host retains the first fault and its exact received byte context. Earlier accepted verdicts remain available.
+
 
 ### origin {origin: field}
 
@@ -1309,7 +1306,7 @@ record: "PWValidatorAssociationIssue"
 as: "lc_association_issue"
 ```
 
-Expected IDs are joined only to one accepted record describing the submitted query. Accepted records remain at collection scope when the join cannot select them.
+
 
 ### origin {origin: field}
 
@@ -1415,7 +1412,7 @@ record: "PWExecStreamObservation"
 as: "lc_exec_stream"
 ```
 
-A stream carries EOF or a terminal read/poll observation from collection.
+
 
 ### eof {eof: field}
 
@@ -1436,7 +1433,7 @@ record: "PWExecCleanupObservation"
 as: "lc_exec_cleanup"
 ```
 
-Cleanup requests follow the frozen collection observation and preserve their native returns.
+
 
 ### state {state: field}
 
@@ -1515,7 +1512,7 @@ record: "PWExecWaitObservation"
 as: "lc_exec_wait"
 ```
 
-Pending, failed and reaped waits retain their different native return values.
+
 
 ### rc {rc: field}
 
@@ -1536,5 +1533,4 @@ scope: "subtree"
 grade: "source_read"
 source: [{"path": "runner/Sources/PWRunnerCore/PWRunnerLifecycleEvidence.swift", "symbol": "PWRunnerSubprocess"}, {"path": "runner/Sources/PWRunnerCore/CWorker.swift", "symbol": "decodeWorkerEvidence"}, {"path": "runner/Sources/PWRunnerCore/CWorkerDisposition.swift", "symbol": "resolveDisposition"}, {"path": "runner/Sources/PWRunnerCore/PWRunnerDisposition.swift", "symbol": "lifecycleSummary"}, {"path": "runner/Sources/PWRunnerCore/PWRunnerPredictionEvidence.swift", "symbol": "validatorAssociationIssues"}, {"path": "runner/Sources/PWRunnerCore/ValidatorClient.swift", "symbol": "decodeValidatorFrames"}, {"path": "runner/Sources/PWRunnerCore/PWRunnerAttemptEvidence.swift", "symbol": "execObservationEvidenceProblem"}, {"path": "runner/Sources/PWRunnerCore/PWRunnerAuthoritySetup.swift", "symbol": "PWOwnedReapObservation"}, {"path": "controller/tools/pw_probe_runner/pw_probe_runner.c", "symbol": "write_ready_byte"}, {"path": "runner/Sources/PWRunnerCore/CWorker.swift", "symbol": "CWorkerInput"}, {"path": "runner/Sources/PWRunnerCore/ActorSession.swift", "symbol": "readyBudgetMs"}, {"path": "runner/Sources/PWRunnerCore/ValidatorClient.swift", "symbol": "runValidator"}, {"path": "controller/tools/pw_probe_runner/pw_probe_runner_abi.h", "symbol": "PW_SHM_DIAGNOSTIC_BYTES"}, {"path": "controller/tools/pw_probe_runner/pw_worker_timing.h", "symbol": "PW_EXEC_REAP_GRACE_MS"}]
 pins: "Imported public field definitions joined to producer/decoder/assessment meanings; explicit rule and evidence gaps preserve scope."
-context: "Source and check inspection during contract drafting."
 ```

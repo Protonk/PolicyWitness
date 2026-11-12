@@ -38,7 +38,7 @@ free.effect: Serialize the held selected request once and use those bytes for cl
 retained_free: {"condition":{"kind":"native_protocol","reason":"Parsed request ownership and completed in-memory normalization precede serialization and dossier construction."},"effect":{"kind":"native_protocol","reason":"One held serialization and independent source/import reads define byte provenance across later delivery/fallback invocations."}}
 ```
 
-The original path is a locator. JSON whitespace, escape spelling and subsequent edits to that file have no role in the held source hash. Actor fallback checks serialize the held resolved policy objects separately in request order. A later helper import scan can observe different import-file bytes because those files are independently opened. Actor-form dossiers retain request order; malformed identity/mode fields become null and policy availability remains distinct from admission.
+The original path is a locator. JSON whitespace, escape spelling and subsequent edits to that file have no role in the held source hash. Actor fallback checks serialize the held resolved policy objects separately in request order. A later helper import scan can observe different import-file bytes because those files are independently opened.
 
 ### Scan literal imports {scan: acts}
 
@@ -69,7 +69,7 @@ retained_free: {"condition":{"kind":"environment_observation","reason":"Selected
 uses: ["dossier.binary.classify"]
 ```
 
-A role baseline must be the unique entry at the expected path and kind with a 64-digit hexadecimal SHA-256. `match` means selected on-disk bytes matched that baseline at this read. A null role record refers to the shipped manifest description; ordinary collection does not rehash that shipped file. Worker/validator override strings must be absolute to be read; NUL-containing or over-<!-- span limits.test_override_path.value -->1,023<!-- /span -->-byte overrides are neither echoed nor opened. Optional `PW_VERIFY_EVIDENCE=1` separately hashes the manifest entries carrying declared hashes.
+A role baseline must be the unique entry at the expected path and kind with a 64-digit hexadecimal SHA-256. `match` means selected on-disk bytes matched that baseline at this read. A null role record refers to the shipped manifest description; ordinary collection does not rehash that shipped file. Worker/validator override strings must be absolute to be read; NUL-containing or over-<!-- span limits.test_override_path.value -->1,023<!-- /span -->-byte overrides are neither echoed nor opened.
 
 ### Held-file example {held_example: example}
 
@@ -177,7 +177,7 @@ as: "augmentation"
 
 ### applied {applied: field}
 
-Applied augmentation names in controller order. Empty for not_requested, failed and not_applicable.
+Applied augmentation names in controller order.
 
 ### original_sha256 {original_sha256: field}
 
@@ -231,7 +231,7 @@ as: "imports"
 
 ### closure_sha256 {closure_sha256: field}
 
-Digest of the selected source plus successfully read import path/hash pairs using the defined framing. Present for complete and incomplete scans; null for failed/not_applicable.
+Digest of the selected source plus successfully read import path/hash pairs using the defined framing.
 
 ### records {records: field}
 
@@ -508,7 +508,7 @@ record: "rust.VerifyReport"
 as: "verification"
 ```
 
-Entries without declared hashes are outside this calculation’s checked count. Each comparison concerns a file read under the app root.
+
 
 ### ok {ok: field}
 

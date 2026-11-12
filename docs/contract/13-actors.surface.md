@@ -17,7 +17,7 @@ record: "PWRunnerActor"
 as: "actor"
 ```
 
-A specimen admits at most <!-- span limits.actors.value_unit -->8 items<!-- /span -->. Each actor has at least one declared phase. Each required-entitlement list fits <!-- span limits.actor_required_entitlements.value_unit -->64 items<!-- /span -->, with each key bounded by <!-- span limits.actor_entitlement_key.value_unit -->255 UTF-8 bytes<!-- /span -->.
+A specimen admits at most <!-- span limits.actors.value_unit -->8 items<!-- /span -->.
 
 ### actor_id {actor_id: field}
 
@@ -44,7 +44,7 @@ Equipment role: `selected` uses the selected runner worker; `unentitled` uses th
 default: []
 ```
 
-Static and live read-back demand for boolean-true entitlement keys on this actor's executable. Omission supplies an empty list; present null is refused. Keys must be nonempty and unique.
+Static and live read-back demand for boolean-true entitlement keys on this actor's executable. Omission supplies an empty list; present null is refused.
 
 ### Normalize actors before launch {normalize: acts}
 
@@ -191,7 +191,7 @@ record: "PWRunnerPhase"
 as: "phase"
 ```
 
-The actor form admits <!-- span limits.actor_phases.value_unit -->16 items<!-- /span --> and the ordinary form <!-- span limits.phase_count.value_unit -->8 items<!-- /span -->. Across either form, actions share the <!-- span limits.probe_steps.value_unit -->256 items<!-- /span --> total capacity.
+
 
 ### phase_id {phase_id: field}
 
@@ -230,21 +230,12 @@ retained_free: {"effect":{"kind":"native_protocol","reason":"Collector closure, 
 
 
 
-### Barrier observation scope {barrier_evidence: definition}
-
-```contract
-defines: "value"
-```
-
-Query ordering joins whole-batch collection, host release, worker acknowledgement and the associated attempt. Phase records retain each observation and the established order. Integrated controls and mutation controls assess this sequence at their selected execution boundary; source ordering alone has source-read support.
-
-#### Disposition support {disposition_support: owner}
+#### Barrier observation support {disposition_support: owner}
 
 ```contract
 grade: "source_read"
 source: {"path":"runner/Sources/PWRunnerCore/PWRunnerStepEvidence.swift","symbol":"eligibleOrderedStep"}
 pins: "The ordering claim requires a complete chain and a unique matching native prediction for the owned worker."
-context: "Static review of the cited production branches."
 limits: "The source owner describes eligibility. Integrated collection/release and mutation observations retain their own execution owners."
 ```
 
@@ -350,22 +341,6 @@ as: "action"
 ```
 
 An action is one JSON object in the phase actions array. The decoder chooses an extension action when the `extension` key is present; otherwise it decodes a paired probe. A present null extension therefore selects extension decoding and fails its required object.
-
-### Paired probe {probe: definition}
-
-```contract
-defines: "record"
-```
-
-The probe variant is `PWRunnerProbeStep`: a step ID, sandbox query and attempt, as defined by the probes surface.
-
-### Extension action {extension: definition}
-
-```contract
-defines: "record"
-```
-
-The extension variant is `PWRunnerExtensionAction`: a step ID and closed extension operation, as defined by the extensions surface. It contributes no sandbox query.
 
 ### Action identity {identity: acts}
 

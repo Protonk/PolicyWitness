@@ -90,7 +90,7 @@ A source may combine a parameter with a literal suffix:
 defines: "value"
 ```
 
-The helper records parameter-map presence and count separately: omission and null decode as absent; an empty map remains present with zero entries. Native compiler examples concern the helper invocation that produced the verdict. Worker examples use the consumed source and parameter values, then observe application and the requested fresh-file effects on concrete targets. Record the selected binaries, policy and platform with each native observation.
+Native compiler examples concern the helper invocation that produced the verdict. Worker examples use the consumed source and parameter values, then observe application and the requested fresh-file effects on concrete targets. Record the selected binaries, policy and platform with each native observation.
 
 #### Disposition support {disposition_support: owner}
 
@@ -196,7 +196,6 @@ The resolver validates all names before file access, reads fragments in requeste
 grade: "source_read"
 source: {"path":"controller/src/augments.rs","symbol":"resolve_policy_augments"}
 pins: "Resolver validation, ordered reads and source append define the produced policy text."
-context: "Static review of the cited production branches."
 limits: "Resolver correctness and selected native fragment observations have distinct scopes."
 ```
 
@@ -433,7 +432,7 @@ test: helper_envelope.data.compile.stage == "compile"
 effects: [set_value(helper_envelope.result.ok, False), set_value(helper_envelope.result.exit_code, 1), set_value(helper_envelope.result.normalized_outcome, "compile_error"), set_value(helper_envelope.result.error, "sandbox_compile_string returned NULL without a diagnostic")]
 ```
 
-The helper supplies its fixed explanatory summary when the native call returned no diagnostic.
+
 #### Native setup failure {setup: outcome}
 
 ```contract
@@ -579,7 +578,7 @@ free.effect: Bind each digest to the bytes held by its producing read. The contr
 retained_free: {"effect":{"kind":"native_protocol","reason":"Each hash belongs to bytes held by a distinct producing read; final equal hashes do not establish read ownership or simultaneity."}}
 ```
 
-The saved file is held once by the controller, selected source is held after augmentation, and the serialized request is held once for delivery. Files named by imports can change between these independent reads. A literal inventory describes the producer's walk; the worker compiled-profile receipt has its own observation boundary.
+Files named by imports can change between these independent reads. A literal inventory describes the producer's walk; the worker compiled-profile receipt has its own observation boundary.
 
 ### Literal import evidence scope {native_import_agreement: definition}
 
@@ -595,7 +594,6 @@ The inventory walks literal imports using its documented two-directory search or
 grade: "source_read"
 source: {"path":"controller/src/sbpl_imports.rs","symbol":"resolve_import_path"}
 pins: "The scanner follows IMPORT_SEARCH_PATHS and records each resolved file read."
-context: "Static review of the cited production branches."
 limits: "The source records that collision precedence was not established by the cited platform exploration."
 ```
 
@@ -634,7 +632,7 @@ Capture result, or the exact normalized_outcome from a supported helper envelope
 
 ### tool_exit_code {tool_exit_code: field}
 
-Helper process exit code, or the capture's fallback value when unavailable. It remains independent of a supported envelope's declared outcome.
+Helper process exit code, or the capture's fallback value when unavailable.
 
 ### envelope {envelope: field}
 

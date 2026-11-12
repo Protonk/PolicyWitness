@@ -30,7 +30,7 @@ values: ["invalid_json", "missing_field", "missing_value", "type_mismatch", "unk
 unknown: "An unfamiliar code remains an unclassified refusal category; its producer text and path are retained as evidence."
 ```
 
-Producer's refusal category. Current categories identify syntax, required values, contract mismatch, closed-field or plan meaning, and capacity failures.
+Producer's refusal category.
 
 ### path {path: field}
 
@@ -95,7 +95,7 @@ Each code's condition remains attached to its owning input rule. This list suppl
 defines: "value"
 ```
 
-Each entry reports the first failure reached in its own traversal. CLI parsing, controller identity and selector checks, augmentation, host decoding, capacity and meaning admission remain distinct boundaries. Representative compound-error neighbours and one-component corrections identify the boundary reached by each input.
+Each entry reports the first failure reached in its own traversal. CLI parsing, controller identity and selector checks, augmentation, host decoding, capacity and meaning admission remain distinct boundaries.
 
 #### Disposition support {disposition_support: owner}
 
@@ -140,7 +140,7 @@ values: ["invalid_json", "missing_field", "missing_value", "type_mismatch", "unk
 unknown: "An unfamiliar code remains an unclassified refusal category; its producer text and path are retained as evidence."
 ```
 
-Producer's refusal category. Current categories identify syntax, required values, contract mismatch, closed-field or plan meaning, and capacity failures.
+Producer's refusal category.
 
 ### path {path: field}
 
@@ -164,7 +164,7 @@ uses: ["request.options", "policy.augments"]
 retained_free: {"effect": {"kind": "raw_admission", "reason": "CLI and preparation failures arise before different typed inputs exist; the selected diagnostic and refusal path depend on those raw branches."}}
 ```
 
-CLI argument parsing precedes reading and gating the file. Target resolution errors take precedence over an augment error after dossier preparation. These results identify local refusal, while the client capture owns whether a later invocation was attempted.
+These results identify local refusal, while the client capture owns whether a later invocation was attempted.
 
 #### Selected request refusal {request_refusal: outcome}
 
@@ -299,7 +299,7 @@ free.effect: Independently inspect every echoed metadata value: replace an unsaf
 retained_free: {"effect":{"kind":"raw_admission","reason":"Safe refusal echo inspects malformed raw input values independently of the selected first refusal and typed request construction."}}
 ```
 
-A parameter key can fit the parameter capacity yet exceed the smaller path-component bound. Such a refusal may retain admission_failure.parameter_key while request_failure.path is null. The path is withheld as a whole rather than shortened into another input location.
+A parameter key can fit the parameter capacity yet exceed the smaller path-component bound. Such a refusal may retain admission_failure.parameter_key while request_failure.path is null.
 
 ### Support {support: owner}
 
@@ -325,19 +325,7 @@ Given a correctly asserted ordinary specimen, a policy member `capture_compiled_
 
 A target-absence check made by a teaching control is separate evidence of the file state. The structured refusal identifies the stopped admission boundary.
 
-### Absent query path and successful creation {absent_path: example}
-
-A paired probe can query `file-write-create` with a path that does not exist at planning time, then attempt `file/create` at that path. The planner reports `prediction_unavailable`; the attempt remains eligible to run. A successful native create/open and an independent newly-created-file check answer different observations. Later realpath diagnostics can resolve a path the earlier query planner could not resolve.
-
-### Refusal correction workflows {workflow: definition}
-
-```contract
-defines: "value"
-```
-
-The capture correction chain changes the misspelled capture option, then supplies a valid nonce, then reaches application and capture. The same intent is exercised through CLI and direct-host entries. Each refused input retains its first diagnostic and no child effect; each successful correction retains its request, reply and independently checked target effect.
-
-#### Disposition support {disposition_support: owner}
+#### Correction workflow support {disposition_support: owner}
 
 ```contract
 grade: "check_read"
@@ -347,6 +335,10 @@ context: "Static review of the cited producer and assertion branches."
 check: [{"path":"tests/suites/runner_outcome_bad_request/contract.py","symbol":"refusal_workflows","form":"test"}]
 limits: "This owner describes the concrete correction chain; the guide presentation has its own workflow validation."
 ```
+
+### Absent query path and successful creation {absent_path: example}
+
+A paired probe can query `file-write-create` with a path that does not exist at planning time, then attempt `file/create` at that path. The planner reports `prediction_unavailable`; the attempt remains eligible to run. A successful native create/open and an independent newly-created-file check answer different observations. Later realpath diagnostics can resolve a path the earlier query planner could not resolve.
 
 ### Support {support: owner}
 
@@ -372,24 +364,15 @@ Later failures have different consequences from pre-child input refusal. Their o
 defines: "event"
 ```
 
-A client `xpc_timeout` records expiry of the client's wait without a host reply. A host `runner_timeout` may arrive in a successfully delivered client reply, with client exit 0 and controller exit 1. The host timeout includes policy-transfer and worker-sentinel paths.
+A client `xpc_timeout` records expiry of the client's wait without a host reply. A host `runner_timeout` may arrive in a successfully delivered client reply, with client exit 0 and controller exit 1.
 
-Worker or validator launch failure belongs to the respective child record. A missing completed slot leaves its operation result unresolved. `runner_reporting_failed` carries the reporting failure's explicit retention account and original summary when available. Preserve the records that were actually received while reading each failure at its own scope.
+Worker or validator launch failure belongs to the respective child record. Preserve the records that were actually received while reading each failure at its own scope.
 
-### Later-outcome observation owners {evidence: definition}
-
-```contract
-defines: "value"
-```
-
-Transport delivery and capture admission, host publication, worker and validator lifecycle, and controller disposition have separate owners. Their accounts retain the available raw evidence and identify the boundary that refused or withheld a conclusion. Rich reporting retains observations with removed comparisons; minimal reporting retains scalar context and original summary diagnostics; empty publication reaches receiver decoding failure.
-
-#### Disposition support {disposition_support: owner}
+#### Later-outcome support {disposition_support: owner}
 
 ```contract
 grade: "source_read"
 source: [{"path":"controller/src/runner_client.rs","symbol":"parse_runner_client_output"},{"path":"runner/Sources/PWRunnerCore/PWRunnerService.swift","symbol":"pwRunnerReportData"},{"path":"controller/src/run_flow.rs","symbol":"admit_reply"}]
 pins: "Delivery/capture precedence, successive reporting writers and controller reply admission retain separate consequences."
-context: "Static review of the cited production branches."
 limits: "Constructed writer and reader controls, source-built child controls and native selected-app outcomes retain their individual evidence grades."
 ```

@@ -38,7 +38,7 @@ Worker action result, including publication provenance and retained native obser
 
 ### comparison {comparison: field}
 
-Host assessment of observation, submitted scopes and reply.phases[p].ordering. Reporting fallback withholds every comparison.
+Host assessment of observation, submitted scopes and reply.phases[p].ordering.
 
 ### actor_id {actor_id: field}
 
@@ -120,7 +120,7 @@ Operation carried by the frame, omitted when absent.
 
 ### filter_type {filter_type: field}
 
-Filter spelling carried by the frame, omitted when absent. Query association compares the projected filter's uppercase spelling.
+Filter spelling carried by the frame, omitted when absent.
 
 ### filter_type_id {filter_type_id: field}
 
@@ -147,7 +147,7 @@ values: ["allow", "deny", "error", "unsupported_operation"]
 unknown: "Retain an unfamiliar diagnostic outcome with its error string; assign only its recorded diagnostic meaning."
 ```
 
-The accepted frame's outcome string. Unfamiliar diagnostic strings remain retained with their recorded diagnostic meaning.
+The accepted frame's outcome string.
 
 ### error {error: field}
 
@@ -304,7 +304,7 @@ Host-established worker ownership through release acknowledgement. Later cleanup
 
 ### protocol_violations {protocol_violations: field}
 
-Sorted unique driver and assembly findings about the collection/release/acknowledgement protocol. An empty array is one prerequisite of the established chain.
+Sorted unique driver and assembly findings about the collection/release/acknowledgement protocol.
 
 ## Query path observations {query_paths: subject}
 
@@ -582,8 +582,7 @@ effects: set_value(reply.steps[s].comparison.order, "unestablished")
 test: present(reply.phases[p].ordering) and reply.phases[p].ordering.collection_closed_before_proceed and reply.phases[p].ordering.proceed_set and reply.phases[p].ordering.proceed_observed and reply.phases[p].ordering.worker_lifetime_established and count(reply.phases[p].ordering.protocol_violations) == 0
 ```
 
-Collection closed, release and acknowledgement occurred, and worker
-ownership was established through acknowledgement.
+
 
 #### Setup {setup: condition}
 
@@ -608,8 +607,7 @@ free.condition: The query targets the associated live worker PID. For a filter k
 retained_free: {"condition": {"kind": "native_protocol", "reason": "The constructor receives the owned worker PID from live CWorkerOutput; the general reader supplies its associated reported process PID. Future filter names use the source string uppercasing operation."}}
 ```
 
-The native value for a none filter is absent. Other filters compare the
-carried value with the projected query value.
+
 
 ##### Exact retained query identity {identity: condition}
 
@@ -629,9 +627,8 @@ pins: "Ordering first counts all records for the step ID, then compares the sele
 
 ### Temporal meaning {meaning: definition}
 
-`query_first` places this prediction before the phase's attempt batch.
+
 Each probe retains its prediction eligibility when another query fails.
-Attempt success and aggregate run success have independent meanings.
 A consume, release or other action earlier in the batch can change the
 state a later attempt encounters. Submitted-string relations and path
 observations retain their respective intervals and identities.
@@ -661,8 +658,7 @@ who: ["identity.definitions.host"]
 
 A permission classification records the shape of the native failure.
 Attribution to a particular enforcing mechanism requires supporting
-evidence. A positive child PID establishes spawning even when the child
-subsequently exits nonzero.
+evidence.
 
 #### Spawn observed {spawned: outcome}
 
@@ -757,15 +753,9 @@ free.effect: Open a new descriptor during the released action, perform the actio
 retained_free: {"effect": {"kind": "native_protocol", "reason": "Descriptor acquisition, call order and release publication are native events. The adjacent aggregate classifiers express the ordered selection from carried native returns and errno values."}}
 ```
 
-`read_fresh` performs descriptor stat, bounded read and close after a
-successful open. A successful read records the bytes actually returned.
+A successful read records the bytes actually returned.
 
-`write_fresh` opens, records descriptor metadata, truncates to zero,
-records metadata again, writes one byte if truncation succeeded, records
-metadata after that write and closes. `create_fresh` first records a
-path-stat diagnostic, then opens with exclusive creation, records descriptor
-metadata, writes one byte, records metadata and closes. Creation's pre-open
-stat is diagnostic. A short write retains its observed count. Unreached operations remain absent.
+Unreached operations remain absent.
 
 #### Publication support {support: owner}
 
@@ -788,11 +778,8 @@ free.effect: Resolve qualifying query and attempt paths through the host filesys
 retained_free: {"effect": {"kind": "environment_observation", "reason": "Realpath, parent lookup and firmlink resolution are later filesystem observations; channel input eligibility and fixed output provenance are structured below."}}
 ```
 
-Query realpath and firmlink forms describe host observations after
-orchestration. The attempt's realpath follows the leaf; its parent form
-resolves the parent and appends the literal leaf. A missing leaf can have
-a parent form and a null realpath form. For a symlink leaf, the parent form
-names the link while realpath can name its destination. The submitted
+A missing leaf can have
+a parent form and a null realpath form. The submitted
 comparison operands remain preserved.
 
 #### Path support {support: owner}

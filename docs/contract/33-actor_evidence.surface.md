@@ -146,9 +146,7 @@ compiled-profile context. Host validation, controller admission and the general 
 scope. The actor/extension readers check ordinary semantic relationships when
 the reporting-failure record is absent. The lifecycle receipt reader separately checks each
 retained worker's claims and controller projection; findings from that
-assessment describe the retained worker evidence. Ordinary actor, phase and
-resource association requirements remain conditional on the ordinary semantic
-reply path.
+assessment describe the retained worker evidence.
 
 #### Reader definition support {support: owner}
 
@@ -200,7 +198,7 @@ record: "PWRunnerActorApplication"
 as: "ae_application"
 ```
 
-The host classifies the apply-call boundary from mode, launch, applied publication, eligible authority failure and terminal worker evidence, in that precedence order.
+
 
 ### state {state: field}
 
@@ -243,9 +241,7 @@ when: present(request.actors) and present(reply.actors) and reply.execution_form
 test: present(reply.authority_setup) and count(reply.authority_setup.workers) == count(reply.actors) and matches(w) == 1
 ```
 
-The produced authority table has one entry at each actor's list position,
-carrying that actor's index and identifier. Application classification
-evaluates each actor's applicable evidence in the case order below.
+
 
 ### Application classification {classify: reports}
 
@@ -264,9 +260,7 @@ when: present(request.actors) and present(reply.actors) and reply.execution_form
 ```
 
 
-The rule uses the actor's launch presence and applied flag, the worker
-evidence retained in its subprocess, and the authority entry at the same
-actor position when that entry exists. Preparation refusals classify their
+Preparation refusals classify their
 unlaunched rows through the first two branches. An unavailable native
 authority observation is reported as an entry with publication `not_observed`.
 
@@ -282,7 +276,7 @@ test: reply.actors[a].mode == "unapplied"
 effects: [set_value(reply.actors[a].application.state, "not_requested"), set_value(reply.actors[a].application.basis, "unapplied_declaration")]
 ```
 
-Mode is `unapplied`.
+
 
 #### Worker absent {unlaunched: outcome}
 
@@ -291,7 +285,7 @@ test: absent(reply.actors[a].launch)
 effects: [set_value(reply.actors[a].application.state, "not_attempted"), set_value(reply.actors[a].application.basis, "worker_not_launched")]
 ```
 
-Apply mode has no launched worker.
+
 
 #### Applied flag {applied: outcome}
 
@@ -300,7 +294,7 @@ test: present(reply.actors[a].applied) and reply.actors[a].applied == True
 effects: [set_value(reply.actors[a].application.state, "observed"), set_value(reply.actors[a].application.basis, "applied_publication")]
 ```
 
-The worker's applied publication is true.
+
 
 #### Authority refusal {authority: outcome}
 
@@ -309,8 +303,7 @@ test: present(reply.authority_setup) and matches(t) == 1
 effects: [set_value(reply.actors[a].application.state, "not_attempted"), set_value(reply.actors[a].application.basis, "terminal_authority_setup_refusal")]
 ```
 
-An observed authority decision is `terminal_required_failure` and carries no
-setup integrity error.
+
 
 #### Native apply failure {apply_failure: outcome}
 
@@ -319,7 +312,7 @@ test: present(reply.actors[a].subprocess) and present(reply.actors[a].subprocess
 effects: [set_value(reply.actors[a].application.state, "observed"), set_value(reply.actors[a].application.basis, "apply_failure_publication")]
 ```
 
-Terminal operation 8, code 1, native kind 1 has a nonzero native result.
+
 
 #### Input refusal {input: outcome}
 
@@ -328,8 +321,7 @@ test: present(reply.actors[a].subprocess) and present(reply.actors[a].subprocess
 effects: [set_value(reply.actors[a].application.state, "not_attempted"), set_value(reply.actors[a].application.basis, "terminal_input_refusal")]
 ```
 
-Terminal operation 1 has code 4, 7, 10 or 12 and native kind 0; or operation 2
-has code 2, 3, 9 or 13.
+
 
 #### Parameter refusal {parameter: outcome}
 
@@ -338,8 +330,7 @@ test: present(reply.actors[a].subprocess) and present(reply.actors[a].subprocess
 effects: [set_value(reply.actors[a].application.state, "not_attempted"), set_value(reply.actors[a].application.basis, "terminal_parameter_refusal")]
 ```
 
-Terminal operation 1/code 5/kind 0; operation 3/code 1/kind 2; or operation 4
-with code 1/kind 1 or code 6/kind 0.
+
 
 #### Compile refusal {compile: outcome}
 
@@ -348,7 +339,7 @@ test: present(reply.actors[a].subprocess) and present(reply.actors[a].subprocess
 effects: [set_value(reply.actors[a].application.state, "not_attempted"), set_value(reply.actors[a].application.basis, "terminal_compile_refusal")]
 ```
 
-Terminal operation 5/code 1/native kind 2.
+
 
 #### Timing refusal {timing: outcome}
 
@@ -357,7 +348,7 @@ test: present(reply.actors[a].subprocess) and present(reply.actors[a].subprocess
 effects: [set_value(reply.actors[a].application.state, "not_attempted"), set_value(reply.actors[a].application.basis, "terminal_timing_refusal")]
 ```
 
-Terminal operation 12 has code 1/kind 1, code 14/kind 0, or code 15/detail 1/kind 0.
+
 
 #### Apply boundary without result {boundary: outcome}
 
@@ -366,7 +357,7 @@ test: present(reply.actors[a].subprocess) and present(reply.actors[a].subprocess
 effects: [set_value(reply.actors[a].application.state, "unobserved"), set_value(reply.actors[a].application.basis, "apply_call_boundary_without_result")]
 ```
 
-Progress identifies operation 8 and stage 1 or 2, after all earlier branches failed.
+
 
 #### Remaining evidence {remaining: outcome}
 
@@ -375,7 +366,7 @@ test: True
 effects: [set_value(reply.actors[a].application.state, "unobserved"), set_value(reply.actors[a].application.basis, "no_eligible_apply_publication")]
 ```
 
-The preceding evidence branches did not establish another pair.
+
 
 ### Setup deadline and later application {late_application: definition}
 
@@ -476,7 +467,7 @@ record: "PWRunnerActorActivation"
 as: "ae_activation"
 ```
 
-The capture sequence belongs to the actor whose activation was stored. Time may be unavailable while the store and ordinal remain observed.
+
 
 ### capture_ordinal {capture_ordinal: field}
 
@@ -518,7 +509,7 @@ record: "PWRunnerScheduleRecord"
 as: "ae_schedule"
 ```
 
-The schedule records aggregate allowances and cancellation alongside individual actor and phase facts.
+
 
 ### setup_wait {setup_wait: field}
 
@@ -620,11 +611,10 @@ each: ["q", "p"]
 test: reply.phases[p].phase_id == request.phases[q].phase_id and reply.phases[p].ordinal == q + 1 and reply.phases[p].actor_id == request.phases[q].actor_id and implies(present(request.phases[q].after_termination), present(reply.phases[p].termination_gate) and reply.phases[p].termination_gate.source_actor_id == request.phases[q].after_termination.actor_id) and implies(absent(request.phases[q].after_termination), absent(reply.phases[p].termination_gate))
 ```
 
-Normalization retains the submitted phase order. Each prepared reply has
-one phase row per request phase at the corresponding position. The scheduler
+The scheduler
 installs every declared gate before cancellation, allowance and dependent
 availability checks, then assembly copies that gate into the phase row.
-An unreached gate therefore remains a declared gate. Its source final phase
+Its source final phase
 comes from the source actor's last preceding phase in the normalized plan.
 Preparation refusals carry their separate before-launch phase account.
 
@@ -667,9 +657,7 @@ on: "always"
 effects: set_value(reply.phases[p].termination_gate.activation_eligible, reply.phases[p].termination_gate.outcome == "satisfied")
 ```
 
-The evaluated outcome determines the permission to activate the dependent
-phase. The scheduler applies the cancellation procedure when this value is
-false.
+
 
 #### Satisfied {satisfied: outcome}
 
@@ -711,8 +699,7 @@ order was unavailable.
 value: "execution_allowance_exhausted"
 ```
 
-Evaluation began with no positive whole-millisecond gate budget. A schedule
-allowance check that stops traversal earlier leaves the gate `not_reached`.
+Evaluation began with no positive whole-millisecond gate budget.
 
 #### Timing unavailable {clock_unavailable: outcome}
 
@@ -787,7 +774,7 @@ Run result and exit status continue to follow their result-selection rule.
 test: implies(reply.phases[p].termination_gate.outcome == "not_reached", absent(reply.phases[p].termination_gate.wait) and absent(reply.phases[p].termination_gate.observation) and absent(reply.phases[p].termination_gate.capture_ordinal))
 ```
 
-An unreached gate carries its declaration and false eligibility.
+
 
 #### Timely satisfied wait {timely: condition}
 
@@ -877,6 +864,5 @@ scope: "subtree"
 grade: "source_read"
 source: [{"path": "runner/Sources/PWRunnerCore/PWRunnerActors.swift", "symbol": "PWRunnerActorResult"}, {"path": "runner/Sources/PWRunnerCore/PWRunnerAuthoritySetup.swift", "symbol": "actorApplicationAssessment"}, {"path": "runner/Sources/PWRunnerCore/ActorScheduler.swift", "symbol": "ActorScheduler"}, {"path": "runner/Sources/PWRunnerCore/ActorOrchestration.swift", "symbol": "assembleActorReply"}, {"path": "runner/Sources/PWRunnerCore/ActorPlan.swift", "symbol": "normalizeActorPlan"}, {"path": "runner/Sources/PWRunnerCore/PWRunnerReply.swift", "symbol": "actorExtensionEvidenceProblem"}, {"path": "controller/src/porcelain_actor.rs", "symbol": "gates"}, {"path": "controller/src/porcelain_admission.rs", "symbol": "execution_diagnostics"}, {"path": "tests/lib/actor_evidence.py", "symbol": "validate_actor_evidence"}, {"path": "tests/lib/lifecycle_oracle.py", "symbol": "check_actor_records"}, {"path": "tests/lib/consumer.py", "symbol": "_validate_actors"}]
 pins: "Imported public field definitions joined to producer/decoder/assessment meanings; explicit rule and evidence gaps preserve scope."
-context: "Source and check inspection during contract drafting."
 limits: "No execution credit is claimed by this owner."
 ```

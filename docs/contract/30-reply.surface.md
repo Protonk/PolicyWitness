@@ -47,8 +47,7 @@ operations and child exit statuses have separate fields.
 
 ### Aggregate outcome {normalized_outcome: field}
 
-The host outcome, with the meanings below. `finished` describes completed
-execution and required evidence collection; individual attempts can fail.
+The host outcome, with the meanings below.
 
 ### Aggregate diagnostic {error: field}
 
@@ -130,7 +129,7 @@ where required. It identifies the selected execution configuration.
 ### Reporting failure {reporting_failure: field}
 
 Host validation or encoding failure and the fallback's retention state.
-Original summary fields are diagnostic values from the rejected report.
+
 
 ### Execution form {execution_form: field}
 
@@ -264,9 +263,7 @@ free.effect: Validate and encode the assembled report. If either operation fails
 retained_free: {"effect": {"kind": "native_protocol", "reason": "Validation/encoding failures select successive writer attempts. Original-summary copying reads the distinct rejected report; the final fallback carries the selected writer retention state."}}
 ```
 
-The rich fallback preserves observations that triggered rejection. The
-minimal writer retains specimen/run/bundle/policy identity, PID and original
-summary diagnostics, with empty steps and phases. Empty reply bytes reach the
+The rich fallback preserves observations that triggered rejection. Empty reply bytes reach the
 recipient's decoding failure.
 
 #### Reporting-failure associations {associations: gap}

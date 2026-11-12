@@ -1001,10 +1001,7 @@ value: {"run":["core_limit"],"worker":["issue_symbol","consume_symbol","release_
 
 The index within each list is its fixed slot. Worker descriptor close can
 belong to setup or cleanup according to the branch. Worker slots 11–12,
-region slots 8–11 and custody slots 1–2 are cleanup. Integer/error-code
-operations publish their return; failed integer/mapping operations publish
-errno. Symbol, validation and memory states carry their corresponding
-observation without an invented integer return.
+region slots 8–11 and custody slots 1–2 are cleanup.
 
 ## Unresolved shared-memory name {cleanup_reference: subject}
 
@@ -1054,5 +1051,4 @@ scope: "subtree"
 grade: "source_read"
 source: [{"path": "runner/Sources/PWRunnerCore/ActorEquipment.swift", "symbol": "ActorEquipmentPreparation"}, {"path": "runner/Sources/PWRunnerCore/PWRunnerEquipment.swift", "symbol": "pwRunnerEquipmentProblems"}, {"path": "runner/Sources/PWRunnerCore/AuthoritySetupRuntime.swift", "symbol": "decodeAuthoritySetup"}, {"path": "runner/Sources/PWRunnerCore/PWRunnerAuthoritySetup.swift", "symbol": "authoritySetupIntegrityErrors"}, {"path": "runner/Sources/PWRunnerCore/ActorOrchestration.swift", "symbol": "actorPreparationRefusal"}, {"path": "runner/Sources/PWRunnerCore/PWRunnerReply.swift", "symbol": "actorExtensionEvidenceProblem"}, {"path": "runner/Sources/PWRunnerCore/ActorScheduler.swift", "symbol": "didSetUp"}, {"path": "runner/Sources/PWRunnerCore/ActorOrchestration.swift", "symbol": "inspectionDeadline"}, {"path": "runner/Sources/PWRunnerCore/MonotonicDeadline.swift", "symbol": "static func now"}]
 pins: "Imported public field definitions joined to producer/decoder/assessment meanings; explicit rule and evidence gaps preserve scope."
-context: "Source and check inspection during contract drafting."
 ```

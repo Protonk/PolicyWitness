@@ -217,11 +217,13 @@ class ContractTreeTests(receipts.TestCase):
         self.assertNotIn('for each', rule)
         row = next(line for line in rendered.split('## Controller findings', 1)[1].splitlines()
                    if '#contract-demo-report-read_status)' in line)
-        self.assertIn('sample.phases[q].id', row)
-        self.assertIn('sample.phases[p].id', row)
+        # The index names the record members read; operand paths stay in the rule.
+        self.assertIn('`sample.phases`', row)
+        self.assertIn('`sample.status`', row)
         self.assertIn('`reply.steps`', row)
+        self.assertNotIn('sample.phases[q].id', row)
 
-    def test_findings_include_direct_effects_child_triggers_and_consequence_prose(self):
+    def test_findings_name_direct_reach_and_link_child_consequences_with_triggers(self):
         body = minimal_surface().replace('failure: "first"',
                                         'effects: set_value(sample.status, "reviewed")\n'
                                         'free.effect: Keep the direct retained explanation.\n'
@@ -235,15 +237,31 @@ class ContractTreeTests(receipts.TestCase):
         rendered = self.model.render(self.load(body))
         row = next(line for line in rendered.split('## Controller findings', 1)[1].splitlines()
                    if '#contract-demo-report-read_status)' in line)
-        self.assertIn('sets `sample.status` to `"reviewed"`.', row)
-        self.assertIn('Keep the direct retained explanation.', row)
-        self.assertIn('On failure, prevents', row)
-        self.assertIn('The record remains available when the assessment is withheld.', row)
-        self.assertIn('On success, retain the successful model note.', row)
-        self.assertIn('The successful note carries its own consequence detail.', row)
+        self.assertIn('At the rule: sets `sample.status`.', row)
+        failure = '[Otherwise](#contract-demo-report-read_status-failure) (on failure): '
+        self.assertIn(failure + 'prevents [Activate a phase](#contract-demo-meanings-activate) for '
+                      'members after `p` in `sample.phases`; retains `sample`; '
+                      'withholds [Supported assessment](#contract-demo-meanings-assessment).', row)
+        self.assertIn('[Successful consequence](#contract-demo-report-read_status-success) (on success).', row)
+        # Assigned values, free consequences and prose belong to the linked rows.
+        body = rendered.split('## Evidence support', 1)[0]
+        for text in ('sets `sample.status` to `"reviewed"`.', 'Keep the direct retained explanation.',
+                     'The record remains available when the assessment is withheld.',
+                     'On success, retain the successful model note.',
+                     'The successful note carries its own consequence detail.'):
+            self.assertIn(text, body)
+            self.assertNotIn(text, row)
         self.assertNotIn('The controller checks the status under this constructed rule.', row)
         self.assertNotIn('Requires', row)
         self.assertNotIn('Applies when', row)
+        free_only = minimal_surface().replace('failure: "first"',
+            'free.effect: Keep the direct retained explanation.\n'
+            'retained_free: {"effect":{"kind":"native_protocol","reason":"The model preserves this procedural release sentence."}}\n'
+            'failure: "first"', 1)
+        row = next(line for line in self.model.render(self.load(free_only)).split('## Controller findings', 1)[1].splitlines()
+                   if '#contract-demo-report-read_status)' in line)
+        self.assertIn('Stated at the linked rule.', row)
+        self.assertIn(failure, row)
 
     def test_record_alias_locations_render_at_their_own_subject(self):
         rendered = self.model.render(self.load())
@@ -341,8 +359,7 @@ class ContractTreeTests(receipts.TestCase):
         self.assertIn('Entry: direct.', row)
         self.assertIn('On failure,', row)
         findings = rendered.split('## Controller findings', 1)[1]
-        self.assertIn('Entry: direct.', findings)
-        self.assertIn('On failure,', findings)
+        self.assertIn('[Otherwise](#contract-demo-report-read_status-failure) (direct, on failure): ', findings)
 
     def test_arithmetic_renders_limit_quantities_and_collection_operands(self):
         body = self.changed('test: sample.status in ["ready", "unknown"]',
@@ -683,8 +700,10 @@ effects: set_value(sample.note, "fallback")
         self.assertIn('</a>1. Known status |', self.model.render(changed))
         finding = next(line for line in rendered.split('\n## Controller findings\n', 1)[1].splitlines()
                        if '#contract-demo-report-decision)' in line)
-        self.assertIn('First-match case 1:', finding)
-        self.assertIn('sets `sample.note` to `"fallback"`', finding)
+        self.assertIn('[Ready](#contract-demo-report-decision-ready) (case 1): sets `sample.note`.', finding)
+        self.assertIn('[Fallback](#contract-demo-report-decision-fallback) (case 3): sets `sample.note`.', finding)
+        self.assertNotIn('"fallback"', finding)
+        self.assertIn('sets `sample.note` to `"fallback"`', rendered.split('## Evidence support', 1)[0])
         shared = component_surface().replace('The component that reads a retained model.',
             'The component that reads a retained model.').replace('defines: "component"',
             'defines: "component"\nuses: ["demo.report.decision.ready"]', 1)
@@ -889,15 +908,19 @@ effects: perform(ref("identity.procedures.refuse"), ref("demo.report"))
             'test: sample.phases[p].id != "expected"\n```\n'
             '#### Otherwise {failure: effect}', 1)
         rendered = self.model.render(self.load(body))
+        lines = rendered.splitlines()
         for parent, title, operator in [('matching', 'Matching phases', '='),
                                         ('other', 'Other phases', '≠')]:
             anchor = 'contract-demo-report-read_status-' + parent
-            caption = '**Within [' + title + '](#' + anchor + ').**'
-            self.assertEqual(rendered.count(caption), 1)
-            fragment = rendered.split(caption, 1)[1].split('\n\n', 2)[1]
-            self.assertIn('| Item | Requirement or consequence |', fragment)
-            self.assertIn('<a id="' + anchor + '-label"></a>Retained label', fragment)
-            self.assertIn('Requires `sample.phases[p].id` ' + operator + ' `"expected"`.', fragment)
+            position = next(i for i, line in enumerate(lines) if '<a id="' + anchor + '"></a>' in line)
+            self.assertTrue(lines[position].startswith('| <a id="' + anchor + '"></a>' + title + ' | '))
+            # The subordinate row is the next row of the same table and names its parent.
+            row = lines[position + 1]
+            self.assertTrue(row.startswith('| <a id="' + anchor + '-label"></a>' + title + ' › Retained label | '), row)
+            self.assertIn('Requires `sample.phases[p].id` ' + operator + ' `"expected"`.', row)
+            self.assertEqual(rendered.count('<a id="' + anchor + '-label"></a>'), 1)
+        self.assertEqual(rendered.split('### Read the status', 1)[1].split('### Release a phase', 1)[0]
+                         .count('| Item | Requirement or consequence |'), 1)
         self.assertIn('Association restriction for `p`: `sample.phases[p].id` = `"expected"`.', rendered)
         self.assertIn('Association restriction for `p`: `sample.phases[p].id` ≠ `"expected"`.', rendered)
         self.assertIn('On failure, prevents', rendered)
@@ -911,8 +934,9 @@ effects: perform(ref("identity.procedures.refuse"), ref("demo.report"))
                      'Reports: ordinary.', 'Applies when `sample.status` is present.'):
             self.assertIn(text, local)
         navigation = rendered.split('\n## Rule applicability\n', 1)[1].split('\n## Controller findings\n', 1)[0]
-        self.assertIn('| Rule | Acting components |', navigation)
-        self.assertIn('#contract-demo-report-read_status)', navigation)
+        self.assertIn('| Acting components | Rules |', navigation)
+        self.assertIn('| controller | [Read the status](#contract-demo-report-read_status); '
+                      '[Release a phase](#contract-demo-report-release) |', navigation)
         self.assertNotIn('sample.status', navigation)
         self.assertEqual(before, self.model.public_payload(tree, 'demo'))
         self.assertIn('Record `sample`: `ContractFixture`.', rendered)

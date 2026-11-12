@@ -66,7 +66,7 @@ free.effect: Send only the reservation control; the host may grant its one unuse
 retained_free: {"condition":{"kind":"native_protocol","reason":"The pre-attempt remaining continuous-clock allowance and attempts-started counter precede the final acquisition report."},"effect":{"kind":"native_protocol","reason":"Grant/reconnect control runs on connection-bound reservation state within an unchanged deadline and never submits specimen bytes during acquisition."}}
 ```
 
-The requested lease is at most <!-- span limits.reservation_lease.value_unit -->5,000 milliseconds<!-- /span --> and at most the remaining overall allowance. Each reservation RPC waits at most <!-- span limits.reservation_rpc_wait.value_unit -->5,000 milliseconds<!-- /span -->; retries wait up to <!-- span limits.reservation_retry_delay.value_unit -->100 milliseconds<!-- /span -->, shortened by the remaining allowance. The client begins at most <!-- span limits.reservation_attempts.value -->256<!-- /span --> acquisition attempts, including occupied replies and transport failures. Every attempt uses a new UUID. A host shares its one slot across authenticated connections. Grant, execution, expiry and abandonment advance that slot toward retirement; expiry or disconnect does not make it reusable. The client sends specimen bytes at the execution RPC.
+The requested lease is at most <!-- span limits.reservation_lease.value_unit -->5,000 milliseconds<!-- /span --> and at most the remaining overall allowance. Each reservation RPC waits at most <!-- span limits.reservation_rpc_wait.value_unit -->5,000 milliseconds<!-- /span -->; retries wait up to <!-- span limits.reservation_retry_delay.value_unit -->100 milliseconds<!-- /span -->, shortened by the remaining allowance. Every attempt uses a new UUID. A host shares its one slot across authenticated connections. Grant, execution, expiry and abandonment advance that slot toward retirement; expiry or disconnect does not make it reusable.
 
 ### Admit the control {admit_control: checks}
 
@@ -82,7 +82,7 @@ free.effect: Bound the control to <!-- span limits.reservation_control_bytes.val
 retained_free: {"condition": {"kind": "native_protocol", "reason": "Control callback arrival must precede the client terminal decision; the decoded control cannot establish event ordering alone."}, "effect": {"kind": "serialized_grammar", "reason": "Raw control bytes, live callback phase/attempt, requested lease and UUID parsing govern admission. The adjacent typed requirements express the carried status-specific fields."}}
 ```
 
-A grant requires a positive signed-32-bit host PID, UUID host instance, the current attempt UUID, UUID credential and positive lease no greater than requested. Acquisition replies require reason absent or null; occupied replies also require credential and lease absent or null. Both reservation requests and admitted control replies reject unknown keys after identity admission. Optional control fields accept JSON null as absence. Reservation acceptance establishes control admission and ownership of a slot. Peer PID and host-instance strings are assertions supplied by that peer.
+Both reservation requests and admitted control replies reject unknown keys after identity admission. Optional control fields accept JSON null as absence. Reservation acceptance establishes control admission and ownership of a slot. Peer PID and host-instance strings are assertions supplied by that peer.
 
 #### Typed control identity {identity: condition}
 
@@ -128,7 +128,7 @@ free.effect: Record the sampled invocation elapsed time before acquiring/calling
 retained_free: {"condition": {"kind": "native_protocol", "reason": "Invocation eligibility uses a fresh continuous-clock sample after an admitted grant, not the final reported elapsed time."}, "effect": {"kind": "native_protocol", "reason": "The sampled elapsed time, publication-before-proxy ordering and once-only invocation are live session events. The invoked field records this client call boundary."}}
 ```
 
-A grant handled at or after the overall deadline remains granted with submission `not_invoked`. The host checks the connection-bound credential before interpreting the specimen. Wrong, expired, absent or consumed credentials return a submission control refusal. A transport error after invocation leaves receipt and execution uncertain until independent observations resolve them.
+The host checks the connection-bound credential before interpreting the specimen. A transport error after invocation leaves receipt and execution uncertain until independent observations resolve them.
 
 ### Apply the original allowance {deadline: acts}
 
@@ -147,7 +147,7 @@ Continuous time includes machine sleep. Client clock failure ends with `local_er
 
 ### Uncertain invocation example {uncertain: example}
 
-A capture can contain `acquisition_stop: "granted"`, `submission: {"state":"invoked"}` and `terminal: "xpc_error"` while `runner_reply` is absent. The client crossed its execution-call boundary once; the reply was unavailable. Retrying the specimen would be a new caller decision with possible repeated effects. A capture rejected by the controller instead leaves the controller’s `submission` projection `unknown`.
+A capture can contain `acquisition_stop: "granted"`, `submission: {"state":"invoked"}` and `terminal: "xpc_error"` while `runner_reply` is absent. The client crossed its execution-call boundary once; the reply was unavailable. Retrying the specimen would be a new caller decision with possible repeated effects.
 
 ### Transport evidence scope {live_evidence: definition}
 
@@ -163,7 +163,6 @@ Controlled client connections establish the observed control-identity refusal an
 grade: "source_read"
 source: {"path":"runner/Clients/PWRunnerClient/PWRunnerClientSession.swift","symbol":"reservationReply"}
 pins: "Control admission and submission phase changes preserve the once-only client boundary."
-context: "Static review of the cited production branches."
 limits: "A substituted foreign control is a controlled receive observation. Native cap-interval behavior and a complete native fault matrix remain outside that observation."
 ```
 
@@ -199,7 +198,7 @@ The host’s compiled public identity, checked by the client before reading the 
 
 ### status {status: field}
 
-The host reports `granted`, `occupied`, `invalid_request`, `unsupported_protocol` or `reservation_refused` at the corresponding boundary. The client admits granted/occupied acquisition replies and reservation_refused submission replies with their required fields.
+The host reports `granted`, `occupied`, `invalid_request`, `unsupported_protocol` or `reservation_refused` at the corresponding boundary.
 
 ### attempt_id {attempt_id: field}
 
@@ -387,7 +386,7 @@ as: "invocation"
 
 ### state {state: field}
 
-`not_invoked` until the client crosses its execution-call boundary, then permanently `invoked`. This field is authoritative to the controller only in an admitted capture.
+`not_invoked` until the client crosses its execution-call boundary, then permanently `invoked`.
 
 ### invoked_elapsed_ms {invoked_elapsed_ms: field}
 
@@ -513,7 +512,7 @@ Diagnostic explaining capture refusal or absence; null for accepted capture.
 
 ### submission {submission: field}
 
-Admitted capture’s invoked/not_invoked state, otherwise `unknown`. Raw rejected bytes never supply a recovered invocation assertion.
+Admitted capture’s invoked/not_invoked state, otherwise `unknown`.
 
 ### runner_reply_error {runner_reply_error: field}
 
@@ -623,7 +622,7 @@ record: "rust.TransportCapture"
 as: "transport_value"
 ```
 
-The public object is either the complete admitted PWRunnerClientCapture projection or the Rejected object below. The Rust enum is untagged: JSON contains the chosen alternative’s fields directly. `transport_admission` names which interpretation the controller established.
+The Rust enum is untagged: JSON contains the chosen alternative’s fields directly. `transport_admission` names which interpretation the controller established.
 
 ## Rejected client stdout {rejected: subject}
 

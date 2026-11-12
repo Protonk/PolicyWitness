@@ -118,17 +118,11 @@ The Rust controller and compiler helper embed a nonempty compile-time
 Ordinary SwiftPM compilation uses `unbound`; its explicitly selected unit-test
 context uses `test:policy-witness`. Rust unit tests likewise use
 `test:policy-witness`. A request cannot pass the controller's identity gate
-when its expected identity is empty or `unbound`.
+when its expected identity is empty or `unbound`. A supplied spelling can be
+foreign or release-shaped; build version, number, commit and describe retain
+their separately supplied provenance.
 
-#### Direct-build identity {direct_evidence: definition}
-
-```contract
-defines: "value"
-```
-
-A non-test Cargo build embeds a nonempty supplied PW_BUILD_CONTRACT verbatim. An absent or empty value produces unbound. The spelling can be foreign or release-shaped; build version, number, commit and describe retain their separately supplied provenance. An unbound receiver refuses public requests; a bound receiver requires exact equality with its public identity.
-
-##### Disposition support {disposition_support: owner}
+#### Disposition support {disposition_support: owner}
 
 ```contract
 grade: "check_read"
@@ -185,9 +179,7 @@ retained_free: {"effect":{"kind":"native_protocol","reason":"Ancestry walking an
 
 History derivation compares a surface with its prior declared inputs. The
 history reader for a released layout supplies that layout's own definition
-and shape framing. Source copies lacking annotated history can check current
-inputs and agreement of carried tables; their result explicitly leaves the
-historical last-change derivation unverified.
+and shape framing.
 
 #### Surface-history support {support: owner}
 
@@ -227,7 +219,7 @@ preflight requires complete history.
 defines: "value"
 ```
 
-Review a development-asserting specimen against its original source and contract snapshot when those are available. Record the old assertion, target identity and commitments compared. When the old snapshot is unavailable, review the relevant target definitions and chosen validation against the specimen explicitly. Set the target assertion after that review. A development digest identifies selected source bytes; the release table supplies release-indexed history.
+Review a development-asserting specimen against its original source and contract snapshot when those are available. Record the old assertion, target identity and commitments compared. When the old snapshot is unavailable, review the relevant target definitions and chosen validation against the specimen explicitly. Set the target assertion after that review.
 
 #### Disposition support {disposition_support: owner}
 
@@ -235,7 +227,6 @@ Review a development-asserting specimen against its original source and contract
 grade: "source_read"
 source: {"path":"docs/build_contract.py","symbol":"def identity"}
 pins: "The development identity hashes selected source paths and bytes; release identity selection uses release-tag and byte checks."
-context: "Static review of the cited production branches."
 limits: "The source establishes identity construction. The specimen review procedure is the stated reuse obligation."
 ```
 
@@ -416,9 +407,7 @@ defines: "component"
 ```
 
 The native `sb_api_validator` issues `sandbox_check` queries about the selected
-worker process and returns query records to the host. Each query describes
-an operation and filter; the attempt later performs its separately specified
-native operation.
+worker process and returns query records to the host.
 
 ### Compiler helper {helper: definition}
 
@@ -550,8 +539,7 @@ defines: "event"
 An effect is an observable consequence of an operation, such as creation of a
 file, truncation, bytes read or written, or spawning a child. Each effect claim
 is bounded by its concrete observation: descriptor metadata, content/transfer
-result, child PID or independent state observation. An `open_write` success
-reports its truncating open; the worker discards the following write's return.
+result, child PID or independent state observation.
 The meaning of a successful status is specific to that operation.
 
 ### Cause {cause: definition}
@@ -813,7 +801,8 @@ retained_free: {"condition": {"kind": "raw_admission", "reason": "The first raw 
 ```
 
 Version dispatch reports the compiled context without loading a specimen or
-starting the runner client. `generated_at_unix_ms` is the producer's current
+starting the runner client. Remaining arguments are ignored.
+`generated_at_unix_ms` is the producer's current
 wall-clock time in milliseconds since the Unix epoch; the shared serializer
 uses zero if its system time precedes that epoch.
 
@@ -827,14 +816,6 @@ pins: "--version succeeds, emits kind version and result.ok true, supplies popul
 context: "Read dispatch and serializer branches; read integration test invoking the selected controller binary and independently extracting its app plist identity."
 limits: "Check read without execution. Alias version, trailing arguments, exact null result fields and rendering-error exit are source-established here; the cited check exercises --version success."
 ```
-
-### Version argument dispatch {arguments: definition}
-
-```contract
-defines: "value"
-```
-
-The first argument --version or version selects version reporting. Remaining arguments are ignored. Successful envelope rendering returns process exit 0; a rendering error returns 2.
 
 #### Disposition support {disposition_support: owner}
 

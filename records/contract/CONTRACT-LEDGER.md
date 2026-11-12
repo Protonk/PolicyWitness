@@ -12,6 +12,22 @@ sections hold and when they are updated; a check-in reads them first.
 
 ## Standing
 
+**First reduction applied before the tag.** At the maintainer's direction the
+prepared contract was reduced at the pre-tag boundary, so the reduced account
+becomes the `v0.3.8` surface. `records/contract/FIRST-REDUCTION-ACCOUNT.md`
+records the cuts, canonical consequences, verification and declined
+candidates; `records/contract/evidence/first-reduction/` lists every removed
+sentence and node with its retained statement. The contract has 5,472 lines
+and 73,178 words, from 5,831 and 77,418. Presentation changes left every
+surface hash identical. Authored cuts changed 149 nodes in prose only and
+removed 15, which moves all nineteen surface hashes while every stamp stays
+`v0.3.8`. Product source, shape goldens, the guide body and the free
+relationship counts (51 conditions, no dependencies, 78 effects, four
+applicability clauses) are unchanged; all 145 support paragraphs remain.
+`source_drift` run `20261112T002531Z_b89d61d1` passed 10 of 10 on the reduced
+tree. The stage-three and stage-four paragraphs below describe the document
+and rehearsals before this reduction. The pause before the tag stands.
+
 **Final review boundary.** The maintainer has directed a pause before the
 `v0.3.8` tag, with completed changes committed and pre-tag checks finished.
 Another agent's review and the maintainer's line-by-line contract reading
@@ -640,6 +656,32 @@ local and disposable. The run identity is `20261110T195016Z_0d197151`.
 Reversal removes the outcome-level owner while leaving
 the existing reply-label test. Product behavior is unchanged.
 
+**Derived views identify a rule and its reach (first reduction).** The
+controller-findings view names the record members a check reads and links
+each consequence with its entry, trigger or case and the targets it sets,
+withholds, retains or prevents. The applicability view lists rules under each
+acting-component set, and a subordinate row follows its parent row. Operand
+paths, assigned values, free effects and consequence prose stay at the linked
+rule. Evidence: canonical payloads and all nineteen surface hashes are
+identical across this step, checked by comparison. Reversal restores the
+earlier renderer and seven presentation controls; no public content moves.
+
+**Stage-two evidence definitions fold into support; accepted limits stay
+public (first reduction).** Twelve D definitions that restated a neighboring
+rule or field and described its evidence were removed. Each owner now
+supports the rule, field, example or subject concerned, and each sentence
+stated nowhere else moved there. The seven L definitions and the D
+definitions carrying their own behavior are unchanged. Evidence: the cut
+manifest and canonical comparison, check-read grade over the contract text;
+no product source was read. Reversal restores the nodes from `b83b2e2e`.
+
+**Parallel ordinary and actor rule families stay separate (first
+reduction).** The two projection families and the two disposition-bound
+families repeat about 1,350 words. Reply-wide findings overwrite the ordinary
+outputs and leave actor outputs, and assigned actions differ, so one
+statement needs a scope parameter the tree does not have. Declined with the
+other candidates listed in the reduction account.
+
 ## For the maintainer
 
 What only the maintainer can settle. Work proceeds on everything else, and
@@ -657,6 +699,8 @@ under the strain register, gives the evidence found for each row.
 | What ships | A release archives the guide and not the contract. After stage one the guide's surface table names surfaces defined only in the contract. | A reader holding only the release cannot follow the table to a definition. | The table stays in the guide and the archive's contents are unchanged. |
 | The reading before `v0.3.8` | Pause before tagging the completed, committed changes, after pre-tag checks. The maintainer will arrange another agent's review and read the contract line by line. | Review can change the source before tagged rehearsal and Apple submission. | Stage four and pre-tag verification proceed; the final tag waits for the instruction to continue. |
 | Contract size | The stage-one rendering has 4,494 lines and 59,989 words, including 1,671 table lines; authored body and field meanings are counted above. | This exceeds the plan's 2,200-line reporting threshold. | Stage three examines repetition and generated presentation while retaining field meanings and boundary distinctions. |
+| Contract size after the first reduction | 5,472 lines and 73,178 words. The remaining repetition found by reading needs a decision or new expression forms: scope parameters for the ordinary and actor families, a conditional value, and the owner schema's required pins and check-read context. | The plan's reporting threshold is 2,200 lines; sentence-level repetition is now a few percent of the document. | Declined candidates are listed with sizes in the reduction account. |
+| Evidence in the rendered contract | Support paragraphs take about a tenth of the document. Rendering grade, scope, limit and citations without pins and context would remove about 3,400 words and move no stamp. | Pins state which assertions a check supports. | Support renders in full; only generic context on source-read owners was removed. |
 | `v0.3.7` at publication | Published as a release, against only its tag pushed. | `make publish` pushes one tag, and a clone with `main` and the earlier tags but without `v0.3.7` fails the stamp check. | Nothing is pushed; notes are drafted for both versions. |
 
 ## Stage log
