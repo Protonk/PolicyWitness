@@ -1,6 +1,6 @@
 # Contract example conformance plan
 
-This plan adds the first executable entrance to the public contract: a signed PolicyWitness application emits one contract-bound specimen through its own CLI, that same application runs it, and an independent test checks selected public relationships in the resulting envelope. It follows the four-stage contract work outlined in [CONTRACT-STAGING-PLAN.md](CONTRACT-STAGING-PLAN.md) and targets the 0.3.8 candidate, without making the tag or publication an outcome.
+This plan adds the first executable entrance to the public contract: a signed PolicyWitness application emits one contract-bound specimen through its own CLI, that same application runs it, and an independent test checks selected public relationships in the resulting envelope. It follows the completed four-stage contract work, whose remaining release inputs are in [RELEASE-INPUTS.md](../records/contract/RELEASE-INPUTS.md), and targets the 0.3.8 candidate, without making the tag or publication an outcome.
 
 The plan is written for an executor who knows the repository but not the planning conversation. Sections 2 and 3 record what was inspected and decided; sections 4 to 8 say what to build, in what order, and how to tell it is done; section 9 lists the public commitments the design creates, for the maintainer to confirm before controller work starts.
 
@@ -271,7 +271,7 @@ Earlier pre-tag evidence does not carry over. This work changes the CLI, the bui
 4. Then prepare again: `generate_contract_stamps.py --release v0.3.8 --require-history`, changing only the two stamp tables and the snapshot history; confirm that the ordinary check gives exactly the expected missing-tag refusal; run the same prepared-commit checks as before (baselines against `v0.3.7`, footprint attribution).
 5. Revise the prepared notes in [RELEASE-NOTES-v0.3.8.md](../records/contract/RELEASE-NOTES-v0.3.8.md): the `request` row gains an additive command, and the verification paragraph cites the new runs with their scopes.
 
-The plan ends at that prepared, untagged state with the maintainer's review pending. Tagging, the tagged rehearsal, notarization and publication are separate decisions and are not steps here. If the maintainer prefers to tag 0.3.8 without this work, steps 0 to 5 can equally sit on a branch of the `unreleased` state; nothing in the design depends on the release number.
+The plan ends at that prepared, untagged state with the maintainer's review pending. Tagging, the tagged rehearsal, notarization and publication are separate decisions and are not steps here; the release inputs record the open decisions and checkpoint rules they will need. If the maintainer prefers to tag 0.3.8 without this work, steps 0 to 5 can equally sit on a branch of the `unreleased` state; nothing in the design depends on the release number.
 
 ## 9. Commitments to confirm
 

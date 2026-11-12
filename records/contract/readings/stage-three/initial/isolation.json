@@ -1,8 +1,0 @@
-{
-  "contract_sha256": "e1aafb723c46261bffe5c4c940abd81dae222ee1aa6ff53067428ef4c17c9814",
-  "contract_lines": 5747,
-  "contract_words": 75456,
-  "task_sha256": "c45a3014a00f9d9262325434ba3bd9190be4b44d19f2b1e9609caa4852e36e14",
-  "source_commit": "eac1482e",
-  "scope": "Frozen stage-three generated contract, uncommitted account/model changes. Isolated reader receives only this copy and task."
-}
