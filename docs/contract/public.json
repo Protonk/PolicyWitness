@@ -646,7 +646,7 @@
             },
             "id": "identity.public.direct",
             "kind": "definition",
-            "prose": "The Rust controller and compiler helper embed a nonempty compile-time\n`PW_BUILD_CONTRACT` verbatim. An absent or empty value becomes `unbound`.\nOrdinary SwiftPM compilation uses `unbound`; its explicitly selected unit-test\ncontext uses `test:policy-witness`. Rust unit tests likewise use\n`test:policy-witness`. A request cannot pass the controller's identity gate\nwhen its expected identity is empty or `unbound`. A supplied spelling can be\nforeign or release-shaped; build version, number, commit and describe retain\ntheir separately supplied provenance.",
+            "prose": "The Rust controller and compiler helper embed a nonempty compile-time\n`PW_BUILD_CONTRACT` verbatim. An absent or empty value becomes `unbound`.\nA supplied `PW_BUILD_CONTRACT` spelling can be foreign or release-shaped;\nbuild version, number, commit and describe retain their separately supplied\nprovenance. Ordinary SwiftPM compilation uses `unbound`; its explicitly\nselected unit-test context uses `test:policy-witness`. Rust unit tests\nlikewise use `test:policy-witness`. A request cannot pass the controller's\nidentity gate when its expected identity is empty or `unbound`.",
             "title": "Direct compilation contexts"
           },
           {
@@ -1141,7 +1141,7 @@
             },
             "id": "request",
             "kind": "surface",
-            "prose": "Direct XPC callers supply the host form themselves.",
+            "prose": "A saved specimen describes one experiment. The controller reads its file once, resolves controller options and packaged augments, and serializes the held request delivered to the client. Direct XPC callers supply the host form themselves. The standalone compiler helper accepts its own policy input.",
             "title": "Saved specimens and runner selection"
           },
           {
@@ -1663,7 +1663,7 @@
             },
             "id": "request.specimen.admission",
             "kind": "acts",
-            "prose": "Admission accepts or refuses the complete plan; it preserves declared action counts.",
+            "prose": "Admission accepts or refuses the complete plan; it preserves declared action counts. Empty ordinary plans still compile and apply the policy.",
             "title": "Admission order and effects"
           },
           {
@@ -21797,7 +21797,7 @@
             },
             "id": "diagnostics.execution.project",
             "kind": "acts",
-            "prose": "For the actor form, the controller computes each worker's projection\nseparately. It then sets the top-level disposition to `per_actor` when any\nentry differs from `no_worker`, and aggregates the actor integrity values.\n\nTheir lifecycle prerequisites are the actual helper\ncheck in each invocation, including retained reporting-failure replies.",
+            "prose": "For the actor form, the controller computes each worker's projection\nseparately. It then sets the top-level disposition to `per_actor` when any\nentry differs from `no_worker`, and aggregates the actor integrity values.\n\nThe two concrete scopes below bind each source subprocess to its own output\nfields. Their lifecycle prerequisites are the actual helper check in each\ninvocation, including retained reporting-failure replies.",
             "title": "Project one worker or aggregate actors"
           },
           {
@@ -61462,7 +61462,7 @@
             },
             "id": "diagnostics.execution.project",
             "kind": "acts",
-            "prose": "For the actor form, the controller computes each worker's projection\nseparately. It then sets the top-level disposition to `per_actor` when any\nentry differs from `no_worker`, and aggregates the actor integrity values.\n\nTheir lifecycle prerequisites are the actual helper\ncheck in each invocation, including retained reporting-failure replies.",
+            "prose": "For the actor form, the controller computes each worker's projection\nseparately. It then sets the top-level disposition to `per_actor` when any\nentry differs from `no_worker`, and aggregates the actor integrity values.\n\nThe two concrete scopes below bind each source subprocess to its own output\nfields. Their lifecycle prerequisites are the actual helper check in each\ninvocation, including retained reporting-failure replies.",
             "title": "Project one worker or aggregate actors"
           },
           {
@@ -74730,7 +74730,7 @@
             },
             "id": "request",
             "kind": "surface",
-            "prose": "Direct XPC callers supply the host form themselves.",
+            "prose": "A saved specimen describes one experiment. The controller reads its file once, resolves controller options and packaged augments, and serializes the held request delivered to the client. Direct XPC callers supply the host form themselves. The standalone compiler helper accepts its own policy input.",
             "title": "Saved specimens and runner selection"
           },
           {
@@ -74975,7 +74975,7 @@
             },
             "id": "request.specimen.admission",
             "kind": "acts",
-            "prose": "Admission accepts or refuses the complete plan; it preserves declared action counts.",
+            "prose": "Admission accepts or refuses the complete plan; it preserves declared action counts. Empty ordinary plans still compile and apply the policy.",
             "title": "Admission order and effects"
           },
           {
@@ -95122,7 +95122,7 @@
             },
             "id": "diagnostics.execution.project",
             "kind": "acts",
-            "prose": "For the actor form, the controller computes each worker's projection\nseparately. It then sets the top-level disposition to `per_actor` when any\nentry differs from `no_worker`, and aggregates the actor integrity values.\n\nTheir lifecycle prerequisites are the actual helper\ncheck in each invocation, including retained reporting-failure replies.",
+            "prose": "For the actor form, the controller computes each worker's projection\nseparately. It then sets the top-level disposition to `per_actor` when any\nentry differs from `no_worker`, and aggregates the actor integrity values.\n\nThe two concrete scopes below bind each source subprocess to its own output\nfields. Their lifecycle prerequisites are the actual helper check in each\ninvocation, including retained reporting-failure replies.",
             "title": "Project one worker or aggregate actors"
           },
           {
@@ -109600,7 +109600,7 @@
             },
             "id": "request",
             "kind": "surface",
-            "prose": "Direct XPC callers supply the host form themselves.",
+            "prose": "A saved specimen describes one experiment. The controller reads its file once, resolves controller options and packaged augments, and serializes the held request delivered to the client. Direct XPC callers supply the host form themselves. The standalone compiler helper accepts its own policy input.",
             "title": "Saved specimens and runner selection"
           },
           {
@@ -109845,7 +109845,7 @@
             },
             "id": "request.specimen.admission",
             "kind": "acts",
-            "prose": "Admission accepts or refuses the complete plan; it preserves declared action counts.",
+            "prose": "Admission accepts or refuses the complete plan; it preserves declared action counts. Empty ordinary plans still compile and apply the policy.",
             "title": "Admission order and effects"
           },
           {
@@ -143267,7 +143267,7 @@
             },
             "id": "diagnostics.execution.project",
             "kind": "acts",
-            "prose": "For the actor form, the controller computes each worker's projection\nseparately. It then sets the top-level disposition to `per_actor` when any\nentry differs from `no_worker`, and aggregates the actor integrity values.\n\nTheir lifecycle prerequisites are the actual helper\ncheck in each invocation, including retained reporting-failure replies.",
+            "prose": "For the actor form, the controller computes each worker's projection\nseparately. It then sets the top-level disposition to `per_actor` when any\nentry differs from `no_worker`, and aggregates the actor integrity values.\n\nThe two concrete scopes below bind each source subprocess to its own output\nfields. Their lifecycle prerequisites are the actual helper check in each\ninvocation, including retained reporting-failure replies.",
             "title": "Project one worker or aggregate actors"
           },
           {
@@ -149352,7 +149352,7 @@
             },
             "id": "request",
             "kind": "surface",
-            "prose": "Direct XPC callers supply the host form themselves.",
+            "prose": "A saved specimen describes one experiment. The controller reads its file once, resolves controller options and packaged augments, and serializes the held request delivered to the client. Direct XPC callers supply the host form themselves. The standalone compiler helper accepts its own policy input.",
             "title": "Saved specimens and runner selection"
           },
           {
@@ -149597,7 +149597,7 @@
             },
             "id": "request.specimen.admission",
             "kind": "acts",
-            "prose": "Admission accepts or refuses the complete plan; it preserves declared action counts.",
+            "prose": "Admission accepts or refuses the complete plan; it preserves declared action counts. Empty ordinary plans still compile and apply the policy.",
             "title": "Admission order and effects"
           },
           {
@@ -152058,6 +152058,16 @@
             "kind": "example",
             "prose": "Given a correctly asserted ordinary specimen, a policy member `capture_compiled_profiel` is an unknown field. The host returns `bad_request`, with code `unknown_field` and path `[\"policy\",\"capture_compiled_profiel\"]`; the controller exits 1. A worker or validator is not launched for this refusal. Correcting the spelling to `capture_compiled_profile: true` also requires a valid `capture_nonce`.\n\nA target-absence check made by a teaching control is separate evidence of the file state. The structured refusal identifies the stopped admission boundary.",
             "title": "Misspelled capture request"
+          },
+          {
+            "context": {},
+            "facts": {
+              "defines": "value"
+            },
+            "id": "refusals.examples.workflow",
+            "kind": "definition",
+            "prose": "The capture correction chain changes the misspelled capture option, then supplies a valid nonce, then reaches application and capture. The same intent is exercised through CLI and direct-host entries. Each refused input retains its first diagnostic and no child effect; each successful correction retains its request, reply and independently checked target effect.",
+            "title": "Refusal correction workflows"
           },
           {
             "context": {},
@@ -170885,7 +170895,7 @@
             },
             "id": "diagnostics.execution.project",
             "kind": "acts",
-            "prose": "For the actor form, the controller computes each worker's projection\nseparately. It then sets the top-level disposition to `per_actor` when any\nentry differs from `no_worker`, and aggregates the actor integrity values.\n\nTheir lifecycle prerequisites are the actual helper\ncheck in each invocation, including retained reporting-failure replies.",
+            "prose": "For the actor form, the controller computes each worker's projection\nseparately. It then sets the top-level disposition to `per_actor` when any\nentry differs from `no_worker`, and aggregates the actor integrity values.\n\nThe two concrete scopes below bind each source subprocess to its own output\nfields. Their lifecycle prerequisites are the actual helper check in each\ninvocation, including retained reporting-failure replies.",
             "title": "Project one worker or aggregate actors"
           },
           {
@@ -185309,7 +185319,7 @@
             },
             "id": "request",
             "kind": "surface",
-            "prose": "Direct XPC callers supply the host form themselves.",
+            "prose": "A saved specimen describes one experiment. The controller reads its file once, resolves controller options and packaged augments, and serializes the held request delivered to the client. Direct XPC callers supply the host form themselves. The standalone compiler helper accepts its own policy input.",
             "title": "Saved specimens and runner selection"
           },
           {
@@ -185831,7 +185841,7 @@
             },
             "id": "request.specimen.admission",
             "kind": "acts",
-            "prose": "Admission accepts or refuses the complete plan; it preserves declared action counts.",
+            "prose": "Admission accepts or refuses the complete plan; it preserves declared action counts. Empty ordinary plans still compile and apply the policy.",
             "title": "Admission order and effects"
           },
           {
@@ -217807,7 +217817,7 @@
             },
             "id": "diagnostics.execution.project",
             "kind": "acts",
-            "prose": "For the actor form, the controller computes each worker's projection\nseparately. It then sets the top-level disposition to `per_actor` when any\nentry differs from `no_worker`, and aggregates the actor integrity values.\n\nTheir lifecycle prerequisites are the actual helper\ncheck in each invocation, including retained reporting-failure replies.",
+            "prose": "For the actor form, the controller computes each worker's projection\nseparately. It then sets the top-level disposition to `per_actor` when any\nentry differs from `no_worker`, and aggregates the actor integrity values.\n\nThe two concrete scopes below bind each source subprocess to its own output\nfields. Their lifecycle prerequisites are the actual helper check in each\ninvocation, including retained reporting-failure replies.",
             "title": "Project one worker or aggregate actors"
           },
           {
@@ -238358,7 +238368,7 @@
             },
             "id": "identity.public.direct",
             "kind": "definition",
-            "prose": "The Rust controller and compiler helper embed a nonempty compile-time\n`PW_BUILD_CONTRACT` verbatim. An absent or empty value becomes `unbound`.\nOrdinary SwiftPM compilation uses `unbound`; its explicitly selected unit-test\ncontext uses `test:policy-witness`. Rust unit tests likewise use\n`test:policy-witness`. A request cannot pass the controller's identity gate\nwhen its expected identity is empty or `unbound`. A supplied spelling can be\nforeign or release-shaped; build version, number, commit and describe retain\ntheir separately supplied provenance.",
+            "prose": "The Rust controller and compiler helper embed a nonempty compile-time\n`PW_BUILD_CONTRACT` verbatim. An absent or empty value becomes `unbound`.\nA supplied `PW_BUILD_CONTRACT` spelling can be foreign or release-shaped;\nbuild version, number, commit and describe retain their separately supplied\nprovenance. Ordinary SwiftPM compilation uses `unbound`; its explicitly\nselected unit-test context uses `test:policy-witness`. Rust unit tests\nlikewise use `test:policy-witness`. A request cannot pass the controller's\nidentity gate when its expected identity is empty or `unbound`.",
             "title": "Direct compilation contexts"
           },
           {
@@ -254216,7 +254226,7 @@
             },
             "id": "profile.receipt.host",
             "kind": "reports",
-            "prose": "",
+            "prose": "Passing every condition produces `captured` with the capture fields.",
             "title": "The host decides capture availability"
           },
           {
@@ -257421,7 +257431,7 @@
             },
             "id": "request",
             "kind": "surface",
-            "prose": "Direct XPC callers supply the host form themselves.",
+            "prose": "A saved specimen describes one experiment. The controller reads its file once, resolves controller options and packaged augments, and serializes the held request delivered to the client. Direct XPC callers supply the host form themselves. The standalone compiler helper accepts its own policy input.",
             "title": "Saved specimens and runner selection"
           },
           {
@@ -257666,7 +257676,7 @@
             },
             "id": "request.specimen.admission",
             "kind": "acts",
-            "prose": "Admission accepts or refuses the complete plan; it preserves declared action counts.",
+            "prose": "Admission accepts or refuses the complete plan; it preserves declared action counts. Empty ordinary plans still compile and apply the policy.",
             "title": "Admission order and effects"
           },
           {
@@ -315410,7 +315420,7 @@
             },
             "id": "diagnostics.execution.project",
             "kind": "acts",
-            "prose": "For the actor form, the controller computes each worker's projection\nseparately. It then sets the top-level disposition to `per_actor` when any\nentry differs from `no_worker`, and aggregates the actor integrity values.\n\nTheir lifecycle prerequisites are the actual helper\ncheck in each invocation, including retained reporting-failure replies.",
+            "prose": "For the actor form, the controller computes each worker's projection\nseparately. It then sets the top-level disposition to `per_actor` when any\nentry differs from `no_worker`, and aggregates the actor integrity values.\n\nThe two concrete scopes below bind each source subprocess to its own output\nfields. Their lifecycle prerequisites are the actual helper check in each\ninvocation, including retained reporting-failure replies.",
             "title": "Project one worker or aggregate actors"
           },
           {
@@ -317239,7 +317249,7 @@
             },
             "id": "identity.public.direct",
             "kind": "definition",
-            "prose": "The Rust controller and compiler helper embed a nonempty compile-time\n`PW_BUILD_CONTRACT` verbatim. An absent or empty value becomes `unbound`.\nOrdinary SwiftPM compilation uses `unbound`; its explicitly selected unit-test\ncontext uses `test:policy-witness`. Rust unit tests likewise use\n`test:policy-witness`. A request cannot pass the controller's identity gate\nwhen its expected identity is empty or `unbound`. A supplied spelling can be\nforeign or release-shaped; build version, number, commit and describe retain\ntheir separately supplied provenance.",
+            "prose": "The Rust controller and compiler helper embed a nonempty compile-time\n`PW_BUILD_CONTRACT` verbatim. An absent or empty value becomes `unbound`.\nA supplied `PW_BUILD_CONTRACT` spelling can be foreign or release-shaped;\nbuild version, number, commit and describe retain their separately supplied\nprovenance. Ordinary SwiftPM compilation uses `unbound`; its explicitly\nselected unit-test context uses `test:policy-witness`. Rust unit tests\nlikewise use `test:policy-witness`. A request cannot pass the controller's\nidentity gate when its expected identity is empty or `unbound`.",
             "title": "Direct compilation contexts"
           },
           {
@@ -331085,7 +331095,7 @@
             },
             "id": "profile.receipt.host",
             "kind": "reports",
-            "prose": "",
+            "prose": "Passing every condition produces `captured` with the capture fields.",
             "title": "The host decides capture availability"
           },
           {
@@ -342610,7 +342620,7 @@
             },
             "id": "profile.receipt.host",
             "kind": "reports",
-            "prose": "",
+            "prose": "Passing every condition produces `captured` with the capture fields.",
             "title": "The host decides capture availability"
           },
           {
@@ -400806,7 +400816,7 @@
             },
             "id": "diagnostics.execution.project",
             "kind": "acts",
-            "prose": "For the actor form, the controller computes each worker's projection\nseparately. It then sets the top-level disposition to `per_actor` when any\nentry differs from `no_worker`, and aggregates the actor integrity values.\n\nTheir lifecycle prerequisites are the actual helper\ncheck in each invocation, including retained reporting-failure replies.",
+            "prose": "For the actor form, the controller computes each worker's projection\nseparately. It then sets the top-level disposition to `per_actor` when any\nentry differs from `no_worker`, and aggregates the actor integrity values.\n\nThe two concrete scopes below bind each source subprocess to its own output\nfields. Their lifecycle prerequisites are the actual helper check in each\ninvocation, including retained reporting-failure replies.",
             "title": "Project one worker or aggregate actors"
           },
           {
@@ -403696,7 +403706,7 @@
             },
             "id": "dossier.verification",
             "kind": "subject",
-            "prose": "",
+            "prose": "Each comparison concerns a file read under the app root.",
             "title": "Manifest hash verification"
           },
           {
@@ -423506,7 +423516,7 @@
             },
             "id": "identity.public.direct",
             "kind": "definition",
-            "prose": "The Rust controller and compiler helper embed a nonempty compile-time\n`PW_BUILD_CONTRACT` verbatim. An absent or empty value becomes `unbound`.\nOrdinary SwiftPM compilation uses `unbound`; its explicitly selected unit-test\ncontext uses `test:policy-witness`. Rust unit tests likewise use\n`test:policy-witness`. A request cannot pass the controller's identity gate\nwhen its expected identity is empty or `unbound`. A supplied spelling can be\nforeign or release-shaped; build version, number, commit and describe retain\ntheir separately supplied provenance.",
+            "prose": "The Rust controller and compiler helper embed a nonempty compile-time\n`PW_BUILD_CONTRACT` verbatim. An absent or empty value becomes `unbound`.\nA supplied `PW_BUILD_CONTRACT` spelling can be foreign or release-shaped;\nbuild version, number, commit and describe retain their separately supplied\nprovenance. Ordinary SwiftPM compilation uses `unbound`; its explicitly\nselected unit-test context uses `test:policy-witness`. Rust unit tests\nlikewise use `test:policy-witness`. A request cannot pass the controller's\nidentity gate when its expected identity is empty or `unbound`.",
             "title": "Direct compilation contexts"
           },
           {
@@ -441993,7 +442003,7 @@
             },
             "id": "profile.receipt.host",
             "kind": "reports",
-            "prose": "",
+            "prose": "Passing every condition produces `captured` with the capture fields.",
             "title": "The host decides capture availability"
           },
           {
@@ -447246,7 +447256,7 @@
             },
             "id": "request",
             "kind": "surface",
-            "prose": "Direct XPC callers supply the host form themselves.",
+            "prose": "A saved specimen describes one experiment. The controller reads its file once, resolves controller options and packaged augments, and serializes the held request delivered to the client. Direct XPC callers supply the host form themselves. The standalone compiler helper accepts its own policy input.",
             "title": "Saved specimens and runner selection"
           },
           {
@@ -447491,7 +447501,7 @@
             },
             "id": "request.specimen.admission",
             "kind": "acts",
-            "prose": "Admission accepts or refuses the complete plan; it preserves declared action counts.",
+            "prose": "Admission accepts or refuses the complete plan; it preserves declared action counts. Empty ordinary plans still compile and apply the policy.",
             "title": "Admission order and effects"
           },
           {
@@ -488414,7 +488424,7 @@
             },
             "id": "diagnostics.execution.project",
             "kind": "acts",
-            "prose": "For the actor form, the controller computes each worker's projection\nseparately. It then sets the top-level disposition to `per_actor` when any\nentry differs from `no_worker`, and aggregates the actor integrity values.\n\nTheir lifecycle prerequisites are the actual helper\ncheck in each invocation, including retained reporting-failure replies.",
+            "prose": "For the actor form, the controller computes each worker's projection\nseparately. It then sets the top-level disposition to `per_actor` when any\nentry differs from `no_worker`, and aggregates the actor integrity values.\n\nThe two concrete scopes below bind each source subprocess to its own output\nfields. Their lifecycle prerequisites are the actual helper check in each\ninvocation, including retained reporting-failure replies.",
             "title": "Project one worker or aggregate actors"
           },
           {
@@ -489760,7 +489770,7 @@
             },
             "id": "identity.public.direct",
             "kind": "definition",
-            "prose": "The Rust controller and compiler helper embed a nonempty compile-time\n`PW_BUILD_CONTRACT` verbatim. An absent or empty value becomes `unbound`.\nOrdinary SwiftPM compilation uses `unbound`; its explicitly selected unit-test\ncontext uses `test:policy-witness`. Rust unit tests likewise use\n`test:policy-witness`. A request cannot pass the controller's identity gate\nwhen its expected identity is empty or `unbound`. A supplied spelling can be\nforeign or release-shaped; build version, number, commit and describe retain\ntheir separately supplied provenance.",
+            "prose": "The Rust controller and compiler helper embed a nonempty compile-time\n`PW_BUILD_CONTRACT` verbatim. An absent or empty value becomes `unbound`.\nA supplied `PW_BUILD_CONTRACT` spelling can be foreign or release-shaped;\nbuild version, number, commit and describe retain their separately supplied\nprovenance. Ordinary SwiftPM compilation uses `unbound`; its explicitly\nselected unit-test context uses `test:policy-witness`. Rust unit tests\nlikewise use `test:policy-witness`. A request cannot pass the controller's\nidentity gate when its expected identity is empty or `unbound`.",
             "title": "Direct compilation contexts"
           },
           {
@@ -493245,7 +493255,7 @@
             },
             "id": "dossier.verification",
             "kind": "subject",
-            "prose": "",
+            "prose": "Each comparison concerns a file read under the app root.",
             "title": "Manifest hash verification"
           },
           {
@@ -530368,7 +530378,7 @@
             },
             "id": "diagnostics.execution.project",
             "kind": "acts",
-            "prose": "For the actor form, the controller computes each worker's projection\nseparately. It then sets the top-level disposition to `per_actor` when any\nentry differs from `no_worker`, and aggregates the actor integrity values.\n\nTheir lifecycle prerequisites are the actual helper\ncheck in each invocation, including retained reporting-failure replies.",
+            "prose": "For the actor form, the controller computes each worker's projection\nseparately. It then sets the top-level disposition to `per_actor` when any\nentry differs from `no_worker`, and aggregates the actor integrity values.\n\nThe two concrete scopes below bind each source subprocess to its own output\nfields. Their lifecycle prerequisites are the actual helper check in each\ninvocation, including retained reporting-failure replies.",
             "title": "Project one worker or aggregate actors"
           },
           {
@@ -550929,7 +550939,7 @@
             },
             "id": "identity.public.direct",
             "kind": "definition",
-            "prose": "The Rust controller and compiler helper embed a nonempty compile-time\n`PW_BUILD_CONTRACT` verbatim. An absent or empty value becomes `unbound`.\nOrdinary SwiftPM compilation uses `unbound`; its explicitly selected unit-test\ncontext uses `test:policy-witness`. Rust unit tests likewise use\n`test:policy-witness`. A request cannot pass the controller's identity gate\nwhen its expected identity is empty or `unbound`. A supplied spelling can be\nforeign or release-shaped; build version, number, commit and describe retain\ntheir separately supplied provenance.",
+            "prose": "The Rust controller and compiler helper embed a nonempty compile-time\n`PW_BUILD_CONTRACT` verbatim. An absent or empty value becomes `unbound`.\nA supplied `PW_BUILD_CONTRACT` spelling can be foreign or release-shaped;\nbuild version, number, commit and describe retain their separately supplied\nprovenance. Ordinary SwiftPM compilation uses `unbound`; its explicitly\nselected unit-test context uses `test:policy-witness`. Rust unit tests\nlikewise use `test:policy-witness`. A request cannot pass the controller's\nidentity gate when its expected identity is empty or `unbound`.",
             "title": "Direct compilation contexts"
           },
           {
@@ -566787,7 +566797,7 @@
             },
             "id": "profile.receipt.host",
             "kind": "reports",
-            "prose": "",
+            "prose": "Passing every condition produces `captured` with the capture fields.",
             "title": "The host decides capture availability"
           },
           {
@@ -572005,7 +572015,7 @@
             },
             "id": "request",
             "kind": "surface",
-            "prose": "Direct XPC callers supply the host form themselves.",
+            "prose": "A saved specimen describes one experiment. The controller reads its file once, resolves controller options and packaged augments, and serializes the held request delivered to the client. Direct XPC callers supply the host form themselves. The standalone compiler helper accepts its own policy input.",
             "title": "Saved specimens and runner selection"
           },
           {
@@ -572250,7 +572260,7 @@
             },
             "id": "request.specimen.admission",
             "kind": "acts",
-            "prose": "Admission accepts or refuses the complete plan; it preserves declared action counts.",
+            "prose": "Admission accepts or refuses the complete plan; it preserves declared action counts. Empty ordinary plans still compile and apply the policy.",
             "title": "Admission order and effects"
           },
           {

@@ -136,7 +136,7 @@ free.when: Capture was requested for this worker and worker output was collected
 retained_free: {"when": {"kind": "native_protocol", "reason": "The selected ordinary or actor policy supplies this worker capture request. Collection supplies the worker output consumed before receipt construction."}}
 ```
 
-
+Passing every condition produces `captured` with the capture fields.
 
 #### Application {application: condition}
 

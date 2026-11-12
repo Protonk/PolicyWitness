@@ -37,10 +37,10 @@
       "stored_sha256": "8dc0ccb3018a9e342b1677ff28cf01e4d8f80456a553525a0485e378bff9734e"
     },
     {
-      "decoded_sha256": "741dc93af80e6a0c837bc873f6ad286f06e98e03e656a42ab3fa14fdad48897a",
+      "decoded_sha256": "89a2e695a56a8931867455c0ce5e8aa967ad9dc54d0703206de208aed160eb56",
       "path": "reduction-manifest.json.gz",
-      "stored_bytes": 19568,
-      "stored_sha256": "065d131ac7ccf3d9757523ce26c2d0118d04135821e0884a9eb8b6cab4a98366"
+      "stored_bytes": 19047,
+      "stored_sha256": "a2bd17998ce6fabb58b4a684a708a30716c050b73e4d99c12e77692ee8d26689"
     }
   ]
 }

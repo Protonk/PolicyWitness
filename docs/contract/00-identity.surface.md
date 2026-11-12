@@ -115,12 +115,12 @@ defines: "value"
 
 The Rust controller and compiler helper embed a nonempty compile-time
 `PW_BUILD_CONTRACT` verbatim. An absent or empty value becomes `unbound`.
-Ordinary SwiftPM compilation uses `unbound`; its explicitly selected unit-test
-context uses `test:policy-witness`. Rust unit tests likewise use
-`test:policy-witness`. A request cannot pass the controller's identity gate
-when its expected identity is empty or `unbound`. A supplied spelling can be
-foreign or release-shaped; build version, number, commit and describe retain
-their separately supplied provenance.
+A supplied `PW_BUILD_CONTRACT` spelling can be foreign or release-shaped;
+build version, number, commit and describe retain their separately supplied
+provenance. Ordinary SwiftPM compilation uses `unbound`; its explicitly
+selected unit-test context uses `test:policy-witness`. Rust unit tests
+likewise use `test:policy-witness`. A request cannot pass the controller's
+identity gate when its expected identity is empty or `unbound`.
 
 #### Disposition support {disposition_support: owner}
 

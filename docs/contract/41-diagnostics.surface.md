@@ -376,8 +376,9 @@ For the actor form, the controller computes each worker's projection
 separately. It then sets the top-level disposition to `per_actor` when any
 entry differs from `no_worker`, and aggregates the actor integrity values.
 
-Their lifecycle prerequisites are the actual helper
-check in each invocation, including retained reporting-failure replies.
+The two concrete scopes below bind each source subprocess to its own output
+fields. Their lifecycle prerequisites are the actual helper check in each
+invocation, including retained reporting-failure replies.
 
 ### Actor projection rows {actor_rows: reports}
 

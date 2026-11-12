@@ -9,7 +9,7 @@ checks: ["failure_boundaries"]
 ```
 
 
-Direct XPC callers supply the host form themselves.
+A saved specimen describes one experiment. The controller reads its file once, resolves controller options and packaged augments, and serializes the held request delivered to the client. Direct XPC callers supply the host form themselves. The standalone compiler helper accepts its own policy input.
 
 ## Specimen {specimen: subject}
 
@@ -88,7 +88,7 @@ free.effect: Check contract first, decode the selected plan form and closed nest
 retained_free: {"effect": {"kind": "raw_admission", "reason": "Contract-first decoding and branch traversal consume raw objects before a complete typed request is available."}}
 ```
 
-Admission accepts or refuses the complete plan; it preserves declared action counts.
+Admission accepts or refuses the complete plan; it preserves declared action counts. Empty ordinary plans still compile and apply the policy.
 
 ### Null and omission {nulls: acts}
 

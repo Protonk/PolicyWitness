@@ -80,12 +80,12 @@ refuses a selected-source change during compilation.
 
 The Rust controller and compiler helper embed a nonempty compile-time
 `PW_BUILD_CONTRACT` verbatim. An absent or empty value becomes `unbound`.
-Ordinary SwiftPM compilation uses `unbound`; its explicitly selected unit-test
-context uses `test:policy-witness`. Rust unit tests likewise use
-`test:policy-witness`. A request cannot pass the controller's identity gate
-when its expected identity is empty or `unbound`. A supplied spelling can be
-foreign or release-shaped; build version, number, commit and describe retain
-their separately supplied provenance.
+A supplied `PW_BUILD_CONTRACT` spelling can be foreign or release-shaped;
+build version, number, commit and describe retain their separately supplied
+provenance. Ordinary SwiftPM compilation uses `unbound`; its explicitly
+selected unit-test context uses `test:policy-witness`. Rust unit tests
+likewise use `test:policy-witness`. A request cannot pass the controller's
+identity gate when its expected identity is empty or `unbound`.
 
 **Support: [check read](#contract-support-grades) for [Direct compilation contexts](#contract-identity-public-direct).** The non-test constant, Cargo environment tracking and receiver equality gate have separate roles. Context: Static review of the cited producer and assertion branches. Evidence limit: The control builds an isolated non-test controller with supplied and absent stamp values, then checks identity and the next refusing controller boundary. Source: [json_contract.rs](../controller/src/json_contract.rs): `BUILD_CONTRACT`; [build.rs](../controller/build.rs): `fn main`; [request_patch.rs](../controller/src/request_patch.rs): `validate_contract`. Check: [cli_contract.rs](../controller/integration/cli_contract.rs): `supplied_direct_cargo_identity_is_embedded_without_release_provenance`.
 
@@ -510,7 +510,7 @@ the consequence for retained records and supported assessments.
 <a id="contract-request"></a>
 ### Saved specimens and runner selection
 
-Direct XPC callers supply the host form themselves.
+A saved specimen describes one experiment. The controller reads its file once, resolves controller options and packaged augments, and serializes the held request delivered to the client. Direct XPC callers supply the host form themselves. The standalone compiler helper accepts its own policy input.
 
 <a id="contract-request-specimen"></a>
 #### Specimen
@@ -540,7 +540,7 @@ The host request objects have closed field sets. Parameter-map keys and caller l
 
 [Runner host](#contract-identity-definitions-host) acts at request decode and whole-request admission. Entry: xpc execute. Recipient: caller, report reader. Reports: runner reply. Uses [Stop children and preserve safe metadata](#contract-refusals-request-consequence). Check contract first, decode the selected plan form and closed nested objects, check capacities, then validate policy and plan meaning. On refusal apply the runner request-refusal consequence. A host may already exist to deliver that refusal.
 
-Admission accepts or refuses the complete plan; it preserves declared action counts.
+Admission accepts or refuses the complete plan; it preserves declared action counts. Empty ordinary plans still compile and apply the policy.
 
 <a id="contract-request-specimen-nulls"></a>
 ##### Null and omission
@@ -2247,12 +2247,17 @@ Given a correctly asserted ordinary specimen, a policy member `capture_compiled_
 
 A target-absence check made by a teaching control is separate evidence of the file state. The structured refusal identifies the stopped admission boundary.
 
-**Support: [check read](#contract-support-grades) for [Misspelled capture request](#contract-refusals-examples-misspelling).** Controller refusals precede invocation at their own preparation boundaries. Context: Static review of the cited producer and assertion branches. Evidence limit: This owner describes the concrete correction chain; the guide presentation has its own workflow validation. Source: [run_flow.rs](../controller/src/run_flow.rs): `fn run(args:`. Check: [contract.py](../tests/suites/runner_outcome_bad_request/contract.py): `refusal_workflows`.
-
 <a id="contract-refusals-examples-absent_path"></a>
 ##### Absent query path and successful creation
 
 A paired probe can query `file-write-create` with a path that does not exist at planning time, then attempt `file/create` at that path. The planner reports `prediction_unavailable`; the attempt remains eligible to run. A successful native create/open and an independent newly-created-file check answer different observations. Later realpath diagnostics can resolve a path the earlier query planner could not resolve.
+
+<a id="contract-refusals-examples-workflow"></a>
+##### Refusal correction workflows
+
+The capture correction chain changes the misspelled capture option, then supplies a valid nonce, then reaches application and capture. The same intent is exercised through CLI and direct-host entries. Each refused input retains its first diagnostic and no child effect; each successful correction retains its request, reply and independently checked target effect.
+
+**Support: [check read](#contract-support-grades) for [Refusal correction workflows](#contract-refusals-examples-workflow).** Controller refusals precede invocation at their own preparation boundaries. Context: Static review of the cited producer and assertion branches. Evidence limit: This owner describes the concrete correction chain; the guide presentation has its own workflow validation. Source: [run_flow.rs](../controller/src/run_flow.rs): `fn run(args:`. Check: [contract.py](../tests/suites/runner_outcome_bad_request/contract.py): `refusal_workflows`.
 
 **Support: [check read](#contract-support-grades) for [Refusal and unavailable-prediction examples](#contract-refusals-examples) and its descendants.** The adjacent meanings follow the named request, producer and observation branches. Context: Review of the named producer branches. Evidence limit: The request corpus checks refusal fields; the correction workflow and independent file effects have their own support. Source: [PWRunnerCoding.swift](../runner/Sources/PWRunnerCore/PWRunnerCoding.swift): `rejectUnknownRequestKeys`; [CWorkerRequestPlanning.swift](../runner/Sources/PWRunnerCore/CWorkerRequestPlanning.swift): `pathFilterIsUnresolvable`; [pw_probe_runner.c](../controller/tools/pw_probe_runner/pw_probe_runner.c): `attempt_file_create`. Check: [RequestContractTests.swift](../runner/Tests/PWRunnerCoreTests/RequestContractTests.swift): `runRequestContractTests`.
 
@@ -4103,6 +4108,8 @@ A failure that produces no worker output leaves the receipt absent; absence has 
 
 [Runner host](#contract-identity-definitions-host) reports at collected worker capture decoding. Entry: cli run, runner verify, direct xpc. Recipient: controller, xpc caller. Reports: runner reply. Capture was requested for this worker and worker output was collected. The first failed condition selects the consequence.
 
+Passing every condition produces `captured` with the capture fields.
+
 | Item | Requirement or consequence |
 | --- | --- |
 | <a id="contract-profile-receipt-host-application"></a>Application | Application was observed and its return code was zero. |
@@ -4366,8 +4373,9 @@ For the actor form, the controller computes each worker's projection
 separately. It then sets the top-level disposition to `per_actor` when any
 entry differs from `no_worker`, and aggregates the actor integrity values.
 
-Their lifecycle prerequisites are the actual helper
-check in each invocation, including retained reporting-failure replies.
+The two concrete scopes below bind each source subprocess to its own output
+fields. Their lifecycle prerequisites are the actual helper check in each
+invocation, including retained reporting-failure replies.
 
 <a id="contract-diagnostics-execution-actor_rows"></a>
 ##### Actor projection rows
@@ -4914,6 +4922,8 @@ Record `runner`: `rust.RunnerProvenance`. Uses [Signature observation](#contract
 
 Record `verification`: `rust.VerifyReport`.
 
+Each comparison concerns a file read under the app root.
+
 | Field | JSON type and presence | Meaning |
 | --- | --- | --- |
 | <a id="contract-dossier-verification-ok"></a>`ok` | boolean; required | True when every checked manifest entry was readable and matched its declared hash; false when mismatches contains an entry. |
@@ -5034,8 +5044,6 @@ Absent resources are classified ambiguous for ownership and retain their indepen
 
 If bootout succeeds and plist removal succeeds but the final launchctl read is unknown, the command reports both action booleans true and cleanup_retained true. Keep the recorded bundle and any operator recovery state, inspect reconcile, and repeat removal until service/plist absence and registry retirement are observed.
 
-**Support: [check read](#contract-support-grades) for [Command boundaries](#contract-installation-commands).** Registry normalization and durable cleanup preserve historical records and opaque metadata. Context: Static review of the cited producer and assertion branches. Evidence limit: The live workflow uses a current owned service and a constructed historical debuggable record; both retired aliases have separate offline controls. Source: [runner_manager.rs](../controller/src/runner_manager.rs): `pub enum RunnerKind`, `pub fn parse`; [registry_recovery.py](../tests/suites/runner_byoxpc/opt_in/registry_recovery.py): `historical-after-remove`. Check: [registry_recovery.sh](../tests/suites/runner_byoxpc/opt_in/registry_recovery.sh): `registry_recovery`; [runner_manager.rs](../controller/src/runner_manager.rs): `legacy_machme_kind_deserializes_as_byoxpc`, `legacy_debuggable_kind_deserializes_as_byoxpc`, `caller_facing_parse_rejects_legacy_aliases`.
-
 <a id="contract-installation-registry"></a>
 ### Runner registry
 
@@ -5080,6 +5088,8 @@ Recorded signature, entitlement and inventory values describe their named reads;
 | <a id="contract-installation-runner-validator_entitlements"></a>`validator_entitlements` | [Entitlement observation](#contract-installation-entitlements); omitted when absent | Validator entitlement readback when available. |
 | <a id="contract-installation-runner-issuer_signature"></a>`issuer_signature` | [Signature observation](#contract-installation-signature); omitted when absent | Historical extension-issuer signature metadata when available. Current install leaves it absent. |
 | <a id="contract-installation-runner-issuer_entitlements"></a>`issuer_entitlements` | [Entitlement observation](#contract-installation-entitlements); omitted when absent | Historical extension-issuer entitlement metadata when available. Current install leaves it absent. |
+
+**Support: [check read](#contract-support-grades) for [kind](#contract-installation-runner-kind).** Registry normalization and durable cleanup preserve historical records and opaque metadata. Context: Static review of the cited producer and assertion branches. Evidence limit: The live workflow uses a current owned service and a constructed historical debuggable record; both retired aliases have separate offline controls. Source: [runner_manager.rs](../controller/src/runner_manager.rs): `pub enum RunnerKind`, `pub fn parse`; [registry_recovery.py](../tests/suites/runner_byoxpc/opt_in/registry_recovery.py): `historical-after-remove`. Check: [registry_recovery.sh](../tests/suites/runner_byoxpc/opt_in/registry_recovery.sh): `registry_recovery`; [runner_manager.rs](../controller/src/runner_manager.rs): `legacy_machme_kind_deserializes_as_byoxpc`, `legacy_debuggable_kind_deserializes_as_byoxpc`, `caller_facing_parse_rejects_legacy_aliases`.
 
 <a id="contract-installation-ownership"></a>
 ### Recorded cleanup ownership

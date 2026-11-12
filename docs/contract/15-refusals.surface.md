@@ -325,7 +325,19 @@ Given a correctly asserted ordinary specimen, a policy member `capture_compiled_
 
 A target-absence check made by a teaching control is separate evidence of the file state. The structured refusal identifies the stopped admission boundary.
 
-#### Correction workflow support {disposition_support: owner}
+### Absent query path and successful creation {absent_path: example}
+
+A paired probe can query `file-write-create` with a path that does not exist at planning time, then attempt `file/create` at that path. The planner reports `prediction_unavailable`; the attempt remains eligible to run. A successful native create/open and an independent newly-created-file check answer different observations. Later realpath diagnostics can resolve a path the earlier query planner could not resolve.
+
+### Refusal correction workflows {workflow: definition}
+
+```contract
+defines: "value"
+```
+
+The capture correction chain changes the misspelled capture option, then supplies a valid nonce, then reaches application and capture. The same intent is exercised through CLI and direct-host entries. Each refused input retains its first diagnostic and no child effect; each successful correction retains its request, reply and independently checked target effect.
+
+#### Disposition support {disposition_support: owner}
 
 ```contract
 grade: "check_read"
@@ -335,10 +347,6 @@ context: "Static review of the cited producer and assertion branches."
 check: [{"path":"tests/suites/runner_outcome_bad_request/contract.py","symbol":"refusal_workflows","form":"test"}]
 limits: "This owner describes the concrete correction chain; the guide presentation has its own workflow validation."
 ```
-
-### Absent query path and successful creation {absent_path: example}
-
-A paired probe can query `file-write-create` with a path that does not exist at planning time, then attempt `file/create` at that path. The planner reports `prediction_unavailable`; the attempt remains eligible to run. A successful native create/open and an independent newly-created-file check answer different observations. Later realpath diagnostics can resolve a path the earlier query planner could not resolve.
 
 ### Support {support: owner}
 

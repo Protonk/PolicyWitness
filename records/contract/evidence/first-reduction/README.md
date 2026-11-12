@@ -4,9 +4,9 @@
 from the prepared `v0.3.8` account at `b83b2e2e` and where each meaning
 remains:
 
-- `sentence_cuts`: 148 entries, each with its node, the removed sentences, any
+- `sentence_cuts`: 147 entries, each with its node, the removed sentences, any
   replacement, and the retained statement with its node.
-- `node_removals`: the 15 removed nodes with their former text, the stage-two
+- `node_removals`: the 14 removed nodes with their former text, the stage-two
   gap each definition replaced, the node its support now qualifies and the
   sentence or clause moved to that home.
 - `owner_context_removals`: the two generic context strings removed from 14

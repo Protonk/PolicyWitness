@@ -508,7 +508,7 @@ record: "rust.VerifyReport"
 as: "verification"
 ```
 
-
+Each comparison concerns a file read under the app root.
 
 ### ok {ok: field}
 

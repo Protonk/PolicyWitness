@@ -220,17 +220,6 @@ limits: "Acceptance of a nonconventional full parent is source-supported; this o
 
 If bootout succeeds and plist removal succeeds but the final launchctl read is unknown, the command reports both action booleans true and cleanup_retained true. Keep the recorded bundle and any operator recovery state, inspect reconcile, and repeat removal until service/plist absence and registry retirement are observed.
 
-### Legacy registry support {disposition_support: owner}
-
-```contract
-grade: "check_read"
-source: [{"path":"controller/src/runner_manager.rs","symbol":"pub enum RunnerKind"},{"path":"controller/src/runner_manager.rs","symbol":"pub fn parse"},{"path":"tests/suites/runner_byoxpc/opt_in/registry_recovery.py","symbol":"historical-after-remove"}]
-pins: "Registry normalization and durable cleanup preserve historical records and opaque metadata."
-context: "Static review of the cited producer and assertion branches."
-check: [{"path":"tests/suites/runner_byoxpc/opt_in/registry_recovery.sh","symbol":"registry_recovery","form":"test"},{"path":"controller/src/runner_manager.rs","symbol":"legacy_machme_kind_deserializes_as_byoxpc","form":"test"},{"path":"controller/src/runner_manager.rs","symbol":"legacy_debuggable_kind_deserializes_as_byoxpc","form":"test"},{"path":"controller/src/runner_manager.rs","symbol":"caller_facing_parse_rejects_legacy_aliases","form":"test"}]
-limits: "The live workflow uses a current owned service and a constructed historical debuggable record; both retired aliases have separate offline controls."
-```
-
 ## Runner registry {registry: subject}
 
 ```contract
@@ -312,6 +301,17 @@ Controller wall-clock Unix milliseconds recorded while preparing installation, i
 ### kind {kind: field}
 
 Known runner kind when recorded. Historical machme/debuggable deserialize to byoxpc; absent kind can be inferred by the selecting command.
+
+#### Legacy registry support {disposition_support: owner}
+
+```contract
+grade: "check_read"
+source: [{"path":"controller/src/runner_manager.rs","symbol":"pub enum RunnerKind"},{"path":"controller/src/runner_manager.rs","symbol":"pub fn parse"},{"path":"tests/suites/runner_byoxpc/opt_in/registry_recovery.py","symbol":"historical-after-remove"}]
+pins: "Registry normalization and durable cleanup preserve historical records and opaque metadata."
+context: "Static review of the cited producer and assertion branches."
+check: [{"path":"tests/suites/runner_byoxpc/opt_in/registry_recovery.sh","symbol":"registry_recovery","form":"test"},{"path":"controller/src/runner_manager.rs","symbol":"legacy_machme_kind_deserializes_as_byoxpc","form":"test"},{"path":"controller/src/runner_manager.rs","symbol":"legacy_debuggable_kind_deserializes_as_byoxpc","form":"test"},{"path":"controller/src/runner_manager.rs","symbol":"caller_facing_parse_rejects_legacy_aliases","form":"test"}]
+limits: "The live workflow uses a current owned service and a constructed historical debuggable record; both retired aliases have separate offline controls."
+```
 
 ### worker_signature {worker_signature: field}
 
