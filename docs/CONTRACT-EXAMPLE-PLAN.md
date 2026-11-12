@@ -139,7 +139,7 @@ The existing `apply_only` and `read_hosts` examples stay as they are.
 | Example changed between releases | The `request` stamp becomes `unreleased`; release preflight refuses remaining `unreleased` rows. |
 | Specimen saved from another build | `run` refuses it with `unsupported_contract` and names the expected identity. |
 
-No path runs from documentation into shipped code. Editing contract prose cannot change the build identity.
+No path runs from documentation into shipped code. Editing contract prose leaves the development digest unchanged. Release-form identity additionally requires a clean checkout at an eligible annotated release tag, so prose-only edits can change the next computed identity from release form to development form. An already-built app retains its embedded identity.
 
 ### 4.5 The round-trip case
 
@@ -280,6 +280,8 @@ Determine applicability from the version, transport and reply-admission evidence
 
 The new rule reaches every existing reader of an envelope, not only this plan's cases: 35 tracked test files call the consumer's readers. Constructed envelopes need attention first. `envelope_skeleton` in [blackbox.py](../tests/lib/blackbox.py) sets `result.ok` and `result.exit_code` from an `ok` argument that defaults to true whatever the reply's outcome, and it has five call sites, three of which pass `ok` explicitly. Derive the skeleton's result from the reply's outcome, or correct each caller, so that a constructed envelope states a coherent result unless its control is about that incoherence. Correct accidental fixture mismatches and state the correction; preserve deliberate result faults and require their diagnostics. Do not normalize the result in `consumer.validate` or repair a control after its deliberate mutation. A fixture correction is not a reason to narrow the rule.
 
+Summarize fixture corrections in section 6's evaluation record. For each correction, name the affected helper and cases, the original incoherence, what changed, the intended assertion and the deliberate faults whose rejection remains verified. Cite their control identifiers, expected diagnostics and results. Corrections sharing one helper fix and cause can share an entry with all affected cases named. This summary lets a later reviewer distinguish repaired incidental envelope fields from a weakened control without reconstructing the entire diff.
+
 **Cross-build controls** extend [cli_contract.rs](../controller/integration/cli_contract.rs), which already builds isolated non-test controllers with supplied and absent stamps. The unbound build's `example` exits 2 with empty stdout. The build given another identity emits that identity, and the signed app's `run` refuses the resulting document with `unsupported_contract` and its own expected identity. The same file takes the usage rows of section 4.2 against the signed app.
 
 **Generation controls** go in the existing `source_drift` cases, over disposable source copies:
@@ -363,7 +365,9 @@ Passing tests are necessary here and not sufficient. Failures awaiting a disposi
 
 Continue the same record through section 9. For each later disposition, append the verification stage, case and failed assertion, failed and replacement run identifiers, applicable build identities, supporting observation and disposition. Commit the evidence update even when no product correction was needed. Later entries preserve the step 3 decision and make subsequent verification available for candidate review.
 
-**Step 4. Support and accounts.** Replace the evidence gap with owners that cite the constant, the emitter and the checks, with their limits stated; regenerate. Owner metadata is outside the public payload and nothing here touches `controller/src`, so the build identity must be unchanged by this step. Confirm that it is.
+End the evaluation record with a short, current handoff statement: the final supported source commit and the commits completing implementation and support, the selected app's source snapshot (commit and worktree state) and embedded identity, the applicable verification, completed support work, and unresolved decisions or failure dispositions (explicitly none when there are none). Record later evidence-only commits separately. Distinguish matters that block dependent investigation from release work that may remain pending. Update the statement after step 4 and whenever later work changes readiness; it summarizes the existing decisions and evidence and adds no approval checkpoint. An unchanged development digest does not establish that verification remains applicable: account for changed consumers, fixtures and tests when carrying evidence forward.
+
+**Step 4. Support and accounts.** Replace the evidence gap with owners that cite the constant, the emitter and the checks, with their limits stated; regenerate. Owner metadata is outside the public payload, and these support edits do not change the development digest inputs. Confirm that the `development:<sha256>` identity is unchanged from the step 3 build, and update the handoff statement with the completed support work and its commit.
 
 **Step 5. Candidate verification** (section 9).
 
