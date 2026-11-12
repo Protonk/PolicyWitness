@@ -248,25 +248,25 @@ host's compiled build context.
 <!-- BEGIN GENERATED CONTRACT STAMPS -->
 | Surface | User artifact | Last changed |
 | --- | --- | --- |
-| `actor_evidence` | Actor and phase evidence | unreleased |
-| `actors` | Actors and phases | unreleased |
-| `diagnostics` | Controller findings and assessments | unreleased |
-| `dossier` | Specimen dossier | unreleased |
-| `envelope` | The controller envelope | unreleased |
-| `equipment` | Equipment and authority setup | unreleased |
-| `extensions` | Extension actions and authority custody | unreleased |
-| `identity` | The contract identity | unreleased |
-| `installation` | Managing runners | unreleased |
-| `lifecycle` | Process and operation observations | unreleased |
-| `policy` | Policy source, parameters and compilation | unreleased |
-| `probes` | Paired probes and attempted operations | unreleased |
-| `profile` | Compiled-profile receipts | unreleased |
-| `refusals` | Request refusals and retained evidence | unreleased |
-| `reply` | The host report | unreleased |
-| `request` | Saved specimens and runner selection | unreleased |
-| `steps` | Predictions, attempts and comparison | unreleased |
-| `transport` | Reservation, invocation and client capture | unreleased |
-| `wire` | Binary response primitives and validator record transport | unreleased |
+| `actor_evidence` | Actor and phase evidence | v0.3.8 |
+| `actors` | Actors and phases | v0.3.8 |
+| `diagnostics` | Controller findings and assessments | v0.3.8 |
+| `dossier` | Specimen dossier | v0.3.8 |
+| `envelope` | The controller envelope | v0.3.8 |
+| `equipment` | Equipment and authority setup | v0.3.8 |
+| `extensions` | Extension actions and authority custody | v0.3.8 |
+| `identity` | The contract identity | v0.3.8 |
+| `installation` | Managing runners | v0.3.8 |
+| `lifecycle` | Process and operation observations | v0.3.8 |
+| `policy` | Policy source, parameters and compilation | v0.3.8 |
+| `probes` | Paired probes and attempted operations | v0.3.8 |
+| `profile` | Compiled-profile receipts | v0.3.8 |
+| `refusals` | Request refusals and retained evidence | v0.3.8 |
+| `reply` | The host report | v0.3.8 |
+| `request` | Saved specimens and runner selection | v0.3.8 |
+| `steps` | Predictions, attempts and comparison | v0.3.8 |
+| `transport` | Reservation, invocation and client capture | v0.3.8 |
+| `wire` | Binary response primitives and validator record transport | v0.3.8 |
 <!-- END GENERATED CONTRACT STAMPS -->
 
 ## Definitions

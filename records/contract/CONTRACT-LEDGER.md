@@ -24,16 +24,31 @@ removed 14, which moves all nineteen surface hashes while every stamp stays
 `v0.3.8`. Product source, shape goldens, the guide body and the free
 relationship counts (51 conditions, no dependencies, 78 effects, four
 applicability clauses) are unchanged; all 145 support paragraphs remain.
-`source_drift` run `20261112T002531Z_b89d61d1` passed 10 of 10 on the first
-reduced source `d18d4925`. Two independent sentence-by-sentence reviews of
-that commit found no lost proposition and seven weakened or dangling
-statements, all corrected. Build 1341 of `d18d4925` and default battery
-`20261112T003820Z_c2a4ab04` completed 229 cases: 228 passed and
-`witness_contract/response_footprint` failed when its final process sample
-straddled the controller's exit, which that harness refuses by design. The
-whole run remains failed; the corrected source is rehearsed next. The
+`source_drift` passed 10 of 10 on the first reduced source `d18d4925` and
+again on the corrected source. Two independent sentence-by-sentence reviews
+of `d18d4925` found no lost proposition and seven weakened or dangling
+statements, all corrected in `8435e5d3`.
+
+Pre-tag rehearsal of `8435e5d3`, signed development build 1342: default
+battery `20261112T011446Z_56c07ee0` passed 229 of 229 with Swift 604 of 604;
+full refusal run `20261112T014343Z_41e6da4e` passed all 88 control records
+and 16 mutation demonstrations, including nested ZIP acceptance and default
+run `20261112T024432Z_09e2ceea` with 229 of 229. These runs record zero
+sleep, skips, unrun cases or harness errors and valid unchanged apps. An
+earlier battery on `d18d4925`, `20261112T003820Z_c2a4ab04`, remains a failed
+run: 228 of 229, with `witness_contract/response_footprint` refusing a final
+process sample that straddled the controller's exit, as that harness does by
+design.
+
+Prospective `v0.3.8` generation again changes only the contract and guide
+stamp tables and snapshot history. The prepared contract is
+`c11f7170abc31fc5d7a7a545d4d7e18ce84c8eb175a28282a55d2020504385ec`; the
+prepared guide is unchanged at
+`766eb552504f61746bd00d22be17d759fe7e0fba355805115b77211dc378ceb9`. The
+ordinary check refuses for precisely the absent `v0.3.8` tag. The
 stage-three and stage-four paragraphs below describe the document and
-rehearsals before this reduction. The pause before the tag stands.
+rehearsals before this reduction. Pause before the tag; maintainer review
+precedes tagged rehearsal and real Apple submission.
 
 **Final review boundary.** The maintainer has directed a pause before the
 `v0.3.8` tag, with completed changes committed and pre-tag checks finished.
