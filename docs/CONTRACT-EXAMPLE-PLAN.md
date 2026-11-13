@@ -455,6 +455,68 @@ Possible later steps keep the same direction, from code to presentation; they ar
 
 ## 12. Evaluation record
 
+Recorded by the executor on 2026-11-12 at the evaluation point. Every run named here is development evidence under `tests/out/runs/` or in the challenge worktree: it is disposable under the retention policy and is not retained release evidence.
+
+### Source and build
+
+| Item | Value |
+| --- | --- |
+| Final supported source | `23440049`, clean working tree |
+| Implementation commits | `89f9d121` (step 0), `de17cef7` (step 1), `7f1fcb8b` (step 2), `6c9f11da` (step 3), `c188ffb4` and `23440049` (corrections after review) |
+| Selected app | `dist/PolicyWitness.app`, built by the signed pipeline from `23440049` with a clean tree; `PWBuildDescribe` is `v0.3.7-34-g23440049` |
+| Embedded identity | `development:6a333cf6f19aea6939fa843655b6ce2a90ec05837fb4bb6b8b9288b0ccc572f0`, equal to what `docs/build_contract.py` derives from the source |
+| Earlier builds | `de17cef7` gave `development:06501fd5…8923`; `c188ffb4` gave `development:8627b82f…e504`. Evidence from them is not carried to the final build |
+
+### Runs
+
+| Output directory | Run | Selection | Source and build | Result |
+| --- | --- | --- | --- | --- |
+| `example-step1-a` | `20261113T002356Z_28ce9ecf` | `unit`, `source_drift` | Working tree later committed as `de17cef7` | Failed, 13 of 14; disposition below |
+| `example-step1-b` | `20261113T003211Z_06171dc8` | The same | Working tree later committed as `de17cef7` | Pass, 14 of 14 |
+| `example-step2-a` | `20261113T004110Z_7995238e` | `integration` | Build of `de17cef7` | Pass |
+| `example-step3-a` | `20261113T005552Z_7b966617` | `blackbox_e2e/checker_controls` and both example cases | Working tree later committed as `6c9f11da`; build of `de17cef7` | Pass, 3 of 3 |
+| `example-step3-battery-1` | `20261113T005633Z_a4410175` | Default battery | `6c9f11da`; build of `de17cef7` | Pass, 231 case results |
+| `example-eval-01` to `-10` | `…998977e8` to `…ae06eac7` | Live case, ten times | `6c9f11da`; build of `de17cef7` | Pass, 10 of 10 |
+| `example-fix-unit-drift` | `20261113T014053Z_edb14980` | `unit`, `source_drift` | Working tree later committed as `c188ffb4` | Pass, 14 of 14 |
+| `example-fix-cases` | `20261113T014824Z_cfd718de` | `integration` and the three cases | `c188ffb4` and its build | Failed, 3 of 4; disposition below |
+| `example-fix2-unit-drift` | `20261113T014921Z_6172d5cb` | `unit`, `source_drift` | Working tree later committed as `23440049` | Pass, 14 of 14 |
+| `example-fix2-cases` | `20261113T015638Z_e8188171` | `integration` and the three cases | `23440049` and its build | Pass, 4 of 4 |
+| `example-final-battery-1` | `20261113T015713Z_2e6b9fd5` | Default battery | `23440049` and its build | Pass, 231 case results, no skip, unrun case or harness error, inventory unchanged, no system sleep recorded |
+| `example-final-eval-01` to `-10` | `…9aeeaa60` to `…a52e9e15` | Live case, ten times | `23440049` and its build | Pass, 10 of 10 |
+
+Runs marked "working tree later committed" started before their commit existed; no run record states a source snapshot, and their applicability rests on the tree having been committed unchanged. The final battery, `example-fix2-cases` and the final ten runs ran on the clean tree at `23440049`.
+
+### Control coverage
+
+In the final battery `witness_contract/example_round_trip_controls` matched 190 of 190 rejected controls and covered 67 of 67 assertions, with passing baselines under a development and a release-form identity and seven controls of the checker's prepare step. Its artifact `example-round-trip-controls.json` holds each control's expected and actual sets and the coverage it earned. The case spells every expected classification itself and fails if the checker's table differs. Each native assertion, the prerequisite assertion and the execution assertion has at least one matched control that the consumer reads without error. Six assertions can only be violated together with a consumer diagnostic, which the allowance of section 4.7 permits: the three identity assertions, the step-identifier and query echoes, and the consumer's own aggregate, whose propagation control requires it exactly.
+
+`blackbox_e2e/checker_controls` ran 134 result-consistency controls for the shared consumer. Shape and record validity rest on that case; that the app is validly signed and unchanged rests on the dispatcher's inspection.
+
+### Serialization challenge
+
+The disposable worktree `PolicyWitness-example-challenge`, beside this checkout, holds the runs; the directory `PolicyWitness-example-challenge.evidence` beside it holds the patch, source hashes, commands, console logs and the named failure. The challenge was run at `6c9f11da` and repeated at `23440049`, with the same outcome.
+
+| Step at `23440049` | Run | Result |
+| --- | --- | --- |
+| Baseline | `20261113T022155Z_0dd7c933` | `unit/rust.unit` passes |
+| One line of the emitter changed from the pretty serializer to the compact one | `20261113T022159Z_39f2cd98` | 241 tests pass and one fails: the controlled orchestration test for the emitted example, at its comparison of the client's request with the emitted document |
+| Restoration, with source hashes equal to the baseline's | `20261113T022201Z_89d8e260` | `unit/rust.unit` passes |
+
+This evidence concerns request preparation under the test identity and ends at the client callback. It does not establish exact delivery by a signed binary.
+
+### Ten-run comparison
+
+The bounded sample ran on the build of `de17cef7`: ten of ten runs passed, with all 67 assertions holding in each, every prediction a validator `allow`, every order `query_first` and every attempt `ok`. After the corrections a second sample of ten ran on the final build with the same results; it is recorded as replacement evidence for the changed build, not as a restart of the first. Neither sample contains a failed or unevaluated assertion, so no disposition under section 4.6 was needed. Both samples ran back to back within about half a minute each on one machine under one operating condition. They give no information about variation such as an `unestablished` order.
+
+### Failed runs and their dispositions
+
+| Run | Failure | Disposition |
+| --- | --- | --- |
+| `example-step1-a` | `source_drift/generator_contract` reported three unlisted citation pairs, all in this plan | A defect in this document's prose, unrelated to the command. The text is present at the starting commit, from which the executor infers the case was already failing there; it was not run at that commit. `3bb0955f` rewrote the three mentions as symbol links; `example-step1-b` is the replacement run |
+| `example-fix-cases` | The new integration test required exit 2 for a stdout closed at launch; the app exited 0 | An incorrect expectation written by the executor. On that build the write to descriptor 1 succeeded, so the launch condition behaves as a redirect to the null device and exit 0 supplies what the system accepted. `23440049` removed the expectation and the direct descriptor write that accompanied it; `example-fix2-cases` is the replacement run |
+
+Local runs of the two control scripts outside the dispatcher failed several times on mistakes in the controls while they were being written. They are not retained and earn no credit. One direct `cargo test` during step 1 ran outside the checkout lock helper; it was local debugging and earns no credit.
+
 ### Independent review: initial assessment
 
 A reviewer in a fresh context received this plan, the diff from `c6345219` to `6c9f11da`, the source and build identities, the raw runs and the serialization challenge evidence. The authors' diagnoses, failure dispositions and acceptance view were withheld. The assessment below is preserved as received on 2026-11-12, before any of that was shared and before any correction was made.
@@ -578,3 +640,59 @@ One command of mine was refused by the permission system before it executed. It 
 - The renderer uses `validate_contract(value, identity)` where 4.1 names `validate_request_contract`. It is the same gate with the identity as a parameter, which 4.8 asks for.
 - 3bb0955f bundles the maintainer-confirmation record with the prose fix for the step1-a failure.
 ```
+
+### Authors' response and dispositions
+
+The reviewer has not seen the corrections below, and they have not been independently reviewed again.
+
+| Finding | Response | Disposition |
+| --- | --- | --- |
+| 3.1 `example` exits 101 when stderr is unwritable | Confirmed as a product defect against the confirmed exit commitment | Corrected in `c188ffb4`: the reason and the usage text are written without panicking. The integration test `example_write_failures_exit_2_without_a_panic` checks unwritable pipes on the signed app, and the reviewer's reproduction exits 2 on the final build |
+| 3.1, stdout closed at launch exits 0 | Not a defect; see the failed-run table | No product change. The contract rule does not claim this case fails |
+| 3.2 Expected classifications came from the checker's table | Accepted | Corrected in `c188ffb4`: the control case spells each classification and checks the checker's table against it |
+| 3.3 Six native controls also tripped the consumer | Accepted | Corrected in `c188ffb4`: coherent deny, failed-read, combined and unestablished-order replies are read cleanly by the consumer and fail only native expectations. The incoherent inputs remain as further controls under the allowance |
+| 3.4 One controller-authored field switched the consumer's result rule off | Accepted | Corrected in `c188ffb4`: admission comes from the capture's host bytes and the producer and profile gates alone. Controls show the relationship in force without the assessment, and the example checker reports an admitted reply without the assessment as a consistency failure. Remaining limit: the consumer does not restate the controller's collection-capacity gate, so a reply refused for capacity alone would be reported as inconsistent; the final battery contains no such envelope |
+| 3.5 No evaluation record | The record follows the review by the order of section 6 | This section |
+| 3.6 The plan repeated the constant | Accepted | Section 4.1 now links to the constant. The hand-typed step in the probes surface's `read_hosts` example stays, as section 4.3 states; it is listed under open matters |
+| 3.7 The live case stores the target file's bytes | The plan requires it in section 4.5 | No change; listed under open matters |
+| 3.8 The checker held its own list of selection keys | Accepted | Corrected in `c188ffb4`: the checker reads the keys from the request shape golden, and the control case fails if the set changes |
+| Section 2, no built-app test of the write-failure row | Accepted | Covered by the integration test named above |
+| Section 2, nothing executed the prepare step on a failing emission | Accepted | Seven prepare controls: a failed emission or bound writes a report and leaves no target observation or refusal input |
+| Section 2, `one_change` compared an input with the function that wrote it | Accepted | The checker now judges each input against the emitted bytes and the stated change |
+| Section 2, "reads no file" rests on reading | Partly answered | The isolated Cargo builds in the integration case emit from a bare target directory with no app, manifest or registry beside them. No control observes the process's file reads |
+| Section 2, the ten-run sample shows one condition | Agreed | Stated as a limit in the comparison above |
+
+No consequential disagreement remains open between the reviewer's assessment and this response.
+
+### Fixture corrections under section 4.8
+
+No fixture needed correcting. `envelope_skeleton` in `tests/lib/blackbox.py` now derives its default result from the reply's outcome. Its five call sites already stated coherent results: two rely on the default with a `finished` reply (`runner_filter_sysctl_name/checker_controls`, `blackbox_e2e` extension controls) and three pass an explicit failure with a `bad_request` or `xpc_error` reply (`blackbox_e2e` policy-check and client-capture controls, `source_drift/porcelain_codec`). No control's expectation changed. Controls that deliberately fault a result or a reply outcome, such as the `retired_run_outcome` and `failed_runner` controls, still require their own diagnostics, and the cases holding them pass in the final battery. With admission decided by the capture and gates alone, skeleton-built envelopes are subject to the new rule; none failed it.
+
+### Deviations from the plan
+
+- The user guide gained one command-table row, by the maintainer's decision of 2026-11-12.
+- Step 0 rewrote the stamp cells and snapshot history directly, because generation refuses while the tables claim an absent tag; the generator then wrote nothing further.
+- `3bb0955f` also fixed the pre-existing prose-scan failure in this plan.
+- Files outside section 5's table changed: `docs/contract/runtime.py` (selector-key reading moved into the tree reader, which the extraction needs), `tests/lib/runner_client_capture.py` (the independent admission of host bytes), and the `integration` and `source_drift` suite READMEs. `build_contracts.py` and `tests/COVERAGE.md` are listed there and did not change.
+- The offline controls are a separate script beside the one checker, and build their passing input from the authored run under `tests/fixtures/blackbox_e2e`, because no coherent single-read reply exists under `tests/fixtures/contract`. No fixture was generated.
+- No unit test covers CLI dispatch to `example`; the integration case covers it on the signed app.
+- The renderer calls the contract gate with the identity as a parameter, which section 4.8 asks for, where section 4.1 names its wrapper.
+- The contract's example node states its two commands in authored prose and the renderer appends the extracted document. The node's public payload holds the parsed document in place of its citation.
+- The shared consumer's admission uses the capture and the producer and profile gates, and not the controller's assessment, with the capacity limit stated above.
+- Step 3 spans `6c9f11da`, `c188ffb4` and `23440049`, and needed two further signed builds after the review.
+
+### Open matters
+
+1. **The maintainer's evaluation decision.** Not yet recorded. Step 4 does not begin before it is committed here.
+2. **Target bytes in evidence.** The live case stores the attempt target's bytes, so release-acceptance evidence would carry the acceptance machine's hosts file. A digest and length would support the same equality observation. The plan requires the bytes; this is a commitment for the maintainer.
+3. **The `read_hosts` example.** The probes surface's hand-typed step equals the emitted example's step. The plan keeps it; acceptance criterion 9 is met for the emitted document and not for that fragment.
+4. **Integrity findings and command success.** The consumer now verifies today's mapping from reply outcome to result. Whether controller integrity findings should change command success, `envelope.data.select.success_findings`, remains undecided and is not authorized by this work.
+5. **Release form.** No live run has seen a `release:` identity; section 9's nested acceptance supplies it.
+
+### Handoff statement
+
+- **Supported source:** `23440049`. Implementation is complete through step 3; no support commit exists, and the rule and the example node still carry their evidence gaps.
+- **Selected app:** built from `23440049` with a clean tree, identity `development:6a333cf6f19aea6939fa843655b6ce2a90ec05837fb4bb6b8b9288b0ccc572f0`.
+- **Applicable verification:** the final default battery, the final ten runs of the live case and the challenge repeated at `23440049`. Evidence from the two earlier builds is superseded.
+- **Blocks dependent investigation:** the maintainer's decision, then step 4's support.
+- **May remain pending:** section 9's candidate verification, open matters 2 to 5, and an independent review of the corrections.
