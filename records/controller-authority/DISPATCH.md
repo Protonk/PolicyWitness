@@ -44,3 +44,19 @@ previous accumulation of runs and worktrees. Initial reading creates neither.
 Tests needed by several roles are combined when that preserves their boundary
 and evidence. A necessary isolated mutation must have an explicit lifetime;
 no permanent extra worktree is part of this dispatch.
+
+## Integration and returning reviews
+
+A/B/C completed cross-examination in their original contexts. C reviewed X07's
+bounded test diff before execution in `C-ORACLE-REVIEW.md`; this is a follow-up
+within its boundary assignment, not an additional minor task. D completed the
+tour and all 56 crosswalk families with fresh `gpt-6-astra`; its document files
+were frozen before the consolidated verification run. A/B/C now review the
+full integrated diff from their original perspectives and will inspect the
+relevant final receipts. The coordinator performs all execution and cleanup.
+The four-principal budget and zero-minor count remain unchanged.
+
+All returning reviews finished with acceptance after raw receipt inspection.
+D responded to their findings; the coordinator applied BR01, recorded its
+reviewed applicability exception and completed normal cleanup. All principal
+assignments are complete, with no substitution or additional assignment.

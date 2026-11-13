@@ -1,5 +1,10 @@
 # Controller authority and CONTROLLER.md integration plan
 
+Status: implemented and reviewed. The
+[acceptance packet](../records/controller-authority/ACCEPTANCE.md) records the
+maintainer's decisions, complete obligation crosswalk, independent returning
+reviews, verification scope and artifact disposition.
+
 This plan establishes `docs/CONTROLLER.md` as an explanatory peer of
 [WORKER.md](../docs/WORKER.md), and uses the authored public contract to examine
 the authority assigned to the controller. Its investigation source baseline is

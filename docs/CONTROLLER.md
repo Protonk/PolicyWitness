@@ -190,8 +190,8 @@ status/producer/stage context; it does not independently compare a requested
 nonce or revalidate captured bytecode. A consumer needs separately retained
 request operands to make such a comparison.
 
-Current actor diagnostics first select actions through carried actor labels,
-phase IDs and action IDs, then assess each carried subprocess. Worker-local
+Current actor diagnostics first select actions through carried actor labels
+and each matching phase's action IDs, then assess each carried subprocess. Worker-local
 lifecycle failures withhold that projection. Later reply-wide findings withhold
 the aggregate and retain separately computed actor rows. A retained local
 `clean_exit` does not override a finding against its launch PID, identity or

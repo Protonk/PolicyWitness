@@ -54,3 +54,44 @@ command/configuration, expected and actual observations, raw path and limits.
 Review and record any failed assertion before pruning its inactive output with
 the repository tools. Final acceptance distinguishes source/check reading,
 constructed checks and native observations.
+
+## Integration verification
+
+At source `424f3c73`, consolidated run `20261113T155111Z_8ba29955` under
+`tests/out/runs/controller-authority-verification` passed all ten source-drift
+cases and `blackbox_e2e/checker_controls`: 11 pass, no skip/unrun/harness error,
+zero system sleep, selected app valid before and unchanged after. The app is
+still the clean accepted `a5de0c63` build; shipped source and all identities are
+unchanged. VERIFICATION records exact command, dependency applicability,
+structural public deltas and the final reviewed prose-only exception.
+
+The new 134-row result receipt matches complete independently expected
+diagnostic multisets, retaining 189 actual errors with no missing/unexpected
+ones. Five separate actual-control-route sensitivity records prove acceptance,
+extra/missing/duplicate rejection and restoration for the comparator. Five
+new controller known-gap controls produce their exact intended findings or
+pass after restoration. These are constructed/structural observations, not
+new native contradiction or failure evidence. All credited negative controls
+reach the named predicate; no unrelated failure is counted.
+
+The investigation used two dispatcher runs total: one baseline evaluation and
+one verification of changed documentation/tests. No new worktree, build,
+release rehearsal or ten-run sample was created. Retention disposition will
+be appended after final raw receipt review and ordinary repository pruning.
+
+## Final retention disposition
+
+A/B/C completed raw receipt review and accepted the result before cleanup.
+`make prune` first reported a signature-facts mismatch inside the automation
+sandbox. The identical preview passed outside it without artifact changes,
+establishing the environmental scope of that diagnostic. The clean preview
+selected only this investigation's two inactive disposable runs.
+
+`make prune APPLY=1` then completed with no blockers, failures, missing
+acceptance or unmanaged output. It removed both controller-authority run
+directories, preserved the protected newest release acceptance and kept the
+four release archives v0.3.4 through v0.3.7. The raw development artifacts cited
+above are now **pruned and unavailable**, not retained evidence. The committed
+reviews and provenance/count/limit summaries are the surviving account; no
+private evidence copy or keep marker was created. Only the original worktree
+remains. No machine-resource recovery obligation was created by this plan.

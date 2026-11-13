@@ -720,3 +720,59 @@ snapshot and stamp accounting, source-drift document controls, and returning
 A/B/C review. D's draft is complete but does not predeclare those checks passed.
 Permanent documents link to contracts, implementation and checks, never these
 records. Source-only and constructed claims do not acquire release credit.
+
+## D response to returning source reviews
+
+Read A-REVIEW, B-REVIEW and C-REVIEW after the stable draft and maintainer
+acceptance. All three find no consequential unresolved contract/implementation
+or boundary objection. Their source-review acceptance remains conditional on
+BR01 and completed verification receipts; this response does not convert that
+conditional approval into final execution or release credit.
+
+**BR01 accepted.** `execution_diagnostics` selects phases by carried actor label,
+flattens those phases' action IDs, and resolves each to the first matching global
+step/event. Phase IDs are not another join operand in that local selection.
+The tour sentence will say “carried actor labels and each matching phase's
+action IDs.” Phase identity remains a separate reply-wide check. The coordinator
+will apply this one explanatory correction after the active consolidated run;
+D has made no documentation edit during execution. It does not reopen M02,
+change production code or require a new product decision.
+
+A's normalized-node review adds an important context qualification to the
+accepted-node realization above. The relocated M01 definition no longer
+inherits the old selection rule's `when: present(envelope.data.runner_result)`,
+successful-admission `free_when`, or `where: run completion after admission`;
+it inherits payload assembly context. Its own admitted-reply prose and `uses`
+reference preserve its descriptive meaning. The relocated M03 definition's
+inherited `where` changes from host response encoding to host reply assembly;
+its prose/references preserve degraded-form scope. Both retain original
+who/entry/recipient/report context. Therefore the accurate invariant is
+unchanged executable/reporting-rule applicability, effects and ownership,
+not unchanged context for every relocated descriptive node. The other three
+accepted definitions retain their IDs; all retained node contexts compare
+unchanged in A's review. No stronger admission or attribution follows from
+these legal sibling placements.
+
+A verified all 56 family IDs occur exactly once and the original node,
+promise, prerequisite/beneficiary and failure/dependency cells are preserved
+literally. B reviewed the grouped implementation/assertion routes and found no
+missing family or owner transfer. C reviewed the crosswalk against all twelve
+boundary challenges. These are scoped returning reviews, not fresh blind
+investigations or independent proofs of every native predicate. The historical
+open-choice text stays explicitly labelled initial inventory; current accepted
+meanings and the two old-to-new mappings govern the final account.
+
+The remaining evidence conditions are concrete: completed source-drift and
+checker-control receipts; all 134 normal consumer controls' full expected and
+actual diagnostic multisets; and the five sensitivity records showing baseline
+and restoration acceptance with exactly the authored extra/missing/duplicate
+differences for the three refusals. The old 134-control run cannot supply that
+stronger credit. Documentation checks establish registration, links, generated
+agreement and known-gap index structure, not semantic truth of diagram arrows.
+The one earlier ordinary native example remains scoped to that execution and
+adds no evidence for actor contradictions, degraded production, output loss or
+cleanup races. No new native run is requested by these returning reviews.
+
+D identifies no additional concrete correction beyond BR01 and the context
+qualification recorded here. Final execution credit remains pending coordinator
+completion and the reviewers' receipt inspection.
