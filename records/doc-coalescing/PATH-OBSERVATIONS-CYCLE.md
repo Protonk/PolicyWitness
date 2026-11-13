@@ -60,10 +60,11 @@ call (`sb_api_validator.c`), `capture_observed_path`, the three open actions,
    the diagnostic "can see a path changed by an attempt" without that scope.
 4. **The planning check is the only path observation before the query, and it
    leaves no path.** Its result appears only as an exclusion. A path query
-   that was not excluded implies the host's `realpath` succeeded at planning,
-   which the guide uses in rule 11 without saying so. The check runs third,
-   after the pair and filter-kind exclusions, so an excluded query does not
-   always carry it.
+   the validator answered implies the host's `realpath` succeeded at planning,
+   which the guide uses in rule 11 without saying so. A query that was merely
+   not excluded does not imply it: when no validator ran for the phase,
+   planning may not have run. The check runs third, after the pair and
+   filter-kind exclusions, so an excluded query does not always carry it.
 5. **Descriptor identity is documented as a shape, in a section introduced as
    extension output.** "Extension and fresh-read output" opens by saying its
    records sit "separately from ordinary `steps`", then lists two
@@ -98,3 +99,61 @@ call (`sb_api_validator.c`), `capture_observed_path`, the three open actions,
   (map loading, built-in fallback) that belongs in a tour.
 - Exec targets carry `attempt.path_diagnostics` but no worker path
   observation; the exec observation records are their own topic.
+
+## Pass 2 — Consolidated explanations
+
+The guide gained one section, "Reading path and object observations", placed
+before the two `path_diagnostics` field references. It has three parts.
+
+- **"Who observed what, and when"** is a seven-row table: the two submitted
+  strings, the planning check, `observed_path`, the pre-open stat, the
+  descriptor stats and the host diagnostics, each with its fields, observer,
+  call and time. A paragraph gives the per-phase sequence and says that only
+  `comparison.order: query_first` places a query answer before its phase's
+  actions.
+- **"What each record establishes"** gives one entry per record and a
+  paragraph on comparing two records, including what equal and different
+  device and inode numbers support.
+- **"When a record is absent, null or different"** has three tables, for host
+  diagnostics, the worker's path observation and the stat records. Each row
+  gives what the reply shows, what it means and what remains established.
+
+Smaller edits: the per-step note and the comparison section's "same runtime
+object" entry link to the new section; the `path_diagnostics` reference says
+one pass covers every step after the last phase; and the "Extension and
+fresh-read output" introduction no longer says its two `steps[].attempt`
+records sit outside `steps`.
+
+No contract source, reading rule, generated region or public snapshot changed.
+The retained ownership question about the contract's `observed_path` sentence
+stands.
+
+### Direct source check of the new tables
+
+Each row was compared with its producer before commit. The comparison changed
+the draft in five places:
+
+- A `path` qualifier on "a query the validator answered passed the check".
+- The statement about unknown planning now names
+  `missing_reason: validator_not_invoked`. A first draft said any synthetic
+  result without a `query_plan:` limitation leaves planning unknown, which is
+  wrong for `validator_no_verdict`: there a validator ran, so planning ran.
+- `realpath_resolved: null` no longer implies only absence or traversal.
+- The parent-resolved, leaf-unresolved row gives its two causes as examples.
+  A leaf the host cannot reach through an unsearchable parent is a third.
+- The tables are scoped to an ordinary reply, because a
+  `runner_reporting_failed` reply removes `comparison.limitations`.
+
+Branch orders confirmed: planning tests pair, then filter kind, then path
+(`planValidatorQueries`); `parentRealpathResolved` returns nil for a
+non-absolute target, a trailing slash, a `.` or `..` leaf, or an unresolved
+parent; `decodeFreshRead` returns only the open pair when the open failed;
+`decodeFreshWrite` omits each stat whose slot value is the not-reached marker.
+
+### Alignment duties added
+
+The three tables restate producer behavior and contract field meanings with no
+check binding them. Three facts would make them stale without any test
+failing: a fourth action recording `observed_path`, a planning exclusion pair
+that uses the `path` filter kind, and a change to when the host computes path
+diagnostics.

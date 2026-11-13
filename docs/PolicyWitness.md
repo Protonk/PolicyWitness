@@ -1947,8 +1947,9 @@ jq '[.data.specimen.policy.augmentation.applied_sha256, .data.runner_result.poli
 
 ### Extension and fresh-read output
 
-The lifecycle [example](#sandbox-extensions) returns these records under
-`data.runner_result`, separately from ordinary `steps`:
+The lifecycle [example](#sandbox-extensions) returns `extension_events`,
+`transfers` and `resources` under `data.runner_result`, separately from
+ordinary `steps`. The two fresh records belong to each step's `attempt`:
 
 | Record | Fields and supported reading |
 | --- | --- |
@@ -2037,11 +2038,13 @@ The runner echoes step results with additional context:
 Notes:
 - `requested_path` echoes the attempt target for every attempt kind
   (path, Mach service name, sysctl name, etc.). `observed_path` is the
-  worker's own `F_GETPATH` observation for successful `open_read`, `open_write`
-  or `create`, explicit `null` otherwise. A `read_fresh` action instead retains
+  worker's own `F_GETPATH` observation after a successful `open_read`, `open_write`
+  or `create` open, and explicit `null` otherwise. A `read_fresh` action instead retains
   descriptor metadata under `fresh_read.identity`. `path_diagnostics` is the host's later resolution of a file or
   exec attempt target (see [attempt.path_diagnostics](#attemptpath_diagnostics));
   other attempt kinds omit it.
+  [Reading path and object observations](#reading-path-and-object-observations)
+  sets these records side by side, with the causes of each `null`.
 - `filter_value` is the exact string the runner passes to `sandbox_check`,
   except when `outcome == "prediction_unavailable"` — in that case no
   `sandbox_check` call is made; `filter_value` is echoed back from the
@@ -2189,6 +2192,8 @@ prediction and enforcement agree or disagree needs more:
   `observed_path` and a fresh descriptor's `identity` come from the worker's
   attempt; `path_diagnostics` comes from the host after the run. None of them
   shows which object the query consulted.
+  [Reading path and object observations](#reading-path-and-object-observations)
+  describes each record.
 - **Unchanged state across the interval.** `query_first` places the answer
   before the phase's whole action batch. An earlier action in the same phase
   can change the target or the worker's own sandbox state, for example by
@@ -2411,6 +2416,121 @@ jq '.data.runner_result.steps[]
        limitations: .comparison.limitations}' "$PW_RESULT"
 ```
 
+### Reading path and object observations
+
+A file or exec step can carry several records about its target. They come from
+different observers, use different calls and are taken at different times.
+Read each as its own observation. No reply field records which object
+`sandbox_check` consulted when it answered the query.
+
+#### Who observed what, and when
+
+| Record | Fields | Observer and call | When |
+| --- | --- | --- | --- |
+| Submitted query string | `sandbox_check.filter_value` | The request supplies it. The validator passes the same bytes to `sandbox_check`. | During the phase's query collection, if the query ran. |
+| Submitted attempt target | `attempt.requested_path` | The request supplies it. The worker passes the same bytes to the action's native call. | When the action runs. |
+| Planning check | No path field. A failed check appears as `sandbox_check.outcome: prediction_unavailable` with `query_plan:path_unresolved_at_planning` in `comparison.limitations`. | The host, calling `realpath(3)` on the query string. | When the host plans a phase's queries: after the worker reaches that phase and before the phase's collection. |
+| Worker path observation | `attempt.observed_path` | The worker, calling `fcntl(F_GETPATH)` on the descriptor its open returned. Only `open_read`, `open_write` and `create` record it. | Inside the action, after a successful open and before the action's read or write and its close. |
+| Pre-open stat | `attempt.fresh_write.preopen_stat` | The worker, calling `lstat` on the target string. Only `create_fresh` records it. | Inside the action, before its exclusive open. |
+| Descriptor stat | `attempt.fresh_read.stat_rc` and `identity`; `attempt.fresh_write.opened_stat`, `truncated_stat` and `written_stat` | The worker, calling `fstat` on the descriptor its open returned. Only `read_fresh`, `write_fresh` and `create_fresh` record them. | Inside the action: after the open, and for a fresh write again after the truncation and after the write. |
+| Host path diagnostics | `sandbox_check.path_diagnostics` and `attempt.path_diagnostics` | The unsandboxed host, calling `realpath(3)` and applying string mappings. | Once, after orchestration returns. This is after every phase's actions, not after this step. |
+
+Within one phase the host plans the queries, the validator runs them, the host
+closes collection and releases the phase, and the worker runs the actions in
+declaration order. A later phase repeats that sequence, and the host's path
+diagnostics follow the last one. The planning check and the path diagnostics
+are placed by the host's own sequence. That a step's query answer preceded its
+phase's actions is established only by
+[`comparison.order: query_first`](#when-order-is-unestablished).
+
+#### What each record establishes
+
+- **Submitted strings** establish what was asked and what was attempted, byte
+  for byte. `comparison.target_relation` compares these two strings and
+  nothing else. Equal strings can reach different objects, and different
+  strings can reach the same one.
+- **The planning check** establishes, when it excluded the query, that the
+  host could not resolve the string at that moment. A `path` query the
+  validator answered (`sandbox_check.result_source: validator`) passed the
+  check, so the host resolved its string then. The resolved form is not
+  recorded. Planning tests the operation and filter pair first, so a query
+  excluded with `query_plan:prediction_unavailable_pair` was not checked. When
+  no validator ran for the phase
+  (`sandbox_check.missing_reason: validator_not_invoked`), the reply does not
+  show whether the check ran.
+- **`observed_path`** establishes that the worker's open returned a descriptor
+  and that the kernel reported this path for it at that moment. The path can
+  differ from the submitted string: an `open_read` of `/etc/hosts` records
+  `/private/etc/hosts`. It does not show what the path named when the query
+  ran, or what it names later.
+- **Descriptor stat records** establish the device, inode, mode, owner and
+  group of the object the descriptor referred to at that call, and for a fresh
+  write its size. The call reads the descriptor, so it describes the object
+  that was opened, whatever the path names afterwards.
+- **`preopen_stat`** establishes what the worker's own lookup of the string
+  found just before the exclusive open: an existing object's metadata, or a
+  failure with its `errno`. `lstat` does not follow a final symlink. It is a
+  separate lookup from the open and does not establish the state the open met.
+- **Host path diagnostics** establish how the host resolved each submitted
+  string after the run. They do not establish what the validator, the kernel
+  or the worker resolved earlier. `firmlink_resolved` is a string mapping
+  applied to the resolved or substituted path. It is a candidate spelling, not
+  an observation that an object exists there.
+
+Comparing two records compares two observations. Equal paths from two
+observers show that both calls returned the same spelling, each at its own
+time. Device and inode numbers identify an object on one filesystem while it
+exists. Two descriptor records with different numbers therefore describe
+different objects. Two with equal numbers describe the same object if it
+existed throughout; the report does not record whether it was removed and its
+number reused in between.
+
+#### When a record is absent, null or different
+
+These tables read an ordinary reply. A `runner_reporting_failed` reply removes
+every comparison, so a planning exclusion then appears only as
+`sandbox_check.outcome: prediction_unavailable` with its `error`.
+
+Host path diagnostics:
+
+| What the reply shows | What it means | What remains established |
+| --- | --- | --- |
+| No `sandbox_check.path_diagnostics` | The query's filter kind is not `path`, or its value is empty. | The submitted `filter_value` and the query result. |
+| No `attempt.path_diagnostics` | The attempt kind is not `file` or `exec`, or its target is empty. Mach service names and sysctl names get no path diagnostics. | The submitted `requested_path` and the attempt result. |
+| A form's key is omitted and its name is listed in `same_as_input` | The host derived that form and its bytes equal `input`. This is a resolved form, not a missing one. | The host's later resolution, equal to the submitted string. |
+| `realpath_resolved` is `null` | The host's `realpath(3)` failed after the run. The path did not exist then, or the host could not resolve it for another reason, such as a permission failure of its own. | The submitted string and both channel results. A later failure does not show what existed when the query or the attempt ran. |
+| The validator answered the query, and `sandbox_check.path_diagnostics.realpath_resolved` is `null` | The host resolved the string at planning and could not after the run. Something changed in between. An `unlink` in this phase or a later one is one cause. | Both host observations, each at its own time. The reply names the change only if an action's own result does. |
+| The query was excluded with `query_plan:path_unresolved_at_planning`, and the later form resolves | The host could not resolve the string at planning and could after the run. The quick start's `create` is an example: the attempt created the file. | The exclusion. No query ran for this step, and the later resolution does not supply one. |
+| `realpath_resolved` is `null` and `firmlink_resolved` is a string | With no `realpath` result, the host substitutes the `/etc`, `/tmp` and `/var` prefixes in the submitted string and then applies the firmlink mapping. | A candidate spelling. It does not show that anything exists at that path. |
+| `firmlink_resolved` is `null` | The path is not absolute, or no firmlink prefix matches it. | The other form and the submitted string. |
+| `attempt.path_diagnostics.realpath_resolved` is `null` and `parent_realpath_resolved` is available | The host resolved the parent directory and not the leaf. For example, the leaf was absent after the run, or it is a symlink whose destination did not resolve. | The parent's resolved spelling with the submitted leaf. |
+| `parent_realpath_resolved` is `null` | The target is not absolute, ends with `/`, has `.` or `..` as its leaf, or its parent did not resolve. | The other form and the submitted string. |
+
+The worker's path observation:
+
+| What the reply shows | What it means | What remains established |
+| --- | --- | --- |
+| `observed_path` is `null` and `attempt.result_source` is `synthetic` | The worker published no completed result for the action, or the action is unsupported. | `attempt.missing_reason` and `attempt.lifecycle`. |
+| `observed_path` is `null` on a completed action other than `open_read`, `open_write` or `create` | The action does not record a path. This includes `read_fresh`, `write_fresh`, `create_fresh`, `unlink`, `access` and every non-file kind. | The action's own result, and for a fresh action its descriptor stat records. |
+| `observed_path` is `null` and `attempt.outcome` is `open_failed` | The open returned no descriptor, so there was nothing to ask about. | The open's `rc` and `errno`. |
+| `observed_path` is `null` and `attempt.outcome` is `ok` on `open_read`, `open_write` or `create` | The open succeeded and the worker's `F_GETPATH` call returned no path. The worker records no error for that call. | The successful open. A missing path observation does not change the attempt's result. |
+| `observed_path` differs from `requested_path` | The kernel reported a different spelling for the opened descriptor than the one submitted. | Where the open ended up at that moment. The difference is not a failure. |
+| `observed_path` differs from `attempt.path_diagnostics.realpath_resolved` | The two come from different observers, calls and times. The target may have changed in between, or the two calls may spell one object differently. The reply does not say which. | Each observation at its own time. Neither corrects the other. |
+
+Descriptor and pre-open stat records:
+
+| What the reply shows | What it means | What remains established |
+| --- | --- | --- |
+| No `fresh_read` or `fresh_write` object | The action is a different one, or the worker published no completed result for it. | `attempt.lifecycle` and the other attempt fields. |
+| `fresh_read` has `open_rc: -1` and no stat, read or close fields | The open failed. No descriptor existed, so there is no identity. | `open_errno`. |
+| `fresh_read` has a nonzero `stat_rc` and no `identity` | The `fstat` call failed with `stat_errno`. The read and close still ran and have their own fields. | The open, read and close results. |
+| A `fresh_write` stat object is absent | That call was not reached. `preopen_stat` exists only for `create_fresh`. `opened_stat` needs a successful open. `truncated_stat` exists only for `write_fresh` after a successful open. `written_stat` needs the write to have been reached. | The calls that were reached, each with its own return. |
+| A `fresh_write` stat object has `rc: -1` | That metadata call failed with the recorded `errno`. It carries no `identity` or `size`. For `preopen_stat` on a new target this is the expected result. | The failure of that call, separate from the open's result. |
+
+The field layouts are under [path_diagnostics](#path_diagnostics),
+[attempt.path_diagnostics](#attemptpath_diagnostics) and
+[Extension and fresh-read output](#extension-and-fresh-read-output).
+
 ### path_diagnostics
 
 `path_diagnostics` is emitted on every path-filter `sandbox_check`
@@ -2425,6 +2545,8 @@ host (`PWRunnerService.enrichPathDiagnostics`) after orchestration returns,
 with child cleanup status recorded separately. `observer="runner_host"`
 and `stage="after_orchestration"` identify that provenance. The host's resolution
 is independent of the worker's sandbox and can see a path changed by an attempt.
+One pass covers every step after the last phase, so a step's diagnostics can
+reflect actions in later phases.
 Neither a resolved path nor null establishes what the validator saw earlier.
 
 Each form is in exactly one of three states:
