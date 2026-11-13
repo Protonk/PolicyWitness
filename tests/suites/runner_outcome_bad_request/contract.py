@@ -7,6 +7,7 @@ from pathlib import Path
 import plistlib
 import secrets
 import shlex
+import shutil
 import subprocess
 import sys
 import tempfile
@@ -419,6 +420,32 @@ def emitted_lessons(pw, out, effect, cli, *, emitter=None, prefix='lesson-emitte
         assert (directory / 'specimen.json').read_bytes() == emitted.stdout, name
 
 
+def substituted_rejection_faults(observation, accepted_document):
+    """Why a retained observation is not the intended rejection; empty when it is.
+
+    The run's process status is the one `RunCapture` observed. The envelope's
+    published outcome and exit code are separate claims, read separately.
+    """
+    def zero(value):
+        return type(value) is int and value == 0
+
+    faults = []
+    if (observation / 'lesson.exit').read_text() != '0\n':
+        faults.append('publication_exit')
+    if (observation / 'lesson.stdout').read_bytes() != accepted_document:
+        faults.append('published_document')
+    capture = json.loads((observation / 'capture.json').read_text())
+    if not (capture.get('state') == 'exited' and zero(capture.get('returncode')) and zero(capture.get('exit_code'))
+            and capture.get('term_signal') is None):
+        faults.append('observed_run_status')
+    result = json.loads((observation / 'run.json').read_text())['result']
+    if not (result.get('normalized_outcome') == 'finished' and zero(result.get('exit_code'))):
+        faults.append('published_result')
+    if json.loads((observation / 'effect.json').read_text()) != dict(accepted=False, observed=True):
+        faults.append('file_effect')
+    return faults
+
+
 def emitted_lessons_reject_substituted_publication(pw, out, directory, effect, cli):
     """Rejected control: `emitted_lessons` must read what the emitter publishes.
 
@@ -437,17 +464,26 @@ def emitted_lessons_reject_substituted_publication(pw, out, directory, effect, c
     try:
         emitted_lessons(pw, out, effect, cli, emitter=standin, prefix='lesson-substituted-')
     except AssertionError as error:
-        # Only this rejection counts: the accepted document was published, `run`
-        # admitted it, and the refused branch stopped at its exit-and-outcome
-        # assertion. Any other failure is a fault in the control's setup.
+        # Only this rejection counts: the accepted document was published, the
+        # `run` process exited 0 and reported an admitted finished run, and the
+        # refused branch stopped at its exit-and-outcome assertion. Any other
+        # failure is a fault in the control's setup.
         refused = out / 'lesson-substituted-capture_typo'
+        accepted = (out / 'lesson-emitted-create/lesson.stdout').read_bytes()
         assert traceback.extract_tb(error.__traceback__)[-1].name == 'cli', error
-        assert (refused / 'lesson.exit').read_text() == '0\n', refused
-        assert (refused / 'lesson.stdout').read_bytes() == (out / 'lesson-emitted-create/lesson.stdout').read_bytes(), refused
-        envelope = json.loads((refused / 'run.json').read_text())
-        assert envelope['result']['normalized_outcome'] == 'finished' and envelope['result']['exit_code'] == 0, envelope
-        assert json.loads((refused / 'effect.json').read_text()) == dict(accepted=False, observed=True), refused
+        faults = substituted_rejection_faults(refused, accepted)
+        assert not faults, (faults, refused)
         effect.unlink()
+        # Constructed: the same observation with a nonzero captured status does
+        # not qualify, although its envelope still publishes exit code 0.
+        constructed = out / 'lesson-substituted-constructed-nonzero-status'
+        shutil.copytree(refused, constructed)
+        assert not substituted_rejection_faults(constructed, accepted), constructed
+        capture = json.loads((constructed / 'capture.json').read_text())
+        capture.update(returncode=1, exit_code=1)
+        (constructed / 'capture.json').write_text(json.dumps(capture, indent=2) + '\n')
+        faults = substituted_rejection_faults(constructed, accepted)
+        assert faults == ['observed_run_status'], (faults, constructed)
     else:
         raise AssertionError('a substituted publication passed the emitted-lesson step')
     standin.unlink()
