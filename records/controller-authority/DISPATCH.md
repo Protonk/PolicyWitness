@@ -19,7 +19,7 @@ reading protocol. Do not open another report before the freeze.
 | A, Contractual Authority Reader | Plan role A; baseline identity/maintainer disposition; authored contract, authoring model and imported declarations; generated views for navigation. No cited production/test implementation. Required README exposure is recorded as navigation. | `A-CONTRACT-INITIAL.md` | Active: `/root/contract_reader` |
 | B, Implementation Authority Reader | Plan role B; baseline identity/maintainer disposition; production/build/test/fixture sources and component READMEs. No authored/generated contract as outline; record incidental wording exposure. Historical raw runs are unavailable. | `B-IMPLEMENTATION-INITIAL.md` | Active: `/root/implementation_reader` |
 | C, Boundary Challenger | Plan role C; baseline identity/maintainer disposition, public entries and catalogs; write scenarios before targeted code/contract inspection. No A/B results. | `C-BOUNDARIES-INITIAL.md` | Active: `/root/boundary_challenger` |
-| D, Integration Editor | Frozen reports, cross-examination, decisions, evidence and actual source. Starts after initial adjudication. | `INTEGRATION.md`, agreed documentation destinations | Not dispatched |
+| D, Integration Editor | Frozen reports, cross-examination, decisions, evidence and actual source. Started after initial adjudication; maintainer M01–M05 acceptance delivered during drafting. | `INTEGRATION.md`, agreed documentation destinations | Active: `/root/integration_editor`, fresh `gpt-6-astra` |
 
 The packets were dispatched after entry-record commit `9b579bf7` using the
 recorded model and fresh-context setting. Each was told to read only the
