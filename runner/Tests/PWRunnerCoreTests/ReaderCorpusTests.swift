@@ -81,8 +81,9 @@ func runReaderCorpusTests(_ tk: TestKit) {
                 let worker = CWorkerOutput(workerPid: 42, readyByteReceived: true, applied: true, applyRC: applyRC,
                     applyErrno: 0, done: true, exitCode: 0,
                     slots: [CWorkerSlotResult(stepId: "s", rc: 0, errnoVal: 0, completed: true)],
-                    reaped: true, waitErrors: [], hookInvoked: true, proceedSet: true, proceedObserved: true,
-                    proceedOwnershipEstablished: true)
+                    pollStopReason: "done", reaped: true, waitErrors: [], hookInvoked: true,
+                    proceedSet: true, proceedObserved: true, proceedOwnershipEstablished: true,
+                    collectionBasis: "after_confirmed_reap")
                 let classified = classify(workerResult: .success(worker), validatorResult: .success(validator),
                     expectedVerdictCount: 1)
                 let ordering = buildOrdering(worker, validatorOutput: validator, hasQueries: true)
