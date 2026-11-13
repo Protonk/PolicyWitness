@@ -3213,30 +3213,6 @@
             "title": "Emit the example specimen"
           },
           {
-            "context": {
-              "entry": [
-                "cli_example"
-              ],
-              "recipient": [
-                "cli_caller"
-              ],
-              "report": [
-                "example_specimen"
-              ],
-              "where": "CLI example dispatch",
-              "who": [
-                "identity.definitions.controller"
-              ]
-            },
-            "facts": {
-              "kind": "evidence"
-            },
-            "id": "request.specimen.emit_example.evidence",
-            "kind": "gap",
-            "prose": "No check is credited for this rule yet. The signed-app passage from `example` through `run`, the exit statuses and the write-failure behavior await their checks' review.",
-            "title": "Emission evidence"
-          },
-          {
             "context": {},
             "document": {
               "policy": {
@@ -3267,16 +3243,6 @@
             "kind": "example",
             "prose": "These commands print the example and submit it unchanged:\n\n```sh\npolicy-witness example > example.json\npolicy-witness run example.json\n```\n\nThe printed document carries the emitting build's identity where this rendering shows `<reported-contract>`.",
             "title": "Emitted example"
-          },
-          {
-            "context": {},
-            "facts": {
-              "kind": "evidence"
-            },
-            "id": "request.specimen.example.evidence",
-            "kind": "gap",
-            "prose": "No executed instance of this example is credited yet. The rendering is extracted from the controller's definition; host admission and native results await the signed-app round trip.",
-            "title": "Example evidence"
           },
           {
             "context": {
@@ -76819,30 +76785,6 @@
             "title": "Emit the example specimen"
           },
           {
-            "context": {
-              "entry": [
-                "cli_example"
-              ],
-              "recipient": [
-                "cli_caller"
-              ],
-              "report": [
-                "example_specimen"
-              ],
-              "where": "CLI example dispatch",
-              "who": [
-                "identity.definitions.controller"
-              ]
-            },
-            "facts": {
-              "kind": "evidence"
-            },
-            "id": "request.specimen.emit_example.evidence",
-            "kind": "gap",
-            "prose": "No check is credited for this rule yet. The signed-app passage from `example` through `run`, the exit statuses and the write-failure behavior await their checks' review.",
-            "title": "Emission evidence"
-          },
-          {
             "context": {},
             "document": {
               "policy": {
@@ -76873,16 +76815,6 @@
             "kind": "example",
             "prose": "These commands print the example and submit it unchanged:\n\n```sh\npolicy-witness example > example.json\npolicy-witness run example.json\n```\n\nThe printed document carries the emitting build's identity where this rendering shows `<reported-contract>`.",
             "title": "Emitted example"
-          },
-          {
-            "context": {},
-            "facts": {
-              "kind": "evidence"
-            },
-            "id": "request.specimen.example.evidence",
-            "kind": "gap",
-            "prose": "No executed instance of this example is credited yet. The rendering is extracted from the controller's definition; host admission and native results await the signed-app round trip.",
-            "title": "Example evidence"
           },
           {
             "context": {
@@ -111911,30 +111843,6 @@
             "title": "Emit the example specimen"
           },
           {
-            "context": {
-              "entry": [
-                "cli_example"
-              ],
-              "recipient": [
-                "cli_caller"
-              ],
-              "report": [
-                "example_specimen"
-              ],
-              "where": "CLI example dispatch",
-              "who": [
-                "identity.definitions.controller"
-              ]
-            },
-            "facts": {
-              "kind": "evidence"
-            },
-            "id": "request.specimen.emit_example.evidence",
-            "kind": "gap",
-            "prose": "No check is credited for this rule yet. The signed-app passage from `example` through `run`, the exit statuses and the write-failure behavior await their checks' review.",
-            "title": "Emission evidence"
-          },
-          {
             "context": {},
             "document": {
               "policy": {
@@ -111965,16 +111873,6 @@
             "kind": "example",
             "prose": "These commands print the example and submit it unchanged:\n\n```sh\npolicy-witness example > example.json\npolicy-witness run example.json\n```\n\nThe printed document carries the emitting build's identity where this rendering shows `<reported-contract>`.",
             "title": "Emitted example"
-          },
-          {
-            "context": {},
-            "facts": {
-              "kind": "evidence"
-            },
-            "id": "request.specimen.example.evidence",
-            "kind": "gap",
-            "prose": "No executed instance of this example is credited yet. The rendering is extracted from the controller's definition; host admission and native results await the signed-app round trip.",
-            "title": "Example evidence"
           },
           {
             "context": {
@@ -151885,30 +151783,6 @@
             "title": "Emit the example specimen"
           },
           {
-            "context": {
-              "entry": [
-                "cli_example"
-              ],
-              "recipient": [
-                "cli_caller"
-              ],
-              "report": [
-                "example_specimen"
-              ],
-              "where": "CLI example dispatch",
-              "who": [
-                "identity.definitions.controller"
-              ]
-            },
-            "facts": {
-              "kind": "evidence"
-            },
-            "id": "request.specimen.emit_example.evidence",
-            "kind": "gap",
-            "prose": "No check is credited for this rule yet. The signed-app passage from `example` through `run`, the exit statuses and the write-failure behavior await their checks' review.",
-            "title": "Emission evidence"
-          },
-          {
             "context": {},
             "document": {
               "policy": {
@@ -151939,16 +151813,6 @@
             "kind": "example",
             "prose": "These commands print the example and submit it unchanged:\n\n```sh\npolicy-witness example > example.json\npolicy-witness run example.json\n```\n\nThe printed document carries the emitting build's identity where this rendering shows `<reported-contract>`.",
             "title": "Emitted example"
-          },
-          {
-            "context": {},
-            "facts": {
-              "kind": "evidence"
-            },
-            "id": "request.specimen.example.evidence",
-            "kind": "gap",
-            "prose": "No executed instance of this example is credited yet. The rendering is extracted from the controller's definition; host admission and native results await the signed-app round trip.",
-            "title": "Example evidence"
           },
           {
             "context": {
@@ -188351,30 +188215,6 @@
             "title": "Emit the example specimen"
           },
           {
-            "context": {
-              "entry": [
-                "cli_example"
-              ],
-              "recipient": [
-                "cli_caller"
-              ],
-              "report": [
-                "example_specimen"
-              ],
-              "where": "CLI example dispatch",
-              "who": [
-                "identity.definitions.controller"
-              ]
-            },
-            "facts": {
-              "kind": "evidence"
-            },
-            "id": "request.specimen.emit_example.evidence",
-            "kind": "gap",
-            "prose": "No check is credited for this rule yet. The signed-app passage from `example` through `run`, the exit statuses and the write-failure behavior await their checks' review.",
-            "title": "Emission evidence"
-          },
-          {
             "context": {},
             "document": {
               "policy": {
@@ -188405,16 +188245,6 @@
             "kind": "example",
             "prose": "These commands print the example and submit it unchanged:\n\n```sh\npolicy-witness example > example.json\npolicy-witness run example.json\n```\n\nThe printed document carries the emitting build's identity where this rendering shows `<reported-contract>`.",
             "title": "Emitted example"
-          },
-          {
-            "context": {},
-            "facts": {
-              "kind": "evidence"
-            },
-            "id": "request.specimen.example.evidence",
-            "kind": "gap",
-            "prose": "No executed instance of this example is credited yet. The rendering is extracted from the controller's definition; host admission and native results await the signed-app round trip.",
-            "title": "Example evidence"
           },
           {
             "context": {
@@ -260355,30 +260185,6 @@
             "title": "Emit the example specimen"
           },
           {
-            "context": {
-              "entry": [
-                "cli_example"
-              ],
-              "recipient": [
-                "cli_caller"
-              ],
-              "report": [
-                "example_specimen"
-              ],
-              "where": "CLI example dispatch",
-              "who": [
-                "identity.definitions.controller"
-              ]
-            },
-            "facts": {
-              "kind": "evidence"
-            },
-            "id": "request.specimen.emit_example.evidence",
-            "kind": "gap",
-            "prose": "No check is credited for this rule yet. The signed-app passage from `example` through `run`, the exit statuses and the write-failure behavior await their checks' review.",
-            "title": "Emission evidence"
-          },
-          {
             "context": {},
             "document": {
               "policy": {
@@ -260409,16 +260215,6 @@
             "kind": "example",
             "prose": "These commands print the example and submit it unchanged:\n\n```sh\npolicy-witness example > example.json\npolicy-witness run example.json\n```\n\nThe printed document carries the emitting build's identity where this rendering shows `<reported-contract>`.",
             "title": "Emitted example"
-          },
-          {
-            "context": {},
-            "facts": {
-              "kind": "evidence"
-            },
-            "id": "request.specimen.example.evidence",
-            "kind": "gap",
-            "prose": "No executed instance of this example is credited yet. The rendering is extracted from the controller's definition; host admission and native results await the signed-app round trip.",
-            "title": "Example evidence"
           },
           {
             "context": {
@@ -450349,30 +450145,6 @@
             "title": "Emit the example specimen"
           },
           {
-            "context": {
-              "entry": [
-                "cli_example"
-              ],
-              "recipient": [
-                "cli_caller"
-              ],
-              "report": [
-                "example_specimen"
-              ],
-              "where": "CLI example dispatch",
-              "who": [
-                "identity.definitions.controller"
-              ]
-            },
-            "facts": {
-              "kind": "evidence"
-            },
-            "id": "request.specimen.emit_example.evidence",
-            "kind": "gap",
-            "prose": "No check is credited for this rule yet. The signed-app passage from `example` through `run`, the exit statuses and the write-failure behavior await their checks' review.",
-            "title": "Emission evidence"
-          },
-          {
             "context": {},
             "document": {
               "policy": {
@@ -450403,16 +450175,6 @@
             "kind": "example",
             "prose": "These commands print the example and submit it unchanged:\n\n```sh\npolicy-witness example > example.json\npolicy-witness run example.json\n```\n\nThe printed document carries the emitting build's identity where this rendering shows `<reported-contract>`.",
             "title": "Emitted example"
-          },
-          {
-            "context": {},
-            "facts": {
-              "kind": "evidence"
-            },
-            "id": "request.specimen.example.evidence",
-            "kind": "gap",
-            "prose": "No executed instance of this example is credited yet. The rendering is extracted from the controller's definition; host admission and native results await the signed-app round trip.",
-            "title": "Example evidence"
           },
           {
             "context": {
@@ -575277,30 +575039,6 @@
             "title": "Emit the example specimen"
           },
           {
-            "context": {
-              "entry": [
-                "cli_example"
-              ],
-              "recipient": [
-                "cli_caller"
-              ],
-              "report": [
-                "example_specimen"
-              ],
-              "where": "CLI example dispatch",
-              "who": [
-                "identity.definitions.controller"
-              ]
-            },
-            "facts": {
-              "kind": "evidence"
-            },
-            "id": "request.specimen.emit_example.evidence",
-            "kind": "gap",
-            "prose": "No check is credited for this rule yet. The signed-app passage from `example` through `run`, the exit statuses and the write-failure behavior await their checks' review.",
-            "title": "Emission evidence"
-          },
-          {
             "context": {},
             "document": {
               "policy": {
@@ -575331,16 +575069,6 @@
             "kind": "example",
             "prose": "These commands print the example and submit it unchanged:\n\n```sh\npolicy-witness example > example.json\npolicy-witness run example.json\n```\n\nThe printed document carries the emitting build's identity where this rendering shows `<reported-contract>`.",
             "title": "Emitted example"
-          },
-          {
-            "context": {},
-            "facts": {
-              "kind": "evidence"
-            },
-            "id": "request.specimen.example.evidence",
-            "kind": "gap",
-            "prose": "No executed instance of this example is credited yet. The rendering is extracted from the controller's definition; host admission and native results await the signed-app round trip.",
-            "title": "Example evidence"
           },
           {
             "context": {

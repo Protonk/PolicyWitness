@@ -683,11 +683,9 @@ No fixture needed correcting. `envelope_skeleton` in `tests/lib/blackbox.py` now
 
 ### Open matters
 
-1. **The maintainer's evaluation decision.** Not yet recorded. Step 4 does not begin before it is committed here.
-2. **Target bytes in evidence.** The live case stores the attempt target's bytes, so release-acceptance evidence would carry the acceptance machine's hosts file. A digest and length would support the same equality observation. The plan requires the bytes; this is a commitment for the maintainer.
-3. **The `read_hosts` example.** The probes surface's hand-typed step equals the emitted example's step. The plan keeps it; acceptance criterion 9 is met for the emitted document and not for that fragment.
-4. **Integrity findings and command success.** The consumer now verifies today's mapping from reply outcome to result. Whether controller integrity findings should change command success, `envelope.data.select.success_findings`, remains undecided and is not authorized by this work.
-5. **Release form.** No live run has seen a `release:` identity; section 9's nested acceptance supplies it.
+1. **Integrity findings and command success.** The consumer verifies today's mapping from reply outcome to result. Whether controller integrity findings should change command success, `envelope.data.select.success_findings`, remains undecided and is not authorized by this work.
+2. **Release form.** No live run has seen a `release:` identity; section 9's nested acceptance supplies it.
+3. **Review of later changes.** The corrections after the independent review, the two revisions and the step 4 support have not been independently reviewed.
 
 ### Maintainer's decision
 
@@ -707,10 +705,22 @@ On the `read_hosts` example, choosing extraction of the step from the constant o
 
 The decision is accept, with two revisions: the live case records a digest and length of each target in place of its bytes, and the probes surface's `read_hosts` step is extracted from the example constant.
 
+### After the decision
+
+| Stage | Change | Run | Result |
+| --- | --- | --- | --- |
+| Revisions, `d3c2a72a` | The live case records a digest and length of each target in place of its bytes. The probes surface's `read_hosts` step is extracted from the constant through a member path | `example-rev-a`, `20261113T024020Z_f14a2562`: `source_drift`, `unit`, both example cases and `blackbox_e2e/checker_controls` | Pass, 17 of 17. The offline case matched 192 controls and covered 67 of 67 assertions. The retained target record holds a digest and length and no bytes |
+| Step 4, the commit that adds this row | Support owners replace the evidence gaps on the rule and the example node, graded check read with their limits stated | `example-step4-a`, `20261113T024826Z_da2f4033`: `source_drift` and both example cases | Pass, 12 of 12 |
+
+Both stages changed tests, the contract tree and generated documents. Controller source did not change, so the identity derived from the source stays `development:6a333cf6f19aea6939fa843655b6ce2a90ec05837fb4bb6b8b9288b0ccc572f0`, equal to the selected app's.
+
+Evidence carried forward to this state, as a reviewed judgment and not a mechanical fact: the final default battery ran before `d3c2a72a`. The consumer, the dispatcher and every case outside the two example cases and the contract generator's controls are unchanged since that battery; the two example cases, the consumer controls and `source_drift` were rerun after each change. Earlier development runs under `tests/out/runs/` retain this machine's target bytes from before the first revision and remain disposable.
+
 ### Handoff statement
 
-- **Supported source:** `23440049`. Implementation is complete through step 3; no support commit exists, and the rule and the example node still carry their evidence gaps.
-- **Selected app:** built from `23440049` with a clean tree, identity `development:6a333cf6f19aea6939fa843655b6ce2a90ec05837fb4bb6b8b9288b0ccc572f0`.
-- **Applicable verification:** the final default battery, the final ten runs of the live case and the challenge repeated at `23440049`. Evidence from the two earlier builds is superseded.
-- **Blocks dependent investigation:** the maintainer's decision, then step 4's support.
-- **May remain pending:** section 9's candidate verification, open matters 2 to 5, and an independent review of the corrections.
+- **Supported source:** the commit that adds this statement. Implementation is `23440049` with the revisions of `d3c2a72a`; support for the rule and the example node is complete at check-read grade, and the evidence gaps are gone.
+- **Selected app:** built from `23440049` with a clean tree, identity `development:6a333cf6f19aea6939fa843655b6ce2a90ec05837fb4bb6b8b9288b0ccc572f0`. Controller source is unchanged since that build.
+- **Applicable verification:** the final default battery and the challenge at `23440049`, and the reruns listed under "After the decision". The final ten runs of the live case predate the digest revision and stand as the sample for that build.
+- **Unresolved decisions and dispositions:** no failed assertion awaits a disposition. The open matters above are the unresolved decisions.
+- **Blocks dependent investigation:** nothing recorded here. The controller investigation can use this baseline; reassess applicability if source, contract, consumer, fixtures or tests change.
+- **May remain pending:** section 9's candidate verification on the final source, and an independent review of the later changes.

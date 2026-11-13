@@ -576,10 +576,7 @@ This template applies a policy with no probe actions. Replace the assertion with
 
 `policy-witness example` takes no argument and prints one specimen defined by the emitting build, followed by one newline. The output is a request document, not an envelope. Process exit 0 supplies the complete document, and the same build's `run` admits it. Every failure to emit is process exit 2: an argument, a build whose identity is empty or `unbound`, an example the contract gate refuses, or a failed write or flush. A reason is written to standard error when that stream accepts it; the exit status does not depend on it. On exit 2 discard standard output, even when it holds a complete document. The document's content, layout and labels carry no stability promise between builds. The command reads no file, starts no runner and reports nothing about a caller's document; `run` remains the only admission.
 
-<a id="contract-request-specimen-emit_example-evidence"></a>
-###### Known gap: Emission evidence
-
-No check is credited for this rule yet. The signed-app passage from `example` through `run`, the exit statuses and the write-failure behavior await their checks' review.
+**Support: [check read](#contract-support-grades) for [Emit the example specimen](#contract-request-specimen-emit_example).** Emission parses the constant, inserts the binary's identity, passes the contract gate and uses the held request's serialization before any byte is written. An argument, an empty or unbound identity, a gate refusal and a failed write or flush each return the refusal that the command maps to exit 2. The emitted file reaches the controlled client as emitted, without its framing newline. On the selected app the command exits 0 with one JSON object and one newline carrying the app's identity, repeats it byte for byte, refuses every argument, and exits 2 when stdout has no reader whether or not stderr can be written; a build without an identity prints nothing. Context: Read the emitter and dispatch, the emitter's unit tests, the controlled orchestration test, the CLI integration tests against the selected app and isolated Cargo builds, and the live round-trip case with its checker. Evidence limit: Check read; no execution is credited. The exact request comparison runs under the test identity and ends at the client callback; on a signed app the live case observes the delivered length only. A gate refusal on a bound build has unit support and no built-app observation. No check observes the process's file reads; the isolated builds emit with no app, manifest or registry beside them. Development runs of these checks exist and are disposable; release credit awaits an archived acceptance. Source: [example.rs](../controller/src/example.rs): `pub fn render`, `fn emit`, `pub fn cmd_example`; [cli.rs](../controller/src/cli.rs): `pub fn run`. Check: [example.rs](../controller/src/example.rs): `rendered_document_is_the_constant_with_the_given_identity`, `refusals_are_typed_and_write_nothing`, `only_complete_output_with_a_successful_flush_succeeds`; [run_flow.rs](../controller/src/run_flow.rs): `emitted_example_reaches_the_client_as_the_emitted_document`; [cli_contract.rs](../controller/integration/cli_contract.rs): `example_prints_one_request_and_refuses_every_argument`, `example_write_failures_exit_2_without_a_panic`, `supplied_direct_cargo_identity_is_embedded_without_release_provenance`; [example_round_trip.sh](../tests/suites/witness_contract/example_round_trip.sh): `example_round_trip`.
 
 <a id="contract-request-specimen-example"></a>
 ##### Emitted example
@@ -621,10 +618,7 @@ The printed document carries the emitting build's identity where this rendering 
 }
 ```
 
-<a id="contract-request-specimen-example-evidence"></a>
-###### Known gap: Example evidence
-
-No executed instance of this example is credited yet. The rendering is extracted from the controller's definition; host admission and native results await the signed-app round trip.
+**Support: [check read](#contract-support-grades) for [Emitted example](#contract-request-specimen-example).** The rendering is the parsed constant, which must be a request object without an identity, test overrides, selection keys or unknown members. An edit to the constant is refused until regeneration and then moves the rendering, the request payload and the build identity. The live case requires the selected app's emitted document without its identity to equal this snapshot, submits the emitted bytes unchanged and requires admission, identity, digest and echo relationships and the pinned native results. Context: Read the constant, the extraction's constructed controls, the disposable-copy generation control and the live case with its checker and rejected controls. Evidence limit: Check read; no executed instance is credited here. Host admission and the native results are observed by the live case on a development build and one machine, under observed target prerequisites, and are not release evidence. Deeper request validity is established by execution, not by the extraction. The example's content carries no stability promise between builds. Source: [example.rs](../controller/src/example.rs): `EXAMPLE_DOCUMENT`. Check: [contract_tree_controls.py](../tests/suites/source_drift/contract_tree_controls.py): `test_example_document_is_extracted_from_its_cited_constant`, `test_example_document_refusals_name_the_source`; [generators.py](../tests/suites/source_drift/generators.py): `test_example_source_edit_is_stale_until_regeneration_and_moves_content_and_identity`; [example_round_trip.sh](../tests/suites/witness_contract/example_round_trip.sh): `example_round_trip`; [check_example_round_trip.py](../tests/suites/witness_contract/check_example_round_trip.py): `evaluate`.
 
 <a id="contract-request-specimen-duplicate_keys"></a>
 ##### Repeated members at each entry
@@ -5289,8 +5283,6 @@ Each row names the record members a check reads and links each consequence with 
 | Item | Kind |
 | --- | --- |
 | [Ordinary-build history requirement](#contract-identity-surfaces-release_history) | behavior |
-| [Emission evidence](#contract-request-specimen-emit_example-evidence) | evidence |
-| [Example evidence](#contract-request-specimen-example-evidence) | evidence |
 | [Reporting-failure associations](#contract-reply-failure-publish-associations) | behavior |
 | [Termination cancellation reach](#contract-actor_evidence-gate-cancellation_evidence) | behavior |
 | [Success and findings](#contract-envelope-data-select-success_findings) | behavior |
