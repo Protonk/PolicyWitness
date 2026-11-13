@@ -226,3 +226,31 @@ Added machinery: the scenario copy and its controls, and one support owner.
 Preserved distinctions: prediction versus raw native return, submitted
 strings versus runtime objects, order versus state, classification versus
 cause, and source inspection versus constructed checks versus native evidence.
+
+## Order checklist correction
+
+A maintainer review after completion found the guide's "When `order` is
+`unestablished`" table stating two requirements less exactly than
+`eligibleOrderedPrediction`, `eligibleOrderedStep` and the contract's
+"Establish query order" conditions. This is the unbound alignment duty named
+above, and no check reported it.
+
+- **Native answer.** The row omitted that `errno` must be present for either
+  outcome and that `rc` must equal `native_rc`. The row and a paragraph below
+  the table now state both, and keep the difference that an eligible `deny`
+  requires `errno: 0` while an eligible `allow` requires presence only.
+- **Validator record.** The row said the record's fields equal the step's
+  `sandbox_check`. The association compares the record's `rc` with
+  `native_rc`, its `filter_type` with the uppercase `filter_kind`, and for a
+  `none` filter expects `NONE` with no `filter_value`. A list below the table
+  states each comparison.
+
+The warning that matching fields do not establish `query_first` is unchanged.
+The contract, its five `uses` references and the public snapshot are
+unchanged. The generator checks passed, and `tests/run.sh --suite
+source_drift` from clean `5ffb0a5a` passed all ten cases in run
+`20261113T192021Z_6bbbdd52` (397,103 ms, Python 3.14.9), with no skips, unrun
+cases, harness errors or recorded system sleep. These are documentation
+observations: no check compares the guide's table with the rule, so the
+wording rests on reading the source and the contract. The run was reviewed and
+pruned with `make prune APPLY=1`. No runtime code changed and no build ran.
