@@ -22065,7 +22065,7 @@
             },
             "id": "diagnostics.execution.reply_checks",
             "kind": "acts",
-            "prose": "The controller appends these findings to top-level `disposition_issues`.\nIt preserves the actor entries, an ordinary stop reason already derived,\nand all host fields including step comparisons and claimed gate outcomes.\nThose retained assertions can therefore appear beside the controller's\nfinding about them.\n\nThe [reply-wide withholding scope](#contract-diagnostics-issue-subject-withholding_scope)\ndefines the attribution limits of the retained actor-row projections.",
+            "prose": "The controller appends these findings to top-level `disposition_issues`.\nIt preserves the actor entries, an ordinary stop reason already derived,\nand all host fields including step comparisons and claimed gate outcomes.\nThose retained assertions can therefore appear beside the controller's\nfinding about them.\n\nThe reply-wide withholding scope defines the attribution limits of the retained\nactor-row projections.",
             "referenced_types": {
               "diagnostics.actors": {
                 "json_null": false,
@@ -61820,7 +61820,7 @@
             },
             "id": "diagnostics.execution.reply_checks",
             "kind": "acts",
-            "prose": "The controller appends these findings to top-level `disposition_issues`.\nIt preserves the actor entries, an ordinary stop reason already derived,\nand all host fields including step comparisons and claimed gate outcomes.\nThose retained assertions can therefore appear beside the controller's\nfinding about them.\n\nThe [reply-wide withholding scope](#contract-diagnostics-issue-subject-withholding_scope)\ndefines the attribution limits of the retained actor-row projections.",
+            "prose": "The controller appends these findings to top-level `disposition_issues`.\nIt preserves the actor entries, an ordinary stop reason already derived,\nand all host fields including step comparisons and claimed gate outcomes.\nThose retained assertions can therefore appear beside the controller's\nfinding about them.\n\nThe reply-wide withholding scope defines the attribution limits of the retained\nactor-row projections.",
             "referenced_types": {
               "diagnostics.actors": {
                 "json_null": false,
@@ -95648,7 +95648,7 @@
             },
             "id": "diagnostics.execution.reply_checks",
             "kind": "acts",
-            "prose": "The controller appends these findings to top-level `disposition_issues`.\nIt preserves the actor entries, an ordinary stop reason already derived,\nand all host fields including step comparisons and claimed gate outcomes.\nThose retained assertions can therefore appear beside the controller's\nfinding about them.\n\nThe [reply-wide withholding scope](#contract-diagnostics-issue-subject-withholding_scope)\ndefines the attribution limits of the retained actor-row projections.",
+            "prose": "The controller appends these findings to top-level `disposition_issues`.\nIt preserves the actor entries, an ordinary stop reason already derived,\nand all host fields including step comparisons and claimed gate outcomes.\nThose retained assertions can therefore appear beside the controller's\nfinding about them.\n\nThe reply-wide withholding scope defines the attribution limits of the retained\nactor-row projections.",
             "referenced_types": {
               "diagnostics.actors": {
                 "json_null": false,
@@ -143980,7 +143980,7 @@
             },
             "id": "diagnostics.execution.reply_checks",
             "kind": "acts",
-            "prose": "The controller appends these findings to top-level `disposition_issues`.\nIt preserves the actor entries, an ordinary stop reason already derived,\nand all host fields including step comparisons and claimed gate outcomes.\nThose retained assertions can therefore appear beside the controller's\nfinding about them.\n\nThe [reply-wide withholding scope](#contract-diagnostics-issue-subject-withholding_scope)\ndefines the attribution limits of the retained actor-row projections.",
+            "prose": "The controller appends these findings to top-level `disposition_issues`.\nIt preserves the actor entries, an ordinary stop reason already derived,\nand all host fields including step comparisons and claimed gate outcomes.\nThose retained assertions can therefore appear beside the controller's\nfinding about them.\n\nThe reply-wide withholding scope defines the attribution limits of the retained\nactor-row projections.",
             "referenced_types": {
               "diagnostics.actors": {
                 "json_null": false,
@@ -171795,7 +171795,7 @@
             },
             "id": "diagnostics.execution.reply_checks",
             "kind": "acts",
-            "prose": "The controller appends these findings to top-level `disposition_issues`.\nIt preserves the actor entries, an ordinary stop reason already derived,\nand all host fields including step comparisons and claimed gate outcomes.\nThose retained assertions can therefore appear beside the controller's\nfinding about them.\n\nThe [reply-wide withholding scope](#contract-diagnostics-issue-subject-withholding_scope)\ndefines the attribution limits of the retained actor-row projections.",
+            "prose": "The controller appends these findings to top-level `disposition_issues`.\nIt preserves the actor entries, an ordinary stop reason already derived,\nand all host fields including step comparisons and claimed gate outcomes.\nThose retained assertions can therefore appear beside the controller's\nfinding about them.\n\nThe reply-wide withholding scope defines the attribution limits of the retained\nactor-row projections.",
             "referenced_types": {
               "diagnostics.actors": {
                 "json_null": false,
@@ -218907,7 +218907,7 @@
             },
             "id": "diagnostics.execution.reply_checks",
             "kind": "acts",
-            "prose": "The controller appends these findings to top-level `disposition_issues`.\nIt preserves the actor entries, an ordinary stop reason already derived,\nand all host fields including step comparisons and claimed gate outcomes.\nThose retained assertions can therefore appear beside the controller's\nfinding about them.\n\nThe [reply-wide withholding scope](#contract-diagnostics-issue-subject-withholding_scope)\ndefines the attribution limits of the retained actor-row projections.",
+            "prose": "The controller appends these findings to top-level `disposition_issues`.\nIt preserves the actor entries, an ordinary stop reason already derived,\nand all host fields including step comparisons and claimed gate outcomes.\nThose retained assertions can therefore appear beside the controller's\nfinding about them.\n\nThe reply-wide withholding scope defines the attribution limits of the retained\nactor-row projections.",
             "referenced_types": {
               "diagnostics.actors": {
                 "json_null": false,
@@ -316644,7 +316644,7 @@
             },
             "id": "diagnostics.execution.reply_checks",
             "kind": "acts",
-            "prose": "The controller appends these findings to top-level `disposition_issues`.\nIt preserves the actor entries, an ordinary stop reason already derived,\nand all host fields including step comparisons and claimed gate outcomes.\nThose retained assertions can therefore appear beside the controller's\nfinding about them.\n\nThe [reply-wide withholding scope](#contract-diagnostics-issue-subject-withholding_scope)\ndefines the attribution limits of the retained actor-row projections.",
+            "prose": "The controller appends these findings to top-level `disposition_issues`.\nIt preserves the actor entries, an ordinary stop reason already derived,\nand all host fields including step comparisons and claimed gate outcomes.\nThose retained assertions can therefore appear beside the controller's\nfinding about them.\n\nThe reply-wide withholding scope defines the attribution limits of the retained\nactor-row projections.",
             "referenced_types": {
               "diagnostics.actors": {
                 "json_null": false,
@@ -402008,7 +402008,7 @@
             },
             "id": "diagnostics.execution.reply_checks",
             "kind": "acts",
-            "prose": "The controller appends these findings to top-level `disposition_issues`.\nIt preserves the actor entries, an ordinary stop reason already derived,\nand all host fields including step comparisons and claimed gate outcomes.\nThose retained assertions can therefore appear beside the controller's\nfinding about them.\n\nThe [reply-wide withholding scope](#contract-diagnostics-issue-subject-withholding_scope)\ndefines the attribution limits of the retained actor-row projections.",
+            "prose": "The controller appends these findings to top-level `disposition_issues`.\nIt preserves the actor entries, an ordinary stop reason already derived,\nand all host fields including step comparisons and claimed gate outcomes.\nThose retained assertions can therefore appear beside the controller's\nfinding about them.\n\nThe reply-wide withholding scope defines the attribution limits of the retained\nactor-row projections.",
             "referenced_types": {
               "diagnostics.actors": {
                 "json_null": false,
@@ -489751,7 +489751,7 @@
             },
             "id": "diagnostics.execution.reply_checks",
             "kind": "acts",
-            "prose": "The controller appends these findings to top-level `disposition_issues`.\nIt preserves the actor entries, an ordinary stop reason already derived,\nand all host fields including step comparisons and claimed gate outcomes.\nThose retained assertions can therefore appear beside the controller's\nfinding about them.\n\nThe [reply-wide withholding scope](#contract-diagnostics-issue-subject-withholding_scope)\ndefines the attribution limits of the retained actor-row projections.",
+            "prose": "The controller appends these findings to top-level `disposition_issues`.\nIt preserves the actor entries, an ordinary stop reason already derived,\nand all host fields including step comparisons and claimed gate outcomes.\nThose retained assertions can therefore appear beside the controller's\nfinding about them.\n\nThe reply-wide withholding scope defines the attribution limits of the retained\nactor-row projections.",
             "referenced_types": {
               "diagnostics.actors": {
                 "json_null": false,
@@ -531605,7 +531605,7 @@
             },
             "id": "diagnostics.execution.reply_checks",
             "kind": "acts",
-            "prose": "The controller appends these findings to top-level `disposition_issues`.\nIt preserves the actor entries, an ordinary stop reason already derived,\nand all host fields including step comparisons and claimed gate outcomes.\nThose retained assertions can therefore appear beside the controller's\nfinding about them.\n\nThe [reply-wide withholding scope](#contract-diagnostics-issue-subject-withholding_scope)\ndefines the attribution limits of the retained actor-row projections.",
+            "prose": "The controller appends these findings to top-level `disposition_issues`.\nIt preserves the actor entries, an ordinary stop reason already derived,\nand all host fields including step comparisons and claimed gate outcomes.\nThose retained assertions can therefore appear beside the controller's\nfinding about them.\n\nThe reply-wide withholding scope defines the attribution limits of the retained\nactor-row projections.",
             "referenced_types": {
               "diagnostics.actors": {
                 "json_null": false,

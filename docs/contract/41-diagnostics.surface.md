@@ -652,8 +652,8 @@ and all host fields including step comparisons and claimed gate outcomes.
 Those retained assertions can therefore appear beside the controller's
 finding about them.
 
-The [reply-wide withholding scope](#contract-diagnostics-issue-subject-withholding_scope)
-defines the attribution limits of the retained actor-row projections.
+The reply-wide withholding scope defines the attribution limits of the retained
+actor-row projections.
 
 ### Findings beside the completion result {outer_result: definition}
 
