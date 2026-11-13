@@ -169,3 +169,44 @@ cause each. The omitted-form row was the defect corrected under question 2.
   true without reading the apply status. The producer never emits that
   combination. Whether the reader should refuse it is a behavior question and
   is only noted.
+
+## Verification
+
+One run from clean `84f9993a` covered the documentation, the changed test
+reader and both new controls:
+
+```sh
+env -u PYTHONOPTIMIZE PYTHONDONTWRITEBYTECODE=1 \
+  PW_TEST_OUT_DIR=tests/out/runs/doc-coalescing-counterexample-audit PW_TEST_QUIET=1 \
+  tests/run.sh --suite source_drift \
+  --case runner_unit/pwrunner_core_unit_executable \
+  --case blackbox_e2e/checker_controls --case run_effects/checker_controls \
+  --case runner_filter_sysctl_name/checker_controls \
+  --case witness_contract/comparison_matrix
+```
+
+Run `20261113T203503Z_78cbe115` completed in 621,295 ms. All 15 cases passed,
+with no skips, unrun cases, harness errors or recorded system sleep.
+
+- Constructed: `runner_unit` ran 605 of 605 tests, including "canonically
+  equivalent targets with different UTF-8 bytes are same_submitted".
+  `blackbox_e2e/checker_controls` wrote the accepted
+  `canonical_equivalent_targets` envelope and both rejections. The two other
+  checker-control cases exercise the changed reader on their own inputs.
+- Native: `witness_contract/comparison_matrix` ran the live matrix rows
+  through the changed reader. Its rows use ASCII targets, so it shows the
+  reader still accepts ordinary replies and does not exercise the equivalent
+  pair.
+- Documentation: the ten `source_drift` cases passed after regeneration of
+  the copied questions and reading rules.
+
+Limits. No test compares the corrected sentences with the code; they rest on
+the source inspection recorded above. The equivalent pair is exercised by
+constructed inputs only; the one native observation of it is unretained. The
+reader's equivalence uses Python's Unicode data and the producer's uses the
+Swift standard library's, so a code point known to only one of them could
+compare differently. The other suites that use the shared reader on live
+replies were not run. No runtime source changed, the staged app was not
+rebuilt, and no support grade rose. The run was reviewed and removed with
+`make prune APPLY=1`. The staged `dist/PolicyWitness.md` still equals the
+guide at `bfa65341`.
