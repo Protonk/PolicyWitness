@@ -91,6 +91,10 @@ two input owners, consumer migration, verification and a narrow acquisition
 interface. The maintainer selected the separate `lesson` command; implementation
 and [acceptance](../records/doc-coalescing/PASS-3-PROPOSAL.md#implementation-and-acceptance)
 complete Pass 3. The corpus and both teaching documents now consume app-owned
-inputs while retaining independent expectations and observations. Support
-presentation remains the next pass; the first map's limits on merging distinct
-assertions still apply.
+inputs while retaining independent expectations and observations.
+
+The [fourth pass](../records/doc-coalescing/PASS-4.md) completes support
+presentation for this cycle. Each claim retains its qualifications and links
+to citations and execution provenance rendered from its existing owner record.
+No owners were merged: this pass reduces citation clutter in the reading path,
+while the earlier passes removed maintained copies and input-alignment duties.
