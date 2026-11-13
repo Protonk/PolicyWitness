@@ -477,9 +477,11 @@ controller, except that `lesson capture_typo` returns the controller's
 The control passes only when the step fails in the intended way. It requires
 an `AssertionError` raised from the `cli` helper, publication exit 0, a
 published document byte-identical to the emitted `create` document, a `run`
-that exited 0 with `finished`, and a recorded file effect. Any other failure,
-including a stand-in that could not publish, propagates as a failure of the
-case. It then removes the created file and the stand-in. A copy of the
+process that `RunCapture` observed to exit normally with status 0, an envelope
+that separately publishes `finished` with exit code 0, and a recorded file
+effect. Any other failure, including a stand-in that could not publish,
+propagates as a failure of the case. It then removes the created file and the
+stand-in. A copy of the
 stand-in is retained as `substituting-emitter.sh`, and the control's
 `lesson-substituted-*` artifacts sit beside the ordinary `lesson-emitted-*`
 ones. The [suite account](../../tests/suites/runner_outcome_bad_request/README.md)
@@ -505,6 +507,39 @@ Verification:
 
 The tree still computes the identity recorded under
 [Baseline observations](#baseline-observations); no build was made.
+
+### Correction: observed status
+
+As first committed, the control read the run's exit from the envelope's
+`result.exit_code`. That is the value the controller publishes, not the
+process status. A substituted run that published `finished` with exit code 0,
+created the file and actually exited nonzero would have failed the `cli`
+assertion and been accepted as the intended rejection. The account above
+claimed an observed exit of 0 that the control did not check.
+
+`substituted_rejection_faults` now reads `capture.json`, which `RunCapture`
+writes from the waited process: state `exited`, return code and exit code
+exactly 0, no terminating signal. The envelope's outcome and exit code are
+still required, as a separate fault. The control then copies the live
+observation to `lesson-substituted-constructed-nonzero-status`, requires the
+unaltered copy to qualify, sets the captured return and exit codes to 1, and
+requires the only fault to be `observed_run_status`. The copy's envelope still
+publishes exit code 0, so the two readings are told apart. This adds no native
+invocation.
+
+Verification through the dispatcher:
+`runner_outcome_bad_request/accepted_input_contract` with
+`source_drift/runner_source_manifests_agree`, which applies the
+repository-document rule to the suite account. Run
+`20261113T235005Z_b5afee5c`: both passed, the app was unchanged and neither
+case overlapped system sleep. In its artifacts the live observation has
+captured status 0 and the constructed copy has captured status 1 beside a
+published exit code of 0. The run was a development run and was removed with
+`make prune APPLY=1` after inspection. No plan or other document changed, so
+no other documentation check applied.
+
+The constructed check covers a nonzero exit status. A signal-terminated run is
+refused by the same condition and has no constructed observation of its own.
 
 Maintenance added: the control names the `capture_typo` selector and the
 `create` artifact directory, and it identifies the intended rejection by the
