@@ -80,5 +80,8 @@ The [first ownership map and edit sequence](../records/doc-coalescing/PASS-1.md)
 complete Pass 1. Narrow [result-reading](../records/doc-coalescing/RESULT-READING.md)
 and [request-lesson](../records/doc-coalescing/REQUEST-LESSON.md) audits, followed
 by a [boundary review](../records/doc-coalescing/REVIEW.md), support the map.
-Pass 2 begins with the identified wording corrections and specific duplicate
-removals; broader projections and app exposure retain their stated prerequisites.
+The [second pass](../records/doc-coalescing/PASS-2.md) completes the identified
+wording corrections and two duplicate removals, with reviewed public dependencies
+and documentation verification. Broader projections and app exposure retain
+their stated prerequisites; the next pass prepares the lesson's input migration
+and its concrete interface decision.
