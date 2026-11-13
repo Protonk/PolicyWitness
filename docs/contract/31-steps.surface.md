@@ -1070,8 +1070,8 @@ pins: "Native code preserves the first failed reached descriptor operation; the 
 ```contract
 grade: "source_read"
 scope: "subtree"
-source: [{"path":"runner/Sources/PWRunnerCore/CWorkerStepResults.swift","symbol":"buildStepResults"},{"path":"runner/Sources/PWRunnerCore/CWorkerComparison.swift","symbol":"comparisonEvidence"},{"path":"runner/Sources/PWRunnerCore/PWRunnerStepEvidence.swift","symbol":"PWRunnerStepResult"},{"path":"runner/Sources/PWRunnerCore/PWRunnerPredictionEvidence.swift","symbol":"ValidatorVerdict"},{"path":"runner/Sources/PWRunnerCore/CWorker.swift","symbol":"decodeFreshRead"},{"path":"runner/Sources/PWRunnerCore/PWRunnerService.swift","symbol":"enrichPathDiagnostics"}, {"path": "controller/tools/pw_probe_runner/pw_probe_runner_abi.h", "symbol": "PW_SHM_CHILD_OUTPUT_BYTES"}, {"path": "controller/tools/pw_probe_runner/pw_worker_exec.h", "symbol": "stdout_overflow"}]
+source: [{"path":"runner/Sources/PWRunnerCore/CWorkerStepResults.swift","symbol":"buildStepResults"},{"path":"runner/Sources/PWRunnerCore/CWorkerComparison.swift","symbol":"comparisonEvidence"},{"path":"runner/Sources/PWRunnerCore/PWRunnerStepEvidence.swift","symbol":"PWRunnerStepResult"},{"path":"runner/Sources/PWRunnerCore/PWRunnerPredictionEvidence.swift","symbol":"ValidatorVerdict"},{"path":"runner/Sources/PWRunnerCore/CWorker.swift","symbol":"decodeFreshRead"},{"path":"runner/Sources/PWRunnerCore/PWRunnerService.swift","symbol":"enrichPathDiagnostics"},{"path":"controller/tools/pw_probe_runner/pw_probe_runner.c","symbol":"capture_observed_path"}, {"path": "controller/tools/pw_probe_runner/pw_probe_runner_abi.h", "symbol": "PW_SHM_CHILD_OUTPUT_BYTES"}, {"path": "controller/tools/pw_probe_runner/pw_worker_exec.h", "symbol": "stdout_overflow"}]
 pins: "Imported fields receive their producer meanings, channel origins and observation boundaries."
-context: "Read definitions alongside assembly, native payload decoding and path enrichment."
+context: "Read definitions alongside assembly, native payload decoding, the worker's descriptor-path capture and path enrichment."
 limits: "Source support; specific rules have separately graded check owners."
 ```

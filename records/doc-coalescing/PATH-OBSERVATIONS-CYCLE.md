@@ -202,3 +202,26 @@ and adds no support grade. A guide exercise built on it would need a new
 request and coverage in `witness_contract/guide_workflows`, so it stays an
 adjacent opportunity: a lesson that opens a symlink and unlinks its target in
 a later phase would show the after-every-phase rule with the reader's data.
+
+## Pass 4 — Support beside its claim
+
+The current arrangement is retained, with one citation added.
+
+| Record | Support beside the claim | Limit |
+| --- | --- | --- |
+| Planning check | The query admission and planning rule in `12-probes` carries its own support and the sentence that planning and later diagnostics "have separate times and owners". | Not re-read this cycle beyond the rule text. |
+| `observed_path` | The subtree "Record-field support" owner in `31-steps`, source read. | It cited assembly and decoding but not the worker call that produces the path. |
+| Descriptor and pre-open stats | "Publication support" under the fresh-operation rule, check read against `FreshWriteEvidenceTests`. | Its own limit says fresh-read sequencing is source-supported. |
+| Host path diagnostics | "Path support" under "Add host path observations", check read against `PathDiagnosticsTests`. | Constructed parents and symlinks; the three test cases cover wire states, leaf and parent resolution and skipped non-path attempts. |
+
+The record-field owner now also cites `capture_observed_path`, which was read
+with its three callers this cycle, and its context names the descriptor-path
+capture. This is an owner-only change: `docs/contract/public.json` is
+byte-identical before and after regeneration.
+
+No owner was added or merged. `CWorkerTests` has a case that runs the real
+worker on `/etc/hosts` and asserts `observed_path` is `/private/etc/hosts`,
+and no contract owner credits it. Crediting it needs a rule or field-level
+claim to attach to, which follows the maintainer's decision on the contract's
+`observed_path` sentence. Source inspection, constructed checks and native
+evidence keep their separate grades.
