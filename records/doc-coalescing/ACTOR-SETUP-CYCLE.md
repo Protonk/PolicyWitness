@@ -107,7 +107,7 @@ ordinary/degraded neighbours as constructed controls. The existing derived
 Evidence details view remains available for citations and execution provenance.
 No support owners were merged, regraded or newly credited with execution.
 
-## Result and verification handoff
+## Result and verification
 
 The three resulting reading paths are:
 
@@ -133,10 +133,36 @@ grade. No authored contract, public snapshot, generator input or runtime/test
 source changed. Completion success, evidence integrity, actor attribution,
 query-order qualification and sandbox-cause limits remain distinct.
 
-`git diff --check` passes. Generator freshness, staged standalone guide and
-dispatcher `source_drift` verification remain with root; no behavioral rerun
-is requested for these explanatory edits. The existing bounded and constructed
-controls were read for claim accuracy, not rerun or newly credited. Record the
-verification result here after the coordinated run. No new bug or unresolved
-meaning decision remains within this cycle; broader actor lifecycle and the
-previously recorded fallback/shape coverage question stay outside its scope.
+No new bug or unresolved meaning decision remains within this cycle; broader
+actor lifecycle and the previously recorded fallback/shape coverage question
+stay outside its scope.
+
+Pass 1 was committed in `8c7b2936`; passes 2–4 in `3b1005ba`. From that clean
+source, the coordinated documentation selection was:
+
+```sh
+env -u PYTHONOPTIMIZE PYTHONDONTWRITEBYTECODE=1 \
+  PW_TEST_OUT_DIR=tests/out/runs/astra-actor-setup-docs PW_TEST_QUIET=1 \
+  tests/run.sh --suite source_drift
+```
+
+Run `20261113T214112Z_e486bab3` passed all ten cases, with no skipped or unrun
+cases, harness errors or recorded system sleep. Generator checks for the guide
+and contract stamps also passed. `docs/contract/public.json` remained
+byte-identical, SHA-256
+`7f217827c323aeeb49a8e3e7e872f67cf4f90c403aadf1a104905668568a80c1`.
+The owning generator staged the current standalone guide to
+`dist/PolicyWitness.md`; the signed app from the preceding investigation was
+not rebuilt. No runtime code or executed guide command changed.
+
+These checks establish mechanical freshness, copied regions, links and
+generator controls. They do not compare the new prose with producer behavior.
+The bounded and constructed controls were read for claim accuracy and receive
+no new execution grade from this documentation run. Final plan/record edits
+receive generator and whitespace checks only.
+
+The development run was reviewed and removed with `make prune APPLY=1`;
+its raw artifacts are no longer retained. The four release archives and
+protected acceptance remain. Across the investigation and this cycle there
+were four dispatcher runs, one signed build and no additional worktree.
+All commits remain local on `main`; nothing was pushed.

@@ -150,7 +150,8 @@ and records a focused actor reporting-validation correction with its evidence.
 
 ## Fourth cycle
 
-The fourth cycle takes actor setup and application evidence as its topic:
+The completed fourth cycle covers actor setup and application evidence:
 submitted declaration, worker publication, host assessment and reader
-validation. Its [ownership map and sequence](../records/doc-coalescing/ACTOR-SETUP-CYCLE.md)
-sets the three reading questions, proposed treatment and verification.
+validation. Its [record](../records/doc-coalescing/ACTOR-SETUP-CYCLE.md)
+contains the three reading questions, ownership map, resulting paths,
+retained examples and support presentation, and verification.
