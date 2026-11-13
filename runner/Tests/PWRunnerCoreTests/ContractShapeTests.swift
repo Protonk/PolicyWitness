@@ -99,6 +99,14 @@ private func shapeWorkerOutputs() -> [(CWorkerOutput, [PWRunnerProbeStep])] {
     transferTimedOut.workerEvidence?.failure_state = "absent"
     transferTimedOut.workerEvidence?.failure = nil
     transferTimedOut.workerEvidence?.policy_read = PWWorkerPolicyRead(bytes_expected: 200000, bytes_received: 8192)
+    // The resolver supports absent host observations even though the current
+    // live driver supplies both. Exercise that documented fallback through
+    // typed reporting and encoding, not by adding allowlist keys by hand.
+    var unrecorded = conflict
+    unrecorded.slots = [shapeSlot("first", completed: true)]
+    unrecorded.workerEvidence?.progress = nil
+    unrecorded.pollStopReason = nil
+    unrecorded.collectionBasis = nil
     return [
         (transferTimedOut, [shapeProbe("first")]),
         (conflict, [shapeProbe("first"), shapeProbe("second")]),
@@ -106,6 +114,7 @@ private func shapeWorkerOutputs() -> [(CWorkerOutput, [PWRunnerProbeStep])] {
         (unusable, [shapeProbe("first")]),
         (unsupported, [shapeProbe("first", kind: "future", action: "future")]),
         (crashed, [shapeProbe("first")]),
+        (unrecorded, [shapeProbe("first")]),
     ]
 }
 

@@ -190,6 +190,13 @@ func actorShapeDocuments() throws -> [PWRunnerRunResult] {
     complete.transfers = [first, second]
     var documents = [try assemble(complete)]
 
+    // The same documented host-observation fallback must survive at the actor
+    // subprocess path. This is a constructed omission, not native reachability.
+    var unrecorded = complete
+    unrecorded.actors[0].output!.pollStopReason = nil
+    unrecorded.actors[0].output!.collectionBasis = nil
+    documents.append(try assemble(unrecorded))
+
     // ---- A refused launch, a failed setup, an unavailable consume and a
     // refused transfer; the schedule still visits B.
     let bOutput = actorOutput(translation.inputs[1], index: 1, applies: true, failures: ["b_consume_first", "b_release"], refusedTransfers: ["b_to_c"])

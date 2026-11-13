@@ -114,6 +114,10 @@ def replay_shapes_and_sizes(artifacts):
     for document in documents: collect_shape(document, 'reply', shape)
     for path, key in REQUIRED_SHAPE:
         require(shape.get(path, {}).get(key) not in (None, 'null'), path + '.' + key + ' lacks a typed fixture')
+    for sub in ('reply.runner_subprocess', 'reply.actors[].subprocess'):
+        for question in ('stop_reason', 'collection_basis'):
+            path = sub + '.disposition.questions.' + question
+            require(shape.get(path, {}).get('reason') == 'string', path + ' lacks its typed unresolved fallback')
     candidate = dict(shape=shape)
     golden = json.loads((ROOT / 'tests/fixtures/contract/response_shape.json').read_text())
     if candidate != golden:

@@ -4,6 +4,7 @@ General report validity, ordinary actor/extension semantics and retained worker
 lifecycle claims have different scopes. The receipt records each answer before
 any assertion. JSON-only controls retain both authored and test-normalized views.
 """
+import copy
 import json
 from pathlib import Path
 import sys
@@ -94,6 +95,26 @@ def replay(directory):
             row['expected_lifecycle_findings'] = case['expected_lifecycle_findings']
             check(lifecycle == case['expected_lifecycle_findings'],
                   f'{identity}: retained lifecycle findings {lifecycle}')
+        if 'unrecorded_host_form' in case:
+            actor_form = case['unrecorded_host_form'] == 'actors'
+            def subject(value):
+                return value['actors'][0]['subprocess'] if actor_form else value['runner_subprocess']
+            sub = subject(reply)
+            path = 'reply.' + ('actors[].subprocess' if actor_form else 'runner_subprocess')
+            row['fallback_shape_controls'] = []
+            for question, observation in [('stop_reason', 'poll_stop_reason'), ('collection_basis', 'collection_basis')]:
+                claim = sub['disposition']['questions'][question]
+                check(observation not in sub and claim == {'state': 'unresolved', 'reason': 'not_recorded'},
+                      identity + ': fallback acquired a fact or lost its exact unresolved claim')
+                for fault, change, expected_finding in [
+                    ('reason_type', {'reason': 7}, f'{path}.disposition.questions.{question}.reason is number, not string'),
+                    ('unknown_key', {'invented_observation': True}, f'unknown key {path}.disposition.questions.{question}.invented_observation'),
+                ]:
+                    altered = copy.deepcopy(reply)
+                    subject(altered)['disposition']['questions'][question].update(change)
+                    findings = inspect(lambda: consumer.validate_fixture(altered, expected_contract=contract))
+                    row['fallback_shape_controls'].append(dict(question=question, fault=fault, findings=findings))
+                    check(expected_finding in findings, identity + ': missing fallback shape refusal: ' + expected_finding)
         check((not general) == expected, f'{identity}: general consumer {general}')
         check((not assembled) == expected, f'{identity}: envelope consumer {assembled}')
         degraded = reply.get('reporting_failure') is not None

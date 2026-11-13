@@ -212,6 +212,22 @@ func runReaderCorpusTests(_ tk: TestKit) {
             var actorBase = documents[0]
             actorBase.steps = enrichPathDiagnostics(steps: actorBase.steps)
             try emit("actor-complete", actorBase, accepts: true, rule: "ordinary actor evidence")
+            let unrecordedDocuments = try replyShapeDocuments().filter { reply in
+                let sub = reply.runner_subprocess ?? reply.actors?.first?.subprocess
+                return sub?.disposition?.questions.stop_reason?.reason == "not_recorded"
+                    && sub?.disposition?.questions.collection_basis?.reason == "not_recorded"
+            }
+            try expectEqual(unrecordedDocuments.count, 2, "ordinary and actor fallback companions required")
+            for source in unrecordedDocuments {
+                let form = source.execution_form == "actors" ? "actors" : "ordinary"
+                for retained in [false, true] {
+                    try emit("unrecorded-host-" + form + (retained ? "-degraded" : ""),
+                        retained ? degrade(source) : source, accepts: true,
+                        rule: "documented absent host observations remain unresolved through each reader")
+                    rows[rows.count - 1]["unrecorded_host_form"] = form
+                    rows[rows.count - 1]["expected_lifecycle_findings"] = [] as [String]
+                }
+            }
             let appliedActor = actorBase.actors!.firstIndex { $0.mode == "apply" && $0.setup_status == "applied" }!
             var mismatchedSetup = actorBase
             mismatchedSetup.actors![appliedActor].setup_status = "unapplied_declared"
