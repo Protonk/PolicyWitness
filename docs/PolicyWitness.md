@@ -315,7 +315,7 @@ or signal can qualify; final phase completion is separate. A failed evaluated
 gate cancels the remaining schedule, including unrelated later visits, while
 collection and cleanup continue. This example leaves that dependency absent.
 
-Actor setup automatically reports bounded apparatus operations and their publication. Required apparatus failures stop before policy setup or the unapplied declaration; missing private extension symbols instead make their actions unavailable. A missing terminal setup publication does not prove application never happened. Read application observations, setup decisions and process disposition separately.
+Actor setup automatically reports bounded apparatus operations and their publication. Required apparatus failures stop before policy setup or the unapplied declaration; missing private extension symbols instead make their actions unavailable. A missing terminal setup publication does not prove application never happened. Read [application observations and setup decisions](#reading-actor-setup-and-application) separately from process disposition.
 
 #### Actors: issue inside the sandbox and re-delegate
 
@@ -1497,6 +1497,72 @@ recognized client failure has its own record instead of a synthesized host
 execution result. A reply can be delayed or lost after invocation; inspect
 [Receiver evidence](#receiver-evidence) before repeating an effect.
 
+### Reading actor setup and application
+
+In an ordinary actor reply, read each `actors[]` row in stages: what was requested,
+whether setup made the actor usable, and what application evidence was finally
+collected. For retained reporting-failure rows, follow the
+[validation scope below](#what-validation-adds). These fields answer different
+questions:
+
+| Field | What it establishes |
+| --- | --- |
+| `mode` | The submitted choice: `apply` asks the worker to compile and apply its policy; `unapplied` asks it not to apply a specimen policy. Inherited restrictions remain relevant. The choice alone establishes no worker progress. |
+| `setup_status` | The host's setup disposition. `applied` and `unapplied_declared` are the usable setup states; other values record the host's disposition when usable setup was not established. Usable setup is one prerequisite for a visit, not evidence that the visit ran. |
+| `applied` and `application_count` | Whether final collection acquired the worker's successful-application flag. The flag is carried for an apply actor when output exists; the count is one exactly when the flag is true, otherwise zero. The flag is absent for an unapplied actor. Zero does not by itself establish whether an apply call was attempted. |
+| `application.state` and `application.basis` | The host's assessment of the application boundary and the declaration or observation supporting it. Read the pair together: `observed` includes both a published success and a published native apply failure. |
+
+For an `apply` actor, `observed` with `applied_publication` is supported by
+`applied: true` and `application_count: 1`. With `apply_failure_publication`,
+`observed` instead refers to the published nonzero apply result in that
+actor's `subprocess.worker_evidence.failure`; the successful-application count
+is zero. A compilation refusal precedes the apply call and yields
+`not_attempted` with `terminal_compile_refusal`. `unobserved` leaves the apply
+result unresolved: `apply_call_boundary_without_result` retains progress at
+the call boundary, while `no_eligible_apply_publication` has no eligible apply
+result. Neither basis establishes successful application or proves it absent.
+
+For an `unapplied` actor, `not_requested` with `unapplied_declaration` comes
+from the declared mode, even if preparation refused launch. It does not mean
+the worker published its setup decision. That separate observation is reported
+by `setup_status: unapplied_declared`. The process may still have inherited
+restrictions; this mode does not establish unrestricted authority.
+
+#### Application can outlast setup eligibility
+
+An actor can publish successful application during cleanup after its setup
+allowance expires. The final row then retains `setup_status: setup_timeout`,
+`applied: true`, `application_count: 1`, and `application` with state `observed`
+and basis `applied_publication`. Those fields describe different points in the
+run. The later publication does not reopen setup: that actor's phases remain
+unavailable for activation and query collection.
+
+Apply and deliberately unapplied actors can both participate in the schedule
+once their respective setup is usable. Equipment inspection, continued process
+ownership, schedule allowances and any declared termination dependency still
+bound execution. Read the phase's activation, arrival, collection and release
+records to see what occurred. Usable setup alone establishes neither a query
+nor an action; the [comparison reading path](#when-order-is-unestablished)
+explains the additional evidence needed for `query_first`.
+
+#### What validation adds
+
+On an ordinary reply, the host self-check, controller and general JSON consumer
+check carried actor relationships, including mode/setup consistency,
+application counts, the state/basis pair and the source observations that take
+precedence. These checks compare fields within the reply; they do not
+independently compare its declarations with the submitted specimen.
+
+A [reporting-failure reply](#what-a-reporting-failure-preserves) has a different
+scope. With `evidence_retained: true`, the assembled actor rows and application
+assessments remain inspectable, but ordinary actor-relationship checks do not
+certify them. Comparisons are removed. Worker lifecycle projections are still
+assessed separately; a retained local ending does not certify the actor labels
+or joins used to select its observations. Read the
+[controller findings and their scope](#how-the-controllers-findings-qualify-the-report)
+beside the row. Completion success also remains separate from
+[evidence integrity](#what-success-means).
+
 <a id="shape-and-producer-contract"></a>
 
 ### Worker and host records
@@ -1587,8 +1653,10 @@ Reply fields beyond `pid` / `runner_subprocess`:
   observations, followed by the actor's owned live-code observation.
   `preparation_failure` identifies a host preparation refusal before the planned
   actor schedule. Keep that refusal beside any setup/cleanup observations.
-- `actors[].application` — the classified setup/application account, read with
-  the worker's raw publication. The reply's top-level `authority_setup` records
+- `actors[].application` — the host's application-boundary assessment, read with
+  its basis and the worker's raw publication; see
+  [Reading actor setup and application](#reading-actor-setup-and-application).
+  The reply's top-level `authority_setup` records
   host scopes and actor-indexed worker apparatus decisions. Selected equipment
   and live inspection have their own records. An unapplied
   declaration, a failed apply and missing publication describe different states.

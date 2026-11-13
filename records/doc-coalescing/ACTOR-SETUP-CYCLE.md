@@ -57,3 +57,86 @@ with producer/reader path and discriminating observations before changing it.
 
 Completion will record the resulting three paths, retained arrangements,
 maintenance duties, verification and remaining limits here.
+
+## Pass 2 — Explanations and source review
+
+The guide now has [Reading actor setup and application](../../docs/PolicyWitness.md#reading-actor-setup-and-application),
+reachable from its actor example and top-level application field. Its four-row
+field overview separates the declaration, setup disposition, final successful
+publication and application-boundary assessment. The following paragraphs
+explain observed failure versus success, declared unapplied mode versus worker
+setup publication, and final application after expired setup eligibility.
+The section ends with ordinary/degraded scope and links to the existing
+comparison and result-reading accounts. It uses internal guide links so the
+standalone copy keeps the path.
+
+[Runner README](../../runner/README.md#run-lifecycle) now routes the producer
+account through worker `main`, `setupDisposition`, final collection, reply
+assembly and `actorApplicationAssessment`. [CONTROLLER](../../docs/CONTROLLER.md#receiving-and-evaluating-evidence)
+names the separate identity/application recipient checks, then continues into
+its existing attribution and degraded-branch qualifications. Neither tour
+reproduces the full classification table.
+
+Claim review used the current worker apply/unapplied branches, scheduler setup
+and finish branches, assembly and classifier, Swift reporting reader, Rust
+identity/application/degradation branches, and Python general/lifecycle
+readers. The eleven-pair corpus assertions and the two late-publication
+controls were read. In particular, the unapplied classification precedes the
+launch branch, a successful flag does not erase conflicting failure evidence,
+and final application collection does not change `setup_timeout`.
+The guide explicitly scopes its field relationships to ordinary replies before
+describing retained degraded records. No new runtime contradiction emerged.
+
+## Pass 3 — Existing examples retained
+
+Retain the existing actor/extension specimens and app-owned lesson material.
+The actor example supplies the two declared modes, and now links to their
+reading path. It does not reliably produce apply failure, setup expiry or a
+reporting conflict; pretending that it did would make the lesson less accurate.
+Those contrasts are explained through the existing field meanings and bounded
+controls. No new command, fixture, extraction mechanism or independently
+maintained eleven-case algorithm is needed.
+
+## Pass 4 — Support presentation retained with focused routes
+
+Retain the authored contract's classification and adjacent support blocks.
+The runner route points directly to the late-publication account and preserves
+the shortened-allowance/delayed-worker limit beside that link. The controller
+route points to reader applicability and identifies the application pairs and
+ordinary/degraded neighbours as constructed controls. The existing derived
+Evidence details view remains available for citations and execution provenance.
+No support owners were merged, regraded or newly credited with execution.
+
+## Result and verification handoff
+
+The three resulting reading paths are:
+
+1. Guide actor example or top-level application field → Reading actor setup
+   and application → field overview and observed-failure/unapplied contrasts.
+   Readers no longer need to reconstruct these distinctions from the contract's
+   eleven-case algorithm.
+2. The same section → Application can outlast setup eligibility → existing
+   comparison reading path. Producer details remain in runner README, which
+   links the complete classification and bounded late-publication support.
+   Successful final publication is now explained beside eligibility rather
+   than only in extension troubleshooting.
+3. The same section → What validation adds → reporting-failure preservation
+   and controller finding scopes. CONTROLLER provides the implementation route
+   while preserving the limit on attribution of retained actor projections.
+
+The improvement is explanation and navigation, not removed copies. The guide's
+four-field summary and selected contrasts remain maintained explanations of
+contract meanings. Their alignment, the existing extension timeout row and
+the tour routes remain review duties when producer or reader behavior changes.
+There is no new machinery, public owner, interface, contract meaning or support
+grade. No authored contract, public snapshot, generator input or runtime/test
+source changed. Completion success, evidence integrity, actor attribution,
+query-order qualification and sandbox-cause limits remain distinct.
+
+`git diff --check` passes. Generator freshness, staged standalone guide and
+dispatcher `source_drift` verification remain with root; no behavioral rerun
+is requested for these explanatory edits. The existing bounded and constructed
+controls were read for claim accuracy, not rerun or newly credited. Record the
+verification result here after the coordinated run. No new bug or unresolved
+meaning decision remains within this cycle; broader actor lifecycle and the
+previously recorded fallback/shape coverage question stay outside its scope.

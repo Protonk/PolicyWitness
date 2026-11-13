@@ -190,6 +190,17 @@ status/producer/stage context; it does not independently compare a requested
 nonce or revalidate captured bytecode. A consumer needs separately retained
 request operands to make such a comparison.
 
+On the ordinary actor path, `porcelain_actor::identity` checks the carried mode
+against its setup claims; `application` checks the count, permitted state/basis
+pair, supporting observations, source precedence and contradictory publications.
+An observed failed apply therefore differs from a successful applied flag,
+and a late applied flag need not repair a setup timeout. The
+[application contract](CONTRACT.md#contract-actor_evidence-application)
+keeps the production classification and recipient checks separate; its
+[reader support](CONTRACT.md#contract-actor_evidence-actor-reader_scope)
+identifies constructed application-pair and ordinary/degraded controls without
+claiming that each constructed context occurred in a native run.
+
 Current actor diagnostics first select actions through carried actor labels
 and each matching phase's action IDs, then assess each carried subprocess. Worker-local
 lifecycle failures withhold that projection. Later reply-wide findings withhold

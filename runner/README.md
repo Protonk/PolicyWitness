@@ -151,6 +151,23 @@ The service validates its own seal, its sealed `Contents/Resources/worker-equipm
 
 Actor setup automatically records bounded apparatus observations before policy compilation/application: core-limit handling, authority mapping and framing, descriptor closure and each extension-symbol lookup. Missing extension symbols make the corresponding actions unavailable; required apparatus failure prevents application. Setup publication, application observation and final process disposition remain separate. Missing terminal publication leaves application uncertain rather than proving it did not happen.
 
+The producer stages behind those distinctions are explicit. Worker `main`
+publishes successful application only after `sandbox_apply` returns zero;
+an unapplied worker skips that call and publishes its setup declaration.
+`ActorScheduler.setupDisposition` decides usable setup from the worker's
+publications; `finish` later collects output without reopening an expired
+setup decision. `assembleActorReply` keeps that earlier `setup_status` beside
+the final `applied` flag and count, and calls
+[`actorApplicationAssessment`](Sources/PWRunnerCore/PWRunnerAuthoritySetup.swift)
+for the boundary assessment. That assessment can report an observed apply
+failure, and its unapplied branch follows the declaration even without launch.
+The [guide's reading path](../docs/PolicyWitness.md#reading-actor-setup-and-application)
+walks through these contrasts; the
+[contract classification](../docs/CONTRACT.md#contract-actor_evidence-application-classify)
+owns the complete source precedence, with the
+[late-publication support](../docs/CONTRACT.md#contract-actor_evidence-application-late_application)
+qualified by its shortened setup allowance and delayed worker control.
+
 A phase's `after_termination` dependency requires an owned natural reap after the source's final activation, before dependent activation and query collection. Abnormal natural exit can satisfy it without final phase completion. Source clock uncertainty prevents satisfaction, while clock loss after dependent activation was stored cannot erase that activation. The gate never requests termination to satisfy itself. [The wire contract](../docs/CONTRACT.md#contract-actor_evidence-gate) defines source association, clock eligibility and retained evidence.
 
 Every validator query uses `SANDBOX_CHECK_NO_REPORT`, so predictions produce no
