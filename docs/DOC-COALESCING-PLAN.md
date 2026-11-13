@@ -157,3 +157,11 @@ submitted declaration, worker publication, host assessment and reader
 validation. Its [record](../records/doc-coalescing/ACTOR-SETUP-CYCLE.md)
 contains the three reading questions, ownership map, resulting paths,
 retained examples and support presentation, and verification.
+
+## Publication and admission boundary
+
+A bounded [investigation](../records/doc-coalescing/PUBLICATION-ADMISSION-INVESTIGATION.md)
+follows the emitted example and the two lesson inputs through publication,
+controller preparation and host admission. It is not a cycle. Its record maps
+each input's promise, decision owner, presentations and checks, and separates
+established findings from hypotheses and proposed experiments.
