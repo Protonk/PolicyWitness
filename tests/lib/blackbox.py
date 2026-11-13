@@ -51,15 +51,21 @@ def bind_constructed_envelope(template):
     return recapture_host_reply(result)
 
 
-def envelope_skeleton(runner, *, ok=True, timeout_ms=240000):
+def envelope_skeleton(runner, *, ok=None, timeout_ms=240000):
     """A current-contract `kind: run` envelope around a constructed reply.
 
     Control files use this to put a hand-authored reply inside the uniform
     data skeleton (D2) so the full document validator can read it. The dossier
     it carries says nothing was selected; it is not a live observation.
+
+    The result follows the reply's outcome: success and exit 0 for `finished`,
+    failure and exit 1 otherwise. A control about a result that disagrees with
+    its reply passes `ok` or edits the result afterwards.
     """
     if isinstance(runner, dict) and 'producer' not in runner:
         runner = dict(runner, producer=build_context.producer())
+    if ok is None:
+        ok = not isinstance(runner, dict) or runner.get('normalized_outcome') == 'finished'
     reason = 'constructed control: no runner was selected'
     binary = {'path': None, 'actual_sha256': None, 'baseline_sha256': None,
               'verification': 'unavailable', 'reason': reason}

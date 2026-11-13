@@ -608,6 +608,163 @@ def consumer_controls(artifacts, current):
     (artifacts / 'consumer-controls.json').write_text(json.dumps(records, indent=2) + '\n')
 
 
+def result_consistency_controls(artifacts, current):
+    """An admitted reply's outcome binds the envelope's outcome, success flag and exit code.
+
+    Each control names the exact set of result diagnostics it requires and any
+    other consumer diagnostic that must remain beside them. Applicability is
+    established from the capture, producer, profile context and controller
+    assessment; no control here derives an outcome from a body that failed
+    admission, an absent reply or a rejected capture.
+    """
+    prefixes = {'normalized_outcome': 'result.normalized_outcome is ', 'ok': 'result.ok is ',
+                'exit_code': 'result.exit_code is ', 'result': 'result is not an object'}
+    records = []
+
+    def control(name, envelope, expected=(), beside=()):
+        path = artifacts / ('result_' + name + '.json')
+        path.write_text(json.dumps(envelope, indent=2) + '\n')
+        errors = validate(envelope)
+        found = sorted(key for key, prefix in prefixes.items() if any(e.startswith(prefix) for e in errors))
+        assert found == sorted(expected), (name, 'result diagnostics', found, sorted(expected), errors)
+        for diagnostic in beside:
+            assert any(diagnostic in error for error in errors), (name, 'missing', diagnostic, errors)
+        if not expected and not beside:
+            assert not errors, (name, errors)
+        records.append({'control': name, 'expected_result_diagnostics': sorted(expected), 'found_result_diagnostics': found,
+                        'required_beside': list(beside), 'errors': errors})
+
+    def failed(outcome):
+        document = copy.deepcopy(current)
+        document['data']['runner_result'].update(normalized_outcome=outcome, rc=1, error='constructed failure')
+        document['result'].update(normalized_outcome=outcome, ok=False, exit_code=1, error='constructed failure')
+        return recapture_host_reply(document)
+
+    baselines = {'finished': copy.deepcopy(current), 'worker_timeout': failed('worker_timeout'),
+                 'bad_request': failed('bad_request'), 'unfamiliar_outcome': failed('unfamiliar_outcome')}
+    for label, baseline in baselines.items():
+        control(label + '_coherent', baseline)
+        finished = label == 'finished'
+        # One result field changes at a time; the other two keep their diagnostics absent.
+        changes = [
+            ('outcome_tool_error', 'normalized_outcome', lambda r: r.update(normalized_outcome='tool_error')),
+            ('outcome_refusal_spelling', 'normalized_outcome',
+             lambda r: r.update(normalized_outcome='malformed_runner_response')),
+            ('outcome_other', 'normalized_outcome',
+             lambda r: r.update(normalized_outcome='worker_timeout' if label != 'worker_timeout' else 'finished')),
+            ('outcome_removed', 'normalized_outcome', lambda r: r.pop('normalized_outcome')),
+            ('outcome_null', 'normalized_outcome', lambda r: r.update(normalized_outcome=None)),
+            ('outcome_number', 'normalized_outcome', lambda r: r.update(normalized_outcome=0)),
+            ('ok_flipped', 'ok', lambda r: r.update(ok=not finished)),
+            ('ok_removed', 'ok', lambda r: r.pop('ok')),
+            ('ok_null', 'ok', lambda r: r.update(ok=None)),
+            # Python compares 1 == True and 0 == False; the JSON types differ.
+            ('ok_integer', 'ok', lambda r: r.update(ok=1 if finished else 0)),
+            ('exit_other', 'exit_code', lambda r: r.update(exit_code=1 if finished else 0)),
+            ('exit_tool_error', 'exit_code', lambda r: r.update(exit_code=2)),
+            ('exit_removed', 'exit_code', lambda r: r.pop('exit_code')),
+            ('exit_null', 'exit_code', lambda r: r.update(exit_code=None)),
+            ('exit_boolean', 'exit_code', lambda r: r.update(exit_code=not finished)),
+            ('exit_text', 'exit_code', lambda r: r.update(exit_code='0' if finished else '1')),
+        ]
+        for name, field, change in changes:
+            document = copy.deepcopy(baseline)
+            change(document['result'])
+            control(label + '_' + name, document, expected=(field,))
+        document = copy.deepcopy(baseline)
+        document['result'].update(normalized_outcome='tool_error', ok=not finished, exit_code=2)
+        control(label + '_all_three', document, expected=('normalized_outcome', 'ok', 'exit_code'))
+        for name, value in (('result_removed', None), ('result_array', [])):
+            document = copy.deepcopy(baseline)
+            if value is None:
+                document.pop('result')
+            else:
+                document['result'] = value
+            control(label + '_' + name, document, expected=('result',))
+        # An unrelated record error in an admitted reply leaves the result mismatch visible, and conversely.
+        document = copy.deepcopy(baseline)
+        del document['data']['runner_result']['steps'][0]['comparison']
+        recapture_host_reply(document)
+        control(label + '_record_error_only', document, beside=('missing comparison',))
+        document['result']['exit_code'] = 2
+        control(label + '_record_error_and_exit', document, expected=('exit_code',), beside=('missing comparison',))
+
+    # Admission failures supply no mapping, whatever the retained body and the result say.
+    # Every field disagrees with the finished reply the baseline's bytes carry.
+    mismatched = {'normalized_outcome': 'tool_error', 'ok': False, 'exit_code': 7}
+    contexts = json.loads((ROOT / 'tests/fixtures/contract/compiled_profile.json').read_text())
+    refused_contexts = [case for case in contexts if not case['valid']]
+    assert refused_contexts and len(refused_contexts) < len(contexts), 'profile fixture needs admitted and refused contexts'
+    for case in contexts:
+        document = copy.deepcopy(current)
+        document['data']['runner_result']['compiled_profile'] = case['receipt']
+        recapture_host_reply(document)
+        document['result'].update(mismatched)
+        control('profile_' + case['name'] + '_mismatched_result', document,
+                expected=('normalized_outcome', 'ok', 'exit_code') if case['valid'] else (),
+                beside=() if case['valid'] else ('compiled_profile',))
+        if not case['valid']:
+            # The controller's own account of this refusal: a retained body and no assessment.
+            document['result'].update(normalized_outcome='malformed_runner_response', ok=False, exit_code=1,
+                                      error='constructed refusal')
+            document['data']['runner_sandbox_diagnostics'] = None
+            control('profile_' + case['name'] + '_refused', document, beside=('compiled_profile',))
+
+    # No reply: the controller's own result rules apply, and nothing is derived here.
+    for name, result in (('tool_error', dict(normalized_outcome='tool_error', ok=False, exit_code=2)),
+                         ('mismatched', mismatched)):
+        document = copy.deepcopy(current)
+        document['data'].update(runner_result=None, runner_client=None, runner_sandbox_diagnostics=None)
+        document['result'].update(result, error='controlled')
+        control('absent_reply_' + name, document)
+
+    # A capture this reader rejects cannot admit the bytes it retains.
+    for name, change, diagnostic in [
+        ('capture_foreign_contract', lambda c: c['transport'].update(contract='test:foreign'),
+         'runner client transport admission disagrees'),
+        ('capture_truncated_reply', lambda c: c['transport']['runner_reply'].update(truncated=True),
+         'runner client transport admission disagrees'),
+        ('delivery_failed', lambda c: c['request_delivery'].update(error='constructed delivery failure'),
+         'runner client transport admission disagrees'),
+        ('reply_diagnostic', lambda c: c.update(runner_reply_error='constructed host-byte diagnostic'),
+         'complete parsed host bytes carry a host-byte diagnostic'),
+    ]:
+        document = copy.deepcopy(current)
+        change(document['data']['runner_client'])
+        document['result'].update(mismatched)
+        control('rejected_' + name, document, beside=(diagnostic,))
+
+    # Without the controller's assessment this reader has no evidence that the
+    # controller admitted the reply, so it asserts no mapping. Capacity refusal
+    # is a controller gate this reader does not restate.
+    document = copy.deepcopy(current)
+    document['data']['runner_sandbox_diagnostics'] = None
+    document['result'].update(mismatched)
+    control('assessment_absent', document)
+
+    # The result is bound to the admitted bytes: a projected record that differs
+    # from them is reported, and the result still answers to the bytes.
+    document = copy.deepcopy(current)
+    document['data']['runner_result']['normalized_outcome'] = 'worker_timeout'
+    document['result'].update(normalized_outcome='worker_timeout', ok=False, exit_code=1)
+    control('projection_differs_from_bytes', document, expected=('normalized_outcome', 'ok', 'exit_code'),
+            beside=('host result differs from exact captured host reply bytes',))
+
+    # A foreign producer is one version error; nothing behind it is read.
+    document = copy.deepcopy(current)
+    document['data']['runner_result']['producer'] = {'contract': 'test:next'}
+    recapture_host_reply(document)
+    document['result'].update(mismatched)
+    errors = validate(document)
+    assert len(errors) == 1 and 'unsupported runner response' in errors[0], errors
+    records.append({'control': 'unsupported_reply_version', 'expected_result_diagnostics': [],
+                    'found_result_diagnostics': [], 'required_beside': ['unsupported runner response'], 'errors': errors})
+
+    assert len({record['control'] for record in records}) == len(records)
+    (artifacts / 'result-consistency-controls.json').write_text(json.dumps(records, indent=2) + '\n')
+    print(f'result consistency controls: {len(records)} ok', flush=True)
+
+
 def client_output_control(artifacts):
     """A missing service produces client observations with no host RunResult."""
     app = Path(os.environ.get('PW_APP_DIR') or (ROOT / 'dist/PolicyWitness.app'))
@@ -746,6 +903,7 @@ def main():
         summary(retired)['normalized_outcome'] = 'ok'
         check('retired_run_outcome_' + label, retired, (diagnostic,))
     consumer_controls(artifacts, baseline)
+    result_consistency_controls(artifacts, baseline)
     exec_observation_controls(artifacts)
     mutation_order_controls(artifacts, baseline)
     client_output_control(artifacts)

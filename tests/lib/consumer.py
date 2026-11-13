@@ -7,6 +7,9 @@ an unknown key at a recorded path is an error naming the path, a present key
 must carry the golden's type, absence is allowed), then the record rules below.
 Rejected policy-check payloads remain opaque inside their validated capture
 wrappers; admitted helper envelopes are checked against the current shape.
+An envelope whose own evidence admits its runner reply must report that
+reply's outcome, with success and exit 0 exactly for `finished` and exit 1
+otherwise; an absent, rejected or refused reply supplies no such mapping.
 Evidence is then selected by field. No policy, specimen, errno rule, file or
 production implementation is an input, and nothing here asserts agreement or
 disagreement between the prediction and the attempt. Scenario expectations
@@ -15,6 +18,7 @@ belong to callers.
 Public functions:
 
     validate(document)  -> [error, ...]   one version error, or the shape errors
+    admitted_reply(document) -> reply     the reply the envelope's evidence admits, or None
     steps(document)     -> [step, ...]    the reply's steps after the version gate
     select(steps, ...)  -> [step, ...]    steps whose fields equal the given values
     lifecycle(document) -> view           the registered lifecycle account
@@ -30,7 +34,7 @@ from lifecycle_adapter import read_lifecycle, summaries
 from document_versions import is_envelope, version_errors, require_supported as _gate
 from extension_evidence import validate_extensions, validate_fresh_read, validate_fresh_write
 from phase_evidence import collection_problem, ownership_problem
-from runner_client_capture import validate_client
+from runner_client_capture import admitted_host_reply, validate_client
 
 
 # The comparison record vocabulary (docs/PolicyWitness.md, "Reading a comparison record").
@@ -1006,6 +1010,62 @@ def _validate_envelope(document, expected_contract, *, allow_fixture_json=False)
     return errors
 
 
+def admitted_reply(document, expected_contract, *, allow_fixture_json=False):
+    """The runner reply this envelope's own evidence admits, or None.
+
+    The envelope passes the version gate, its client capture independently
+    admits complete host bytes, their producer and compiled-profile context
+    pass the gates this reader applies, and the controller carries its
+    assessment of the reply. The result fields are never consulted. A body
+    retained after admission failed, an absent reply and a rejected capture
+    supply nothing, and this reader does not restate the controller's
+    collection-capacity gate: without the assessment it admits no reply.
+    """
+    if not is_envelope(document) or version_errors(document, expected_contract):
+        return None
+    data = document.get('data')
+    if not isinstance(data, dict) or not isinstance(data.get('runner_sandbox_diagnostics'), dict):
+        return None
+    reply = admitted_host_reply(data.get('runner_client'), expected_contract, allow_fixture_json=allow_fixture_json)
+    if not isinstance(reply, dict) or version_errors(reply, expected_contract):
+        return None
+    actors = reply.get('actors') if isinstance(reply.get('actors'), list) else []
+    profiles = [reply.get('compiled_profile')] + [a.get('compiled_profile') for a in actors if isinstance(a, dict)]
+    if any(_validate_capture(profile) for profile in profiles):
+        return None
+    return reply
+
+
+def _admitted_outcome(document, expected_contract, allow_fixture_json):
+    reply = admitted_reply(document, expected_contract, allow_fixture_json=allow_fixture_json)
+    outcome = reply.get('normalized_outcome') if reply is not None else None
+    return outcome if isinstance(outcome, str) else None
+
+
+def _validate_result(document, expected_contract, *, allow_fixture_json=False):
+    """An admitted reply's outcome determines the envelope's outcome, success flag and exit code."""
+    outcome = _admitted_outcome(document, expected_contract, allow_fixture_json)
+    if outcome is None:
+        return []
+    result = document.get('result')
+    if not isinstance(result, dict):
+        return [f'result is not an object beside the admitted reply outcome {outcome!r}']
+    finished = outcome == 'finished'
+    spelled = lambda key: json.dumps(result[key]) if key in result else 'absent'
+    errors = []
+    if type(result.get('normalized_outcome')) is not str or result['normalized_outcome'] != outcome:
+        errors.append(f'result.normalized_outcome is {spelled("normalized_outcome")}, '
+                      f'not the admitted reply outcome {json.dumps(outcome)}')
+    if type(result.get('ok')) is not bool or result['ok'] is not finished:
+        errors.append(f'result.ok is {spelled("ok")}, not {json.dumps(finished)} '
+                      f'for the admitted reply outcome {json.dumps(outcome)}')
+    expected_exit = 0 if finished else 1
+    if type(result.get('exit_code')) is not int or result['exit_code'] != expected_exit:
+        errors.append(f'result.exit_code is {spelled("exit_code")}, not {expected_exit} '
+                      f'for the admitted reply outcome {json.dumps(outcome)}')
+    return errors
+
+
 def validate(document, expected_contract, *, allow_fixture_json=False):
     """The single version error, or every shape and record error of a supported document."""
     errors = version_errors(document, expected_contract)
@@ -1014,6 +1074,7 @@ def validate(document, expected_contract, *, allow_fixture_json=False):
     if is_envelope(document):
         validate_shape(document, 'envelope', ENVELOPE_SHAPE, errors, expected_contract)
         errors.extend(_validate_envelope(document, expected_contract, allow_fixture_json=allow_fixture_json))
+        errors.extend(_validate_result(document, expected_contract, allow_fixture_json=allow_fixture_json))
         runner = _reply(document)
         if runner is not None:
             errors.extend(_validate_reply(runner))

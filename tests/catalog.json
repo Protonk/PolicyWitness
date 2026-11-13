@@ -1614,6 +1614,27 @@
           ]
         },
         {
+          "id": "example_round_trip",
+          "description": "The app's own example passes from example through run on the signed app: emitted bytes submitted unchanged, identity, digest and echo relationships, shared readers, pinned native expectations under observed prerequisites and six one-change refusals",
+          "command": [
+            "bash",
+            "tests/suites/witness_contract/example_round_trip.sh"
+          ],
+          "requires": [
+            "app"
+          ]
+        },
+        {
+          "id": "example_round_trip_controls",
+          "description": "Every assertion of the example round-trip checker has a rejected constructed control matched by identifier and classification; unevaluated groups and combined faults are checked",
+          "command": [
+            "bash",
+            "tests/suites/witness_contract/example_round_trip_controls.sh"
+          ],
+          "requires": [],
+          "default": true
+        },
+        {
           "id": "create_existing_file_preserves_contents",
           "description": "create preserves existing bytes and identities while enforcing write permission",
           "command": [

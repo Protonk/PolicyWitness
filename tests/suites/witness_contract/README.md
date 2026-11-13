@@ -1100,6 +1100,73 @@ comparison classifier. Public requests refuse unsupported attempts before
 children; the shared request-contract corpus checks that an earlier valid
 create in the refused specimen does not run.
 
+## The app's own example
+
+`example_round_trip` holds no specimen. It runs the selected app directly and
+retains the raw stdout, stderr and exit status of `--version`, two `example`
+invocations, the `run` of the emitted bytes and each changed input under
+`artifacts/capture/`. `check_example_round_trip.py` reads those files. Before
+anything is submitted it requires both emissions to exit 0 with empty stderr
+and one JSON object followed by one newline, and it refuses to run a document
+outside its bounds: the ordinary form with a nonempty plan, at least one step
+pairing a `sandbox_check` with a read-only file attempt, only read-only file
+attempts, and no `_test_overrides`, runner selection, augments or entitlement
+requirement. A failure there is reported with every run assertion unevaluated,
+and `run` is not invoked.
+
+The emitted file is then submitted unchanged. Each assertion has a stable
+identifier, a group and a classification, and `capture/report.json` lists every
+assertion's result:
+
+| Group | Demand |
+| --- | --- |
+| Passage | The document's identity equals `--version`'s `build.contract` and `data.contract` and the app property list's `PWContract`, in a packaged form; two emissions are byte-identical; `request_delivery.bytes_written` equals the document's length without its framing newline; the document without `contract` equals the example in the contract snapshot. |
+| Admission | No `request_failure` and no `bad_request`; the dossier's original digest and the reply's `policy_sha256` equal the SHA-256 of the document's policy source. |
+| Identity | The envelope's `build.contract`, the client capture's `contract` and the reply's `producer.contract` equal the document's. They are compared before any reply is read. |
+| Echo | The reply echoes the document's `specimen_id`, its step identifiers in order, and each submitted operation, filter, attempt kind, action and target. |
+| Reported against observed | The process exit status the case captured equals `result.exit_code`. |
+| Existing readers | `consumer.validate` reports no error, as the one aggregate assertion `consumer_validation`; the controller's `disposition_integrity` is `valid` with no `disposition_issues`. |
+| Native | Under the prerequisite that each attempt target resolves to a regular file this user can read: the reply is `finished`, each prediction is a validator `allow` with `native_rc` 0, `order` is `query_first` given that prediction, each attempt is `ok` with `rc` 0, and each target's bytes and `st_dev`, `st_ino`, `st_mode`, `st_uid`, `st_gid`, `st_size`, `st_mtime_ns` and `st_ctime_ns` are equal in the case's observations before and after the run. |
+| Refusals | Six inputs, each the emitted bytes with one change, go through `run`: another development identity, another release, `unbound`, no identity, a removed closing brace and one unknown member. The first five stop at the controller with their code, path, expected identity where one applies and no client capture or reply; the last is refused by the host as `unknown_field` with no step results. |
+
+Identity, digest and echo expectations come from the emitted document or
+another output of the same app. The native expectations are pinned to the
+present example and change with it. Shape, record, ordering and outcome-mapping
+rules belong to the consumer and are not restated; the delivery-length
+assertion is a length observation, and exact request bytes at the client
+boundary are checked by the controller's orchestration unit test under the
+test identity. The target observations establish equality at the sampled
+boundaries and assign no writer. Nothing states that a prediction and an
+attempt agree.
+
+The case passes or fails and declares no skip. A failure carries its
+classification: `consistency` for a relationship that must hold whatever the
+native results, `execution_unavailable` when the run yields no admitted reply
+(nothing behind the reply is then credited or faulted),
+`prerequisite_unestablished` when a target prerequisite was not observed
+(native expectations are then unevaluated) and `native_observation` when a
+pinned native expectation fails under observed prerequisites. The log prints
+each as `FAIL <identifier> [<classification>]`. Both cases are default members:
+they write nothing, need no signing identity, GUI session or network, and add
+a few CLI invocations.
+
+`example_round_trip_controls` runs the same checker offline over constructed
+captures; a constructed document stands in for the emission. Each of its
+rejected controls introduces one logical fault and states the exact set of
+identifier and classification pairs it must produce; a control earns coverage
+for its target assertions only when the actual set matches. The consumer's
+aggregate diagnostic is permitted beside another control's set and earns
+nothing there, and its own propagation control requires it exactly. Controls
+also require the stated assertions to be unevaluated after a failed emission
+or bound, behind a differing identity, without an admitted reply and under an
+unobserved prerequisite; require a coherent validator-spawn failure with
+matching exits to fail only native expectations; and keep every diagnostic of
+combined faults. The case fails if any assertion in the checker's table lacks a
+matched control, and `artifacts/example-round-trip-controls.json` holds each
+control's expected and actual sets and the coverage it earned. Shape and record
+validity rest on `blackbox_e2e/checker_controls`; that the app is validly
+signed and unchanged rests on the dispatcher's inspection.
+
 ## Specimen dossier
 
 `dossier_witness` checks `data.specimen` against facts read independently of

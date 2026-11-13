@@ -450,6 +450,31 @@ def validate_client(client, runner, expected_contract=build_context.TEST_CONTRAC
     return errors
 
 
+def admitted_host_reply(client, expected_contract=build_context.TEST_CONTRACT, *, allow_fixture_json=False):
+    """The host reply a client record independently admits, or None.
+
+    Delivery, the outer stdout capture, the capture's own admission, its
+    terminal event and the complete host bytes decide this. The controller's
+    labels and the envelope's result are not consulted, and no rejected or
+    incomplete body is read.
+    """
+    if not isinstance(client, dict):
+        return None
+    delivery = client.get('request_delivery')
+    if delivery is not None and (not isinstance(delivery, dict) or delivery.get('error') is not None):
+        return None
+    if (client.get('stdout_truncated') is True or client.get('stdout_parse_error') is not None or
+            client.get('stdout_capture_error') is not None or client.get('runner_reply_error') is not None):
+        return None
+    capture = client.get('transport')
+    if not isinstance(capture, dict) or 'format' in capture or 'data_base64' in capture:
+        return None
+    try:
+        return host_reply(capture, expected_contract, allow_fixture_json=allow_fixture_json)
+    except ValueError:
+        return None
+
+
 def host_reply(value, expected_contract=build_context.TEST_CONTRACT, *, allow_fixture_json=False):
     """Parse exact admitted complete host bytes, without reading host semantics."""
     errors = validate_capture(value, expected_contract)
