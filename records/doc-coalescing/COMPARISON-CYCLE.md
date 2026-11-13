@@ -161,3 +161,68 @@ about targets and operations when they compare submitted strings and
 PolicyWitness's own mapping; and an `open_read` success had been described as
 a read. The consultation is source inspection and supplies no execution
 evidence.
+
+## Verification
+
+Generator regeneration, `generate_contract_stamps.py --tree-check` and
+`--check --require-history`, and `generate_limits.py --check` passed after each
+pass. One suite run then covered the whole cycle from clean `1f5e358c`:
+
+```sh
+env -u PYTHONOPTIMIZE PYTHONDONTWRITEBYTECODE=1 \
+  PW_TEST_OUT_DIR=tests/out/runs/doc-coalescing-comparison PW_TEST_QUIET=1 \
+  tests/run.sh --suite source_drift
+```
+
+Run `20261113T181345Z_0be84511` completed in 398,792 ms in an unsandboxed
+shell with Python 3.14.9. All ten cases passed, with no skips, unrun cases,
+harness errors or recorded system sleep. `limits_documentation` ran 24 tests,
+including the new scenario-copy test and the extended stale-copy control.
+These are generator and documentation observations. No runtime code, request
+or guide command changed, so no build, native case or guide-workflow case was
+added, and no support grade rose.
+
+One disposable run and no worktree were created. After receipt review,
+`make prune` preview and `make prune APPLY=1` removed that run without
+blockers and kept the four release archives and protected acceptance. Its raw
+output is no longer available locally. The staged `dist/PolicyWitness.md`
+still equals the guide at `bfa65341`; the next signed build restages it.
+
+## Completion
+
+1. **A `deny` beside a success.** The FAQ answer now begins "No" and links to
+   "When the answer and the attempt differ". That subsection lists five fields
+   to check, states what the record establishes when all five permit the
+   comparison, and names what a conclusion still needs: runtime object
+   identity, unchanged state, the attempt's effect and a failure's cause.
+   Rows S05 and S06 show the relation fields ruling a comparison out. Before,
+   the reader assembled this from rules 1, 4 to 10 and a field entry. Still
+   difficult: no published row shows a real `deny` beside a success with every
+   field permitting the comparison, because the fixture's only such row uses
+   the test validator; and the guide cannot say how to establish runtime
+   identity for the query, since no reply field records it.
+2. **`order: unestablished`.** The field entry and FAQ link to a table of the
+   four requirements, the fields that show each and why each can be unmet,
+   followed by what the step still supplies. Rows S07 and S11 show two
+   reasons. Before, the guide said "eligible native records" and left the
+   requirements to the developer contract. Still difficult: the setup and
+   record requirements span three parts of the reply, and the guide's table
+   restates a contract rule without a check binding the two.
+3. **`permission_failure`.** The FAQ answer links to a table of each
+   observation and basis with the fields it rests on, the statement that
+   neither the classification nor a `deny` beside it identifies the cause,
+   and examples of separating evidence. Rows S02 and S03 carry identical
+   records under different conditions. Still difficult: attribution remains
+   the reader's experiment; the guide offers examples and no procedure.
+
+Contract readers reach the three rules from the comparison field list, and the
+order and classification rules show their check-read support locally.
+
+Removed: the test contract's incorrect setup wording, and the misattached
+support scope for classification. No maintained copy was deleted this cycle.
+Added duties: the guide's order and classification tables against
+`steps.assessment`, and the three scenario notes against the selected rows.
+Added machinery: the scenario copy and its controls, and one support owner.
+Preserved distinctions: prediction versus raw native return, submitted
+strings versus runtime objects, order versus state, classification versus
+cause, and source inspection versus constructed checks versus native evidence.

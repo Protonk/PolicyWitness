@@ -119,6 +119,8 @@ while the earlier passes removed maintained copies and input-alignment duties.
 
 ## Second cycle
 
-The second cycle takes the per-step comparison record as its topic. Its
-[record](../records/doc-coalescing/COMPARISON-CYCLE.md) states the scope, the
-three reader questions and the ownership map, then each pass's result.
+The second cycle takes the per-step comparison record as its topic and is
+complete. Its [record](../records/doc-coalescing/COMPARISON-CYCLE.md) states
+the scope, the three reader questions and the ownership map, then each pass's
+result, the one consultation, verification and the adjacent opportunities kept
+for a later cycle.
