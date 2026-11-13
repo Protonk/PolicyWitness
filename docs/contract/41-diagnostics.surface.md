@@ -636,6 +636,7 @@ effects: [set_value(envelope.data.runner_sandbox_diagnostics.disposition_issues[
 ```contract
 who: ["identity.definitions.controller"]
 where: "typed reply relationship checks after worker projections"
+uses: ["diagnostics.issue.subject.withholding_scope"]
 entry: ["cli_run"]
 recipient: ["report_reader"]
 report: ["execution_diagnostics"]
@@ -651,10 +652,8 @@ and all host fields including step comparisons and claimed gate outcomes.
 Those retained assertions can therefore appear beside the controller's
 finding about them.
 
-Each actor-row projection describes the carried subprocess and action records
-selected through carried labels and IDs. Preserving it does not override a
-finding against that row's identity, launch association or action membership,
-or independently establish attribution to the requested actor.
+The [reply-wide withholding scope](#contract-diagnostics-issue-subject-withholding_scope)
+defines the attribution limits of the retained actor-row projections.
 
 ### Findings beside the completion result {outer_result: definition}
 

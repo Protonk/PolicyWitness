@@ -4294,7 +4294,7 @@ execution diagnostic record, before reply-wide findings are appended.
 <a id="contract-diagnostics-execution-reply_checks"></a>
 ##### Apply reply-wide findings
 
-[Controller](#contract-identity-definitions-controller) acts at typed reply relationship checks after worker projections. Entry: cli run. Recipient: report reader. Reports: execution diagnostics. [set_value(`diagnostics.process_disposition`, `"withheld"`), set_value(`diagnostics.termination_cause`, `"unknown"`), set_value(`diagnostics.disposition_integrity`, `"invalid"`), retain_records(`reply`), retain_assessments(`diagnostics.actors`)]. Follows [Project one worker or aggregate actors](#contract-diagnostics-execution-project). One or more applicable reply-wide checks finds an invalid relationship.
+[Controller](#contract-identity-definitions-controller) acts at typed reply relationship checks after worker projections. Entry: cli run. Recipient: report reader. Reports: execution diagnostics. [set_value(`diagnostics.process_disposition`, `"withheld"`), set_value(`diagnostics.termination_cause`, `"unknown"`), set_value(`diagnostics.disposition_integrity`, `"invalid"`), retain_records(`reply`), retain_assessments(`diagnostics.actors`)]. Follows [Project one worker or aggregate actors](#contract-diagnostics-execution-project). Uses [Reply-wide withholding scope](#contract-diagnostics-issue-subject-withholding_scope). One or more applicable reply-wide checks finds an invalid relationship.
 
 The controller appends these findings to top-level `disposition_issues`.
 It preserves the actor entries, an ordinary stop reason already derived,
@@ -4302,10 +4302,8 @@ and all host fields including step comparisons and claimed gate outcomes.
 Those retained assertions can therefore appear beside the controller's
 finding about them.
 
-Each actor-row projection describes the carried subprocess and action records
-selected through carried labels and IDs. Preserving it does not override a
-finding against that row's identity, launch association or action membership,
-or independently establish attribution to the requested actor.
+The [reply-wide withholding scope](#contract-diagnostics-issue-subject-withholding_scope)
+defines the attribution limits of the retained actor-row projections.
 
 <a id="contract-diagnostics-execution-outer_result"></a>
 ##### Findings beside the completion result

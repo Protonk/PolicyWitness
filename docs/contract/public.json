@@ -22055,6 +22055,9 @@
               "report": [
                 "execution_diagnostics"
               ],
+              "uses": [
+                "diagnostics.issue.subject.withholding_scope"
+              ],
               "where": "typed reply relationship checks after worker projections",
               "who": [
                 "identity.definitions.controller"
@@ -22062,7 +22065,7 @@
             },
             "id": "diagnostics.execution.reply_checks",
             "kind": "acts",
-            "prose": "The controller appends these findings to top-level `disposition_issues`.\nIt preserves the actor entries, an ordinary stop reason already derived,\nand all host fields including step comparisons and claimed gate outcomes.\nThose retained assertions can therefore appear beside the controller's\nfinding about them.\n\nEach actor-row projection describes the carried subprocess and action records\nselected through carried labels and IDs. Preserving it does not override a\nfinding against that row's identity, launch association or action membership,\nor independently establish attribution to the requested actor.",
+            "prose": "The controller appends these findings to top-level `disposition_issues`.\nIt preserves the actor entries, an ordinary stop reason already derived,\nand all host fields including step comparisons and claimed gate outcomes.\nThose retained assertions can therefore appear beside the controller's\nfinding about them.\n\nThe [reply-wide withholding scope](#contract-diagnostics-issue-subject-withholding_scope)\ndefines the attribution limits of the retained actor-row projections.",
             "referenced_types": {
               "diagnostics.actors": {
                 "json_null": false,
@@ -22094,6 +22097,54 @@
               }
             },
             "title": "Apply reply-wide findings"
+          },
+          {
+            "context": {},
+            "facts": {
+              "as": "integrity_issue",
+              "record": "rust.IntegrityIssue"
+            },
+            "id": "diagnostics.issue",
+            "kind": "subject",
+            "prose": "",
+            "title": "Integrity finding"
+          },
+          {
+            "context": {},
+            "facts": {
+              "uses": [
+                "diagnostics.issue.subject_path",
+                "diagnostics.execution.reply_checks",
+                "diagnostics.execution.project"
+              ]
+            },
+            "id": "diagnostics.issue.subject",
+            "kind": "definition",
+            "prose": "A subject path associates the finding with the retained assertion that its\ncheck inspected. A gate's source and dependent records remain operands of\nthat check. Reply-wide findings withhold the aggregate projection and retain\nthe separately computed actor projections. Worker-local findings affect\nthat worker's projection.",
+            "title": "Finding association and effect"
+          },
+          {
+            "context": {},
+            "facts": {},
+            "id": "diagnostics.issue.subject.withholding_scope",
+            "kind": "definition",
+            "prose": "Reply-wide findings withhold the aggregate and retain separately computed\nactor-row projections. Each projection describes the carried subprocess and\naction records selected through carried labels and IDs. It does not override\nfindings against identity, launch association or action membership, or\nindependently establish attribution to the requested actor. Worker-local\nlifecycle findings still withhold that worker's projection.",
+            "title": "Reply-wide withholding scope"
+          },
+          {
+            "context": {},
+            "facts": {},
+            "field": {
+              "json_null": false,
+              "omission": "Option::is_none",
+              "optional": true,
+              "presence": "omitted when absent",
+              "type": "array of string"
+            },
+            "id": "diagnostics.issue.subject_path",
+            "kind": "field",
+            "prose": "Optional location of the inspected assertion within `data.runner_result`.\nThe path is an ordered list of object keys and canonical zero-based decimal\narray positions. An empty path names the whole host result; a present null\nvalue remains an addressable target. For example,\n`[\"phases\",\"2\",\"termination_gate\"]` names the third phase's carried gate,\neven when phase labels are duplicated or invalid.\nThe controller supplies this field for owned-reap, phase-activation and\ntermination-gate findings. Its association identifies the inspected record;\nprojection and retention effects follow the producing check's scope.\nOther controller findings and copied host conflicts omit this field.",
+            "title": "subject_path"
           },
           {
             "context": {},
@@ -61759,6 +61810,9 @@
               "report": [
                 "execution_diagnostics"
               ],
+              "uses": [
+                "diagnostics.issue.subject.withholding_scope"
+              ],
               "where": "typed reply relationship checks after worker projections",
               "who": [
                 "identity.definitions.controller"
@@ -61766,7 +61820,7 @@
             },
             "id": "diagnostics.execution.reply_checks",
             "kind": "acts",
-            "prose": "The controller appends these findings to top-level `disposition_issues`.\nIt preserves the actor entries, an ordinary stop reason already derived,\nand all host fields including step comparisons and claimed gate outcomes.\nThose retained assertions can therefore appear beside the controller's\nfinding about them.\n\nEach actor-row projection describes the carried subprocess and action records\nselected through carried labels and IDs. Preserving it does not override a\nfinding against that row's identity, launch association or action membership,\nor independently establish attribution to the requested actor.",
+            "prose": "The controller appends these findings to top-level `disposition_issues`.\nIt preserves the actor entries, an ordinary stop reason already derived,\nand all host fields including step comparisons and claimed gate outcomes.\nThose retained assertions can therefore appear beside the controller's\nfinding about them.\n\nThe [reply-wide withholding scope](#contract-diagnostics-issue-subject-withholding_scope)\ndefines the attribution limits of the retained actor-row projections.",
             "referenced_types": {
               "diagnostics.actors": {
                 "json_null": false,
@@ -61798,6 +61852,54 @@
               }
             },
             "title": "Apply reply-wide findings"
+          },
+          {
+            "context": {},
+            "facts": {
+              "as": "integrity_issue",
+              "record": "rust.IntegrityIssue"
+            },
+            "id": "diagnostics.issue",
+            "kind": "subject",
+            "prose": "",
+            "title": "Integrity finding"
+          },
+          {
+            "context": {},
+            "facts": {
+              "uses": [
+                "diagnostics.issue.subject_path",
+                "diagnostics.execution.reply_checks",
+                "diagnostics.execution.project"
+              ]
+            },
+            "id": "diagnostics.issue.subject",
+            "kind": "definition",
+            "prose": "A subject path associates the finding with the retained assertion that its\ncheck inspected. A gate's source and dependent records remain operands of\nthat check. Reply-wide findings withhold the aggregate projection and retain\nthe separately computed actor projections. Worker-local findings affect\nthat worker's projection.",
+            "title": "Finding association and effect"
+          },
+          {
+            "context": {},
+            "facts": {},
+            "id": "diagnostics.issue.subject.withholding_scope",
+            "kind": "definition",
+            "prose": "Reply-wide findings withhold the aggregate and retain separately computed\nactor-row projections. Each projection describes the carried subprocess and\naction records selected through carried labels and IDs. It does not override\nfindings against identity, launch association or action membership, or\nindependently establish attribution to the requested actor. Worker-local\nlifecycle findings still withhold that worker's projection.",
+            "title": "Reply-wide withholding scope"
+          },
+          {
+            "context": {},
+            "facts": {},
+            "field": {
+              "json_null": false,
+              "omission": "Option::is_none",
+              "optional": true,
+              "presence": "omitted when absent",
+              "type": "array of string"
+            },
+            "id": "diagnostics.issue.subject_path",
+            "kind": "field",
+            "prose": "Optional location of the inspected assertion within `data.runner_result`.\nThe path is an ordered list of object keys and canonical zero-based decimal\narray positions. An empty path names the whole host result; a present null\nvalue remains an addressable target. For example,\n`[\"phases\",\"2\",\"termination_gate\"]` names the third phase's carried gate,\neven when phase labels are duplicated or invalid.\nThe controller supplies this field for owned-reap, phase-activation and\ntermination-gate findings. Its association identifies the inspected record;\nprojection and retention effects follow the producing check's scope.\nOther controller findings and copied host conflicts omit this field.",
+            "title": "subject_path"
           },
           {
             "context": {},
@@ -95536,6 +95638,9 @@
               "report": [
                 "execution_diagnostics"
               ],
+              "uses": [
+                "diagnostics.issue.subject.withholding_scope"
+              ],
               "where": "typed reply relationship checks after worker projections",
               "who": [
                 "identity.definitions.controller"
@@ -95543,7 +95648,7 @@
             },
             "id": "diagnostics.execution.reply_checks",
             "kind": "acts",
-            "prose": "The controller appends these findings to top-level `disposition_issues`.\nIt preserves the actor entries, an ordinary stop reason already derived,\nand all host fields including step comparisons and claimed gate outcomes.\nThose retained assertions can therefore appear beside the controller's\nfinding about them.\n\nEach actor-row projection describes the carried subprocess and action records\nselected through carried labels and IDs. Preserving it does not override a\nfinding against that row's identity, launch association or action membership,\nor independently establish attribution to the requested actor.",
+            "prose": "The controller appends these findings to top-level `disposition_issues`.\nIt preserves the actor entries, an ordinary stop reason already derived,\nand all host fields including step comparisons and claimed gate outcomes.\nThose retained assertions can therefore appear beside the controller's\nfinding about them.\n\nThe [reply-wide withholding scope](#contract-diagnostics-issue-subject-withholding_scope)\ndefines the attribution limits of the retained actor-row projections.",
             "referenced_types": {
               "diagnostics.actors": {
                 "json_null": false,
@@ -95575,6 +95680,54 @@
               }
             },
             "title": "Apply reply-wide findings"
+          },
+          {
+            "context": {},
+            "facts": {
+              "as": "integrity_issue",
+              "record": "rust.IntegrityIssue"
+            },
+            "id": "diagnostics.issue",
+            "kind": "subject",
+            "prose": "",
+            "title": "Integrity finding"
+          },
+          {
+            "context": {},
+            "facts": {
+              "uses": [
+                "diagnostics.issue.subject_path",
+                "diagnostics.execution.reply_checks",
+                "diagnostics.execution.project"
+              ]
+            },
+            "id": "diagnostics.issue.subject",
+            "kind": "definition",
+            "prose": "A subject path associates the finding with the retained assertion that its\ncheck inspected. A gate's source and dependent records remain operands of\nthat check. Reply-wide findings withhold the aggregate projection and retain\nthe separately computed actor projections. Worker-local findings affect\nthat worker's projection.",
+            "title": "Finding association and effect"
+          },
+          {
+            "context": {},
+            "facts": {},
+            "id": "diagnostics.issue.subject.withholding_scope",
+            "kind": "definition",
+            "prose": "Reply-wide findings withhold the aggregate and retain separately computed\nactor-row projections. Each projection describes the carried subprocess and\naction records selected through carried labels and IDs. It does not override\nfindings against identity, launch association or action membership, or\nindependently establish attribution to the requested actor. Worker-local\nlifecycle findings still withhold that worker's projection.",
+            "title": "Reply-wide withholding scope"
+          },
+          {
+            "context": {},
+            "facts": {},
+            "field": {
+              "json_null": false,
+              "omission": "Option::is_none",
+              "optional": true,
+              "presence": "omitted when absent",
+              "type": "array of string"
+            },
+            "id": "diagnostics.issue.subject_path",
+            "kind": "field",
+            "prose": "Optional location of the inspected assertion within `data.runner_result`.\nThe path is an ordered list of object keys and canonical zero-based decimal\narray positions. An empty path names the whole host result; a present null\nvalue remains an addressable target. For example,\n`[\"phases\",\"2\",\"termination_gate\"]` names the third phase's carried gate,\neven when phase labels are duplicated or invalid.\nThe controller supplies this field for owned-reap, phase-activation and\ntermination-gate findings. Its association identifies the inspected record;\nprojection and retention effects follow the producing check's scope.\nOther controller findings and copied host conflicts omit this field.",
+            "title": "subject_path"
           },
           {
             "context": {},
@@ -143817,6 +143970,9 @@
               "report": [
                 "execution_diagnostics"
               ],
+              "uses": [
+                "diagnostics.issue.subject.withholding_scope"
+              ],
               "where": "typed reply relationship checks after worker projections",
               "who": [
                 "identity.definitions.controller"
@@ -143824,7 +143980,7 @@
             },
             "id": "diagnostics.execution.reply_checks",
             "kind": "acts",
-            "prose": "The controller appends these findings to top-level `disposition_issues`.\nIt preserves the actor entries, an ordinary stop reason already derived,\nand all host fields including step comparisons and claimed gate outcomes.\nThose retained assertions can therefore appear beside the controller's\nfinding about them.\n\nEach actor-row projection describes the carried subprocess and action records\nselected through carried labels and IDs. Preserving it does not override a\nfinding against that row's identity, launch association or action membership,\nor independently establish attribution to the requested actor.",
+            "prose": "The controller appends these findings to top-level `disposition_issues`.\nIt preserves the actor entries, an ordinary stop reason already derived,\nand all host fields including step comparisons and claimed gate outcomes.\nThose retained assertions can therefore appear beside the controller's\nfinding about them.\n\nThe [reply-wide withholding scope](#contract-diagnostics-issue-subject-withholding_scope)\ndefines the attribution limits of the retained actor-row projections.",
             "referenced_types": {
               "diagnostics.actors": {
                 "json_null": false,
@@ -143856,6 +144012,54 @@
               }
             },
             "title": "Apply reply-wide findings"
+          },
+          {
+            "context": {},
+            "facts": {
+              "as": "integrity_issue",
+              "record": "rust.IntegrityIssue"
+            },
+            "id": "diagnostics.issue",
+            "kind": "subject",
+            "prose": "",
+            "title": "Integrity finding"
+          },
+          {
+            "context": {},
+            "facts": {
+              "uses": [
+                "diagnostics.issue.subject_path",
+                "diagnostics.execution.reply_checks",
+                "diagnostics.execution.project"
+              ]
+            },
+            "id": "diagnostics.issue.subject",
+            "kind": "definition",
+            "prose": "A subject path associates the finding with the retained assertion that its\ncheck inspected. A gate's source and dependent records remain operands of\nthat check. Reply-wide findings withhold the aggregate projection and retain\nthe separately computed actor projections. Worker-local findings affect\nthat worker's projection.",
+            "title": "Finding association and effect"
+          },
+          {
+            "context": {},
+            "facts": {},
+            "id": "diagnostics.issue.subject.withholding_scope",
+            "kind": "definition",
+            "prose": "Reply-wide findings withhold the aggregate and retain separately computed\nactor-row projections. Each projection describes the carried subprocess and\naction records selected through carried labels and IDs. It does not override\nfindings against identity, launch association or action membership, or\nindependently establish attribution to the requested actor. Worker-local\nlifecycle findings still withhold that worker's projection.",
+            "title": "Reply-wide withholding scope"
+          },
+          {
+            "context": {},
+            "facts": {},
+            "field": {
+              "json_null": false,
+              "omission": "Option::is_none",
+              "optional": true,
+              "presence": "omitted when absent",
+              "type": "array of string"
+            },
+            "id": "diagnostics.issue.subject_path",
+            "kind": "field",
+            "prose": "Optional location of the inspected assertion within `data.runner_result`.\nThe path is an ordered list of object keys and canonical zero-based decimal\narray positions. An empty path names the whole host result; a present null\nvalue remains an addressable target. For example,\n`[\"phases\",\"2\",\"termination_gate\"]` names the third phase's carried gate,\neven when phase labels are duplicated or invalid.\nThe controller supplies this field for owned-reap, phase-activation and\ntermination-gate findings. Its association identifies the inspected record;\nprojection and retention effects follow the producing check's scope.\nOther controller findings and copied host conflicts omit this field.",
+            "title": "subject_path"
           },
           {
             "context": {},
@@ -171581,6 +171785,9 @@
               "report": [
                 "execution_diagnostics"
               ],
+              "uses": [
+                "diagnostics.issue.subject.withholding_scope"
+              ],
               "where": "typed reply relationship checks after worker projections",
               "who": [
                 "identity.definitions.controller"
@@ -171588,7 +171795,7 @@
             },
             "id": "diagnostics.execution.reply_checks",
             "kind": "acts",
-            "prose": "The controller appends these findings to top-level `disposition_issues`.\nIt preserves the actor entries, an ordinary stop reason already derived,\nand all host fields including step comparisons and claimed gate outcomes.\nThose retained assertions can therefore appear beside the controller's\nfinding about them.\n\nEach actor-row projection describes the carried subprocess and action records\nselected through carried labels and IDs. Preserving it does not override a\nfinding against that row's identity, launch association or action membership,\nor independently establish attribution to the requested actor.",
+            "prose": "The controller appends these findings to top-level `disposition_issues`.\nIt preserves the actor entries, an ordinary stop reason already derived,\nand all host fields including step comparisons and claimed gate outcomes.\nThose retained assertions can therefore appear beside the controller's\nfinding about them.\n\nThe [reply-wide withholding scope](#contract-diagnostics-issue-subject-withholding_scope)\ndefines the attribution limits of the retained actor-row projections.",
             "referenced_types": {
               "diagnostics.actors": {
                 "json_null": false,
@@ -171620,6 +171827,54 @@
               }
             },
             "title": "Apply reply-wide findings"
+          },
+          {
+            "context": {},
+            "facts": {
+              "as": "integrity_issue",
+              "record": "rust.IntegrityIssue"
+            },
+            "id": "diagnostics.issue",
+            "kind": "subject",
+            "prose": "",
+            "title": "Integrity finding"
+          },
+          {
+            "context": {},
+            "facts": {
+              "uses": [
+                "diagnostics.issue.subject_path",
+                "diagnostics.execution.reply_checks",
+                "diagnostics.execution.project"
+              ]
+            },
+            "id": "diagnostics.issue.subject",
+            "kind": "definition",
+            "prose": "A subject path associates the finding with the retained assertion that its\ncheck inspected. A gate's source and dependent records remain operands of\nthat check. Reply-wide findings withhold the aggregate projection and retain\nthe separately computed actor projections. Worker-local findings affect\nthat worker's projection.",
+            "title": "Finding association and effect"
+          },
+          {
+            "context": {},
+            "facts": {},
+            "id": "diagnostics.issue.subject.withholding_scope",
+            "kind": "definition",
+            "prose": "Reply-wide findings withhold the aggregate and retain separately computed\nactor-row projections. Each projection describes the carried subprocess and\naction records selected through carried labels and IDs. It does not override\nfindings against identity, launch association or action membership, or\nindependently establish attribution to the requested actor. Worker-local\nlifecycle findings still withhold that worker's projection.",
+            "title": "Reply-wide withholding scope"
+          },
+          {
+            "context": {},
+            "facts": {},
+            "field": {
+              "json_null": false,
+              "omission": "Option::is_none",
+              "optional": true,
+              "presence": "omitted when absent",
+              "type": "array of string"
+            },
+            "id": "diagnostics.issue.subject_path",
+            "kind": "field",
+            "prose": "Optional location of the inspected assertion within `data.runner_result`.\nThe path is an ordered list of object keys and canonical zero-based decimal\narray positions. An empty path names the whole host result; a present null\nvalue remains an addressable target. For example,\n`[\"phases\",\"2\",\"termination_gate\"]` names the third phase's carried gate,\neven when phase labels are duplicated or invalid.\nThe controller supplies this field for owned-reap, phase-activation and\ntermination-gate findings. Its association identifies the inspected record;\nprojection and retention effects follow the producing check's scope.\nOther controller findings and copied host conflicts omit this field.",
+            "title": "subject_path"
           },
           {
             "context": {},
@@ -218642,6 +218897,9 @@
               "report": [
                 "execution_diagnostics"
               ],
+              "uses": [
+                "diagnostics.issue.subject.withholding_scope"
+              ],
               "where": "typed reply relationship checks after worker projections",
               "who": [
                 "identity.definitions.controller"
@@ -218649,7 +218907,7 @@
             },
             "id": "diagnostics.execution.reply_checks",
             "kind": "acts",
-            "prose": "The controller appends these findings to top-level `disposition_issues`.\nIt preserves the actor entries, an ordinary stop reason already derived,\nand all host fields including step comparisons and claimed gate outcomes.\nThose retained assertions can therefore appear beside the controller's\nfinding about them.\n\nEach actor-row projection describes the carried subprocess and action records\nselected through carried labels and IDs. Preserving it does not override a\nfinding against that row's identity, launch association or action membership,\nor independently establish attribution to the requested actor.",
+            "prose": "The controller appends these findings to top-level `disposition_issues`.\nIt preserves the actor entries, an ordinary stop reason already derived,\nand all host fields including step comparisons and claimed gate outcomes.\nThose retained assertions can therefore appear beside the controller's\nfinding about them.\n\nThe [reply-wide withholding scope](#contract-diagnostics-issue-subject-withholding_scope)\ndefines the attribution limits of the retained actor-row projections.",
             "referenced_types": {
               "diagnostics.actors": {
                 "json_null": false,
@@ -218681,6 +218939,54 @@
               }
             },
             "title": "Apply reply-wide findings"
+          },
+          {
+            "context": {},
+            "facts": {
+              "as": "integrity_issue",
+              "record": "rust.IntegrityIssue"
+            },
+            "id": "diagnostics.issue",
+            "kind": "subject",
+            "prose": "",
+            "title": "Integrity finding"
+          },
+          {
+            "context": {},
+            "facts": {
+              "uses": [
+                "diagnostics.issue.subject_path",
+                "diagnostics.execution.reply_checks",
+                "diagnostics.execution.project"
+              ]
+            },
+            "id": "diagnostics.issue.subject",
+            "kind": "definition",
+            "prose": "A subject path associates the finding with the retained assertion that its\ncheck inspected. A gate's source and dependent records remain operands of\nthat check. Reply-wide findings withhold the aggregate projection and retain\nthe separately computed actor projections. Worker-local findings affect\nthat worker's projection.",
+            "title": "Finding association and effect"
+          },
+          {
+            "context": {},
+            "facts": {},
+            "id": "diagnostics.issue.subject.withholding_scope",
+            "kind": "definition",
+            "prose": "Reply-wide findings withhold the aggregate and retain separately computed\nactor-row projections. Each projection describes the carried subprocess and\naction records selected through carried labels and IDs. It does not override\nfindings against identity, launch association or action membership, or\nindependently establish attribution to the requested actor. Worker-local\nlifecycle findings still withhold that worker's projection.",
+            "title": "Reply-wide withholding scope"
+          },
+          {
+            "context": {},
+            "facts": {},
+            "field": {
+              "json_null": false,
+              "omission": "Option::is_none",
+              "optional": true,
+              "presence": "omitted when absent",
+              "type": "array of string"
+            },
+            "id": "diagnostics.issue.subject_path",
+            "kind": "field",
+            "prose": "Optional location of the inspected assertion within `data.runner_result`.\nThe path is an ordered list of object keys and canonical zero-based decimal\narray positions. An empty path names the whole host result; a present null\nvalue remains an addressable target. For example,\n`[\"phases\",\"2\",\"termination_gate\"]` names the third phase's carried gate,\neven when phase labels are duplicated or invalid.\nThe controller supplies this field for owned-reap, phase-activation and\ntermination-gate findings. Its association identifies the inspected record;\nprojection and retention effects follow the producing check's scope.\nOther controller findings and copied host conflicts omit this field.",
+            "title": "subject_path"
           },
           {
             "context": {},
@@ -316328,6 +316634,9 @@
               "report": [
                 "execution_diagnostics"
               ],
+              "uses": [
+                "diagnostics.issue.subject.withholding_scope"
+              ],
               "where": "typed reply relationship checks after worker projections",
               "who": [
                 "identity.definitions.controller"
@@ -316335,7 +316644,7 @@
             },
             "id": "diagnostics.execution.reply_checks",
             "kind": "acts",
-            "prose": "The controller appends these findings to top-level `disposition_issues`.\nIt preserves the actor entries, an ordinary stop reason already derived,\nand all host fields including step comparisons and claimed gate outcomes.\nThose retained assertions can therefore appear beside the controller's\nfinding about them.\n\nEach actor-row projection describes the carried subprocess and action records\nselected through carried labels and IDs. Preserving it does not override a\nfinding against that row's identity, launch association or action membership,\nor independently establish attribution to the requested actor.",
+            "prose": "The controller appends these findings to top-level `disposition_issues`.\nIt preserves the actor entries, an ordinary stop reason already derived,\nand all host fields including step comparisons and claimed gate outcomes.\nThose retained assertions can therefore appear beside the controller's\nfinding about them.\n\nThe [reply-wide withholding scope](#contract-diagnostics-issue-subject-withholding_scope)\ndefines the attribution limits of the retained actor-row projections.",
             "referenced_types": {
               "diagnostics.actors": {
                 "json_null": false,
@@ -316367,6 +316676,54 @@
               }
             },
             "title": "Apply reply-wide findings"
+          },
+          {
+            "context": {},
+            "facts": {
+              "as": "integrity_issue",
+              "record": "rust.IntegrityIssue"
+            },
+            "id": "diagnostics.issue",
+            "kind": "subject",
+            "prose": "",
+            "title": "Integrity finding"
+          },
+          {
+            "context": {},
+            "facts": {
+              "uses": [
+                "diagnostics.issue.subject_path",
+                "diagnostics.execution.reply_checks",
+                "diagnostics.execution.project"
+              ]
+            },
+            "id": "diagnostics.issue.subject",
+            "kind": "definition",
+            "prose": "A subject path associates the finding with the retained assertion that its\ncheck inspected. A gate's source and dependent records remain operands of\nthat check. Reply-wide findings withhold the aggregate projection and retain\nthe separately computed actor projections. Worker-local findings affect\nthat worker's projection.",
+            "title": "Finding association and effect"
+          },
+          {
+            "context": {},
+            "facts": {},
+            "id": "diagnostics.issue.subject.withholding_scope",
+            "kind": "definition",
+            "prose": "Reply-wide findings withhold the aggregate and retain separately computed\nactor-row projections. Each projection describes the carried subprocess and\naction records selected through carried labels and IDs. It does not override\nfindings against identity, launch association or action membership, or\nindependently establish attribution to the requested actor. Worker-local\nlifecycle findings still withhold that worker's projection.",
+            "title": "Reply-wide withholding scope"
+          },
+          {
+            "context": {},
+            "facts": {},
+            "field": {
+              "json_null": false,
+              "omission": "Option::is_none",
+              "optional": true,
+              "presence": "omitted when absent",
+              "type": "array of string"
+            },
+            "id": "diagnostics.issue.subject_path",
+            "kind": "field",
+            "prose": "Optional location of the inspected assertion within `data.runner_result`.\nThe path is an ordered list of object keys and canonical zero-based decimal\narray positions. An empty path names the whole host result; a present null\nvalue remains an addressable target. For example,\n`[\"phases\",\"2\",\"termination_gate\"]` names the third phase's carried gate,\neven when phase labels are duplicated or invalid.\nThe controller supplies this field for owned-reap, phase-activation and\ntermination-gate findings. Its association identifies the inspected record;\nprojection and retention effects follow the producing check's scope.\nOther controller findings and copied host conflicts omit this field.",
+            "title": "subject_path"
           },
           {
             "context": {},
@@ -401641,6 +401998,9 @@
               "report": [
                 "execution_diagnostics"
               ],
+              "uses": [
+                "diagnostics.issue.subject.withholding_scope"
+              ],
               "where": "typed reply relationship checks after worker projections",
               "who": [
                 "identity.definitions.controller"
@@ -401648,7 +402008,7 @@
             },
             "id": "diagnostics.execution.reply_checks",
             "kind": "acts",
-            "prose": "The controller appends these findings to top-level `disposition_issues`.\nIt preserves the actor entries, an ordinary stop reason already derived,\nand all host fields including step comparisons and claimed gate outcomes.\nThose retained assertions can therefore appear beside the controller's\nfinding about them.\n\nEach actor-row projection describes the carried subprocess and action records\nselected through carried labels and IDs. Preserving it does not override a\nfinding against that row's identity, launch association or action membership,\nor independently establish attribution to the requested actor.",
+            "prose": "The controller appends these findings to top-level `disposition_issues`.\nIt preserves the actor entries, an ordinary stop reason already derived,\nand all host fields including step comparisons and claimed gate outcomes.\nThose retained assertions can therefore appear beside the controller's\nfinding about them.\n\nThe [reply-wide withholding scope](#contract-diagnostics-issue-subject-withholding_scope)\ndefines the attribution limits of the retained actor-row projections.",
             "referenced_types": {
               "diagnostics.actors": {
                 "json_null": false,
@@ -489381,6 +489741,9 @@
               "report": [
                 "execution_diagnostics"
               ],
+              "uses": [
+                "diagnostics.issue.subject.withholding_scope"
+              ],
               "where": "typed reply relationship checks after worker projections",
               "who": [
                 "identity.definitions.controller"
@@ -489388,7 +489751,7 @@
             },
             "id": "diagnostics.execution.reply_checks",
             "kind": "acts",
-            "prose": "The controller appends these findings to top-level `disposition_issues`.\nIt preserves the actor entries, an ordinary stop reason already derived,\nand all host fields including step comparisons and claimed gate outcomes.\nThose retained assertions can therefore appear beside the controller's\nfinding about them.\n\nEach actor-row projection describes the carried subprocess and action records\nselected through carried labels and IDs. Preserving it does not override a\nfinding against that row's identity, launch association or action membership,\nor independently establish attribution to the requested actor.",
+            "prose": "The controller appends these findings to top-level `disposition_issues`.\nIt preserves the actor entries, an ordinary stop reason already derived,\nand all host fields including step comparisons and claimed gate outcomes.\nThose retained assertions can therefore appear beside the controller's\nfinding about them.\n\nThe [reply-wide withholding scope](#contract-diagnostics-issue-subject-withholding_scope)\ndefines the attribution limits of the retained actor-row projections.",
             "referenced_types": {
               "diagnostics.actors": {
                 "json_null": false,
@@ -531232,6 +531595,9 @@
               "report": [
                 "execution_diagnostics"
               ],
+              "uses": [
+                "diagnostics.issue.subject.withholding_scope"
+              ],
               "where": "typed reply relationship checks after worker projections",
               "who": [
                 "identity.definitions.controller"
@@ -531239,7 +531605,7 @@
             },
             "id": "diagnostics.execution.reply_checks",
             "kind": "acts",
-            "prose": "The controller appends these findings to top-level `disposition_issues`.\nIt preserves the actor entries, an ordinary stop reason already derived,\nand all host fields including step comparisons and claimed gate outcomes.\nThose retained assertions can therefore appear beside the controller's\nfinding about them.\n\nEach actor-row projection describes the carried subprocess and action records\nselected through carried labels and IDs. Preserving it does not override a\nfinding against that row's identity, launch association or action membership,\nor independently establish attribution to the requested actor.",
+            "prose": "The controller appends these findings to top-level `disposition_issues`.\nIt preserves the actor entries, an ordinary stop reason already derived,\nand all host fields including step comparisons and claimed gate outcomes.\nThose retained assertions can therefore appear beside the controller's\nfinding about them.\n\nThe [reply-wide withholding scope](#contract-diagnostics-issue-subject-withholding_scope)\ndefines the attribution limits of the retained actor-row projections.",
             "referenced_types": {
               "diagnostics.actors": {
                 "json_null": false,
@@ -531271,6 +531637,54 @@
               }
             },
             "title": "Apply reply-wide findings"
+          },
+          {
+            "context": {},
+            "facts": {
+              "as": "integrity_issue",
+              "record": "rust.IntegrityIssue"
+            },
+            "id": "diagnostics.issue",
+            "kind": "subject",
+            "prose": "",
+            "title": "Integrity finding"
+          },
+          {
+            "context": {},
+            "facts": {
+              "uses": [
+                "diagnostics.issue.subject_path",
+                "diagnostics.execution.reply_checks",
+                "diagnostics.execution.project"
+              ]
+            },
+            "id": "diagnostics.issue.subject",
+            "kind": "definition",
+            "prose": "A subject path associates the finding with the retained assertion that its\ncheck inspected. A gate's source and dependent records remain operands of\nthat check. Reply-wide findings withhold the aggregate projection and retain\nthe separately computed actor projections. Worker-local findings affect\nthat worker's projection.",
+            "title": "Finding association and effect"
+          },
+          {
+            "context": {},
+            "facts": {},
+            "id": "diagnostics.issue.subject.withholding_scope",
+            "kind": "definition",
+            "prose": "Reply-wide findings withhold the aggregate and retain separately computed\nactor-row projections. Each projection describes the carried subprocess and\naction records selected through carried labels and IDs. It does not override\nfindings against identity, launch association or action membership, or\nindependently establish attribution to the requested actor. Worker-local\nlifecycle findings still withhold that worker's projection.",
+            "title": "Reply-wide withholding scope"
+          },
+          {
+            "context": {},
+            "facts": {},
+            "field": {
+              "json_null": false,
+              "omission": "Option::is_none",
+              "optional": true,
+              "presence": "omitted when absent",
+              "type": "array of string"
+            },
+            "id": "diagnostics.issue.subject_path",
+            "kind": "field",
+            "prose": "Optional location of the inspected assertion within `data.runner_result`.\nThe path is an ordered list of object keys and canonical zero-based decimal\narray positions. An empty path names the whole host result; a present null\nvalue remains an addressable target. For example,\n`[\"phases\",\"2\",\"termination_gate\"]` names the third phase's carried gate,\neven when phase labels are duplicated or invalid.\nThe controller supplies this field for owned-reap, phase-activation and\ntermination-gate findings. Its association identifies the inspected record;\nprojection and retention effects follow the producing check's scope.\nOther controller findings and copied host conflicts omit this field.",
+            "title": "subject_path"
           },
           {
             "context": {},

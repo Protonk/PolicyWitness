@@ -1327,7 +1327,7 @@ For an ordinary worker, the diagnostics record its `process_disposition`,
 | --- | --- |
 | Worker lifecycle | That worker's projection becomes `withheld`, with integrity `invalid` and cause `unknown`. Its raw observations remain in the host report. |
 | Actor aggregate | Top-level `per_actor` directs the reader to `diagnostics.actors[]`. Any invalid actor projection makes aggregate integrity invalid; other actor entries retain their own results. |
-| Reply-wide relationship | Top-level projection becomes `withheld`/`invalid`/`unknown`. Already computed actor entries remain available independently. |
+| Reply-wide relationship | Top-level projection becomes `withheld`/`invalid`/`unknown`. Already computed actor projections of the carried rows remain available; identity, launch-association and action-membership findings still qualify their attribution to the requested actors. |
 | Validated host conflict | The controller can report `conflicting` with integrity `valid` and copied host issues: it validated the evidence supporting that conflict. |
 
 Here `diagnostics` abbreviates `data.runner_sandbox_diagnostics`. Null integrity
@@ -1353,9 +1353,13 @@ why polling stopped, so an earlier deadline can coexist with a later clean exit.
 
 #### What a reporting failure preserves
 
-If host encoding fails, the replacement outcome is `runner_reporting_failed`,
-with `rc: 1`, an error and `reporting_failure` containing the diagnostic and
-original execution summary. The command exits 1.
+If host validation or encoding of the assembled result fails, the host attempts
+to publish a replacement report. When the controller admits that fallback, its
+outcome is `runner_reporting_failed`, with `rc: 1`, an error and
+`reporting_failure` containing the diagnostic and original execution summary;
+the command exits 1. If both the rich and minimal fallback writers fail, the
+host returns empty bytes, which the controller cannot decode; follow
+[When no host report was admitted](#when-no-host-report-was-admitted).
 
 - `evidence_retained: true` retains the assembled observations while removing
   every comparison. Retained ordering fields are diagnostic; this form supplies
@@ -1401,8 +1405,10 @@ execution after invocation is never automatically replayed by the client.
   report, abnormal or unconfirmed disposition, or a host wait/cleanup failure.
   The cause may be unknown. A completed report survives an abnormal exit as
   partial execution evidence.
-- `runner_reporting_failed` — the host could not encode its assembled result.
-  `reporting_failure` preserves the original execution summary separately.
+- `runner_reporting_failed` — a fallback report after host validation or encoding
+  of the assembled result failed. See
+  [What a reporting failure preserves](#what-a-reporting-failure-preserves)
+  for retained evidence and fallback limits.
 - `worker_spawn_failed` — host could not `posix_spawn` the worker
   (filesystem/codesign/quota error). Worker never ran.
 - `validator_spawn_failed` — host could not `posix_spawn` the

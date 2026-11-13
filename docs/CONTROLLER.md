@@ -224,15 +224,12 @@ keep those limits beside the preservation rules.
 separately. For an admitted reply, exact `finished` selects true/0; other
 outcomes select false/1. Earlier admission and delivery failures follow their
 own refusal paths. An unsuccessful attempt can belong to a finished experiment;
-controller integrity findings can also coexist with that current success
-mapping. `typed_completion_preserves_native_failure_beside_finished_summary`
+controller integrity findings can also coexist with that current
+[success mapping](CONTRACT.md#contract-envelope-data-success_findings).
+`typed_completion_preserves_native_failure_beside_finished_summary`
 and `malformed_phase_claims_withhold_projection_and_preserve_raw_reply` are
 constructed controls of these separate operations, not observations that a
 native host spontaneously emits every tested contradiction.
-
-The [completion rule](CONTRACT.md#contract-envelope-data-success_findings)
-retains this distinction: success reports host completion, not successful
-attempts or successful controller relationship checks.
 
 Fallback compilation is eligible only after an admitted client terminal
 `xpc_error` and successful request delivery. It checks the held whole request
