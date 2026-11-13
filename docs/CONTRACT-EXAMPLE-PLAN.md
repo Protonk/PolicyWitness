@@ -18,7 +18,7 @@ $PW run /tmp/example.json > /tmp/result.json
 - The contract's rendering of the example is extracted from that source.
 - A default-battery case follows the passage on the signed app. It supplies no specimen of its own.
 
-For this release the audience is the project: PolicyWitness is tested against its own expression at release. This is a public command currently intended for project verification; user-guide presentation is deferred. It is the first step toward examples that keep statements of what PolicyWitness accepts out of the user guide.
+For this release the audience is the project: PolicyWitness is tested against its own expression at release. This is a public command currently intended for project verification. The user guide lists it in its command table and presents no workflow; a purpose-built help and example interface is later work with its own plan. It is the first step toward examples that keep statements of what PolicyWitness accepts out of the user guide.
 
 ## 2. Principles
 
@@ -46,9 +46,9 @@ Observed on `main` on 2026-11-12. Re-check any that the work depends on.
 
 **Identity.** [build_contract.py](build_contract.py) derives `release:vX.Y.Z` for a clean checkout at one annotated release tag whose selected bytes equal the tag's blobs, and `development:<sha256>` otherwise. The digest covers every `.rs` file under `controller/src`. [json_contract.rs](../controller/src/json_contract.rs) embeds the value as `BUILD_CONTRACT`; a plain Cargo build is `unbound`.
 
-**Admission and the held request.** `validate_contract` in [request_patch.rs](../controller/src/request_patch.rs) requires `contract` to equal the binary's identity and refuses an empty or `unbound` identity; a refusal is exit 1, `bad_request`, with `data.request_failure`. The controller owns that gate, selectors and augments. The request grammar belongs to the Swift host. [run_flow.rs](../controller/src/run_flow.rs) parses the file once, resolves augments, removes controller selection fields, and holds one `serde_json::to_string_pretty` serialization that it delivers to the client without a trailing newline. A retained smoke run reports `request_delivery.bytes_written` of 576, matching the length computed from the submitted specimen; this is a length observation, not proof of byte identity. The existing controlled orchestration tests capture the exact string passed to `RunDependencies.client`, which can establish the example's byte-preservation property through the actual preparation path.
+**Admission and the held request.** [`validate_contract`](../controller/src/request_patch.rs) requires `contract` to equal the binary's identity and refuses an empty or `unbound` identity; a refusal is exit 1, `bad_request`, with `data.request_failure`. The controller owns that gate, selectors and augments. The request grammar belongs to the Swift host. [run_flow.rs](../controller/src/run_flow.rs) parses the file once, resolves augments, removes controller selection fields, and holds one `serde_json::to_string_pretty` serialization that it delivers to the client without a trailing newline. A retained smoke run reports `request_delivery.bytes_written` of 576, matching the length computed from the submitted specimen; this is a length observation, not proof of byte identity. The existing controlled orchestration tests capture the exact string passed to `RunDependencies.client`, which can establish the example's byte-preservation property through the actual preparation path.
 
-**The controller already originates one specimen.** `verify_request()` in [runner_commands.rs](../controller/src/runner_commands.rs) builds an apply-only request with the binary's identity and sends it on `runner verify`. The contract's `request.specimen.apply_only` example is a separate hand-typed document.
+**The controller already originates one specimen.** [`verify_request()`](../controller/src/runner_commands.rs) builds an apply-only request with the binary's identity and sends it on `runner verify`. The contract's `request.specimen.apply_only` example is a separate hand-typed document.
 
 **CLI.** [cli.rs](../controller/src/cli.rs) dispatches `run`, `runner` and `--version`. Every current output is an envelope. `run` reads a file path; there is no standard-input form.
 
@@ -105,7 +105,7 @@ The fourth row cannot occur in a build from the signed pipeline: the contract ge
 
 The output is the specimen itself, not an envelope. The document carries the identity in `contract`, where the contract says a specimen carries it, and redirecting stdout yields a file `run` accepts with no extraction step.
 
-`print_usage` lists the command, and the controller README's CLI block follows `cli.rs` as the drift suite requires. The user guide does not mention it in this release.
+`print_usage` lists the command, and the controller README's CLI block follows `cli.rs` as the drift suite requires. The user guide lists it as one row of its command table, stating the two commands, the exit rule and its present use for project verification.
 
 ### 4.3 The contract's account
 
@@ -280,7 +280,7 @@ This rule checks the present outcome-to-result mapping. It does not decide wheth
 
 Determine applicability from the version, transport and reply-admission evidence independently of the result fields being checked. Changing only `result.normalized_outcome` to `tool_error` or a refusal spelling must not disable the relationship. Require all three result fields with their proper JSON types; controls remove them, set them to null and substitute booleans for integers or integers for booleans. Distinguish admission failures from later record errors: a retained reply rejected for its compiled-profile context supplies no outcome mapping, while an admitted reply with an unrelated record error must still expose an independent result mismatch. Preserve both diagnostics in that combined control. Controls also cover absent replies and rejected client captures without deriving outcomes from their retained bytes.
 
-The new rule reaches every existing reader of an envelope, not only this plan's cases: 35 tracked test files call the consumer's readers. Constructed envelopes need attention first. `envelope_skeleton` in [blackbox.py](../tests/lib/blackbox.py) sets `result.ok` and `result.exit_code` from an `ok` argument that defaults to true whatever the reply's outcome, and it has five call sites, three of which pass `ok` explicitly. Derive the skeleton's result from the reply's outcome, or correct each caller, so that a constructed envelope states a coherent result unless its control is about that incoherence. Correct accidental fixture mismatches and state the correction; preserve deliberate result faults and require their diagnostics. Do not normalize the result in `consumer.validate` or repair a control after its deliberate mutation. A fixture correction is not a reason to narrow the rule.
+The new rule reaches every existing reader of an envelope, not only this plan's cases: 35 tracked test files call the consumer's readers. Constructed envelopes need attention first. [`envelope_skeleton`](../tests/lib/blackbox.py) sets `result.ok` and `result.exit_code` from an `ok` argument that defaults to true whatever the reply's outcome, and it has five call sites, three of which pass `ok` explicitly. Derive the skeleton's result from the reply's outcome, or correct each caller, so that a constructed envelope states a coherent result unless its control is about that incoherence. Correct accidental fixture mismatches and state the correction; preserve deliberate result faults and require their diagnostics. Do not normalize the result in `consumer.validate` or repair a control after its deliberate mutation. A fixture correction is not a reason to narrow the rule.
 
 Summarize fixture corrections in section 6's evaluation record. For each correction, name the affected helper and cases, the original incoherence, what changed, the intended assertion and the deliberate faults whose rejection remains verified. Cite their control identifiers, expected diagnostics and results. Corrections sharing one helper fix and cause can share an entry with all affected cases named. This summary lets a later reviewer distinguish repaired incidental envelope fields from a weakened control without reconstructing the entire diff.
 
@@ -319,9 +319,10 @@ Only the last row observes native execution, and only its native group depends o
 | Contract model | `docs/contract/tree.py`, `README.md`, `AGENTS.md`; `docs/generate_contract_stamps.py` | The `document` fact, its extraction, validation and rendering; the cited source as a declared input; authoring reference |
 | Generated | `docs/CONTRACT.md`, `docs/contract/public.json` | Regenerated, never hand-edited |
 | Tests | `tests/catalog.json`; `tests/suites/witness_contract/` (two case scripts, one checker, README); `tests/lib/consumer.py`; `tests/lib/blackbox.py` and the constructed controls that call `envelope_skeleton`; `tests/suites/blackbox_e2e/checker_controls.py` and README; `controller/integration/cli_contract.rs`; `tests/suites/source_drift/` (`contract_tree_controls.py`, `generators.py`, `build_contracts.py`); `tests/README.md`, `tests/COVERAGE.md` where applicable | Cases, shared outcome-consistency checks and controls, registry and suite accounts |
+| Guide | `docs/PolicyWitness.md` | One row in the command table |
 | Possibly | `docs/architecture.json` | Only if its account enumerates CLI entries; check and regenerate if so |
 
-Not touched: `build.sh`, `meson.build`, `build_contract.py`, the bundle layout, the evidence manifest, the wire schema, the host, the worker, the validator, the dispatcher, `runner verify` and the user guide. A need to change any of these is a signal to stop and reconsider, not a routine extension.
+Not touched: `build.sh`, `meson.build`, `build_contract.py`, the bundle layout, the evidence manifest, the wire schema, the host, the worker, the validator, the dispatcher and `runner verify`. A need to change any of these is a signal to stop and reconsider, not a routine extension.
 
 ## 6. Order of implementation
 
@@ -436,12 +437,12 @@ The plan ends at that prepared, untagged state with the maintainer's review pend
 | A narrow public guarantee | Successful emission gives a document the same build admits through `run`. Content, layout and labels carry no stability promise between builds. The command is public and currently intended for project verification |
 | Every failure to emit is exit 2 and requires discarding stdout | Usage errors, an unbound build, a failed gate and a failed write share one status; the reason is stderr text. A write failure does not establish exactly which bytes reached the caller |
 
-**To confirm before step 1.** Each creates behavior a caller can see.
+**Confirmed by the maintainer on 2026-11-12, before step 1.** Each creates behavior a caller can see.
 
 | Distinction | Why it matters | Commitment |
 | --- | --- | --- |
 | The command prints a bare specimen, in the controller's held serialization, not an envelope | It is the first controller output that is not an envelope, and its key order is the serializer's, not an author's | `example` output is a request document with one trailing framing newline; `run`'s held request omits that newline. Envelopes remain the form of every report |
-| The command is listed in usage and stated in the contract, and absent from the user guide | A reader of the guide alone does not learn of it; a reader of `--help` does | The entrance is disclosed where the CLI is defined and is not presented as a workflow in this release |
+| The command is listed in usage, stated in the contract and listed in the user guide's command table | A reader of the guide learns that the command exists and what its exit statuses mean, while the guide's worked examples still use hand-substituted identities | The entrance is disclosed in each place and its target remains project testing; presentation as a workflow waits for the purpose-built help and example interface |
 | Native expectations fail the case when their prerequisites hold | A machine where `sandbox_check` gives no answer for this read fails the default battery and release acceptance, subject to section 4.6's dispositions | The battery asserts the native result only under observed prerequisites, and reports it apart from consistency |
 
 ## 11. Where this stops, and the route onward
@@ -450,7 +451,7 @@ Out of scope: more than one example, selection by name, external runner examples
 
 Possible later steps keep the same direction, from code to presentation; they are not prerequisites or promised follow-up work:
 
-- **The guide and README.** Their hand-substituted `BUILD_CONTRACT` examples can shrink to the two commands in section 1 once the entrance is presented to users. That is the point at which the promise in section 10 is reconsidered.
+- **The guide and README.** Their hand-substituted `BUILD_CONTRACT` examples can shrink to the two commands in section 1 when the purpose-built help and example interface is planned. That is the point at which the promise in section 10 is reconsidered.
 - **The verify request.** `verify_request()` and the contract's `apply_only` example may share storage or extraction later if that removes useful duplication. Verification's apply-only request serves a different purpose from the paired example, and its behavior need not be unified with this command. No such refactor is required by this plan.
 - **A second example.** It needs a way to select among examples and, with that, a statement of what a selection denotes across releases. Neither is designed here.
 - **Refusal examples.** A document the app prints so that `run` refuses it would let refusal guidance come from the app as well. Its expected outcome is obtained by running it, in keeping with section 2.
