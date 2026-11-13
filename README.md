@@ -145,6 +145,7 @@ preserved release archives.
   - CLI contract and controller behavior: [controller/README.md](controller/README.md)
   - Runner service architecture: [runner/README.md](runner/README.md)
   - Architecture tour (one run in time, boundaries, the document graph): [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md)
+  - Controller tour (authority, evidence and recovery): [docs/CONTROLLER.md](docs/CONTROLLER.md)
   - Worker tour (resources, authority and constraints): [docs/WORKER.md](docs/WORKER.md)
 - Contributing:
   - Working guidance: [AGENTS.md](AGENTS.md)

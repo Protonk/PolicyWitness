@@ -2334,6 +2334,17 @@ Record `failure`: `PWRunnerReportingFailure`.
 - <a id="contract-reply-failure-original_error"></a>**`original_error`** (string?): Original aggregate error when present.
 - <a id="contract-reply-failure-evidence_retained"></a>**`evidence_retained`** (boolean): True identifies the rich fallback: original fields remain apart from the producer/summary/reporting-failure metadata and removed step comparisons. False identifies the independent minimal fallback with scalar context and empty steps/phases.
 
+<a id="contract-reply-failure-associations"></a>
+##### Reporting-failure associations
+
+Uses [Publish a report or fallback](#contract-reply-failure-publish), [Reader applicability](#contract-actor_evidence-actor-reader_scope).
+
+Reporting-failure admission checks the degraded form and applicable receiver
+context. It does not certify ordinary actor/phase associations in retained
+records. Those records may preserve the inconsistency that caused reporting
+failure. Worker-local lifecycle checks continue at their stated scope; no
+comparison or query-order conclusion is recovered from retained raw records.
+
 <a id="contract-reply-failure-publish"></a>
 ##### Publish a report or fallback
 
@@ -2349,16 +2360,7 @@ recipient's decoding failure.
 | <a id="contract-reply-failure-publish-minimal"></a>Minimal fallback arrays | Applies when (present(`reply.reporting_failure`) and not (`reply.reporting_failure.evidence_retained`)). [set_value(`reply.steps`, []), set_value(`reply.phases`, [])]. |
 | <a id="contract-reply-failure-publish-producer"></a>Fallback producer identity | Applies when present(`reply.reporting_failure`). [set_value(`reply.producer.contract`, [Contract](#contract-identity-build-contract)), set_value(`reply.producer.describe`, [Describe](#contract-identity-build-describe)), set_value(`reply.producer.commit`, [Commit](#contract-identity-build-commit))]. |
 
-<a id="contract-reply-failure-publish-associations"></a>
-###### Known gap: Reporting-failure associations
-
-The degraded branch checks the failed summary, marker and absent comparisons.
-It bypasses ordinary actor/phase association checks. Retained records can
-therefore carry the association inconsistency that caused degradation.
-Whether every reporting-failure reply must still establish those associations
-remains a maintainer decision.
-
-**Support: [check read](#contract-support-grades) for [Publish a report or fallback](#contract-reply-failure-publish).** Constructed reporting defects trigger rich fallback, preserve other projected fields and remove comparisons; malformed fallback markers refuse. Independent minimal/empty paths are read in source. Context: Read report validation, fallback writers and constructed binary reply controls. Evidence limit: No new execution credit. The association commitment remains open independently of fallback validation. Source: [PWRunnerService.swift](../runner/Sources/PWRunnerCore/PWRunnerService.swift): `pwRunnerReportData`; [PWRunnerReply.swift](../runner/Sources/PWRunnerCore/PWRunnerReply.swift): `func validateForReporting()`. Check: [ReplyFailureTests.swift](../runner/Tests/PWRunnerCoreTests/ReplyFailureTests.swift): `runReplyFailureTests`.
+**Support: [check read](#contract-support-grades) for [Publish a report or fallback](#contract-reply-failure-publish).** Constructed reporting defects trigger rich fallback, preserve other projected fields and remove comparisons; malformed fallback markers refuse. Independent minimal/empty paths are read in source. Context: Read report validation, fallback writers and constructed binary reply controls. Evidence limit: No new execution credit. Fallback validation establishes the degraded form, not ordinary association consistency in retained records. Source: [PWRunnerService.swift](../runner/Sources/PWRunnerCore/PWRunnerService.swift): `pwRunnerReportData`; [PWRunnerReply.swift](../runner/Sources/PWRunnerCore/PWRunnerReply.swift): `func validateForReporting()`. Check: [ReplyFailureTests.swift](../runner/Tests/PWRunnerCoreTests/ReplyFailureTests.swift): `runReplyFailureTests`.
 
 <a id="contract-steps"></a>
 ### Predictions, attempts and comparison
@@ -3300,7 +3302,11 @@ Uses [Check families and applicability](#contract-diagnostics-execution-families
 
 The host self-check, controller semantic reader and general canonical-JSON
 consumer check ordinary actor relationships when `reporting_failure` is
-absent. A preparation refusal belongs to the actor execution form and retains
+absent. Recipient checks compare declarations and observations carried in the
+reply; they do not independently compare those declarations with the submitted
+request. The host owns request-to-reply assembly.
+
+A preparation refusal belongs to the actor execution form and retains
 its admitted declarations: actor order, IDs and visits, phase order and owner,
 actor visit numbers and action IDs. It carries no launch, arrival, completion,
 proceed publication, step, extension-event, transfer or resource entry. Each
@@ -4051,6 +4057,16 @@ Actor: [Controller](#contract-identity-definitions-controller). Boundary: run pa
 - <a id="contract-envelope-data-runner_result"></a>**`runner_result`** ([Execution record](#contract-reply-record) ∪ null): Structurally decoded host reply when available, retained even if a later label gate refuses admission. Null when there is no decodable reply; an accepted capture can retain its exact bytes separately.
 - <a id="contract-envelope-data-request_failure"></a>**`request_failure`** ([Projected request refusal](#contract-refusals-projection)?): Controller refusal code/path, or the host refusal projected from an admitted `bad_request` reply. Omitted when the selected result supplies none.
 
+<a id="contract-envelope-data-success_findings"></a>
+##### Success and findings
+
+Uses [Select the public result](#contract-envelope-data-select).
+
+For an admitted reply, `result.ok` and process exit describe the host completion
+outcome. They do not certify successful attempts or successful controller
+relationship checks. A `finished` reply with integrity findings remains true/0;
+callers inspect the observations and findings for those separate conclusions.
+
 <a id="contract-envelope-data-select"></a>
 ##### Select the public result
 
@@ -4063,13 +4079,6 @@ The observations and supported assessments state what the run establishes.
 | --- | --- | --- |
 | <a id="contract-envelope-data-select-finished"></a>1. Admitted finished outcome | `envelope.data.runner_result.normalized_outcome` = `"finished"` | [set_value(`envelope.result.ok`, `true`), set_value(`envelope.result.exit_code`, `0`), set_value(`envelope.result.normalized_outcome`, `envelope.data.runner_result.normalized_outcome`), retain_records(`envelope.data.runner_result`)]. |
 | <a id="contract-envelope-data-select-other"></a>2. Other admitted outcome | `true` | [set_value(`envelope.result.ok`, `false`), set_value(`envelope.result.exit_code`, `1`), set_value(`envelope.result.normalized_outcome`, `envelope.data.runner_result.normalized_outcome`), retain_records(`envelope.data.runner_result`)]. |
-
-<a id="contract-envelope-data-select-success_findings"></a>
-###### Known gap: Success and findings
-
-Whether result.ok and process exit should also reflect controller integrity
-findings remains open. Present behavior selects success from the admitted
-host outcome alone.
 
 <a id="contract-envelope-data-classification"></a>
 ##### Controller classifications
@@ -4293,6 +4302,11 @@ and all host fields including step comparisons and claimed gate outcomes.
 Those retained assertions can therefore appear beside the controller's
 finding about them.
 
+Each actor-row projection describes the carried subprocess and action records
+selected through carried labels and IDs. Preserving it does not override a
+finding against that row's identity, launch association or action membership,
+or independently establish attribution to the requested actor.
+
 <a id="contract-diagnostics-execution-outer_result"></a>
 ##### Findings beside the completion result
 
@@ -4319,7 +4333,7 @@ Uses [Reply](#contract-identity-definitions-reply).
 | Reporting-failure form | A reply carrying reporting_failure: degraded outcome/rc/error, origin/diagnostic/original outcome, removed comparisons and the retention-specific record form. | Reply-wide. |
 
 The reporting-failure branch checks its degradation form while retaining the
-assembled records. Worker lifecycle projections still run independently,
+assembled records. Worker lifecycle projections still run separately,
 with their comparison-limitation requirement waived when the comparison
 has been removed by degradation. The retained host records remain
 available for inspection at their own observation boundaries.
@@ -4341,9 +4355,11 @@ final-status answer that passes the other claim checks projects as
 withholds the worker projection.
 
 <a id="contract-diagnostics-execution-vocabulary-vocabulary_choice"></a>
-###### Known gap: Unconfirmed vocabulary
+###### Unconfirmed vocabulary
 
-For ordinary and actor workers, the controller maps both unresolved and inapplicable host final-status claims to unconfirmed while retaining the host claim. Whether to retain that merged controller vocabulary remains a maintainer decision.
+For ordinary and actor workers, the controller uses `unconfirmed` for both
+unresolved and inapplicable final status. The retained host claim state and
+reason preserve that distinction for consumers that need it.
 
 <a id="contract-diagnostics-execution-scope_example"></a>
 ##### Scope example
@@ -4354,7 +4370,8 @@ then publishes top-level `withheld` and an actor-evidence finding beside
 that actor's `clean_exit`. If the admitted host summary is `finished`,
 the outer result still reports `ok: true` and exit 0. The three values
 answer the reply relationship, individual ending and host completion
-questions respectively.
+questions respectively. The actor projection describes its retained row;
+it does not certify associations rejected by a reply-wide finding.
 
 **Support: [check read](#contract-support-grades) for [Execution diagnostics](#contract-diagnostics-execution) and its descendants.** Worker-local and reply-wide projection effects, raw-record retention, open summaries, degradation applicability and outer success are distinct branches. Context: Typed controller implementation and the named constructed tests were read. Evidence limit: Actor/native family entry points and the complete gate checks were read; their detailed operation predicates have separate source owners. The scope example combines separately inspected projection and outer-result controls. Source: [porcelain_admission.rs](../controller/src/porcelain_admission.rs): `execution_diagnostics`, `project`, `validate_lifecycle`, `admit_reply`; [run_flow.rs](../controller/src/run_flow.rs): `reply_contract`, `complete_execution`; [porcelain_actor.rs](../controller/src/porcelain_actor.rs): `pub(super) fn validate`; [porcelain_native.rs](../controller/src/porcelain_native.rs): `pub(super) fn validate`. Check: [porcelain_admission.rs](../controller/src/porcelain_admission.rs): `typed_invalid_actor_account_keeps_independent_actor_endings`, `typed_degradation_never_certifies_surviving_comparison`, `typed_future_applicability_and_summary_remain_open_without_rewriting`; [run_flow.rs](../controller/src/run_flow.rs): `malformed_phase_claims_withhold_projection_and_preserve_raw_reply`, `execution_envelopes_preserve_raw_evidence_and_emit_only_execution_fields`.
 
@@ -4369,12 +4386,21 @@ lifecycle assessment remains a separate judgment over the retained native
 account and its projection. A reporting failure can retain observations that
 produce a lifecycle finding while satisfying the degradation form.
 
+These readers do not promise identical admission domains. The general Python
+consumer's outer-result check assumes replies within the controller's
+collection-capacity domain and does not reproduce that gate. Its consistency
+finding on a controller refusal for capacity alone does not establish a
+violation of the controller's result-selection rule.
+
 **Support: [executed](#contract-support-grades) for [Reader judgments](#contract-diagnostics-execution-reader_evidence).** Preparation, identifier, membership, application precedence and degradation cases check their own expected judgments and retained consequences across the actual readers. Context: Whole canonical runner-unit case passed with zero recorded system sleep. Swift judgments over 142 typed frames were retained before encoding; exact-one Rust replay carried 143 frames including the real writer-cap fallback through envelopes, then independent Python readers completed all rows and seven JSON-only controls. Evidence limit: The corpus uses constructed records and independently expected interpretations. Eleven application-positive pairs, degradation admission, the exact contradictory-worker D1 finding and retained actor projections have separate assertions. JSON-only normalization has its own domain. Native occurrence of each constructed context has separate observation owners. Source: [porcelain_admission.rs](../controller/src/porcelain_admission.rs): `execution_diagnostics`; [consumer.py](../tests/lib/consumer.py): `_validate_reply`; [lifecycle_oracle.py](../tests/lib/lifecycle_oracle.py): `check_actor_records`. Check: [run_flow.rs](../controller/src/run_flow.rs): `reader_definition_corpus_cross_readers`; [reader_corpus.py](../tests/suites/runner_unit/reader_corpus.py): `replay`. Run: `20261111T162345Z_3d6c7242`. Source snapshot: `reviewed-inputs sha256:af396aadf41ba79a0d072b62d9c3f4ff1df5b5fa30d6c4ff267c53e8437dd51d (b6ce6d26 dirty; replay identity correction)`. Case: `runner_unit/pwrunner_core_unit_executable`.
 
 <a id="contract-diagnostics-execution-reader_evidence-classifier_generation"></a>
-###### Known gap: Independent semantic classifiers
+###### Independent semantic classifiers
 
-The host, controller and test readers retain independently written semantic classifiers checked against the stated definitions. Whether to generate those classifiers from one implementation remains a maintainer decision.
+Host, controller and test readers retain separately authored semantic
+classifiers. Agreement is checked against stated definitions and independent
+expectations within each reader's scope. No generated shared classifier or
+universal equivalence is promised.
 
 <a id="contract-diagnostics-actor"></a>
 #### One actor's diagnostics
@@ -4494,13 +4520,18 @@ the separately computed actor projections. Worker-local findings affect
 that worker's projection.
 
 <a id="contract-diagnostics-issue-subject-withholding_scope"></a>
-###### Known gap: Reply-wide withholding scope
+###### Reply-wide withholding scope
 
-A reply-wide finding withholds the aggregate projection and retains separately computed actor projections. Whether that finding should also withhold the actor conclusions remains a maintainer decision.
+Reply-wide findings withhold the aggregate and retain separately computed
+actor-row projections. Each projection describes the carried subprocess and
+action records selected through carried labels and IDs. It does not override
+findings against identity, launch association or action membership, or
+independently establish attribution to the requested actor. Worker-local
+lifecycle findings still withhold that worker's projection.
 
 **Support: [executed](#contract-support-grades) for [Finding association and effect](#contract-diagnostics-issue-subject).** The constructed check retains both equal-label gates by positions 2 and 6, then checks owned-reap, activation and dependent-gate subjects with exact finding details/order and unchanged input records. Context: The named control passed in the completed zero-sleep unit/rust.unit case; its assertions inspect the findings returned by the production gate checker. Evidence limit: Execution covers the constructed owned-reap, activation and selected gate cases. Remaining predicate-location assignments retain their source support. Reference resolution and action-wide withholding choices have separate owners. Source: [porcelain_actor.rs](../controller/src/porcelain_actor.rs): `fn gates`. Check: [porcelain_actor.rs](../controller/src/porcelain_actor.rs): `gate_findings_locate_each_retained_assertion_by_position`. Run: `20261111T155411Z_29ef0802`. Source snapshot: `reviewed-inputs sha256:b5298841bceaea7af57843a0e2ab68de2dd2ed85edf21fd07b16ac91d5a8838e (b6ce6d26 dirty)`. Case: `unit/rust.unit`.
 
-**Support: [executed](#contract-support-grades) for [Finding association and effect](#contract-diagnostics-issue-subject).** Forty-two retained controls cover optional/root/object/scalar/null targets, canonical array positions, malformed or unresolved paths, aggregate and actor issue locations, version gating and accumulated independent faults; 12 accept and 30 refuse. Context: The completed blackbox_e2e/checker_controls case passed with zero recorded system sleep. Each constructed input and its exact findings remain in consumer_subject_*.json and *.errors.json. Evidence limit: These controls establish reference reading and unchanged carried documents. Product predicate-to-subject selection is checked by the gate and full-reply corpus owners; reserved withholding policy remains explicit. Source: [consumer.py](../tests/lib/consumer.py): `_subject_path_problem`, `_validate_diagnostic_subjects`. Check: [checker_controls.py](../tests/suites/blackbox_e2e/checker_controls.py): `diagnostic_subject_controls`. Run: `20261111T155411Z_29ef0802`. Source snapshot: `reviewed-inputs sha256:b5298841bceaea7af57843a0e2ab68de2dd2ed85edf21fd07b16ac91d5a8838e (b6ce6d26 dirty)`. Case: `blackbox_e2e/checker_controls`.
+**Support: [executed](#contract-support-grades) for [Finding association and effect](#contract-diagnostics-issue-subject).** Forty-two retained controls cover optional/root/object/scalar/null targets, canonical array positions, malformed or unresolved paths, aggregate and actor issue locations, version gating and accumulated independent faults; 12 accept and 30 refuse. Context: The completed blackbox_e2e/checker_controls case passed with zero recorded system sleep. Each constructed input and its exact findings remain in consumer_subject_*.json and *.errors.json. Evidence limit: These controls establish reference reading and unchanged carried documents. Product predicate-to-subject selection is checked by the gate and full-reply corpus owners; the withholding definition separately governs projection scope. Source: [consumer.py](../tests/lib/consumer.py): `_subject_path_problem`, `_validate_diagnostic_subjects`. Check: [checker_controls.py](../tests/suites/blackbox_e2e/checker_controls.py): `diagnostic_subject_controls`. Run: `20261111T155411Z_29ef0802`. Source snapshot: `reviewed-inputs sha256:b5298841bceaea7af57843a0e2ab68de2dd2ed85edf21fd07b16ac91d5a8838e (b6ce6d26 dirty)`. Case: `blackbox_e2e/checker_controls`.
 
 **Support: [source read](#contract-support-grades) for [Integrity finding](#contract-diagnostics-issue) and its descendants.** Gate-family findings carry locations in the retained reply while preserving existing predicates, detail, order and projection scope. Copied host issues preserve their own metadata. Context: Constructors, projection copy, actor gate checks and native validator dispatch read. Evidence limit: Locations identify inspected retained records. Existing worker-local and reply-wide projection rules govern the findings independently. Source: [porcelain_admission.rs](../controller/src/porcelain_admission.rs): `IntegrityIssue`, `fn issue`, `for i in &sub.disposition`; [porcelain_actor.rs](../controller/src/porcelain_actor.rs): `fn require`, `fn gates`; [porcelain_native.rs](../controller/src/porcelain_native.rs): `pub(super) fn validate`.
 
@@ -5283,10 +5314,5 @@ Each row names the record members a check reads and links each consequence with 
 | Item | Kind |
 | --- | --- |
 | [Ordinary-build history requirement](#contract-identity-surfaces-release_history) | behavior |
-| [Reporting-failure associations](#contract-reply-failure-publish-associations) | behavior |
 | [Termination cancellation reach](#contract-actor_evidence-gate-cancellation_evidence) | behavior |
-| [Success and findings](#contract-envelope-data-select-success_findings) | behavior |
-| [Unconfirmed vocabulary](#contract-diagnostics-execution-vocabulary-vocabulary_choice) | behavior |
-| [Independent semantic classifiers](#contract-diagnostics-execution-reader_evidence-classifier_generation) | behavior |
-| [Reply-wide withholding scope](#contract-diagnostics-issue-subject-withholding_scope) | behavior |
 <!-- END GENERATED PUBLIC CONTRACT -->

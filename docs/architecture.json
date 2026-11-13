@@ -3184,7 +3184,7 @@
           "label": "source_drift check.py",
           "kind": "check",
           "facts": {
-            "Guards": "copies and vocabularies that are not generated, workflow guidance sections and diagnostic routes, the Known gap indexes in the architecture, build and worker tours, and the evidence-channel landing paths"
+            "Guards": "copies and vocabularies that are not generated, workflow guidance sections and diagnostic routes, the Known gap indexes in the architecture, build, worker and controller tours, and the evidence-channel landing paths"
           },
           "sources": [
             {

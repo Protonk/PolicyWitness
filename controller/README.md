@@ -3,12 +3,16 @@
 The Rust controller drives a selected runner service and prints one JSON witness
 per specimen. It ships as `PolicyWitness.app/Contents/MacOS/policy-witness`.
 For the actor form the dossier carries one policy account per actor
-(`data.specimen.actors[]`), the fallback compilation runs once per apply actor
-(`data.actor_policy_checks[]`) and the execution diagnostics project each
+(`data.specimen.actors[]`). When fallback compilation is eligible, it checks
+the held whole request and each carried actor policy object in request order,
+before host mode admission is known (`data.actor_policy_checks[]`). This does
+not establish policy application. The execution diagnostics project each
 actor's disposition record (`data.runner_sandbox_diagnostics.actors[]`) under
 a `per_actor` aggregate.
 The runner owns policy application, predictions and attempts; the controller
 owns request preparation, reply admission, provenance and execution diagnostics.
+The [controller tour](../docs/CONTROLLER.md) explains those responsibilities,
+their evidence boundaries and recovery limits.
 See [AGENTS.md](AGENTS.md) for working guidance and the
 [user guide](../docs/PolicyWitness.md) for specimen and output formats.
 

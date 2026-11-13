@@ -651,6 +651,11 @@ and all host fields including step comparisons and claimed gate outcomes.
 Those retained assertions can therefore appear beside the controller's
 finding about them.
 
+Each actor-row projection describes the carried subprocess and action records
+selected through carried labels and IDs. Preserving it does not override a
+finding against that row's identity, launch association or action membership,
+or independently establish attribution to the requested actor.
+
 ### Findings beside the completion result {outer_result: definition}
 
 ```contract
@@ -680,7 +685,7 @@ uses: ["identity.definitions.reply"]
 | Reporting-failure form | A reply carrying reporting_failure: degraded outcome/rc/error, origin/diagnostic/original outcome, removed comparisons and the retention-specific record form. | Reply-wide. |
 
 The reporting-failure branch checks its degradation form while retaining the
-assembled records. Worker lifecycle projections still run independently,
+assembled records. Worker lifecycle projections still run separately,
 with their comparison-limitation requirement waived when the comparison
 has been removed by degradation. The retained host records remain
 available for inspection at their own observation boundaries.
@@ -704,13 +709,11 @@ final-status answer that passes the other claim checks projects as
 `unrecognized`. This differs from an unknown closed claim state, which
 withholds the worker projection.
 
-#### Unconfirmed vocabulary {vocabulary_choice: gap}
+#### Unconfirmed vocabulary {vocabulary_choice: definition}
 
-```contract
-kind: "behavior"
-```
-
-For ordinary and actor workers, the controller maps both unresolved and inapplicable host final-status claims to unconfirmed while retaining the host claim. Whether to retain that merged controller vocabulary remains a maintainer decision.
+For ordinary and actor workers, the controller uses `unconfirmed` for both
+unresolved and inapplicable final status. The retained host claim state and
+reason preserve that distinction for consumers that need it.
 
 ### Scope example {scope_example: example}
 
@@ -720,7 +723,8 @@ then publishes top-level `withheld` and an actor-evidence finding beside
 that actor's `clean_exit`. If the admitted host summary is `finished`,
 the outer result still reports `ok: true` and exit 0. The three values
 answer the reply relationship, individual ending and host completion
-questions respectively.
+questions respectively. The actor projection describes its retained row;
+it does not certify associations rejected by a reply-wide finding.
 
 ### Controller finding support {support: owner}
 
@@ -746,6 +750,12 @@ lifecycle assessment remains a separate judgment over the retained native
 account and its projection. A reporting failure can retain observations that
 produce a lifecycle finding while satisfying the degradation form.
 
+These readers do not promise identical admission domains. The general Python
+consumer's outer-result check assumes replies within the controller's
+collection-capacity domain and does not reproduce that gate. Its consistency
+finding on a controller refusal for capacity alone does not establish a
+violation of the controller's result-selection rule.
+
 
 #### Corpus support {support: owner}
 
@@ -761,13 +771,12 @@ case: "runner_unit/pwrunner_core_unit_executable"
 source_snapshot: "reviewed-inputs sha256:af396aadf41ba79a0d072b62d9c3f4ff1df5b5fa30d6c4ff267c53e8437dd51d (b6ce6d26 dirty; replay identity correction)"
 ```
 
-#### Independent semantic classifiers {classifier_generation: gap}
+#### Independent semantic classifiers {classifier_generation: definition}
 
-```contract
-kind: "behavior"
-```
-
-The host, controller and test readers retain independently written semantic classifiers checked against the stated definitions. Whether to generate those classifiers from one implementation remains a maintainer decision.
+Host, controller and test readers retain separately authored semantic
+classifiers. Agreement is checked against stated definitions and independent
+expectations within each reader's scope. No generated shared classifier or
+universal equivalence is promised.
 
 ## One actor's diagnostics {actor: subject}
 
@@ -1132,13 +1141,14 @@ that check. Reply-wide findings withhold the aggregate projection and retain
 the separately computed actor projections. Worker-local findings affect
 that worker's projection.
 
-#### Reply-wide withholding scope {withholding_scope: gap}
+#### Reply-wide withholding scope {withholding_scope: definition}
 
-```contract
-kind: "behavior"
-```
-
-A reply-wide finding withholds the aggregate projection and retains separately computed actor projections. Whether that finding should also withhold the actor conclusions remains a maintainer decision.
+Reply-wide findings withhold the aggregate and retain separately computed
+actor-row projections. Each projection describes the carried subprocess and
+action records selected through carried labels and IDs. It does not override
+findings against identity, launch association or action membership, or
+independently establish attribution to the requested actor. Worker-local
+lifecycle findings still withhold that worker's projection.
 
 #### Executed gate finding locations {gate_execution: owner}
 
@@ -1162,7 +1172,7 @@ source: [{"path":"tests/lib/consumer.py","symbol":"_subject_path_problem"},{"pat
 check: {"path":"tests/suites/blackbox_e2e/checker_controls.py","symbol":"diagnostic_subject_controls","form":"test"}
 pins: "Forty-two retained controls cover optional/root/object/scalar/null targets, canonical array positions, malformed or unresolved paths, aggregate and actor issue locations, version gating and accumulated independent faults; 12 accept and 30 refuse."
 context: "The completed blackbox_e2e/checker_controls case passed with zero recorded system sleep. Each constructed input and its exact findings remain in consumer_subject_*.json and *.errors.json."
-limits: "These controls establish reference reading and unchanged carried documents. Product predicate-to-subject selection is checked by the gate and full-reply corpus owners; reserved withholding policy remains explicit."
+limits: "These controls establish reference reading and unchanged carried documents. Product predicate-to-subject selection is checked by the gate and full-reply corpus owners; the withholding definition separately governs projection scope."
 run: "20261111T155411Z_29ef0802"
 case: "blackbox_e2e/checker_controls"
 source_snapshot: "reviewed-inputs sha256:b5298841bceaea7af57843a0e2ab68de2dd2ed85edf21fd07b16ac91d5a8838e (b6ce6d26 dirty)"

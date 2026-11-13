@@ -127,7 +127,11 @@ uses: ["diagnostics.execution.families", "reply.failure.publish"]
 
 The host self-check, controller semantic reader and general canonical-JSON
 consumer check ordinary actor relationships when `reporting_failure` is
-absent. A preparation refusal belongs to the actor execution form and retains
+absent. Recipient checks compare declarations and observations carried in the
+reply; they do not independently compare those declarations with the submitted
+request. The host owns request-to-reply assembly.
+
+A preparation refusal belongs to the actor execution form and retains
 its admitted declarations: actor order, IDs and visits, phase order and owner,
 actor visit numbers and action IDs. It carries no launch, arrival, completion,
 proceed publication, step, extension-event, transfer or resource entry. Each

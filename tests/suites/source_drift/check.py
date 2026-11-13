@@ -1062,6 +1062,7 @@ SHAPE_GOLDENS = {"reply": "tests/fixtures/contract/response_shape.json",
 
 BUILD_DOC = "docs/BUILD.md"
 WORKER_DOC = "docs/WORKER.md"
+CONTROLLER_DOC = "docs/CONTROLLER.md"
 
 
 def handwritten(tree: repository_tree.Tree, relative: str):
@@ -1075,9 +1076,9 @@ def handwritten(tree: repository_tree.Tree, relative: str):
 def check_known_gap_index(tree: repository_tree.Tree) -> list[Problem]:
     """Every paragraph opening with "Known gap" is indexed, in order, by the last section, which lists nothing else.
 
-    The convention holds in the architecture, build and worker tours."""
+    The convention holds in the architecture, build, worker and controller tours."""
     problems = []
-    for relative in (ARCHITECTURE_DOC, BUILD_DOC, WORKER_DOC):
+    for relative in (ARCHITECTURE_DOC, BUILD_DOC, WORKER_DOC, CONTROLLER_DOC):
         problems.extend(known_gap_index_problems(tree, relative))
     return problems
 
@@ -1192,7 +1193,7 @@ RULES = (
     Rule("host_invariance", check_host_invariance,
          inputs=(directory(RUNNER_SOURCES, (".swift", ".c", ".h", ".m", ".mm")),)),
     Rule("known_gap_index", check_known_gap_index,
-         inputs=(required(ARCHITECTURE_DOC), required(BUILD_DOC), required(WORKER_DOC)), helpers=MARKDOWN_HELPERS),
+         inputs=(required(ARCHITECTURE_DOC), required(BUILD_DOC), required(WORKER_DOC), required(CONTROLLER_DOC)), helpers=MARKDOWN_HELPERS),
     Rule("evidence_channel_paths", check_evidence_channel_paths,
          inputs=(required(ARCHITECTURE_DOC), *(required(path) for path in SHAPE_GOLDENS.values())), helpers=MARKDOWN_HELPERS),
 )

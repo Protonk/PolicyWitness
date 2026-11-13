@@ -254,6 +254,18 @@ producer/summary/reporting-failure metadata and removed step comparisons.
 False identifies the independent minimal fallback with scalar context and
 empty steps/phases.
 
+### Reporting-failure associations {associations: definition}
+
+```contract
+uses: ["reply.failure.publish", "actor_evidence.actor.reader_scope"]
+```
+
+Reporting-failure admission checks the degraded form and applicable receiver
+context. It does not certify ordinary actor/phase associations in retained
+records. Those records may preserve the inconsistency that caused reporting
+failure. Worker-local lifecycle checks continue at their stated scope; no
+comparison or query-order conclusion is recovered from retained raw records.
+
 ### Publish a report or fallback {publish: reports}
 
 ```contract
@@ -266,18 +278,6 @@ retained_free: {"effect": {"kind": "native_protocol", "reason": "Validation/enco
 The rich fallback preserves observations that triggered rejection. Empty reply bytes reach the
 recipient's decoding failure.
 
-#### Reporting-failure associations {associations: gap}
-
-```contract
-kind: "behavior"
-```
-
-The degraded branch checks the failed summary, marker and absent comparisons.
-It bypasses ordinary actor/phase association checks. Retained records can
-therefore carry the association inconsistency that caused degradation.
-Whether every reporting-failure reply must still establish those associations
-remains a maintainer decision.
-
 #### Fallback support {support: owner}
 
 ```contract
@@ -286,7 +286,7 @@ source: [{"path":"runner/Sources/PWRunnerCore/PWRunnerService.swift","symbol":"p
 check: {"path":"runner/Tests/PWRunnerCoreTests/ReplyFailureTests.swift","symbol":"runReplyFailureTests","form":"test"}
 pins: "Constructed reporting defects trigger rich fallback, preserve other projected fields and remove comparisons; malformed fallback markers refuse. Independent minimal/empty paths are read in source."
 context: "Read report validation, fallback writers and constructed binary reply controls."
-limits: "No new execution credit. The association commitment remains open independently of fallback validation."
+limits: "No new execution credit. Fallback validation establishes the degraded form, not ordinary association consistency in retained records."
 ```
 #### Fallback summary {summary: effect}
 

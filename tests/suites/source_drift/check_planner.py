@@ -522,7 +522,7 @@ def structure_scenarios(repo):
 def gap_scenarios(repo):
     """Exercise every tour's paragraph/index ownership."""
     scenarios = []
-    for name in ('ARCHITECTURE', 'BUILD', 'WORKER'):
+    for name in ('ARCHITECTURE', 'BUILD', 'WORKER', 'CONTROLLER'):
         path = Path(f'docs/{name}.md')
         source = (repo / path).read_text()
         heading = '## Known gaps'

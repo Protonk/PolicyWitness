@@ -183,6 +183,17 @@ accepted capture can retain its exact bytes separately.
 Controller refusal code/path, or the host refusal projected from an admitted
 `bad_request` reply. Omitted when the selected result supplies none.
 
+### Success and findings {success_findings: definition}
+
+```contract
+uses: ["envelope.data.select"]
+```
+
+For an admitted reply, `result.ok` and process exit describe the host completion
+outcome. They do not certify successful attempts or successful controller
+relationship checks. A `finished` reply with integrity findings remains true/0;
+callers inspect the observations and findings for those separate conclusions.
+
 ### Select the public result {select: reports}
 
 ```contract
@@ -197,16 +208,6 @@ selection: "first_match"
 
 `finished` can coexist with a failed file open or an integrity finding.
 The observations and supported assessments state what the run establishes.
-
-#### Success and findings {success_findings: gap}
-
-```contract
-kind: "behavior"
-```
-
-Whether result.ok and process exit should also reflect controller integrity
-findings remains open. Present behavior selects success from the admitted
-host outcome alone.
 
 #### Admitted finished outcome {finished: outcome}
 

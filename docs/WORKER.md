@@ -15,7 +15,8 @@ later phases share that process and can observe effects of earlier actions,
 and in the actor form an actor can hold authority it issued itself. The unsandboxed host arranges queries, collects
 publications and replies. This tour explains the resources and constraints of
 that instrument. The [architecture tour](ARCHITECTURE.md) owns orchestration
-and ordering; the [build tour](BUILD.md) owns compilation and provenance;
+and ordering; the [controller tour](CONTROLLER.md) owns preparation, reply
+assessment and publication; the [build tour](BUILD.md) owns compilation and provenance;
 the [evidence contract](../tests/FAILURE-PROPAGATION-CONTRACT.md#worker-evidence-contract)
 owns the meaning of its records.
 
@@ -41,7 +42,7 @@ flowchart TB
     subgraph outside["Outside the worker"]
         validator["Validator queries<br/>the live worker"]
         host["Host collects publications<br/>and assembles comparisons"]
-        controller["Controller associates<br/>external log candidates"]
+        controller["Controller admits reply<br/>and projects diagnostics"]
     end
     acquire -->|publish observations| storage
     extension -->|publish native results| storage
@@ -84,7 +85,8 @@ The worker performs admitted actions and publishes native observations. Its
 inputs include attempt kinds and targets, bounded arguments, phase partitions
 and time allowances; requested extension actions maintain local handle state.
 Prediction belongs to the validator. The host owns disposition, collection and
-comparison, and the controller gathers log candidates. Those responsibilities
+comparison; the controller prepares the request, admits the reply and projects
+execution diagnostics. Those responsibilities
 are a deliberate division of work, not observations the worker failed to make.
 
 The observations themselves have limits. Native return values and local
@@ -92,8 +94,8 @@ publications do not establish private kernel extension state, effective
 permissions, revocation or the cause of a permission-shaped failure. Nor do they
 show whether privacy consent mediation affected an attempt; the
 [external-runner guide](PolicyWitness.md#external-runners-byoxpc) gives
-target-selection guidance for that limitation. Joining host observations and
-log candidates to a result does not automatically justify causal attribution or
+target-selection guidance for that limitation. Joining host observations to a result does not automatically justify causal
+attribution or
 a verdict that prediction and enforcement agree. The
 [evidence ownership table](ARCHITECTURE.md#evidence-channels-and-ownership)
 and [comparison contract](PolicyWitness.md#reading-a-comparison-record)

@@ -184,16 +184,23 @@ finished reply and three coherent failed ones, including a `bad_request` and
 an unfamiliar outcome. It changes, removes, nulls and retypes each result field
 alone and requires exactly that field's diagnostic; changes all three; removes
 the result; and combines a result fault with an unrelated record error,
-keeping both. A reply retained after a compiled-profile refusal, an absent
+keeping both. Every control matches the complete independently specified
+diagnostic multiset, including required structural companions; extra, missing
+and duplicate messages fail. Sensitivity controls pass an authored diagnostic
+list through the same control path, add an unrelated message, remove a required
+message, duplicate one, and restore the list. Their receipts retain each
+expected/actual list and the exact missing/unexpected differences.
+A reply retained after a compiled-profile refusal, an absent
 reply, a rejected capture, a failed delivery and a host-byte diagnostic each
 produce no result diagnostic whatever the result says, and a foreign producer
 remains one version error. A projected record that differs from the captured
 bytes is reported, and the result still answers to the bytes. Removing the
 controller's assessment leaves the relationship in force. The consumer does
 not restate the controller's collection-capacity gate, so a reply refused for
-capacity alone is outside what it reads and would be reported as inconsistent;
-no host produces one. The rule checks today's mapping and does not decide whether
-controller integrity findings should change command success.
+capacity alone is outside what it reads and would be reported as inconsistent.
+These constructed controls do not establish native production of that case.
+The public rule selects success from the admitted host outcome independently
+of controller integrity findings; the controls verify that relationship.
 
 Constructed client controls independently check contract-first
 admission, ordered reservation attempts, bounded observations, exact base64

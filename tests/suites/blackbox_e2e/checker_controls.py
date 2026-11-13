@@ -12,6 +12,7 @@ import json
 import os
 import subprocess
 import sys
+from collections import Counter
 from pathlib import Path
 
 
@@ -611,8 +612,8 @@ def consumer_controls(artifacts, current):
 def result_consistency_controls(artifacts, current):
     """An admitted reply's outcome binds the envelope's outcome, success flag and exit code.
 
-    Each control names the exact set of result diagnostics it requires and any
-    other consumer diagnostic that must remain beside them. Applicability is
+    Each control independently names its complete diagnostic multiset,
+    including structural companions and their multiplicity. Applicability is
     established from the capture, producer and profile context alone; no
     control here derives an outcome from a body that failed admission, an
     absent reply or a rejected capture.
@@ -621,18 +622,28 @@ def result_consistency_controls(artifacts, current):
                 'exit_code': 'result.exit_code is ', 'result': 'result is not an object'}
     records = []
 
-    def control(name, envelope, expected=(), beside=()):
+    def control(name, envelope, expected=None, beside=(), *, error_source=validate, receipt=records):
+        expected = expected or {}
         path = artifacts / ('result_' + name + '.json')
         path.write_text(json.dumps(envelope, indent=2) + '\n')
-        errors = validate(envelope)
+        errors = error_source(envelope)
+        wanted = list(expected.values()) + list(beside)
+        missing = sorted((Counter(wanted) - Counter(errors)).elements())
+        unexpected = sorted((Counter(errors) - Counter(wanted)).elements())
         found = sorted(key for key, prefix in prefixes.items() if any(e.startswith(prefix) for e in errors))
+        receipt.append({'control': name, 'expected_result_diagnostics': sorted(expected),
+                        'found_result_diagnostics': found, 'expected_errors': wanted, 'errors': errors,
+                        'missing': missing, 'unexpected': unexpected})
+        assert not missing and not unexpected, (name, 'complete diagnostics', missing, unexpected, errors)
         assert found == sorted(expected), (name, 'result diagnostics', found, sorted(expected), errors)
-        for diagnostic in beside:
-            assert any(diagnostic in error for error in errors), (name, 'missing', diagnostic, errors)
-        if not expected and not beside:
-            assert not errors, (name, errors)
-        records.append({'control': name, 'expected_result_diagnostics': sorted(expected), 'found_result_diagnostics': found,
-                        'required_beside': list(beside), 'errors': errors})
+
+    def result_error(field, shown, outcome, success, exit_code):
+        # Formatting only: callers supply explicit expected values and the fault.
+        # Never derive an expectation from reader output or admission functions.
+        if field == 'normalized_outcome':
+            return f'result.normalized_outcome is {shown}, not the admitted reply outcome {json.dumps(outcome)}'
+        wanted = json.dumps(success) if field == 'ok' else str(exit_code)
+        return f'result.{field} is {shown}, not {wanted} for the admitted reply outcome {json.dumps(outcome)}'
 
     def failed(outcome):
         document = copy.deepcopy(current)
@@ -640,75 +651,104 @@ def result_consistency_controls(artifacts, current):
         document['result'].update(normalized_outcome=outcome, ok=False, exit_code=1, error='constructed failure')
         return recapture_host_reply(document)
 
-    baselines = {'finished': copy.deepcopy(current), 'worker_timeout': failed('worker_timeout'),
-                 'bad_request': failed('bad_request'), 'unfamiliar_outcome': failed('unfamiliar_outcome')}
-    for label, baseline in baselines.items():
+    baselines = [('finished', copy.deepcopy(current), True, 0),
+                 ('worker_timeout', failed('worker_timeout'), False, 1),
+                 ('bad_request', failed('bad_request'), False, 1),
+                 ('unfamiliar_outcome', failed('unfamiliar_outcome'), False, 1)]
+    absent = object()
+    shape_companions = {
+        'outcome_number': 'envelope.result.normalized_outcome is number, not string',
+        'ok_integer': 'envelope.result.ok is number, not boolean',
+        'exit_boolean': 'envelope.result.exit_code is boolean, not number',
+        'exit_text': 'envelope.result.exit_code is string, not number',
+    }
+    comparison_error = current['data']['runner_result']['steps'][0]['step_id'] + ': missing comparison'
+    for label, baseline, success, exit_code in baselines:
         control(label + '_coherent', baseline)
-        finished = label == 'finished'
         # One result field changes at a time; the other two keep their diagnostics absent.
         changes = [
-            ('outcome_tool_error', 'normalized_outcome', lambda r: r.update(normalized_outcome='tool_error')),
-            ('outcome_refusal_spelling', 'normalized_outcome',
-             lambda r: r.update(normalized_outcome='malformed_runner_response')),
-            ('outcome_other', 'normalized_outcome',
-             lambda r: r.update(normalized_outcome='worker_timeout' if label != 'worker_timeout' else 'finished')),
-            ('outcome_removed', 'normalized_outcome', lambda r: r.pop('normalized_outcome')),
-            ('outcome_null', 'normalized_outcome', lambda r: r.update(normalized_outcome=None)),
-            ('outcome_number', 'normalized_outcome', lambda r: r.update(normalized_outcome=0)),
-            ('ok_flipped', 'ok', lambda r: r.update(ok=not finished)),
-            ('ok_removed', 'ok', lambda r: r.pop('ok')),
-            ('ok_null', 'ok', lambda r: r.update(ok=None)),
+            ('outcome_tool_error', 'normalized_outcome', 'tool_error'),
+            ('outcome_refusal_spelling', 'normalized_outcome', 'malformed_runner_response'),
+            ('outcome_other', 'normalized_outcome', 'worker_timeout' if label != 'worker_timeout' else 'finished'),
+            ('outcome_removed', 'normalized_outcome', absent),
+            ('outcome_null', 'normalized_outcome', None),
+            ('outcome_number', 'normalized_outcome', 0),
+            ('ok_flipped', 'ok', not success),
+            ('ok_removed', 'ok', absent),
+            ('ok_null', 'ok', None),
             # Python compares 1 == True and 0 == False; the JSON types differ.
-            ('ok_integer', 'ok', lambda r: r.update(ok=1 if finished else 0)),
-            ('exit_other', 'exit_code', lambda r: r.update(exit_code=1 if finished else 0)),
-            ('exit_tool_error', 'exit_code', lambda r: r.update(exit_code=2)),
-            ('exit_removed', 'exit_code', lambda r: r.pop('exit_code')),
-            ('exit_null', 'exit_code', lambda r: r.update(exit_code=None)),
-            ('exit_boolean', 'exit_code', lambda r: r.update(exit_code=not finished)),
-            ('exit_text', 'exit_code', lambda r: r.update(exit_code='0' if finished else '1')),
+            ('ok_integer', 'ok', 1 if success else 0),
+            ('exit_other', 'exit_code', 1 if success else 0),
+            ('exit_tool_error', 'exit_code', 2),
+            ('exit_removed', 'exit_code', absent),
+            ('exit_null', 'exit_code', None),
+            ('exit_boolean', 'exit_code', not success),
+            ('exit_text', 'exit_code', '0' if success else '1'),
         ]
-        for name, field, change in changes:
+        for name, field, value in changes:
             document = copy.deepcopy(baseline)
-            change(document['result'])
-            control(label + '_' + name, document, expected=(field,))
+            if value is absent:
+                document['result'].pop(field)
+            else:
+                document['result'][field] = value
+            expected = {field: result_error(field, 'absent' if value is absent else json.dumps(value),
+                                            label, success, exit_code)}
+            beside = (shape_companions[name],) if name in shape_companions else ()
+            control(label + '_' + name, document, expected, beside)
         document = copy.deepcopy(baseline)
-        document['result'].update(normalized_outcome='tool_error', ok=not finished, exit_code=2)
-        control(label + '_all_three', document, expected=('normalized_outcome', 'ok', 'exit_code'))
+        faults = {'normalized_outcome': 'tool_error', 'ok': not success, 'exit_code': 2}
+        document['result'].update(faults)
+        expected = {field: result_error(field, json.dumps(value), label, success, exit_code)
+                    for field, value in faults.items()}
+        control(label + '_all_three', document, expected)
         for name, value in (('result_removed', None), ('result_array', [])):
             document = copy.deepcopy(baseline)
             if value is None:
                 document.pop('result')
             else:
                 document['result'] = value
-            control(label + '_' + name, document, expected=('result',))
+            control(label + '_' + name, document,
+                    {'result': f'result is not an object beside the admitted reply outcome {label!r}'},
+                    beside=('envelope.result is array, not object',) if name == 'result_array' else ())
         # An unrelated record error in an admitted reply leaves the result mismatch visible, and conversely.
         document = copy.deepcopy(baseline)
         del document['data']['runner_result']['steps'][0]['comparison']
         recapture_host_reply(document)
-        control(label + '_record_error_only', document, beside=('missing comparison',))
+        control(label + '_record_error_only', document, beside=(comparison_error,))
         document['result']['exit_code'] = 2
-        control(label + '_record_error_and_exit', document, expected=('exit_code',), beside=('missing comparison',))
+        control(label + '_record_error_and_exit', document,
+                {'exit_code': result_error('exit_code', '2', label, success, exit_code)}, beside=(comparison_error,))
 
     # Admission failures supply no mapping, whatever the retained body and the result say.
     # Every field disagrees with the finished reply the baseline's bytes carry.
     mismatched = {'normalized_outcome': 'tool_error', 'ok': False, 'exit_code': 7}
+    mismatched_errors = {field: result_error(field, json.dumps(value), 'finished', True, 0)
+                         for field, value in mismatched.items()}
     contexts = json.loads((ROOT / 'tests/fixtures/contract/compiled_profile.json').read_text())
-    refused_contexts = [case for case in contexts if not case['valid']]
-    assert refused_contexts and len(refused_contexts) < len(contexts), 'profile fixture needs admitted and refused contexts'
+    profile_errors = {'captured': (), 'unavailable': (),
+                      'unavailable_producer': ('unavailable compiled_profile cannot claim capture context',),
+                      'unavailable_capture_stage': ('unavailable compiled_profile cannot claim capture context',)}
+    for field in ('producer', 'capture_stage', 'status'):
+        semantic = 'invalid compiled_profile status' if field == 'status' else 'compiled_profile requires worker/before_apply context'
+        for suffix in ('None', 'False', '7', 'future', 'absent'):
+            shape = (f'reply.compiled_profile.{field} is {"boolean" if suffix == "False" else "number"}, not string',) if suffix in ('False', '7') else ()
+            profile_errors[field + '_' + suffix] = shape + (semantic,)
+    assert {case['name'] for case in contexts} == set(profile_errors), 'profile expectation inventory drift'
     for case in contexts:
+        beside = profile_errors[case['name']]
+        assert case['valid'] is (not beside), (case['name'], 'profile admission expectation drift')
         document = copy.deepcopy(current)
         document['data']['runner_result']['compiled_profile'] = case['receipt']
         recapture_host_reply(document)
         document['result'].update(mismatched)
         control('profile_' + case['name'] + '_mismatched_result', document,
-                expected=('normalized_outcome', 'ok', 'exit_code') if case['valid'] else (),
-                beside=() if case['valid'] else ('compiled_profile',))
+                expected=mismatched_errors if not beside else {}, beside=beside)
         if not case['valid']:
             # The controller's own account of this refusal: a retained body and no assessment.
             document['result'].update(normalized_outcome='malformed_runner_response', ok=False, exit_code=1,
                                       error='constructed refusal')
             document['data']['runner_sandbox_diagnostics'] = None
-            control('profile_' + case['name'] + '_refused', document, beside=('compiled_profile',))
+            control('profile_' + case['name'] + '_refused', document, beside=beside)
 
     # No reply: the controller's own result rules apply, and nothing is derived here.
     for name, result in (('tool_error', dict(normalized_outcome='tool_error', ok=False, exit_code=2)),
@@ -719,20 +759,23 @@ def result_consistency_controls(artifacts, current):
         control('absent_reply_' + name, document)
 
     # A capture this reader rejects cannot admit the bytes it retains.
-    for name, change, diagnostic in [
+    rejection_consequences = ('rejected runner client capture lacks an admission error',
+                              'runner client submission projection requires admitted complete capture',
+                              'rejected client capture cannot supply host result or host-byte diagnostics')
+    for name, change, diagnostics in [
         ('capture_foreign_contract', lambda c: c['transport'].update(contract='test:foreign'),
-         'runner client transport admission disagrees'),
+         ('runner client transport admission disagrees with independent admission: unsupported runner client capture: contract test:foreign',) + rejection_consequences),
         ('capture_truncated_reply', lambda c: c['transport']['runner_reply'].update(truncated=True),
-         'runner client transport admission disagrees'),
+         ('runner client transport admission disagrees with independent admission: capture.runner_reply truncated marker disagrees with counts',) + rejection_consequences),
         ('delivery_failed', lambda c: c['request_delivery'].update(error='constructed delivery failure'),
-         'runner client transport admission disagrees'),
+         ('runner client transport admission disagrees with independent admission',) + rejection_consequences),
         ('reply_diagnostic', lambda c: c.update(runner_reply_error='constructed host-byte diagnostic'),
-         'complete parsed host bytes carry a host-byte diagnostic'),
+         ('complete parsed host bytes carry a host-byte diagnostic',)),
     ]:
         document = copy.deepcopy(current)
         change(document['data']['runner_client'])
         document['result'].update(mismatched)
-        control('rejected_' + name, document, beside=(diagnostic,))
+        control('rejected_' + name, document, beside=diagnostics)
 
     # No controller-authored field switches the relationship off: with the
     # assessment removed, the admitted bytes still bind the result.
@@ -740,14 +783,17 @@ def result_consistency_controls(artifacts, current):
     document['data']['runner_sandbox_diagnostics'] = None
     control('assessment_absent_coherent', document)
     document['result'].update(mismatched)
-    control('assessment_absent_mismatched', document, expected=('normalized_outcome', 'ok', 'exit_code'))
+    control('assessment_absent_mismatched', document, expected=mismatched_errors)
 
     # The result is bound to the admitted bytes: a projected record that differs
     # from them is reported, and the result still answers to the bytes.
     document = copy.deepcopy(current)
     document['data']['runner_result']['normalized_outcome'] = 'worker_timeout'
     document['result'].update(normalized_outcome='worker_timeout', ok=False, exit_code=1)
-    control('projection_differs_from_bytes', document, expected=('normalized_outcome', 'ok', 'exit_code'),
+    projection_faults = {'normalized_outcome': 'worker_timeout', 'ok': False, 'exit_code': 1}
+    control('projection_differs_from_bytes', document,
+            expected={field: result_error(field, json.dumps(value), 'finished', True, 0)
+                      for field, value in projection_faults.items()},
             beside=('host result differs from exact captured host reply bytes',))
 
     # A foreign producer is one version error; nothing behind it is read.
@@ -755,10 +801,38 @@ def result_consistency_controls(artifacts, current):
     document['data']['runner_result']['producer'] = {'contract': 'test:next'}
     recapture_host_reply(document)
     document['result'].update(mismatched)
-    errors = validate(document)
-    assert len(errors) == 1 and 'unsupported runner response' in errors[0], errors
-    records.append({'control': 'unsupported_reply_version', 'expected_result_diagnostics': [],
-                    'found_result_diagnostics': [], 'required_beside': ['unsupported runner response'], 'errors': errors})
+    control('unsupported_reply_version', document,
+            beside=("unsupported runner response: contract 'test:next' (expected 'test:fixture')",))
+
+    # Exercise the actual control route with an independently literal complete
+    # result, then an extra, missing and duplicate message, then restoration.
+    # These test-owned substitutions change no production reader or semantics.
+    oracle_records = []
+    expected_exit = 'result.exit_code is 2, not 0 for the admitted reply outcome "finished"'
+    expected_comparison = 'fs_write_allowed: missing comparison'
+    oracle_document = copy.deepcopy(current)
+    del oracle_document['data']['runner_result']['steps'][0]['comparison']
+    oracle_document['result']['exit_code'] = 2
+    recapture_host_reply(oracle_document)
+    baseline_errors = [expected_exit, expected_comparison]
+    sentinel = 'unexpected diagnostic sentinel'
+    for name, supplied, missing, unexpected in (
+        ('baseline', baseline_errors, [], []),
+        ('extra', baseline_errors + [sentinel], [], [sentinel]),
+        ('missing', [expected_exit], [expected_comparison], []),
+        ('duplicate', baseline_errors + [expected_comparison], [], [expected_comparison]),
+        ('restored', baseline_errors, [], []),
+    ):
+        try:
+            control('oracle_' + name, oracle_document, {'exit_code': expected_exit},
+                    beside=(expected_comparison,), error_source=lambda _: supplied, receipt=oracle_records)
+        except AssertionError:
+            assert missing or unexpected, (name, 'valid oracle control refused')
+        else:
+            assert not missing and not unexpected, (name, 'damaged oracle control accepted')
+        assert oracle_records[-1]['missing'] == missing, (name, oracle_records[-1])
+        assert oracle_records[-1]['unexpected'] == unexpected, (name, oracle_records[-1])
+    (artifacts / 'result-oracle-controls.json').write_text(json.dumps(oracle_records, indent=2) + '\n')
 
     assert len({record['control'] for record in records}) == len(records)
     (artifacts / 'result-consistency-controls.json').write_text(json.dumps(records, indent=2) + '\n')

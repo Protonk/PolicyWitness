@@ -22062,7 +22062,7 @@
             },
             "id": "diagnostics.execution.reply_checks",
             "kind": "acts",
-            "prose": "The controller appends these findings to top-level `disposition_issues`.\nIt preserves the actor entries, an ordinary stop reason already derived,\nand all host fields including step comparisons and claimed gate outcomes.\nThose retained assertions can therefore appear beside the controller's\nfinding about them.",
+            "prose": "The controller appends these findings to top-level `disposition_issues`.\nIt preserves the actor entries, an ordinary stop reason already derived,\nand all host fields including step comparisons and claimed gate outcomes.\nThose retained assertions can therefore appear beside the controller's\nfinding about them.\n\nEach actor-row projection describes the carried subprocess and action records\nselected through carried labels and IDs. Preserving it does not override a\nfinding against that row's identity, launch association or action membership,\nor independently establish attribution to the requested actor.",
             "referenced_types": {
               "diagnostics.actors": {
                 "json_null": false,
@@ -22734,58 +22734,6 @@
               }
             },
             "title": "Other admitted outcome"
-          },
-          {
-            "context": {
-              "entry": [
-                "cli_run"
-              ],
-              "free_when": [
-                "Client capture and host reply admission have succeeded."
-              ],
-              "recipient": [
-                "cli_caller"
-              ],
-              "report": [
-                "run_envelope"
-              ],
-              "when": {
-                "body": {
-                  "args": [
-                    {
-                      "attr": "runner_result",
-                      "node": "Attribute",
-                      "value": {
-                        "attr": "data",
-                        "node": "Attribute",
-                        "value": {
-                          "id": "envelope",
-                          "node": "Name"
-                        }
-                      }
-                    }
-                  ],
-                  "func": {
-                    "id": "present",
-                    "node": "Name"
-                  },
-                  "keywords": [],
-                  "node": "Call"
-                },
-                "node": "Expression"
-              },
-              "where": "run completion after admission",
-              "who": [
-                "identity.definitions.controller"
-              ]
-            },
-            "facts": {
-              "kind": "behavior"
-            },
-            "id": "envelope.data.select.success_findings",
-            "kind": "gap",
-            "prose": "Whether result.ok and process exit should also reflect controller integrity\nfindings remains open. Present behavior selects success from the admitted\nhost outcome alone.",
-            "title": "Success and findings"
           },
           {
             "context": {},
@@ -61818,7 +61766,7 @@
             },
             "id": "diagnostics.execution.reply_checks",
             "kind": "acts",
-            "prose": "The controller appends these findings to top-level `disposition_issues`.\nIt preserves the actor entries, an ordinary stop reason already derived,\nand all host fields including step comparisons and claimed gate outcomes.\nThose retained assertions can therefore appear beside the controller's\nfinding about them.",
+            "prose": "The controller appends these findings to top-level `disposition_issues`.\nIt preserves the actor entries, an ordinary stop reason already derived,\nand all host fields including step comparisons and claimed gate outcomes.\nThose retained assertions can therefore appear beside the controller's\nfinding about them.\n\nEach actor-row projection describes the carried subprocess and action records\nselected through carried labels and IDs. Preserving it does not override a\nfinding against that row's identity, launch association or action membership,\nor independently establish attribution to the requested actor.",
             "referenced_types": {
               "diagnostics.actors": {
                 "json_null": false,
@@ -62490,58 +62438,6 @@
               }
             },
             "title": "Other admitted outcome"
-          },
-          {
-            "context": {
-              "entry": [
-                "cli_run"
-              ],
-              "free_when": [
-                "Client capture and host reply admission have succeeded."
-              ],
-              "recipient": [
-                "cli_caller"
-              ],
-              "report": [
-                "run_envelope"
-              ],
-              "when": {
-                "body": {
-                  "args": [
-                    {
-                      "attr": "runner_result",
-                      "node": "Attribute",
-                      "value": {
-                        "attr": "data",
-                        "node": "Attribute",
-                        "value": {
-                          "id": "envelope",
-                          "node": "Name"
-                        }
-                      }
-                    }
-                  ],
-                  "func": {
-                    "id": "present",
-                    "node": "Name"
-                  },
-                  "keywords": [],
-                  "node": "Call"
-                },
-                "node": "Expression"
-              },
-              "where": "run completion after admission",
-              "who": [
-                "identity.definitions.controller"
-              ]
-            },
-            "facts": {
-              "kind": "behavior"
-            },
-            "id": "envelope.data.select.success_findings",
-            "kind": "gap",
-            "prose": "Whether result.ok and process exit should also reflect controller integrity\nfindings remains open. Present behavior selects success from the admitted\nhost outcome alone.",
-            "title": "Success and findings"
           },
           {
             "context": {},
@@ -95647,7 +95543,7 @@
             },
             "id": "diagnostics.execution.reply_checks",
             "kind": "acts",
-            "prose": "The controller appends these findings to top-level `disposition_issues`.\nIt preserves the actor entries, an ordinary stop reason already derived,\nand all host fields including step comparisons and claimed gate outcomes.\nThose retained assertions can therefore appear beside the controller's\nfinding about them.",
+            "prose": "The controller appends these findings to top-level `disposition_issues`.\nIt preserves the actor entries, an ordinary stop reason already derived,\nand all host fields including step comparisons and claimed gate outcomes.\nThose retained assertions can therefore appear beside the controller's\nfinding about them.\n\nEach actor-row projection describes the carried subprocess and action records\nselected through carried labels and IDs. Preserving it does not override a\nfinding against that row's identity, launch association or action membership,\nor independently establish attribution to the requested actor.",
             "referenced_types": {
               "diagnostics.actors": {
                 "json_null": false,
@@ -96319,58 +96215,6 @@
               }
             },
             "title": "Other admitted outcome"
-          },
-          {
-            "context": {
-              "entry": [
-                "cli_run"
-              ],
-              "free_when": [
-                "Client capture and host reply admission have succeeded."
-              ],
-              "recipient": [
-                "cli_caller"
-              ],
-              "report": [
-                "run_envelope"
-              ],
-              "when": {
-                "body": {
-                  "args": [
-                    {
-                      "attr": "runner_result",
-                      "node": "Attribute",
-                      "value": {
-                        "attr": "data",
-                        "node": "Attribute",
-                        "value": {
-                          "id": "envelope",
-                          "node": "Name"
-                        }
-                      }
-                    }
-                  ],
-                  "func": {
-                    "id": "present",
-                    "node": "Name"
-                  },
-                  "keywords": [],
-                  "node": "Call"
-                },
-                "node": "Expression"
-              },
-              "where": "run completion after admission",
-              "who": [
-                "identity.definitions.controller"
-              ]
-            },
-            "facts": {
-              "kind": "behavior"
-            },
-            "id": "envelope.data.select.success_findings",
-            "kind": "gap",
-            "prose": "Whether result.ok and process exit should also reflect controller integrity\nfindings remains open. Present behavior selects success from the admitted\nhost outcome alone.",
-            "title": "Success and findings"
           },
           {
             "context": {},
@@ -143980,7 +143824,7 @@
             },
             "id": "diagnostics.execution.reply_checks",
             "kind": "acts",
-            "prose": "The controller appends these findings to top-level `disposition_issues`.\nIt preserves the actor entries, an ordinary stop reason already derived,\nand all host fields including step comparisons and claimed gate outcomes.\nThose retained assertions can therefore appear beside the controller's\nfinding about them.",
+            "prose": "The controller appends these findings to top-level `disposition_issues`.\nIt preserves the actor entries, an ordinary stop reason already derived,\nand all host fields including step comparisons and claimed gate outcomes.\nThose retained assertions can therefore appear beside the controller's\nfinding about them.\n\nEach actor-row projection describes the carried subprocess and action records\nselected through carried labels and IDs. Preserving it does not override a\nfinding against that row's identity, launch association or action membership,\nor independently establish attribution to the requested actor.",
             "referenced_types": {
               "diagnostics.actors": {
                 "json_null": false,
@@ -144652,58 +144496,6 @@
               }
             },
             "title": "Other admitted outcome"
-          },
-          {
-            "context": {
-              "entry": [
-                "cli_run"
-              ],
-              "free_when": [
-                "Client capture and host reply admission have succeeded."
-              ],
-              "recipient": [
-                "cli_caller"
-              ],
-              "report": [
-                "run_envelope"
-              ],
-              "when": {
-                "body": {
-                  "args": [
-                    {
-                      "attr": "runner_result",
-                      "node": "Attribute",
-                      "value": {
-                        "attr": "data",
-                        "node": "Attribute",
-                        "value": {
-                          "id": "envelope",
-                          "node": "Name"
-                        }
-                      }
-                    }
-                  ],
-                  "func": {
-                    "id": "present",
-                    "node": "Name"
-                  },
-                  "keywords": [],
-                  "node": "Call"
-                },
-                "node": "Expression"
-              },
-              "where": "run completion after admission",
-              "who": [
-                "identity.definitions.controller"
-              ]
-            },
-            "facts": {
-              "kind": "behavior"
-            },
-            "id": "envelope.data.select.success_findings",
-            "kind": "gap",
-            "prose": "Whether result.ok and process exit should also reflect controller integrity\nfindings remains open. Present behavior selects success from the admitted\nhost outcome alone.",
-            "title": "Success and findings"
           },
           {
             "context": {},
@@ -171796,7 +171588,7 @@
             },
             "id": "diagnostics.execution.reply_checks",
             "kind": "acts",
-            "prose": "The controller appends these findings to top-level `disposition_issues`.\nIt preserves the actor entries, an ordinary stop reason already derived,\nand all host fields including step comparisons and claimed gate outcomes.\nThose retained assertions can therefore appear beside the controller's\nfinding about them.",
+            "prose": "The controller appends these findings to top-level `disposition_issues`.\nIt preserves the actor entries, an ordinary stop reason already derived,\nand all host fields including step comparisons and claimed gate outcomes.\nThose retained assertions can therefore appear beside the controller's\nfinding about them.\n\nEach actor-row projection describes the carried subprocess and action records\nselected through carried labels and IDs. Preserving it does not override a\nfinding against that row's identity, launch association or action membership,\nor independently establish attribution to the requested actor.",
             "referenced_types": {
               "diagnostics.actors": {
                 "json_null": false,
@@ -172468,58 +172260,6 @@
               }
             },
             "title": "Other admitted outcome"
-          },
-          {
-            "context": {
-              "entry": [
-                "cli_run"
-              ],
-              "free_when": [
-                "Client capture and host reply admission have succeeded."
-              ],
-              "recipient": [
-                "cli_caller"
-              ],
-              "report": [
-                "run_envelope"
-              ],
-              "when": {
-                "body": {
-                  "args": [
-                    {
-                      "attr": "runner_result",
-                      "node": "Attribute",
-                      "value": {
-                        "attr": "data",
-                        "node": "Attribute",
-                        "value": {
-                          "id": "envelope",
-                          "node": "Name"
-                        }
-                      }
-                    }
-                  ],
-                  "func": {
-                    "id": "present",
-                    "node": "Name"
-                  },
-                  "keywords": [],
-                  "node": "Call"
-                },
-                "node": "Expression"
-              },
-              "where": "run completion after admission",
-              "who": [
-                "identity.definitions.controller"
-              ]
-            },
-            "facts": {
-              "kind": "behavior"
-            },
-            "id": "envelope.data.select.success_findings",
-            "kind": "gap",
-            "prose": "Whether result.ok and process exit should also reflect controller integrity\nfindings remains open. Present behavior selects success from the admitted\nhost outcome alone.",
-            "title": "Success and findings"
           },
           {
             "context": {},
@@ -197455,6 +197195,34 @@
                 "identity.definitions.host"
               ]
             },
+            "facts": {
+              "uses": [
+                "reply.failure.publish",
+                "actor_evidence.actor.reader_scope"
+              ]
+            },
+            "id": "reply.failure.associations",
+            "kind": "definition",
+            "prose": "Reporting-failure admission checks the degraded form and applicable receiver\ncontext. It does not certify ordinary actor/phase associations in retained\nrecords. Those records may preserve the inconsistency that caused reporting\nfailure. Worker-local lifecycle checks continue at their stated scope; no\ncomparison or query-order conclusion is recovered from retained raw records.",
+            "title": "Reporting-failure associations"
+          },
+          {
+            "context": {
+              "entry": [
+                "xpc_execute"
+              ],
+              "recipient": [
+                "controller",
+                "xpc_caller"
+              ],
+              "report": [
+                "runner_reply"
+              ],
+              "where": "host reply assembly",
+              "who": [
+                "identity.definitions.host"
+              ]
+            },
             "facts": {},
             "field": {
               "json_null": false,
@@ -197638,31 +197406,6 @@
             "kind": "reports",
             "prose": "The rich fallback preserves observations that triggered rejection. Empty reply bytes reach the\nrecipient's decoding failure.",
             "title": "Publish a report or fallback"
-          },
-          {
-            "context": {
-              "entry": [
-                "xpc_execute"
-              ],
-              "recipient": [
-                "controller",
-                "xpc_caller"
-              ],
-              "report": [
-                "runner_reply"
-              ],
-              "where": "host response encoding",
-              "who": [
-                "identity.definitions.host"
-              ]
-            },
-            "facts": {
-              "kind": "behavior"
-            },
-            "id": "reply.failure.publish.associations",
-            "kind": "gap",
-            "prose": "The degraded branch checks the failed summary, marker and absent comparisons.\nIt bypasses ordinary actor/phase association checks. Retained records can\ntherefore carry the association inconsistency that caused degradation.\nWhether every reporting-failure reply must still establish those associations\nremains a maintainer decision.",
-            "title": "Reporting-failure associations"
           },
           {
             "context": {
@@ -199742,7 +199485,7 @@
             },
             "id": "actor_evidence.actor.reader_scope",
             "kind": "definition",
-            "prose": "The host self-check, controller semantic reader and general canonical-JSON\nconsumer check ordinary actor relationships when `reporting_failure` is\nabsent. A preparation refusal belongs to the actor execution form and retains\nits admitted declarations: actor order, IDs and visits, phase order and owner,\nactor visit numbers and action IDs. It carries no launch, arrival, completion,\nproceed publication, step, extension-event, transfer or resource entry. Each\nactor has zero successful applications. Its host authority scope is\n`not_attempted`, with empty region and custody tables. The actor event table\nis present, including when empty.\n\nPhase and actor identifiers are nonempty and NUL-free within their admitted\nUTF-8 capacities. Action identifiers use that same capacity and NUL rule;\nordinary-form actions admit an empty identifier, while actor-form actions require a\nnonempty one. Declaration uniqueness and exact schedule membership apply\nseparately from that string grammar.\n\nA reporting-failure reply is checked for its degradation form and applicable\ncompiled-profile context. Host validation, controller admission and the general consumer apply that\nscope. The actor/extension readers check ordinary semantic relationships when\nthe reporting-failure record is absent. The lifecycle receipt reader separately checks each\nretained worker's claims and controller projection; findings from that\nassessment describe the retained worker evidence.",
+            "prose": "The host self-check, controller semantic reader and general canonical-JSON\nconsumer check ordinary actor relationships when `reporting_failure` is\nabsent. Recipient checks compare declarations and observations carried in the\nreply; they do not independently compare those declarations with the submitted\nrequest. The host owns request-to-reply assembly.\n\nA preparation refusal belongs to the actor execution form and retains\nits admitted declarations: actor order, IDs and visits, phase order and owner,\nactor visit numbers and action IDs. It carries no launch, arrival, completion,\nproceed publication, step, extension-event, transfer or resource entry. Each\nactor has zero successful applications. Its host authority scope is\n`not_attempted`, with empty region and custody tables. The actor event table\nis present, including when empty.\n\nPhase and actor identifiers are nonempty and NUL-free within their admitted\nUTF-8 capacities. Action identifiers use that same capacity and NUL rule;\nordinary-form actions admit an empty identifier, while actor-form actions require a\nnonempty one. Declaration uniqueness and exact schedule membership apply\nseparately from that string grammar.\n\nA reporting-failure reply is checked for its degradation form and applicable\ncompiled-profile context. Host validation, controller admission and the general consumer apply that\nscope. The actor/extension readers check ordinary semantic relationships when\nthe reporting-failure record is absent. The lifecycle receipt reader separately checks each\nretained worker's claims and controller projection; findings from that\nassessment describe the retained worker evidence.",
             "title": "Reader applicability"
           },
           {
@@ -218718,7 +218461,7 @@
             },
             "id": "diagnostics.execution.families",
             "kind": "definition",
-            "prose": "| Check family | Applicability and checked relationship | Finding scope |\n| --- | --- | --- |\n| Lifecycle claims | Each worker subprocess: required claims, state/basis references, owned final status, cleanup facts, progress association, slot count/order, action identity, lifecycle copies and supported conflicts. | That worker's projection; ordinary projection or one actor entry. |\n| Phase and query evidence | Ordinary semantic reply: phase IDs/order, action partition, collection state, validator ownership and raw-record association, protocol violations, comparison vocabulary and the complete `query_first` chain. | Reply-wide. |\n| Policy delivery/read evidence | Ordinary semantic reply with a worker policy-read receipt: bounded counts, host expected-count agreement, length-refusal detail and consistency with later worker observations. | Reply-wide. |\n| Native operation observations | Ordinary semantic reply: each fresh-read, fresh-write and exec observation's applicable fields and native relationships. | Reply-wide. |\n| Actor association | Ordinary semantic actor reply: actor indexes/IDs, launch/subprocess PID, visits, phase owner, event owner and matching transfer source. | Reply-wide. |\n| Actor setup, equipment, application, termination and custody | Ordinary semantic reply: execution-form applicability and the actor record relationships defined by those surfaces. | Reply-wide. |\n| Reporting-failure form | A reply carrying reporting_failure: degraded outcome/rc/error, origin/diagnostic/original outcome, removed comparisons and the retention-specific record form. | Reply-wide. |\n\nThe reporting-failure branch checks its degradation form while retaining the\nassembled records. Worker lifecycle projections still run independently,\nwith their comparison-limitation requirement waived when the comparison\nhas been removed by degradation. The retained host records remain\navailable for inspection at their own observation boundaries.",
+            "prose": "| Check family | Applicability and checked relationship | Finding scope |\n| --- | --- | --- |\n| Lifecycle claims | Each worker subprocess: required claims, state/basis references, owned final status, cleanup facts, progress association, slot count/order, action identity, lifecycle copies and supported conflicts. | That worker's projection; ordinary projection or one actor entry. |\n| Phase and query evidence | Ordinary semantic reply: phase IDs/order, action partition, collection state, validator ownership and raw-record association, protocol violations, comparison vocabulary and the complete `query_first` chain. | Reply-wide. |\n| Policy delivery/read evidence | Ordinary semantic reply with a worker policy-read receipt: bounded counts, host expected-count agreement, length-refusal detail and consistency with later worker observations. | Reply-wide. |\n| Native operation observations | Ordinary semantic reply: each fresh-read, fresh-write and exec observation's applicable fields and native relationships. | Reply-wide. |\n| Actor association | Ordinary semantic actor reply: actor indexes/IDs, launch/subprocess PID, visits, phase owner, event owner and matching transfer source. | Reply-wide. |\n| Actor setup, equipment, application, termination and custody | Ordinary semantic reply: execution-form applicability and the actor record relationships defined by those surfaces. | Reply-wide. |\n| Reporting-failure form | A reply carrying reporting_failure: degraded outcome/rc/error, origin/diagnostic/original outcome, removed comparisons and the retention-specific record form. | Reply-wide. |\n\nThe reporting-failure branch checks its degradation form while retaining the\nassembled records. Worker lifecycle projections still run separately,\nwith their comparison-limitation requirement waived when the comparison\nhas been removed by degradation. The retained host records remain\navailable for inspection at their own observation boundaries.",
             "title": "Check families and applicability"
           },
           {
@@ -218906,7 +218649,7 @@
             },
             "id": "diagnostics.execution.reply_checks",
             "kind": "acts",
-            "prose": "The controller appends these findings to top-level `disposition_issues`.\nIt preserves the actor entries, an ordinary stop reason already derived,\nand all host fields including step comparisons and claimed gate outcomes.\nThose retained assertions can therefore appear beside the controller's\nfinding about them.",
+            "prose": "The controller appends these findings to top-level `disposition_issues`.\nIt preserves the actor entries, an ordinary stop reason already derived,\nand all host fields including step comparisons and claimed gate outcomes.\nThose retained assertions can therefore appear beside the controller's\nfinding about them.\n\nEach actor-row projection describes the carried subprocess and action records\nselected through carried labels and IDs. Preserving it does not override a\nfinding against that row's identity, launch association or action membership,\nor independently establish attribution to the requested actor.",
             "referenced_types": {
               "diagnostics.actors": {
                 "json_null": false,
@@ -219578,58 +219321,6 @@
               }
             },
             "title": "Other admitted outcome"
-          },
-          {
-            "context": {
-              "entry": [
-                "cli_run"
-              ],
-              "free_when": [
-                "Client capture and host reply admission have succeeded."
-              ],
-              "recipient": [
-                "cli_caller"
-              ],
-              "report": [
-                "run_envelope"
-              ],
-              "when": {
-                "body": {
-                  "args": [
-                    {
-                      "attr": "runner_result",
-                      "node": "Attribute",
-                      "value": {
-                        "attr": "data",
-                        "node": "Attribute",
-                        "value": {
-                          "id": "envelope",
-                          "node": "Name"
-                        }
-                      }
-                    }
-                  ],
-                  "func": {
-                    "id": "present",
-                    "node": "Name"
-                  },
-                  "keywords": [],
-                  "node": "Call"
-                },
-                "node": "Expression"
-              },
-              "where": "run completion after admission",
-              "who": [
-                "identity.definitions.controller"
-              ]
-            },
-            "facts": {
-              "kind": "behavior"
-            },
-            "id": "envelope.data.select.success_findings",
-            "kind": "gap",
-            "prose": "Whether result.ok and process exit should also reflect controller integrity\nfindings remains open. Present behavior selects success from the admitted\nhost outcome alone.",
-            "title": "Success and findings"
           },
           {
             "context": {},
@@ -302883,7 +302574,7 @@
             },
             "id": "actor_evidence.actor.reader_scope",
             "kind": "definition",
-            "prose": "The host self-check, controller semantic reader and general canonical-JSON\nconsumer check ordinary actor relationships when `reporting_failure` is\nabsent. A preparation refusal belongs to the actor execution form and retains\nits admitted declarations: actor order, IDs and visits, phase order and owner,\nactor visit numbers and action IDs. It carries no launch, arrival, completion,\nproceed publication, step, extension-event, transfer or resource entry. Each\nactor has zero successful applications. Its host authority scope is\n`not_attempted`, with empty region and custody tables. The actor event table\nis present, including when empty.\n\nPhase and actor identifiers are nonempty and NUL-free within their admitted\nUTF-8 capacities. Action identifiers use that same capacity and NUL rule;\nordinary-form actions admit an empty identifier, while actor-form actions require a\nnonempty one. Declaration uniqueness and exact schedule membership apply\nseparately from that string grammar.\n\nA reporting-failure reply is checked for its degradation form and applicable\ncompiled-profile context. Host validation, controller admission and the general consumer apply that\nscope. The actor/extension readers check ordinary semantic relationships when\nthe reporting-failure record is absent. The lifecycle receipt reader separately checks each\nretained worker's claims and controller projection; findings from that\nassessment describe the retained worker evidence.",
+            "prose": "The host self-check, controller semantic reader and general canonical-JSON\nconsumer check ordinary actor relationships when `reporting_failure` is\nabsent. Recipient checks compare declarations and observations carried in the\nreply; they do not independently compare those declarations with the submitted\nrequest. The host owns request-to-reply assembly.\n\nA preparation refusal belongs to the actor execution form and retains\nits admitted declarations: actor order, IDs and visits, phase order and owner,\nactor visit numbers and action IDs. It carries no launch, arrival, completion,\nproceed publication, step, extension-event, transfer or resource entry. Each\nactor has zero successful applications. Its host authority scope is\n`not_attempted`, with empty region and custody tables. The actor event table\nis present, including when empty.\n\nPhase and actor identifiers are nonempty and NUL-free within their admitted\nUTF-8 capacities. Action identifiers use that same capacity and NUL rule;\nordinary-form actions admit an empty identifier, while actor-form actions require a\nnonempty one. Declaration uniqueness and exact schedule membership apply\nseparately from that string grammar.\n\nA reporting-failure reply is checked for its degradation form and applicable\ncompiled-profile context. Host validation, controller admission and the general consumer apply that\nscope. The actor/extension readers check ordinary semantic relationships when\nthe reporting-failure record is absent. The lifecycle receipt reader separately checks each\nretained worker's claims and controller projection; findings from that\nassessment describe the retained worker evidence.",
             "title": "Reader applicability"
           },
           {
@@ -316456,7 +316147,7 @@
             },
             "id": "diagnostics.execution.families",
             "kind": "definition",
-            "prose": "| Check family | Applicability and checked relationship | Finding scope |\n| --- | --- | --- |\n| Lifecycle claims | Each worker subprocess: required claims, state/basis references, owned final status, cleanup facts, progress association, slot count/order, action identity, lifecycle copies and supported conflicts. | That worker's projection; ordinary projection or one actor entry. |\n| Phase and query evidence | Ordinary semantic reply: phase IDs/order, action partition, collection state, validator ownership and raw-record association, protocol violations, comparison vocabulary and the complete `query_first` chain. | Reply-wide. |\n| Policy delivery/read evidence | Ordinary semantic reply with a worker policy-read receipt: bounded counts, host expected-count agreement, length-refusal detail and consistency with later worker observations. | Reply-wide. |\n| Native operation observations | Ordinary semantic reply: each fresh-read, fresh-write and exec observation's applicable fields and native relationships. | Reply-wide. |\n| Actor association | Ordinary semantic actor reply: actor indexes/IDs, launch/subprocess PID, visits, phase owner, event owner and matching transfer source. | Reply-wide. |\n| Actor setup, equipment, application, termination and custody | Ordinary semantic reply: execution-form applicability and the actor record relationships defined by those surfaces. | Reply-wide. |\n| Reporting-failure form | A reply carrying reporting_failure: degraded outcome/rc/error, origin/diagnostic/original outcome, removed comparisons and the retention-specific record form. | Reply-wide. |\n\nThe reporting-failure branch checks its degradation form while retaining the\nassembled records. Worker lifecycle projections still run independently,\nwith their comparison-limitation requirement waived when the comparison\nhas been removed by degradation. The retained host records remain\navailable for inspection at their own observation boundaries.",
+            "prose": "| Check family | Applicability and checked relationship | Finding scope |\n| --- | --- | --- |\n| Lifecycle claims | Each worker subprocess: required claims, state/basis references, owned final status, cleanup facts, progress association, slot count/order, action identity, lifecycle copies and supported conflicts. | That worker's projection; ordinary projection or one actor entry. |\n| Phase and query evidence | Ordinary semantic reply: phase IDs/order, action partition, collection state, validator ownership and raw-record association, protocol violations, comparison vocabulary and the complete `query_first` chain. | Reply-wide. |\n| Policy delivery/read evidence | Ordinary semantic reply with a worker policy-read receipt: bounded counts, host expected-count agreement, length-refusal detail and consistency with later worker observations. | Reply-wide. |\n| Native operation observations | Ordinary semantic reply: each fresh-read, fresh-write and exec observation's applicable fields and native relationships. | Reply-wide. |\n| Actor association | Ordinary semantic actor reply: actor indexes/IDs, launch/subprocess PID, visits, phase owner, event owner and matching transfer source. | Reply-wide. |\n| Actor setup, equipment, application, termination and custody | Ordinary semantic reply: execution-form applicability and the actor record relationships defined by those surfaces. | Reply-wide. |\n| Reporting-failure form | A reply carrying reporting_failure: degraded outcome/rc/error, origin/diagnostic/original outcome, removed comparisons and the retention-specific record form. | Reply-wide. |\n\nThe reporting-failure branch checks its degradation form while retaining the\nassembled records. Worker lifecycle projections still run separately,\nwith their comparison-limitation requirement waived when the comparison\nhas been removed by degradation. The retained host records remain\navailable for inspection at their own observation boundaries.",
             "title": "Check families and applicability"
           },
           {
@@ -316644,7 +316335,7 @@
             },
             "id": "diagnostics.execution.reply_checks",
             "kind": "acts",
-            "prose": "The controller appends these findings to top-level `disposition_issues`.\nIt preserves the actor entries, an ordinary stop reason already derived,\nand all host fields including step comparisons and claimed gate outcomes.\nThose retained assertions can therefore appear beside the controller's\nfinding about them.",
+            "prose": "The controller appends these findings to top-level `disposition_issues`.\nIt preserves the actor entries, an ordinary stop reason already derived,\nand all host fields including step comparisons and claimed gate outcomes.\nThose retained assertions can therefore appear beside the controller's\nfinding about them.\n\nEach actor-row projection describes the carried subprocess and action records\nselected through carried labels and IDs. Preserving it does not override a\nfinding against that row's identity, launch association or action membership,\nor independently establish attribution to the requested actor.",
             "referenced_types": {
               "diagnostics.actors": {
                 "json_null": false,
@@ -317316,58 +317007,6 @@
               }
             },
             "title": "Other admitted outcome"
-          },
-          {
-            "context": {
-              "entry": [
-                "cli_run"
-              ],
-              "free_when": [
-                "Client capture and host reply admission have succeeded."
-              ],
-              "recipient": [
-                "cli_caller"
-              ],
-              "report": [
-                "run_envelope"
-              ],
-              "when": {
-                "body": {
-                  "args": [
-                    {
-                      "attr": "runner_result",
-                      "node": "Attribute",
-                      "value": {
-                        "attr": "data",
-                        "node": "Attribute",
-                        "value": {
-                          "id": "envelope",
-                          "node": "Name"
-                        }
-                      }
-                    }
-                  ],
-                  "func": {
-                    "id": "present",
-                    "node": "Name"
-                  },
-                  "keywords": [],
-                  "node": "Call"
-                },
-                "node": "Expression"
-              },
-              "where": "run completion after admission",
-              "who": [
-                "identity.definitions.controller"
-              ]
-            },
-            "facts": {
-              "kind": "behavior"
-            },
-            "id": "envelope.data.select.success_findings",
-            "kind": "gap",
-            "prose": "Whether result.ok and process exit should also reflect controller integrity\nfindings remains open. Present behavior selects success from the admitted\nhost outcome alone.",
-            "title": "Success and findings"
           },
           {
             "context": {},
@@ -335014,31 +334653,6 @@
               "report": [
                 "runner_reply"
               ],
-              "where": "host response encoding",
-              "who": [
-                "identity.definitions.host"
-              ]
-            },
-            "facts": {
-              "kind": "behavior"
-            },
-            "id": "reply.failure.publish.associations",
-            "kind": "gap",
-            "prose": "The degraded branch checks the failed summary, marker and absent comparisons.\nIt bypasses ordinary actor/phase association checks. Retained records can\ntherefore carry the association inconsistency that caused degradation.\nWhether every reporting-failure reply must still establish those associations\nremains a maintainer decision.",
-            "title": "Reporting-failure associations"
-          },
-          {
-            "context": {
-              "entry": [
-                "xpc_execute"
-              ],
-              "recipient": [
-                "controller",
-                "xpc_caller"
-              ],
-              "report": [
-                "runner_reply"
-              ],
               "when": {
                 "body": {
                   "node": "BoolOp",
@@ -347383,58 +346997,6 @@
               "entry": [
                 "cli_run"
               ],
-              "free_when": [
-                "Client capture and host reply admission have succeeded."
-              ],
-              "recipient": [
-                "cli_caller"
-              ],
-              "report": [
-                "run_envelope"
-              ],
-              "when": {
-                "body": {
-                  "args": [
-                    {
-                      "attr": "runner_result",
-                      "node": "Attribute",
-                      "value": {
-                        "attr": "data",
-                        "node": "Attribute",
-                        "value": {
-                          "id": "envelope",
-                          "node": "Name"
-                        }
-                      }
-                    }
-                  ],
-                  "func": {
-                    "id": "present",
-                    "node": "Name"
-                  },
-                  "keywords": [],
-                  "node": "Call"
-                },
-                "node": "Expression"
-              },
-              "where": "run completion after admission",
-              "who": [
-                "identity.definitions.controller"
-              ]
-            },
-            "facts": {
-              "kind": "behavior"
-            },
-            "id": "envelope.data.select.success_findings",
-            "kind": "gap",
-            "prose": "Whether result.ok and process exit should also reflect controller integrity\nfindings remains open. Present behavior selects success from the admitted\nhost outcome alone.",
-            "title": "Success and findings"
-          },
-          {
-            "context": {
-              "entry": [
-                "cli_run"
-              ],
               "recipient": [
                 "cli_caller"
               ],
@@ -347458,6 +347020,32 @@
             "kind": "field",
             "prose": "Held-input, equipment and provenance observations, including partial records\non failure.",
             "title": "Dossier"
+          },
+          {
+            "context": {
+              "entry": [
+                "cli_run"
+              ],
+              "recipient": [
+                "cli_caller"
+              ],
+              "report": [
+                "run_envelope"
+              ],
+              "where": "run payload assembly",
+              "who": [
+                "identity.definitions.controller"
+              ]
+            },
+            "facts": {
+              "uses": [
+                "envelope.data.select"
+              ]
+            },
+            "id": "envelope.data.success_findings",
+            "kind": "definition",
+            "prose": "For an admitted reply, `result.ok` and process exit describe the host completion\noutcome. They do not certify successful attempts or successful controller\nrelationship checks. A `finished` reply with integrity findings remains true/0;\ncallers inspect the observations and findings for those separate conclusions.",
+            "title": "Success and findings"
           },
           {
             "context": {
@@ -348356,7 +347944,7 @@
             },
             "id": "actor_evidence.actor.reader_scope",
             "kind": "definition",
-            "prose": "The host self-check, controller semantic reader and general canonical-JSON\nconsumer check ordinary actor relationships when `reporting_failure` is\nabsent. A preparation refusal belongs to the actor execution form and retains\nits admitted declarations: actor order, IDs and visits, phase order and owner,\nactor visit numbers and action IDs. It carries no launch, arrival, completion,\nproceed publication, step, extension-event, transfer or resource entry. Each\nactor has zero successful applications. Its host authority scope is\n`not_attempted`, with empty region and custody tables. The actor event table\nis present, including when empty.\n\nPhase and actor identifiers are nonempty and NUL-free within their admitted\nUTF-8 capacities. Action identifiers use that same capacity and NUL rule;\nordinary-form actions admit an empty identifier, while actor-form actions require a\nnonempty one. Declaration uniqueness and exact schedule membership apply\nseparately from that string grammar.\n\nA reporting-failure reply is checked for its degradation form and applicable\ncompiled-profile context. Host validation, controller admission and the general consumer apply that\nscope. The actor/extension readers check ordinary semantic relationships when\nthe reporting-failure record is absent. The lifecycle receipt reader separately checks each\nretained worker's claims and controller projection; findings from that\nassessment describe the retained worker evidence.",
+            "prose": "The host self-check, controller semantic reader and general canonical-JSON\nconsumer check ordinary actor relationships when `reporting_failure` is\nabsent. Recipient checks compare declarations and observations carried in the\nreply; they do not independently compare those declarations with the submitted\nrequest. The host owns request-to-reply assembly.\n\nA preparation refusal belongs to the actor execution form and retains\nits admitted declarations: actor order, IDs and visits, phase order and owner,\nactor visit numbers and action IDs. It carries no launch, arrival, completion,\nproceed publication, step, extension-event, transfer or resource entry. Each\nactor has zero successful applications. Its host authority scope is\n`not_attempted`, with empty region and custody tables. The actor event table\nis present, including when empty.\n\nPhase and actor identifiers are nonempty and NUL-free within their admitted\nUTF-8 capacities. Action identifiers use that same capacity and NUL rule;\nordinary-form actions admit an empty identifier, while actor-form actions require a\nnonempty one. Declaration uniqueness and exact schedule membership apply\nseparately from that string grammar.\n\nA reporting-failure reply is checked for its degradation form and applicable\ncompiled-profile context. Host validation, controller admission and the general consumer apply that\nscope. The actor/extension readers check ordinary semantic relationships when\nthe reporting-failure record is absent. The lifecycle receipt reader separately checks each\nretained worker's claims and controller projection; findings from that\nassessment describe the retained worker evidence.",
             "title": "Reader applicability"
           },
           {
@@ -379438,7 +379026,7 @@
             },
             "id": "diagnostics.execution.families",
             "kind": "definition",
-            "prose": "| Check family | Applicability and checked relationship | Finding scope |\n| --- | --- | --- |\n| Lifecycle claims | Each worker subprocess: required claims, state/basis references, owned final status, cleanup facts, progress association, slot count/order, action identity, lifecycle copies and supported conflicts. | That worker's projection; ordinary projection or one actor entry. |\n| Phase and query evidence | Ordinary semantic reply: phase IDs/order, action partition, collection state, validator ownership and raw-record association, protocol violations, comparison vocabulary and the complete `query_first` chain. | Reply-wide. |\n| Policy delivery/read evidence | Ordinary semantic reply with a worker policy-read receipt: bounded counts, host expected-count agreement, length-refusal detail and consistency with later worker observations. | Reply-wide. |\n| Native operation observations | Ordinary semantic reply: each fresh-read, fresh-write and exec observation's applicable fields and native relationships. | Reply-wide. |\n| Actor association | Ordinary semantic actor reply: actor indexes/IDs, launch/subprocess PID, visits, phase owner, event owner and matching transfer source. | Reply-wide. |\n| Actor setup, equipment, application, termination and custody | Ordinary semantic reply: execution-form applicability and the actor record relationships defined by those surfaces. | Reply-wide. |\n| Reporting-failure form | A reply carrying reporting_failure: degraded outcome/rc/error, origin/diagnostic/original outcome, removed comparisons and the retention-specific record form. | Reply-wide. |\n\nThe reporting-failure branch checks its degradation form while retaining the\nassembled records. Worker lifecycle projections still run independently,\nwith their comparison-limitation requirement waived when the comparison\nhas been removed by degradation. The retained host records remain\navailable for inspection at their own observation boundaries.",
+            "prose": "| Check family | Applicability and checked relationship | Finding scope |\n| --- | --- | --- |\n| Lifecycle claims | Each worker subprocess: required claims, state/basis references, owned final status, cleanup facts, progress association, slot count/order, action identity, lifecycle copies and supported conflicts. | That worker's projection; ordinary projection or one actor entry. |\n| Phase and query evidence | Ordinary semantic reply: phase IDs/order, action partition, collection state, validator ownership and raw-record association, protocol violations, comparison vocabulary and the complete `query_first` chain. | Reply-wide. |\n| Policy delivery/read evidence | Ordinary semantic reply with a worker policy-read receipt: bounded counts, host expected-count agreement, length-refusal detail and consistency with later worker observations. | Reply-wide. |\n| Native operation observations | Ordinary semantic reply: each fresh-read, fresh-write and exec observation's applicable fields and native relationships. | Reply-wide. |\n| Actor association | Ordinary semantic actor reply: actor indexes/IDs, launch/subprocess PID, visits, phase owner, event owner and matching transfer source. | Reply-wide. |\n| Actor setup, equipment, application, termination and custody | Ordinary semantic reply: execution-form applicability and the actor record relationships defined by those surfaces. | Reply-wide. |\n| Reporting-failure form | A reply carrying reporting_failure: degraded outcome/rc/error, origin/diagnostic/original outcome, removed comparisons and the retention-specific record form. | Reply-wide. |\n\nThe reporting-failure branch checks its degradation form while retaining the\nassembled records. Worker lifecycle projections still run separately,\nwith their comparison-limitation requirement waived when the comparison\nhas been removed by degradation. The retained host records remain\navailable for inspection at their own observation boundaries.",
             "title": "Check families and applicability"
           },
           {
@@ -401903,17 +401491,15 @@
             },
             "id": "diagnostics.execution.reader_evidence",
             "kind": "definition",
-            "prose": "Host reporting validation, controller semantic admission and canonical-JSON\nconsumption interpret the same typed records at their stated scopes. Worker\nlifecycle assessment remains a separate judgment over the retained native\naccount and its projection. A reporting failure can retain observations that\nproduce a lifecycle finding while satisfying the degradation form.",
+            "prose": "Host reporting validation, controller semantic admission and canonical-JSON\nconsumption interpret the same typed records at their stated scopes. Worker\nlifecycle assessment remains a separate judgment over the retained native\naccount and its projection. A reporting failure can retain observations that\nproduce a lifecycle finding while satisfying the degradation form.\n\nThese readers do not promise identical admission domains. The general Python\nconsumer's outer-result check assumes replies within the controller's\ncollection-capacity domain and does not reproduce that gate. Its consistency\nfinding on a controller refusal for capacity alone does not establish a\nviolation of the controller's result-selection rule.",
             "title": "Reader judgments"
           },
           {
             "context": {},
-            "facts": {
-              "kind": "behavior"
-            },
+            "facts": {},
             "id": "diagnostics.execution.reader_evidence.classifier_generation",
-            "kind": "gap",
-            "prose": "The host, controller and test readers retain independently written semantic classifiers checked against the stated definitions. Whether to generate those classifiers from one implementation remains a maintainer decision.",
+            "kind": "definition",
+            "prose": "Host, controller and test readers retain separately authored semantic\nclassifiers. Agreement is checked against stated definitions and independent\nexpectations within each reader's scope. No generated shared classifier or\nuniversal equivalence is promised.",
             "title": "Independent semantic classifiers"
           },
           {
@@ -402062,7 +401648,7 @@
             },
             "id": "diagnostics.execution.reply_checks",
             "kind": "acts",
-            "prose": "The controller appends these findings to top-level `disposition_issues`.\nIt preserves the actor entries, an ordinary stop reason already derived,\nand all host fields including step comparisons and claimed gate outcomes.\nThose retained assertions can therefore appear beside the controller's\nfinding about them.",
+            "prose": "The controller appends these findings to top-level `disposition_issues`.\nIt preserves the actor entries, an ordinary stop reason already derived,\nand all host fields including step comparisons and claimed gate outcomes.\nThose retained assertions can therefore appear beside the controller's\nfinding about them.\n\nEach actor-row projection describes the carried subprocess and action records\nselected through carried labels and IDs. Preserving it does not override a\nfinding against that row's identity, launch association or action membership,\nor independently establish attribution to the requested actor.",
             "referenced_types": {
               "diagnostics.actors": {
                 "json_null": false,
@@ -402100,7 +401686,7 @@
             "facts": {},
             "id": "diagnostics.execution.scope_example",
             "kind": "example",
-            "prose": "A typed actor reply can carry a transfer naming an invalid source actor,\nwhile another actor retains a valid clean-exit lifecycle. The controller\nthen publishes top-level `withheld` and an actor-evidence finding beside\nthat actor's `clean_exit`. If the admitted host summary is `finished`,\nthe outer result still reports `ok: true` and exit 0. The three values\nanswer the reply relationship, individual ending and host completion\nquestions respectively.",
+            "prose": "A typed actor reply can carry a transfer naming an invalid source actor,\nwhile another actor retains a valid clean-exit lifecycle. The controller\nthen publishes top-level `withheld` and an actor-evidence finding beside\nthat actor's `clean_exit`. If the admitted host summary is `finished`,\nthe outer result still reports `ok: true` and exit 0. The three values\nanswer the reply relationship, individual ending and host completion\nquestions respectively. The actor projection describes its retained row;\nit does not certify associations rejected by a reply-wide finding.",
             "title": "Scope example"
           },
           {
@@ -402145,12 +401731,10 @@
           },
           {
             "context": {},
-            "facts": {
-              "kind": "behavior"
-            },
+            "facts": {},
             "id": "diagnostics.execution.vocabulary.vocabulary_choice",
-            "kind": "gap",
-            "prose": "For ordinary and actor workers, the controller maps both unresolved and inapplicable host final-status claims to unconfirmed while retaining the host claim. Whether to retain that merged controller vocabulary remains a maintainer decision.",
+            "kind": "definition",
+            "prose": "For ordinary and actor workers, the controller uses `unconfirmed` for both\nunresolved and inapplicable final status. The retained host claim state and\nreason preserve that distinction for consumers that need it.",
             "title": "Unconfirmed vocabulary"
           },
           {
@@ -402345,12 +401929,10 @@
           },
           {
             "context": {},
-            "facts": {
-              "kind": "behavior"
-            },
+            "facts": {},
             "id": "diagnostics.issue.subject.withholding_scope",
-            "kind": "gap",
-            "prose": "A reply-wide finding withholds the aggregate projection and retains separately computed actor projections. Whether that finding should also withhold the actor conclusions remains a maintainer decision.",
+            "kind": "definition",
+            "prose": "Reply-wide findings withhold the aggregate and retain separately computed\nactor-row projections. Each projection describes the carried subprocess and\naction records selected through carried labels and IDs. It does not override\nfindings against identity, launch association or action membership, or\nindependently establish attribution to the requested actor. Worker-local\nlifecycle findings still withhold that worker's projection.",
             "title": "Reply-wide withholding scope"
           },
           {
@@ -446412,6 +445994,34 @@
                 "identity.definitions.host"
               ]
             },
+            "facts": {
+              "uses": [
+                "reply.failure.publish",
+                "actor_evidence.actor.reader_scope"
+              ]
+            },
+            "id": "reply.failure.associations",
+            "kind": "definition",
+            "prose": "Reporting-failure admission checks the degraded form and applicable receiver\ncontext. It does not certify ordinary actor/phase associations in retained\nrecords. Those records may preserve the inconsistency that caused reporting\nfailure. Worker-local lifecycle checks continue at their stated scope; no\ncomparison or query-order conclusion is recovered from retained raw records.",
+            "title": "Reporting-failure associations"
+          },
+          {
+            "context": {
+              "entry": [
+                "xpc_execute"
+              ],
+              "recipient": [
+                "controller",
+                "xpc_caller"
+              ],
+              "report": [
+                "runner_reply"
+              ],
+              "where": "host reply assembly",
+              "who": [
+                "identity.definitions.host"
+              ]
+            },
             "facts": {},
             "field": {
               "json_null": false,
@@ -446595,31 +446205,6 @@
             "kind": "reports",
             "prose": "The rich fallback preserves observations that triggered rejection. Empty reply bytes reach the\nrecipient's decoding failure.",
             "title": "Publish a report or fallback"
-          },
-          {
-            "context": {
-              "entry": [
-                "xpc_execute"
-              ],
-              "recipient": [
-                "controller",
-                "xpc_caller"
-              ],
-              "report": [
-                "runner_reply"
-              ],
-              "where": "host response encoding",
-              "who": [
-                "identity.definitions.host"
-              ]
-            },
-            "facts": {
-              "kind": "behavior"
-            },
-            "id": "reply.failure.publish.associations",
-            "kind": "gap",
-            "prose": "The degraded branch checks the failed summary, marker and absent comparisons.\nIt bypasses ordinary actor/phase association checks. Retained records can\ntherefore carry the association inconsistency that caused degradation.\nWhether every reporting-failure reply must still establish those associations\nremains a maintainer decision.",
-            "title": "Reporting-failure associations"
           },
           {
             "context": {
@@ -467181,7 +466766,7 @@
             },
             "id": "diagnostics.execution.families",
             "kind": "definition",
-            "prose": "| Check family | Applicability and checked relationship | Finding scope |\n| --- | --- | --- |\n| Lifecycle claims | Each worker subprocess: required claims, state/basis references, owned final status, cleanup facts, progress association, slot count/order, action identity, lifecycle copies and supported conflicts. | That worker's projection; ordinary projection or one actor entry. |\n| Phase and query evidence | Ordinary semantic reply: phase IDs/order, action partition, collection state, validator ownership and raw-record association, protocol violations, comparison vocabulary and the complete `query_first` chain. | Reply-wide. |\n| Policy delivery/read evidence | Ordinary semantic reply with a worker policy-read receipt: bounded counts, host expected-count agreement, length-refusal detail and consistency with later worker observations. | Reply-wide. |\n| Native operation observations | Ordinary semantic reply: each fresh-read, fresh-write and exec observation's applicable fields and native relationships. | Reply-wide. |\n| Actor association | Ordinary semantic actor reply: actor indexes/IDs, launch/subprocess PID, visits, phase owner, event owner and matching transfer source. | Reply-wide. |\n| Actor setup, equipment, application, termination and custody | Ordinary semantic reply: execution-form applicability and the actor record relationships defined by those surfaces. | Reply-wide. |\n| Reporting-failure form | A reply carrying reporting_failure: degraded outcome/rc/error, origin/diagnostic/original outcome, removed comparisons and the retention-specific record form. | Reply-wide. |\n\nThe reporting-failure branch checks its degradation form while retaining the\nassembled records. Worker lifecycle projections still run independently,\nwith their comparison-limitation requirement waived when the comparison\nhas been removed by degradation. The retained host records remain\navailable for inspection at their own observation boundaries.",
+            "prose": "| Check family | Applicability and checked relationship | Finding scope |\n| --- | --- | --- |\n| Lifecycle claims | Each worker subprocess: required claims, state/basis references, owned final status, cleanup facts, progress association, slot count/order, action identity, lifecycle copies and supported conflicts. | That worker's projection; ordinary projection or one actor entry. |\n| Phase and query evidence | Ordinary semantic reply: phase IDs/order, action partition, collection state, validator ownership and raw-record association, protocol violations, comparison vocabulary and the complete `query_first` chain. | Reply-wide. |\n| Policy delivery/read evidence | Ordinary semantic reply with a worker policy-read receipt: bounded counts, host expected-count agreement, length-refusal detail and consistency with later worker observations. | Reply-wide. |\n| Native operation observations | Ordinary semantic reply: each fresh-read, fresh-write and exec observation's applicable fields and native relationships. | Reply-wide. |\n| Actor association | Ordinary semantic actor reply: actor indexes/IDs, launch/subprocess PID, visits, phase owner, event owner and matching transfer source. | Reply-wide. |\n| Actor setup, equipment, application, termination and custody | Ordinary semantic reply: execution-form applicability and the actor record relationships defined by those surfaces. | Reply-wide. |\n| Reporting-failure form | A reply carrying reporting_failure: degraded outcome/rc/error, origin/diagnostic/original outcome, removed comparisons and the retention-specific record form. | Reply-wide. |\n\nThe reporting-failure branch checks its degradation form while retaining the\nassembled records. Worker lifecycle projections still run separately,\nwith their comparison-limitation requirement waived when the comparison\nhas been removed by degradation. The retained host records remain\navailable for inspection at their own observation boundaries.",
             "title": "Check families and applicability"
           },
           {
@@ -489646,17 +489231,15 @@
             },
             "id": "diagnostics.execution.reader_evidence",
             "kind": "definition",
-            "prose": "Host reporting validation, controller semantic admission and canonical-JSON\nconsumption interpret the same typed records at their stated scopes. Worker\nlifecycle assessment remains a separate judgment over the retained native\naccount and its projection. A reporting failure can retain observations that\nproduce a lifecycle finding while satisfying the degradation form.",
+            "prose": "Host reporting validation, controller semantic admission and canonical-JSON\nconsumption interpret the same typed records at their stated scopes. Worker\nlifecycle assessment remains a separate judgment over the retained native\naccount and its projection. A reporting failure can retain observations that\nproduce a lifecycle finding while satisfying the degradation form.\n\nThese readers do not promise identical admission domains. The general Python\nconsumer's outer-result check assumes replies within the controller's\ncollection-capacity domain and does not reproduce that gate. Its consistency\nfinding on a controller refusal for capacity alone does not establish a\nviolation of the controller's result-selection rule.",
             "title": "Reader judgments"
           },
           {
             "context": {},
-            "facts": {
-              "kind": "behavior"
-            },
+            "facts": {},
             "id": "diagnostics.execution.reader_evidence.classifier_generation",
-            "kind": "gap",
-            "prose": "The host, controller and test readers retain independently written semantic classifiers checked against the stated definitions. Whether to generate those classifiers from one implementation remains a maintainer decision.",
+            "kind": "definition",
+            "prose": "Host, controller and test readers retain separately authored semantic\nclassifiers. Agreement is checked against stated definitions and independent\nexpectations within each reader's scope. No generated shared classifier or\nuniversal equivalence is promised.",
             "title": "Independent semantic classifiers"
           },
           {
@@ -489805,7 +489388,7 @@
             },
             "id": "diagnostics.execution.reply_checks",
             "kind": "acts",
-            "prose": "The controller appends these findings to top-level `disposition_issues`.\nIt preserves the actor entries, an ordinary stop reason already derived,\nand all host fields including step comparisons and claimed gate outcomes.\nThose retained assertions can therefore appear beside the controller's\nfinding about them.",
+            "prose": "The controller appends these findings to top-level `disposition_issues`.\nIt preserves the actor entries, an ordinary stop reason already derived,\nand all host fields including step comparisons and claimed gate outcomes.\nThose retained assertions can therefore appear beside the controller's\nfinding about them.\n\nEach actor-row projection describes the carried subprocess and action records\nselected through carried labels and IDs. Preserving it does not override a\nfinding against that row's identity, launch association or action membership,\nor independently establish attribution to the requested actor.",
             "referenced_types": {
               "diagnostics.actors": {
                 "json_null": false,
@@ -489843,7 +489426,7 @@
             "facts": {},
             "id": "diagnostics.execution.scope_example",
             "kind": "example",
-            "prose": "A typed actor reply can carry a transfer naming an invalid source actor,\nwhile another actor retains a valid clean-exit lifecycle. The controller\nthen publishes top-level `withheld` and an actor-evidence finding beside\nthat actor's `clean_exit`. If the admitted host summary is `finished`,\nthe outer result still reports `ok: true` and exit 0. The three values\nanswer the reply relationship, individual ending and host completion\nquestions respectively.",
+            "prose": "A typed actor reply can carry a transfer naming an invalid source actor,\nwhile another actor retains a valid clean-exit lifecycle. The controller\nthen publishes top-level `withheld` and an actor-evidence finding beside\nthat actor's `clean_exit`. If the admitted host summary is `finished`,\nthe outer result still reports `ok: true` and exit 0. The three values\nanswer the reply relationship, individual ending and host completion\nquestions respectively. The actor projection describes its retained row;\nit does not certify associations rejected by a reply-wide finding.",
             "title": "Scope example"
           },
           {
@@ -489888,12 +489471,10 @@
           },
           {
             "context": {},
-            "facts": {
-              "kind": "behavior"
-            },
+            "facts": {},
             "id": "diagnostics.execution.vocabulary.vocabulary_choice",
-            "kind": "gap",
-            "prose": "For ordinary and actor workers, the controller maps both unresolved and inapplicable host final-status claims to unconfirmed while retaining the host claim. Whether to retain that merged controller vocabulary remains a maintainer decision.",
+            "kind": "definition",
+            "prose": "For ordinary and actor workers, the controller uses `unconfirmed` for both\nunresolved and inapplicable final status. The retained host claim state and\nreason preserve that distinction for consumers that need it.",
             "title": "Unconfirmed vocabulary"
           },
           {
@@ -490088,12 +489669,10 @@
           },
           {
             "context": {},
-            "facts": {
-              "kind": "behavior"
-            },
+            "facts": {},
             "id": "diagnostics.issue.subject.withholding_scope",
-            "kind": "gap",
-            "prose": "A reply-wide finding withholds the aggregate projection and retains separately computed actor projections. Whether that finding should also withhold the actor conclusions remains a maintainer decision.",
+            "kind": "definition",
+            "prose": "Reply-wide findings withhold the aggregate and retain separately computed\nactor-row projections. Each projection describes the carried subprocess and\naction records selected through carried labels and IDs. It does not override\nfindings against identity, launch association or action membership, or\nindependently establish attribution to the requested actor. Worker-local\nlifecycle findings still withhold that worker's projection.",
             "title": "Reply-wide withholding scope"
           },
           {
@@ -490146,7 +489725,7 @@
             },
             "id": "actor_evidence.actor.reader_scope",
             "kind": "definition",
-            "prose": "The host self-check, controller semantic reader and general canonical-JSON\nconsumer check ordinary actor relationships when `reporting_failure` is\nabsent. A preparation refusal belongs to the actor execution form and retains\nits admitted declarations: actor order, IDs and visits, phase order and owner,\nactor visit numbers and action IDs. It carries no launch, arrival, completion,\nproceed publication, step, extension-event, transfer or resource entry. Each\nactor has zero successful applications. Its host authority scope is\n`not_attempted`, with empty region and custody tables. The actor event table\nis present, including when empty.\n\nPhase and actor identifiers are nonempty and NUL-free within their admitted\nUTF-8 capacities. Action identifiers use that same capacity and NUL rule;\nordinary-form actions admit an empty identifier, while actor-form actions require a\nnonempty one. Declaration uniqueness and exact schedule membership apply\nseparately from that string grammar.\n\nA reporting-failure reply is checked for its degradation form and applicable\ncompiled-profile context. Host validation, controller admission and the general consumer apply that\nscope. The actor/extension readers check ordinary semantic relationships when\nthe reporting-failure record is absent. The lifecycle receipt reader separately checks each\nretained worker's claims and controller projection; findings from that\nassessment describe the retained worker evidence.",
+            "prose": "The host self-check, controller semantic reader and general canonical-JSON\nconsumer check ordinary actor relationships when `reporting_failure` is\nabsent. Recipient checks compare declarations and observations carried in the\nreply; they do not independently compare those declarations with the submitted\nrequest. The host owns request-to-reply assembly.\n\nA preparation refusal belongs to the actor execution form and retains\nits admitted declarations: actor order, IDs and visits, phase order and owner,\nactor visit numbers and action IDs. It carries no launch, arrival, completion,\nproceed publication, step, extension-event, transfer or resource entry. Each\nactor has zero successful applications. Its host authority scope is\n`not_attempted`, with empty region and custody tables. The actor event table\nis present, including when empty.\n\nPhase and actor identifiers are nonempty and NUL-free within their admitted\nUTF-8 capacities. Action identifiers use that same capacity and NUL rule;\nordinary-form actions admit an empty identifier, while actor-form actions require a\nnonempty one. Declaration uniqueness and exact schedule membership apply\nseparately from that string grammar.\n\nA reporting-failure reply is checked for its degradation form and applicable\ncompiled-profile context. Host validation, controller admission and the general consumer apply that\nscope. The actor/extension readers check ordinary semantic relationships when\nthe reporting-failure record is absent. The lifecycle receipt reader separately checks each\nretained worker's claims and controller projection; findings from that\nassessment describe the retained worker evidence.",
             "title": "Reader applicability"
           },
           {
@@ -490790,58 +490369,6 @@
             "title": "Other admitted outcome"
           },
           {
-            "context": {
-              "entry": [
-                "cli_run"
-              ],
-              "free_when": [
-                "Client capture and host reply admission have succeeded."
-              ],
-              "recipient": [
-                "cli_caller"
-              ],
-              "report": [
-                "run_envelope"
-              ],
-              "when": {
-                "body": {
-                  "args": [
-                    {
-                      "attr": "runner_result",
-                      "node": "Attribute",
-                      "value": {
-                        "attr": "data",
-                        "node": "Attribute",
-                        "value": {
-                          "id": "envelope",
-                          "node": "Name"
-                        }
-                      }
-                    }
-                  ],
-                  "func": {
-                    "id": "present",
-                    "node": "Name"
-                  },
-                  "keywords": [],
-                  "node": "Call"
-                },
-                "node": "Expression"
-              },
-              "where": "run completion after admission",
-              "who": [
-                "identity.definitions.controller"
-              ]
-            },
-            "facts": {
-              "kind": "behavior"
-            },
-            "id": "envelope.data.select.success_findings",
-            "kind": "gap",
-            "prose": "Whether result.ok and process exit should also reflect controller integrity\nfindings remains open. Present behavior selects success from the admitted\nhost outcome alone.",
-            "title": "Success and findings"
-          },
-          {
             "context": {},
             "facts": {
               "artifact": "The contract identity",
@@ -491086,31 +490613,6 @@
             "kind": "reports",
             "prose": "The rich fallback preserves observations that triggered rejection. Empty reply bytes reach the\nrecipient's decoding failure.",
             "title": "Publish a report or fallback"
-          },
-          {
-            "context": {
-              "entry": [
-                "xpc_execute"
-              ],
-              "recipient": [
-                "controller",
-                "xpc_caller"
-              ],
-              "report": [
-                "runner_reply"
-              ],
-              "where": "host response encoding",
-              "who": [
-                "identity.definitions.host"
-              ]
-            },
-            "facts": {
-              "kind": "behavior"
-            },
-            "id": "reply.failure.publish.associations",
-            "kind": "gap",
-            "prose": "The degraded branch checks the failed summary, marker and absent comparisons.\nIt bypasses ordinary actor/phase association checks. Retained records can\ntherefore carry the association inconsistency that caused degradation.\nWhether every reporting-failure reply must still establish those associations\nremains a maintainer decision.",
-            "title": "Reporting-failure associations"
           },
           {
             "context": {
@@ -499969,7 +499471,7 @@
             },
             "id": "actor_evidence.actor.reader_scope",
             "kind": "definition",
-            "prose": "The host self-check, controller semantic reader and general canonical-JSON\nconsumer check ordinary actor relationships when `reporting_failure` is\nabsent. A preparation refusal belongs to the actor execution form and retains\nits admitted declarations: actor order, IDs and visits, phase order and owner,\nactor visit numbers and action IDs. It carries no launch, arrival, completion,\nproceed publication, step, extension-event, transfer or resource entry. Each\nactor has zero successful applications. Its host authority scope is\n`not_attempted`, with empty region and custody tables. The actor event table\nis present, including when empty.\n\nPhase and actor identifiers are nonempty and NUL-free within their admitted\nUTF-8 capacities. Action identifiers use that same capacity and NUL rule;\nordinary-form actions admit an empty identifier, while actor-form actions require a\nnonempty one. Declaration uniqueness and exact schedule membership apply\nseparately from that string grammar.\n\nA reporting-failure reply is checked for its degradation form and applicable\ncompiled-profile context. Host validation, controller admission and the general consumer apply that\nscope. The actor/extension readers check ordinary semantic relationships when\nthe reporting-failure record is absent. The lifecycle receipt reader separately checks each\nretained worker's claims and controller projection; findings from that\nassessment describe the retained worker evidence.",
+            "prose": "The host self-check, controller semantic reader and general canonical-JSON\nconsumer check ordinary actor relationships when `reporting_failure` is\nabsent. Recipient checks compare declarations and observations carried in the\nreply; they do not independently compare those declarations with the submitted\nrequest. The host owns request-to-reply assembly.\n\nA preparation refusal belongs to the actor execution form and retains\nits admitted declarations: actor order, IDs and visits, phase order and owner,\nactor visit numbers and action IDs. It carries no launch, arrival, completion,\nproceed publication, step, extension-event, transfer or resource entry. Each\nactor has zero successful applications. Its host authority scope is\n`not_attempted`, with empty region and custody tables. The actor event table\nis present, including when empty.\n\nPhase and actor identifiers are nonempty and NUL-free within their admitted\nUTF-8 capacities. Action identifiers use that same capacity and NUL rule;\nordinary-form actions admit an empty identifier, while actor-form actions require a\nnonempty one. Declaration uniqueness and exact schedule membership apply\nseparately from that string grammar.\n\nA reporting-failure reply is checked for its degradation form and applicable\ncompiled-profile context. Host validation, controller admission and the general consumer apply that\nscope. The actor/extension readers check ordinary semantic relationships when\nthe reporting-failure record is absent. The lifecycle receipt reader separately checks each\nretained worker's claims and controller projection; findings from that\nassessment describe the retained worker evidence.",
             "title": "Reader applicability"
           },
           {
@@ -518945,7 +518447,7 @@
             },
             "id": "diagnostics.execution.families",
             "kind": "definition",
-            "prose": "| Check family | Applicability and checked relationship | Finding scope |\n| --- | --- | --- |\n| Lifecycle claims | Each worker subprocess: required claims, state/basis references, owned final status, cleanup facts, progress association, slot count/order, action identity, lifecycle copies and supported conflicts. | That worker's projection; ordinary projection or one actor entry. |\n| Phase and query evidence | Ordinary semantic reply: phase IDs/order, action partition, collection state, validator ownership and raw-record association, protocol violations, comparison vocabulary and the complete `query_first` chain. | Reply-wide. |\n| Policy delivery/read evidence | Ordinary semantic reply with a worker policy-read receipt: bounded counts, host expected-count agreement, length-refusal detail and consistency with later worker observations. | Reply-wide. |\n| Native operation observations | Ordinary semantic reply: each fresh-read, fresh-write and exec observation's applicable fields and native relationships. | Reply-wide. |\n| Actor association | Ordinary semantic actor reply: actor indexes/IDs, launch/subprocess PID, visits, phase owner, event owner and matching transfer source. | Reply-wide. |\n| Actor setup, equipment, application, termination and custody | Ordinary semantic reply: execution-form applicability and the actor record relationships defined by those surfaces. | Reply-wide. |\n| Reporting-failure form | A reply carrying reporting_failure: degraded outcome/rc/error, origin/diagnostic/original outcome, removed comparisons and the retention-specific record form. | Reply-wide. |\n\nThe reporting-failure branch checks its degradation form while retaining the\nassembled records. Worker lifecycle projections still run independently,\nwith their comparison-limitation requirement waived when the comparison\nhas been removed by degradation. The retained host records remain\navailable for inspection at their own observation boundaries.",
+            "prose": "| Check family | Applicability and checked relationship | Finding scope |\n| --- | --- | --- |\n| Lifecycle claims | Each worker subprocess: required claims, state/basis references, owned final status, cleanup facts, progress association, slot count/order, action identity, lifecycle copies and supported conflicts. | That worker's projection; ordinary projection or one actor entry. |\n| Phase and query evidence | Ordinary semantic reply: phase IDs/order, action partition, collection state, validator ownership and raw-record association, protocol violations, comparison vocabulary and the complete `query_first` chain. | Reply-wide. |\n| Policy delivery/read evidence | Ordinary semantic reply with a worker policy-read receipt: bounded counts, host expected-count agreement, length-refusal detail and consistency with later worker observations. | Reply-wide. |\n| Native operation observations | Ordinary semantic reply: each fresh-read, fresh-write and exec observation's applicable fields and native relationships. | Reply-wide. |\n| Actor association | Ordinary semantic actor reply: actor indexes/IDs, launch/subprocess PID, visits, phase owner, event owner and matching transfer source. | Reply-wide. |\n| Actor setup, equipment, application, termination and custody | Ordinary semantic reply: execution-form applicability and the actor record relationships defined by those surfaces. | Reply-wide. |\n| Reporting-failure form | A reply carrying reporting_failure: degraded outcome/rc/error, origin/diagnostic/original outcome, removed comparisons and the retention-specific record form. | Reply-wide. |\n\nThe reporting-failure branch checks its degradation form while retaining the\nassembled records. Worker lifecycle projections still run separately,\nwith their comparison-limitation requirement waived when the comparison\nhas been removed by degradation. The retained host records remain\navailable for inspection at their own observation boundaries.",
             "title": "Check families and applicability"
           },
           {
@@ -531737,7 +531239,7 @@
             },
             "id": "diagnostics.execution.reply_checks",
             "kind": "acts",
-            "prose": "The controller appends these findings to top-level `disposition_issues`.\nIt preserves the actor entries, an ordinary stop reason already derived,\nand all host fields including step comparisons and claimed gate outcomes.\nThose retained assertions can therefore appear beside the controller's\nfinding about them.",
+            "prose": "The controller appends these findings to top-level `disposition_issues`.\nIt preserves the actor entries, an ordinary stop reason already derived,\nand all host fields including step comparisons and claimed gate outcomes.\nThose retained assertions can therefore appear beside the controller's\nfinding about them.\n\nEach actor-row projection describes the carried subprocess and action records\nselected through carried labels and IDs. Preserving it does not override a\nfinding against that row's identity, launch association or action membership,\nor independently establish attribution to the requested actor.",
             "referenced_types": {
               "diagnostics.actors": {
                 "json_null": false,
@@ -532409,58 +531911,6 @@
               }
             },
             "title": "Other admitted outcome"
-          },
-          {
-            "context": {
-              "entry": [
-                "cli_run"
-              ],
-              "free_when": [
-                "Client capture and host reply admission have succeeded."
-              ],
-              "recipient": [
-                "cli_caller"
-              ],
-              "report": [
-                "run_envelope"
-              ],
-              "when": {
-                "body": {
-                  "args": [
-                    {
-                      "attr": "runner_result",
-                      "node": "Attribute",
-                      "value": {
-                        "attr": "data",
-                        "node": "Attribute",
-                        "value": {
-                          "id": "envelope",
-                          "node": "Name"
-                        }
-                      }
-                    }
-                  ],
-                  "func": {
-                    "id": "present",
-                    "node": "Name"
-                  },
-                  "keywords": [],
-                  "node": "Call"
-                },
-                "node": "Expression"
-              },
-              "where": "run completion after admission",
-              "who": [
-                "identity.definitions.controller"
-              ]
-            },
-            "facts": {
-              "kind": "behavior"
-            },
-            "id": "envelope.data.select.success_findings",
-            "kind": "gap",
-            "prose": "Whether result.ok and process exit should also reflect controller integrity\nfindings remains open. Present behavior selects success from the admitted\nhost outcome alone.",
-            "title": "Success and findings"
           },
           {
             "context": {},
@@ -571306,6 +570756,34 @@
                 "identity.definitions.host"
               ]
             },
+            "facts": {
+              "uses": [
+                "reply.failure.publish",
+                "actor_evidence.actor.reader_scope"
+              ]
+            },
+            "id": "reply.failure.associations",
+            "kind": "definition",
+            "prose": "Reporting-failure admission checks the degraded form and applicable receiver\ncontext. It does not certify ordinary actor/phase associations in retained\nrecords. Those records may preserve the inconsistency that caused reporting\nfailure. Worker-local lifecycle checks continue at their stated scope; no\ncomparison or query-order conclusion is recovered from retained raw records.",
+            "title": "Reporting-failure associations"
+          },
+          {
+            "context": {
+              "entry": [
+                "xpc_execute"
+              ],
+              "recipient": [
+                "controller",
+                "xpc_caller"
+              ],
+              "report": [
+                "runner_reply"
+              ],
+              "where": "host reply assembly",
+              "who": [
+                "identity.definitions.host"
+              ]
+            },
             "facts": {},
             "field": {
               "json_null": false,
@@ -571489,31 +570967,6 @@
             "kind": "reports",
             "prose": "The rich fallback preserves observations that triggered rejection. Empty reply bytes reach the\nrecipient's decoding failure.",
             "title": "Publish a report or fallback"
-          },
-          {
-            "context": {
-              "entry": [
-                "xpc_execute"
-              ],
-              "recipient": [
-                "controller",
-                "xpc_caller"
-              ],
-              "report": [
-                "runner_reply"
-              ],
-              "where": "host response encoding",
-              "who": [
-                "identity.definitions.host"
-              ]
-            },
-            "facts": {
-              "kind": "behavior"
-            },
-            "id": "reply.failure.publish.associations",
-            "kind": "gap",
-            "prose": "The degraded branch checks the failed summary, marker and absent comparisons.\nIt bypasses ordinary actor/phase association checks. Retained records can\ntherefore carry the association inconsistency that caused degradation.\nWhether every reporting-failure reply must still establish those associations\nremains a maintainer decision.",
-            "title": "Reporting-failure associations"
           },
           {
             "context": {

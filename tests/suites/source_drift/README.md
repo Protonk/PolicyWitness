@@ -171,7 +171,7 @@ of the reply or envelope shape golden.
 The `generator_contract` case holds the document graph's drift node to the
 rules this script runs, and the form table below to the shared module's rules.
 
-The Known gap rule covers ARCHITECTURE.md, BUILD.md and WORKER.md. Disposable
+The Known gap rule covers ARCHITECTURE.md, BUILD.md, WORKER.md and CONTROLLER.md. Disposable
 checkout controls add an unindexed gap, add its matching index entry, remove
 the final heading and add a spurious index entry in each tour. Repaired and
 restored copies pass; each rejected mutation names its document. Structure
