@@ -15,7 +15,6 @@ aggregate diagnostic is permitted beside any other control's set and earns
 nothing there; its own propagation control requires it exactly. Coverage is
 complete when every assertion in the checker's table has a matched control.
 """
-import base64
 import copy
 import hashlib
 import json
@@ -135,7 +134,7 @@ def build(identity=DEVELOPMENT):
     content = b'constructed target bytes\n'
     observed = {'targets': [{
         'target': target, 'resolved': target, 'regular_file': True, 'readable': True, 'error': None,
-        'sha256': hashlib.sha256(content).hexdigest(), 'bytes_base64': base64.b64encode(content).decode(),
+        'sha256': hashlib.sha256(content).hexdigest(), 'length': len(content),
         'stat': {'st_dev': 16777234, 'st_ino': 4242, 'st_mode': 33188, 'st_uid': 0, 'st_gid': 0,
                  'st_size': len(content), 'st_mtime_ns': 1700000000000000000, 'st_ctime_ns': 1700000000000000000}}]}
     version = {'build': build_context.producer(identity), 'kind': 'version', 'generated_at_unix_ms': 1,
@@ -471,9 +470,15 @@ def controls():
 
     def after(state):
         return state['targets-after']['targets'][0]
+
+    def before(state):
+        return state['targets-before']['targets'][0]
     changed = b'changed target bytes\n'
-    add('native_target_bytes', lambda s: after(s).update(sha256=hashlib.sha256(changed).hexdigest(),
-                                                         bytes_base64=base64.b64encode(changed).decode()),
+    add('native_target_digest', lambda s: after(s).update(sha256=hashlib.sha256(changed).hexdigest()),
+        ['native.targets_unchanged'], holds=consistency_holds, clean=True)
+    add('native_target_length', lambda s: after(s).update(length=after(s)['length'] + 1),
+        ['native.targets_unchanged'], holds=consistency_holds, clean=True)
+    add('native_target_digest_absent', lambda s: (before(s).pop('sha256'), after(s).pop('sha256')),
         ['native.targets_unchanged'], holds=consistency_holds, clean=True)
     for field in checker.STAT_FIELDS:
         add('native_target_' + field, lambda s, field=field: after(s)['stat'].update({field: after(s)['stat'][field] + 1}),
@@ -486,9 +491,6 @@ def controls():
         ['native.targets_unchanged'], holds=consistency_holds, clean=True)
 
     native = tuple(ident for ident, _, _, _ in checker.ASSERTIONS if expected_classification(ident) == NATIVE_OBSERVATION)
-
-    def before(state):
-        return state['targets-before']['targets'][0]
     add('prerequisite_unreadable', lambda s: before(s).update(readable=False, error='PermissionError: constructed'),
         ['prerequisite.targets_readable'], unevaluated=native, holds=consistency_holds, clean=True)
     add('prerequisite_not_regular', lambda s: before(s).update(regular_file=False),

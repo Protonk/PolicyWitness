@@ -24,7 +24,6 @@ assertion's result, with consistency apart from native observations.
     evaluate CAPTURE               read the retained captures and report
 """
 import argparse
-import base64
 import hashlib
 import json
 import os
@@ -116,7 +115,7 @@ def _table():
         ('native.order', 'native', NATIVE_OBSERVATION, 'given that prediction, `order` is `query_first`'),
         ('native.attempt', 'native', NATIVE_OBSERVATION, 'each attempt has outcome `ok` and `rc` 0'),
         ('native.targets_unchanged', 'native', NATIVE_OBSERVATION,
-         "each target's bytes and selected metadata are equal before and after the run"),
+         "each target's digest, length and selected metadata are equal before and after the run"),
     ]
     for name, (code, path, identity, component) in REFUSALS.items():
         prefix = 'refusal.' + name
@@ -256,8 +255,8 @@ def observe_target(target):
                       stat={field: getattr(status, field) for field in STAT_FIELDS})
         if record['regular_file']:
             data = Path(resolved).read_bytes()
-            record.update(readable=True, sha256=hashlib.sha256(data).hexdigest(),
-                          bytes_base64=base64.b64encode(data).decode('ascii'))
+            # A digest and length support the equality observation; the bytes are not retained.
+            record.update(readable=True, sha256=hashlib.sha256(data).hexdigest(), length=len(data))
     except OSError as error:
         record['error'] = f'{type(error).__name__}: {error}'
     return record
@@ -490,8 +489,10 @@ def _native(inputs, document, reply, pairs, results):
         differing = [field for field in STAT_FIELDS if _get(earlier, 'stat', field) != _get(later, 'stat', field)]
         if earlier.get('resolved') != later.get('resolved'):
             differing.insert(0, 'resolved path')
-        if earlier.get('sha256') != later.get('sha256') or earlier.get('bytes_base64') != later.get('bytes_base64'):
-            differing.insert(0, 'bytes')
+        if not isinstance(earlier.get('sha256'), str) or earlier.get('sha256') != later.get('sha256'):
+            differing.insert(0, 'digest')
+        if type(earlier.get('length')) is not int or earlier.get('length') != later.get('length'):
+            differing.insert(0, 'length')
         if differing:
             changed.append(f'{target} differs in ' + ', '.join(differing))
     results.record('native.targets_unchanged', changed)

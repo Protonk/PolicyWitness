@@ -121,7 +121,7 @@ The tree reader extracts the constant with a strict reader that refuses anything
 
 The renderer prints the document with `contract` shown as `<reported-contract>`, and the command that emits it. The parsed document enters the node's public payload, so a change to the example moves the `request` surface stamp. The cited source file becomes a declared generator input, as `runner_select.rs` already is.
 
-The existing `apply_only` and `read_hosts` examples stay as they are.
+The `apply_only` example stays as it is. By the maintainer's decision of 2026-11-12 the probes surface's `read_hosts` example takes its step from the same constant: its `document` fact adds a `member` path selecting the first step, checked against the step record's fields and rendered without the identity placeholder.
 
 ### 4.4 Identities and stale artifacts
 
@@ -172,9 +172,9 @@ The comparison with the snapshot is a comparison, never a substitution: a mismat
 | Prediction | `result_source` is `validator`, `outcome` is `allow`, `native_rc` is 0 |
 | Order | Given that prediction, `order` is `query_first` |
 | Attempt | `outcome` is `ok`, `rc` is 0 |
-| Target observation | Each target's bytes and the selected metadata are unchanged between the case's before and after observations |
+| Target observation | Each target's digest, length and selected metadata are unchanged between the case's before and after observations |
 
-The case records each resolved target path, its bytes, and `st_dev`, `st_ino`, `st_mode`, `st_uid`, `st_gid`, `st_size`, `st_mtime_ns` and `st_ctime_ns` before and after execution. Access time is excluded because the observations themselves read the file. A changed target is a `native_observation` failure, not a contradiction in the app's report or evidence that PolicyWitness caused the change. These observations establish equality or difference at the sampled boundaries, not the absence of intervening changes. Section 4.6 governs its disposition.
+The case records each resolved target path, a SHA-256 digest and the length of its bytes, and `st_dev`, `st_ino`, `st_mode`, `st_uid`, `st_gid`, `st_size`, `st_mtime_ns` and `st_ctime_ns` before and after execution. Access time is excluded because the observations themselves read the file. A changed target is a `native_observation` failure, not a contradiction in the app's report or evidence that PolicyWitness caused the change. These observations establish equality or difference at the sampled boundaries, not the absence of intervening changes. Section 4.6 governs its disposition.
 
 Nothing in either group states that prediction and enforcement agree.
 
@@ -222,7 +222,7 @@ In no row is the case removed from the default battery, given a skip, or handed 
 | A target prerequisite was not observed, the dispatcher recorded system sleep overlapping the failure, or an automation-sandbox refusal was confirmed by the prescribed unchanged-artifact rerun | Record that exclusion and credit a fresh run that establishes the prerequisites and completes without it. Explaining why the target was unavailable, the machine slept or the harness imposed the restriction is unnecessary. Use the existing dispatcher sleep record and sandboxed-harness procedure. |
 | The validator produced no answer, with a valid recorded spawn failure or timeout and honest `unestablished` ordering | A complete passing run can supersede this trial without explaining the underlying scheduling or OS cause. The earlier run supplies no successful native-observation credit. Its available evidence must satisfy the consistency assertions; a generic error without evidence locating the failure does not establish this disposition. |
 | The validator answered `deny`, or the worker failed `open_read`, while the stated prerequisites were observed | Resolve the challenge to the native expectation through a justified correction to its applicability, a checker correction or a product fix. Later successes alone do not settle it. |
-| A target's bytes or selected metadata changed between observations | Report `native_observation` without assigning a writer. Review target applicability and the observation code, and record the evidence supporting any environmental exclusion or correction. A later unchanged sample alone does not explain the earlier difference; an unsupported disposition leaves evaluation pending. |
+| A target's digest, length or selected metadata changed between observations | Report `native_observation` without assigning a writer. Review target applicability and the observation code, and record the evidence supporting any environmental exclusion or correction. A later unchanged sample alone does not explain the earlier difference; an unsupported disposition leaves evaluation pending. |
 | An identity, policy digest, echo or reported-against-observed assertion is wrong, or an existing reader reports an error | Resolve the product, checker or contract discrepancy before acceptance. These must hold even when native execution fails. |
 
 The example must demonstrate successful execution. This work does not require an explanation of every correctly reported inability to execute. A failure without a disposition supported by this table leaves evaluation pending, including a native discrepancy that the table does not cover. Do not infer an exclusion from a later pass or classify every `execution_unavailable` result as environmental.
@@ -257,7 +257,7 @@ The checker and control case establish coverage as follows:
 | Echo | The echoed `specimen_id` differs; an extra, missing or renamed step; the query echo differs; the attempt echo differs |
 | Reported against observed | The captured exit differs from `result.exit_code` |
 | Existing readers | The dedicated consumer propagation control; `disposition_integrity` not `valid`; a nonempty `disposition_issues` |
-| Native | A coherent `validator_spawn_failed` reply with a missing prediction and honest `unestablished` ordering; a prediction other than `allow`; an attempt that failed; changed target bytes or selected metadata with the envelope unchanged. With prerequisites held, each must produce `native_observation` with consistency still passing. An unobserved prerequisite must produce `prerequisite_unestablished` with native expectations not evaluated |
+| Native | A coherent `validator_spawn_failed` reply with a missing prediction and honest `unestablished` ordering; a prediction other than `allow`; an attempt that failed; a changed target digest, length or selected metadata with the envelope unchanged. With prerequisites held, each must produce `native_observation` with consistency still passing. An unobserved prerequisite must produce `prerequisite_unestablished` with native expectations not evaluated |
 | Refusals | For each refusal control: an accepted run in its place; the wrong code or path; a missing or wrong expected identity where section 4.5 requires one; a client capture on a controller-side refusal |
 | Classification | A combined-fault input reports every fault; an attempted run with no admitted reply is `execution_unavailable` and credits or faults nothing from the reply |
 
@@ -387,7 +387,7 @@ At that point, when relevant decisions and failure dispositions are settled, the
 | The rule needs a `free.*` fact | Generation refuses free-text growth | Restructure the rule; otherwise stop and raise it |
 | The host refuses the example | The live case fails at admission with a `request_failure` | The example is invalid for this build. Fix the constant; do not relax admission |
 | A target is unreadable or absent | The case fails as `prerequisite_unestablished` | Section 4.6's release consequence. Do not hand the case another document |
-| A target's bytes or selected metadata differ after the run | The case fails as `native_observation` while a consistent envelope still passes its readers | Record the sampled change and follow section 4.6 without attributing a writer or treating it as a false app report |
+| A target's digest, length or selected metadata differ after the run | The case fails as `native_observation` while a consistent envelope still passes its readers | Record the sampled change and follow section 4.6 without attributing a writer or treating it as a false app report |
 | The prediction is unavailable with a valid recorded spawn failure or timeout | The case fails as `native_observation` while consistency passes | Apply section 4.6's earlier-run rules: a complete passing run can supersede the trial without diagnosing the underlying OS cause |
 | The prediction is `deny` or `open_read` fails with prerequisites established | The case fails as `native_observation` while consistency passes | Resolve the challenge to the native expectation under section 4.6; later successes alone do not settle it |
 | A passing checker that checks nothing or rejects for the wrong reason | The offline controls accept a faulted input or its diagnostics differ from the expected set | Match each control's intended diagnostics and classification before crediting coverage; preserve independent combined faults and check unevaluated groups |

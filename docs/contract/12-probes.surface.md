@@ -33,13 +33,12 @@ Requested native operation.
 
 ### Read-hosts pair {read_hosts: example}
 
-This step pairs a path query with an open-read attempt:
-
-```json
-{"step_id":"read-hosts","sandbox_check":{"operation":"file-read-data","filter":{"kind":"path","value":"/etc/hosts"}},"attempt":{"kind":"file","action":"open_read","target":"/etc/hosts"}}
+```contract
+document: {"path": "controller/src/example.rs", "symbol": "EXAMPLE_DOCUMENT", "member": ["probe_plan", 0]}
+uses: ["request.specimen.example"]
 ```
 
-The open-read operation's success establishes its open boundary. A `read_fresh` attempt supplies the separate read-count, content and close observations described by the step-result surface.
+This step of the emitted example pairs a path query with an open-read attempt. The open-read operation's success establishes its open boundary. A `read_fresh` attempt supplies the separate read-count, content and close observations described by the step-result surface.
 
 ### Support {support: owner}
 
@@ -48,7 +47,7 @@ scope: "subtree"
 grade: "source_read"
 source: [{"path": "runner/Sources/PWRunnerCore/PWRunnerRequest.swift", "symbol": "PWRunnerProbeStep"}, {"path": "runner/Sources/PWRunnerCore/ProbeRunner.swift", "symbol": "requestMeaningFailure"}, {"path": "runner/Sources/PWRunnerCore/ActorPlan.swift", "symbol": "normalizeActorPlan"}]
 pins: "The adjacent field meanings and operations follow the named implementation."
-limits: "Grammar and uniqueness branches read. The teaching step is a template; no live result is claimed."
+limits: "Grammar and uniqueness branches read. The teaching step is extracted from the controller's example; this owner claims no live result."
 ```
 
 

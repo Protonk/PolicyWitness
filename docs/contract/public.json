@@ -36382,10 +36382,29 @@
           },
           {
             "context": {},
-            "facts": {},
+            "document": {
+              "attempt": {
+                "action": "open_read",
+                "kind": "file",
+                "target": "/etc/hosts"
+              },
+              "sandbox_check": {
+                "filter": {
+                  "kind": "path",
+                  "value": "/etc/hosts"
+                },
+                "operation": "file-read-data"
+              },
+              "step_id": "read-hosts"
+            },
+            "facts": {
+              "uses": [
+                "request.specimen.example"
+              ]
+            },
             "id": "probes.step.read_hosts",
             "kind": "example",
-            "prose": "This step pairs a path query with an open-read attempt:\n\n```json\n{\"step_id\":\"read-hosts\",\"sandbox_check\":{\"operation\":\"file-read-data\",\"filter\":{\"kind\":\"path\",\"value\":\"/etc/hosts\"}},\"attempt\":{\"kind\":\"file\",\"action\":\"open_read\",\"target\":\"/etc/hosts\"}}\n```\n\nThe open-read operation's success establishes its open boundary. A `read_fresh` attempt supplies the separate read-count, content and close observations described by the step-result surface.",
+            "prose": "This step of the emitted example pairs a path query with an open-read attempt. The open-read operation's success establishes its open boundary. A `read_fresh` attempt supplies the separate read-count, content and close observations described by the step-result surface.",
             "title": "Read-hosts pair"
           },
           {
@@ -43121,10 +43140,29 @@
           },
           {
             "context": {},
-            "facts": {},
+            "document": {
+              "attempt": {
+                "action": "open_read",
+                "kind": "file",
+                "target": "/etc/hosts"
+              },
+              "sandbox_check": {
+                "filter": {
+                  "kind": "path",
+                  "value": "/etc/hosts"
+                },
+                "operation": "file-read-data"
+              },
+              "step_id": "read-hosts"
+            },
+            "facts": {
+              "uses": [
+                "request.specimen.example"
+              ]
+            },
             "id": "probes.step.read_hosts",
             "kind": "example",
-            "prose": "This step pairs a path query with an open-read attempt:\n\n```json\n{\"step_id\":\"read-hosts\",\"sandbox_check\":{\"operation\":\"file-read-data\",\"filter\":{\"kind\":\"path\",\"value\":\"/etc/hosts\"}},\"attempt\":{\"kind\":\"file\",\"action\":\"open_read\",\"target\":\"/etc/hosts\"}}\n```\n\nThe open-read operation's success establishes its open boundary. A `read_fresh` attempt supplies the separate read-count, content and close observations described by the step-result surface.",
+            "prose": "This step of the emitted example pairs a path query with an open-read attempt. The open-read operation's success establishes its open boundary. A `read_fresh` attempt supplies the separate read-count, content and close observations described by the step-result surface.",
             "title": "Read-hosts pair"
           },
           {
@@ -109857,10 +109895,29 @@
           },
           {
             "context": {},
-            "facts": {},
+            "document": {
+              "attempt": {
+                "action": "open_read",
+                "kind": "file",
+                "target": "/etc/hosts"
+              },
+              "sandbox_check": {
+                "filter": {
+                  "kind": "path",
+                  "value": "/etc/hosts"
+                },
+                "operation": "file-read-data"
+              },
+              "step_id": "read-hosts"
+            },
+            "facts": {
+              "uses": [
+                "request.specimen.example"
+              ]
+            },
             "id": "probes.step.read_hosts",
             "kind": "example",
-            "prose": "This step pairs a path query with an open-read attempt:\n\n```json\n{\"step_id\":\"read-hosts\",\"sandbox_check\":{\"operation\":\"file-read-data\",\"filter\":{\"kind\":\"path\",\"value\":\"/etc/hosts\"}},\"attempt\":{\"kind\":\"file\",\"action\":\"open_read\",\"target\":\"/etc/hosts\"}}\n```\n\nThe open-read operation's success establishes its open boundary. A `read_fresh` attempt supplies the separate read-count, content and close observations described by the step-result surface.",
+            "prose": "This step of the emitted example pairs a path query with an open-read attempt. The open-read operation's success establishes its open boundary. A `read_fresh` attempt supplies the separate read-count, content and close observations described by the step-result surface.",
             "title": "Read-hosts pair"
           },
           {
@@ -149812,10 +149869,29 @@
           },
           {
             "context": {},
-            "facts": {},
+            "document": {
+              "attempt": {
+                "action": "open_read",
+                "kind": "file",
+                "target": "/etc/hosts"
+              },
+              "sandbox_check": {
+                "filter": {
+                  "kind": "path",
+                  "value": "/etc/hosts"
+                },
+                "operation": "file-read-data"
+              },
+              "step_id": "read-hosts"
+            },
+            "facts": {
+              "uses": [
+                "request.specimen.example"
+              ]
+            },
             "id": "probes.step.read_hosts",
             "kind": "example",
-            "prose": "This step pairs a path query with an open-read attempt:\n\n```json\n{\"step_id\":\"read-hosts\",\"sandbox_check\":{\"operation\":\"file-read-data\",\"filter\":{\"kind\":\"path\",\"value\":\"/etc/hosts\"}},\"attempt\":{\"kind\":\"file\",\"action\":\"open_read\",\"target\":\"/etc/hosts\"}}\n```\n\nThe open-read operation's success establishes its open boundary. A `read_fresh` attempt supplies the separate read-count, content and close observations described by the step-result surface.",
+            "prose": "This step of the emitted example pairs a path query with an open-read attempt. The open-read operation's success establishes its open boundary. A `read_fresh` attempt supplies the separate read-count, content and close observations described by the step-result surface.",
             "title": "Read-hosts pair"
           },
           {
@@ -186142,10 +186218,29 @@
           },
           {
             "context": {},
-            "facts": {},
+            "document": {
+              "attempt": {
+                "action": "open_read",
+                "kind": "file",
+                "target": "/etc/hosts"
+              },
+              "sandbox_check": {
+                "filter": {
+                  "kind": "path",
+                  "value": "/etc/hosts"
+                },
+                "operation": "file-read-data"
+              },
+              "step_id": "read-hosts"
+            },
+            "facts": {
+              "uses": [
+                "request.specimen.example"
+              ]
+            },
             "id": "probes.step.read_hosts",
             "kind": "example",
-            "prose": "This step pairs a path query with an open-read attempt:\n\n```json\n{\"step_id\":\"read-hosts\",\"sandbox_check\":{\"operation\":\"file-read-data\",\"filter\":{\"kind\":\"path\",\"value\":\"/etc/hosts\"}},\"attempt\":{\"kind\":\"file\",\"action\":\"open_read\",\"target\":\"/etc/hosts\"}}\n```\n\nThe open-read operation's success establishes its open boundary. A `read_fresh` attempt supplies the separate read-count, content and close observations described by the step-result surface.",
+            "prose": "This step of the emitted example pairs a path query with an open-read attempt. The open-read operation's success establishes its open boundary. A `read_fresh` attempt supplies the separate read-count, content and close observations described by the step-result surface.",
             "title": "Read-hosts pair"
           },
           {
@@ -254658,10 +254753,29 @@
           },
           {
             "context": {},
-            "facts": {},
+            "document": {
+              "attempt": {
+                "action": "open_read",
+                "kind": "file",
+                "target": "/etc/hosts"
+              },
+              "sandbox_check": {
+                "filter": {
+                  "kind": "path",
+                  "value": "/etc/hosts"
+                },
+                "operation": "file-read-data"
+              },
+              "step_id": "read-hosts"
+            },
+            "facts": {
+              "uses": [
+                "request.specimen.example"
+              ]
+            },
             "id": "probes.step.read_hosts",
             "kind": "example",
-            "prose": "This step pairs a path query with an open-read attempt:\n\n```json\n{\"step_id\":\"read-hosts\",\"sandbox_check\":{\"operation\":\"file-read-data\",\"filter\":{\"kind\":\"path\",\"value\":\"/etc/hosts\"}},\"attempt\":{\"kind\":\"file\",\"action\":\"open_read\",\"target\":\"/etc/hosts\"}}\n```\n\nThe open-read operation's success establishes its open boundary. A `read_fresh` attempt supplies the separate read-count, content and close observations described by the step-result surface.",
+            "prose": "This step of the emitted example pairs a path query with an open-read attempt. The open-read operation's success establishes its open boundary. A `read_fresh` attempt supplies the separate read-count, content and close observations described by the step-result surface.",
             "title": "Read-hosts pair"
           },
           {
@@ -442585,10 +442699,29 @@
           },
           {
             "context": {},
-            "facts": {},
+            "document": {
+              "attempt": {
+                "action": "open_read",
+                "kind": "file",
+                "target": "/etc/hosts"
+              },
+              "sandbox_check": {
+                "filter": {
+                  "kind": "path",
+                  "value": "/etc/hosts"
+                },
+                "operation": "file-read-data"
+              },
+              "step_id": "read-hosts"
+            },
+            "facts": {
+              "uses": [
+                "request.specimen.example"
+              ]
+            },
             "id": "probes.step.read_hosts",
             "kind": "example",
-            "prose": "This step pairs a path query with an open-read attempt:\n\n```json\n{\"step_id\":\"read-hosts\",\"sandbox_check\":{\"operation\":\"file-read-data\",\"filter\":{\"kind\":\"path\",\"value\":\"/etc/hosts\"}},\"attempt\":{\"kind\":\"file\",\"action\":\"open_read\",\"target\":\"/etc/hosts\"}}\n```\n\nThe open-read operation's success establishes its open boundary. A `read_fresh` attempt supplies the separate read-count, content and close observations described by the step-result surface.",
+            "prose": "This step of the emitted example pairs a path query with an open-read attempt. The open-read operation's success establishes its open boundary. A `read_fresh` attempt supplies the separate read-count, content and close observations described by the step-result surface.",
             "title": "Read-hosts pair"
           },
           {
@@ -567529,10 +567662,29 @@
           },
           {
             "context": {},
-            "facts": {},
+            "document": {
+              "attempt": {
+                "action": "open_read",
+                "kind": "file",
+                "target": "/etc/hosts"
+              },
+              "sandbox_check": {
+                "filter": {
+                  "kind": "path",
+                  "value": "/etc/hosts"
+                },
+                "operation": "file-read-data"
+              },
+              "step_id": "read-hosts"
+            },
+            "facts": {
+              "uses": [
+                "request.specimen.example"
+              ]
+            },
             "id": "probes.step.read_hosts",
             "kind": "example",
-            "prose": "This step pairs a path query with an open-read attempt:\n\n```json\n{\"step_id\":\"read-hosts\",\"sandbox_check\":{\"operation\":\"file-read-data\",\"filter\":{\"kind\":\"path\",\"value\":\"/etc/hosts\"}},\"attempt\":{\"kind\":\"file\",\"action\":\"open_read\",\"target\":\"/etc/hosts\"}}\n```\n\nThe open-read operation's success establishes its open boundary. A `read_fresh` attempt supplies the separate read-count, content and close observations described by the step-result surface.",
+            "prose": "This step of the emitted example pairs a path query with an open-read attempt. The open-read operation's success establishes its open boundary. A `read_fresh` attempt supplies the separate read-count, content and close observations described by the step-result surface.",
             "title": "Read-hosts pair"
           },
           {

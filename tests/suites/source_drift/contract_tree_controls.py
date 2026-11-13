@@ -692,6 +692,43 @@ checks: ["source_drift"]
         self.assertEqual(self.example_tree(constant(admitted)).index['demo.report.extracted'].document,
                          json.loads(admitted))
 
+    def test_example_document_member_selects_one_object_of_the_request(self):
+        constant = self.example_constant('{"specimen_id":"control","probe_plan":[{"status":"ready"},{"unlisted":1}]}')
+
+        def fact(member):
+            return json.dumps({'path': self.EXAMPLE_SOURCE, 'symbol': 'CONTROL_DOCUMENT', 'member': member})
+        tree = self.example_tree(constant, fact(['probe_plan', 0]))
+        node = tree.index['demo.report.extracted']
+        # The fragment's members are fields of the record its subject describes.
+        self.assertEqual(node.document, {'status': 'ready'})
+        payload = self.model.public_payload(tree, 'demo')
+        self.assertEqual(next(item for item in payload['nodes'] if item['id'] == node.id)['document'], {'status': 'ready'})
+        rendered = self.model.render(tree)
+        self.assertIn('The request comes from the cited constant.\n\n```json\n{\n  "status": "ready"\n}\n```', rendered)
+        self.assertNotIn('<reported-contract>', rendered)
+        edited = self.example_tree(constant.replace('"ready"', '"unknown"'), fact(['probe_plan', 0]))
+        self.assertNotEqual(self.model.public_payload(edited, 'demo'), payload)
+        for label, member, diagnostic in [
+            ('empty path', [], 'document member must be a nonempty path'),
+            ('not a path', 'probe_plan', 'document member must be a nonempty path'),
+            ('boolean index', ['probe_plan', True], 'document member must be a nonempty path'),
+            ('index out of range', ['probe_plan', 2], 'has no member at ["probe_plan", 2]'),
+            ('negative index', ['probe_plan', -1], 'has no member at ["probe_plan", -1]'),
+            ('absent key', ['phases'], 'has no member at ["phases"]'),
+            ('key into an array', ['probe_plan', 'first'], 'has no member at ["probe_plan", "first"]'),
+            ('scalar member', ['specimen_id'], 'member ["specimen_id"] is not a JSON object'),
+            ('array member', ['probe_plan'], 'member ["probe_plan"] is not a JSON object'),
+            ('unknown fragment member', ['probe_plan', 1], "carries the unknown member 'unlisted'"),
+        ]:
+            with self.subTest(control=label):
+                with self.assertRaises(ValueError) as caught:
+                    self.example_tree(constant, fact(member))
+                self.assertIn(diagnostic, str(caught.exception))
+        # The whole constant is checked before any member is selected.
+        with self.assertRaisesRegex(ValueError, "forbidden member 'contract'"):
+            self.example_tree(self.example_constant('{"contract":"x","probe_plan":[{"status":"ready"}]}'),
+                              fact(['probe_plan', 0]))
+
     def test_free_text_counts_ratchet_by_kind(self):
         runtime = generate_contract_stamps.contract_module('runtime')
         tree = self.load()

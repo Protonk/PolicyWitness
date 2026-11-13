@@ -152,6 +152,11 @@ prints the document after the example's prose with `contract` shown as
 `<reported-contract>`. The extracted document enters the public snapshot in
 place of its citation, and the cited file is a generator input.
 
+A `member` path of keys and indices, such as `["probe_plan", 0]`, selects one
+object inside that request. The whole constant is checked first. The selected
+object's members must then be fields of the record its subject describes, and
+it is rendered as it stands, without the identity placeholder.
+
 The renderer joins field meanings to public JSON types and presence in
 record-local lists. A bare type requires its key; `T?` omits an absent field,
 while `T ∪ null` keeps its key and represents absence as null. These signatures

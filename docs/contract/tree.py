@@ -129,6 +129,7 @@ class Node:
     record: str | None = None
     field_info: dict | None = None
     document: dict | None = None
+    document_member: bool = False
 
     @property
     def surface_id(self):
@@ -690,8 +691,13 @@ def _example_document(tree, node):
     top-level members.
     """
     ref = node.facts['document']
-    if not isinstance(ref, dict) or set(ref) != {'path', 'symbol'}:
+    if not isinstance(ref, dict) or set(ref) - {'member'} != {'path', 'symbol'}:
         node.fail('document requires one path/symbol citation', 'document')
+    member = ref.get('member', [])
+    if not isinstance(member, list) or ('member' in ref and not member) or \
+            any(type(part) not in (str, int) for part in member):
+        node.fail('document member must be a nonempty path of keys and indices', 'document')
+    ref = {key: ref[key] for key in ('path', 'symbol')}
     try:
         generator_common.citation(ref, _ReadRoot(tree.read))
         source = tree.read(_relative(ref['path']))
@@ -726,7 +732,24 @@ def _example_document(tree, node):
             node.fail(f'{path}: {symbol} carries the controller selection key {key!r}', 'document')
         if key not in fields:
             node.fail(f'{path}: {symbol} carries the unknown member {key!r}', 'document')
+    # A member path selects one object inside the admissible request, such as a
+    # step. Its members must be fields of the record its subject describes.
+    for depth, part in enumerate(member):
+        container = dict if isinstance(part, str) else list
+        if not isinstance(value, container) or (part not in value if container is dict else not 0 <= part < len(value)):
+            node.fail(f'{path}: {symbol} has no member at {json.dumps(member[:depth + 1])}', 'document')
+        value = value[part]
+    if member:
+        if not isinstance(value, dict):
+            node.fail(f'{path}: {symbol} member {json.dumps(member)} is not a JSON object', 'document')
+        record = tree.records.get(node.parent.record) if node.parent is not None and node.parent.record else None
+        if record is None:
+            node.fail('a document member belongs directly beneath a record subject', 'document')
+        for key in value:
+            if key not in record['fields']:
+                node.fail(f'{path}: {symbol} member {json.dumps(member)} carries the unknown member {key!r}', 'document')
     node.document = value
+    node.document_member = bool(member)
 
 
 def _owner(tree, node):
@@ -1508,7 +1531,7 @@ def render(tree):
         if facts: output.extend([facts, ''])
         if node.prose: output.extend([node.prose, ''])
         if node.document is not None:
-            shown = {'contract': '<reported-contract>', **node.document}
+            shown = node.document if node.document_member else {'contract': '<reported-contract>', **node.document}
             output.extend(['```json', json.dumps(shown, indent=2, sort_keys=True, ensure_ascii=False), '```', ''])
         fields = [c for c in node.children if c.kind == 'field']
         if fields:

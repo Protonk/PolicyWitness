@@ -858,15 +858,29 @@ One paired probe contributes one action and at most one eligible validator query
 <a id="contract-probes-step-read_hosts"></a>
 ##### Read-hosts pair
 
-This step pairs a path query with an open-read attempt:
+Uses [Emitted example](#contract-request-specimen-example).
+
+This step of the emitted example pairs a path query with an open-read attempt. The open-read operation's success establishes its open boundary. A `read_fresh` attempt supplies the separate read-count, content and close observations described by the step-result surface.
 
 ```json
-{"step_id":"read-hosts","sandbox_check":{"operation":"file-read-data","filter":{"kind":"path","value":"/etc/hosts"}},"attempt":{"kind":"file","action":"open_read","target":"/etc/hosts"}}
+{
+  "attempt": {
+    "action": "open_read",
+    "kind": "file",
+    "target": "/etc/hosts"
+  },
+  "sandbox_check": {
+    "filter": {
+      "kind": "path",
+      "value": "/etc/hosts"
+    },
+    "operation": "file-read-data"
+  },
+  "step_id": "read-hosts"
+}
 ```
 
-The open-read operation's success establishes its open boundary. A `read_fresh` attempt supplies the separate read-count, content and close observations described by the step-result surface.
-
-**Support: [source read](#contract-support-grades) for [Paired probe](#contract-probes-step) and its descendants.** The adjacent field meanings and operations follow the named implementation. Evidence limit: Grammar and uniqueness branches read. The teaching step is a template; no live result is claimed. Source: [PWRunnerRequest.swift](../runner/Sources/PWRunnerCore/PWRunnerRequest.swift): `PWRunnerProbeStep`; [ProbeRunner.swift](../runner/Sources/PWRunnerCore/ProbeRunner.swift): `requestMeaningFailure`; [ActorPlan.swift](../runner/Sources/PWRunnerCore/ActorPlan.swift): `normalizeActorPlan`.
+**Support: [source read](#contract-support-grades) for [Paired probe](#contract-probes-step) and its descendants.** The adjacent field meanings and operations follow the named implementation. Evidence limit: Grammar and uniqueness branches read. The teaching step is extracted from the controller's example; this owner claims no live result. Source: [PWRunnerRequest.swift](../runner/Sources/PWRunnerCore/PWRunnerRequest.swift): `PWRunnerProbeStep`; [ProbeRunner.swift](../runner/Sources/PWRunnerCore/ProbeRunner.swift): `requestMeaningFailure`; [ActorPlan.swift](../runner/Sources/PWRunnerCore/ActorPlan.swift): `normalizeActorPlan`.
 
 <a id="contract-probes-query"></a>
 #### Sandbox query
