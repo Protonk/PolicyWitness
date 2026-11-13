@@ -179,6 +179,51 @@ This template applies a policy with no probe actions. Replace the assertion with
 {"contract":"<reported-contract>","specimen_id":"apply-only","policy":{"format":"sbpl","sbpl_source":"(version 1) (allow default)"},"probe_plan":[]}
 ```
 
+### Emit the example specimen {emit_example: reports}
+
+```contract
+who: ["identity.definitions.controller"]
+where: "CLI example dispatch"
+entry: ["cli_example"]
+recipient: ["cli_caller"]
+report: ["example_specimen"]
+uses: ["identity.build.contract", "identity.definitions.specimen"]
+effects: set_value(specimen.contract, ref("identity.build.contract"))
+```
+
+`policy-witness example` takes no argument and prints one specimen defined by the emitting build, followed by one newline. The output is a request document, not an envelope. Process exit 0 supplies the complete document, and the same build's `run` admits it. Every failure to emit is process exit 2 with a reason on standard error: an argument, a build whose identity is empty or `unbound`, an example the contract gate refuses, or a failed write or flush. On exit 2 discard standard output, even when it holds a complete document. The document's content, layout and labels carry no stability promise between builds. The command reads no file, starts no runner and reports nothing about a caller's document; `run` remains the only admission.
+
+#### Emission evidence {evidence: gap}
+
+```contract
+kind: "evidence"
+```
+
+No check is credited for this rule yet. The signed-app passage from `example` through `run`, the exit statuses and the write-failure behavior await their checks' review.
+
+### Emitted example {example: example}
+
+```contract
+document: {"path": "controller/src/example.rs", "symbol": "EXAMPLE_DOCUMENT"}
+```
+
+These commands print the example and submit it unchanged:
+
+```sh
+policy-witness example > example.json
+policy-witness run example.json
+```
+
+The printed document carries the emitting build's identity where this rendering shows `<reported-contract>`.
+
+#### Example evidence {evidence: gap}
+
+```contract
+kind: "evidence"
+```
+
+No executed instance of this example is credited yet. The rendering is extracted from the controller's definition; host admission and native results await the signed-app round trip.
+
 ### Repeated members at each entry {duplicate_keys: definition}
 
 ```contract

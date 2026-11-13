@@ -17,7 +17,7 @@ See [AGENTS.md](AGENTS.md) for working guidance and the
 | Area | Sources and responsibility |
 | --- | --- |
 | CLI and orchestration | [main.rs](src/main.rs), [cli.rs](src/cli.rs), [run_flow.rs](src/run_flow.rs): dispatch, run preparation and envelope assembly. |
-| Requests | [request_patch.rs](src/request_patch.rs): parsing, contract admission and structured refusals; [runner_select.rs](src/runner_select.rs): selector validation and runner resolution; [augments.rs](src/augments.rs): named policy augmentation. |
+| Requests | [request_patch.rs](src/request_patch.rs): parsing, contract admission and structured refusals; [example.rs](src/example.rs): the build's example specimen and its emitter; [runner_select.rs](src/runner_select.rs): selector validation and runner resolution; [augments.rs](src/augments.rs): named policy augmentation. |
 | Reply transport and interpretation | [runner_client.rs](src/runner_client.rs): one Swift-client invocation and separate client/host capture admission; [porcelain_admission.rs](src/porcelain_admission.rs): typed worker/actor admission and projection; [json_contract.rs](src/json_contract.rs): envelope rendering. |
 | Provenance | [dossier.rs](src/dossier.rs), [evidence.rs](src/evidence.rs), [digest.rs](src/digest.rs), [host_facts.rs](src/host_facts.rs): specimen records, manifest lookup, hashes and host facts. |
 | Policy inspection | [policy_check.rs](src/policy_check.rs): independent compile-check capture; [sbpl_imports.rs](src/sbpl_imports.rs) and [sbpl_lex.rs](src/sbpl_lex.rs): bounded import scan and lexer, shared with `sbpl-check`. |
@@ -49,6 +49,7 @@ observations; rejected frames remain available as bytes.
 ```text
 policy-witness run <request.json> [--timeout-ms <n>] [--runner-mode <standard|byoxpc>]
 policy-witness runner <command> [options]
+policy-witness example
 policy-witness --version
 ```
 
@@ -58,6 +59,16 @@ identity in `data.contract` and `build.contract`. Every envelope also carries
 plists advertise the same identity as `PWContract`. A plain Cargo build is
 `unbound` and refuses public requests and packaged peers.
 The [build-stamp contract](../docs/CONTRACT.md#contract-identity-build) defines these fields.
+
+`example` takes no argument and prints the specimen defined in
+[example.rs](src/example.rs) with this binary's identity as `contract`,
+followed by one newline. It uses `run`'s parser, contract gate and held
+serialization, renders the whole document before writing, and reads no file,
+app root, manifest or registry. Exit 0 supplies the complete document; an
+argument, an empty or `unbound` identity, a gate refusal or a failed write or
+flush is exit 2 with a line on stderr, and the caller discards stdout. The
+[example rule](../docs/CONTRACT.md#contract-request-specimen-emit_example)
+states the public promise.
 
 `--timeout-ms` controls the runner RPC. `PW_VERIFY_EVIDENCE=1` adds manifest hash verification under
 `data.specimen.app_provenance.evidence_verify`.

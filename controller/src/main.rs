@@ -10,6 +10,7 @@ mod cli;
 mod digest;
 mod dossier;
 mod evidence;
+mod example;
 // Shared with the sbpl-check helper through #[path] includes.
 mod host_facts;
 mod json_contract;

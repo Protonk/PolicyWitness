@@ -3131,6 +3131,156 @@
           {
             "context": {
               "entry": [
+                "cli_example"
+              ],
+              "recipient": [
+                "cli_caller"
+              ],
+              "report": [
+                "example_specimen"
+              ],
+              "where": "CLI example dispatch",
+              "who": [
+                "identity.definitions.controller"
+              ]
+            },
+            "facts": {
+              "effects": {
+                "body": {
+                  "args": [
+                    {
+                      "attr": "contract",
+                      "node": "Attribute",
+                      "value": {
+                        "id": "specimen",
+                        "node": "Name"
+                      }
+                    },
+                    {
+                      "args": [
+                        {
+                          "kind": null,
+                          "node": "Constant",
+                          "value": "identity.build.contract"
+                        }
+                      ],
+                      "func": {
+                        "id": "ref",
+                        "node": "Name"
+                      },
+                      "keywords": [],
+                      "node": "Call"
+                    }
+                  ],
+                  "func": {
+                    "id": "set_value",
+                    "node": "Name"
+                  },
+                  "keywords": [],
+                  "node": "Call"
+                },
+                "node": "Expression"
+              },
+              "entry": [
+                "cli_example"
+              ],
+              "recipient": [
+                "cli_caller"
+              ],
+              "report": [
+                "example_specimen"
+              ],
+              "uses": [
+                "identity.build.contract",
+                "identity.definitions.specimen"
+              ],
+              "where": "CLI example dispatch",
+              "who": [
+                "identity.definitions.controller"
+              ]
+            },
+            "id": "request.specimen.emit_example",
+            "kind": "reports",
+            "prose": "`policy-witness example` takes no argument and prints one specimen defined by the emitting build, followed by one newline. The output is a request document, not an envelope. Process exit 0 supplies the complete document, and the same build's `run` admits it. Every failure to emit is process exit 2 with a reason on standard error: an argument, a build whose identity is empty or `unbound`, an example the contract gate refuses, or a failed write or flush. On exit 2 discard standard output, even when it holds a complete document. The document's content, layout and labels carry no stability promise between builds. The command reads no file, starts no runner and reports nothing about a caller's document; `run` remains the only admission.",
+            "referenced_types": {
+              "specimen.contract": {
+                "json_null": false,
+                "optional": false,
+                "presence": "as defined below",
+                "type": "string"
+              }
+            },
+            "title": "Emit the example specimen"
+          },
+          {
+            "context": {
+              "entry": [
+                "cli_example"
+              ],
+              "recipient": [
+                "cli_caller"
+              ],
+              "report": [
+                "example_specimen"
+              ],
+              "where": "CLI example dispatch",
+              "who": [
+                "identity.definitions.controller"
+              ]
+            },
+            "facts": {
+              "kind": "evidence"
+            },
+            "id": "request.specimen.emit_example.evidence",
+            "kind": "gap",
+            "prose": "No check is credited for this rule yet. The signed-app passage from `example` through `run`, the exit statuses and the write-failure behavior await their checks' review.",
+            "title": "Emission evidence"
+          },
+          {
+            "context": {},
+            "document": {
+              "policy": {
+                "format": "sbpl",
+                "sbpl_source": "(version 1) (allow default)"
+              },
+              "probe_plan": [
+                {
+                  "attempt": {
+                    "action": "open_read",
+                    "kind": "file",
+                    "target": "/etc/hosts"
+                  },
+                  "sandbox_check": {
+                    "filter": {
+                      "kind": "path",
+                      "value": "/etc/hosts"
+                    },
+                    "operation": "file-read-data"
+                  },
+                  "step_id": "read-hosts"
+                }
+              ],
+              "specimen_id": "example"
+            },
+            "facts": {},
+            "id": "request.specimen.example",
+            "kind": "example",
+            "prose": "These commands print the example and submit it unchanged:\n\n```sh\npolicy-witness example > example.json\npolicy-witness run example.json\n```\n\nThe printed document carries the emitting build's identity where this rendering shows `<reported-contract>`.",
+            "title": "Emitted example"
+          },
+          {
+            "context": {},
+            "facts": {
+              "kind": "evidence"
+            },
+            "id": "request.specimen.example.evidence",
+            "kind": "gap",
+            "prose": "No executed instance of this example is credited yet. The rendering is extracted from the controller's definition; host admission and native results await the signed-app round trip.",
+            "title": "Example evidence"
+          },
+          {
+            "context": {
+              "entry": [
                 "cli_run"
               ],
               "recipient": [
@@ -34324,6 +34474,38 @@
           {
             "context": {},
             "facts": {
+              "as": "build_stamp",
+              "record": "rust.BuildStamp"
+            },
+            "id": "identity.build",
+            "kind": "subject",
+            "prose": "Every controller and compiler-helper envelope carries these string fields\nunder `build`. They identify the emitting binary's compiled context.",
+            "title": "Build identification"
+          },
+          {
+            "context": {},
+            "facts": {
+              "uses": [
+                "identity.public.contract",
+                "identity.public.forms",
+                "identity.public.direct"
+              ]
+            },
+            "field": {
+              "json_null": false,
+              "omission": null,
+              "optional": false,
+              "presence": "required",
+              "type": "string"
+            },
+            "id": "identity.build.contract",
+            "kind": "field",
+            "prose": "The public identity embedded in the emitting binary. Receiving boundaries use\nthe exact value according to their identity-admission rule.",
+            "title": "Contract"
+          },
+          {
+            "context": {},
+            "facts": {
               "part": "definitions"
             },
             "id": "identity.definitions",
@@ -34521,6 +34703,27 @@
             "kind": "definition",
             "prose": "A public contract identity is the string a build embeds for exact admission.\nA specimen carries it in `contract`; controller and compiler-helper envelopes\ncarry it in `build.contract`; a host reply carries it in `producer.contract`;\na client capture carries its own producer identity. The app and service\nproperty lists carry the build's value as `PWContract`. At an identity-admission\nboundary, the receiver compares the arriving identity with its expected identity.\nEquality supplies that boundary's identity match. Request validity, wire\nstructure, equipment association and supported observations have their own\nconditions.",
             "title": "Exact admission identity"
+          },
+          {
+            "context": {},
+            "facts": {
+              "defines": "value"
+            },
+            "id": "identity.public.direct",
+            "kind": "definition",
+            "prose": "The Rust controller and compiler helper embed a nonempty compile-time\n`PW_BUILD_CONTRACT` verbatim. An absent or empty value becomes `unbound`.\nA supplied `PW_BUILD_CONTRACT` spelling can be foreign or release-shaped;\nbuild version, number, commit and describe retain their separately supplied\nprovenance. Ordinary SwiftPM compilation uses `unbound`; its explicitly\nselected unit-test context uses `test:policy-witness`. Rust unit tests\nlikewise use `test:policy-witness`. A request cannot pass the controller's\nidentity gate when its expected identity is empty or `unbound`.",
+            "title": "Direct compilation contexts"
+          },
+          {
+            "context": {},
+            "facts": {
+              "defines": "value",
+              "type": "String"
+            },
+            "id": "identity.public.forms",
+            "kind": "definition",
+            "prose": "`release:vX.Y.Z` names the sole annotated release tag at the build checkout's\nHEAD. The build derives this form when the checkout is clean, the tag matches\n`v<digits>.<digits>.<digits>`, and the selected files' actual bytes and inventory\nequal that tag's blobs. More than one qualifying annotated tag on a clean\nHEAD refuses identity derivation as ambiguous.\n\n`development:<sha256>` identifies the selected source paths and bytes in\nother source trees. Its digest is SHA-256 with the domain prefix\n`PolicyWitness public build contract` followed by a NUL byte. For each sorted\nrepository-relative path, the generator appends the UTF-8 path and file bytes,\neach preceded by its unsigned eight-byte big-endian length. A dirty release\ncheckout receives this development form. A documentation-only edit can change\nthe form from release to development while leaving the selected-source digest\nunchanged.",
+            "title": "Release and development forms"
           },
           {
             "context": {},
@@ -73989,6 +74192,38 @@
           {
             "context": {},
             "facts": {
+              "as": "build_stamp",
+              "record": "rust.BuildStamp"
+            },
+            "id": "identity.build",
+            "kind": "subject",
+            "prose": "Every controller and compiler-helper envelope carries these string fields\nunder `build`. They identify the emitting binary's compiled context.",
+            "title": "Build identification"
+          },
+          {
+            "context": {},
+            "facts": {
+              "uses": [
+                "identity.public.contract",
+                "identity.public.forms",
+                "identity.public.direct"
+              ]
+            },
+            "field": {
+              "json_null": false,
+              "omission": null,
+              "optional": false,
+              "presence": "required",
+              "type": "string"
+            },
+            "id": "identity.build.contract",
+            "kind": "field",
+            "prose": "The public identity embedded in the emitting binary. Receiving boundaries use\nthe exact value according to their identity-admission rule.",
+            "title": "Contract"
+          },
+          {
+            "context": {},
+            "facts": {
               "part": "definitions"
             },
             "id": "identity.definitions",
@@ -74186,6 +74421,27 @@
             "kind": "definition",
             "prose": "A public contract identity is the string a build embeds for exact admission.\nA specimen carries it in `contract`; controller and compiler-helper envelopes\ncarry it in `build.contract`; a host reply carries it in `producer.contract`;\na client capture carries its own producer identity. The app and service\nproperty lists carry the build's value as `PWContract`. At an identity-admission\nboundary, the receiver compares the arriving identity with its expected identity.\nEquality supplies that boundary's identity match. Request validity, wire\nstructure, equipment association and supported observations have their own\nconditions.",
             "title": "Exact admission identity"
+          },
+          {
+            "context": {},
+            "facts": {
+              "defines": "value"
+            },
+            "id": "identity.public.direct",
+            "kind": "definition",
+            "prose": "The Rust controller and compiler helper embed a nonempty compile-time\n`PW_BUILD_CONTRACT` verbatim. An absent or empty value becomes `unbound`.\nA supplied `PW_BUILD_CONTRACT` spelling can be foreign or release-shaped;\nbuild version, number, commit and describe retain their separately supplied\nprovenance. Ordinary SwiftPM compilation uses `unbound`; its explicitly\nselected unit-test context uses `test:policy-witness`. Rust unit tests\nlikewise use `test:policy-witness`. A request cannot pass the controller's\nidentity gate when its expected identity is empty or `unbound`.",
+            "title": "Direct compilation contexts"
+          },
+          {
+            "context": {},
+            "facts": {
+              "defines": "value",
+              "type": "String"
+            },
+            "id": "identity.public.forms",
+            "kind": "definition",
+            "prose": "`release:vX.Y.Z` names the sole annotated release tag at the build checkout's\nHEAD. The build derives this form when the checkout is clean, the tag matches\n`v<digits>.<digits>.<digits>`, and the selected files' actual bytes and inventory\nequal that tag's blobs. More than one qualifying annotated tag on a clean\nHEAD refuses identity derivation as ambiguous.\n\n`development:<sha256>` identifies the selected source paths and bytes in\nother source trees. Its digest is SHA-256 with the domain prefix\n`PolicyWitness public build contract` followed by a NUL byte. For each sorted\nrepository-relative path, the generator appends the UTF-8 path and file bytes,\neach preceded by its unsigned eight-byte big-endian length. A dirty release\ncheckout receives this development form. A documentation-only edit can change\nthe form from release to development while leaving the selected-source digest\nunchanged.",
+            "title": "Release and development forms"
           },
           {
             "context": {},
@@ -76439,6 +76695,156 @@
             "kind": "definition",
             "prose": "For the paired repeated-member cases, CLI entry keeps the last contract, policy, probe step_id, attempt target, runner selector or runner.mode value, then holds the parsed object\u2019s serialization. Direct host entry keeps the first contract, policy, probe step_id or attempt target value in either tested order. Direct-host runner and runner.mode cases refuse with unknown_field at [\"runner\"] in either order. These observations concern the listed raw-input pairs, their canonical neighbours and independent file effects on the observed platform.",
             "title": "Repeated members at each entry"
+          },
+          {
+            "context": {
+              "entry": [
+                "cli_example"
+              ],
+              "recipient": [
+                "cli_caller"
+              ],
+              "report": [
+                "example_specimen"
+              ],
+              "where": "CLI example dispatch",
+              "who": [
+                "identity.definitions.controller"
+              ]
+            },
+            "facts": {
+              "effects": {
+                "body": {
+                  "args": [
+                    {
+                      "attr": "contract",
+                      "node": "Attribute",
+                      "value": {
+                        "id": "specimen",
+                        "node": "Name"
+                      }
+                    },
+                    {
+                      "args": [
+                        {
+                          "kind": null,
+                          "node": "Constant",
+                          "value": "identity.build.contract"
+                        }
+                      ],
+                      "func": {
+                        "id": "ref",
+                        "node": "Name"
+                      },
+                      "keywords": [],
+                      "node": "Call"
+                    }
+                  ],
+                  "func": {
+                    "id": "set_value",
+                    "node": "Name"
+                  },
+                  "keywords": [],
+                  "node": "Call"
+                },
+                "node": "Expression"
+              },
+              "entry": [
+                "cli_example"
+              ],
+              "recipient": [
+                "cli_caller"
+              ],
+              "report": [
+                "example_specimen"
+              ],
+              "uses": [
+                "identity.build.contract",
+                "identity.definitions.specimen"
+              ],
+              "where": "CLI example dispatch",
+              "who": [
+                "identity.definitions.controller"
+              ]
+            },
+            "id": "request.specimen.emit_example",
+            "kind": "reports",
+            "prose": "`policy-witness example` takes no argument and prints one specimen defined by the emitting build, followed by one newline. The output is a request document, not an envelope. Process exit 0 supplies the complete document, and the same build's `run` admits it. Every failure to emit is process exit 2 with a reason on standard error: an argument, a build whose identity is empty or `unbound`, an example the contract gate refuses, or a failed write or flush. On exit 2 discard standard output, even when it holds a complete document. The document's content, layout and labels carry no stability promise between builds. The command reads no file, starts no runner and reports nothing about a caller's document; `run` remains the only admission.",
+            "referenced_types": {
+              "specimen.contract": {
+                "json_null": false,
+                "optional": false,
+                "presence": "as defined below",
+                "type": "string"
+              }
+            },
+            "title": "Emit the example specimen"
+          },
+          {
+            "context": {
+              "entry": [
+                "cli_example"
+              ],
+              "recipient": [
+                "cli_caller"
+              ],
+              "report": [
+                "example_specimen"
+              ],
+              "where": "CLI example dispatch",
+              "who": [
+                "identity.definitions.controller"
+              ]
+            },
+            "facts": {
+              "kind": "evidence"
+            },
+            "id": "request.specimen.emit_example.evidence",
+            "kind": "gap",
+            "prose": "No check is credited for this rule yet. The signed-app passage from `example` through `run`, the exit statuses and the write-failure behavior await their checks' review.",
+            "title": "Emission evidence"
+          },
+          {
+            "context": {},
+            "document": {
+              "policy": {
+                "format": "sbpl",
+                "sbpl_source": "(version 1) (allow default)"
+              },
+              "probe_plan": [
+                {
+                  "attempt": {
+                    "action": "open_read",
+                    "kind": "file",
+                    "target": "/etc/hosts"
+                  },
+                  "sandbox_check": {
+                    "filter": {
+                      "kind": "path",
+                      "value": "/etc/hosts"
+                    },
+                    "operation": "file-read-data"
+                  },
+                  "step_id": "read-hosts"
+                }
+              ],
+              "specimen_id": "example"
+            },
+            "facts": {},
+            "id": "request.specimen.example",
+            "kind": "example",
+            "prose": "These commands print the example and submit it unchanged:\n\n```sh\npolicy-witness example > example.json\npolicy-witness run example.json\n```\n\nThe printed document carries the emitting build's identity where this rendering shows `<reported-contract>`.",
+            "title": "Emitted example"
+          },
+          {
+            "context": {},
+            "facts": {
+              "kind": "evidence"
+            },
+            "id": "request.specimen.example.evidence",
+            "kind": "gap",
+            "prose": "No executed instance of this example is credited yet. The rendering is extracted from the controller's definition; host admission and native results await the signed-app round trip.",
+            "title": "Example evidence"
           },
           {
             "context": {
@@ -107649,6 +108055,38 @@
           {
             "context": {},
             "facts": {
+              "as": "build_stamp",
+              "record": "rust.BuildStamp"
+            },
+            "id": "identity.build",
+            "kind": "subject",
+            "prose": "Every controller and compiler-helper envelope carries these string fields\nunder `build`. They identify the emitting binary's compiled context.",
+            "title": "Build identification"
+          },
+          {
+            "context": {},
+            "facts": {
+              "uses": [
+                "identity.public.contract",
+                "identity.public.forms",
+                "identity.public.direct"
+              ]
+            },
+            "field": {
+              "json_null": false,
+              "omission": null,
+              "optional": false,
+              "presence": "required",
+              "type": "string"
+            },
+            "id": "identity.build.contract",
+            "kind": "field",
+            "prose": "The public identity embedded in the emitting binary. Receiving boundaries use\nthe exact value according to their identity-admission rule.",
+            "title": "Contract"
+          },
+          {
+            "context": {},
+            "facts": {
               "part": "definitions"
             },
             "id": "identity.definitions",
@@ -107846,6 +108284,27 @@
             "kind": "definition",
             "prose": "A public contract identity is the string a build embeds for exact admission.\nA specimen carries it in `contract`; controller and compiler-helper envelopes\ncarry it in `build.contract`; a host reply carries it in `producer.contract`;\na client capture carries its own producer identity. The app and service\nproperty lists carry the build's value as `PWContract`. At an identity-admission\nboundary, the receiver compares the arriving identity with its expected identity.\nEquality supplies that boundary's identity match. Request validity, wire\nstructure, equipment association and supported observations have their own\nconditions.",
             "title": "Exact admission identity"
+          },
+          {
+            "context": {},
+            "facts": {
+              "defines": "value"
+            },
+            "id": "identity.public.direct",
+            "kind": "definition",
+            "prose": "The Rust controller and compiler helper embed a nonempty compile-time\n`PW_BUILD_CONTRACT` verbatim. An absent or empty value becomes `unbound`.\nA supplied `PW_BUILD_CONTRACT` spelling can be foreign or release-shaped;\nbuild version, number, commit and describe retain their separately supplied\nprovenance. Ordinary SwiftPM compilation uses `unbound`; its explicitly\nselected unit-test context uses `test:policy-witness`. Rust unit tests\nlikewise use `test:policy-witness`. A request cannot pass the controller's\nidentity gate when its expected identity is empty or `unbound`.",
+            "title": "Direct compilation contexts"
+          },
+          {
+            "context": {},
+            "facts": {
+              "defines": "value",
+              "type": "String"
+            },
+            "id": "identity.public.forms",
+            "kind": "definition",
+            "prose": "`release:vX.Y.Z` names the sole annotated release tag at the build checkout's\nHEAD. The build derives this form when the checkout is clean, the tag matches\n`v<digits>.<digits>.<digits>`, and the selected files' actual bytes and inventory\nequal that tag's blobs. More than one qualifying annotated tag on a clean\nHEAD refuses identity derivation as ambiguous.\n\n`development:<sha256>` identifies the selected source paths and bytes in\nother source trees. Its digest is SHA-256 with the domain prefix\n`PolicyWitness public build contract` followed by a NUL byte. For each sorted\nrepository-relative path, the generator appends the UTF-8 path and file bytes,\neach preceded by its unsigned eight-byte big-endian length. A dirty release\ncheckout receives this development form. A documentation-only edit can change\nthe form from release to development while leaving the selected-source digest\nunchanged.",
+            "title": "Release and development forms"
           },
           {
             "context": {},
@@ -111309,6 +111768,156 @@
             "kind": "definition",
             "prose": "For the paired repeated-member cases, CLI entry keeps the last contract, policy, probe step_id, attempt target, runner selector or runner.mode value, then holds the parsed object\u2019s serialization. Direct host entry keeps the first contract, policy, probe step_id or attempt target value in either tested order. Direct-host runner and runner.mode cases refuse with unknown_field at [\"runner\"] in either order. These observations concern the listed raw-input pairs, their canonical neighbours and independent file effects on the observed platform.",
             "title": "Repeated members at each entry"
+          },
+          {
+            "context": {
+              "entry": [
+                "cli_example"
+              ],
+              "recipient": [
+                "cli_caller"
+              ],
+              "report": [
+                "example_specimen"
+              ],
+              "where": "CLI example dispatch",
+              "who": [
+                "identity.definitions.controller"
+              ]
+            },
+            "facts": {
+              "effects": {
+                "body": {
+                  "args": [
+                    {
+                      "attr": "contract",
+                      "node": "Attribute",
+                      "value": {
+                        "id": "specimen",
+                        "node": "Name"
+                      }
+                    },
+                    {
+                      "args": [
+                        {
+                          "kind": null,
+                          "node": "Constant",
+                          "value": "identity.build.contract"
+                        }
+                      ],
+                      "func": {
+                        "id": "ref",
+                        "node": "Name"
+                      },
+                      "keywords": [],
+                      "node": "Call"
+                    }
+                  ],
+                  "func": {
+                    "id": "set_value",
+                    "node": "Name"
+                  },
+                  "keywords": [],
+                  "node": "Call"
+                },
+                "node": "Expression"
+              },
+              "entry": [
+                "cli_example"
+              ],
+              "recipient": [
+                "cli_caller"
+              ],
+              "report": [
+                "example_specimen"
+              ],
+              "uses": [
+                "identity.build.contract",
+                "identity.definitions.specimen"
+              ],
+              "where": "CLI example dispatch",
+              "who": [
+                "identity.definitions.controller"
+              ]
+            },
+            "id": "request.specimen.emit_example",
+            "kind": "reports",
+            "prose": "`policy-witness example` takes no argument and prints one specimen defined by the emitting build, followed by one newline. The output is a request document, not an envelope. Process exit 0 supplies the complete document, and the same build's `run` admits it. Every failure to emit is process exit 2 with a reason on standard error: an argument, a build whose identity is empty or `unbound`, an example the contract gate refuses, or a failed write or flush. On exit 2 discard standard output, even when it holds a complete document. The document's content, layout and labels carry no stability promise between builds. The command reads no file, starts no runner and reports nothing about a caller's document; `run` remains the only admission.",
+            "referenced_types": {
+              "specimen.contract": {
+                "json_null": false,
+                "optional": false,
+                "presence": "as defined below",
+                "type": "string"
+              }
+            },
+            "title": "Emit the example specimen"
+          },
+          {
+            "context": {
+              "entry": [
+                "cli_example"
+              ],
+              "recipient": [
+                "cli_caller"
+              ],
+              "report": [
+                "example_specimen"
+              ],
+              "where": "CLI example dispatch",
+              "who": [
+                "identity.definitions.controller"
+              ]
+            },
+            "facts": {
+              "kind": "evidence"
+            },
+            "id": "request.specimen.emit_example.evidence",
+            "kind": "gap",
+            "prose": "No check is credited for this rule yet. The signed-app passage from `example` through `run`, the exit statuses and the write-failure behavior await their checks' review.",
+            "title": "Emission evidence"
+          },
+          {
+            "context": {},
+            "document": {
+              "policy": {
+                "format": "sbpl",
+                "sbpl_source": "(version 1) (allow default)"
+              },
+              "probe_plan": [
+                {
+                  "attempt": {
+                    "action": "open_read",
+                    "kind": "file",
+                    "target": "/etc/hosts"
+                  },
+                  "sandbox_check": {
+                    "filter": {
+                      "kind": "path",
+                      "value": "/etc/hosts"
+                    },
+                    "operation": "file-read-data"
+                  },
+                  "step_id": "read-hosts"
+                }
+              ],
+              "specimen_id": "example"
+            },
+            "facts": {},
+            "id": "request.specimen.example",
+            "kind": "example",
+            "prose": "These commands print the example and submit it unchanged:\n\n```sh\npolicy-witness example > example.json\npolicy-witness run example.json\n```\n\nThe printed document carries the emitting build's identity where this rendering shows `<reported-contract>`.",
+            "title": "Emitted example"
+          },
+          {
+            "context": {},
+            "facts": {
+              "kind": "evidence"
+            },
+            "id": "request.specimen.example.evidence",
+            "kind": "gap",
+            "prose": "No executed instance of this example is credited yet. The rendering is extracted from the controller's definition; host admission and native results await the signed-app round trip.",
+            "title": "Example evidence"
           },
           {
             "context": {
@@ -147217,6 +147826,38 @@
           {
             "context": {},
             "facts": {
+              "as": "build_stamp",
+              "record": "rust.BuildStamp"
+            },
+            "id": "identity.build",
+            "kind": "subject",
+            "prose": "Every controller and compiler-helper envelope carries these string fields\nunder `build`. They identify the emitting binary's compiled context.",
+            "title": "Build identification"
+          },
+          {
+            "context": {},
+            "facts": {
+              "uses": [
+                "identity.public.contract",
+                "identity.public.forms",
+                "identity.public.direct"
+              ]
+            },
+            "field": {
+              "json_null": false,
+              "omission": null,
+              "optional": false,
+              "presence": "required",
+              "type": "string"
+            },
+            "id": "identity.build.contract",
+            "kind": "field",
+            "prose": "The public identity embedded in the emitting binary. Receiving boundaries use\nthe exact value according to their identity-admission rule.",
+            "title": "Contract"
+          },
+          {
+            "context": {},
+            "facts": {
               "part": "definitions"
             },
             "id": "identity.definitions",
@@ -147414,6 +148055,27 @@
             "kind": "definition",
             "prose": "A public contract identity is the string a build embeds for exact admission.\nA specimen carries it in `contract`; controller and compiler-helper envelopes\ncarry it in `build.contract`; a host reply carries it in `producer.contract`;\na client capture carries its own producer identity. The app and service\nproperty lists carry the build's value as `PWContract`. At an identity-admission\nboundary, the receiver compares the arriving identity with its expected identity.\nEquality supplies that boundary's identity match. Request validity, wire\nstructure, equipment association and supported observations have their own\nconditions.",
             "title": "Exact admission identity"
+          },
+          {
+            "context": {},
+            "facts": {
+              "defines": "value"
+            },
+            "id": "identity.public.direct",
+            "kind": "definition",
+            "prose": "The Rust controller and compiler helper embed a nonempty compile-time\n`PW_BUILD_CONTRACT` verbatim. An absent or empty value becomes `unbound`.\nA supplied `PW_BUILD_CONTRACT` spelling can be foreign or release-shaped;\nbuild version, number, commit and describe retain their separately supplied\nprovenance. Ordinary SwiftPM compilation uses `unbound`; its explicitly\nselected unit-test context uses `test:policy-witness`. Rust unit tests\nlikewise use `test:policy-witness`. A request cannot pass the controller's\nidentity gate when its expected identity is empty or `unbound`.",
+            "title": "Direct compilation contexts"
+          },
+          {
+            "context": {},
+            "facts": {
+              "defines": "value",
+              "type": "String"
+            },
+            "id": "identity.public.forms",
+            "kind": "definition",
+            "prose": "`release:vX.Y.Z` names the sole annotated release tag at the build checkout's\nHEAD. The build derives this form when the checkout is clean, the tag matches\n`v<digits>.<digits>.<digits>`, and the selected files' actual bytes and inventory\nequal that tag's blobs. More than one qualifying annotated tag on a clean\nHEAD refuses identity derivation as ambiguous.\n\n`development:<sha256>` identifies the selected source paths and bytes in\nother source trees. Its digest is SHA-256 with the domain prefix\n`PolicyWitness public build contract` followed by a NUL byte. For each sorted\nrepository-relative path, the generator appends the UTF-8 path and file bytes,\neach preceded by its unsigned eight-byte big-endian length. A dirty release\ncheckout receives this development form. A documentation-only edit can change\nthe form from release to development while leaving the selected-source digest\nunchanged.",
+            "title": "Release and development forms"
           },
           {
             "context": {},
@@ -151061,6 +151723,156 @@
             "kind": "definition",
             "prose": "For the paired repeated-member cases, CLI entry keeps the last contract, policy, probe step_id, attempt target, runner selector or runner.mode value, then holds the parsed object\u2019s serialization. Direct host entry keeps the first contract, policy, probe step_id or attempt target value in either tested order. Direct-host runner and runner.mode cases refuse with unknown_field at [\"runner\"] in either order. These observations concern the listed raw-input pairs, their canonical neighbours and independent file effects on the observed platform.",
             "title": "Repeated members at each entry"
+          },
+          {
+            "context": {
+              "entry": [
+                "cli_example"
+              ],
+              "recipient": [
+                "cli_caller"
+              ],
+              "report": [
+                "example_specimen"
+              ],
+              "where": "CLI example dispatch",
+              "who": [
+                "identity.definitions.controller"
+              ]
+            },
+            "facts": {
+              "effects": {
+                "body": {
+                  "args": [
+                    {
+                      "attr": "contract",
+                      "node": "Attribute",
+                      "value": {
+                        "id": "specimen",
+                        "node": "Name"
+                      }
+                    },
+                    {
+                      "args": [
+                        {
+                          "kind": null,
+                          "node": "Constant",
+                          "value": "identity.build.contract"
+                        }
+                      ],
+                      "func": {
+                        "id": "ref",
+                        "node": "Name"
+                      },
+                      "keywords": [],
+                      "node": "Call"
+                    }
+                  ],
+                  "func": {
+                    "id": "set_value",
+                    "node": "Name"
+                  },
+                  "keywords": [],
+                  "node": "Call"
+                },
+                "node": "Expression"
+              },
+              "entry": [
+                "cli_example"
+              ],
+              "recipient": [
+                "cli_caller"
+              ],
+              "report": [
+                "example_specimen"
+              ],
+              "uses": [
+                "identity.build.contract",
+                "identity.definitions.specimen"
+              ],
+              "where": "CLI example dispatch",
+              "who": [
+                "identity.definitions.controller"
+              ]
+            },
+            "id": "request.specimen.emit_example",
+            "kind": "reports",
+            "prose": "`policy-witness example` takes no argument and prints one specimen defined by the emitting build, followed by one newline. The output is a request document, not an envelope. Process exit 0 supplies the complete document, and the same build's `run` admits it. Every failure to emit is process exit 2 with a reason on standard error: an argument, a build whose identity is empty or `unbound`, an example the contract gate refuses, or a failed write or flush. On exit 2 discard standard output, even when it holds a complete document. The document's content, layout and labels carry no stability promise between builds. The command reads no file, starts no runner and reports nothing about a caller's document; `run` remains the only admission.",
+            "referenced_types": {
+              "specimen.contract": {
+                "json_null": false,
+                "optional": false,
+                "presence": "as defined below",
+                "type": "string"
+              }
+            },
+            "title": "Emit the example specimen"
+          },
+          {
+            "context": {
+              "entry": [
+                "cli_example"
+              ],
+              "recipient": [
+                "cli_caller"
+              ],
+              "report": [
+                "example_specimen"
+              ],
+              "where": "CLI example dispatch",
+              "who": [
+                "identity.definitions.controller"
+              ]
+            },
+            "facts": {
+              "kind": "evidence"
+            },
+            "id": "request.specimen.emit_example.evidence",
+            "kind": "gap",
+            "prose": "No check is credited for this rule yet. The signed-app passage from `example` through `run`, the exit statuses and the write-failure behavior await their checks' review.",
+            "title": "Emission evidence"
+          },
+          {
+            "context": {},
+            "document": {
+              "policy": {
+                "format": "sbpl",
+                "sbpl_source": "(version 1) (allow default)"
+              },
+              "probe_plan": [
+                {
+                  "attempt": {
+                    "action": "open_read",
+                    "kind": "file",
+                    "target": "/etc/hosts"
+                  },
+                  "sandbox_check": {
+                    "filter": {
+                      "kind": "path",
+                      "value": "/etc/hosts"
+                    },
+                    "operation": "file-read-data"
+                  },
+                  "step_id": "read-hosts"
+                }
+              ],
+              "specimen_id": "example"
+            },
+            "facts": {},
+            "id": "request.specimen.example",
+            "kind": "example",
+            "prose": "These commands print the example and submit it unchanged:\n\n```sh\npolicy-witness example > example.json\npolicy-witness run example.json\n```\n\nThe printed document carries the emitting build's identity where this rendering shows `<reported-contract>`.",
+            "title": "Emitted example"
+          },
+          {
+            "context": {},
+            "facts": {
+              "kind": "evidence"
+            },
+            "id": "request.specimen.example.evidence",
+            "kind": "gap",
+            "prose": "No executed instance of this example is credited yet. The rendering is extracted from the controller's definition; host admission and native results await the signed-app round trip.",
+            "title": "Example evidence"
           },
           {
             "context": {
@@ -183422,6 +184234,38 @@
           {
             "context": {},
             "facts": {
+              "as": "build_stamp",
+              "record": "rust.BuildStamp"
+            },
+            "id": "identity.build",
+            "kind": "subject",
+            "prose": "Every controller and compiler-helper envelope carries these string fields\nunder `build`. They identify the emitting binary's compiled context.",
+            "title": "Build identification"
+          },
+          {
+            "context": {},
+            "facts": {
+              "uses": [
+                "identity.public.contract",
+                "identity.public.forms",
+                "identity.public.direct"
+              ]
+            },
+            "field": {
+              "json_null": false,
+              "omission": null,
+              "optional": false,
+              "presence": "required",
+              "type": "string"
+            },
+            "id": "identity.build.contract",
+            "kind": "field",
+            "prose": "The public identity embedded in the emitting binary. Receiving boundaries use\nthe exact value according to their identity-admission rule.",
+            "title": "Contract"
+          },
+          {
+            "context": {},
+            "facts": {
               "part": "definitions"
             },
             "id": "identity.definitions",
@@ -183619,6 +184463,27 @@
             "kind": "definition",
             "prose": "A public contract identity is the string a build embeds for exact admission.\nA specimen carries it in `contract`; controller and compiler-helper envelopes\ncarry it in `build.contract`; a host reply carries it in `producer.contract`;\na client capture carries its own producer identity. The app and service\nproperty lists carry the build's value as `PWContract`. At an identity-admission\nboundary, the receiver compares the arriving identity with its expected identity.\nEquality supplies that boundary's identity match. Request validity, wire\nstructure, equipment association and supported observations have their own\nconditions.",
             "title": "Exact admission identity"
+          },
+          {
+            "context": {},
+            "facts": {
+              "defines": "value"
+            },
+            "id": "identity.public.direct",
+            "kind": "definition",
+            "prose": "The Rust controller and compiler helper embed a nonempty compile-time\n`PW_BUILD_CONTRACT` verbatim. An absent or empty value becomes `unbound`.\nA supplied `PW_BUILD_CONTRACT` spelling can be foreign or release-shaped;\nbuild version, number, commit and describe retain their separately supplied\nprovenance. Ordinary SwiftPM compilation uses `unbound`; its explicitly\nselected unit-test context uses `test:policy-witness`. Rust unit tests\nlikewise use `test:policy-witness`. A request cannot pass the controller's\nidentity gate when its expected identity is empty or `unbound`.",
+            "title": "Direct compilation contexts"
+          },
+          {
+            "context": {},
+            "facts": {
+              "defines": "value",
+              "type": "String"
+            },
+            "id": "identity.public.forms",
+            "kind": "definition",
+            "prose": "`release:vX.Y.Z` names the sole annotated release tag at the build checkout's\nHEAD. The build derives this form when the checkout is clean, the tag matches\n`v<digits>.<digits>.<digits>`, and the selected files' actual bytes and inventory\nequal that tag's blobs. More than one qualifying annotated tag on a clean\nHEAD refuses identity derivation as ambiguous.\n\n`development:<sha256>` identifies the selected source paths and bytes in\nother source trees. Its digest is SHA-256 with the domain prefix\n`PolicyWitness public build contract` followed by a NUL byte. For each sorted\nrepository-relative path, the generator appends the UTF-8 path and file bytes,\neach preceded by its unsigned eight-byte big-endian length. A dirty release\ncheckout receives this development form. A documentation-only edit can change\nthe form from release to development while leaving the selected-source digest\nunchanged.",
+            "title": "Release and development forms"
           },
           {
             "context": {},
@@ -187305,6 +188170,156 @@
             "kind": "definition",
             "prose": "For the paired repeated-member cases, CLI entry keeps the last contract, policy, probe step_id, attempt target, runner selector or runner.mode value, then holds the parsed object\u2019s serialization. Direct host entry keeps the first contract, policy, probe step_id or attempt target value in either tested order. Direct-host runner and runner.mode cases refuse with unknown_field at [\"runner\"] in either order. These observations concern the listed raw-input pairs, their canonical neighbours and independent file effects on the observed platform.",
             "title": "Repeated members at each entry"
+          },
+          {
+            "context": {
+              "entry": [
+                "cli_example"
+              ],
+              "recipient": [
+                "cli_caller"
+              ],
+              "report": [
+                "example_specimen"
+              ],
+              "where": "CLI example dispatch",
+              "who": [
+                "identity.definitions.controller"
+              ]
+            },
+            "facts": {
+              "effects": {
+                "body": {
+                  "args": [
+                    {
+                      "attr": "contract",
+                      "node": "Attribute",
+                      "value": {
+                        "id": "specimen",
+                        "node": "Name"
+                      }
+                    },
+                    {
+                      "args": [
+                        {
+                          "kind": null,
+                          "node": "Constant",
+                          "value": "identity.build.contract"
+                        }
+                      ],
+                      "func": {
+                        "id": "ref",
+                        "node": "Name"
+                      },
+                      "keywords": [],
+                      "node": "Call"
+                    }
+                  ],
+                  "func": {
+                    "id": "set_value",
+                    "node": "Name"
+                  },
+                  "keywords": [],
+                  "node": "Call"
+                },
+                "node": "Expression"
+              },
+              "entry": [
+                "cli_example"
+              ],
+              "recipient": [
+                "cli_caller"
+              ],
+              "report": [
+                "example_specimen"
+              ],
+              "uses": [
+                "identity.build.contract",
+                "identity.definitions.specimen"
+              ],
+              "where": "CLI example dispatch",
+              "who": [
+                "identity.definitions.controller"
+              ]
+            },
+            "id": "request.specimen.emit_example",
+            "kind": "reports",
+            "prose": "`policy-witness example` takes no argument and prints one specimen defined by the emitting build, followed by one newline. The output is a request document, not an envelope. Process exit 0 supplies the complete document, and the same build's `run` admits it. Every failure to emit is process exit 2 with a reason on standard error: an argument, a build whose identity is empty or `unbound`, an example the contract gate refuses, or a failed write or flush. On exit 2 discard standard output, even when it holds a complete document. The document's content, layout and labels carry no stability promise between builds. The command reads no file, starts no runner and reports nothing about a caller's document; `run` remains the only admission.",
+            "referenced_types": {
+              "specimen.contract": {
+                "json_null": false,
+                "optional": false,
+                "presence": "as defined below",
+                "type": "string"
+              }
+            },
+            "title": "Emit the example specimen"
+          },
+          {
+            "context": {
+              "entry": [
+                "cli_example"
+              ],
+              "recipient": [
+                "cli_caller"
+              ],
+              "report": [
+                "example_specimen"
+              ],
+              "where": "CLI example dispatch",
+              "who": [
+                "identity.definitions.controller"
+              ]
+            },
+            "facts": {
+              "kind": "evidence"
+            },
+            "id": "request.specimen.emit_example.evidence",
+            "kind": "gap",
+            "prose": "No check is credited for this rule yet. The signed-app passage from `example` through `run`, the exit statuses and the write-failure behavior await their checks' review.",
+            "title": "Emission evidence"
+          },
+          {
+            "context": {},
+            "document": {
+              "policy": {
+                "format": "sbpl",
+                "sbpl_source": "(version 1) (allow default)"
+              },
+              "probe_plan": [
+                {
+                  "attempt": {
+                    "action": "open_read",
+                    "kind": "file",
+                    "target": "/etc/hosts"
+                  },
+                  "sandbox_check": {
+                    "filter": {
+                      "kind": "path",
+                      "value": "/etc/hosts"
+                    },
+                    "operation": "file-read-data"
+                  },
+                  "step_id": "read-hosts"
+                }
+              ],
+              "specimen_id": "example"
+            },
+            "facts": {},
+            "id": "request.specimen.example",
+            "kind": "example",
+            "prose": "These commands print the example and submit it unchanged:\n\n```sh\npolicy-witness example > example.json\npolicy-witness run example.json\n```\n\nThe printed document carries the emitting build's identity where this rendering shows `<reported-contract>`.",
+            "title": "Emitted example"
+          },
+          {
+            "context": {},
+            "facts": {
+              "kind": "evidence"
+            },
+            "id": "request.specimen.example.evidence",
+            "kind": "gap",
+            "prose": "No executed instance of this example is credited yet. The rendering is extracted from the controller's definition; host admission and native results await the signed-app round trip.",
+            "title": "Example evidence"
           },
           {
             "context": {
@@ -259140,6 +260155,156 @@
             "kind": "definition",
             "prose": "For the paired repeated-member cases, CLI entry keeps the last contract, policy, probe step_id, attempt target, runner selector or runner.mode value, then holds the parsed object\u2019s serialization. Direct host entry keeps the first contract, policy, probe step_id or attempt target value in either tested order. Direct-host runner and runner.mode cases refuse with unknown_field at [\"runner\"] in either order. These observations concern the listed raw-input pairs, their canonical neighbours and independent file effects on the observed platform.",
             "title": "Repeated members at each entry"
+          },
+          {
+            "context": {
+              "entry": [
+                "cli_example"
+              ],
+              "recipient": [
+                "cli_caller"
+              ],
+              "report": [
+                "example_specimen"
+              ],
+              "where": "CLI example dispatch",
+              "who": [
+                "identity.definitions.controller"
+              ]
+            },
+            "facts": {
+              "effects": {
+                "body": {
+                  "args": [
+                    {
+                      "attr": "contract",
+                      "node": "Attribute",
+                      "value": {
+                        "id": "specimen",
+                        "node": "Name"
+                      }
+                    },
+                    {
+                      "args": [
+                        {
+                          "kind": null,
+                          "node": "Constant",
+                          "value": "identity.build.contract"
+                        }
+                      ],
+                      "func": {
+                        "id": "ref",
+                        "node": "Name"
+                      },
+                      "keywords": [],
+                      "node": "Call"
+                    }
+                  ],
+                  "func": {
+                    "id": "set_value",
+                    "node": "Name"
+                  },
+                  "keywords": [],
+                  "node": "Call"
+                },
+                "node": "Expression"
+              },
+              "entry": [
+                "cli_example"
+              ],
+              "recipient": [
+                "cli_caller"
+              ],
+              "report": [
+                "example_specimen"
+              ],
+              "uses": [
+                "identity.build.contract",
+                "identity.definitions.specimen"
+              ],
+              "where": "CLI example dispatch",
+              "who": [
+                "identity.definitions.controller"
+              ]
+            },
+            "id": "request.specimen.emit_example",
+            "kind": "reports",
+            "prose": "`policy-witness example` takes no argument and prints one specimen defined by the emitting build, followed by one newline. The output is a request document, not an envelope. Process exit 0 supplies the complete document, and the same build's `run` admits it. Every failure to emit is process exit 2 with a reason on standard error: an argument, a build whose identity is empty or `unbound`, an example the contract gate refuses, or a failed write or flush. On exit 2 discard standard output, even when it holds a complete document. The document's content, layout and labels carry no stability promise between builds. The command reads no file, starts no runner and reports nothing about a caller's document; `run` remains the only admission.",
+            "referenced_types": {
+              "specimen.contract": {
+                "json_null": false,
+                "optional": false,
+                "presence": "as defined below",
+                "type": "string"
+              }
+            },
+            "title": "Emit the example specimen"
+          },
+          {
+            "context": {
+              "entry": [
+                "cli_example"
+              ],
+              "recipient": [
+                "cli_caller"
+              ],
+              "report": [
+                "example_specimen"
+              ],
+              "where": "CLI example dispatch",
+              "who": [
+                "identity.definitions.controller"
+              ]
+            },
+            "facts": {
+              "kind": "evidence"
+            },
+            "id": "request.specimen.emit_example.evidence",
+            "kind": "gap",
+            "prose": "No check is credited for this rule yet. The signed-app passage from `example` through `run`, the exit statuses and the write-failure behavior await their checks' review.",
+            "title": "Emission evidence"
+          },
+          {
+            "context": {},
+            "document": {
+              "policy": {
+                "format": "sbpl",
+                "sbpl_source": "(version 1) (allow default)"
+              },
+              "probe_plan": [
+                {
+                  "attempt": {
+                    "action": "open_read",
+                    "kind": "file",
+                    "target": "/etc/hosts"
+                  },
+                  "sandbox_check": {
+                    "filter": {
+                      "kind": "path",
+                      "value": "/etc/hosts"
+                    },
+                    "operation": "file-read-data"
+                  },
+                  "step_id": "read-hosts"
+                }
+              ],
+              "specimen_id": "example"
+            },
+            "facts": {},
+            "id": "request.specimen.example",
+            "kind": "example",
+            "prose": "These commands print the example and submit it unchanged:\n\n```sh\npolicy-witness example > example.json\npolicy-witness run example.json\n```\n\nThe printed document carries the emitting build's identity where this rendering shows `<reported-contract>`.",
+            "title": "Emitted example"
+          },
+          {
+            "context": {},
+            "facts": {
+              "kind": "evidence"
+            },
+            "id": "request.specimen.example.evidence",
+            "kind": "gap",
+            "prose": "No executed instance of this example is credited yet. The rendering is extracted from the controller's definition; host admission and native results await the signed-app round trip.",
+            "title": "Example evidence"
           },
           {
             "context": {
@@ -448969,6 +450134,156 @@
           {
             "context": {
               "entry": [
+                "cli_example"
+              ],
+              "recipient": [
+                "cli_caller"
+              ],
+              "report": [
+                "example_specimen"
+              ],
+              "where": "CLI example dispatch",
+              "who": [
+                "identity.definitions.controller"
+              ]
+            },
+            "facts": {
+              "effects": {
+                "body": {
+                  "args": [
+                    {
+                      "attr": "contract",
+                      "node": "Attribute",
+                      "value": {
+                        "id": "specimen",
+                        "node": "Name"
+                      }
+                    },
+                    {
+                      "args": [
+                        {
+                          "kind": null,
+                          "node": "Constant",
+                          "value": "identity.build.contract"
+                        }
+                      ],
+                      "func": {
+                        "id": "ref",
+                        "node": "Name"
+                      },
+                      "keywords": [],
+                      "node": "Call"
+                    }
+                  ],
+                  "func": {
+                    "id": "set_value",
+                    "node": "Name"
+                  },
+                  "keywords": [],
+                  "node": "Call"
+                },
+                "node": "Expression"
+              },
+              "entry": [
+                "cli_example"
+              ],
+              "recipient": [
+                "cli_caller"
+              ],
+              "report": [
+                "example_specimen"
+              ],
+              "uses": [
+                "identity.build.contract",
+                "identity.definitions.specimen"
+              ],
+              "where": "CLI example dispatch",
+              "who": [
+                "identity.definitions.controller"
+              ]
+            },
+            "id": "request.specimen.emit_example",
+            "kind": "reports",
+            "prose": "`policy-witness example` takes no argument and prints one specimen defined by the emitting build, followed by one newline. The output is a request document, not an envelope. Process exit 0 supplies the complete document, and the same build's `run` admits it. Every failure to emit is process exit 2 with a reason on standard error: an argument, a build whose identity is empty or `unbound`, an example the contract gate refuses, or a failed write or flush. On exit 2 discard standard output, even when it holds a complete document. The document's content, layout and labels carry no stability promise between builds. The command reads no file, starts no runner and reports nothing about a caller's document; `run` remains the only admission.",
+            "referenced_types": {
+              "specimen.contract": {
+                "json_null": false,
+                "optional": false,
+                "presence": "as defined below",
+                "type": "string"
+              }
+            },
+            "title": "Emit the example specimen"
+          },
+          {
+            "context": {
+              "entry": [
+                "cli_example"
+              ],
+              "recipient": [
+                "cli_caller"
+              ],
+              "report": [
+                "example_specimen"
+              ],
+              "where": "CLI example dispatch",
+              "who": [
+                "identity.definitions.controller"
+              ]
+            },
+            "facts": {
+              "kind": "evidence"
+            },
+            "id": "request.specimen.emit_example.evidence",
+            "kind": "gap",
+            "prose": "No check is credited for this rule yet. The signed-app passage from `example` through `run`, the exit statuses and the write-failure behavior await their checks' review.",
+            "title": "Emission evidence"
+          },
+          {
+            "context": {},
+            "document": {
+              "policy": {
+                "format": "sbpl",
+                "sbpl_source": "(version 1) (allow default)"
+              },
+              "probe_plan": [
+                {
+                  "attempt": {
+                    "action": "open_read",
+                    "kind": "file",
+                    "target": "/etc/hosts"
+                  },
+                  "sandbox_check": {
+                    "filter": {
+                      "kind": "path",
+                      "value": "/etc/hosts"
+                    },
+                    "operation": "file-read-data"
+                  },
+                  "step_id": "read-hosts"
+                }
+              ],
+              "specimen_id": "example"
+            },
+            "facts": {},
+            "id": "request.specimen.example",
+            "kind": "example",
+            "prose": "These commands print the example and submit it unchanged:\n\n```sh\npolicy-witness example > example.json\npolicy-witness run example.json\n```\n\nThe printed document carries the emitting build's identity where this rendering shows `<reported-contract>`.",
+            "title": "Emitted example"
+          },
+          {
+            "context": {},
+            "facts": {
+              "kind": "evidence"
+            },
+            "id": "request.specimen.example.evidence",
+            "kind": "gap",
+            "prose": "No executed instance of this example is credited yet. The rendering is extracted from the controller's definition; host admission and native results await the signed-app round trip.",
+            "title": "Example evidence"
+          },
+          {
+            "context": {
+              "entry": [
                 "cli_run"
               ],
               "recipient": [
@@ -573724,6 +575039,156 @@
             "kind": "definition",
             "prose": "For the paired repeated-member cases, CLI entry keeps the last contract, policy, probe step_id, attempt target, runner selector or runner.mode value, then holds the parsed object\u2019s serialization. Direct host entry keeps the first contract, policy, probe step_id or attempt target value in either tested order. Direct-host runner and runner.mode cases refuse with unknown_field at [\"runner\"] in either order. These observations concern the listed raw-input pairs, their canonical neighbours and independent file effects on the observed platform.",
             "title": "Repeated members at each entry"
+          },
+          {
+            "context": {
+              "entry": [
+                "cli_example"
+              ],
+              "recipient": [
+                "cli_caller"
+              ],
+              "report": [
+                "example_specimen"
+              ],
+              "where": "CLI example dispatch",
+              "who": [
+                "identity.definitions.controller"
+              ]
+            },
+            "facts": {
+              "effects": {
+                "body": {
+                  "args": [
+                    {
+                      "attr": "contract",
+                      "node": "Attribute",
+                      "value": {
+                        "id": "specimen",
+                        "node": "Name"
+                      }
+                    },
+                    {
+                      "args": [
+                        {
+                          "kind": null,
+                          "node": "Constant",
+                          "value": "identity.build.contract"
+                        }
+                      ],
+                      "func": {
+                        "id": "ref",
+                        "node": "Name"
+                      },
+                      "keywords": [],
+                      "node": "Call"
+                    }
+                  ],
+                  "func": {
+                    "id": "set_value",
+                    "node": "Name"
+                  },
+                  "keywords": [],
+                  "node": "Call"
+                },
+                "node": "Expression"
+              },
+              "entry": [
+                "cli_example"
+              ],
+              "recipient": [
+                "cli_caller"
+              ],
+              "report": [
+                "example_specimen"
+              ],
+              "uses": [
+                "identity.build.contract",
+                "identity.definitions.specimen"
+              ],
+              "where": "CLI example dispatch",
+              "who": [
+                "identity.definitions.controller"
+              ]
+            },
+            "id": "request.specimen.emit_example",
+            "kind": "reports",
+            "prose": "`policy-witness example` takes no argument and prints one specimen defined by the emitting build, followed by one newline. The output is a request document, not an envelope. Process exit 0 supplies the complete document, and the same build's `run` admits it. Every failure to emit is process exit 2 with a reason on standard error: an argument, a build whose identity is empty or `unbound`, an example the contract gate refuses, or a failed write or flush. On exit 2 discard standard output, even when it holds a complete document. The document's content, layout and labels carry no stability promise between builds. The command reads no file, starts no runner and reports nothing about a caller's document; `run` remains the only admission.",
+            "referenced_types": {
+              "specimen.contract": {
+                "json_null": false,
+                "optional": false,
+                "presence": "as defined below",
+                "type": "string"
+              }
+            },
+            "title": "Emit the example specimen"
+          },
+          {
+            "context": {
+              "entry": [
+                "cli_example"
+              ],
+              "recipient": [
+                "cli_caller"
+              ],
+              "report": [
+                "example_specimen"
+              ],
+              "where": "CLI example dispatch",
+              "who": [
+                "identity.definitions.controller"
+              ]
+            },
+            "facts": {
+              "kind": "evidence"
+            },
+            "id": "request.specimen.emit_example.evidence",
+            "kind": "gap",
+            "prose": "No check is credited for this rule yet. The signed-app passage from `example` through `run`, the exit statuses and the write-failure behavior await their checks' review.",
+            "title": "Emission evidence"
+          },
+          {
+            "context": {},
+            "document": {
+              "policy": {
+                "format": "sbpl",
+                "sbpl_source": "(version 1) (allow default)"
+              },
+              "probe_plan": [
+                {
+                  "attempt": {
+                    "action": "open_read",
+                    "kind": "file",
+                    "target": "/etc/hosts"
+                  },
+                  "sandbox_check": {
+                    "filter": {
+                      "kind": "path",
+                      "value": "/etc/hosts"
+                    },
+                    "operation": "file-read-data"
+                  },
+                  "step_id": "read-hosts"
+                }
+              ],
+              "specimen_id": "example"
+            },
+            "facts": {},
+            "id": "request.specimen.example",
+            "kind": "example",
+            "prose": "These commands print the example and submit it unchanged:\n\n```sh\npolicy-witness example > example.json\npolicy-witness run example.json\n```\n\nThe printed document carries the emitting build's identity where this rendering shows `<reported-contract>`.",
+            "title": "Emitted example"
+          },
+          {
+            "context": {},
+            "facts": {
+              "kind": "evidence"
+            },
+            "id": "request.specimen.example.evidence",
+            "kind": "gap",
+            "prose": "No executed instance of this example is credited yet. The rendering is extracted from the controller's definition; host admission and native results await the signed-app round trip.",
+            "title": "Example evidence"
           },
           {
             "context": {

@@ -920,6 +920,51 @@ class GeneratorContractTests(receipts.TestCase):
                         self.assertEqual(release.main(['--remote', str(root), '--report']), 0)
                     self.assertIn('WARNING: prose baseline grew', err.getvalue())
 
+    def test_example_source_edit_is_stale_until_regeneration_and_moves_content_and_identity(self):
+        import generate_contract_stamps as stamps
+        import build_contract
+        directory = tempfile.TemporaryDirectory(prefix='pw-example-source-')
+        self.addCleanup(directory.cleanup)
+        root = Path(directory.name)
+        fixture_inputs.copy_declared(ROOT, root, sorted(set(stamps.input_paths(ROOT)) | set(build_contract.inputs(ROOT))))
+        self.track_inputs(root)
+        contract_fixture.fresh_authoring(root, module('example_contract', root / 'docs/generate_contract_stamps.py'))
+        source = root / 'controller/src/example.rs'
+        original = source.read_text()
+
+        def generated():
+            snapshot = json.loads((root / 'docs/contract/public.json').read_text())
+            request = next(row for row in snapshot['surfaces'] if row['id'] == 'request')
+            return (root / 'docs/CONTRACT.md').read_text(), request['public'], build_contract.identity(root)
+
+        self.assertEqual(self.command(root, 'contract_stamps', '--check').returncode, 0)
+        before = generated()
+        edited = original.replace('"specimen_id":"example"', '"specimen_id":"example-edited"')
+        self.assertNotEqual(edited, original)
+        source.write_text(edited)
+        taken = self.snapshot(root)
+        result = self.command(root, 'contract_stamps', '--check')
+        self.assertEqual(result.returncode, 1, result.stdout)
+        self.assertIn('stale generated contract: docs/CONTRACT.md, docs/contract/public.json', result.stderr)
+        self.assertEqual(self.snapshot(root), taken, 'refusal changed checkout')
+        result = self.command(root, 'contract_stamps')
+        self.assertEqual(result.returncode, 0, result.stderr)
+        after = generated()
+        for label, earlier, later in zip(('rendered contract', 'request surface payload', 'build identity'), before, after):
+            self.assertNotEqual(earlier, later, label)
+        self.assertIn('"specimen_id": "example-edited"', after[0])
+        self.assertEqual(self.command(root, 'contract_stamps', '--check').returncode, 0)
+        # A forbidden member is refused by the check and by generation, naming the source.
+        forbidden = edited.replace('{"specimen_id":"example-edited"', '{"contract":"release:v0.0.0","specimen_id":"example-edited"')
+        self.assertNotEqual(forbidden, edited)
+        source.write_text(forbidden)
+        taken = self.snapshot(root)
+        for args in (('--check',), ()):
+            result = self.command(root, 'contract_stamps', *args)
+            self.assertEqual(result.returncode, 1, result.stdout)
+            self.assertIn("controller/src/example.rs: EXAMPLE_DOCUMENT carries the forbidden member 'contract'", result.stderr)
+            self.assertEqual(self.snapshot(root), taken, 'refusal changed checkout')
+
     def test_whole_file_staging_is_owned_and_idempotent(self):
         root = self.checkout()
         destination = root / 'staged-guide.md'

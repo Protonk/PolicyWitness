@@ -569,6 +569,63 @@ This template applies a policy with no probe actions. Replace the assertion with
 {"contract":"<reported-contract>","specimen_id":"apply-only","policy":{"format":"sbpl","sbpl_source":"(version 1) (allow default)"},"probe_plan":[]}
 ```
 
+<a id="contract-request-specimen-emit_example"></a>
+##### Emit the example specimen
+
+[Controller](#contract-identity-definitions-controller) reports at CLI example dispatch. Entry: cli example. Recipient: cli caller. Reports: example specimen. set_value(`specimen.contract`, [Contract](#contract-identity-build-contract)). Uses [Contract](#contract-identity-build-contract), [Specimen](#contract-identity-definitions-specimen).
+
+`policy-witness example` takes no argument and prints one specimen defined by the emitting build, followed by one newline. The output is a request document, not an envelope. Process exit 0 supplies the complete document, and the same build's `run` admits it. Every failure to emit is process exit 2 with a reason on standard error: an argument, a build whose identity is empty or `unbound`, an example the contract gate refuses, or a failed write or flush. On exit 2 discard standard output, even when it holds a complete document. The document's content, layout and labels carry no stability promise between builds. The command reads no file, starts no runner and reports nothing about a caller's document; `run` remains the only admission.
+
+<a id="contract-request-specimen-emit_example-evidence"></a>
+###### Known gap: Emission evidence
+
+No check is credited for this rule yet. The signed-app passage from `example` through `run`, the exit statuses and the write-failure behavior await their checks' review.
+
+<a id="contract-request-specimen-example"></a>
+##### Emitted example
+
+These commands print the example and submit it unchanged:
+
+```sh
+policy-witness example > example.json
+policy-witness run example.json
+```
+
+The printed document carries the emitting build's identity where this rendering shows `<reported-contract>`.
+
+```json
+{
+  "contract": "<reported-contract>",
+  "policy": {
+    "format": "sbpl",
+    "sbpl_source": "(version 1) (allow default)"
+  },
+  "probe_plan": [
+    {
+      "attempt": {
+        "action": "open_read",
+        "kind": "file",
+        "target": "/etc/hosts"
+      },
+      "sandbox_check": {
+        "filter": {
+          "kind": "path",
+          "value": "/etc/hosts"
+        },
+        "operation": "file-read-data"
+      },
+      "step_id": "read-hosts"
+    }
+  ],
+  "specimen_id": "example"
+}
+```
+
+<a id="contract-request-specimen-example-evidence"></a>
+###### Known gap: Example evidence
+
+No executed instance of this example is credited yet. The rendering is extracted from the controller's definition; host admission and native results await the signed-app round trip.
+
 <a id="contract-request-specimen-duplicate_keys"></a>
 ##### Repeated members at each entry
 
@@ -5183,7 +5240,7 @@ Each linked rule states its boundary, entry, recipients, reports and conditions.
 | --- | --- |
 | [Build pipeline](#contract-identity-definitions-build_pipeline) | [Build derivation](#contract-identity-public-derive) |
 | [Contract generator](#contract-identity-definitions-contract_generator) | [Deriving the history table](#contract-identity-surfaces-derive) |
-| [Controller](#contract-identity-definitions-controller) | [Version command](#contract-identity-version-emit); [Hold and deliver the selected request](#contract-request-specimen-hold); [Selector precedence](#contract-request-options-precedence); [Selection and augmentation failure order](#contract-request-options-failure_order); [Resolve and append](#contract-policy-augments-resolve); [Resolve actor policies in request order](#contract-policy-augments-actors); [Fallback eligibility and classification](#contract-policy-fallback-classify); [Controller pre-invocation refusal](#contract-refusals-controller-consequence); [Admit client and host observations](#contract-transport-client-admit); [Checking a carried gate](#contract-actor_evidence-gate-check); [The controller checks carried labels](#contract-profile-receipt-labels); [Select the public result](#contract-envelope-data-select); [Boundary precedence](#contract-envelope-data-admit); [Decoded response collection bounds](#contract-diagnostics-execution-geometry); [Admit the response before assessment](#contract-diagnostics-execution-admit); [Project one worker or aggregate actors](#contract-diagnostics-execution-project); [Actor projection rows](#contract-diagnostics-execution-actor_rows); [Worker lifecycle validation](#contract-diagnostics-execution-ordinary-lifecycle_check); [Ending mapping](#contract-diagnostics-execution-ordinary-mapping); [Supported stop reason](#contract-diagnostics-execution-ordinary-stop); [Host-cleanup attribution](#contract-diagnostics-execution-ordinary-cause); [Copy validated host conflicts](#contract-diagnostics-execution-ordinary-host_conflicts); [Apply reply-wide findings](#contract-diagnostics-execution-reply_checks); [Worker lifecycle validation](#contract-diagnostics-actor-projection-lifecycle_check); [Ending mapping](#contract-diagnostics-actor-projection-mapping); [Supported stop reason](#contract-diagnostics-actor-projection-stop); [Host-cleanup attribution](#contract-diagnostics-actor-projection-cause); [Copy validated host conflicts](#contract-diagnostics-actor-projection-host_conflicts); [Retain observation and finding separately](#contract-diagnostics-issue-retain); [Hold the selected request](#contract-dossier-collection-held); [Scan literal imports](#contract-dossier-collection-scan); [Compare selected files](#contract-dossier-collection-compare); [Augmentation record relationships](#contract-dossier-augmentation-relationships); [Retained scan scope](#contract-dossier-imports-scope); [Classify the retained digest pair](#contract-dossier-binary-classify); [Read and select records](#contract-installation-commands-read); [Publish a registry mutation](#contract-installation-commands-publish); [Install a selected service](#contract-installation-commands-install); [Retain installation ownership](#contract-installation-commands-pending); [Refresh validation metadata](#contract-installation-commands-validate); [Reconcile observations](#contract-installation-commands-reconcile); [Remove an owned installation](#contract-installation-commands-remove); [Classify cleanup ownership](#contract-installation-commands-ownership); [Retained recovery account](#contract-installation-cleanup-retention); [Published installation state](#contract-installation-install-state_copy); [Request delivery failure](#contract-installation-verify-delivery_failure); [Select the verification operation result](#contract-installation-verify-select); [Classify the typed service observation](#contract-installation-service-classify) |
+| [Controller](#contract-identity-definitions-controller) | [Version command](#contract-identity-version-emit); [Hold and deliver the selected request](#contract-request-specimen-hold); [Emit the example specimen](#contract-request-specimen-emit_example); [Selector precedence](#contract-request-options-precedence); [Selection and augmentation failure order](#contract-request-options-failure_order); [Resolve and append](#contract-policy-augments-resolve); [Resolve actor policies in request order](#contract-policy-augments-actors); [Fallback eligibility and classification](#contract-policy-fallback-classify); [Controller pre-invocation refusal](#contract-refusals-controller-consequence); [Admit client and host observations](#contract-transport-client-admit); [Checking a carried gate](#contract-actor_evidence-gate-check); [The controller checks carried labels](#contract-profile-receipt-labels); [Select the public result](#contract-envelope-data-select); [Boundary precedence](#contract-envelope-data-admit); [Decoded response collection bounds](#contract-diagnostics-execution-geometry); [Admit the response before assessment](#contract-diagnostics-execution-admit); [Project one worker or aggregate actors](#contract-diagnostics-execution-project); [Actor projection rows](#contract-diagnostics-execution-actor_rows); [Worker lifecycle validation](#contract-diagnostics-execution-ordinary-lifecycle_check); [Ending mapping](#contract-diagnostics-execution-ordinary-mapping); [Supported stop reason](#contract-diagnostics-execution-ordinary-stop); [Host-cleanup attribution](#contract-diagnostics-execution-ordinary-cause); [Copy validated host conflicts](#contract-diagnostics-execution-ordinary-host_conflicts); [Apply reply-wide findings](#contract-diagnostics-execution-reply_checks); [Worker lifecycle validation](#contract-diagnostics-actor-projection-lifecycle_check); [Ending mapping](#contract-diagnostics-actor-projection-mapping); [Supported stop reason](#contract-diagnostics-actor-projection-stop); [Host-cleanup attribution](#contract-diagnostics-actor-projection-cause); [Copy validated host conflicts](#contract-diagnostics-actor-projection-host_conflicts); [Retain observation and finding separately](#contract-diagnostics-issue-retain); [Hold the selected request](#contract-dossier-collection-held); [Scan literal imports](#contract-dossier-collection-scan); [Compare selected files](#contract-dossier-collection-compare); [Augmentation record relationships](#contract-dossier-augmentation-relationships); [Retained scan scope](#contract-dossier-imports-scope); [Classify the retained digest pair](#contract-dossier-binary-classify); [Read and select records](#contract-installation-commands-read); [Publish a registry mutation](#contract-installation-commands-publish); [Install a selected service](#contract-installation-commands-install); [Retain installation ownership](#contract-installation-commands-pending); [Refresh validation metadata](#contract-installation-commands-validate); [Reconcile observations](#contract-installation-commands-reconcile); [Remove an owned installation](#contract-installation-commands-remove); [Classify cleanup ownership](#contract-installation-commands-ownership); [Retained recovery account](#contract-installation-cleanup-retention); [Published installation state](#contract-installation-install-state_copy); [Request delivery failure](#contract-installation-verify-delivery_failure); [Select the verification operation result](#contract-installation-verify-select); [Classify the typed service observation](#contract-installation-service-classify) |
 | [Runner host](#contract-identity-definitions-host) | [Admission order and effects](#contract-request-specimen-admission); [Null and omission](#contract-request-specimen-nulls); [Bounded strings and action counts](#contract-request-specimen-capacity); [Admission and eligibility](#contract-probes-query-eligibility); [Extension participant restriction](#contract-probes-attempt-extension_exec); [Normalize actors before launch](#contract-actors-actor-normalize); [Collect, release and advance](#contract-actors-phase-order); [Validate and evaluate the dependency](#contract-actors-after_termination-gate); [Admit the declared dependency](#contract-actors-after_termination-declaration); [Action identity](#contract-actors-action-identity); [Resolve references and ownership](#contract-extensions-operation-references); [Bound the declared resource plan](#contract-extensions-operation-capacity); [Exclude exec in participating actors](#contract-extensions-operation-exec); [Observe the source answer](#contract-extensions-custody-source_answer); [Project a published issue result](#contract-extensions-event-issue_projection); [Delivered receipt prerequisites](#contract-extensions-transfer-delivered_receipt); [Source acknowledgement association](#contract-extensions-transfer-source_association); [Refuse at the first reached boundary](#contract-refusals-request-select); [Stop children and preserve safe metadata](#contract-refusals-request-consequence); [Sanitize every echoed field](#contract-refusals-admission-echo); [Admit a connection](#contract-transport-authorization-connection); [Host line admission](#contract-wire-validator-read); [Assemble execution evidence](#contract-reply-record-assemble); [Publish a report or fallback](#contract-reply-failure-publish); [Assemble the two channels](#contract-steps-assessment-assembly); [Establish query order](#contract-steps-assessment-order); [Classify an observation](#contract-steps-assessment-observe); [Add host path observations](#contract-steps-assessment-paths); [Resolve the final process status](#contract-lifecycle-worker-final_status); [Copy the polling stop](#contract-lifecycle-worker-resolve_stop_reason); [Copy the final collection basis](#contract-lifecycle-worker-resolve_collection_basis); [Resolving lifecycle claims](#contract-lifecycle-disposition-resolve); [Project ordinary canonical step claims](#contract-lifecycle-disposition-ordinary_projection); [Project actor canonical step claims](#contract-lifecycle-disposition-actor_projection); [Joining accepted validator records](#contract-lifecycle-validator-associate); [Count expected and unexpected associations](#contract-lifecycle-validator-cardinality); [Actor ownership and reporting scope](#contract-actor_evidence-actor-account); [Associated authority rows](#contract-actor_evidence-application-authority_association); [Application classification](#contract-actor_evidence-application-classify); [Prepared actor phase and gate records](#contract-actor_evidence-gate-prepared_association); [Evaluating and applying the dependency](#contract-actor_evidence-gate-evaluate); [Binding before launch](#contract-equipment-binding-bind); [Packaged bound-row equalities](#contract-equipment-binding-bound_values); [Associating the owned process](#contract-equipment-execution-inspect); [Inspection result eligibility](#contract-equipment-execution-eligibility); [Preparation refusal contents](#contract-equipment-preparation_failure-retain); [Acquiring setup decisions and operations](#contract-equipment-authority_scope-acquire); [Receipt presence](#contract-profile-receipt-presence); [The host decides capture availability](#contract-profile-receipt-host) |
 | [Runner host](#contract-identity-definitions-host), [Worker](#contract-identity-definitions-worker) | [Prepare native compiler input](#contract-policy-spec-parameters); [Fresh process and retained policy](#contract-actors-actor-fresh); [Prepare before use](#contract-extensions-custody-prepare); [Acknowledge, compare and settle delivery](#contract-extensions-custody-deliver); [Erase at declared last use and teardown](#contract-extensions-custody-erase) |
 | [Compiler helper](#contract-identity-definitions-helper) | [Read helper input](#contract-policy-helper_request-read); [Helper admission order](#contract-policy-helper_policy-admit); [Inventory, compile and report](#contract-policy-check_data-run_compile); [Select the helper verdict](#contract-policy-check_data-verdict); [Decoded policy metadata](#contract-policy-check_data-metadata); [Release native resources](#contract-policy-compile-release) |
@@ -5218,6 +5275,8 @@ Each row names the record members a check reads and links each consequence with 
 | Item | Kind |
 | --- | --- |
 | [Ordinary-build history requirement](#contract-identity-surfaces-release_history) | behavior |
+| [Emission evidence](#contract-request-specimen-emit_example-evidence) | evidence |
+| [Example evidence](#contract-request-specimen-example-evidence) | evidence |
 | [Reporting-failure associations](#contract-reply-failure-publish-associations) | behavior |
 | [Termination cancellation reach](#contract-actor_evidence-gate-cancellation_evidence) | behavior |
 | [Success and findings](#contract-envelope-data-select-success_findings) | behavior |

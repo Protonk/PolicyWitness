@@ -142,6 +142,16 @@ An evidence gap can explicitly cover a subtree. Metadata stays separate
 from stamped public content, while public gaps, definitions, examples,
 field meanings and relationship facts enter the public snapshot.
 
+An example can take its request from code. `document` cites, by `path` and
+`symbol`, one Rust constant spelled `const NAME: &str = r#"..."#;`. The reader
+accepts that one spelling and exactly one definition of the symbol. The raw
+string must hold a JSON object whose members are `PWRunnerRunSpec` fields,
+without `contract`, `_test_overrides` or a controller selection key from
+`runner_select.rs`; deeper validity belongs to host admission. The renderer
+prints the document after the example's prose with `contract` shown as
+`<reported-contract>`. The extracted document enters the public snapshot in
+place of its citation, and the cited file is a generator input.
+
 The renderer joins field meanings to public JSON types and presence in
 record-local lists. A bare type requires its key; `T?` omits an absent field,
 while `T ∪ null` keeps its key and represents absence as null. These signatures

@@ -160,14 +160,7 @@ def collected_shapes(root, tree=None):
         if surface in values:
             values[surface]['reservation_limits'] = reservation
     if 'request' in values:
-        selector = read(root, 'controller/src/runner_select.rs')
-        keys = {}
-        for name in ('SELECTOR_FIELDS', 'RUNNER_SELECTOR_FIELDS'):
-            match = re.search(r'const ' + name + r':.*?= &\[(.*?)\];', selector, re.S)
-            if not match:
-                raise ValueError(f'missing selector declaration {name}')
-            keys[name] = sorted(re.findall(r'"([^"\\]*)"', match[1]))
-        values['request']['controller_keys'] = keys
+        values['request']['controller_keys'] = model.controller_keys(lambda name: read(root, name))
     return {f'tests/fixtures/contract/surfaces/{ident}.json': canonical(value)
             for ident, value in values.items()}
 

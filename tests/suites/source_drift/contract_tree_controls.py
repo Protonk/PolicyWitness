@@ -610,6 +610,88 @@ checks: ["source_drift"]
         self.assertNotEqual(self.model.public_payload(self.load(body), 'demo'),
                             self.model.public_payload(self.load(changed), 'demo'))
 
+    EXAMPLE_SOURCE = 'controller/src/control_example.rs'
+
+    def example_tree(self, source, fact=None, path=EXAMPLE_SOURCE):
+        """The constructed model with one example extracted from an overlaid Rust source."""
+        fact = fact or json.dumps({'path': path, 'symbol': 'CONTROL_DOCUMENT'})
+        body = self.changed('### Example with a fenced heading {example: example}',
+                            '### Extracted request {extracted: example}\n```contract\ndocument: ' + fact +
+                            '\n```\nThe request comes from the cited constant.\n'
+                            '### Example with a fenced heading {example: example}')
+        files = {'docs/contract/control.surface.md': body, path: source}
+        read = lambda name: files[name] if name in files else (ROOT / name).read_text()
+        return self.model.load_tree(ROOT, read=read, paths=['docs/contract/control.surface.md'])
+
+    @staticmethod
+    def example_constant(body, name='CONTROL_DOCUMENT'):
+        return 'pub const ' + name + ': &str = r#"' + body + '"#;\n'
+
+    def test_example_document_is_extracted_from_its_cited_constant(self):
+        constant = self.example_constant('{"specimen_id":"control","probe_plan":[]}')
+        tree = self.example_tree('//! A constructed source.\n' + constant)
+        node = tree.index['demo.report.extracted']
+        self.assertEqual(node.document, {'specimen_id': 'control', 'probe_plan': []})
+        payload = self.model.public_payload(tree, 'demo')
+        public = next(item for item in payload['nodes'] if item['id'] == node.id)
+        self.assertEqual(public['document'], node.document)
+        self.assertNotIn('document', public['facts'])
+        rendered = self.model.render(tree)
+        self.assertIn('The request comes from the cited constant.\n\n```json\n{\n'
+                      '  "contract": "<reported-contract>",\n  "probe_plan": [],\n'
+                      '  "specimen_id": "control"\n}\n```', rendered)
+        edited = self.example_tree(constant.replace('"control"', '"edited"'))
+        self.assertNotEqual(self.model.public_payload(edited, 'demo'), payload)
+        self.assertNotEqual(self.model.render(edited), rendered)
+        # The citation locates the document; the document is the public content.
+        moved = self.example_tree(constant, path='controller/src/control_moved.rs')
+        self.assertEqual(self.model.public_payload(moved, 'demo'), payload)
+
+    def test_example_document_refusals_name_the_source(self):
+        admitted = '{"specimen_id":"control","probe_plan":[]}'
+        constant = self.example_constant
+        controls = [
+            ('symbol absent', constant(admitted, 'OTHER_DOCUMENT'), None, "missing symbol 'CONTROL_DOCUMENT'"),
+            ('symbol only mentioned', '// CONTROL_DOCUMENT is described here.\n', None,
+             'expected one definition of CONTROL_DOCUMENT, found 0'),
+            ('two definitions', constant(admitted) + constant(admitted), None,
+             'expected one definition of CONTROL_DOCUMENT, found 2'),
+            ('ordinary string', 'pub const CONTROL_DOCUMENT: &str = "{\\"specimen_id\\":\\"control\\"}";\n', None,
+             'CONTROL_DOCUMENT is not a single r#"..."# raw string constant'),
+            ('wider raw delimiter', 'pub const CONTROL_DOCUMENT: &str = r##"' + admitted + '"##;\n', None,
+             'CONTROL_DOCUMENT is not a single r#"..."# raw string constant'),
+            ('truncated JSON', constant('{"specimen_id":'), None, 'CONTROL_DOCUMENT is not JSON'),
+            ('array', constant('[]'), None, 'CONTROL_DOCUMENT is not a JSON object'),
+            ('contract member', constant('{"contract":"release:v0.0.0","specimen_id":"control"}'), None,
+             "forbidden member 'contract'"),
+            ('test overrides', constant('{"specimen_id":"control","_test_overrides":{}}'), None,
+             "forbidden member '_test_overrides'"),
+            ('selection key', constant('{"specimen_id":"control","runner_mode":"standard"}'), None,
+             "controller selection key 'runner_mode'"),
+            ('unknown member', constant('{"specimen_id":"control","unlisted":1}'), None,
+             "unknown member 'unlisted'"),
+            ('citation with a form', constant(admitted),
+             json.dumps({'path': self.EXAMPLE_SOURCE, 'symbol': 'CONTROL_DOCUMENT', 'form': 'test'}),
+             'document requires one path/symbol citation'),
+            ('lowercase symbol', 'pub const control_document: &str = r#"{}"#;\n',
+             json.dumps({'path': self.EXAMPLE_SOURCE, 'symbol': 'control_document'}),
+             'is not a constant name'),
+        ]
+        for label, source, fact, diagnostic in controls:
+            with self.subTest(control=label):
+                with self.assertRaises(ValueError) as caught:
+                    self.example_tree(source, fact)
+                message = str(caught.exception)
+                self.assertIn(diagnostic, message)
+                if 'citation' not in label:
+                    self.assertIn(self.EXAMPLE_SOURCE, message)
+        with self.assertRaisesRegex(ValueError, 'missing/invalid reference controller/src/control_absent.rs'):
+            self.example_tree(constant(admitted),
+                              json.dumps({'path': 'controller/src/control_absent.rs', 'symbol': 'CONTROL_DOCUMENT'}))
+        # The baseline these controls mutate is admitted.
+        self.assertEqual(self.example_tree(constant(admitted)).index['demo.report.extracted'].document,
+                         json.loads(admitted))
+
     def test_free_text_counts_ratchet_by_kind(self):
         runtime = generate_contract_stamps.contract_module('runtime')
         tree = self.load()

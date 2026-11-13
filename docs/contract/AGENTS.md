@@ -22,7 +22,9 @@ specific native, constructed-input, shortened-budget, missing-assertion and
 retention limits. Execution credit identifies the run and the source/build
 exercised; release credit identifies the acceptance case.
 Keep evidence metadata separate from stamped public meanings. Preserve useful
-examples with their support or an explicit evidence gap.
+examples with their support or an explicit evidence gap. Change an extracted
+example at the source its `document` fact cites and regenerate; no surface
+restates that document.
 
 Edit generator inputs and regenerate through the entry point. Review field
 type and presence joins against their declarations, particularly custom

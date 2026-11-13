@@ -2803,6 +2803,29 @@ else:
             fs::remove_dir_all(&root).unwrap();
         }
 
+        /// The emitted example is a fixed point of `run`'s preparation: the
+        /// client receives the emitted file without its one framing newline.
+        #[test]
+        fn emitted_example_reaches_the_client_as_the_emitted_document() {
+            let root = scratch("example");
+            let app = synthetic_app(&root);
+            install_manifest(&app, ManifestState::Valid);
+            let emitted = crate::example::render(
+                crate::example::EXAMPLE_DOCUMENT,
+                crate::json_contract::BUILD_CONTRACT,
+            )
+            .unwrap();
+            let request = root.join("example.json");
+            write(&request, emitted.as_bytes());
+            let observed = observe(&app, None, &[request.to_str().unwrap()]);
+            assert_eq!(observed.calls.len(), 1);
+            let document = emitted.strip_suffix('\n').expect("one framing newline");
+            assert!(!document.ends_with('\n'));
+            assert_eq!(observed.calls[0].request, document);
+            assert_eq!(fs::read(&request).unwrap(), emitted.as_bytes());
+            fs::remove_dir_all(root).unwrap();
+        }
+
         #[test]
         fn builtin_manifest_failures_refuse_before_the_client_with_one_load() {
             for (label, state, detail) in [

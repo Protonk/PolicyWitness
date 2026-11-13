@@ -63,7 +63,7 @@ FACTS_BY_KIND = {
     'effect': {'on', 'effects'},
     'outcome': {'value', 'object', 'test', 'effects'},
     'gap': {'kind', 'scope'},
-    'example': set(),
+    'example': {'document'},
     'owner': {'scope', 'grade', 'source', 'check', 'pins', 'context', 'limits',
               'run', 'source_snapshot', 'build', 'release', 'case'},
 }
@@ -87,6 +87,9 @@ SUPPORT_GRADES = {
 }
 FREE_REASONS = {'native_protocol', 'serialized_grammar', 'raw_admission',
                 'environment_observation', 'pending_decision'}
+REQUEST_RECORD = 'PWRunnerRunSpec'
+SELECTOR_SOURCE = 'controller/src/runner_select.rs'
+SELECTOR_DECLARATIONS = ('SELECTOR_FIELDS', 'RUNNER_SELECTOR_FIELDS')
 
 
 class ContractError(ValueError):
@@ -125,6 +128,7 @@ class Node:
     object_types: dict = field(default_factory=dict)
     record: str | None = None
     field_info: dict | None = None
+    document: dict | None = None
 
     @property
     def surface_id(self):
@@ -666,6 +670,65 @@ def _inline_records(tree):
                 node.fail(f'inline field {info["name"]} names unknown type {info["swift_type"]}')
 
 
+def controller_keys(read):
+    """The controller's selection keys, by declaration, from its source."""
+    selector = read(SELECTOR_SOURCE)
+    keys = {}
+    for name in SELECTOR_DECLARATIONS:
+        match = re.search(r'const ' + name + r':.*?= &\[(.*?)\];', selector, re.S)
+        if not match:
+            raise ValueError(f'missing selector declaration {name}')
+        keys[name] = sorted(re.findall(r'"([^"\\]*)"', match[1]))
+    return keys
+
+
+def _example_document(tree, node):
+    """Extract an example request from the one raw-string constant it cites.
+
+    The reader accepts one spelling, `const NAME: &str = r#"..."#;`, and is
+    not a Rust parser. Host admission decides everything beneath the
+    top-level members.
+    """
+    ref = node.facts['document']
+    if not isinstance(ref, dict) or set(ref) != {'path', 'symbol'}:
+        node.fail('document requires one path/symbol citation', 'document')
+    try:
+        generator_common.citation(ref, _ReadRoot(tree.read))
+        source = tree.read(_relative(ref['path']))
+    except (KeyError, OSError, ValueError) as error:
+        node.fail(str(error), 'document')
+    path, symbol = ref['path'], ref['symbol']
+    if not re.fullmatch(r'[A-Z][A-Z0-9_]*', symbol):
+        node.fail(f'{path}: document symbol {symbol!r} is not a constant name', 'document')
+    definitions = re.findall(r'\b(?:const|static)\s+' + symbol + r'\b', source)
+    if len(definitions) != 1:
+        node.fail(f'{path}: expected one definition of {symbol}, found {len(definitions)}', 'document')
+    match = re.search(r'\bconst ' + symbol + r': &str = r#"(.*?)"#;', source, re.S)
+    if not match:
+        node.fail(f'{path}: {symbol} is not a single r#"..."# raw string constant', 'document')
+    try:
+        value = json.loads(match[1])
+    except ValueError as error:
+        node.fail(f'{path}: {symbol} is not JSON: {error}', 'document')
+    if not isinstance(value, dict):
+        node.fail(f'{path}: {symbol} is not a JSON object', 'document')
+    fields = tree.records.get(REQUEST_RECORD, {}).get('fields')
+    if fields is None:
+        node.fail(f'document requires the imported {REQUEST_RECORD} record', 'document')
+    try:
+        selection = controller_keys(tree.read)[SELECTOR_DECLARATIONS[0]]
+    except (KeyError, OSError, ValueError) as error:
+        node.fail(str(error), 'document')
+    for key in value:
+        if key in {'contract', '_test_overrides'}:
+            node.fail(f'{path}: {symbol} carries the forbidden member {key!r}', 'document')
+        if key in selection:
+            node.fail(f'{path}: {symbol} carries the controller selection key {key!r}', 'document')
+        if key not in fields:
+            node.fail(f'{path}: {symbol} carries the unknown member {key!r}', 'document')
+    node.document = value
+
+
 def _owner(tree, node):
     facts = node.facts
     if facts.get('scope', 'self') not in {'self', 'subtree'}:
@@ -929,6 +992,8 @@ def _validate(tree):
                 node.fail('known gap requires a public statement')
         if node.kind == 'owner':
             _owner(tree, node)
+        if 'document' in facts:
+            _example_document(tree, node)
         for path in facts.get('at', []):
             if not isinstance(path, str):
                 node.fail('record placements must be object paths', 'at')
@@ -1442,6 +1507,9 @@ def render(tree):
         facts = _facts_text(tree, node, include_context=True)
         if facts: output.extend([facts, ''])
         if node.prose: output.extend([node.prose, ''])
+        if node.document is not None:
+            shown = {'contract': '<reported-contract>', **node.document}
+            output.extend(['```json', json.dumps(shown, indent=2, sort_keys=True, ensure_ascii=False), '```', ''])
         fields = [c for c in node.children if c.kind == 'field']
         if fields:
             for member in fields:
@@ -1523,8 +1591,9 @@ def _ast_public(value):
 
 
 def _node_public(tree, node):
+    # An example's citation locates its document; the document is the public content.
     facts = {key: (_ast_public(node.expressions[key]) if key in node.expressions else value)
-             for key, value in node.facts.items() if key not in PUBLIC_EXCLUSIONS}
+             for key, value in node.facts.items() if key not in PUBLIC_EXCLUSIONS | {'document'}}
     context = dict(node.context)
     if 'when' in context:
         context['when'] = _ast_public(ast.parse(context['when'], mode='eval'))
@@ -1534,6 +1603,8 @@ def _node_public(tree, node):
         result['each_scope'] = list(node.each)
     if node.facts.get('selection') == 'first_match':
         result['case_order'] = [child.id for child in node.children if child.kind == 'outcome']
+    if node.document is not None:
+        result['document'] = node.document
     if node.field_info:
         result['field'] = _public_field(tree.records[node.parent.record], node.field_info)
     if node.record:

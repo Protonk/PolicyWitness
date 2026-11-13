@@ -52,7 +52,7 @@ def tree_input_paths(root):
                         value = json.loads(raw)
                     except ValueError:
                         continue
-                    if key in {'source', 'check'}:
+                    if key in {'source', 'check', 'document'}:
                         citations = value if isinstance(value, list) else [value]
                         paths.update(citation['path'] for citation in citations
                                      if isinstance(citation, dict) and isinstance(citation.get('path'), str))

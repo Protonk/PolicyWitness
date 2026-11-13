@@ -2484,6 +2484,7 @@ not the exec descendants.
 | `run FILE --timeout-ms N` | Sets the client acquisition/reply allowance. Host, validator and worker budgets keep their own values. |
 | `run FILE --runner-mode standard` or `byoxpc` | Supplies the runner-mode selection; external selection still requires its registered ID or service. |
 | `--version` | Prints a version envelope with `build.contract` and descriptive build coordinates. Save it with the specimen. |
+| `example` | Prints one specimen that this build defines, carrying the build's own contract identity, for the same build's `run`: `example > FILE`, then `run FILE`. It takes no argument and prints a request, not an envelope. Exit 0 supplies the complete document; on exit 2 discard the output. The document can differ between builds. The project uses it to test a build against its own example. |
 
 ### Running specimens in parallel
 

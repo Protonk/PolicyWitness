@@ -601,6 +601,18 @@ controls use independent preimages for legacy regions and public snapshots,
 including missing-input and malformed-history refusals. These constructed
 controls establish generator behavior; their fixture rules are test inputs.
 
+Example-extraction controls give an example node an overlaid Rust source and
+require the parsed document in its public payload and rendering in place of
+its citation. They refuse, naming the source: an absent or merely mentioned
+symbol, two definitions, an ordinary or wider-delimited string, text that is
+not a JSON object, a `contract` or `_test_overrides` member, a controller
+selection key and an unknown top-level member. The `generator_contract` case
+edits the controller's example constant in a disposable copy of the declared
+inputs: the real check refuses the stale contract and snapshot and writes
+nothing, regeneration then moves the rendered contract, the `request` surface
+payload and the build identity, and a forbidden member is refused by both
+checking and generation.
+
 The `build_contracts` case also checks the generated host/worker source
 identity and exercises relocation, deterministic regeneration, stale generated values, malformed
 markers, automatic helper discovery, layout edits and both handshake edits.
