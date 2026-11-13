@@ -270,3 +270,70 @@ strings with different bytes and one canonical form would therefore read
 field sentence says "compares submitted strings". Choosing between a byte
 comparison in the producer and "strings" in the two guide sentences is a
 decision about a public meaning, so nothing was changed.
+
+## Verification
+
+After each pass the limits and contract-stamp generator checks passed. One
+suite run then covered the cycle from clean `5aab3fb8`:
+
+```sh
+env -u PYTHONOPTIMIZE PYTHONDONTWRITEBYTECODE=1 \
+  PW_TEST_OUT_DIR=tests/out/runs/doc-coalescing-path-observations PW_TEST_QUIET=1 \
+  tests/run.sh --suite source_drift
+```
+
+Run `20261113T200437Z_585e6a8c` completed in 425,850 ms with Python 3.14.9.
+All ten cases passed, with no skips, unrun cases, harness errors or recorded
+system sleep. These are generator and documentation observations. They show
+that copied regions, links, citations and stamps are intact. They do not
+compare the new tables with the contract or the source; that comparison is
+the direct source check under Pass 2 and the consultation.
+
+No runtime code, request or executed guide command changed, so no build,
+native case or `guide_workflows` run was added, and no support grade rose.
+The two local runs of the staged app under Pass 3 are unretained observations.
+The suite run was reviewed and removed with `make prune APPLY=1`, which kept
+the release archives and protected acceptance. The staged
+`dist/PolicyWitness.md` still equals the guide at `bfa65341`; the next signed
+build restages it.
+
+## Completion
+
+1. **What each representation establishes.** The per-step note and the
+   comparison section's "same runtime object" entry link to "Reading path and
+   object observations". "What each record establishes" gives one entry per
+   record with what it does not show, and a paragraph on comparing two
+   records. Before, a reader collected this from six places and found no
+   statement of what a descriptor identity supports. Still difficult: nothing
+   in the reply records the object the query consulted, and the device and
+   inode inference depends on a filesystem property the report does not
+   record.
+2. **Who observed it, and when.** The seven-row table gives each record's
+   observer, call and time, and the paragraph after it gives the per-phase
+   sequence. Two times are now explicit that were not: the planning check
+   runs per phase before collection, and the host's diagnostics run once
+   after every phase. Still difficult: the worker records sit after the query
+   answer only under `query_first`, so the reader combines this table with the
+   order checklist.
+3. **Failed resolution, differences and absence.** Three tables give what the
+   reply shows, what it means and what remains established, for host
+   diagnostics, `observed_path` and the stat records. They separate an omitted
+   form from a `null` one, give the causes of `observed_path: null`, and read
+   the two cross-time combinations: answered then unresolved, and excluded
+   then resolved. The quick-start subsection applies them to the reader's own
+   result. Still difficult: 21 rows is a lot to scan, and no example in the
+   guide shows a later phase changing an earlier step's diagnostics.
+
+Public snapshot: unchanged. Removed duties: none; no maintained copy was
+deleted, and the fresh-read introduction no longer contradicts its table.
+Added duties: the three tables against the producers and the contract, with
+no binding check; and one unexecuted `jq` expression's field names. Added
+machinery: none. Preserved distinctions: submitted strings, worker
+observations and later host diagnostics; omitted, `null` and present forms;
+planning time and diagnostic time; source inspection, constructed checks and
+native evidence.
+
+Two decisions remain with the maintainer: whether the contract's
+`observed_path` sentence should name its three actions and call, and how
+`target_relation` should compare strings that differ in bytes and agree in
+canonical form.
