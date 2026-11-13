@@ -127,6 +127,12 @@ The porcelain reply controls retain normal, evidence-preserving and minimal
 binary receipts. The independent Python reader checks an authored normal fixture,
 retained facts, interrupted prefixes, explicit lifecycle absence and exact UTF-8
 path presentation. Typed shape companions feed the public shape golden.
+Constructed omissions of polling-stop and collection-basis observations also
+pass through the production resolver and encoder, at ordinary and actor
+subprocess paths. The reader corpus checks both normal and retained degraded
+forms, their exact `unresolved`/`not_recorded` claims, and independent rejection
+of wrong reason types and unknown keys. These companions cover documented
+fallbacks; the current live driver supplies both observations.
 `porcelain-replies/replay.json` records the result; `porcelain-dense/sizes.json`
 separates observed 256-step binary/public sizes from conservative JSON component
 allowances. The authority-setup allowance belongs to this test-side presentation

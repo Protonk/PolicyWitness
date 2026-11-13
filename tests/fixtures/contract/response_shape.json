@@ -168,6 +168,7 @@
     "reply.actors[].subprocess.disposition.questions.collection_basis": {
       "answer": "string",
       "basis": "array",
+      "reason": "string",
       "state": "string"
     },
     "reply.actors[].subprocess.disposition.questions.final_status": {
@@ -205,6 +206,7 @@
     "reply.actors[].subprocess.disposition.questions.stop_reason": {
       "answer": "string",
       "basis": "array",
+      "reason": "string",
       "state": "string"
     },
     "reply.actors[].subprocess.disposition.steps[]": {
@@ -791,6 +793,7 @@
     "reply.runner_subprocess.disposition.questions.collection_basis": {
       "answer": "string",
       "basis": "array",
+      "reason": "string",
       "state": "string"
     },
     "reply.runner_subprocess.disposition.questions.final_status": {
@@ -828,6 +831,7 @@
     "reply.runner_subprocess.disposition.questions.stop_reason": {
       "answer": "string",
       "basis": "array",
+      "reason": "string",
       "state": "string"
     },
     "reply.runner_subprocess.disposition.steps[]": {

@@ -7,7 +7,8 @@ deterministic, and checked into the repo so tests are hermetic.
 
 - `contract/`: goldens for the wire contracts: the reply shape
   (`response_shape.json`, every key the reply's public projection carries
-  across the field-complete fixture and its production-shaped companions,
+  across the field-complete fixture, production-shaped companions and
+  documented resolver-absence companions,
   checked by `runner_unit`), the
   controller envelope shape (`envelope_shape.json`, from the field-complete
   `kind: "run"` envelope a Rust unit test renders, with the helper envelopes it

@@ -148,7 +148,7 @@ their raw artifacts are no longer available. The four release archives and
 protected acceptance were preserved. The initial sandboxed pruning preview's
 signature diagnostic did not recur outside the automation sandbox.
 
-## Concrete lead left outside this correction
+## Lifecycle fallback follow-up
 
 The documented resolver branches
 `lifecycle.worker.resolve_stop_reason.missing` and
@@ -160,4 +160,68 @@ Python shape reader rejects these constructed fallback forms. The live
 production initializer supplies only a classifier fallback and is not serialized.
 This is a demonstrated documented-fallback/shape-coverage discrepancy, without
 demonstrated native reachability. Completing the intended ordinary fixture does
-not settle that separate coverage question.
+not settle that separate coverage question. The subsequent focused
+investigation below addresses it.
+
+### Finding and correction
+
+The mismatch belongs to the test consumer's fixture-derived allowlist, not the
+resolver or binary schema. Both ordinary `runner_subprocess` and actor-local
+`actors[].subprocess` use the same disposition record. At each placement the
+golden included `answer`, `basis` and `state` for `stop_reason` and
+`collection_basis`, but omitted their documented unresolved `reason` field.
+
+The source trace separates these boundaries:
+
+- `ActorSession.pollStopReason` is a nonoptional string initialized before
+  collection. `collectOutput` always supplies it and derives collection basis
+  from whether the owned child was reaped. The only other production
+  `CWorkerOutput` initializer is a classifier-only fallback in actor assembly;
+  its output is not serialized. No current native path to either omission was
+  identified.
+- `resolveDisposition` explicitly produces `unresolved / not_recorded` when
+  either observation is absent. The authored lifecycle rule already specifies
+  both branches, and `PWDispositionClaim.reason` is already a schema field.
+- Swift reporting and Rust admission permit these constructed records. The
+  independent lifecycle oracle likewise derives the unresolved claims.
+  Python's general consumer nevertheless rejected them at the preceding shape
+  check because its allowlist comes from the encoded fixture inventory.
+
+The fixtures now include one ordinary and one actor companion with the two
+observations deliberately absent. Production resolution, assembly, reporting
+validation and binary encoding supply their fields. The independent binary
+reader produces the candidate golden; its entire delta is four
+`reason: string` entries. The reviewed candidate replaces the golden without
+loosening the shape reader or changing a production reader, native code,
+binary schema, public field definition or existing meaning.
+
+Four reader-corpus cases cover ordinary and actor records, each in normal and
+retained degraded form. They require exact unresolved claims, continued absence
+of the raw observations, and no lifecycle findings. Sixteen independent
+wrong-type/unknown-key mutations keep the corrected paths restrictive. The
+shape check also requires both typed reason fields at both subprocess paths.
+These are interpretation and coverage controls, not native execution claims.
+
+### Reproduction and verification
+
+Regression source `2cee133b`, canonical case
+`runner_unit/pwrunner_core_unit_executable`, run
+`20261113T220521Z_f62091a6`, output `tests/out/runs/lifecycle-fallback-shape-red`:
+Swift passed 605/605, including host acceptance of all four new corpus rows.
+The case then failed exactly at the independent shape comparison and wrote
+the four-entry candidate. Zero system sleep was recorded; its `suite_exit`
+entry follows that deliberate failing comparison. Later Rust/Python wrapper
+stages did not run, so this red case supplies no replay credit.
+
+A separate read-only diagnostic decoded those four retained frames under
+their explicit `test:policy-witness` identity. With the old allowlist each had
+exactly the two unknown-key findings for its subprocess placement; with the
+reviewed candidate each had no general-consumer findings. This diagnostic
+isolates the allowlist dependency; the coordinated acceptance run below owns
+full reader and rejection-control verification.
+
+Acceptance is pending the focused runner-unit case, checker controls and
+documentation checks. The signed app is unchanged: only constructed controls,
+the reviewed shape inventory and documentation change. No worker wait,
+eligibility rule, admission implementation or validator receiver changes, so
+the unrelated wait experiments and broad receiver battery are not selected.

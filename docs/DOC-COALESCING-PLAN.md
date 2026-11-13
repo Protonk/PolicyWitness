@@ -147,6 +147,8 @@ correction, the controls added and the decisions left with the maintainer.
 The [query-order investigation](../records/doc-coalescing/QUERY-ORDER-INVESTIGATION.md)
 traces producer setup observations through the carried reply and its readers,
 and records a focused actor reporting-validation correction with its evidence.
+Its follow-up traces documented lifecycle fallback forms through the shape
+allowlist and records the corresponding fixture and consumer correction.
 
 ## Fourth cycle
 
