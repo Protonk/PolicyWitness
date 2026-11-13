@@ -515,6 +515,8 @@ The bounded sample ran on the build of `de17cef7`: ten of ten runs passed, with 
 | `example-step1-a` | `source_drift/generator_contract` reported three unlisted citation pairs, all in this plan | A defect in this document's prose, unrelated to the command. The text is present at the starting commit, from which the executor infers the case was already failing there; it was not run at that commit. `3bb0955f` rewrote the three mentions as symbol links; `example-step1-b` is the replacement run |
 | `example-fix-cases` | The new integration test required exit 2 for a stdout closed at launch; the app exited 0 | An incorrect expectation written by the executor. On that build the write to descriptor 1 succeeded, so the launch condition behaves as a redirect to the null device and exit 0 supplies what the system accepted. `23440049` removed the expectation and the direct descriptor write that accompanied it; `example-fix2-cases` is the replacement run |
 
+A `source_drift` run on the uncommitted candidate record, `example-candidate-record-drift`, failed the prose scan on a literal duration in this section; the sentence was reworded and `example-candidate-record-drift-2` is the replacement run.
+
 Local runs of the two control scripts outside the dispatcher failed several times on mistakes in the controls while they were being written. They are not retained and earn no credit. One direct `cargo test` during step 1 ran outside the checkout lock helper; it was local debugging and earns no credit.
 
 ### Independent review: initial assessment
@@ -684,8 +686,7 @@ No fixture needed correcting. `envelope_skeleton` in `tests/lib/blackbox.py` now
 ### Open matters
 
 1. **Integrity findings and command success.** The consumer verifies today's mapping from reply outcome to result. Whether controller integrity findings should change command success, `envelope.data.select.success_findings`, remains undecided and is not authorized by this work.
-2. **Release form.** No live run has seen a `release:` identity; section 9's nested acceptance supplies it.
-3. **Review of later changes.** The corrections after the independent review, the two revisions and the step 4 support have not been independently reviewed.
+2. **Review of later changes.** The corrections after the independent review, the two revisions and the step 4 support have not been independently reviewed.
 
 ### Maintainer's decision
 
@@ -716,11 +717,33 @@ Both stages changed tests, the contract tree and generated documents. Controller
 
 Evidence carried forward to this state, as a reviewed judgment and not a mechanical fact: the final default battery ran before `d3c2a72a`. The consumer, the dispatcher and every case outside the two example cases and the contract generator's controls are unchanged since that battery; the two example cases, the consumer controls and `source_drift` were rerun after each change. Earlier development runs under `tests/out/runs/` retain this machine's target bytes from before the first revision and remain disposable.
 
+### Candidate verification under section 9
+
+Run on `a5de0c63`, the final source, in the `unreleased` stamp state.
+
+| Section 9 item | Run | Result |
+| --- | --- | --- |
+| 1. Signed development build and default battery | Build of `a5de0c63` (`PWBuildDescribe` `v0.3.7-38-ga5de0c63`, identity unchanged); `example-candidate-battery`, `20261113T025645Z_fa04991f` | Pass, 231 case results, no skip, unrun case or harness error, inventory unchanged, no system sleep recorded |
+| 2. Complete `preflight/build_refusal_controls` rehearsal | `example-candidate-rehearsal`, `20261113T032129Z_fe9dd38c` | Pass: 88 build refusal controls and 16 bypass demonstrations. Its nested extracted-ZIP acceptance, `20261113T040628Z_a2fd02a5`, passed 231 case results against the fixture reporting `release:v1.0.0` |
+| 3. `witness_contract/order_barrier_mutations` | Not run | Judged not required; see below |
+
+The dispatcher recorded a short system sleep during the rehearsal's invocation; its `run.json` holds the length. The case passed, and the sleep is stated because host and worker allowances count it.
+
+**Release form.** In the nested acceptance the live case saw `release:v1.0.0` in the emitted document, the envelope's build stamp and the reply's producer, and all 67 assertions held. Its `other_development` refusal submitted a substituted development identity, the branch that applies to a release build. This is the plan's evidence for the release form; it comes from a disposable fixture, not from a tagged release.
+
+**Order-barrier applicability.** The rerun is required when the worker wait, the release store or the eligibility rule changes. No file under `runner/` or `controller/tools/` changed between `c6345219` and `a5de0c63`, and the worker identity generator reports the identity it reported before the work. On that basis the executor judges the rerun not required. This is a judgment about applicability, not a mechanical fact.
+
+**Stamp preparation withheld.** Section 9's items 4 and 5 end at a prepared, untagged tree in which the ordinary stamp check and the build refuse. The maintainer said on 2026-11-12:
+
+> Let's keep the tree buildable.
+
+The stamps therefore stay `unreleased`. Not done, and owed before a tag: generation with `--release v0.3.8 --require-history`, confirmation of the expected missing-tag refusal, and the prepared-commit checks of baselines against `v0.3.7` and footprint attribution. The draft release notes are revised for the command and these runs.
+
 ### Handoff statement
 
-- **Supported source:** the commit that adds this statement. Implementation is `23440049` with the revisions of `d3c2a72a`; support for the rule and the example node is complete at check-read grade, and the evidence gaps are gone.
-- **Selected app:** built from `23440049` with a clean tree, identity `development:6a333cf6f19aea6939fa843655b6ce2a90ec05837fb4bb6b8b9288b0ccc572f0`. Controller source is unchanged since that build.
-- **Applicable verification:** the final default battery and the challenge at `23440049`, and the reruns listed under "After the decision". The final ten runs of the live case predate the digest revision and stand as the sample for that build.
+- **Supported source:** `a5de0c63`. Implementation is `23440049` with the revisions of `d3c2a72a`; `a5de0c63` completes support for the rule and the example node at check-read grade. Later commits to this record are evidence only.
+- **Selected app:** built from `a5de0c63` with a clean tree, identity `development:6a333cf6f19aea6939fa843655b6ce2a90ec05837fb4bb6b8b9288b0ccc572f0`.
+- **Applicable verification:** the candidate battery and the build-refusal rehearsal on `a5de0c63`, with the nested release-form acceptance; the challenge at `23440049`, whose emitter and orchestration test are unchanged since.
 - **Unresolved decisions and dispositions:** no failed assertion awaits a disposition. The open matters above are the unresolved decisions.
 - **Blocks dependent investigation:** nothing recorded here. The controller investigation can use this baseline; reassess applicability if source, contract, consumer, fixtures or tests change.
-- **May remain pending:** section 9's candidate verification on the final source, and an independent review of the later changes.
+- **Pending release work:** stamp preparation and its prepared-commit checks, withheld by the maintainer's instruction to keep the tree buildable; the maintainer's review of the contract and the notes; the tag and everything after it.

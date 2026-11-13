@@ -6,10 +6,10 @@ What the release end-game still needs from the four-stage contract work, whose o
 
 Recorded on 2026-11-12.
 
-- `main` is prepared for `v0.3.8` and has no `v0.3.8` tag. The stamp tables and public snapshot claim the release, so the ordinary stamp check and the build refuse until the tag exists.
+- `main` has no `v0.3.8` tag and its stamps read `unreleased`, so ordinary generation, the stamp check and the build work. The maintainer chose to keep the tree buildable after the [example work](../../docs/CONTRACT-EXAMPLE-PLAN.md#12-evaluation-record). Preparation for the tag is still owed: generation with `--release v0.3.8 --require-history`, after which the ordinary stamp check and the build refuse until the tag exists, and the prepared-commit checks of baselines against `v0.3.7` and footprint attribution.
 - `v0.3.7` is tagged locally, accepted and archived under `dist/archive/v0.3.7/` (gitignored, local only). It is unpublished and its tag has not been pushed. The branch itself has been pushed, so a clone without both tags fails the stamp check.
 - The maintainer reads the contract line by line, and arranges another agent's review, before the tag. The tagged rehearsal and the Apple submission wait for the instruction to continue.
-- Evidence from the earlier pre-tag rehearsals describes the builds it ran on (`8435e5d3` for the last full battery and refusal rehearsal). A later change to shipped source or the generator needs its own runs.
+- Evidence from the earlier pre-tag rehearsals describes the builds it ran on (`8435e5d3`). The example work changed shipped source and the generator; its full battery and refusal rehearsal ran on `a5de0c63` and are in that plan's evaluation record. A later change to shipped source or the generator needs its own runs.
 
 ## Decisions open for the maintainer
 
