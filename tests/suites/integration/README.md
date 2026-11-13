@@ -9,6 +9,13 @@ Rust integration tests that exercise the CLI contract against a built app.
 - Validates the controller envelope and runner result shape.
 - The denied file-read specimen reports `finished` at both run-summary levels
   and exit 0 while retaining `open_failed` and a permission-failure observation.
+- `example` on the resolved app exits 0 with empty stderr and prints one JSON
+  object and one newline carrying the app's `PWContract`; two emissions are
+  byte-identical, and every argument is exit 2 with usage and empty stdout.
+- Isolated Cargo builds without an identity print nothing for `example` and
+  exit 2. Builds given another identity emit it, and the resolved app's `run`
+  refuses each emitted document with `unsupported_contract`, its own expected
+  identity and no client capture.
 - Test source lives at `controller/integration/cli_contract.rs`.
 
 ## Success criteria

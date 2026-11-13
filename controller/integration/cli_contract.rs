@@ -304,7 +304,87 @@ fn supplied_direct_cargo_identity_is_embedded_without_release_provenance() {
             )
             .unwrap();
         }
+
+        // An unbound build emits nothing. A bound build emits its own
+        // identity, and the selected app's `run` refuses that document at its
+        // contract gate, before any client invocation.
+        let emitted = run_pw(&binary, &["example"]);
+        let example = directory.join("example.json");
+        std::fs::write(&example, &emitted.stdout).unwrap();
+        std::fs::write(directory.join("example.stderr"), &emitted.stderr).unwrap();
+        if expected == "unbound" {
+            assert_eq!(emitted.status.code(), Some(2), "{label}: example exit");
+            assert!(emitted.stdout.is_empty(), "{label}: example stdout");
+            let reason = String::from_utf8(emitted.stderr).unwrap();
+            assert_eq!(reason.lines().count(), 1, "{label}: {reason:?}");
+            assert!(reason.contains("no public identity"), "{label}: {reason:?}");
+            continue;
+        }
+        assert_eq!(emitted.status.code(), Some(0), "{label}: example exit");
+        assert!(emitted.stderr.is_empty(), "{label}: example stderr");
+        let document: serde_json::Value = serde_json::from_slice(&emitted.stdout).unwrap();
+        assert_eq!(document["contract"], expected, "{label}");
+        let app_contract = candidate_contract();
+        assert_ne!(app_contract, expected, "{label}");
+        let refused = run_pw(&require_pw_bin(), &["run", example.to_str().unwrap()]);
+        std::fs::write(directory.join("app-run.json"), &refused.stdout).unwrap();
+        std::fs::write(directory.join("app-run.stderr"), &refused.stderr).unwrap();
+        assert_eq!(std::fs::read(&example).unwrap(), emitted.stdout);
+        assert_eq!(refused.status.code(), Some(1), "{label}: app run exit");
+        let envelope: serde_json::Value = serde_json::from_slice(&refused.stdout).unwrap();
+        assert_eq!(envelope["result"]["normalized_outcome"], "bad_request");
+        assert_eq!(
+            envelope["data"]["request_failure"],
+            serde_json::json!({"code": "unsupported_contract", "path": ["contract"],
+                               "expected_contract": app_contract}),
+            "{label}"
+        );
+        assert!(envelope["data"]["runner_client"].is_null());
+        assert!(envelope["data"]["runner_result"].is_null());
     }
+}
+
+#[test]
+fn example_prints_one_request_and_refuses_every_argument() {
+    if !integration_enabled() {
+        return;
+    }
+    let bin = require_pw_bin();
+    let first = run_pw(&bin, &["example"]);
+    assert_eq!(first.status.code(), Some(0));
+    assert!(first.stderr.is_empty());
+    let text = String::from_utf8(first.stdout.clone()).unwrap();
+    let body = text.strip_suffix('\n').expect("one framing newline");
+    assert!(!body.ends_with('\n'));
+    let document: serde_json::Value = serde_json::from_str(body).unwrap();
+    assert!(document.is_object());
+    assert_eq!(document["contract"], candidate_contract());
+    let second = run_pw(&bin, &["example"]);
+    assert_eq!(second.status.code(), Some(0));
+    assert_eq!(second.stdout, first.stdout);
+
+    for args in [
+        vec!["example", "--help"],
+        vec!["example", "-h"],
+        vec!["example", "read-hosts"],
+        vec!["example", ""],
+        vec!["example", "--version"],
+    ] {
+        let output = run_pw(&bin, &args);
+        assert_eq!(output.status.code(), Some(2), "{args:?}");
+        assert!(output.stdout.is_empty(), "{args:?}");
+        let usage = String::from_utf8(output.stderr).unwrap();
+        assert!(usage.starts_with("usage:\n"), "{args:?}: {usage:?}");
+        assert!(usage.contains("\n  policy-witness example\n"), "{args:?}");
+    }
+    // The general usage lists the command.
+    let help = run_pw(&bin, &["--help"]);
+    assert_eq!(help.status.code(), Some(0));
+    assert!(
+        String::from_utf8(help.stderr)
+            .unwrap()
+            .contains("\n  policy-witness example\n")
+    );
 }
 
 #[test]
