@@ -2210,10 +2210,26 @@ the attempt came first. These fields show which:
 
 | Requirement | Fields to read | Why it can be unmet |
 | --- | --- | --- |
-| A native answer | `sandbox_check.result_source` is `validator`, and `outcome` is `allow` with `native_rc: 0` or `deny` with `native_rc: 1` and `errno: 0` | The planner excluded the query (`prediction_unavailable`, with a `query_plan:` entry in `limitations`). The native call returned `EINVAL` (`unsupported_operation`), most commonly for a rejected operation name. The validator returned a diagnostic or no record (`error`, `missing_reason`). |
+| A native answer | `sandbox_check.result_source` is `validator`; `errno` is a number, not `null`; `rc` equals `native_rc`; and `outcome` is `allow` with `native_rc: 0`, or `deny` with `native_rc: 1` and `errno: 0` | The planner excluded the query (`prediction_unavailable`, with a `query_plan:` entry in `limitations`). The native call returned `EINVAL` (`unsupported_operation`), most commonly for a rejected operation name. The validator returned a diagnostic or no record (`error`, `missing_reason`). |
 | The phase's collection chain | In the `phases[]` entry with the step's `phase_id`: `ordering.collection_closed_before_proceed`, `proceed_set`, `proceed_observed` and `worker_lifetime_established` are all true and `protocol_violations` is empty | The worker exited or stalled before acknowledging release, or its release wait expired. With no worker there is no `ordering` object. |
 | Established setup | Ordinary form: `sandboxed_after_apply` is true. Actor form: the step's actor has `setup_status` `applied` or `unapplied_declared` | Compilation or application failed, or application was not observed. |
-| One exact validator record | The phase's `validator_subprocess.records` has exactly one record with this `step_id`; its operation, filter, outcome, `rc` and `errno` equal the step's `sandbox_check`; and `sandbox_check.pid` is the worker's PID | The validator's output was partial, or a record was missing, duplicated or different from the planned query. |
+| One exact validator record | The phase's `validator_subprocess.records` has exactly one record with this `step_id`; that record corresponds to the step's `sandbox_check` as described below the table; and `sandbox_check.pid` is the worker's PID | The validator's output was partial, or a record was missing, duplicated or different from the planned query. |
+
+A native answer needs its `errno` present for either outcome. An eligible
+`deny` requires `errno: 0`. An eligible `allow` requires only that the field
+holds a number, with no requirement on its value. An answer with
+`native_rc: null` or `errno: null` does not qualify.
+
+The validator record is compared with the step's `sandbox_check` field by
+field, but not every comparison is between same-named fields with equal text:
+
+- The record's `operation`, `outcome` and `errno` equal the query's.
+- The record's `rc` equals the query's `native_rc`.
+- The record's `filter_type` is the uppercase spelling of the query's
+  `filter_kind`, such as `PATH` for `path`.
+- The record's `filter_value` equals the query's, except for filter kind
+  `none`. That record has `filter_type: NONE` and no `filter_value`, even when
+  `sandbox_check.filter_value` echoes a value from the request.
 
 Use the table to find the unmet requirement. The host decides `order` from its
 own observations, so matching fields in a reply that says `unestablished`, or
