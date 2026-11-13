@@ -14,7 +14,7 @@ ROOT = Path(__file__).resolve().parents[3]
 sys.path.insert(0, str(ROOT / 'tests/lib'))
 import build_context
 from run_capture import RunCapture
-from request_examples import CORPUS, examples, materialize
+from request_examples import CORPUS, LESSON_SOURCES, examples, materialize
 from porcelain import decode as decode_porcelain
 from runner_client_capture import host_reply
 
@@ -388,6 +388,34 @@ def refusal_workflows(pw, client, service, out, effect, base, cli):
 
 
 
+def emitted_lessons(pw, out, effect, cli):
+    """Submit the selected app's emitted lesson documents unchanged through `run`.
+
+    The app supplies each document. The expected admission or refusal and the
+    file effect remain the corpus row's, authored apart from the emitter.
+    """
+    sources = {case['id']: case['request_source'] for case in json.loads(CORPUS.read_text())
+               if 'request_source' in case}
+    # Every app-owned input needs a row; an absent row must not pass by omission.
+    assert set(sources.values()) == LESSON_SOURCES, sources
+    for example in examples():
+        if example['id'] not in sources:
+            continue
+        name = 'lesson-emitted-' + example['id']
+        directory = out / name; directory.mkdir()
+        assert not effect.exists(), name
+        emitted = subprocess.run([str(pw), 'lesson', Path(sources[example['id']]).stem, '--target', str(effect)],
+                                 stdin=subprocess.DEVNULL, capture_output=True, timeout=20)
+        (directory / 'lesson.stdout').write_bytes(emitted.stdout)
+        (directory / 'lesson.stderr').write_bytes(emitted.stderr)
+        (directory / 'lesson.exit').write_text(f'{emitted.returncode}\n')
+        assert emitted.returncode == 0 and emitted.stderr == b'', (name, emitted.returncode, emitted.stderr)
+        expected = example['expected']['cli']
+        cli(name, json.loads(emitted.stdout), accepted=expected is None, failure=expected,
+            raw=emitted.stdout, prediction=example.get('prediction'))
+        assert (directory / 'specimen.json').read_bytes() == emitted.stdout, name
+
+
 def main():
     pw, out = Path(sys.argv[1]), Path(sys.argv[2])
     app = pw.parents[2]
@@ -404,7 +432,9 @@ def main():
 
         def cli(name, specimen, *, accepted=False, error='', args=(), failure=None, raw=None, prediction=None, expected_effect=None):
             capture = RunCapture(pw, out / name, specimen, cli_args=[*args])
-            if raw is not None:
+            if isinstance(raw, bytes):
+                capture.request_path.write_bytes(raw)
+            elif raw is not None:
                 capture.request_path.write_text(raw)
             original = capture.request_path.read_bytes()
             with capture as run:
@@ -490,6 +520,7 @@ def main():
                 assert not observed and reply['steps'] == [], reply
                 assert reply.get('runner_subprocess') is None and (reply.get('phases') or [{}])[0].get('validator_subprocess') is None, reply
 
+        emitted_lessons(pw, out, effect, cli)
         composite_parameters(pw, out, directory, base)
         refusal_workflows(pw, client, service, out, effect, base, cli)
 

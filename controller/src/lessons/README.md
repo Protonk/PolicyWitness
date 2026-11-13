@@ -9,5 +9,7 @@ a nonce. Publication does not perform request admission or execution.
 The request-contract test corpus references these files while keeping expected
 refusals separately authored. Its Python and Swift loaders supply their own
 identity and target substitutions. The guide and developer lesson acquire
-requests from the installed command. The public build identity includes both
-files explicitly in [build_contract.py](../../../docs/build_contract.py).
+requests from the installed command, and the live request control submits that
+command's output unchanged under the corpus expectations. The public build
+identity includes both files explicitly in
+[build_contract.py](../../../docs/build_contract.py).

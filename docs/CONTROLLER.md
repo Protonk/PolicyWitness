@@ -56,18 +56,36 @@ flowchart TD
 
 ## Originating and preparing work
 
-`example` originates a build-defined specimen. In
+`example` and `lesson` originate requests the build defines. In
 [example.rs](../controller/src/example.rs), `render` inserts the compiled
 identity, uses the request parser and identity gate, serializes the whole
 object and appends one newline. `emit` writes only after rendering and requires
-a successful flush. It reads no request, app manifest or registry and launches
-nothing. Exit 0 promises that the emitted specimen is admitted by the same
-build's `run`, not that an attempted operation succeeds. The host still owns
-full grammar admission. The
+a successful flush. [lesson.rs](../controller/src/lesson.rs) follows the same
+sequence in its own code for two embedded
+[teaching inputs](../controller/src/lessons/README.md). It first checks its
+selector and target, then writes the caller's absolute target unchanged into
+the query and attempt operands. Neither command reads a request, app manifest
+or registry, launches anything or consults the host's grammar. For both, exit 0
+reports complete publication and nothing the host decided. Version dispatch
+likewise reports compiled identity without executing work.
+
+The commands then carry different promises. For `example`, the build also
+guarantees that its own `run` admits the published specimen. That guarantee
+spans components: the controller holds the constant, the host owns full
+grammar admission, and both are inputs of one build identity. Emission
+observes no host decision; a later `run` does. The guarantee concerns
+admission, not the success of an attempted operation. The
 [emission rule](CONTRACT.md#contract-request-specimen-emit_example) and its
 extracted example preserve that separation. The documentation extractor reads
 the source constant; documentation does not supply runtime example content.
-Version dispatch likewise reports compiled identity without executing work.
+
+`lesson` carries no such guarantee. Its
+[rule](CONTRACT.md#contract-request-specimen-emit_lesson) states that
+publication establishes neither admission nor an effect. `capture_typo` is
+published with a policy member the host's closed object refuses, and `create`
+carries a caller-chosen target that host capacity admission still judges. The
+controller checks no closed field set, so `run` prepares and delivers either
+lesson as it would any saved specimen.
 
 For saved specimens, [run_flow.rs](../controller/src/run_flow.rs) holds the
 request text and parsed value. Its identity gate precedes interpretation of
@@ -97,7 +115,12 @@ and an unchanged file. This is a constructed dependency test under a test
 identity. The signed-app
 [round-trip checker](../tests/suites/witness_contract/check_example_round_trip.py)
 compares the pipe's accepted byte count with prepared length: that is not an
-exact-byte observation at the pipe or proof of host receipt.
+exact-byte observation at the pipe or proof of host receipt. No constructed
+test makes the exact comparison for a lesson. The
+[live request control](../tests/suites/runner_outcome_bad_request/contract.py)
+submits the selected app's emitted lessons unchanged and reads `run`'s
+decision and the target file against separately authored expectations; it
+compares no delivered bytes.
 
 [dossier.rs](../controller/src/dossier.rs) records selected source and available
 binary provenance. The import scan in
@@ -275,12 +298,14 @@ universal equivalence is promised.
 
 General envelopes are rendered before `println!` in
 [json_contract.rs](../controller/src/json_contract.rs) and run dispatch; these
-paths do not implement the example command's explicit fallible write/flush
-protocol. For `example`, complete-looking JSON is unusable on exit 2, including
-a late flush failure. `only_complete_output_with_a_successful_flush_succeeds`
-in `example.rs` tests that case with an injected writer. Neither publication
-path establishes downstream receipt or durable storage. Interrupted output
-can follow effects; stderr is a human diagnostic, not a replacement protocol.
+paths do not implement the explicit fallible write/flush protocol that
+`example` and `lesson` each implement. For those two commands, complete-looking
+JSON is unusable on exit 2, including a late flush failure.
+`only_complete_output_with_a_successful_flush_succeeds` in `example.rs` and
+`complete_publication_requires_all_writes_and_flush` in `lesson.rs` test that
+case with injected writers. No publication path establishes downstream receipt
+or durable storage. Interrupted output can follow effects; stderr is a human
+diagnostic, not a replacement protocol.
 
 ## Equipment administration and recovery
 

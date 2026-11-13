@@ -296,6 +296,10 @@ and preserves artifacts; use `PW_APP_DIR` for an isolated signed build.
   Accepted cases must create a file; refused cases must leave it absent, with
   no worker/validator records and no steps. A valid earlier step in the
   unsupported-attempt example detects accidental partial execution.
+- For `create` and `capture_typo` they also submit the selected app's `lesson`
+  output unchanged through the CLI, under the same corpus expectations. The
+  rendered and emitted forms are checked separately; neither stands in for
+  the other.
 - The live controls retain the corpus, rendered requests, replies and effect
   observations. They verify that submitted files were not rewritten.
 - Dedicated unit controls still cover every object depth, bounded diagnostics,

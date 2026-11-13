@@ -2925,6 +2925,7 @@ not the exec descendants.
 | `run FILE --runner-mode standard` or `byoxpc` | Supplies the runner-mode selection; external selection still requires its registered ID or service. |
 | `--version` | Prints a version envelope with `build.contract` and descriptive build coordinates. Save it with the specimen. |
 | `example` | Prints one specimen that this build defines, carrying the build's own contract identity, for the same build's `run`: `example > FILE`, then `run FILE`. It takes no argument and prints a request, not an envelope. Exit 0 supplies the complete document; on exit 2 discard the output. The document can differ between builds. The project uses it to test a build against its own example. |
+| `lesson create --target PATH` or `lesson capture_typo --target PATH` | Prints one of the two request lessons this build embeds, carrying the build's own contract identity and the absolute `PATH` as its query and attempt target, for the [quick start](#quick-start) and the [refusal exercise](#try-an-accepted-request-and-a-refusal). It prints a request, not an envelope. Exit 0 supplies the complete request and reports nothing about admission: `run` decides that separately, and `capture_typo` carries a deliberately unknown policy field. On exit 2 discard the output. `PATH` is inserted verbatim without checking the filesystem. The documents can differ between builds. |
 
 ### Running specimens in parallel
 

@@ -21,7 +21,10 @@ produce the independent file effect used by the accepted-input controls.
   Swift unit tests. The create/capture-typo input bodies resolve explicit paths
   to app-owned JSON under `controller/src/lessons/`; expected diagnostics remain
   independent corpus data. Every example runs through CLI and direct XPC with exact
-  code/path expectations. Ineffective arguments, nonces and filter values,
+  code/path expectations. For those two inputs the control also runs the selected
+  app's `lesson` command and submits its output unchanged through `run`, under
+  the same corpus rows and file observation; a missing row for either input
+  fails the control. Ineffective arguments, nonces and filter values,
   unknown attempt/filter names, duplicate IDs and capacity excess refuse the
   whole specimen. Exec arguments and enabled capture have positive controls;
   known unavailable predictions preserve the independent attempt.
