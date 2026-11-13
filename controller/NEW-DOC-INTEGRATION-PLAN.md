@@ -2,9 +2,11 @@
 
 This plan establishes `docs/CONTROLLER.md` as an explanatory peer of
 [WORKER.md](../docs/WORKER.md), and uses the authored public contract to examine
-the authority assigned to the controller. Its implementation baseline is
-**unset**. Set it only after the CLI example work's contractual
-changes and reductions are settled, using the entry gate below.
+the authority assigned to the controller. Its investigation source baseline is
+`dcc7dd0bd0634a603379ff185228abca70b5d22f`, with the accepted implementation and
+contract at `a5de0c63`. The [entry record](../records/controller-authority/BASELINE.md)
+records the maintainer's disposition of the historical prerequisite, identities
+and evidence limits. Investigation records do not change that source baseline.
 
 The controller is PolicyWitness's control plane: it admits and prepares work,
 selects and directs the execution apparatus, governs invocation, evaluates
@@ -79,7 +81,7 @@ them merely to simplify this investigation.
 | Admission | The controller gates identity and prepares controller-owned options; the Swift host owns request grammar admission. `run` remains the way to ask whether a caller's specimen is accepted. Add no admission query, validation mode, dry run or alternative submission route. |
 | Publication | The command prepares and gates the document before output, writes it with one framing LF and explicitly flushes. Any emission failure is exit 2 and requires discarding stdout, even when it parses as a complete document. Stderr explains the failure to a person and supplies no classification interface. |
 | Testing and interpretation | The live round-trip case gets its specimen from the app, perturbs it before submission, observes the machine beside execution and uses existing readers afterward. It does not author a specimen or add a fourth interpreter. Constructed documents remain legitimate inputs to offline checker controls. |
-| Scope | The command is public and currently intended for project verification. Usage and the contract disclose it; user-guide presentation is deferred. `runner verify` retains its separate apply-only purpose. Neither sharing its storage nor introducing named examples is required here. |
+| Scope | The command is public and currently intended for project verification. Usage, the contract and one user-guide command-table row disclose it; workflow presentation is deferred. `runner verify` retains its separate apply-only purpose. Neither sharing its storage nor introducing named examples is required here. |
 
 The controller therefore originates some inputs as well as admitting caller
 inputs. Its self-gate establishes only the checks it performs; host admission
