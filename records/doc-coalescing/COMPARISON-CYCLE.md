@@ -144,3 +144,20 @@ relations owners cite the same source and check for different assertions and
 scopes. The rendered anchor `contract-steps-assessment-meaning-support` is
 replaced by `contract-steps-assessment-order-support`; nothing in the
 repository linked to the old one.
+
+## Consultation
+
+One Opus consultation, read-only and without further delegation, answered one
+question: does the guide's new comparison text claim more than the contract
+rules and producer source establish? It read the guide subsections, the FAQ
+changes, the `steps` surface, the producer, validator and worker sources and
+the fixture with its live reader. It found no explicit sandbox-cause or
+agreement claim and reported ten imprecise or overreaching statements and four
+doubts. All were applied. The consequential ones: a `deny` answer had been
+called a prediction without the `query_first` condition; the scenarios' last
+column had been called an independent observation although some entries state
+policy text; `different_submitted` and `matched` had been glossed as facts
+about targets and operations when they compare submitted strings and
+PolicyWitness's own mapping; and an `open_read` success had been described as
+a read. The consultation is source inspection and supplies no execution
+evidence.

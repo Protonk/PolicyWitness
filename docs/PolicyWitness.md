@@ -110,7 +110,7 @@ The shipped app requires macOS 26 or later on Apple silicon (arm64).
 
 ### Can PolicyWitness attribute a failed attempt to sandbox denial?
 
-A permission-shaped failure records a native result such as `EPERM`, `EACCES` or a bootstrap permission result. The report preserves that observation and the separately collected query answer. Establishing the cause requires evidence that distinguishes sandbox enforcement from the other reasons the native operation can fail. [What a permission failure establishes](#what-a-permission-failure-establishes) lists what the classification rests on and the kinds of evidence an attribution needs.
+A permission-shaped failure records a native result such as `EPERM`, `EACCES` or a bootstrap permission result. The report preserves that observation and the separately collected query answer. Establishing the cause requires evidence that distinguishes sandbox enforcement from the other reasons the native operation can fail. [What a permission failure establishes](#what-a-permission-failure-establishes) lists what the classification rests on and gives examples of evidence an attribution can use.
 
 ### What does PolicyWitness's attempt channel record?
 
@@ -2153,10 +2153,10 @@ have source `"synthetic"` with `missing_reason: "slot_absent"` or
 `steps[].comparison` relates a step's two channels: the query answer in
 `sandbox_check` and the native result in `attempt`. It classifies the attempt,
 compares what the specimen submitted to each channel and states whether the
-answer is placed before the phase's actions. No field in the record, or
-elsewhere in the reply, says that the prediction and the attempt agree or
-disagree. That conclusion is yours to draw, and it needs the observations
-described here.
+host established that the answer preceded the phase's actions. No field in the
+record, or elsewhere in the reply, says that the prediction and the attempt
+agree or disagree. That conclusion is yours to draw, and it needs the
+observations described here.
 
 The next three subsections each start from a step you are looking at.
 [The complete rules](#the-complete-rules) cover every field and case.
@@ -2171,16 +2171,18 @@ other:
 | Field | Value that permits the comparison | Any other value |
 | --- | --- | --- |
 | `sandbox_check.result_source` and `outcome` | `validator` with `allow` or `deny` | The step has no query answer. Read `error`, `native_rc` and `missing_reason`. |
-| `comparison.operation_relation` | `matched` | `different`: the query named another operation than the one the attempt maps to. `unresolved`: a `file`/`create` attempt or a wildcard query has no single operation to match. |
-| `comparison.target_relation` | `same_submitted` | `different_submitted`: the query and the attempt name different targets. `unresolved`: the query's filter kind differs from the attempt's, or one of the two values is absent. |
-| `comparison.order` | `query_first` | `unestablished`: the answer is not placed before the attempt. See [When `order` is `unestablished`](#when-order-is-unestablished). |
+| `comparison.operation_relation` | `matched` | `different`: the query named another operation than the one the attempt maps to. `unresolved`: a `file`/`create` or `create_fresh` attempt, an unsupported attempt, or a wildcard query other than `process-exec*`, has no single operation to match. |
+| `comparison.target_relation` | `same_submitted` | `different_submitted`: the query and the attempt submitted different strings, which can still resolve to one object. `unresolved`: the query's filter kind differs from the attempt's, or one of the two values is absent. |
+| `comparison.order` | `query_first` | `unestablished`: the host did not establish that the answer preceded the attempt. See [When `order` is `unestablished`](#when-order-is-unestablished). |
 | `comparison.limitations` | empty | Each entry names a planner exclusion or an attempt whose lifecycle is not `completed`. |
 
 When every field has the value in the middle column, the record establishes
-this much: the validator asked `sandbox_check` about this worker with the same
-submitted operation and target string, the host collected that answer before
-releasing the phase's actions, and the worker's attempt then completed as
-recorded. A claim that prediction and enforcement agree or disagree needs more:
+this much: the validator asked `sandbox_check` about this worker, using the
+operation PolicyWitness maps the attempt to and the same submitted target
+string; the host collected that answer before releasing the phase's actions;
+and the worker's attempt then completed as recorded. For exec, a matched
+`process-exec*` query concerns admission of the target only. A claim that
+prediction and enforcement agree or disagree needs more:
 
 - **The same runtime object.** `same_submitted` compares submitted strings.
   One spelling can resolve to different objects for the query and the attempt.
@@ -2188,10 +2190,11 @@ recorded. A claim that prediction and enforcement agree or disagree needs more:
   attempt; `path_diagnostics` comes from the host after the run. None of them
   shows which object the query consulted.
 - **Unchanged state across the interval.** `query_first` places the answer
-  before the phase's whole action batch. An earlier action in the same phase,
-  or a process outside the run, can change the target before this attempt.
-  Give the action its own [phase](#ordered-phases) to collect nearer to it, and
-  observe the state independently.
+  before the phase's whole action batch. An earlier action in the same phase
+  can change the target or the worker's own sandbox state, for example by
+  consuming or releasing an extension, and a process outside the run can
+  change the target. Give the action its own [phase](#ordered-phases) to
+  collect nearer to it, and observe the state independently.
 - **The attempt's effect.** `succeeded` rests on the worker's reported status
   or, for exec, on a spawned child. Read the operation's own observations, such
   as fresh-read bytes or the child's exit status, and confirm the effect
@@ -2207,7 +2210,7 @@ the attempt came first. These fields show which:
 
 | Requirement | Fields to read | Why it can be unmet |
 | --- | --- | --- |
-| A native answer | `sandbox_check.result_source` is `validator`, and `outcome` is `allow` with `native_rc: 0` or `deny` with `native_rc: 1` and `errno: 0` | The planner excluded the query (`prediction_unavailable`, with a `query_plan:` entry in `limitations`). The native call rejected the operation name (`unsupported_operation`). The validator returned a diagnostic or no record (`error`, `missing_reason`). |
+| A native answer | `sandbox_check.result_source` is `validator`, and `outcome` is `allow` with `native_rc: 0` or `deny` with `native_rc: 1` and `errno: 0` | The planner excluded the query (`prediction_unavailable`, with a `query_plan:` entry in `limitations`). The native call returned `EINVAL` (`unsupported_operation`), most commonly for a rejected operation name. The validator returned a diagnostic or no record (`error`, `missing_reason`). |
 | The phase's collection chain | In the `phases[]` entry with the step's `phase_id`: `ordering.collection_closed_before_proceed`, `proceed_set`, `proceed_observed` and `worker_lifetime_established` are all true and `protocol_violations` is empty | The worker exited or stalled before acknowledging release, or its release wait expired. With no worker there is no `ordering` object. |
 | Established setup | Ordinary form: `sandboxed_after_apply` is true. Actor form: the step's actor has `setup_status` `applied` or `unapplied_declared` | Compilation or application failed, or application was not observed. |
 | One exact validator record | The phase's `validator_subprocess.records` has exactly one record with this `step_id`; its operation, filter, outcome, `rc` and `errno` equal the step's `sandbox_check`; and `sandbox_check.pid` is the worker's PID | The validator's output was partial, or a record was missing, duplicated or different from the planned query. |
@@ -2219,9 +2222,9 @@ in a `runner_reporting_failed` reply without comparisons, do not establish
 
 An unestablished step still supplies its attempt result and classification,
 the two submitted relations and its limitations. A retained `allow` or `deny`
-remains the native call's return. Without the chain it does not establish that
-the worker was live when the query ran, so it is not a prediction about the
-specimen. Each step is assessed separately: another query's failure in the
+remains the native call's return. Without `query_first` it does not establish
+that the query met the live worker under its established setup, so it is not a
+prediction about the specimen. Each step is assessed separately: another query's failure in the
 same phase leaves an eligible answer its `query_first`.
 
 `query_first` does not depend on the attempt. A step can carry it beside an
@@ -2243,15 +2246,18 @@ first row that fits:
 | `unavailable` | `no_completed_worker_result` | No completed worker result. Read `attempt.missing_reason` and `attempt.lifecycle`. |
 
 `permission_failure` says that the native call returned a permission-shaped
-result. Sandbox enforcement is one cause of such a result; file mode and
-ownership are another. The classification does not say which applied, and a
-`deny` answer beside it does not either: the answer is a prediction collected
-earlier, and the failure is a separate observation.
+result. Sandbox enforcement is one cause of such a result. File mode and
+ownership, access-control lists, file flags and other system policy are
+others. The classification does not say which applied, and a `deny` answer
+beside it does not either: the answer is a separate query-channel record, and
+a prediction collected before the actions only when `order` is `query_first`.
 
 To attribute the failure, add evidence that separates the causes. For example:
 
-- run the same attempt outside PolicyWitness before the run, to learn whether
-  it fails with no policy applied;
+- perform the same operation outside PolicyWitness before the run, to learn
+  whether it fails with no specimen policy applied; that process differs from
+  the worker in more than the policy, so a success there does not single out
+  the policy;
 - run a control specimen whose policy differs only in the rule in question,
   and compare the two attempts;
 - record the target's existence, mode and ownership independently.
@@ -2266,8 +2272,10 @@ against the app. Its specimen's policy allows by default and denies reading the
 file named `denied`. `readable` is an ordinary file, `locked` has mode 0000,
 `absent` does not exist and `helper_true` is a program that exits 0. Query is
 the answer in `sandbox_check`, or `unavailable` when the step has none. The
-other columns are the comparison fields. The last column is the independent
-observation the test keeps beside the record.
+other columns are the comparison fields. The last column is the fixture's
+control note: the independent observations the test makes, such as direct open
+and spawn results and file bytes before and after the run, and for some rows
+the policy text or native behavior the row relies on.
 
 <!-- BEGIN COPIED COMPARISON SCENARIOS -->
 
@@ -2282,18 +2290,17 @@ observation the test keeps beside the record.
 
 <!-- END COPIED COMPARISON SCENARIOS -->
 
-- S02 and S03 carry identical comparison fields. S03's control shows the same
-  open failing outside PolicyWitness, so file mode accounts for it without the
-  policy, and its `allow` answer was collected first for the same submitted
-  operation and target. S02's policy contains a matching deny rule; its row
-  still does not attribute the failure to the sandbox.
+- S02 and S03 carry identical comparison fields. S03's control shows an
+  equivalent open failing without the specimen policy. S02's policy contains a
+  matching deny rule; its row still does not attribute the failure to the
+  sandbox.
 - S05 has a `deny` beside a success, and `target_relation` is
-  `different_submitted`: the query named the denied file and the attempt read
-  another. In S06 `operation_relation` is `different`: the query asked about
-  writing and the attempt read.
+  `different_submitted`: the query named the denied file and the attempt
+  opened another for reading. In S06 `operation_relation` is `different`: the
+  query asked about writing and the attempt opened the file for reading.
 - S07 and S11 have no query answer, so their order is `unestablished`. S07's
-  planner exclusion appears in `limitations`. S11's rejected operation name
-  appears only in `sandbox_check`, as `unsupported_operation`.
+  planner exclusion appears in `limitations`. S11's `unsupported_operation`
+  outcome appears in `sandbox_check` and not in `limitations`.
 
 #### The complete rules
 

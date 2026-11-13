@@ -18,7 +18,7 @@ The shipped app requires macOS 26 or later on Apple silicon (arm64).
 
 ## Can PolicyWitness attribute a failed attempt to sandbox denial?
 
-A permission-shaped failure records a native result such as `EPERM`, `EACCES` or a bootstrap permission result. The report preserves that observation and the separately collected query answer. Establishing the cause requires evidence that distinguishes sandbox enforcement from the other reasons the native operation can fail. [What a permission failure establishes](PolicyWitness.md#what-a-permission-failure-establishes) lists what the classification rests on and the kinds of evidence an attribution needs.
+A permission-shaped failure records a native result such as `EPERM`, `EACCES` or a bootstrap permission result. The report preserves that observation and the separately collected query answer. Establishing the cause requires evidence that distinguishes sandbox enforcement from the other reasons the native operation can fail. [What a permission failure establishes](PolicyWitness.md#what-a-permission-failure-establishes) lists what the classification rests on and gives examples of evidence an attribution can use.
 
 ## What does PolicyWitness's attempt channel record?
 
