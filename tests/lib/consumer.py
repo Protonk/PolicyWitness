@@ -1014,17 +1014,19 @@ def admitted_reply(document, expected_contract, *, allow_fixture_json=False):
     """The runner reply this envelope's own evidence admits, or None.
 
     The envelope passes the version gate, its client capture independently
-    admits complete host bytes, their producer and compiled-profile context
-    pass the gates this reader applies, and the controller carries its
-    assessment of the reply. The result fields are never consulted. A body
-    retained after admission failed, an absent reply and a rejected capture
-    supply nothing, and this reader does not restate the controller's
-    collection-capacity gate: without the assessment it admits no reply.
+    admits complete host bytes, and their producer and compiled-profile
+    context pass the gates this reader applies. Neither the result fields nor
+    any other controller-authored field is consulted. A body retained after
+    admission failed, an absent reply and a rejected capture supply nothing.
+
+    This reader does not restate the controller's collection-capacity gate. A
+    reply the controller refuses for capacity alone is outside what it reads:
+    it would be admitted here and its envelope reported as inconsistent.
     """
     if not is_envelope(document) or version_errors(document, expected_contract):
         return None
     data = document.get('data')
-    if not isinstance(data, dict) or not isinstance(data.get('runner_sandbox_diagnostics'), dict):
+    if not isinstance(data, dict):
         return None
     reply = admitted_host_reply(data.get('runner_client'), expected_contract, allow_fixture_json=allow_fixture_json)
     if not isinstance(reply, dict) or version_errors(reply, expected_contract):

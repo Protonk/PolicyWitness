@@ -1154,14 +1154,21 @@ a few CLI invocations.
 captures; a constructed document stands in for the emission. Each of its
 rejected controls introduces one logical fault and states the exact set of
 identifier and classification pairs it must produce; a control earns coverage
-for its target assertions only when the actual set matches. The consumer's
+for its target assertions only when the actual set matches. The case spells
+each assertion's expected classification itself and fails if the checker's
+table carries another. The consumer's
 aggregate diagnostic is permitted beside another control's set and earns
 nothing there, and its own propagation control requires it exactly. Controls
 also require the stated assertions to be unevaluated after a failed emission
 or bound, behind a differing identity, without an admitted reply and under an
-unobserved prerequisite; require a coherent validator-spawn failure with
-matching exits to fail only native expectations; and keep every diagnostic of
-combined faults. The case fails if any assertion in the checker's table lacks a
+unobserved prerequisite; require coherent replies (a validator-spawn failure
+with matching exits, a deny prediction, a failed read and an unestablished
+order) to be read cleanly by the consumer and to fail only native
+expectations; and keep every diagnostic of combined faults. Each refusal input
+is judged against the emitted bytes and its stated change, not against the
+function that wrote it. Further controls run the checker's `prepare` step on
+constructed emissions: a failed emission or bound writes a report and no
+target observation or refusal input, so nothing can be submitted. The case fails if any assertion in the checker's table lacks a
 matched control, and `artifacts/example-round-trip-controls.json` holds each
 control's expected and actual sets and the coverage it earned. Shape and record
 validity rest on `blackbox_e2e/checker_controls`; that the app is validly

@@ -5,7 +5,10 @@
 //! its held request. The command reads no file and launches nothing.
 
 use std::ffi::OsString;
+use std::fs::File;
 use std::io::Write;
+use std::mem::ManuallyDrop;
+use std::os::fd::FromRawFd;
 
 use serde_json::Value;
 
@@ -64,20 +67,27 @@ fn emit(
 }
 
 pub fn cmd_example(args: &[OsString]) -> i32 {
-    let mut out = std::io::stdout().lock();
-    match emit(args, EXAMPLE_DOCUMENT, BUILD_CONTRACT, &mut out) {
+    // The standard stdout handle reports success when its descriptor is
+    // closed, so the document goes to the descriptor itself.
+    // SAFETY: descriptor 1 is this process's standard output for its whole
+    // life, and `ManuallyDrop` keeps this handle from closing it.
+    let mut out = ManuallyDrop::new(unsafe { File::from_raw_fd(1) });
+    match emit(args, EXAMPLE_DOCUMENT, BUILD_CONTRACT, &mut *out) {
         Ok(()) => 0,
         Err(refusal) => {
-            match refusal {
-                Refusal::Usage => cli::print_usage(),
+            let reason = match refusal {
+                Refusal::Usage => cli::USAGE.to_string(),
                 Refusal::NoPublicIdentity => {
-                    eprintln!("policy-witness example: this build has no public identity")
+                    "policy-witness example: this build has no public identity".into()
                 }
                 Refusal::Request(code) => {
-                    eprintln!("policy-witness example: the example is not admissible: {code}")
+                    format!("policy-witness example: the example is not admissible: {code}")
                 }
-                Refusal::Write => eprintln!("policy-witness example: failed to write stdout"),
-            }
+                Refusal::Write => "policy-witness example: failed to write stdout".into(),
+            };
+            // The reason is for a person. An unwritable stderr leaves the
+            // exit status as the whole report.
+            let _ = writeln!(std::io::stderr(), "{reason}");
             2
         }
     }

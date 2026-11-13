@@ -66,7 +66,9 @@ followed by one newline. It uses `run`'s parser, contract gate and held
 serialization, renders the whole document before writing, and reads no file,
 app root, manifest or registry. Exit 0 supplies the complete document; an
 argument, an empty or `unbound` identity, a gate refusal or a failed write or
-flush is exit 2 with a line on stderr, and the caller discards stdout. The
+flush is exit 2, and the caller discards stdout. The document is written to
+the stdout descriptor itself, so a closed descriptor is a failed write. The
+reason goes to stderr when it is writable and never changes the status. The
 [example rule](../docs/CONTRACT.md#contract-request-specimen-emit_example)
 states the public promise.
 

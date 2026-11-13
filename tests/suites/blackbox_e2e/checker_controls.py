@@ -613,9 +613,9 @@ def result_consistency_controls(artifacts, current):
 
     Each control names the exact set of result diagnostics it requires and any
     other consumer diagnostic that must remain beside them. Applicability is
-    established from the capture, producer, profile context and controller
-    assessment; no control here derives an outcome from a body that failed
-    admission, an absent reply or a rejected capture.
+    established from the capture, producer and profile context alone; no
+    control here derives an outcome from a body that failed admission, an
+    absent reply or a rejected capture.
     """
     prefixes = {'normalized_outcome': 'result.normalized_outcome is ', 'ok': 'result.ok is ',
                 'exit_code': 'result.exit_code is ', 'result': 'result is not an object'}
@@ -734,13 +734,13 @@ def result_consistency_controls(artifacts, current):
         document['result'].update(mismatched)
         control('rejected_' + name, document, beside=(diagnostic,))
 
-    # Without the controller's assessment this reader has no evidence that the
-    # controller admitted the reply, so it asserts no mapping. Capacity refusal
-    # is a controller gate this reader does not restate.
+    # No controller-authored field switches the relationship off: with the
+    # assessment removed, the admitted bytes still bind the result.
     document = copy.deepcopy(current)
     document['data']['runner_sandbox_diagnostics'] = None
+    control('assessment_absent_coherent', document)
     document['result'].update(mismatched)
-    control('assessment_absent', document)
+    control('assessment_absent_mismatched', document, expected=('normalized_outcome', 'ok', 'exit_code'))
 
     # The result is bound to the admitted bytes: a projected record that differs
     # from them is reported, and the result still answers to the bytes.

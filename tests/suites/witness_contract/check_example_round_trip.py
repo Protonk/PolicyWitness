@@ -45,7 +45,11 @@ NATIVE_OBSERVATION = 'native_observation'
 EXAMPLE_NODE = 'request.specimen.example'
 PACKAGED_IDENTITY = re.compile(r'release:v[0-9]+\.[0-9]+\.[0-9]+|development:[0-9a-f]{64}')
 READ_ONLY_FILE_ACTIONS = ('open_read', 'access')
-RUNNER_SELECTION_KEYS = ('runner', 'runner_id', 'runner_service', 'runner_mode')
+# The controller's selection keys, from the request surface's shape golden (collected from `runner_select.rs`).
+SELECTOR_FIELDS = tuple(json.loads((Path(__file__).resolve().parents[2] / 'fixtures/contract/surfaces/request.json')
+                                   .read_text())['controller_keys']['SELECTOR_FIELDS'])
+ENTITLEMENT_KEY = 'required_entitlements'
+RUNNER_SELECTION_KEYS = tuple(key for key in SELECTOR_FIELDS if key != ENTITLEMENT_KEY)
 UNKNOWN_MEMBER = 'example_round_trip_unknown_member'
 STAT_FIELDS = ('st_dev', 'st_ino', 'st_mode', 'st_uid', 'st_gid', 'st_size', 'st_mtime_ns', 'st_ctime_ns')
 
@@ -355,10 +359,10 @@ def _bounds(document, results):
     results.record('bounds.no_augments',
                    ['`policy.augments` is ' + _spell(policy['augments'])] if isinstance(policy, dict) and policy.get('augments') else [])
     entitlement = []
-    if 'required_entitlements' in document:
-        entitlement.append('`required_entitlements` is present')
-    if isinstance(document.get('runner'), dict) and 'required_entitlements' in document['runner']:
-        entitlement.append('`runner.required_entitlements` is present')
+    if ENTITLEMENT_KEY in document:
+        entitlement.append(f'`{ENTITLEMENT_KEY}` is present')
+    if isinstance(document.get('runner'), dict) and ENTITLEMENT_KEY in document['runner']:
+        entitlement.append(f'`runner.{ENTITLEMENT_KEY}` is present')
     results.record('bounds.no_entitlement_requirement', entitlement)
 
 
@@ -510,13 +514,51 @@ def _prerequisites(inputs, document, results):
     return not problems
 
 
+def _one_change(name, emitted, document, submitted):
+    """Whether a submitted input is the emitted document with its one stated change.
+
+    The input is judged against the emitted bytes and the stated change, not
+    against the function that wrote it.
+    """
+    if submitted is None:
+        return ['the input was not retained']
+    if name == 'truncated_document':
+        return [] if emitted.endswith(b'}\n') and submitted == emitted[:-2] + b'\n' else \
+            ['the input is not the emitted bytes without their closing brace']
+    value, problem = _json(submitted)
+    if problem or not isinstance(value, dict):
+        return ['the input is ' + (problem or 'not a JSON object')]
+    contract = document.get('contract')
+
+    def others(members):
+        return {key: member for key, member in members.items() if key != 'contract'}
+
+    if name == 'absent_identity':
+        return [] if value == others(document) else ['the input is not the document without `contract`']
+    if name == 'unknown_member':
+        return [] if value == dict(document, **{UNKNOWN_MEMBER: True}) else \
+            ['the input is not the document with one unknown member']
+    asserted = value.get('contract')
+    if others(value) != others(document) or not isinstance(asserted, str) or asserted == contract:
+        return ['the input differs from the document outside `contract`, or asserts the same identity']
+    if name == 'other_release':
+        return [] if asserted == 'release:v0.0.0' else [f'the input asserts {_spell(asserted)}']
+    if name == 'unbound':
+        return [] if asserted == 'unbound' else [f'the input asserts {_spell(asserted)}']
+    development = re.compile(r'development:[0-9a-f]{64}')
+    if not development.fullmatch(asserted):
+        return [f'the input asserts {_spell(asserted)}, which is not a development identity']
+    if isinstance(contract, str) and development.fullmatch(contract) and \
+            sum(a != b for a, b in zip(asserted, contract)) != 1:
+        return [f'the input asserts {_spell(asserted)}, which is not one digit from the document\'s identity']
+    return []
+
+
 def _refusals(inputs, emitted, document, results):
-    expected_inputs = refusal_inputs(emitted)
     for name, (code, path, identity, component) in REFUSALS.items():
         prefix = 'refusal.' + name
         capture = inputs['refusals'][name]
-        results.record(prefix + '.one_change', [] if capture['input'] == expected_inputs[name] else
-                       'the retained input is not the emitted document with this one change')
+        results.record(prefix + '.one_change', _one_change(name, emitted, document, capture['input']))
         envelope, problem = _json(capture['stdout'])
         refused = []
         if capture['exit'] != 1:

@@ -344,6 +344,70 @@ fn supplied_direct_cargo_identity_is_embedded_without_release_provenance() {
     }
 }
 
+/// A pipe's write end whose read end is already closed: every write fails.
+fn unwritable() -> std::process::Stdio {
+    let (reader, writer) = std::io::pipe().expect("pipe");
+    drop(reader);
+    writer.into()
+}
+
+#[test]
+fn example_write_failures_exit_2_without_a_panic() {
+    use std::process::Stdio;
+
+    if !integration_enabled() {
+        return;
+    }
+    let bin = require_pw_bin();
+    let run = |args: &[&str], stdout: Stdio, stderr: Stdio| {
+        Command::new(&bin)
+            .args(args)
+            .stdin(Stdio::null())
+            .stdout(stdout)
+            .stderr(stderr)
+            .spawn()
+            .expect("spawn")
+            .wait_with_output()
+            .expect("wait")
+    };
+    let reason = "policy-witness example: failed to write stdout\n";
+
+    // The document cannot be written: exit 2 and one line for a person.
+    let output = run(&["example"], unwritable(), Stdio::piped());
+    assert_eq!(output.status.code(), Some(2));
+    assert_eq!(String::from_utf8(output.stderr).unwrap(), reason);
+    // Neither stream can be written: the exit status is the whole report.
+    let output = run(&["example"], unwritable(), unwritable());
+    assert_eq!(output.status.code(), Some(2));
+    // A refusal whose reason cannot be written is still exit 2 with no output.
+    let output = run(&["example", "extra"], Stdio::piped(), unwritable());
+    assert_eq!(output.status.code(), Some(2));
+    assert!(output.stdout.is_empty());
+
+    // A closed descriptor is a failed write, not a success nobody received.
+    let shell = |script: &str| {
+        Command::new("/bin/sh")
+            .args(["-c", script])
+            .arg(&bin)
+            .stdin(Stdio::null())
+            .output()
+            .expect("shell")
+    };
+    let output = shell("exec \"$0\" example >&-");
+    assert_eq!(output.status.code(), Some(2));
+    assert_eq!(String::from_utf8(output.stderr).unwrap(), reason);
+    let output = shell("exec \"$0\" example >&- 2>&-");
+    assert_eq!(output.status.code(), Some(2));
+    let output = shell("exec \"$0\" example extra 2>&-");
+    assert_eq!(output.status.code(), Some(2));
+    assert!(output.stdout.is_empty());
+    // With a writable stdout a closed stderr changes nothing.
+    let output = shell("exec \"$0\" example 2>&-");
+    assert_eq!(output.status.code(), Some(0));
+    let reference = run(&["example"], Stdio::piped(), Stdio::piped());
+    assert_eq!(output.stdout, reference.stdout);
+}
+
 #[test]
 fn example_prints_one_request_and_refuses_every_argument() {
     if !integration_enabled() {

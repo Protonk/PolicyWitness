@@ -29,8 +29,13 @@ sys.path.insert(0, str(Path(__file__).resolve().parent))
 import build_context
 from blackbox import bind_constructed_envelope, envelope_skeleton, recapture_host_reply
 import check_example_round_trip as checker
-from check_example_round_trip import (CONSISTENCY, EXECUTION_UNAVAILABLE, NATIVE_OBSERVATION,
-                                      PREREQUISITE_UNESTABLISHED, REFUSALS, UNKNOWN_MEMBER)
+from check_example_round_trip import REFUSALS, UNKNOWN_MEMBER
+
+# The classifications this case expects, spelled here and not read from the checker.
+CONSISTENCY = 'consistency'
+EXECUTION_UNAVAILABLE = 'execution_unavailable'
+PREREQUISITE_UNESTABLISHED = 'prerequisite_unestablished'
+NATIVE_OBSERVATION = 'native_observation'
 
 FIXTURE = ROOT / 'tests/fixtures/blackbox_e2e/checker/current/constructed_run.json'
 DEVELOPMENT = 'development:' + 'c0' * 32
@@ -44,8 +49,19 @@ REPLY_DEPENDENT = ('admission.reply_policy_digest', 'echo.specimen_id', 'echo.st
                    'native.targets_unchanged')
 
 
+def expected_classification(ident):
+    """The classification each assertion must carry, authored independently of the checker's table."""
+    if ident == 'execution.admitted_reply':
+        return EXECUTION_UNAVAILABLE
+    if ident == 'prerequisite.targets_readable':
+        return PREREQUISITE_UNESTABLISHED
+    if ident.startswith('native.'):
+        return NATIVE_OBSERVATION
+    return CONSISTENCY
+
+
 def pairs(*identifiers):
-    return {(ident, checker.CLASSIFICATION[ident]) for ident in identifiers}
+    return {(ident, expected_classification(ident)) for ident in identifiers}
 
 
 # ---------------------------------------------------------------------------
@@ -212,6 +228,31 @@ def spawn_failed(state):
     envelope['result'].update(normalized_outcome='validator_spawn_failed', ok=False, exit_code=1,
                               error='constructed validator spawn failure')
     state['run']['exit'] = 1
+
+
+def validator_record(state):
+    return reply_of(state)['phases'][0]['validator_subprocess']['records'][0]
+
+
+def coherent_deny(state):
+    """The validator answers deny and its record says so; the read itself is untouched."""
+    step_of(state)['sandbox_check'].update(outcome='deny', native_rc=1, rc=1, errno=0)
+    record = validator_record(state)
+    record.update(outcome='deny', rc=1, raw_line=record['raw_line'].replace('"rc":0', '"rc":1')
+                  .replace('"outcome":"allow"', '"outcome":"deny"'))
+
+
+def coherent_failed_read(state):
+    """The read fails with a permission errno and the comparison records that observation."""
+    step_of(state)['attempt'].update(outcome='open_failed', rc=1, errno=1, observed_path=None,
+                                     error='open(O_RDONLY): Operation not permitted')
+    step_of(state)['comparison'].update(observation='permission_failure', observation_basis='permission_errno')
+
+
+def coherent_unestablished(state):
+    """The validator answered, and the chain that would order it first lacks an established worker lifetime."""
+    reply_of(state)['phases'][0]['ordering'].update(worker_lifetime_established=False)
+    step_of(state)['comparison']['order'] = 'unestablished'
 
 
 def no_reply(state):
@@ -396,14 +437,27 @@ def controls():
             disposition_issues=[{'kind': 'constructed', 'detail': 'constructed issue'}]),
         ['readers.disposition_issues'], recapture=False)
 
-    consistency_holds = tuple(ident for ident, group, classification, _ in checker.ASSERTIONS
-                              if classification == CONSISTENCY)
+    consistency_holds = tuple(ident for ident, _, _, _ in checker.ASSERTIONS if expected_classification(ident) == CONSISTENCY)
     add('native_validator_spawn_failed', spawn_failed, ['native.completion', 'native.prediction'],
         unevaluated=('native.order',), holds=consistency_holds + ('native.attempt', 'native.targets_unchanged'),
         clean=True)
     # A nonzero exit alone is not a consistency fault; a reported exit that differs from the observed one is.
     add('native_validator_spawn_failed_exit_0', lambda s: (spawn_failed(s), s['run'].update(exit=0)),
         ['reported.exit_code'], ['native.completion', 'native.prediction'], unevaluated=('native.order',), clean=True)
+    # Coherent replies: the consumer reads each cleanly, every consistency assertion
+    # holds, and only the pinned native expectation fails.
+    add('native_coherent_deny', coherent_deny, ['native.prediction'], unevaluated=('native.order',),
+        holds=consistency_holds + ('native.completion', 'native.attempt', 'native.targets_unchanged'), clean=True)
+    add('native_coherent_failed_read', coherent_failed_read, ['native.attempt'],
+        holds=consistency_holds + ('native.completion', 'native.prediction', 'native.order',
+                                   'native.targets_unchanged'), clean=True)
+    add('native_coherent_deny_and_failed_read', lambda s: (coherent_deny(s), coherent_failed_read(s)),
+        ['native.prediction', 'native.attempt'], unevaluated=('native.order',),
+        holds=consistency_holds + ('native.completion', 'native.targets_unchanged'), clean=True)
+    add('native_coherent_order_unestablished', coherent_unestablished, ['native.order'],
+        holds=consistency_holds + ('native.completion', 'native.prediction', 'native.attempt',
+                                   'native.targets_unchanged'), clean=True)
+    # Incoherent replies: the checker still names its own assertion beside the consumer's diagnostic.
     add('native_prediction_deny', lambda s: step_of(s)['sandbox_check'].update(outcome='deny', native_rc=1, rc=1),
         ['native.prediction'], unevaluated=('native.order',))
     add('native_prediction_source', lambda s: step_of(s)['sandbox_check'].update(result_source='synthetic'),
@@ -431,7 +485,7 @@ def controls():
     add('native_target_not_observed_after', lambda s: s.update({'targets-after': None}),
         ['native.targets_unchanged'], holds=consistency_holds, clean=True)
 
-    native = tuple(ident for ident, _, classification, _ in checker.ASSERTIONS if classification == NATIVE_OBSERVATION)
+    native = tuple(ident for ident, _, _, _ in checker.ASSERTIONS if expected_classification(ident) == NATIVE_OBSERVATION)
 
     def before(state):
         return state['targets-before']['targets'][0]
@@ -508,6 +562,15 @@ def controls():
             lambda s, r=refusal: r(s).update(input=r(s)['input'].replace(b'"specimen_id"', b'"specimen_ID"')),
             [prefix + '.one_change'])
         add('refusal_' + name + '_input_absent', lambda s, r=refusal: r(s).update(input=None), [prefix + '.one_change'])
+        add('refusal_' + name + '_input_of_another_refusal',
+            lambda s, r=refusal, name=name: r(s).update(
+                input=s['refusals']['unbound' if name != 'unbound' else 'other_release']['input']),
+            [prefix + '.one_change'])
+
+    add('refusal_other_development_two_digits',
+        lambda s: s['refusals']['other_development'].update(
+            input=s['example-1']['stdout'].replace(DEVELOPMENT.encode(), b'development:' + b'c1' * 32)),
+        ['refusal.other_development.one_change'])
 
     # No admitted reply: only execution is unavailable. Nothing behind the reply is credited or faulted.
     without_reply = REPLY_DEPENDENT + ('passage.delivery_length', 'identity.client_transport', 'identity.reply_producer')
@@ -515,13 +578,22 @@ def controls():
                        'admission.dossier_policy_digest', 'consumer_validation', 'prerequisite.targets_readable')
     add('execution_tool_error', no_reply, ['execution.admitted_reply'], unevaluated=without_reply,
         holds=controller_side, clean=True)
-    add('execution_no_assessment', lambda s: envelope_of(s)['data'].update(runner_sandbox_diagnostics=None),
-        ['execution.admitted_reply'], unevaluated=REPLY_DEPENDENT, recapture=False)
-    add('execution_capture_without_reply',
-        lambda s: (envelope_of(s)['data'].update(runner_result=None, runner_sandbox_diagnostics=None),
-                   envelope_of(s)['result'].update(normalized_outcome='xpc_error', ok=False, exit_code=1),
+    # The capture retains only part of the host bytes: no reply is admitted from them.
+    add('execution_reply_truncated',
+        lambda s: (envelope_of(s)['data']['runner_client']['transport']['runner_reply'].update(truncated=True),
+                   envelope_of(s)['data'].update(runner_result=None, runner_sandbox_diagnostics=None),
+                   envelope_of(s)['result'].update(normalized_outcome='runner_reply_truncated', ok=False, exit_code=1),
                    s['run'].update(exit=1)),
         ['execution.admitted_reply'], unevaluated=REPLY_DEPENDENT + ('identity.reply_producer',), recapture=False)
+    # An admitted reply without the controller's assessment is a consistency fault, not missing execution.
+    add('readers_assessment_absent', lambda s: envelope_of(s)['data'].update(runner_sandbox_diagnostics=None),
+        ['readers.disposition_integrity', 'readers.disposition_issues'], holds=('execution.admitted_reply',),
+        recapture=False)
+    add('readers_assessment_absent_and_result',
+        lambda s: (envelope_of(s)['data'].update(runner_sandbox_diagnostics=None),
+                   envelope_of(s)['result'].update(normalized_outcome='tool_error', ok=False, exit_code=0)),
+        ['readers.disposition_integrity', 'readers.disposition_issues', 'consumer_validation'],
+        holds=('execution.admitted_reply', 'reported.exit_code'), recapture=False)
     every_run = tuple(ident for ident, group, _, _ in checker.ASSERTIONS
                       if group in ('admission', 'identity', 'echo', 'reported', 'readers')
                       or ident.startswith('native.') or ident == 'passage.delivery_length')
@@ -577,7 +649,7 @@ def run_control(artifacts, row):
         problems.extend(f'{ident} is {statuses[ident]}, not unevaluated' for ident in chosen
                         if statuses[ident] != 'not_evaluated')
     problems.extend(f'{ident} is {statuses[ident]}, not holding' for ident in row['holds']
-                    if statuses[ident] != 'pass' and (ident, checker.CLASSIFICATION[ident]) not in row['expected'])
+                    if statuses[ident] != 'pass' and (ident, expected_classification(ident)) not in row['expected'])
     if row['clean'] and report['consumer_errors']:
         problems.append('the consumer reports ' + repr(report['consumer_errors']))
     # A diagnostic must name its assertion and classification to a reader of the report alone.
@@ -629,12 +701,76 @@ def perturbation_controls():
     return records
 
 
+def prepare_controls(artifacts):
+    """`prepare` is what the live case runs before submitting: a failed gate writes a report and nothing to run."""
+    import plistlib
+    records = []
+    app = artifacts / 'captures' / 'prepare-app'
+    (app / 'Contents').mkdir(parents=True)
+    (app / 'Contents/Info.plist').write_bytes(plistlib.dumps({'PWContract': DEVELOPMENT}))
+    for name, change, failing in [
+        ('passing', lambda s: None, ()),
+        ('emission_exit_2', lambda s: s['example-1'].update(exit=2), ('emission.example_exit',)),
+        ('emission_stderr', lambda s: s['example-2'].update(stderr=b'warning\n'), ('emission.stderr_empty',)),
+        ('emission_not_an_object', lambda s: [s[w].update(stdout=b'[]\n') for w in ('example-1', 'example-2')],
+         ('emission.json_object',)),
+        ('version_exit_1', lambda s: s['version'].update(exit=1), ('emission.version_exit',)),
+        ('bound_write_action',
+         lambda s: set_document(s, lambda d: d['probe_plan'][0]['attempt'].update(action='open_write')),
+         ('bounds.paired_read_probe', 'bounds.read_only_attempts')),
+        ('bound_test_overrides', lambda s: set_document(s, lambda d: d.update(_test_overrides={})),
+         ('bounds.no_test_overrides',)),
+    ]:
+        state = build()
+        change(state)
+        snapshot = artifacts / 'captures' / ('prepare-' + name + '.snapshot.json')
+        snapshot.write_text(json.dumps({'surfaces': [{'id': 'request', 'public': {'nodes': [
+            {'id': checker.EXAMPLE_NODE, 'document': state['contract-example']['document']}]}}]}))
+        # As the live case leaves the directory before `prepare`: the three invocations only.
+        for key in ('run', 'property-list', 'contract-example', 'targets-before', 'targets-after'):
+            state[key] = None
+        state['refusals'] = {}
+        directory = artifacts / 'captures' / ('prepare-' + name)
+        write(directory, state)
+        status = checker.prepare(directory, app, snapshot)
+        produced = sorted(path.relative_to(directory).as_posix() for path in directory.rglob('*') if path.is_file())
+        runnable = [path for path in produced if path.startswith('refusals/') or path == 'targets-before.json']
+        if failing:
+            report = json.loads((directory / 'report.json').read_text())
+            assert status == 1 and not runnable, (name, status, runnable)
+            assert checker.diagnostics(report) == pairs(*failing), (name, checker.diagnostics(report))
+            assert all(row['status'] == 'not_evaluated' for row in report['assertions']
+                       if row['group'] in RUN_GROUPS), name
+        else:
+            assert status == 0 and 'report.json' not in produced, (name, status, produced)
+            assert runnable == sorted(['targets-before.json'] + [f'refusals/{refusal}/input.json' for refusal in REFUSALS]), runnable
+            assert json.loads((directory / 'property-list.json').read_text())['PWContract'] == DEVELOPMENT
+            assert json.loads((directory / 'contract-example.json').read_text())['document'] == \
+                {key: value for key, value in document_of(state).items() if key != 'contract'}
+            emitted = state['example-1']['stdout']
+            for refusal in REFUSALS:
+                submitted = (directory / 'refusals' / refusal / 'input.json').read_bytes()
+                assert checker._one_change(refusal, emitted, document_of(state), submitted) == [], refusal
+        records.append({'control': 'prepare_' + name, 'status': status, 'failing': list(failing), 'files': produced})
+    return records
+
+
 def main():
     artifacts = Path(sys.argv[1])
     if (artifacts / 'captures').exists():
         shutil.rmtree(artifacts / 'captures')
-    results = {'baselines': [], 'controls': [], 'perturbations': perturbation_controls()}
+    results = {'baselines': [], 'controls': [], 'perturbations': perturbation_controls(),
+               'prepare': prepare_controls(artifacts)}
     failures = []
+    # The checker's table must carry the classification this case authors for each assertion.
+    disagreeing = [ident for ident, _, carried, _ in checker.ASSERTIONS if carried != expected_classification(ident)]
+    if disagreeing:
+        failures.append('classification differs from this case\'s expectation: ' + ', '.join(disagreeing))
+    # The selector controls below name every selection key the checker reads from the shape golden.
+    if set(checker.RUNNER_SELECTION_KEYS) != {'runner', 'runner_id', 'runner_service', 'runner_mode'} or \
+            checker.ENTITLEMENT_KEY not in checker.SELECTOR_FIELDS:
+        failures.append('the controller selection keys changed; add a bounds control for each: ' +
+                        ', '.join(checker.SELECTOR_FIELDS))
     for identity in (DEVELOPMENT, RELEASE):
         directory = artifacts / 'captures' / ('baseline_' + identity.split(':')[0])
         write(directory, build(identity))

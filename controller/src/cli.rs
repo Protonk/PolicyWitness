@@ -11,9 +11,9 @@ use crate::json_contract;
 use crate::run_flow;
 use crate::runner_commands;
 
-pub fn print_usage() {
-    eprintln!(
-        "\
+/// The usage text. `print_usage` prints it; a command that must not panic on
+/// an unwritable stderr writes it itself.
+pub const USAGE: &str = "\
 usage:
   policy-witness run <request.json> [--timeout-ms <n>] [--runner-mode <standard|byoxpc>]
   policy-witness runner <command> [options]
@@ -25,8 +25,10 @@ notes:
   - runs the selected PWRunner XPC service once and prints a single JSON result to stdout
   - request.json is parsed once; the resolved request is delivered to the runner client on stdin (`--request -`), never through a temporary file
   - example takes no argument and prints the specimen this build defines, carrying this build's contract, as a request.json that the same build's run admits; exit 0 supplies the complete document, and on exit 2 discard stdout
-  - --version prints a JSON envelope (kind=version) with the build stamp and the public contract this build asserts; every envelope also carries the stamp under `build`"
-    );
+  - --version prints a JSON envelope (kind=version) with the build stamp and the public contract this build asserts; every envelope also carries the stamp under `build`";
+
+pub fn print_usage() {
+    eprintln!("{USAGE}");
 }
 
 pub fn run(argv: Vec<OsString>) -> i32 {

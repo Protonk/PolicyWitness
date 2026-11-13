@@ -60,11 +60,7 @@ Observed on `main` on 2026-11-12. Re-check any that the work depends on.
 
 ### 4.1 The example in controller source
 
-A new module, `controller/src/example.rs`, holds the example as one raw string constant: a JSON object without a `contract` member.
-
-```json
-{"specimen_id":"example","policy":{"format":"sbpl","sbpl_source":"(version 1) (allow default)"},"probe_plan":[{"step_id":"read-hosts","sandbox_check":{"operation":"file-read-data","filter":{"kind":"path","value":"/etc/hosts"}},"attempt":{"kind":"file","action":"open_read","target":"/etc/hosts"}}]}
-```
+A new module, `controller/src/example.rs`, holds the example as one raw string constant, [`EXAMPLE_DOCUMENT`](../controller/src/example.rs): a JSON object without a `contract` member. This plan does not repeat it; the [contract's rendering](CONTRACT.md#contract-request-specimen-example) is extracted from the constant.
 
 The scenario is one read-only paired probe under an allow-default policy. It writes nothing and needs no fixture, and it gives each of the three fixture interventions something to act on; an apply-only document would leave two of them empty.
 

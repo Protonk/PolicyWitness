@@ -177,9 +177,9 @@ its query is read from `order` alone.
 The consumer binds an envelope's result to the reply its own evidence admits:
 `result.normalized_outcome` is that reply's outcome, `result.ok` is true exactly
 for `finished`, and `result.exit_code` is 0 for `finished` and 1 otherwise.
-Admission is decided from the client capture's complete host bytes, the
-producer and compiled-profile gates and the presence of the controller's
-assessment, never from the result fields. `checker_controls` starts from a
+Admission is decided from the client capture's complete host bytes and the
+producer and compiled-profile gates, never from the result fields or any other
+controller-authored field. `checker_controls` starts from a
 finished reply and three coherent failed ones, including a `bad_request` and
 an unfamiliar outcome. It changes, removes, nulls and retypes each result field
 alone and requires exactly that field's diagnostic; changes all three; removes
@@ -188,10 +188,11 @@ keeping both. A reply retained after a compiled-profile refusal, an absent
 reply, a rejected capture, a failed delivery and a host-byte diagnostic each
 produce no result diagnostic whatever the result says, and a foreign producer
 remains one version error. A projected record that differs from the captured
-bytes is reported, and the result still answers to the bytes. The consumer
-does not restate the controller's collection-capacity gate: when the
-assessment is absent it admits no reply and asserts no mapping, which one
-control records. The rule checks today's mapping and does not decide whether
+bytes is reported, and the result still answers to the bytes. Removing the
+controller's assessment leaves the relationship in force. The consumer does
+not restate the controller's collection-capacity gate, so a reply refused for
+capacity alone is outside what it reads and would be reported as inconsistent;
+no host produces one. The rule checks today's mapping and does not decide whether
 controller integrity findings should change command success.
 
 Constructed client controls independently check contract-first
