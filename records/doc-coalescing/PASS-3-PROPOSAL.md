@@ -1,8 +1,9 @@
 # App-owned request lesson: acquisition decision
 
 Prepared at `71d4d2a6` for Pass 3 of
-[DOC-COALESCING-PLAN](../../docs/DOC-COALESCING-PLAN.md). This is a proposal;
-the command and ownership changes below are not implemented.
+[DOC-COALESCING-PLAN](../../docs/DOC-COALESCING-PLAN.md). The maintainer accepted
+the recommended separate `lesson` command. The following records the selected
+interface and migration; implementation verification is pending.
 
 ## Recommended interface
 

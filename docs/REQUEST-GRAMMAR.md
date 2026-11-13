@@ -2,37 +2,38 @@
 
 This is a developer lesson. The [contract rules](CONTRACT.md#contract-request)
 define the promise; the [specimen reference](PolicyWitness.md#specimen-format)
-describes authoring. The examples here are executable inputs from
-[tests/fixtures/request_contract/examples.json](../tests/fixtures/request_contract/examples.json).
-Their expected refusals are independent data, checked by both the Swift unit
-tests and live CLI/direct-XPC controls.
+describes authoring. The `create` and `capture_typo` inputs are embedded in the
+app from [controller-owned templates](../controller/src/lessons/README.md).
+The [test corpus](../tests/fixtures/request_contract/examples.json) references
+those inputs and owns the other examples. Expected refusals remain independent
+data, checked by both Swift unit tests and live CLI/direct-XPC controls.
 
 The [user guide exercise](PolicyWitness.md#try-an-accepted-request-and-a-refusal)
-presents `create` and `capture_typo` as standalone commands. Keep its requests
-aligned with those corpus cases so readers can repeat the same exercise
-using the shipped app.
+presents the same app-owned pair as standalone commands, with saved requests
+and independent effect observations.
 
 ## Start with an observable instruction
 
 The `create` example supplies an SBPL policy, one sandbox query, and one file
-creation attempt. Its `$EFFECT` placeholder is replaced by an absolute path to
-an absent file. This makes acceptance observable outside the returned JSON.
+creation attempt. Supply an absolute path to an absent file. This makes
+acceptance observable outside the returned JSON.
 
 From the repository root, using a current signed build:
 
 ```sh
 PW=dist/PolicyWitness.app/Contents/MacOS/policy-witness
 PW_EXAMPLE_DIR=$(mktemp -d /private/tmp/pw-grammar.XXXXXX)
-tests/lib/python.sh tests/lib/request_examples.py create --effect "$PW_EXAMPLE_DIR/created" > "$PW_EXAMPLE_DIR/request.json"
-cat "$PW_EXAMPLE_DIR/request.json"
-"$PW" run "$PW_EXAMPLE_DIR/request.json" > "$PW_EXAMPLE_DIR/run.json"
+"$PW" lesson create --target "$PW_EXAMPLE_DIR/created" > "$PW_EXAMPLE_DIR/request.json" &&
+cat "$PW_EXAMPLE_DIR/request.json" &&
+"$PW" run "$PW_EXAMPLE_DIR/request.json" > "$PW_EXAMPLE_DIR/run.json" &&
 test -f "$PW_EXAMPLE_DIR/created"
 ```
 
-The renderer prints the complete request and does no execution. It generates
-a fresh nonce for examples that request capture and asserts the selected app's
-`PWContract` from its plist. Keep the directory to inspect
-both submitted bytes and returned evidence.
+`lesson` prints a complete request with the emitting binary's contract and does
+no execution or filesystem inspection. Exit 0 establishes publication; on exit 2
+discard its output. The typo lesson deliberately produces a request that `run`
+refuses. Neither lesson supplies a nonce. Keep the directory to inspect submitted
+bytes and returned evidence.
 
 Reading that request teaches three boundaries:
 
@@ -46,7 +47,10 @@ Reading that request teaches three boundaries:
 
 An input grammar describes the allowed shapes. A contract also gives those
 shapes meaning, specifies refusals, and distinguishes execution from admission.
-Use these corpus IDs with the same renderer:
+Use the repository renderer for the broader corpus, for example
+`tests/lib/python.sh tests/lib/request_examples.py capture --effect "$PW_EXAMPLE_DIR/captured"`.
+It asserts the selected app's identity and generates a nonce for inputs that
+request one. Expected behavior remains separately authored:
 
 | Example | Lesson | Expected behavior |
 | --- | --- | --- |
@@ -72,11 +76,12 @@ Use these corpus IDs with the same renderer:
 Try the typo with a new, absent effect path:
 
 ```sh
-tests/lib/python.sh tests/lib/request_examples.py capture_typo --effect "$PW_EXAMPLE_DIR/refused" > "$PW_EXAMPLE_DIR/typo.json"
-"$PW" run "$PW_EXAMPLE_DIR/typo.json" > "$PW_EXAMPLE_DIR/refusal.json"
-PW_EXAMPLE_RC=$?
-test "$PW_EXAMPLE_RC" = 1
-test ! -e "$PW_EXAMPLE_DIR/refused"
+if "$PW" lesson capture_typo --target "$PW_EXAMPLE_DIR/refused" > "$PW_EXAMPLE_DIR/typo.json"; then
+  "$PW" run "$PW_EXAMPLE_DIR/typo.json" > "$PW_EXAMPLE_DIR/refusal.json"
+  PW_EXAMPLE_RC=$?
+  test "$PW_EXAMPLE_RC" = 1
+  test ! -e "$PW_EXAMPLE_DIR/refused"
+fi
 ```
 
 Inspect `data.request_failure` in that envelope:

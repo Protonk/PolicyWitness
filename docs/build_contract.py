@@ -24,6 +24,7 @@ FILES = ('build.sh', 'meson.build', 'meson.options', 'runner/Package.swift',
 SUFFIXES = ('.rs', '.c', '.h', '.swift', '.sb', '.plist', '.ent')
 FILES += ('tests/lib/build_provenance.py', 'tests/lib/signer_check.py',
           'tests/lib/cargo_config.py', 'tests/lib/checkout_lock.py', 'tests/lib/output_target.py')
+FILES += ('controller/src/lessons/create.json', 'controller/src/lessons/capture_typo.json')
 RELEASE = re.compile(r'v[0-9]+\.[0-9]+\.[0-9]+')
 
 

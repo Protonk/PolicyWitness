@@ -9,11 +9,11 @@ import Foundation
 private func actorCorpus() throws -> [[String: Any]] {
     let url = repositoryRoot().appendingPathComponent("tests/fixtures/request_contract/examples.json")
     let corpus = try JSONSerialization.jsonObject(with: Data(contentsOf: url)) as! [[String: Any]]
-    return corpus.filter { ($0["request"] as? [String: Any])?["actors"] != nil }
+    return try corpus.filter { try requestExampleInput($0)["actors"] != nil }
 }
 
 private func corpusText(_ example: [String: Any]) throws -> String {
-    var request = example["request"] as! [String: Any]
+    var request = try requestExampleInput(example)
     assertExampleContract(example, request: &request)
     let encoded = try JSONSerialization.data(withJSONObject: request)
     return String(decoding: encoded, as: UTF8.self)

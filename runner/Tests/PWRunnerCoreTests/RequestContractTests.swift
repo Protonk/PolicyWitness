@@ -36,7 +36,7 @@ func runRequestContractTests(_ tk: TestKit) {
             let url = repositoryRoot().appendingPathComponent("tests/fixtures/request_contract/examples.json")
             let examples = try JSONSerialization.jsonObject(with: Data(contentsOf: url)) as! [[String: Any]]
             for example in examples {
-                var request = example["request"] as! [String: Any]
+                var request = try requestExampleInput(example)
                 assertExampleContract(example, request: &request)
                 if let count = example["repeat_steps"] as? Int {
                     let step = (request["probe_plan"] as! [[String: Any]])[0]
@@ -260,4 +260,27 @@ func assertExampleContract(_ example: [String: Any], request: inout [String: Any
     case "missing": request.removeValue(forKey: "contract")
     default: request["contract"] = testRequestContract
     }
+}
+
+/// Input ownership is explicit; expected diagnostics remain in the test corpus.
+func requestExampleInput(_ example: [String: Any]) throws -> [String: Any] {
+    let inline = example.keys.contains("request")
+    let referenced = example.keys.contains("request_source")
+    guard inline != referenced else {
+        throw TestFailure(message: "example must carry exactly one of request and request_source")
+    }
+    let object: Any
+    if inline {
+        object = example["request"]!
+    } else {
+        let allowed = ["controller/src/lessons/create.json", "controller/src/lessons/capture_typo.json"]
+        guard let source = example["request_source"] as? String, allowed.contains(source) else {
+            throw TestFailure(message: "unsupported request source")
+        }
+        object = try JSONSerialization.jsonObject(with: Data(contentsOf: repositoryRoot().appendingPathComponent(source)))
+    }
+    guard let request = object as? [String: Any], request["contract"] == nil, request["schema_version"] == nil else {
+        throw TestFailure(message: "request template must be an identity-free object")
+    }
+    return request
 }

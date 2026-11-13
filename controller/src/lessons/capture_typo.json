@@ -1,0 +1,25 @@
+{
+  "specimen_id": "request-grammar",
+  "policy": {
+    "format": "sbpl",
+    "sbpl_source": "(version 1) (allow default)",
+    "capture_compiled_profiel": true
+  },
+  "probe_plan": [
+    {
+      "step_id": "create",
+      "sandbox_check": {
+        "operation": "file-write-create",
+        "filter": {
+          "kind": "path",
+          "value": "$EFFECT"
+        }
+      },
+      "attempt": {
+        "kind": "file",
+        "action": "create",
+        "target": "$EFFECT"
+      }
+    }
+  ]
+}

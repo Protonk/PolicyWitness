@@ -55,25 +55,15 @@ before continuing. The string identifies the exact input/report contract; the
 remaining examples marked `BUILD_CONTRACT` need that value before submission.
 A release uses `release:vX.Y.Z`; a development build uses `development:<digest>`.
 
-Create a request that opens a new, empty file under an allow-all policy:
+Obtain this build's create lesson, which opens a new, empty file under an
+allow-all policy. `lesson` prints a request with the emitting app's contract;
+it does not execute it. Exit 0 supplies the complete request. On exit 2 discard
+its output. The target is inserted verbatim without checking the filesystem.
 
 ```sh
-cat > "$PW_WORK/create.json" <<JSON
-{
-  "contract": "$PW_CONTRACT",
-  "specimen_id": "guide-create",
-  "policy": {"format": "sbpl", "sbpl_source": "(version 1) (allow default)"},
-  "probe_plan": [{
-    "step_id": "create",
-    "sandbox_check": {
-      "operation": "file-write-create",
-      "filter": {"kind": "path", "value": "$PW_WORK/created"}
-    },
-    "attempt": {"kind": "file", "action": "create", "target": "$PW_WORK/created"}
-  }]
-}
-JSON
-if test ! -e "$PW_WORK/created"; then
+"$PW" lesson create --target "$PW_WORK/created" > "$PW_WORK/create.json"
+PW_PREPARE_EXIT=$?
+if test "$PW_PREPARE_EXIT" -eq 0 && test ! -e "$PW_WORK/created"; then
   "$PW" run "$PW_WORK/create.json" > "$PW_WORK/create-result.json" 2> "$PW_WORK/create-stderr.txt"
   PW_EXIT=$?
   printf '%s\n' "$PW_EXIT" > "$PW_WORK/create-exit.txt"
@@ -82,11 +72,12 @@ if test ! -e "$PW_WORK/created"; then
   /usr/bin/stat -f 'size=%z mode=%Sp inode=%i' "$PW_WORK/created" > "$PW_WORK/create-observation.txt"
   cat "$PW_WORK/create-observation.txt"
 else
-  printf '%s\n' 'Target already exists; prepare a fresh work directory before running this create.' >&2
+  printf '%s\n' 'Request emission failed or target exists; discard failed output and prepare a fresh work directory.' >&2
 fi
 ```
 
-The guard refuses to reuse an existing target. On a completed create, the command exits 0 and the target is an empty file. The saved
+The guard requires successful emission and refuses to reuse an existing target.
+On a completed create, the run command exits 0 and the target is an empty file. The saved
 exit status and envelope describe execution; `test` and `stat` independently
 observe the file effect. `create` opens an existing file without truncating it,
 which is why the initial absence matters.
@@ -536,18 +527,21 @@ The [quick start](#quick-start) retained `create.json`, its envelope and an
 independent file observation in `$PW_WORK`. Use a different target for this
 refusal exercise, so an earlier successful run cannot explain its presence.
 
-Introduce an unknown policy field deliberately:
+Obtain the paired lesson containing a deliberately unknown policy field.
+Successful publication by `lesson` does not mean `run` will admit this input:
 
 ```sh
-sed -e 's|/created"|/capture-target"|g' \
-    -e 's|"format": "sbpl",|"format": "sbpl", "capture_compiled_profiel": true,|' \
-    "$PW_WORK/create.json" > "$PW_WORK/capture-typo.json"
-test ! -e "$PW_WORK/capture-target"
-"$PW" run "$PW_WORK/capture-typo.json" > "$PW_WORK/capture-typo-result.json" 2> "$PW_WORK/capture-typo-stderr.txt"
-PW_EXIT=$?
-printf '%s\n' "$PW_EXIT" > "$PW_WORK/capture-typo-exit.txt"
-test "$PW_EXIT" -eq 1
-test ! -e "$PW_WORK/capture-target"
+"$PW" lesson capture_typo --target "$PW_WORK/capture-target" > "$PW_WORK/capture-typo.json"
+PW_PREPARE_EXIT=$?
+if test "$PW_PREPARE_EXIT" -eq 0 && test ! -e "$PW_WORK/capture-target"; then
+  "$PW" run "$PW_WORK/capture-typo.json" > "$PW_WORK/capture-typo-result.json" 2> "$PW_WORK/capture-typo-stderr.txt"
+  PW_EXIT=$?
+  printf '%s\n' "$PW_EXIT" > "$PW_WORK/capture-typo-exit.txt"
+  test "$PW_EXIT" -eq 1
+  test ! -e "$PW_WORK/capture-target"
+else
+  printf '%s\n' 'Request emission failed or target exists; preserve earlier records and prepare a fresh target.' >&2
+fi
 ```
 
 The envelope reports `bad_request`; `data.request_failure` identifies
@@ -559,13 +553,19 @@ the intended file effect independently.
 Correct the spelling in a copy, preserving the refused input:
 
 ```sh
-sed 's/capture_compiled_profiel/capture_compiled_profile/' \
-    "$PW_WORK/capture-typo.json" > "$PW_WORK/capture-no-nonce.json"
-"$PW" run "$PW_WORK/capture-no-nonce.json" > "$PW_WORK/capture-no-nonce-result.json" 2> "$PW_WORK/capture-no-nonce-stderr.txt"
-PW_EXIT=$?
-printf '%s\n' "$PW_EXIT" > "$PW_WORK/capture-no-nonce-exit.txt"
-test "$PW_EXIT" -eq 1
-test ! -e "$PW_WORK/capture-target"
+/usr/bin/plutil -remove policy.capture_compiled_profiel \
+  -o "$PW_WORK/capture-no-nonce.json" "$PW_WORK/capture-typo.json" &&
+/usr/bin/plutil -insert policy.capture_compiled_profile -bool YES "$PW_WORK/capture-no-nonce.json"
+PW_PREPARE_EXIT=$?
+if test "$PW_PREPARE_EXIT" -eq 0 && test ! -e "$PW_WORK/capture-target"; then
+  "$PW" run "$PW_WORK/capture-no-nonce.json" > "$PW_WORK/capture-no-nonce-result.json" 2> "$PW_WORK/capture-no-nonce-stderr.txt"
+  PW_EXIT=$?
+  printf '%s\n' "$PW_EXIT" > "$PW_WORK/capture-no-nonce-exit.txt"
+  test "$PW_EXIT" -eq 1
+  test ! -e "$PW_WORK/capture-target"
+else
+  printf '%s\n' 'Request repair failed or target exists; preserve earlier records before continuing.' >&2
+fi
 ```
 
 Enabled capture requires a nonce. This second refusal reports
@@ -583,16 +583,17 @@ Continue after that command succeeds and prints 32 lowercase hexadecimal
 characters. Preserve the corrected request and its result:
 
 ```sh
-sed "s/\"capture_compiled_profile\": true/\"capture_compiled_profile\": true, \"capture_nonce\": \"$PW_NONCE\"/" \
-    "$PW_WORK/capture-no-nonce.json" > "$PW_WORK/capture.json"
-if test ! -e "$PW_WORK/capture-target"; then
+/usr/bin/plutil -insert policy.capture_nonce -string "$PW_NONCE" \
+  -o "$PW_WORK/capture.json" "$PW_WORK/capture-no-nonce.json"
+PW_PREPARE_EXIT=$?
+if test "$PW_PREPARE_EXIT" -eq 0 && test ! -e "$PW_WORK/capture-target"; then
   "$PW" run "$PW_WORK/capture.json" > "$PW_WORK/capture-result.json" 2> "$PW_WORK/capture-stderr.txt"
   PW_EXIT=$?
   printf '%s\n' "$PW_EXIT" > "$PW_WORK/capture-exit.txt"
   cat "$PW_WORK/capture-result.json"
   test -f "$PW_WORK/capture-target"
 else
-  printf '%s\n' 'Capture target already exists; preserve its records and prepare a new target.' >&2
+  printf '%s\n' 'Request repair failed or capture target exists; preserve its records before continuing.' >&2
 fi
 ```
 
@@ -2684,10 +2685,15 @@ For a service-selected file-effect check, derive another request from the saved
 quick-start input and use a new target:
 
 ```sh
-sed -e "s|\"specimen_id\": \"guide-create\",|\"specimen_id\": \"guide-byoxpc-create\", \"runner\": {\"service\": \"$SERVICE\", \"mode\": \"byoxpc\"},|" \
-    -e 's|/created"|/byoxpc-created"|g' \
-    "$PW_WORK/create.json" > "$PW_WORK/byoxpc-create.json"
-if test ! -e "$PW_WORK/byoxpc-created"; then
+/usr/bin/plutil -replace specimen_id -string guide-byoxpc-create \
+  -o "$PW_WORK/byoxpc-create.json" "$PW_WORK/create.json" &&
+/usr/bin/plutil -insert runner -dictionary "$PW_WORK/byoxpc-create.json" &&
+/usr/bin/plutil -insert runner.service -string "$SERVICE" "$PW_WORK/byoxpc-create.json" &&
+/usr/bin/plutil -insert runner.mode -string byoxpc "$PW_WORK/byoxpc-create.json" &&
+/usr/bin/plutil -replace probe_plan.0.sandbox_check.filter.value -string "$PW_WORK/byoxpc-created" "$PW_WORK/byoxpc-create.json" &&
+/usr/bin/plutil -replace probe_plan.0.attempt.target -string "$PW_WORK/byoxpc-created" "$PW_WORK/byoxpc-create.json"
+PW_PREPARE_EXIT=$?
+if test "$PW_PREPARE_EXIT" -eq 0 && test ! -e "$PW_WORK/byoxpc-created"; then
   "$PW" run "$PW_WORK/byoxpc-create.json" --timeout-ms 20000 \
     > "$PW_WORK/byoxpc-create-result.json" 2> "$PW_WORK/byoxpc-create-stderr.txt"
   PW_EXIT=$?
@@ -2697,7 +2703,7 @@ if test ! -e "$PW_WORK/byoxpc-created"; then
   /usr/bin/stat -f 'size=%z mode=%Sp inode=%i' "$PW_WORK/byoxpc-created" > "$PW_WORK/byoxpc-observation.txt"
   cat "$PW_WORK/byoxpc-observation.txt"
 else
-  printf '%s\n' 'Target already exists; preserve its records and prepare a new effect target.' >&2
+  printf '%s\n' 'Request preparation failed or target exists; preserve its records and prepare a new effect target.' >&2
 fi
 ```
 

@@ -243,7 +243,8 @@ class PublicBuildContractTests(receipts.TestCase):
         self.commit(root)
         self.assertEqual(contract.identity(root), loose, 'documentation-only commit does not change source digest')
         previous = loose
-        for name in ('controller/src/main.rs', 'runner/augments/mach-register.sb', 'PolicyWitness.entitlements'):
+        for name in ('controller/src/main.rs', 'runner/augments/mach-register.sb', 'PolicyWitness.entitlements',
+                     'controller/src/lessons/create.json', 'controller/src/lessons/capture_typo.json'):
             path = root / name
             if not path.exists():
                 path = next((root / 'runner/augments').glob('*.sb'))

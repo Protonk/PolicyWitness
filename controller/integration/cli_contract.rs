@@ -305,6 +305,21 @@ fn supplied_direct_cargo_identity_is_embedded_without_release_provenance() {
             .unwrap();
         }
 
+        // Lesson publication uses this emitting binary's identity too; the
+        // deliberately invalid lesson is still published, without host admission.
+        for selector in ["create", "capture_typo"] {
+            let lesson = run_pw(&binary, &["lesson", selector, "--target", "/absent"]);
+            if expected == "unbound" {
+                assert_eq!(lesson.status.code(), Some(2));
+                assert!(lesson.stdout.is_empty());
+            } else {
+                assert_eq!(lesson.status.code(), Some(0));
+                let value: serde_json::Value = serde_json::from_slice(&lesson.stdout).unwrap();
+                assert_eq!(value["contract"], expected);
+                assert_eq!(value["probe_plan"][0]["attempt"]["target"], "/absent");
+            }
+        }
+
         // An unbound build emits nothing. A bound build emits its own
         // identity, and the selected app's `run` refuses that document at its
         // contract gate, before any client invocation.
@@ -1538,4 +1553,90 @@ fn sbpl_check_records_import_provenance_for_system_sb() {
         .and_then(|v| v.as_str())
         .unwrap_or("");
     assert_eq!(sha.len(), 64, "sha256 should be a 64-char hex string");
+}
+
+#[test]
+fn lesson_publishes_both_inputs_from_the_installed_binary() {
+    if !integration_enabled() {
+        return;
+    }
+    let bin = require_pw_bin();
+    let target = "/nonexistent-parent/../quote\" backslash\\ newline\n é";
+    let mut documents = Vec::new();
+    for selector in ["create", "capture_typo"] {
+        let output = Command::new(&bin)
+            .args(["lesson", selector, "--target", target])
+            .current_dir("/")
+            .stdin(std::process::Stdio::null())
+            .output()
+            .unwrap();
+        assert_eq!(output.status.code(), Some(0));
+        assert!(output.stderr.is_empty());
+        assert!(output.stdout.ends_with(b"\n") && !output.stdout.ends_with(b"\n\n"));
+        let document: serde_json::Value = serde_json::from_slice(&output.stdout).unwrap();
+        assert_eq!(document["contract"], candidate_contract());
+        assert_eq!(document["specimen_id"], "request-grammar");
+        assert_eq!(document["probe_plan"][0]["step_id"], "create");
+        assert_eq!(document["probe_plan"][0]["attempt"]["target"], target);
+        assert_eq!(
+            document["probe_plan"][0]["sandbox_check"]["filter"]["value"],
+            target
+        );
+        documents.push(document);
+    }
+    documents[0]["policy"]["capture_compiled_profiel"] = true.into();
+    assert_eq!(documents[0], documents[1]);
+}
+
+#[test]
+fn lesson_cli_refusals_and_write_failures_exit_2_safely() {
+    use std::os::unix::ffi::OsStringExt;
+    use std::process::Stdio;
+    if !integration_enabled() {
+        return;
+    }
+    let bin = require_pw_bin();
+    for args in [
+        vec!["lesson"],
+        vec!["lesson", "create"],
+        vec!["lesson", "future", "--target", "/x"],
+        vec!["lesson", "create", "--target", "relative"],
+        vec!["lesson", "create", "--target", ""],
+        vec!["lesson", "create", "--target", "/x", "--target", "/y"],
+    ] {
+        let output = Command::new(&bin).args(args).output().unwrap();
+        assert_eq!(output.status.code(), Some(2));
+        assert!(output.stdout.is_empty());
+    }
+    let output = Command::new(&bin)
+        .args(["lesson", "create", "--target"])
+        .arg(std::ffi::OsString::from_vec(vec![b'/', 255]))
+        .output()
+        .unwrap();
+    assert_eq!(output.status.code(), Some(2));
+    assert!(output.stdout.is_empty());
+    let output = Command::new(&bin)
+        .args(["lesson", "create", "--target", "/x"])
+        .stdout(unwritable())
+        .stderr(Stdio::piped())
+        .spawn()
+        .unwrap()
+        .wait_with_output()
+        .unwrap();
+    assert_eq!(output.status.code(), Some(2));
+    assert!(!String::from_utf8_lossy(&output.stderr).contains("panicked"));
+    for (script, expected) in [
+        ("exec \"$0\" lesson create --target /x 2>&-", 0),
+        ("exec \"$0\" lesson create --target relative 2>&-", 2),
+    ] {
+        let output = Command::new("/bin/sh")
+            .args(["-c", script])
+            .arg(&bin)
+            .output()
+            .unwrap();
+        assert_eq!(output.status.code(), Some(expected));
+        if expected == 2 {
+            assert!(output.stdout.is_empty());
+        }
+    }
 }

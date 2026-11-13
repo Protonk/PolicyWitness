@@ -19,7 +19,11 @@ substituted. Explicit cuts preserve the displayed command text while allowing
 ownership, exit-status capture and independent observations between commands.
 The shell state retains the guide's variables and umask; refusal commands keep
 their expected nonzero status. Source extraction controls refuse missing or
-ambiguous fences and reordered cuts. Constructed ownership controls use the
+ambiguous fences and reordered cuts. Preparation controls execute the actual
+create and capture-typo fences against a local emitter that writes partial JSON
+and exits 2, checking no submission, target or run result. Removing the successful
+preparation guard must make the same absence oracle reject a recorded submission;
+the fake run never performs a native operation. Constructed ownership controls use the
 existing fake OS tools and actual cleanup paths to observe refused foreign
 owners, uncertain submissions, each absence requirement and interrupted deletion
 recovery. The existing dispatcher retention control checks the top-level guide

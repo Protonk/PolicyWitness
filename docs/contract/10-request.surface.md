@@ -204,6 +204,49 @@ context: "Read the emitter and dispatch, the emitter's unit tests, the controlle
 limits: "Check read; no execution is credited. The exact request comparison runs under the test identity and ends at the client callback; on a signed app the live case observes the delivered length only. A gate refusal on a bound build has unit support and no built-app observation. No check observes the process's file reads; the isolated builds emit with no app, manifest or registry beside them. Development runs of these checks exist and are disposable; release credit awaits an archived acceptance."
 ```
 
+### Emit a request lesson {emit_lesson: reports}
+
+```contract
+who: ["identity.definitions.controller"]
+where: "CLI lesson dispatch"
+entry: ["cli_lesson"]
+recipient: ["cli_caller"]
+report: ["lesson_specimen"]
+uses: ["identity.build.contract", "identity.definitions.specimen"]
+effects: set_value(specimen.contract, ref("identity.build.contract"))
+```
+
+`policy-witness lesson <create|capture_typo> --target <absolute-path>` accepts
+one selector followed by one target option. The target must be a nonempty,
+absolute UTF-8 path without NUL. The controller preserves it verbatim in the
+query and attempt, inserts the emitting binary's contract, and prints one
+pretty JSON object followed by one newline. `capture_typo` deliberately includes
+an unknown policy field. The document's content, layout and labels carry no
+stability promise between builds.
+
+Process exit 0 establishes complete publication, including a successful flush;
+it establishes neither admission nor an effect. `run` independently admits or
+refuses the emitted input. Usage, target, empty or `unbound` identity, rendering,
+write and flush failures exit 2. Discard standard output on exit 2, even when
+it contains a complete document. A reason goes to standard error when writable;
+the exit status does not depend on that stream.
+
+Emission reads no external file, launches no process and does not inspect or
+normalize the target. It creates no directory and establishes no target-absence
+claim. The caller's workflow supplies absence checks and independent effect
+observations.
+
+#### Lesson publication support {support: owner}
+
+```contract
+grade: "check_read"
+source: [{"path": "controller/src/lesson.rs", "symbol": "fn render"}, {"path": "controller/src/lesson.rs", "symbol": "fn emit"}, {"path": "controller/src/lesson.rs", "symbol": "pub fn cmd_lesson"}, {"path": "controller/src/cli.rs", "symbol": "pub fn run"}]
+check: [{"path": "controller/src/lesson.rs", "symbol": "both_inputs_preserve_target_identity_and_intentional_difference", "form": "test"}, {"path": "controller/src/lesson.rs", "symbol": "argument_target_and_identity_refusals_write_nothing", "form": "test"}, {"path": "controller/src/lesson.rs", "symbol": "complete_publication_requires_all_writes_and_flush", "form": "test"}]
+pins: "Both materializations carry the supplied identity and verbatim target, retain the expected specimen/step labels, omit a nonce and differ only by the deliberately misspelled capture field. Argument, target and identity refusals write nothing. Controlled short writes assemble the complete document; partial-write and late-flush failures return a refusal even when complete JSON was written. Dispatch maps successful publication to exit 0 and refusals to exit 2."
+context: "Read the embedded-template materializer, CLI dispatch and three unit controls with constructed arguments, identities and writers."
+limits: "No execution is credited. Unit controls establish publication behavior, not host admission or native file effects. Exit mapping, stderr handling and the absence of file reads/process launches have source-read support; the controls do not observe operating-system activity. Rendering failure is a source-read branch without an injected malformed-template control."
+```
+
 ### Emitted example {example: example}
 
 ```contract

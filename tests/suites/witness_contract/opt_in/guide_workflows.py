@@ -27,7 +27,7 @@ import session
 from bundle import command, inventory, save
 from worker_exit_witness import worker_exit_witness
 
-VARIABLES = ('APP', 'PW', 'PW_WORK', 'PW_CONTRACT', 'PW_NONCE',
+VARIABLES = ('APP', 'PW', 'PW_WORK', 'PW_CONTRACT', 'PW_NONCE', 'PW_PREPARE_EXIT',
              'IDENTITY', 'ENT', 'PW_RUNNER_STAGE', 'BYO', 'SERVICE', 'PW_EXIT')
 
 
@@ -407,9 +407,10 @@ class Workflow:
         assert self.values['PW_CONTRACT'] == self.contract
         self.run('show-contract', shown)
         self.observe('create-independent-before', 'created', False)
-        create = self.guide.fence('Quick start', 'cat > "$PW_WORK/create.json"')
-        prepare, execute = split(create, ['if test ! -e'])
+        create = self.guide.fence('Quick start', '"$PW" lesson create')
+        prepare, execute = split(create, ['if test "$PW_PREPARE_EXIT"'])
         self.run('create-request', prepare)
+        assert self.values['PW_PREPARE_EXIT'] == '0'
         original_create = (self.work / 'create.json').read_bytes()
         self.invoke('create', execute, 'create-result.json')
         self.created('create', 'created')
@@ -423,10 +424,11 @@ class Workflow:
         save(self.out / 'existing-target-guard.json', dict(result_unchanged=True, effect_unchanged=True, saved_mtime_ns=saved))
         for name, needle, code, field in [
             ('capture-typo', '> "$PW_WORK/capture-typo.json"', 'unknown_field', 'capture_compiled_profiel'),
-            ('capture-no-nonce', "sed 's/capture_compiled_profiel/", 'invalid_capture_nonce', 'capture_nonce')]:
+            ('capture-no-nonce', '/usr/bin/plutil -remove policy.capture_compiled_profiel', 'invalid_capture_nonce', 'capture_nonce')]:
             text = self.guide.fence('Try an accepted request and a refusal', needle)
-            prepare, execute = split(text, ['"$PW" run'])
+            prepare, execute = split(text, ['if test "$PW_PREPARE_EXIT"'])
             self.run(name + '-request', prepare)
+            assert self.values['PW_PREPARE_EXIT'] == '0'
             original = (self.work / (name + '.json')).read_bytes()
             self.observe(name + '-independent-before', 'capture-target', False)
             self.invoke(name, execute, name + '-result.json', admission_refusal=True)
@@ -437,9 +439,10 @@ class Workflow:
         self.run('nonce', generate)
         assert re.fullmatch('[0-9a-f]{32}', self.values['PW_NONCE'])
         self.run('show-nonce', display)
-        capture = self.guide.fence('Try an accepted request and a refusal', 'capture-no-nonce.json" > "$PW_WORK/capture.json')
-        prepare, execute = split(capture, ['if test ! -e'])
+        capture = self.guide.fence('Try an accepted request and a refusal', '/usr/bin/plutil -insert policy.capture_nonce')
+        prepare, execute = split(capture, ['if test "$PW_PREPARE_EXIT"'])
         self.run('capture-request', prepare)
+        assert self.values['PW_PREPARE_EXIT'] == '0'
         self.observe('capture-independent-before', 'capture-target', False)
         self.invoke('capture', execute, 'capture-result.json')
         _, runner = self.created('capture', 'capture-target')
@@ -540,8 +543,9 @@ class Workflow:
         assert value['data']['runner_pid'] == runner['pid'] and runner['sandboxed_after_apply'] is True
         assert runner['steps'] == []
         create = self.guide.fence('Use the runner in a specimen', 'guide-byoxpc-create')
-        prepare, execute = split(create, ['if test ! -e'])
+        prepare, execute = split(create, ['if test "$PW_PREPARE_EXIT"'])
         self.run('byoxpc-request', prepare)
+        assert self.values['PW_PREPARE_EXIT'] == '0'
         self.observe('byoxpc-independent-before', 'byoxpc-created', False)
         self.invoke('byoxpc-create', execute, 'byoxpc-create-result.json')
         _, selected_runner = self.created('byoxpc-create', 'byoxpc-created')
@@ -589,6 +593,51 @@ def controls(out):
     refuses(lambda: split('x\nx\n', ['x\n']))
     refuses(lambda: split('first\nsecond\nthird\n', ['third\n', 'second\n']))
     refuses(lambda: replace_once('APP=x\nAPP=x\n', 'APP=x', 'APP=y'))
+    # Exercise the displayed preparation guards without invoking a native run.
+    real_guide = Guide((ROOT / 'docs/PolicyWitness.md').read_text(), 'actual guide guard controls')
+    guard_receipts = []
+    for name, section, target, result_name in [
+            ('create', 'Quick start', 'created', 'create-result.json'),
+            ('capture_typo', 'Try an accepted request and a refusal', 'capture-target', 'capture-typo-result.json')]:
+        fence = real_guide.fence(section, '"$PW" lesson ' + name + ' --target')
+        guard = 'test "$PW_PREPARE_EXIT" -eq 0 && '
+        assert fence.count(guard) == 1
+        for variant, text in [('guarded', fence), ('guard-removed', fence.replace(guard, '', 1))]:
+            directory = (out / 'preparation-controls' / name / variant).resolve()
+            work = directory / 'work'
+            work.mkdir(parents=True)
+            fake = directory / 'fake-pw'
+            fake.write_text('#!/bin/sh\n'
+                            'case "$1" in\n'
+                            "  lesson) printf '{\"partial\":'; exit 2 ;;\n"
+                            '  run) : > "$PW_WORK/submitted"; exit 1 ;;\n'
+                            '  *) exit 99 ;;\n'
+                            'esac\n')
+            fake.chmod(0o700)
+            script = directory / 'fragment.sh'
+            script.write_text('export PW_WORK=' + shlex.quote(str(work)) + '\n'
+                              'PW=' + shlex.quote(str(fake)) + '\n' + text)
+            result = command(directory / 'capture', ['/bin/bash', script], check=False)
+            request_name = 'create.json' if name == 'create' else 'capture-typo.json'
+            assert (work / request_name).read_bytes() == b'{"partial":'
+            assert not (work / target).exists()
+
+            def preparation_stopped_submission():
+                assert not (work / 'submitted').exists(), 'failed emission reached run'
+                assert not (work / result_name).exists(), 'failed emission published a run result'
+
+            if variant == 'guarded':
+                assert result['returncode'] == 0, result
+                preparation_stopped_submission()
+            else:
+                # The same absence oracle must reject removal of the guard.
+                assert (work / 'submitted').is_file() and (work / result_name).is_file()
+                refuses(preparation_stopped_submission)
+            guard_receipts.append(dict(lesson=name, variant=variant,
+                                       submitted=(work / 'submitted').exists(),
+                                       target_present=(work / target).exists(),
+                                       run_result_present=(work / result_name).exists()))
+    save(out / 'preparation-guard-controls.json', dict(fences=real_guide.used, observations=guard_receipts))
     # Construct the copy's expected private-file modes independently of the
     # comparison helper, then keep content and execute-bit failures distinct.
     copy_control = out / 'copy-controls'

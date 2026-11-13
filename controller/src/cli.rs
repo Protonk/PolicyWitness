@@ -8,6 +8,7 @@ use std::ffi::OsString;
 
 use crate::example;
 use crate::json_contract;
+use crate::lesson;
 use crate::run_flow;
 use crate::runner_commands;
 
@@ -19,13 +20,14 @@ usage:
   policy-witness runner <command> [options]
     commands: install, list, status, verify, remove, validate, reconcile
   policy-witness example
+  policy-witness lesson <create|capture_typo> --target <absolute-path>
   policy-witness --version
 
 notes:
   - runs the selected PWRunner XPC service once and prints a single JSON result to stdout
   - request.json is parsed once; the resolved request is delivered to the runner client on stdin (`--request -`), never through a temporary file
   - example takes no argument and prints the specimen this build defines, carrying this build's contract, as a request.json that the same build's run admits; exit 0 supplies the complete document, and on exit 2 discard stdout
-  - --version prints a JSON envelope (kind=version) with the build stamp and the public contract this build asserts; every envelope also carries the stamp under `build`";
+  - lesson emits a teaching input for an absolute UTF-8 target; capture_typo is deliberately refused by run; exit 0 means complete publication, and on exit 2 discard stdout\n  - --version prints a JSON envelope (kind=version) with the build stamp and the public contract this build asserts; every envelope also carries the stamp under `build`";
 
 pub fn print_usage() {
     eprintln!("{USAGE}");
@@ -64,6 +66,7 @@ pub fn run(argv: Vec<OsString>) -> i32 {
             }
         },
         "example" => example::cmd_example(rest),
+        "lesson" => lesson::cmd_lesson(rest),
         "runner" => match runner_commands::cmd_runner(rest) {
             Ok(code) => code,
             Err(err) => {

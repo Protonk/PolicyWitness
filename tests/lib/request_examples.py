@@ -6,11 +6,38 @@ from pathlib import Path
 import secrets
 import build_context
 
-CORPUS = Path(__file__).resolve().parents[1] / 'fixtures/request_contract/examples.json'
+ROOT = Path(__file__).resolve().parents[2]
+CORPUS = ROOT / 'tests/fixtures/request_contract/examples.json'
+LESSON_SOURCES = {f'controller/src/lessons/{name}.json' for name in ('create', 'capture_typo')}
+
+
+def resolve_request(example):
+    """Resolve one explicit input owner, keeping expectations in the corpus."""
+    if ('request' in example) == ('request_source' in example):
+        raise ValueError('example must carry exactly one of request and request_source')
+    if 'request' in example:
+        request = example['request']
+    else:
+        source = example['request_source']
+        if not isinstance(source, str) or source not in LESSON_SOURCES:
+            raise ValueError(f'unsupported request source: {source!r}')
+        request = json.loads((ROOT / source).read_text())
+    if not isinstance(request, dict):
+        raise ValueError('example request must be an object')
+    if 'contract' in request or 'schema_version' in request:
+        raise ValueError('request template carries a contract marker')
+    return request
 
 
 def examples():
-    return json.loads(CORPUS.read_text())
+    cases = json.loads(CORPUS.read_text())
+    resolved = []
+    for case in cases:
+        request = resolve_request(case)
+        case = dict(case)
+        case.pop('request_source', None)
+        resolved.append(dict(case, request=request))
+    return resolved
 
 
 def materialize(example, effect, nonce):

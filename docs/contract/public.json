@@ -3213,6 +3213,90 @@
             "title": "Emit the example specimen"
           },
           {
+            "context": {
+              "entry": [
+                "cli_lesson"
+              ],
+              "recipient": [
+                "cli_caller"
+              ],
+              "report": [
+                "lesson_specimen"
+              ],
+              "where": "CLI lesson dispatch",
+              "who": [
+                "identity.definitions.controller"
+              ]
+            },
+            "facts": {
+              "effects": {
+                "body": {
+                  "args": [
+                    {
+                      "attr": "contract",
+                      "node": "Attribute",
+                      "value": {
+                        "id": "specimen",
+                        "node": "Name"
+                      }
+                    },
+                    {
+                      "args": [
+                        {
+                          "kind": null,
+                          "node": "Constant",
+                          "value": "identity.build.contract"
+                        }
+                      ],
+                      "func": {
+                        "id": "ref",
+                        "node": "Name"
+                      },
+                      "keywords": [],
+                      "node": "Call"
+                    }
+                  ],
+                  "func": {
+                    "id": "set_value",
+                    "node": "Name"
+                  },
+                  "keywords": [],
+                  "node": "Call"
+                },
+                "node": "Expression"
+              },
+              "entry": [
+                "cli_lesson"
+              ],
+              "recipient": [
+                "cli_caller"
+              ],
+              "report": [
+                "lesson_specimen"
+              ],
+              "uses": [
+                "identity.build.contract",
+                "identity.definitions.specimen"
+              ],
+              "where": "CLI lesson dispatch",
+              "who": [
+                "identity.definitions.controller"
+              ]
+            },
+            "id": "request.specimen.emit_lesson",
+            "kind": "reports",
+            "prose": "`policy-witness lesson <create|capture_typo> --target <absolute-path>` accepts\none selector followed by one target option. The target must be a nonempty,\nabsolute UTF-8 path without NUL. The controller preserves it verbatim in the\nquery and attempt, inserts the emitting binary's contract, and prints one\npretty JSON object followed by one newline. `capture_typo` deliberately includes\nan unknown policy field. The document's content, layout and labels carry no\nstability promise between builds.\n\nProcess exit 0 establishes complete publication, including a successful flush;\nit establishes neither admission nor an effect. `run` independently admits or\nrefuses the emitted input. Usage, target, empty or `unbound` identity, rendering,\nwrite and flush failures exit 2. Discard standard output on exit 2, even when\nit contains a complete document. A reason goes to standard error when writable;\nthe exit status does not depend on that stream.\n\nEmission reads no external file, launches no process and does not inspect or\nnormalize the target. It creates no directory and establishes no target-absence\nclaim. The caller's workflow supplies absence checks and independent effect\nobservations.",
+            "referenced_types": {
+              "specimen.contract": {
+                "json_null": false,
+                "optional": false,
+                "presence": "as defined below",
+                "type": "string"
+              }
+            },
+            "title": "Emit a request lesson"
+          },
+          {
             "context": {},
             "document": {
               "policy": {
@@ -76783,6 +76867,90 @@
             "title": "Emit the example specimen"
           },
           {
+            "context": {
+              "entry": [
+                "cli_lesson"
+              ],
+              "recipient": [
+                "cli_caller"
+              ],
+              "report": [
+                "lesson_specimen"
+              ],
+              "where": "CLI lesson dispatch",
+              "who": [
+                "identity.definitions.controller"
+              ]
+            },
+            "facts": {
+              "effects": {
+                "body": {
+                  "args": [
+                    {
+                      "attr": "contract",
+                      "node": "Attribute",
+                      "value": {
+                        "id": "specimen",
+                        "node": "Name"
+                      }
+                    },
+                    {
+                      "args": [
+                        {
+                          "kind": null,
+                          "node": "Constant",
+                          "value": "identity.build.contract"
+                        }
+                      ],
+                      "func": {
+                        "id": "ref",
+                        "node": "Name"
+                      },
+                      "keywords": [],
+                      "node": "Call"
+                    }
+                  ],
+                  "func": {
+                    "id": "set_value",
+                    "node": "Name"
+                  },
+                  "keywords": [],
+                  "node": "Call"
+                },
+                "node": "Expression"
+              },
+              "entry": [
+                "cli_lesson"
+              ],
+              "recipient": [
+                "cli_caller"
+              ],
+              "report": [
+                "lesson_specimen"
+              ],
+              "uses": [
+                "identity.build.contract",
+                "identity.definitions.specimen"
+              ],
+              "where": "CLI lesson dispatch",
+              "who": [
+                "identity.definitions.controller"
+              ]
+            },
+            "id": "request.specimen.emit_lesson",
+            "kind": "reports",
+            "prose": "`policy-witness lesson <create|capture_typo> --target <absolute-path>` accepts\none selector followed by one target option. The target must be a nonempty,\nabsolute UTF-8 path without NUL. The controller preserves it verbatim in the\nquery and attempt, inserts the emitting binary's contract, and prints one\npretty JSON object followed by one newline. `capture_typo` deliberately includes\nan unknown policy field. The document's content, layout and labels carry no\nstability promise between builds.\n\nProcess exit 0 establishes complete publication, including a successful flush;\nit establishes neither admission nor an effect. `run` independently admits or\nrefuses the emitted input. Usage, target, empty or `unbound` identity, rendering,\nwrite and flush failures exit 2. Discard standard output on exit 2, even when\nit contains a complete document. A reason goes to standard error when writable;\nthe exit status does not depend on that stream.\n\nEmission reads no external file, launches no process and does not inspect or\nnormalize the target. It creates no directory and establishes no target-absence\nclaim. The caller's workflow supplies absence checks and independent effect\nobservations.",
+            "referenced_types": {
+              "specimen.contract": {
+                "json_null": false,
+                "optional": false,
+                "presence": "as defined below",
+                "type": "string"
+              }
+            },
+            "title": "Emit a request lesson"
+          },
+          {
             "context": {},
             "document": {
               "policy": {
@@ -111838,6 +112006,90 @@
               }
             },
             "title": "Emit the example specimen"
+          },
+          {
+            "context": {
+              "entry": [
+                "cli_lesson"
+              ],
+              "recipient": [
+                "cli_caller"
+              ],
+              "report": [
+                "lesson_specimen"
+              ],
+              "where": "CLI lesson dispatch",
+              "who": [
+                "identity.definitions.controller"
+              ]
+            },
+            "facts": {
+              "effects": {
+                "body": {
+                  "args": [
+                    {
+                      "attr": "contract",
+                      "node": "Attribute",
+                      "value": {
+                        "id": "specimen",
+                        "node": "Name"
+                      }
+                    },
+                    {
+                      "args": [
+                        {
+                          "kind": null,
+                          "node": "Constant",
+                          "value": "identity.build.contract"
+                        }
+                      ],
+                      "func": {
+                        "id": "ref",
+                        "node": "Name"
+                      },
+                      "keywords": [],
+                      "node": "Call"
+                    }
+                  ],
+                  "func": {
+                    "id": "set_value",
+                    "node": "Name"
+                  },
+                  "keywords": [],
+                  "node": "Call"
+                },
+                "node": "Expression"
+              },
+              "entry": [
+                "cli_lesson"
+              ],
+              "recipient": [
+                "cli_caller"
+              ],
+              "report": [
+                "lesson_specimen"
+              ],
+              "uses": [
+                "identity.build.contract",
+                "identity.definitions.specimen"
+              ],
+              "where": "CLI lesson dispatch",
+              "who": [
+                "identity.definitions.controller"
+              ]
+            },
+            "id": "request.specimen.emit_lesson",
+            "kind": "reports",
+            "prose": "`policy-witness lesson <create|capture_typo> --target <absolute-path>` accepts\none selector followed by one target option. The target must be a nonempty,\nabsolute UTF-8 path without NUL. The controller preserves it verbatim in the\nquery and attempt, inserts the emitting binary's contract, and prints one\npretty JSON object followed by one newline. `capture_typo` deliberately includes\nan unknown policy field. The document's content, layout and labels carry no\nstability promise between builds.\n\nProcess exit 0 establishes complete publication, including a successful flush;\nit establishes neither admission nor an effect. `run` independently admits or\nrefuses the emitted input. Usage, target, empty or `unbound` identity, rendering,\nwrite and flush failures exit 2. Discard standard output on exit 2, even when\nit contains a complete document. A reason goes to standard error when writable;\nthe exit status does not depend on that stream.\n\nEmission reads no external file, launches no process and does not inspect or\nnormalize the target. It creates no directory and establishes no target-absence\nclaim. The caller's workflow supplies absence checks and independent effect\nobservations.",
+            "referenced_types": {
+              "specimen.contract": {
+                "json_null": false,
+                "optional": false,
+                "presence": "as defined below",
+                "type": "string"
+              }
+            },
+            "title": "Emit a request lesson"
           },
           {
             "context": {},
@@ -151779,6 +152031,90 @@
             "title": "Emit the example specimen"
           },
           {
+            "context": {
+              "entry": [
+                "cli_lesson"
+              ],
+              "recipient": [
+                "cli_caller"
+              ],
+              "report": [
+                "lesson_specimen"
+              ],
+              "where": "CLI lesson dispatch",
+              "who": [
+                "identity.definitions.controller"
+              ]
+            },
+            "facts": {
+              "effects": {
+                "body": {
+                  "args": [
+                    {
+                      "attr": "contract",
+                      "node": "Attribute",
+                      "value": {
+                        "id": "specimen",
+                        "node": "Name"
+                      }
+                    },
+                    {
+                      "args": [
+                        {
+                          "kind": null,
+                          "node": "Constant",
+                          "value": "identity.build.contract"
+                        }
+                      ],
+                      "func": {
+                        "id": "ref",
+                        "node": "Name"
+                      },
+                      "keywords": [],
+                      "node": "Call"
+                    }
+                  ],
+                  "func": {
+                    "id": "set_value",
+                    "node": "Name"
+                  },
+                  "keywords": [],
+                  "node": "Call"
+                },
+                "node": "Expression"
+              },
+              "entry": [
+                "cli_lesson"
+              ],
+              "recipient": [
+                "cli_caller"
+              ],
+              "report": [
+                "lesson_specimen"
+              ],
+              "uses": [
+                "identity.build.contract",
+                "identity.definitions.specimen"
+              ],
+              "where": "CLI lesson dispatch",
+              "who": [
+                "identity.definitions.controller"
+              ]
+            },
+            "id": "request.specimen.emit_lesson",
+            "kind": "reports",
+            "prose": "`policy-witness lesson <create|capture_typo> --target <absolute-path>` accepts\none selector followed by one target option. The target must be a nonempty,\nabsolute UTF-8 path without NUL. The controller preserves it verbatim in the\nquery and attempt, inserts the emitting binary's contract, and prints one\npretty JSON object followed by one newline. `capture_typo` deliberately includes\nan unknown policy field. The document's content, layout and labels carry no\nstability promise between builds.\n\nProcess exit 0 establishes complete publication, including a successful flush;\nit establishes neither admission nor an effect. `run` independently admits or\nrefuses the emitted input. Usage, target, empty or `unbound` identity, rendering,\nwrite and flush failures exit 2. Discard standard output on exit 2, even when\nit contains a complete document. A reason goes to standard error when writable;\nthe exit status does not depend on that stream.\n\nEmission reads no external file, launches no process and does not inspect or\nnormalize the target. It creates no directory and establishes no target-absence\nclaim. The caller's workflow supplies absence checks and independent effect\nobservations.",
+            "referenced_types": {
+              "specimen.contract": {
+                "json_null": false,
+                "optional": false,
+                "presence": "as defined below",
+                "type": "string"
+              }
+            },
+            "title": "Emit a request lesson"
+          },
+          {
             "context": {},
             "document": {
               "policy": {
@@ -188208,6 +188544,90 @@
               }
             },
             "title": "Emit the example specimen"
+          },
+          {
+            "context": {
+              "entry": [
+                "cli_lesson"
+              ],
+              "recipient": [
+                "cli_caller"
+              ],
+              "report": [
+                "lesson_specimen"
+              ],
+              "where": "CLI lesson dispatch",
+              "who": [
+                "identity.definitions.controller"
+              ]
+            },
+            "facts": {
+              "effects": {
+                "body": {
+                  "args": [
+                    {
+                      "attr": "contract",
+                      "node": "Attribute",
+                      "value": {
+                        "id": "specimen",
+                        "node": "Name"
+                      }
+                    },
+                    {
+                      "args": [
+                        {
+                          "kind": null,
+                          "node": "Constant",
+                          "value": "identity.build.contract"
+                        }
+                      ],
+                      "func": {
+                        "id": "ref",
+                        "node": "Name"
+                      },
+                      "keywords": [],
+                      "node": "Call"
+                    }
+                  ],
+                  "func": {
+                    "id": "set_value",
+                    "node": "Name"
+                  },
+                  "keywords": [],
+                  "node": "Call"
+                },
+                "node": "Expression"
+              },
+              "entry": [
+                "cli_lesson"
+              ],
+              "recipient": [
+                "cli_caller"
+              ],
+              "report": [
+                "lesson_specimen"
+              ],
+              "uses": [
+                "identity.build.contract",
+                "identity.definitions.specimen"
+              ],
+              "where": "CLI lesson dispatch",
+              "who": [
+                "identity.definitions.controller"
+              ]
+            },
+            "id": "request.specimen.emit_lesson",
+            "kind": "reports",
+            "prose": "`policy-witness lesson <create|capture_typo> --target <absolute-path>` accepts\none selector followed by one target option. The target must be a nonempty,\nabsolute UTF-8 path without NUL. The controller preserves it verbatim in the\nquery and attempt, inserts the emitting binary's contract, and prints one\npretty JSON object followed by one newline. `capture_typo` deliberately includes\nan unknown policy field. The document's content, layout and labels carry no\nstability promise between builds.\n\nProcess exit 0 establishes complete publication, including a successful flush;\nit establishes neither admission nor an effect. `run` independently admits or\nrefuses the emitted input. Usage, target, empty or `unbound` identity, rendering,\nwrite and flush failures exit 2. Discard standard output on exit 2, even when\nit contains a complete document. A reason goes to standard error when writable;\nthe exit status does not depend on that stream.\n\nEmission reads no external file, launches no process and does not inspect or\nnormalize the target. It creates no directory and establishes no target-absence\nclaim. The caller's workflow supplies absence checks and independent effect\nobservations.",
+            "referenced_types": {
+              "specimen.contract": {
+                "json_null": false,
+                "optional": false,
+                "presence": "as defined below",
+                "type": "string"
+              }
+            },
+            "title": "Emit a request lesson"
           },
           {
             "context": {},
@@ -260180,6 +260600,90 @@
               }
             },
             "title": "Emit the example specimen"
+          },
+          {
+            "context": {
+              "entry": [
+                "cli_lesson"
+              ],
+              "recipient": [
+                "cli_caller"
+              ],
+              "report": [
+                "lesson_specimen"
+              ],
+              "where": "CLI lesson dispatch",
+              "who": [
+                "identity.definitions.controller"
+              ]
+            },
+            "facts": {
+              "effects": {
+                "body": {
+                  "args": [
+                    {
+                      "attr": "contract",
+                      "node": "Attribute",
+                      "value": {
+                        "id": "specimen",
+                        "node": "Name"
+                      }
+                    },
+                    {
+                      "args": [
+                        {
+                          "kind": null,
+                          "node": "Constant",
+                          "value": "identity.build.contract"
+                        }
+                      ],
+                      "func": {
+                        "id": "ref",
+                        "node": "Name"
+                      },
+                      "keywords": [],
+                      "node": "Call"
+                    }
+                  ],
+                  "func": {
+                    "id": "set_value",
+                    "node": "Name"
+                  },
+                  "keywords": [],
+                  "node": "Call"
+                },
+                "node": "Expression"
+              },
+              "entry": [
+                "cli_lesson"
+              ],
+              "recipient": [
+                "cli_caller"
+              ],
+              "report": [
+                "lesson_specimen"
+              ],
+              "uses": [
+                "identity.build.contract",
+                "identity.definitions.specimen"
+              ],
+              "where": "CLI lesson dispatch",
+              "who": [
+                "identity.definitions.controller"
+              ]
+            },
+            "id": "request.specimen.emit_lesson",
+            "kind": "reports",
+            "prose": "`policy-witness lesson <create|capture_typo> --target <absolute-path>` accepts\none selector followed by one target option. The target must be a nonempty,\nabsolute UTF-8 path without NUL. The controller preserves it verbatim in the\nquery and attempt, inserts the emitting binary's contract, and prints one\npretty JSON object followed by one newline. `capture_typo` deliberately includes\nan unknown policy field. The document's content, layout and labels carry no\nstability promise between builds.\n\nProcess exit 0 establishes complete publication, including a successful flush;\nit establishes neither admission nor an effect. `run` independently admits or\nrefuses the emitted input. Usage, target, empty or `unbound` identity, rendering,\nwrite and flush failures exit 2. Discard standard output on exit 2, even when\nit contains a complete document. A reason goes to standard error when writable;\nthe exit status does not depend on that stream.\n\nEmission reads no external file, launches no process and does not inspect or\nnormalize the target. It creates no directory and establishes no target-absence\nclaim. The caller's workflow supplies absence checks and independent effect\nobservations.",
+            "referenced_types": {
+              "specimen.contract": {
+                "json_null": false,
+                "optional": false,
+                "presence": "as defined below",
+                "type": "string"
+              }
+            },
+            "title": "Emit a request lesson"
           },
           {
             "context": {},
@@ -450090,6 +450594,90 @@
             "title": "Emit the example specimen"
           },
           {
+            "context": {
+              "entry": [
+                "cli_lesson"
+              ],
+              "recipient": [
+                "cli_caller"
+              ],
+              "report": [
+                "lesson_specimen"
+              ],
+              "where": "CLI lesson dispatch",
+              "who": [
+                "identity.definitions.controller"
+              ]
+            },
+            "facts": {
+              "effects": {
+                "body": {
+                  "args": [
+                    {
+                      "attr": "contract",
+                      "node": "Attribute",
+                      "value": {
+                        "id": "specimen",
+                        "node": "Name"
+                      }
+                    },
+                    {
+                      "args": [
+                        {
+                          "kind": null,
+                          "node": "Constant",
+                          "value": "identity.build.contract"
+                        }
+                      ],
+                      "func": {
+                        "id": "ref",
+                        "node": "Name"
+                      },
+                      "keywords": [],
+                      "node": "Call"
+                    }
+                  ],
+                  "func": {
+                    "id": "set_value",
+                    "node": "Name"
+                  },
+                  "keywords": [],
+                  "node": "Call"
+                },
+                "node": "Expression"
+              },
+              "entry": [
+                "cli_lesson"
+              ],
+              "recipient": [
+                "cli_caller"
+              ],
+              "report": [
+                "lesson_specimen"
+              ],
+              "uses": [
+                "identity.build.contract",
+                "identity.definitions.specimen"
+              ],
+              "where": "CLI lesson dispatch",
+              "who": [
+                "identity.definitions.controller"
+              ]
+            },
+            "id": "request.specimen.emit_lesson",
+            "kind": "reports",
+            "prose": "`policy-witness lesson <create|capture_typo> --target <absolute-path>` accepts\none selector followed by one target option. The target must be a nonempty,\nabsolute UTF-8 path without NUL. The controller preserves it verbatim in the\nquery and attempt, inserts the emitting binary's contract, and prints one\npretty JSON object followed by one newline. `capture_typo` deliberately includes\nan unknown policy field. The document's content, layout and labels carry no\nstability promise between builds.\n\nProcess exit 0 establishes complete publication, including a successful flush;\nit establishes neither admission nor an effect. `run` independently admits or\nrefuses the emitted input. Usage, target, empty or `unbound` identity, rendering,\nwrite and flush failures exit 2. Discard standard output on exit 2, even when\nit contains a complete document. A reason goes to standard error when writable;\nthe exit status does not depend on that stream.\n\nEmission reads no external file, launches no process and does not inspect or\nnormalize the target. It creates no directory and establishes no target-absence\nclaim. The caller's workflow supplies absence checks and independent effect\nobservations.",
+            "referenced_types": {
+              "specimen.contract": {
+                "json_null": false,
+                "optional": false,
+                "presence": "as defined below",
+                "type": "string"
+              }
+            },
+            "title": "Emit a request lesson"
+          },
+          {
             "context": {},
             "document": {
               "policy": {
@@ -574904,6 +575492,90 @@
               }
             },
             "title": "Emit the example specimen"
+          },
+          {
+            "context": {
+              "entry": [
+                "cli_lesson"
+              ],
+              "recipient": [
+                "cli_caller"
+              ],
+              "report": [
+                "lesson_specimen"
+              ],
+              "where": "CLI lesson dispatch",
+              "who": [
+                "identity.definitions.controller"
+              ]
+            },
+            "facts": {
+              "effects": {
+                "body": {
+                  "args": [
+                    {
+                      "attr": "contract",
+                      "node": "Attribute",
+                      "value": {
+                        "id": "specimen",
+                        "node": "Name"
+                      }
+                    },
+                    {
+                      "args": [
+                        {
+                          "kind": null,
+                          "node": "Constant",
+                          "value": "identity.build.contract"
+                        }
+                      ],
+                      "func": {
+                        "id": "ref",
+                        "node": "Name"
+                      },
+                      "keywords": [],
+                      "node": "Call"
+                    }
+                  ],
+                  "func": {
+                    "id": "set_value",
+                    "node": "Name"
+                  },
+                  "keywords": [],
+                  "node": "Call"
+                },
+                "node": "Expression"
+              },
+              "entry": [
+                "cli_lesson"
+              ],
+              "recipient": [
+                "cli_caller"
+              ],
+              "report": [
+                "lesson_specimen"
+              ],
+              "uses": [
+                "identity.build.contract",
+                "identity.definitions.specimen"
+              ],
+              "where": "CLI lesson dispatch",
+              "who": [
+                "identity.definitions.controller"
+              ]
+            },
+            "id": "request.specimen.emit_lesson",
+            "kind": "reports",
+            "prose": "`policy-witness lesson <create|capture_typo> --target <absolute-path>` accepts\none selector followed by one target option. The target must be a nonempty,\nabsolute UTF-8 path without NUL. The controller preserves it verbatim in the\nquery and attempt, inserts the emitting binary's contract, and prints one\npretty JSON object followed by one newline. `capture_typo` deliberately includes\nan unknown policy field. The document's content, layout and labels carry no\nstability promise between builds.\n\nProcess exit 0 establishes complete publication, including a successful flush;\nit establishes neither admission nor an effect. `run` independently admits or\nrefuses the emitted input. Usage, target, empty or `unbound` identity, rendering,\nwrite and flush failures exit 2. Discard standard output on exit 2, even when\nit contains a complete document. A reason goes to standard error when writable;\nthe exit status does not depend on that stream.\n\nEmission reads no external file, launches no process and does not inspect or\nnormalize the target. It creates no directory and establishes no target-absence\nclaim. The caller's workflow supplies absence checks and independent effect\nobservations.",
+            "referenced_types": {
+              "specimen.contract": {
+                "json_null": false,
+                "optional": false,
+                "presence": "as defined below",
+                "type": "string"
+              }
+            },
+            "title": "Emit a request lesson"
           },
           {
             "context": {},
