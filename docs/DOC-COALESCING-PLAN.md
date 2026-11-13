@@ -116,3 +116,9 @@ presentation for this cycle. Each claim retains its qualifications and links
 to citations and execution provenance rendered from its existing owner record.
 No owners were merged: this pass reduces citation clutter in the reading path,
 while the earlier passes removed maintained copies and input-alignment duties.
+
+## Second cycle
+
+The second cycle takes the per-step comparison record as its topic. Its
+[record](../records/doc-coalescing/COMPARISON-CYCLE.md) states the scope, the
+three reader questions and the ownership map, then each pass's result.
