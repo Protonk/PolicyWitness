@@ -69,24 +69,95 @@ before ordinary reporting. Degraded reporting continues to retain conflicts.
 Regression source: clean commit `8eeae6c7`. Canonical selection:
 `runner_unit/pwrunner_core_unit_executable`, output
 `tests/out/runs/astra-order-boundary-red`, run `20261113T211124Z_36071ee0`.
-The [run account](../../tests/out/runs/astra-order-boundary-red/run.json)
+The run account
 records zero system sleep, an unchanged inspected app, and 604/605 Swift tests
 passing. The sole failure was host acceptance of `actor-apply-declares-unapplied`
 despite its rejection expectation. The retained
-[Swift manifest](../../tests/out/runs/astra-order-boundary-red/suites/runner_unit/pwrunner_core_unit_executable/artifacts/reader-corpus/swift.json)
+Swift manifest
 also records `reporting_failure_observed: false` for the actual host reporting
 path. Ordinary cases behaved as predicted. The wrapper stopped at that Swift
 failure; this red run supplies no new Rust/Python replay credit.
 
-These gitignored development artifacts are local and disposable under normal
-retention; the committed controls preserve the reproduction. They establish
+These development observations establish
 constructed host interpretation, not a native scheduler producing malformed
 setup. Source inspection establishes the other boundary statements above.
 
-Acceptance is pending the corrected signed build and one coordinated selection:
-`failure_boundaries`, `runner_unit`, `runner_abi_layout`,
-`runner_c_worker_harness`, `unit`, `source_drift`, and
-`witness_contract/comparison_matrix`. The correction does not change the worker
-wait, release store or query eligibility rule, so the ordering mutation control
-is not required for this change. Final run/source identities and reader receipts
-belong here after verification.
+The corrected signed build is number `1408`, source `5adff9ae`, with worker
+identity `55c17ee8ca9c57360610525b026c8d8039be78b8798259c41726408ba5ac7b28`.
+`make build IDENTITY='Developer ID Application: Adam Hyland (42D369QV8E)'`
+completed signing and verification. It refreshed the staged guide. No
+notarization or publication was performed. The public snapshot and shape
+goldens did not change; the new support owner remains `check_read`.
+
+The coordinated selection ran from clean `5adff9ae`:
+
+```sh
+env -u PYTHONOPTIMIZE PYTHONDONTWRITEBYTECODE=1 \
+  PW_TEST_OUT_DIR=tests/out/runs/astra-order-boundary-acceptance PW_TEST_QUIET=1 \
+  tests/run.sh --suite source_drift --suite failure_boundaries \
+    --suite runner_unit --suite runner_abi_layout \
+    --suite runner_c_worker_harness --suite unit \
+    --case witness_contract/comparison_matrix
+```
+
+Run `20261113T211601Z_9debc827` completed all 96 selected cases: 92 passed and
+four failed, with zero recorded system sleep. Its four `suite_exit` harness
+entries correspond to those case failures. The inspected app stayed unchanged.
+
+| Failure | Finding and disposition |
+| --- | --- |
+| `runner_unit/pwrunner_core_unit_executable` | Swift passed 605/605 and Rust matched all new expectations. Python rejected three new ordinary positive controls because their constructed worker omitted polling-stop and collection-basis observations. The actual producer always supplies these. Commit `59d2709d` completes the fixture with `done` and `after_confirmed_reap`; it changes no reader expectation or runtime source. |
+| `runner_unit/host_setup_oracle_sensitivity` | The partial-unmap variant spawned a child but retained no child receipt. Its 100 ms ready, 200 ms sentinel and 200 ms grace allowances expired; the host recorded SIGKILL and reap. That observation does not identify why the child receipt was missing. An unchanged-case retry passed. |
+| `runner_c_worker_harness/native_pause` | This opt-in experiment failed to qualify the standalone `nanosleep` candidate under the deny configurations. It does not exercise a production wait or the reporting correction. The failure remains a failed qualification; no retry or acceptance credit is assigned. |
+| `runner_c_worker_harness/arm_wait` | This separate opt-in instruction trial refused without its coordinator gate. No instruction trial ran, and no credit is assigned. The reporting change introduces neither candidate wait primitive. |
+
+The focused follow-up ran from clean `59d2709d`, using the same signed app:
+
+```sh
+env -u PYTHONOPTIMIZE PYTHONDONTWRITEBYTECODE=1 \
+  PW_TEST_OUT_DIR=tests/out/runs/astra-order-boundary-followup PW_TEST_QUIET=1 \
+  tests/run.sh --case runner_unit/pwrunner_core_unit_executable \
+    --case runner_unit/host_setup_oracle_sensitivity
+```
+
+Run `20261113T213143Z_38c7d166` passed both cases with no skips, unrun cases,
+harness errors or recorded system sleep. Swift passed 605/605. The complete
+reader replay passed 149 typed frames and seven JSON-only controls. Its six
+new rows distinguish retained order conflicts, a deliberately erased conflict,
+the rejected actor declaration and actual rich degradation; independent binary
+projection agrees. The malformed ordinary actor is rejected by Swift, Rust and
+general Python. The degraded reply retains its declaration and withholds all
+comparisons. The extension subreader retains its narrower identity scope.
+
+The other 92 results are retained as a reviewed applicability judgment: the only
+subsequent executable-input delta is two fields in the constructed
+`ReaderCorpusTests` helper, rerun in full above. The unchanged host-setup recipe
+copies production sources and its own fixture, not that helper. Neither runtime
+sources, other case inputs nor the inspected app changed. Later record-only
+edits receive generator and whitespace checks, not additional behavioral credit.
+The two experimental wait screens remain failed/refused; this is not an
+all-green 96-case run.
+
+The correction does not change the worker wait, release store or query
+eligibility rule, so the ordering mutation control is not required. No native
+occurrence of the malformed actor setup is claimed. Development run artifacts
+are disposable under normal retention; the committed controls preserve the
+reproduction, and the run identities above preserve the outcome account.
+All three development runs were reviewed and removed with `make prune APPLY=1`;
+their raw artifacts are no longer available. The four release archives and
+protected acceptance were preserved. The initial sandboxed pruning preview's
+signature diagnostic did not recur outside the automation sandbox.
+
+## Concrete lead left outside this correction
+
+The documented resolver branches
+`lifecycle.worker.resolve_stop_reason.missing` and
+`lifecycle.worker.resolve_collection_basis.missing` produce
+`reason: not_recorded`. The corresponding paths in
+`tests/fixtures/contract/response_shape.json` omit `reason`, so the generic
+Python shape reader rejects these constructed fallback forms. The live
+`ActorSession.collectOutput` always supplies both observations; the other
+production initializer supplies only a classifier fallback and is not serialized.
+This is a demonstrated documented-fallback/shape-coverage discrepancy, without
+demonstrated native reachability. Completing the intended ordinary fixture does
+not settle that separate coverage question.
