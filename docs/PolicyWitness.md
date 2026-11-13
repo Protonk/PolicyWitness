@@ -2527,6 +2527,39 @@ Descriptor and pre-open stat records:
 | A `fresh_write` stat object is absent | That call was not reached. `preopen_stat` exists only for `create_fresh`. `opened_stat` needs a successful open. `truncated_stat` exists only for `write_fresh` after a successful open. `written_stat` needs the write to have been reached. | The calls that were reached, each with its own return. |
 | A `fresh_write` stat object has `rc: -1` | That metadata call failed with the recorded `errno`. It carries no `identity` or `size`. For `preopen_stat` on a new target this is the expected result. | The failure of that call, separate from the open's result. |
 
+#### The quick start's records
+
+The [quick start](#quick-start) result carries four of these kinds of record
+for one submitted string. With optional `jq`, select them together:
+
+```sh
+jq '.data.runner_result.steps[]
+    | {step_id,
+       filter_value: .sandbox_check.filter_value,
+       query_outcome: .sandbox_check.outcome,
+       limitations: .comparison.limitations,
+       query_paths: .sandbox_check.path_diagnostics,
+       requested_path: .attempt.requested_path,
+       observed_path: .attempt.observed_path,
+       attempt_paths: .attempt.path_diagnostics}' "$PW_WORK/create-result.json"
+```
+
+When the target was absent before the run and the create succeeded, read the
+output in time order:
+
+1. `query_outcome` is `prediction_unavailable` and `limitations` holds
+   `query_plan:path_unresolved_at_planning`. Before the phase's collection the
+   host could not resolve the string, so no query ran.
+2. `observed_path` is a path. The worker's open returned a descriptor, and the
+   kernel reported that path for it.
+3. `query_paths` and `attempt_paths` are the host's forms after the run. A
+   form named in `same_as_input` resolved to the submitted bytes. The file
+   exists now, so the string that did not resolve at planning resolves here.
+
+The quick start's own `stat` output is a fifth observation, made by your shell
+after the command returned. None of the five says what `sandbox_check` would
+have answered for this path.
+
 The field layouts are under [path_diagnostics](#path_diagnostics),
 [attempt.path_diagnostics](#attemptpath_diagnostics) and
 [Extension and fresh-read output](#extension-and-fresh-read-output).

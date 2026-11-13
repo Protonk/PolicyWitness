@@ -153,7 +153,52 @@ parent; `decodeFreshRead` returns only the open pair when the open failed;
 ### Alignment duties added
 
 The three tables restate producer behavior and contract field meanings with no
-check binding them. Three facts would make them stale without any test
-failing: a fourth action recording `observed_path`, a planning exclusion pair
-that uses the `path` filter kind, and a change to when the host computes path
-diagnostics.
+check binding them. Changes that would make them stale without any test
+failing include a fourth action recording `observed_path`, a change to the
+stat calls a fresh action makes, a reordering of the planning tests, and a
+change to when the host computes path diagnostics.
+
+## Pass 3 — Examples from their owner
+
+The quick start already produces an example of this topic from app-owned
+material: `lesson create` emits the request, and its result holds a planning
+exclusion, a worker `observed_path` and both host diagnostics for one string.
+The guide's new subsection "The quick start's records" selects those fields
+from the reader's own `create-result.json` with one `jq` expression and reads
+them in time order. It adds no request, command or lesson. The quick start's
+`stat` line is named as a fifth observation.
+
+The `jq` expression was run against a result produced by the staged app
+(contract `development:aa400348…`) on 2026-11-13 and returned the fields the
+text describes. Like the guide's other `jq` fences it is optional and no
+harness case executes it, so its field names are a maintained copy.
+
+No fixture was copied. `tests/fixtures/contract/path_diagnostics.json` holds
+constructed three-state cases whose paths are placeholders, and the matrix
+rows do not carry path records, so neither shows a reader a real sequence.
+
+### A local two-phase observation
+
+To check the tables against a live reply, one specimen ran once through the
+same staged app under `(allow default)`, in a scratch directory holding a file
+`real`, a symlink `link` to it and a dangling symlink. The first phase opened
+`link` with `open_read`, read `link` and `real` with `read_fresh`, opened the
+dangling link and ran `create_fresh`; the second phase unlinked `real`.
+
+- `open_read` of `link` recorded `observed_path` ending in `real`.
+- The two `read_fresh` steps recorded equal device and inode numbers and
+  `observed_path: null`.
+- Every first-phase query on `link` and `real` was answered by the validator
+  with `query_first`, and each carried `realpath_resolved: null`: the host's
+  pass ran after the second phase's unlink.
+- The dangling link was excluded at planning; its open failed with errno 2,
+  and its attempt diagnostics listed only the parent form.
+- `create_fresh` recorded `preopen_stat` with `rc: -1` and errno 2, then
+  `opened_stat` and `written_stat` with one inode and sizes 0 and 1. A shell
+  `stat` afterwards reported the same inode.
+
+This is one unretained observation on one machine. It agrees with the tables
+and adds no support grade. A guide exercise built on it would need a new
+request and coverage in `witness_contract/guide_workflows`, so it stays an
+adjacent opportunity: a lesson that opens a symlink and unlinks its target in
+a later phase would show the after-every-phase rule with the reader's data.
