@@ -2445,19 +2445,19 @@ phase's actions is established only by
 
 #### What each record establishes
 
-- **Submitted strings** establish what was asked and what was attempted, byte
-  for byte. `comparison.target_relation` compares these two strings and
-  nothing else. Equal strings can reach different objects, and different
-  strings can reach the same one.
+- **Submitted strings** establish what was asked and what was attempted.
+  `comparison.target_relation` compares these two strings, and only when the
+  query's filter kind matches the kind the attempt maps to. It compares
+  nothing about objects. Equal strings can reach different objects, and
+  different strings can reach the same one.
 - **The planning check** establishes, when it excluded the query, that the
   host could not resolve the string at that moment. A `path` query the
   validator answered (`sandbox_check.result_source: validator`) passed the
   check, so the host resolved its string then. The resolved form is not
-  recorded. Planning tests the operation and filter pair first, so a query
-  excluded with `query_plan:prediction_unavailable_pair` was not checked. When
-  no validator ran for the phase
-  (`sandbox_check.missing_reason: validator_not_invoked`), the reply does not
-  show whether the check ran.
+  recorded. A step with `sandbox_check.missing_reason: validator_not_invoked`
+  does not itself show whether the check ran. The phase's `collection_status`
+  shows how far collection got; `not_reached` means the phase's queries were
+  never planned.
 - **`observed_path`** establishes that the worker's open returned a descriptor
   and that the kernel reported this path for it at that moment. The path can
   differ from the submitted string: an `open_read` of `/etc/hosts` records
@@ -2479,17 +2479,20 @@ phase's actions is established only by
 
 Comparing two records compares two observations. Equal paths from two
 observers show that both calls returned the same spelling, each at its own
-time. Device and inode numbers identify an object on one filesystem while it
-exists. Two descriptor records with different numbers therefore describe
-different objects. Two with equal numbers describe the same object if it
-existed throughout; the report does not record whether it was removed and its
-number reused in between.
+time. Device and inode numbers identify an object among those existing at one
+time on one mounted filesystem. Where the filesystem keeps an object's numbers
+for its lifetime, two descriptor records with different numbers describe
+different objects, and two with equal numbers describe the same object unless
+it was removed and its number reused in between. The report records neither
+that property of the filesystem nor whether the object persisted.
 
 #### When a record is absent, null or different
 
 These tables read an ordinary reply. A `runner_reporting_failed` reply removes
-every comparison, so a planning exclusion then appears only as
-`sandbox_check.outcome: prediction_unavailable` with its `error`.
+every comparison, and its minimal form carries no steps. Where it retains
+steps, a planning exclusion appears without its `query_plan:` entry, as
+`sandbox_check.outcome: prediction_unavailable` with
+`missing_reason: query_not_requested` and an `error` naming the path.
 
 Host path diagnostics:
 
@@ -2500,9 +2503,9 @@ Host path diagnostics:
 | A form's key is omitted and its name is listed in `same_as_input` | The host derived that form and its bytes equal `input`. This is a resolved form, not a missing one. | The host's later resolution, equal to the submitted string. |
 | `realpath_resolved` is `null` | The host's `realpath(3)` failed after the run. The path did not exist then, or the host could not resolve it for another reason, such as a permission failure of its own. | The submitted string and both channel results. A later failure does not show what existed when the query or the attempt ran. |
 | The validator answered the query, and `sandbox_check.path_diagnostics.realpath_resolved` is `null` | The host resolved the string at planning and could not after the run. Something changed in between. An `unlink` in this phase or a later one is one cause. | Both host observations, each at its own time. The reply names the change only if an action's own result does. |
-| The query was excluded with `query_plan:path_unresolved_at_planning`, and the later form resolves | The host could not resolve the string at planning and could after the run. The quick start's `create` is an example: the attempt created the file. | The exclusion. No query ran for this step, and the later resolution does not supply one. |
+| The query was excluded with `query_plan:path_unresolved_at_planning`, and the later form resolves | The host could not resolve the string at planning and could after the run. The quick start is an example when its target was absent beforehand and the `create` succeeded. | The exclusion. No query ran for this step, and the later resolution does not supply one. |
 | `realpath_resolved` is `null` and `firmlink_resolved` is a string | With no `realpath` result, the host substitutes the `/etc`, `/tmp` and `/var` prefixes in the submitted string and then applies the firmlink mapping. | A candidate spelling. It does not show that anything exists at that path. |
-| `firmlink_resolved` is `null` | The path is not absolute, or no firmlink prefix matches it. | The other form and the submitted string. |
+| `firmlink_resolved` is `null` | The path the mapping was applied to is not absolute or matches no firmlink prefix. That path is the `realpath` result, or the substituted input when `realpath` failed. | The other form and the submitted string. |
 | `attempt.path_diagnostics.realpath_resolved` is `null` and `parent_realpath_resolved` is available | The host resolved the parent directory and not the leaf. For example, the leaf was absent after the run, or it is a symlink whose destination did not resolve. | The parent's resolved spelling with the submitted leaf. |
 | `parent_realpath_resolved` is `null` | The target is not absolute, ends with `/`, has `.` or `..` as its leaf, or its parent did not resolve. | The other form and the submitted string. |
 
@@ -2512,8 +2515,8 @@ The worker's path observation:
 | --- | --- | --- |
 | `observed_path` is `null` and `attempt.result_source` is `synthetic` | The worker published no completed result for the action, or the action is unsupported. | `attempt.missing_reason` and `attempt.lifecycle`. |
 | `observed_path` is `null` on a completed action other than `open_read`, `open_write` or `create` | The action does not record a path. This includes `read_fresh`, `write_fresh`, `create_fresh`, `unlink`, `access` and every non-file kind. | The action's own result, and for a fresh action its descriptor stat records. |
-| `observed_path` is `null` and `attempt.outcome` is `open_failed` | The open returned no descriptor, so there was nothing to ask about. | The open's `rc` and `errno`. |
-| `observed_path` is `null` and `attempt.outcome` is `ok` on `open_read`, `open_write` or `create` | The open succeeded and the worker's `F_GETPATH` call returned no path. The worker records no error for that call. | The successful open. A missing path observation does not change the attempt's result. |
+| `observed_path` is `null` and `attempt.outcome` is `open_failed` | The open returned no descriptor, so there was nothing to ask about. | The open's `errno`. `attempt.rc` is the worker's status for the action, not the native return. |
+| `observed_path` is `null` and `attempt.outcome` is `ok` on `open_read`, `open_write` or `create` | The open succeeded, and either the worker's `F_GETPATH` call returned no path or the host could not decode the returned bytes as UTF-8. Neither case records an error. | The successful open. A missing path observation does not change the attempt's result. |
 | `observed_path` differs from `requested_path` | The kernel reported a different spelling for the opened descriptor than the one submitted. | Where the open ended up at that moment. The difference is not a failure. |
 | `observed_path` differs from `attempt.path_diagnostics.realpath_resolved` | The two come from different observers, calls and times. The target may have changed in between, or the two calls may spell one object differently. The reply does not say which. | Each observation at its own time. Neither corrects the other. |
 
@@ -2529,8 +2532,9 @@ Descriptor and pre-open stat records:
 
 #### The quick start's records
 
-The [quick start](#quick-start) result carries four of these kinds of record
-for one submitted string. With optional `jq`, select them together:
+The [quick start](#quick-start) result carries the submitted strings, the
+planning result, the worker's path observation and the host diagnostics for
+one target. With optional `jq`, select them together:
 
 ```sh
 jq '.data.runner_result.steps[]
@@ -2544,21 +2548,21 @@ jq '.data.runner_result.steps[]
        attempt_paths: .attempt.path_diagnostics}' "$PW_WORK/create-result.json"
 ```
 
-When the target was absent before the run and the create succeeded, read the
-output in time order:
+Read the output in time order. On a run whose target was absent beforehand
+and whose create succeeded, it usually reads as follows:
 
-1. `query_outcome` is `prediction_unavailable` and `limitations` holds
-   `query_plan:path_unresolved_at_planning`. Before the phase's collection the
-   host could not resolve the string, so no query ran.
-2. `observed_path` is a path. The worker's open returned a descriptor, and the
-   kernel reported that path for it.
+1. If `query_outcome` is `prediction_unavailable` and `limitations` holds
+   `query_plan:path_unresolved_at_planning`, the host could not resolve the
+   string before the phase's collection, and no query ran.
+2. If `observed_path` is a path, the worker's open returned a descriptor and
+   the kernel reported that path for it.
 3. `query_paths` and `attempt_paths` are the host's forms after the run. A
-   form named in `same_as_input` resolved to the submitted bytes. The file
-   exists now, so the string that did not resolve at planning resolves here.
+   form named in `same_as_input` resolved to the submitted bytes when the host
+   ran that pass. A string that did not resolve at planning can resolve here.
 
-The quick start's own `stat` output is a fifth observation, made by your shell
-after the command returned. None of the five says what `sandbox_check` would
-have answered for this path.
+The quick start's own `stat` output is a further observation, made by your
+shell after the command returned. None of these says what `sandbox_check`
+would have answered for this path.
 
 The field layouts are under [path_diagnostics](#path_diagnostics),
 [attempt.path_diagnostics](#attemptpath_diagnostics) and

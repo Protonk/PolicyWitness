@@ -225,3 +225,48 @@ and no contract owner credits it. Crediting it needs a rule or field-level
 claim to attach to, which follows the maintainer's decision on the contract's
 `observed_path` sentence. Source inspection, constructed checks and native
 evidence keep their separate grades.
+
+## Consultation
+
+The one consultation asked a read-only Opus reviewer, without my reading of
+the code, whether the new guide section claims more than the contract and
+producer source establish or omits a condition the source applies. It read the
+section, `31-steps` and `12-probes`, and the planning, validator, worker,
+decoding, step-assembly and path-enrichment sources. It reported no sentence
+implying which object the query consulted and none claiming agreement or
+disagreement. It reported two wrong statements, eight overstatements or
+omitted conditions and one doubt. All were checked against the cited source
+and applied:
+
+- **Wrong.** `validator_not_invoked` was said to leave planning unknown. The
+  step leaves it unknown; the phase's `collection_status` does not, and
+  `not_reached` means the phase was never planned.
+- **Wrong.** A failed open's "`rc` and `errno`" were offered as the open's own.
+  `attempt.rc` is the worker's status; only `errno` is the native value.
+- A successful open with `observed_path: null` also arises when the host
+  cannot decode the returned bytes as UTF-8.
+- `target_relation` was described without its filter-kind condition and as a
+  byte comparison. See the finding below.
+- The quick start row said the attempt created the file. `create` does not
+  distinguish creating from opening, so the row now states the conditions.
+- `firmlink_resolved: null` now names the path the mapping is applied to.
+- The pair-exclusion sentence was removed: no excluded pair uses `path`.
+- The reporting-failure scope now covers the minimal form and the retained
+  `missing_reason`.
+- The quick-start reading is conditional at each step and no longer says the
+  file "exists now".
+- The device and inode paragraph now states the filesystem property its
+  inference needs.
+- The count of record kinds in the quick-start subsection was removed.
+
+### Finding outside this cycle's edits
+
+`comparisonEvidence` compares `filter_value` and `requested_path` with Swift
+string equality, which treats canonically equivalent Unicode as equal. Reading
+rule 4 and one FAQ answer say `same_submitted` compares "bytes", and
+`path_diagnostics.same_as_input` does compare UTF-8 bytes. Two submitted
+strings with different bytes and one canonical form would therefore read
+`same_submitted` while a diagnostic treats them as different. The contract's
+field sentence says "compares submitted strings". Choosing between a byte
+comparison in the producer and "strings" in the two guide sentences is a
+decision about a public meaning, so nothing was changed.
