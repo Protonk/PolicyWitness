@@ -264,9 +264,8 @@ Not rerun, as reviewed judgments and not mechanical facts:
 - Opt-in `witness_contract/guide_workflows`. The guide gained one table row,
   outside every fence that case selects.
 
-No rejected control has been run for `emitted_lessons`. The step reuses the
-case's existing assertions, and the mutation proposed below would be its
-first rejected control.
+`emitted_lessons` has no rejected control in the battery. The first
+[mutation probe](#mutation-probes) exercised one by hand.
 
 ## Remaining public wording
 
@@ -295,34 +294,167 @@ Retained without change: the two promise kinds, the lesson rule, the
 independent corpus expectations, the separate `lesson` command and both
 substitution implementations.
 
-## Proposed mutation experiment
+## Mutation probes
 
-Not run.
+Two constructed controls, run after the repairs. Each asks whether an existing
+check connects what the app publishes to an independently authored admission
+expectation. The app, templates, corpus rows, contract snapshot and public
+promises were not changed, and nothing was built. These substitutions show
+nothing about a defect in the shipped emitter or host.
 
-**Mutation.** A disposable stand-in for the selected app's `policy-witness`
-forwards every invocation to the real binary, except that
-`lesson capture_typo` returns the real `lesson create` output for the same
-target. Publication still exits 0 with a complete, correctly identified
-document; the document no longer carries the misspelled member. No source,
-template, corpus row or app byte changes, and nothing is rebuilt.
+### Setup
 
-**Reader conclusion at risk.** "A passing `accepted_input_contract` shows
-that what `lesson capture_typo` publishes is refused by `run`." Before the
-repair above the case could not support that: it built the request from the
-repository template and never read the app's output.
+`tests/run.sh` accepts a controller only inside the app bundle it validates
+([test_cli.py](../../tests/lib/test_cli.py)), so a stand-in controller cannot be
+selected through the dispatcher without weakening that check. Both probes
+therefore ran the checkers by hand through `tests/lib/python.sh`, which starts
+them as the cases do. They are not runs of the cases and credit nothing to the
+battery.
 
-**Detection expected.** `emitted_lessons` should fail on the `capture_typo`
-row, where `run` exits 0 and the target file exists against an expected
-`unknown_field` refusal. The loader-built `capture_typo` rows should still
-pass, since they do not depend on the emitter.
+A stand-in is a directory `PolicyWitness.app/Contents/` holding three things.
+`MacOS/policy-witness` is a shell wrapper, `MacOS/pw-runner-client` is a
+wrapper that only `exec`s the real client, and `XPCServices` is a symlink to
+the real directory. The request control derives the client and service from
+the controller's location, which is why the layout exists. `PW_APP_DIR` named
+the real app throughout. The real app was only read and executed. Every
+wrapper appended its arguments to a log, marked `forward` or `substitute`,
+then ended with `exec "${REAL}" "$@"`, so arguments, status and both streams
+are the real binary's except where stated:
 
-**Reading the result.** A missed detection would show that the new step does
-not bind the published document to the row's expectation, a checker defect.
-It would show nothing about the product: the real emitter and host are
-unchanged. Detection would show that this one divergence is caught. It would
-not show that emitter and template agree in general, that any byte-level
-property holds, or that publication implies admission of `create`.
+```sh
+# typo-as-create
+if [[ $# -eq 4 && $1 == lesson && $2 == capture_typo && $3 == --target ]]; then
+  exec "${REAL}" lesson create --target "$4"
+fi
 
-**Cost.** The stand-in needs links to the real client, service and property
-list beside it, and one by-hand run of `contract.py` outside the dispatcher
-with its output in scratch.
+# example-policy-member
+if [[ $# -eq 1 && $1 == example ]]; then
+  held="$(mktemp)"; status=0
+  "${REAL}" example > "${held}" || status=$?
+  if [[ ${status} -ne 0 ]]; then cat "${held}"; rm -f "${held}"; exit "${status}"; fi
+  # exit 97 unless exactly one line equals `  "policy": {`
+  /usr/bin/awk '{print} $0 == "  \"policy\": {" {print "    \"capture_compiled_profiel\": true,"}' "${held}"
+  rm -f "${held}"; exit 0
+fi
+```
+
+A third stand-in, `forward`, substitutes nothing. Before either probe, each
+stand-in's forwarded `example`, `lesson` and refusal output was compared with
+the real binary's and was byte-identical, with equal status and stderr. The
+`typo-as-create` output for `capture_typo` was byte-identical to the real
+`lesson create`. The altered example differed from the real one by the one
+added line, 593 bytes against 555, and parsed with the same identity.
+
+### Probe 1: accepted material published as `capture_typo`
+
+Command: `contract.py STAND-IN-CONTROLLER EMPTY-OUTPUT-DIRECTORY`, the
+arguments the `accepted_input_contract` case passes.
+
+| Stand-in | Exit | Invocations, substituted | Result |
+| --- | --- | --- | --- |
+| `forward` | 0 | 226, 0 | Completed with the case's final line. |
+| `typo-as-create` | 1 | 162, 1 | `AssertionError` in `emitted_lessons` for `lesson-emitted-capture_typo`. |
+
+The first detecting assertion is the opening one of the `cli` helper's refused
+branch: `rc == 1 and env['result']['normalized_outcome'] == 'bad_request' and
+env['result']['ok'] is False`. For the substituted document `run` exited 0
+with `finished`, a worker record, one step and attempt `ok`.
+
+What that failure did not exercise: the error text, the refusal code and path
+comparison, child absence and `assert not observed` all follow the failing
+line. The helper wrote `observed: true` to `effect.json` before asserting, so
+the created target is on record and was never asserted. Nothing after
+`emitted_lessons` ran.
+
+The loader-built rows passed under the substitution, before the failing step:
+`lesson-cli-capture_typo` exited 1 with `unknown_field` at
+`policy.capture_compiled_profiel`, and `lesson-xpc-capture_typo` left no file.
+`lesson-emitted-create` passed. The loader rows are therefore insensitive to
+what the app publishes, as their design implies, and only the emitted step
+connects publication to the row's expectation.
+
+### Probe 2: published example that the host refuses
+
+Command sequence: that of
+[example_round_trip.sh](../../tests/suites/witness_contract/example_round_trip.sh),
+with the controller path naming the stand-in and the checker's app argument
+naming the real app: `--version`, `example` twice, the checker's `prepare`,
+`run` of the emitted file, `observe-after`, the six one-change refusal runs
+and `evaluate`.
+
+| Stand-in | `prepare` | `evaluate` |
+| --- | --- | --- |
+| `forward` | passed | PASS: 67 assertions hold |
+| `example-policy-member` | passed | FAIL: 7 fail, 5 not evaluated |
+
+No assertion stopped the altered document before submission. `prepare` gates
+on the emission and bounds groups only, and every row in both held: exit 0,
+empty stderr, one JSON object, one framing newline, and the read-only bounds.
+The identity rows against `--version` and the property list held too, and the
+two emissions were identical. By every publication check the stand-in
+published successfully.
+
+Host outcome: `run` exited 1 with `bad_request` and `unknown_field` at
+`policy.capture_compiled_profiel`. The runner reply carried the same record,
+`specimen_id` `<decode_failed>`, no worker and no steps. `bytes_written` was
+592, the altered length less its newline. The targets were unchanged, and the
+six one-change refusals derived from the altered bytes all held.
+
+Failing assertions, in table order:
+
+| Assertion | What it read |
+| --- | --- |
+| `passage.contract_rendering` | The emitted document against the contract snapshot. Independent of the host and not a gate. |
+| `admission.no_request_failure` | `data.request_failure` and the `bad_request` outcome. This is the detection of the host refusal. |
+| `admission.reply_policy_digest`, `echo.specimen_id`, `echo.step_ids`, `readers.disposition_integrity`, `native.completion` | Consequences of reading a refusal reply. |
+
+The checker records every row separately, so the admission row failed on its
+own evidence and not because the rendering row had. The rendering failure
+belongs to this construction: the stand-in altered the output without the
+snapshot. The snapshot is extracted from the same source constant, so a change
+made in source would be regenerated into it and the rendering row would then
+hold. That is an inference from the generator's design and was not observed.
+
+The offline case already holds a constructed control for this detection,
+`admission_host_refuses_the_example` in
+[example_round_trip_controls.py](../../tests/suites/witness_contract/example_round_trip_controls.py).
+It expects `admission.no_request_failure` with `echo.step_ids` and
+`native.completion`. The observed decode-stage refusal failed three further
+rows, because such a reply echoes neither the specimen ID nor a policy digest
+and carries no assessment. The constructed refusal and the observed one have
+different shapes and trip the same detecting row.
+
+### Limits
+
+- One execution of each, by hand, on one build and machine, outside the
+  dispatcher.
+- A rejection establishes what the failing assertion checks: exit status and
+  outcome in probe 1, the refusal record and outcome in probe 2. Neither
+  establishes exact-byte transport, general agreement between emitter and
+  template, or admission of every published lesson.
+- The stand-in layout changes where the request control finds its client and
+  service. The forwarding baselines show that layout is neutral for these two
+  checkers and nothing wider.
+- Probe outputs and stand-ins were in `.tmp/publication-admission/`. They were
+  inspected and then removed; the commands and wrapper bodies above reproduce
+  them.
+
+### Retention
+
+Probe 1 is worth a small permanent control, in a different form. The distinct
+failure it catches is `emitted_lessons` no longer reading what the app
+publishes, for instance after a change that takes the document from the
+loader. No other check distinguishes that, and it is the gap this
+investigation found. The stand-in bundle is the wrong vehicle: it depends on
+the control's path derivations and cannot pass the dispatcher. An emitter
+argument to `emitted_lessons`, defaulting to the controller, would let the same
+case call it once more with a substituting emitter and require the
+exit-and-outcome assertion to fail. Cost: about 25 lines, two more `lesson`
+and two more `run` invocations in a default case, removal of the file the
+admitted run creates, and a deliberately failing subcase whose artifacts a
+reader must recognize as a control.
+
+Probe 2 does not merit one. Its detecting assertion already has a permanent
+constructed control, and the live case's six refusals already read real host
+refusal records. The probe added one fact, that the submission gate does not
+stop a refused but well-published document, which needs no regression control.
