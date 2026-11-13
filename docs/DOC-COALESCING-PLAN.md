@@ -85,3 +85,7 @@ wording corrections and two duplicate removals, with reviewed public dependencie
 and documentation verification. Broader projections and app exposure retain
 their stated prerequisites; the next pass prepares the lesson's input migration
 and its concrete interface decision.
+
+The [Pass 3 proposal](../records/doc-coalescing/PASS-3-PROPOSAL.md) specifies the
+two input owners, consumer migration, verification and a narrow acquisition
+interface. Its command choice awaits the maintainer decision before implementation.
