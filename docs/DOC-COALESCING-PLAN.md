@@ -75,3 +75,10 @@ lesson in [REQUEST-GRAMMAR](REQUEST-GRAMMAR.md), its
 [corpus](../tests/fixtures/request_contract/examples.json), guide exercise and
 current emitted example. Produce the small ownership map and an ordered set
 of concrete edits before rewriting these accounts or extending the app.
+
+The [first ownership map and edit sequence](../records/doc-coalescing/PASS-1.md)
+complete Pass 1. Narrow [result-reading](../records/doc-coalescing/RESULT-READING.md)
+and [request-lesson](../records/doc-coalescing/REQUEST-LESSON.md) audits, followed
+by a [boundary review](../records/doc-coalescing/REVIEW.md), support the map.
+Pass 2 begins with the identified wording corrections and specific duplicate
+removals; broader projections and app exposure retain their stated prerequisites.
