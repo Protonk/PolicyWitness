@@ -1416,8 +1416,10 @@ label.
 3. Read a `permission_failure`, `other_failure` or nonzero child exit as the
    recorded observation. Attributing it to sandbox enforcement requires evidence
    that distinguishes that cause from the other causes of the native result.
-4. `same_submitted` compares the submitted path bytes. Runtime object identity
-   requires its own observations across the query and attempt.
+4. `same_submitted` compares the two submitted strings. Canonically equivalent
+   Unicode spellings compare equal, so their UTF-8 bytes can differ;
+   `same_as_input` in path diagnostics compares bytes instead. Runtime object
+   identity requires its own observations across the query and attempt.
 5. `query_first` establishes an order; state may change during that interval.
    Keep independent state observations when a comparison depends on continuity.
 6. A worker `unlink` of a submitted path with `outcome: ok` and `rc: 0`

@@ -138,6 +138,25 @@ func runComparisonEvidenceTests(_ tk: TestKit) {
             }
         }
     }
+    tk.group("submitted target equality") {
+        // target_relation compares the two submitted strings with canonical
+        // Unicode equivalence. Path diagnostics compare UTF-8 bytes instead;
+        // PathDiagnosticsTests keeps this same pair as separate forms.
+        tk.run("canonically equivalent targets with different UTF-8 bytes are same_submitted") {
+            let composed = "/private/tmp/caf\u{e9}"
+            let decomposed = "/private/tmp/cafe\u{301}"
+            try expectFalse(Array(composed.utf8) == Array(decomposed.utf8), "the two spellings must differ in bytes")
+            let equivalent = computeComparison(sandboxCheck: comparisonCheck(target: composed),
+                attempt: comparisonAttempt(target: decomposed))
+            try expectEqual(equivalent.target_relation, "same_submitted")
+            let reversed = computeComparison(sandboxCheck: comparisonCheck(target: decomposed),
+                attempt: comparisonAttempt(target: composed))
+            try expectEqual(reversed.target_relation, "same_submitted")
+            let other = computeComparison(sandboxCheck: comparisonCheck(target: composed),
+                attempt: comparisonAttempt(target: "/private/tmp/cafe"))
+            try expectEqual(other.target_relation, "different_submitted")
+        }
+    }
     tk.group("limitations vocabulary at the producer") {
         tk.run("each planner exclusion code renders as its query_plan entry and nothing else") {
             for code in ["path_unresolved_at_planning", "prediction_unavailable_pair", "unrecognized_filter_kind"] {

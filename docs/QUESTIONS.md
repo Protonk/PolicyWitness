@@ -38,7 +38,7 @@ It records the attempt observation and its basis, the relationship between submi
 
 ## Does PolicyWitness decide whether `sandbox_check` and enforcement disagree?
 
-No. The report supplies the query answer, attempt observation and the relationships it can establish. `query_first` establishes collection before the phase's actions; `same_submitted` compares submitted target bytes. Runtime object identity and changes between query and action require additional observations for an agreement or disagreement claim. [When the answer and the attempt differ](PolicyWitness.md#when-the-answer-and-the-attempt-differ) gives the fields to check first.
+No. The report supplies the query answer, attempt observation and the relationships it can establish. `query_first` establishes collection before the phase's actions; `same_submitted` compares the two submitted target strings, and canonically equivalent Unicode spellings compare equal. Runtime object identity and changes between query and action require additional observations for an agreement or disagreement claim. [When the answer and the attempt differ](PolicyWitness.md#when-the-answer-and-the-attempt-differ) gives the fields to check first.
 
 ## Can PolicyWitness run every profile that `libsandbox` accepts?
 

@@ -134,3 +134,12 @@ identity records and the host's `path_diagnostics`. Its
 scope, the three reader questions and the ownership map, then each pass's
 result, the one consultation, verification, two decisions left with the
 maintainer and the adjacent opportunities kept for a later cycle.
+
+## Counterexample audit
+
+A bounded [audit](../records/doc-coalescing/COUNTEREXAMPLE-AUDIT.md) tested
+the second and third cycles' reader-facing explanations against four
+discriminating cases: what "same" means, whether a derived path implies
+existence, whether observations from different times combine, and whether
+missing evidence identifies a cause. It records each claim, case and
+correction, the controls added and the decisions left with the maintainer.

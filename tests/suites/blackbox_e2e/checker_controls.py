@@ -24,6 +24,7 @@ import contract
 import build_context
 from blackbox import bind_constructed_envelope, envelope_skeleton, recapture_host_reply
 from consumer import lifecycle as live_lifecycle, select, steps as live_steps, validate_fixture as validate, validate_exec_observation
+from consumer import ATTEMPT_PATH_FORMS, path_form
 from functools import partial
 lifecycle = partial(live_lifecycle, expected_contract=build_context.TEST_CONTRACT)
 steps = partial(live_steps, expected_contract=build_context.TEST_CONTRACT)
@@ -319,6 +320,36 @@ def consumer_controls(artifacts, current):
         if record['step_id'] == 'fs_write_allowed':
             record['filter_value'] = '/link/file'
     run_host('attempt_path_forms', resolved)
+
+    # Three meanings of "same" on one step. The query and the attempt submit
+    # canonically equivalent strings with different UTF-8 bytes: the record is
+    # same_submitted, while the attempt's leaf-followed host form has the
+    # query's bytes and so stays a carried string beside its own input.
+    composed, decomposed = '/link/caf\u00e9', '/link/cafe\u0301'
+    assert composed != decomposed and composed.encode() != decomposed.encode()
+    equivalent = copy.deepcopy(resolved)
+    first(equivalent)['sandbox_check']['filter_value'] = composed
+    first(equivalent)['sandbox_check']['path_diagnostics']['input'] = composed
+    for record in runner(equivalent)['phases'][0]['validator_subprocess']['records']:
+        if record['step_id'] == 'fs_write_allowed':
+            record['filter_value'] = composed
+    first(equivalent)['attempt']['requested_path'] = decomposed
+    first(equivalent)['attempt']['path_diagnostics'] = dict(input=decomposed, observer='runner_host',
+        stage='after_orchestration', same_as_input=['parent_realpath_resolved'], realpath_resolved=composed)
+    def equivalent_same(e):
+        require(first(e)['comparison']['target_relation'] == 'same_submitted', 'canonically equivalent targets must be same_submitted')
+        require(path_form(first(e)['attempt']['path_diagnostics'], 'realpath_resolved', ATTEMPT_PATH_FORMS) == 'resolved',
+                'a byte-different host form must stay a carried string')
+    run_host('canonical_equivalent_targets', equivalent, equivalent_same)
+    for name, change, diagnostic in [
+        ('canonical_equivalent_called_different', lambda e: first(e)['comparison'].update(target_relation='different_submitted'),
+         'disagrees with the submitted targets'),
+        ('canonical_equivalent_form_compacted', lambda e: first(e)['attempt']['path_diagnostics'].update(realpath_resolved=decomposed),
+         'identical UTF-8 bytes must be listed in same_as_input'),
+    ]:
+        broken = copy.deepcopy(equivalent)
+        change(broken)
+        run_host(name, broken, rejected_by=diagnostic)
     for name, change, diagnostic in [
         ('input_mismatch', lambda a: a['path_diagnostics'].update(input='/unrelated/file'), 'input differs from requested_path'),
         ('wrong_observer', lambda a: a['path_diagnostics'].update(observer='worker'), 'host/stage provenance'),

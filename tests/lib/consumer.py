@@ -26,6 +26,7 @@ Public functions:
 from copy import deepcopy
 import json
 from pathlib import Path
+import unicodedata
 
 import contract
 import build_context
@@ -172,6 +173,18 @@ def expected_observation(attempt):
     return ('unavailable', 'no_completed_worker_result')
 
 
+def same_submitted_string(left, right):
+    """The record's target equality: canonically equivalent strings are equal.
+
+    Two submitted strings with different UTF-8 bytes and one canonical form
+    are `same_submitted`. Path-form `same_as_input` is a byte comparison and
+    is checked separately in validate_path_diagnostics.
+    """
+    if isinstance(left, str) and isinstance(right, str):
+        return unicodedata.normalize('NFC', left) == unicodedata.normalize('NFC', right)
+    return left == right
+
+
 def expected_relations(query, attempt):
     """(operation_relation, target_relation) from the submitted operations and targets."""
     mapping = ATTEMPT_OPERATIONS.get((attempt.get('requested_kind'), attempt.get('requested_action')))
@@ -186,7 +199,8 @@ def expected_relations(query, attempt):
             query.get('filter_value') is None or attempt.get('requested_path') is None:
         target_relation = 'unresolved'
     else:
-        target_relation = 'same_submitted' if query['filter_value'] == attempt['requested_path'] else 'different_submitted'
+        target_relation = ('same_submitted' if same_submitted_string(query['filter_value'], attempt['requested_path'])
+                           else 'different_submitted')
     return operation_relation, target_relation
 
 

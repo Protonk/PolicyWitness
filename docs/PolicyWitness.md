@@ -130,7 +130,7 @@ It records the attempt observation and its basis, the relationship between submi
 
 ### Does PolicyWitness decide whether `sandbox_check` and enforcement disagree?
 
-No. The report supplies the query answer, attempt observation and the relationships it can establish. `query_first` establishes collection before the phase's actions; `same_submitted` compares submitted target bytes. Runtime object identity and changes between query and action require additional observations for an agreement or disagreement claim. [When the answer and the attempt differ](#when-the-answer-and-the-attempt-differ) gives the fields to check first.
+No. The report supplies the query answer, attempt observation and the relationships it can establish. `query_first` establishes collection before the phase's actions; `same_submitted` compares the two submitted target strings, and canonically equivalent Unicode spellings compare equal. Runtime object identity and changes between query and action require additional observations for an agreement or disagreement claim. [When the answer and the attempt differ](#when-the-answer-and-the-attempt-differ) gives the fields to check first.
 
 ### Can PolicyWitness run every profile that `libsandbox` accepts?
 
@@ -2181,13 +2181,16 @@ other:
 
 When every field has the value in the middle column, the record establishes
 this much: the validator asked `sandbox_check` about this worker, using the
-operation PolicyWitness maps the attempt to and the same submitted target
-string; the host collected that answer before releasing the phase's actions;
+operation PolicyWitness maps the attempt to and a submitted target string
+equal to the attempt's; the host collected that answer before releasing the
+phase's actions;
 and the worker's attempt then completed as recorded. For exec, a matched
 `process-exec*` query concerns admission of the target only. A claim that
 prediction and enforcement agree or disagree needs more:
 
-- **The same runtime object.** `same_submitted` compares submitted strings.
+- **The same runtime object.** `same_submitted` compares submitted strings,
+  and canonically equivalent Unicode spellings compare equal even when their
+  bytes differ.
   One spelling can resolve to different objects for the query and the attempt.
   `observed_path` and a fresh descriptor's `identity` come from the worker's
   attempt; `path_diagnostics` comes from the host after the run. None of them
@@ -2211,14 +2214,15 @@ prediction and enforcement agree or disagree needs more:
 
 The host sets `comparison.order` to `query_first` only when four requirements
 hold for the step. `unestablished` means at least one did not; it does not mean
-the attempt came first. These fields show which:
+the attempt came first. These fields show which requirement, and the last
+column gives examples of reasons rather than a diagnosis:
 
-| Requirement | Fields to read | Why it can be unmet |
+| Requirement | Fields to read | Examples of why it is unmet |
 | --- | --- | --- |
 | A native answer | `sandbox_check.result_source` is `validator`; `errno` is a number, not `null`; `rc` equals `native_rc`; and `outcome` is `allow` with `native_rc: 0`, or `deny` with `native_rc: 1` and `errno: 0` | The planner excluded the query (`prediction_unavailable`, with a `query_plan:` entry in `limitations`). The native call returned `EINVAL` (`unsupported_operation`), most commonly for a rejected operation name. The validator returned a diagnostic or no record (`error`, `missing_reason`). |
 | The phase's collection chain | In the `phases[]` entry with the step's `phase_id`: `ordering.collection_closed_before_proceed`, `proceed_set`, `proceed_observed` and `worker_lifetime_established` are all true and `protocol_violations` is empty | The worker exited or stalled before acknowledging release, or its release wait expired. With no worker there is no `ordering` object. |
-| Established setup | Ordinary form: `sandboxed_after_apply` is true. Actor form: the step's actor has `setup_status` `applied` or `unapplied_declared` | Compilation or application failed, or application was not observed. |
-| One exact validator record | The phase's `validator_subprocess.records` has exactly one record with this `step_id`; that record corresponds to the step's `sandbox_check` as described below the table; and `sandbox_check.pid` is the worker's PID | The validator's output was partial, or a record was missing, duplicated or different from the planned query. |
+| Established setup | Ordinary form: `sandboxed_after_apply` is true and the worker published a zero apply status. Actor form: the step's actor has `setup_status` `applied` or `unapplied_declared` | Compilation or application failed, or application was not observed. |
+| One exact validator record | The phase's `validator_subprocess.records` has exactly one record with this `step_id`; that record corresponds to the step's `sandbox_check` as described below the table; and `sandbox_check.pid` is the worker's PID (`runner_subprocess.pid`, or the actor's `launch.pid`) | The validator's output was partial, or a record was missing, duplicated or different from the planned query. |
 
 A native answer needs its `errno` present for either outcome. An eligible
 `deny` requires `errno: 0`. An eligible `allow` requires only that the field
@@ -2236,9 +2240,18 @@ field, but not every comparison is between same-named fields with equal text:
   `none`. That record has `filter_type: NONE` and no `filter_value`, even when
   `sandbox_check.filter_value` echoes a value from the request.
 
-Use the table to find the unmet requirement. The host decides `order` from its
-own observations, so matching fields in a reply that says `unestablished`, or
-in a `runner_reporting_failed` reply without comparisons, do not establish
+The reply's setup fields summarize the host's observation. `sandboxed_after_apply`
+is the worker's applied publication alone. A worker that published it beside a
+nonzero apply status has an inconsistent record: the step is `unestablished`
+though the flag is true, and a release under that record adds
+`release_without_successful_application` to `protocol_violations`.
+
+Use the table to find the unmet requirement. An unmet requirement says which
+observation is missing, not why: a released chain without `proceed_observed`
+reads the same whether the worker died or stalled before acknowledging, and
+the worker and phase records carry that reason. The host decides `order` from its own
+observations, so matching fields in a reply that says `unestablished`, or in a
+`runner_reporting_failed` reply without comparisons, do not establish
 `query_first`.
 
 An unestablished step still supplies its attempt result and classification,
@@ -2347,8 +2360,10 @@ Read the channels' results, relations and order with these rules:
 3. Read a `permission_failure`, `other_failure` or nonzero child exit as the
    recorded observation. Attributing it to sandbox enforcement requires evidence
    that distinguishes that cause from the other causes of the native result.
-4. `same_submitted` compares the submitted path bytes. Runtime object identity
-   requires its own observations across the query and attempt.
+4. `same_submitted` compares the two submitted strings. Canonically equivalent
+   Unicode spellings compare equal, so their UTF-8 bytes can differ;
+   `same_as_input` in path diagnostics compares bytes instead. Runtime object
+   identity requires its own observations across the query and attempt.
 5. `query_first` establishes an order; state may change during that interval.
    Keep independent state observations when a comparison depends on continuity.
 6. A worker `unlink` of a submitted path with `outcome: ok` and `rc: 0`
@@ -2433,7 +2448,12 @@ Read each as its own observation. No reply field records which object
 | Worker path observation | `attempt.observed_path` | The worker, calling `fcntl(F_GETPATH)` on the descriptor its open returned. Only `open_read`, `open_write` and `create` record it. | Inside the action, after a successful open and before the action's read or write and its close. |
 | Pre-open stat | `attempt.fresh_write.preopen_stat` | The worker, calling `lstat` on the target string. Only `create_fresh` records it. | Inside the action, before its exclusive open. |
 | Descriptor stat | `attempt.fresh_read.stat_rc` and `identity`; `attempt.fresh_write.opened_stat`, `truncated_stat` and `written_stat` | The worker, calling `fstat` on the descriptor its open returned. Only `read_fresh`, `write_fresh` and `create_fresh` record them. | Inside the action: after the open, and for a fresh write again after the truncation and after the write. |
-| Host path diagnostics | `sandbox_check.path_diagnostics` and `attempt.path_diagnostics` | The unsandboxed host, calling `realpath(3)` and applying string mappings. | Once, after orchestration returns. This is after every phase's actions, not after this step. |
+| Host path diagnostics | `sandbox_check.path_diagnostics` and `attempt.path_diagnostics` | The unsandboxed host, calling `realpath(3)` and applying string mappings. | Once, after orchestration returns. This follows every phase the worker reached, not just this step. Cleanup of the worker and any exec child has its own records. |
+
+The table describes this build. The contract commits to less for
+`observed_path`: a path observation the worker supplies when one is available.
+The three actions and the call named here are the current worker's
+implementation.
 
 Within one phase the host plans the queries, the validator runs them, the host
 closes collection and releases the phase, and the worker runs the actions in
@@ -2447,9 +2467,13 @@ phase's actions is established only by
 
 - **Submitted strings** establish what was asked and what was attempted.
   `comparison.target_relation` compares these two strings, and only when the
-  query's filter kind matches the kind the attempt maps to. It compares
-  nothing about objects. Equal strings can reach different objects, and
-  different strings can reach the same one.
+  query's filter kind matches the kind the attempt maps to. Canonically
+  equivalent Unicode spellings compare equal, so two strings with different
+  UTF-8 bytes can be `same_submitted`. `same_as_input` in path diagnostics is
+  a different test: it compares a host-derived form with `input` byte for
+  byte. Neither test compares objects. Equal strings can reach different
+  objects, and different strings can reach the same one; whether two
+  equivalent spellings name one file depends on the filesystem.
 - **The planning check** establishes, when it excluded the query, that the
   host could not resolve the string at that moment. A `path` query the
   validator answered (`sandbox_check.result_source: validator`) passed the
@@ -2471,11 +2495,15 @@ phase's actions is established only by
   found just before the exclusive open: an existing object's metadata, or a
   failure with its `errno`. `lstat` does not follow a final symlink. It is a
   separate lookup from the open and does not establish the state the open met.
-- **Host path diagnostics** establish how the host resolved each submitted
-  string after the run. They do not establish what the validator, the kernel
-  or the worker resolved earlier. `firmlink_resolved` is a string mapping
-  applied to the resolved or substituted path. It is a candidate spelling, not
-  an observation that an object exists there.
+- **Host path diagnostics** establish what the host derived from each
+  submitted string after the run. They do not establish what the validator,
+  the kernel or the worker resolved earlier. Only `realpath_resolved` reports
+  a resolution of the whole path, so only it shows that the path led to an
+  object at that time. `parent_realpath_resolved` resolves the parent
+  directory and appends the submitted leaf without looking the leaf up.
+  `firmlink_resolved` is a string mapping applied to the resolved or
+  substituted path. Both are candidate spellings, not observations that an
+  object exists there.
 
 Comparing two records compares two observations. Equal paths from two
 observers show that both calls returned the same spelling, each at its own
@@ -2500,10 +2528,10 @@ Host path diagnostics:
 | --- | --- | --- |
 | No `sandbox_check.path_diagnostics` | The query's filter kind is not `path`, or its value is empty. | The submitted `filter_value` and the query result. |
 | No `attempt.path_diagnostics` | The attempt kind is not `file` or `exec`, or its target is empty. Mach service names and sysctl names get no path diagnostics. | The submitted `requested_path` and the attempt result. |
-| A form's key is omitted and its name is listed in `same_as_input` | The host derived that form and its bytes equal `input`. This is a resolved form, not a missing one. | The host's later resolution, equal to the submitted string. |
+| A form's key is omitted and its name is listed in `same_as_input` | The host derived that form and its bytes equal `input`. The form is available, not missing. | For `realpath_resolved`, the whole path resolved to the submitted bytes at that time. For `parent_realpath_resolved` or `firmlink_resolved`, only that the derived spelling equals the submitted one, which does not show that the target exists. |
 | `realpath_resolved` is `null` | The host's `realpath(3)` failed after the run. The path did not exist then, or the host could not resolve it for another reason, such as a permission failure of its own. | The submitted string and both channel results. A later failure does not show what existed when the query or the attempt ran. |
-| The validator answered the query, and `sandbox_check.path_diagnostics.realpath_resolved` is `null` | The host resolved the string at planning and could not after the run. Something changed in between. An `unlink` in this phase or a later one is one cause. | Both host observations, each at its own time. The reply names the change only if an action's own result does. |
-| The query was excluded with `query_plan:path_unresolved_at_planning`, and the later form resolves | The host could not resolve the string at planning and could after the run. The quick start is an example when its target was absent beforehand and the `create` succeeded. | The exclusion. No query ran for this step, and the later resolution does not supply one. |
+| The validator answered the query, and `sandbox_check.path_diagnostics.realpath_resolved` is `null` | The host resolved the string at planning and could not after the run. Something changed in between. An `unlink` in this phase or a later one is one cause. | Both host observations, each at its own time. They do not bracket this step's attempt: a successful attempt can sit beside a `null` produced by a later phase. The reply names the change only if an action's own result does. |
+| The query was excluded with `query_plan:path_unresolved_at_planning`, and `realpath_resolved` is later a string or listed in `same_as_input` | The host could not resolve the string at planning and could after the run. The quick start is an example when its target was absent beforehand and the `create` succeeded. | The exclusion. No query ran for this step, and the later resolution does not supply one. |
 | `realpath_resolved` is `null` and `firmlink_resolved` is a string | With no `realpath` result, the host substitutes the `/etc`, `/tmp` and `/var` prefixes in the submitted string and then applies the firmlink mapping. | A candidate spelling. It does not show that anything exists at that path. |
 | `firmlink_resolved` is `null` | The path the mapping was applied to is not absolute or matches no firmlink prefix. That path is the `realpath` result, or the substituted input when `realpath` failed. | The other form and the submitted string. |
 | `attempt.path_diagnostics.realpath_resolved` is `null` and `parent_realpath_resolved` is available | The host resolved the parent directory and not the leaf. For example, the leaf was absent after the run, or it is a symlink whose destination did not resolve. | The parent's resolved spelling with the submitted leaf. |
@@ -2556,9 +2584,13 @@ and whose create succeeded, it usually reads as follows:
    string before the phase's collection, and no query ran.
 2. If `observed_path` is a path, the worker's open returned a descriptor and
    the kernel reported that path for it.
-3. `query_paths` and `attempt_paths` are the host's forms after the run. A
-   form named in `same_as_input` resolved to the submitted bytes when the host
-   ran that pass. A string that did not resolve at planning can resolve here.
+3. `query_paths` and `attempt_paths` are the host's forms after the run. Read
+   `realpath_resolved` for whether the whole path resolved then: named in
+   `same_as_input` or present as a string, it resolved; `null`, it did not.
+   A string that did not resolve at planning can resolve here.
+   `parent_realpath_resolved` named in `same_as_input` shows only that the
+   parent resolved to its submitted spelling. A failed create leaves it there
+   too.
 
 The quick start's own `stat` output is a further observation, made by your
 shell after the command returned. None of these says what `sandbox_check`
