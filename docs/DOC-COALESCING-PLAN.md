@@ -143,3 +143,7 @@ discriminating cases: what "same" means, whether a derived path implies
 existence, whether observations from different times combine, and whether
 missing evidence identifies a cause. It records each claim, case and
 correction, the controls added and the decisions left with the maintainer.
+
+The [query-order investigation](../records/doc-coalescing/QUERY-ORDER-INVESTIGATION.md)
+traces producer setup observations through the carried reply and its readers,
+and records a focused actor reporting-validation correction with its evidence.

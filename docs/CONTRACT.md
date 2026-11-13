@@ -3465,6 +3465,9 @@ assessment describe the retained worker evidence.
 <a id="contract-actor_evidence-actor-reader_scope-support"></a>
 **Support: [executed](#contract-support-grades) for [Reader applicability](#contract-actor_evidence-actor-reader_scope).** Constructed typed preparation, declaration and degradation neighbours retain separate host, controller, general-consumer and worker-lifecycle judgments. Context: Whole canonical runner-unit case passed with zero recorded system sleep. Swift judgments over 142 typed frames were retained before encoding; exact-one Rust replay carried 143 frames including the real writer-cap fallback through envelopes, then independent Python readers completed all rows and seven JSON-only controls. Evidence limit: The corpus uses constructed records and independently expected interpretations. Eleven application-positive pairs, degradation admission, the exact contradictory-worker D1 finding and retained actor projections have separate assertions. JSON-only normalization has its own domain. Native occurrence of each constructed context has separate observation owners. [Evidence details](#contract-actor_evidence-actor-reader_scope-support-details).
 
+<a id="contract-actor_evidence-actor-reader_scope-setup_support"></a>
+**Support: [check read](#contract-support-grades) for [Reader applicability](#contract-actor_evidence-actor-reader_scope).** An apply-mode actor cannot declare unapplied setup in an ordinary reply; rich degradation retains the conflicting declaration without comparisons. Context: A constructed valid actor reply changes only setup_status. Host reporting, controller admission and the general consumer own the ordinary identity check; the extension subreader has a narrower scope. Evidence limit: Source and check reading. The constructed mismatch is not evidence of a native scheduler producing it; execution of the corrected reader remains separately recorded. [Evidence details](#contract-actor_evidence-actor-reader_scope-setup_support-details).
+
 <a id="contract-actor_evidence-launch"></a>
 #### Actor launch context
 
@@ -6195,6 +6198,13 @@ Source: [PWRunnerLifecycleEvidence.swift](../runner/Sources/PWRunnerCore/PWRunne
 [Local support](#contract-actor_evidence-actor-reader_scope-support).
 
 Source: [ActorOrchestration.swift](../runner/Sources/PWRunnerCore/ActorOrchestration.swift): `actorPreparationRefusal`; [ActorPlan.swift](../runner/Sources/PWRunnerCore/ActorPlan.swift): `normalizeActorPlan`; [PWRunnerReply.swift](../runner/Sources/PWRunnerCore/PWRunnerReply.swift): `actorExtensionEvidenceProblem`, `validateForReporting`; [porcelain_admission.rs](../controller/src/porcelain_admission.rs): `admission_problem`; [porcelain_actor.rs](../controller/src/porcelain_actor.rs): `preparation_failure_valid`; [consumer.py](../tests/lib/consumer.py): `_validate_reply`; [lifecycle_oracle.py](../tests/lib/lifecycle_oracle.py): `check_actor_records`. Check: [ReaderCorpusTests.swift](../runner/Tests/PWRunnerCoreTests/ReaderCorpusTests.swift): `runReaderCorpusTests`; [run_flow.rs](../controller/src/run_flow.rs): `reader_definition_corpus_cross_readers`. Run: `20261111T162345Z_3d6c7242`. Source snapshot: `reviewed-inputs sha256:af396aadf41ba79a0d072b62d9c3f4ff1df5b5fa30d6c4ff267c53e8437dd51d (b6ce6d26 dirty; replay identity correction)`. Case: `runner_unit/pwrunner_core_unit_executable`.
+
+<a id="contract-actor_evidence-actor-reader_scope-setup_support-details"></a>
+### Reader applicability — Setup declaration check support
+
+[Local support](#contract-actor_evidence-actor-reader_scope-setup_support).
+
+Source: [PWRunnerReply.swift](../runner/Sources/PWRunnerCore/PWRunnerReply.swift): `actorExtensionEvidenceProblem`; [porcelain_actor.rs](../controller/src/porcelain_actor.rs): `fn identity`; [consumer.py](../tests/lib/consumer.py): `_validate_actors`. Check: [ReaderCorpusTests.swift](../runner/Tests/PWRunnerCoreTests/ReaderCorpusTests.swift): `runReaderCorpusTests`; [reader_corpus.py](../tests/suites/runner_unit/reader_corpus.py): `replay`.
 
 <a id="contract-actor_evidence-application-late_application-disposition_support-details"></a>
 ### Setup deadline and later application — Disposition support

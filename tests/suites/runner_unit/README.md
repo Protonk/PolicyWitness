@@ -41,6 +41,13 @@ through the production assembler and resolver, an adjacent incorrect assessment,
 and retained source observations. Terminal pre-apply and failed-apply contexts
 also check contradictory applied flags. The corpus records constructed reader
 evidence; native occurrence of each context requires separate observations.
+Ordering controls distinguish the producer's internal apply status from its
+carried application flag and protocol violations. A forced order claim with a
+retained violation refuses; deliberately erasing the violation exposes the
+recipient's evidence limit. An applied actor with only its setup declaration
+changed to `unapplied_declared` must refuse ordinary reporting and retain that
+conflict without comparisons in rich degradation. General actor identity checks
+own this refusal; the extension subreader has an explicitly separate expectation.
 
 ## Invariants
 

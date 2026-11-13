@@ -497,6 +497,9 @@ extension PWRunnerRunResult {
             guard phase.actor_visit == visits[actor] else { return "phase actor_visit disagrees with that actor's visit order" }
         }
         for actor in actors {
+            if actor.mode == "apply" && actor.setup_status == "unapplied_declared" {
+                return "apply actor cannot declare an unapplied setup"
+            }
             guard [0, 1].contains(actor.application_count), (actor.application_count == 1) == (actor.applied == true),
                   actor.setup_status != "applied" || actor.applied == true else { return "application count contradicts application publication" }
         }

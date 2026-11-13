@@ -166,6 +166,17 @@ case: "runner_unit/pwrunner_core_unit_executable"
 source_snapshot: "reviewed-inputs sha256:af396aadf41ba79a0d072b62d9c3f4ff1df5b5fa30d6c4ff267c53e8437dd51d (b6ce6d26 dirty; replay identity correction)"
 ```
 
+#### Setup declaration check support {setup_support: owner}
+
+```contract
+grade: "check_read"
+source: [{"path":"runner/Sources/PWRunnerCore/PWRunnerReply.swift","symbol":"actorExtensionEvidenceProblem"},{"path":"controller/src/porcelain_actor.rs","symbol":"fn identity"},{"path":"tests/lib/consumer.py","symbol":"_validate_actors"}]
+check: [{"path":"runner/Tests/PWRunnerCoreTests/ReaderCorpusTests.swift","symbol":"runReaderCorpusTests","form":"test"},{"path":"tests/suites/runner_unit/reader_corpus.py","symbol":"replay","form":"test"}]
+pins: "An apply-mode actor cannot declare unapplied setup in an ordinary reply; rich degradation retains the conflicting declaration without comparisons."
+context: "A constructed valid actor reply changes only setup_status. Host reporting, controller admission and the general consumer own the ordinary identity check; the extension subreader has a narrower scope."
+limits: "Source and check reading. The constructed mismatch is not evidence of a native scheduler producing it; execution of the corrected reader remains separately recorded."
+```
+
 ## Actor launch context {launch: subject}
 
 ```contract
