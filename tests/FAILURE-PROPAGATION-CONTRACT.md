@@ -1202,7 +1202,9 @@ and the signed app must be restored before acceptance.
 `steps[].comparison` contains `observation`, `observation_basis`,
 `operation_relation`, `target_relation`, `order` and `limitations`, and nothing
 else. It relates the two channels; it does not say whether they agree, and no
-field in a reply does.
+field in a reply does. [CONTRACT](../docs/CONTRACT.md#contract-steps-comparison)
+defines the fields and [their rules](../docs/CONTRACT.md#contract-steps-assessment);
+the table below is the working summary for test authors.
 
 ```json
 "comparison": {
@@ -1221,7 +1223,7 @@ field in a reply does.
 | `observation_basis` | string | the fields the classification rests on: `completed_worker_status` (completed result, `attempt.outcome` and PW status `rc`), `permission_errno` (worker-reported EPERM/EACCES on a file, access, unlink, sysctl or failed-spawn result), `bootstrap_permission_result` (the exact `bootstrap_look_up: kr=1100` report), `spawned_child` (positive `child_pid` in a completed result, independently of the child's later exit) or `no_completed_worker_result`. None identifies the enforcing mechanism. |
 | `operation_relation` | string | `matched` when the submitted query operation is the attempt's mapped operation (file `open_read`/`access`/`read_fresh` → `file-read-data`, `open_write`/`write_fresh` → `file-write-data`, `unlink` → `file-write-unlink`, exec `spawn` → `process-exec*`, mach lookup → `mach-lookup`, sysctl read → `sysctl-read`); `different` when it is another operation; `unresolved` for compound `file`/`create` or `file`/`create_fresh`, or an unsupported attempt |
 | `target_relation` | string | `same_submitted` or `different_submitted` by comparing the submitted `filter_value` with the submitted attempt target under the attempt's mapped filter kind (`path` for file and exec, `global_name` for mach lookup, `sysctl_name` for sysctl); `unresolved` when the query's `filter_kind` differs from that kind or either side is absent. Different strings establish different submitted targets, not distinct runtime objects. |
-| `order` | string | `query_first` only when the host closed collection before storing release, the worker acknowledged release after successful application, worker ownership was retained through acknowledgement, and a unique native allow/deny record matches the exact planned query tuple with coherent rc/errno; `unestablished` otherwise. It names an interval before that phase’s entire action batch, not a state snapshot or per-step interleaving. |
+| `order` | string | `query_first` only when the host closed collection before storing release, the worker acknowledged release, worker ownership was retained through acknowledgement, the phase records no protocol violation, setup is established (successful application, or an unapplied actor's declared setup), and a unique native allow/deny record for the reported worker matches the exact planned query tuple with coherent rc/errno; `unestablished` otherwise. [Establish query order](../docs/CONTRACT.md#contract-steps-assessment-order) states these requirements over the reply's fields. It names an interval before that phase’s entire action batch, not a state snapshot or per-step interleaving. |
 | `limitations` | array of string | may be empty. Vocabulary: `query_plan:path_unresolved_at_planning`, `query_plan:prediction_unavailable_pair`, `query_plan:unrecognized_filter_kind` (the planner's exclusion, one at most) and `attempt:lifecycle_unresolved`, `attempt:lifecycle_conflicting`, `attempt:unsupported`, `attempt:not_reached`, `attempt:started_without_result` (the lifecycle summary when it is not `completed`, one at most). Missing channels, scope differences and failures carry no limitation of their own: their fields already say so. |
 
 The raw query answer stays in `sandbox_check`: it is `outcome` when

@@ -110,7 +110,7 @@ The shipped app requires macOS 26 or later on Apple silicon (arm64).
 
 ### Can PolicyWitness attribute a failed attempt to sandbox denial?
 
-A permission-shaped failure records a native result such as `EPERM`, `EACCES` or a bootstrap permission result. The report preserves that observation and the separately collected query answer. Establishing the cause requires evidence that distinguishes sandbox enforcement from the other reasons the native operation can fail.
+A permission-shaped failure records a native result such as `EPERM`, `EACCES` or a bootstrap permission result. The report preserves that observation and the separately collected query answer. Establishing the cause requires evidence that distinguishes sandbox enforcement from the other reasons the native operation can fail. [What a permission failure establishes](#what-a-permission-failure-establishes) lists what the classification rests on and the kinds of evidence an attribution needs.
 
 ### What does PolicyWitness's attempt channel record?
 
@@ -130,7 +130,7 @@ It records the attempt observation and its basis, the relationship between submi
 
 ### Does PolicyWitness decide whether `sandbox_check` and enforcement disagree?
 
-The report supplies the query answer, attempt observation and the relationships it can establish. `query_first` establishes collection before the phase's actions; `same_submitted` compares submitted target bytes. Runtime object identity and changes between query and action require additional observations for an agreement or disagreement claim.
+No. The report supplies the query answer, attempt observation and the relationships it can establish. `query_first` establishes collection before the phase's actions; `same_submitted` compares submitted target bytes. Runtime object identity and changes between query and action require additional observations for an agreement or disagreement claim. [When the answer and the attempt differ](#when-the-answer-and-the-attempt-differ) gives the fields to check first.
 
 ### Can PolicyWitness run every profile that `libsandbox` accepts?
 
@@ -150,7 +150,7 @@ Use [actors and sandbox extensions](#sandbox-extensions). Each actor selects equ
 
 ### Which happens first, the prediction or the attempt?
 
-The host closes a phase's query collection before releasing its action batch. A qualifying native answer has `comparison.order: query_first` when the report carries the supporting release and acknowledgement chain. Actions run in declaration order; an earlier action can change the state a later action encounters. Use [ordered phases](#ordered-phases) to collect again after earlier actions.
+The host closes a phase's query collection before releasing its action batch. A qualifying native answer has `comparison.order: query_first` when the report carries the supporting release and acknowledgement chain. Actions run in declaration order; an earlier action can change the state a later action encounters. Use [ordered phases](#ordered-phases) to collect again after earlier actions. [When `order` is `unestablished`](#when-order-is-unestablished) names each requirement behind `query_first` and the fields that show it.
 
 ### Can PolicyWitness collect sandbox-denial logs?
 
@@ -1651,14 +1651,16 @@ Reply fields beyond `pid` / `runner_subprocess`:
   ambient errno. Unfamiliar nonzero codes remain failures; wording is not a
   classification rule. The record survives a higher-priority worker failure
   and evidence-preserving reply degradation.
-- `steps[].comparison.order` — `query_first` for eligible native records with the full release/acknowledgement chain; `unestablished` otherwise. Query order establishes an interval before that phase’s entire action batch.
+- `steps[].comparison.order` — `query_first` when the step has a native allow or deny answer, its phase's complete collection, release and acknowledgement chain, established setup and one exact validator record; `unestablished` otherwise. Query order establishes an interval before that phase’s entire action batch. [When `order` is `unestablished`](#when-order-is-unestablished) names the fields behind each requirement.
 - `phases[].ordering` — host collection/release observations, worker acknowledgement, worker lifetime evidence, validator disposition and protocol violations. After collection closure, release still requires the expected live worker phase. Validator failure or unconfirmed cleanup does not itself prevent release; no later record enters a closed collection. Missing predictions remain unestablished. Death before acknowledgement prevents a query-first claim; later death preserves it. `validator_disposition` is `not_invoked`, `not_needed` (empty query plan), `not_spawned`, `reaped` or `unconfirmed`.
 - `steps[].comparison` — six fields that relate the two channels. `observation`
   classifies the attempt channel (`succeeded`,
   `permission_failure`, `other_failure` or `unavailable`) and
   `observation_basis` names the fields it rests on (`completed_worker_status`,
   `permission_errno`, `bootstrap_permission_result`, `spawned_child` or
-  `no_completed_worker_result`). `operation_relation` (`matched`, `different`
+  `no_completed_worker_result`);
+  [What a permission failure establishes](#what-a-permission-failure-establishes)
+  gives the fields behind each basis. `operation_relation` (`matched`, `different`
   or `unresolved`) says whether the submitted query operation is the attempt's
   mapped operation: file `open_read`/`read_fresh`/`access` map to `file-read-data`,
   `open_write`/`write_fresh` to `file-write-data`, `unlink` to `file-write-unlink`, exec
@@ -2148,6 +2150,117 @@ have source `"synthetic"` with `missing_reason: "slot_absent"` or
 
 ### Reading a comparison record
 
+`steps[].comparison` relates a step's two channels: the query answer in
+`sandbox_check` and the native result in `attempt`. It classifies the attempt,
+compares what the specimen submitted to each channel and states whether the
+answer is placed before the phase's actions. No field in the record, or
+elsewhere in the reply, says that the prediction and the attempt agree or
+disagree. That conclusion is yours to draw, and it needs the observations
+described here.
+
+The next three subsections each start from a step you are looking at.
+[The complete rules](#the-complete-rules) cover every field and case.
+
+#### When the answer and the attempt differ
+
+Take a step whose `sandbox_check.outcome` is `deny` and whose
+`comparison.observation` is `succeeded`. The same reading applies to an `allow`
+beside a failure. Check these fields before setting one channel against the
+other:
+
+| Field | Value that permits the comparison | Any other value |
+| --- | --- | --- |
+| `sandbox_check.result_source` and `outcome` | `validator` with `allow` or `deny` | The step has no query answer. Read `error`, `native_rc` and `missing_reason`. |
+| `comparison.operation_relation` | `matched` | `different`: the query named another operation than the one the attempt maps to. `unresolved`: a `file`/`create` attempt or a wildcard query has no single operation to match. |
+| `comparison.target_relation` | `same_submitted` | `different_submitted`: the query and the attempt name different targets. `unresolved`: the query's filter kind differs from the attempt's, or one of the two values is absent. |
+| `comparison.order` | `query_first` | `unestablished`: the answer is not placed before the attempt. See [When `order` is `unestablished`](#when-order-is-unestablished). |
+| `comparison.limitations` | empty | Each entry names a planner exclusion or an attempt whose lifecycle is not `completed`. |
+
+When every field has the value in the middle column, the record establishes
+this much: the validator asked `sandbox_check` about this worker with the same
+submitted operation and target string, the host collected that answer before
+releasing the phase's actions, and the worker's attempt then completed as
+recorded. A claim that prediction and enforcement agree or disagree needs more:
+
+- **The same runtime object.** `same_submitted` compares submitted strings.
+  One spelling can resolve to different objects for the query and the attempt.
+  `observed_path` and a fresh descriptor's `identity` come from the worker's
+  attempt; `path_diagnostics` comes from the host after the run. None of them
+  shows which object the query consulted.
+- **Unchanged state across the interval.** `query_first` places the answer
+  before the phase's whole action batch. An earlier action in the same phase,
+  or a process outside the run, can change the target before this attempt.
+  Give the action its own [phase](#ordered-phases) to collect nearer to it, and
+  observe the state independently.
+- **The attempt's effect.** `succeeded` rests on the worker's reported status
+  or, for exec, on a spawned child. Read the operation's own observations, such
+  as fresh-read bytes or the child's exit status, and confirm the effect
+  outside the run.
+- **A failure's cause**, when the attempt failed. See
+  [What a permission failure establishes](#what-a-permission-failure-establishes).
+
+#### When `order` is `unestablished`
+
+The host sets `comparison.order` to `query_first` only when four requirements
+hold for the step. `unestablished` means at least one did not; it does not mean
+the attempt came first. These fields show which:
+
+| Requirement | Fields to read | Why it can be unmet |
+| --- | --- | --- |
+| A native answer | `sandbox_check.result_source` is `validator`, and `outcome` is `allow` with `native_rc: 0` or `deny` with `native_rc: 1` and `errno: 0` | The planner excluded the query (`prediction_unavailable`, with a `query_plan:` entry in `limitations`). The native call rejected the operation name (`unsupported_operation`). The validator returned a diagnostic or no record (`error`, `missing_reason`). |
+| The phase's collection chain | In the `phases[]` entry with the step's `phase_id`: `ordering.collection_closed_before_proceed`, `proceed_set`, `proceed_observed` and `worker_lifetime_established` are all true and `protocol_violations` is empty | The worker exited or stalled before acknowledging release, or its release wait expired. With no worker there is no `ordering` object. |
+| Established setup | Ordinary form: `sandboxed_after_apply` is true. Actor form: the step's actor has `setup_status` `applied` or `unapplied_declared` | Compilation or application failed, or application was not observed. |
+| One exact validator record | The phase's `validator_subprocess.records` has exactly one record with this `step_id`; its operation, filter, outcome, `rc` and `errno` equal the step's `sandbox_check`; and `sandbox_check.pid` is the worker's PID | The validator's output was partial, or a record was missing, duplicated or different from the planned query. |
+
+Use the table to find the unmet requirement. The host decides `order` from its
+own observations, so matching fields in a reply that says `unestablished`, or
+in a `runner_reporting_failed` reply without comparisons, do not establish
+`query_first`.
+
+An unestablished step still supplies its attempt result and classification,
+the two submitted relations and its limitations. A retained `allow` or `deny`
+remains the native call's return. Without the chain it does not establish that
+the worker was live when the query ran, so it is not a prediction about the
+specimen. Each step is assessed separately: another query's failure in the
+same phase leaves an eligible answer its `query_first`.
+
+`query_first` does not depend on the attempt. A step can carry it beside an
+`unavailable` observation when the worker stopped after acknowledging release.
+
+#### What a permission failure establishes
+
+`observation` classifies the shape of the attempt's native result, and
+`observation_basis` names what that classification rests on. The host takes the
+first row that fits:
+
+| `observation` | `observation_basis` | Rests on |
+| --- | --- | --- |
+| `succeeded` | `spawned_child` | A completed exec attempt with a positive `child_pid`, whatever the child's later exit. |
+| `succeeded` | `completed_worker_status` | A completed result with `outcome: ok` and `rc: 0`. |
+| `permission_failure` | `permission_errno` | A completed, failed open, read, write, unlink, access, sysctl or exec result whose `attempt.errno` is 1 (`EPERM`) or 13 (`EACCES`). |
+| `permission_failure` | `bootstrap_permission_result` | A failed Mach lookup whose `attempt.error` is `bootstrap_look_up: kr=1100`. |
+| `other_failure` | `completed_worker_status` | Any other completed result with a nonzero `rc`. |
+| `unavailable` | `no_completed_worker_result` | No completed worker result. Read `attempt.missing_reason` and `attempt.lifecycle`. |
+
+`permission_failure` says that the native call returned a permission-shaped
+result. Sandbox enforcement is one cause of such a result; file mode and
+ownership are another. The classification does not say which applied, and a
+`deny` answer beside it does not either: the answer is a prediction collected
+earlier, and the failure is a separate observation.
+
+To attribute the failure, add evidence that separates the causes. For example:
+
+- run the same attempt outside PolicyWitness before the run, to learn whether
+  it fails with no policy applied;
+- run a control specimen whose policy differs only in the rule in question,
+  and compare the two attempts;
+- record the target's existence, mode and ownership independently.
+
+Keep those observations with the result. The attribution they support is your
+conclusion; the report does not state it.
+
+#### The complete rules
+
 Read the channels' results, relations and order with these rules:
 
 <!-- BEGIN COPIED READING RULES -->
@@ -2206,6 +2319,8 @@ Read the channels' results, relations and order with these rules:
     or release in that phase changed what the attempt later encountered.
 
 <!-- END COPIED READING RULES -->
+
+#### Selecting steps with jq
 
 With optional `jq`, select steps by explicit field combinations from a saved
 result. For these commands, set `PW_RESULT` to that result's absolute path:

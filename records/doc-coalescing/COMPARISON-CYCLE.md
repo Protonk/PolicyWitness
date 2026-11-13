@@ -58,3 +58,38 @@ The contract's rules match that source. No behavioral evidence is claimed.
 - The contract's temporal-meaning definition omits the interval statement that
   the identity surface and the guide carry.
 - The attempt-outcome catalog, path diagnostics and extension rules 13 and 14.
+
+## Pass 2 — Consolidated explanations
+
+The guide's reading section now opens by stating what the record relates and
+that no reply field states agreement. Three subsections start from an observed
+step: an answer that differs from the attempt, an unestablished order and a
+permission failure. Each names the fields to read and what a conclusion still
+needs. The copied rules follow under their own heading as the complete account,
+and the `jq` recipes keep their commands under a heading of their own. The
+`comparison.order` field entry names the four requirements in place of
+"eligible native records", and three FAQ answers link to the subsection that
+answers them.
+
+The test contract's `order` row now includes an unapplied actor's declared
+setup, the absence of protocol violations and the reported worker, and links to
+the contract rule. Its introduction names the contract as the owner of the
+field meanings.
+
+In the `steps` surface, five comparison fields gain a `uses` reference to the
+rule or definition that sets them, so the rendered field list links to
+"Classify an observation", "Submitted operation and target" and "Establish
+query order". No prose, field shape, support owner or free-text relationship
+changed.
+
+Public snapshot review: the five field nodes each gain one `uses` fact. The
+`reply`, `envelope` and `installation` surfaces, which already inherit those
+fields, each gain the same 18 shared nodes: the `steps.assessment` subject and
+its order, classification and relations nodes. A later change to one of those
+rules will therefore also mark these three surfaces changed, which matches the
+fields' dependence on them. History and the free-text baseline are unchanged,
+and every surface is currently unreleased.
+
+The guide's new subsections restate the contract's order and classification
+rules for a reader who cannot follow a link into the contract. That adds one
+alignment duty between the guide and `steps.assessment`; no check binds them.

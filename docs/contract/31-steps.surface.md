@@ -253,21 +253,41 @@ as: "comparison"
 
 ### observation {observation: field}
 
+```contract
+uses: ["steps.assessment.observe"]
+```
+
 `succeeded`, `permission_failure`, `other_failure` or `unavailable`, classified from the attempt channel by the rule below.
 
 ### observation_basis {observation_basis: field}
+
+```contract
+uses: ["steps.assessment.observe"]
+```
 
 Supporting observation: `spawned_child`, `completed_worker_status`, `permission_errno`, `bootstrap_permission_result` or `no_completed_worker_result`.
 
 ### operation_relation {operation_relation: field}
 
+```contract
+uses: ["steps.assessment.relations"]
+```
+
 `matched` means the query equals the action's mapped operation; `different` means those strings differ; `unresolved` means the mapping cannot assign a single operation.
 
 ### target_relation {target_relation: field}
 
+```contract
+uses: ["steps.assessment.relations"]
+```
+
 `same_submitted` or `different_submitted` compares submitted strings when the query filter matches the action's mapped filter and both strings exist; otherwise `unresolved`.
 
 ### order {order: field}
+
+```contract
+uses: ["steps.assessment.order"]
+```
 
 `query_first` places this eligible prediction before this phase's attempt batch with required worker lifetime and setup established. `unestablished` retains the channels without that temporal assessment.
 

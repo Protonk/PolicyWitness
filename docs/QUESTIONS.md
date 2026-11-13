@@ -18,7 +18,7 @@ The shipped app requires macOS 26 or later on Apple silicon (arm64).
 
 ## Can PolicyWitness attribute a failed attempt to sandbox denial?
 
-A permission-shaped failure records a native result such as `EPERM`, `EACCES` or a bootstrap permission result. The report preserves that observation and the separately collected query answer. Establishing the cause requires evidence that distinguishes sandbox enforcement from the other reasons the native operation can fail.
+A permission-shaped failure records a native result such as `EPERM`, `EACCES` or a bootstrap permission result. The report preserves that observation and the separately collected query answer. Establishing the cause requires evidence that distinguishes sandbox enforcement from the other reasons the native operation can fail. [What a permission failure establishes](PolicyWitness.md#what-a-permission-failure-establishes) lists what the classification rests on and the kinds of evidence an attribution needs.
 
 ## What does PolicyWitness's attempt channel record?
 
@@ -38,7 +38,7 @@ It records the attempt observation and its basis, the relationship between submi
 
 ## Does PolicyWitness decide whether `sandbox_check` and enforcement disagree?
 
-The report supplies the query answer, attempt observation and the relationships it can establish. `query_first` establishes collection before the phase's actions; `same_submitted` compares submitted target bytes. Runtime object identity and changes between query and action require additional observations for an agreement or disagreement claim.
+No. The report supplies the query answer, attempt observation and the relationships it can establish. `query_first` establishes collection before the phase's actions; `same_submitted` compares submitted target bytes. Runtime object identity and changes between query and action require additional observations for an agreement or disagreement claim. [When the answer and the attempt differ](PolicyWitness.md#when-the-answer-and-the-attempt-differ) gives the fields to check first.
 
 ## Can PolicyWitness run every profile that `libsandbox` accepts?
 
@@ -58,7 +58,7 @@ Use [actors and sandbox extensions](PolicyWitness.md#sandbox-extensions). Each a
 
 ## Which happens first, the prediction or the attempt?
 
-The host closes a phase's query collection before releasing its action batch. A qualifying native answer has `comparison.order: query_first` when the report carries the supporting release and acknowledgement chain. Actions run in declaration order; an earlier action can change the state a later action encounters. Use [ordered phases](PolicyWitness.md#ordered-phases) to collect again after earlier actions.
+The host closes a phase's query collection before releasing its action batch. A qualifying native answer has `comparison.order: query_first` when the report carries the supporting release and acknowledgement chain. Actions run in declaration order; an earlier action can change the state a later action encounters. Use [ordered phases](PolicyWitness.md#ordered-phases) to collect again after earlier actions. [When `order` is `unestablished`](PolicyWitness.md#when-order-is-unestablished) names each requirement behind `query_first` and the fields that show it.
 
 ## Can PolicyWitness collect sandbox-denial logs?
 
