@@ -147,3 +147,10 @@ correction, the controls added and the decisions left with the maintainer.
 The [query-order investigation](../records/doc-coalescing/QUERY-ORDER-INVESTIGATION.md)
 traces producer setup observations through the carried reply and its readers,
 and records a focused actor reporting-validation correction with its evidence.
+
+## Fourth cycle
+
+The fourth cycle takes actor setup and application evidence as its topic:
+submitted declaration, worker publication, host assessment and reader
+validation. Its [ownership map and sequence](../records/doc-coalescing/ACTOR-SETUP-CYCLE.md)
+sets the three reading questions, proposed treatment and verification.
