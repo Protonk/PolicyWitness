@@ -119,3 +119,28 @@ the pass avoided adding hand-written example records to the guide.
 
 The test contract's literal example record remains hand-written and equals
 row S01's expectation. Rendering it from the fixture is left for later.
+
+## Pass 4 — Support beside its claim
+
+Two owners in the `steps` surface now sit beside the claims their assertions
+cover. Support metadata is outside the public snapshot, which this pass leaves
+unchanged.
+
+- The check-read ordering owner moved from the temporal-meaning definition to
+  "Establish query order". Its assertion concerns the rule's requirements:
+  `OrderingTests` removes each chain link and applies each record defect in
+  turn. The rule now shows its source-read association owner and this
+  check-read owner together. The definition states evidentiary limits and
+  keeps the surface's source-read owner.
+- "Classify an observation" gains a check-read owner citing `comparisonEvidence`
+  and `ComparisonEvidenceTests`. The producer's branch order was read against
+  the rule's six cases, and the table-driven reader asserts observation and
+  basis for every matrix row. The relations owner's assertion no longer lists
+  classification, which its attached scope never covered.
+
+Both owners keep their limits: source and check reading, constructed inputs
+and no execution credit. No owners were merged; the classification and
+relations owners cite the same source and check for different assertions and
+scopes. The rendered anchor `contract-steps-assessment-meaning-support` is
+replaced by `contract-steps-assessment-order-support`; nothing in the
+repository linked to the old one.

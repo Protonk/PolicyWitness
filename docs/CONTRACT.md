@@ -2695,6 +2695,9 @@ the ordering assessment supplies its live-worker temporal meaning.
 <a id="contract-steps-assessment-order-source"></a>
 **Support: [source read](#contract-support-grades) for [Establish query order](#contract-steps-assessment-order) and its descendants.** Ordering first counts all records for the step ID, then compares the selected record and native value. Production supplies its live worker PID; reporting validation supplies the associated reported worker PID. [Evidence details](#contract-steps-assessment-order-source-details).
 
+<a id="contract-steps-assessment-order-support"></a>
+**Support: [check read](#contract-support-grades) for [Establish query order](#contract-steps-assessment-order) and its descendants.** Native answer eligibility and the collection/release/acknowledgement chain are independently required; producer association is exact within the phase. Context: Read eligibility, ordering construction, phase adaptation and ordering controls. Evidence limit: Source and check reading; no new execution or mutation-control run is credited. [Evidence details](#contract-steps-assessment-order-support-details).
+
 <a id="contract-steps-assessment-meaning"></a>
 ##### Temporal meaning
 
@@ -2702,9 +2705,6 @@ Each probe retains its prediction eligibility when another query fails.
 A consume, release or other action earlier in the batch can change the
 state a later attempt encounters. Submitted-string relations and path
 observations retain their respective intervals and identities.
-
-<a id="contract-steps-assessment-meaning-support"></a>
-**Support: [check read](#contract-support-grades) for [Temporal meaning](#contract-steps-assessment-meaning) and its descendants.** Native answer eligibility and the collection/release/acknowledgement chain are independently required; producer association is exact within the phase. Context: Read eligibility, ordering construction, phase adaptation and ordering controls. Evidence limit: Source and check reading; no new execution or mutation-control run is credited. [Evidence details](#contract-steps-assessment-meaning-support-details).
 
 <a id="contract-steps-assessment-observe"></a>
 ##### Classify an observation
@@ -2723,6 +2723,9 @@ evidence.
 | <a id="contract-steps-assessment-observe-bootstrap"></a>4. Bootstrap permission result | (`reply.steps[r].attempt.result_source` = `"worker"` and `reply.steps[r].attempt.rc` ≠ `0` and `reply.steps[r].attempt.outcome` = `"lookup_failed"` and `reply.steps[r].attempt.error` = `"bootstrap_look_up: kr=1100"`) | [set_value(`reply.steps[r].comparison.observation`, `"permission_failure"`), set_value(`reply.steps[r].comparison.observation_basis`, `"bootstrap_permission_result"`)]. |
 | <a id="contract-steps-assessment-observe-other"></a>5. Other completed failure | (`reply.steps[r].attempt.result_source` = `"worker"` and `reply.steps[r].attempt.rc` ≠ `0`) | [set_value(`reply.steps[r].comparison.observation`, `"other_failure"`), set_value(`reply.steps[r].comparison.observation_basis`, `"completed_worker_status"`)]. |
 | <a id="contract-steps-assessment-observe-unavailable"></a>6. Unavailable observation | `true` | [set_value(`reply.steps[r].comparison.observation`, `"unavailable"`), set_value(`reply.steps[r].comparison.observation_basis`, `"no_completed_worker_result"`)]. |
+
+<a id="contract-steps-assessment-observe-support"></a>
+**Support: [check read](#contract-support-grades) for [Classify an observation](#contract-steps-assessment-observe) and its descendants.** Every scenario-matrix row's constructed attempt result yields its expected observation and basis: a spawned child with either exit status, completed success, permission errno, the bootstrap permission result, another completed failure and a missing result. Context: Read the producer's branch order and the table-driven reader over the scenario matrix. Evidence limit: Constructed attempt results were read. Integrated matrix cases own the live rows, without execution credit here. [Evidence details](#contract-steps-assessment-observe-support-details).
 
 <a id="contract-steps-assessment-relations"></a>
 ##### Submitted operation and target
@@ -2752,7 +2755,7 @@ A later query can follow unlink and recreation of the same spelling;
 these observations belong to their respective objects and times.
 
 <a id="contract-steps-assessment-relations-support"></a>
-**Support: [check read](#contract-support-grades) for [Submitted operation and target](#contract-steps-assessment-relations) and its descendants.** The scenario matrix checks channel classification, mapped operations, submitted relations, order and limitation values, including spawn and unlink distinctions. Context: Read the producer, matrix adapter and shared reading rules with their scenario descriptions. Evidence limit: Constructed controls were read. Corresponding integrated cases own live filesystem scenarios, without execution credit here. [Evidence details](#contract-steps-assessment-relations-support-details).
+**Support: [check read](#contract-support-grades) for [Submitted operation and target](#contract-steps-assessment-relations) and its descendants.** The scenario matrix checks mapped operations, submitted relations, order and limitation values, including spawn and unlink distinctions. Context: Read the producer, matrix adapter and shared reading rules with their scenario descriptions. Evidence limit: Constructed controls were read. Corresponding integrated cases own live filesystem scenarios, without execution credit here. [Evidence details](#contract-steps-assessment-relations-support-details).
 
 <a id="contract-steps-assessment-fresh"></a>
 ##### Observe fresh descriptors
@@ -6081,12 +6084,19 @@ Source: [CWorkerStepResults.swift](../runner/Sources/PWRunnerCore/CWorkerStepRes
 
 Source: [PWRunnerStepEvidence.swift](../runner/Sources/PWRunnerCore/PWRunnerStepEvidence.swift): `eligibleOrderedStep`; [PWRunnerReply.swift](../runner/Sources/PWRunnerCore/PWRunnerReply.swift): `validateForReporting`.
 
-<a id="contract-steps-assessment-meaning-support-details"></a>
-### Temporal meaning — Ordering support
+<a id="contract-steps-assessment-order-support-details"></a>
+### Establish query order — Ordering support
 
-[Local support](#contract-steps-assessment-meaning-support).
+[Local support](#contract-steps-assessment-order-support).
 
 Source: [PWRunnerStepEvidence.swift](../runner/Sources/PWRunnerCore/PWRunnerStepEvidence.swift): `eligibleOrderedStep`; [CWorkerComparison.swift](../runner/Sources/PWRunnerCore/CWorkerComparison.swift): `buildOrdering`; [CWorkerStepResults.swift](../runner/Sources/PWRunnerCore/CWorkerStepResults.swift): `eligibleOrderedStep`. Check: [OrderingTests.swift](../runner/Tests/PWRunnerCoreTests/OrderingTests.swift): `runOrderingTests`.
+
+<a id="contract-steps-assessment-observe-support-details"></a>
+### Classify an observation — Classification support
+
+[Local support](#contract-steps-assessment-observe-support).
+
+Source: [CWorkerComparison.swift](../runner/Sources/PWRunnerCore/CWorkerComparison.swift): `comparisonEvidence`. Check: [ComparisonEvidenceTests.swift](../runner/Tests/PWRunnerCoreTests/ComparisonEvidenceTests.swift): `runComparisonEvidenceTests`.
 
 <a id="contract-steps-assessment-relations-support-details"></a>
 ### Submitted operation and target — Comparison support

@@ -645,14 +645,6 @@ source: [{"path": "runner/Sources/PWRunnerCore/PWRunnerStepEvidence.swift", "sym
 pins: "Ordering first counts all records for the step ID, then compares the selected record and native value. Production supplies its live worker PID; reporting validation supplies the associated reported worker PID."
 ```
 
-### Temporal meaning {meaning: definition}
-
-
-Each probe retains its prediction eligibility when another query fails.
-A consume, release or other action earlier in the batch can change the
-state a later attempt encounters. Submitted-string relations and path
-observations retain their respective intervals and identities.
-
 #### Ordering support {support: owner}
 
 ```contract
@@ -664,6 +656,14 @@ pins: "Native answer eligibility and the collection/release/acknowledgement chai
 context: "Read eligibility, ordering construction, phase adaptation and ordering controls."
 limits: "Source and check reading; no new execution or mutation-control run is credited."
 ```
+
+### Temporal meaning {meaning: definition}
+
+
+Each probe retains its prediction eligibility when another query fails.
+A consume, release or other action earlier in the batch can change the
+state a later attempt encounters. Submitted-string relations and path
+observations retain their respective intervals and identities.
 
 ### Classify an observation {observe: checks}
 
@@ -726,6 +726,18 @@ test: True
 effects: [set_value(reply.steps[r].comparison.observation, "unavailable"), set_value(reply.steps[r].comparison.observation_basis, "no_completed_worker_result")]
 ```
 
+#### Classification support {support: owner}
+
+```contract
+grade: "check_read"
+scope: "subtree"
+source: {"path":"runner/Sources/PWRunnerCore/CWorkerComparison.swift","symbol":"comparisonEvidence"}
+check: {"path":"runner/Tests/PWRunnerCoreTests/ComparisonEvidenceTests.swift","symbol":"runComparisonEvidenceTests","form":"test"}
+pins: "Every scenario-matrix row's constructed attempt result yields its expected observation and basis: a spawned child with either exit status, completed success, permission errno, the bootstrap permission result, another completed failure and a missing result."
+context: "Read the producer's branch order and the table-driven reader over the scenario matrix."
+limits: "Constructed attempt results were read. Integrated matrix cases own the live rows, without execution credit here."
+```
+
 ### Submitted operation and target {relations: definition}
 
 | Attempt | Mapped operation | Mapped filter |
@@ -758,7 +770,7 @@ grade: "check_read"
 scope: "subtree"
 source: {"path":"runner/Sources/PWRunnerCore/CWorkerComparison.swift","symbol":"comparisonEvidence"}
 check: {"path":"runner/Tests/PWRunnerCoreTests/ComparisonEvidenceTests.swift","symbol":"runComparisonEvidenceTests","form":"test"}
-pins: "The scenario matrix checks channel classification, mapped operations, submitted relations, order and limitation values, including spawn and unlink distinctions."
+pins: "The scenario matrix checks mapped operations, submitted relations, order and limitation values, including spawn and unlink distinctions."
 context: "Read the producer, matrix adapter and shared reading rules with their scenario descriptions."
 limits: "Constructed controls were read. Corresponding integrated cases own live filesystem scenarios, without execution credit here."
 ```
