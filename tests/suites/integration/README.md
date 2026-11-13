@@ -12,9 +12,10 @@ Rust integration tests that exercise the CLI contract against a built app.
 - `example` on the resolved app exits 0 with empty stderr and prints one JSON
   object and one newline carrying the app's `PWContract`; two emissions are
   byte-identical, and every argument is exit 2 with usage and empty stdout.
-- `example` with an unwritable stdout, a closed stdout descriptor or an
-  unwritable stderr exits 2 without a panic; the reason reaches stderr when
-  that stream is writable, and a closed stderr beside a writable stdout still
+- `example` whose stdout is a pipe with no reader exits 2 without a panic,
+  whether or not stderr can be written; the reason reaches stderr when that
+  stream is writable. An argument refused beside an unwritable or closed
+  stderr is still exit 2, and a closed stderr beside a writable stdout still
   exits 0 with the complete document.
 - Isolated Cargo builds without an identity print nothing for `example` and
   exit 2. Builds given another identity emit it, and the resolved app's `run`

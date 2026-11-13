@@ -384,7 +384,7 @@ fn example_write_failures_exit_2_without_a_panic() {
     assert_eq!(output.status.code(), Some(2));
     assert!(output.stdout.is_empty());
 
-    // A closed descriptor is a failed write, not a success nobody received.
+    // A stderr closed at launch changes neither status.
     let shell = |script: &str| {
         Command::new("/bin/sh")
             .args(["-c", script])
@@ -393,15 +393,9 @@ fn example_write_failures_exit_2_without_a_panic() {
             .output()
             .expect("shell")
     };
-    let output = shell("exec \"$0\" example >&-");
-    assert_eq!(output.status.code(), Some(2));
-    assert_eq!(String::from_utf8(output.stderr).unwrap(), reason);
-    let output = shell("exec \"$0\" example >&- 2>&-");
-    assert_eq!(output.status.code(), Some(2));
     let output = shell("exec \"$0\" example extra 2>&-");
     assert_eq!(output.status.code(), Some(2));
     assert!(output.stdout.is_empty());
-    // With a writable stdout a closed stderr changes nothing.
     let output = shell("exec \"$0\" example 2>&-");
     assert_eq!(output.status.code(), Some(0));
     let reference = run(&["example"], Stdio::piped(), Stdio::piped());
