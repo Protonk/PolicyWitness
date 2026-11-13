@@ -6,10 +6,10 @@ emits, the accepted `lesson create` input and the deliberately refused
 preparation and host admission, and stops before interpreting native execution.
 It is not a four-pass cycle.
 
-This record currently holds the initial map only. No experiment was run and no
-public document was edited. Source was read at `c9a7978d`. The distribution
-app reports `development:e2a3ddf1…`, the identity `docs/build_contract.py`
-computes for this tree, so the experiments proposed below need no build.
+The passage, map, findings and hypotheses below were written from source at
+`c9a7978d`, before any experiment or edit. The sections from
+[Baseline observations](#baseline-observations) onward record what was then
+observed, the bounded repairs and what remains open.
 
 ## Passage
 
@@ -20,7 +20,7 @@ computes for this tree, so the experiments proposed below need no build.
 | Host admission | Host. [PWRunnerRequest.swift](../../runner/Sources/PWRunnerCore/PWRunnerRequest.swift) checks `contract`, then root and nested closed objects while decoding; `admitSpecimen` in [ProbeRunner.swift](../../runner/Sources/PWRunnerCore/ProbeRunner.swift) checks capacity, then meaning. | No. `capture_typo` stops in decoding at `policy`. `example` and `create` continue to capacity and meaning; `create` carries a caller-chosen target subject to the 511-byte operand capacities in [limits.json](../../docs/limits.json). |
 | After admission | Host, worker, validator. | Not followed here. Admission starts children; it establishes no query answer and no file effect. |
 
-## Map
+## Map as found
 
 | | `example` | `lesson create` | `lesson capture_typo` |
 | --- | --- | --- | --- |
@@ -33,7 +33,7 @@ computes for this tree, so the experiments proposed below need no build.
 | Checks on host admission | Default `witness_contract/example_round_trip`: the selected app's emitted bytes submitted unchanged, admission and six one-change refusals observed. | Default `runner_outcome_bad_request/accepted_input_contract` and Swift `RequestContractTests`: a request materialized from the repository template by the Python or Swift loader, not the app's emitted bytes. Emitted bytes reach `run` only in opt-in `witness_contract/guide_workflows`. | Same as `create`, with the independently authored refusal in [examples.json](../../tests/fixtures/request_contract/examples.json). |
 | Unproved | Exact bytes at the pipe and host receipt (stated in the owner's limits); a gate refusal on a bound build. | Default-battery admission of the emitted document; the fixed-point property; behavior at the target capacity boundary. | Default-battery refusal of the emitted document; refusal code when the target also exceeds capacity. |
 
-## Established
+## Established by reading
 
 1. **The starting observations hold.** The contract gives `example` a
    same-build admission promise and `lesson` a publication promise. Both
@@ -91,6 +91,8 @@ computes for this tree, so the experiments proposed below need no build.
 
 ## Hypotheses
 
+Their outcomes are under [Baseline observations](#baseline-observations).
+
 - H1. Each emitted lesson document is a fixed point of `run`'s preparation,
   and the host treats it as it treats the loader-materialized request.
   Expected by construction; unobserved in the default battery.
@@ -131,36 +133,196 @@ Expectations that must stay independently authored:
 The misspelled member's name is both: its identity is a fact of the input, and
 its appearance in `request_failure.path` is an expected outcome.
 
-## Narrow experiments
+## Baseline observations
 
-Both use the current distribution app by hand, with captures kept in scratch.
-Neither adds a case, build or worktree.
+One execution of each passage on one machine, by hand, against
+`dist/PolicyWitness.app`. `--version`, the app property list and
+`docs/build_contract.py` on this tree all report
+`development:e2a3ddf1c5f3848d9bcd370287fb9ad2be81ec78b11e8060d93ca9dd9e6fbac0`;
+the app describes itself as `v0.3.7-74-g5adff9ae`. Each emitted file was
+written to disk as printed and passed to `run` unchanged. Each target was
+observed with `lstat` before emission and after `run`. Raw captures are in
+`.tmp/publication-admission/captures/`, which is gitignored, disposable and
+present only in the local checkout; the table is the retained account.
 
-- X1 (H1). Emit both lessons to fresh targets and submit the emitted files
-  unchanged. Compare `request_delivery.bytes_written` with the emitted length
-  less its newline; read `data.request_failure` and whether the runner reply
-  carries the same record; observe each target independently. Four invocations.
-- X2 (H2, H3). Repeat with 511-byte and 512-byte targets. Six invocations. The
-  511-byte `create` is expected to be admitted whatever its attempt returns,
-  which keeps admission apart from the effect.
+| Passage | Target, UTF-8 bytes / characters | `lesson` exit, emitted bytes | `run` exit and outcome | Refusal record | `bytes_written` | Target before → after |
+| --- | --- | --- | --- | --- | --- | --- |
+| X1 `create` | 42 / 42 | 0, 623 | 0, `finished`; one step, attempt `ok` | none | 622 | absent → regular file, size 0 |
+| X1 `capture_typo` | 42 / 42 | 0, 661 | 1, `bad_request` | `unknown_field` at `policy.capture_compiled_profiel` | 660 | absent → absent |
+| X2 `capture_typo` | 511 / 510 | 0, 1599 | 1, `bad_request` | `unknown_field`, same path | 1598 | absent → absent |
+| X2 `create` | 511 / 510 | 0, 1561 | 0, `finished`; attempt `ok` | none | 1560 | absent → regular file, size 0 |
+| X2 `capture_typo` | 512 / 511 | 0, 1601 | 1, `bad_request` | `unknown_field`, same path | 1600 | absent → absent |
+| X2 `create` | 512 / 511 | 0, 1563 | 1, `bad_request` | `admission_refused` at `probe_plan.0.attempt.target`; `admission_failure` field `target`, actual 512, maximum 511, unit `utf8_bytes`, origin `runner_host` | 1562 | absent → absent |
 
-Findings 2, 4, 6, 7 and 8 are settled by reading and need no experiment. H4
-needs none unless a correction is selected.
+The two boundary targets share one existing directory, differ by one leaf
+byte, keep every component at or below 200 bytes and contain one two-byte
+character. In every refused passage the runner reply carried the same
+`request_failure` as the envelope, no worker or validator record and no steps.
+In all six, emission wrote nothing to stderr, the submitted file was unchanged
+after `run`, and the emitted JSON value equalled the repository template with
+its `$EFFECT` markers replaced and the identity added.
 
-## Recommended next step
+What these establish, for this build and machine:
 
-Run X1 and X2, then return with dispositions sorted by kind:
+- H1, in part. `run` admitted the emitted `create` document and a new empty
+  file appeared; the host refused the emitted `capture_typo` document. The
+  host's decisions matched the corpus rows written for the loader-built forms.
+- H2. Publication succeeded for a target the host then refused on capacity,
+  before any child. The 512-byte target has 511 characters, so the count is
+  of UTF-8 bytes.
+- H3. The misspelled member is refused first at either length.
 
-- Editorial: CONTROLLER's origination and publication paragraphs; the lesson
-  support owner's citations and limits.
-- Public wording, for a maintainer decision: whether the example rule should
-  separate what exit 0 establishes from the build-level admission promise and
-  state that promise's conditions; whether usage text should state a host
-  outcome for `capture_typo`.
-- Mechanical: whether one default check should relate emitted lesson bytes to
-  the materialized templates, and where.
-- Retain: the two promise kinds, the independent corpus expectations and the
-  separate `lesson` command.
+What remains inferred or unobserved:
 
-Adjacent, not pursued: the root README's hand-written first specimen; whether
-the example promise extends to an external runner selected at `run`.
+- Exact delivered bytes. `bytes_written` equalled the emitted length less its
+  newline in all six passages. That is a count of bytes the client's pipe
+  accepted. It does not show which bytes were written or that the host
+  received them.
+- The fixed point. That `run`'s preparation reproduces an emitted lesson is
+  supported by source inspection and that length agreement only. The example
+  has a constructed exact-string test under a test identity; the lessons have
+  none.
+- Host receipt. The host's replies name the misspelled member and the 512-byte
+  count, which is consistent with receipt of documents having those
+  properties and is not a byte comparison.
+- The query operand's own capacity. The attempt target is checked first, so
+  the 511-byte bound on `sandbox_check.filter.value` was not separately
+  reached.
+- Release builds, other machines, repeated runs and a failing stderr write.
+- H4, which was not pursued.
+
+No observation contradicted a public promise.
+
+## Repairs
+
+No controller source, template or generator input of the build identity
+changed; the tree still computes the identity above, so the staged app was
+reused.
+
+| Gap | Change | Kind |
+| --- | --- | --- |
+| CONTROLLER omitted `lesson` and joined publication with the example guarantee | [CONTROLLER](../../docs/CONTROLLER.md) now describes both emitters under one publication account, then states the example's same-build admission as a build guarantee spanning controller constant and host grammar, which emission does not observe, and states that `lesson` carries none. The guarantee's strength is unchanged. | Editorial |
+| CONTROLLER named the write/flush protocol as the example's alone | The publication paragraph names both commands and both injected-writer tests. | Editorial |
+| CONTROLLER did not say which lesson checks exist | The preparation paragraph states that no constructed exact-string test covers a lesson and what the live control reads. | Editorial |
+| Guide command table listed `example` and not `lesson` | One authored row in the [guide](../../docs/PolicyWitness.md); the staged copy was refreshed with `generate_limits.py --stage-guide`. | Editorial |
+| Lesson support owner omitted existing checks | The owner in [10-request.surface.md](../../docs/contract/10-request.surface.md) cites the three unit controls, the two selected-app CLI tests, the isolated-build identity test and the live control; its pins and limits say what each establishes. Regenerated with `generate_contract_stamps.py`: `CONTRACT.md` changed, `public.json` did not. | Support presentation |
+| Default battery never submitted emitted lesson bytes | `emitted_lessons` in [contract.py](../../tests/suites/runner_outcome_bad_request/contract.py), inside the existing default `accepted_input_contract` case. | Mechanical |
+
+The lesson tests were read before citing them. The selected-app tests observe
+exit status, stdout, an empty stderr on success, identity, labels, verbatim
+targets and the one-member difference. Their stderr control closes the stream
+at launch. Unlike the example's, no lesson control gives stderr a reader-less
+pipe, so the lesson's indifference to a failing stderr write stays
+source-read, and the owner says so.
+
+`emitted_lessons` runs the selected app's `lesson` for each corpus row that
+names an app-owned source, retains its stdout, stderr and exit status, writes
+the emitted bytes as the request file and submits it through the case's
+existing `cli` helper. Expected admission, refusal code and path, child
+absence and the file observation come from the corpus row and that helper;
+nothing is derived from the emitted document except the request itself. It
+requires a row for every lesson source, so a removed row fails instead of
+passing by omission. The loader-built rows remain. They exercise the direct
+host entry, and the Swift unit tests read the same rows without an app; the
+emitted path covers neither.
+
+Maintenance added:
+
+- The lesson selector is taken from the template's file stem. A selector
+  renamed apart from its file fails the control.
+- The support owner cites seven checks by symbol, and CONTROLLER names one
+  more test and links the control. Renaming any of them requires the
+  citation.
+- The guide's command table carries a `lesson` row beside the usage text.
+- The default case makes four more app invocations.
+
+## Verification
+
+One dispatcher run covered the changed documents, generated contract and
+changed control: the `source_drift` suite with
+`runner_outcome_bad_request/accepted_input_contract`, run
+`20261113T230216Z_ae39b836`. All 11 cases passed, the app was unchanged
+across the run and no case overlapped system sleep. The tree was `8d4d202a`
+with the repairs above uncommitted, against the staged app of the same
+identity. In the live case's artifacts, each `lesson-emitted-*` request file
+is byte-identical to the retained `lesson` stdout; `create` was admitted with
+its file observed, and `capture_typo` was refused with `unknown_field`, no
+worker and no steps.
+
+The plan paragraph changed after that run, so
+`source_drift/generator_contract` ran once more alone, run
+`20261113T231002Z_20f65548`, and passed. Both were development runs. Their
+output was inspected and then removed with `make prune APPLY=1`, together
+with the earlier plan-link check.
+
+Not rerun, as reviewed judgments and not mechanical facts:
+
+- `unit` and `integration`. No Rust source changed. The newly cited lesson
+  tests were read, not executed here; the owner credits no execution.
+- `witness_contract/example_round_trip` and Swift `runner_unit`. Neither the
+  example, the corpus nor a loader changed.
+- Opt-in `witness_contract/guide_workflows`. The guide gained one table row,
+  outside every fence that case selects.
+
+No rejected control has been run for `emitted_lessons`. The step reuses the
+case's existing assertions, and the mutation proposed below would be its
+first rejected control.
+
+## Remaining public wording
+
+Two sentences still read as though exit 0 reports an admission decision.
+Neither was changed: the first is stamped public content, and the second is
+controller source, an identity input whose edit requires a new build.
+
+1. The example rule in the request surface. Current: "Process exit 0 supplies
+   the complete document, and the same build's `run` admits it." and, at the
+   end, "The command reads no file, starts no runner and reports nothing about
+   a caller's document; `run` remains the only admission." Proposed: "Process
+   exit 0 supplies the complete document. The build guarantees that its own
+   `run` admits that document; emission performs no admission, and `run`
+   remains the only admission." with the final sentence ending at "a caller's
+   document." Every surface stamp is already `unreleased`, so this changes
+   `CONTRACT.md` and the public snapshot and moves no released stamp.
+2. The CLI usage notes in `cli.rs`. Proposed for `example`: "…carrying this
+   build's contract; the build guarantees its own run admits it; exit 0
+   supplies the complete document, and on exit 2 discard stdout". Proposed
+   for `lesson`: "…capture_typo carries a deliberately unknown policy field;
+   exit 0 means complete publication and reports nothing about admission, and
+   on exit 2 discard stdout". This is best carried with the next controller
+   source change, not built for alone.
+
+Retained without change: the two promise kinds, the lesson rule, the
+independent corpus expectations, the separate `lesson` command and both
+substitution implementations.
+
+## Proposed mutation experiment
+
+Not run.
+
+**Mutation.** A disposable stand-in for the selected app's `policy-witness`
+forwards every invocation to the real binary, except that
+`lesson capture_typo` returns the real `lesson create` output for the same
+target. Publication still exits 0 with a complete, correctly identified
+document; the document no longer carries the misspelled member. No source,
+template, corpus row or app byte changes, and nothing is rebuilt.
+
+**Reader conclusion at risk.** "A passing `accepted_input_contract` shows
+that what `lesson capture_typo` publishes is refused by `run`." Before the
+repair above the case could not support that: it built the request from the
+repository template and never read the app's output.
+
+**Detection expected.** `emitted_lessons` should fail on the `capture_typo`
+row, where `run` exits 0 and the target file exists against an expected
+`unknown_field` refusal. The loader-built `capture_typo` rows should still
+pass, since they do not depend on the emitter.
+
+**Reading the result.** A missed detection would show that the new step does
+not bind the published document to the row's expectation, a checker defect.
+It would show nothing about the product: the real emitter and host are
+unchanged. Detection would show that this one divergence is caught. It would
+not show that emitter and template agree in general, that any byte-level
+property holds, or that publication implies admission of `create`.
+
+**Cost.** The stand-in needs links to the real client, service and property
+list beside it, and one by-hand run of `contract.py` outside the dispatcher
+with its output in scratch.
