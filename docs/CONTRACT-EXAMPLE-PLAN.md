@@ -689,6 +689,24 @@ No fixture needed correcting. `envelope_skeleton` in `tests/lib/blackbox.py` now
 4. **Integrity findings and command success.** The consumer now verifies today's mapping from reply outcome to result. Whether controller integrity findings should change command success, `envelope.data.select.success_findings`, remains undecided and is not authorized by this work.
 5. **Release form.** No live run has seen a `release:` identity; section 9's nested acceptance supplies it.
 
+### Maintainer's decision
+
+Given on 2026-11-12, in the maintainer's words.
+
+On the evaluation:
+
+> I accept (this may be treated as "accept with revisions" based on the below).
+
+On the target bytes in evidence, after hearing that the plan states no reason for storing them:
+
+> digest-and-length is good.
+
+On the `read_hosts` example, choosing extraction of the step from the constant over a link to the emitted example:
+
+> I agree, you can do A. Proceed.
+
+The decision is accept, with two revisions: the live case records a digest and length of each target in place of its bytes, and the probes surface's `read_hosts` step is extracted from the example constant.
+
 ### Handoff statement
 
 - **Supported source:** `23440049`. Implementation is complete through step 3; no support commit exists, and the rule and the example node still carry their evidence gaps.
