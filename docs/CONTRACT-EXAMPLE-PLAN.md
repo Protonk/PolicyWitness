@@ -455,7 +455,7 @@ Possible later steps keep the same direction, from code to presentation; they ar
 
 ## 12. Evaluation record
 
-Recorded by the executor on 2026-11-12 at the evaluation point. Every run named here is development evidence under `tests/out/runs/` or in the challenge worktree: it is disposable under the retention policy and is not retained release evidence.
+Recorded by the executor on 2026-11-12 at the evaluation point. Every run named here was development evidence under `tests/out/runs/` or in the challenge worktree: disposable under the retention policy, and never retained release evidence. At the maintainer's instruction on 2026-11-12, after the candidate verification below was recorded, those run directories were pruned and the challenge worktree and its evidence directory were removed. This record is what remains of them; a claim here can be checked again only by running its case.
 
 ### Source and build
 
@@ -494,7 +494,7 @@ In the final battery `witness_contract/example_round_trip_controls` matched 190 
 
 ### Serialization challenge
 
-The disposable worktree `PolicyWitness-example-challenge`, beside this checkout, holds the runs; the directory `PolicyWitness-example-challenge.evidence` beside it holds the patch, source hashes, commands, console logs and the named failure. The challenge was run at `6c9f11da` and repeated at `23440049`, with the same outcome.
+A disposable worktree, `PolicyWitness-example-challenge` beside this checkout, held the runs, and the directory `PolicyWitness-example-challenge.evidence` beside it held the patch, source hashes, commands, console logs and the named failure; both have since been removed. The challenge was run at `6c9f11da` and repeated at `23440049`, with the same outcome.
 
 | Step at `23440049` | Run | Result |
 | --- | --- | --- |
@@ -715,7 +715,7 @@ The decision is accept, with two revisions: the live case records a digest and l
 
 Both stages changed tests, the contract tree and generated documents. Controller source did not change, so the identity derived from the source stays `development:6a333cf6f19aea6939fa843655b6ce2a90ec05837fb4bb6b8b9288b0ccc572f0`, equal to the selected app's.
 
-Evidence carried forward to this state, as a reviewed judgment and not a mechanical fact: the final default battery ran before `d3c2a72a`. The consumer, the dispatcher and every case outside the two example cases and the contract generator's controls are unchanged since that battery; the two example cases, the consumer controls and `source_drift` were rerun after each change. Earlier development runs under `tests/out/runs/` retain this machine's target bytes from before the first revision and remain disposable.
+Evidence carried forward to this state, as a reviewed judgment and not a mechanical fact: the final default battery ran before `d3c2a72a`. The consumer, the dispatcher and every case outside the two example cases and the contract generator's controls are unchanged since that battery; the two example cases, the consumer controls and `source_drift` were rerun after each change. Development runs from before the first revision retained this machine's target bytes; they were pruned with the rest.
 
 ### Candidate verification under section 9
 
@@ -743,7 +743,7 @@ The stamps therefore stay `unreleased`. Not done, and owed before a tag: generat
 
 - **Supported source:** `a5de0c63`. Implementation is `23440049` with the revisions of `d3c2a72a`; `a5de0c63` completes support for the rule and the example node at check-read grade. Later commits to this record are evidence only.
 - **Selected app:** built from `a5de0c63` with a clean tree, identity `development:6a333cf6f19aea6939fa843655b6ce2a90ec05837fb4bb6b8b9288b0ccc572f0`.
-- **Applicable verification:** the candidate battery and the build-refusal rehearsal on `a5de0c63`, with the nested release-form acceptance; the challenge at `23440049`, whose emitter and orchestration test are unchanged since.
+- **Applicable verification:** the candidate battery and the build-refusal rehearsal on `a5de0c63`, with the nested release-form acceptance; the challenge at `23440049`, whose emitter and orchestration test are unchanged since. Their output directories are pruned, so this record and the commit messages carry the results.
 - **Unresolved decisions and dispositions:** no failed assertion awaits a disposition. The open matters above are the unresolved decisions.
 - **Blocks dependent investigation:** nothing recorded here. The controller investigation can use this baseline; reassess applicability if source, contract, consumer, fixtures or tests change.
 - **Pending release work:** stamp preparation and its prepared-commit checks, withheld by the maintainer's instruction to keep the tree buildable; the maintainer's review of the contract and the notes; the tag and everything after it.
