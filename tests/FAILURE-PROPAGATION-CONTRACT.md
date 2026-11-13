@@ -1462,7 +1462,9 @@ record, an independent control and the expected record. S09 is explicitly
 constructed-only: its unsupported attempt is refused by public admission,
 while the unit reader exercises defensive handling of constructed results.
 `docs/generate_limits.py` renders the table below from it, and `source_drift`
-fails when the committed table differs from the generator's output. The query column is
+fails when the committed table differs from the generator's output. The same
+run copies a few rows into the guide's
+[recorded scenarios](../docs/PolicyWitness.md#recorded-scenarios). The query column is
 `sandbox_check.outcome` when `result_source` is `validator` and the outcome is
 `allow` or `deny`, otherwise `unavailable`. Specimen S runs the real
 validator; B steers it with `stub_validator.py` through

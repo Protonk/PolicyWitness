@@ -5,7 +5,8 @@ One run renders the limits inventory into LIMITS.md, renders the comparison
 scenario matrix (tests/fixtures/comparison/matrix.json) into the failure
 contract's table, and copies the shared sections into the user guide: the
 limits tables from LIMITS.md, the questions from QUESTIONS.md and the
-comparison reading rules and extension statuses from the failure contract. References identify
+comparison reading rules and extension statuses from the failure contract.
+The guide's comparison scenarios are selected rows of the same matrix. References identify
 owners, not proof of values. Compiled C, Swift and Rust tests compare
 implementation values with the limits manifest independently.
 --check verifies every document without writing. --stage-guide copies the
@@ -47,6 +48,10 @@ RULES_START = "<!-- BEGIN SHARED READING RULES -->"
 RULES_END = "<!-- END SHARED READING RULES -->"
 GUIDE_RULES_START = "<!-- BEGIN COPIED READING RULES -->"
 GUIDE_RULES_END = "<!-- END COPIED READING RULES -->"
+GUIDE_SCENARIOS_START = "<!-- BEGIN COPIED COMPARISON SCENARIOS -->"
+GUIDE_SCENARIOS_END = "<!-- END COPIED COMPARISON SCENARIOS -->"
+# Matrix rows the guide shows beside its reading advice, in display order.
+GUIDE_SCENARIO_ROWS = ("S02", "S03", "S05", "S06", "S07", "S11")
 EXTENSION_START = "<!-- BEGIN SHARED EXTENSION STATUSES -->"
 EXTENSION_END = "<!-- END SHARED EXTENSION STATUSES -->"
 GUIDE_EXTENSION_START = "<!-- BEGIN COPIED EXTENSION STATUSES -->"
@@ -197,19 +202,36 @@ def load_matrix(path: Path):
     return rows
 
 
-def render_matrix(rows):
-    lines = [MATRIX_START, "",
-             "| Row | Specimen | Scenario | Query | Observation | Basis | Operation | Target | Order | Limitations | Independent control |",
-             "| --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |"]
+def matrix_table(rows, *, specimen):
+    """The scenario table; the guide's selection omits the fixture's specimen column."""
+    columns = ["Row", *(["Specimen"] if specimen else []), "Scenario", "Query", "Observation", "Basis",
+               "Operation", "Target", "Order", "Limitations", "Independent control"]
+    lines = ["| " + " | ".join(columns) + " |", "| " + " | ".join("---" for _ in columns) + " |"]
     for row in rows:
         comparison = row["comparison"]
         limitations = ", ".join(f"`{x}`" for x in comparison["limitations"]) or "—"
         lines.append("| " + " | ".join(map(cell, [
-            row["id"], row["specimen"], row["scenario"], f"`{row['query']}`",
+            row["id"], *([row["specimen"]] if specimen else []), row["scenario"], f"`{row['query']}`",
             f"`{comparison['observation']}`", f"`{comparison['observation_basis']}`",
             f"`{comparison['operation_relation']}`", f"`{comparison['target_relation']}`",
             f"`{comparison['order']}`", limitations, row["control"]])) + " |")
-    return "\n".join(lines) + "\n\n" + MATRIX_END
+    return "\n".join(lines)
+
+
+def render_matrix(rows):
+    return MATRIX_START + "\n\n" + matrix_table(rows, specimen=True) + "\n\n" + MATRIX_END
+
+
+def update_guide_scenarios(text, rows):
+    """Copy the selected matrix rows, in the guide's order, for readers of an envelope."""
+    by_id = {row["id"]: row for row in rows}
+    missing = [ident for ident in GUIDE_SCENARIO_ROWS if ident not in by_id]
+    if missing:
+        raise ValueError(f"guide scenario rows absent from the matrix: {', '.join(missing)}")
+    table = matrix_table([by_id[ident] for ident in GUIDE_SCENARIO_ROWS], specimen=False)
+    require_standalone(table, "comparison scenarios")
+    return replace_block(text, GUIDE_SCENARIOS_START, GUIDE_SCENARIOS_END,
+                         GUIDE_SCENARIOS_START + "\n\n" + table + "\n\n" + GUIDE_SCENARIOS_END)
 
 
 def update_contract(text, rows):
@@ -420,6 +442,7 @@ def validate_guide(text, limits):
         raise ValueError("guide must use inline internal links only")
     markers = {line.strip() for block in guide.blocks if block.kind == "html" for line in block.content.splitlines()}
     for marker in (GUIDE_START, GUIDE_END, GUIDE_QUESTIONS_START, GUIDE_QUESTIONS_END, GUIDE_RULES_START, GUIDE_RULES_END,
+                   GUIDE_SCENARIOS_START, GUIDE_SCENARIOS_END,
                    GUIDE_EXTENSION_START, GUIDE_EXTENSION_END, GUIDE_COVERAGE_START, GUIDE_COVERAGE_END):
         if marker not in markers:
             raise ValueError(f"guide marker {marker} must stand on its own line outside code")
@@ -440,6 +463,12 @@ def validate_guide(text, limits):
     if not numbered(markdown_reader.parse(rules, "copied reading rules")):
         raise ValueError("guide must contain the copied reading rules")
     require_standalone(rules, "copied reading rules")
+    begin, finish = block_bounds(text, GUIDE_SCENARIOS_START, GUIDE_SCENARIOS_END)
+    scenarios = text[begin + len(GUIDE_SCENARIOS_START):finish - len(GUIDE_SCENARIOS_END)]
+    shown = [row[0].text for table in markdown_reader.parse(scenarios, "copied comparison scenarios").tables
+             for row in table.rows if row]
+    if shown != list(GUIDE_SCENARIO_ROWS):
+        raise ValueError("guide must contain the copied comparison scenarios")
     begin, finish = block_bounds(text, GUIDE_EXTENSION_START, GUIDE_EXTENSION_END)
     statuses = text[begin + len(GUIDE_EXTENSION_START):finish - len(GUIDE_EXTENSION_END)]
     require_standalone(statuses, "copied extension statuses")
@@ -494,6 +523,7 @@ def main():
         guide_after = update_guide_rules(update_guide_questions(
             update_guide(guide_before, after), questions),
             contract_after)
+        guide_after = update_guide_scenarios(guide_after, rows)
         guide_after = update_guide_extension_statuses(guide_after, contract_after)
         # The coverage copy comes from the freshly span-rendered source document.
         extensions_after = span_only[EXTENSIONS_NAME][1] if EXTENSIONS_NAME in span_only else extensions_path.read_text()

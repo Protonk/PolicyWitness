@@ -561,8 +561,8 @@ No build required; the manifest reader needs Meson on `PATH` for
 [docs/limits.json](../../../docs/limits.json), generated tables (the limits
 tables and the failure contract's scenario matrix rendered from
 `tests/fixtures/comparison/matrix.json`), the user guide's copied limits,
-questions, comparison reading rules and extension status tables, and the guide's
-internal links. The `generator_contract` case checks local links in its selected
+questions, comparison reading rules, selected comparison scenarios and extension
+status tables, and the guide's internal links. The `generator_contract` case checks local links in its selected
 prose documents. Controls exercise the real
 generator command with stale, missing and altered content; preserve both source
 files and an existing staged guide on rejection; and validate a staged guide

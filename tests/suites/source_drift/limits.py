@@ -61,6 +61,8 @@ class LimitsDocumentationTests(receipts.TestCase):
         self.assertEqual(self.guide, generator.update_guide(self.guide, self.document))
         self.assertEqual(self.guide, generator.update_guide_questions(self.guide, self.questions))
         self.assertEqual(self.guide, generator.update_guide_rules(self.guide, self.contract))
+        self.assertEqual(self.guide, generator.update_guide_scenarios(
+            self.guide, generator.load_matrix(ROOT / generator.MATRIX_NAME)))
         self.assertEqual(self.guide, generator.update_guide_extension_statuses(self.guide, self.contract))
         result = self.command(ROOT, '--check')
         self.assertEqual(result.returncode, 0, result.stderr)
@@ -165,14 +167,40 @@ An authored source still has <!-- span limits.step_id.value -->STALE_PUBLIC<!-- 
         self.assertEqual(sum(item.ordered and item.depth == 0 for item in document.items), 14)
         self.assertEqual(document.links, [])
 
+    def test_guide_scenarios_are_the_selected_fixture_rows(self):
+        rows = generator.load_matrix(ROOT / generator.MATRIX_NAME)
+        by_id = {row['id']: row for row in rows}
+        region = self.guide.split(generator.GUIDE_SCENARIOS_START)[1].split(generator.GUIDE_SCENARIOS_END)[0]
+        table, = markdown_reader.parse(region).tables
+        self.assertEqual([cells[0].text for cells in table.rows], list(generator.GUIDE_SCENARIO_ROWS))
+        self.assertNotIn('Specimen', [cell.text for cell in table.header])
+
+        def expected(markup):
+            inline = markdown_reader.parse(markup).inlines[0]
+            return inline.text, inline.code
+        for cells in table.rows:
+            row = by_id[cells[0].text]
+            comparison = row['comparison']
+            limitations = comparison['limitations']
+            self.assertEqual((cells[1].text, cells[1].code), expected(row['scenario']), row['id'])
+            self.assertEqual([cell.text for cell in cells[2:8]], [row['query'], *(
+                comparison[key] for key in generator.COMPARISON_KEYS[:5])], row['id'])
+            self.assertEqual(cells[8].text, ', '.join(limitations) if limitations else '—', row['id'])
+            self.assertEqual((cells[9].text, cells[9].code), expected(row['control']), row['id'])
+        # A selected row the fixture no longer carries refuses; nothing is silently dropped.
+        with self.assertRaisesRegex(ValueError, 'absent from the matrix: S03'):
+            generator.update_guide_scenarios(self.guide, [row for row in rows if row['id'] != 'S03'])
+
     def test_stale_matrix_table_or_rules_copy_is_refused_and_regenerated(self):
         for filename, mutate, expect in [
             (generator.CONTRACT_NAME, lambda t: t.replace('| S01 | S | allow, read succeeds |', '| S01 | S | allow, read fails |', 1), 'allow, read succeeds'),
             (generator.CONTRACT_NAME, lambda t: t.replace('1. The raw query answer', '1. The changed raw query answer', 1), 'The changed raw query answer'),
             ('docs/PolicyWitness.md', lambda t: t.replace('1. The raw query answer', '1. The changed raw query answer', 1), 'The raw query answer'),
+            ('docs/PolicyWitness.md', lambda t: t.replace('| S03 | allow, mode-000 file EACCES |', '| S03 | allow, read fails |', 1), '| S03 | allow, mode-000 file EACCES |'),
             (generator.CONTRACT_NAME, lambda t: t.replace(generator.MATRIX_END, ''), None),
             (generator.CONTRACT_NAME, lambda t: t.replace(generator.RULES_END, ''), None),
             ('docs/PolicyWitness.md', lambda t: t.replace(generator.GUIDE_RULES_END, ''), None),
+            ('docs/PolicyWitness.md', lambda t: t.replace(generator.GUIDE_SCENARIOS_END, ''), None),
         ]:
             with self.subTest(filename=filename, mutation=mutate):
                 root = self.checkout()
@@ -198,8 +226,9 @@ An authored source still has <!-- span limits.step_id.value -->STALE_PUBLIC<!-- 
                 # contract's rules into the guide; a rule edited in the contract
                 # reaches the guide, a rule edited only in the guide is overwritten.
                 rules = guide.read_text().split(generator.GUIDE_RULES_START)[1].split(generator.GUIDE_RULES_END)[0]
+                scenarios = guide.read_text().split(generator.GUIDE_SCENARIOS_START)[1].split(generator.GUIDE_SCENARIOS_END)[0]
                 table = contract.read_text().split(generator.MATRIX_START)[1]
-                self.assertIn(expect, rules + table)
+                self.assertIn(expect, rules + table + scenarios)
                 self.assertEqual(self.command(root, '--check').returncode, 0)
 
     def test_extension_statuses_are_complete_and_copied_from_the_contract(self):
@@ -463,6 +492,8 @@ An authored source still has <!-- span limits.step_id.value -->STALE_PUBLIC<!-- 
             (wrapped(generator.GUIDE_QUESTIONS_START, generator.GUIDE_QUESTIONS_END, '\n~~~~~text', '~~~~~\n'),
              'at least one copied question'),
             (wrapped(generator.GUIDE_RULES_START, generator.GUIDE_RULES_END, '\n<!--', '-->\n'), 'copied reading rules'),
+            (wrapped(generator.GUIDE_SCENARIOS_START, generator.GUIDE_SCENARIOS_END, '\n<!--', '-->\n'),
+             'copied comparison scenarios'),
             (self.guide.replace('\n## Limits\n', '\n<!--\n## Limits\n-->\n', 1), 'missing its Limits heading'),
             (self.guide + '\n[ref]: LIMITS.md\n', 'inline internal links only'),
             (self.guide.replace(generator.GUIDE_RULES_START, '~~~~~text\n' + generator.GUIDE_RULES_START, 1)

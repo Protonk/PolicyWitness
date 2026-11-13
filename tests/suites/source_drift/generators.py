@@ -76,6 +76,7 @@ def region_ownership(root, name):
                 'docs/PolicyWitness.md': [(gen.GUIDE_START, gen.GUIDE_END),
                     (gen.GUIDE_QUESTIONS_START, gen.GUIDE_QUESTIONS_END),
                     (gen.GUIDE_RULES_START, gen.GUIDE_RULES_END),
+                    (gen.GUIDE_SCENARIOS_START, gen.GUIDE_SCENARIOS_END),
                     (gen.GUIDE_EXTENSION_START, gen.GUIDE_EXTENSION_END),
                     (gen.GUIDE_COVERAGE_START, gen.GUIDE_COVERAGE_END)]}, set()
     data = json.loads((root / gen.MANIFEST_NAME).read_text())

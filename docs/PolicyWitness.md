@@ -2259,6 +2259,42 @@ To attribute the failure, add evidence that separates the causes. For example:
 Keep those observations with the result. The attribution they support is your
 conclusion; the report does not state it.
 
+#### Recorded scenarios
+
+These rows come from the scenario fixture that PolicyWitness's tests check
+against the app. Its specimen's policy allows by default and denies reading the
+file named `denied`. `readable` is an ordinary file, `locked` has mode 0000,
+`absent` does not exist and `helper_true` is a program that exits 0. Query is
+the answer in `sandbox_check`, or `unavailable` when the step has none. The
+other columns are the comparison fields. The last column is the independent
+observation the test keeps beside the record.
+
+<!-- BEGIN COPIED COMPARISON SCENARIOS -->
+
+| Row | Scenario | Query | Observation | Basis | Operation | Target | Order | Limitations | Independent control |
+| --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |
+| S02 | deny, read EPERM | `deny` | `permission_failure` | `permission_errno` | `matched` | `same_submitted` | `query_first` | — | policy denies file-read-data on this literal path; denied bytes unchanged; the failure is read under reading rule 3 (the envelope does not attribute it to the sandbox) |
+| S03 | allow, mode-000 file EACCES | `allow` | `permission_failure` | `permission_errno` | `matched` | `same_submitted` | `query_first` | — | direct open of locked outside PW fails with EACCES before the run; mode 0000 is a DAC condition, not policy |
+| S05 | query denied path, attempt other path | `deny` | `succeeded` | `completed_worker_status` | `matched` | `different_submitted` | `query_first` | — | readable and denied bytes unchanged |
+| S06 | query write, attempt read | `allow` | `succeeded` | `completed_worker_status` | `different` | `same_submitted` | `query_first` | — | readable bytes unchanged |
+| S07 | absent path, both channels | `unavailable` | `other_failure` | `completed_worker_status` | `matched` | `same_submitted` | `unestablished` | `query_plan:path_unresolved_at_planning` | absent does not exist before or after the run |
+| S11 | bare process-exec query, spawn ok | `unavailable` | `succeeded` | `spawned_child` | `different` | `same_submitted` | `unestablished` | — | direct spawn of helper_true exits 0; the native API rejects the bare spelling |
+
+<!-- END COPIED COMPARISON SCENARIOS -->
+
+- S02 and S03 carry identical comparison fields. S03's control shows the same
+  open failing outside PolicyWitness, so file mode accounts for it without the
+  policy, and its `allow` answer was collected first for the same submitted
+  operation and target. S02's policy contains a matching deny rule; its row
+  still does not attribute the failure to the sandbox.
+- S05 has a `deny` beside a success, and `target_relation` is
+  `different_submitted`: the query named the denied file and the attempt read
+  another. In S06 `operation_relation` is `different`: the query asked about
+  writing and the attempt read.
+- S07 and S11 have no query answer, so their order is `unestablished`. S07's
+  planner exclusion appears in `limitations`. S11's rejected operation name
+  appears only in `sandbox_check`, as `unsupported_operation`.
+
 #### The complete rules
 
 Read the channels' results, relations and order with these rules:

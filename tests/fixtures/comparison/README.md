@@ -28,6 +28,11 @@ These readers share the file:
   the lifecycle limitation for `unit.lifecycle_summary` exactly as the step
   builder does.
 
+`docs/generate_limits.py` renders every row into the failure contract's table
+and copies the rows named by its `GUIDE_SCENARIO_ROWS` into the user guide.
+A copied row's `scenario` and `control` text reaches readers of an envelope,
+so it must stand without this fixture's other rows or repository links.
+
 ## Placeholders
 
 Absolute paths use the fixtures' `{{NAME}}` convention and are expanded by

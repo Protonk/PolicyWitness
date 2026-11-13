@@ -25,6 +25,11 @@ also rebased to the copied coverage anchor. Each target anchor must exist in
 the guide.
 Author scalar spans outside generated regions; the generator renders them
 before copying the shared prose.
+The guide's recorded comparison scenarios are rows of
+[the scenario matrix](../tests/fixtures/comparison/matrix.json), selected by
+`GUIDE_SCENARIO_ROWS` in the generator. Change a row's wording in the fixture
+and the selection in the generator; the guide's notes on those rows are
+authored beside the copy and must still describe them.
 
 Keep shared prose about what a user can observe with the shipped app: reply
 fields, refusal names, counts and markers. Put the implementing mechanism under

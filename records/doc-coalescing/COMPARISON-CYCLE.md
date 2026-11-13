@@ -93,3 +93,29 @@ and every surface is currently unreleased.
 The guide's new subsections restate the contract's order and classification
 rules for a reader who cannot follow a link into the contract. That adds one
 alignment duty between the guide and `steps.assessment`; no check binds them.
+
+## Pass 3 — Examples from their owner
+
+The guide had no concrete comparison record, and the scenario fixture already
+owns reviewed expectations with independent controls. `docs/generate_limits.py`
+now copies six fixture rows into the guide under "Recorded scenarios": S02 and
+S03 for a permission failure under two causes, S05 and S06 for an answer and an
+attempt that concern different things, and S07 and S11 for an unestablished
+order. The rows use the renderer that produces the test contract's table,
+without the specimen column. The guide authors only the short description of
+the fixture's files and three notes on what the rows show.
+
+The expectations and controls stay separately authored in the fixture. The unit
+reader checks every row through the producer and the live matrix case checks
+the specimen S rows against the app; this pass ran neither and credits no
+execution. No guide command changed, and the pass adds no app interface.
+
+New machinery: one marker pair in the guide, a row selection constant, a
+shared table renderer, guide validation of the copied rows, a region
+registration and drift controls for a stale copy, a missing marker, a hidden
+block and a selected row absent from the fixture. New duty: the three authored
+notes must keep describing the selected rows. No maintained copy was removed;
+the pass avoided adding hand-written example records to the guide.
+
+The test contract's literal example record remains hand-written and equals
+row S01's expectation. Rendering it from the fixture is left for later.
