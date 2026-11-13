@@ -220,8 +220,37 @@ reviewed candidate each had no general-consumer findings. This diagnostic
 isolates the allowlist dependency; the coordinated acceptance run below owns
 full reader and rejection-control verification.
 
-Acceptance is pending the focused runner-unit case, checker controls and
-documentation checks. The signed app is unchanged: only constructed controls,
-the reviewed shape inventory and documentation change. No worker wait,
-eligibility rule, admission implementation or validator receiver changes, so
-the unrelated wait experiments and broad receiver battery are not selected.
+Acceptance ran from clean `0eab1ddc`:
+
+```sh
+env -u PYTHONOPTIMIZE PYTHONDONTWRITEBYTECODE=1 \
+  PW_TEST_OUT_DIR=tests/out/runs/lifecycle-fallback-shape-acceptance PW_TEST_QUIET=1 \
+  tests/run.sh --case runner_unit/pwrunner_core_unit_executable \
+    --case blackbox_e2e/checker_controls --suite source_drift
+```
+
+Run `20261113T220829Z_e400ab53` passed all 12 cases, with no skips, unrun cases,
+harness errors or recorded system sleep. Swift passed 605/605; the full reader
+replay passed 153 typed records and seven JSON-only controls. All four new
+records passed Swift/Rust/general-Python validation, agreed under independent
+binary projection, and had no lifecycle findings. All sixteen new malformed
+field controls produced their required shape refusal. The existing black-box
+checker controls also passed.
+
+The inspected signed app remained unchanged. No build or worktree was added.
+The public snapshot is byte-identical to the preceding cycle; contract stamps
+and guide generators remain current. Only constructed controls, the reviewed
+shape inventory and documentation changed. No worker wait, eligibility rule,
+admission implementation or validator receiver changed, so the unrelated wait
+experiments and broad receiver battery were not selected. Final record-only
+edits receive generator and whitespace checks, not another behavioral run.
+
+This settles the demonstrated false rejection. It does not establish native
+occurrence of absent host observations or completeness of every other
+fixture-derived shape. The narrower current-producer trace and the wider
+documented fallback vocabulary remain separate claims.
+
+Both development runs were reviewed and removed with `make prune APPLY=1`;
+their raw artifacts are no longer retained. Release archives and protected
+acceptance remain. The follow-up used two dispatcher runs, no build and no
+additional worktree. All changes remain local on `main`; nothing was pushed.
