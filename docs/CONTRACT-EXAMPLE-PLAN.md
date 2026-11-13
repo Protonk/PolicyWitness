@@ -456,3 +456,129 @@ Possible later steps keep the same direction, from code to presentation; they ar
 - **A second example.** It needs a way to select among examples and, with that, a statement of what a selection denotes across releases. Neither is designed here.
 - **Refusal examples.** A document the app prints so that `run` refuses it would let refusal guidance come from the app as well. Its expected outcome is obtained by running it, in keeping with section 2.
 - **Support grade.** After an archived release acceptance includes the live case, the example's owner can move from `check_read` to release credit naming that release and case.
+
+## 12. Evaluation record
+
+### Independent review: initial assessment
+
+A reviewer in a fresh context received this plan, the diff from `c6345219` to `6c9f11da`, the source and build identities, the raw runs and the serialization challenge evidence. The authors' diagnoses, failure dispositions and acceptance view were withheld. The assessment below is preserved as received on 2026-11-12, before any of that was shared and before any correction was made.
+
+```text
+Initial assessment: `policy-witness example` at 6c9f11da, plan evaluation point (section 6)
+
+All evidence runs but `example-step1-a` passed, including 12 live round trips with 67 of 67 assertions each. I found one product behaviour that contradicts a confirmed commitment (exit 101 instead of 2) and several places where the controls prove less than the plan and suite README say.
+
+What I did: read the plan, the full diff `c6345219..6c9f11da`, the checker, both control files, the consumer changes, and the raw artifacts of every listed run. I ran only read-only commands:
+- `example`, `--version` and `example x` on the dist app, including with closed pipes;
+- `generate_contract_stamps.py --check --require-history` and `--tree-check`, and `build_contract.py`;
+- `codesign --verify`;
+- the checker on copies of a retained capture in my scratch directory.
+
+One command of mine was refused by the permission system before it executed. It would have copied the controller binary to scratch and invoked `example` and, wrongly, `run` on the copy. Nothing ran, and I did not retry.
+
+## Identity and applicability (verified)
+
+- **Identity:** the app's `PWContract`, `--version` `build.contract` and `data.contract`, and `docs/build_contract.py` at HEAD all give `development:06501fd5…8923`.
+- **Source since the build:** no `controller/src` or `runner` file changed after de17cef7. Later commits touch only `controller/integration/cli_contract.rs`, tests and READMEs.
+- **Build:** the app was built at 16:40:27 from de17cef7 (`PWBuildDescribe v0.3.7-29-gde17cef7`, no dirty marker). `codesign --verify --deep --strict` passes.
+- **Runs on an uncommitted tree:** `example-step1-a`, `step1-b`, `step2-a` and `step3-a` started before their commits existed. Every file in the diff has an mtime earlier than the run that credits it, and the tree is clean now. I infer those runs saw the committed bytes; no run record states a source snapshot.
+- **Runs after the final commit:** `example-step3-battery-1` (16:56:33) and the ten eval runs.
+- **Limit:** the app is a build of de17cef7, not of the final commit; only its contract-identity inputs are equal. Criterion 8.2's "build of the final source" holds in that sense only.
+
+## 1. Established
+
+- **Section 1 commands on the signed development app.**
+  - Twelve live runs (`example-step3-a`, the battery, `example-eval-01`…`10`) each report 67 of 67 assertions passing.
+  - Recomputed from raw captures:
+    - emission is 555 bytes, byte-identical across both emissions and all runs;
+    - `bytes_written` is 554;
+    - envelope, client-capture and reply-producer identities equal the document's;
+    - both policy digests equal SHA-256 of the policy source;
+    - the prediction is validator/allow/0, order is `query_first`, the attempt is ok/0, and the result is `finished`, ok, exit 0, with integrity valid;
+    - target observations are equal before and after.
+  - Replaying `example-eval-05`'s capture in a scratch copy reproduced its `report.json` exactly.
+  - Scope: one machine, one development identity; the ten eval runs fall within 27 seconds, back to back.
+- **Exact preparation fixed point, test identity only.** `emitted_example_reaches_the_client_as_the_emitted_document` (`controller/src/run_flow.rs` ~2806–2828) passes in step1-a, step1-b, the battery and the challenge baseline and restoration. It ends at the `RunDependencies.client` callback under `test:policy-witness`, as section 4.1 declares.
+- **Serialization challenge.** In `/Users/raccoon/Desktop/Security/PolicyWitness-example-challenge.evidence/`:
+  - the patch is one line;
+  - baseline and restoration hashes of `example.rs` and `run_flow.rs` equal main's;
+  - the mutated run fails only that test (241 passed, 1 failed) at `run_flow.rs:2824:13`, the request/document `assert_eq!`, pretty on the left and compact on the right.
+- **One definition, direct passage (by reading).** `EXAMPLE_DOCUMENT` → `parse_request` → insert `BUILD_CONTRACT` → `validate_contract` → `serde_json::to_string_pretty`. There is no generated source or build step, and `build.sh` is unchanged.
+- **Contract account.**
+  - Both generator checks exit 0 at HEAD.
+  - The `emit_example` rule carries no `free.*` fact, and no baseline file changed.
+  - The snapshot's `document` equals the emitted document without `contract`, checked independently of the checker.
+  - Both new nodes carry explicit evidence gaps, as step 1 prescribes.
+- **Refusals through `run` (criterion 8.4).** A diff of each retained `input.json` against the emitted bytes shows exactly the stated single change. The outputs:
+  - other development, other release, unbound → `unsupported_contract`, path `["contract"]`, the app's `expected_contract`, no client or reply;
+  - absent identity → `missing_field`, same path and expected identity;
+  - truncated → `invalid_json`, path `[]`;
+  - unknown member → host `unknown_field`, path naming the member, client and reply present.
+- **Cross-build and usage controls (8.5).** Battery artifacts under `…/integration/cli.integration/artifacts/direct-cargo-contract/`:
+  - `absent` and `empty` builds: empty stdout and one stderr line (exit 2 is asserted by the test);
+  - `foreign` and `release_form` builds emit their own identity, and the app refuses each with its own expected identity and null client and reply.
+- **Generation controls (8.6).** Present in `contract_tree_controls.py` and `generators.py`, passing in step1-b and the battery. They assert the request payload moves, not the stamp cell itself.
+- **Consumer result rule (8.10).** `result-consistency-controls.json` holds 133 records, identical in step3-a and the battery. They cover coherent finished and three non-finished baselines, each field changed, removed, nulled and retyped alone, all three together, a record error beside a result fault, refused profile contexts, absent replies, rejected captures and a projection differing from the bytes. On a live-format capture copy, flipping only `result.ok` produced exactly the consumer diagnostic.
+- **Battery (8.3).** 231 selected, 231 completed, 0 skip, 0 unrun, no harness errors, `system_sleep_ms` 0 throughout, inventory unchanged.
+- **Not-touched list (8.8).** No file under `runner/`, and none of `build.sh`, `meson.build`, `docs/build_contract.py`, `runner_commands.rs` or the dispatcher is in the diff.
+- **Offline controls.** 178 of 178 matched, 67 of 67 identifiers covered, both baselines clean, results identical across two runs. Section 3 qualifies what "matched" proves.
+- **Checker restates no consumer or controller rule (by reading).** Its own assertions compare against the emitted document, the process exit, its target observations or the pinned native expectations.
+
+## 2. Unsupported or weakly supported
+
+- **"Every failure to emit is exit 2" (section 10, 4.2, the contract rule).** False in one case I reproduced; see 3.1. The write-failure row has no built-app test: the unit test drives `emit` with a mock writer, and nothing exercises `cmd_example`'s mapping. I observed exit 2 with the stderr line when only stdout was a closed pipe.
+- **"Reads no file, resolves no app root."** Supported by code reading only (`cli.rs` dispatch → `example::cmd_example`).
+- **Classification matching (4.7).** Only identifiers are independently matched; see 3.2.
+- **Native controls "with consistency still passing" (4.7 native row).** Shown for the spawn-failure and target-change controls only; see 3.3.
+- **"Each [emission fault] prevents submission."** Controls call `checker.evaluate` only. Nothing executes `prepare()` or the shell's no-run branch with a failing emission; that rests on reading `example_round_trip.sh` and `prepare()` (`check_example_round_trip.py` ~733–737).
+- **`refusal.*.one_change`.** It compares the retained input with `refusal_inputs(emitted)`, the function that wrote it (line ~518). It shows the file was not altered after preparation, not that the change is single. For real serde bytes that property rests on my diff above and on reading; `perturbation_controls` uses Python-serialized documents.
+- **Release-form identity on the live case.** Not expected yet (section 9). Present evidence is the offline `release:v9.9.9` baseline and the Cargo `release_form` build.
+- **Step 4 support, candidate rehearsal, criterion 8.11.** Later steps; not counted as failures.
+- **Ten-run sample.** All ten ran back to back in 27 seconds under one condition. It gives no information on variation, such as `unestablished` ordering.
+- **Criterion 8.1 "a second generation writes nothing."** I could not run generation. `--check` passing and the disposable-copy control support it indirectly.
+
+## 3. Defects and risks, most consequential first
+
+1. **`example` exits 101 when stderr is unwritable.**
+   - Reproduction: `{ sleep 0.4; policy-witness example 2>&1; } | true` exits 101; `example x` under the same pipe also exits 101.
+   - Cause: `cmd_example` reports through `eprintln!` and `cli::print_usage` (`controller/src/example.rs` ~66–86, `cli.rs:14`), which panic on a failed stderr write.
+   - It contradicts 4.2 ("exit 2 without a panic", "one line, if stderr is writable") and the public rule text in `docs/contract/10-request.surface.md`.
+   - A caller is not misled into accepting output, since 101 is not 0.
+   - Separately, `example >&-` exits 0: the write succeeds with nobody receiving it.
+2. **Expected classifications come from the checker's own table.** `pairs()` in `example_round_trip_controls.py:47–48` reads `checker.CLASSIFICATION`. `consistency_holds`, `native` and the rendered-report check use the same table. A misclassified assertion cannot fail any control. Section 4.7 requires the pairs "authored independently", and the suite README says the same.
+3. **Six native controls also trip the consumer.** `native_prediction_deny`, `_source`, `_rc_boolean`, `native_order_unestablished`, `native_attempt_failed` and `native_attempt_rc` each produce `consumer_validation [consistency]` as well, because the constructed replies are incoherent. They earn coverage under the allowance. No control shows a coherent deny or failed-read reply classified as `native_observation` alone.
+4. **The consumer's result rule is switched off by one controller-authored field.**
+   - `admitted_reply` in `tests/lib/consumer.py` (~1013–1036) returns None unless `data.runner_sandbox_diagnostics` is an object.
+   - The `assessment_absent` control asserts zero errors for a finished admitted reply with result `{tool_error, false, 7}`.
+   - On a live capture copy, nulling the assessment and setting the result to `tool_error`, ok false, exit_code 0 gave only `execution.admitted_reply [execution_unavailable]` and no consistency failure. The case still fails, but with the classification whose remedy text points away from the product.
+   - `envelope_skeleton` sets the assessment to null, so skeleton-built envelopes are never subject to the rule. The commit's "five call sites already coherent" is true but immaterial.
+5. **No evaluation record exists.** Section 6 places it in the commit that completes step 3. Missing with it are the fixture-correction summary from 4.8 (even "none needed") and a recorded disposition for `example-step1-a`.
+6. **Criterion 8.9 is not literally met.** `docs/CONTRACT-EXAMPLE-PLAN.md:66` holds the constant verbatim. The pre-existing hand-typed `read_hosts` step in `docs/contract/12-probes.surface.md:39` is byte-equal to the example's step; the plan keeps it, but it is an unextracted near-copy.
+7. **The live case stores the machine's `/etc/hosts` bytes** (base64 in `targets-before.json` and `targets-after.json`), as 4.5 requires. Release-acceptance evidence will carry the acceptance machine's hosts file.
+8. **`RUNNER_SELECTION_KEYS` in the checker (line 48) is a hand-held copy** of `SELECTOR_FIELDS` in `runner_select.rs`. It is correct today and would go stale silently if a selector is added. The generator's refusal of selection keys in the constant partly covers this.
+
+## `example-step1-a`
+
+`source_drift/generator_contract` failed in `test_prose_baseline_is_consistent_and_growth_is_explicit` on three unlisted `citation_pair` sites, all in `docs/CONTRACT-EXAMPLE-PLAN.md`. The other 13 cases passed, including `unit/rust.unit`. That text is present at c6345219, so I infer the case was already red at the starting commit; I did not run it there. 3bb0955f rewrote the three mentions as symbol links. By mtime, only the plan, `docs/contract/AGENTS.md`, `docs/contract/README.md` and the source_drift README changed between runs a and b. This is not evidence about the command, and it has no recorded disposition.
+
+## 4. What would change this assessment
+
+- **Fixed point:** a `run_flow` test or challenge run where the mutated emitter still passes, or evidence that `observe` does not reach the production preparation path.
+- **Signed-app passage:** a host-received request differing from the emitted bytes at equal length. Present evidence cannot exclude it, and the plan declares that.
+- **Live results:** any eval or battery `report.json` with a failing or unevaluated assertion, a nonzero `system_sleep_ms`, or evidence of live-case runs that were not retained (I found none).
+- **Applicability:** an identity-input or runner file differing between de17cef7 and HEAD, or a test file edited after its crediting run.
+- **3.1:** `example` exiting 2 under `2>&1 | true` on a rebuilt app, or the maintainer limiting the rule to a writable stderr.
+- **3.2 and 3.3:** literal classifications per control, and coherent deny and failed-read controls with `clean=True`.
+- **3.4:** a consumer or controller check that an envelope with admitted host bytes always carries the assessment.
+- **Release form:** the section 9 nested acceptance showing a `release:` identity through the live case.
+
+## 5. Deviations from the plan
+
+- The step 3 commit has no "Evaluation record" section.
+- Step 0 (89f9d121) rewrote the stamp cells and snapshot history by hand. The commit says so, and `--check --require-history` passes on the result.
+- `docs/contract/runtime.py` changed (selector-key reading moved into `tree.py`) and `tests/suites/integration/README.md` changed; section 5 lists neither. `build_contracts.py` and `tests/COVERAGE.md` are listed and unchanged.
+- The offline controls build from `tests/fixtures/blackbox_e2e/checker/current/constructed_run.json`, not `tests/fixtures/contract/` as 4.7 names. The fixture is existing and unmodified.
+- There is no unit test of CLI dispatch to `example`; it is covered by the integration case and by `emit`'s argument refusals.
+- The renderer uses `validate_contract(value, identity)` where 4.1 names `validate_request_contract`. It is the same gate with the identity as a parameter, which 4.8 asks for.
+- 3bb0955f bundles the maintainer-confirmation record with the prose fix for the step1-a failure.
+```
