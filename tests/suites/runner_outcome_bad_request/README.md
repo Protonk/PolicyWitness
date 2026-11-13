@@ -24,7 +24,12 @@ produce the independent file effect used by the accepted-input controls.
   code/path expectations. For those two inputs the control also runs the selected
   app's `lesson` command and submits its output unchanged through `run`, under
   the same corpus rows and file observation; a missing row for either input
-  fails the control. Ineffective arguments, nonces and filter values,
+  fails the control. A rejected control repeats that step with a stand-in
+  emitter that returns the `create` document for `capture_typo`. The step must
+  then fail at its exit-and-outcome assertion, with the admitted run and the
+  created file on record; the `lesson-substituted-*` artifacts and the retained
+  stand-in script belong to that control and report no product failure.
+  Ineffective arguments, nonces and filter values,
   unknown attempt/filter names, duplicate IDs and capacity excess refuse the
   whole specimen. Exec arguments and enabled capture have positive controls;
   known unavailable predictions preserve the independent attempt.
