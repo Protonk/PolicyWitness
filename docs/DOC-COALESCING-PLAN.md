@@ -124,3 +124,11 @@ complete. Its [record](../records/doc-coalescing/COMPARISON-CYCLE.md) states
 the scope, the three reader questions and the ownership map, then each pass's
 result, the one consultation, verification and the adjacent opportunities kept
 for a later cycle.
+
+## Third cycle
+
+The third cycle takes path and object observations as its topic: submitted
+paths, the worker's `observed_path`, fresh-descriptor identity records and the
+host's `path_diagnostics`. Its [record](../records/doc-coalescing/PATH-OBSERVATIONS-CYCLE.md)
+states the scope, the three reader questions and the ownership map, then each
+pass's result.
