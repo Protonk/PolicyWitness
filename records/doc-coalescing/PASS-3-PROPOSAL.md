@@ -2,8 +2,8 @@
 
 Prepared at `71d4d2a6` for Pass 3 of
 [DOC-COALESCING-PLAN](../../docs/DOC-COALESCING-PLAN.md). The maintainer accepted
-the recommended separate `lesson` command. The following records the selected
-interface and migration; implementation verification is pending.
+the recommended separate `lesson` command. The selected interface and migration
+are implemented and verified in `d04a3819`; acceptance is recorded below.
 
 ## Recommended interface
 
@@ -84,9 +84,77 @@ CLI/direct-XPC controls retain independently authored admission expectations;
 guide execution observes actual emitted inputs and external effects. Confirm the
 old example still meets its promise. Reuse no native result merely because a
 schema stayed unchanged. Review and prune disposable evidence after acceptance;
-use no extra worktree. This preparation has run no tests or builds.
+use no extra worktree. The interface preparation used no tests or builds.
 
 Two narrow Sol reviews mapped the existing consumers and compared acquisition
 interfaces. Astra accepted the proposal with the standalone-tool clarification
 above. Proposal links and referenced catalog cases were checked; these are
 preparation checks, not execution evidence for the proposed command.
+
+## Implementation and acceptance
+
+The guide's literal create request and initial typo-construction recipe are gone;
+REQUEST-GRAMMAR's manual alignment instruction is gone. Both lessons now come
+from the installed app. The corpus references the two embedded JSON sources and
+keeps independent expectations. Resolving those references reproduced all 158
+original corpus rows exactly. The guide's subsequent capture and BYOXPC edits
+use `plutil`; saved requests, absence guards and independent observations remain.
+
+The public snapshot adds only `request.specimen.emit_lesson`, locally and in
+dependent closures. Existing rules, field shapes, support grades and free-text
+baseline remain. Sol reviewed source inputs and consumer migration; Astra
+accepted the final standalone workflows, contract scope and guard controls.
+
+One signed build of clean `d04a3819db21d83502c63588f5f371f714db0776` succeeded:
+build 1386, `v0.3.7-52-gd04a3819`, signer Adam Hyland / `42D369QV8E`.
+Its public identity is
+`development:aa40034827bb542cc89a0228bfd4caf97fd7a2230357c01e4557082a7426c9e1`.
+The worker identity remains
+`52bbda618677886b6c59dcf5dd999e2b2a5021cbd2c8dc4f08aa0ba66ef2dd38`.
+
+Run `20261113T170936Z_7054fc17` used `PW_TEST_OUT_DIR=tests/out/runs/doc-coalescing-pass3`,
+`PW_TEST_QUIET=1`, `PYTHONDONTWRITEBYTECODE=1` and the selection above through
+`tests/run.sh` in an unsandboxed shell. All 19 selected cases passed, with no
+skip, unrun case, harness error or recorded system sleep:
+
+```text
+source_drift/runner_source_manifests_agree
+source_drift/limits_documentation
+source_drift/build_contracts
+source_drift/architecture_documentation
+source_drift/build_documentation
+source_drift/generator_contract
+source_drift/markdown_reader
+source_drift/direct_python_start
+source_drift/footprint_documentation
+source_drift/porcelain_codec
+unit/rust.unit
+unit/rust.fmt
+unit/rust.disposition_reds
+unit/rust.byoxpc_reds
+integration/cli.integration
+runner_unit/pwrunner_core_unit_executable
+runner_outcome_bad_request/accepted_input_contract
+witness_contract/example_round_trip
+witness_contract/guide_workflows
+```
+
+Review covered both new CLI integration controls, all three emitter unit controls,
+the Swift batch (604 passed), the corpus's CLI/direct-XPC observations and the
+actual staged guide. Failed-emission controls prevented submission for both
+lessons; removing each guard made the same oracle reject the observed submission.
+The guide obtained positive capture and file observations and verified owned
+BYOXPC removal. Its workspace receipt records `cleanup_verified` and `removed`;
+the external receipt records `removed`. The owned service was
+`com.policywitness.guide.501.runner.1eQ1Jk` in `gui/501`, at
+`/private/tmp/pw-guide.y9TbWa/runner.1eQ1Jk/PWRunner.guide.xpc`.
+Post-run list/reconcile showed no runners, pending cleanup, candidates or inspection
+errors. The inspected signed app remained unchanged throughout the run.
+
+This is development evidence from one build and one run, not release acceptance.
+No additional worktree was created. The final plan/acceptance-only delta changes
+no implementation, guide, test code or fixture; its links and diff formatting
+are checked separately.
+After receipt review, `make prune` and `make prune APPLY=1` removed the single
+development run without blockers. The four release archives and protected
+acceptance remain; this run's raw output is no longer locally available.

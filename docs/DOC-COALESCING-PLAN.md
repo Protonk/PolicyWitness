@@ -89,4 +89,8 @@ and its concrete interface decision.
 The [Pass 3 proposal](../records/doc-coalescing/PASS-3-PROPOSAL.md) specifies the
 two input owners, consumer migration, verification and a narrow acquisition
 interface. The maintainer selected the separate `lesson` command; implementation
-verification is in progress.
+and [acceptance](../records/doc-coalescing/PASS-3-PROPOSAL.md#implementation-and-acceptance)
+complete Pass 3. The corpus and both teaching documents now consume app-owned
+inputs while retaining independent expectations and observations. Support
+presentation remains the next pass; the first map's limits on merging distinct
+assertions still apply.
