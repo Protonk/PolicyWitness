@@ -1161,10 +1161,81 @@ effects: perform(ref("identity.procedures.refuse"), ref("demo.report"))
             'source: {"path": "tests/suites/source_drift/contract_tree_controls.py", "symbol": "minimal_surface"}',
             'source: [{"path": "tests/suites/source_drift/contract_tree_controls.py", "symbol": "minimal_surface"},'
             '{"path": "tests/suites/source_drift/contract_tree_controls.py", "symbol": "component_surface"}]')
-        owner = self.model._owner_text(self.load(body).index['demo.support'])
+        owner = self.model._owner_details(self.load(body).index['demo.support'])
         self.assertEqual(owner.count('](../tests/suites/source_drift/contract_tree_controls.py)'), 1)
         self.assertIn('`minimal_surface`', owner)
         self.assertIn('`component_surface`', owner)
+
+
+    def test_owner_details_keep_qualifications_local_and_routes_reciprocal(self):
+        def owner(level, name, grade, scope='self', optional=True):
+            facts = [f'scope: "{scope}"', f'grade: "{grade}"',
+                     'source: {"path": "tests/suites/source_drift/contract_tree_controls.py", "symbol": "minimal_surface"}',
+                     f'pins: "Pins {name}."']
+            if grade != 'source_read':
+                facts.append('check: {"path": "tests/suites/source_drift/contract_tree_controls.py", "symbol": "test_tree_and_fact_shape_refusals", "form": "test"}')
+            if optional:
+                facts.extend([f'context: "Context {name}."', f'limits: "Limit {name}."'])
+            if grade == 'executed':
+                facts.extend(['run: "constructed-run"', 'source_snapshot: "constructed-source"',
+                              'build: "constructed-build"', 'release: "v0.3.7"',
+                              'case: "source_drift/build_contracts"'])
+            return '#' * level + ' Evidence ' + name + ' {' + name + ': owner}\n```contract\n' + '\n'.join(facts) + '\n```\n'
+
+        body = minimal_surface().replace('### Release a phase {release: acts}',
+            owner(5, 'row_support', 'executed') + '### Release a phase {release: acts}')
+        # Two owners support the same surface with different scopes; the compact
+        # effect-row owner must route back to its own summary too.
+        body += owner(2, 'checked', 'check_read') + owner(2, 'brief', 'source_read', optional=False)
+        tree = self.load(body)
+        before = self.model.public_payload(tree, 'demo')
+        rendered = self.model.render(tree)
+        local, appendix = rendered.split('\n## Evidence support\n', 1)
+        details = appendix.split('\n## Rule applicability\n', 1)[0]
+        owners = [n for n in tree.nodes if n.kind == 'owner']
+        self.assertEqual(len(owners), 4)
+        for node in owners:
+            anchor = self.model._anchor(node)
+            self.assertEqual(rendered.count('<a id="' + anchor + '"></a>'), 1)
+            self.assertEqual(rendered.count('<a id="' + anchor + '-details"></a>'), 1)
+            self.assertIn('[Evidence details](#' + anchor + '-details)', local)
+            self.assertIn('[Local support](#' + anchor + ')', details)
+            self.assertIn('### ' + node.parent.title + ' — ' + node.title, details)
+            self.assertIn(node.facts['pins'], local)
+            self.assertNotIn(node.facts['pins'], details)
+            self.assertIn('[' + node.facts['grade'].replace('_', ' ') + '](#contract-support-grades)', local)
+            scope = self.model._link(node.parent) + (' and its descendants' if node.facts.get('scope') == 'subtree' else '') + '.**'
+            self.assertIn(scope, self.model._owner_text(node))
+            for key, label in [('context', 'Context: '), ('limits', 'Evidence limit: ')]:
+                if key in node.facts:
+                    self.assertIn(label + node.facts[key], local)
+                    self.assertNotIn(node.facts[key], details)
+                else:
+                    self.assertNotIn(label, self.model._owner_text(node))
+        self.assertNotIn('Source:', local)
+        self.assertNotIn('Check:', local)
+        self.assertNotIn('Run:', local)
+        for text in ('Source:', 'Check:', 'Run: `constructed-run`.',
+                     'Source snapshot: `constructed-source`.', 'Build: `constructed-build`.',
+                     'Release: `v0.3.7`.', 'Case: `source_drift/build_contracts`.'):
+            self.assertIn(text, details)
+        self.assertIn('contract-demo-report-read_status-failure-row_support', local)
+        self.assertEqual(before, self.model.public_payload(tree, 'demo'))
+
+    def test_actual_owners_each_have_one_local_and_appendix_route(self):
+        tree = self.model.load_tree(ROOT)
+        rendered = self.model.render(tree)
+        local, appendix = rendered.split('\n## Evidence support\n', 1)
+        owners = [node for node in tree.nodes if node.kind == 'owner']
+        self.assertTrue(owners)
+        for node in owners:
+            anchor = self.model._anchor(node)
+            for suffix in ('', '-details'):
+                self.assertEqual(rendered.count('<a id="' + anchor + suffix + '"></a>'), 1, node.id)
+            self.assertIn('[Evidence details](#' + anchor + '-details)', local, node.id)
+            self.assertIn('[Local support](#' + anchor + ')', appendix, node.id)
+        self.assertEqual(local.count('[Evidence details]('), len(owners))
+        self.assertEqual(appendix.count('[Local support]('), len(owners))
 
 
 

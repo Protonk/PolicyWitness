@@ -1344,7 +1344,13 @@ def _owner_text(node):
               '](#contract-support-grades) for ' + scope + '.**', facts['pins']]
     if 'context' in facts: pieces.append('Context: ' + facts['context'])
     if 'limits' in facts: pieces.append('Evidence limit: ' + facts['limits'])
-    pieces.append(_citation_links(facts['source'], 'Source'))
+    pieces.append('[Evidence details](#' + _anchor(node) + '-details).')
+    return ' '.join(pieces)
+
+
+def _owner_details(node):
+    facts = node.facts
+    pieces = [_citation_links(facts['source'], 'Source')]
     if 'check' in facts:
         pieces.append(_citation_links(facts['check'], 'Check'))
     if facts['grade'] == 'executed':
@@ -1487,6 +1493,7 @@ def render(tree):
     """Render the contract with a marker for the entry point's surface table."""
     output = ['# PolicyWitness contract', '']
     roots = defaultdict(list)
+    owners = []
     for surface in tree.surfaces:
         roots[surface.facts['part']].append(surface)
         for node in surface.descendants():
@@ -1524,7 +1531,8 @@ def render(tree):
 
     def visit(node, depth):
         if node.kind == 'owner':
-            output.extend([_owner_text(node), ''])
+            owners.append(node)
+            output.extend(['<a id="' + _anchor(node) + '"></a>', _owner_text(node), ''])
             return
         heading(node, depth)
         facts = _facts_text(tree, node, include_context=True)
@@ -1577,6 +1585,11 @@ def render(tree):
     output.extend([NOTATION, '', '## Evidence support', '', '<a id="contract-support-grades"></a>',
                    '**Support grades.** ' + ' '.join('**' + key.replace('_', ' ') + ':** ' + text
                                                      for key, text in SUPPORT_GRADES.items()), ''])
+    for owner in owners:
+        output.extend(['<a id="' + _anchor(owner) + '-details"></a>',
+                       '### ' + owner.parent.title + ' — ' + owner.title, '',
+                       '[Local support](#' + _anchor(owner) + ').', '',
+                       _owner_details(owner), ''])
     applicability, findings, gaps = _views(tree)
     if applicability:
         output.extend(['## Rule applicability', '',

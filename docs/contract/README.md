@@ -136,6 +136,12 @@ supports its parent. Execution credit also names `run` and
 `source_snapshot` or `build`; release credit names `release` and `case`
 as `suite/case`.
 
+The rendered contract keeps each owner's grade, scope, assertion, context and
+limits beside its claim. Its Evidence details link leads to source and check
+citations and execution provenance in Evidence support; each entry links back
+to that owner's local support paragraph. Both views come from the same owner
+record, including owners attached to compact table rows.
+
 A rule or example has graded support or an explicit evidence gap. Gap
 `kind` is `behavior`, `evidence` or `meaning`; its prose is public.
 An evidence gap can explicitly cover a subtree. Metadata stays separate

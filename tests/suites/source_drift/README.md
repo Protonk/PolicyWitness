@@ -595,6 +595,11 @@ Presentation controls preserve every field anchor and meaning, nullable versus
 omitted fields and serialization exceptions, field-local obligations, expression
 grouping and complete operands. The reading key defines the compact forms;
 first-match order, narrowed contexts and subordinate scopes retain their controls.
+Support rendering controls keep grades, assertions, contexts and limits local
+while moving citations and execution provenance into reciprocal appendix entries.
+They cover each grade, self and subtree scope, multiple owners of a claim and
+compact table rows; the authored tree supplies an exact-once route check for
+every owner. Supporting metadata remains outside the public payload.
 The record-reader controls mutate source declarations and serialization forms;
 unrecognized forms refuse instead of supplying guessed types. Retained-reader
 controls use independent preimages for legacy regions and public snapshots,
