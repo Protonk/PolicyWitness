@@ -40,6 +40,12 @@ def replay(directory):
         expected = case['expected_semantic']
         check(reply['producer']['contract'] == contract, identity + ': unexpected producer contract')
         row = {'id': identity, 'origin': case['origin'], 'rule': case['rule']}
+        if case.get('expected_reporting_failure') is True:
+            check((reply.get('reporting_failure') or {}).get('evidence_retained') is True and
+                  all(step.get('comparison') is None for step in reply['steps']) and
+                  any(actor.get('mode') == 'apply' and actor.get('setup_status') == 'unapplied_declared'
+                      for actor in reply.get('actors', [])),
+                  identity + ': host degradation lost the setup conflict or retained comparisons')
         if 'application_expected' in case:
             expected_pair = case['application_expected']
             subject = next(actor for actor in reply['actors'] if actor['actor_id'] == expected_pair['actor_id'])
@@ -94,8 +100,11 @@ def replay(directory):
         if degraded:
             check(not actor and not extensions, identity + ': ordinary subaccount reader escaped applicability')
         elif reply.get('execution_form') == 'actors':
-            # This corpus's ordinary actor faults are in this family's scope.
-            check((not extensions) == expected, f'{identity}: actor/extension reader {extensions}')
+            # Actor identity belongs to the general reader. Record a separate
+            # expectation when a case falls outside the extension family's scope.
+            expected_extensions = case.get('expected_extensions', expected)
+            row['expected_extensions'] = expected_extensions
+            check((not extensions) == expected_extensions, f'{identity}: actor/extension reader {extensions}')
         previous_issue = -1
         for message in case.get('required_consumer_issues', []):
             check(message in general, f'{identity}: consumer missed exact finding {message!r}')

@@ -66,6 +66,54 @@ func runReaderCorpusTests(_ tk: TestKit) {
                 rule: "63 UTF-8 bytes, not character count")
             try emit("ordinary-overlong-step", ordinary(String(repeating: "é", count: 32)), accepts: false,
                 rule: "ordinary step capacity", requiredIssues: ["phase/action identity exceeds admitted grammar"])
+            // applyRC is a producer observation, not a field of the carried
+            // reply. Preserve the ordering builder's evidence of its conflict.
+            func orderedOrdinary(applyRC: Int32) -> PWRunnerRunResult {
+                let probe = PWRunnerProbeStep(step_id: "s",
+                    sandbox_check: PWRunnerSandboxCheck(operation: "file-read-data",
+                        filter: PWRunnerSandboxFilter(kind: "path", value: "/etc/hosts")),
+                    attempt: PWRunnerAttempt(kind: "file", action: "open_read", target: "/etc/hosts"))
+                let queryPlan = planValidatorQueries([probe])
+                let validator = ValidatorOutput(validatorPid: 7, verdicts: [
+                    ValidatorVerdict(stepId: "s", operation: "file-read-data", filterType: "PATH", filterTypeId: 1,
+                        filterValue: "/etc/hosts", rc: 0, errnoVal: 0, outcome: "allow", rawLine: "constructed control")
+                ], reaped: true, expectedProbes: queryPlan.compactMap { $0.probe })
+                let worker = CWorkerOutput(workerPid: 42, readyByteReceived: true, applied: true, applyRC: applyRC,
+                    applyErrno: 0, done: true, exitCode: 0,
+                    slots: [CWorkerSlotResult(stepId: "s", rc: 0, errnoVal: 0, completed: true)],
+                    reaped: true, waitErrors: [], hookInvoked: true, proceedSet: true, proceedObserved: true,
+                    proceedOwnershipEstablished: true)
+                let classified = classify(workerResult: .success(worker), validatorResult: .success(validator),
+                    expectedVerdictCount: 1)
+                let ordering = buildOrdering(worker, validatorOutput: validator, hasQueries: true)
+                return PWRunnerRunResult(specimen_id: "ordering-reader-corpus", rc: classified.rc,
+                    normalized_outcome: classified.outcome, error: classified.error, pid: 42,
+                    policy_format: "sbpl", sandboxed_after_apply: worker.applied,
+                    steps: buildStepResults(probePlan: [probe], queryPlan: queryPlan, workerOutput: worker,
+                        validatorOutput: validator, ordering: ordering), runner_subprocess: buildWorkerSubprocess(worker),
+                    phases: [constructedPhase(worker, ids: ["s"], validator: validator)])
+            }
+            let ordered = orderedOrdinary(applyRC: 0)
+            try expectEqual(ordered.steps[0].comparison?.order, "query_first")
+            try emit("ordering-ordinary", ordered, accepts: true, rule: "successful producer application and complete query chain")
+            let inconsistentApply = orderedOrdinary(applyRC: -1)
+            try expectEqual(inconsistentApply.sandboxed_after_apply, true)
+            try expectEqual(inconsistentApply.steps[0].comparison?.order, "unestablished")
+            try expectEqual(inconsistentApply.phases[0].ordering?.protocol_violations, ["release_without_successful_application"])
+            try emit("ordering-apply-status-conflict", inconsistentApply, accepts: true,
+                rule: "constructed applied publication with nonzero producer-only applyRC retains its order violation")
+            rows[rows.count - 1]["producer_apply_rc"] = -1
+            var forcedOrder = inconsistentApply
+            forcedOrder.steps[0].comparison?.order = "query_first"
+            try emit("ordering-apply-status-forced-order", forcedOrder, accepts: false,
+                rule: "a carried application flag cannot erase the producer's ordering violation",
+                requiredIssues: ["query_first lacks eligible prediction and complete ordering chain"])
+            rows[rows.count - 1]["required_consumer_issues"] = ["s: query_first lacks eligible record or ordering chain"]
+            // This deliberately altered record is no longer the producer's
+            // output. No recipient can recover the missing internal status.
+            forcedOrder.phases[0].ordering?.protocol_violations = []
+            try emit("ordering-erased-apply-status-conflict", forcedOrder, accepts: true,
+                rule: "synthetic erased-violation reply has no carried nonzero applyRC to disprove query_first")
             let documents = try actorShapeDocuments()
             let preparations = documents.filter { $0.preparation_failure != nil && $0.reporting_failure == nil }
             try expectTrue(!preparations.isEmpty, "preparation fixture family missing")
@@ -163,6 +211,20 @@ func runReaderCorpusTests(_ tk: TestKit) {
             var actorBase = documents[0]
             actorBase.steps = enrichPathDiagnostics(steps: actorBase.steps)
             try emit("actor-complete", actorBase, accepts: true, rule: "ordinary actor evidence")
+            let appliedActor = actorBase.actors!.firstIndex { $0.mode == "apply" && $0.setup_status == "applied" }!
+            var mismatchedSetup = actorBase
+            mismatchedSetup.actors![appliedActor].setup_status = "unapplied_declared"
+            try emit("actor-apply-declares-unapplied", mismatchedSetup, accepts: false,
+                rule: "ordinary actor identity checks reject a setup declaration inconsistent with mode; extension subreader does not own identity",
+                requiredIssues: ["apply actor cannot declare an unapplied setup"])
+            rows[rows.count - 1]["expected_extensions"] = true
+            let retainedSetup = try reportedReply(mismatchedSetup)
+            try emit("host-degraded-actor-setup", retainedSetup, accepts: true,
+                rule: "host rejection retains the inconsistent setup declaration and removes comparisons")
+            rows[rows.count - 1]["expected_reporting_failure"] = true
+            rows[rows.count - 1]["reporting_failure_observed"] = retainedSetup.reporting_failure?.evidence_retained == true
+                && retainedSetup.actors?[appliedActor].setup_status == "unapplied_declared"
+                && retainedSetup.steps.allSatisfy { $0.comparison == nil }
             let retainedWorker = degrade(actorBase)
             try emit("degraded-actor-lifecycle-valid", retainedWorker, accepts: true,
                 rule: "degradation retains independently valid worker lifecycle claims")
@@ -260,6 +322,10 @@ func runReaderCorpusTests(_ tk: TestKit) {
             try JSONSerialization.data(withJSONObject: manifest, options: [.prettyPrinted, .sortedKeys])
                 .write(to: directory.appendingPathComponent("swift.json"))
             for row in rows {
+                if row["expected_reporting_failure"] != nil {
+                    try expectEqual(row["reporting_failure_observed"] as? Bool, true,
+                        "\(row["id"]!): host failed to retain degraded evidence without comparisons")
+                }
                 if row["application_expected"] != nil {
                     try expectEqual(row["application_matches_expected"] as? Bool, true,
                         "\(row["id"]!): producer application pair disagrees with the eligible source")
