@@ -166,5 +166,6 @@ controller preparation and host admission. It is not a cycle. Its record maps
 each input's promise, decision owner, presentations and checks; reports the
 baseline observations on the staged app; and lists the bounded repairs to the
 controller tour, guide command table, lesson support citations and live
-request control. Two constructed mutation probes followed. Two public-wording
-proposals and one retention recommendation await a maintainer decision.
+request control. Two constructed mutation probes followed; the first is
+retained as a rejected control inside that request control. Two public-wording
+proposals await a maintainer decision.

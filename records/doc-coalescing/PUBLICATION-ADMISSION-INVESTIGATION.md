@@ -264,8 +264,9 @@ Not rerun, as reviewed judgments and not mechanical facts:
 - Opt-in `witness_contract/guide_workflows`. The guide gained one table row,
   outside every fence that case selects.
 
-`emitted_lessons` has no rejected control in the battery. The first
-[mutation probe](#mutation-probes) exercised one by hand.
+At that point `emitted_lessons` had no rejected control in the battery. The
+first [mutation probe](#mutation-probes) exercised one by hand, and a
+[retained control](#retained-control) followed.
 
 ## Remaining public wording
 
@@ -441,6 +442,9 @@ different shapes and trip the same detecting row.
 
 ### Retention
 
+The maintainer accepted both recommendations below; the
+[retained control](#retained-control) implements the first.
+
 Probe 1 is worth a small permanent control, in a different form. The distinct
 failure it catches is `emitted_lessons` no longer reading what the app
 publishes, for instance after a change that takes the document from the
@@ -458,3 +462,57 @@ Probe 2 does not merit one. Its detecting assertion already has a permanent
 constructed control, and the live case's six refusals already read real host
 refusal records. The probe added one fact, that the submission gate does not
 stop a refused but well-published document, which needs no regression control.
+
+## Retained control
+
+`emitted_lessons` takes an optional emitter and artifact prefix; by default it
+publishes with the selected controller as before.
+`emitted_lessons_reject_substituted_publication` in
+[contract.py](../../tests/suites/runner_outcome_bad_request/contract.py) calls
+it once more inside the same default case. Its emitter is a shell script
+written into the case's temporary directory that `exec`s the selected
+controller, except that `lesson capture_typo` returns the controller's
+`lesson create` output. The corpus rows and their expectations are untouched.
+
+The control passes only when the step fails in the intended way. It requires
+an `AssertionError` raised from the `cli` helper, publication exit 0, a
+published document byte-identical to the emitted `create` document, a `run`
+that exited 0 with `finished`, and a recorded file effect. Any other failure,
+including a stand-in that could not publish, propagates as a failure of the
+case. It then removes the created file and the stand-in. A copy of the
+stand-in is retained as `substituting-emitter.sh`, and the control's
+`lesson-substituted-*` artifacts sit beside the ordinary `lesson-emitted-*`
+ones. The [suite account](../../tests/suites/runner_outcome_bad_request/README.md)
+says those artifacts report no product failure.
+
+Probe 2 has no retained control.
+
+Verification:
+
+- By hand, outside the dispatcher. With `emitted_lessons` altered at import to
+  ignore its emitter, the request control exited 1 with "a substituted
+  publication passed the emitted-lesson step". That alteration stands for the
+  regression the control exists for. Unaltered, the request control exited 0.
+  Both outputs were in scratch and were removed after inspection.
+- Through the dispatcher: `runner_outcome_bad_request/accepted_input_contract`
+  with `source_drift/generator_contract` and
+  `source_drift/runner_source_manifests_agree`, run
+  `20261113T233809Z_47eb0a26`. All three passed, the app was unchanged and no
+  case overlapped system sleep. In its artifacts the substituted publication
+  is byte-identical to the emitted `create` document and its `effect.json`
+  reads `accepted: false, observed: true`. The run was a development run and
+  was removed with `make prune APPLY=1` after inspection.
+
+The tree still computes the identity recorded under
+[Baseline observations](#baseline-observations); no build was made.
+
+Maintenance added: the control names the `capture_typo` selector and the
+`create` artifact directory, and it identifies the intended rejection by the
+`cli` helper's name and by the admitted run. Renaming either lesson, that
+helper or the artifact prefix requires the control. The default case makes two
+more `lesson` and two more `run` invocations.
+
+What it establishes is narrow. A step that stops reading its emitter fails the
+control. It does not establish byte-level transport, agreement between emitter
+and template, or anything about the shipped emitter, and its rejection rests on
+the exit-and-outcome assertion alone, as in probe 1.
