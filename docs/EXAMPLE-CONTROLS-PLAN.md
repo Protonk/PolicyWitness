@@ -1,10 +1,12 @@
 # Pin every example checker condition and state the workload once
 
-Status: accepted for implementation by the maintainer on 2026-11-14; not yet
-implemented. It changes the
+Status: implemented in `c8f63bb2` and verified on signed build 1441 by
+`20261114T194634Z_6b34bd1d`: all 18 selected cases passed. Ready for review
+and retirement. It changed the
 [example checker and its controls](../tests/suites/witness_contract/README.md#the-apps-own-example),
-one contract-generator selector and one controller unit test. It adds no
-actor, action, native submission or product behavior.
+one contract-generator selector and one controller unit test. It added no
+actor, action, native submission or product behavior. The
+[result](#result) section holds the evidence for each criterion.
 
 ## Problem
 
@@ -107,11 +109,52 @@ commit supports that judgment. Regenerate the contract with
 `tests/lib/python.sh docs/generate_contract_stamps.py` and review every moved
 surface. A changed contract identity is a named cause for the build.
 
+## Result
+
+Candidate: `c8f63bb2`, `dist/PolicyWitness.app` build 1441, contract
+`development:31acd293fb62d75f17231cd15b9179ea96de75a43331bbe80fedfaedd71d294e`,
+signed with the Developer ID identity and a secure timestamp; no release or
+notarization claim. Dispatcher run `20261114T194634Z_6b34bd1d` in
+`tests/out/runs/example-controls-acceptance`: 18 of 18 cases passed (ten
+`source_drift`, four `unit`, `integration/cli.integration`, both example
+cases, `blackbox_e2e/checker_controls`), with no skip, unrun case, harness
+error or recorded sleep, and an unchanged app inventory.
+
+| Criterion | Evidence |
+| --- | --- |
+| 1. Each condition has its own control | The controls case reports 170 of 170 declared conditions pinned by a control that fails that condition alone, and fails otherwise. |
+| 2. The gate covers what the live case reports | The required rows are the 158 `(form, id)` rows of the passing baseline from `evaluate`; all have a matched rejected control in their form, from 1045 control runs of 527 rows. The controls call `evaluate` and `prepare`. |
+| 3. The shape is stated once | `table_one_then_two` passes a 1+2 capture under a 1+2 table and fails the default container; `committed_snapshot_example` passes `prepare`. The controller shape test is removed, the probes surface selects by `phase_id` and `step_id`, and the generator controls refuse a selector matching no element or two. |
+| 4. No private reach | The two control files name no underscore-prefixed checker attribute, patch nothing and read each row's `form` member. |
+| 5. No distinction is lost | 371 of 372 scalar controls keep their names; `c8f63bb2` lists the renamed one and each replaced form control. |
+| 6. The measured gap closes | Outside the dispatcher, against the committed files: suppressing each of the 170 declared conditions, making each of the 158 rows unable to fail, and 48 source mutations of the remaining logic each fail the controls script. |
+| 7. The live case still passes | The live report holds 158 passing rows with twelve command records; the emitted document equals the constant, whose bytes are those of `898f3ed1`. |
+
+The contract regeneration moved no generated file. The build's development
+identity did move, because it is computed from source bytes that include the
+edited controller file; the commit message's statement that the identity is
+unchanged is wrong on that point, and the build was required.
+
+`witness_contract/phases` and `witness_contract/actor_compositions` were not
+rerun, as a reviewed exception: the change touches the example checker, its
+two control files, the contract tree reader and its controls, documentation
+and one controller test module, none of which those cases read, and no
+native, admission or transport source changed. Their last runs were on build
+1437.
+
+The run directories `tests/out/runs/example-controls-acceptance` and
+`tests/out/runs/example-controls-rehearsal` are gitignored development output,
+disposable under ordinary retention. The scratch measurement's harness and
+logs were under `/private/tmp` and are not durable.
+
 ## Limits
 
 Constructed controls establish what the checker distinguishes, not what a
 native producer does. The scratch measurement samples conditions chosen by
-its author. The consumer's acceptance of an unreaped ordinary worker and of
-an incomplete final phase, the request surface's "applied once" sentence and
-the envelope surface's failed-open `rc` stay as the review reported them. A
-second actor is a separate decision after this work.
+its author; the condition and row measurements are exhaustive over what the
+checker declares and reports, and the 48 source mutations are not. The
+consumer's acceptance of an unreaped ordinary worker and of an incomplete
+final phase, the request surface's "applied once" sentence and the envelope
+surface's failed-open `rc` stay as the review reported them.
+[TEST-INPUT-PLAN.md](TEST-INPUT-PLAN.md) still names the flat example as its
+baseline. A second actor is a separate decision after this work.
