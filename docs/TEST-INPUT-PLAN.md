@@ -1,6 +1,7 @@
 # Transform lesson into a controlled-input test seam
 
-Status: proposed revision; no implementation has begun. Use the implemented
+Status: ready for guide-design and acceptance review; no implementation has
+begun. Use the implemented
 [example workload and observer](../tests/suites/witness_contract/README.md#the-apps-own-example),
 including the three-form workload in `898f3ed1`, the per-condition controls in
 `c8f63bb2` and the [controls review](EXAMPLE-CONTROLS-PLAN.md). Review concrete guide replacements

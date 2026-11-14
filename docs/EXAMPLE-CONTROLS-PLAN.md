@@ -1,8 +1,10 @@
 # Pin every example checker condition and state the workload once
 
 Status: implemented in `c8f63bb2` and verified on signed build 1441 by
-`20261114T194634Z_6b34bd1d`: all 18 selected cases passed. Ready for review
-and retirement after the review corrections below are verified. It changed the
+`20261114T194634Z_6b34bd1d`: all 18 selected cases passed. Review corrections in
+`5e5200b5` passed the 13-case selection recorded below. Ready to begin the test
+input plan's guide-design and acceptance review; this plan remains available
+for retirement review. The implementation changed the
 [example checker and its controls](../tests/suites/witness_contract/README.md#the-apps-own-example),
 one contract-generator selector and one controller unit test. It added no
 actor, action, native submission or product behavior. The
@@ -159,8 +161,9 @@ The controls include missing and mismatched identities, missing and changed
 snapshot content, unreadable version output and differing emissions through
 the actual preparation boundary.
 
-The condition gate previously inspected only conditions eligible to earn
-singleton coverage. It could ignore undeclared rows or names in another list.
+The coverage accounting checked undeclared names only after a control earned
+singleton coverage. The per-control judgment checked names only for expected,
+declared rows, so conditions attached to other rows could be silently ignored.
 Every stated condition now belongs to a declared row expected to fail in its
 form, with no duplicates. Judgment controls require each refusal. Existing
 ordinary-only worker conditions and actor-only diagnostic conditions now live
@@ -174,6 +177,52 @@ still needed. It keeps its identical-content fixtures separate from example's
 distinguishing-prefix prerequisites, and requires its own worker-reap and
 phase-completion assertions and rejected controls. These repairs add no native
 submission, action or product behavior.
+
+### Review verification
+
+Source `5e5200b5`, dispatcher run `20261114T234608Z_a6eb4923` in
+`tests/out/runs/example-controls-review-acceptance`, against the unchanged
+signed build 1441 and contract recorded above:
+
+```sh
+PW_TEST_OUT_DIR=tests/out/runs/example-controls-review-acceptance tests/run.sh \
+  --suite source_drift --case blackbox_e2e/checker_controls \
+  --case witness_contract/example_round_trip_controls \
+  --case witness_contract/example_round_trip
+```
+
+All 13 selected cases passed: ten `source_drift` cases, the shared consumer
+controls and both example cases. There were no skips, unrun cases, harness
+errors or recorded sleep. The app passed inspection and its before/after
+inventories are identical. The live report has 158 passing rows and twelve
+command records. The controls retain 1045 matched runs covering all 158 rows
+and all 170 conditions, plus 21 preparation scenarios and four judgment
+controls. Preparation refuses each new correspondence fault before producing
+runnable inputs; the combined-fault capture still reports every independent
+failure.
+
+No candidate rebuild was needed: the review changes no build-identity input,
+and recomputing that identity gives build 1441's exact contract. The updated
+checker and controls were rerun; this is not reuse of their earlier execution.
+Contract regeneration changes only the two corrected examples and their
+derived views; shape goldens, release history and the staged guide are
+unchanged. The subsequent acceptance-note edits change only these plan
+accounts, not executed code or fixtures.
+
+The final run supersedes the two failing development rehearsals in
+`example-controls-review-offline` and `example-controls-review-offline-2`:
+their diagnostics exposed lost combined-fault reporting and condition lists
+attached to inapplicable forms. Both are corrected; the third offline
+rehearsal and final selection pass. These runs remain disposable development
+output under ordinary retention, not retained release evidence.
+
+Read-only equipment inspection on 2026-11-14 found a matching Developer ID
+identity for the selected app's team, a logged-in GUI session, an empty
+default runner registry with no pending cleanup, and no reconciliation
+candidates or inspection errors. The source and staged guides are identical.
+No external runner was installed. These mutable prerequisites must hold again
+when the test input plan executes its full guide workflow; its guide design
+and acceptance checkpoint remain the next work.
 
 ## Limits
 
