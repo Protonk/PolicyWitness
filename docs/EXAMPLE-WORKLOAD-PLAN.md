@@ -8,8 +8,15 @@ The work used that budget once: signed development build 1430,
 `tests/out/runs/example-workload`, whose 18 selected cases passed with no skip,
 unrun case, harness error or recorded sleep. On that build the live case
 observed the native results recorded for the settled document under
-[Observed native results](#observed-native-results). The run is disposable
-development output on one machine, not release evidence.
+[Observed native results](#observed-native-results). Review then changed the
+checker, its controls and the suite account in `9e14a1c6`, which is the named
+cause of a second run against the same build: `20261114T144012Z_cf63e2de`
+under `tests/out/runs/example-workload-review` selected `source_drift` and the
+two example cases, and its 12 cases passed on the same terms with the same
+native results. `unit`, `integration` and `blackbox_e2e/checker_controls` rest
+on the first run as a reviewed exception: that commit changes none of their
+inputs. Both runs are disposable development output on one machine, not
+release evidence.
 
 Prepared against `495ecf25` by reading the emitter, round-trip checker,
 controls and contract definitions, and by submitting candidate documents by
