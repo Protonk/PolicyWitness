@@ -1,2 +1,0 @@
-/Users/raccoon/Desktop/Security/PolicyWitness/records/browser-trace-investigations/local/r1/pilot: valid on disk
-/Users/raccoon/Desktop/Security/PolicyWitness/records/browser-trace-investigations/local/r1/pilot: satisfies its Designated Requirement

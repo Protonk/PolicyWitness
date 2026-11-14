@@ -1,9 +1,0 @@
-{
-  "argv": [
-    "/opt/homebrew/Cellar/python@3.14/3.14.9/bin/python3.14",
-    "-I",
-    "/Users/raccoon/Desktop/Security/PolicyWitness/records/browser-trace-investigations/read.py",
-    "/Users/raccoon/Desktop/Security/PolicyWitness/records/browser-trace-investigations/evidence/controls/constructed-01/constructed-application_after_issuance.json"
-  ],
-  "returncode": 1
-}

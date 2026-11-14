@@ -20,6 +20,41 @@ How much investigation is needed depends on the uncertainty. Source inspection, 
 
 Verification belongs in the proposal. The checks should establish the intended behavior, not just the absence of an error; where a misleading pass is plausible, the plan should account for it. Include tests and documentation when they are needed to preserve or explain the change. A plan is ready when its reader can proceed without reconstructing its rationale, while recognizing evidence that would require reconsideration.
 
+## Improving documentation in four passes
+
+Choose one bounded topic and three concrete reader questions. Work through these
+passes to improve the reader's ability to find, understand and apply the contract.
+Shorten, expand, repeat or relocate material when that serves those questions;
+fewer words or files do not by themselves establish improvement.
+
+1. **Establish ownership.** Map each question to its authoritative definition,
+   other presentations and supporting checks. Public meanings belong in the
+   authored contract, concrete build-specific specimens in app source,
+   mechanisms in implementation tours, user tasks in the guide, and evidence
+   in the existing graded support records. Keep unresolved ownership explicit.
+2. **Consolidate explanations.** Resolve reading problems using that map.
+   Preserve consequential conditions and useful repetition. Compare revised
+   explanations with their owners; a citation check establishes that a source
+   exists, not that it supports the explanation. Changes to public meanings,
+   ownership or interfaces need a concrete maintainer decision within the
+   change's agreed scope.
+3. **Use app-owned examples.** Extract documents and useful fragments from
+   their actual owner where this improves reading or removes alignment duties.
+   Keep expected refusals and independent effect observations separately
+   authored, and establish admission through the existing execution path.
+   Keep teaching material and verification separable from its presentation so
+   another interface can reuse them.
+4. **Clarify support.** Keep qualifications and evidence limits beside claims.
+   Render citations and provenance from existing support records where useful;
+   combine owners only when their assertions and scopes coincide. Preserve the
+   distinctions between source inspection, constructed checks and native evidence.
+
+Finish by answering the three questions through the resulting reading paths,
+stating remaining difficulties and the maintenance duties added or removed.
+Retaining the existing arrangement is a valid outcome of any pass. Additional
+review should resolve a specific uncertainty. Use owning generators and checks
+appropriate to the changed boundary, following [test guidance](tests/AGENTS.md).
+
 ## Working guidance
 
 > You should read AGENTS.md, even if you're a human

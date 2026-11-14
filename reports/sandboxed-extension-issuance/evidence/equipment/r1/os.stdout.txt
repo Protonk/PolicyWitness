@@ -1,3 +1,0 @@
-ProductName:		macOS
-ProductVersion:		26.7.1
-BuildVersion:		25G241
