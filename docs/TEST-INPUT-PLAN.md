@@ -1,9 +1,10 @@
 # Transform lesson into a controlled-input test seam
 
-Status: proposed revision; no implementation has begun. Land and accept the
-[example workload](EXAMPLE-WORKLOAD-PLAN.md) first. Then review concrete guide
-replacements and this seam's acceptance table before removing `lesson` or
-building this plan's candidate. Source inspection is against `5415dc14`;
+Status: proposed revision; no implementation has begun. Use the implemented
+[example workload and observer](../tests/suites/witness_contract/README.md#the-apps-own-example),
+including the review changes in `9e14a1c6`. Review concrete guide replacements
+and this seam's acceptance table before removing `lesson` or building this
+plan's candidate. The command and guide inspection is against `5415dc14`;
 the proposed native experiments have not been executed.
 
 ## Purpose and what needs the command
@@ -32,12 +33,13 @@ answer key, new execution path, native action or general lesson catalog.
 
 ## Sequence and guide migration gate
 
-### Land example and reuse its observer
+### Reuse the example observer
 
-Complete the example plan and record its accepted commit/build before starting
-this implementation. Its build budget is separate; this plan does not claim a
-shared candidate build. Rebase the proposed checks onto the actual landed
-observer, fresh-read assertions and controls.
+The baseline is the three-step example in `b4e00762`, signed development build
+1430, with the checker and observer controls in `9e14a1c6`. Its development
+runs are disposable, not retained release evidence. This seam needs its own
+candidate build. Rebase the proposed checks onto the current observer,
+fresh-read assertions and controls before extracting shared helpers.
 
 Reuse the following mechanisms instead of writing another implementation:
 
@@ -97,8 +99,8 @@ installs, verifies and removes an owned service. The adjacent staged guide must
 match the source guide. Confirm that equipment and cleanup ownership before
 implementation; lack of equipment leaves the work unverified, not skipped.
 
-The guide design and seam acceptance table are reviewed together after example
-lands. Once agreed, implement the reviewed migration and command replacement;
+The guide design and seam acceptance table are reviewed together. Once agreed,
+implement the reviewed migration and command replacement;
 land the guide changes before or with removal of `lesson`, never afterwards.
 If the guide design is unresolved, freeze here with lesson intact. No second
 guide architecture or generic harness refactor is included in this budget.
@@ -260,7 +262,7 @@ executions merely to preserve its implementation.
 
 ## Acceptance checkpoint, verification and completion
 
-After example lands, present for maintainer review:
+Before implementation, present for maintainer review:
 
 - The concrete guide passages and their reader conclusions, dependency map,
   harness fence changes and confirmed full-workflow equipment.

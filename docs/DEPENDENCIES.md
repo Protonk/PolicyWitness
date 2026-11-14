@@ -59,6 +59,40 @@ record membership and declared equipment requirements. Individual controls can
 impose additional conditions, such as the
 [toolchain-switch control's distinct developer toolchains](../tests/CHANGE-VERIFICATION.md#build-toolchain-switch-controls).
 
+### Files used by the emitted example
+
+The current [app-owned example](../controller/src/example.rs) and
+[`witness_contract/example_round_trip`](../tests/suites/witness_contract/README.md#the-apps-own-example)
+use these host files:
+
+| Path | Role in the workload |
+| --- | --- |
+| `/etc/hosts` | Target A: a data-read query and a successful open. Its symlinked spelling is permitted. |
+| `/usr/share/dict/propernames` | Target B: metadata and data-read queries, and the attempted open covered by the policy's literal data-read denial. The policy names this exact path; its expected results assume that spelling resolves to the file the rule governs. |
+| `/usr/share/dict/connectives` | Target C: a successful read through a fresh descriptor, compared with the test's own file observation. |
+
+The live case requires all three to be readable regular files with distinct
+device/inode identities and nonempty bounded prefixes; C's prefix must differ
+from A's and B's. It samples identity and content before and after submission
+and requires the recorded contents and selected metadata to remain unchanged.
+The expected query answers are allow, allow and deny, with the last open
+returning `EPERM`; these are workload observations, not general sandbox
+guarantees or an attribution of the failure's cause.
+
+These operands have been checked on one development Mac. Availability of the
+dictionary files across all supported installations, including the macOS 26.0
+floor, remains unverified. This is an accepted local prerequisite for the
+workload, not a claim that every supported OS image supplies those files.
+Missing or unreadable files fail `prerequisite.targets_readable`; the case
+does not skip, create replacements or substitute paths. Other unmet conditions
+retain their own prerequisite or observation diagnostics.
+
+The publisher itself reads no file, and these files are not build
+dependencies. The published specimen still goes through ordinary `run` when
+a file is absent; publication promises no native result. Paths and native
+expectations are build-specific, so changes to the example require review of
+this account alongside its owning case.
+
 ## Conditions no package supplies
 
 - **Apple Developer Program membership.** The Developer ID Application
