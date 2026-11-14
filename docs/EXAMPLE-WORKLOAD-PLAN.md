@@ -1,10 +1,15 @@
 # A discriminating three-step CLI example
 
-Status: accepted for implementation, which has not begun. The maintainer has
+Status: implemented in `b4e00762` and awaiting maintainer review. The maintainer
 settled the [policy and operands](#policy-operands-and-native-grounding) and
 accepted the [acceptance table](#acceptance-table-and-budget) with its budget.
-Controls beyond that table, and builds or runs beyond that budget, need the
-cause the budget names. No source, checker or build has changed.
+The work used that budget once: signed development build 1430,
+`development:b038b125…`, and dispatcher run `20261114T040843Z_988f620c` under
+`tests/out/runs/example-workload`, whose 18 selected cases passed with no skip,
+unrun case, harness error or recorded sleep. On that build the live case
+observed the native results recorded for the settled document under
+[Observed native results](#observed-native-results). The run is disposable
+development output on one machine, not release evidence.
 
 Prepared against `495ecf25` by reading the emitter, round-trip checker,
 controls and contract definitions, and by submitting candidate documents by
