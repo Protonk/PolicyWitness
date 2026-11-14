@@ -1367,10 +1367,14 @@ and require a validator-spawn failure and an unestablished order to be read
 cleanly. The expanded structure assertions also report an incomplete collection
 or release chain. Each refusal input is judged
 against the emitted bytes and its stated change, not against the function that
-wrote it. Controls of the checker's `prepare` step show that a failed emission
-or bound writes a report and no target observation or refusal input, so nothing
-can be submitted. Flat emission, swapped/collapsed phases and a lost action
-are rejected at that preparation boundary.
+wrote it. Controls of the checker's `prepare` step show that a failed emission,
+identity comparison, packaged identity, snapshot correspondence or bound
+writes a report and no target observation, derivative or refusal input, so
+nothing can be submitted. Preparation calls `evaluate` with
+`preparation_only=True`, leaving every run-dependent row unevaluated.
+Flat emission, swapped/collapsed phases and a lost action are rejected at that
+boundary. Full evaluation of retained captures still reports independent run
+failures beside publication correspondence failures.
 
 Four alterations must pass. Three are made in each form: a fresh read whose
 open returned descriptor 0, a fresh read of a target shorter than the bound,
@@ -1386,8 +1390,12 @@ both pairs that involve step 3.
 The case fails on either of two gaps. Every row of the passing three-form
 report, which is what the live case reports, needs a matched rejected control
 in its own form. Every condition the checker declares needs a matched control
-that fails that condition alone in its row; a control that states a condition
-the checker does not declare also fails the case.
+that fails that condition alone in its row. Every stated condition must belong
+to a declared conditioned row expected to fail in that form, including names
+in lists that cannot earn singleton coverage. Undeclared rows or conditions,
+conditions on unexpected rows and duplicate names fail the case; independent
+judgment controls require each rejection. Form-specific conditions live beside
+that form's additional expected rows.
 `artifacts/example-round-trip-controls.json` holds each control's form,
 expected and actual sets, failed conditions and the coverage it earned, with
 the observer, table, summary and shared-fault controls, the accepted

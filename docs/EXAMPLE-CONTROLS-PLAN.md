@@ -2,7 +2,7 @@
 
 Status: implemented in `c8f63bb2` and verified on signed build 1441 by
 `20261114T194634Z_6b34bd1d`: all 18 selected cases passed. Ready for review
-and retirement. It changed the
+and retirement after the review corrections below are verified. It changed the
 [example checker and its controls](../tests/suites/witness_contract/README.md#the-apps-own-example),
 one contract-generator selector and one controller unit test. It added no
 actor, action, native submission or product behavior. The
@@ -147,14 +147,42 @@ The run directories `tests/out/runs/example-controls-acceptance` and
 disposable under ordinary retention. The scratch measurement's harness and
 logs were under `/private/tmp` and are not durable.
 
+## Review corrections
+
+The review found two preparation and control-accounting gaps. `prepare` checked
+emission and workload bounds but could still write runnable derivatives after
+an identity, snapshot or determinism failure. It now checks every publication
+row before writing those inputs. The same `evaluate` entry has a preparation
+mode that leaves run-dependent rows unevaluated; full capture evaluation keeps
+independent run failures visible beside publication correspondence failures.
+The controls include missing and mismatched identities, missing and changed
+snapshot content, unreadable version output and differing emissions through
+the actual preparation boundary.
+
+The condition gate previously inspected only conditions eligible to earn
+singleton coverage. It could ignore undeclared rows or names in another list.
+Every stated condition now belongs to a declared row expected to fail in its
+form, with no duplicates. Judgment controls require each refusal. Existing
+ordinary-only worker conditions and actor-only diagnostic conditions now live
+under their applicable forms instead of being silently ignored elsewhere.
+
+The request example distinguishes an observed ordinary application from a
+counted application, and the envelope example leaves operation-specific `rc`
+values with their producer. The test input plan names the current three-form
+baseline, concrete observer/comparison/control owners and the small extraction
+still needed. It keeps its identical-content fixtures separate from example's
+distinguishing-prefix prerequisites, and requires its own worker-reap and
+phase-completion assertions and rejected controls. These repairs add no native
+submission, action or product behavior.
+
 ## Limits
 
 Constructed controls establish what the checker distinguishes, not what a
 native producer does. The scratch measurement samples conditions chosen by
 its author; the condition and row measurements are exhaustive over what the
 checker declares and reports, and the 48 source mutations are not. The
-consumer's acceptance of an unreaped ordinary worker and of an incomplete
-final phase, the request surface's "applied once" sentence and the envelope
-surface's failed-open `rc` stay as the review reported them.
-[TEST-INPUT-PLAN.md](TEST-INPUT-PLAN.md) still names the flat example as its
-baseline. A second actor is a separate decision after this work.
+consumer does not supply all of this workload's completion expectations:
+example's structure rows reject an unreaped ordinary worker and an incomplete
+final phase, and [TEST-INPUT-PLAN.md](TEST-INPUT-PLAN.md) explicitly requires
+those assertions for its own passages. The shared consumer's scope is unchanged.
+A second actor is a separate decision after this work.

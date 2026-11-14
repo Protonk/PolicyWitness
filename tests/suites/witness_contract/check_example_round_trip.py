@@ -248,6 +248,11 @@ def _execution_rows(workload):
     ] + _native_rows(workload)
 
 
+def preparation_rows(workload=WORKLOAD):
+    """Assertions established before observing targets or submitting any request."""
+    return tuple(ident for ident, group, _, _ in _publication_rows(workload) if group != 'refusals')
+
+
 STRUCTURE_ROWS = (
     ('structure.execution_form', 'structure', CONSISTENCY, 'the reply uses the submitted execution form'),
     ('structure.phase_membership', 'structure', CONSISTENCY,
@@ -1079,7 +1084,7 @@ def _refusals(inputs, emitted, document, results):
 
 
 def _publication(inputs, results, workload):
-    """Emission, bounds and passage, then the refusals once the emission may be run.
+    """Emission, bounds and passage, without reading any run captures.
 
     Returns the emitted bytes with their document when it may, and the roles
     the bounds found either way.
@@ -1093,7 +1098,6 @@ def _publication(inputs, results, workload):
     if document is None or results.failed(*gate):
         results.remaining('no run was attempted: the emission or its bounds did not hold')
         return None, roles
-    _refusals(inputs, emitted, document, results)
     return (emitted, document), roles
 
 
@@ -1445,12 +1449,23 @@ def _report(by_form, forms):
             'forms': forms, 'assertions': assertions}
 
 
-def evaluate(inputs, *, authored_fixture=False, workload=WORKLOAD):
-    """One publication and three submissions, each judged on its own rows. No row compares two forms."""
+def evaluate(inputs, *, authored_fixture=False, workload=WORKLOAD, preparation_only=False):
+    """One publication and three submissions, each judged on its own rows. No row compares two forms.
+
+    Preparation evaluates only the publication rows, before any observations
+    or submissions exist. Evaluation of retained captures preserves independent
+    run failures even beside a publication correspondence failure.
+    """
     by_form = {form: Results(form, workload) for form in FORMS}
     forms = {form: {'workload': None, 'consumer_errors': []} for form in FORMS}
     publication, roles = _publication(inputs, by_form['emitted'], workload)
     forms['emitted']['workload'] = _described(roles, workload)
+    if preparation_only:
+        for results in by_form.values():
+            results.remaining('preparation has not observed targets or submitted any request')
+        return _report(by_form, forms)
+    if publication is not None:
+        _refusals(inputs, *publication, by_form['emitted'])
     for form in FORMS:
         results = by_form[form]
         if publication is None:
@@ -1572,8 +1587,8 @@ def prepare(directory, app, snapshot):
     (directory / 'contract-example.json').write_text(json.dumps(rendered, indent=2) + '\n')
 
     # The same checker decides whether the emitted bytes may be run.
-    report = evaluate(load(directory))
-    gate = [row for row in report['assertions'] if row['form'] == 'emitted' and row['group'] in ('emission', 'bounds')]
+    report = evaluate(load(directory), preparation_only=True)
+    gate = [row for row in report['assertions'] if row['form'] == 'emitted' and row['id'] in preparation_rows()]
     if any(row['status'] != 'pass' for row in gate):
         _write_report(directory, report)
         return 1

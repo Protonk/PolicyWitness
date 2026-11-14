@@ -630,7 +630,7 @@ policy-witness run example.json
 
 The printed document carries the emitting build's identity where this rendering shows `<reported-contract>`.
 
-The ordinary phased document keeps one worker across two collection boundaries. `initial-reads` collects the first two queries before releasing their attempts; after that phase completes, `restricted-read` collects the final query before releasing its attempt. The policy is applied once.
+The ordinary phased document keeps one worker across two collection boundaries. `initial-reads` collects the first two queries before releasing their attempts; after that phase completes, `restricted-read` collects the final query before releasing its attempt. When policy application succeeds, both phases use that worker under the same applied policy. The ordinary reply reports observed application; it does not carry an application count.
 
 The policy allows by default and denies data reads of the one file its specific rule names. Each step establishes something different:
 
@@ -4320,9 +4320,10 @@ result describes its separate compiler invocation.
 <a id="contract-envelope-data-failed_attempt"></a>
 ##### A finished run with a failed attempt
 
-An admitted report says `finished` while a step says `open_failed`, rc -1
-and errno 1. The controller emits result.ok true and exit 0, retains the
-native failure and computes evidence findings independently.
+An admitted report says `finished` while a step says `open_failed` with
+errno 1. The controller emits result.ok true and exit 0, retains the step's
+reported rc and errno and computes evidence findings independently. The
+step's rc is operation-specific; this example does not prescribe its value.
 
 <a id="contract-envelope-support"></a>
 **Support: [check read](#contract-support-grades) for [The controller envelope](#contract-envelope) and its descendants.** Constructed outcomes preserve nested native evidence and select success only for finished. A real fixture child exposes delivery refusal precedence. Rendering serializes the borrowed payload once. Context: Read completion/admission/frame code and the named constructed or fixture-child checks. Evidence limit: Check reading. The fixture child is a controlled protocol writer; native kernel execution is separate evidence. [Evidence details](#contract-envelope-support-details).

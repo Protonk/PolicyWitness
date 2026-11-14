@@ -258,9 +258,10 @@ result describes its separate compiler invocation.
 
 ### A finished run with a failed attempt {failed_attempt: example}
 
-An admitted report says `finished` while a step says `open_failed`, rc -1
-and errno 1. The controller emits result.ok true and exit 0, retains the
-native failure and computes evidence findings independently.
+An admitted report says `finished` while a step says `open_failed` with
+errno 1. The controller emits result.ok true and exit 0, retains the step's
+reported rc and errno and computes evidence findings independently. The
+step's rc is operation-specific; this example does not prescribe its value.
 
 ## Envelope support {support: owner}
 

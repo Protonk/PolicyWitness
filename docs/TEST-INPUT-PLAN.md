@@ -2,7 +2,8 @@
 
 Status: proposed revision; no implementation has begun. Use the implemented
 [example workload and observer](../tests/suites/witness_contract/README.md#the-apps-own-example),
-including the review changes in `9e14a1c6`. Review concrete guide replacements
+including the three-form workload in `898f3ed1`, the per-condition controls in
+`c8f63bb2` and the [controls review](EXAMPLE-CONTROLS-PLAN.md). Review concrete guide replacements
 and this seam's acceptance table before removing `lesson` or building this
 plan's candidate. The command and guide inspection is against `5415dc14`;
 the proposed native experiments have not been executed.
@@ -35,29 +36,44 @@ answer key, new execution path, native action or general lesson catalog.
 
 ### Reuse the example observer
 
-The baseline is the three-step example in `b4e00762`, signed development build
-1430, with the checker and observer controls in `9e14a1c6`. Its development
-runs are disposable, not retained release evidence. This seam needs its own
-candidate build. Rebase the proposed checks onto the current observer,
-fresh-read assertions and controls before extracting shared helpers.
+The baseline publishes three steps in two ordinary phases and exercises flat
+and single-actor derivatives as separate submissions. The controls account
+records signed development build 1441, 158 `(form, id)` rows and 170 named
+conditions. Its development runs are disposable, not retained release
+evidence. This seam needs its own candidate build. Use the current mechanisms
+below; the old flat-example baseline and identifier prefixes no longer apply.
 
 Reuse the following mechanisms instead of writing another implementation:
 
-| Mechanism from example | Treatment here |
+| Landed mechanism and owner | Treatment here |
 | --- | --- |
-| Same-descriptor sampling of identity, full digest/length and bounded-prefix digest/length | Reuse the observer for harness-owned A and B. |
-| Successful fresh-read identity, prefix and count correspondence | Reuse the scalar comparisons against independently supplied expected samples. |
-| Internal fresh-read and reply semantics | Continue using the existing independent consumer. |
-| Coherent wrong-identity/content controls and missing-observation handling | Reuse their helper machinery and existing coverage; add only controls specific to this experiment. |
-| Workload roles, policy expectations, target prerequisites and passage association | Keep separately authored for this seam. |
+| `check_example_round_trip.observe_target(target, opener=...)`; `observer_controls` in `example_round_trip_controls.py` changes or unlinks the path after open | Extract the same-descriptor sampler with an explicit prefix bound for both callers. Retain identity, full digest/length, bounded-prefix digest/length and error observations. |
+| `_target_changes` and the `syscalls`, `identity` and `content` comparisons nested in `_native` | Extract the small sample and successful-read comparisons against independently supplied expected samples. Keep stability and missing-observation decisions with each caller. |
+| `consumer.validate` and `extension_evidence.validate_fresh_read`; `blackbox_e2e/checker_controls` | Reuse for internal reply and syscall semantics, including unavailable later calls after a failed open. Do not infer worker reap or phase completion from consumer acceptance. |
+| `fresh_read`, `set_fresh`, `fresh_fails` and the coherent controls `fresh_identity_of_A`, `fresh_inode_alone`, `fresh_content_of_A`, `fresh_count_alone_short` | Extract only the record construction/mutation needed by both callers, taking bytes and identity explicitly. The existing helpers select example's step 2 and its A/B/C samples; they are not a general capture API. |
+| `prepare`, `preparation_rows`, `one_change_problems`, `diagnostics` and `failed_conditions` | Preserve the preparation boundary and explicit row/condition diagnostics. Author this publisher's target-binding and request-transformation rules separately. |
+| `WORKLOAD`, `_prerequisites`, `_structure`, `evaluate` and the three-form capture builder | Keep the workload, expectations, completion assertions and passage association separately authored for this seam. Do not reuse the whole example evaluator or its constructed workload. |
 
-If these mechanisms remain private to the
-[example checker](../tests/suites/witness_contract/check_example_round_trip.py),
-extract the small observer/comparison helpers for both callers. Preserve
+The comparisons remain private to the
+[example checker](../tests/suites/witness_contract/check_example_round_trip.py).
+Extract them into a small shared test helper when implementing this seam. Preserve
 example's behavior and rerun its live case and controls when their dependencies
 change. Do not create a universal workload checker or share expectations with
 the product. The acceptance table must name the landed helpers and cases
 reused, rather than describe them as work still to be invented.
+
+Example's prerequisites require three distinct files and a distinguishing
+fresh-read prefix. This experiment deliberately gives A and B identical bytes,
+and its allow-default passages include a single target. Those prerequisites
+must not travel with the sampler. Keep the new experiment's explicit inode,
+content-transition and per-passage stability requirements below.
+
+Preparation must reject publication, identity, snapshot or target-binding
+failures before sampling targets, creating derivatives or invoking `run`.
+The current example controls exercise that boundary through `prepare`, while
+full evaluation of retained captures keeps independent faults visible beside
+a publication mismatch. The new wrong-target emitter control must exercise
+the corresponding real preparation path, not only a comparison helper.
 
 ### Design the guide before removing lesson
 
@@ -237,6 +253,18 @@ the reply, and bind submitted IDs/operands, policy digest and capture to the
 current passage. Successful reads must match independent identity, byte count
 and prefix observations. Use the existing consumer for internal semantics.
 
+For each admitted completed passage, also require the ordinary worker's
+positive PID, applied and ready observations, completion, confirmed reap,
+exit 0 without a signal and `after_confirmed_reap` collection basis; require
+the submitted phase's arrival, completion and collection/release chain.
+Use example's `structure.worker` and `structure.collections` conditions as
+the review map, with separately authored assertions for this one-step input.
+The consumer currently accepts an ordinary unreaped worker or incomplete
+final phase in some otherwise valid constructed captures. Example rejects
+them through its own structure rows. Include rejected controls for both here;
+neither `finished` nor consumer acceptance supplies the missing observations.
+These are workload completion expectations, not new universal admission rules.
+
 | Rejected control | Required distinction and reuse |
 | --- | --- |
 | Coherent other-file identity with correct echoes and identical bytes | Reuse example's identity comparison and coherent-control helper; consumer accepts, external identity assertion rejects. |
@@ -269,7 +297,8 @@ Before implementation, present for maintainer review:
 - The landed observer/comparison helpers and controls reused, with any small
   extraction needed; separately owned expectations and new controls.
 - Canonical case IDs, fixture ownership and exact diagnostics, plus invocation
-  accounting for the seven native passages and publication controls.
+  accounting for the seven submissions (six execution passages and one
+  refusal) and publication controls.
 - The stamped developer rule and shared usage changes, and the migration of
   old corpus resources without losing grammar or direct-host coverage.
 

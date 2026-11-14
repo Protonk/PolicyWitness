@@ -775,9 +775,9 @@ def controls():
     add('admission_host_refuses_the_example', host_refuses, ['admission.no_request_failure'],
         ['echo.step_ids', 'native.completion', 'native.process_status', 'structure.phase_membership', COLLECTIONS],
         unevaluated=('echo.queries', 'echo.attempts', 'native.order') + every_step,
-        conditions={'structure.phase_membership': ['phase_count'], COLLECTIONS: each_phase('unique'),
-                    'structure.worker': unworked},
-        per_form={'emitted': {'also': ['structure.worker']}, 'flat': {'also': ['structure.worker']}})
+        conditions={'structure.phase_membership': ['phase_count'], COLLECTIONS: each_phase('unique')},
+        per_form={form: {'also': ['structure.worker'], 'conditions': {'structure.worker': unworked}}
+                  for form in ('emitted', 'flat')})
     add('admission_dossier_digest',
         lambda s: dossier_policy(s)['augmentation'].update(original_sha256='0' * 64),
         ['admission.dossier_policy_digest'], recapture=False)
@@ -1233,8 +1233,8 @@ def controls():
         ['execution.admitted_reply'], unevaluated=REPLY_DEPENDENT + ('identity.reply_producer',), recapture=False)
     # An admitted reply without the controller's assessment is a consistency fault, not missing execution.
     # The actor's own assessment is part of what is absent.
-    without_actor_assessment = dict(per_form={'actor': {'also': ['structure.actor_ownership']}},
-                                    conditions={'structure.actor_ownership': ['diagnostics_actors']})
+    without_actor_assessment = dict(per_form={'actor': {'also': ['structure.actor_ownership'],
+        'conditions': {'structure.actor_ownership': ['diagnostics_actors']}}})
     add('readers_assessment_absent', lambda s: envelope_of(s)['data'].update(runner_sandbox_diagnostics=None),
         ['readers.disposition_integrity', 'readers.disposition_issues'], holds=('execution.admitted_reply',),
         recapture=False, **without_actor_assessment)
@@ -1336,6 +1336,17 @@ def judge(report, form, expected, *, conditions=None, unevaluated=(), holds=(), 
     declared = checker.conditions(form)
     found = checker.failed_conditions(report)
     stated = {ident: names(form) if callable(names) else names for ident, names in (conditions or {}).items()}
+    for ident, names in stated.items():
+        if ident not in expected:
+            problems.append(f'{ident} states conditions but is not an expected failing row')
+        if ident not in declared:
+            problems.append(f'{ident} states conditions but is not a declared conditioned row')
+        elif names is not None:
+            unknown = sorted(set(names) - set(declared[ident]))
+            if unknown:
+                problems.append(f'{ident} states undeclared conditions: {unknown!r}')
+            if len(set(names)) != len(names):
+                problems.append(f'{ident} repeats a stated condition')
     for ident in sorted(set(expected) & set(declared)):
         if stated.get(ident) is None:
             problems.append(f'{ident} is expected to fail and its failed conditions are not stated')
@@ -1368,7 +1379,7 @@ def run_control(artifacts, row, form):
     (directory / 'report.json').write_text(json.dumps(report, indent=2) + '\n')
     more = row['per_form'].get(form, {})
     expected = row['expected'] + tuple(more.get('also', ()))
-    problems, earned = judge(report, form, expected, conditions=row['conditions'],
+    problems, earned = judge(report, form, expected, conditions=row['conditions'] | more.get('conditions', {}),
                              unevaluated=row['unevaluated'] + tuple(more.get('unevaluated', ())), holds=row['holds'],
                              rest_holds=row['rest_holds'], clean=row['clean'],
                              exactly_consumer=row['exactly_consumer'],
@@ -1445,6 +1456,26 @@ def prepare_controls(artifacts):
         ('emission_not_an_object', lambda s: [s[w].update(stdout=b'[]\n') for w in ('example-1', 'example-2')],
          ('emission.json_object',)),
         ('version_exit_1', lambda s: s['version'].update(exit=1), ('emission.version_exit',)),
+        ('version_build_identity', lambda s: s['version']['envelope']['build'].update(contract=RELEASE),
+         ('passage.contract_matches_version',)),
+        ('version_data_identity', lambda s: s['version']['envelope']['data'].update(contract=RELEASE),
+         ('passage.contract_matches_version',)),
+        ('version_unreadable', lambda s: s['version'].update(stdout=b'not JSON\n'),
+         ('passage.contract_matches_version',)),
+        ('property_list_identity', lambda s: s['property-list'].update(PWContract=RELEASE),
+         ('passage.contract_matches_property_list',)),
+        ('property_list_missing', lambda s: s.update({'property-list': None}),
+         ('passage.contract_matches_property_list',)),
+        ('snapshot_member', lambda s: s['contract-example']['document'].update(specimen_id='another'),
+         ('passage.contract_rendering',)),
+        ('snapshot_missing', lambda s: s.update({'contract-example': {'document': None}}),
+         ('passage.contract_rendering',)),
+        ('emissions_differ', lambda s: s['example-2'].update(stdout=b' ' + s['example-2']['stdout']),
+         ('passage.emissions_identical',)),
+        ('identity_absent', lambda s: set_document(s, lambda d: d.pop('contract')),
+         ('passage.contract_matches_version', 'passage.contract_matches_property_list', 'passage.contract_packaged_form')),
+        ('identity_unpackaged', lambda s: (s.clear(), s.update(build('test:unpackaged'))),
+         ('passage.contract_packaged_form',)),
         ('bound_write_action',
          lambda s: set_document(s, lambda d: d['phases'][0]['actions'][0]['attempt'].update(action='open_write')),
          ('bounds.workload_roles', 'bounds.read_only_attempts')),
@@ -1461,6 +1492,12 @@ def prepare_controls(artifacts):
     ]:
         state = build()
         change(state)
+        listed = state['property-list']
+        plist = app / 'Contents/Info.plist'
+        if listed is None:
+            plist.unlink()
+        else:
+            plist.write_bytes(plistlib.dumps({'PWContract': listed['PWContract']}))
         snapshot = artifacts / 'captures' / ('prepare-' + name + '.snapshot.json')
         snapshot.write_text(json.dumps({'surfaces': [{'id': 'request', 'public': {'nodes': [
             {'id': checker.EXAMPLE_NODE, 'document': state['contract-example']['document']}]}}]}))
@@ -1476,6 +1513,8 @@ def prepare_controls(artifacts):
         if failing:
             report = json.loads((directory / 'report.json').read_text())
             assert status == 1 and not runnable, (name, status, runnable)
+            assert not any(path.endswith(('targets-before.json', 'targets-after.json', 'run.stdout'))
+                           for path in produced), (name, produced)
             assert checker.diagnostics(report) == triples('emitted', *failing), (name, checker.diagnostics(report))
             assert all(row['status'] == 'not_evaluated' for row in report['assertions']
                        if row['group'] in RUN_GROUPS or row['form'] != 'emitted'), name
@@ -1495,6 +1534,31 @@ def prepare_controls(artifacts):
                 derived = json.loads((directory / form / 'input.json').read_bytes())
                 assert checker.transformation_problems(source, derived, form) == [], form
         records.append({'control': 'prepare_' + name, 'status': status, 'failing': list(failing), 'files': produced})
+    return records
+
+
+def judgment_controls(artifacts):
+    """All named conditions are checked, including names that cannot earn singleton coverage."""
+    state = build()
+    phase_of(state, 1)['completion_observed'] = False
+    _, report = evaluated(artifacts, 'judgment_conditions', state)
+    expected = {COLLECTIONS: ['phase1.completion_observed']}
+    problems, earned = judge(report, 'emitted', [COLLECTIONS], conditions=expected, rest_holds=True)
+    assert not problems and earned == [(COLLECTIONS, 'phase1.completion_observed')], (problems, earned)
+    records = []
+    for name, stated, diagnostic in (
+        ('undeclared_alongside_declared', {COLLECTIONS: ['phase1.completion_observed', 'invented']},
+         f"{COLLECTIONS} states undeclared conditions: ['invented']"),
+        ('undeclared_row', dict(expected, invented=['one', 'two']),
+         'invented states conditions but is not a declared conditioned row'),
+        ('unexpected_conditioned_row', dict(expected, **{'structure.worker': ['reaped']}),
+         'structure.worker states conditions but is not an expected failing row'),
+        ('duplicated_condition', {COLLECTIONS: ['phase1.completion_observed'] * 2},
+         f'{COLLECTIONS} repeats a stated condition'),
+    ):
+        problems, _ = judge(report, 'emitted', [COLLECTIONS], conditions=stated, rest_holds=True)
+        assert diagnostic in problems, (name, problems)
+        records.append({'control': name, 'required_diagnostic': diagnostic, 'problems': problems})
     return records
 
 
@@ -1750,6 +1814,7 @@ def main():
     results = {'baselines': [], 'accepted_variants': [], 'controls': [], 'perturbations': perturbation_controls(),
                # `prepare` reads an app property list; the table control below uses the one written here.
                'prepare': prepare_controls(artifacts), 'observer': observer_controls(artifacts),
+               'judgment': judgment_controls(artifacts),
                'uniform_answer_demonstration': uniform_answer_demonstration(artifacts),
                'table': table_controls(artifacts), 'summary': summary_controls(artifacts),
                'shared_fault': shared_fault_controls(artifacts)}

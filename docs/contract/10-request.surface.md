@@ -263,7 +263,7 @@ policy-witness run example.json
 
 The printed document carries the emitting build's identity where this rendering shows `<reported-contract>`.
 
-The ordinary phased document keeps one worker across two collection boundaries. `initial-reads` collects the first two queries before releasing their attempts; after that phase completes, `restricted-read` collects the final query before releasing its attempt. The policy is applied once.
+The ordinary phased document keeps one worker across two collection boundaries. `initial-reads` collects the first two queries before releasing their attempts; after that phase completes, `restricted-read` collects the final query before releasing its attempt. When policy application succeeds, both phases use that worker under the same applied policy. The ordinary reply reports observed application; it does not carry an application count.
 
 The policy allows by default and denies data reads of the one file its specific rule names. Each step establishes something different:
 
