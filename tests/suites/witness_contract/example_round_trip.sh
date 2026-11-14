@@ -16,6 +16,7 @@ invoke() {
   local prefix="$1"
   shift
   local status=0
+  printf '%s\n' "${PW_BIN}" "$@" >"${prefix}.command"
   "${PW_BIN}" "$@" >"${prefix}.stdout" 2>"${prefix}.stderr" || status=$?
   printf '%s\n' "${status}" >"${prefix}.exit"
 }
@@ -25,17 +26,27 @@ invoke "${CAPTURE}/version" --version
 invoke "${CAPTURE}/example-1" example
 invoke "${CAPTURE}/example-2" example
 
-test_step prepare "gate the emitted bytes, observe every query and attempt path and change the bytes in one place per refusal"
+test_step prepare "gate the phased emission and independently check both derivatives"
 if ! "${PW_PYTHON}" -B -S "${CHECKER}" prepare "${CAPTURE}" "${PW_APP_DIR}" \
     "${ROOT_DIR}/docs/contract/public.json" >"${PW_TEST_ARTIFACTS}/prepare.log" 2>&1; then
   cat "${PW_TEST_ARTIFACTS}/prepare.log" >&2 || true
   test_fail "the emitted document was not submitted (report: ${CAPTURE}/report.json)"
 fi
 
-test_step run "submit the emitted bytes through run, then each changed input"
-invoke "${CAPTURE}/run" run "${CAPTURE}/example-1.stdout"
-test_run_logged "${PW_TEST_ARTIFACTS}/observe-after.log" "target observation after the run failed" \
-  "${PW_PYTHON}" -B -S "${CHECKER}" observe-after "${CAPTURE}"
+test_step run "submit emitted, flat and actor forms with their own before/after samples"
+for form in emitted flat actor; do
+  directory="${CAPTURE}/${form}"
+  input="${directory}/input.json"
+  if [[ "${form}" == emitted ]]; then
+    directory="${CAPTURE}"
+    input="${CAPTURE}/example-1.stdout"
+  fi
+  test_run_logged "${PW_TEST_ARTIFACTS}/${form}-before.log" "target observation before ${form} failed" \
+    "${PW_PYTHON}" -B -S "${CHECKER}" observe "${CAPTURE}" "${form}" before
+  invoke "${directory}/run" run "${input}"
+  test_run_logged "${PW_TEST_ARTIFACTS}/${form}-after.log" "target observation after ${form} failed" \
+    "${PW_PYTHON}" -B -S "${CHECKER}" observe "${CAPTURE}" "${form}" after
+done
 for directory in "${CAPTURE}"/refusals/*/; do
   invoke "${directory}run" run "${directory}input.json"
 done
@@ -43,4 +54,4 @@ done
 test_step check "read the retained captures"
 test_check_python "${PW_TEST_ARTIFACTS}/check.log" "example round trip failed (report: ${CAPTURE}/report.json)" \
   "${CHECKER}" evaluate "${CAPTURE}"
-test_pass "the app's own example passes from example through run; every changed input is refused at its boundary" "{}"
+test_pass "the emitted phased example and both derivatives meet their independent expectations; all six refusal inputs stop at their boundaries" "{}"

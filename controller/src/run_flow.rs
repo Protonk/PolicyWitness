@@ -2826,6 +2826,57 @@ else:
             fs::remove_dir_all(root).unwrap();
         }
 
+        /// Both test-owned transformations retain their held serialization and
+        /// entire policy at the controlled client boundary. This is preparation
+        /// coverage; native admission belongs to the three live submissions.
+        #[test]
+        fn example_derivatives_preserve_their_document_and_policy_at_the_client() {
+            let root = scratch("example-derivatives");
+            let app = synthetic_app(&root);
+            install_manifest(&app, ManifestState::Valid);
+            let emitted = crate::example::render(
+                crate::example::EXAMPLE_DOCUMENT,
+                crate::json_contract::BUILD_CONTRACT,
+            )
+            .unwrap();
+            let source: Value = serde_json::from_str(&emitted).unwrap();
+            let policy = source["policy"].clone();
+            let actions: Vec<Value> = source["phases"]
+                .as_array()
+                .unwrap()
+                .iter()
+                .flat_map(|phase| phase["actions"].as_array().unwrap().iter().cloned())
+                .collect();
+            let mut flat = source.clone();
+            flat.as_object_mut().unwrap().remove("phases");
+            flat["probe_plan"] = json!(actions);
+            let mut actor = source.clone();
+            actor.as_object_mut().unwrap().remove("policy");
+            actor["actors"] = json!([{"actor_id":"example-reader", "equipment":"selected",
+                "sandbox":{"mode":"apply", "policy":policy}}]);
+            for phase in actor["phases"].as_array_mut().unwrap() {
+                phase["actor_id"] = json!("example-reader");
+            }
+            for (name, document) in [("flat", flat), ("actor", actor)] {
+                let text = serde_json::to_string_pretty(&document).unwrap();
+                let request = root.join(format!("{name}.json"));
+                write(&request, format!("{text}\n").as_bytes());
+                let observed = observe(&app, None, &[request.to_str().unwrap()]);
+                assert_eq!(observed.calls.len(), 1, "{name}");
+                assert_eq!(observed.calls[0].request, text, "{name}");
+                let held: Value = serde_json::from_str(&observed.calls[0].request).unwrap();
+                assert_eq!(held, document, "{name}");
+                let received = if name == "actor" {
+                    &held["actors"][0]["sandbox"]["policy"]
+                } else {
+                    &held["policy"]
+                };
+                assert_eq!(received, &policy, "{name}");
+                assert_eq!(fs::read(&request).unwrap(), format!("{text}\n").as_bytes());
+            }
+            fs::remove_dir_all(root).unwrap();
+        }
+
         #[test]
         fn builtin_manifest_failures_refuse_before_the_client_with_one_load() {
             for (label, state, detail) in [

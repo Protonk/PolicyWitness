@@ -1615,7 +1615,7 @@
         },
         {
           "id": "example_round_trip",
-          "description": "The app's own three-step example passes from example through run on the signed app: emitted bytes submitted unchanged, identity, digest and echo relationships, shared readers, per-step native expectations and fresh-read correspondence under observed prerequisites, and six one-change refusals",
+          "description": "The emitted two-phase example and exact flat/actor derivatives pass through run with independent native expectations, samples, phase and actor ownership checks, a diagnostic summary and six one-change refusals",
           "command": [
             "bash",
             "tests/suites/witness_contract/example_round_trip.sh"
@@ -1626,7 +1626,7 @@
         },
         {
           "id": "example_round_trip_controls",
-          "description": "Every assertion of the example round-trip checker has a rejected constructed control matched by identifier and classification; unevaluated assertions, exchanged answers and records, coherent fresh-read substitutions and combined faults are checked",
+          "description": "Constructed flat, phased and full actor captures pin exact checker diagnostics: transformations, collection ownership, application/equipment/reap, consistent renaming, independent native faults, missing evidence and fresh-read correspondence",
           "command": [
             "bash",
             "tests/suites/witness_contract/example_round_trip_controls.sh"

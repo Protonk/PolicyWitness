@@ -15,7 +15,7 @@ use crate::request_patch::{parse_request, validate_contract};
 
 // The contract generator extracts this constant and accepts this one form: a
 // single `r#"`...`"#` raw string holding a JSON object without `contract`.
-pub const EXAMPLE_DOCUMENT: &str = r#"{"specimen_id":"example","policy":{"format":"sbpl","sbpl_source":"(version 1) (allow default) (deny file-read-data (literal \"/usr/share/dict/propernames\") (with no-report))"},"probe_plan":[{"step_id":"read-hosts","sandbox_check":{"operation":"file-read-data","filter":{"kind":"path","value":"/etc/hosts"}},"attempt":{"kind":"file","action":"open_read","target":"/etc/hosts"}},{"step_id":"metadata-propernames-read-connectives","sandbox_check":{"operation":"file-read-metadata","filter":{"kind":"path","value":"/usr/share/dict/propernames"}},"attempt":{"kind":"file","action":"read_fresh","target":"/usr/share/dict/connectives"}},{"step_id":"read-propernames","sandbox_check":{"operation":"file-read-data","filter":{"kind":"path","value":"/usr/share/dict/propernames"}},"attempt":{"kind":"file","action":"open_read","target":"/usr/share/dict/propernames"}}]}"#;
+pub const EXAMPLE_DOCUMENT: &str = r#"{"specimen_id":"example","policy":{"format":"sbpl","sbpl_source":"(version 1) (allow default) (deny file-read-data (literal \"/usr/share/dict/propernames\") (with no-report))"},"phases":[{"phase_id":"initial-reads","actions":[{"step_id":"read-hosts","sandbox_check":{"operation":"file-read-data","filter":{"kind":"path","value":"/etc/hosts"}},"attempt":{"kind":"file","action":"open_read","target":"/etc/hosts"}},{"step_id":"metadata-propernames-read-connectives","sandbox_check":{"operation":"file-read-metadata","filter":{"kind":"path","value":"/usr/share/dict/propernames"}},"attempt":{"kind":"file","action":"read_fresh","target":"/usr/share/dict/connectives"}}]},{"phase_id":"restricted-read","actions":[{"step_id":"read-propernames","sandbox_check":{"operation":"file-read-data","filter":{"kind":"path","value":"/usr/share/dict/propernames"}},"attempt":{"kind":"file","action":"open_read","target":"/usr/share/dict/propernames"}}]}]}"#;
 
 /// Why no document was printed. Every case is process exit 2.
 #[derive(Debug, PartialEq, Eq)]
@@ -115,6 +115,30 @@ mod tests {
             assert_eq!(contract, Some(Value::String(identity.into())));
             assert_eq!(value, defined);
         }
+    }
+
+    #[test]
+    fn example_has_two_collection_boundaries_with_the_existing_three_actions() {
+        let document: Value = serde_json::from_str(EXAMPLE_DOCUMENT).unwrap();
+        assert!(document.get("probe_plan").is_none());
+        assert!(document.get("actors").is_none());
+        let phases = document["phases"].as_array().unwrap();
+        assert_eq!(phases.len(), 2);
+        assert_eq!(phases[0]["phase_id"], "initial-reads");
+        assert_eq!(phases[1]["phase_id"], "restricted-read");
+        assert_eq!(phases[0]["actions"].as_array().unwrap().len(), 2);
+        assert_eq!(phases[1]["actions"].as_array().unwrap().len(), 1);
+        let actions: Vec<_> = phases
+            .iter()
+            .flat_map(|p| p["actions"].as_array().unwrap())
+            .collect();
+        assert_eq!(actions[0]["step_id"], "read-hosts");
+        assert_eq!(
+            actions[1]["step_id"],
+            "metadata-propernames-read-connectives"
+        );
+        assert_eq!(actions[2]["step_id"], "read-propernames");
+        assert_eq!(actions[1]["attempt"]["action"], "read_fresh");
     }
 
     #[test]

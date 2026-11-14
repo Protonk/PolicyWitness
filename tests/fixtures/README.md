@@ -114,6 +114,10 @@ deterministic, and checked into the repo so tests are hermetic.
   expected outcomes for strict evidence validation, plus captured envelopes
   under `checker/` for independent controls of the evidence checker
   ([README](blackbox_e2e/checker/README.md)).
+- `example_round_trip/`: a complete identity-free, authored single-actor
+  envelope for the example's three-form checker controls, with independent
+  application, equipment, collection and reap observations; see its
+  [README](example_round_trip/README.md).
 - `comparison/`: the comparison-record scenario matrix. `matrix.json` holds
   every S, B, C and T row with its specimen inputs, the raw channel inputs the
   Swift unit reader feeds to `comparisonEvidence(...)`, the raw fields the

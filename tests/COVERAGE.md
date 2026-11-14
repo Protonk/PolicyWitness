@@ -155,6 +155,17 @@ mutations. The same case drives cumulative collection exhaustion through
 completed attempts and independent cleanup evidence. No new normalized or
 attempt outcome names are introduced by phases.
 
+The default `witness_contract/example_round_trip` executes the app's emitted
+2+1 phased workload, its exact flat derivative and its one-applied-actor
+derivative. Independent samples and per-form query/attempt expectations sit
+beside submitted phase/action/actor association, collection/release and owned
+worker cleanup checks. Its diagnostic summary makes no equality claim.
+`example_round_trip_controls` supplies complete constructed passing envelopes,
+coherent foreign partitions/owners, missing-evidence and fresh-read substitutions;
+these establish checker sensitivity separately from native effects. The
+[suite account](suites/witness_contract/README.md#the-apps-own-example) owns
+the assertions and the single-actor, read-only and local-file limits.
+
 The opt-in `witness_contract/path_query_observations` case investigates native
 path queries independently of PW's planner, using the shipped validator and a
 separately signed target. It preserves missing/inaccessible path states and

@@ -46,6 +46,7 @@ PREREQUISITE_UNESTABLISHED = 'prerequisite_unestablished'
 NATIVE_OBSERVATION = 'native_observation'
 
 FIXTURE = ROOT / 'tests/fixtures/blackbox_e2e/checker/current/constructed_run.json'
+ACTOR_FIXTURE = ROOT / 'tests/fixtures/example_round_trip/constructed_actor_run.json'
 DEVELOPMENT = 'development:' + 'c0' * 32
 RELEASE = 'release:v9.9.9'
 CONSUMER = ('consumer_validation', CONSISTENCY)
@@ -295,7 +296,9 @@ def step_of(state, number=1):
 
 
 def validator_record(state, number):
-    return reply_of(state)['phases'][0]['validator_subprocess']['records'][number - 1]
+    ident = step_of(state, number)['step_id']
+    return next(record for phase in reply_of(state)['phases']
+                for record in phase['validator_subprocess']['records'] if record['step_id'] == ident)
 
 
 def before(state, role):
@@ -310,8 +313,9 @@ def spawn_failed(state):
     """A coherent reply whose validator never ran: no prediction, honest `unestablished` order, exit 1."""
     envelope, reply = envelope_of(state), reply_of(state)
     reply.update(normalized_outcome='validator_spawn_failed', rc=1, error='constructed validator spawn failure')
-    reply['phases'][0]['ordering'].update(validator_disposition='not_spawned')
-    reply['phases'][0].pop('validator_subprocess')
+    for phase in reply['phases']:
+        phase['ordering'].update(validator_disposition='not_spawned')
+        phase.pop('validator_subprocess')
     for step in reply['steps']:
         step['sandbox_check'].update(result_source='synthetic', native_rc=None, errno=None, outcome='error',
                                      missing_reason='validator_not_invoked')
@@ -380,7 +384,8 @@ def fresh_fails(state, call, errno=EPERM):
 
 def coherent_unestablished(state):
     """The validator answered, and the chain that would order it first lacks an established worker lifetime."""
-    reply_of(state)['phases'][0]['ordering'].update(worker_lifetime_established=False)
+    for phase in reply_of(state)['phases']:
+        phase['ordering'].update(worker_lifetime_established=False)
     for step in reply_of(state)['steps']:
         step['comparison']['order'] = 'unestablished'
 
@@ -517,7 +522,7 @@ def controls():
            ['bounds.no_entitlement_requirement'], ['bounds.no_runner_selection'])
     bounds('phases_in_place_of_plan',
            lambda d: (d.update(phases=[{'phase_id': 'p', 'actions': d['probe_plan']}]), d.pop('probe_plan')),
-           ['bounds.ordinary_form'], roles)
+           ['bounds.ordinary_form'])
     bounds('actors', lambda d: d.update(actors=[{'actor_id': 'a'}]), ['bounds.ordinary_form'])
 
     # Another workload: every attempt is still read-only, and only the roles refuse it.
@@ -1088,7 +1093,7 @@ def run_control(artifacts, row):
         recapture_host_reply(state['run']['envelope'])
     directory = artifacts / 'captures' / row['name']
     write(directory, state)
-    report = checker.evaluate(checker.load(directory), authored_fixture=True)
+    report = checker.evaluate_capture(checker.load(directory), authored_fixture=True, form='flat')
     (directory / 'report.json').write_text(json.dumps(report, indent=2) + '\n')
     actual = checker.diagnostics(report)
     statuses = {assertion['id']: assertion['status'] for assertion in report['assertions']}
@@ -1163,6 +1168,7 @@ def perturbation_controls():
 def prepare_controls(artifacts):
     """`prepare` is what the live case runs before submitting: a failed gate writes a report and nothing to run."""
     import plistlib
+    from example_form_controls import build as build_expansion
     records = []
     app = artifacts / 'captures' / 'prepare-app'
     (app / 'Contents').mkdir(parents=True)
@@ -1175,14 +1181,20 @@ def prepare_controls(artifacts):
          ('emission.json_object',)),
         ('version_exit_1', lambda s: s['version'].update(exit=1), ('emission.version_exit',)),
         ('bound_write_action',
-         lambda s: set_document(s, lambda d: d['probe_plan'][0]['attempt'].update(action='open_write')),
+         lambda s: set_document(s, lambda d: d['phases'][0]['actions'][0]['attempt'].update(action='open_write')),
          ('bounds.workload_roles', 'bounds.read_only_attempts')),
         ('bound_another_workload',
-         lambda s: set_document(s, lambda d: d['probe_plan'].reverse()), ('bounds.workload_roles',)),
+         lambda s: set_document(s, lambda d: d['phases'].reverse()), ('bounds.workload_roles', 'bounds.ordinary_form')),
+        ('flat_emission', lambda s: set_document(s, lambda d: (d.update(probe_plan=checker.actions(d)), d.pop('phases'))),
+         ('bounds.ordinary_form',)),
+        ('collapsed_partition', lambda s: set_document(s, lambda d: d.update(phases=[
+            {'phase_id':'one-phase','actions':checker.actions(d)}])), ('bounds.ordinary_form',)),
+        ('lost_action', lambda s: set_document(s, lambda d: d['phases'][0]['actions'].pop()),
+         ('bounds.ordinary_form','bounds.workload_roles')),
         ('bound_test_overrides', lambda s: set_document(s, lambda d: d.update(_test_overrides={})),
          ('bounds.no_test_overrides',)),
     ]:
-        state = build()
+        state = build_expansion()
         change(state)
         snapshot = artifacts / 'captures' / ('prepare-' + name + '.snapshot.json')
         snapshot.write_text(json.dumps({'surfaces': [{'id': 'request', 'public': {'nodes': [
@@ -1195,7 +1207,7 @@ def prepare_controls(artifacts):
         write(directory, state)
         status = checker.prepare(directory, app, snapshot)
         produced = sorted(path.relative_to(directory).as_posix() for path in directory.rglob('*') if path.is_file())
-        runnable = [path for path in produced if path.startswith('refusals/') or path == 'targets-before.json']
+        runnable = [path for path in produced if path.startswith('refusals/') or path in ('flat/input.json', 'actor/input.json')]
         if failing:
             report = json.loads((directory / 'report.json').read_text())
             assert status == 1 and not runnable, (name, status, runnable)
@@ -1204,7 +1216,7 @@ def prepare_controls(artifacts):
                        if row['group'] in RUN_GROUPS), name
         else:
             assert status == 0 and 'report.json' not in produced, (name, status, produced)
-            assert runnable == sorted(['targets-before.json'] + [f'refusals/{refusal}/input.json' for refusal in REFUSALS]), runnable
+            assert runnable == sorted(['flat/input.json', 'actor/input.json'] + [f'refusals/{refusal}/input.json' for refusal in REFUSALS]), runnable
             assert json.loads((directory / 'property-list.json').read_text())['PWContract'] == DEVELOPMENT
             assert json.loads((directory / 'contract-example.json').read_text())['document'] == \
                 {key: value for key, value in document_of(state).items() if key != 'contract'}
@@ -1326,7 +1338,7 @@ def uniform_answer_demonstration(artifacts):
     recapture_host_reply(uniform['run']['envelope'])
     directory = artifacts / 'captures' / 'uniform_answers'
     write(directory, uniform)
-    report = checker.evaluate(checker.load(directory), authored_fixture=True)
+    report = checker.evaluate_capture(checker.load(directory), authored_fixture=True, form='flat')
     # The uniform capture is itself a reply the consumer reads cleanly; the present checker rejects
     # only step 3's own two expectations in it.
     assert not report['consumer_errors'], report['consumer_errors']
@@ -1344,10 +1356,16 @@ def uniform_answer_demonstration(artifacts):
 
 
 def main():
+    # Qualify the complete authored actor envelope before its mutation controls.
+    actor = bind_constructed_envelope(json.loads(ACTOR_FIXTURE.read_text()))
+    errors = checker.consumer.validate(actor, actor['build']['contract'], allow_fixture_json=True)
+    assert not errors, errors
     artifacts = Path(sys.argv[1])
     if (artifacts / 'captures').exists():
         shutil.rmtree(artifacts / 'captures')
-    results = {'baselines': [], 'accepted_variants': [], 'controls': [], 'perturbations': perturbation_controls(),
+    from example_form_controls import run as form_controls
+    expanded = form_controls(artifacts)
+    results = {'forms': expanded, 'baselines': [], 'accepted_variants': [], 'controls': [], 'perturbations': perturbation_controls(),
                'prepare': prepare_controls(artifacts), 'observer': observer_controls(artifacts),
                'uniform_answer_demonstration': uniform_answer_demonstration(artifacts)}
     failures = [f'{record["control"]}: ' + '; '.join(record['problems'])
@@ -1364,7 +1382,7 @@ def main():
     for identity in (DEVELOPMENT, RELEASE):
         directory = artifacts / 'captures' / ('baseline_' + identity.split(':')[0])
         write(directory, build(identity))
-        report = checker.evaluate(checker.load(directory), authored_fixture=True)
+        report = checker.evaluate_capture(checker.load(directory), authored_fixture=True, form='flat')
         (directory / 'report.json').write_text(json.dumps(report, indent=2) + '\n')
         unsettled = [row['id'] for row in report['assertions'] if row['status'] != 'pass']
         results['baselines'].append({'identity': identity, 'status': report['status'], 'not_passing': unsettled,
@@ -1377,7 +1395,7 @@ def main():
         recapture_host_reply(state['run']['envelope'])
         directory = artifacts / 'captures' / ('accepted_' + name)
         write(directory, state)
-        report = checker.evaluate(checker.load(directory), authored_fixture=True)
+        report = checker.evaluate_capture(checker.load(directory), authored_fixture=True, form='flat')
         (directory / 'report.json').write_text(json.dumps(report, indent=2) + '\n')
         unsettled = [row['id'] for row in report['assertions'] if row['status'] != 'pass']
         results['accepted_variants'].append({'variant': name, 'status': report['status'], 'not_passing': unsettled,

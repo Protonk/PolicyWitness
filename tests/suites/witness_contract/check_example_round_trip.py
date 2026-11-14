@@ -32,11 +32,12 @@ Every assertion has a stable identifier, one group and one classification.
 A failure prints its identifier and classification; `report.json` holds every
 assertion's result, with consistency apart from native observations.
 
-    prepare CAPTURE APP SNAPSHOT   gate the emission, observe, write refusal inputs
-    observe-after CAPTURE          observe the targets again
-    evaluate CAPTURE               read the retained captures and report
+    prepare CAPTURE APP SNAPSHOT      gate the emission and write checked derivatives/refusals
+    observe CAPTURE FORM before|after sample the selected submission
+    evaluate CAPTURE                  read all three retained captures and report
 """
 import argparse
+import copy
 import hashlib
 import json
 import os
@@ -108,7 +109,7 @@ def _table():
          "`request_delivery.bytes_written` is the document's length without its framing newline"),
         ('passage.contract_rendering', 'passage', CONSISTENCY,
          "the document without `contract` equals the contract snapshot's example"),
-        ('bounds.ordinary_form', 'bounds', CONSISTENCY, 'the document is the ordinary form with a nonempty `probe_plan`'),
+        ('bounds.ordinary_form', 'bounds', CONSISTENCY, 'the document has the required ordinary request container and action partition'),
         ('bounds.workload_roles', 'bounds', CONSISTENCY,
          'the plan is three steps: a `file-read-data` query and `open_read` of one target A; a `file-read-metadata` '
          'query on a second target B with a `read_fresh` of a third target C; a `file-read-data` query and '
@@ -193,6 +194,25 @@ def _table():
 ASSERTIONS = _table()
 CLASSIFICATION = {ident: classification for ident, _, classification, _ in ASSERTIONS}
 
+EXECUTION_ASSERTIONS = tuple(row for row in ASSERTIONS if row[1] not in ('emission', 'bounds', 'passage', 'refusals')
+                             or row[0] == 'passage.delivery_length')
+
+
+def actions(document):
+    """Submitted actions in order; never normalize a reply into another form."""
+    if isinstance(document.get('probe_plan'), list):
+        return document['probe_plan']
+    phases = document.get('phases')
+    return [step for phase in phases if isinstance(phase, dict) and isinstance(phase.get('actions'), list)
+            for step in phase['actions']] if isinstance(phases, list) else []
+
+
+def submitted_policy(document, form):
+    if form == 'actor':
+        actors = document.get('actors')
+        return _get(actors[0], 'sandbox', 'policy') or {} if isinstance(actors, list) and len(actors) == 1 else {}
+    return document.get('policy') or {}
+
 
 # ---------------------------------------------------------------------------
 # Retained captures
@@ -235,6 +255,12 @@ def load(directory):
     inputs = {name: _invocation(directory, name) for name in ('version', 'example-1', 'example-2', 'run')}
     for name in ('property-list', 'contract-example', 'targets-before', 'targets-after'):
         inputs[name] = _json(_bytes(directory / (name + '.json')))[0]
+    inputs['forms'] = {}
+    for form in ('flat', 'actor'):
+        base = directory / form
+        inputs['forms'][form] = {'input': _bytes(base / 'input.json'), 'run': _invocation(base, 'run')}
+        for name in ('targets-before', 'targets-after'):
+            inputs['forms'][form][name] = _json(_bytes(base / (name + '.json')))[0]
     inputs['refusals'] = {}
     for name in REFUSALS:
         base = directory / 'refusals' / name
@@ -297,10 +323,9 @@ def workload_roles(document):
     Roles are positions and relationships among submitted operands. No step
     identifier, path or policy text decides one.
     """
-    plan = document.get('probe_plan')
-    steps = plan if isinstance(plan, list) else []
+    steps = actions(document)
     if len(steps) != 3 or any(not isinstance(step, dict) for step in steps):
-        return None, [f'`probe_plan` holds {len(steps)} step(s) where this workload has three']
+        return None, [f'the document holds {len(steps)} step(s) where this workload has three']
 
     def half(step):
         query, attempt = step.get('sandbox_check'), step.get('attempt')
@@ -340,7 +365,7 @@ def workload_roles(document):
 def observed_paths(document):
     """Every submitted query path and attempt target, each once, in order of appearance."""
     paths = []
-    for step in document.get('probe_plan') or []:
+    for step in actions(document):
         if not isinstance(step, dict):
             continue
         for path in (_get(step.get('sandbox_check'), 'filter', 'value'), _get(step.get('attempt'), 'target')):
@@ -387,24 +412,25 @@ def observe(directory, name, document):
 # ---------------------------------------------------------------------------
 
 class Results:
-    def __init__(self):
+    def __init__(self, table=None):
+        self.table = ASSERTIONS if table is None else table
         self.rows = {}
 
     def record(self, ident, problems, passed=None):
         """`problems` is a list of explanations; empty means the assertion holds."""
-        assert ident in CLASSIFICATION and ident not in self.rows, ident
+        assert ident in {row[0] for row in self.table} and ident not in self.rows, ident
         problems = [problems] if isinstance(problems, str) else list(problems)
         self.rows[ident] = {'status': 'fail' if problems else 'pass', 'explanation': '; '.join(problems) or passed}
 
     def unevaluated(self, ident, reason):
-        assert ident in CLASSIFICATION and ident not in self.rows, ident
+        assert ident in {row[0] for row in self.table} and ident not in self.rows, ident
         self.rows[ident] = {'status': 'not_evaluated', 'explanation': reason}
 
     def failed(self, *identifiers):
         return any(self.rows.get(ident, {}).get('status') == 'fail' for ident in identifiers)
 
     def rest(self, group_or_prefix, reason):
-        for ident, group, _, _ in ASSERTIONS:
+        for ident, group, _, _ in self.table:
             if ident not in self.rows and (group == group_or_prefix or ident.startswith(group_or_prefix)):
                 self.unevaluated(ident, reason)
 
@@ -448,16 +474,30 @@ def _emission(inputs, results):
     return inputs['example-1']['stdout'], documents.get('example-1')
 
 
-def _bounds(document, results):
-    plan = document.get('probe_plan')
+def _bounds(document, results, form='emitted'):
     ordinary = []
-    for key in ('actors', 'phases'):
-        if document.get(key) is not None:
-            ordinary.append(f'the document carries `{key}`')
-    if not isinstance(plan, list) or not plan or any(not isinstance(step, dict) for step in plan):
-        ordinary.append('`probe_plan` is not a nonempty array of objects')
+    if form == 'flat':
+        plan = document.get('probe_plan')
+        if not isinstance(plan, list) or not plan or any(not isinstance(step, dict) for step in plan):
+            ordinary.append('`probe_plan` is not a nonempty array of objects')
+        if 'phases' in document:
+            ordinary.append('a flat document carries `phases`')
+    else:
+        phases = document.get('phases')
+        if not isinstance(phases, list) or len(phases) != 2 or any(
+                not isinstance(phase, dict) or set(phase) != {'phase_id', 'actions'} or
+                not isinstance(phase.get('phase_id'), str) or not phase['phase_id'] or
+                not isinstance(phase.get('actions'), list) or len(phase['actions']) != count
+                for phase, count in zip(phases or [], (2, 1))):
+            ordinary.append('emission must contain two ordinary phases with action counts 2 and 1')
+        elif phases[0]['phase_id'] == phases[1]['phase_id']:
+            ordinary.append('phase identifiers are not distinct')
+        if 'probe_plan' in document:
+            ordinary.append('the emitted document carries `probe_plan`')
+    if document.get('actors') is not None:
+        ordinary.append('the emitted document carries `actors`')
     results.record('bounds.ordinary_form', ordinary)
-    steps = [step for step in plan if isinstance(step, dict)] if isinstance(plan, list) else []
+    steps = [step for step in actions(document) if isinstance(step, dict)]
 
     def read_only(attempt):
         return isinstance(attempt, dict) and attempt.get('kind') == 'file' and attempt.get('action') in READ_ONLY_FILE_ACTIONS
@@ -521,14 +561,14 @@ def _matched_steps(document, reply):
     """
     replied = [step for step in reply.get('steps') or [] if isinstance(step, dict)] if isinstance(reply.get('steps'), list) else []
     return [(submitted, [step for step in replied if step.get('step_id') == submitted.get('step_id')])
-            for submitted in document['probe_plan']]
+            for submitted in actions(document)]
 
 
 def _echo(document, reply, matched, results):
     """Echo assertions; returns, per submitted step identifier, which halves every carrying record echoes."""
     results.record('echo.specimen_id', [] if reply.get('specimen_id') == document.get('specimen_id') else
                    f'the reply carries {_spell(reply.get("specimen_id"))}; the document carries {_spell(document.get("specimen_id"))}')
-    submitted_ids = [step.get('step_id') for step in document['probe_plan']]
+    submitted_ids = [step.get('step_id') for step in actions(document)]
     replied_ids = [step.get('step_id') if isinstance(step, dict) else None for step in reply.get('steps') or []] \
         if isinstance(reply.get('steps'), list) else None
     results.record('echo.step_ids', [] if replied_ids == submitted_ids else
@@ -883,30 +923,37 @@ def _refusals(inputs, emitted, document, results):
             results.record(prefix + '.host_reply', host)
 
 
-def evaluate(inputs, *, authored_fixture=False):
+def evaluate_capture(inputs, *, authored_fixture=False, form='emitted', publication=True):
     """Every assertion's result from retained inputs.
 
     `authored_fixture` admits constructed JSON host bytes, for the offline
     controls only; a live capture is read as the controller retained it.
     """
-    results = Results()
-    emitted, document = _emission(inputs, results)
-    if document is None:
-        for ident, group, _, _ in ASSERTIONS:
-            if ident not in results.rows:
-                results.unevaluated(ident, 'the first emission supplied no document')
-        return _report(results, [])
-    roles = _bounds(document, results)
-    _passage(inputs, document, results)
-    gate = [ident for ident, group, _, _ in ASSERTIONS if group in ('emission', 'bounds')]
-    if results.failed(*gate):
-        for ident, group, _, _ in ASSERTIONS:
-            if ident not in results.rows:
-                results.unevaluated(ident, 'no run was attempted: the emission or its bounds did not hold')
-        return _report(results, [], roles)
-
+    table = ASSERTIONS if publication else EXECUTION_ASSERTIONS
+    results = Results(table)
+    if publication:
+        emitted, document = _emission(inputs, results)
+        if document is not None:
+            roles = _bounds(document, results, form)
+            _passage(inputs, document, results)
+        else:
+            roles = None
+        gate = [ident for ident, group, _, _ in table if group in ('emission', 'bounds')]
+        if document is None or results.failed(*gate):
+            for ident, _, _, _ in table:
+                if ident not in results.rows:
+                    results.unevaluated(ident, 'no run was attempted: the emission or its bounds did not hold')
+            return _report(results, [], roles)
+        _refusals(inputs, emitted, document, results)
+    else:
+        emitted = inputs.get('input')
+        document, problem = _json(emitted)
+        roles, problems = workload_roles(document) if isinstance(document, dict) else (None, ['no input'])
+        if problem or problems:
+            for ident, _, _, _ in table:
+                results.unevaluated(ident, 'the derivative supplied no admitted workload')
+            return _report(results, [], roles)
     ground = _prerequisites(inputs, roles, results)
-    _refusals(inputs, emitted, document, results)
 
     run = inputs['run']
     envelope, problem = _json(run['stdout'])
@@ -914,7 +961,7 @@ def evaluate(inputs, *, authored_fixture=False):
         results.record('execution.admitted_reply',
                        'the run was not captured' if run['exit'] is None else
                        'the run printed no envelope: stdout is ' + (problem or 'not an object'))
-        for ident, _, _, _ in ASSERTIONS:
+        for ident, _, _, _ in table:
             if ident not in results.rows:
                 results.unevaluated(ident, 'the run supplied no envelope')
         return _report(results, [], roles)
@@ -937,9 +984,13 @@ def evaluate(inputs, *, authored_fixture=False):
     if outcome == 'bad_request':
         refused.append('`result.normalized_outcome` is "bad_request"')
     results.record('admission.no_request_failure', refused)
-    digest = hashlib.sha256(_get(document, 'policy', 'sbpl_source').encode('utf-8')).hexdigest() \
-        if isinstance(_get(document, 'policy', 'sbpl_source'), str) else None
+    policy = submitted_policy(document, form)
+    digest = hashlib.sha256(policy['sbpl_source'].encode('utf-8')).hexdigest() if isinstance(policy.get('sbpl_source'), str) else None
     dossier = _get(data, 'specimen', 'policy', 'augmentation', 'original_sha256')
+    if form == 'actor':
+        wanted_actor = document['actors'][0]['actor_id']
+        dossiers = [a for a in _get(data, 'specimen', 'actors') or [] if isinstance(a, dict) and a.get('actor_id') == wanted_actor]
+        dossier = _get(dossiers[0], 'policy', 'augmentation', 'original_sha256') if len(dossiers) == 1 else None
     results.record('admission.dossier_policy_digest', [] if digest is not None and dossier == digest else
                    f'the dossier records {_spell(dossier)}; the document\'s policy source has SHA-256 {_spell(digest)}')
 
@@ -978,8 +1029,10 @@ def evaluate(inputs, *, authored_fixture=False):
         return _report(results, errors, roles)
     results.record('execution.admitted_reply', [])
 
-    results.record('admission.reply_policy_digest', [] if digest is not None and reply.get('policy_sha256') == digest else
-                   f'the reply records {_spell(reply.get("policy_sha256"))}; the document\'s policy source has SHA-256 {_spell(digest)}')
+    policy_record = consumer.actor_record(reply, document['actors'][0]['actor_id']) if form == 'actor' else reply
+    received = policy_record.get('policy_sha256')
+    results.record('admission.reply_policy_digest', [] if digest is not None and received == digest else
+                   f'the reply records {_spell(received)}; submitted policy SHA-256 is {_spell(digest)}')
     matched = _matched_steps(document, reply)
     echoed = _echo(document, reply, matched, results)
     diagnostics = data.get('runner_sandbox_diagnostics') if isinstance(data.get('runner_sandbox_diagnostics'), dict) else {}
@@ -992,10 +1045,10 @@ def evaluate(inputs, *, authored_fixture=False):
 
 
 def _report(results, consumer_errors, roles=None):
-    missing = [ident for ident, _, _, _ in ASSERTIONS if ident not in results.rows]
+    missing = [ident for ident, _, _, _ in results.table if ident not in results.rows]
     assert not missing, missing
     assertions = [dict(id=ident, group=group, classification=classification, statement=statement, **results.rows[ident])
-                  for ident, group, classification, statement in ASSERTIONS]
+                  for ident, group, classification, statement in results.table]
     failures = [row for row in assertions if row['status'] == 'fail']
     counts = {}
     for row in assertions:
@@ -1013,6 +1066,232 @@ def _report(results, consumer_errors, roles=None):
             'not_evaluated': [{'id': row['id'], 'reason': row['explanation']} for row in assertions
                               if row['status'] == 'not_evaluated'],
             'consumer_errors': list(consumer_errors), 'assertions': assertions}
+
+
+# The example's request-to-evidence checks are separate from the general consumer.
+STRUCTURE_ASSERTIONS = (
+    ('structure.execution_form', 'structure', CONSISTENCY, 'the reply uses the submitted execution form'),
+    ('structure.phase_membership', 'structure', CONSISTENCY, 'reply phases retain the exact submitted phase/action partition and order'),
+    ('structure.collections', 'structure', CONSISTENCY, 'each submitted phase has its own complete collection and release chain'),
+    ('structure.worker', 'structure', CONSISTENCY, 'the submitted worker was applied, completed and reaped under its owned process record'),
+)
+ACTOR_ASSERTIONS = (
+    ('structure.actor_ownership', 'structure', CONSISTENCY, 'the submitted actor owns both visits, all steps and its controller projections'),
+    ('structure.actor_application', 'structure', CONSISTENCY, 'the actor applied the submitted policy once and received its source digest'),
+    ('structure.actor_equipment', 'structure', CONSISTENCY, 'the actor used selected equipment matched to its launched worker'),
+)
+TRANSFORM_STATEMENTS = {
+    'flat': 'the flat derivative changes only phases into the ordered probe_plan',
+    'actor': 'the actor derivative relocates the entire policy to one applied selected actor and assigns both phases',
+}
+
+
+def derivatives(document):
+    """Construct the two test-owned request forms. Validation below is independent."""
+    flat = copy.deepcopy(document)
+    flat['probe_plan'] = [step for phase in flat.pop('phases') for step in phase['actions']]
+    actor = copy.deepcopy(document)
+    actor['actors'] = [{'actor_id': 'example-reader', 'equipment': 'selected',
+                        'sandbox': {'mode': 'apply', 'policy': actor.pop('policy')}}]
+    for phase in actor['phases']:
+        phase['actor_id'] = 'example-reader'
+    return {'flat': flat, 'actor': actor}
+
+
+def transformation_problems(source, candidate, form):
+    """Judge permitted fields and membership without calling the constructor."""
+    if not isinstance(source, dict) or not isinstance(candidate, dict):
+        return ['the source or derivative is not an object']
+    problems = []
+    if form == 'flat':
+        if set(candidate) != (set(source) - {'phases'}) | {'probe_plan'}:
+            problems.append('the flat member set differs')
+        for key in source.keys() - {'phases'}:
+            if candidate.get(key) != source[key]:
+                problems.append(f'flat member {key} changed')
+        steps = candidate.get('probe_plan')
+        if not isinstance(steps, list) or len(steps) != 3:
+            problems.append('flat does not hold exactly three actions')
+        else:
+            for index, (phase, action) in enumerate(((0, 0), (0, 1), (1, 0))):
+                if steps[index] != source['phases'][phase]['actions'][action]:
+                    problems.append(f'flat action {index} changed')
+    else:
+        if set(candidate) != (set(source) - {'policy'}) | {'actors'}:
+            problems.append('the actor member set differs')
+        for key in source.keys() - {'policy', 'phases'}:
+            if candidate.get(key) != source[key]:
+                problems.append(f'actor member {key} changed')
+        actors = candidate.get('actors')
+        actor = actors[0] if isinstance(actors, list) and len(actors) == 1 and isinstance(actors[0], dict) else {}
+        actor_id = actor.get('actor_id')
+        if set(actor) != {'actor_id', 'equipment', 'sandbox'} or not isinstance(actor_id, str) or not actor_id or \
+                actor.get('equipment') != 'selected' or actor.get('sandbox') != {'mode': 'apply', 'policy': source.get('policy')}:
+            problems.append('the sole applied selected actor does not preserve the entire policy')
+        phases = candidate.get('phases')
+        if not isinstance(phases, list) or len(phases) != 2:
+            problems.append('actor does not hold two phases')
+        else:
+            for index, phase in enumerate(phases):
+                if not isinstance(phase, dict) or set(phase) != set(source['phases'][index]) | {'actor_id'} or \
+                        phase.get('actor_id') != actor_id or any(phase.get(k) != v for k, v in source['phases'][index].items()):
+                    problems.append(f'actor phase {index} changed beyond its actor assignment')
+    return problems
+
+
+def _structure(inputs, document, form, base, *, authored_fixture):
+    table = STRUCTURE_ASSERTIONS + (ACTOR_ASSERTIONS if form == 'actor' else ())
+    results = Results(table)
+    statuses = {r['id']: r['status'] for r in base['assertions']}
+    if statuses.get('execution.admitted_reply') != 'pass':
+        for ident, _, _, _ in table:
+            results.unevaluated(ident, 'no identity-admitted reply')
+        return _report(results, [])
+    envelope = _json(inputs['run']['stdout'])[0]
+    reply = consumer.admitted_reply(envelope, document['contract'], allow_fixture_json=authored_fixture)
+    actor_form = form == 'actor'
+    results.record('structure.execution_form', [] if consumer.actor_form(reply) == actor_form else 'the reply uses another execution form')
+    expected = document['phases'] if form != 'flat' else [{'phase_id': 'main', 'actions': document['probe_plan']}]
+    phases = reply.get('phases') if isinstance(reply.get('phases'), list) else []
+    partition = [(p.get('phase_id'), p.get('ordinal'), p.get('action_ids')) if isinstance(p, dict) else None for p in phases]
+    wanted = [(p['phase_id'], i, [s['step_id'] for s in p['actions']]) for i, p in enumerate(expected, 1)]
+    results.record('structure.phase_membership', [] if partition == wanted else
+                   f'reply partition {_spell(partition)} differs from submitted {_spell(wanted)}')
+    collections = []
+    for submitted in expected:
+        matches = [p for p in phases if isinstance(p, dict) and p.get('phase_id') == submitted['phase_id']]
+        if len(matches) != 1:
+            collections.append(f'{submitted["phase_id"]}: no unique phase collection')
+            continue
+        phase = matches[0]
+        validator = phase.get('validator_subprocess') or {}
+        ordering = phase.get('ordering') or {}
+        if any(phase.get(k) is not True for k in ('arrival_observed', 'completion_observed')) or \
+                phase.get('collection_status') != 'collected' or validator.get('reaped') is not True or \
+                any(ordering.get(k) is not True for k in ('collection_closed_before_proceed', 'proceed_set',
+                                                         'proceed_observed', 'worker_lifetime_established')) or \
+                ordering.get('validator_disposition') != 'reaped' or ordering.get('protocol_violations') != []:
+            collections.append(f'{submitted["phase_id"]}: collection, completion or release is unestablished')
+        # Internal ownership, query operand and PID joins belong to the full consumer.
+        # Here an internally valid collection still has to name this submitted plan.
+        if validator.get('expected_step_ids') != [s['step_id'] for s in submitted['actions']]:
+            collections.append(f'{submitted["phase_id"]}: collection names another submitted query plan')
+    results.record('structure.collections', collections)
+    actor_id = document['actors'][0]['actor_id'] if actor_form else None
+    actor = consumer.actor_record(reply, actor_id) if actor_form else {}
+    worker = actor.get('subprocess') if actor_form else reply.get('runner_subprocess')
+    worker = worker if isinstance(worker, dict) else {}
+    pid = worker.get('pid')
+    if actor_form:
+        applied = actor.get('applied') is True and _get(actor, 'launch', 'pid') == pid and \
+            _get(actor, 'launch', 'parent_pid') == reply.get('pid')
+    else:
+        applied = reply.get('sandboxed_after_apply') is True and reply.get('pid') == pid
+    results.record('structure.worker', [] if applied and type(pid) is int and pid > 0 and
+                   all(worker.get(k) is True for k in ('reaped', 'ready_byte_received', 'done_observed')) and
+                   _exact_int(worker.get('exit_code'), 0) and worker.get('term_signal') is None and
+                   worker.get('collection_basis') == 'after_confirmed_reap' else 'applied worker ownership, completion or reap is unestablished')
+    if actor_form:
+        data = envelope['data']
+        actors = reply.get('actors') or []
+        diagnostics = _get(data, 'runner_sandbox_diagnostics', 'actors') or []
+        dossiers = _get(data, 'specimen', 'actors') or []
+        ownership = []
+        for label, records in (('reply', actors), ('diagnostics', diagnostics), ('dossier', dossiers)):
+            if [a.get('actor_id') for a in records if isinstance(a, dict)] != [actor_id]:
+                ownership.append(f'{label} does not name the sole submitted actor')
+        if actor.get('visits') != [1, 2] or any(p.get('actor_id') != actor_id or p.get('actor_visit') != i
+                                             for i, p in enumerate(phases, 1)) or \
+                any(s.get('actor_id') != actor_id for s in reply.get('steps') or []):
+            ownership.append('actor visit or step ownership differs')
+        if any('termination_gate' in p for p in phases):
+            ownership.append('a phase invents a termination dependency')
+        for diagnostic in diagnostics:
+            if diagnostic.get('disposition_integrity') != 'valid' or diagnostic.get('disposition_issues') != []:
+                ownership.append('actor diagnostics do not establish valid disposition')
+        results.record('structure.actor_ownership', ownership)
+        digest = hashlib.sha256(submitted_policy(document, form)['sbpl_source'].encode()).hexdigest()
+        results.record('structure.actor_application', [] if actor.get('mode') == 'apply' and
+                       actor.get('setup_status') == 'applied' and actor.get('applied') is True and
+                       _exact_int(actor.get('application_count'), 1) and
+                       actor.get('application') == {'state': 'observed', 'basis': 'applied_publication'} and
+                       actor.get('policy_received_sha256') == digest else 'single application or policy receipt differs')
+        equipment = actor.get('equipment') or {}
+        execution = equipment.get('execution') or {}
+        results.record('structure.actor_equipment', [] if equipment.get('requested') == 'selected' and
+                       equipment.get('resolved') == 'selected' and equipment.get('required_entitlements') == [] and
+                       equipment.get('requirements_status') == 'satisfied' and execution.get('status') == 'matched' and
+                       execution.get('eligible') is True and execution.get('pid') == pid else 'selected equipment is not matched to this actor worker')
+    return _report(results, [])
+
+
+def _diagnostic(inputs, document, form, rows):
+    statuses = {r['id']: r['status'] for r in rows}
+    required = ('identity.envelope_build', 'identity.client_transport', 'identity.reply_producer',
+                'execution.admitted_reply', 'echo.specimen_id', 'echo.step_ids', 'echo.queries', 'echo.attempts',
+                'structure.execution_form', 'structure.phase_membership') + (('structure.actor_ownership',) if form == 'actor' else ())
+    record = {'form': form, 'samples': {key: inputs.get(key) for key in ('targets-before', 'targets-after')},
+              'assertions': statuses, 'observations': None}
+    if any(statuses.get(k) != 'pass' for k in required):
+        record['withheld_reason'] = 'identity or submitted association is unestablished'
+        return record
+    reply = _json(inputs['run']['stdout'])[0]['data']['runner_result']
+    roles = workload_roles(document)[0]
+    observations = []
+    for role, step_id in roles['steps'].items():
+        step = next(s for s in reply['steps'] if s['step_id'] == step_id)
+        query, attempt = step['sandbox_check'], step['attempt']
+        fresh = attempt.get('fresh_read')
+        observed = {'role': role, 'step_id': step_id, 'phase_id': step.get('phase_id'), 'actor_id': step.get('actor_id'),
+                    'query': {k: query.get(k) for k in ('result_source', 'outcome', 'native_rc', 'errno')},
+                    'attempt': {k: attempt.get(k) for k in ('result_source', 'outcome', 'rc', 'errno')}}
+        if isinstance(fresh, dict):
+            try:
+                digest = hashlib.sha256(bytes.fromhex(fresh.get('content_hex'))).hexdigest()
+            except (TypeError, ValueError):
+                digest = None
+            observed['fresh_read'] = {'identity': fresh.get('identity'), 'count': fresh.get('read_rc'), 'sha256': digest}
+        observations.append(observed)
+    record['observations'] = observations
+    return record
+
+
+def evaluate(inputs, *, authored_fixture=False):
+    """One publication, three independent captures, no equality assertions."""
+    emitted = evaluate_capture(inputs, authored_fixture=authored_fixture)
+    source, _ = _json(inputs['example-1']['stdout'])
+    prepared = all(r['status'] == 'pass' for r in emitted['assertions'] if r['group'] in ('emission', 'bounds'))
+    forms, all_rows, summaries, errors = {}, [], [], []
+    for form in ('emitted', 'flat', 'actor'):
+        captured = inputs if form == 'emitted' else inputs['forms'][form]
+        document = source if form == 'emitted' else _json(captured['input'])[0]
+        transform = None if form == 'emitted' else transformation_problems(source, document, form) if prepared else ['emission is unestablished']
+        if form != 'emitted':
+            all_rows.append(dict(id=form + '.transformation', group='transformation', classification=CONSISTENCY,
+                                 statement=TRANSFORM_STATEMENTS[form], status=('fail' if transform else 'pass') if prepared else 'not_evaluated',
+                                 explanation='; '.join(transform) or None, form=form))
+        if form == 'emitted':
+            base = emitted
+        elif prepared and not transform:
+            base = evaluate_capture(captured, authored_fixture=authored_fixture, form=form, publication=False)
+        else:
+            withheld = Results(EXECUTION_ASSERTIONS)
+            for ident, _, _, _ in withheld.table:
+                withheld.unevaluated(ident, 'the emission or transformation is unestablished')
+            base = _report(withheld, [])
+        structure = _structure(captured, document, form, base, authored_fixture=authored_fixture)
+        rows = base['assertions'] + structure['assertions']
+        forms[form] = {'workload': base['workload'], 'consumer_errors': base['consumer_errors']}
+        errors.extend(form + ': ' + error for error in base['consumer_errors'])
+        summaries.append(_diagnostic(captured, document, form, rows))
+        all_rows.extend(dict(row, id=(form + '.' if form != 'emitted' else '') + row['id'], form=form) for row in rows)
+    results = Results(tuple((r['id'], r['group'], r['classification'], r['statement']) for r in all_rows))
+    results.rows = {r['id']: {k: r[k] for k in ('status', 'explanation')} for r in all_rows}
+    report = _report(results, errors)
+    report['assertions'] = all_rows
+    report.update(schema_version=2, forms=forms, diagnostic_summary=summaries)
+    return report
+
 
 
 def diagnostics(report):
@@ -1065,7 +1344,20 @@ def prepare(directory, app, snapshot):
         _write_report(directory, report)
         return 1
     emitted = (directory / 'example-1.stdout').read_bytes()
-    observe(directory, 'targets-before', json.loads(emitted.decode('utf-8')))
+    source = json.loads(emitted)
+    account = {}
+    for form, document in derivatives(source).items():
+        problems = transformation_problems(source, document, form)
+        assert not problems, problems
+        base = directory / form
+        base.mkdir()
+        (base / 'input.json').write_text(json.dumps(document, indent=2, sort_keys=True) + '\n')
+        account[form] = {'operation': TRANSFORM_STATEMENTS[form], 'problems': problems,
+                         'removed': ['phases'] if form == 'flat' else ['policy'],
+                         'added': ['probe_plan'] if form == 'flat' else ['actors', 'phases[].actor_id'],
+                         'relocated': 'phases[].actions -> probe_plan' if form == 'flat' else 'policy -> actors[0].sandbox.policy',
+                         'preserved': 'all other members, ordered action objects and policy bytes'}
+    (directory / 'transformations.json').write_text(json.dumps(account, indent=2) + '\n')
     for name, body in refusal_inputs(emitted).items():
         base = directory / 'refusals' / name
         base.mkdir(parents=True)
@@ -1081,14 +1373,18 @@ def main(argv=None):
     command.add_argument('capture')
     command.add_argument('app')
     command.add_argument('snapshot')
-    for name in ('observe-after', 'evaluate'):
-        commands.add_parser(name).add_argument('capture')
+    commands.add_parser('evaluate').add_argument('capture')
+    command = commands.add_parser('observe')
+    command.add_argument('capture')
+    command.add_argument('form', choices=('emitted', 'flat', 'actor'))
+    command.add_argument('when', choices=('before', 'after'))
     args = parser.parse_args(argv)
     if args.command == 'prepare':
         return prepare(args.capture, args.app, args.snapshot)
-    if args.command == 'observe-after':
-        emitted = (Path(args.capture) / 'example-1.stdout').read_bytes()
-        observe(args.capture, 'targets-after', json.loads(emitted.decode('utf-8')))
+    if args.command == 'observe':
+        base = Path(args.capture) if args.form == 'emitted' else Path(args.capture) / args.form
+        path = base / ('example-1.stdout' if args.form == 'emitted' else 'input.json')
+        observe(base, 'targets-' + args.when, json.loads(path.read_bytes()))
         return 0
     report = evaluate(load(args.capture))
     _write_report(args.capture, report)

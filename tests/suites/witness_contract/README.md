@@ -1106,16 +1106,25 @@ create in the refused specimen does not run.
 
 ## The app's own example
 
-`example_round_trip` holds no specimen. It runs the selected app directly and
-retains the raw stdout, stderr and exit status of `--version`, two `example`
-invocations, the `run` of the emitted bytes and each changed input under
-`artifacts/capture/`. `check_example_round_trip.py` reads those files. Before
-anything is submitted it requires both emissions to exit 0 with empty stderr
-and one JSON object followed by one newline, and it refuses to run a document
-outside its bounds: the ordinary form with a nonempty plan, only read-only file
-attempts, no `_test_overrides`, runner selection, augments or entitlement
-requirement, and the three-step workload below. A failure there is reported
-with every run assertion unevaluated, and `run` is not invoked.
+`example_round_trip` acquires its specimen from the selected app. It retains
+raw stdout, stderr, observed exit status and command arguments for twelve CLI
+calls: one `--version`, two `example` emissions, three workload submissions and
+six refusal submissions. `check_example_round_trip.py` reads the captures in
+`artifacts/capture/`. Before any submission it requires successful
+JSON emissions with empty stderr and one framing newline, an ordinary phased
+document with two actions then one, only read-only file attempts, no test
+overrides, runner selection, augments or entitlement requirement, and the
+three-step workload below.
+
+It submits emitted stdout unchanged, then submits two test-owned derivatives:
+flat removes `phases` and places the same actions in `probe_plan`; actor moves
+the entire policy object into one applied `selected` actor and assigns both
+phases to that actor. Other members, action objects and policy bytes are
+preserved. Independent field/membership checks gate the transformations before
+submission. `transformations.json` records the permitted changes. The flat
+and actor inputs, commands, outputs and samples have their own subdirectories;
+refusals remain six single changes to emitted bytes, not eighteen per-form
+variants. Each native submission gets its own host and worker.
 
 The workload is identified by position and by the relationships among its
 submitted operands. No step identifier, path or policy text decides a role,
@@ -1132,7 +1141,7 @@ number of steps, a role missing, repeated, collapsed onto another target or in
 another order is another workload and is not run.
 
 Before submission the checker samples every submitted query path and attempt
-target, B included, and it samples them again after the run. Each sample opens
+target, B included, and it samples them again after that submission. All before descriptors are closed before `run`; each form has its own samples. Each sample opens
 the path once, takes the device, inode and other metadata from that descriptor,
 reads the content from the same descriptor and closes it. It keeps the
 SHA-256 digest and length of the content and of its bounded prefix, the first
@@ -1141,12 +1150,12 @@ SHA-256 digest and length of the content and of its bounded prefix, the first
 The emitted file is then submitted unchanged. Each assertion has a stable
 identifier, a group and a classification. `capture/report.json` lists every
 assertion's result with a one-sentence statement keyed by role, and its
-`workload` member names the submitted step identifier and path in each role:
+`forms` member names the submitted step identifier and path in each role. Existing identifiers describe the emitted form; added flat and actor assertions have `flat.` and `actor.` prefixes:
 
 | Group | Demand |
 | --- | --- |
-| Passage | The document's identity equals `--version`'s `build.contract` and `data.contract` and the app property list's `PWContract`, in a packaged form; two emissions are byte-identical; `request_delivery.bytes_written` equals the document's length without its framing newline; the document without `contract` equals the example in the contract snapshot. |
-| Admission | No `request_failure` and no `bad_request`; the dossier's original digest and the reply's `policy_sha256` equal the SHA-256 of the document's policy source. |
+| Passage | The emitted document's identity equals `--version`'s `build.contract` and `data.contract` and the app property list's `PWContract`, in a packaged form; two emissions are byte-identical; `request_delivery.bytes_written` equals the document's length without its framing newline; the document without `contract` equals the example in the contract snapshot. |
+| Admission | No `request_failure` and no `bad_request`; the appropriate ordinary or actor dossier's original digest and reply policy digest equal the SHA-256 of the document's policy source. |
 | Identity | The envelope's `build.contract`, the client capture's `contract` and the reply's `producer.contract` equal the document's. They are compared before any reply is read. |
 | Echo | The reply echoes the document's `specimen_id`, its step identifiers in order, and each submitted operation, filter, attempt kind, action and target. |
 | Reported against observed | The process exit status the case captured equals `result.exit_code`. |
@@ -1154,6 +1163,26 @@ assertion's result with a one-sentence statement keyed by role, and its
 | Prerequisites | A, B and C were each a regular file this user opened and read before the run; they have three distinct device and inode identities; each bounded prefix is nonempty and C's differs from A's and from B's. |
 | Native | Listed below; none passes unless every prerequisite holds. |
 | Refusals | Six inputs, each the emitted bytes with one change, go through `run`: another development identity, another release, `unbound`, no identity, a removed closing brace and one unknown member. The first five stop at the controller with their code, path, expected identity where one applies and no client capture or reply; the last is refused by the host as `unknown_field` with no step results. |
+
+Structure assertions check the submitted phase IDs, ordinals and exact action
+partition; each phase must arrive, complete and have its own collected
+validator records, release and acknowledgement. The full consumer owns the
+internal query, collection and live-worker joins. An internally coherent reply
+to a 1+2 partition still fails this case's submitted 2+1 association. Ordinary
+execution retains its singular worker; actor execution retains its actual
+`actors[]`, top-level `steps[]` and `phases[]`, per-actor dossier and controller
+diagnostics. The sole actor must own both visits, apply once, receive the
+submitted policy digest, use matched selected equipment, and complete and reap
+its owned worker. Numeric PID inequality across sequential reaped children is
+not a freshness requirement.
+
+`diagnostic_summary` records each form's query and attempt separately, fresh
+read identity/count/digest, independent samples and assertion statuses. It is
+withheld when producer identity or submitted association is unestablished. It
+has no equality assertion or separate acceptance credit; equal independent
+passes already imply almost all equal summarized values. Query errno on allow
+answers and failed-open `rc` are recorded without adding per-form pins. The
+consumer still enforces their record semantics.
 
 The native expectations are pinned to the present example and change with it.
 Each is its own assertion:
@@ -1221,6 +1250,12 @@ holds one literal data-read rule on a path with one spelling, observes no
 failed fresh read, and supplies nothing that separates a sandbox cause from
 another permission cause beyond this user's own successful read of B.
 
+One actor's two local visit numbers equal the global phase ordinals, so this
+case cannot distinguish those axes or prove multi-actor isolation. Read-only
+phases do not demonstrate replanning after a file effect. The complete
+`phases` and `actor_compositions` cases retain those independent responsibilities.
+Matching results here are observations, not a general equivalence of forms.
+
 The case passes or fails and declares no skip. A failure carries its
 classification: `consistency` for a relationship that must hold whatever the
 native results, `execution_unavailable` when the run yields no admitted reply
@@ -1229,11 +1264,11 @@ native results, `execution_unavailable` when the run yields no admitted reply
 native expectation then passes; no other target is substituted) and
 `native_observation` when a pinned native expectation was read and not met.
 The log prints each as `FAIL <identifier> [<classification>]`.
-Both cases are default members: they write nothing, need no signing identity,
-GUI session or network, and add a few CLI invocations.
+Both cases are default members: the native workloads read files, need no signing identity,
+GUI session or network, and use the same signed app equipment.
 
 `example_round_trip_controls` runs the same checker offline over constructed
-captures; a constructed document stands in for the emission. Its passing
+captures; a constructed document stands in for the emission. Its ordinary passing
 capture is the authored run under `tests/fixtures/blackbox_e2e/checker/current/`
 with the allowed and denied file steps read as steps 1 and 3, and one
 fresh-read step and three target samples authored in the control. Each of its
@@ -1245,6 +1280,21 @@ table carries another. The consumer's aggregate diagnostic is permitted beside
 another control's set and earns nothing there, and its own propagation control
 requires it exactly. Most controls also state the rest of the report: which
 assertions are unevaluated, and that every other one holds.
+
+`example_form_controls.py` adds the complete authored actor fixture described
+in the [fixture account](../../fixtures/example_round_trip/README.md). The
+three-form passing baseline must satisfy the full consumer and every case
+assertion before mutations run. The existing scalar table remains exercised
+on its flat model; its fresh-read, prerequisite, target-stability and combined
+fault controls are also run through all three full forms. New controls pin
+exact diagnostics for wrong partitions, borrowed collections, missing
+completion/acknowledgement, another actor's coherent records, live-worker
+binding, policy receipt, equipment and invented singular records. Shared
+wrong answers fail each form independently. Consistent step, phase and actor
+renaming passes; one-sided renaming, dropped/duplicated/reordered actions and
+substitution of another form fail. Transformation controls alter identity,
+policy, operands, actions and extra members before submission. Replacing the
+summary formatter leaves assertion results unchanged.
 
 A coherent control changes every dependent field, so the consumer reads the
 altered reply without error and only the stated assertion rejects it. The
@@ -1281,11 +1331,13 @@ digest and length, or nothing.
 Further controls require the stated assertions to be unevaluated after a failed
 emission or bound, behind a differing identity and without an admitted reply,
 and require a validator-spawn failure and an unestablished order to be read
-cleanly and to fail only native expectations. Each refusal input is judged
+cleanly. The expanded structure assertions also report an incomplete collection
+or release chain. Each refusal input is judged
 against the emitted bytes and its stated change, not against the function that
 wrote it. Controls of the checker's `prepare` step show that a failed emission
 or bound writes a report and no target observation or refusal input, so nothing
-can be submitted.
+can be submitted. Flat emission, swapped/collapsed phases and a lost action
+are rejected at that preparation boundary.
 
 Three alterations must pass: a fresh read whose open returned descriptor 0, a
 fresh read of a target shorter than the bound, and the answers of steps 1 and 2
@@ -1296,10 +1348,12 @@ exchanging any two steps' answers leaves the capture identical, so no reader
 could tell them apart; in the present capture the same exchange changes it for
 both pairs that involve step 3.
 
-The case fails if any assertion in the checker's table lacks a matched control,
+The case fails if any assertion in the scalar table or any added structure/
+transformation assertion lacks a matched control,
 and `artifacts/example-round-trip-controls.json` holds each control's expected
 and actual sets, the coverage it earned, the observer controls, the accepted
-alterations and the uniform-answer comparison. Shape and record validity rest on
+alterations and the uniform-answer comparison. `example-form-controls.json`
+records the expanded controls and their exact expected sets. Shape and record validity rest on
 `blackbox_e2e/checker_controls`; that the app is validly signed and unchanged
 rests on the dispatcher's inspection.
 

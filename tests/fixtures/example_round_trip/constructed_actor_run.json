@@ -1,0 +1,933 @@
+{
+  "build": {
+    "commit": "constructed",
+    "describe": "constructed-current-controls",
+    "number": "0",
+    "version": "0.0.0"
+  },
+  "data": {
+    "policy_check": null,
+    "runner_client": {
+      "argv": [
+        "/constructed/PolicyWitness.app/Contents/MacOS/pw-runner-client",
+        "run",
+        "--timeout-ms",
+        "20000",
+        "--deadline-ticks",
+        "1000000",
+        "--request",
+        "-",
+        "constructed.PWRunner"
+      ],
+      "capture_limit_bytes": 260046848,
+      "ended_at_unix_ms": 2000,
+      "exit_code": 0,
+      "request_delivery": {
+        "bytes_written": 1497,
+        "error": null
+      },
+      "runner_reply_error": null,
+      "started_at_unix_ms": 1000,
+      "stderr": "",
+      "stderr_bytes_received": 0,
+      "stderr_bytes_retained": 0,
+      "stderr_truncated": false,
+      "stdout_bytes_received": 13608,
+      "stdout_bytes_retained": 13608,
+      "stdout_capture_error": null,
+      "stdout_parse_error": null,
+      "stdout_truncated": false,
+      "submission": "invoked",
+      "transport": {
+        "acquisition_stop": "granted",
+        "attempts": [
+          {
+            "attempt_id": "74733B2A-11C1-4344-BF19-5BBFA2A06466",
+            "control": {
+              "bytes_received": 237,
+              "host_instance": "A481152E-A984-4711-AD88-E6762B031029",
+              "host_pid": 124,
+              "lease_ms": 5000,
+              "sha256": "9708c9574deb56c70615fe48f710a8a9641a6d9d6341fc1454944f1b0d4f5109",
+              "status": "granted"
+            },
+            "ended_elapsed_ms": 53,
+            "ordinal": 1,
+            "outcome": "granted",
+            "started_elapsed_ms": 0
+          }
+        ],
+        "client_pid": 123,
+        "clock": "mach_continuous_time_ns",
+        "clock_available": true,
+        "deadline_continuous_ns": 2477807463691916,
+        "ended_continuous_ns": 2477567564031500,
+        "kind": "runner_client_capture",
+        "started_continuous_ns": 2477567474703000,
+        "submission": {
+          "invoked_elapsed_ms": 54,
+          "state": "invoked"
+        },
+        "terminal": "runner_reply",
+        "timeout_ms": 240000
+      },
+      "transport_admission": "accepted",
+      "transport_error": null
+    },
+    "runner_result": {
+      "bundle_id": "com.policywitness.policy-witness.PWRunner",
+      "normalized_outcome": "finished",
+      "phases": [
+        {
+          "action_ids": [
+            "fs_write_allowed",
+            "constructed_metadata_query_fresh_read"
+          ],
+          "arrival_observed": true,
+          "collection_status": "collected",
+          "completion_observed": true,
+          "ordering": {
+            "collection_closed_before_proceed": true,
+            "proceed_observed": true,
+            "proceed_set": true,
+            "protocol_violations": [],
+            "validator_disposition": "reaped",
+            "worker_lifetime_established": true
+          },
+          "ordinal": 1,
+          "phase_id": "constructed-initial",
+          "validator_subprocess": {
+            "association_issues": [],
+            "exit_code": 0,
+            "exit_grace_wait": {
+              "budget_ms": 1000,
+              "clock_fault": false,
+              "elapsed_ms": 0,
+              "stop": "reaped"
+            },
+            "expected_step_ids": [
+              "fs_write_allowed",
+              "constructed_metadata_query_fresh_read"
+            ],
+            "ordinal": 1,
+            "phase_id": "constructed-initial",
+            "pid": 51101,
+            "probe_bytes_expected": 444,
+            "probe_bytes_written": 444,
+            "reaped": true,
+            "records": [
+              {
+                "errno": 0,
+                "filter_type": "PATH",
+                "filter_type_id": 1,
+                "filter_value": "/private/tmp/pw-bbx.to0A9F/allow-write/existing.txt",
+                "operation": "file-read-data",
+                "outcome": "allow",
+                "raw_line": "{\"kind\":\"sb_api_validator_verdict\",\"schema_version\":1,\"step_id\":\"fs_write_allowed\",\"operation\":\"file-read-data\",\"filter_type\":\"PATH\",\"filter_type_id\":1,\"filter_value\":\"/private/tmp/pw-bbx.to0A9F/allow-write/existing.txt\",\"rc\":0,\"errno\":0,\"outcome\":\"allow\",\"error\":null}",
+                "rc": 0,
+                "step_id": "fs_write_allowed"
+              },
+              {
+                "errno": 0,
+                "filter_type": "PATH",
+                "filter_type_id": 1,
+                "filter_value": "/private/tmp/pw-bbx.to0A9F/deny-write/existing.txt",
+                "operation": "file-read-metadata",
+                "outcome": "allow",
+                "raw_line": "{\"kind\":\"sb_api_validator_verdict\",\"schema_version\":1,\"step_id\":\"constructed_metadata_query_fresh_read\",\"operation\":\"file-read-metadata\",\"filter_type\":\"PATH\",\"filter_type_id\":1,\"filter_value\":\"/private/tmp/pw-bbx.to0A9F/deny-write/existing.txt\",\"rc\":0,\"errno\":0,\"outcome\":\"allow\",\"error\":null}",
+                "rc": 0,
+                "step_id": "constructed_metadata_query_fresh_read"
+              }
+            ],
+            "stdout_bytes_received": 564,
+            "stdout_collection_stop": "eof",
+            "wait_errors": []
+          },
+          "actor_id": "constructed-reader",
+          "actor_visit": 1
+        },
+        {
+          "action_ids": [
+            "fs_write_denied"
+          ],
+          "arrival_observed": true,
+          "collection_status": "collected",
+          "completion_observed": true,
+          "ordering": {
+            "collection_closed_before_proceed": true,
+            "proceed_observed": true,
+            "proceed_set": true,
+            "protocol_violations": [],
+            "validator_disposition": "reaped",
+            "worker_lifetime_established": true
+          },
+          "ordinal": 2,
+          "phase_id": "constructed-restricted",
+          "validator_subprocess": {
+            "association_issues": [],
+            "exit_code": 0,
+            "exit_grace_wait": {
+              "budget_ms": 1000,
+              "clock_fault": false,
+              "elapsed_ms": 0,
+              "stop": "reaped"
+            },
+            "expected_step_ids": [
+              "fs_write_denied"
+            ],
+            "ordinal": 2,
+            "phase_id": "constructed-restricted",
+            "pid": 51102,
+            "probe_bytes_expected": 444,
+            "probe_bytes_written": 444,
+            "reaped": true,
+            "records": [
+              {
+                "errno": 0,
+                "filter_type": "PATH",
+                "filter_type_id": 1,
+                "filter_value": "/private/tmp/pw-bbx.to0A9F/deny-write/existing.txt",
+                "operation": "file-read-data",
+                "outcome": "deny",
+                "raw_line": "{\"kind\":\"sb_api_validator_verdict\",\"schema_version\":1,\"step_id\":\"fs_write_denied\",\"operation\":\"file-read-data\",\"filter_type\":\"PATH\",\"filter_type_id\":1,\"filter_value\":\"/private/tmp/pw-bbx.to0A9F/deny-write/existing.txt\",\"rc\":1,\"errno\":0,\"outcome\":\"deny\",\"error\":null}",
+                "rc": 1,
+                "step_id": "fs_write_denied"
+              }
+            ],
+            "stdout_bytes_received": 267,
+            "stdout_collection_stop": "eof",
+            "wait_errors": []
+          },
+          "actor_id": "constructed-reader",
+          "actor_visit": 2
+        }
+      ],
+      "pid": 51000,
+      "rc": 0,
+      "specimen_id": "constructed_ordinary_controls",
+      "steps": [
+        {
+          "attempt": {
+            "errno": null,
+            "lifecycle": {
+              "boundary": {
+                "answer": "reached",
+                "basis": [
+                  "progress",
+                  "slot",
+                  "attempt_support"
+                ],
+                "state": "supported"
+              },
+              "result": {
+                "answer": "published",
+                "basis": [
+                  "slot",
+                  "attempt_support"
+                ],
+                "state": "supported"
+              },
+              "summary": "completed"
+            },
+            "observed_path": "/private/tmp/pw-bbx.to0A9F/allow-write/existing.txt",
+            "outcome": "ok",
+            "path_diagnostics": {
+              "input": "/private/tmp/pw-bbx.to0A9F/allow-write/existing.txt",
+              "observer": "runner_host",
+              "same_as_input": [
+                "realpath_resolved",
+                "parent_realpath_resolved"
+              ],
+              "stage": "after_orchestration"
+            },
+            "rc": 0,
+            "requested_action": "open_read",
+            "requested_kind": "file",
+            "requested_path": "/private/tmp/pw-bbx.to0A9F/allow-write/existing.txt",
+            "result_source": "worker"
+          },
+          "comparison": {
+            "limitations": [],
+            "observation": "succeeded",
+            "observation_basis": "completed_worker_status",
+            "operation_relation": "matched",
+            "order": "query_first",
+            "target_relation": "same_submitted"
+          },
+          "phase_id": "constructed-initial",
+          "sandbox_check": {
+            "errno": 0,
+            "error": null,
+            "filter_kind": "path",
+            "filter_type_id": 1,
+            "filter_value": "/private/tmp/pw-bbx.to0A9F/allow-write/existing.txt",
+            "native_rc": 0,
+            "operation": "file-read-data",
+            "outcome": "allow",
+            "path_diagnostics": {
+              "firmlink_resolved": "/System/Volumes/Data/private/tmp/pw-bbx.to0A9F/allow-write/existing.txt",
+              "input": "/private/tmp/pw-bbx.to0A9F/allow-write/existing.txt",
+              "observer": "runner_host",
+              "same_as_input": [
+                "realpath_resolved"
+              ],
+              "stage": "after_orchestration"
+            },
+            "pid": 51001,
+            "rc": 0,
+            "result_source": "validator"
+          },
+          "step_id": "fs_write_allowed",
+          "actor_id": "constructed-reader"
+        },
+        {
+          "attempt": {
+            "errno": null,
+            "lifecycle": {
+              "boundary": {
+                "answer": "reached",
+                "basis": [
+                  "progress",
+                  "slot",
+                  "attempt_support"
+                ],
+                "state": "supported"
+              },
+              "result": {
+                "answer": "published",
+                "basis": [
+                  "slot",
+                  "attempt_support"
+                ],
+                "state": "supported"
+              },
+              "summary": "completed"
+            },
+            "observed_path": null,
+            "outcome": "ok",
+            "path_diagnostics": {
+              "input": "/private/tmp/pw-bbx.to0A9F/fresh-read/existing.txt",
+              "observer": "runner_host",
+              "same_as_input": [
+                "realpath_resolved",
+                "parent_realpath_resolved"
+              ],
+              "stage": "after_orchestration"
+            },
+            "rc": 0,
+            "requested_action": "read_fresh",
+            "requested_kind": "file",
+            "requested_path": "/private/tmp/pw-bbx.to0A9F/fresh-read/existing.txt",
+            "result_source": "worker",
+            "fresh_read": {
+              "open_rc": 5,
+              "stat_rc": 0,
+              "read_rc": 64,
+              "close_rc": 0,
+              "identity": {
+                "device": 16777234,
+                "inode": 4244,
+                "mode": 33188,
+                "uid": 0,
+                "gid": 0
+              },
+              "content_hex": "202122232425262728292a2b2c2d2e2f303132333435363738393a3b3c3d3e3f404142434445464748494a4b4c4d4e4f505152535455565758595a5b5c5d5e5f"
+            }
+          },
+          "comparison": {
+            "limitations": [],
+            "observation": "succeeded",
+            "observation_basis": "completed_worker_status",
+            "operation_relation": "different",
+            "order": "query_first",
+            "target_relation": "different_submitted"
+          },
+          "phase_id": "constructed-initial",
+          "sandbox_check": {
+            "errno": 0,
+            "error": null,
+            "filter_kind": "path",
+            "filter_type_id": 1,
+            "filter_value": "/private/tmp/pw-bbx.to0A9F/deny-write/existing.txt",
+            "native_rc": 0,
+            "operation": "file-read-metadata",
+            "outcome": "allow",
+            "path_diagnostics": {
+              "firmlink_resolved": "/System/Volumes/Data/private/tmp/pw-bbx.to0A9F/deny-write/existing.txt",
+              "input": "/private/tmp/pw-bbx.to0A9F/deny-write/existing.txt",
+              "observer": "runner_host",
+              "same_as_input": [
+                "realpath_resolved"
+              ],
+              "stage": "after_orchestration"
+            },
+            "pid": 51001,
+            "rc": 0,
+            "result_source": "validator"
+          },
+          "step_id": "constructed_metadata_query_fresh_read",
+          "actor_id": "constructed-reader"
+        },
+        {
+          "attempt": {
+            "errno": 1,
+            "error": "open(O_RDONLY): Operation not permitted",
+            "lifecycle": {
+              "boundary": {
+                "answer": "reached",
+                "basis": [
+                  "progress",
+                  "slot",
+                  "attempt_support"
+                ],
+                "state": "supported"
+              },
+              "result": {
+                "answer": "published",
+                "basis": [
+                  "slot",
+                  "attempt_support"
+                ],
+                "state": "supported"
+              },
+              "summary": "completed"
+            },
+            "observed_path": null,
+            "outcome": "open_failed",
+            "path_diagnostics": {
+              "input": "/private/tmp/pw-bbx.to0A9F/deny-write/existing.txt",
+              "observer": "runner_host",
+              "same_as_input": [
+                "realpath_resolved",
+                "parent_realpath_resolved"
+              ],
+              "stage": "after_orchestration"
+            },
+            "rc": 1,
+            "requested_action": "open_read",
+            "requested_kind": "file",
+            "requested_path": "/private/tmp/pw-bbx.to0A9F/deny-write/existing.txt",
+            "result_source": "worker"
+          },
+          "comparison": {
+            "limitations": [],
+            "observation": "permission_failure",
+            "observation_basis": "permission_errno",
+            "operation_relation": "matched",
+            "order": "query_first",
+            "target_relation": "same_submitted"
+          },
+          "phase_id": "constructed-restricted",
+          "sandbox_check": {
+            "errno": 0,
+            "error": null,
+            "filter_kind": "path",
+            "filter_type_id": 1,
+            "filter_value": "/private/tmp/pw-bbx.to0A9F/deny-write/existing.txt",
+            "native_rc": 1,
+            "operation": "file-read-data",
+            "outcome": "deny",
+            "path_diagnostics": {
+              "firmlink_resolved": "/System/Volumes/Data/private/tmp/pw-bbx.to0A9F/deny-write/existing.txt",
+              "input": "/private/tmp/pw-bbx.to0A9F/deny-write/existing.txt",
+              "observer": "runner_host",
+              "same_as_input": [
+                "realpath_resolved"
+              ],
+              "stage": "after_orchestration"
+            },
+            "pid": 51001,
+            "rc": 1,
+            "result_source": "validator"
+          },
+          "step_id": "fs_write_denied",
+          "actor_id": "constructed-reader"
+        }
+      ],
+      "execution_form": "actors",
+      "equipment_inventory": {
+        "path": "/constructed/worker-equipment.json",
+        "status": "verified",
+        "sha256": "5656565656565656565656565656565656565656565656565656565656565656",
+        "schema_version": 1,
+        "worker_identity": "7878787878787878787878787878787878787878787878787878787878787878",
+        "unsigned_worker_sha256": "9090909090909090909090909090909090909090909090909090909090909090",
+        "seal_osstatus": 0
+      },
+      "equipment_bindings": [
+        {
+          "role": "selected",
+          "relative_path": "Contents/MacOS/pw-probe-runner",
+          "path": "/constructed/PolicyWitness.app/Contents/XPCServices/PWRunner.xpc/Contents/MacOS/pw-probe-runner",
+          "status": "bound",
+          "expected_sha256": "1212121212121212121212121212121212121212121212121212121212121212",
+          "expected_cdhash": "3434343434343434343434343434343434343434",
+          "sha256": "1212121212121212121212121212121212121212121212121212121212121212",
+          "cdhash": "3434343434343434343434343434343434343434",
+          "identifier": "constructed.selected",
+          "team_id": "CONSTRUCT1",
+          "entitlements_ref": 0,
+          "signature_osstatus": 0,
+          "entitlements_match": true,
+          "source": "packaged",
+          "implementation_identity": "inventory_verified"
+        }
+      ],
+      "equipment_entitlements": [
+        {
+          "source": "binding",
+          "binding_ref": 0,
+          "status": "observed",
+          "raw_plist": "<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n<plist version=\"1.0\"><dict/></plist>\n"
+        },
+        {
+          "source": "execution",
+          "binding_ref": 0,
+          "actor_id": "constructed-reader",
+          "status": "observed",
+          "raw_plist": "<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n<plist version=\"1.0\"><dict/></plist>\n"
+        }
+      ],
+      "actors": [
+        {
+          "actor_id": "constructed-reader",
+          "index": 0,
+          "mode": "apply",
+          "setup_status": "applied",
+          "application_count": 1,
+          "applied": true,
+          "application": {
+            "state": "observed",
+            "basis": "applied_publication"
+          },
+          "launch": {
+            "pid": 51001,
+            "parent_pid": 51000
+          },
+          "subprocess": {
+            "cleanup_trigger": "completion",
+            "collection_basis": "after_confirmed_reap",
+            "disposition": {
+              "issues": [],
+              "questions": {
+                "cleanup_trigger": {
+                  "answer": "completion",
+                  "basis": [
+                    "cleanup_trigger",
+                    "exit_requested"
+                  ],
+                  "state": "supported"
+                },
+                "collection_basis": {
+                  "answer": "after_confirmed_reap",
+                  "basis": [
+                    "collection_basis"
+                  ],
+                  "state": "supported"
+                },
+                "final_status": {
+                  "answer": "exit_code",
+                  "basis": [
+                    "reaped",
+                    "exit_code"
+                  ],
+                  "state": "supported",
+                  "value": 0
+                },
+                "grace_end": {
+                  "answer": "reaped_during_grace",
+                  "basis": [
+                    "grace_end",
+                    "exit_requested"
+                  ],
+                  "state": "supported"
+                },
+                "kill_request_and_result": {
+                  "answer": "none",
+                  "basis": [
+                    "termination_request",
+                    "exit_requested"
+                  ],
+                  "state": "supported"
+                },
+                "progress_association": {
+                  "answer": "none",
+                  "basis": [
+                    "progress"
+                  ],
+                  "state": "supported"
+                },
+                "stop_reason": {
+                  "answer": "done",
+                  "basis": [
+                    "poll_stop_reason"
+                  ],
+                  "state": "supported"
+                }
+              },
+              "steps": [
+                {
+                  "attempt_support": "supported",
+                  "index": 0,
+                  "questions": {
+                    "step_boundary_reached": {
+                      "answer": "reached",
+                      "basis": [
+                        "progress",
+                        "slot",
+                        "attempt_support"
+                      ],
+                      "state": "supported"
+                    },
+                    "step_requested_operation_applicability": {
+                      "answer": "supported",
+                      "basis": [
+                        "attempt_support"
+                      ],
+                      "state": "supported"
+                    },
+                    "step_result_published": {
+                      "answer": "published",
+                      "basis": [
+                        "slot",
+                        "attempt_support"
+                      ],
+                      "state": "supported"
+                    }
+                  },
+                  "slot": "completed",
+                  "step_id": "fs_write_allowed"
+                },
+                {
+                  "attempt_support": "supported",
+                  "index": 1,
+                  "questions": {
+                    "step_boundary_reached": {
+                      "answer": "reached",
+                      "basis": [
+                        "progress",
+                        "slot",
+                        "attempt_support"
+                      ],
+                      "state": "supported"
+                    },
+                    "step_requested_operation_applicability": {
+                      "answer": "supported",
+                      "basis": [
+                        "attempt_support"
+                      ],
+                      "state": "supported"
+                    },
+                    "step_result_published": {
+                      "answer": "published",
+                      "basis": [
+                        "slot",
+                        "attempt_support"
+                      ],
+                      "state": "supported"
+                    }
+                  },
+                  "slot": "completed",
+                  "step_id": "constructed_metadata_query_fresh_read"
+                },
+                {
+                  "attempt_support": "supported",
+                  "index": 2,
+                  "questions": {
+                    "step_boundary_reached": {
+                      "answer": "reached",
+                      "basis": [
+                        "progress",
+                        "slot",
+                        "attempt_support"
+                      ],
+                      "state": "supported"
+                    },
+                    "step_requested_operation_applicability": {
+                      "answer": "supported",
+                      "basis": [
+                        "attempt_support"
+                      ],
+                      "state": "supported"
+                    },
+                    "step_result_published": {
+                      "answer": "published",
+                      "basis": [
+                        "slot",
+                        "attempt_support"
+                      ],
+                      "state": "supported"
+                    }
+                  },
+                  "slot": "completed",
+                  "step_id": "fs_write_denied"
+                }
+              ]
+            },
+            "done_observed": true,
+            "exit_code": 0,
+            "exit_grace_wait": {
+              "budget_ms": 1000,
+              "clock_fault": false,
+              "elapsed_ms": 0,
+              "stop": "reaped_during_grace"
+            },
+            "exit_requested": true,
+            "grace_end": "reaped_during_grace",
+            "partial_steps": false,
+            "pid": 51001,
+            "poll_stop_reason": "done",
+            "ready_byte_received": true,
+            "ready_wait": {
+              "budget_ms": 1000,
+              "clock_fault": false,
+              "elapsed_ms": 12,
+              "stop": "received"
+            },
+            "reaped": true,
+            "wait_errors": [],
+            "worker_evidence": {
+              "abi_identity": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+              "diagnostic": {
+                "state": 0,
+                "status": "absent"
+              },
+              "failure_publication": 0,
+              "failure_state": "absent",
+              "policy_read": {
+                "bytes_expected": 26,
+                "bytes_received": 26
+              },
+              "progress": {
+                "operation": 10,
+                "raw": 169869312,
+                "stage": 2
+              },
+              "readiness": {
+                "rc": 0
+              }
+            }
+          },
+          "policy_format": "sbpl",
+          "policy_sha256": "c3f48dc83eca4ac705acbf9094416e239dda782b96cab885e8f7151c653474b3",
+          "policy_received_sha256": "c3f48dc83eca4ac705acbf9094416e239dda782b96cab885e8f7151c653474b3",
+          "visits": [
+            1,
+            2
+          ],
+          "equipment": {
+            "requested": "selected",
+            "resolved": "selected",
+            "binding_ref": 0,
+            "required_entitlements": [],
+            "requirements_status": "satisfied",
+            "missing_requirements": [],
+            "execution": {
+              "status": "matched",
+              "pid": 51001,
+              "observed_at_monotonic_ns": 1000000,
+              "path": "/constructed/PolicyWitness.app/Contents/XPCServices/PWRunner.xpc/Contents/MacOS/pw-probe-runner",
+              "cdhash": "3434343434343434343434343434343434343434",
+              "identifier": "constructed.selected",
+              "team_id": "CONSTRUCT1",
+              "entitlements_ref": 1,
+              "eligible": true,
+              "native_observations": [
+                {
+                  "operation": "guest_code",
+                  "attempted": true,
+                  "osstatus": 0
+                },
+                {
+                  "operation": "dynamic_validity",
+                  "attempted": true,
+                  "osstatus": 0
+                },
+                {
+                  "operation": "associated_static_code",
+                  "attempted": true,
+                  "osstatus": 0
+                },
+                {
+                  "operation": "signing_information",
+                  "attempted": true,
+                  "osstatus": 0
+                }
+              ]
+            }
+          },
+          "owned_reap": {
+            "pid": 51001,
+            "native_rc": 51001,
+            "raw_status": 0,
+            "capture_ordinal": 3,
+            "observed_ns": 3000000,
+            "ownership_unbroken": true,
+            "departure_requested": true,
+            "stage": "cleanup"
+          }
+        }
+      ],
+      "authority_setup": {
+        "host": {
+          "run": {
+            "disposition": "not_required",
+            "operations": [],
+            "ownership": {}
+          },
+          "regions": [],
+          "custody": []
+        },
+        "workers": [
+          {
+            "actor_id": "constructed-reader",
+            "actor_index": 0,
+            "required": false,
+            "publication": "observed",
+            "disposition": "not_required",
+            "operations": [],
+            "ownership": {}
+          }
+        ]
+      },
+      "extension_events": [],
+      "transfers": [],
+      "resources": {
+        "tokens": [],
+        "deliveries": [],
+        "handles": []
+      },
+      "schedule": {
+        "setup_wait": {
+          "budget_ms": 10000,
+          "elapsed_ms": 2,
+          "clock_fault": false,
+          "stop": "setup_complete"
+        },
+        "execution_wait": {
+          "budget_ms": 120000,
+          "elapsed_ms": 10,
+          "excluded_ms": 4,
+          "clock_fault": false,
+          "stop": "schedule_complete"
+        }
+      }
+    },
+    "runner_sandbox_diagnostics": {
+      "disposition_integrity": "valid",
+      "disposition_issues": [],
+      "process_disposition": "clean_exit",
+      "stop_reason": "done",
+      "termination_cause": null,
+      "actors": [
+        {
+          "actor_id": "constructed-reader",
+          "disposition_integrity": "valid",
+          "disposition_issues": [],
+          "process_disposition": "clean_exit",
+          "stop_reason": "done",
+          "termination_cause": null
+        }
+      ]
+    },
+    "specimen": {
+      "app_provenance": {
+        "evidence_manifest_path": "/constructed/PolicyWitness.app/Contents/Resources/Evidence/manifest.json",
+        "evidence_verify": null
+      },
+      "binaries": {
+        "service": {
+          "actual_sha256": null,
+          "baseline_sha256": null,
+          "path": null,
+          "reason": "constructed control: no artifact inspected",
+          "verification": "unavailable"
+        },
+        "unentitled_worker": {
+          "actual_sha256": null,
+          "baseline_sha256": null,
+          "path": null,
+          "reason": "constructed control: no artifact inspected",
+          "verification": "unavailable"
+        },
+        "validator": {
+          "actual_sha256": null,
+          "baseline_sha256": null,
+          "path": null,
+          "reason": "constructed control: no artifact inspected",
+          "verification": "unavailable"
+        },
+        "worker": {
+          "actual_sha256": null,
+          "baseline_sha256": null,
+          "path": null,
+          "reason": "constructed control: no artifact inspected",
+          "verification": "unavailable"
+        }
+      },
+      "host": {
+        "arch": "arm64",
+        "kernel_release": "25.0.0",
+        "macos_build": "constructed",
+        "macos_version": "26.0"
+      },
+      "policy": {
+        "augmentation": {
+          "applied": [],
+          "applied_sha256": null,
+          "error": null,
+          "original_sha256": null,
+          "status": "not_applicable"
+        },
+        "imports": {
+          "closure_sha256": null,
+          "cycle": null,
+          "exceeded": null,
+          "failure": null,
+          "records": [],
+          "status": "not_applicable"
+        }
+      },
+      "request_path": "/constructed/request.json",
+      "runner_provenance": {
+        "runner_service_name": "constructed.PWRunner"
+      },
+      "actors": [
+        {
+          "actor_id": "constructed-reader",
+          "mode": "apply",
+          "policy": {
+            "augmentation": {
+              "applied": [],
+              "applied_sha256": "c3f48dc83eca4ac705acbf9094416e239dda782b96cab885e8f7151c653474b3",
+              "error": null,
+              "original_sha256": "c3f48dc83eca4ac705acbf9094416e239dda782b96cab885e8f7151c653474b3",
+              "status": "not_applicable"
+            },
+            "imports": {
+              "closure_sha256": null,
+              "cycle": null,
+              "exceeded": null,
+              "failure": null,
+              "records": [],
+              "status": "not_applicable"
+            }
+          }
+        }
+      ]
+    },
+    "timeout_ms": 240000
+  },
+  "generated_at_unix_ms": 1793815211129,
+  "kind": "run",
+  "result": {
+    "errno": null,
+    "error": null,
+    "exit_code": 0,
+    "normalized_outcome": "finished",
+    "ok": true,
+    "rc": null,
+    "stderr": null,
+    "stdout": null
+  }
+}

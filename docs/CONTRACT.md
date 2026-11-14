@@ -630,6 +630,8 @@ policy-witness run example.json
 
 The printed document carries the emitting build's identity where this rendering shows `<reported-contract>`.
 
+The ordinary phased document keeps one worker across two collection boundaries. `initial-reads` collects the first two queries before releasing their attempts; after that phase completes, `restricted-read` collects the final query before releasing its attempt. The policy is applied once.
+
 The policy allows by default and denies data reads of the one file its specific rule names. Each step establishes something different:
 
 - `read-hosts` asks about data reads of one file and opens that file. It supplies a native answer about the path and a witnessed open of it.
@@ -643,63 +645,73 @@ These results are observations on the build and machine that produced them, unde
 ```json
 {
   "contract": "<reported-contract>",
+  "phases": [
+    {
+      "actions": [
+        {
+          "attempt": {
+            "action": "open_read",
+            "kind": "file",
+            "target": "/etc/hosts"
+          },
+          "sandbox_check": {
+            "filter": {
+              "kind": "path",
+              "value": "/etc/hosts"
+            },
+            "operation": "file-read-data"
+          },
+          "step_id": "read-hosts"
+        },
+        {
+          "attempt": {
+            "action": "read_fresh",
+            "kind": "file",
+            "target": "/usr/share/dict/connectives"
+          },
+          "sandbox_check": {
+            "filter": {
+              "kind": "path",
+              "value": "/usr/share/dict/propernames"
+            },
+            "operation": "file-read-metadata"
+          },
+          "step_id": "metadata-propernames-read-connectives"
+        }
+      ],
+      "phase_id": "initial-reads"
+    },
+    {
+      "actions": [
+        {
+          "attempt": {
+            "action": "open_read",
+            "kind": "file",
+            "target": "/usr/share/dict/propernames"
+          },
+          "sandbox_check": {
+            "filter": {
+              "kind": "path",
+              "value": "/usr/share/dict/propernames"
+            },
+            "operation": "file-read-data"
+          },
+          "step_id": "read-propernames"
+        }
+      ],
+      "phase_id": "restricted-read"
+    }
+  ],
   "policy": {
     "format": "sbpl",
     "sbpl_source": "(version 1) (allow default) (deny file-read-data (literal \"/usr/share/dict/propernames\") (with no-report))"
   },
-  "probe_plan": [
-    {
-      "attempt": {
-        "action": "open_read",
-        "kind": "file",
-        "target": "/etc/hosts"
-      },
-      "sandbox_check": {
-        "filter": {
-          "kind": "path",
-          "value": "/etc/hosts"
-        },
-        "operation": "file-read-data"
-      },
-      "step_id": "read-hosts"
-    },
-    {
-      "attempt": {
-        "action": "read_fresh",
-        "kind": "file",
-        "target": "/usr/share/dict/connectives"
-      },
-      "sandbox_check": {
-        "filter": {
-          "kind": "path",
-          "value": "/usr/share/dict/propernames"
-        },
-        "operation": "file-read-metadata"
-      },
-      "step_id": "metadata-propernames-read-connectives"
-    },
-    {
-      "attempt": {
-        "action": "open_read",
-        "kind": "file",
-        "target": "/usr/share/dict/propernames"
-      },
-      "sandbox_check": {
-        "filter": {
-          "kind": "path",
-          "value": "/usr/share/dict/propernames"
-        },
-        "operation": "file-read-data"
-      },
-      "step_id": "read-propernames"
-    }
-  ],
   "specimen_id": "example"
 }
 ```
 
 <a id="contract-request-specimen-example-support"></a>
-**Support: [check read](#contract-support-grades) for [Emitted example](#contract-request-specimen-example).** The rendering is the parsed constant, which must be a request object without an identity, test overrides, selection keys or unknown members. An edit to the constant is refused until regeneration and then moves the rendering, the request payload and the build identity. The live case requires the selected app's emitted document without its identity to equal this snapshot and to be a three-step read-only workload: a data-read query and open of one target, a metadata query on a second target beside a fresh read of a third, and a data-read query and open of the second. It submits the emitted bytes unchanged and requires admission, identity, digest and echo relationships. Under observed target prerequisites it then requires, each as its own assertion, a captured process status of 0, a finished reply, each step's answer, each step's attempt, query-first order, and a fresh read whose descriptor identity, count and bytes equal the case's own observation of that target. Context: Read the constant, the extraction's constructed controls, the disposable-copy generation control and the live case with its checker and rejected controls. Evidence limit: Check read; no executed instance is credited here. Host admission and the native results are observed by the live case on a development build and one machine, under observed target prerequisites, and are not release evidence. The case compares no answer with its attempt and assigns no cause to the failed open. It cannot distinguish the first two steps' allow answers exchanged, samples its targets only before and after the run, and does not establish which object a native query consulted. Deeper request validity is established by execution, not by the extraction. The example's content carries no stability promise between builds. [Evidence details](#contract-request-specimen-example-support-details).
+**Support: [check read](#contract-support-grades) for [Emitted example](#contract-request-specimen-example).** The rendering is the parsed constant, which must be a request object without an identity, test overrides, selection keys or unknown members. An edit to the constant is refused until regeneration and then moves the rendering, the request payload and the build identity. The live case requires the selected app's emitted document without its identity to equal this snapshot and to be an ordinary two-phase read-only workload with two actions then one: a data-read query and open of one target, a metadata query on a second target beside a fresh read of a third, and a data-read query and open of the second. It submits the emitted bytes unchanged and derives flat and single-applied-actor forms with the same actions and policy. Each submission independently requires admission, identity, digest, phase/action ownership and echo relationships; the actor also requires applied-once, selected-equipment and reaped-process observations. A diagnostic summary carries no equality assertion. Under observed target prerequisites it then requires, each as its own assertion, a captured process status of 0, a finished reply, each step's answer, each step's attempt, query-first order, and a fresh read whose descriptor identity, count and bytes equal the case's own observation of that target. Context: Read the constant, the extraction's constructed controls, the disposable-copy generation control and the live case with its checker and rejected controls. Evidence limit: Check read; no executed instance is credited here. Host admission and the native results are observed by the live case on a development build and one machine, under observed target prerequisites, and are not release evidence. The case compares no answer with its attempt and assigns no cause to the failed open. It cannot distinguish the first two steps' allow answers exchanged, samples its targets only before and after the run, and does not establish which object a native query consulted. Deeper request validity is established by execution, not by the extraction. The example's content carries no stability promise between builds. [Evidence details](#contract-request-specimen-example-support-details).
 
 <a id="contract-request-specimen-duplicate_keys"></a>
 ##### Repeated members at each entry

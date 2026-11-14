@@ -3299,57 +3299,67 @@
           {
             "context": {},
             "document": {
+              "phases": [
+                {
+                  "actions": [
+                    {
+                      "attempt": {
+                        "action": "open_read",
+                        "kind": "file",
+                        "target": "/etc/hosts"
+                      },
+                      "sandbox_check": {
+                        "filter": {
+                          "kind": "path",
+                          "value": "/etc/hosts"
+                        },
+                        "operation": "file-read-data"
+                      },
+                      "step_id": "read-hosts"
+                    },
+                    {
+                      "attempt": {
+                        "action": "read_fresh",
+                        "kind": "file",
+                        "target": "/usr/share/dict/connectives"
+                      },
+                      "sandbox_check": {
+                        "filter": {
+                          "kind": "path",
+                          "value": "/usr/share/dict/propernames"
+                        },
+                        "operation": "file-read-metadata"
+                      },
+                      "step_id": "metadata-propernames-read-connectives"
+                    }
+                  ],
+                  "phase_id": "initial-reads"
+                },
+                {
+                  "actions": [
+                    {
+                      "attempt": {
+                        "action": "open_read",
+                        "kind": "file",
+                        "target": "/usr/share/dict/propernames"
+                      },
+                      "sandbox_check": {
+                        "filter": {
+                          "kind": "path",
+                          "value": "/usr/share/dict/propernames"
+                        },
+                        "operation": "file-read-data"
+                      },
+                      "step_id": "read-propernames"
+                    }
+                  ],
+                  "phase_id": "restricted-read"
+                }
+              ],
               "policy": {
                 "format": "sbpl",
                 "sbpl_source": "(version 1) (allow default) (deny file-read-data (literal \"/usr/share/dict/propernames\") (with no-report))"
               },
-              "probe_plan": [
-                {
-                  "attempt": {
-                    "action": "open_read",
-                    "kind": "file",
-                    "target": "/etc/hosts"
-                  },
-                  "sandbox_check": {
-                    "filter": {
-                      "kind": "path",
-                      "value": "/etc/hosts"
-                    },
-                    "operation": "file-read-data"
-                  },
-                  "step_id": "read-hosts"
-                },
-                {
-                  "attempt": {
-                    "action": "read_fresh",
-                    "kind": "file",
-                    "target": "/usr/share/dict/connectives"
-                  },
-                  "sandbox_check": {
-                    "filter": {
-                      "kind": "path",
-                      "value": "/usr/share/dict/propernames"
-                    },
-                    "operation": "file-read-metadata"
-                  },
-                  "step_id": "metadata-propernames-read-connectives"
-                },
-                {
-                  "attempt": {
-                    "action": "open_read",
-                    "kind": "file",
-                    "target": "/usr/share/dict/propernames"
-                  },
-                  "sandbox_check": {
-                    "filter": {
-                      "kind": "path",
-                      "value": "/usr/share/dict/propernames"
-                    },
-                    "operation": "file-read-data"
-                  },
-                  "step_id": "read-propernames"
-                }
-              ],
               "specimen_id": "example"
             },
             "facts": {
@@ -3359,7 +3369,7 @@
             },
             "id": "request.specimen.example",
             "kind": "example",
-            "prose": "These commands print the example and submit it unchanged:\n\n```sh\npolicy-witness example > example.json\npolicy-witness run example.json\n```\n\nThe printed document carries the emitting build's identity where this rendering shows `<reported-contract>`.\n\nThe policy allows by default and denies data reads of the one file its specific rule names. Each step establishes something different:\n\n- `read-hosts` asks about data reads of one file and opens that file. It supplies a native answer about the path and a witnessed open of it.\n- `metadata-propernames-read-connectives` asks about metadata reads of the file the policy names and reads another file through a fresh descriptor. Its answer concerns a file its attempt does not read, so the answer predicts nothing about that read. The read is witnessed separately by its descriptor identity, byte count and bytes.\n- `read-propernames` asks about data reads of the file the policy names and opens that file. It supplies a native answer about that path and a witnessed attempt to open it.\n\nWhere the three files exist and the caller can read them, the first two answers are `allow` and their attempts succeed; the third answer is `deny` and its open fails with errno 1 (`EPERM`). The run still finishes and its process exits 0: a finished run can hold a failed attempt. The deny answer and the failed open are separate observations. The reply records them side by side and states neither that they agree nor what caused the failure.\n\nThese results are observations on the build and machine that produced them, under those conditions. They are not commitments. The paths, labels, step count and order, the policy text with its `(with no-report)` modifier, the errno and every native result can differ between builds. The modifier asks the kernel not to report the refused open in the system log; it promises nothing about what a run logs.",
+            "prose": "These commands print the example and submit it unchanged:\n\n```sh\npolicy-witness example > example.json\npolicy-witness run example.json\n```\n\nThe printed document carries the emitting build's identity where this rendering shows `<reported-contract>`.\n\nThe ordinary phased document keeps one worker across two collection boundaries. `initial-reads` collects the first two queries before releasing their attempts; after that phase completes, `restricted-read` collects the final query before releasing its attempt. The policy is applied once.\n\nThe policy allows by default and denies data reads of the one file its specific rule names. Each step establishes something different:\n\n- `read-hosts` asks about data reads of one file and opens that file. It supplies a native answer about the path and a witnessed open of it.\n- `metadata-propernames-read-connectives` asks about metadata reads of the file the policy names and reads another file through a fresh descriptor. Its answer concerns a file its attempt does not read, so the answer predicts nothing about that read. The read is witnessed separately by its descriptor identity, byte count and bytes.\n- `read-propernames` asks about data reads of the file the policy names and opens that file. It supplies a native answer about that path and a witnessed attempt to open it.\n\nWhere the three files exist and the caller can read them, the first two answers are `allow` and their attempts succeed; the third answer is `deny` and its open fails with errno 1 (`EPERM`). The run still finishes and its process exits 0: a finished run can hold a failed attempt. The deny answer and the failed open are separate observations. The reply records them side by side and states neither that they agree nor what caused the failure.\n\nThese results are observations on the build and machine that produced them, under those conditions. They are not commitments. The paths, labels, step count and order, the policy text with its `(with no-report)` modifier, the errno and every native result can differ between builds. The modifier asks the kernel not to report the refused open in the system log; it promises nothing about what a run logs.",
             "title": "Emitted example"
           },
           {
@@ -77007,57 +77017,67 @@
           {
             "context": {},
             "document": {
+              "phases": [
+                {
+                  "actions": [
+                    {
+                      "attempt": {
+                        "action": "open_read",
+                        "kind": "file",
+                        "target": "/etc/hosts"
+                      },
+                      "sandbox_check": {
+                        "filter": {
+                          "kind": "path",
+                          "value": "/etc/hosts"
+                        },
+                        "operation": "file-read-data"
+                      },
+                      "step_id": "read-hosts"
+                    },
+                    {
+                      "attempt": {
+                        "action": "read_fresh",
+                        "kind": "file",
+                        "target": "/usr/share/dict/connectives"
+                      },
+                      "sandbox_check": {
+                        "filter": {
+                          "kind": "path",
+                          "value": "/usr/share/dict/propernames"
+                        },
+                        "operation": "file-read-metadata"
+                      },
+                      "step_id": "metadata-propernames-read-connectives"
+                    }
+                  ],
+                  "phase_id": "initial-reads"
+                },
+                {
+                  "actions": [
+                    {
+                      "attempt": {
+                        "action": "open_read",
+                        "kind": "file",
+                        "target": "/usr/share/dict/propernames"
+                      },
+                      "sandbox_check": {
+                        "filter": {
+                          "kind": "path",
+                          "value": "/usr/share/dict/propernames"
+                        },
+                        "operation": "file-read-data"
+                      },
+                      "step_id": "read-propernames"
+                    }
+                  ],
+                  "phase_id": "restricted-read"
+                }
+              ],
               "policy": {
                 "format": "sbpl",
                 "sbpl_source": "(version 1) (allow default) (deny file-read-data (literal \"/usr/share/dict/propernames\") (with no-report))"
               },
-              "probe_plan": [
-                {
-                  "attempt": {
-                    "action": "open_read",
-                    "kind": "file",
-                    "target": "/etc/hosts"
-                  },
-                  "sandbox_check": {
-                    "filter": {
-                      "kind": "path",
-                      "value": "/etc/hosts"
-                    },
-                    "operation": "file-read-data"
-                  },
-                  "step_id": "read-hosts"
-                },
-                {
-                  "attempt": {
-                    "action": "read_fresh",
-                    "kind": "file",
-                    "target": "/usr/share/dict/connectives"
-                  },
-                  "sandbox_check": {
-                    "filter": {
-                      "kind": "path",
-                      "value": "/usr/share/dict/propernames"
-                    },
-                    "operation": "file-read-metadata"
-                  },
-                  "step_id": "metadata-propernames-read-connectives"
-                },
-                {
-                  "attempt": {
-                    "action": "open_read",
-                    "kind": "file",
-                    "target": "/usr/share/dict/propernames"
-                  },
-                  "sandbox_check": {
-                    "filter": {
-                      "kind": "path",
-                      "value": "/usr/share/dict/propernames"
-                    },
-                    "operation": "file-read-data"
-                  },
-                  "step_id": "read-propernames"
-                }
-              ],
               "specimen_id": "example"
             },
             "facts": {
@@ -77067,7 +77087,7 @@
             },
             "id": "request.specimen.example",
             "kind": "example",
-            "prose": "These commands print the example and submit it unchanged:\n\n```sh\npolicy-witness example > example.json\npolicy-witness run example.json\n```\n\nThe printed document carries the emitting build's identity where this rendering shows `<reported-contract>`.\n\nThe policy allows by default and denies data reads of the one file its specific rule names. Each step establishes something different:\n\n- `read-hosts` asks about data reads of one file and opens that file. It supplies a native answer about the path and a witnessed open of it.\n- `metadata-propernames-read-connectives` asks about metadata reads of the file the policy names and reads another file through a fresh descriptor. Its answer concerns a file its attempt does not read, so the answer predicts nothing about that read. The read is witnessed separately by its descriptor identity, byte count and bytes.\n- `read-propernames` asks about data reads of the file the policy names and opens that file. It supplies a native answer about that path and a witnessed attempt to open it.\n\nWhere the three files exist and the caller can read them, the first two answers are `allow` and their attempts succeed; the third answer is `deny` and its open fails with errno 1 (`EPERM`). The run still finishes and its process exits 0: a finished run can hold a failed attempt. The deny answer and the failed open are separate observations. The reply records them side by side and states neither that they agree nor what caused the failure.\n\nThese results are observations on the build and machine that produced them, under those conditions. They are not commitments. The paths, labels, step count and order, the policy text with its `(with no-report)` modifier, the errno and every native result can differ between builds. The modifier asks the kernel not to report the refused open in the system log; it promises nothing about what a run logs.",
+            "prose": "These commands print the example and submit it unchanged:\n\n```sh\npolicy-witness example > example.json\npolicy-witness run example.json\n```\n\nThe printed document carries the emitting build's identity where this rendering shows `<reported-contract>`.\n\nThe ordinary phased document keeps one worker across two collection boundaries. `initial-reads` collects the first two queries before releasing their attempts; after that phase completes, `restricted-read` collects the final query before releasing its attempt. The policy is applied once.\n\nThe policy allows by default and denies data reads of the one file its specific rule names. Each step establishes something different:\n\n- `read-hosts` asks about data reads of one file and opens that file. It supplies a native answer about the path and a witnessed open of it.\n- `metadata-propernames-read-connectives` asks about metadata reads of the file the policy names and reads another file through a fresh descriptor. Its answer concerns a file its attempt does not read, so the answer predicts nothing about that read. The read is witnessed separately by its descriptor identity, byte count and bytes.\n- `read-propernames` asks about data reads of the file the policy names and opens that file. It supplies a native answer about that path and a witnessed attempt to open it.\n\nWhere the three files exist and the caller can read them, the first two answers are `allow` and their attempts succeed; the third answer is `deny` and its open fails with errno 1 (`EPERM`). The run still finishes and its process exits 0: a finished run can hold a failed attempt. The deny answer and the failed open are separate observations. The reply records them side by side and states neither that they agree nor what caused the failure.\n\nThese results are observations on the build and machine that produced them, under those conditions. They are not commitments. The paths, labels, step count and order, the policy text with its `(with no-report)` modifier, the errno and every native result can differ between builds. The modifier asks the kernel not to report the refused open in the system log; it promises nothing about what a run logs.",
             "title": "Emitted example"
           },
           {
@@ -112192,57 +112212,67 @@
           {
             "context": {},
             "document": {
+              "phases": [
+                {
+                  "actions": [
+                    {
+                      "attempt": {
+                        "action": "open_read",
+                        "kind": "file",
+                        "target": "/etc/hosts"
+                      },
+                      "sandbox_check": {
+                        "filter": {
+                          "kind": "path",
+                          "value": "/etc/hosts"
+                        },
+                        "operation": "file-read-data"
+                      },
+                      "step_id": "read-hosts"
+                    },
+                    {
+                      "attempt": {
+                        "action": "read_fresh",
+                        "kind": "file",
+                        "target": "/usr/share/dict/connectives"
+                      },
+                      "sandbox_check": {
+                        "filter": {
+                          "kind": "path",
+                          "value": "/usr/share/dict/propernames"
+                        },
+                        "operation": "file-read-metadata"
+                      },
+                      "step_id": "metadata-propernames-read-connectives"
+                    }
+                  ],
+                  "phase_id": "initial-reads"
+                },
+                {
+                  "actions": [
+                    {
+                      "attempt": {
+                        "action": "open_read",
+                        "kind": "file",
+                        "target": "/usr/share/dict/propernames"
+                      },
+                      "sandbox_check": {
+                        "filter": {
+                          "kind": "path",
+                          "value": "/usr/share/dict/propernames"
+                        },
+                        "operation": "file-read-data"
+                      },
+                      "step_id": "read-propernames"
+                    }
+                  ],
+                  "phase_id": "restricted-read"
+                }
+              ],
               "policy": {
                 "format": "sbpl",
                 "sbpl_source": "(version 1) (allow default) (deny file-read-data (literal \"/usr/share/dict/propernames\") (with no-report))"
               },
-              "probe_plan": [
-                {
-                  "attempt": {
-                    "action": "open_read",
-                    "kind": "file",
-                    "target": "/etc/hosts"
-                  },
-                  "sandbox_check": {
-                    "filter": {
-                      "kind": "path",
-                      "value": "/etc/hosts"
-                    },
-                    "operation": "file-read-data"
-                  },
-                  "step_id": "read-hosts"
-                },
-                {
-                  "attempt": {
-                    "action": "read_fresh",
-                    "kind": "file",
-                    "target": "/usr/share/dict/connectives"
-                  },
-                  "sandbox_check": {
-                    "filter": {
-                      "kind": "path",
-                      "value": "/usr/share/dict/propernames"
-                    },
-                    "operation": "file-read-metadata"
-                  },
-                  "step_id": "metadata-propernames-read-connectives"
-                },
-                {
-                  "attempt": {
-                    "action": "open_read",
-                    "kind": "file",
-                    "target": "/usr/share/dict/propernames"
-                  },
-                  "sandbox_check": {
-                    "filter": {
-                      "kind": "path",
-                      "value": "/usr/share/dict/propernames"
-                    },
-                    "operation": "file-read-data"
-                  },
-                  "step_id": "read-propernames"
-                }
-              ],
               "specimen_id": "example"
             },
             "facts": {
@@ -112252,7 +112282,7 @@
             },
             "id": "request.specimen.example",
             "kind": "example",
-            "prose": "These commands print the example and submit it unchanged:\n\n```sh\npolicy-witness example > example.json\npolicy-witness run example.json\n```\n\nThe printed document carries the emitting build's identity where this rendering shows `<reported-contract>`.\n\nThe policy allows by default and denies data reads of the one file its specific rule names. Each step establishes something different:\n\n- `read-hosts` asks about data reads of one file and opens that file. It supplies a native answer about the path and a witnessed open of it.\n- `metadata-propernames-read-connectives` asks about metadata reads of the file the policy names and reads another file through a fresh descriptor. Its answer concerns a file its attempt does not read, so the answer predicts nothing about that read. The read is witnessed separately by its descriptor identity, byte count and bytes.\n- `read-propernames` asks about data reads of the file the policy names and opens that file. It supplies a native answer about that path and a witnessed attempt to open it.\n\nWhere the three files exist and the caller can read them, the first two answers are `allow` and their attempts succeed; the third answer is `deny` and its open fails with errno 1 (`EPERM`). The run still finishes and its process exits 0: a finished run can hold a failed attempt. The deny answer and the failed open are separate observations. The reply records them side by side and states neither that they agree nor what caused the failure.\n\nThese results are observations on the build and machine that produced them, under those conditions. They are not commitments. The paths, labels, step count and order, the policy text with its `(with no-report)` modifier, the errno and every native result can differ between builds. The modifier asks the kernel not to report the refused open in the system log; it promises nothing about what a run logs.",
+            "prose": "These commands print the example and submit it unchanged:\n\n```sh\npolicy-witness example > example.json\npolicy-witness run example.json\n```\n\nThe printed document carries the emitting build's identity where this rendering shows `<reported-contract>`.\n\nThe ordinary phased document keeps one worker across two collection boundaries. `initial-reads` collects the first two queries before releasing their attempts; after that phase completes, `restricted-read` collects the final query before releasing its attempt. The policy is applied once.\n\nThe policy allows by default and denies data reads of the one file its specific rule names. Each step establishes something different:\n\n- `read-hosts` asks about data reads of one file and opens that file. It supplies a native answer about the path and a witnessed open of it.\n- `metadata-propernames-read-connectives` asks about metadata reads of the file the policy names and reads another file through a fresh descriptor. Its answer concerns a file its attempt does not read, so the answer predicts nothing about that read. The read is witnessed separately by its descriptor identity, byte count and bytes.\n- `read-propernames` asks about data reads of the file the policy names and opens that file. It supplies a native answer about that path and a witnessed attempt to open it.\n\nWhere the three files exist and the caller can read them, the first two answers are `allow` and their attempts succeed; the third answer is `deny` and its open fails with errno 1 (`EPERM`). The run still finishes and its process exits 0: a finished run can hold a failed attempt. The deny answer and the failed open are separate observations. The reply records them side by side and states neither that they agree nor what caused the failure.\n\nThese results are observations on the build and machine that produced them, under those conditions. They are not commitments. The paths, labels, step count and order, the policy text with its `(with no-report)` modifier, the errno and every native result can differ between builds. The modifier asks the kernel not to report the refused open in the system log; it promises nothing about what a run logs.",
             "title": "Emitted example"
           },
           {
@@ -152259,57 +152289,67 @@
           {
             "context": {},
             "document": {
+              "phases": [
+                {
+                  "actions": [
+                    {
+                      "attempt": {
+                        "action": "open_read",
+                        "kind": "file",
+                        "target": "/etc/hosts"
+                      },
+                      "sandbox_check": {
+                        "filter": {
+                          "kind": "path",
+                          "value": "/etc/hosts"
+                        },
+                        "operation": "file-read-data"
+                      },
+                      "step_id": "read-hosts"
+                    },
+                    {
+                      "attempt": {
+                        "action": "read_fresh",
+                        "kind": "file",
+                        "target": "/usr/share/dict/connectives"
+                      },
+                      "sandbox_check": {
+                        "filter": {
+                          "kind": "path",
+                          "value": "/usr/share/dict/propernames"
+                        },
+                        "operation": "file-read-metadata"
+                      },
+                      "step_id": "metadata-propernames-read-connectives"
+                    }
+                  ],
+                  "phase_id": "initial-reads"
+                },
+                {
+                  "actions": [
+                    {
+                      "attempt": {
+                        "action": "open_read",
+                        "kind": "file",
+                        "target": "/usr/share/dict/propernames"
+                      },
+                      "sandbox_check": {
+                        "filter": {
+                          "kind": "path",
+                          "value": "/usr/share/dict/propernames"
+                        },
+                        "operation": "file-read-data"
+                      },
+                      "step_id": "read-propernames"
+                    }
+                  ],
+                  "phase_id": "restricted-read"
+                }
+              ],
               "policy": {
                 "format": "sbpl",
                 "sbpl_source": "(version 1) (allow default) (deny file-read-data (literal \"/usr/share/dict/propernames\") (with no-report))"
               },
-              "probe_plan": [
-                {
-                  "attempt": {
-                    "action": "open_read",
-                    "kind": "file",
-                    "target": "/etc/hosts"
-                  },
-                  "sandbox_check": {
-                    "filter": {
-                      "kind": "path",
-                      "value": "/etc/hosts"
-                    },
-                    "operation": "file-read-data"
-                  },
-                  "step_id": "read-hosts"
-                },
-                {
-                  "attempt": {
-                    "action": "read_fresh",
-                    "kind": "file",
-                    "target": "/usr/share/dict/connectives"
-                  },
-                  "sandbox_check": {
-                    "filter": {
-                      "kind": "path",
-                      "value": "/usr/share/dict/propernames"
-                    },
-                    "operation": "file-read-metadata"
-                  },
-                  "step_id": "metadata-propernames-read-connectives"
-                },
-                {
-                  "attempt": {
-                    "action": "open_read",
-                    "kind": "file",
-                    "target": "/usr/share/dict/propernames"
-                  },
-                  "sandbox_check": {
-                    "filter": {
-                      "kind": "path",
-                      "value": "/usr/share/dict/propernames"
-                    },
-                    "operation": "file-read-data"
-                  },
-                  "step_id": "read-propernames"
-                }
-              ],
               "specimen_id": "example"
             },
             "facts": {
@@ -152319,7 +152359,7 @@
             },
             "id": "request.specimen.example",
             "kind": "example",
-            "prose": "These commands print the example and submit it unchanged:\n\n```sh\npolicy-witness example > example.json\npolicy-witness run example.json\n```\n\nThe printed document carries the emitting build's identity where this rendering shows `<reported-contract>`.\n\nThe policy allows by default and denies data reads of the one file its specific rule names. Each step establishes something different:\n\n- `read-hosts` asks about data reads of one file and opens that file. It supplies a native answer about the path and a witnessed open of it.\n- `metadata-propernames-read-connectives` asks about metadata reads of the file the policy names and reads another file through a fresh descriptor. Its answer concerns a file its attempt does not read, so the answer predicts nothing about that read. The read is witnessed separately by its descriptor identity, byte count and bytes.\n- `read-propernames` asks about data reads of the file the policy names and opens that file. It supplies a native answer about that path and a witnessed attempt to open it.\n\nWhere the three files exist and the caller can read them, the first two answers are `allow` and their attempts succeed; the third answer is `deny` and its open fails with errno 1 (`EPERM`). The run still finishes and its process exits 0: a finished run can hold a failed attempt. The deny answer and the failed open are separate observations. The reply records them side by side and states neither that they agree nor what caused the failure.\n\nThese results are observations on the build and machine that produced them, under those conditions. They are not commitments. The paths, labels, step count and order, the policy text with its `(with no-report)` modifier, the errno and every native result can differ between builds. The modifier asks the kernel not to report the refused open in the system log; it promises nothing about what a run logs.",
+            "prose": "These commands print the example and submit it unchanged:\n\n```sh\npolicy-witness example > example.json\npolicy-witness run example.json\n```\n\nThe printed document carries the emitting build's identity where this rendering shows `<reported-contract>`.\n\nThe ordinary phased document keeps one worker across two collection boundaries. `initial-reads` collects the first two queries before releasing their attempts; after that phase completes, `restricted-read` collects the final query before releasing its attempt. The policy is applied once.\n\nThe policy allows by default and denies data reads of the one file its specific rule names. Each step establishes something different:\n\n- `read-hosts` asks about data reads of one file and opens that file. It supplies a native answer about the path and a witnessed open of it.\n- `metadata-propernames-read-connectives` asks about metadata reads of the file the policy names and reads another file through a fresh descriptor. Its answer concerns a file its attempt does not read, so the answer predicts nothing about that read. The read is witnessed separately by its descriptor identity, byte count and bytes.\n- `read-propernames` asks about data reads of the file the policy names and opens that file. It supplies a native answer about that path and a witnessed attempt to open it.\n\nWhere the three files exist and the caller can read them, the first two answers are `allow` and their attempts succeed; the third answer is `deny` and its open fails with errno 1 (`EPERM`). The run still finishes and its process exits 0: a finished run can hold a failed attempt. The deny answer and the failed open are separate observations. The reply records them side by side and states neither that they agree nor what caused the failure.\n\nThese results are observations on the build and machine that produced them, under those conditions. They are not commitments. The paths, labels, step count and order, the policy text with its `(with no-report)` modifier, the errno and every native result can differ between builds. The modifier asks the kernel not to report the refused open in the system log; it promises nothing about what a run logs.",
             "title": "Emitted example"
           },
           {
@@ -188818,57 +188858,67 @@
           {
             "context": {},
             "document": {
+              "phases": [
+                {
+                  "actions": [
+                    {
+                      "attempt": {
+                        "action": "open_read",
+                        "kind": "file",
+                        "target": "/etc/hosts"
+                      },
+                      "sandbox_check": {
+                        "filter": {
+                          "kind": "path",
+                          "value": "/etc/hosts"
+                        },
+                        "operation": "file-read-data"
+                      },
+                      "step_id": "read-hosts"
+                    },
+                    {
+                      "attempt": {
+                        "action": "read_fresh",
+                        "kind": "file",
+                        "target": "/usr/share/dict/connectives"
+                      },
+                      "sandbox_check": {
+                        "filter": {
+                          "kind": "path",
+                          "value": "/usr/share/dict/propernames"
+                        },
+                        "operation": "file-read-metadata"
+                      },
+                      "step_id": "metadata-propernames-read-connectives"
+                    }
+                  ],
+                  "phase_id": "initial-reads"
+                },
+                {
+                  "actions": [
+                    {
+                      "attempt": {
+                        "action": "open_read",
+                        "kind": "file",
+                        "target": "/usr/share/dict/propernames"
+                      },
+                      "sandbox_check": {
+                        "filter": {
+                          "kind": "path",
+                          "value": "/usr/share/dict/propernames"
+                        },
+                        "operation": "file-read-data"
+                      },
+                      "step_id": "read-propernames"
+                    }
+                  ],
+                  "phase_id": "restricted-read"
+                }
+              ],
               "policy": {
                 "format": "sbpl",
                 "sbpl_source": "(version 1) (allow default) (deny file-read-data (literal \"/usr/share/dict/propernames\") (with no-report))"
               },
-              "probe_plan": [
-                {
-                  "attempt": {
-                    "action": "open_read",
-                    "kind": "file",
-                    "target": "/etc/hosts"
-                  },
-                  "sandbox_check": {
-                    "filter": {
-                      "kind": "path",
-                      "value": "/etc/hosts"
-                    },
-                    "operation": "file-read-data"
-                  },
-                  "step_id": "read-hosts"
-                },
-                {
-                  "attempt": {
-                    "action": "read_fresh",
-                    "kind": "file",
-                    "target": "/usr/share/dict/connectives"
-                  },
-                  "sandbox_check": {
-                    "filter": {
-                      "kind": "path",
-                      "value": "/usr/share/dict/propernames"
-                    },
-                    "operation": "file-read-metadata"
-                  },
-                  "step_id": "metadata-propernames-read-connectives"
-                },
-                {
-                  "attempt": {
-                    "action": "open_read",
-                    "kind": "file",
-                    "target": "/usr/share/dict/propernames"
-                  },
-                  "sandbox_check": {
-                    "filter": {
-                      "kind": "path",
-                      "value": "/usr/share/dict/propernames"
-                    },
-                    "operation": "file-read-data"
-                  },
-                  "step_id": "read-propernames"
-                }
-              ],
               "specimen_id": "example"
             },
             "facts": {
@@ -188878,7 +188928,7 @@
             },
             "id": "request.specimen.example",
             "kind": "example",
-            "prose": "These commands print the example and submit it unchanged:\n\n```sh\npolicy-witness example > example.json\npolicy-witness run example.json\n```\n\nThe printed document carries the emitting build's identity where this rendering shows `<reported-contract>`.\n\nThe policy allows by default and denies data reads of the one file its specific rule names. Each step establishes something different:\n\n- `read-hosts` asks about data reads of one file and opens that file. It supplies a native answer about the path and a witnessed open of it.\n- `metadata-propernames-read-connectives` asks about metadata reads of the file the policy names and reads another file through a fresh descriptor. Its answer concerns a file its attempt does not read, so the answer predicts nothing about that read. The read is witnessed separately by its descriptor identity, byte count and bytes.\n- `read-propernames` asks about data reads of the file the policy names and opens that file. It supplies a native answer about that path and a witnessed attempt to open it.\n\nWhere the three files exist and the caller can read them, the first two answers are `allow` and their attempts succeed; the third answer is `deny` and its open fails with errno 1 (`EPERM`). The run still finishes and its process exits 0: a finished run can hold a failed attempt. The deny answer and the failed open are separate observations. The reply records them side by side and states neither that they agree nor what caused the failure.\n\nThese results are observations on the build and machine that produced them, under those conditions. They are not commitments. The paths, labels, step count and order, the policy text with its `(with no-report)` modifier, the errno and every native result can differ between builds. The modifier asks the kernel not to report the refused open in the system log; it promises nothing about what a run logs.",
+            "prose": "These commands print the example and submit it unchanged:\n\n```sh\npolicy-witness example > example.json\npolicy-witness run example.json\n```\n\nThe printed document carries the emitting build's identity where this rendering shows `<reported-contract>`.\n\nThe ordinary phased document keeps one worker across two collection boundaries. `initial-reads` collects the first two queries before releasing their attempts; after that phase completes, `restricted-read` collects the final query before releasing its attempt. The policy is applied once.\n\nThe policy allows by default and denies data reads of the one file its specific rule names. Each step establishes something different:\n\n- `read-hosts` asks about data reads of one file and opens that file. It supplies a native answer about the path and a witnessed open of it.\n- `metadata-propernames-read-connectives` asks about metadata reads of the file the policy names and reads another file through a fresh descriptor. Its answer concerns a file its attempt does not read, so the answer predicts nothing about that read. The read is witnessed separately by its descriptor identity, byte count and bytes.\n- `read-propernames` asks about data reads of the file the policy names and opens that file. It supplies a native answer about that path and a witnessed attempt to open it.\n\nWhere the three files exist and the caller can read them, the first two answers are `allow` and their attempts succeed; the third answer is `deny` and its open fails with errno 1 (`EPERM`). The run still finishes and its process exits 0: a finished run can hold a failed attempt. The deny answer and the failed open are separate observations. The reply records them side by side and states neither that they agree nor what caused the failure.\n\nThese results are observations on the build and machine that produced them, under those conditions. They are not commitments. The paths, labels, step count and order, the policy text with its `(with no-report)` modifier, the errno and every native result can differ between builds. The modifier asks the kernel not to report the refused open in the system log; it promises nothing about what a run logs.",
             "title": "Emitted example"
           },
           {
@@ -260918,57 +260968,67 @@
           {
             "context": {},
             "document": {
+              "phases": [
+                {
+                  "actions": [
+                    {
+                      "attempt": {
+                        "action": "open_read",
+                        "kind": "file",
+                        "target": "/etc/hosts"
+                      },
+                      "sandbox_check": {
+                        "filter": {
+                          "kind": "path",
+                          "value": "/etc/hosts"
+                        },
+                        "operation": "file-read-data"
+                      },
+                      "step_id": "read-hosts"
+                    },
+                    {
+                      "attempt": {
+                        "action": "read_fresh",
+                        "kind": "file",
+                        "target": "/usr/share/dict/connectives"
+                      },
+                      "sandbox_check": {
+                        "filter": {
+                          "kind": "path",
+                          "value": "/usr/share/dict/propernames"
+                        },
+                        "operation": "file-read-metadata"
+                      },
+                      "step_id": "metadata-propernames-read-connectives"
+                    }
+                  ],
+                  "phase_id": "initial-reads"
+                },
+                {
+                  "actions": [
+                    {
+                      "attempt": {
+                        "action": "open_read",
+                        "kind": "file",
+                        "target": "/usr/share/dict/propernames"
+                      },
+                      "sandbox_check": {
+                        "filter": {
+                          "kind": "path",
+                          "value": "/usr/share/dict/propernames"
+                        },
+                        "operation": "file-read-data"
+                      },
+                      "step_id": "read-propernames"
+                    }
+                  ],
+                  "phase_id": "restricted-read"
+                }
+              ],
               "policy": {
                 "format": "sbpl",
                 "sbpl_source": "(version 1) (allow default) (deny file-read-data (literal \"/usr/share/dict/propernames\") (with no-report))"
               },
-              "probe_plan": [
-                {
-                  "attempt": {
-                    "action": "open_read",
-                    "kind": "file",
-                    "target": "/etc/hosts"
-                  },
-                  "sandbox_check": {
-                    "filter": {
-                      "kind": "path",
-                      "value": "/etc/hosts"
-                    },
-                    "operation": "file-read-data"
-                  },
-                  "step_id": "read-hosts"
-                },
-                {
-                  "attempt": {
-                    "action": "read_fresh",
-                    "kind": "file",
-                    "target": "/usr/share/dict/connectives"
-                  },
-                  "sandbox_check": {
-                    "filter": {
-                      "kind": "path",
-                      "value": "/usr/share/dict/propernames"
-                    },
-                    "operation": "file-read-metadata"
-                  },
-                  "step_id": "metadata-propernames-read-connectives"
-                },
-                {
-                  "attempt": {
-                    "action": "open_read",
-                    "kind": "file",
-                    "target": "/usr/share/dict/propernames"
-                  },
-                  "sandbox_check": {
-                    "filter": {
-                      "kind": "path",
-                      "value": "/usr/share/dict/propernames"
-                    },
-                    "operation": "file-read-data"
-                  },
-                  "step_id": "read-propernames"
-                }
-              ],
               "specimen_id": "example"
             },
             "facts": {
@@ -260978,7 +261038,7 @@
             },
             "id": "request.specimen.example",
             "kind": "example",
-            "prose": "These commands print the example and submit it unchanged:\n\n```sh\npolicy-witness example > example.json\npolicy-witness run example.json\n```\n\nThe printed document carries the emitting build's identity where this rendering shows `<reported-contract>`.\n\nThe policy allows by default and denies data reads of the one file its specific rule names. Each step establishes something different:\n\n- `read-hosts` asks about data reads of one file and opens that file. It supplies a native answer about the path and a witnessed open of it.\n- `metadata-propernames-read-connectives` asks about metadata reads of the file the policy names and reads another file through a fresh descriptor. Its answer concerns a file its attempt does not read, so the answer predicts nothing about that read. The read is witnessed separately by its descriptor identity, byte count and bytes.\n- `read-propernames` asks about data reads of the file the policy names and opens that file. It supplies a native answer about that path and a witnessed attempt to open it.\n\nWhere the three files exist and the caller can read them, the first two answers are `allow` and their attempts succeed; the third answer is `deny` and its open fails with errno 1 (`EPERM`). The run still finishes and its process exits 0: a finished run can hold a failed attempt. The deny answer and the failed open are separate observations. The reply records them side by side and states neither that they agree nor what caused the failure.\n\nThese results are observations on the build and machine that produced them, under those conditions. They are not commitments. The paths, labels, step count and order, the policy text with its `(with no-report)` modifier, the errno and every native result can differ between builds. The modifier asks the kernel not to report the refused open in the system log; it promises nothing about what a run logs.",
+            "prose": "These commands print the example and submit it unchanged:\n\n```sh\npolicy-witness example > example.json\npolicy-witness run example.json\n```\n\nThe printed document carries the emitting build's identity where this rendering shows `<reported-contract>`.\n\nThe ordinary phased document keeps one worker across two collection boundaries. `initial-reads` collects the first two queries before releasing their attempts; after that phase completes, `restricted-read` collects the final query before releasing its attempt. The policy is applied once.\n\nThe policy allows by default and denies data reads of the one file its specific rule names. Each step establishes something different:\n\n- `read-hosts` asks about data reads of one file and opens that file. It supplies a native answer about the path and a witnessed open of it.\n- `metadata-propernames-read-connectives` asks about metadata reads of the file the policy names and reads another file through a fresh descriptor. Its answer concerns a file its attempt does not read, so the answer predicts nothing about that read. The read is witnessed separately by its descriptor identity, byte count and bytes.\n- `read-propernames` asks about data reads of the file the policy names and opens that file. It supplies a native answer about that path and a witnessed attempt to open it.\n\nWhere the three files exist and the caller can read them, the first two answers are `allow` and their attempts succeed; the third answer is `deny` and its open fails with errno 1 (`EPERM`). The run still finishes and its process exits 0: a finished run can hold a failed attempt. The deny answer and the failed open are separate observations. The reply records them side by side and states neither that they agree nor what caused the failure.\n\nThese results are observations on the build and machine that produced them, under those conditions. They are not commitments. The paths, labels, step count and order, the policy text with its `(with no-report)` modifier, the errno and every native result can differ between builds. The modifier asks the kernel not to report the refused open in the system log; it promises nothing about what a run logs.",
             "title": "Emitted example"
           },
           {
@@ -456360,57 +456420,67 @@
           {
             "context": {},
             "document": {
+              "phases": [
+                {
+                  "actions": [
+                    {
+                      "attempt": {
+                        "action": "open_read",
+                        "kind": "file",
+                        "target": "/etc/hosts"
+                      },
+                      "sandbox_check": {
+                        "filter": {
+                          "kind": "path",
+                          "value": "/etc/hosts"
+                        },
+                        "operation": "file-read-data"
+                      },
+                      "step_id": "read-hosts"
+                    },
+                    {
+                      "attempt": {
+                        "action": "read_fresh",
+                        "kind": "file",
+                        "target": "/usr/share/dict/connectives"
+                      },
+                      "sandbox_check": {
+                        "filter": {
+                          "kind": "path",
+                          "value": "/usr/share/dict/propernames"
+                        },
+                        "operation": "file-read-metadata"
+                      },
+                      "step_id": "metadata-propernames-read-connectives"
+                    }
+                  ],
+                  "phase_id": "initial-reads"
+                },
+                {
+                  "actions": [
+                    {
+                      "attempt": {
+                        "action": "open_read",
+                        "kind": "file",
+                        "target": "/usr/share/dict/propernames"
+                      },
+                      "sandbox_check": {
+                        "filter": {
+                          "kind": "path",
+                          "value": "/usr/share/dict/propernames"
+                        },
+                        "operation": "file-read-data"
+                      },
+                      "step_id": "read-propernames"
+                    }
+                  ],
+                  "phase_id": "restricted-read"
+                }
+              ],
               "policy": {
                 "format": "sbpl",
                 "sbpl_source": "(version 1) (allow default) (deny file-read-data (literal \"/usr/share/dict/propernames\") (with no-report))"
               },
-              "probe_plan": [
-                {
-                  "attempt": {
-                    "action": "open_read",
-                    "kind": "file",
-                    "target": "/etc/hosts"
-                  },
-                  "sandbox_check": {
-                    "filter": {
-                      "kind": "path",
-                      "value": "/etc/hosts"
-                    },
-                    "operation": "file-read-data"
-                  },
-                  "step_id": "read-hosts"
-                },
-                {
-                  "attempt": {
-                    "action": "read_fresh",
-                    "kind": "file",
-                    "target": "/usr/share/dict/connectives"
-                  },
-                  "sandbox_check": {
-                    "filter": {
-                      "kind": "path",
-                      "value": "/usr/share/dict/propernames"
-                    },
-                    "operation": "file-read-metadata"
-                  },
-                  "step_id": "metadata-propernames-read-connectives"
-                },
-                {
-                  "attempt": {
-                    "action": "open_read",
-                    "kind": "file",
-                    "target": "/usr/share/dict/propernames"
-                  },
-                  "sandbox_check": {
-                    "filter": {
-                      "kind": "path",
-                      "value": "/usr/share/dict/propernames"
-                    },
-                    "operation": "file-read-data"
-                  },
-                  "step_id": "read-propernames"
-                }
-              ],
               "specimen_id": "example"
             },
             "facts": {
@@ -456420,7 +456490,7 @@
             },
             "id": "request.specimen.example",
             "kind": "example",
-            "prose": "These commands print the example and submit it unchanged:\n\n```sh\npolicy-witness example > example.json\npolicy-witness run example.json\n```\n\nThe printed document carries the emitting build's identity where this rendering shows `<reported-contract>`.\n\nThe policy allows by default and denies data reads of the one file its specific rule names. Each step establishes something different:\n\n- `read-hosts` asks about data reads of one file and opens that file. It supplies a native answer about the path and a witnessed open of it.\n- `metadata-propernames-read-connectives` asks about metadata reads of the file the policy names and reads another file through a fresh descriptor. Its answer concerns a file its attempt does not read, so the answer predicts nothing about that read. The read is witnessed separately by its descriptor identity, byte count and bytes.\n- `read-propernames` asks about data reads of the file the policy names and opens that file. It supplies a native answer about that path and a witnessed attempt to open it.\n\nWhere the three files exist and the caller can read them, the first two answers are `allow` and their attempts succeed; the third answer is `deny` and its open fails with errno 1 (`EPERM`). The run still finishes and its process exits 0: a finished run can hold a failed attempt. The deny answer and the failed open are separate observations. The reply records them side by side and states neither that they agree nor what caused the failure.\n\nThese results are observations on the build and machine that produced them, under those conditions. They are not commitments. The paths, labels, step count and order, the policy text with its `(with no-report)` modifier, the errno and every native result can differ between builds. The modifier asks the kernel not to report the refused open in the system log; it promises nothing about what a run logs.",
+            "prose": "These commands print the example and submit it unchanged:\n\n```sh\npolicy-witness example > example.json\npolicy-witness run example.json\n```\n\nThe printed document carries the emitting build's identity where this rendering shows `<reported-contract>`.\n\nThe ordinary phased document keeps one worker across two collection boundaries. `initial-reads` collects the first two queries before releasing their attempts; after that phase completes, `restricted-read` collects the final query before releasing its attempt. The policy is applied once.\n\nThe policy allows by default and denies data reads of the one file its specific rule names. Each step establishes something different:\n\n- `read-hosts` asks about data reads of one file and opens that file. It supplies a native answer about the path and a witnessed open of it.\n- `metadata-propernames-read-connectives` asks about metadata reads of the file the policy names and reads another file through a fresh descriptor. Its answer concerns a file its attempt does not read, so the answer predicts nothing about that read. The read is witnessed separately by its descriptor identity, byte count and bytes.\n- `read-propernames` asks about data reads of the file the policy names and opens that file. It supplies a native answer about that path and a witnessed attempt to open it.\n\nWhere the three files exist and the caller can read them, the first two answers are `allow` and their attempts succeed; the third answer is `deny` and its open fails with errno 1 (`EPERM`). The run still finishes and its process exits 0: a finished run can hold a failed attempt. The deny answer and the failed open are separate observations. The reply records them side by side and states neither that they agree nor what caused the failure.\n\nThese results are observations on the build and machine that produced them, under those conditions. They are not commitments. The paths, labels, step count and order, the policy text with its `(with no-report)` modifier, the errno and every native result can differ between builds. The modifier asks the kernel not to report the refused open in the system log; it promises nothing about what a run logs.",
             "title": "Emitted example"
           },
           {
@@ -586690,57 +586760,67 @@
           {
             "context": {},
             "document": {
+              "phases": [
+                {
+                  "actions": [
+                    {
+                      "attempt": {
+                        "action": "open_read",
+                        "kind": "file",
+                        "target": "/etc/hosts"
+                      },
+                      "sandbox_check": {
+                        "filter": {
+                          "kind": "path",
+                          "value": "/etc/hosts"
+                        },
+                        "operation": "file-read-data"
+                      },
+                      "step_id": "read-hosts"
+                    },
+                    {
+                      "attempt": {
+                        "action": "read_fresh",
+                        "kind": "file",
+                        "target": "/usr/share/dict/connectives"
+                      },
+                      "sandbox_check": {
+                        "filter": {
+                          "kind": "path",
+                          "value": "/usr/share/dict/propernames"
+                        },
+                        "operation": "file-read-metadata"
+                      },
+                      "step_id": "metadata-propernames-read-connectives"
+                    }
+                  ],
+                  "phase_id": "initial-reads"
+                },
+                {
+                  "actions": [
+                    {
+                      "attempt": {
+                        "action": "open_read",
+                        "kind": "file",
+                        "target": "/usr/share/dict/propernames"
+                      },
+                      "sandbox_check": {
+                        "filter": {
+                          "kind": "path",
+                          "value": "/usr/share/dict/propernames"
+                        },
+                        "operation": "file-read-data"
+                      },
+                      "step_id": "read-propernames"
+                    }
+                  ],
+                  "phase_id": "restricted-read"
+                }
+              ],
               "policy": {
                 "format": "sbpl",
                 "sbpl_source": "(version 1) (allow default) (deny file-read-data (literal \"/usr/share/dict/propernames\") (with no-report))"
               },
-              "probe_plan": [
-                {
-                  "attempt": {
-                    "action": "open_read",
-                    "kind": "file",
-                    "target": "/etc/hosts"
-                  },
-                  "sandbox_check": {
-                    "filter": {
-                      "kind": "path",
-                      "value": "/etc/hosts"
-                    },
-                    "operation": "file-read-data"
-                  },
-                  "step_id": "read-hosts"
-                },
-                {
-                  "attempt": {
-                    "action": "read_fresh",
-                    "kind": "file",
-                    "target": "/usr/share/dict/connectives"
-                  },
-                  "sandbox_check": {
-                    "filter": {
-                      "kind": "path",
-                      "value": "/usr/share/dict/propernames"
-                    },
-                    "operation": "file-read-metadata"
-                  },
-                  "step_id": "metadata-propernames-read-connectives"
-                },
-                {
-                  "attempt": {
-                    "action": "open_read",
-                    "kind": "file",
-                    "target": "/usr/share/dict/propernames"
-                  },
-                  "sandbox_check": {
-                    "filter": {
-                      "kind": "path",
-                      "value": "/usr/share/dict/propernames"
-                    },
-                    "operation": "file-read-data"
-                  },
-                  "step_id": "read-propernames"
-                }
-              ],
               "specimen_id": "example"
             },
             "facts": {
@@ -586750,7 +586830,7 @@
             },
             "id": "request.specimen.example",
             "kind": "example",
-            "prose": "These commands print the example and submit it unchanged:\n\n```sh\npolicy-witness example > example.json\npolicy-witness run example.json\n```\n\nThe printed document carries the emitting build's identity where this rendering shows `<reported-contract>`.\n\nThe policy allows by default and denies data reads of the one file its specific rule names. Each step establishes something different:\n\n- `read-hosts` asks about data reads of one file and opens that file. It supplies a native answer about the path and a witnessed open of it.\n- `metadata-propernames-read-connectives` asks about metadata reads of the file the policy names and reads another file through a fresh descriptor. Its answer concerns a file its attempt does not read, so the answer predicts nothing about that read. The read is witnessed separately by its descriptor identity, byte count and bytes.\n- `read-propernames` asks about data reads of the file the policy names and opens that file. It supplies a native answer about that path and a witnessed attempt to open it.\n\nWhere the three files exist and the caller can read them, the first two answers are `allow` and their attempts succeed; the third answer is `deny` and its open fails with errno 1 (`EPERM`). The run still finishes and its process exits 0: a finished run can hold a failed attempt. The deny answer and the failed open are separate observations. The reply records them side by side and states neither that they agree nor what caused the failure.\n\nThese results are observations on the build and machine that produced them, under those conditions. They are not commitments. The paths, labels, step count and order, the policy text with its `(with no-report)` modifier, the errno and every native result can differ between builds. The modifier asks the kernel not to report the refused open in the system log; it promises nothing about what a run logs.",
+            "prose": "These commands print the example and submit it unchanged:\n\n```sh\npolicy-witness example > example.json\npolicy-witness run example.json\n```\n\nThe printed document carries the emitting build's identity where this rendering shows `<reported-contract>`.\n\nThe ordinary phased document keeps one worker across two collection boundaries. `initial-reads` collects the first two queries before releasing their attempts; after that phase completes, `restricted-read` collects the final query before releasing its attempt. The policy is applied once.\n\nThe policy allows by default and denies data reads of the one file its specific rule names. Each step establishes something different:\n\n- `read-hosts` asks about data reads of one file and opens that file. It supplies a native answer about the path and a witnessed open of it.\n- `metadata-propernames-read-connectives` asks about metadata reads of the file the policy names and reads another file through a fresh descriptor. Its answer concerns a file its attempt does not read, so the answer predicts nothing about that read. The read is witnessed separately by its descriptor identity, byte count and bytes.\n- `read-propernames` asks about data reads of the file the policy names and opens that file. It supplies a native answer about that path and a witnessed attempt to open it.\n\nWhere the three files exist and the caller can read them, the first two answers are `allow` and their attempts succeed; the third answer is `deny` and its open fails with errno 1 (`EPERM`). The run still finishes and its process exits 0: a finished run can hold a failed attempt. The deny answer and the failed open are separate observations. The reply records them side by side and states neither that they agree nor what caused the failure.\n\nThese results are observations on the build and machine that produced them, under those conditions. They are not commitments. The paths, labels, step count and order, the policy text with its `(with no-report)` modifier, the errno and every native result can differ between builds. The modifier asks the kernel not to report the refused open in the system log; it promises nothing about what a run logs.",
             "title": "Emitted example"
           },
           {
