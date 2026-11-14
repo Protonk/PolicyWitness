@@ -1,11 +1,12 @@
 # One example through flat, phased and actor execution
 
-Status: proposed; implementation has not begun. Prepared against `d18ce849`,
-including the three-step example in `b4e00762` and the checker review in
-`9e14a1c6`. Three planning rehearsals on existing build 1430 observed the
-expected results and full-reader acceptance; they establish no acceptance of
-this implementation. Their scope and record locations are in the
-[rehearsal account](../records/example-expansion/REHEARSAL.md).
+Status: implemented in `898f3ed1` and qualified on signed build 1437 by
+`20261114T161752Z_f69e47e4`: all 20 selected cases passed. Ready for review
+and retirement; this plan and its records remain in place at the user's request.
+The [acceptance account](../records/example-expansion/ACCEPTANCE.md) records
+the candidate, native observations, constructed controls and evidence limits.
+The earlier [planning rehearsal](../records/example-expansion/REHEARSAL.md)
+remains planning context and supplies no candidate acceptance credit.
 Reusable machinery lives in the
 [example case and controls](../tests/suites/witness_contract/README.md#the-apps-own-example).
 The accepted local file assumptions are in
