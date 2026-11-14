@@ -7,7 +7,8 @@ tests/fixtures/blackbox_e2e, whose allowed and denied file steps are read as
 the workload's first and third steps, with one fresh-read step and three
 target samples authored here. Everything is placed in retained capture files
 exactly as the live case leaves them. No process is launched and nothing here
-is a native observation.
+is a native observation. The observer controls alone touch real files: two
+this case writes in its own directory.
 
 Each rejected control introduces one logical fault and states, independently
 of the checker's output, the exact set of (assertion identifier,
@@ -793,18 +794,33 @@ def controls():
     coherent('targets_not_observed_after', lambda s: s.update({'targets-after': None}),
              ['native.targets_unchanged'], unevaluated=FRESH_CORRESPONDENCE)
 
-    # A missing prerequisite withholds native credit and fault alike. B is only ever queried and
-    # opened without success, so the reply alone would never show that this user cannot read it.
+    # A missing prerequisite withholds every native pass. B is only ever queried and opened
+    # without success, so the reply alone would never show that this user cannot read it.
     other_prerequisites = PREREQUISITES[1:]
+
+    def unreadable(state, role_name):
+        """The first sample as the observer leaves it when its open is refused: no metadata and no digests."""
+        record = before(state, role_name)
+        kept = {'target': record['target'], 'resolved': record['resolved'], 'regular_file': False, 'readable': False,
+                'error': 'PermissionError: constructed'}
+        record.clear()
+        record.update(kept)
+
+    def not_regular(state, role_name):
+        """The first sample of something that is not a regular file: its metadata, and nothing read."""
+        record = before(state, role_name)
+        for member in ('sha256', 'length', 'prefix_sha256', 'prefix_length'):
+            record.pop(member)
+        record.update(regular_file=False, readable=False)
+
+    def unsampled(state, role_name):
+        state['targets-before']['targets'].remove(before(state, role_name))
     for role_name in 'ABC':
-        coherent(f'prerequisite_{role_name}_unreadable',
-                 lambda s, role_name=role_name: before(s, role_name).update(readable=False, error='PermissionError: constructed'),
+        coherent(f'prerequisite_{role_name}_unreadable', lambda s, role_name=role_name: unreadable(s, role_name),
                  ['prerequisite.targets_readable'], unevaluated=NATIVE + other_prerequisites)
-        coherent(f'prerequisite_{role_name}_not_regular',
-                 lambda s, role_name=role_name: before(s, role_name).update(regular_file=False),
+        coherent(f'prerequisite_{role_name}_not_regular', lambda s, role_name=role_name: not_regular(s, role_name),
                  ['prerequisite.targets_readable'], unevaluated=NATIVE + other_prerequisites)
-        coherent(f'prerequisite_{role_name}_not_sampled',
-                 lambda s, role_name=role_name: s['targets-before']['targets'].remove(before(s, role_name)),
+        coherent(f'prerequisite_{role_name}_not_sampled', lambda s, role_name=role_name: unsampled(s, role_name),
                  ['prerequisite.targets_readable'], unevaluated=NATIVE + other_prerequisites)
     coherent('prerequisite_not_observed', lambda s: s.update({'targets-before': None}),
              ['prerequisite.targets_readable'], unevaluated=NATIVE + other_prerequisites)
@@ -818,26 +834,110 @@ def controls():
         for sampled in (before, after):
             sampled(state, one).update(prefix_sha256=sampled(state, other)['prefix_sha256'],
                                        prefix_length=sampled(state, other)['prefix_length'])
-    for one, other in (('A', 'B'), ('C', 'A'), ('C', 'B')):
-        coherent(f'prerequisite_{one}_and_{other}_one_file', lambda s, one=one, other=other: same_file(s, one, other),
-                 ['prerequisite.distinct_identities'], unevaluated=NATIVE)
-    coherent('prerequisite_identity_not_observed',
-             lambda s: [sampled(s, 'B')['stat'].pop('st_ino') for sampled in (before, after)],
+    # Where C's sample changes, the fresh read is of the file the sample now describes, so the
+    # reply still corresponds and the prerequisite is the only fault.
+    coherent('prerequisite_A_and_B_one_file', lambda s: same_file(s, 'A', 'B'),
              ['prerequisite.distinct_identities'], unevaluated=NATIVE)
     for other in ('A', 'B'):
-        coherent(f'prerequisite_C_prefix_equals_{other}', lambda s, other=other: same_prefix(s, 'C', other),
+        coherent(f'prerequisite_C_and_{other}_one_file',
+                 lambda s, other=other: (same_file(s, 'C', other), fresh_of(s, other, content=False)),
+                 ['prerequisite.distinct_identities'], unevaluated=NATIVE)
+        coherent(f'prerequisite_C_prefix_equals_{other}',
+                 lambda s, other=other: (same_prefix(s, 'C', other), fresh_of(s, other, identity=False)),
                  ['prerequisite.distinguishing_prefixes'], unevaluated=NATIVE)
+
+    def identity_not_observed(state, role_name):
+        for sampled in (before, after):
+            sampled(state, role_name)['stat'].pop('st_ino')
+
+    def empty_prefix(state, role_name):
+        for sampled in (before, after):
+            sampled(state, role_name).update(prefix_length=0, prefix_sha256=hashlib.sha256(b'').hexdigest())
+        if role_name == 'C':
+            fresh_of(state, 'C', identity=False, count=0)
     for role_name in 'ABC':
-        coherent(f'prerequisite_{role_name}_prefix_empty',
-                 lambda s, role_name=role_name: [sampled(s, role_name).update(
-                     prefix_length=0, prefix_sha256=hashlib.sha256(b'').hexdigest()) for sampled in (before, after)],
+        coherent(f'prerequisite_{role_name}_identity_not_observed',
+                 lambda s, role_name=role_name: identity_not_observed(s, role_name),
+                 ['prerequisite.distinct_identities'], unevaluated=NATIVE)
+        coherent(f'prerequisite_{role_name}_prefix_empty', lambda s, role_name=role_name: empty_prefix(s, role_name),
                  ['prerequisite.distinguishing_prefixes'], unevaluated=NATIVE)
-    # Whatever the reply says, it earns nothing without the prerequisite.
+
+    # An expectation that is read and not met fails beside the missing prerequisite. Every native
+    # assertion not named as failing is unevaluated: without the prerequisite none passes.
+    def beside(name, change, prerequisite, faults, also=()):
+        failing = tuple(faults) + tuple(also)
+        coherent_or_not = coherent if not also else \
+            (lambda *args, unevaluated: add(*args, unevaluated=unevaluated, rest_holds=True))
+        withheld = tuple(ident for ident in NATIVE if ident not in failing)
+        if prerequisite == 'prerequisite.targets_readable':
+            withheld += other_prerequisites
+        coherent_or_not('prerequisite_' + name, change, [prerequisite, *faults], also, unevaluated=withheld)
+
+    readable = 'prerequisite.targets_readable'
+    # The fresh read is compared with this checker's sample of C, whatever is known of B or A.
+    for role_name in 'AB':
+        beside(f'{role_name}_not_sampled_and_fresh_identity_of_A',
+               lambda s, role_name=role_name: (fresh_of(s, 'A', content=False), unsampled(s, role_name)),
+               readable, ['native.step2.fresh_identity'])
+        beside(f'{role_name}_unreadable_and_fresh_content_of_B',
+               lambda s, role_name=role_name: (fresh_of(s, 'B', identity=False), unreadable(s, role_name)),
+               readable, ['native.step2.fresh_content'])
+    beside('B_unreadable_and_step1_open_fails', lambda s: (unreadable(s, 'B'), set_open(s, 1, EACCES)),
+           readable, ['native.step1.attempt'])
+    beside('B_unreadable_and_step1_denied', lambda s: (unreadable(s, 'B'), set_answer(s, 1, DENY)),
+           readable, ['native.step1.prediction'])
+    beside('A_unreadable_and_step3_eacces', lambda s: (unreadable(s, 'A'), set_open(s, 3, EACCES)),
+           readable, ['native.step3.attempt'])
+    beside('C_unreadable_and_answers_exchanged_2_3', lambda s: (unreadable(s, 'C'), exchange_answers(s, 2, 3)),
+           readable, ['native.step2.prediction', 'native.step3.prediction'])
+    beside('A_unreadable_and_fresh_close_fails', lambda s: (unreadable(s, 'A'), fresh_fails(s, 'close')),
+           readable, ['native.step2.attempt', 'native.step2.fresh_syscalls'])
+    beside('B_unreadable_and_order_unestablished', lambda s: (unreadable(s, 'B'), coherent_unestablished(s)),
+           readable, ['native.order'])
+    beside('B_unreadable_and_A_changed',
+           lambda s: (unreadable(s, 'B'), after(s, 'A').update(length=after(s, 'A')['length'] + 1)),
+           readable, ['native.targets_unchanged'])
+    beside('C_unreadable_and_validator_spawn_failed', lambda s: (unreadable(s, 'C'), spawn_failed(s)),
+           readable, ['native.completion', 'native.process_status', 'native.step1.prediction',
+                      'native.step2.prediction', 'native.step3.prediction'])
+    beside('C_not_sampled_and_status_3', lambda s: (unsampled(s, 'C'), s['run'].update(exit=3)),
+           readable, ['native.process_status'], ['reported.exit_code'])
+    beside('A_and_B_one_file_and_step3_eacces', lambda s: (same_file(s, 'A', 'B'), set_open(s, 3, EACCES)),
+           'prerequisite.distinct_identities', ['native.step3.attempt'])
+    beside('C_and_A_one_file_and_fresh_identity_of_neither', lambda s: same_file(s, 'C', 'A'),
+           'prerequisite.distinct_identities', ['native.step2.fresh_identity'])
+    beside('C_prefix_equals_A_and_fresh_content_of_neither', lambda s: same_prefix(s, 'C', 'A'),
+           'prerequisite.distinguishing_prefixes', ['native.step2.fresh_content'])
+    beside('C_prefix_equals_A_and_step1_denied', lambda s: (same_prefix(s, 'C', 'A'), fresh_of(s, 'A', identity=False),
+                                                           set_answer(s, 1, DENY)),
+           'prerequisite.distinguishing_prefixes', ['native.step1.prediction'])
+
+    # An expectation about a target this checker did not read is not read at all: an unmet one
+    # there is what the missing file itself would produce, and only the prerequisite reports it.
+    for name, change in (
+            ('A_unreadable_and_step1_open_fails', lambda s: (unreadable(s, 'A'), set_open(s, 1, ENOENT))),
+            ('A_not_sampled_and_step1_denied', lambda s: (unsampled(s, 'A'), set_answer(s, 1, DENY))),
+            ('B_unreadable_and_step2_denied', lambda s: (unreadable(s, 'B'), set_answer(s, 2, DENY))),
+            ('B_unreadable_and_step3_allowed', lambda s: (unreadable(s, 'B'), set_answer(s, 3, ALLOW))),
+            ('B_not_sampled_and_step3_open_enoent', lambda s: (unsampled(s, 'B'), set_open(s, 3, ENOENT))),
+            ('B_not_regular_and_step3_succeeds', lambda s: (not_regular(s, 'B'), set_open(s, 3))),
+            ('C_unreadable_and_fresh_identity_and_content_of_A', lambda s: (unreadable(s, 'C'), fresh_of(s, 'A'))),
+            ('C_not_sampled_and_fresh_open_fails', lambda s: (unsampled(s, 'C'), fresh_fails(s, 'open'))),
+            ('not_observed_and_every_step_altered',
+             lambda s: (s.update({'targets-before': None}), set_answer(s, 1, DENY), set_open(s, 3), fresh_of(s, 'A')))):
+        coherent('prerequisite_' + name, change, [readable], unevaluated=NATIVE + other_prerequisites)
+    # A sample of C without an identity leaves the reply's identity nothing to be compared with.
+    coherent('prerequisite_C_identity_not_observed_and_fresh_identity_of_A',
+             lambda s: (identity_not_observed(s, 'C'), fresh_of(s, 'A', content=False)),
+             ['prerequisite.distinct_identities'], unevaluated=NATIVE)
+    # The plan's absent B: the answer is unavailable and the open fails as a missing file does.
+    # Step 3 is not read, and the status and the unrelated fault in step 1 still are.
     add('prerequisite_B_unreadable_with_other_native_results',
-        lambda s: (before(s, 'B').update(readable=False, error='PermissionError: constructed'),
-                   set_answer(s, 3, ALLOW), set_open(s, 3), s['run'].update(exit=3)),
-        ['prerequisite.targets_readable'], ['reported.exit_code'], unevaluated=NATIVE + other_prerequisites,
-        rest_holds=True)
+        lambda s: (unreadable(s, 'B'), set_answer(s, 3, ALLOW), set_open(s, 3), set_open(s, 1, EACCES),
+                   s['run'].update(exit=3)),
+        [readable, 'native.process_status', 'native.step1.attempt'], ['reported.exit_code'],
+        unevaluated=tuple(ident for ident in NATIVE if ident not in ('native.process_status', 'native.step1.attempt'))
+        + other_prerequisites, rest_holds=True)
 
     for name, (code, path, names_identity, component) in REFUSALS.items():
         prefix = 'refusal.' + name
@@ -959,7 +1059,7 @@ def controls():
          'native.process_status', 'refusal.unbound.failure', 'refusal.unknown_member.host_reply',
          'native.targets_unchanged', 'passage.contract_matches_property_list'], rest_holds=True)
     add('combined_prerequisite_and_consistency',
-        lambda s: (before(s, 'A').update(readable=False), reply_of(s).update(specimen_id='another')),
+        lambda s: (before(s, 'A').update(readable=False, regular_file=False), reply_of(s).update(specimen_id='another')),
         ['prerequisite.targets_readable', 'echo.specimen_id'], unevaluated=NATIVE + other_prerequisites,
         rest_holds=True)
     # An association fault beside a native fault in another step: both stay visible.
@@ -1116,6 +1216,80 @@ def prepare_controls(artifacts):
     return records
 
 
+def observer_controls(artifacts):
+    """The observer's sample describes the file it opened, whatever its path names afterwards.
+
+    Each control runs the checker's observer on a file this case wrote, and
+    changes what the path names at the moment the observer's open returns.
+    The sample must carry the opened file's identity and content. The path is
+    then read again here, by name, to show that an observer which went back to
+    the path for either would have recorded something else.
+    """
+    from unittest import mock
+    directory = artifacts / 'captures' / 'observer'
+    directory.mkdir(parents=True)
+    opened_bytes = b'the file the observer opened\n' * 4
+    placed_bytes = b'another file placed at that path afterwards\n' * 4
+    assert opened_bytes[:BOUND] != placed_bytes[:BOUND] and len(opened_bytes) > BOUND
+    real_open = os.open
+
+    def digests(content):
+        return {'sha256': hashlib.sha256(content).hexdigest(), 'length': len(content),
+                'prefix_sha256': hashlib.sha256(content[:BOUND]).hexdigest(), 'prefix_length': len(content[:BOUND])}
+
+    def identity(status):
+        return {'st_dev': status.st_dev, 'st_ino': status.st_ino}
+
+    records = []
+    for name in ('path_replaced_after_open', 'path_unlinked_after_open'):
+        target, other = directory / (name + '.target'), directory / (name + '.other')
+        target.write_bytes(opened_bytes)
+        other.write_bytes(placed_bytes)
+        opened, placed = identity(os.stat(target)), identity(os.stat(other))
+        assert opened != placed, name
+        calls = []
+
+        def open_then_change(path, flags, *arguments, **options):
+            descriptor = real_open(path, flags, *arguments, **options)
+            calls.append(path)
+            if name == 'path_replaced_after_open':
+                os.replace(other, path)
+            else:
+                os.unlink(path)
+            return descriptor
+        with mock.patch.object(checker.os, 'open', open_then_change):
+            sample_taken = checker.observe_target(str(target))
+        assert calls == [str(target)], (name, calls)
+        problems = []
+        if not (sample_taken['readable'] and sample_taken['regular_file'] and sample_taken['error'] is None):
+            problems.append('the sample is not a read of a regular file: ' + repr(sample_taken['error']))
+        found = {key: _get_member(sample_taken, 'stat', key) for key in opened}
+        if found != opened:
+            problems.append(f'the sample carries identity {found}; the opened file has {opened}')
+        found = {key: sample_taken.get(key) for key in digests(opened_bytes)}
+        if found != digests(opened_bytes):
+            problems.append(f'the sample carries {found}; the opened file holds {digests(opened_bytes)}')
+        # What the path names now, read by name: another file, or nothing.
+        if name == 'path_replaced_after_open':
+            by_path = {'identity': identity(os.stat(target)), **digests(target.read_bytes())}
+            assert by_path == {'identity': placed, **digests(placed_bytes)}, (name, by_path)
+            assert by_path['identity'] != opened and all(
+                by_path[key] != digests(opened_bytes)[key] for key in ('sha256', 'length', 'prefix_sha256')), name
+        else:
+            by_path = None
+            assert not target.exists() and other.exists(), name
+        records.append({'control': 'observer_' + name, 'opened': {'identity': opened, **digests(opened_bytes)},
+                        'sample': sample_taken, 'path_afterwards': by_path, 'matched': not problems,
+                        'problems': problems})
+    return records
+
+
+def _get_member(record, *path):
+    for key in path:
+        record = record.get(key) if isinstance(record, dict) else None
+    return record
+
+
 def accepted_variants():
     """Alterations the checker must accept, each for a stated reason."""
     def short_target(state):
@@ -1174,9 +1348,10 @@ def main():
     if (artifacts / 'captures').exists():
         shutil.rmtree(artifacts / 'captures')
     results = {'baselines': [], 'accepted_variants': [], 'controls': [], 'perturbations': perturbation_controls(),
-               'prepare': prepare_controls(artifacts),
+               'prepare': prepare_controls(artifacts), 'observer': observer_controls(artifacts),
                'uniform_answer_demonstration': uniform_answer_demonstration(artifacts)}
-    failures = []
+    failures = [f'{record["control"]}: ' + '; '.join(record['problems'])
+                for record in results['observer'] if not record['matched']]
     # The checker's table must carry the classification this case authors for each assertion.
     disagreeing = [ident for ident, _, carried, _ in checker.ASSERTIONS if carried != expected_classification(ident)]
     if disagreeing:

@@ -579,10 +579,12 @@ def _samples(inputs, name):
 
 
 def _target_changes(inputs):
-    """For each path sampled before the run, the ways its sample after the run differs."""
+    """For each path read before the run, the ways its sample after the run differs."""
     after = _samples(inputs, 'targets-after') or {}
     changes = {}
     for target, earlier in (_samples(inputs, 'targets-before') or {}).items():
+        if not (earlier.get('regular_file') and earlier.get('readable')):
+            continue
         later = after.get(target)
         if later is None or not later.get('readable'):
             changes[target] = ['was not read after the run']
@@ -598,11 +600,30 @@ def _target_changes(inputs):
     return changes
 
 
-def _native(inputs, roles, matched, echoed, results):
-    """Each pinned native expectation as its own assertion. No assertion reads an answer beside its attempt."""
+# The target each half of each step concerns. Its expectation was observed with that file present
+# and readable, so it is read only when this checker read the file before the run.
+CONCERNS = {('step1', 'query'): 'A', ('step1', 'attempt'): 'A', ('step2', 'query'): 'B', ('step2', 'attempt'): 'C',
+            ('step3', 'query'): 'B', ('step3', 'attempt'): 'B'}
+
+
+def _native(inputs, roles, reply, matched, echoed, ground, results):
+    """Each pinned native expectation as its own assertion. No assertion reads an answer beside its attempt.
+
+    An expectation that is read and not met fails whatever else is missing. One
+    that is met passes only when every target prerequisite holds; `ground` says
+    which targets were read and whether a pass is credited.
+    """
+    def settle(ident, problems):
+        if problems or ground['uncredited'] is None:
+            results.record(ident, problems)
+        else:
+            results.unevaluated(ident, ground['uncredited'])
+
     run = inputs['run']
-    results.record('native.process_status', [] if _exact_int(run['exit'], 0) else
-                   f'the `run` process exited {_spell(run["exit"])}')
+    settle('native.process_status', [] if _exact_int(run['exit'], 0) else
+           [f'the `run` process exited {_spell(run["exit"])}'])
+    settle('native.completion', [] if reply.get('normalized_outcome') == 'finished' else
+           [f'the reply\'s `normalized_outcome` is {_spell(reply.get("normalized_outcome"))}'])
 
     # One reply record per step, read only for the half that echoes what was submitted.
     records = {submitted.get('step_id'): found for submitted, found in matched}
@@ -611,7 +632,11 @@ def _native(inputs, roles, matched, echoed, results):
         found = records.get(ident, [])
         unusable = None if len(found) == 1 else f'the reply carries {len(found)} steps with identifier {_spell(ident)}'
         for half, member, store in (('query', 'sandbox_check', queries), ('attempt', 'attempt', attempts)):
-            if unusable is None and not echoed[ident][half]:
+            concerned = CONCERNS[role, half]
+            if concerned not in ground['read']:
+                store[role] = (None, f'target {concerned} ({roles["targets"][concerned]}) was not read before the '
+                               f'run; nothing about it is credited or faulted')
+            elif unusable is None and not echoed[ident][half]:
                 store[role] = (None, f'the reply\'s {half} record for {_spell(ident)} does not echo the submitted '
                                f'{half}; nothing is read from it')
             elif unusable is None:
@@ -625,7 +650,7 @@ def _native(inputs, roles, matched, echoed, results):
             results.unevaluated(ident, withheld)
             return False
         problems = problems(record)
-        results.record(ident, problems)
+        settle(ident, problems)
         return not problems
 
     def prediction(outcome, native_rc, errno=None):
@@ -648,7 +673,7 @@ def _native(inputs, roles, matched, echoed, results):
             order = _get(records[roles['steps'][role]][0], 'comparison', 'order')
             if order != 'query_first':
                 orders.append(f'{STEPS[role]}: `order` is {_spell(order)}')
-        results.record('native.order', orders)
+        settle('native.order', orders)
     else:
         results.unevaluated('native.order', 'no answer met its expectation')
 
@@ -683,23 +708,23 @@ def _native(inputs, roles, matched, echoed, results):
     assertion('native.step2.fresh_syscalls', attempts['step2'], syscalls)
 
     changes = _target_changes(inputs)
-    results.record('native.targets_unchanged', [f'{target} {change}' for target, found in changes.items() for change in found])
+    settle('native.targets_unchanged', [f'{target} {change}' for target, found in changes.items() for change in found])
 
     # The correspondence with C needs one stable observation of C to compare against.
     target = roles['targets']['C']
     observed = (_samples(inputs, 'targets-before') or {}).get(target, {})
     source = attempts['step2'] if target not in changes else \
         (None, f'the samples of {target} before and after the run differ; no correspondence with it is claimed')
+    expected = {'device': _get(observed, 'stat', 'st_dev'), 'inode': _get(observed, 'stat', 'st_ino')}
 
     def identity(attempt):
         found = {key: _get(fresh(attempt), 'identity', key) for key in ('device', 'inode')}
-        expected = {'device': _get(observed, 'stat', 'st_dev'), 'inode': _get(observed, 'stat', 'st_ino')}
-        return [] if all(type(found[key]) is int and _exact_int(expected[key], found[key]) for key in found) else \
+        return [] if all(type(found[key]) is int and found[key] == expected[key] for key in found) else \
             [f'the descriptor identity is {_spell(found)}; this checker observed {_spell(expected)} for {target}']
 
     def content(attempt):
         read, problems = fresh(attempt), []
-        if not _exact_int(read.get('read_rc'), observed.get('prefix_length')) or type(observed.get('prefix_length')) is not int:
+        if not _exact_int(read.get('read_rc'), observed.get('prefix_length')):
             problems.append(f'`read_rc` is {_spell(read.get("read_rc"))}; this checker read a bounded prefix of '
                             f'{_spell(observed.get("prefix_length"))} bytes from {target}')
         try:
@@ -714,16 +739,25 @@ def _native(inputs, roles, matched, echoed, results):
     def given(supplied, reason):
         """The fresh read's record, when the call that supplies this observation succeeded."""
         return source if source[0] is None or supplied(fresh(source[0])) else (None, reason)
-    assertion('native.step2.fresh_identity',
-              given(lambda read: _exact_int(read.get('stat_rc'), 0), 'the descriptor stat did not succeed; it supplies no identity'),
-              identity)
+    # A sample of C without a device and inode leaves nothing to compare an identity with. A sample
+    # without a prefix differs from its later sample under the test above, which withholds both.
+    identified = given(lambda read: _exact_int(read.get('stat_rc'), 0),
+                       'the descriptor stat did not succeed; it supplies no identity')
+    if identified[0] is not None and not all(type(value) is int for value in expected.values()):
+        identified = (None, f'this checker\'s sample of {target} holds no device and inode to compare with')
+    assertion('native.step2.fresh_identity', identified, identity)
     assertion('native.step2.fresh_content',
               given(lambda read: type(read.get('read_rc')) is int and read['read_rc'] >= 0,
                     'the bounded read did not succeed; it supplies no bytes'), content)
 
 
 def _prerequisites(inputs, roles, results):
-    """What this checker must have observed before any native expectation is read."""
+    """What this checker must have observed before a native expectation is credited.
+
+    Returns the roles whose target it read before the run, and the reason no
+    native pass is credited, which is None when every prerequisite holds.
+    """
+    uncredited = 'no failure was found; no native pass is credited while a target prerequisite is unestablished'
     samples = _samples(inputs, 'targets-before')
     problems, usable = [], {}
     if samples is None:
@@ -742,7 +776,7 @@ def _prerequisites(inputs, roles, results):
     if problems:
         for ident in ('prerequisite.distinct_identities', 'prerequisite.distinguishing_prefixes'):
             results.unevaluated(ident, 'a target was not read before the run')
-        return False
+        return {'read': set(usable), 'uncredited': uncredited}
 
     def identity(role):
         return _get(usable[role], 'stat', 'st_dev'), _get(usable[role], 'stat', 'st_ino')
@@ -763,7 +797,7 @@ def _prerequisites(inputs, roles, results):
             prefixes.append(f"target C's bounded prefix equals target {other}'s")
     results.record('prerequisite.distinct_identities', identities)
     results.record('prerequisite.distinguishing_prefixes', prefixes)
-    return not identities and not prefixes
+    return {'read': set(usable), 'uncredited': uncredited if identities or prefixes else None}
 
 
 def _one_change(name, emitted, document, submitted):
@@ -871,7 +905,7 @@ def evaluate(inputs, *, authored_fixture=False):
                 results.unevaluated(ident, 'no run was attempted: the emission or its bounds did not hold')
         return _report(results, [], roles)
 
-    prerequisites = _prerequisites(inputs, roles, results)
+    ground = _prerequisites(inputs, roles, results)
     _refusals(inputs, emitted, document, results)
 
     run = inputs['run']
@@ -953,12 +987,7 @@ def evaluate(inputs, *, authored_fixture=False):
                    f'`disposition_integrity` is {_spell(diagnostics.get("disposition_integrity"))}')
     results.record('readers.disposition_issues', [] if diagnostics.get('disposition_issues') == [] else
                    f'`disposition_issues` is {_spell(diagnostics.get("disposition_issues"))}')
-    if prerequisites:
-        results.record('native.completion', [] if reply.get('normalized_outcome') == 'finished' else
-                       f'the reply\'s `normalized_outcome` is {_spell(reply.get("normalized_outcome"))}')
-        _native(inputs, roles, matched, echoed, results)
-    else:
-        results.rest('native.', 'a target prerequisite was not observed')
+    _native(inputs, roles, reply, matched, echoed, ground, results)
     return _report(results, errors, roles)
 
 

@@ -1152,7 +1152,7 @@ assertion's result with a one-sentence statement keyed by role, and its
 | Reported against observed | The process exit status the case captured equals `result.exit_code`. |
 | Existing readers | `consumer.validate` reports no error, as the one aggregate assertion `consumer_validation`; the controller's `disposition_integrity` is `valid` with no `disposition_issues`. |
 | Prerequisites | A, B and C were each a regular file this user opened and read before the run; they have three distinct device and inode identities; each bounded prefix is nonempty and C's differs from A's and from B's. |
-| Native | Listed below; evaluated only when every prerequisite holds. |
+| Native | Listed below; none passes unless every prerequisite holds. |
 | Refusals | Six inputs, each the emitted bytes with one change, go through `run`: another development identity, another release, `unbound`, no identity, a removed closing brace and one unknown member. The first five stop at the controller with their code, path, expected identity where one applies and no client capture or reply; the last is refused by the host as `unknown_field` with no step results. |
 
 The native expectations are pinned to the present example and change with it.
@@ -1190,6 +1190,19 @@ correspondence assertions are unevaluated. When the descriptor stat or the read
 did not succeed, the correspondence that needs it is unevaluated and
 `native.step2.fresh_syscalls` carries the failure.
 
+The prerequisites bear on the native assertions in two ways. An expectation
+about a target is read only when the checker read that target before the run:
+A for step 1, B for step 2's answer and for step 3, C for step 2's attempt and
+fresh read. Otherwise the assertion is unevaluated, because an unmet
+expectation there is what the missing file itself produces, and the
+prerequisite carries the failure. Every other expectation is read under the
+association rules above. One that is not met fails beside the missing
+prerequisite, including the process status, the completion and the comparison
+of a fresh read with a sample of C that was taken. One that is met passes only
+when all three prerequisites hold and is otherwise unevaluated, so a missing
+observation earns no native pass. `native.targets_unchanged` compares the
+targets that were read before the run.
+
 Identity, digest and echo expectations come from the emitted document or
 another output of the same app. Shape, record, ordering and outcome-mapping
 rules belong to the consumer and are not restated; the delivery-length
@@ -1212,10 +1225,10 @@ The case passes or fails and declares no skip. A failure carries its
 classification: `consistency` for a relationship that must hold whatever the
 native results, `execution_unavailable` when the run yields no admitted reply
 (nothing behind the reply is then credited or faulted),
-`prerequisite_unestablished` when a target prerequisite was not observed
-(native expectations are then unevaluated; no other target is substituted) and
-`native_observation` when a pinned native expectation fails under observed
-prerequisites. The log prints each as `FAIL <identifier> [<classification>]`.
+`prerequisite_unestablished` when a target prerequisite was not observed (no
+native expectation then passes; no other target is substituted) and
+`native_observation` when a pinned native expectation was read and not met.
+The log prints each as `FAIL <identifier> [<classification>]`.
 Both cases are default members: they write nothing, need no signing identity,
 GUI session or network, and add a few CLI invocations.
 
@@ -1253,8 +1266,17 @@ makes these faults:
 | A fresh read that reads cleanly and carries the identity, the content or both of another sampled file; one byte, the device, the inode or the count alone | `native.step2.fresh_identity`, `native.step2.fresh_content`, or both. |
 | A fresh read failing at open, stat, read or close | `native.step2.attempt` and `native.step2.fresh_syscalls`; the correspondence that call supplies is unevaluated. |
 | A changed, unreadable or missing second sample of A, B or C | `native.targets_unchanged`; for C the correspondence is also unevaluated. |
-| A, B or C unreadable, not regular or unsampled; two targets one file; C's prefix equal to another's or empty | The prerequisite; every native assertion is unevaluated whatever the reply says. |
+| A, B or C unreadable, not regular or unsampled; two targets one file; an identity not observed; C's prefix equal to another's or empty | The prerequisite alone; every native assertion is unevaluated. |
+| A missing prerequisite beside an unmet expectation about a target that was read: a fresh read carrying another file's identity or content while A or B is unsampled, a failed or denied step whose own target was read, a nonzero status, an unfinished reply, an unestablished order, a changed target | The prerequisite and that expectation's own assertion; every other native assertion is unevaluated. |
+| A missing prerequisite beside an altered step whose own target was not read; a fresh read of another file's identity when C's sample holds none | The prerequisite alone. |
 | An association fault beside a native fault; several native faults | Every diagnostic stays. |
+
+Two controls run the checker's observer on files the case writes in its own
+directory. As the observer's open returns, one renames another file over the
+path and the other unlinks the path. The sample must carry the device, inode,
+digests and lengths of the file that was opened; the control then reads the
+path by name and requires it to name the other file, with another identity,
+digest and length, or nothing.
 
 Further controls require the stated assertions to be unevaluated after a failed
 emission or bound, behind a differing identity and without an admitted reply,
@@ -1276,8 +1298,8 @@ both pairs that involve step 3.
 
 The case fails if any assertion in the checker's table lacks a matched control,
 and `artifacts/example-round-trip-controls.json` holds each control's expected
-and actual sets, the coverage it earned, the accepted alterations and the
-uniform-answer comparison. Shape and record validity rest on
+and actual sets, the coverage it earned, the observer controls, the accepted
+alterations and the uniform-answer comparison. Shape and record validity rest on
 `blackbox_e2e/checker_controls`; that the app is validly signed and unchanged
 rests on the dispatcher's inspection.
 
