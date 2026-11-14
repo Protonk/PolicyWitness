@@ -1,9 +1,12 @@
 # One example through flat, phased and actor execution
 
-Status: proposed; no implementation or native qualification of the expanded
-workload has begun. Prepared against `3fd340d1`, including the three-step
-example in `b4e00762` and the checker review in `9e14a1c6`. The earlier plan is
-retired; its reusable machinery lives in the
+Status: proposed; implementation has not begun. Prepared against `d18ce849`,
+including the three-step example in `b4e00762` and the checker review in
+`9e14a1c6`. Three planning rehearsals on existing build 1430 observed the
+expected results and full-reader acceptance; they establish no acceptance of
+this implementation. Their scope and record locations are in the
+[rehearsal account](../records/example-expansion/REHEARSAL.md).
+Reusable machinery lives in the
 [example case and controls](../tests/suites/witness_contract/README.md#the-apps-own-example).
 The accepted local file assumptions are in
 [DEPENDENCIES.md](DEPENDENCIES.md#files-used-by-the-emitted-example).
@@ -13,14 +16,23 @@ The accepted local file assumptions are in
 Make the app's emitted example an ordinary two-phase specimen, then execute
 that document unchanged and two explicitly derived forms through the same
 public `run` command. All three perform the current three actions under the
-current policy. Each must meet independently authored expectations before
-agreement between executions can earn credit.
+current policy. Each must meet independently authored expectations. Report
+their observations side by side for diagnosis; equality between forms is not
+an additional assertion or source of acceptance credit.
 
 This adds a second collection/release boundary to the public example and
 exercises both ordinary and actor orchestration with a small, comparable
 experiment. It connects publication, held-request preparation, native
 observations and reply interpretation so later modularization can be checked
 against behavior at those boundaries.
+
+Phased publication is an intended product outcome: the app's own document
+and its extracted public rendering will exhibit two collection boundaries,
+and the unchanged-byte passage will cover publication and preparation of
+`phases`. Keeping flat emission would exercise the same runtime forms but
+would not establish those two outcomes. This choice justifies changing the
+constant, public snapshot, build identity and probes extraction. The test's
+usefulness does not depend on claiming that the forms are equivalent.
 
 Keep `example` argument-free and preserve its publication and admission
 promises. Emission still reads no file and launches nothing. Add no selector,
@@ -81,13 +93,17 @@ produce its expected answer, or production normalization to construct the
 test's oracle. A malformed derivative fails preparation before it reaches
 `run`; a valid derivative's admission is established by its actual execution.
 
-The final emitter is phased. During control development the current flat
-document can supply the unchanged action objects; no extra native rehearsal
-is required. Promote the constant before the one candidate build. The final
-live case requires phased emission and refuses a flat or actor document in
-its place, even though those forms are exercised as derivatives.
+The final emitter is phased. The planning rehearsals obtained the current
+flat document from build 1430 and derived the phased and actor inputs without
+changing its identity, actions or policy. All three finished with allow,
+allow, deny and `ok`, `ok`, `open_failed`/EPERM; each fresh read matched its
+independent sample of C. This removes the initial native-layout uncertainty
+before constructing controls, but does not qualify a future phased emitter.
+Promote the constant before the one candidate build. The final live case
+requires phased emission and refuses a flat or actor document in its place,
+even though those forms are exercised as derivatives.
 
-## Observation and comparison
+## Observation and reporting
 
 ### Independent assertions within each execution
 
@@ -110,6 +126,16 @@ for an actor reply. Check each action by submitted ID and its query/attempt
 echoes, with order checked separately. Duplicate IDs remain visible before
 any dictionary lookup can discard them. Read the actor's application,
 equipment and subprocess evidence at their actual locations.
+
+The rehearsal confirmed that steps and phases remain in the reply's top-level
+`steps[]` and `phases[]` for all forms. Actor steps additionally carry
+`actor_id`; actor phases carry `actor_id` and `actor_visit`. The actor's
+policy digests, application count, equipment and subprocess are under
+`actors[0]`. Its dossier policy is under `data.specimen.actors[0].policy`, and
+the controller diagnostics include an `actors` collection. Actor replies have
+no singular `runner_subprocess` or `policy_sha256`. The fixture and checker
+must follow these locations instead of inventing `actors[].steps` or making
+an ordinary projection of the actor reply.
 
 Reuse the reviewed prerequisite behavior: the target concerned by an
 unobserved step half withholds that half's native expectation; an independent
@@ -154,34 +180,40 @@ across sequentially reaped processes is not a freshness proof: the OS can
 reuse a PID. Do not require identical descriptors, timestamps, PIDs, timing
 intervals or whole envelopes between submissions.
 
-### Cross-form correspondence
+### Diagnostic summary without equality assertions
 
 Only after each record's identity and submitted association are established,
-extract a small per-role comparison of query result/source/native return/query
+record a small per-role summary of query result/source/native return/query
 errno, attempt result/source/return/errno, and the fresh read's device/inode,
 read count and content digest. Preserve query and attempt as separate values.
 Use explicit readers of the ordinary and actor record locations; never
 rewrite an actor reply into an ordinary reply to make the ordinary checker
 accept it.
 
-Compare those observations across forms only when the required external
-samples establish the same files and contents across all three passages.
-Missing or changed samples withhold that correspondence and report the
-prerequisite or stability failure. Independently established per-form faults
-remain visible. Different evidence structures are validated within each form
-and are not discarded merely to produce equal summaries.
+Include the independent samples and per-form assertion statuses so the reader
+can see whether observations were made under matching sampled conditions.
+Retain missingness and differences as recorded values; give the summary no
+pass/fail result, equality requirement or separate coverage claim. Each form's
+existing prerequisite and stability assertions own its missing or changed
+samples, and unrelated failures remain visible.
 
-Equal summaries alone earn no success. A control in which all forms carry
-the same wrong answer must fail each independent native expectation even
-though cross-form equality holds. A control with an identical common summary
-but a wrong phase partition must still fail association. Those two controls
-protect against a comparison layer concealing a shared error.
+With matching samples, the independently pinned per-form passes already
+imply equality of almost every proposed common value. Today's checker does
+not separately pin the allow queries' errno or the failed open's `rc`;
+record those values without adding assertions merely to give this summary a
+purpose. The consumer continues to enforce their existing record semantics.
+
+Retain a combined control in which all forms carry the same wrong answer:
+each independent native expectation must fail. Retain a coherent wrong-phase
+partition with otherwise identical observations: submitted association must
+fail. These exercise per-form independence and association, not a comparison
+layer's additional discrimination.
 
 ## Existing owners and the small extraction
 
 | Owner | Reuse or change |
 | --- | --- |
-| [Example checker](../tests/suites/witness_contract/check_example_round_trip.py) and [controls](../tests/suites/witness_contract/example_round_trip_controls.py) | Keep publication/refusal assertions, per-role native expectations, observer controls and reviewed evidence gating; add per-form structure and cross-form assertions. |
+| [Example checker](../tests/suites/witness_contract/check_example_round_trip.py) and [controls](../tests/suites/witness_contract/example_round_trip_controls.py) | Keep publication/refusal assertions, per-role native expectations, observer controls and reviewed evidence gating; add per-form structure assertions and a diagnostic summary. |
 | [Independent consumer](../tests/lib/consumer.py), [phase evidence](../tests/lib/phase_evidence.py), [actor evidence](../tests/lib/actor_evidence.py) | Read all three full envelopes through the existing validators. They own internal record, ordering and equipment consistency. The example case owns correspondence to its submitted documents and external samples. |
 | [Phase case](../tests/suites/witness_contract/check_phases.py) | Retain its action partition and collection checks, and its live filesystem-change discriminator. This example does not replace that experiment. |
 | [Actor compositions](../tests/suites/witness_contract/check_actor_compositions.py) | Use its existing application, equipment, policy receipt, lifecycle and request-to-reply associations as the reference for selecting observations. Keep its multi-actor and extension-specific expectations there. |
@@ -195,7 +227,7 @@ workload description language, production classifier dependency or second
 general reply interpreter.
 
 Keep existing assertion identifiers for the emitted case where their meanings
-hold. Give added flat, actor, structure and cross-form assertions stable
+hold. Give added flat, actor and structure assertions stable
 identifiers and one-sentence statements. Report which form, role, submitted
 ID, phase and actor supplied each observation. If an existing assertion's
 meaning changes, update its controls and account explicitly; a count of
@@ -204,10 +236,31 @@ assertions is not the acceptance criterion.
 ## Acceptance table and discriminating controls
 
 Use constructed passing captures for all three forms and independently
-authored expected diagnostic/classification sets. Reuse the existing fixture
-builders where their records apply. If coherent actor captures require a new
-authored fixture, give it a fixture-catalog owner; do not freeze a development
-run or generate an expected answer from the checker under test.
+authored expected diagnostic/classification sets. Flat and phased controls
+reuse the existing ordinary fixture and builder. Add one explicitly owned
+full actor fixture at
+`tests/fixtures/example_round_trip/constructed_actor_run.json`, with its scope
+in that directory's README and the fixture catalog. Its owner and reader are
+`witness_contract/example_round_trip_controls`; it is an authored hypothetical
+envelope for one applied selected-equipment actor, two visits and three steps.
+
+The existing `tests/fixtures/contract/actor_*_reply.json` files are subaccount
+models, not full consumer-valid actor captures. They remain owned by their
+existing controls. Use the rehearsal to identify the required record topology,
+then author the new fixture's process identities, samples, application,
+equipment, setup, collection and reap observations independently. There is no
+termination dependency: absence of a termination-gate record is part of this
+fixture. Include the ordinary action records in top-level `steps[]`.
+
+Keep the envelope identity-free and bind explicit test producer/capture
+context through the existing `bind_constructed_envelope` machinery, updating
+authored host carriers through `recapture_host_reply`. Admit constructed JSON
+host bytes only through the consumer's existing fixture option. Do not copy a
+live run and relabel its identity or turn the rehearsal into an expected
+native golden. First make this single passing fixture acceptable to the full
+consumer and the case's independent assertions; only then develop the actor
+mutation matrix. Failure to construct it coherently is an implementation
+blocker, not permission to bypass actor validation.
 
 For a control aimed at external association or correspondence, update all
 dependent capture fields and require the full consumer to accept the record
@@ -219,28 +272,29 @@ withheld observations explicitly.
 | --- | --- | --- |
 | The app publishes the phased workload | Two phases with partition 2+1 and unchanged role relationships | Flat emission, swapped phases, collapsed partition or lost action fails preparation. |
 | Derivatives preserve the experiment | Only the declared container and policy relocation changes | Changed policy byte, operand, action or identity is refused by the independent transformation check. |
-| Every form has its own native oracle | Each separately meets allow/allow/deny and its attempt expectations | All three carry allow for the denied query: equality holds, each form's prediction assertion fails. |
+| Every form has its own native oracle | Each separately meets its pinned query and attempt expectations | All three carry allow for the denied query: each form's prediction assertion fails, regardless of identical summaries. |
 | Phase membership survives projection | Exact submitted phase/action association | Coherent 1+2 partition with the same common observations fails submitted association. |
 | Collections belong to the right phase | Per-phase accepted records and collection/release chain | Borrowed first-phase collection, missing completion or altered acknowledgement is rejected at its responsible association or reader boundary. |
 | Actor ownership reaches every projection | Submitted actor, applied policy, equipment, process and both visits agree | Internally coherent capture for another actor name fails request association; wrong live-process binding or invented singular evidence fails its reader. |
 | Names are labels | Consistent alternative step/phase/actor labels preserve all results | A one-sided rename fails association; a fully consistent rename passes the constructed transformation/checker controls. |
 | Fresh-read evidence remains independent | Own C samples match the read for each form | Coherent wrong file identity, old content, absent C identity, or changed C samples retains the reviewed distinctions. |
 | Independent faults survive missing evidence | Missing B plus an unrelated wrong C identity reports both | Repeat the reviewed combined-fault controls through each form; missing evidence cannot produce a native pass. |
-| Structure cannot disappear in comparison | Structural assertions run even when common values are identical | Reorder/drop/duplicate an action or change phase ownership; an equal extracted summary cannot make the case pass. |
+| Structure is checked independently of the summary | Structural assertions run even when common values are identical | Reorder/drop/duplicate an action or change phase ownership; summary formatting cannot change those failures. |
 | Observer provenance survives extraction | Sample follows the descriptor after pathname replacement/unlink | Existing real-file observer controls still reject path-stat or path-read substitutions. |
 
 Consistent renaming here is constructed coverage. Native renamed/reordered
 multi-actor coverage remains with `actor_compositions`; the new case adds no
 fourth native run for renaming. Replacing a transformed request/capture with
-another form must fail the form-specific admission/structure checks before
-the cross-form reader can silently treat it as the intended execution.
+another form must fail the form-specific admission/structure checks; summary
+formatting cannot silently treat it as the intended execution.
 
 ## Public surfaces and implementation sequence
 
-1. Develop three-form passing captures, transformation checks and rejected
-   controls against the current three action objects. Read the ordinary and
-   actor ownership fields before extracting a comparison. Keep observations
-   distinct from interpretation and withheld results.
+1. Inspect the planning rehearsal's record map, then author and validate the
+   dedicated complete actor fixture before expanding the controls. Develop
+   three-form passing captures, independent transformation checks and rejected
+   controls against the current three action objects. Preserve the full
+   ownership records and withheld observations in the diagnostic summary.
 2. Extend the existing checker and shell case with separately retained captures
    and samples for emitted, flat and actor forms. Keep the original six
    refusal derivatives tied to emitted bytes; do not multiply them per form.
@@ -268,7 +322,7 @@ the cross-form reader can silently treat it as the intended execution.
 The constant is a build-identity input. Its new content and stamped rendering
 need a fresh signed build even though the native implementations are unchanged.
 Document citations and source-list checks establish mechanical agreement;
-the three submissions establish the compared native behavior on that build.
+the three submissions establish each form's native behavior on that build.
 
 ## Execution budget and verification
 
@@ -283,6 +337,10 @@ The live case's complete invocation budget is twelve CLI calls: one
 existing six refusal `run` submissions. This is two additional native workload
 submissions over the current case. The existing companion cases have their
 own invocations and are not included in this count. Samples launch no app.
+The completed planning rehearsal used three read-only `run` submissions on
+build 1430, plus one version query and one emission; these are separate from
+the implementation budget and supply no acceptance credit. Repeat exploration
+only for a concrete unresolved native or record-layout question.
 
 Offline control development can run as needed through the dispatcher. Then
 use one signed candidate build and one combined final selection in a fresh
@@ -305,10 +363,10 @@ Preserve resource ownership and cleanup through their existing helpers.
 
 A failed check, changed dependency, generator movement beyond the planned
 surfaces or unexpected native observation is a named cause for another build
-or run. Do not weaken EPERM, structural membership or observer assertions to
-obtain a pass. If a new observation exposes a runtime defect, retain the
-smallest counterexample and identify the responsible boundary and additional
-verification before repairing it in a separately scoped change.
+or run. A mismatch fails the current expectation while it is investigated;
+do not replace EPERM with a permission-errno union to obtain a pass. Use the
+decision below for a confirmed difference. Structural membership, observation
+provenance and contract rules remain required in every form.
 
 No wait, release or query-eligibility change is planned. Such a change requires
 `witness_contract/order_barrier_mutations`. A shared admission, receiver or
@@ -317,12 +375,46 @@ runner implementation change also requires the coordinated selections in
 omit those checks. Follow that file for sandbox escalation, sleep observations,
 evidence applicability, retention and pruning.
 
+### Handling a native difference
+
+The requirement is a useful workload with independently justified expectations
+for each form. Identical native observations across forms are an observation,
+not a contract or acceptance requirement. The current pins are the values
+observed in all three planning runs; a later difference does not automatically
+change them.
+
+First preserve the raw input, reply, independent samples and process status;
+exclude a missing prerequisite, wrong association, differing equipment or
+transport problem. Reproduce a remaining difference narrowly and inspect the
+responsible boundary. Then distinguish these outcomes:
+
+- A reproducible, understood form-specific result that preserves the workload's
+  purpose can become an exact per-form expectation after maintainer review.
+  For example, a justified EACCES from the actor's failed open could replace
+  its EPERM pin while the ordinary forms retain theirs. Give it its own
+  accepted and rejected controls, record the conditions and support, and
+  rerun the affected cases. Do not infer a sandbox cause from either errno.
+- A legitimate result that removes a required distinction sends the workload
+  back for reconsideration. An actor form that cannot produce the deny answer
+  or cannot supply the independent fresh read no longer serves this plan's
+  purpose. Changing policy or operands needs an explicit revised workload,
+  not silent weakening of its oracle.
+- A contract violation, lost ownership/order evidence, or inconsistent
+  publication is a defect to preserve and scope for repair. It never becomes
+  a permitted per-form exception. An unexplained difference remains a failed
+  qualification; keep it unresolved rather than adopting the observed value.
+
+These decisions separate a change to a workload expectation from a runtime
+repair. The latter needs its own boundary analysis and verification scope.
+
 ## Limits and completion
 
-The expected cross-form native results are a hypothesis to qualify on the
-candidate, not existing evidence or a public equivalence promise. Ordinary
+The planning runs support the initial per-form pins on build 1430 and one
+machine. The candidate must qualify the implementation independently; the
+rehearsal is neither acceptance nor a public equivalence promise. Ordinary
 and actor execution have different setup, evidence and allowance structures;
-this test compares selected observations under stable sampled conditions.
+the diagnostic summary exposes selected observations without asserting that
+the execution forms are equivalent.
 
 The following remain outside its evidence:
 
