@@ -62,7 +62,7 @@ impose additional conditions, such as the
 ### Files used by the emitted example
 
 The current [app-owned example](../controller/src/example.rs) and
-[`witness_contract/example_round_trip`](../tests/suites/witness_contract/README.md#the-apps-own-example)
+[witness_contract/example_round_trip](../tests/suites/witness_contract/README.md#the-apps-own-example)
 use these host files:
 
 | Path | Role in the workload |
