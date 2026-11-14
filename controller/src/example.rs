@@ -118,30 +118,6 @@ mod tests {
     }
 
     #[test]
-    fn example_has_two_collection_boundaries_with_the_existing_three_actions() {
-        let document: Value = serde_json::from_str(EXAMPLE_DOCUMENT).unwrap();
-        assert!(document.get("probe_plan").is_none());
-        assert!(document.get("actors").is_none());
-        let phases = document["phases"].as_array().unwrap();
-        assert_eq!(phases.len(), 2);
-        assert_eq!(phases[0]["phase_id"], "initial-reads");
-        assert_eq!(phases[1]["phase_id"], "restricted-read");
-        assert_eq!(phases[0]["actions"].as_array().unwrap().len(), 2);
-        assert_eq!(phases[1]["actions"].as_array().unwrap().len(), 1);
-        let actions: Vec<_> = phases
-            .iter()
-            .flat_map(|p| p["actions"].as_array().unwrap())
-            .collect();
-        assert_eq!(actions[0]["step_id"], "read-hosts");
-        assert_eq!(
-            actions[1]["step_id"],
-            "metadata-propernames-read-connectives"
-        );
-        assert_eq!(actions[2]["step_id"], "read-propernames");
-        assert_eq!(actions[1]["attempt"]["action"], "read_fresh");
-    }
-
-    #[test]
     fn refusals_are_typed_and_write_nothing() {
         for (args, document, identity, expected) in [
             (

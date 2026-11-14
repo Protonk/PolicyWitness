@@ -1,263 +1,319 @@
-"""Constructed request and ownership controls for the three example forms.
+"""Per-condition and ownership controls for the three example forms.
 
-Expected diagnostics are authored here. The ordinary model and native fault
-mutators come from the scalar controls; the actor envelope is its own complete,
-identity-free fixture. No live reply supplies an expected result.
+Each row here is a control of the same kind as the scalar rows and runs
+through the same runner. A condition control changes one thing in one
+submission's capture or request and states the one condition of its row that
+must fail, with every other row it necessarily fails. The expected rows and
+conditions are authored here; no checker output supplies one.
 """
 import copy
-import hashlib
-import json
-from pathlib import Path
 
-import example_round_trip_controls as scalar
 import check_example_round_trip as checker
-from blackbox import bind_constructed_envelope, recapture_host_reply
+import example_round_trip_controls as scalar
+from example_round_trip_controls import FORMS
+
+ORDINARY = ('emitted', 'flat')
+PHASED = ('emitted', 'actor')
+ACTOR = ('actor',)
+EXECUTION_FORM = 'structure.execution_form'
+MEMBERSHIP = 'structure.phase_membership'
+COLLECTIONS = scalar.COLLECTIONS
+WORKER = 'structure.worker'
+OWNERSHIP = 'structure.actor_ownership'
+APPLICATION = 'structure.actor_application'
+EQUIPMENT = 'structure.actor_equipment'
+TRANSFORMATION = 'transformation'
+# Everything read from a run: unevaluated when the derivative itself is refused.
+BEHIND_TRANSFORMATION = ('passage.delivery_length', 'admission', 'identity', 'execution', 'echo', 'reported',
+                         'readers', 'native', 'structure')
+OTHER_ACTOR = 'another-reader'
+
+reply = scalar.reply_of
+phase = scalar.phase_of
+actor = scalar.actor_of
+worker = scalar.worker_of
+step = scalar.step_of
 
 
-def repartition(reply, partitions):
-    """Author a coherent partition, including collection ownership and step echoes."""
-    templates = copy.deepcopy(reply['phases'])
-    records = {r['step_id']: r for p in templates for r in p['validator_subprocess']['records']}
-    reply['phases'] = []
-    for ordinal, (label, steps) in enumerate(partitions, 1):
-        phase = copy.deepcopy(templates[0])
-        ids = [step['step_id'] for step in steps]
-        phase.update(phase_id=label, ordinal=ordinal, action_ids=ids)
-        phase['validator_subprocess'].update(phase_id=label, ordinal=ordinal, pid=52000+ordinal,
-                                             expected_step_ids=ids, records=[records[sid] for sid in ids])
-        if reply.get('execution_form') == 'actors':
-            phase.update(actor_id=reply['actors'][0]['actor_id'], actor_visit=ordinal)
-        for step in steps:
-            step['phase_id'] = label
-        reply['phases'].append(phase)
+def diagnostics(view):
+    return scalar.envelope_of(view)['data']['runner_sandbox_diagnostics']
 
 
-def build():
-    """Independently authored requests; the checker constructor is not their oracle."""
-    state = scalar.build()
-    flat_doc = scalar.document_of(state)
-    emitted = copy.deepcopy(flat_doc)
-    steps = emitted.pop('probe_plan')
-    emitted['phases'] = [{'phase_id': 'constructed-initial', 'actions': steps[:2]},
-                         {'phase_id': 'constructed-restricted', 'actions': steps[2:]}]
-    reply = scalar.reply_of(state)
-    repartition(reply, [(p['phase_id'], reply['steps'][start:stop])
-                         for p, start, stop in zip(emitted['phases'], (0, 2), (2, 3))])
-    scalar.set_document(state, lambda d: (d.clear(), d.update(emitted)))
-    state['refusals'] = {name: dict(input=body, exit=1, envelope=scalar.refusal_envelope(scalar.DEVELOPMENT, name), stderr=b'')
-                         for name, body in checker.refusal_inputs(state['example-1']['stdout']).items()}
-    scalar.envelope_of(state)['data']['runner_client']['request_delivery']['bytes_written'] = len(state['example-1']['stdout'])-1
-    recapture_host_reply(scalar.envelope_of(state))
-    flat = scalar.build()
-    actor_doc = copy.deepcopy(emitted)
-    actor_doc.pop('policy')
-    actor_doc['actors'] = [{'actor_id': 'constructed-reader', 'equipment': 'selected',
-                            'sandbox': {'mode': 'apply', 'policy': copy.deepcopy(emitted['policy'])}}]
-    for phase in actor_doc['phases']:
-        phase['actor_id'] = 'constructed-reader'
-    actor = bind_constructed_envelope(json.loads(scalar.ACTOR_FIXTURE.read_text()))
-    actor['build']['contract'] = actor['data']['runner_client']['transport']['contract'] = scalar.DEVELOPMENT
-    actor['data']['runner_result']['producer']['contract'] = scalar.DEVELOPMENT
-    state['forms'] = {}
-    for form, doc, envelope in (('flat', flat_doc, scalar.envelope_of(flat)), ('actor', actor_doc, actor)):
-        raw = (json.dumps(doc, indent=2, sort_keys=True)+'\n').encode()
-        envelope['data']['runner_client']['request_delivery']['bytes_written'] = len(raw)-1
-        recapture_host_reply(envelope)
-        state['forms'][form] = {'input': raw, 'run': {'exit': 0, 'envelope': envelope, 'stderr': b''},
-                                'targets-before': copy.deepcopy(state['targets-before']),
-                                'targets-after': copy.deepcopy(state['targets-after'])}
-    return state
+def dossiers(view):
+    return scalar.envelope_of(view)['data']['specimen']['actors']
 
 
-def capture(state, form):
-    return state if form == 'emitted' else state['forms'][form]
+def with_phase(number):
+    """The forms whose constructed reply has this phase."""
+    return FORMS if number == 1 else PHASED
 
 
-def document(state, form):
-    return scalar.document_of(state) if form == 'emitted' else json.loads(capture(state, form)['input'])
+def controls():
+    collected = scalar.Rows()
+    add = collected.add
 
+    def one(name, forms, change, row, condition, also=None, **requirements):
+        """One change that fails one condition of one row. `also` names every other row it necessarily
+        fails, with that row's failed conditions when it has them. The rest of the form holds."""
+        also = also or {}
+        add(name, change, [row], list(also), forms=forms, rest_holds=True,
+            conditions={row: [condition], **{ident: names for ident, names in also.items() if names is not None}},
+            **requirements)
 
-def set_input(state, form, change):
-    if form == 'emitted':
-        scalar.set_document(state, change)
-    else:
-        value = document(state, form)
-        change(value)
-        capture(state, form)['input'] = (json.dumps(value, indent=2, sort_keys=True)+'\n').encode()
+    # The execution form.
+    one('structure_other_execution_form', FORMS,
+        lambda v: reply(v).update(execution_form='ordinary' if actor(v) else 'actors'), EXECUTION_FORM, 'execution_form')
 
+    # Phase membership: the submitted partition, by position.
+    one('membership_extra_phase', FORMS,
+        lambda v: reply(v)['phases'].append(dict(copy.deepcopy(phase(v, 1)), phase_id='extra-phase',
+                                                 ordinal=len(reply(v)['phases']) + 1, action_ids=[])),
+        MEMBERSHIP, 'phase_count')
+    one('membership_last_phase_dropped', FORMS, lambda v: reply(v)['phases'].pop(), MEMBERSHIP, 'phase_count',
+        {COLLECTIONS: lambda form: [f'phase{scalar.phase_count(form)}.unique']})
+    for number in (1, 2):
+        forms = with_phase(number)
+        one(f'membership_phase{number}_identifier', forms,
+            lambda v, number=number: phase(v, number).update(phase_id='another-phase'),
+            MEMBERSHIP, f'phase{number}.phase_id', {COLLECTIONS: [f'phase{number}.unique']})
+        one(f'membership_phase{number}_ordinal', forms, lambda v, number=number: phase(v, number).update(ordinal=9),
+            MEMBERSHIP, f'phase{number}.ordinal')
+        one(f'membership_phase{number}_action_added', forms,
+            lambda v, number=number: phase(v, number).update(action_ids=phase(v, number)['action_ids'] + ['another-step']),
+            MEMBERSHIP, f'phase{number}.action_ids')
+    one('membership_phase1_ordinal_boolean', FORMS, lambda v: phase(v, 1).update(ordinal=True), MEMBERSHIP, 'phase1.ordinal')
+    one('membership_phase1_actions_reversed', PHASED, lambda v: phase(v, 1).update(action_ids=phase(v, 1)['action_ids'][::-1]),
+        MEMBERSHIP, 'phase1.action_ids')
 
-def write(directory, state):
-    scalar.write(directory, state)
-    for form, entry in state.get('forms', {}).items():
-        # Reuse the capture writer; no imaginary version/emission observations.
-        child = dict(entry, refusals={})
-        scalar.write(directory / form, child)
-        (directory / form / 'input.json').write_bytes(entry['input'])
+    # Collections: each submitted phase's own collection, completion and release chain.
+    for number in (1, 2):
+        forms = with_phase(number)
 
+        def collection(name, change, condition, number=number, forms=forms, **requirements):
+            one(f'collections_phase{number}_{name}', forms, lambda v: change(phase(v, number)), COLLECTIONS,
+                f'phase{number}.{condition}', **requirements)
+        one(f'collections_phase{number}_duplicated', forms,
+            lambda v, number=number: reply(v)['phases'].append(copy.deepcopy(phase(v, number))),
+            COLLECTIONS, f'phase{number}.unique', {MEMBERSHIP: ['phase_count']})
+        collection('arrival_absent', lambda p: p.update(arrival_observed=False), 'arrival_observed')
+        collection('completion_absent', lambda p: p.update(completion_observed=False), 'completion_observed')
+        collection('not_collected', lambda p: p.update(collection_status='exhausted'), 'collection_status')
+        collection('validator_not_reaped', lambda p: p['validator_subprocess'].update(reaped=False), 'validator_reaped')
+        collection('collection_open_at_proceed', lambda p: p['ordering'].update(collection_closed_before_proceed=False),
+                   'collection_closed_before_proceed')
+        collection('proceed_not_set', lambda p: p['ordering'].update(proceed_set=False), 'proceed_set')
+        collection('acknowledgement_absent', lambda p: p['ordering'].update(proceed_observed=False), 'proceed_observed',
+                   consumer_reports='phase completion lacks arrival or acknowledgement')
+        collection('worker_lifetime_unestablished', lambda p: p['ordering'].update(worker_lifetime_established=False),
+                   'worker_lifetime_established')
+        collection('validator_disposition', lambda p: p['ordering'].update(validator_disposition='killed'),
+                   'validator_disposition')
+        collection('protocol_violation', lambda p: p['ordering'].update(protocol_violations=['constructed violation']),
+                   'protocol_violations')
+        collection('another_query_plan', lambda p: p['validator_subprocess'].update(
+            expected_step_ids=p['validator_subprocess']['expected_step_ids'] + ['another-step']),
+                   'expected_step_ids')
+        collection('acknowledgement_not_a_boolean', lambda p: p['ordering'].update(proceed_observed=1), 'proceed_observed')
+    # A coherent reply to another partition, and to another phase label: the consumer reads both cleanly.
+    add('wrong_partition',
+        lambda v: scalar.repartition(reply(v), [(phase(v, 1)['phase_id'], reply(v)['steps'][:1]),
+                                                (phase(v, 2)['phase_id'], reply(v)['steps'][1:])]),
+        [MEMBERSHIP, COLLECTIONS], forms=PHASED, clean=True, rest_holds=True,
+        conditions={MEMBERSHIP: ['phase1.action_ids', 'phase2.action_ids'],
+                    COLLECTIONS: ['phase1.expected_step_ids', 'phase2.expected_step_ids']})
+    add('foreign_phase',
+        lambda v: scalar.repartition(reply(v), [('foreign-phase' if number == 1 else found['phase_id'],
+                                                 [s for s in reply(v)['steps'] if s['step_id'] in found['action_ids']])
+                                                for number, found in enumerate(reply(v)['phases'], 1)]),
+        [MEMBERSHIP, COLLECTIONS], forms=FORMS, clean=True, rest_holds=True,
+        conditions={MEMBERSHIP: ['phase1.phase_id'], COLLECTIONS: ['phase1.unique']})
+    # The second phase carrying the first phase's collection: internally a reader rule, and here another plan.
+    add('borrowed_collection',
+        lambda v: phase(v, 2).update(validator_subprocess=copy.deepcopy(phase(v, 1)['validator_subprocess'])),
+        [COLLECTIONS], forms=PHASED, rest_holds=True, conditions={COLLECTIONS: ['phase2.expected_step_ids']},
+        consumer_reports='validator collection names another phase')
 
-def evaluate(artifacts, name, state):
-    for form in ('emitted', 'flat', 'actor'):
-        entry = capture(state, form)
-        if entry.get('run') is not None and 'envelope' in entry['run']:
-            recapture_host_reply(entry['run']['envelope'])
-    directory = artifacts / 'form-captures' / name
-    write(directory, state)
-    report = checker.evaluate(checker.load(directory), authored_fixture=True)
-    (directory / 'report.json').write_text(json.dumps(report, indent=2)+'\n')
-    return report
+    # The worker: applied, owned by this reply, completed and reaped.
+    one('worker_not_applied', ORDINARY, lambda v: reply(v).update(sandboxed_after_apply=False), WORKER, 'applied')
+    one('worker_reply_names_another_process', ORDINARY, lambda v: reply(v).update(pid=4), WORKER, 'reply_pid')
+    one('worker_process_identifier_zero', ORDINARY, lambda v: (reply(v).update(pid=0), worker(v).update(pid=0)),
+        WORKER, 'pid')
+    one('actor_worker_not_applied', ACTOR, lambda v: actor(v).update(applied=False), WORKER, 'applied',
+        {APPLICATION: ['applied']})
+    one('actor_launch_names_another_process', ACTOR, lambda v: actor(v)['launch'].update(pid=4), WORKER, 'launch_pid')
+    one('actor_launch_names_another_parent', ACTOR, lambda v: actor(v)['launch'].update(parent_pid=4),
+        WORKER, 'launch_parent_pid')
+    one('actor_worker_process_identifier_zero', ACTOR,
+        lambda v: (worker(v).update(pid=0), actor(v)['launch'].update(pid=0),
+                   actor(v)['equipment']['execution'].update(pid=0)), WORKER, 'pid')
+    for name, members, condition in (
+            ('reap_absent', dict(reaped=False), 'reaped'),
+            ('ready_byte_absent', dict(ready_byte_received=False), 'ready_byte_received'),
+            ('completion_absent', dict(done_observed=False), 'done_observed'),
+            ('exit_code_1', dict(exit_code=1), 'exit_code'),
+            ('exit_code_boolean', dict(exit_code=False), 'exit_code'),
+            ('terminated_by_signal', dict(term_signal=9), 'term_signal'),
+            ('collected_before_reap', dict(collection_basis='at_deadline'), 'collection_basis')):
+        one('worker_' + name, FORMS, lambda v, members=members: worker(v).update(members), WORKER, condition)
 
+    # The actor's ownership of every projection of the run.
+    one('ownership_second_reply_actor', ACTOR,
+        lambda v: reply(v)['actors'].append(dict(copy.deepcopy(actor(v)), actor_id=OTHER_ACTOR)), OWNERSHIP, 'reply_actors')
+    one('ownership_second_diagnostics_actor', ACTOR,
+        lambda v: diagnostics(v)['actors'].append(dict(copy.deepcopy(diagnostics(v)['actors'][0]), actor_id=OTHER_ACTOR)),
+        OWNERSHIP, 'diagnostics_actors')
+    one('ownership_diagnostics_actor_renamed', ACTOR, lambda v: diagnostics(v)['actors'][0].update(actor_id=OTHER_ACTOR),
+        OWNERSHIP, 'diagnostics_actors')
+    one('ownership_second_dossier_actor', ACTOR,
+        lambda v: dossiers(v).append(dict(copy.deepcopy(dossiers(v)[0]), actor_id=OTHER_ACTOR)), OWNERSHIP, 'dossier_actors')
+    one('ownership_dossier_actor_renamed', ACTOR, lambda v: dossiers(v)[0].update(actor_id=OTHER_ACTOR),
+        OWNERSHIP, 'dossier_actors', {'admission.dossier_policy_digest': None})
+    one('ownership_one_visit', ACTOR, lambda v: actor(v).update(visits=[1]), OWNERSHIP, 'visits')
+    for number in (1, 2):
+        one(f'ownership_phase{number}_another_actor', ACTOR, lambda v, number=number: phase(v, number).update(actor_id=OTHER_ACTOR),
+            OWNERSHIP, f'phase{number}.actor_id')
+        one(f'ownership_phase{number}_another_visit', ACTOR, lambda v, number=number: phase(v, number).update(actor_visit=9),
+            OWNERSHIP, f'phase{number}.actor_visit')
+        one(f'ownership_phase{number}_termination_dependency', ACTOR,
+            lambda v, number=number: phase(v, number).update(termination_gate={}), OWNERSHIP, f'phase{number}.no_termination_gate')
+    for number in (1, 2, 3):
+        one(f'ownership_step{number}_another_actor', ACTOR, lambda v, number=number: step(v, number).update(actor_id=OTHER_ACTOR),
+            OWNERSHIP, f'step.step{number}.actor_id')
+    one('ownership_unsubmitted_step_of_another_actor', ACTOR,
+        lambda v: reply(v)['steps'].append(dict(copy.deepcopy(step(v, 1)), step_id='extra', actor_id=OTHER_ACTOR)),
+        OWNERSHIP, 'unsubmitted_steps.actor_id', {'echo.step_ids': None})
+    one('ownership_actor_disposition_invalid', ACTOR,
+        lambda v: diagnostics(v)['actors'][0].update(disposition_integrity='invalid'), OWNERSHIP,
+        'diagnostics.disposition_integrity')
+    one('ownership_actor_disposition_issue', ACTOR,
+        lambda v: diagnostics(v)['actors'][0].update(disposition_issues=[{'kind': 'constructed', 'detail': 'constructed issue'}]),
+        OWNERSHIP, 'diagnostics.disposition_issues')
 
-def run(artifacts):
-    records = []
-    baseline = evaluate(artifacts, 'passing', build())
-    assert not baseline['consumer_errors'], baseline['consumer_errors']
-    assert all(r['status'] == 'pass' for r in baseline['assertions']), checker.render(baseline)
-    records.append({'control': 'complete_three_form_baseline', 'assertions': len(baseline['assertions'])})
-    covered = set()
+    # One application of the submitted policy.
+    for name, members, condition in (
+            ('unapplied_mode', dict(mode='none'), 'mode'),
+            ('setup_timed_out', dict(setup_status='setup_timeout'), 'setup_status'),
+            ('applied_twice', dict(application_count=2), 'application_count'),
+            ('count_boolean', dict(application_count=True), 'application_count'),
+            ('application_unobserved', dict(application={'state': 'unobserved', 'basis': 'applied_publication'}), 'application'),
+            ('wrong_received_digest', dict(policy_received_sha256='00' * 32), 'policy_received_sha256')):
+        one('application_' + name, ACTOR, lambda v, members=members: actor(v).update(members), APPLICATION, condition)
 
-    def check(name, change, expected, *, clean=True, withheld=(), reader=None):
-        state = build()
-        change(state)
-        report = evaluate(artifacts, name, state)
-        actual = checker.diagnostics(report)
-        wanted = {(ident, scalar.expected_classification(ident.split('.', 1)[1] if ident.startswith(('flat.', 'actor.')) else ident))
-                  for ident in expected}
-        if not clean:
-            actual = {pair for pair in actual if not pair[0].endswith('consumer_validation')}
-        assert actual == wanted, (name, actual, wanted, report['consumer_errors'])
-        if clean:
-            assert not report['consumer_errors'], (name, report['consumer_errors'])
-        if reader:
-            assert any(reader in error for error in report['consumer_errors']), (name, report['consumer_errors'])
-        statuses = {r['id']: r['status'] for r in report['assertions']}
-        assert all(statuses[i] == 'not_evaluated' for i in withheld), (name, statuses)
-        covered.update(expected)
-        records.append({'control': name, 'expected': sorted(wanted), 'consumer_errors': report['consumer_errors'],
-                        'withheld': list(withheld)})
-        return report
+    # Selected equipment matched to the launched worker.
+    for name, members, condition in (
+            ('requested_other', dict(requested='entitled'), 'requested'),
+            ('resolved_other', dict(resolved='entitled'), 'resolved'),
+            ('entitlement_required', dict(required_entitlements=['com.example.entitlement']), 'required_entitlements'),
+            ('requirements_unsatisfied', dict(requirements_status='unsatisfied'), 'requirements_status')):
+        one('equipment_' + name, ACTOR, lambda v, members=members: actor(v)['equipment'].update(members), EQUIPMENT, condition)
+    for name, members, condition in (
+            ('execution_unobserved', dict(status='unobserved'), 'execution.status'),
+            ('execution_ineligible', dict(eligible=False), 'execution.eligible'),
+            ('execution_of_another_process', dict(pid=4), 'execution.pid')):
+        one('equipment_' + name, ACTOR, lambda v, members=members: actor(v)['equipment']['execution'].update(members),
+            EQUIPMENT, condition)
+    add('actor_wrong_equipment', lambda v: actor(v)['equipment']['execution'].update(status='unobserved', eligible=False),
+        [EQUIPMENT], forms=ACTOR, rest_holds=True, conditions={EQUIPMENT: ['execution.status', 'execution.eligible']})
 
-    # The same wrong answer must fail all three independent oracles.
-    check('shared_wrong_answer', lambda s: [scalar.set_answer(capture(s, f), 3, scalar.ALLOW) for f in ('emitted','flat','actor')],
-          ['native.step3.prediction','flat.native.step3.prediction','actor.native.step3.prediction'])
-    for form in ('emitted', 'flat', 'actor'):
-        prefix = '' if form == 'emitted' else form+'.'
-        def reply(s):
-            return scalar.reply_of(capture(s, form))
-        check(form+'_wrong_execution_form', lambda s: reply(s).update(execution_form='ordinary' if form=='actor' else 'actors'),
-              [prefix+'structure.execution_form'], clean=False)
-        check(form+'_one_sided_step_rename', lambda s: reply(s)['steps'][0].update(step_id='other-label'),
-              [prefix+'echo.step_ids'], clean=False,
-              withheld=[prefix+'native.step1.prediction',prefix+'native.step1.attempt'])
-        check(form+'_reordered_steps', lambda s: reply(s)['steps'].reverse(), [prefix+'echo.step_ids'], clean=False)
-        check(form+'_dropped_step', lambda s: reply(s)['steps'].pop(1), [prefix+'echo.step_ids'], clean=False,
-              withheld=[prefix+i for i in scalar.STEP_NATIVE[2]])
-        check(form+'_duplicate_step', lambda s: reply(s)['steps'].append(copy.deepcopy(reply(s)['steps'][1])),
-              [prefix+'echo.step_ids'], clean=False, withheld=[prefix+i for i in scalar.STEP_NATIVE[2]])
-        if form == 'flat':
-            check('flat_foreign_phase', lambda s: repartition(reply(s), [('foreign-phase', reply(s)['steps'])]),
-                  ['flat.structure.phase_membership','flat.structure.collections'])
-        if form != 'flat':
-            check(form+'_wrong_partition', lambda s: repartition(reply(s), [
-                (reply(s)['phases'][0]['phase_id'], reply(s)['steps'][:1]),
-                (reply(s)['phases'][1]['phase_id'], reply(s)['steps'][1:])]),
-                [prefix+'structure.phase_membership',prefix+'structure.collections'])
-            check(form+'_borrowed_collection', lambda s: reply(s)['phases'][1].update(
-                validator_subprocess=copy.deepcopy(reply(s)['phases'][0]['validator_subprocess'])),
-                [prefix+'structure.collections'], clean=False, reader='validator collection names another phase')
-        check(form+'_missing_completion', lambda s: reply(s)['phases'][-1].update(completion_observed=False),
-              [prefix+'structure.collections'])
-        check(form+'_missing_acknowledgement', lambda s: reply(s)['phases'][-1]['ordering'].update(proceed_observed=False),
-              [prefix+'structure.collections'], clean=False, reader='phase completion lacks arrival or acknowledgement')
-        check(form+'_worker_reap_absent', lambda s: (reply(s)['actors'][0]['subprocess'] if form=='actor' else reply(s)['runner_subprocess']).update(reaped=False),
-              [prefix+'structure.worker'], clean=False)
-        check(form+'_query_live_pid', lambda s: reply(s)['steps'][0]['sandbox_check'].update(pid=99999),
-              [], clean=False, reader='query_first')
-        # State the expected whole scalar diagnostic set independently; repeat the
-        # reviewed fresh-read and missing-evidence distinctions through every form.
-        selected = [row for row in scalar.controls() if row['name'].startswith(('fresh_', 'target_', 'targets_', 'prerequisite_'))]
-        selected += [row for row in scalar.controls() if row['name'] in (
-            'native_step1_deny_answer', 'native_step2_deny_answer', 'native_step3_eacces',
-            'native_step3_allow_answer_with_successful_open', 'native_step1_eperm',
-            'combined_prerequisite_and_consistency', 'combined_native_faults')]
-        for row in selected:
-            expected = [prefix+i for i,_ in row['expected']]
-            if row['name'] in ('prerequisite_B_unreadable_and_order_unestablished', 'prerequisite_C_unreadable_and_validator_spawn_failed'):
-                expected.append(prefix+'structure.collections')
-            withheld = [prefix+i for i in row['unevaluated']]
-            check(form+'_'+row['name'], lambda s, row=row: row['change'](capture(s, form)), expected,
-                  clean=row['clean'], withheld=withheld)
-    # The foreign actor remains coherent in every actor-owned account.
-    def rename_actor(s, name, *, request=False):
-        entry = capture(s, 'actor')
-        def rename(value):
-            if isinstance(value, dict):
-                for k,v in value.items():
-                    if k == 'actor_id': value[k] = name
-                    else: rename(v)
-            elif isinstance(value, list):
-                for v in value: rename(v)
-        rename(entry['run']['envelope']['data'])
-        if request: set_input(s, 'actor', rename)
-    check('foreign_actor', lambda s: rename_actor(s, 'another-reader'),
-          ['actor.admission.dossier_policy_digest','actor.admission.reply_policy_digest','actor.structure.actor_ownership',
-           'actor.structure.actor_application','actor.structure.actor_equipment','actor.structure.worker'])
-    check('actor_wrong_received_digest', lambda s: scalar.reply_of(capture(s,'actor'))['actors'][0].update(policy_received_sha256='00'*32),
-          ['actor.structure.actor_application'])
-    check('actor_invented_singular_worker', lambda s: scalar.reply_of(capture(s,'actor')).update(
-          runner_subprocess=copy.deepcopy(scalar.reply_of(capture(s,'actor'))['actors'][0]['subprocess'])),
-          [], clean=False, reader='actor form carries singular runner_subprocess')
-    check('actor_wrong_equipment', lambda s: scalar.reply_of(capture(s,'actor'))['actors'][0]['equipment']['execution'].update(status='unobserved',eligible=False),
-          ['actor.structure.actor_equipment'])
-    # Mutations to every preserved transformation dimension are caught before run.
-    for form in ('flat','actor'):
-        for label, change in [
-            ('identity',lambda d:d.update(contract=scalar.RELEASE)),
-            ('specimen',lambda d:d.update(specimen_id='different')),
-            ('policy',lambda d:checker.submitted_policy(d,form).update(sbpl_source='changed byte')),
-            ('operand',lambda d:checker.actions(d)[0]['attempt'].update(target='/different')),
-            ('action',lambda d:checker.actions(d)[0]['attempt'].update(action='access')),
-            ('extra',lambda d:d.update(extra=True)),
-        ]:
-            check(form+'_transform_'+label, lambda s, change=change:set_input(s,form,change), [form+'.transformation'])
-        other='actor' if form=='flat' else 'flat'
-        check(form+'_replaced_with_'+other, lambda s:capture(s,form).update(input=capture(s,other)['input']), [form+'.transformation'])
-    # A renamed experiment changes all submitted labels and capture associations.
-    state = build()
-    rename_actor(state,'renamed-reader',request=True)
-    for form in ('emitted','flat','actor'):
-        entry=capture(state,form)
-        mapping={s['step_id']:'renamed-'+str(i) for i,s in enumerate(checker.actions(document(state,form)))}
-        if form!='flat':mapping.update({p['phase_id']:'renamed-phase-'+str(i) for i,p in enumerate(document(state,form)['phases'])})
-        def renamed(value):
-            if isinstance(value,str):return mapping.get(value,value)
-            if isinstance(value,list):return [renamed(v) for v in value]
-            if isinstance(value,dict):return {k:renamed(v) for k,v in value.items()}
-            return value
-        doc=renamed(document(state,form))
-        set_input(state,form,lambda d:(d.clear(),d.update(doc)))
-        entry['run']['envelope']=renamed(entry['run']['envelope'])
-        for phase in scalar.reply_of(entry)['phases']:
-            for row in phase['validator_subprocess']['records']:
-                row['raw_line']=json.dumps(renamed(json.loads(row['raw_line'])),separators=(',',':'))
-        raw=state['example-1']['stdout'] if form=='emitted' else entry['input']
-        entry['run']['envelope']['data']['runner_client']['request_delivery']['bytes_written']=len(raw)-1
-    state['refusals']={name:dict(input=body,exit=1,envelope=scalar.refusal_envelope(scalar.DEVELOPMENT,name),stderr=b'')
-                       for name,body in checker.refusal_inputs(state['example-1']['stdout']).items()}
-    report=evaluate(artifacts,'consistent_renaming',state)
-    assert all(r['status']=='pass' for r in report['assertions']),checker.render(report)
-    records.append({'control':'consistent_renaming','status':report['status']})
-    original = checker._diagnostic
-    try:
-        checker._diagnostic = lambda *args: {'formatting': 'deliberately omitted'}
-        reformatted = evaluate(artifacts, 'summary_format_independent', build())
-        assert reformatted['assertions'] == baseline['assertions']
-    finally:
-        checker._diagnostic = original
-    records.append({'control': 'summary_format_independent', 'assertions_unchanged': True})
-    required = {('' if form=='emitted' else form+'.')+row[0]
-                for form in ('emitted','flat','actor') for row in checker.STRUCTURE_ASSERTIONS}
-    required.update('actor.'+row[0] for row in checker.ACTOR_ASSERTIONS)
-    required.update(('flat.transformation','actor.transformation'))
-    assert required <= covered, required-covered
-    (artifacts/'example-form-controls.json').write_text(json.dumps({'controls':records,'covered':sorted(covered)},indent=2)+'\n')
-    return records
+    # An internally coherent capture for another actor name answers no part of the submitted request.
+    def rename_actor(value):
+        if isinstance(value, dict):
+            for key, member in value.items():
+                if key == 'actor_id':
+                    value[key] = OTHER_ACTOR
+                else:
+                    rename_actor(member)
+        elif isinstance(value, list):
+            for member in value:
+                rename_actor(member)
+    add('foreign_actor', lambda v: rename_actor(scalar.envelope_of(v)['data']),
+        [OWNERSHIP, APPLICATION, EQUIPMENT, WORKER, 'admission.dossier_policy_digest', 'admission.reply_policy_digest'],
+        forms=ACTOR, clean=True, rest_holds=True,
+        conditions={OWNERSHIP: ['reply_actors', 'diagnostics_actors', 'dossier_actors', 'visits', 'phase1.actor_id',
+                                'phase2.actor_id', 'step.step1.actor_id', 'step.step2.actor_id', 'step.step3.actor_id'],
+                    APPLICATION: ['mode', 'setup_status', 'applied', 'application_count', 'application',
+                                  'policy_received_sha256'],
+                    EQUIPMENT: ['requested', 'resolved', 'required_entitlements', 'requirements_status',
+                                'execution.status', 'execution.eligible'],
+                    WORKER: ['applied', 'launch_parent_pid', 'pid', 'reaped', 'ready_byte_received', 'done_observed',
+                             'exit_code', 'collection_basis']})
+
+    # Faults only the consumer's reader rules detect: its diagnostic alone, naming the rule.
+    add('reader_query_live_process', lambda v: step(v, 1)['sandbox_check'].update(pid=99999), ['consumer_validation'],
+        forms=FORMS, exactly_consumer=True, rest_holds=True, consumer_reports='query_first')
+    add('reader_invented_singular_worker',
+        lambda v: reply(v).update(runner_subprocess=copy.deepcopy(worker(v))), ['consumer_validation'],
+        forms=ACTOR, exactly_consumer=True, rest_holds=True, consumer_reports='actor form carries singular runner_subprocess')
+
+    # The derivatives: each permitted member, and each preserved one, judged before anything is run.
+    def transform(name, form, change, *failed):
+        add(f'{form}_transform_{name}', change, [TRANSFORMATION], forms=(form,), rest_holds=True,
+            unevaluated=BEHIND_TRANSFORMATION, conditions={TRANSFORMATION: list(failed)})
+
+    def document(change):
+        return lambda v: scalar.set_input(v, change)
+
+    def plan(d, number):
+        return checker.actions(d)[number - 1]
+    for form in ('flat', 'actor'):
+        transform('extra', form, document(lambda d: d.update(extra=True)), 'members')
+        transform('specimen_absent', form, document(lambda d: d.pop('specimen_id')), 'members')
+        transform('identity', form, document(lambda d: d.update(contract=scalar.RELEASE)), 'preserved')
+        transform('specimen', form, document(lambda d: d.update(specimen_id='different')), 'preserved')
+        transform('not_an_object', form, lambda v: v.update(input=b'[]\n'), 'members')
+        transform('not_retained', form, lambda v: v.update(input=None), 'members')
+    # Another form's request in a derivative's place is not that derivative.
+    for form, other in (('flat', 'actor'), ('actor', 'flat')):
+        add(f'{form}_replaced_with_{other}',
+            lambda state, form=form, other=other: state['forms'][form].update(input=state['forms'][other]['input']),
+            [TRANSFORMATION], forms=(form,), rest_holds=True, unevaluated=BEHIND_TRANSFORMATION, whole_state=True,
+            conditions={TRANSFORMATION: ['members']})
+    transform('policy', 'flat', document(lambda d: d['policy'].update(sbpl_source='changed byte')), 'preserved')
+    transform('phases_kept', 'flat', document(lambda d: d.update(phases=[])), 'members')
+    transform('action_dropped', 'flat', document(lambda d: d['probe_plan'].pop()), 'actions')
+    transform('plan_not_an_array', 'flat', document(lambda d: d.update(probe_plan={})), 'actions')
+    for number in (1, 2, 3):
+        transform(f'step{number}_operand', 'flat',
+                  document(lambda d, number=number: plan(d, number)['attempt'].update(target='/different')),
+                  f'action.step{number}')
+    transform('operand', 'flat', document(lambda d: plan(d, 1)['sandbox_check']['filter'].update(value='/different')),
+              'action.step1')
+    transform('action', 'flat', document(lambda d: plan(d, 1)['attempt'].update(action='access')), 'action.step1')
+    transform('actions_exchanged', 'flat', document(lambda d: d['probe_plan'].reverse()), 'action.step1', 'action.step3')
+
+    def sole(d):
+        return d['actors'][0]
+    transform('policy', 'actor', document(lambda d: sole(d)['sandbox']['policy'].update(sbpl_source='changed byte')),
+              'actor.sandbox.policy')
+    transform('policy_kept', 'actor', document(lambda d: d.update(policy=copy.deepcopy(sole(d)['sandbox']['policy']))),
+              'members')
+    transform('no_actor', 'actor', document(lambda d: d.update(actors=[])), 'actors')
+    transform('second_actor', 'actor', document(lambda d: d['actors'].append(dict(copy.deepcopy(sole(d)), actor_id='second'))),
+              'actors')
+    transform('actor_extra_member', 'actor', document(lambda d: sole(d).update(extensions=[])), 'actor.members')
+    transform('actor_equipment_absent', 'actor', document(lambda d: sole(d).pop('equipment')), 'actor.members')
+    transform('actor_identifier_empty', 'actor', document(lambda d: sole(d).update(actor_id='')), 'actor.actor_id')
+    transform('actor_equipment', 'actor', document(lambda d: sole(d).update(equipment='entitled')), 'actor.equipment')
+    transform('sandbox_extra_member', 'actor', document(lambda d: sole(d)['sandbox'].update(profile='x')),
+              'actor.sandbox.members')
+    transform('sandbox_not_an_object', 'actor', document(lambda d: sole(d).update(sandbox='apply')), 'actor.sandbox.members')
+    transform('sandbox_unapplied', 'actor', document(lambda d: sole(d)['sandbox'].update(mode='none')), 'actor.sandbox.mode')
+    transform('phase_dropped', 'actor', document(lambda d: d['phases'].pop()), 'phases')
+    for number in (1, 2):
+        transform(f'phase{number}_extra_member', 'actor',
+                  document(lambda d, number=number: d['phases'][number - 1].update(note='x')), f'phase{number}.members')
+        transform(f'phase{number}_unassigned', 'actor',
+                  document(lambda d, number=number: d['phases'][number - 1].pop('actor_id')), f'phase{number}.members')
+        transform(f'phase{number}_another_actor', 'actor',
+                  document(lambda d, number=number: d['phases'][number - 1].update(actor_id=OTHER_ACTOR)),
+                  f'phase{number}.actor_id')
+        transform(f'phase{number}_relabeled', 'actor',
+                  document(lambda d, number=number: d['phases'][number - 1].update(phase_id='relabeled')),
+                  f'phase{number}.preserved')
+        transform(f'phase{number}_operand', 'actor',
+                  document(lambda d, number=number: d['phases'][number - 1]['actions'][0]['attempt'].update(target='/different')),
+                  f'phase{number}.preserved')
+    transform('operand', 'actor', document(lambda d: plan(d, 1)['sandbox_check']['filter'].update(value='/different')),
+              'phase1.preserved')
+    transform('action', 'actor', document(lambda d: plan(d, 1)['attempt'].update(action='access')), 'phase1.preserved')
+    return collected.rows

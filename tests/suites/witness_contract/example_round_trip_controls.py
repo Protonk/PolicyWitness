@@ -1,22 +1,28 @@
 #!/usr/bin/env python3
-"""Rejected controls for every assertion of the example round-trip checker.
+"""Rejected controls for every row and every condition of the example round-trip checker.
 
-A constructed document stands in for the app's emission: this case tests the
-checker, not the app. Its envelope is the authored ordinary run under
-tests/fixtures/blackbox_e2e, whose allowed and denied file steps are read as
-the workload's first and third steps, with one fresh-read step and three
-target samples authored here. Everything is placed in retained capture files
-exactly as the live case leaves them. No process is launched and nothing here
-is a native observation. The observer controls alone touch real files: two
-this case writes in its own directory.
+A constructed capture stands in for the app's emission and its three runs:
+this case tests the checker, not the app. The emitted document is phased, and
+its flat and single-actor derivatives are authored here beside it. The
+ordinary envelopes are the authored run under tests/fixtures/blackbox_e2e,
+whose allowed and denied file steps are read as the workload's first and third
+steps, with one fresh-read step and three target samples authored here; the
+actor envelope is the authored fixture under tests/fixtures/example_round_trip.
+Everything is placed in retained capture files exactly as the live case leaves
+them, and read through the one `evaluate` the live case runs. No process is
+launched and nothing here is a native observation. The observer controls alone
+touch real files: two this case writes in its own directory.
 
-Each rejected control introduces one logical fault and states, independently
-of the checker's output, the exact set of (assertion identifier,
-classification) pairs it must produce. A control earns coverage for its
-target assertions only when the actual set matches. The shared consumer's
-aggregate diagnostic is permitted beside any other control's set and earns
-nothing there; its own propagation control requires it exactly. Coverage is
-complete when every assertion in the checker's table has a matched control.
+Each rejected control introduces one logical fault in one form and states,
+independently of the checker's output, the exact set of (assertion identifier,
+classification) pairs that form must produce; the other forms must hold. A
+control that changes one submission's capture runs once in each form. A
+control earns coverage for its target rows only when the actual set matches.
+The shared consumer's aggregate diagnostic is permitted beside any other
+control's set and earns nothing there; its own propagation control requires it
+exactly. Coverage is complete when every row of the passing three-form report
+has a matched control in its form, and every condition the checker declares
+has a matched control that fails that condition alone in its row.
 
 A coherent control changes every dependent field, so the shared consumer reads
 the altered reply without error and only the stated assertion rejects it.
@@ -35,9 +41,10 @@ ROOT = Path(__file__).resolve().parents[3]
 sys.path.insert(0, str(ROOT / 'tests/lib'))
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 import build_context
+import consumer
 from blackbox import bind_constructed_envelope, envelope_skeleton, recapture_host_reply
 import check_example_round_trip as checker
-from check_example_round_trip import REFUSALS, UNKNOWN_MEMBER
+from check_example_round_trip import FORMS, REFUSALS, UNKNOWN_MEMBER
 
 # The classifications this case expects, spelled here and not read from the checker.
 CONSISTENCY = 'consistency'
@@ -51,7 +58,10 @@ DEVELOPMENT = 'development:' + 'c0' * 32
 RELEASE = 'release:v9.9.9'
 CONSUMER = ('consumer_validation', CONSISTENCY)
 # Everything that reads the run: unevaluated when the emission or its bounds fail.
-RUN_GROUPS = ('admission', 'identity', 'execution', 'echo', 'reported', 'readers', 'native', 'refusals')
+RUN_GROUPS = ('admission', 'identity', 'execution', 'echo', 'reported', 'readers', 'native', 'refusals', 'structure')
+# The labels this case gives its constructed phases and actor. The checker reads none of them.
+PHASE_LABELS = ('constructed-initial', 'constructed-restricted')
+ACTOR_LABEL = 'constructed-reader'
 # The native assertions of each step, and all of them, spelled here.
 STEP_NATIVE = {
     1: ('native.step1.prediction', 'native.step1.attempt'),
@@ -67,7 +77,10 @@ NATIVE = ('native.process_status', 'native.completion', 'native.order', 'native.
 PREREQUISITES = ('prerequisite.targets_readable', 'prerequisite.distinct_identities',
                  'prerequisite.distinguishing_prefixes')
 REPLY_DEPENDENT = ('admission.reply_policy_digest', 'echo.specimen_id', 'echo.step_ids', 'echo.queries',
-                   'echo.attempts', 'readers.disposition_integrity', 'readers.disposition_issues') + NATIVE
+                   'echo.attempts', 'readers.disposition_integrity', 'readers.disposition_issues', 'structure') + NATIVE
+EMITTED = ('emitted',)
+CONTAINER = 'bounds.ordinary_form'
+COLLECTIONS = 'structure.collections'
 # What one `read_fresh` reads at most, and the permission errnos, spelled here.
 BOUND = 64
 EPERM, ENOENT, EACCES = 1, 2, 13
@@ -91,8 +104,18 @@ def expected_classification(ident):
     return CONSISTENCY
 
 
-def pairs(*identifiers):
-    return {(ident, expected_classification(ident)) for ident in identifiers}
+def triples(form, *identifiers):
+    return {(form, ident, expected_classification(ident)) for ident in identifiers}
+
+
+def phase_count(form):
+    """How many phases this case's constructed reply holds in one form."""
+    return 1 if form == 'flat' else len(PHASE_LABELS)
+
+
+def each_phase(*names):
+    """The named condition in every phase of whichever form a control runs in."""
+    return lambda form: [f'phase{number}.{name}' for number in range(1, phase_count(form) + 1) for name in names]
 
 
 # ---------------------------------------------------------------------------
@@ -193,27 +216,73 @@ def refusal_envelope(identity, name):
     return envelope
 
 
-def build(identity=DEVELOPMENT):
-    """Every retained input of a passing case, as values a control can change before they are written."""
-    run = constructed_run(identity)
+def repartition(reply, partitions):
+    """Author a coherent partition of one reply: phase records, collection ownership and step echoes."""
+    templates = copy.deepcopy(reply['phases'])
+    records = {record['step_id']: record for phase in templates for record in phase['validator_subprocess']['records']}
+    reply['phases'] = []
+    for ordinal, (label, steps) in enumerate(partitions, 1):
+        phase = copy.deepcopy(templates[0])
+        ids = [step['step_id'] for step in steps]
+        phase.update(phase_id=label, ordinal=ordinal, action_ids=ids)
+        phase['validator_subprocess'].update(phase_id=label, ordinal=ordinal, pid=52000 + ordinal,
+                                             expected_step_ids=ids, records=[records[ident] for ident in ids])
+        if reply.get('execution_form') == 'actors':
+            phase.update(actor_id=reply['actors'][0]['actor_id'], actor_visit=ordinal)
+        for step in steps:
+            step['phase_id'] = label
+        reply['phases'].append(phase)
+
+
+def serialized(document):
+    return (json.dumps(document, indent=2, sort_keys=True) + '\n').encode()
+
+
+def build(identity=DEVELOPMENT, counts=(2, 1)):
+    """Every retained input of a passing case, as values a control can change before they are written.
+
+    The emitted document is phased with `counts` actions in each phase. Its
+    flat and actor derivatives are authored here, each with its own run and
+    samples; the checker's constructor is not their source.
+    """
+    def ordinary(partitioned):
+        run = constructed_run(identity)
+        reply = run['data']['runner_result']
+        if partitioned:
+            stops = [sum(counts[:index + 1]) for index in range(len(counts))]
+            repartition(reply, [(label, reply['steps'][stop - count:stop])
+                                for label, count, stop in zip(PHASE_LABELS, counts, stops)])
+        return run
+
+    run = ordinary(True)
     reply = run['data']['runner_result']
-    document = {
-        'contract': identity, 'specimen_id': reply['specimen_id'],
-        'policy': {'format': 'sbpl', 'sbpl_source': '(version 1) (allow default)'},
-        'probe_plan': [{'step_id': step['step_id'],
-                        'sandbox_check': {'operation': step['sandbox_check']['operation'],
-                                          'filter': {'kind': step['sandbox_check']['filter_kind'],
-                                                     'value': step['sandbox_check']['filter_value']}},
-                        'attempt': {'kind': 'file', 'action': step['attempt']['requested_action'],
-                                    'target': step['attempt']['requested_path']}}
-                       for step in reply['steps']],
-    }
-    emitted = (json.dumps(document, indent=2, sort_keys=True) + '\n').encode()
-    digest = hashlib.sha256(document['policy']['sbpl_source'].encode()).hexdigest()
-    reply['policy_sha256'] = digest
-    run['data']['specimen']['policy']['augmentation'].update(original_sha256=digest, applied_sha256=digest)
-    run['data']['runner_client']['request_delivery']['bytes_written'] = len(emitted) - 1
-    recapture_host_reply(run)
+    actions = [{'step_id': step['step_id'],
+                'sandbox_check': {'operation': step['sandbox_check']['operation'],
+                                  'filter': {'kind': step['sandbox_check']['filter_kind'],
+                                             'value': step['sandbox_check']['filter_value']}},
+                'attempt': {'kind': 'file', 'action': step['attempt']['requested_action'],
+                            'target': step['attempt']['requested_path']}}
+               for step in reply['steps']]
+    policy = {'format': 'sbpl', 'sbpl_source': '(version 1) (allow default)'}
+    stops = [sum(counts[:index + 1]) for index in range(len(counts))]
+    phases = [{'phase_id': label, 'actions': actions[stop - count:stop]}
+              for label, count, stop in zip(PHASE_LABELS, counts, stops)]
+    document = {'contract': identity, 'specimen_id': reply['specimen_id'], 'policy': policy, 'phases': phases}
+    flat_document = {'contract': identity, 'specimen_id': reply['specimen_id'], 'policy': copy.deepcopy(policy),
+                     'probe_plan': copy.deepcopy(actions)}
+    actor_document = {'contract': identity, 'specimen_id': reply['specimen_id'],
+                      'actors': [{'actor_id': ACTOR_LABEL, 'equipment': 'selected',
+                                  'sandbox': {'mode': 'apply', 'policy': copy.deepcopy(policy)}}],
+                      'phases': [dict(copy.deepcopy(phase), actor_id=ACTOR_LABEL) for phase in phases]}
+    actor_run = bind_constructed_envelope(json.loads(ACTOR_FIXTURE.read_text()))
+    actor_run['build']['contract'] = actor_run['data']['runner_client']['transport']['contract'] = identity
+    actor_run['data']['runner_result']['producer']['contract'] = identity
+    if tuple(counts) != (2, 1):
+        actor_reply = actor_run['data']['runner_result']
+        repartition(actor_reply, [(label, actor_reply['steps'][stop - count:stop])
+                                  for label, count, stop in zip(PHASE_LABELS, counts, stops)])
+    digest = hashlib.sha256(policy['sbpl_source'].encode()).hexdigest()
+    emitted = serialized(document)
     # The order in which the checker's observer meets the paths: A, then B as step 2's query, then C.
     paths = (reply['steps'][0]['attempt']['requested_path'], reply['steps'][1]['sandbox_check']['filter_value'],
              reply['steps'][1]['attempt']['requested_path'])
@@ -233,7 +302,19 @@ def build(identity=DEVELOPMENT):
         'run': {'exit': 0, 'envelope': run, 'stderr': b''},
         'refusals': {name: {'input': body, 'exit': 1, 'envelope': refusal_envelope(identity, name), 'stderr': b''}
                      for name, body in checker.refusal_inputs(emitted).items()},
+        'forms': {},
     }
+    for form, derived, envelope in (('flat', flat_document, ordinary(False)), ('actor', actor_document, actor_run)):
+        state['forms'][form] = {'input': serialized(derived), 'run': {'exit': 0, 'envelope': envelope, 'stderr': b''},
+                                'targets-before': copy.deepcopy(observed), 'targets-after': copy.deepcopy(observed)}
+    for form in FORMS:
+        view = capture(state, form)
+        envelope = view['run']['envelope']
+        if form != 'actor':
+            envelope['data']['runner_result']['policy_sha256'] = digest
+            envelope['data']['specimen']['policy']['augmentation'].update(original_sha256=digest, applied_sha256=digest)
+        envelope['data']['runner_client']['request_delivery']['bytes_written'] = len(submitted_of(view)) - 1
+        recapture_host_reply(envelope)
     return state
 
 
@@ -252,12 +333,25 @@ def write(directory, state):
         if entry.get('exit') is not None:
             Path(str(base) + '.exit').write_text(f'{entry["exit"]}\n')
 
-    for name in ('version', 'example-1', 'example-2', 'run'):
+    def submission(base, entry):
+        if entry.get('run') is not None:
+            invocation(base / 'run', entry['run'])
+        for name in ('targets-before', 'targets-after'):
+            if entry.get(name) is not None:
+                (base / (name + '.json')).write_text(json.dumps(entry[name], indent=2) + '\n')
+
+    for name in ('version', 'example-1', 'example-2'):
         if state.get(name) is not None:
             invocation(directory / name, state[name])
-    for name in ('property-list', 'contract-example', 'targets-before', 'targets-after'):
+    for name in ('property-list', 'contract-example'):
         if state.get(name) is not None:
             (directory / (name + '.json')).write_text(json.dumps(state[name], indent=2) + '\n')
+    submission(directory, state)
+    for form, entry in state.get('forms', {}).items():
+        (directory / form).mkdir()
+        if entry.get('input') is not None:
+            (directory / form / 'input.json').write_bytes(entry['input'])
+        submission(directory / form, entry)
     for name, entry in state['refusals'].items():
         base = directory / 'refusals' / name
         base.mkdir(parents=True)
@@ -270,25 +364,67 @@ def write(directory, state):
 # State accessors used by the controls
 # ---------------------------------------------------------------------------
 
-def document_of(state):
-    return json.loads(state['example-1']['stdout'].decode())
+def capture(state, form):
+    """One submission's retained inputs. The emitted submission's sit beside the publication records."""
+    return state if form == 'emitted' else state['forms'][form]
+
+
+def submitted_of(view):
+    """The bytes one submission handed to `run`."""
+    return view['input'] if 'input' in view else view['example-1']['stdout']
+
+
+def document_of(view):
+    return json.loads(submitted_of(view).decode())
 
 
 def set_document(state, change):
-    """Change the emitted document itself: both emissions, the snapshot's rendering and the refusal inputs agree."""
+    """Change the emitted document itself: both emissions and the snapshot's rendering agree."""
     document = document_of(state)
     change(document)
-    emitted = (json.dumps(document, indent=2, sort_keys=True) + '\n').encode()
+    emitted = serialized(document)
     state['example-1']['stdout'] = state['example-2']['stdout'] = emitted
     state['contract-example']['document'] = {key: value for key, value in document.items() if key != 'contract'}
 
 
-def envelope_of(state):
-    return state['run']['envelope']
+def set_input(view, change):
+    """Change one derivative's submitted document."""
+    document = document_of(view)
+    change(document)
+    view['input'] = serialized(document)
 
 
-def reply_of(state):
-    return envelope_of(state)['data']['runner_result']
+def envelope_of(view):
+    return view['run']['envelope']
+
+
+def reply_of(view):
+    return envelope_of(view)['data']['runner_result']
+
+
+def actor_of(view):
+    """The sole actor's record when the reply is in actor form."""
+    reply = reply_of(view)
+    return reply['actors'][0] if reply.get('execution_form') == 'actors' else None
+
+
+def policy_record(view):
+    """The record that carries the reply's policy digest in this form."""
+    return actor_of(view) or reply_of(view)
+
+
+def dossier_policy(view):
+    specimen = envelope_of(view)['data']['specimen']
+    return (specimen['actors'][0] if actor_of(view) else specimen)['policy']
+
+
+def worker_of(view):
+    actor = actor_of(view)
+    return actor['subprocess'] if actor else reply_of(view)['runner_subprocess']
+
+
+def phase_of(view, number):
+    return reply_of(view)['phases'][number - 1]
 
 
 def step_of(state, number=1):
@@ -408,32 +544,50 @@ def no_reply(state):
 # Controls
 # ---------------------------------------------------------------------------
 
-def controls():
-    """(name, identity, change, targets, expected pairs, requirements) rows.
+class Rows:
+    """Control rows: (name, forms, change, targets, expected identifiers, requirements).
 
     `targets` are the assertions the control is about; `expected` is the full
-    set its fault necessarily produces. Requirements name assertions that must
-    be unevaluated or must hold, and whether the consumer must read cleanly.
-    `rest_holds` requires every assertion outside the expected and unevaluated
-    sets to hold, so the control states the whole report.
+    set its fault necessarily produces in the form it runs in. `conditions`
+    states, for each expected row built from conditions, exactly which fail.
+    Requirements name assertions that must be unevaluated or must hold,
+    whether the consumer must read cleanly, and a reader rule the consumer
+    must report when the control is about that rule. `rest_holds` requires every
+    assertion of that form outside the expected and unevaluated sets to hold,
+    so the control states the form's whole report. The other forms hold, or
+    are wholly unevaluated when the emission itself is refused.
     """
-    rows = []
 
-    def add(name, change, targets, also=(), *, identity=DEVELOPMENT, unevaluated=(), holds=(), clean=False,
-            recapture=True, exactly_consumer=False, rest_holds=False):
-        expected = pairs(*targets, *also)
-        rows.append(dict(name=name, identity=identity, change=change, targets=tuple(targets), expected=expected,
-                         unevaluated=tuple(unevaluated), holds=tuple(holds), clean=clean, recapture=recapture,
-                         exactly_consumer=exactly_consumer, rest_holds=rest_holds))
+    def __init__(self):
+        self.rows = []
 
-    def coherent(name, change, targets, also=(), *, unevaluated=()):
-        """The consumer reads the altered reply cleanly, and the stated sets are the whole report."""
-        add(name, change, targets, also, unevaluated=unevaluated, clean=True, rest_holds=True)
+    def add(self, name, change, targets, also=(), *, identity=DEVELOPMENT, unevaluated=(), holds=(), clean=False,
+            recapture=True, exactly_consumer=False, rest_holds=False, forms=FORMS, conditions=None,
+            derivatives_withheld=False, per_form=None, consumer_reports=None, whole_state=False):
+        self.rows.append(dict(name=name, identity=identity, change=change, targets=tuple(targets),
+                              expected=tuple(targets) + tuple(also), unevaluated=tuple(unevaluated),
+                              holds=tuple(holds), clean=clean, recapture=recapture,
+                              exactly_consumer=exactly_consumer, rest_holds=rest_holds, forms=tuple(forms),
+                              conditions=dict(conditions or {}), derivatives_withheld=derivatives_withheld,
+                              per_form=dict(per_form or {}), consumer_reports=consumer_reports,
+                              whole_state=whole_state))
+
+    def coherent(self, name, change, targets, also=(), *, unevaluated=(), **requirements):
+        """The consumer reads the altered reply cleanly, and the stated sets are the form's whole report."""
+        self.add(name, change, targets, also, unevaluated=unevaluated, clean=True, rest_holds=True, **requirements)
+
+
+def controls():
+    """The rows for every scalar assertion. A row that changes one submission's capture runs in every form."""
+    collected = Rows()
+    add, coherent = collected.add, collected.coherent
+    rows = collected.rows
 
     def emission(name, change, targets, also=()):
         # A failed emission prevents submission: nothing that reads a run is evaluated,
-        # although the constructed run captures are present.
-        add('emission_' + name, change, targets, also, unevaluated=RUN_GROUPS + ('passage.delivery_length',))
+        # although the constructed run captures are present, and no derivative is judged.
+        add('emission_' + name, change, targets, also, unevaluated=RUN_GROUPS + ('passage.delivery_length',),
+            forms=EMITTED, derivatives_withheld=True)
 
     emission('version_exit_nonzero', lambda s: s['version'].update(exit=1), ['emission.version_exit'])
     for which in ('example-1', 'example-2'):
@@ -450,38 +604,51 @@ def controls():
              ['emission.framing_newline'])
 
     add('passage_version_build', lambda s: s['version']['envelope']['build'].update(contract=RELEASE),
-        ['passage.contract_matches_version'])
+        ['passage.contract_matches_version'], forms=EMITTED)
     add('passage_version_data', lambda s: s['version']['envelope']['data'].update(contract=RELEASE),
-        ['passage.contract_matches_version'])
+        ['passage.contract_matches_version'], forms=EMITTED)
     add('passage_version_unreadable', lambda s: s['version'].update(stdout=b'not an envelope\n'),
-        ['passage.contract_matches_version'])
+        ['passage.contract_matches_version'], forms=EMITTED)
     add('passage_property_list_differs', lambda s: s['property-list'].update(PWContract=RELEASE),
-        ['passage.contract_matches_property_list'])
+        ['passage.contract_matches_property_list'], forms=EMITTED)
     add('passage_property_list_absent', lambda s: s.update({'property-list': None}),
-        ['passage.contract_matches_property_list'])
-    add('passage_unpackaged_identity', lambda s: None, ['passage.contract_packaged_form'], identity='test:unpackaged')
+        ['passage.contract_matches_property_list'], forms=EMITTED)
+    add('passage_unpackaged_identity', lambda s: None, ['passage.contract_packaged_form'], identity='test:unpackaged', forms=EMITTED)
     add('passage_emissions_differ',
         lambda s: s['example-2'].update(stdout=(json.dumps(document_of(s), sort_keys=True) + '\n').encode()),
-        ['passage.emissions_identical'])
+        ['passage.emissions_identical'], forms=EMITTED)
     add('passage_delivery_length',
         lambda s: envelope_of(s)['data']['runner_client']['request_delivery'].update(
-            bytes_written=len(s['example-1']['stdout'])),
+            bytes_written=len(submitted_of(s))),
         ['passage.delivery_length'], recapture=False)
     add('passage_delivery_length_boolean',
         lambda s: envelope_of(s)['data']['runner_client']['request_delivery'].update(bytes_written=True),
         ['passage.delivery_length'], recapture=False)
     add('passage_rendering_member_differs', lambda s: s['contract-example']['document'].update(specimen_id='another'),
-        ['passage.contract_rendering'])
+        ['passage.contract_rendering'], forms=EMITTED)
     add('passage_rendering_extra_member', lambda s: s['contract-example']['document'].update(run_kind='label'),
-        ['passage.contract_rendering'])
-    add('passage_rendering_not_retained', lambda s: s.update({'contract-example': None}), ['passage.contract_rendering'])
+        ['passage.contract_rendering'], forms=EMITTED)
+    add('passage_rendering_not_retained', lambda s: s.update({'contract-example': None}), ['passage.contract_rendering'], forms=EMITTED)
 
-    def bounds(name, change, targets, also=()):
+    def bounds(name, change, targets, also=(), conditions=None):
         add('bounds_' + name, lambda s: set_document(s, change), targets, also,
-            unevaluated=RUN_GROUPS + PREREQUISITES + ('passage.delivery_length',))
+            unevaluated=RUN_GROUPS + PREREQUISITES + ('passage.delivery_length',), forms=EMITTED,
+            derivatives_withheld=True, conditions={CONTAINER: conditions} if conditions else None)
 
     def plan(document, number):
-        return document['probe_plan'][number - 1]
+        return checker.actions(document)[number - 1]
+
+    def planned(document):
+        return list(checker.actions(document))
+
+    def replan(document, steps):
+        """Place a list of steps in the phases: each phase keeps its count while steps remain, the last takes the rest."""
+        counts = [len(phase['actions']) for phase in document['phases']]
+        position = 0
+        for index, phase in enumerate(document['phases']):
+            stop = len(steps) if index == len(counts) - 1 else position + counts[index]
+            phase['actions'] = steps[position:stop]
+            position = stop
 
     def retarget(step, path, *, query=True, attempt=True):
         if query:
@@ -493,20 +660,45 @@ def controls():
         return {'A': plan(document, 1)['attempt']['target'], 'B': plan(document, 3)['attempt']['target'],
                 'C': plan(document, 2)['attempt']['target']}[role]
 
-    read_step = {'step_id': 'fourth', 'sandbox_check': {'operation': 'file-read-data',
-                                                         'filter': {'kind': 'path', 'value': '/constructed/fourth'}}}
+    def fourth(**attempt):
+        return {'step_id': 'fourth', 'sandbox_check': {'operation': 'file-read-data',
+                                                         'filter': {'kind': 'path', 'value': '/constructed/fourth'}},
+                'attempt': attempt}
     roles = ['bounds.workload_roles']
-    bounds('empty_plan', lambda d: d.update(probe_plan=[]), ['bounds.ordinary_form'], roles)
-    bounds('plan_not_an_array', lambda d: d.update(probe_plan={'step_id': 'x'}), ['bounds.ordinary_form'], roles)
-    bounds('write_action', lambda d: d['probe_plan'].append(dict(
-        read_step, attempt={'kind': 'file', 'action': 'open_write', 'target': '/constructed/fourth'})),
-        ['bounds.read_only_attempts'], roles)
-    bounds('unlink_action', lambda d: d['probe_plan'].append(dict(
-        read_step, attempt={'kind': 'file', 'action': 'unlink', 'target': '/constructed/fourth'})),
-        ['bounds.read_only_attempts'], roles)
-    bounds('exec_action', lambda d: d['probe_plan'].append(dict(
-        read_step, attempt={'kind': 'exec', 'action': 'spawn', 'target': '/usr/bin/true'})),
-        ['bounds.read_only_attempts'], roles)
+    # The container. Each control fails one of its conditions; a document with another number of
+    # steps is also another workload.
+    bounds('empty_plan', lambda d: d.update(phases=[]), [CONTAINER], roles, ['phases'])
+    bounds('plan_not_an_array', lambda d: d.update(phases={'phase_id': 'x'}), [CONTAINER], roles, ['phases'])
+    bounds('third_phase', lambda d: d['phases'].append({'phase_id': 'third', 'actions': []}), [CONTAINER],
+           conditions=['phases'])
+    bounds('plan_in_place_of_phases', lambda d: (d.update(probe_plan=planned(d)), d.pop('phases')), [CONTAINER],
+           conditions=['phases', 'no_probe_plan'])
+    bounds('plan_member_beside_phases', lambda d: d.update(probe_plan=None), [CONTAINER], conditions=['no_probe_plan'])
+    bounds('actors', lambda d: d.update(actors=[{'actor_id': 'a'}]), [CONTAINER], conditions=['no_actors'])
+    bounds('phase_identifiers_equal', lambda d: d['phases'][1].update(phase_id=d['phases'][0]['phase_id']),
+           [CONTAINER], conditions=['distinct_phase_ids'])
+    for number in (1, 2):
+        bounds(f'phase{number}_extra_member', lambda d, number=number: d['phases'][number - 1].update(actor_id='a'),
+               [CONTAINER], conditions=[f'phase{number}.members'])
+        bounds(f'phase{number}_member_absent', lambda d, number=number: d['phases'][number - 1].pop('phase_id'),
+               [CONTAINER], conditions=[f'phase{number}.members'])
+        bounds(f'phase{number}_identifier_empty', lambda d, number=number: d['phases'][number - 1].update(phase_id=''),
+               [CONTAINER], conditions=[f'phase{number}.phase_id'])
+        bounds(f'phase{number}_identifier_not_a_string', lambda d, number=number: d['phases'][number - 1].update(phase_id=7),
+               [CONTAINER], conditions=[f'phase{number}.phase_id'])
+        bounds(f'phase{number}_fourth_read_action',
+               lambda d, number=number: d['phases'][number - 1]['actions'].append(
+                   fourth(kind='file', action='access', target='/constructed/fourth')),
+               [CONTAINER], roles, [f'phase{number}.actions'])
+        bounds(f'phase{number}_actions_not_an_array', lambda d, number=number: d['phases'][number - 1].update(actions={}),
+               [CONTAINER], roles, [f'phase{number}.actions'])
+    bounds('action_moved_to_the_second_phase', lambda d: d['phases'][1]['actions'].insert(0, d['phases'][0]['actions'].pop()),
+           [CONTAINER], conditions=['phase1.actions', 'phase2.actions'])
+    for action, attempt in (('write', dict(kind='file', action='open_write', target='/constructed/fourth')),
+                            ('unlink', dict(kind='file', action='unlink', target='/constructed/fourth')),
+                            ('exec', dict(kind='exec', action='spawn', target='/usr/bin/true'))):
+        bounds(action + '_action', lambda d, attempt=attempt: d['phases'][-1]['actions'].append(fourth(**attempt)),
+               ['bounds.read_only_attempts'], roles + [CONTAINER], ['phase2.actions'])
     for number in (1, 2, 3):
         bounds(f'step{number}_write_action', lambda d, number=number: plan(d, number)['attempt'].update(action='create'),
                ['bounds.read_only_attempts'], roles)
@@ -520,14 +712,11 @@ def controls():
     bounds('runner_required_entitlement',
            lambda d: d.update(runner={'required_entitlements': ['com.example.entitlement']}),
            ['bounds.no_entitlement_requirement'], ['bounds.no_runner_selection'])
-    bounds('phases_in_place_of_plan',
-           lambda d: (d.update(phases=[{'phase_id': 'p', 'actions': d['probe_plan']}]), d.pop('probe_plan')),
-           ['bounds.ordinary_form'])
-    bounds('actors', lambda d: d.update(actors=[{'actor_id': 'a'}]), ['bounds.ordinary_form'])
 
-    # Another workload: every attempt is still read-only, and only the roles refuse it.
-    def role(name, change):
-        bounds('roles_' + name, change, roles)
+    # Another workload: every attempt is still read-only, and the roles refuse it. Where the
+    # change also leaves a phase with another number of actions, the container says which.
+    def role(name, change, container=None):
+        bounds('roles_' + name, change, roles, [CONTAINER] if container else (), container)
     role('step3_collapsed_onto_step1_target', lambda d: retarget(plan(d, 3), target(d, 'A')))
     role('step3_collapsed_onto_fresh_read_target', lambda d: retarget(plan(d, 3), target(d, 'C')))
     role('step3_opens_another_target_than_it_queries', lambda d: retarget(plan(d, 3), target(d, 'A'), query=False))
@@ -539,21 +728,27 @@ def controls():
     role('step1_access', lambda d: plan(d, 1)['attempt'].update(action='access'))
     role('step1_unpaired', lambda d: plan(d, 1).pop('sandbox_check'))
     role('step1_filter_not_a_path', lambda d: plan(d, 1)['sandbox_check']['filter'].update(kind='literal'))
+    # Neither operand a path: nothing would then tie the step to a target at all.
+    for number in (1, 3):
+        role(f'step{number}_neither_operand_a_path',
+             lambda d, number=number: (plan(d, number)['sandbox_check']['filter'].update(kind='literal'),
+                                       plan(d, number)['attempt'].update(target=None)))
     role('step2_fresh_read_of_queried_target', lambda d: retarget(plan(d, 2), target(d, 'B'), query=False))
     role('step2_fresh_read_of_step1_target', lambda d: retarget(plan(d, 2), target(d, 'A'), query=False))
     role('step2_queries_step1_target', lambda d: retarget(plan(d, 2), target(d, 'A'), attempt=False))
     role('step2_data_query', lambda d: plan(d, 2)['sandbox_check'].update(operation='file-read-data'))
     role('step2_open_read', lambda d: plan(d, 2)['attempt'].update(action='open_read'))
-    role('missing_fresh_read_step', lambda d: d['probe_plan'].pop(1))
-    role('missing_second_open_step', lambda d: d['probe_plan'].pop(2))
-    role('missing_first_open_step', lambda d: d['probe_plan'].pop(0))
-    role('one_step', lambda d: d.update(probe_plan=d['probe_plan'][:1]))
-    role('duplicated_step_appended', lambda d: d['probe_plan'].append(dict(copy.deepcopy(plan(d, 1)), step_id='again')))
-    role('step3_duplicates_step1', lambda d: d['probe_plan'].__setitem__(2, dict(copy.deepcopy(plan(d, 1)), step_id='again')))
+    role('missing_fresh_read_step', lambda d: replan(d, [plan(d, 1), plan(d, 3)]), ['phase2.actions'])
+    role('missing_second_open_step', lambda d: replan(d, planned(d)[:2]), ['phase2.actions'])
+    role('missing_first_open_step', lambda d: replan(d, planned(d)[1:]), ['phase2.actions'])
+    role('one_step', lambda d: replan(d, planned(d)[:1]), ['phase1.actions', 'phase2.actions'])
+    role('duplicated_step_appended', lambda d: replan(d, planned(d) + [dict(copy.deepcopy(plan(d, 1)), step_id='again')]),
+         ['phase2.actions'])
+    role('step3_duplicates_step1', lambda d: replan(d, planned(d)[:2] + [dict(copy.deepcopy(plan(d, 1)), step_id='again')]))
     role('duplicate_step_identifier', lambda d: plan(d, 3).update(step_id=plan(d, 1)['step_id']))
-    role('reordered_fresh_read_last', lambda d: d['probe_plan'].append(d['probe_plan'].pop(1)))
-    role('reordered_fresh_read_first', lambda d: d['probe_plan'].insert(0, d['probe_plan'].pop(1)))
-    role('reordered_opens_exchanged', lambda d: d['probe_plan'].reverse())
+    role('reordered_fresh_read_last', lambda d: replan(d, [plan(d, 1), plan(d, 3), plan(d, 2)]))
+    role('reordered_fresh_read_first', lambda d: replan(d, [plan(d, 2), plan(d, 1), plan(d, 3)]))
+    role('reordered_opens_exchanged', lambda d: replan(d, planned(d)[::-1]))
 
     add('admission_request_failure',
         lambda s: envelope_of(s)['data'].update(request_failure={'code': 'unknown_field', 'path': ['x']}),
@@ -576,13 +771,17 @@ def controls():
         envelope['result'].update(normalized_outcome='bad_request', ok=False, exit_code=1,
                                   error='constructed host refusal')
         state['run']['exit'] = 1
+    unworked = ['reply_pid', 'pid', 'reaped', 'ready_byte_received', 'done_observed', 'exit_code', 'collection_basis']
     add('admission_host_refuses_the_example', host_refuses, ['admission.no_request_failure'],
-        ['echo.step_ids', 'native.completion', 'native.process_status'],
-        unevaluated=('echo.queries', 'echo.attempts', 'native.order') + every_step)
+        ['echo.step_ids', 'native.completion', 'native.process_status', 'structure.phase_membership', COLLECTIONS],
+        unevaluated=('echo.queries', 'echo.attempts', 'native.order') + every_step,
+        conditions={'structure.phase_membership': ['phase_count'], COLLECTIONS: each_phase('unique'),
+                    'structure.worker': unworked},
+        per_form={'emitted': {'also': ['structure.worker']}, 'flat': {'also': ['structure.worker']}})
     add('admission_dossier_digest',
-        lambda s: envelope_of(s)['data']['specimen']['policy']['augmentation'].update(original_sha256='0' * 64),
+        lambda s: dossier_policy(s)['augmentation'].update(original_sha256='0' * 64),
         ['admission.dossier_policy_digest'], recapture=False)
-    add('admission_reply_digest', lambda s: reply_of(s).update(policy_sha256='0' * 64), ['admission.reply_policy_digest'])
+    add('admission_reply_digest', lambda s: policy_record(s).update(policy_sha256='0' * 64), ['admission.reply_policy_digest'])
 
     # Producer identity is compared before any reply is read: nothing behind it is evaluated.
     behind_identity = REPLY_DEPENDENT + ('execution.admitted_reply',)
@@ -678,11 +877,12 @@ def controls():
 
     predictions = tuple(f'native.step{number}.prediction' for number in (1, 2, 3))
     coherent('native_validator_spawn_failed', spawn_failed,
-             ['native.completion', 'native.process_status', *predictions], unevaluated=('native.order',))
+             ['native.completion', 'native.process_status', *predictions], [COLLECTIONS], unevaluated=('native.order',),
+             conditions={COLLECTIONS: each_phase('validator_reaped', 'validator_disposition', 'expected_step_ids')})
     # A nonzero exit alone is not a consistency fault; a reported exit that differs from the observed one is.
     add('native_validator_spawn_failed_exit_0', lambda s: (spawn_failed(s), s['run'].update(exit=0)),
-        ['reported.exit_code'], ['native.completion', *predictions], unevaluated=('native.order',), clean=True,
-        rest_holds=True)
+        ['reported.exit_code'], ['native.completion', *predictions, COLLECTIONS], unevaluated=('native.order',),
+        clean=True, rest_holds=True, conditions={COLLECTIONS: each_phase('validator_reaped', 'validator_disposition', 'expected_step_ids')})
 
     # One step's answer or attempt changed coherently: the consumer reads the reply cleanly and
     # exactly that step's own assertion rejects it. The step-3 pair shows the answer and the
@@ -702,7 +902,8 @@ def controls():
              ['native.step2.prediction', 'native.step3.prediction'])
     coherent('native_answers_exchanged_1_3', lambda s: exchange_answers(s, 1, 3),
              ['native.step1.prediction', 'native.step3.prediction'])
-    coherent('native_order_unestablished', coherent_unestablished, ['native.order'])
+    coherent('native_order_unestablished', coherent_unestablished, ['native.order'], [COLLECTIONS],
+             conditions={COLLECTIONS: each_phase('worker_lifetime_established')})
     # Step 3's answer is not a deny the validator returned with errno 0.
     add('native_step3_deny_with_query_errno',
         lambda s: set_answer(s, 3, dict(DENY, errno=EACCES)), ['native.step3.prediction'], rest_holds=True)
@@ -869,14 +1070,13 @@ def controls():
 
     # An expectation that is read and not met fails beside the missing prerequisite. Every native
     # assertion not named as failing is unevaluated: without the prerequisite none passes.
-    def beside(name, change, prerequisite, faults, also=()):
-        failing = tuple(faults) + tuple(also)
-        coherent_or_not = coherent if not also else \
-            (lambda *args, unevaluated: add(*args, unevaluated=unevaluated, rest_holds=True))
+    def beside(name, change, prerequisite, faults, also=(), conditions=None):
+        failing = tuple(faults) + tuple(also) + tuple(conditions or ())
         withheld = tuple(ident for ident in NATIVE if ident not in failing)
         if prerequisite == 'prerequisite.targets_readable':
             withheld += other_prerequisites
-        coherent_or_not('prerequisite_' + name, change, [prerequisite, *faults], also, unevaluated=withheld)
+        add('prerequisite_' + name, change, [prerequisite, *faults], tuple(also) + tuple(conditions or ()),
+            unevaluated=withheld, clean=not also, rest_holds=True, conditions=conditions)
 
     readable = 'prerequisite.targets_readable'
     # The fresh read is compared with this checker's sample of C, whatever is known of B or A.
@@ -898,13 +1098,14 @@ def controls():
     beside('A_unreadable_and_fresh_close_fails', lambda s: (unreadable(s, 'A'), fresh_fails(s, 'close')),
            readable, ['native.step2.attempt', 'native.step2.fresh_syscalls'])
     beside('B_unreadable_and_order_unestablished', lambda s: (unreadable(s, 'B'), coherent_unestablished(s)),
-           readable, ['native.order'])
+           readable, ['native.order'], conditions={COLLECTIONS: each_phase('worker_lifetime_established')})
     beside('B_unreadable_and_A_changed',
            lambda s: (unreadable(s, 'B'), after(s, 'A').update(length=after(s, 'A')['length'] + 1)),
            readable, ['native.targets_unchanged'])
     beside('C_unreadable_and_validator_spawn_failed', lambda s: (unreadable(s, 'C'), spawn_failed(s)),
            readable, ['native.completion', 'native.process_status', 'native.step1.prediction',
-                      'native.step2.prediction', 'native.step3.prediction'])
+                      'native.step2.prediction', 'native.step3.prediction'],
+           conditions={COLLECTIONS: each_phase('validator_reaped', 'validator_disposition', 'expected_step_ids')})
     beside('C_not_sampled_and_status_3', lambda s: (unsampled(s, 'C'), s['run'].update(exit=3)),
            readable, ['native.process_status'], ['reported.exit_code'])
     beside('A_and_B_one_file_and_step3_eacces', lambda s: (same_file(s, 'A', 'B'), set_open(s, 3, EACCES)),
@@ -944,6 +1145,9 @@ def controls():
         unevaluated=tuple(ident for ident in NATIVE if ident not in ('native.process_status', 'native.step1.attempt'))
         + other_prerequisites, rest_holds=True)
 
+    def refuse(*arguments, **requirements):
+        add(*arguments, forms=EMITTED, **requirements)
+
     for name, (code, path, names_identity, component) in REFUSALS.items():
         prefix = 'refusal.' + name
         every = [prefix + '.refused', prefix + '.failure'] + ([prefix + '.expected_identity'] if names_identity else []) + \
@@ -955,60 +1159,60 @@ def controls():
         def accepted(state, r=refusal):
             # An accepted run in its place: the passing run's envelope and exit status.
             r(state).update(envelope=copy.deepcopy(envelope_of(state)), exit=0)
-        add('refusal_' + name + '_accepted', accepted, every[:1], every[1:])
-        add('refusal_' + name + '_exit_0', lambda s, r=refusal: r(s).update(exit=0), [prefix + '.refused'])
-        add('refusal_' + name + '_other_outcome',
+        refuse('refusal_' + name + '_accepted', accepted, every[:1], every[1:])
+        refuse('refusal_' + name + '_exit_0', lambda s, r=refusal: r(s).update(exit=0), [prefix + '.refused'])
+        refuse('refusal_' + name + '_other_outcome',
             lambda s, r=refusal: r(s)['envelope']['result'].update(normalized_outcome='tool_error'),
             [prefix + '.refused'])
-        add('refusal_' + name + '_no_envelope', lambda s, r=refusal: r(s).update(stdout=b''), [prefix + '.refused'],
+        refuse('refusal_' + name + '_no_envelope', lambda s, r=refusal: r(s).update(stdout=b''), [prefix + '.refused'],
             unevaluated=every[1:])
-        add('refusal_' + name + '_wrong_code',
+        refuse('refusal_' + name + '_wrong_code',
             lambda s, r=refusal: r(s)['envelope']['data']['request_failure'].update(code='type_mismatch'),
             [prefix + '.failure'])
-        add('refusal_' + name + '_wrong_path',
+        refuse('refusal_' + name + '_wrong_path',
             lambda s, r=refusal: r(s)['envelope']['data']['request_failure'].update(path=['policy']),
             [prefix + '.failure'])
-        add('refusal_' + name + '_no_failure',
+        refuse('refusal_' + name + '_no_failure',
             lambda s, r=refusal: r(s)['envelope']['data'].update(request_failure=None),
             [prefix + '.failure'], [prefix + '.expected_identity'] if names_identity else [])
         if names_identity:
-            add('refusal_' + name + '_identity_missing',
+            refuse('refusal_' + name + '_identity_missing',
                 lambda s, r=refusal: r(s)['envelope']['data']['request_failure'].pop('expected_contract'),
                 [prefix + '.expected_identity'])
-            add('refusal_' + name + '_identity_wrong',
+            refuse('refusal_' + name + '_identity_wrong',
                 lambda s, r=refusal: r(s)['envelope']['data']['request_failure'].update(expected_contract=RELEASE),
                 [prefix + '.expected_identity'])
         if component == 'controller':
-            add('refusal_' + name + '_client_capture',
+            refuse('refusal_' + name + '_client_capture',
                 lambda s, r=refusal: r(s)['envelope']['data'].update(
                     runner_client=copy.deepcopy(envelope_of(s)['data']['runner_client'])),
                 [prefix + '.no_delivery'])
-            add('refusal_' + name + '_runner_reply',
+            refuse('refusal_' + name + '_runner_reply',
                 lambda s, r=refusal: r(s)['envelope']['data'].update(runner_result=copy.deepcopy(reply_of(s))),
                 [prefix + '.no_delivery'])
         else:
-            add('refusal_' + name + '_step_results',
+            refuse('refusal_' + name + '_step_results',
                 lambda s, r=refusal: r(s)['envelope']['data']['runner_result'].update(
                     steps=[copy.deepcopy(step_of(s))]),
                 [prefix + '.host_reply'])
-            add('refusal_' + name + '_reply_finished',
+            refuse('refusal_' + name + '_reply_finished',
                 lambda s, r=refusal: r(s)['envelope']['data']['runner_result'].update(normalized_outcome='finished'),
                 [prefix + '.host_reply'])
-            add('refusal_' + name + '_controller_refused',
+            refuse('refusal_' + name + '_controller_refused',
                 lambda s, r=refusal: r(s)['envelope']['data'].update(runner_client=None, runner_result=None),
                 [prefix + '.host_reply'])
-        add('refusal_' + name + '_input_unchanged', lambda s, r=refusal: r(s).update(input=s['example-1']['stdout']),
+        refuse('refusal_' + name + '_input_unchanged', lambda s, r=refusal: r(s).update(input=s['example-1']['stdout']),
             [prefix + '.one_change'])
-        add('refusal_' + name + '_input_second_change',
+        refuse('refusal_' + name + '_input_second_change',
             lambda s, r=refusal: r(s).update(input=r(s)['input'].replace(b'"specimen_id"', b'"specimen_ID"')),
             [prefix + '.one_change'])
-        add('refusal_' + name + '_input_absent', lambda s, r=refusal: r(s).update(input=None), [prefix + '.one_change'])
-        add('refusal_' + name + '_input_of_another_refusal',
+        refuse('refusal_' + name + '_input_absent', lambda s, r=refusal: r(s).update(input=None), [prefix + '.one_change'])
+        refuse('refusal_' + name + '_input_of_another_refusal',
             lambda s, r=refusal, name=name: r(s).update(
                 input=s['refusals']['unbound' if name != 'unbound' else 'other_release']['input']),
             [prefix + '.one_change'])
 
-    add('refusal_other_development_two_digits',
+    refuse('refusal_other_development_two_digits',
         lambda s: s['refusals']['other_development'].update(
             input=s['example-1']['stdout'].replace(DEVELOPMENT.encode(), b'development:' + b'c1' * 32)),
         ['refusal.other_development.one_change'])
@@ -1028,17 +1232,19 @@ def controls():
                    s['run'].update(exit=1)),
         ['execution.admitted_reply'], unevaluated=REPLY_DEPENDENT + ('identity.reply_producer',), recapture=False)
     # An admitted reply without the controller's assessment is a consistency fault, not missing execution.
+    # The actor's own assessment is part of what is absent.
+    without_actor_assessment = dict(per_form={'actor': {'also': ['structure.actor_ownership']}},
+                                    conditions={'structure.actor_ownership': ['diagnostics_actors']})
     add('readers_assessment_absent', lambda s: envelope_of(s)['data'].update(runner_sandbox_diagnostics=None),
         ['readers.disposition_integrity', 'readers.disposition_issues'], holds=('execution.admitted_reply',),
-        recapture=False)
+        recapture=False, **without_actor_assessment)
     add('readers_assessment_absent_and_result',
         lambda s: (envelope_of(s)['data'].update(runner_sandbox_diagnostics=None),
                    envelope_of(s)['result'].update(normalized_outcome='tool_error', ok=False, exit_code=0)),
         ['readers.disposition_integrity', 'readers.disposition_issues', 'consumer_validation'],
-        holds=('execution.admitted_reply', 'reported.exit_code'), recapture=False)
-    every_run = tuple(ident for ident, group, _, _ in checker.ASSERTIONS
-                      if group in ('admission', 'identity', 'echo', 'reported', 'readers')
-                      or ident.startswith('native.') or ident == 'passage.delivery_length')
+        holds=('execution.admitted_reply', 'reported.exit_code'), recapture=False, **without_actor_assessment)
+    every_run = ('admission', 'identity', 'echo', 'reported', 'readers', 'structure', 'native.',
+                 'passage.delivery_length')
     add('execution_no_envelope', lambda s: s['run'].update(stdout=b'', exit=2), ['execution.admitted_reply'],
         unevaluated=every_run)
     add('execution_stdout_not_an_object', lambda s: s['run'].update(stdout=b'"text"\n'), ['execution.admitted_reply'],
@@ -1062,7 +1268,7 @@ def controls():
     add('combined_independent_faults', combined,
         ['passage.delivery_length', 'echo.specimen_id', 'native.step1.attempt', 'reported.exit_code',
          'native.process_status', 'refusal.unbound.failure', 'refusal.unknown_member.host_reply',
-         'native.targets_unchanged', 'passage.contract_matches_property_list'], rest_holds=True)
+         'native.targets_unchanged', 'passage.contract_matches_property_list'], rest_holds=True, forms=EMITTED)
     add('combined_prerequisite_and_consistency',
         lambda s: (before(s, 'A').update(readable=False, regular_file=False), reply_of(s).update(specimen_id='another')),
         ['prerequisite.targets_readable', 'echo.specimen_id'], unevaluated=NATIVE + other_prerequisites,
@@ -1086,46 +1292,106 @@ def controls():
     return rows
 
 
-def run_control(artifacts, row):
-    state = build(row['identity'])
-    row['change'](state)
-    if row['recapture'] and state.get('run') is not None and 'envelope' in state['run']:
-        recapture_host_reply(state['run']['envelope'])
-    directory = artifacts / 'captures' / row['name']
-    write(directory, state)
-    report = checker.evaluate_capture(checker.load(directory), authored_fixture=True, form='flat')
-    (directory / 'report.json').write_text(json.dumps(report, indent=2) + '\n')
-    actual = checker.diagnostics(report)
-    statuses = {assertion['id']: assertion['status'] for assertion in report['assertions']}
+def selected(form, selector):
+    """The rows of one form a selector names: an identifier, a group, or a prefix ending in a period."""
+    return [ident for ident, group, _, _ in checker.table(form)
+            if ident == selector or group == selector or (selector.endswith('.') and ident.startswith(selector))]
+
+
+def judge(report, form, expected, *, conditions=None, unevaluated=(), holds=(), rest_holds=False, clean=False,
+          exactly_consumer=False, derivatives_withheld=False, consumer_reports=None):
+    """The ways a report differs from what a control states about one form. Empty when it matches."""
     problems = []
-    permitted = set() if row['exactly_consumer'] or CONSUMER in row['expected'] else {CONSUMER}
-    if actual - permitted != row['expected'] - permitted or not row['expected'] <= actual:
-        problems.append('diagnostics differ: missing ' + repr(sorted(row['expected'] - actual)) +
-                        ', unexpected ' + repr(sorted(actual - row['expected'] - permitted)))
+    actual = checker.diagnostics(report)
+    wanted = triples(form, *expected)
+    consumer_row = (form,) + CONSUMER
+    permitted = set() if exactly_consumer or consumer_row in wanted else {consumer_row}
+    if actual - permitted != wanted - permitted or not wanted <= actual:
+        problems.append('diagnostics differ: missing ' + repr(sorted(wanted - actual)) +
+                        ', unexpected ' + repr(sorted(actual - wanted - permitted)))
+    statuses = {(row['form'], row['id']): row['status'] for row in report['assertions']}
+    present = {ident for other, ident in statuses if other == form}
     withheld = set()
-    for selector in row['unevaluated']:
-        chosen = [ident for ident, group, _, _ in checker.ASSERTIONS if ident == selector or group == selector]
-        assert chosen, selector
+    for selector in unevaluated:
+        assert any(selected(other, selector) for other in FORMS), selector
+        chosen = selected(form, selector)
         withheld.update(chosen)
-        problems.extend(f'{ident} is {statuses[ident]}, not unevaluated' for ident in chosen
-                        if statuses[ident] != 'not_evaluated')
-    holding = set(row['holds'])
-    if row['rest_holds']:
-        holding.update(ident for ident in statuses if ident not in withheld and ident != CONSUMER[0])
-    problems.extend(f'{ident} is {statuses[ident]}, not holding' for ident in sorted(holding)
-                    if statuses[ident] != 'pass' and (ident, expected_classification(ident)) not in row['expected'])
-    if row['clean'] and report['consumer_errors']:
-        problems.append('the consumer reports ' + repr(report['consumer_errors']))
-    # A diagnostic must name its assertion and classification to a reader of the report alone.
+        problems.extend(f'{ident} is {statuses[form, ident]}, not unevaluated' for ident in chosen
+                        if statuses[form, ident] != 'not_evaluated')
+    holding = set(holds) & present
+    if rest_holds:
+        holding.update(ident for ident in present if ident not in withheld and ident != CONSUMER[0])
+    problems.extend(f'{ident} is {statuses[form, ident]}, not holding' for ident in sorted(holding)
+                    if statuses[form, ident] != 'pass' and ident not in expected)
+    # A fault in one submission leaves the others as they were; a refused emission leaves none judged.
+    for other in FORMS:
+        if other == form:
+            continue
+        settled = 'not_evaluated' if derivatives_withheld else 'pass'
+        wrong = sorted(ident for (found, ident), status in statuses.items() if found == other and status != settled)
+        if wrong:
+            problems.append(f'{other} rows are not {settled}: ' + ', '.join(wrong))
+        if report['forms'][other]['consumer_errors']:
+            problems.append(f'the consumer reports for {other}: ' + repr(report['forms'][other]['consumer_errors']))
+    declared = checker.conditions(form)
+    found = checker.failed_conditions(report)
+    stated = {ident: names(form) if callable(names) else names for ident, names in (conditions or {}).items()}
+    for ident in sorted(set(expected) & set(declared)):
+        if stated.get(ident) is None:
+            problems.append(f'{ident} is expected to fail and its failed conditions are not stated')
+        elif sorted(found.get((form, ident), ())) != sorted(stated[ident]):
+            problems.append(f'{ident} failed conditions {sorted(found.get((form, ident), ()))}, not {sorted(stated[ident])}')
+    if clean and report['forms'][form]['consumer_errors']:
+        problems.append('the consumer reports ' + repr(report['forms'][form]['consumer_errors']))
+    if consumer_reports and not any(consumer_reports in error for error in report['forms'][form]['consumer_errors']):
+        problems.append(f'the consumer does not report {consumer_reports!r}: ' + repr(report['forms'][form]['consumer_errors']))
+    # A diagnostic must name its form, assertion and classification to a reader of the report alone.
     rendered = checker.render(report)
-    for ident, classification in row['expected']:
-        if f'FAIL {ident} [{classification}]: ' not in rendered:
-            problems.append(f'the rendered report does not name {ident} [{classification}]')
-    covered = sorted(row['targets']) if not problems else []
-    return {'control': row['name'], 'targets': sorted(row['targets']),
-            'expected': sorted(map(list, row['expected'])), 'actual': sorted(map(list, actual)),
+    for _, ident, classification in wanted:
+        if f'FAIL {form} {ident} [{classification}]: ' not in rendered:
+            problems.append(f'the rendered report does not name {form} {ident} [{classification}]')
+    earned = [(ident, stated[ident][0]) for ident in sorted(set(expected) & set(declared))
+              if stated.get(ident) is not None and len(stated[ident]) == 1]
+    return problems, earned
+
+
+def run_control(artifacts, row, form):
+    state = build(row['identity'])
+    view = capture(state, form)
+    # A control changes the one submission it runs in; a few need another submission's bytes as well.
+    row['change'](state if row['whole_state'] else view)
+    if row['recapture'] and view.get('run') is not None and 'envelope' in view['run']:
+        recapture_host_reply(view['run']['envelope'])
+    directory = artifacts / 'captures' / form / row['name']
+    write(directory, state)
+    report = checker.evaluate(checker.load(directory), authored_fixture=True)
+    (directory / 'report.json').write_text(json.dumps(report, indent=2) + '\n')
+    more = row['per_form'].get(form, {})
+    expected = row['expected'] + tuple(more.get('also', ()))
+    problems, earned = judge(report, form, expected, conditions=row['conditions'],
+                             unevaluated=row['unevaluated'] + tuple(more.get('unevaluated', ())), holds=row['holds'],
+                             rest_holds=row['rest_holds'], clean=row['clean'],
+                             exactly_consumer=row['exactly_consumer'],
+                             derivatives_withheld=row['derivatives_withheld'], consumer_reports=row['consumer_reports'])
+    return {'control': row['name'], 'form': form, 'targets': sorted(row['targets']), 'expected': sorted(expected),
+            'actual': sorted(map(list, checker.diagnostics(report))),
+            'failed_conditions': {ident: list(names) for (found, ident), names in checker.failed_conditions(report).items()
+                                  if found == form},
             'consumer_errors': report['consumer_errors'], 'matched': not problems, 'problems': problems,
-            'earned_coverage': covered}
+            'earned_coverage': sorted(row['targets']) if not problems else [],
+            'earned_conditions': [list(pair) for pair in earned] if not problems else []}
+
+
+def evaluated(artifacts, name, state):
+    """A constructed capture written as the live case leaves it and read through the checker."""
+    for form in FORMS:
+        recapture_host_reply(capture(state, form)['run']['envelope'])
+    directory = artifacts / 'captures' / name
+    write(directory, state)
+    inputs = checker.load(directory)
+    report = checker.evaluate(inputs, authored_fixture=True)
+    (directory / 'report.json').write_text(json.dumps(report, indent=2) + '\n')
+    return inputs, report
 
 
 def perturbation_controls():
@@ -1159,7 +1425,7 @@ def perturbation_controls():
     # An identity that also occurs as another value is replaced as a member, never by its bytes.
     document = json.loads(build()['example-1']['stdout'])
     document['specimen_id'] = document['contract']
-    emitted = (json.dumps(document, indent=2, sort_keys=True) + '\n').encode()
+    emitted = serialized(document)
     changed = json.loads(checker.refusal_inputs(emitted)['unbound'])
     assert changed == dict(document, contract='unbound'), changed
     return records
@@ -1168,7 +1434,6 @@ def perturbation_controls():
 def prepare_controls(artifacts):
     """`prepare` is what the live case runs before submitting: a failed gate writes a report and nothing to run."""
     import plistlib
-    from example_form_controls import build as build_expansion
     records = []
     app = artifacts / 'captures' / 'prepare-app'
     (app / 'Contents').mkdir(parents=True)
@@ -1184,17 +1449,17 @@ def prepare_controls(artifacts):
          lambda s: set_document(s, lambda d: d['phases'][0]['actions'][0]['attempt'].update(action='open_write')),
          ('bounds.workload_roles', 'bounds.read_only_attempts')),
         ('bound_another_workload',
-         lambda s: set_document(s, lambda d: d['phases'].reverse()), ('bounds.workload_roles', 'bounds.ordinary_form')),
+         lambda s: set_document(s, lambda d: d['phases'].reverse()), ('bounds.workload_roles', CONTAINER)),
         ('flat_emission', lambda s: set_document(s, lambda d: (d.update(probe_plan=checker.actions(d)), d.pop('phases'))),
-         ('bounds.ordinary_form',)),
+         (CONTAINER,)),
         ('collapsed_partition', lambda s: set_document(s, lambda d: d.update(phases=[
-            {'phase_id':'one-phase','actions':checker.actions(d)}])), ('bounds.ordinary_form',)),
+            {'phase_id': 'one-phase', 'actions': checker.actions(d)}])), (CONTAINER,)),
         ('lost_action', lambda s: set_document(s, lambda d: d['phases'][0]['actions'].pop()),
-         ('bounds.ordinary_form','bounds.workload_roles')),
+         (CONTAINER, 'bounds.workload_roles')),
         ('bound_test_overrides', lambda s: set_document(s, lambda d: d.update(_test_overrides={})),
          ('bounds.no_test_overrides',)),
     ]:
-        state = build_expansion()
+        state = build()
         change(state)
         snapshot = artifacts / 'captures' / ('prepare-' + name + '.snapshot.json')
         snapshot.write_text(json.dumps({'surfaces': [{'id': 'request', 'public': {'nodes': [
@@ -1202,7 +1467,7 @@ def prepare_controls(artifacts):
         # As the live case leaves the directory before `prepare`: the three invocations only.
         for key in ('run', 'property-list', 'contract-example', 'targets-before', 'targets-after'):
             state[key] = None
-        state['refusals'] = {}
+        state['refusals'], state['forms'] = {}, {}
         directory = artifacts / 'captures' / ('prepare-' + name)
         write(directory, state)
         status = checker.prepare(directory, app, snapshot)
@@ -1211,9 +1476,9 @@ def prepare_controls(artifacts):
         if failing:
             report = json.loads((directory / 'report.json').read_text())
             assert status == 1 and not runnable, (name, status, runnable)
-            assert checker.diagnostics(report) == pairs(*failing), (name, checker.diagnostics(report))
+            assert checker.diagnostics(report) == triples('emitted', *failing), (name, checker.diagnostics(report))
             assert all(row['status'] == 'not_evaluated' for row in report['assertions']
-                       if row['group'] in RUN_GROUPS), name
+                       if row['group'] in RUN_GROUPS or row['form'] != 'emitted'), name
         else:
             assert status == 0 and 'report.json' not in produced, (name, status, produced)
             assert runnable == sorted(['flat/input.json', 'actor/input.json'] + [f'refusals/{refusal}/input.json' for refusal in REFUSALS]), runnable
@@ -1223,7 +1488,12 @@ def prepare_controls(artifacts):
             emitted = state['example-1']['stdout']
             for refusal in REFUSALS:
                 submitted = (directory / 'refusals' / refusal / 'input.json').read_bytes()
-                assert checker._one_change(refusal, emitted, document_of(state), submitted) == [], refusal
+                assert checker.one_change_problems(refusal, emitted, document_of(state), submitted) == [], refusal
+            # What `prepare` wrote for each derivative is what the checker then judges: both transformations hold.
+            source = json.loads(emitted)
+            for form in ('flat', 'actor'):
+                derived = json.loads((directory / form / 'input.json').read_bytes())
+                assert checker.transformation_problems(source, derived, form) == [], form
         records.append({'control': 'prepare_' + name, 'status': status, 'failing': list(failing), 'files': produced})
     return records
 
@@ -1231,19 +1501,17 @@ def prepare_controls(artifacts):
 def observer_controls(artifacts):
     """The observer's sample describes the file it opened, whatever its path names afterwards.
 
-    Each control runs the checker's observer on a file this case wrote, and
-    changes what the path names at the moment the observer's open returns.
-    The sample must carry the opened file's identity and content. The path is
-    then read again here, by name, to show that an observer which went back to
-    the path for either would have recorded something else.
+    Each control runs the checker's observer on a file this case wrote, with
+    an opener that changes what the path names as the open returns. The
+    sample must carry the opened file's identity and content. The path is then read again here, by
+    name, to show that an observer which went back to the path for either
+    would have recorded something else.
     """
-    from unittest import mock
     directory = artifacts / 'captures' / 'observer'
     directory.mkdir(parents=True)
     opened_bytes = b'the file the observer opened\n' * 4
     placed_bytes = b'another file placed at that path afterwards\n' * 4
     assert opened_bytes[:BOUND] != placed_bytes[:BOUND] and len(opened_bytes) > BOUND
-    real_open = os.open
 
     def digests(content):
         return {'sha256': hashlib.sha256(content).hexdigest(), 'length': len(content),
@@ -1261,21 +1529,20 @@ def observer_controls(artifacts):
         assert opened != placed, name
         calls = []
 
-        def open_then_change(path, flags, *arguments, **options):
-            descriptor = real_open(path, flags, *arguments, **options)
+        def open_then_change(path, flags):
+            descriptor = os.open(path, flags)
             calls.append(path)
             if name == 'path_replaced_after_open':
                 os.replace(other, path)
             else:
                 os.unlink(path)
             return descriptor
-        with mock.patch.object(checker.os, 'open', open_then_change):
-            sample_taken = checker.observe_target(str(target))
+        sample_taken = checker.observe_target(str(target), opener=open_then_change)
         assert calls == [str(target)], (name, calls)
         problems = []
         if not (sample_taken['readable'] and sample_taken['regular_file'] and sample_taken['error'] is None):
             problems.append('the sample is not a read of a regular file: ' + repr(sample_taken['error']))
-        found = {key: _get_member(sample_taken, 'stat', key) for key in opened}
+        found = {key: member_of(sample_taken, 'stat', key) for key in opened}
         if found != opened:
             problems.append(f'the sample carries identity {found}; the opened file has {opened}')
         found = {key: sample_taken.get(key) for key in digests(opened_bytes)}
@@ -1293,34 +1560,71 @@ def observer_controls(artifacts):
         records.append({'control': 'observer_' + name, 'opened': {'identity': opened, **digests(opened_bytes)},
                         'sample': sample_taken, 'path_afterwards': by_path, 'matched': not problems,
                         'problems': problems})
+    # A path that names nothing supplies no sample, whatever opens it.
+    absent = checker.observe_target(str(directory / 'absent'))
+    assert absent['error'] and not absent['readable'] and not absent['regular_file'], absent
     return records
 
 
-def _get_member(record, *path):
+def member_of(record, *path):
     for key in path:
         record = record.get(key) if isinstance(record, dict) else None
     return record
 
 
 def accepted_variants():
-    """Alterations the checker must accept, each for a stated reason."""
-    def short_target(state):
+    """Alterations the checker must accept, each for a stated reason. Each is made in every form."""
+    def short_target(view):
         # C shorter than the bound: the whole file is its bounded prefix.
         count = 10
         for sampled in (before, after):
-            sampled(state, 'C').update(sample('C', sampled(state, 'C')['target']), length=count,
-                                       sha256=hashlib.sha256(CONTENT['C'][:count]).hexdigest(),
-                                       prefix_length=count, prefix_sha256=hashlib.sha256(CONTENT['C'][:count]).hexdigest())
-            sampled(state, 'C')['stat']['st_size'] = count
-        set_fresh(state, read_rc=count, content_hex=CONTENT['C'][:count].hex())
+            sampled(view, 'C').update(sample('C', sampled(view, 'C')['target']), length=count,
+                                      sha256=hashlib.sha256(CONTENT['C'][:count]).hexdigest(),
+                                      prefix_length=count, prefix_sha256=hashlib.sha256(CONTENT['C'][:count]).hexdigest())
+            sampled(view, 'C')['stat']['st_size'] = count
+        set_fresh(view, read_rc=count, content_hex=CONTENT['C'][:count].hex())
     return [
         # A descriptor is any nonnegative integer; zero is a successful open.
-        ('fresh_open_returns_descriptor_0', lambda s: set_fresh(s, open_rc=0)),
+        ('fresh_open_returns_descriptor_0', lambda view: set_fresh(view, open_rc=0)),
         ('fresh_read_of_a_target_shorter_than_the_bound', short_target),
         # Steps 1 and 2 expect the same answer, so exchanging those two answers changes nothing
         # in the capture. This is the workload's stated blind spot, not a distinction it makes.
-        ('answers_exchanged_1_2', lambda s: exchange_answers(s, 1, 2)),
+        ('answers_exchanged_1_2', lambda view: exchange_answers(view, 1, 2)),
     ]
+
+
+def renamed():
+    """Every label of the experiment changed consistently in each form's request and capture: names are labels."""
+    state = build()
+
+    def rename(value, mapping):
+        if isinstance(value, str):
+            return mapping.get(value, value)
+        if isinstance(value, list):
+            return [rename(item, mapping) for item in value]
+        if isinstance(value, dict):
+            return {key: rename(item, mapping) for key, item in value.items()}
+        return value
+
+    for form in FORMS:
+        view = capture(state, form)
+        document = document_of(view)
+        mapping = {step['step_id']: f'renamed-{index}' for index, step in enumerate(checker.actions(document))}
+        mapping.update({phase['phase_id']: f'renamed-phase-{index}' for index, phase in enumerate(document.get('phases', []))})
+        mapping[ACTOR_LABEL] = 'renamed-reader'
+        changed = rename(document, mapping)
+        if form == 'emitted':
+            set_document(state, lambda d: (d.clear(), d.update(changed)))
+        else:
+            set_input(view, lambda d: (d.clear(), d.update(changed)))
+        view['run']['envelope'] = rename(view['run']['envelope'], mapping)
+        for phase in reply_of(view)['phases']:
+            for record in phase['validator_subprocess']['records']:
+                record['raw_line'] = json.dumps(rename(json.loads(record['raw_line']), mapping), separators=(',', ':'))
+        envelope_of(view)['data']['runner_client']['request_delivery']['bytes_written'] = len(submitted_of(view)) - 1
+    state['refusals'] = {name: {'input': body, 'exit': 1, 'envelope': refusal_envelope(DEVELOPMENT, name), 'stderr': b''}
+                         for name, body in checker.refusal_inputs(state['example-1']['stdout']).items()}
+    return state
 
 
 def uniform_answer_demonstration(artifacts):
@@ -1335,14 +1639,12 @@ def uniform_answer_demonstration(artifacts):
     uniform = build()
     set_answer(uniform, 3, ALLOW)
     set_open(uniform, 3)
-    recapture_host_reply(uniform['run']['envelope'])
-    directory = artifacts / 'captures' / 'uniform_answers'
-    write(directory, uniform)
-    report = checker.evaluate_capture(checker.load(directory), authored_fixture=True, form='flat')
+    _, report = evaluated(artifacts, 'uniform_answers', uniform)
     # The uniform capture is itself a reply the consumer reads cleanly; the present checker rejects
     # only step 3's own two expectations in it.
     assert not report['consumer_errors'], report['consumer_errors']
-    assert checker.diagnostics(report) == pairs('native.step3.prediction', 'native.step3.attempt'), checker.diagnostics(report)
+    assert checker.diagnostics(report) == triples('emitted', 'native.step3.prediction', 'native.step3.attempt'), \
+        checker.diagnostics(report)
     records = []
     for name, base, changing in (('uniform_answers', uniform, set()), ('present_workload', build(), {(1, 3), (2, 3)})):
         for first, second in ((1, 2), (1, 3), (2, 3)):
@@ -1355,23 +1657,107 @@ def uniform_answer_demonstration(artifacts):
     return records
 
 
+def shared_fault_controls(artifacts):
+    """The same wrong answer in all three submissions fails each form's own expectation: no form vouches for another."""
+    state = build()
+    for form in FORMS:
+        set_answer(capture(state, form), 3, ALLOW)
+    _, report = evaluated(artifacts, 'shared_wrong_answer', state)
+    wanted = set().union(*(triples(form, 'native.step3.prediction') for form in FORMS))
+    assert checker.diagnostics(report) == wanted and not report['consumer_errors'], checker.render(report)
+    assert all(row['status'] == 'pass' for row in report['assertions'] if row['id'] != 'native.step3.prediction')
+    return [{'control': 'shared_wrong_answer', 'expected': sorted(map(list, wanted))}]
+
+
+def table_controls(artifacts):
+    """The workload's shape is the checker's one table: another table reads another partition, with no other change."""
+    other = dict(checker.WORKLOAD, phases=(('step1',), ('step2', 'step3')))
+    state = build(counts=(1, 2))
+    for form in FORMS:
+        recapture_host_reply(capture(state, form)['run']['envelope'])
+    directory = artifacts / 'captures' / 'table_one_then_two'
+    write(directory, state)
+    inputs = checker.load(directory)
+    under_other = checker.evaluate(inputs, authored_fixture=True, workload=other)
+    assert under_other['status'] == 'pass' and not under_other['consumer_errors'] and \
+        all(row['status'] == 'pass' for row in under_other['assertions']), checker.render(under_other)
+    assert [(row['form'], row['id']) for row in under_other['assertions']] == \
+        [(form, row[0]) for form in FORMS for row in checker.table(form, other)]
+    # The same capture under the default table is another partition: its container refuses it and nothing is run.
+    under_default = checker.evaluate(inputs, authored_fixture=True)
+    problems, _ = judge(under_default, 'emitted', [CONTAINER],
+                        conditions={CONTAINER: ['phase1.actions', 'phase2.actions']},
+                        unevaluated=RUN_GROUPS + PREREQUISITES + ('passage.delivery_length',), rest_holds=True,
+                        derivatives_withheld=True)
+    assert not problems, problems
+    # The committed contract snapshot holds the app's constant, as the drift suite requires. Standing in
+    # for the emission, it passes the gate the live case runs before submitting, and `prepare` writes
+    # derivatives of it that the transformation check accepts. Under the other table its container refuses it.
+    snapshot = ROOT / 'docs/contract/public.json'
+    request = next(row for row in json.loads(snapshot.read_text())['surfaces'] if row['id'] == 'request')
+    example = next(node for node in request['public']['nodes'] if node['id'] == checker.EXAMPLE_NODE)['document']
+    state = build()
+    set_document(state, lambda d: (d.clear(), d.update(example, contract=DEVELOPMENT)))
+    for key in ('run', 'property-list', 'contract-example', 'targets-before', 'targets-after'):
+        state[key] = None
+    state['refusals'], state['forms'] = {}, {}
+    directory = artifacts / 'captures' / 'committed_snapshot_example'
+    write(directory, state)
+    app = artifacts / 'captures' / 'prepare-app'
+    assert checker.prepare(directory, app, snapshot) == 0, 'the committed example is refused before submission'
+    source = json.loads(state['example-1']['stdout'])
+    for form in ('flat', 'actor'):
+        derived = json.loads((directory / form / 'input.json').read_bytes())
+        assert checker.transformation_problems(source, derived, form) == [], form
+    refused = checker.evaluate(checker.load(directory), workload=other)
+    assert checker.failed_conditions(refused) == {('emitted', CONTAINER): ('phase1.actions', 'phase2.actions')}, \
+        checker.render(refused)
+    return [{'control': 'table_one_then_two', 'passes_under': list(map(list, other['phases'])),
+             'default_table_failed_conditions': ['phase1.actions', 'phase2.actions']},
+            {'control': 'committed_snapshot_example', 'prepared': True,
+             'steps': [step['step_id'] for step in checker.actions(example)]}]
+
+
+def summary_controls(artifacts):
+    """The diagnostic summary is made from a finished report and changes nothing in it."""
+    inputs, report = evaluated(artifacts, 'summary_passing', build())
+    assert 'diagnostic_summary' not in report
+    kept = copy.deepcopy(report)
+    summary = checker.diagnostic_summary(inputs, report)
+    assert report == kept
+    assert [entry['form'] for entry in summary] == list(FORMS) and all(len(entry['observations']) == 3 for entry in summary)
+    # A form whose association is unestablished supplies no observations; the others still do.
+    state = build()
+    step_of(capture(state, 'flat'), 1).update(step_id='other-label')
+    inputs, report = evaluated(artifacts, 'summary_flat_unassociated', state)
+    kept = copy.deepcopy(report)
+    summary = {entry['form']: entry for entry in checker.diagnostic_summary(inputs, report)}
+    assert report == kept
+    assert summary['flat']['observations'] is None and summary['flat']['withheld_reason']
+    assert all(len(summary[form]['observations']) == 3 for form in ('emitted', 'actor'))
+    return [{'control': 'summary_leaves_the_report_unchanged'}, {'control': 'summary_withheld_for_one_form'}]
+
+
 def main():
-    # Qualify the complete authored actor envelope before its mutation controls.
-    actor = bind_constructed_envelope(json.loads(ACTOR_FIXTURE.read_text()))
-    errors = checker.consumer.validate(actor, actor['build']['contract'], allow_fixture_json=True)
-    assert not errors, errors
     artifacts = Path(sys.argv[1])
     if (artifacts / 'captures').exists():
         shutil.rmtree(artifacts / 'captures')
-    from example_form_controls import run as form_controls
-    expanded = form_controls(artifacts)
-    results = {'forms': expanded, 'baselines': [], 'accepted_variants': [], 'controls': [], 'perturbations': perturbation_controls(),
+    # Qualify the complete authored actor envelope before its mutation controls.
+    actor = bind_constructed_envelope(json.loads(ACTOR_FIXTURE.read_text()))
+    errors = consumer.validate(actor, actor['build']['contract'], allow_fixture_json=True)
+    assert not errors, errors
+    from example_form_controls import controls as form_controls
+    results = {'baselines': [], 'accepted_variants': [], 'controls': [], 'perturbations': perturbation_controls(),
+               # `prepare` reads an app property list; the table control below uses the one written here.
                'prepare': prepare_controls(artifacts), 'observer': observer_controls(artifacts),
-               'uniform_answer_demonstration': uniform_answer_demonstration(artifacts)}
+               'uniform_answer_demonstration': uniform_answer_demonstration(artifacts),
+               'table': table_controls(artifacts), 'summary': summary_controls(artifacts),
+               'shared_fault': shared_fault_controls(artifacts)}
     failures = [f'{record["control"]}: ' + '; '.join(record['problems'])
                 for record in results['observer'] if not record['matched']]
-    # The checker's table must carry the classification this case authors for each assertion.
-    disagreeing = [ident for ident, _, carried, _ in checker.ASSERTIONS if carried != expected_classification(ident)]
+    # Each form's table must carry the classification this case authors for each assertion.
+    disagreeing = [f'{form} {ident}' for form in FORMS for ident, _, carried, _ in checker.table(form)
+                   if carried != expected_classification(ident)]
     if disagreeing:
         failures.append('classification differs from this case\'s expectation: ' + ', '.join(disagreeing))
     # The selector controls below name every selection key the checker reads from the shape golden.
@@ -1379,46 +1765,60 @@ def main():
             checker.ENTITLEMENT_KEY not in checker.SELECTOR_FIELDS:
         failures.append('the controller selection keys changed; add a bounds control for each: ' +
                         ', '.join(checker.SELECTOR_FIELDS))
+
+    def accepted(name, state):
+        _, report = evaluated(artifacts, name, state)
+        unsettled = [f'{row["form"]} {row["id"]}' for row in report['assertions'] if row['status'] != 'pass']
+        if report['status'] != 'pass' or unsettled or report['consumer_errors']:
+            failures.append(f'{name}: {checker.render(report)} {report["consumer_errors"]}')
+        return report, {'status': report['status'], 'not_passing': unsettled, 'consumer_errors': report['consumer_errors']}
+
+    required = None
     for identity in (DEVELOPMENT, RELEASE):
-        directory = artifacts / 'captures' / ('baseline_' + identity.split(':')[0])
-        write(directory, build(identity))
-        report = checker.evaluate_capture(checker.load(directory), authored_fixture=True, form='flat')
-        (directory / 'report.json').write_text(json.dumps(report, indent=2) + '\n')
-        unsettled = [row['id'] for row in report['assertions'] if row['status'] != 'pass']
-        results['baselines'].append({'identity': identity, 'status': report['status'], 'not_passing': unsettled,
-                                     'consumer_errors': report['consumer_errors']})
-        if report['status'] != 'pass' or unsettled or report['consumer_errors']:
-            failures.append(f'baseline {identity}: {checker.render(report)} {report["consumer_errors"]}')
+        report, record = accepted('baseline_' + identity.split(':')[0], build(identity))
+        results['baselines'].append(dict(record, identity=identity))
+        # What the live case reports: every row of the three-form report from the one `evaluate`.
+        rows = [(row['form'], row['id']) for row in report['assertions']]
+        assert required in (None, rows) and len(set(rows)) == len(rows)
+        required = rows
     for name, change in accepted_variants():
-        state = build()
-        change(state)
-        recapture_host_reply(state['run']['envelope'])
-        directory = artifacts / 'captures' / ('accepted_' + name)
-        write(directory, state)
-        report = checker.evaluate_capture(checker.load(directory), authored_fixture=True, form='flat')
-        (directory / 'report.json').write_text(json.dumps(report, indent=2) + '\n')
-        unsettled = [row['id'] for row in report['assertions'] if row['status'] != 'pass']
-        results['accepted_variants'].append({'variant': name, 'status': report['status'], 'not_passing': unsettled,
-                                             'consumer_errors': report['consumer_errors']})
-        if report['status'] != 'pass' or unsettled or report['consumer_errors']:
-            failures.append(f'accepted variant {name}: {checker.render(report)} {report["consumer_errors"]}')
+        for form in FORMS:
+            state = build()
+            change(capture(state, form))
+            results['accepted_variants'].append(dict(accepted(f'accepted_{form}_{name}', state)[1], variant=name, form=form))
+    results['accepted_variants'].append(dict(accepted('accepted_consistent_renaming', renamed())[1],
+                                             variant='consistent_renaming', form='all'))
+
     names = set()
-    covered = {}
-    for row in controls():
+    covered, conditions_covered = {}, {}
+    for row in controls() + form_controls():
         assert row['name'] not in names, row['name']
         names.add(row['name'])
-        assert row['targets'] and pairs(*row['targets']) <= row['expected'], row['name']
-        record = run_control(artifacts, row)
-        results['controls'].append(record)
-        if not record['matched']:
-            failures.append(f'{record["control"]}: ' + '; '.join(record['problems']))
-        for ident in record['earned_coverage']:
-            covered.setdefault(ident, []).append(record['control'])
-    table = [ident for ident, _, _, _ in checker.ASSERTIONS]
-    uncovered = [ident for ident in table if ident not in covered]
+        assert row['targets'] and set(row['forms']) <= set(FORMS), row['name']
+        for form in row['forms']:
+            record = run_control(artifacts, row, form)
+            results['controls'].append(record)
+            if not record['matched']:
+                failures.append(f'{form} {record["control"]}: ' + '; '.join(record['problems']))
+            for ident in record['earned_coverage']:
+                covered.setdefault((form, ident), []).append(record['control'])
+            for ident, condition in record['earned_conditions']:
+                conditions_covered.setdefault((form, ident, condition), []).append(record['control'])
+    uncovered = [f'{form} {ident}' for form, ident in required if (form, ident) not in covered]
+    declared = [(form, ident, condition) for form in FORMS for ident, names_ in checker.conditions(form).items()
+                for condition in names_]
+    unpinned = [f'{form} {ident} {condition}' for form, ident, condition in declared
+                if (form, ident, condition) not in conditions_covered]
+    undeclared = sorted(f'{form} {ident} {condition}' for form, ident, condition in conditions_covered
+                        if (form, ident, condition) not in declared)
     results['coverage'] = {
-        'assertions': len(table), 'covered': {ident: covered[ident] for ident in table if ident in covered},
+        'rows': len(required),
+        'covered': {f'{form} {ident}': covered[form, ident] for form, ident in required if (form, ident) in covered},
         'uncovered': uncovered,
+        'conditions': len(declared),
+        'conditions_covered': {f'{form} {ident} {condition}': conditions_covered[form, ident, condition]
+                               for form, ident, condition in declared if (form, ident, condition) in conditions_covered},
+        'conditions_unpinned': unpinned,
         'resting_on_other_evidence': [
             'Shape and record validity, ordering and the envelope-result relationship come from consumer.validate, '
             'whose rejected controls are blackbox_e2e/checker_controls; readers_consumer_propagation establishes '
@@ -1427,9 +1827,14 @@ def main():
             'controlled in the dispatcher suite.'],
     }
     if uncovered:
-        failures.append('assertions without a matched rejected control: ' + ', '.join(uncovered))
+        failures.append('rows without a matched rejected control in their form: ' + ', '.join(uncovered))
+    if unpinned:
+        failures.append('conditions without a matched control that fails them alone: ' + ', '.join(unpinned))
+    if undeclared:
+        failures.append('controls state conditions the checker does not declare: ' + ', '.join(undeclared))
     (artifacts / 'example-round-trip-controls.json').write_text(json.dumps(results, indent=2) + '\n')
-    print(f'{len(results["controls"])} controls, {len(table) - len(uncovered)} of {len(table)} assertions covered', flush=True)
+    print(f'{len(results["controls"])} controls, {len(required) - len(uncovered)} of {len(required)} rows covered, '
+          f'{len(declared) - len(unpinned)} of {len(declared)} conditions pinned', flush=True)
     if failures:
         raise SystemExit('\n'.join(failures))
 

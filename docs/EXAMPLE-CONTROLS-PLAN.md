@@ -50,9 +50,9 @@ weakened condition. Four causes:
   table offline. The contract generator's document member path accepts a
   one-member selector for an array element, and the probes surface selects the
   read-hosts action by `phase_id` and `step_id`.
-- **Public seams.** The observer takes an after-open callback, the diagnostic
-  summary is a separate public function applied after evaluation, and the
-  one-change judgment is public.
+- **Public seams.** The observer takes its opener as a parameter, the
+  diagnostic summary is a separate public function applied after evaluation,
+  and the one-change judgment is public.
 
 The emitted document's bytes, the twelve CLI calls of the live case, every
 existing assertion identifier and its meaning, and the reviewed prerequisite
@@ -80,8 +80,9 @@ and same-descriptor behavior do not change.
    attribute, replace no checker attribute and parse no identifier for its
    form.
 5. **No distinction is lost.** Every prior scalar control remains under its
-   name. Each prior form control remains or is replaced by a stricter named
-   control, and the replacement is listed in the implementing commit.
+   name, apart from one whose name described the flat container. Each prior
+   form control remains or is replaced by a stricter named control, and the
+   replacements are listed in the implementing commit.
 6. **The measured gap closes.** The review's 64 unnoticed changes,
    re-expressed against the new code, each fail the controls case. This is a
    scratch measurement outside the dispatcher, reported as such.

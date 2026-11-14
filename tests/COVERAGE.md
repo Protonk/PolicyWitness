@@ -161,8 +161,10 @@ derivative. Independent samples and per-form query/attempt expectations sit
 beside submitted phase/action/actor association, collection/release and owned
 worker cleanup checks. Its diagnostic summary makes no equality claim.
 `example_round_trip_controls` supplies complete constructed passing envelopes,
-coherent foreign partitions/owners, missing-evidence and fresh-read substitutions;
-these establish checker sensitivity separately from native effects. The
+coherent foreign partitions/owners, missing-evidence and fresh-read substitutions,
+each run in every form it applies to, and one control for each condition of the
+container, transformation and structure rows; these establish checker
+sensitivity separately from native effects. The
 [suite account](suites/witness_contract/README.md#the-apps-own-example) owns
 the assertions and the single-actor, read-only and local-file limits.
 

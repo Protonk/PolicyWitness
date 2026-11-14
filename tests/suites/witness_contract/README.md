@@ -1126,9 +1126,15 @@ and actor inputs, commands, outputs and samples have their own subdirectories;
 refusals remain six single changes to emitted bytes, not eighteen per-form
 variants. Each native submission gets its own host and worker.
 
-The workload is identified by position and by the relationships among its
-submitted operands. No step identifier, path or policy text decides a role,
-and the checker does not read the policy source:
+The checker states the workload once, in its `WORKLOAD` table: the phase
+partition, the order of the roles, each role's query operation and attempt
+action with the target each concerns, and the answer and attempt result pinned
+to the present example. The container bound, the role finder, the
+transformation check, the target each native expectation concerns, the native
+expectations and the declared conditions all read that table, and `evaluate`
+takes it as a parameter. The workload is identified by position and by the
+relationships among its submitted operands. No step identifier, path or policy
+text decides a role, and the checker does not read the policy source:
 
 | Step | Query | Attempt |
 | --- | --- | --- |
@@ -1147,10 +1153,14 @@ reads the content from the same descriptor and closes it. It keeps the
 SHA-256 digest and length of the content and of its bounded prefix, the first
 64 bytes, which is the most one `read_fresh` reads. No content is kept.
 
-The emitted file is then submitted unchanged. Each assertion has a stable
-identifier, a group and a classification. `capture/report.json` lists every
-assertion's result with a one-sentence statement keyed by role, and its
-`forms` member names the submitted step identifier and path in each role. Existing identifiers describe the emitted form; added flat and actor assertions have `flat.` and `actor.` prefixes:
+The emitted file is then submitted unchanged. Each row of the report has a
+form (`emitted`, `flat` or `actor`), a stable identifier, a group and a
+classification; one identifier in two forms is two rows. `capture/report.json`
+lists every row's result with a one-sentence statement keyed by role, and its
+`forms` member names the submitted step identifier and path in each role. The
+publication rows (emission, bounds, refusals and the passage rows other than
+the delivery length) belong to the emitted form; each derivative has a
+`transformation` row in their place:
 
 | Group | Demand |
 | --- | --- |
@@ -1163,6 +1173,13 @@ assertion's result with a one-sentence statement keyed by role, and its
 | Prerequisites | A, B and C were each a regular file this user opened and read before the run; they have three distinct device and inode identities; each bounded prefix is nonempty and C's differs from A's and from B's. |
 | Native | Listed below; none passes unless every prerequisite holds. |
 | Refusals | Six inputs, each the emitted bytes with one change, go through `run`: another development identity, another release, `unbound`, no identity, a removed closing brace and one unknown member. The first five stop at the controller with their code, path, expected identity where one applies and no client capture or reply; the last is refused by the host as `unknown_field` with no step results. |
+
+`bounds.ordinary_form`, each derivative's `transformation` row and every
+`structure.*` row are built from named conditions, which the checker declares
+for each form. A failing row lists the conditions that failed, such as
+`phase2.proceed_observed` or `actor.sandbox.mode`, in its `conditions` member
+and its explanation. A member that is absent from a derivative fails its
+member set alone; one that is present and changed fails its own condition.
 
 Structure assertions check the submitted phase IDs, ordinals and exact action
 partition; each phase must arrive, complete and have its own collected
@@ -1177,8 +1194,10 @@ its owned worker. Numeric PID inequality across sequential reaped children is
 not a freshness requirement.
 
 `diagnostic_summary` records each form's query and attempt separately, fresh
-read identity/count/digest, independent samples and assertion statuses. It is
-withheld when producer identity or submitted association is unestablished. It
+read identity/count/digest, independent samples and assertion statuses. A
+separate function builds it from the finished report, which it does not
+change. A form's observations are withheld when its producer identity or
+submitted association is unestablished. It
 has no equality assertion or separate acceptance credit; equal independent
 passes already imply almost all equal summarized values. Query errno on allow
 answers and failed-open `rc` are recorded without adding per-form pins. The
@@ -1263,38 +1282,52 @@ native results, `execution_unavailable` when the run yields no admitted reply
 `prerequisite_unestablished` when a target prerequisite was not observed (no
 native expectation then passes; no other target is substituted) and
 `native_observation` when a pinned native expectation was read and not met.
-The log prints each as `FAIL <identifier> [<classification>]`.
+The log prints each as `FAIL <form> <identifier> [<classification>]`.
 Both cases are default members: the native workloads read files, need no signing identity,
 GUI session or network, and use the same signed app equipment.
 
-`example_round_trip_controls` runs the same checker offline over constructed
-captures; a constructed document stands in for the emission. Its ordinary passing
-capture is the authored run under `tests/fixtures/blackbox_e2e/checker/current/`
-with the allowed and denied file steps read as steps 1 and 3, and one
-fresh-read step and three target samples authored in the control. Each of its
-rejected controls introduces one logical fault and states the exact set of
-identifier and classification pairs it must produce; a control earns coverage
-for its target assertions only when the actual set matches. The case spells
-each assertion's expected classification itself and fails if the checker's
-table carries another. The consumer's aggregate diagnostic is permitted beside
-another control's set and earns nothing there, and its own propagation control
-requires it exactly. Most controls also state the rest of the report: which
-assertions are unevaluated, and that every other one holds.
+`example_round_trip_controls` runs the same `evaluate` offline over
+constructed captures. Its passing model is the phased emission with its flat
+and actor derivatives, each with its own run and samples. The ordinary
+envelopes are the authored run under
+`tests/fixtures/blackbox_e2e/checker/current/` with the allowed and denied file
+steps read as steps 1 and 3, and one fresh-read step and three target samples
+authored in the control; the actor envelope is the complete authored fixture
+described in the [fixture account](../../fixtures/example_round_trip/README.md).
+The three-form baseline must satisfy the full consumer and every row before
+any control runs.
 
-`example_form_controls.py` adds the complete authored actor fixture described
-in the [fixture account](../../fixtures/example_round_trip/README.md). The
-three-form passing baseline must satisfy the full consumer and every case
-assertion before mutations run. The existing scalar table remains exercised
-on its flat model; its fresh-read, prerequisite, target-stability and combined
-fault controls are also run through all three full forms. New controls pin
-exact diagnostics for wrong partitions, borrowed collections, missing
-completion/acknowledgement, another actor's coherent records, live-worker
-binding, policy receipt, equipment and invented singular records. Shared
-wrong answers fail each form independently. Consistent step, phase and actor
-renaming passes; one-sided renaming, dropped/duplicated/reordered actions and
-substitution of another form fail. Transformation controls alter identity,
-policy, operands, actions and extra members before submission. Replacing the
-summary formatter leaves assertion results unchanged.
+Each rejected control introduces one logical fault in one form and states the
+exact set of identifier and classification pairs that form must produce. The
+other forms must hold; when the emission itself is refused, no derivative is
+judged. A control that changes one submission's capture runs once in each
+form, and a control of the publication runs in the emitted form. For every
+expected row built from conditions the control states exactly which conditions
+fail. The case spells each row's expected classification itself and fails if
+a form's table carries another. The consumer's aggregate diagnostic is
+permitted beside another control's set and earns nothing there, and its own
+propagation control requires it exactly. Most controls also state the rest of
+that form's report: which rows are unevaluated, and that every other one holds.
+
+`example_form_controls.py` holds the condition and ownership rows. For each
+condition a control changes one thing: one phase's ordinal, arrival,
+completion, collection status, release or acknowledgement; the worker's
+application, process identifiers, completion or reap; one projection of the
+actor's ownership; one member of its application or equipment; one member of
+a derivative. Coherent controls keep a reply to another partition, to another
+phase label and to another actor's name internally valid, and the submitted
+association still rejects each. A collection borrowed from the first phase,
+a query naming another live process and an invented singular worker record
+are tied to the consumer rule that reports them. Another form's request in a
+derivative's place fails that derivative's member set.
+
+Three controls stand apart from the rows. The same wrong answer in all three
+submissions fails each form's own expectation. A constructed 1+2 document,
+its derivatives and their replies pass under a 1+2 table handed to `evaluate`
+and fail the default table's container, with nothing run; the example in the
+committed contract snapshot passes the default table's bounds offline. The
+diagnostic summary is built from a finished report and leaves it unchanged,
+and one unassociated form withholds only its own observations.
 
 A coherent control changes every dependent field, so the consumer reads the
 altered reply without error and only the stated assertion rejects it. The
@@ -1322,8 +1355,8 @@ makes these faults:
 | An association fault beside a native fault; several native faults | Every diagnostic stays. |
 
 Two controls run the checker's observer on files the case writes in its own
-directory. As the observer's open returns, one renames another file over the
-path and the other unlinks the path. The sample must carry the device, inode,
+directory. Each hands the observer an opener that changes the path as its
+open returns: one renames another file over the path and the other unlinks it. The sample must carry the device, inode,
 digests and lengths of the file that was opened; the control then reads the
 path by name and requires it to name the other file, with another identity,
 digest and length, or nothing.
@@ -1339,23 +1372,28 @@ or bound writes a report and no target observation or refusal input, so nothing
 can be submitted. Flat emission, swapped/collapsed phases and a lost action
 are rejected at that preparation boundary.
 
-Three alterations must pass: a fresh read whose open returned descriptor 0, a
-fresh read of a target shorter than the bound, and the answers of steps 1 and 2
-exchanged, which is the blind spot stated above. The case also shows what a
+Four alterations must pass. Three are made in each form: a fresh read whose
+open returned descriptor 0, a fresh read of a target shorter than the bound,
+and the answers of steps 1 and 2 exchanged, which is the blind spot stated
+above. The fourth renames every step, phase and actor consistently in all
+three requests and captures. The case also shows what a
 workload with uniform answers could not distinguish, without a second checker:
 in a constructed capture where step 3 is allowed and succeeds like the others,
 exchanging any two steps' answers leaves the capture identical, so no reader
 could tell them apart; in the present capture the same exchange changes it for
 both pairs that involve step 3.
 
-The case fails if any assertion in the scalar table or any added structure/
-transformation assertion lacks a matched control,
-and `artifacts/example-round-trip-controls.json` holds each control's expected
-and actual sets, the coverage it earned, the observer controls, the accepted
-alterations and the uniform-answer comparison. `example-form-controls.json`
-records the expanded controls and their exact expected sets. Shape and record validity rest on
-`blackbox_e2e/checker_controls`; that the app is validly signed and unchanged
-rests on the dispatcher's inspection.
+The case fails on either of two gaps. Every row of the passing three-form
+report, which is what the live case reports, needs a matched rejected control
+in its own form. Every condition the checker declares needs a matched control
+that fails that condition alone in its row; a control that states a condition
+the checker does not declare also fails the case.
+`artifacts/example-round-trip-controls.json` holds each control's form,
+expected and actual sets, failed conditions and the coverage it earned, with
+the observer, table, summary and shared-fault controls, the accepted
+alterations and the uniform-answer comparison. Shape and record validity rest
+on `blackbox_e2e/checker_controls`; that the app is validly signed and
+unchanged rests on the dispatcher's inspection.
 
 ## Specimen dossier
 

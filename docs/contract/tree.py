@@ -694,9 +694,13 @@ def _example_document(tree, node):
     if not isinstance(ref, dict) or set(ref) - {'member'} != {'path', 'symbol'}:
         node.fail('document requires one path/symbol citation', 'document')
     member = ref.get('member', [])
+
+    def selector(part):
+        return isinstance(part, dict) and len(part) == 1 and all(
+            isinstance(key, str) and isinstance(value, str) for key, value in part.items())
     if not isinstance(member, list) or ('member' in ref and not member) or \
-            any(type(part) not in (str, int) for part in member):
-        node.fail('document member must be a nonempty path of keys and indices', 'document')
+            any(type(part) not in (str, int) and not selector(part) for part in member):
+        node.fail('document member must be a nonempty path of keys, indices and one-member selectors', 'document')
     ref = {key: ref[key] for key in ('path', 'symbol')}
     try:
         generator_common.citation(ref, _ReadRoot(tree.read))
@@ -733,8 +737,18 @@ def _example_document(tree, node):
         if key not in fields:
             node.fail(f'{path}: {symbol} carries the unknown member {key!r}', 'document')
     # A member path selects one object inside the admissible request, such as a
-    # step. Its members must be fields of the record its subject describes.
+    # step. Its members must be fields of the record its subject describes. A
+    # one-member selector names the one array element that carries that member
+    # with that value, so the selection follows the element and not its position.
     for depth, part in enumerate(member):
+        if isinstance(part, dict):
+            (key, wanted), = part.items()
+            matches = [item for item in value if isinstance(item, dict) and item.get(key) == wanted] \
+                if isinstance(value, list) else []
+            if len(matches) != 1:
+                node.fail(f'{path}: {symbol} has {len(matches)} elements at {json.dumps(member[:depth + 1])}', 'document')
+            value = matches[0]
+            continue
         container = dict if isinstance(part, str) else list
         if not isinstance(value, container) or (part not in value if container is dict else not 0 <= part < len(value)):
             node.fail(f'{path}: {symbol} has no member at {json.dumps(member[:depth + 1])}', 'document')

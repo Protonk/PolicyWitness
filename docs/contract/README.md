@@ -158,8 +158,11 @@ prints the document after the example's prose with `contract` shown as
 `<reported-contract>`. The extracted document enters the public snapshot in
 place of its citation, and the cited file is a generator input.
 
-A `member` path of keys and indices, such as `["probe_plan", 0]`, selects one
-object inside that request. The whole constant is checked first. The selected
+A `member` path selects one object inside that request. Each part is a key, an
+index, or a one-member selector such as `{"step_id": "read-hosts"}`, which
+names the one array element carrying that member with that string value and
+is refused when no element or more than one does. The whole constant is
+checked first. The selected
 object's members must then be fields of the record its subject describes, and
 it is rendered as it stands, without the identity placeholder.
 

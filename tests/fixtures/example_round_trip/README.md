@@ -1,8 +1,8 @@
 # Complete actor example control
 
 `constructed_actor_run.json` is an authored hypothetical run envelope for
-`witness_contract/example_round_trip_controls`, read by
-`example_form_controls.py`. It describes one applied `selected` actor, two
+`witness_contract/example_round_trip_controls`, whose passing model reads it
+as the actor submission's run. It describes one applied `selected` actor, two
 visits with a 2+1 action partition, and the three example roles. It supplies
 full setup, equipment, application, collection, worker disposition, reap,
 controller dossier and diagnostic records. There is no termination dependency,

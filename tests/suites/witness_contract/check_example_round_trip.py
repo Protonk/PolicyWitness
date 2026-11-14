@@ -10,27 +10,24 @@ or another output of the same app. Shape, record, ordering and outcome-mapping
 rules belong to the consumer and the controller; this file restates none of
 them.
 
-Two expectations are the case's own. The document must be a read-only workload
-of three steps over three targets, found by their relationships and never by a
-label or a path:
+Two expectations are the case's own, and `WORKLOAD` below states both once.
+The document must be that read-only workload, found by the relationships among
+its submitted operands and never by a label or a path. Under observed
+prerequisites the native results must then meet the answers and attempt
+results pinned there to the present example, each answer before its attempt,
+with a finished run whose process exits 0 and unchanged targets; a successful
+fresh read must carry the descriptor identity, count and bytes this checker
+observed for its target. The policy source is not read to decide any of this.
+Each step's answer and attempt are separate assertions. Nothing here compares
+an answer with its attempt, states that they agree or assigns a failure to the
+policy.
 
-    step 1   a `file-read-data` query on target A, and an `open_read` of A
-    step 2   a `file-read-metadata` query on target B, and a `read_fresh` of target C
-    step 3   a `file-read-data` query on B, and an `open_read` of B
-
-Under observed prerequisites the native results must then meet the expectations
-pinned to the present example: allow answers for steps 1 and 2 and a deny
-answer for step 3, each before its attempt; a successful open of A; a
-successful fresh read whose descriptor identity, count and bytes are those this
-checker observed for C; a failed open of B with `EPERM`; a finished run whose
-process exits 0; and unchanged targets. The policy source is not read to decide
-any of this. Each step's answer and attempt are separate assertions. Nothing
-here compares an answer with its attempt, states that they agree or assigns a
-failure to the policy.
-
-Every assertion has a stable identifier, one group and one classification.
-A failure prints its identifier and classification; `report.json` holds every
-assertion's result, with consistency apart from native observations.
+The emitted document is submitted unchanged, and so are two derivatives this
+case writes: a flat form and a single-actor form. Each submission is one form
+with its own rows. A row has a form, a stable identifier, one group and one
+classification; a failure prints all of them, and `report.json` holds every
+row's result, with consistency apart from native observations. A row built
+from several conditions names the ones that failed.
 
     prepare CAPTURE APP SNAPSHOT      gate the emission and write checked derivatives/refusals
     observe CAPTURE FORM before|after sample the selected submission
@@ -61,16 +58,25 @@ READ_ONLY_FILE_ACTIONS = ('open_read', 'access', 'read_fresh')
 # The most bytes one `read_fresh` reads, as the step-result surface documents it. Authored here.
 FRESH_READ_BOUND = 64
 EPERM = 1
-STEPS = {
-    'step1': 'step 1 (data-read query and open of target A)',
-    'step2': 'step 2 (metadata query on target B beside a fresh read of target C)',
-    'step3': 'step 3 (data-read query and open of target B)',
+# The one statement of this workload's shape. `phases` partitions the roles in
+# emitted order. Each role names its query operation and its attempt action with
+# the target each concerns, the answer pinned to the present example and the
+# attempt result pinned to it. A target letter is a relationship among submitted
+# paths: one letter is one path and two letters are two paths.
+WORKLOAD = {
+    'phases': (('step1', 'step2'), ('step3',)),
+    'roles': {
+        'step1': {'query': ('file-read-data', 'A'), 'attempt': ('open_read', 'A'),
+                  'answer': {'outcome': 'allow', 'native_rc': 0}, 'result': {'outcome': 'ok', 'rc': 0}},
+        'step2': {'query': ('file-read-metadata', 'B'), 'attempt': ('read_fresh', 'C'),
+                  'answer': {'outcome': 'allow', 'native_rc': 0}, 'result': {'outcome': 'ok', 'rc': 0}},
+        'step3': {'query': ('file-read-data', 'B'), 'attempt': ('open_read', 'B'),
+                  'answer': {'outcome': 'deny', 'native_rc': 1, 'errno': 0},
+                  'result': {'outcome': 'open_failed', 'errno': EPERM}},
+    },
 }
-TARGETS = {
-    'A': 'the target step 1 queries for data reads and opens',
-    'B': 'the target step 2 queries for metadata reads and step 3 queries for data reads and opens',
-    'C': 'the target step 2 reads through a fresh descriptor',
-}
+FORMS = ('emitted', 'flat', 'actor')
+FRESH_ACTION = 'read_fresh'
 # The controller's selection keys, from the request surface's shape golden (collected from `runner_select.rs`).
 SELECTOR_FIELDS = tuple(json.loads((Path(__file__).resolve().parents[2] / 'fixtures/contract/surfaces/request.json')
                                    .read_text())['controller_keys']['SELECTOR_FIELDS'])
@@ -91,7 +97,76 @@ REFUSALS = {
 }
 
 
-def _table():
+def step_text(workload, role):
+    """One role in words, from the table."""
+    (operation, queried), (action, target) = workload['roles'][role]['query'], workload['roles'][role]['attempt']
+    number = list(workload['roles']).index(role) + 1
+    return f'step {number} (`{operation}` query on target {queried} beside `{action}` of target {target})'
+
+
+def target_roles(workload):
+    """The target letters in order of first use."""
+    letters = []
+    for spec in workload['roles'].values():
+        for letter in (spec['query'][1], spec['attempt'][1]):
+            if letter not in letters:
+                letters.append(letter)
+    return tuple(letters)
+
+
+def target_text(workload, letter):
+    uses = []
+    for number, spec in enumerate(workload['roles'].values(), 1):
+        if spec['query'][1] == letter:
+            uses.append(f"step {number}'s `{spec['query'][0]}` query")
+        if spec['attempt'][1] == letter:
+            uses.append(f"step {number}'s `{spec['attempt'][0]}`")
+    return 'the target of ' + ' and '.join(uses)
+
+
+def fresh_roles(workload):
+    """The roles whose attempt is a fresh read, with the target each reads."""
+    return {role: spec['attempt'][1] for role, spec in workload['roles'].items() if spec['attempt'][0] == FRESH_ACTION}
+
+
+def _spelled(expected):
+    return ', '.join(f'`{key}` {json.dumps(value)}' for key, value in expected.items())
+
+
+def _native_rows(workload):
+    rows = [
+        ('native.process_status', 'native', NATIVE_OBSERVATION,
+         'the captured exit status of the `run` process is 0, whatever the envelope reports'),
+        ('native.completion', 'native', NATIVE_OBSERVATION, "the reply's `normalized_outcome` is `finished`"),
+    ]
+    for role, spec in workload['roles'].items():
+        rows.append((f'native.{role}.prediction', 'native', NATIVE_OBSERVATION,
+                     f'{step_text(workload, role)}: the answer about {spec["query"][1]} is a validator answer with '
+                     + _spelled(spec['answer'])))
+    rows.append(('native.order', 'native', NATIVE_OBSERVATION,
+                 'each step whose answer met its expectation records `order` `query_first`'))
+    for role, spec in workload['roles'].items():
+        rows.append((f'native.{role}.attempt', 'native', NATIVE_OBSERVATION,
+                     f'{step_text(workload, role)}: the `{spec["attempt"][0]}` of {spec["attempt"][1]} is a worker '
+                     'result with ' + _spelled(spec['result'])))
+        if role in fresh_roles(workload):
+            letter = spec['attempt'][1]
+            rows.append((f'native.{role}.fresh_syscalls', 'native', NATIVE_OBSERVATION,
+                         f'{step_text(workload, role)}: the open returned a descriptor, and the descriptor stat, '
+                         'the bounded read and the close each succeeded'))
+            rows.append((f'native.{role}.fresh_identity', 'native', NATIVE_OBSERVATION,
+                         f"{step_text(workload, role)}: the descriptor's device and inode are those this checker "
+                         f'observed for {letter}'))
+            rows.append((f'native.{role}.fresh_content', 'native', NATIVE_OBSERVATION,
+                         f"{step_text(workload, role)}: the read count and the bytes read are the length and digest "
+                         f"of {letter}'s bounded prefix as this checker observed it"))
+    rows.append(('native.targets_unchanged', 'native', NATIVE_OBSERVATION,
+                 "each target's digest, length, bounded prefix and selected metadata are equal before and after the run"))
+    return rows
+
+
+def _publication_rows(workload):
+    letters = ', '.join(target_roles(workload))
     rows = [
         ('emission.version_exit', 'emission', CONSISTENCY, '`--version` exits 0'),
         ('emission.example_exit', 'emission', CONSISTENCY, 'both `example` invocations exit 0'),
@@ -105,72 +180,20 @@ def _table():
         ('passage.contract_packaged_form', 'passage', CONSISTENCY,
          'the identity has a packaged `release:` or `development:` form'),
         ('passage.emissions_identical', 'passage', CONSISTENCY, 'two emissions are byte-identical'),
-        ('passage.delivery_length', 'passage', CONSISTENCY,
-         "`request_delivery.bytes_written` is the document's length without its framing newline"),
         ('passage.contract_rendering', 'passage', CONSISTENCY,
          "the document without `contract` equals the contract snapshot's example"),
-        ('bounds.ordinary_form', 'bounds', CONSISTENCY, 'the document has the required ordinary request container and action partition'),
+        ('bounds.ordinary_form', 'bounds', CONSISTENCY,
+         'the document is ordinary phases with action counts ' +
+         ' and '.join(str(len(phase)) for phase in workload['phases'])),
         ('bounds.workload_roles', 'bounds', CONSISTENCY,
-         'the plan is three steps: a `file-read-data` query and `open_read` of one target A; a `file-read-metadata` '
-         'query on a second target B with a `read_fresh` of a third target C; a `file-read-data` query and '
-         '`open_read` of B'),
+         f'the document holds {len(workload["roles"])} steps: ' +
+         '; '.join(step_text(workload, role) for role in workload['roles']) +
+         f'; {letters} are different submitted paths'),
         ('bounds.read_only_attempts', 'bounds', CONSISTENCY, 'every attempt is a read-only file action'),
         ('bounds.no_test_overrides', 'bounds', CONSISTENCY, 'the document carries no `_test_overrides`'),
         ('bounds.no_runner_selection', 'bounds', CONSISTENCY, 'the document carries no runner selection field'),
         ('bounds.no_augments', 'bounds', CONSISTENCY, 'the policy names no augments'),
         ('bounds.no_entitlement_requirement', 'bounds', CONSISTENCY, 'the document requires no entitlement'),
-        ('admission.no_request_failure', 'admission', CONSISTENCY,
-         'the run reports no `request_failure` and no `bad_request` outcome'),
-        ('admission.dossier_policy_digest', 'admission', CONSISTENCY,
-         "the dossier's original policy digest is the SHA-256 of the document's policy source"),
-        ('admission.reply_policy_digest', 'admission', CONSISTENCY,
-         "the reply's `policy_sha256` is the SHA-256 of the document's policy source"),
-        ('identity.envelope_build', 'identity', CONSISTENCY, "the run envelope's `build.contract` is the document's"),
-        ('identity.client_transport', 'identity', CONSISTENCY, "the client capture's `contract` is the document's"),
-        ('identity.reply_producer', 'identity', CONSISTENCY, "the reply's `producer.contract` is the document's"),
-        ('execution.admitted_reply', 'execution', EXECUTION_UNAVAILABLE, 'the run yields an admitted runner reply'),
-        ('echo.specimen_id', 'echo', CONSISTENCY, "the reply echoes the document's `specimen_id`"),
-        ('echo.step_ids', 'echo', CONSISTENCY, "the reply's step identifiers are the document's, in order"),
-        ('echo.queries', 'echo', CONSISTENCY, 'each query echoes its submitted operation and filter'),
-        ('echo.attempts', 'echo', CONSISTENCY, 'each attempt echoes its submitted kind, action and target'),
-        ('reported.exit_code', 'reported', CONSISTENCY, 'the captured process exit status equals `result.exit_code`'),
-        ('consumer_validation', 'readers', CONSISTENCY, 'the shared consumer reports no error'),
-        ('readers.disposition_integrity', 'readers', CONSISTENCY, "the controller's `disposition_integrity` is `valid`"),
-        ('readers.disposition_issues', 'readers', CONSISTENCY, 'the controller reports no `disposition_issues`'),
-        ('prerequisite.targets_readable', 'native', PREREQUISITE_UNESTABLISHED,
-         'targets A, B and C are each a regular file the test user opened and read before the run'),
-        ('prerequisite.distinct_identities', 'native', PREREQUISITE_UNESTABLISHED,
-         'targets A, B and C have three distinct device and inode identities'),
-        ('prerequisite.distinguishing_prefixes', 'native', PREREQUISITE_UNESTABLISHED,
-         "each target's bounded prefix is nonempty, and C's differs from A's and from B's"),
-        ('native.process_status', 'native', NATIVE_OBSERVATION,
-         'the captured exit status of the `run` process is 0, whatever the envelope reports'),
-        ('native.completion', 'native', NATIVE_OBSERVATION, "the reply's `normalized_outcome` is `finished`"),
-        ('native.step1.prediction', 'native', NATIVE_OBSERVATION,
-         STEPS['step1'] + ': the answer about A is a validator `allow` with `native_rc` 0'),
-        ('native.step2.prediction', 'native', NATIVE_OBSERVATION,
-         STEPS['step2'] + ': the answer about B is a validator `allow` with `native_rc` 0'),
-        ('native.step3.prediction', 'native', NATIVE_OBSERVATION,
-         STEPS['step3'] + ': the answer about B is a validator `deny` with `native_rc` 1 and a query `errno` of 0'),
-        ('native.order', 'native', NATIVE_OBSERVATION,
-         'each step whose answer met its expectation records `order` `query_first`'),
-        ('native.step1.attempt', 'native', NATIVE_OBSERVATION,
-         STEPS['step1'] + ': the open of A is a worker result with outcome `ok` and `rc` 0'),
-        ('native.step2.attempt', 'native', NATIVE_OBSERVATION,
-         STEPS['step2'] + ': the fresh read of C is a worker result with outcome `ok` and `rc` 0'),
-        ('native.step2.fresh_syscalls', 'native', NATIVE_OBSERVATION,
-         STEPS['step2'] + ': the open returned a descriptor, and the descriptor stat, the bounded read and the '
-         'close each succeeded'),
-        ('native.step2.fresh_identity', 'native', NATIVE_OBSERVATION,
-         STEPS['step2'] + ": the descriptor's device and inode are those this checker observed for C"),
-        ('native.step2.fresh_content', 'native', NATIVE_OBSERVATION,
-         STEPS['step2'] + ": the read count and the bytes read are the length and digest of C's bounded prefix "
-         'as this checker observed it'),
-        ('native.step3.attempt', 'native', NATIVE_OBSERVATION,
-         STEPS['step3'] + ': the open of B is a worker result with outcome `open_failed` and an attempt `errno` '
-         'of exactly 1 (`EPERM`)'),
-        ('native.targets_unchanged', 'native', NATIVE_OBSERVATION,
-         "each target's digest, length, bounded prefix and selected metadata are equal before and after the run"),
     ]
     for name, (code, path, identity, component) in REFUSALS.items():
         prefix = 'refusal.' + name
@@ -188,14 +211,117 @@ def _table():
         else:
             rows.append((prefix + '.host_reply', 'refusals', CONSISTENCY,
                          'the host replies `bad_request` with no step results'))
-    return tuple(rows)
+    return rows
 
 
-ASSERTIONS = _table()
-CLASSIFICATION = {ident: classification for ident, _, classification, _ in ASSERTIONS}
+def _execution_rows(workload):
+    letters = target_roles(workload)
+    fresh = sorted(set(fresh_roles(workload).values()))
+    return [
+        ('passage.delivery_length', 'passage', CONSISTENCY,
+         "`request_delivery.bytes_written` is the submitted document's length without its framing newline"),
+        ('admission.no_request_failure', 'admission', CONSISTENCY,
+         'the run reports no `request_failure` and no `bad_request` outcome'),
+        ('admission.dossier_policy_digest', 'admission', CONSISTENCY,
+         "the dossier's original policy digest is the SHA-256 of the submitted policy source"),
+        ('admission.reply_policy_digest', 'admission', CONSISTENCY,
+         "the reply's `policy_sha256` is the SHA-256 of the submitted policy source"),
+        ('identity.envelope_build', 'identity', CONSISTENCY, "the run envelope's `build.contract` is the document's"),
+        ('identity.client_transport', 'identity', CONSISTENCY, "the client capture's `contract` is the document's"),
+        ('identity.reply_producer', 'identity', CONSISTENCY, "the reply's `producer.contract` is the document's"),
+        ('execution.admitted_reply', 'execution', EXECUTION_UNAVAILABLE, 'the run yields an admitted runner reply'),
+        ('echo.specimen_id', 'echo', CONSISTENCY, "the reply echoes the document's `specimen_id`"),
+        ('echo.step_ids', 'echo', CONSISTENCY, "the reply's step identifiers are the document's, in order"),
+        ('echo.queries', 'echo', CONSISTENCY, 'each query echoes its submitted operation and filter'),
+        ('echo.attempts', 'echo', CONSISTENCY, 'each attempt echoes its submitted kind, action and target'),
+        ('reported.exit_code', 'reported', CONSISTENCY, 'the captured process exit status equals `result.exit_code`'),
+        ('consumer_validation', 'readers', CONSISTENCY, 'the shared consumer reports no error'),
+        ('readers.disposition_integrity', 'readers', CONSISTENCY, "the controller's `disposition_integrity` is `valid`"),
+        ('readers.disposition_issues', 'readers', CONSISTENCY, 'the controller reports no `disposition_issues`'),
+        ('prerequisite.targets_readable', 'native', PREREQUISITE_UNESTABLISHED,
+         f'targets {", ".join(letters)} are each a regular file the test user opened and read before the run'),
+        ('prerequisite.distinct_identities', 'native', PREREQUISITE_UNESTABLISHED,
+         f'targets {", ".join(letters)} have {len(letters)} distinct device and inode identities'),
+        ('prerequisite.distinguishing_prefixes', 'native', PREREQUISITE_UNESTABLISHED,
+         "each target's bounded prefix is nonempty, and the prefix of " + ' and of '.join(fresh) +
+         " differs from every other target's"),
+    ] + _native_rows(workload)
 
-EXECUTION_ASSERTIONS = tuple(row for row in ASSERTIONS if row[1] not in ('emission', 'bounds', 'passage', 'refusals')
-                             or row[0] == 'passage.delivery_length')
+
+STRUCTURE_ROWS = (
+    ('structure.execution_form', 'structure', CONSISTENCY, 'the reply uses the submitted execution form'),
+    ('structure.phase_membership', 'structure', CONSISTENCY,
+     'reply phases retain the exact submitted phase/action partition and order'),
+    ('structure.collections', 'structure', CONSISTENCY,
+     'each submitted phase has its own complete collection and release chain'),
+    ('structure.worker', 'structure', CONSISTENCY,
+     'the submitted worker was applied, completed and reaped under its owned process record'),
+)
+ACTOR_ROWS = (
+    ('structure.actor_ownership', 'structure', CONSISTENCY,
+     'the submitted actor owns every visit, every step and its controller projections'),
+    ('structure.actor_application', 'structure', CONSISTENCY,
+     'the actor applied the submitted policy once and received its source digest'),
+    ('structure.actor_equipment', 'structure', CONSISTENCY,
+     'the actor used selected equipment matched to its launched worker'),
+)
+TRANSFORMATION_ROWS = {
+    'flat': ('transformation', 'transformation', CONSISTENCY,
+             'the flat derivative changes only phases into the ordered probe_plan'),
+    'actor': ('transformation', 'transformation', CONSISTENCY,
+              'the actor derivative relocates the entire policy to one applied selected actor and assigns every phase'),
+}
+
+
+def table(form, workload=WORKLOAD):
+    """The rows of one form's report, in order: (identifier, group, classification, statement)."""
+    if form == 'emitted':
+        rows = _publication_rows(workload) + _execution_rows(workload)
+    else:
+        rows = [TRANSFORMATION_ROWS[form]] + _execution_rows(workload)
+    return tuple(rows) + STRUCTURE_ROWS + (ACTOR_ROWS if form == 'actor' else ())
+
+
+def _phase_names(count, *names):
+    return tuple(f'phase{number}.{name}' for number in range(1, count + 1) for name in names)
+
+
+def conditions(form, workload=WORKLOAD):
+    """The named conditions of each conditioned row in one form. A failing row reports the names that failed."""
+    phases = len(workload['phases'])
+    replied = 1 if form == 'flat' else phases
+    roles = tuple(workload['roles'])
+    worker = ('pid', 'reaped', 'ready_byte_received', 'done_observed', 'exit_code', 'term_signal', 'collection_basis')
+    declared = {
+        'structure.execution_form': ('execution_form',),
+        'structure.phase_membership': ('phase_count',) + _phase_names(replied, 'phase_id', 'ordinal', 'action_ids'),
+        'structure.collections': _phase_names(
+            replied, 'unique', 'arrival_observed', 'completion_observed', 'collection_status', 'validator_reaped',
+            'collection_closed_before_proceed', 'proceed_set', 'proceed_observed', 'worker_lifetime_established',
+            'validator_disposition', 'protocol_violations', 'expected_step_ids'),
+        'structure.worker': (('applied', 'launch_pid', 'launch_parent_pid') if form == 'actor' else
+                             ('applied', 'reply_pid')) + worker,
+    }
+    if form == 'emitted':
+        declared['bounds.ordinary_form'] = ('phases',) + _phase_names(phases, 'members', 'phase_id', 'actions') + \
+            ('distinct_phase_ids', 'no_probe_plan', 'no_actors')
+    if form == 'flat':
+        declared['transformation'] = ('members', 'preserved', 'actions') + tuple(f'action.{role}' for role in roles)
+    if form == 'actor':
+        declared['transformation'] = ('members', 'preserved', 'actors', 'actor.members', 'actor.actor_id',
+                                      'actor.equipment', 'actor.sandbox.members', 'actor.sandbox.mode',
+                                      'actor.sandbox.policy', 'phases') + \
+            _phase_names(phases, 'members', 'actor_id', 'preserved')
+        declared['structure.actor_ownership'] = ('reply_actors', 'diagnostics_actors', 'dossier_actors', 'visits') + \
+            _phase_names(phases, 'actor_id', 'actor_visit', 'no_termination_gate') + \
+            tuple(f'step.{role}.actor_id' for role in roles) + \
+            ('unsubmitted_steps.actor_id', 'diagnostics.disposition_integrity', 'diagnostics.disposition_issues')
+        declared['structure.actor_application'] = ('mode', 'setup_status', 'applied', 'application_count',
+                                                   'application', 'policy_received_sha256')
+        declared['structure.actor_equipment'] = ('requested', 'resolved', 'required_entitlements',
+                                                 'requirements_status', 'execution.status', 'execution.eligible',
+                                                 'execution.pid')
+    return declared
 
 
 def actions(document):
@@ -317,15 +443,16 @@ def refusal_inputs(emitted):
 # Observations the case makes itself
 # ---------------------------------------------------------------------------
 
-def workload_roles(document):
-    """The step identifiers and targets of the three roles, or the reasons the document is another workload.
+def workload_roles(document, workload=WORKLOAD):
+    """The step identifiers and targets of the table's roles, or the reasons the document is another workload.
 
     Roles are positions and relationships among submitted operands. No step
     identifier, path or policy text decides one.
     """
+    roles = workload['roles']
     steps = actions(document)
-    if len(steps) != 3 or any(not isinstance(step, dict) for step in steps):
-        return None, [f'the document holds {len(steps)} step(s) where this workload has three']
+    if len(steps) != len(roles) or any(not isinstance(step, dict) for step in steps):
+        return None, [f'the document holds {len(steps)} step(s) where this workload has {len(roles)}']
 
     def half(step):
         query, attempt = step.get('sandbox_check'), step.get('attempt')
@@ -335,31 +462,29 @@ def workload_roles(document):
         return (_get(query, 'operation'), path if isinstance(path, str) else None, action,
                 target if isinstance(target, str) else None)
 
-    def matched_open(found):
-        operation, path, action, target = found
-        return operation == 'file-read-data' and action == 'open_read' and path is not None and path == target
-
-    first, second, third = (half(step) for step in steps)
+    found = [half(step) for step in steps]
     problems = []
-    if not matched_open(first):
-        problems.append('step 1 is not a `file-read-data` path query with an `open_read` of the same target')
-    if not (second[0] == 'file-read-metadata' and second[2] == 'read_fresh' and None not in (second[1], second[3])
-            and second[1] != second[3]):
-        problems.append('step 2 is not a `file-read-metadata` path query with a `read_fresh` of another target')
-    if not matched_open(third):
-        problems.append('step 3 is not a `file-read-data` path query with an `open_read` of the same target')
+    for number, (spec, (operation, path, action, target)) in enumerate(zip(roles.values(), found), 1):
+        wanted_operation, wanted_action = spec['query'][0], spec['attempt'][0]
+        if not (operation == wanted_operation and action == wanted_action and None not in (path, target)):
+            problems.append(f'step {number} is not a `{wanted_operation}` path query with a `{wanted_action}` of a file')
     identifiers = [step.get('step_id') for step in steps]
-    if any(not isinstance(ident, str) for ident in identifiers) or len(set(identifiers)) != 3:
-        problems.append('the step identifiers are not three distinct strings')
+    if any(not isinstance(ident, str) for ident in identifiers) or len(set(identifiers)) != len(roles):
+        problems.append(f'the step identifiers are not {len(roles)} distinct strings')
+    targets = {}
     if not problems:
-        if third[1] != second[1]:
-            problems.append('step 3 does not query and open the target step 2 queries')
-        if first[1] in (second[1], second[3]):
-            problems.append("step 1's target is also a target of step 2")
+        # One letter is one submitted path, and two letters are two, within a step and across steps.
+        for number, (spec, (_, path, _, target)) in enumerate(zip(roles.values(), found), 1):
+            for letter, submitted in ((spec['query'][1], path), (spec['attempt'][1], target)):
+                if targets.setdefault(letter, submitted) != submitted:
+                    problems.append(f'step {number} does not use the one path target {letter} names')
+        for letter, submitted in targets.items():
+            others = [other for other, value in targets.items() if other < letter and value == submitted]
+            if others and not problems:
+                problems.append(f'targets {others[0]} and {letter} are one submitted path')
     if problems:
         return None, problems
-    return {'steps': dict(zip(STEPS, identifiers)),
-            'targets': {'A': first[1], 'B': second[1], 'C': second[3]}}, []
+    return {'steps': dict(zip(roles, identifiers)), 'targets': {letter: targets[letter] for letter in target_roles(workload)}}, []
 
 
 def observed_paths(document):
@@ -374,12 +499,17 @@ def observed_paths(document):
     return paths
 
 
-def observe_target(target):
-    """One sample: identity and content read from one descriptor this process opened, then closed."""
+def observe_target(target, opener=os.open):
+    """One sample: identity and content read from one descriptor this process opened, then closed.
+
+    `opener` opens the path and returns the descriptor. The observer controls
+    pass one that changes what the path names as the open returns, so that
+    everything read afterwards is read after the change.
+    """
     record = {'target': target, 'resolved': None, 'regular_file': False, 'readable': False, 'error': None}
     try:
         record['resolved'] = os.path.realpath(target, strict=True)
-        descriptor = os.open(target, os.O_RDONLY | os.O_NONBLOCK | os.O_CLOEXEC)
+        descriptor = opener(target, os.O_RDONLY | os.O_NONBLOCK | os.O_CLOEXEC)
     except OSError as error:
         record['error'] = f'{type(error).__name__}: {error}'
         return record
@@ -412,27 +542,62 @@ def observe(directory, name, document):
 # ---------------------------------------------------------------------------
 
 class Results:
-    def __init__(self, table=None):
-        self.table = ASSERTIONS if table is None else table
+    """One form's rows. A conditioned row is recorded with the names of its failed conditions."""
+
+    def __init__(self, form, workload):
+        self.form = form
+        self.table = table(form, workload)
+        self.identifiers = {row[0] for row in self.table}
+        self.declared = conditions(form, workload)
         self.rows = {}
 
     def record(self, ident, problems, passed=None):
         """`problems` is a list of explanations; empty means the assertion holds."""
-        assert ident in {row[0] for row in self.table} and ident not in self.rows, ident
+        assert ident in self.identifiers and ident not in self.rows and ident not in self.declared, ident
         problems = [problems] if isinstance(problems, str) else list(problems)
         self.rows[ident] = {'status': 'fail' if problems else 'pass', 'explanation': '; '.join(problems) or passed}
 
+    def conditions(self, ident, failed):
+        """`failed` is a list of (condition name, explanation); empty means every condition holds."""
+        assert ident in self.identifiers and ident not in self.rows, ident
+        names = [name for name, _ in failed]
+        assert set(names) <= set(self.declared[ident]) and len(set(names)) == len(names), (ident, names)
+        self.rows[ident] = {'status': 'fail' if failed else 'pass', 'conditions': names,
+                            'explanation': '; '.join(f'{name}: {text}' for name, text in failed) or None}
+
     def unevaluated(self, ident, reason):
-        assert ident in {row[0] for row in self.table} and ident not in self.rows, ident
+        assert ident in self.identifiers and ident not in self.rows, ident
         self.rows[ident] = {'status': 'not_evaluated', 'explanation': reason}
+        if ident in self.declared:
+            self.rows[ident]['conditions'] = None
+
+    def status(self, ident):
+        return self.rows.get(ident, {}).get('status')
 
     def failed(self, *identifiers):
-        return any(self.rows.get(ident, {}).get('status') == 'fail' for ident in identifiers)
+        return any(self.status(ident) == 'fail' for ident in identifiers)
 
     def rest(self, group_or_prefix, reason):
         for ident, group, _, _ in self.table:
             if ident not in self.rows and (group == group_or_prefix or ident.startswith(group_or_prefix)):
                 self.unevaluated(ident, reason)
+
+    def remaining(self, reason):
+        for ident, _, _, _ in self.table:
+            if ident not in self.rows:
+                self.unevaluated(ident, reason)
+
+
+class _Conditions:
+    """Collects the failed conditions of one row."""
+
+    def __init__(self):
+        self.failed = []
+
+    def require(self, name, holds, text):
+        if not holds:
+            self.failed.append((name, text))
+        return holds
 
 
 def _spell(value):
@@ -474,35 +639,33 @@ def _emission(inputs, results):
     return inputs['example-1']['stdout'], documents.get('example-1')
 
 
-def _bounds(document, results, form='emitted'):
-    ordinary = []
-    if form == 'flat':
-        plan = document.get('probe_plan')
-        if not isinstance(plan, list) or not plan or any(not isinstance(step, dict) for step in plan):
-            ordinary.append('`probe_plan` is not a nonempty array of objects')
-        if 'phases' in document:
-            ordinary.append('a flat document carries `phases`')
-    else:
-        phases = document.get('phases')
-        if not isinstance(phases, list) or len(phases) != 2 or any(
-                not isinstance(phase, dict) or set(phase) != {'phase_id', 'actions'} or
-                not isinstance(phase.get('phase_id'), str) or not phase['phase_id'] or
-                not isinstance(phase.get('actions'), list) or len(phase['actions']) != count
-                for phase, count in zip(phases or [], (2, 1))):
-            ordinary.append('emission must contain two ordinary phases with action counts 2 and 1')
-        elif phases[0]['phase_id'] == phases[1]['phase_id']:
-            ordinary.append('phase identifiers are not distinct')
-        if 'probe_plan' in document:
-            ordinary.append('the emitted document carries `probe_plan`')
-    if document.get('actors') is not None:
-        ordinary.append('the emitted document carries `actors`')
-    results.record('bounds.ordinary_form', ordinary)
+def _bounds(document, results, workload):
+    counts = [len(phase) for phase in workload['phases']]
+    form = _Conditions()
+    phases = document.get('phases')
+    listed = phases if isinstance(phases, list) else []
+    form.require('phases', isinstance(phases, list) and len(phases) == len(counts),
+                 f'`phases` is not an array of {len(counts)} phases')
+    for number, (phase, count) in enumerate(zip(listed, counts), 1):
+        if not form.require(f'phase{number}.members', isinstance(phase, dict) and set(phase) == {'phase_id', 'actions'},
+                            'the phase is not an object with exactly `phase_id` and `actions`'):
+            continue
+        form.require(f'phase{number}.phase_id', isinstance(phase['phase_id'], str) and bool(phase['phase_id']),
+                     f'`phase_id` is {_spell(phase["phase_id"])}')
+        form.require(f'phase{number}.actions', isinstance(phase['actions'], list) and len(phase['actions']) == count,
+                     f'`actions` does not hold {count} action(s)')
+    named = [phase.get('phase_id') for phase in listed if isinstance(phase, dict)]
+    if len(named) == len(listed) and all(isinstance(ident, str) for ident in named):
+        form.require('distinct_phase_ids', len(set(named)) == len(named), 'two phases share an identifier')
+    form.require('no_probe_plan', 'probe_plan' not in document, 'the document carries `probe_plan`')
+    form.require('no_actors', document.get('actors') is None, 'the document carries `actors`')
+    results.conditions('bounds.ordinary_form', form.failed)
     steps = [step for step in actions(document) if isinstance(step, dict)]
 
     def read_only(attempt):
         return isinstance(attempt, dict) and attempt.get('kind') == 'file' and attempt.get('action') in READ_ONLY_FILE_ACTIONS
 
-    roles, problems = workload_roles(document)
+    roles, problems = workload_roles(document, workload)
     results.record('bounds.workload_roles', problems)
     results.record('bounds.read_only_attempts',
                    [f'step {_spell(step.get("step_id"))} attempts {_spell(step.get("attempt"))}'
@@ -640,19 +803,18 @@ def _target_changes(inputs):
     return changes
 
 
-# The target each half of each step concerns. Its expectation was observed with that file present
-# and readable, so it is read only when this checker read the file before the run.
-CONCERNS = {('step1', 'query'): 'A', ('step1', 'attempt'): 'A', ('step2', 'query'): 'B', ('step2', 'attempt'): 'C',
-            ('step3', 'query'): 'B', ('step3', 'attempt'): 'B'}
-
-
-def _native(inputs, roles, reply, matched, echoed, ground, results):
+def _native(inputs, roles, reply, matched, echoed, ground, results, workload):
     """Each pinned native expectation as its own assertion. No assertion reads an answer beside its attempt.
 
     An expectation that is read and not met fails whatever else is missing. One
     that is met passes only when every target prerequisite holds; `ground` says
-    which targets were read and whether a pass is credited.
+    which targets were read and whether a pass is credited. The target each
+    half of a step concerns is the one the table names for it: its expectation
+    was observed with that file present and readable, so it is read only when
+    this checker read the file before the run.
     """
+    specs = workload['roles']
+
     def settle(ident, problems):
         if problems or ground['uncredited'] is None:
             results.record(ident, problems)
@@ -672,7 +834,7 @@ def _native(inputs, roles, reply, matched, echoed, ground, results):
         found = records.get(ident, [])
         unusable = None if len(found) == 1 else f'the reply carries {len(found)} steps with identifier {_spell(ident)}'
         for half, member, store in (('query', 'sandbox_check', queries), ('attempt', 'attempt', attempts)):
-            concerned = CONCERNS[role, half]
+            concerned = specs[role][half][1]
             if concerned not in ground['read']:
                 store[role] = (None, f'target {concerned} ({roles["targets"][concerned]}) was not read before the '
                                f'run; nothing about it is credited or faulted')
@@ -693,43 +855,34 @@ def _native(inputs, roles, reply, matched, echoed, ground, results):
         settle(ident, problems)
         return not problems
 
-    def prediction(outcome, native_rc, errno=None):
-        def problems(query):
-            found = {key: query.get(key) for key in ('result_source', 'outcome', 'native_rc')}
-            expected = {'result_source': 'validator', 'outcome': outcome, 'native_rc': native_rc}
-            if errno is not None:
-                found['errno'], expected['errno'] = query.get('errno'), errno
+    def pinned(noun, producer, expectation):
+        """The record comes from `producer` and carries each pinned member with its exact type and value."""
+        expected = dict(result_source=producer, **expectation)
+
+        def problems(record):
+            found = {key: record.get(key) for key in expected}
             if all(type(found[key]) is type(value) and found[key] == value for key, value in expected.items()):
                 return []
-            return [f'the answer is {_spell(found)}']
+            return [f'the {noun} is {_spell(found)}']
         return problems
 
-    qualifying = [role for role, problems in (('step1', prediction('allow', 0)), ('step2', prediction('allow', 0)),
-                                              ('step3', prediction('deny', 1, errno=0)))
-                  if assertion(f'native.{role}.prediction', queries[role], problems)]
+    qualifying = [role for role in specs
+                  if assertion(f'native.{role}.prediction', queries[role], pinned('answer', 'validator', specs[role]['answer']))]
     if qualifying:
         orders = []
         for role in qualifying:
             order = _get(records[roles['steps'][role]][0], 'comparison', 'order')
             if order != 'query_first':
-                orders.append(f'{STEPS[role]}: `order` is {_spell(order)}')
+                orders.append(f'{step_text(workload, role)}: `order` is {_spell(order)}')
         settle('native.order', orders)
     else:
         results.unevaluated('native.order', 'no answer met its expectation')
 
-    def succeeded(attempt):
-        found = {key: attempt.get(key) for key in ('result_source', 'outcome', 'rc')}
-        return [] if found['result_source'] == 'worker' and found['outcome'] == 'ok' and _exact_int(found['rc'], 0) \
-            else [f'the attempt is {_spell(found)}']
+    for role in specs:
+        assertion(f'native.{role}.attempt', attempts[role], pinned('attempt', 'worker', specs[role]['result']))
 
-    def refused(attempt):
-        found = {key: attempt.get(key) for key in ('result_source', 'outcome', 'errno')}
-        return [] if found['result_source'] == 'worker' and found['outcome'] == 'open_failed' \
-            and _exact_int(found['errno'], EPERM) else [f'the attempt is {_spell(found)}']
-
-    assertion('native.step1.attempt', attempts['step1'], succeeded)
-    assertion('native.step2.attempt', attempts['step2'], succeeded)
-    assertion('native.step3.attempt', attempts['step3'], refused)
+    changes = _target_changes(inputs)
+    settle('native.targets_unchanged', [f'{target} {change}' for target, found in changes.items() for change in found])
 
     def fresh(read):
         return read.get('fresh_read') if isinstance(read.get('fresh_read'), dict) else {}
@@ -745,57 +898,56 @@ def _native(inputs, roles, reply, matched, echoed, ground, results):
         if type(read.get('read_rc')) is not int or not 0 <= read['read_rc'] <= FRESH_READ_BOUND:
             problems.append(f'`read_rc` is {_spell(read.get("read_rc"))}')
         return problems
-    assertion('native.step2.fresh_syscalls', attempts['step2'], syscalls)
 
-    changes = _target_changes(inputs)
-    settle('native.targets_unchanged', [f'{target} {change}' for target, found in changes.items() for change in found])
+    for role, letter in fresh_roles(workload).items():
+        assertion(f'native.{role}.fresh_syscalls', attempts[role], syscalls)
 
-    # The correspondence with C needs one stable observation of C to compare against.
-    target = roles['targets']['C']
-    observed = (_samples(inputs, 'targets-before') or {}).get(target, {})
-    source = attempts['step2'] if target not in changes else \
-        (None, f'the samples of {target} before and after the run differ; no correspondence with it is claimed')
-    expected = {'device': _get(observed, 'stat', 'st_dev'), 'inode': _get(observed, 'stat', 'st_ino')}
+        # The correspondence needs one stable observation of the target to compare against.
+        target = roles['targets'][letter]
+        observed = (_samples(inputs, 'targets-before') or {}).get(target, {})
+        source = attempts[role] if target not in changes else \
+            (None, f'the samples of {target} before and after the run differ; no correspondence with it is claimed')
+        expected = {'device': _get(observed, 'stat', 'st_dev'), 'inode': _get(observed, 'stat', 'st_ino')}
 
-    def identity(attempt):
-        found = {key: _get(fresh(attempt), 'identity', key) for key in ('device', 'inode')}
-        return [] if all(type(found[key]) is int and found[key] == expected[key] for key in found) else \
-            [f'the descriptor identity is {_spell(found)}; this checker observed {_spell(expected)} for {target}']
+        def identity(attempt, expected=expected, target=target):
+            found = {key: _get(fresh(attempt), 'identity', key) for key in ('device', 'inode')}
+            return [] if all(type(found[key]) is int and found[key] == expected[key] for key in found) else \
+                [f'the descriptor identity is {_spell(found)}; this checker observed {_spell(expected)} for {target}']
 
-    def content(attempt):
-        read, problems = fresh(attempt), []
-        if not _exact_int(read.get('read_rc'), observed.get('prefix_length')):
-            problems.append(f'`read_rc` is {_spell(read.get("read_rc"))}; this checker read a bounded prefix of '
-                            f'{_spell(observed.get("prefix_length"))} bytes from {target}')
-        try:
-            digest = hashlib.sha256(bytes.fromhex(read.get('content_hex'))).hexdigest()
-        except (TypeError, ValueError):
-            digest = None
-        if digest is None or digest != observed.get('prefix_sha256'):
-            problems.append(f'the bytes read have SHA-256 {_spell(digest)}; the bounded prefix this checker read '
-                            f'from {target} has {_spell(observed.get("prefix_sha256"))}')
-        return problems
+        def content(attempt, observed=observed, target=target):
+            read, problems = fresh(attempt), []
+            if not _exact_int(read.get('read_rc'), observed.get('prefix_length')):
+                problems.append(f'`read_rc` is {_spell(read.get("read_rc"))}; this checker read a bounded prefix of '
+                                f'{_spell(observed.get("prefix_length"))} bytes from {target}')
+            try:
+                digest = hashlib.sha256(bytes.fromhex(read.get('content_hex'))).hexdigest()
+            except (TypeError, ValueError):
+                digest = None
+            if digest is None or digest != observed.get('prefix_sha256'):
+                problems.append(f'the bytes read have SHA-256 {_spell(digest)}; the bounded prefix this checker read '
+                                f'from {target} has {_spell(observed.get("prefix_sha256"))}')
+            return problems
 
-    def given(supplied, reason):
-        """The fresh read's record, when the call that supplies this observation succeeded."""
-        return source if source[0] is None or supplied(fresh(source[0])) else (None, reason)
-    # A sample of C without a device and inode leaves nothing to compare an identity with. A sample
-    # without a prefix differs from its later sample under the test above, which withholds both.
-    identified = given(lambda read: _exact_int(read.get('stat_rc'), 0),
-                       'the descriptor stat did not succeed; it supplies no identity')
-    if identified[0] is not None and not all(type(value) is int for value in expected.values()):
-        identified = (None, f'this checker\'s sample of {target} holds no device and inode to compare with')
-    assertion('native.step2.fresh_identity', identified, identity)
-    assertion('native.step2.fresh_content',
-              given(lambda read: type(read.get('read_rc')) is int and read['read_rc'] >= 0,
-                    'the bounded read did not succeed; it supplies no bytes'), content)
+        def given(supplied, reason, source=source):
+            """The fresh read's record, when the call that supplies this observation succeeded."""
+            return source if source[0] is None or supplied(fresh(source[0])) else (None, reason)
+        # A sample without a device and inode leaves nothing to compare an identity with. A sample
+        # without a prefix differs from its later sample under the test above, which withholds both.
+        identified = given(lambda read: _exact_int(read.get('stat_rc'), 0),
+                           'the descriptor stat did not succeed; it supplies no identity')
+        if identified[0] is not None and not all(type(value) is int for value in expected.values()):
+            identified = (None, f'this checker\'s sample of {target} holds no device and inode to compare with')
+        assertion(f'native.{role}.fresh_identity', identified, identity)
+        assertion(f'native.{role}.fresh_content',
+                  given(lambda read: type(read.get('read_rc')) is int and read['read_rc'] >= 0,
+                        'the bounded read did not succeed; it supplies no bytes'), content)
 
 
-def _prerequisites(inputs, roles, results):
+def _prerequisites(inputs, roles, results, workload):
     """What this checker must have observed before a native expectation is credited.
 
-    Returns the roles whose target it read before the run, and the reason no
-    native pass is credited, which is None when every prerequisite holds.
+    Returns the targets it read before the run, and the reason no native pass
+    is credited, which is None when every prerequisite holds.
     """
     uncredited = 'no failure was found; no native pass is credited while a target prerequisite is unestablished'
     samples = _samples(inputs, 'targets-before')
@@ -823,24 +975,27 @@ def _prerequisites(inputs, roles, results):
 
     def prefix(role):
         return usable[role].get('prefix_length'), usable[role].get('prefix_sha256')
+    letters = target_roles(workload)
     identities, prefixes = [], []
-    for role in TARGETS:
+    for role in letters:
         if any(type(part) is not int for part in identity(role)):
             identities.append(f'target {role} has no observed device and inode')
         if type(prefix(role)[0]) is not int or prefix(role)[0] < 1 or not isinstance(prefix(role)[1], str):
             prefixes.append(f'target {role} has no nonempty observed prefix')
-    for first, second in (('A', 'B'), ('A', 'C'), ('B', 'C')):
-        if not identities and identity(first) == identity(second):
-            identities.append(f'targets {first} and {second} are one file: device and inode {_spell(list(identity(first)))}')
-    for other in ('A', 'B'):
-        if not prefixes and prefix(other) == prefix('C'):
-            prefixes.append(f"target C's bounded prefix equals target {other}'s")
+    for index, first in enumerate(letters):
+        for second in letters[index + 1:]:
+            if not identities and identity(first) == identity(second):
+                identities.append(f'targets {first} and {second} are one file: device and inode {_spell(list(identity(first)))}')
+    for read in sorted(set(fresh_roles(workload).values())):
+        for other in letters:
+            if other != read and not prefixes and prefix(other) == prefix(read):
+                prefixes.append(f"target {read}'s bounded prefix equals target {other}'s")
     results.record('prerequisite.distinct_identities', identities)
     results.record('prerequisite.distinguishing_prefixes', prefixes)
     return {'read': set(usable), 'uncredited': uncredited if identities or prefixes else None}
 
 
-def _one_change(name, emitted, document, submitted):
+def one_change_problems(name, emitted, document, submitted):
     """Whether a submitted input is the emitted document with its one stated change.
 
     The input is judged against the emitted bytes and the stated change, not
@@ -884,7 +1039,7 @@ def _refusals(inputs, emitted, document, results):
     for name, (code, path, identity, component) in REFUSALS.items():
         prefix = 'refusal.' + name
         capture = inputs['refusals'][name]
-        results.record(prefix + '.one_change', _one_change(name, emitted, document, capture['input']))
+        results.record(prefix + '.one_change', one_change_problems(name, emitted, document, capture['input']))
         envelope, problem = _json(capture['stdout'])
         refused = []
         if capture['exit'] != 1:
@@ -923,48 +1078,41 @@ def _refusals(inputs, emitted, document, results):
             results.record(prefix + '.host_reply', host)
 
 
-def evaluate_capture(inputs, *, authored_fixture=False, form='emitted', publication=True):
-    """Every assertion's result from retained inputs.
+def _publication(inputs, results, workload):
+    """Emission, bounds and passage, then the refusals once the emission may be run.
+
+    Returns the emitted bytes with their document when it may, and the roles
+    the bounds found either way.
+    """
+    emitted, document = _emission(inputs, results)
+    roles = None
+    if document is not None:
+        roles = _bounds(document, results, workload)
+        _passage(inputs, document, results)
+    gate = [ident for ident, group, _, _ in results.table if group in ('emission', 'bounds')]
+    if document is None or results.failed(*gate):
+        results.remaining('no run was attempted: the emission or its bounds did not hold')
+        return None, roles
+    _refusals(inputs, emitted, document, results)
+    return (emitted, document), roles
+
+
+def _execution(capture, submitted, document, form, roles, results, workload, authored_fixture):
+    """Every row read from one submission's run. Returns the consumer's errors.
 
     `authored_fixture` admits constructed JSON host bytes, for the offline
     controls only; a live capture is read as the controller retained it.
     """
-    table = ASSERTIONS if publication else EXECUTION_ASSERTIONS
-    results = Results(table)
-    if publication:
-        emitted, document = _emission(inputs, results)
-        if document is not None:
-            roles = _bounds(document, results, form)
-            _passage(inputs, document, results)
-        else:
-            roles = None
-        gate = [ident for ident, group, _, _ in table if group in ('emission', 'bounds')]
-        if document is None or results.failed(*gate):
-            for ident, _, _, _ in table:
-                if ident not in results.rows:
-                    results.unevaluated(ident, 'no run was attempted: the emission or its bounds did not hold')
-            return _report(results, [], roles)
-        _refusals(inputs, emitted, document, results)
-    else:
-        emitted = inputs.get('input')
-        document, problem = _json(emitted)
-        roles, problems = workload_roles(document) if isinstance(document, dict) else (None, ['no input'])
-        if problem or problems:
-            for ident, _, _, _ in table:
-                results.unevaluated(ident, 'the derivative supplied no admitted workload')
-            return _report(results, [], roles)
-    ground = _prerequisites(inputs, roles, results)
+    ground = _prerequisites(capture, roles, results, workload)
 
-    run = inputs['run']
+    run = capture['run']
     envelope, problem = _json(run['stdout'])
     if run['exit'] is None or problem or not isinstance(envelope, dict):
         results.record('execution.admitted_reply',
                        'the run was not captured' if run['exit'] is None else
                        'the run printed no envelope: stdout is ' + (problem or 'not an object'))
-        for ident, _, _, _ in table:
-            if ident not in results.rows:
-                results.unevaluated(ident, 'the run supplied no envelope')
-        return _report(results, [], roles)
+        results.remaining('the run supplied no envelope')
+        return []
 
     contract = document.get('contract')
     data = envelope.get('data') if isinstance(envelope.get('data'), dict) else {}
@@ -973,9 +1121,9 @@ def evaluate_capture(inputs, *, authored_fixture=False, form='emitted', publicat
     if client is None:
         results.unevaluated('passage.delivery_length', 'the envelope carries no client record')
     else:
-        results.record('passage.delivery_length', [] if _exact_int(written, len(emitted) - 1) else
-                       f'`request_delivery.bytes_written` is {_spell(written)}; the emitted document is '
-                       f'{len(emitted) - 1} bytes without its framing newline')
+        results.record('passage.delivery_length', [] if _exact_int(written, len(submitted) - 1) else
+                       f'`request_delivery.bytes_written` is {_spell(written)}; the submitted document is '
+                       f'{len(submitted) - 1} bytes without its framing newline')
 
     outcome = _get(envelope, 'result', 'normalized_outcome')
     refused = []
@@ -986,13 +1134,15 @@ def evaluate_capture(inputs, *, authored_fixture=False, form='emitted', publicat
     results.record('admission.no_request_failure', refused)
     policy = submitted_policy(document, form)
     digest = hashlib.sha256(policy['sbpl_source'].encode('utf-8')).hexdigest() if isinstance(policy.get('sbpl_source'), str) else None
-    dossier = _get(data, 'specimen', 'policy', 'augmentation', 'original_sha256')
+    actor_id = document['actors'][0]['actor_id'] if form == 'actor' else None
     if form == 'actor':
-        wanted_actor = document['actors'][0]['actor_id']
-        dossiers = [a for a in _get(data, 'specimen', 'actors') or [] if isinstance(a, dict) and a.get('actor_id') == wanted_actor]
+        dossiers = [entry for entry in _get(data, 'specimen', 'actors') or []
+                    if isinstance(entry, dict) and entry.get('actor_id') == actor_id]
         dossier = _get(dossiers[0], 'policy', 'augmentation', 'original_sha256') if len(dossiers) == 1 else None
+    else:
+        dossier = _get(data, 'specimen', 'policy', 'augmentation', 'original_sha256')
     results.record('admission.dossier_policy_digest', [] if digest is not None and dossier == digest else
-                   f'the dossier records {_spell(dossier)}; the document\'s policy source has SHA-256 {_spell(digest)}')
+                   f'the dossier records {_spell(dossier)}; the submitted policy source has SHA-256 {_spell(digest)}')
 
     # Producer identity is compared before any reply is read.
     results.record('identity.envelope_build', [] if _get(envelope, 'build', 'contract') == contract else
@@ -1019,20 +1169,19 @@ def evaluate_capture(inputs, *, authored_fixture=False, form='emitted', publicat
         results.unevaluated('execution.admitted_reply', 'an identity differs; no reply is read under another identity')
         for prefix in dependent:
             results.rest(prefix, 'an identity differs; no reply is read under another identity')
-        return _report(results, errors, roles)
+        return errors
     reply = consumer.admitted_reply(envelope, contract, allow_fixture_json=authored_fixture)
     if reply is None:
         results.record('execution.admitted_reply', 'the envelope\'s evidence admits no runner reply '
                        f'(`result.normalized_outcome` is {_spell(outcome)})')
         for prefix in dependent:
             results.rest(prefix, 'no admitted reply: nothing is credited or faulted from it')
-        return _report(results, errors, roles)
+        return errors
     results.record('execution.admitted_reply', [])
 
-    policy_record = consumer.actor_record(reply, document['actors'][0]['actor_id']) if form == 'actor' else reply
-    received = policy_record.get('policy_sha256')
+    received = (consumer.actor_record(reply, actor_id) if form == 'actor' else reply).get('policy_sha256')
     results.record('admission.reply_policy_digest', [] if digest is not None and received == digest else
-                   f'the reply records {_spell(received)}; submitted policy SHA-256 is {_spell(digest)}')
+                   f'the reply records {_spell(received)}; the submitted policy source has SHA-256 {_spell(digest)}')
     matched = _matched_steps(document, reply)
     echoed = _echo(document, reply, matched, results)
     diagnostics = data.get('runner_sandbox_diagnostics') if isinstance(data.get('runner_sandbox_diagnostics'), dict) else {}
@@ -1040,54 +1189,12 @@ def evaluate_capture(inputs, *, authored_fixture=False, form='emitted', publicat
                    f'`disposition_integrity` is {_spell(diagnostics.get("disposition_integrity"))}')
     results.record('readers.disposition_issues', [] if diagnostics.get('disposition_issues') == [] else
                    f'`disposition_issues` is {_spell(diagnostics.get("disposition_issues"))}')
-    _native(inputs, roles, reply, matched, echoed, ground, results)
-    return _report(results, errors, roles)
-
-
-def _report(results, consumer_errors, roles=None):
-    missing = [ident for ident, _, _, _ in results.table if ident not in results.rows]
-    assert not missing, missing
-    assertions = [dict(id=ident, group=group, classification=classification, statement=statement, **results.rows[ident])
-                  for ident, group, classification, statement in results.table]
-    failures = [row for row in assertions if row['status'] == 'fail']
-    counts = {}
-    for row in assertions:
-        bucket = counts.setdefault(row['classification'], {'pass': 0, 'fail': 0, 'not_evaluated': 0})
-        bucket[row['status']] += 1
-    # The roles let a reader of this file match each role-keyed statement to a submitted step and path.
-    workload = None if roles is None else {
-        'steps': {role: {'role': STEPS[role], 'step_id': ident} for role, ident in roles['steps'].items()},
-        'targets': {role: {'role': TARGETS[role], 'path': path} for role, path in roles['targets'].items()}}
-    return {'schema_version': 1, 'status': 'fail' if failures else 'pass', 'workload': workload,
-            'classifications': sorted({row['classification'] for row in failures}),
-            'counts_by_classification': counts,
-            'failures': [{'id': row['id'], 'classification': row['classification'], 'explanation': row['explanation']}
-                         for row in failures],
-            'not_evaluated': [{'id': row['id'], 'reason': row['explanation']} for row in assertions
-                              if row['status'] == 'not_evaluated'],
-            'consumer_errors': list(consumer_errors), 'assertions': assertions}
-
-
-# The example's request-to-evidence checks are separate from the general consumer.
-STRUCTURE_ASSERTIONS = (
-    ('structure.execution_form', 'structure', CONSISTENCY, 'the reply uses the submitted execution form'),
-    ('structure.phase_membership', 'structure', CONSISTENCY, 'reply phases retain the exact submitted phase/action partition and order'),
-    ('structure.collections', 'structure', CONSISTENCY, 'each submitted phase has its own complete collection and release chain'),
-    ('structure.worker', 'structure', CONSISTENCY, 'the submitted worker was applied, completed and reaped under its owned process record'),
-)
-ACTOR_ASSERTIONS = (
-    ('structure.actor_ownership', 'structure', CONSISTENCY, 'the submitted actor owns both visits, all steps and its controller projections'),
-    ('structure.actor_application', 'structure', CONSISTENCY, 'the actor applied the submitted policy once and received its source digest'),
-    ('structure.actor_equipment', 'structure', CONSISTENCY, 'the actor used selected equipment matched to its launched worker'),
-)
-TRANSFORM_STATEMENTS = {
-    'flat': 'the flat derivative changes only phases into the ordered probe_plan',
-    'actor': 'the actor derivative relocates the entire policy to one applied selected actor and assigns both phases',
-}
+    _native(capture, roles, reply, matched, echoed, ground, results, workload)
+    return errors
 
 
 def derivatives(document):
-    """Construct the two test-owned request forms. Validation below is independent."""
+    """Construct the two test-owned request forms. `transformation_problems` judges them independently."""
     flat = copy.deepcopy(document)
     flat['probe_plan'] = [step for phase in flat.pop('phases') for step in phase['actions']]
     actor = copy.deepcopy(document)
@@ -1098,205 +1205,332 @@ def derivatives(document):
     return {'flat': flat, 'actor': actor}
 
 
-def transformation_problems(source, candidate, form):
-    """Judge permitted fields and membership without calling the constructor."""
-    if not isinstance(source, dict) or not isinstance(candidate, dict):
-        return ['the source or derivative is not an object']
-    problems = []
+def transformation_problems(source, candidate, form, workload=WORKLOAD):
+    """The failed conditions of one derivative, as (name, explanation).
+
+    The derivative is judged by its members against the emitted document and
+    the table, without calling the constructor. A member that is absent fails
+    the member set alone; one that is present and changed fails its own
+    condition.
+    """
+    check = _Conditions()
+    if not check.require('members', isinstance(candidate, dict), 'the derivative is not a JSON object'):
+        return check.failed
+    roles = workload['roles']
     if form == 'flat':
-        if set(candidate) != (set(source) - {'phases'}) | {'probe_plan'}:
-            problems.append('the flat member set differs')
-        for key in source.keys() - {'phases'}:
-            if candidate.get(key) != source[key]:
-                problems.append(f'flat member {key} changed')
+        check.require('members', set(candidate) == (set(source) - {'phases'}) | {'probe_plan'},
+                      f'the members are {_spell(sorted(candidate))}')
+        changed = sorted(key for key in (source.keys() - {'phases'}) & candidate.keys() if candidate[key] != source[key])
+        check.require('preserved', not changed, f'member(s) {_spell(changed)} changed')
         steps = candidate.get('probe_plan')
-        if not isinstance(steps, list) or len(steps) != 3:
-            problems.append('flat does not hold exactly three actions')
-        else:
-            for index, (phase, action) in enumerate(((0, 0), (0, 1), (1, 0))):
-                if steps[index] != source['phases'][phase]['actions'][action]:
-                    problems.append(f'flat action {index} changed')
-    else:
-        if set(candidate) != (set(source) - {'policy'}) | {'actors'}:
-            problems.append('the actor member set differs')
-        for key in source.keys() - {'policy', 'phases'}:
-            if candidate.get(key) != source[key]:
-                problems.append(f'actor member {key} changed')
-        actors = candidate.get('actors')
-        actor = actors[0] if isinstance(actors, list) and len(actors) == 1 and isinstance(actors[0], dict) else {}
-        actor_id = actor.get('actor_id')
-        if set(actor) != {'actor_id', 'equipment', 'sandbox'} or not isinstance(actor_id, str) or not actor_id or \
-                actor.get('equipment') != 'selected' or actor.get('sandbox') != {'mode': 'apply', 'policy': source.get('policy')}:
-            problems.append('the sole applied selected actor does not preserve the entire policy')
-        phases = candidate.get('phases')
-        if not isinstance(phases, list) or len(phases) != 2:
-            problems.append('actor does not hold two phases')
-        else:
-            for index, phase in enumerate(phases):
-                if not isinstance(phase, dict) or set(phase) != set(source['phases'][index]) | {'actor_id'} or \
-                        phase.get('actor_id') != actor_id or any(phase.get(k) != v for k, v in source['phases'][index].items()):
-                    problems.append(f'actor phase {index} changed beyond its actor assignment')
-    return problems
+        if 'probe_plan' in candidate and check.require('actions', isinstance(steps, list) and len(steps) == len(roles),
+                                                       f'`probe_plan` does not hold {len(roles)} actions'):
+            position = iter(steps)
+            for index, phase in enumerate(workload['phases']):
+                for offset, role in enumerate(phase):
+                    check.require(f'action.{role}', next(position) == source['phases'][index]['actions'][offset],
+                                  f'the action is not phase {index + 1} action {offset + 1} of the emitted document')
+        return check.failed
+    check.require('members', set(candidate) == (set(source) - {'policy'}) | {'actors'},
+                  f'the members are {_spell(sorted(candidate))}')
+    changed = sorted(key for key in (source.keys() - {'policy', 'phases'}) & candidate.keys() if candidate[key] != source[key])
+    check.require('preserved', not changed, f'member(s) {_spell(changed)} changed')
+    actors = candidate.get('actors')
+    actor_id = None
+    if 'actors' in candidate and check.require('actors', isinstance(actors, list) and len(actors) == 1 and
+                                               isinstance(actors[0], dict), '`actors` is not one actor object'):
+        actor = actors[0]
+        check.require('actor.members', set(actor) == {'actor_id', 'equipment', 'sandbox'},
+                      f'the actor\'s members are {_spell(sorted(actor))}')
+        if 'actor_id' in actor and check.require('actor.actor_id', isinstance(actor['actor_id'], str) and bool(actor['actor_id']),
+                                                 f'`actor_id` is {_spell(actor["actor_id"])}'):
+            actor_id = actor['actor_id']
+        if 'equipment' in actor:
+            check.require('actor.equipment', actor['equipment'] == 'selected', f'`equipment` is {_spell(actor["equipment"])}')
+        if 'sandbox' in actor:
+            sandbox = actor['sandbox']
+            if check.require('actor.sandbox.members', isinstance(sandbox, dict) and set(sandbox) == {'mode', 'policy'},
+                             'the sandbox is not an object with exactly `mode` and `policy`'):
+                check.require('actor.sandbox.mode', sandbox['mode'] == 'apply', f'`mode` is {_spell(sandbox["mode"])}')
+                check.require('actor.sandbox.policy', sandbox['policy'] == source.get('policy'),
+                              'the policy is not the emitted document\'s whole policy')
+    phases = candidate.get('phases')
+    if 'phases' in candidate and check.require('phases', isinstance(phases, list) and len(phases) == len(source['phases']),
+                                               f'`phases` does not hold {len(source["phases"])} phases'):
+        for number, (phase, original) in enumerate(zip(phases, source['phases']), 1):
+            if not check.require(f'phase{number}.members', isinstance(phase, dict) and set(phase) == set(original) | {'actor_id'},
+                                 'the phase does not add exactly `actor_id` to the emitted phase\'s members'):
+                continue
+            if actor_id is not None:
+                check.require(f'phase{number}.actor_id', phase['actor_id'] == actor_id,
+                              f'`actor_id` is {_spell(phase["actor_id"])}; the actor is {_spell(actor_id)}')
+            check.require(f'phase{number}.preserved', all(phase[key] == value for key, value in original.items()),
+                          'an emitted phase member changed')
+    return check.failed
 
 
-def _structure(inputs, document, form, base, *, authored_fixture):
-    table = STRUCTURE_ASSERTIONS + (ACTOR_ASSERTIONS if form == 'actor' else ())
-    results = Results(table)
-    statuses = {r['id']: r['status'] for r in base['assertions']}
-    if statuses.get('execution.admitted_reply') != 'pass':
-        for ident, _, _, _ in table:
-            results.unevaluated(ident, 'no identity-admitted reply')
-        return _report(results, [])
-    envelope = _json(inputs['run']['stdout'])[0]
+def _structure(capture, document, form, roles, results, authored_fixture):
+    """Correspondence between one submitted document and the ownership records of its reply.
+
+    Internal ownership, query operand and process-identifier joins belong to
+    the consumer. Here an internally valid reply still has to be the reply to
+    this submitted partition, worker and actor.
+    """
+    if results.status('execution.admitted_reply') != 'pass':
+        results.rest('structure', 'no identity-admitted reply')
+        return
+    envelope = _json(capture['run']['stdout'])[0]
     reply = consumer.admitted_reply(envelope, document['contract'], allow_fixture_json=authored_fixture)
     actor_form = form == 'actor'
-    results.record('structure.execution_form', [] if consumer.actor_form(reply) == actor_form else 'the reply uses another execution form')
-    expected = document['phases'] if form != 'flat' else [{'phase_id': 'main', 'actions': document['probe_plan']}]
-    phases = reply.get('phases') if isinstance(reply.get('phases'), list) else []
-    partition = [(p.get('phase_id'), p.get('ordinal'), p.get('action_ids')) if isinstance(p, dict) else None for p in phases]
-    wanted = [(p['phase_id'], i, [s['step_id'] for s in p['actions']]) for i, p in enumerate(expected, 1)]
-    results.record('structure.phase_membership', [] if partition == wanted else
-                   f'reply partition {_spell(partition)} differs from submitted {_spell(wanted)}')
-    collections = []
-    for submitted in expected:
-        matches = [p for p in phases if isinstance(p, dict) and p.get('phase_id') == submitted['phase_id']]
-        if len(matches) != 1:
-            collections.append(f'{submitted["phase_id"]}: no unique phase collection')
+
+    check = _Conditions()
+    check.require('execution_form', consumer.actor_form(reply) == actor_form, 'the reply uses another execution form')
+    results.conditions('structure.execution_form', check.failed)
+
+    expected = [{'phase_id': 'main', 'actions': document['probe_plan']}] if form == 'flat' else document['phases']
+    phases = [phase if isinstance(phase, dict) else {} for phase in reply['phases']] \
+        if isinstance(reply.get('phases'), list) else []
+    membership = _Conditions()
+    membership.require('phase_count', len(phases) == len(expected),
+                       f'the reply holds {len(phases)} phase(s); {len(expected)} were submitted')
+    for number, (submitted, replied) in enumerate(zip(expected, phases), 1):
+        wanted = [step['step_id'] for step in submitted['actions']]
+        for name, found, sent in (('phase_id', replied.get('phase_id'), submitted['phase_id']),
+                                  ('action_ids', replied.get('action_ids'), wanted)):
+            membership.require(f'phase{number}.{name}', found == sent, f'the reply carries {_spell(found)}; submitted {_spell(sent)}')
+        membership.require(f'phase{number}.ordinal', _exact_int(replied.get('ordinal'), number),
+                           f'the reply carries {_spell(replied.get("ordinal"))}')
+    results.conditions('structure.phase_membership', membership.failed)
+
+    collections = _Conditions()
+    for number, submitted in enumerate(expected, 1):
+        matches = [phase for phase in phases if phase.get('phase_id') == submitted['phase_id']]
+        if not collections.require(f'phase{number}.unique', len(matches) == 1,
+                                   f'{len(matches)} reply phases carry {_spell(submitted["phase_id"])}'):
             continue
         phase = matches[0]
-        validator = phase.get('validator_subprocess') or {}
-        ordering = phase.get('ordering') or {}
-        if any(phase.get(k) is not True for k in ('arrival_observed', 'completion_observed')) or \
-                phase.get('collection_status') != 'collected' or validator.get('reaped') is not True or \
-                any(ordering.get(k) is not True for k in ('collection_closed_before_proceed', 'proceed_set',
-                                                         'proceed_observed', 'worker_lifetime_established')) or \
-                ordering.get('validator_disposition') != 'reaped' or ordering.get('protocol_violations') != []:
-            collections.append(f'{submitted["phase_id"]}: collection, completion or release is unestablished')
-        # Internal ownership, query operand and PID joins belong to the full consumer.
-        # Here an internally valid collection still has to name this submitted plan.
-        if validator.get('expected_step_ids') != [s['step_id'] for s in submitted['actions']]:
-            collections.append(f'{submitted["phase_id"]}: collection names another submitted query plan')
-    results.record('structure.collections', collections)
+        validator = phase.get('validator_subprocess') if isinstance(phase.get('validator_subprocess'), dict) else {}
+        ordering = phase.get('ordering') if isinstance(phase.get('ordering'), dict) else {}
+        wanted = [step['step_id'] for step in submitted['actions']]
+        for name, found, sent in (
+                ('arrival_observed', phase.get('arrival_observed'), True),
+                ('completion_observed', phase.get('completion_observed'), True),
+                ('collection_status', phase.get('collection_status'), 'collected'),
+                ('validator_reaped', validator.get('reaped'), True),
+                ('collection_closed_before_proceed', ordering.get('collection_closed_before_proceed'), True),
+                ('proceed_set', ordering.get('proceed_set'), True),
+                ('proceed_observed', ordering.get('proceed_observed'), True),
+                ('worker_lifetime_established', ordering.get('worker_lifetime_established'), True),
+                ('validator_disposition', ordering.get('validator_disposition'), 'reaped'),
+                ('protocol_violations', ordering.get('protocol_violations'), []),
+                ('expected_step_ids', validator.get('expected_step_ids'), wanted)):
+            collections.require(f'phase{number}.{name}', type(found) is type(sent) and found == sent,
+                                f'the phase carries {_spell(found)}')
+    results.conditions('structure.collections', collections.failed)
+
     actor_id = document['actors'][0]['actor_id'] if actor_form else None
     actor = consumer.actor_record(reply, actor_id) if actor_form else {}
     worker = actor.get('subprocess') if actor_form else reply.get('runner_subprocess')
     worker = worker if isinstance(worker, dict) else {}
     pid = worker.get('pid')
+    owned = _Conditions()
     if actor_form:
-        applied = actor.get('applied') is True and _get(actor, 'launch', 'pid') == pid and \
-            _get(actor, 'launch', 'parent_pid') == reply.get('pid')
+        owned.require('applied', actor.get('applied') is True, f'the actor\'s `applied` is {_spell(actor.get("applied"))}')
+        owned.require('launch_pid', _get(actor, 'launch', 'pid') == pid,
+                      f'the launch names process {_spell(_get(actor, "launch", "pid"))}; the worker is {_spell(pid)}')
+        owned.require('launch_parent_pid', _get(actor, 'launch', 'parent_pid') == reply.get('pid'),
+                      f'the launch names parent {_spell(_get(actor, "launch", "parent_pid"))}; the reply\'s process is '
+                      f'{_spell(reply.get("pid"))}')
     else:
-        applied = reply.get('sandboxed_after_apply') is True and reply.get('pid') == pid
-    results.record('structure.worker', [] if applied and type(pid) is int and pid > 0 and
-                   all(worker.get(k) is True for k in ('reaped', 'ready_byte_received', 'done_observed')) and
-                   _exact_int(worker.get('exit_code'), 0) and worker.get('term_signal') is None and
-                   worker.get('collection_basis') == 'after_confirmed_reap' else 'applied worker ownership, completion or reap is unestablished')
-    if actor_form:
-        data = envelope['data']
-        actors = reply.get('actors') or []
-        diagnostics = _get(data, 'runner_sandbox_diagnostics', 'actors') or []
-        dossiers = _get(data, 'specimen', 'actors') or []
-        ownership = []
-        for label, records in (('reply', actors), ('diagnostics', diagnostics), ('dossier', dossiers)):
-            if [a.get('actor_id') for a in records if isinstance(a, dict)] != [actor_id]:
-                ownership.append(f'{label} does not name the sole submitted actor')
-        if actor.get('visits') != [1, 2] or any(p.get('actor_id') != actor_id or p.get('actor_visit') != i
-                                             for i, p in enumerate(phases, 1)) or \
-                any(s.get('actor_id') != actor_id for s in reply.get('steps') or []):
-            ownership.append('actor visit or step ownership differs')
-        if any('termination_gate' in p for p in phases):
-            ownership.append('a phase invents a termination dependency')
-        for diagnostic in diagnostics:
-            if diagnostic.get('disposition_integrity') != 'valid' or diagnostic.get('disposition_issues') != []:
-                ownership.append('actor diagnostics do not establish valid disposition')
-        results.record('structure.actor_ownership', ownership)
-        digest = hashlib.sha256(submitted_policy(document, form)['sbpl_source'].encode()).hexdigest()
-        results.record('structure.actor_application', [] if actor.get('mode') == 'apply' and
-                       actor.get('setup_status') == 'applied' and actor.get('applied') is True and
-                       _exact_int(actor.get('application_count'), 1) and
-                       actor.get('application') == {'state': 'observed', 'basis': 'applied_publication'} and
-                       actor.get('policy_received_sha256') == digest else 'single application or policy receipt differs')
-        equipment = actor.get('equipment') or {}
-        execution = equipment.get('execution') or {}
-        results.record('structure.actor_equipment', [] if equipment.get('requested') == 'selected' and
-                       equipment.get('resolved') == 'selected' and equipment.get('required_entitlements') == [] and
-                       equipment.get('requirements_status') == 'satisfied' and execution.get('status') == 'matched' and
-                       execution.get('eligible') is True and execution.get('pid') == pid else 'selected equipment is not matched to this actor worker')
-    return _report(results, [])
+        owned.require('applied', reply.get('sandboxed_after_apply') is True,
+                      f'`sandboxed_after_apply` is {_spell(reply.get("sandboxed_after_apply"))}')
+        owned.require('reply_pid', reply.get('pid') == pid,
+                      f'the reply\'s process is {_spell(reply.get("pid"))}; the worker is {_spell(pid)}')
+    owned.require('pid', type(pid) is int and pid > 0, f'the worker\'s `pid` is {_spell(pid)}')
+    for name in ('reaped', 'ready_byte_received', 'done_observed'):
+        owned.require(name, worker.get(name) is True, f'`{name}` is {_spell(worker.get(name))}')
+    owned.require('exit_code', _exact_int(worker.get('exit_code'), 0), f'`exit_code` is {_spell(worker.get("exit_code"))}')
+    owned.require('term_signal', worker.get('term_signal') is None, f'`term_signal` is {_spell(worker.get("term_signal"))}')
+    owned.require('collection_basis', worker.get('collection_basis') == 'after_confirmed_reap',
+                  f'`collection_basis` is {_spell(worker.get("collection_basis"))}')
+    results.conditions('structure.worker', owned.failed)
+    if not actor_form:
+        return
+
+    data = envelope['data']
+    ownership = _Conditions()
+    diagnostics = _get(data, 'runner_sandbox_diagnostics', 'actors')
+    for label, records in (('reply', reply.get('actors')), ('diagnostics', diagnostics),
+                           ('dossier', _get(data, 'specimen', 'actors'))):
+        named = [entry.get('actor_id') if isinstance(entry, dict) else None for entry in records] \
+            if isinstance(records, list) else None
+        ownership.require(f'{label}_actors', named == [actor_id], f'the {label} names actors {_spell(named)}')
+    visits = list(range(1, len(expected) + 1))
+    ownership.require('visits', actor.get('visits') == visits, f'the actor\'s visits are {_spell(actor.get("visits"))}')
+    for number, replied in enumerate(phases[:len(expected)], 1):
+        ownership.require(f'phase{number}.actor_id', replied.get('actor_id') == actor_id,
+                          f'the phase names actor {_spell(replied.get("actor_id"))}')
+        ownership.require(f'phase{number}.actor_visit', _exact_int(replied.get('actor_visit'), number),
+                          f'the phase is visit {_spell(replied.get("actor_visit"))}')
+        ownership.require(f'phase{number}.no_termination_gate', 'termination_gate' not in replied,
+                          'the phase carries a termination dependency')
+    steps = [step for step in reply['steps'] if isinstance(step, dict)] if isinstance(reply.get('steps'), list) else []
+    for role, ident in roles['steps'].items():
+        owners = [step.get('actor_id') for step in steps if step.get('step_id') == ident]
+        ownership.require(f'step.{role}.actor_id', all(owner == actor_id for owner in owners),
+                          f'the step names actor(s) {_spell(owners)}')
+    others = [step.get('actor_id') for step in steps if step.get('step_id') not in roles['steps'].values()]
+    ownership.require('unsubmitted_steps.actor_id', all(owner == actor_id for owner in others),
+                      f'step(s) that were not submitted name actor(s) {_spell(others)}')
+    entries = [entry for entry in diagnostics if isinstance(entry, dict)] if isinstance(diagnostics, list) else []
+    for name, wanted in (('disposition_integrity', 'valid'), ('disposition_issues', [])):
+        found = [entry.get(name) for entry in entries]
+        ownership.require(f'diagnostics.{name}', all(type(value) is type(wanted) and value == wanted for value in found),
+                          f'the actor diagnostics carry {_spell(found)}')
+    results.conditions('structure.actor_ownership', ownership.failed)
+
+    digest = hashlib.sha256(submitted_policy(document, form)['sbpl_source'].encode('utf-8')).hexdigest()
+    application = _Conditions()
+    for name, wanted in (('mode', 'apply'), ('setup_status', 'applied'), ('applied', True), ('application_count', 1),
+                         ('application', {'state': 'observed', 'basis': 'applied_publication'}),
+                         ('policy_received_sha256', digest)):
+        found = actor.get(name)
+        application.require(name, type(found) is type(wanted) and found == wanted, f'the actor carries {_spell(found)}')
+    results.conditions('structure.actor_application', application.failed)
+
+    equipment = actor.get('equipment') if isinstance(actor.get('equipment'), dict) else {}
+    execution = equipment.get('execution') if isinstance(equipment.get('execution'), dict) else {}
+    matched = _Conditions()
+    for name, found, wanted in (('requested', equipment.get('requested'), 'selected'),
+                                ('resolved', equipment.get('resolved'), 'selected'),
+                                ('required_entitlements', equipment.get('required_entitlements'), []),
+                                ('requirements_status', equipment.get('requirements_status'), 'satisfied'),
+                                ('execution.status', execution.get('status'), 'matched'),
+                                ('execution.eligible', execution.get('eligible'), True)):
+        matched.require(name, type(found) is type(wanted) and found == wanted, f'the equipment carries {_spell(found)}')
+    matched.require('execution.pid', execution.get('pid') == pid,
+                    f'the equipment observation names process {_spell(execution.get("pid"))}; the worker is {_spell(pid)}')
+    results.conditions('structure.actor_equipment', matched.failed)
 
 
-def _diagnostic(inputs, document, form, rows):
-    statuses = {r['id']: r['status'] for r in rows}
-    required = ('identity.envelope_build', 'identity.client_transport', 'identity.reply_producer',
-                'execution.admitted_reply', 'echo.specimen_id', 'echo.step_ids', 'echo.queries', 'echo.attempts',
-                'structure.execution_form', 'structure.phase_membership') + (('structure.actor_ownership',) if form == 'actor' else ())
-    record = {'form': form, 'samples': {key: inputs.get(key) for key in ('targets-before', 'targets-after')},
-              'assertions': statuses, 'observations': None}
-    if any(statuses.get(k) != 'pass' for k in required):
-        record['withheld_reason'] = 'identity or submitted association is unestablished'
-        return record
-    reply = _json(inputs['run']['stdout'])[0]['data']['runner_result']
-    roles = workload_roles(document)[0]
-    observations = []
-    for role, step_id in roles['steps'].items():
-        step = next(s for s in reply['steps'] if s['step_id'] == step_id)
-        query, attempt = step['sandbox_check'], step['attempt']
-        fresh = attempt.get('fresh_read')
-        observed = {'role': role, 'step_id': step_id, 'phase_id': step.get('phase_id'), 'actor_id': step.get('actor_id'),
-                    'query': {k: query.get(k) for k in ('result_source', 'outcome', 'native_rc', 'errno')},
-                    'attempt': {k: attempt.get(k) for k in ('result_source', 'outcome', 'rc', 'errno')}}
-        if isinstance(fresh, dict):
-            try:
-                digest = hashlib.sha256(bytes.fromhex(fresh.get('content_hex'))).hexdigest()
-            except (TypeError, ValueError):
-                digest = None
-            observed['fresh_read'] = {'identity': fresh.get('identity'), 'count': fresh.get('read_rc'), 'sha256': digest}
-        observations.append(observed)
-    record['observations'] = observations
-    return record
+def _described(roles, workload):
+    """The roles in words, so a reader of the report can match each statement to a submitted step and path."""
+    if roles is None:
+        return None
+    return {'steps': {role: {'role': step_text(workload, role), 'step_id': ident} for role, ident in roles['steps'].items()},
+            'targets': {letter: {'role': target_text(workload, letter), 'path': submitted}
+                        for letter, submitted in roles['targets'].items()}}
 
 
-def evaluate(inputs, *, authored_fixture=False):
-    """One publication, three independent captures, no equality assertions."""
-    emitted = evaluate_capture(inputs, authored_fixture=authored_fixture)
-    source, _ = _json(inputs['example-1']['stdout'])
-    prepared = all(r['status'] == 'pass' for r in emitted['assertions'] if r['group'] in ('emission', 'bounds'))
-    forms, all_rows, summaries, errors = {}, [], [], []
-    for form in ('emitted', 'flat', 'actor'):
-        captured = inputs if form == 'emitted' else inputs['forms'][form]
-        document = source if form == 'emitted' else _json(captured['input'])[0]
-        transform = None if form == 'emitted' else transformation_problems(source, document, form) if prepared else ['emission is unestablished']
-        if form != 'emitted':
-            all_rows.append(dict(id=form + '.transformation', group='transformation', classification=CONSISTENCY,
-                                 statement=TRANSFORM_STATEMENTS[form], status=('fail' if transform else 'pass') if prepared else 'not_evaluated',
-                                 explanation='; '.join(transform) or None, form=form))
+def _report(by_form, forms):
+    assertions = []
+    for form, results in by_form.items():
+        missing = [ident for ident, _, _, _ in results.table if ident not in results.rows]
+        assert not missing, (form, missing)
+        assertions.extend(dict(form=form, id=ident, group=group, classification=classification, statement=statement,
+                               **results.rows[ident]) for ident, group, classification, statement in results.table)
+    failures = [row for row in assertions if row['status'] == 'fail']
+    counts = {}
+    for row in assertions:
+        bucket = counts.setdefault(row['classification'], {'pass': 0, 'fail': 0, 'not_evaluated': 0})
+        bucket[row['status']] += 1
+    return {'schema_version': 3, 'status': 'fail' if failures else 'pass',
+            'classifications': sorted({row['classification'] for row in failures}),
+            'counts_by_classification': counts,
+            'failures': [{key: row[key] for key in ('form', 'id', 'classification', 'explanation', 'conditions') if key in row}
+                         for row in failures],
+            'not_evaluated': [{'form': row['form'], 'id': row['id'], 'reason': row['explanation']} for row in assertions
+                              if row['status'] == 'not_evaluated'],
+            'consumer_errors': [f'{form}: {error}' for form in forms for error in forms[form]['consumer_errors']],
+            'forms': forms, 'assertions': assertions}
+
+
+def evaluate(inputs, *, authored_fixture=False, workload=WORKLOAD):
+    """One publication and three submissions, each judged on its own rows. No row compares two forms."""
+    by_form = {form: Results(form, workload) for form in FORMS}
+    forms = {form: {'workload': None, 'consumer_errors': []} for form in FORMS}
+    publication, roles = _publication(inputs, by_form['emitted'], workload)
+    forms['emitted']['workload'] = _described(roles, workload)
+    for form in FORMS:
+        results = by_form[form]
+        if publication is None:
+            if form != 'emitted':
+                results.remaining('the emission is unestablished')
+            continue
+        emitted, source = publication
         if form == 'emitted':
-            base = emitted
-        elif prepared and not transform:
-            base = evaluate_capture(captured, authored_fixture=authored_fixture, form=form, publication=False)
+            capture, submitted, document = inputs, emitted, source
         else:
-            withheld = Results(EXECUTION_ASSERTIONS)
-            for ident, _, _, _ in withheld.table:
-                withheld.unevaluated(ident, 'the emission or transformation is unestablished')
-            base = _report(withheld, [])
-        structure = _structure(captured, document, form, base, authored_fixture=authored_fixture)
-        rows = base['assertions'] + structure['assertions']
-        forms[form] = {'workload': base['workload'], 'consumer_errors': base['consumer_errors']}
-        errors.extend(form + ': ' + error for error in base['consumer_errors'])
-        summaries.append(_diagnostic(captured, document, form, rows))
-        all_rows.extend(dict(row, id=(form + '.' if form != 'emitted' else '') + row['id'], form=form) for row in rows)
-    results = Results(tuple((r['id'], r['group'], r['classification'], r['statement']) for r in all_rows))
-    results.rows = {r['id']: {k: r[k] for k in ('status', 'explanation')} for r in all_rows}
-    report = _report(results, errors)
-    report['assertions'] = all_rows
-    report.update(schema_version=2, forms=forms, diagnostic_summary=summaries)
-    return report
+            capture = inputs['forms'][form]
+            submitted = capture['input']
+            document = _json(submitted)[0]
+            failed = transformation_problems(source, document, form, workload)
+            results.conditions('transformation', failed)
+            if failed:
+                results.remaining('the transformation is unestablished')
+                continue
+            roles, problems = workload_roles(document, workload)
+            if problems:
+                results.remaining('the derivative supplied no admitted workload')
+                continue
+            forms[form]['workload'] = _described(roles, workload)
+        forms[form]['consumer_errors'] = _execution(capture, submitted, document, form, roles, results, workload,
+                                                    authored_fixture)
+        _structure(capture, document, form, roles, results, authored_fixture)
+    return _report(by_form, forms)
 
+
+SUMMARY_REQUIRES = ('identity.envelope_build', 'identity.client_transport', 'identity.reply_producer',
+                    'execution.admitted_reply', 'echo.specimen_id', 'echo.step_ids', 'echo.queries', 'echo.attempts',
+                    'structure.execution_form', 'structure.phase_membership')
+
+
+def diagnostic_summary(inputs, report):
+    """Each form's observations side by side, for a reader. It is built from a finished report and judges nothing.
+
+    Query and attempt stay separate values. A form whose producer identity or
+    submitted association is unestablished supplies no observations.
+    """
+    summaries = []
+    for form in FORMS:
+        capture = inputs if form == 'emitted' else inputs['forms'][form]
+        statuses = {row['id']: row['status'] for row in report['assertions'] if row['form'] == form}
+        record = {'form': form, 'samples': {key: capture.get(key) for key in ('targets-before', 'targets-after')},
+                  'assertions': statuses, 'observations': None}
+        summaries.append(record)
+        described = report['forms'][form]['workload']
+        required = SUMMARY_REQUIRES + (('structure.actor_ownership',) if form == 'actor' else ())
+        if described is None or any(statuses.get(ident) != 'pass' for ident in required):
+            record['withheld_reason'] = 'identity or submitted association is unestablished'
+            continue
+        reply = _json(capture['run']['stdout'])[0]['data']['runner_result']
+        record['observations'] = []
+        for role, entry in described['steps'].items():
+            step = next(found for found in reply['steps'] if found['step_id'] == entry['step_id'])
+            query, attempt = step['sandbox_check'], step['attempt']
+            observed = {'role': role, 'step_id': entry['step_id'], 'phase_id': step.get('phase_id'),
+                        'actor_id': step.get('actor_id'),
+                        'query': {key: query.get(key) for key in ('result_source', 'outcome', 'native_rc', 'errno')},
+                        'attempt': {key: attempt.get(key) for key in ('result_source', 'outcome', 'rc', 'errno')}}
+            fresh = attempt.get('fresh_read')
+            if isinstance(fresh, dict):
+                try:
+                    digest = hashlib.sha256(bytes.fromhex(fresh.get('content_hex'))).hexdigest()
+                except (TypeError, ValueError):
+                    digest = None
+                observed['fresh_read'] = {'identity': fresh.get('identity'), 'count': fresh.get('read_rc'), 'sha256': digest}
+            record['observations'].append(observed)
+    return summaries
 
 
 def diagnostics(report):
-    """The (assertion identifier, classification) pairs of a report's failures."""
-    return {(row['id'], row['classification']) for row in report['failures']}
+    """The (form, assertion identifier, classification) triples of a report's failures."""
+    return {(row['form'], row['id'], row['classification']) for row in report['failures']}
+
+
+def failed_conditions(report):
+    """The failed condition names of each conditioned row that failed, by (form, assertion identifier)."""
+    return {(row['form'], row['id']): tuple(row['conditions']) for row in report['failures'] if 'conditions' in row}
 
 
 def render(report):
@@ -1308,9 +1542,9 @@ def render(report):
             lines.append(f'  {classification}: {counts["pass"]} hold, {counts["fail"]} fail, '
                          f'{counts["not_evaluated"]} not evaluated')
     for row in report['failures']:
-        lines.append(f'FAIL {row["id"]} [{row["classification"]}]: {row["explanation"]}')
+        lines.append(f'FAIL {row["form"]} {row["id"]} [{row["classification"]}]: {row["explanation"]}')
     for row in report['not_evaluated']:
-        lines.append(f'NOT EVALUATED {row["id"]}: {row["reason"]}')
+        lines.append(f'NOT EVALUATED {row["form"]} {row["id"]}: {row["reason"]}')
     return '\n'.join(lines)
 
 
@@ -1339,7 +1573,7 @@ def prepare(directory, app, snapshot):
 
     # The same checker decides whether the emitted bytes may be run.
     report = evaluate(load(directory))
-    gate = [row for row in report['assertions'] if row['group'] in ('emission', 'bounds')]
+    gate = [row for row in report['assertions'] if row['form'] == 'emitted' and row['group'] in ('emission', 'bounds')]
     if any(row['status'] != 'pass' for row in gate):
         _write_report(directory, report)
         return 1
@@ -1347,12 +1581,12 @@ def prepare(directory, app, snapshot):
     source = json.loads(emitted)
     account = {}
     for form, document in derivatives(source).items():
-        problems = transformation_problems(source, document, form)
+        problems = [f'{name}: {text}' for name, text in transformation_problems(source, document, form)]
         assert not problems, problems
         base = directory / form
         base.mkdir()
         (base / 'input.json').write_text(json.dumps(document, indent=2, sort_keys=True) + '\n')
-        account[form] = {'operation': TRANSFORM_STATEMENTS[form], 'problems': problems,
+        account[form] = {'operation': TRANSFORMATION_ROWS[form][3], 'problems': problems,
                          'removed': ['phases'] if form == 'flat' else ['policy'],
                          'added': ['probe_plan'] if form == 'flat' else ['actors', 'phases[].actor_id'],
                          'relocated': 'phases[].actions -> probe_plan' if form == 'flat' else 'policy -> actors[0].sandbox.policy',
@@ -1376,7 +1610,7 @@ def main(argv=None):
     commands.add_parser('evaluate').add_argument('capture')
     command = commands.add_parser('observe')
     command.add_argument('capture')
-    command.add_argument('form', choices=('emitted', 'flat', 'actor'))
+    command.add_argument('form', choices=FORMS)
     command.add_argument('when', choices=('before', 'after'))
     args = parser.parse_args(argv)
     if args.command == 'prepare':
@@ -1386,7 +1620,10 @@ def main(argv=None):
         path = base / ('example-1.stdout' if args.form == 'emitted' else 'input.json')
         observe(base, 'targets-' + args.when, json.loads(path.read_bytes()))
         return 0
-    report = evaluate(load(args.capture))
+    inputs = load(args.capture)
+    report = evaluate(inputs)
+    # The summary is added to a finished report: no row is computed after it or from it.
+    report['diagnostic_summary'] = diagnostic_summary(inputs, report)
     _write_report(args.capture, report)
     return 0 if report['status'] == 'pass' else 1
 

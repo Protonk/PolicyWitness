@@ -708,10 +708,26 @@ checks: ["source_drift"]
         self.assertNotIn('<reported-contract>', rendered)
         edited = self.example_tree(constant.replace('"ready"', '"unknown"'), fact(['probe_plan', 0]))
         self.assertNotEqual(self.model.public_payload(edited, 'demo'), payload)
+        # A selector follows the element that carries a member with a value, whatever its position.
+        selected = self.example_tree(constant, fact(['probe_plan', {'status': 'ready'}]))
+        self.assertEqual(selected.index['demo.report.extracted'].document, {'status': 'ready'})
+        self.assertEqual(self.model.public_payload(selected, 'demo'), payload)
+        moved = self.example_constant('{"specimen_id":"control","probe_plan":[{"unlisted":1},{"status":"ready"}]}')
+        self.assertEqual(self.example_tree(moved, fact(['probe_plan', {'status': 'ready'}]))
+                         .index['demo.report.extracted'].document, {'status': 'ready'})
+        twice = self.example_constant('{"specimen_id":"control","probe_plan":[{"status":"ready"},{"status":"ready"}]}')
+        with self.assertRaisesRegex(ValueError, r'has 2 elements at \["probe_plan", \{"status": "ready"\}\]'):
+            self.example_tree(twice, fact(['probe_plan', {'status': 'ready'}]))
         for label, member, diagnostic in [
             ('empty path', [], 'document member must be a nonempty path'),
             ('not a path', 'probe_plan', 'document member must be a nonempty path'),
             ('boolean index', ['probe_plan', True], 'document member must be a nonempty path'),
+            ('two-member selector', ['probe_plan', {'status': 'ready', 'unlisted': 1}], 'document member must be a nonempty path'),
+            ('empty selector', ['probe_plan', {}], 'document member must be a nonempty path'),
+            ('selector value not a string', ['probe_plan', {'unlisted': 1}], 'document member must be a nonempty path'),
+            ('selector matching nothing', ['probe_plan', {'status': 'absent'}],
+             'has 0 elements at ["probe_plan", {"status": "absent"}]'),
+            ('selector into an object', [{'specimen_id': 'control'}], 'has 0 elements at [{"specimen_id": "control"}]'),
             ('index out of range', ['probe_plan', 2], 'has no member at ["probe_plan", 2]'),
             ('negative index', ['probe_plan', -1], 'has no member at ["probe_plan", -1]'),
             ('absent key', ['phases'], 'has no member at ["phases"]'),

@@ -1626,7 +1626,7 @@
         },
         {
           "id": "example_round_trip_controls",
-          "description": "Constructed flat, phased and full actor captures pin exact checker diagnostics: transformations, collection ownership, application/equipment/reap, consistent renaming, independent native faults, missing evidence and fresh-read correspondence",
+          "description": "Constructed phased, flat and full actor captures pin exact checker diagnostics in each form; every row of the three-form report has a matched rejected control in its form and every declared condition has a control that fails it alone",
           "command": [
             "bash",
             "tests/suites/witness_contract/example_round_trip_controls.sh"
