@@ -3,17 +3,30 @@
 
 The case supplies no specimen. The document is whatever the selected app
 printed; this checker reads retained captures of the commands the case ran,
-changes the printed bytes in one place for each refusal, observes the attempt
-targets itself, and reads the run envelope with the shared consumer. Identity,
-digest and echo expectations are derived from the printed document or another
-output of the same app. Shape, record, ordering and outcome-mapping rules
-belong to the consumer and the controller; this file restates none of them.
+changes the printed bytes in one place for each refusal, observes every query
+and attempt path itself, and reads the run envelope with the shared consumer.
+Identity, digest and echo expectations are derived from the printed document
+or another output of the same app. Shape, record, ordering and outcome-mapping
+rules belong to the consumer and the controller; this file restates none of
+them.
 
-Two expectations are the case's own. The document must hold at least one
-paired, read-only probe, and under observed prerequisites the native results
-must meet the expectations pinned to the present example: a validator `allow`
-before a read that succeeds, with the targets unchanged. Nothing here states
-that a prediction and an attempt agree.
+Two expectations are the case's own. The document must be a read-only workload
+of three steps over three targets, found by their relationships and never by a
+label or a path:
+
+    step 1   a `file-read-data` query on target A, and an `open_read` of A
+    step 2   a `file-read-metadata` query on target B, and a `read_fresh` of target C
+    step 3   a `file-read-data` query on B, and an `open_read` of B
+
+Under observed prerequisites the native results must then meet the expectations
+pinned to the present example: allow answers for steps 1 and 2 and a deny
+answer for step 3, each before its attempt; a successful open of A; a
+successful fresh read whose descriptor identity, count and bytes are those this
+checker observed for C; a failed open of B with `EPERM`; a finished run whose
+process exits 0; and unchanged targets. The policy source is not read to decide
+any of this. Each step's answer and attempt are separate assertions. Nothing
+here compares an answer with its attempt, states that they agree or assigns a
+failure to the policy.
 
 Every assertion has a stable identifier, one group and one classification.
 A failure prints its identifier and classification; `report.json` holds every
@@ -43,7 +56,20 @@ NATIVE_OBSERVATION = 'native_observation'
 
 EXAMPLE_NODE = 'request.specimen.example'
 PACKAGED_IDENTITY = re.compile(r'release:v[0-9]+\.[0-9]+\.[0-9]+|development:[0-9a-f]{64}')
-READ_ONLY_FILE_ACTIONS = ('open_read', 'access')
+READ_ONLY_FILE_ACTIONS = ('open_read', 'access', 'read_fresh')
+# The most bytes one `read_fresh` reads, as the step-result surface documents it. Authored here.
+FRESH_READ_BOUND = 64
+EPERM = 1
+STEPS = {
+    'step1': 'step 1 (data-read query and open of target A)',
+    'step2': 'step 2 (metadata query on target B beside a fresh read of target C)',
+    'step3': 'step 3 (data-read query and open of target B)',
+}
+TARGETS = {
+    'A': 'the target step 1 queries for data reads and opens',
+    'B': 'the target step 2 queries for metadata reads and step 3 queries for data reads and opens',
+    'C': 'the target step 2 reads through a fresh descriptor',
+}
 # The controller's selection keys, from the request surface's shape golden (collected from `runner_select.rs`).
 SELECTOR_FIELDS = tuple(json.loads((Path(__file__).resolve().parents[2] / 'fixtures/contract/surfaces/request.json')
                                    .read_text())['controller_keys']['SELECTOR_FIELDS'])
@@ -83,8 +109,10 @@ def _table():
         ('passage.contract_rendering', 'passage', CONSISTENCY,
          "the document without `contract` equals the contract snapshot's example"),
         ('bounds.ordinary_form', 'bounds', CONSISTENCY, 'the document is the ordinary form with a nonempty `probe_plan`'),
-        ('bounds.paired_read_probe', 'bounds', CONSISTENCY,
-         'at least one step pairs a `sandbox_check` with a read-only file attempt'),
+        ('bounds.workload_roles', 'bounds', CONSISTENCY,
+         'the plan is three steps: a `file-read-data` query and `open_read` of one target A; a `file-read-metadata` '
+         'query on a second target B with a `read_fresh` of a third target C; a `file-read-data` query and '
+         '`open_read` of B'),
         ('bounds.read_only_attempts', 'bounds', CONSISTENCY, 'every attempt is a read-only file action'),
         ('bounds.no_test_overrides', 'bounds', CONSISTENCY, 'the document carries no `_test_overrides`'),
         ('bounds.no_runner_selection', 'bounds', CONSISTENCY, 'the document carries no runner selection field'),
@@ -109,13 +137,39 @@ def _table():
         ('readers.disposition_integrity', 'readers', CONSISTENCY, "the controller's `disposition_integrity` is `valid`"),
         ('readers.disposition_issues', 'readers', CONSISTENCY, 'the controller reports no `disposition_issues`'),
         ('prerequisite.targets_readable', 'native', PREREQUISITE_UNESTABLISHED,
-         'each attempt target resolves to a regular file the test user can open and read'),
+         'targets A, B and C are each a regular file the test user opened and read before the run'),
+        ('prerequisite.distinct_identities', 'native', PREREQUISITE_UNESTABLISHED,
+         'targets A, B and C have three distinct device and inode identities'),
+        ('prerequisite.distinguishing_prefixes', 'native', PREREQUISITE_UNESTABLISHED,
+         "each target's bounded prefix is nonempty, and C's differs from A's and from B's"),
+        ('native.process_status', 'native', NATIVE_OBSERVATION,
+         'the captured exit status of the `run` process is 0, whatever the envelope reports'),
         ('native.completion', 'native', NATIVE_OBSERVATION, "the reply's `normalized_outcome` is `finished`"),
-        ('native.prediction', 'native', NATIVE_OBSERVATION, 'each prediction is a validator `allow` with `native_rc` 0'),
-        ('native.order', 'native', NATIVE_OBSERVATION, 'given that prediction, `order` is `query_first`'),
-        ('native.attempt', 'native', NATIVE_OBSERVATION, 'each attempt has outcome `ok` and `rc` 0'),
+        ('native.step1.prediction', 'native', NATIVE_OBSERVATION,
+         STEPS['step1'] + ': the answer about A is a validator `allow` with `native_rc` 0'),
+        ('native.step2.prediction', 'native', NATIVE_OBSERVATION,
+         STEPS['step2'] + ': the answer about B is a validator `allow` with `native_rc` 0'),
+        ('native.step3.prediction', 'native', NATIVE_OBSERVATION,
+         STEPS['step3'] + ': the answer about B is a validator `deny` with `native_rc` 1 and a query `errno` of 0'),
+        ('native.order', 'native', NATIVE_OBSERVATION,
+         'each step whose answer met its expectation records `order` `query_first`'),
+        ('native.step1.attempt', 'native', NATIVE_OBSERVATION,
+         STEPS['step1'] + ': the open of A is a worker result with outcome `ok` and `rc` 0'),
+        ('native.step2.attempt', 'native', NATIVE_OBSERVATION,
+         STEPS['step2'] + ': the fresh read of C is a worker result with outcome `ok` and `rc` 0'),
+        ('native.step2.fresh_syscalls', 'native', NATIVE_OBSERVATION,
+         STEPS['step2'] + ': the open returned a descriptor, and the descriptor stat, the bounded read and the '
+         'close each succeeded'),
+        ('native.step2.fresh_identity', 'native', NATIVE_OBSERVATION,
+         STEPS['step2'] + ": the descriptor's device and inode are those this checker observed for C"),
+        ('native.step2.fresh_content', 'native', NATIVE_OBSERVATION,
+         STEPS['step2'] + ": the read count and the bytes read are the length and digest of C's bounded prefix "
+         'as this checker observed it'),
+        ('native.step3.attempt', 'native', NATIVE_OBSERVATION,
+         STEPS['step3'] + ': the open of B is a worker result with outcome `open_failed` and an attempt `errno` '
+         'of exactly 1 (`EPERM`)'),
         ('native.targets_unchanged', 'native', NATIVE_OBSERVATION,
-         "each target's digest, length and selected metadata are equal before and after the run"),
+         "each target's digest, length, bounded prefix and selected metadata are equal before and after the run"),
     ]
     for name, (code, path, identity, component) in REFUSALS.items():
         prefix = 'refusal.' + name
@@ -237,34 +291,95 @@ def refusal_inputs(emitted):
 # Observations the case makes itself
 # ---------------------------------------------------------------------------
 
-def attempt_targets(document):
-    targets = []
+def workload_roles(document):
+    """The step identifiers and targets of the three roles, or the reasons the document is another workload.
+
+    Roles are positions and relationships among submitted operands. No step
+    identifier, path or policy text decides one.
+    """
+    plan = document.get('probe_plan')
+    steps = plan if isinstance(plan, list) else []
+    if len(steps) != 3 or any(not isinstance(step, dict) for step in steps):
+        return None, [f'`probe_plan` holds {len(steps)} step(s) where this workload has three']
+
+    def half(step):
+        query, attempt = step.get('sandbox_check'), step.get('attempt')
+        path = _get(query, 'filter', 'value') if _get(query, 'filter', 'kind') == 'path' else None
+        action = _get(attempt, 'action') if _get(attempt, 'kind') == 'file' else None
+        target = _get(attempt, 'target')
+        return (_get(query, 'operation'), path if isinstance(path, str) else None, action,
+                target if isinstance(target, str) else None)
+
+    def matched_open(found):
+        operation, path, action, target = found
+        return operation == 'file-read-data' and action == 'open_read' and path is not None and path == target
+
+    first, second, third = (half(step) for step in steps)
+    problems = []
+    if not matched_open(first):
+        problems.append('step 1 is not a `file-read-data` path query with an `open_read` of the same target')
+    if not (second[0] == 'file-read-metadata' and second[2] == 'read_fresh' and None not in (second[1], second[3])
+            and second[1] != second[3]):
+        problems.append('step 2 is not a `file-read-metadata` path query with a `read_fresh` of another target')
+    if not matched_open(third):
+        problems.append('step 3 is not a `file-read-data` path query with an `open_read` of the same target')
+    identifiers = [step.get('step_id') for step in steps]
+    if any(not isinstance(ident, str) for ident in identifiers) or len(set(identifiers)) != 3:
+        problems.append('the step identifiers are not three distinct strings')
+    if not problems:
+        if third[1] != second[1]:
+            problems.append('step 3 does not query and open the target step 2 queries')
+        if first[1] in (second[1], second[3]):
+            problems.append("step 1's target is also a target of step 2")
+    if problems:
+        return None, problems
+    return {'steps': dict(zip(STEPS, identifiers)),
+            'targets': {'A': first[1], 'B': second[1], 'C': second[3]}}, []
+
+
+def observed_paths(document):
+    """Every submitted query path and attempt target, each once, in order of appearance."""
+    paths = []
     for step in document.get('probe_plan') or []:
-        attempt = step.get('attempt') if isinstance(step, dict) else None
-        if isinstance(attempt, dict) and isinstance(attempt.get('target'), str) and attempt['target'] not in targets:
-            targets.append(attempt['target'])
-    return targets
+        if not isinstance(step, dict):
+            continue
+        for path in (_get(step.get('sandbox_check'), 'filter', 'value'), _get(step.get('attempt'), 'target')):
+            if isinstance(path, str) and path not in paths:
+                paths.append(path)
+    return paths
 
 
 def observe_target(target):
+    """One sample: identity and content read from one descriptor this process opened, then closed."""
     record = {'target': target, 'resolved': None, 'regular_file': False, 'readable': False, 'error': None}
     try:
-        resolved = os.path.realpath(target, strict=True)
-        status = os.stat(resolved)
-        record.update(resolved=resolved, regular_file=stat_module.S_ISREG(status.st_mode),
-                      stat={field: getattr(status, field) for field in STAT_FIELDS})
-        if record['regular_file']:
-            data = Path(resolved).read_bytes()
-            # A digest and length support the equality observation; the bytes are not retained.
-            record.update(readable=True, sha256=hashlib.sha256(data).hexdigest(), length=len(data))
+        record['resolved'] = os.path.realpath(target, strict=True)
+        descriptor = os.open(target, os.O_RDONLY | os.O_NONBLOCK | os.O_CLOEXEC)
     except OSError as error:
         record['error'] = f'{type(error).__name__}: {error}'
+        return record
+    try:
+        status = os.fstat(descriptor)
+        record.update(regular_file=stat_module.S_ISREG(status.st_mode),
+                      stat={field: getattr(status, field) for field in STAT_FIELDS})
+        if record['regular_file']:
+            data = b''
+            while chunk := os.read(descriptor, 1 << 20):
+                data += chunk
+            prefix = data[:FRESH_READ_BOUND]
+            # Digests and lengths support the equality observations; the bytes are not retained.
+            record.update(readable=True, sha256=hashlib.sha256(data).hexdigest(), length=len(data),
+                          prefix_sha256=hashlib.sha256(prefix).hexdigest(), prefix_length=len(prefix))
+    except OSError as error:
+        record['error'] = f'{type(error).__name__}: {error}'
+    finally:
+        os.close(descriptor)
     return record
 
 
 def observe(directory, name, document):
     path = Path(directory) / (name + '.json')
-    path.write_text(json.dumps({'targets': [observe_target(t) for t in attempt_targets(document)]}, indent=2) + '\n')
+    path.write_text(json.dumps({'targets': [observe_target(t) for t in observed_paths(document)]}, indent=2) + '\n')
 
 
 # ---------------------------------------------------------------------------
@@ -347,8 +462,8 @@ def _bounds(document, results):
     def read_only(attempt):
         return isinstance(attempt, dict) and attempt.get('kind') == 'file' and attempt.get('action') in READ_ONLY_FILE_ACTIONS
 
-    paired = [step for step in steps if isinstance(step.get('sandbox_check'), dict) and read_only(step.get('attempt'))]
-    results.record('bounds.paired_read_probe', [] if paired else 'no step pairs a `sandbox_check` with a read-only file attempt')
+    roles, problems = workload_roles(document)
+    results.record('bounds.workload_roles', problems)
     results.record('bounds.read_only_attempts',
                    [f'step {_spell(step.get("step_id"))} attempts {_spell(step.get("attempt"))}'
                     for step in steps if 'attempt' in step and not read_only(step['attempt'])])
@@ -363,6 +478,7 @@ def _bounds(document, results):
     if isinstance(document.get('runner'), dict) and ENTITLEMENT_KEY in document['runner']:
         entitlement.append(f'`runner.{ENTITLEMENT_KEY}` is present')
     results.record('bounds.no_entitlement_requirement', entitlement)
+    return roles
 
 
 def _passage(inputs, document, results):
@@ -398,17 +514,18 @@ def _passage(inputs, document, results):
 
 
 def _matched_steps(document, reply):
-    """(submitted step, first reply step with its identifier) for each submitted step that has one."""
+    """(submitted step, every reply step carrying its identifier), in submitted order.
+
+    Reply steps are found by identifier, never by position, and two steps with
+    one identifier are both kept.
+    """
     replied = [step for step in reply.get('steps') or [] if isinstance(step, dict)] if isinstance(reply.get('steps'), list) else []
-    pairs = []
-    for submitted in document['probe_plan']:
-        match = next((step for step in replied if step.get('step_id') == submitted.get('step_id')), None)
-        if match is not None:
-            pairs.append((submitted, match))
-    return pairs
+    return [(submitted, [step for step in replied if step.get('step_id') == submitted.get('step_id')])
+            for submitted in document['probe_plan']]
 
 
-def _echo(document, reply, pairs, results):
+def _echo(document, reply, matched, results):
+    """Echo assertions; returns, per submitted step identifier, which halves every carrying record echoes."""
     results.record('echo.specimen_id', [] if reply.get('specimen_id') == document.get('specimen_id') else
                    f'the reply carries {_spell(reply.get("specimen_id"))}; the document carries {_spell(document.get("specimen_id"))}')
     submitted_ids = [step.get('step_id') for step in document['probe_plan']]
@@ -416,103 +533,237 @@ def _echo(document, reply, pairs, results):
         if isinstance(reply.get('steps'), list) else None
     results.record('echo.step_ids', [] if replied_ids == submitted_ids else
                    f'the reply lists {_spell(replied_ids)}; the document lists {_spell(submitted_ids)}')
-    if not pairs:
+    echoed = {}
+    if not any(records for _, records in matched):
         for ident in ('echo.queries', 'echo.attempts'):
             results.unevaluated(ident, 'no reply step carries a submitted step identifier')
-        return
+        return echoed
     queries, attempts = [], []
-    for submitted, replied in pairs:
+    for submitted, records in matched:
         label = _spell(submitted.get('step_id'))
-        query = submitted.get('sandbox_check')
-        if isinstance(query, dict):
-            answer = replied.get('sandbox_check') if isinstance(replied.get('sandbox_check'), dict) else {}
-            for name, sent, echoed in (('operation', query.get('operation'), answer.get('operation')),
-                                       ('filter kind', _get(query, 'filter', 'kind'), answer.get('filter_kind')),
-                                       ('filter value', _get(query, 'filter', 'value'), answer.get('filter_value'))):
-                if sent != echoed:
-                    queries.append(f'step {label} {name}: submitted {_spell(sent)}, echoed {_spell(echoed)}')
-        attempt = submitted.get('attempt')
-        if isinstance(attempt, dict):
-            answer = replied.get('attempt') if isinstance(replied.get('attempt'), dict) else {}
-            for name, sent, echoed in (('kind', attempt.get('kind'), answer.get('requested_kind')),
-                                       ('action', attempt.get('action'), answer.get('requested_action')),
-                                       ('target', attempt.get('target'), answer.get('requested_path'))):
-                if sent != echoed:
-                    attempts.append(f'step {label} {name}: submitted {_spell(sent)}, echoed {_spell(echoed)}')
+        halves = echoed.setdefault(submitted.get('step_id'), {'query': True, 'attempt': True})
+        for replied in records:
+            query = submitted.get('sandbox_check')
+            if isinstance(query, dict):
+                answer = replied.get('sandbox_check') if isinstance(replied.get('sandbox_check'), dict) else {}
+                for name, sent, found in (('operation', query.get('operation'), answer.get('operation')),
+                                          ('filter kind', _get(query, 'filter', 'kind'), answer.get('filter_kind')),
+                                          ('filter value', _get(query, 'filter', 'value'), answer.get('filter_value'))):
+                    if sent != found:
+                        halves['query'] = False
+                        queries.append(f'step {label} {name}: submitted {_spell(sent)}, echoed {_spell(found)}')
+            attempt = submitted.get('attempt')
+            if isinstance(attempt, dict):
+                answer = replied.get('attempt') if isinstance(replied.get('attempt'), dict) else {}
+                for name, sent, found in (('kind', attempt.get('kind'), answer.get('requested_kind')),
+                                          ('action', attempt.get('action'), answer.get('requested_action')),
+                                          ('target', attempt.get('target'), answer.get('requested_path'))):
+                    if sent != found:
+                        halves['attempt'] = False
+                        attempts.append(f'step {label} {name}: submitted {_spell(sent)}, echoed {_spell(found)}')
     results.record('echo.queries', queries)
     results.record('echo.attempts', attempts)
+    return echoed
 
 
 def _exact_int(value, expected):
     return type(value) is int and value == expected
 
 
-def _native(inputs, document, reply, pairs, results):
-    results.record('native.completion', [] if reply.get('normalized_outcome') == 'finished' else
-                   f'the reply\'s `normalized_outcome` is {_spell(reply.get("normalized_outcome"))}')
-    if not pairs:
-        for ident in ('native.prediction', 'native.order', 'native.attempt'):
-            results.unevaluated(ident, 'no reply step carries a submitted step identifier')
-    else:
-        predictions, orders, attempts, predicted = [], [], [], 0
-        for submitted, replied in pairs:
-            label = _spell(submitted.get('step_id'))
-            if isinstance(submitted.get('sandbox_check'), dict):
-                query = replied.get('sandbox_check') if isinstance(replied.get('sandbox_check'), dict) else {}
-                found = {key: query.get(key) for key in ('result_source', 'outcome', 'native_rc')}
-                if found['result_source'] == 'validator' and found['outcome'] == 'allow' and _exact_int(found['native_rc'], 0):
-                    predicted += 1
-                    order = _get(replied, 'comparison', 'order')
-                    if order != 'query_first':
-                        orders.append(f'step {label} `order` is {_spell(order)}')
-                else:
-                    predictions.append(f'step {label} prediction is {_spell(found)}')
-            if isinstance(submitted.get('attempt'), dict):
-                attempt = replied.get('attempt') if isinstance(replied.get('attempt'), dict) else {}
-                if attempt.get('outcome') != 'ok' or not _exact_int(attempt.get('rc'), 0):
-                    attempts.append(f'step {label} attempt has outcome {_spell(attempt.get("outcome"))} and rc {_spell(attempt.get("rc"))}')
-        results.record('native.prediction', predictions)
-        if predicted:
-            results.record('native.order', orders)
-        else:
-            results.unevaluated('native.order', 'no prediction met its expectation')
-        results.record('native.attempt', attempts)
-    before = {record['target']: record for record in _get(inputs['targets-before'], 'targets') or []}
-    after = {record.get('target'): record for record in _get(inputs['targets-after'], 'targets') or []
-             if isinstance(record, dict)}
-    changed = []
-    for target, earlier in before.items():
+def _samples(inputs, name):
+    """This checker's observations from one sampling, by submitted path."""
+    observed = _get(inputs[name], 'targets')
+    if not isinstance(observed, list):
+        return None
+    return {record.get('target'): record for record in observed if isinstance(record, dict)}
+
+
+def _target_changes(inputs):
+    """For each path sampled before the run, the ways its sample after the run differs."""
+    after = _samples(inputs, 'targets-after') or {}
+    changes = {}
+    for target, earlier in (_samples(inputs, 'targets-before') or {}).items():
         later = after.get(target)
         if later is None or not later.get('readable'):
-            changed.append(f'{target} was not read after the run')
+            changes[target] = ['was not read after the run']
             continue
         differing = [field for field in STAT_FIELDS if _get(earlier, 'stat', field) != _get(later, 'stat', field)]
         if earlier.get('resolved') != later.get('resolved'):
             differing.insert(0, 'resolved path')
-        if not isinstance(earlier.get('sha256'), str) or earlier.get('sha256') != later.get('sha256'):
-            differing.insert(0, 'digest')
-        if type(earlier.get('length')) is not int or earlier.get('length') != later.get('length'):
-            differing.insert(0, 'length')
+        for name, kind in (('prefix_sha256', str), ('prefix_length', int), ('sha256', str), ('length', int)):
+            if type(earlier.get(name)) is not kind or earlier.get(name) != later.get(name):
+                differing.insert(0, name)
         if differing:
-            changed.append(f'{target} differs in ' + ', '.join(differing))
-    results.record('native.targets_unchanged', changed)
+            changes[target] = ['differs in ' + ', '.join(differing)]
+    return changes
 
 
-def _prerequisites(inputs, document, results):
-    observed = _get(inputs['targets-before'], 'targets')
-    problems = []
-    if not isinstance(observed, list) or any(not isinstance(record, dict) for record in observed):
+def _native(inputs, roles, matched, echoed, results):
+    """Each pinned native expectation as its own assertion. No assertion reads an answer beside its attempt."""
+    run = inputs['run']
+    results.record('native.process_status', [] if _exact_int(run['exit'], 0) else
+                   f'the `run` process exited {_spell(run["exit"])}')
+
+    # One reply record per step, read only for the half that echoes what was submitted.
+    records = {submitted.get('step_id'): found for submitted, found in matched}
+    queries, attempts = {}, {}
+    for role, ident in roles['steps'].items():
+        found = records.get(ident, [])
+        unusable = None if len(found) == 1 else f'the reply carries {len(found)} steps with identifier {_spell(ident)}'
+        for half, member, store in (('query', 'sandbox_check', queries), ('attempt', 'attempt', attempts)):
+            if unusable is None and not echoed[ident][half]:
+                store[role] = (None, f'the reply\'s {half} record for {_spell(ident)} does not echo the submitted '
+                               f'{half}; nothing is read from it')
+            elif unusable is None:
+                store[role] = (found[0].get(member) if isinstance(found[0].get(member), dict) else {}, None)
+            else:
+                store[role] = (None, unusable)
+
+    def assertion(ident, source, problems):
+        record, withheld = source
+        if record is None:
+            results.unevaluated(ident, withheld)
+            return False
+        problems = problems(record)
+        results.record(ident, problems)
+        return not problems
+
+    def prediction(outcome, native_rc, errno=None):
+        def problems(query):
+            found = {key: query.get(key) for key in ('result_source', 'outcome', 'native_rc')}
+            expected = {'result_source': 'validator', 'outcome': outcome, 'native_rc': native_rc}
+            if errno is not None:
+                found['errno'], expected['errno'] = query.get('errno'), errno
+            if all(type(found[key]) is type(value) and found[key] == value for key, value in expected.items()):
+                return []
+            return [f'the answer is {_spell(found)}']
+        return problems
+
+    qualifying = [role for role, problems in (('step1', prediction('allow', 0)), ('step2', prediction('allow', 0)),
+                                              ('step3', prediction('deny', 1, errno=0)))
+                  if assertion(f'native.{role}.prediction', queries[role], problems)]
+    if qualifying:
+        orders = []
+        for role in qualifying:
+            order = _get(records[roles['steps'][role]][0], 'comparison', 'order')
+            if order != 'query_first':
+                orders.append(f'{STEPS[role]}: `order` is {_spell(order)}')
+        results.record('native.order', orders)
+    else:
+        results.unevaluated('native.order', 'no answer met its expectation')
+
+    def succeeded(attempt):
+        found = {key: attempt.get(key) for key in ('result_source', 'outcome', 'rc')}
+        return [] if found['result_source'] == 'worker' and found['outcome'] == 'ok' and _exact_int(found['rc'], 0) \
+            else [f'the attempt is {_spell(found)}']
+
+    def refused(attempt):
+        found = {key: attempt.get(key) for key in ('result_source', 'outcome', 'errno')}
+        return [] if found['result_source'] == 'worker' and found['outcome'] == 'open_failed' \
+            and _exact_int(found['errno'], EPERM) else [f'the attempt is {_spell(found)}']
+
+    assertion('native.step1.attempt', attempts['step1'], succeeded)
+    assertion('native.step2.attempt', attempts['step2'], succeeded)
+    assertion('native.step3.attempt', attempts['step3'], refused)
+
+    def fresh(read):
+        return read.get('fresh_read') if isinstance(read.get('fresh_read'), dict) else {}
+
+    def syscalls(attempt):
+        read, problems = fresh(attempt), []
+        # A successful open returns a descriptor, which is nonnegative and not zero by convention.
+        if type(read.get('open_rc')) is not int or read['open_rc'] < 0:
+            problems.append(f'`open_rc` is {_spell(read.get("open_rc"))}')
+        for name in ('stat_rc', 'close_rc'):
+            if not _exact_int(read.get(name), 0):
+                problems.append(f'`{name}` is {_spell(read.get(name))}')
+        if type(read.get('read_rc')) is not int or not 0 <= read['read_rc'] <= FRESH_READ_BOUND:
+            problems.append(f'`read_rc` is {_spell(read.get("read_rc"))}')
+        return problems
+    assertion('native.step2.fresh_syscalls', attempts['step2'], syscalls)
+
+    changes = _target_changes(inputs)
+    results.record('native.targets_unchanged', [f'{target} {change}' for target, found in changes.items() for change in found])
+
+    # The correspondence with C needs one stable observation of C to compare against.
+    target = roles['targets']['C']
+    observed = (_samples(inputs, 'targets-before') or {}).get(target, {})
+    source = attempts['step2'] if target not in changes else \
+        (None, f'the samples of {target} before and after the run differ; no correspondence with it is claimed')
+
+    def identity(attempt):
+        found = {key: _get(fresh(attempt), 'identity', key) for key in ('device', 'inode')}
+        expected = {'device': _get(observed, 'stat', 'st_dev'), 'inode': _get(observed, 'stat', 'st_ino')}
+        return [] if all(type(found[key]) is int and _exact_int(expected[key], found[key]) for key in found) else \
+            [f'the descriptor identity is {_spell(found)}; this checker observed {_spell(expected)} for {target}']
+
+    def content(attempt):
+        read, problems = fresh(attempt), []
+        if not _exact_int(read.get('read_rc'), observed.get('prefix_length')) or type(observed.get('prefix_length')) is not int:
+            problems.append(f'`read_rc` is {_spell(read.get("read_rc"))}; this checker read a bounded prefix of '
+                            f'{_spell(observed.get("prefix_length"))} bytes from {target}')
+        try:
+            digest = hashlib.sha256(bytes.fromhex(read.get('content_hex'))).hexdigest()
+        except (TypeError, ValueError):
+            digest = None
+        if digest is None or digest != observed.get('prefix_sha256'):
+            problems.append(f'the bytes read have SHA-256 {_spell(digest)}; the bounded prefix this checker read '
+                            f'from {target} has {_spell(observed.get("prefix_sha256"))}')
+        return problems
+
+    def given(supplied, reason):
+        """The fresh read's record, when the call that supplies this observation succeeded."""
+        return source if source[0] is None or supplied(fresh(source[0])) else (None, reason)
+    assertion('native.step2.fresh_identity',
+              given(lambda read: _exact_int(read.get('stat_rc'), 0), 'the descriptor stat did not succeed; it supplies no identity'),
+              identity)
+    assertion('native.step2.fresh_content',
+              given(lambda read: type(read.get('read_rc')) is int and read['read_rc'] >= 0,
+                    'the bounded read did not succeed; it supplies no bytes'), content)
+
+
+def _prerequisites(inputs, roles, results):
+    """What this checker must have observed before any native expectation is read."""
+    samples = _samples(inputs, 'targets-before')
+    problems, usable = [], {}
+    if samples is None:
         problems.append('the targets were not observed before the run')
     else:
-        records = {record.get('target'): record for record in observed}
-        for target in attempt_targets(document):
-            record = records.get(target)
+        for role, target in roles['targets'].items():
+            record = samples.get(target)
             if record is None:
-                problems.append(f'{target} was not observed')
+                problems.append(f'target {role} ({target}) was not observed')
             elif not record.get('regular_file') or not record.get('readable'):
-                problems.append(f'{target} is not a readable regular file' + (f' ({record["error"]})' if record.get('error') else ''))
+                problems.append(f'target {role} ({target}) is not a readable regular file' +
+                                (f' ({record["error"]})' if record.get('error') else ''))
+            else:
+                usable[role] = record
     results.record('prerequisite.targets_readable', problems)
-    return not problems
+    if problems:
+        for ident in ('prerequisite.distinct_identities', 'prerequisite.distinguishing_prefixes'):
+            results.unevaluated(ident, 'a target was not read before the run')
+        return False
+
+    def identity(role):
+        return _get(usable[role], 'stat', 'st_dev'), _get(usable[role], 'stat', 'st_ino')
+
+    def prefix(role):
+        return usable[role].get('prefix_length'), usable[role].get('prefix_sha256')
+    identities, prefixes = [], []
+    for role in TARGETS:
+        if any(type(part) is not int for part in identity(role)):
+            identities.append(f'target {role} has no observed device and inode')
+        if type(prefix(role)[0]) is not int or prefix(role)[0] < 1 or not isinstance(prefix(role)[1], str):
+            prefixes.append(f'target {role} has no nonempty observed prefix')
+    for first, second in (('A', 'B'), ('A', 'C'), ('B', 'C')):
+        if not identities and identity(first) == identity(second):
+            identities.append(f'targets {first} and {second} are one file: device and inode {_spell(list(identity(first)))}')
+    for other in ('A', 'B'):
+        if not prefixes and prefix(other) == prefix('C'):
+            prefixes.append(f"target C's bounded prefix equals target {other}'s")
+    results.record('prerequisite.distinct_identities', identities)
+    results.record('prerequisite.distinguishing_prefixes', prefixes)
+    return not identities and not prefixes
 
 
 def _one_change(name, emitted, document, submitted):
@@ -611,16 +862,16 @@ def evaluate(inputs, *, authored_fixture=False):
             if ident not in results.rows:
                 results.unevaluated(ident, 'the first emission supplied no document')
         return _report(results, [])
-    _bounds(document, results)
+    roles = _bounds(document, results)
     _passage(inputs, document, results)
     gate = [ident for ident, group, _, _ in ASSERTIONS if group in ('emission', 'bounds')]
     if results.failed(*gate):
         for ident, group, _, _ in ASSERTIONS:
             if ident not in results.rows:
                 results.unevaluated(ident, 'no run was attempted: the emission or its bounds did not hold')
-        return _report(results, [])
+        return _report(results, [], roles)
 
-    prerequisites = _prerequisites(inputs, document, results)
+    prerequisites = _prerequisites(inputs, roles, results)
     _refusals(inputs, emitted, document, results)
 
     run = inputs['run']
@@ -632,7 +883,7 @@ def evaluate(inputs, *, authored_fixture=False):
         for ident, _, _, _ in ASSERTIONS:
             if ident not in results.rows:
                 results.unevaluated(ident, 'the run supplied no envelope')
-        return _report(results, [])
+        return _report(results, [], roles)
 
     contract = document.get('contract')
     data = envelope.get('data') if isinstance(envelope.get('data'), dict) else {}
@@ -683,33 +934,35 @@ def evaluate(inputs, *, authored_fixture=False):
         results.unevaluated('execution.admitted_reply', 'an identity differs; no reply is read under another identity')
         for prefix in dependent:
             results.rest(prefix, 'an identity differs; no reply is read under another identity')
-        return _report(results, errors)
+        return _report(results, errors, roles)
     reply = consumer.admitted_reply(envelope, contract, allow_fixture_json=authored_fixture)
     if reply is None:
         results.record('execution.admitted_reply', 'the envelope\'s evidence admits no runner reply '
                        f'(`result.normalized_outcome` is {_spell(outcome)})')
         for prefix in dependent:
             results.rest(prefix, 'no admitted reply: nothing is credited or faulted from it')
-        return _report(results, errors)
+        return _report(results, errors, roles)
     results.record('execution.admitted_reply', [])
 
     results.record('admission.reply_policy_digest', [] if digest is not None and reply.get('policy_sha256') == digest else
                    f'the reply records {_spell(reply.get("policy_sha256"))}; the document\'s policy source has SHA-256 {_spell(digest)}')
-    pairs = _matched_steps(document, reply)
-    _echo(document, reply, pairs, results)
+    matched = _matched_steps(document, reply)
+    echoed = _echo(document, reply, matched, results)
     diagnostics = data.get('runner_sandbox_diagnostics') if isinstance(data.get('runner_sandbox_diagnostics'), dict) else {}
     results.record('readers.disposition_integrity', [] if diagnostics.get('disposition_integrity') == 'valid' else
                    f'`disposition_integrity` is {_spell(diagnostics.get("disposition_integrity"))}')
     results.record('readers.disposition_issues', [] if diagnostics.get('disposition_issues') == [] else
                    f'`disposition_issues` is {_spell(diagnostics.get("disposition_issues"))}')
     if prerequisites:
-        _native(inputs, document, reply, pairs, results)
+        results.record('native.completion', [] if reply.get('normalized_outcome') == 'finished' else
+                       f'the reply\'s `normalized_outcome` is {_spell(reply.get("normalized_outcome"))}')
+        _native(inputs, roles, matched, echoed, results)
     else:
         results.rest('native.', 'a target prerequisite was not observed')
-    return _report(results, errors)
+    return _report(results, errors, roles)
 
 
-def _report(results, consumer_errors):
+def _report(results, consumer_errors, roles=None):
     missing = [ident for ident, _, _, _ in ASSERTIONS if ident not in results.rows]
     assert not missing, missing
     assertions = [dict(id=ident, group=group, classification=classification, statement=statement, **results.rows[ident])
@@ -719,7 +972,11 @@ def _report(results, consumer_errors):
     for row in assertions:
         bucket = counts.setdefault(row['classification'], {'pass': 0, 'fail': 0, 'not_evaluated': 0})
         bucket[row['status']] += 1
-    return {'schema_version': 1, 'status': 'fail' if failures else 'pass',
+    # The roles let a reader of this file match each role-keyed statement to a submitted step and path.
+    workload = None if roles is None else {
+        'steps': {role: {'role': STEPS[role], 'step_id': ident} for role, ident in roles['steps'].items()},
+        'targets': {role: {'role': TARGETS[role], 'path': path} for role, path in roles['targets'].items()}}
+    return {'schema_version': 1, 'status': 'fail' if failures else 'pass', 'workload': workload,
             'classifications': sorted({row['classification'] for row in failures}),
             'counts_by_classification': counts,
             'failures': [{'id': row['id'], 'classification': row['classification'], 'explanation': row['explanation']}

@@ -583,7 +583,7 @@ This template applies a policy with no probe actions. Replace the assertion with
 
 [Controller](#contract-identity-definitions-controller) reports at CLI example dispatch. Entry: cli example. Recipient: cli caller. Reports: example specimen. set_value(`specimen.contract`, [Contract](#contract-identity-build-contract)). Uses [Contract](#contract-identity-build-contract), [Specimen](#contract-identity-definitions-specimen).
 
-`policy-witness example` takes no argument and prints one specimen defined by the emitting build, followed by one newline. The output is a request document, not an envelope. Process exit 0 supplies the complete document, and the same build's `run` admits it. Every failure to emit is process exit 2: an argument, a build whose identity is empty or `unbound`, an example the contract gate refuses, or a failed write or flush. A reason is written to standard error when that stream accepts it; the exit status does not depend on it. On exit 2 discard standard output, even when it holds a complete document. The document's content, layout and labels carry no stability promise between builds. The command reads no file, starts no runner and reports nothing about a caller's document; `run` remains the only admission.
+`policy-witness example` takes no argument and prints one specimen defined by the emitting build, followed by one newline. The output is a request document, not an envelope. Process exit 0 supplies the complete document. The build guarantees that its own `run` admits that document; emission performs no admission and observes none. Every failure to emit is process exit 2: an argument, a build whose identity is empty or `unbound`, an example the contract gate refuses, or a failed write or flush. A reason is written to standard error when that stream accepts it; the exit status does not depend on it. On exit 2 discard standard output, even when it holds a complete document. The document's content, layout and labels carry no stability promise between builds. The command reads no file, starts no runner and reports nothing about a caller's document; `run` remains the only admission.
 
 <a id="contract-request-specimen-emit_example-support"></a>
 **Support: [check read](#contract-support-grades) for [Emit the example specimen](#contract-request-specimen-emit_example).** Emission parses the constant, inserts the binary's identity, passes the contract gate and uses the held request's serialization before any byte is written. An argument, an empty or unbound identity, a gate refusal and a failed write or flush each return the refusal that the command maps to exit 2. The emitted file reaches the controlled client as emitted, without its framing newline. On the selected app the command exits 0 with one JSON object and one newline carrying the app's identity, repeats it byte for byte, refuses every argument, and exits 2 when stdout has no reader whether or not stderr can be written; a build without an identity prints nothing. Context: Read the emitter and dispatch, the emitter's unit tests, the controlled orchestration test, the CLI integration tests against the selected app and isolated Cargo builds, and the live round-trip case with its checker. Evidence limit: Check read; no execution is credited. The exact request comparison runs under the test identity and ends at the client callback; on a signed app the live case observes the delivered length only. A gate refusal on a bound build has unit support and no built-app observation. No check observes the process's file reads; the isolated builds emit with no app, manifest or registry beside them. Development runs of these checks exist and are disposable; release credit awaits an archived acceptance. [Evidence details](#contract-request-specimen-emit_example-support-details).
@@ -619,6 +619,8 @@ observations.
 <a id="contract-request-specimen-example"></a>
 ##### Emitted example
 
+Uses [Cause](#contract-identity-definitions-cause).
+
 These commands print the example and submit it unchanged:
 
 ```sh
@@ -628,12 +630,22 @@ policy-witness run example.json
 
 The printed document carries the emitting build's identity where this rendering shows `<reported-contract>`.
 
+The policy allows by default and denies data reads of the one file its specific rule names. Each step establishes something different:
+
+- `read-hosts` asks about data reads of one file and opens that file. It supplies a native answer about the path and a witnessed open of it.
+- `metadata-propernames-read-connectives` asks about metadata reads of the file the policy names and reads another file through a fresh descriptor. Its answer concerns a file its attempt does not read, so the answer predicts nothing about that read. The read is witnessed separately by its descriptor identity, byte count and bytes.
+- `read-propernames` asks about data reads of the file the policy names and opens that file. It supplies a native answer about that path and a witnessed attempt to open it.
+
+Where the three files exist and the caller can read them, the first two answers are `allow` and their attempts succeed; the third answer is `deny` and its open fails with errno 1 (`EPERM`). The run still finishes and its process exits 0: a finished run can hold a failed attempt. The deny answer and the failed open are separate observations. The reply records them side by side and states neither that they agree nor what caused the failure.
+
+These results are observations on the build and machine that produced them, under those conditions. They are not commitments. The paths, labels, step count and order, the policy text with its `(with no-report)` modifier, the errno and every native result can differ between builds. The modifier asks the kernel not to report the refused open in the system log; it promises nothing about what a run logs.
+
 ```json
 {
   "contract": "<reported-contract>",
   "policy": {
     "format": "sbpl",
-    "sbpl_source": "(version 1) (allow default)"
+    "sbpl_source": "(version 1) (allow default) (deny file-read-data (literal \"/usr/share/dict/propernames\") (with no-report))"
   },
   "probe_plan": [
     {
@@ -650,6 +662,36 @@ The printed document carries the emitting build's identity where this rendering 
         "operation": "file-read-data"
       },
       "step_id": "read-hosts"
+    },
+    {
+      "attempt": {
+        "action": "read_fresh",
+        "kind": "file",
+        "target": "/usr/share/dict/connectives"
+      },
+      "sandbox_check": {
+        "filter": {
+          "kind": "path",
+          "value": "/usr/share/dict/propernames"
+        },
+        "operation": "file-read-metadata"
+      },
+      "step_id": "metadata-propernames-read-connectives"
+    },
+    {
+      "attempt": {
+        "action": "open_read",
+        "kind": "file",
+        "target": "/usr/share/dict/propernames"
+      },
+      "sandbox_check": {
+        "filter": {
+          "kind": "path",
+          "value": "/usr/share/dict/propernames"
+        },
+        "operation": "file-read-data"
+      },
+      "step_id": "read-propernames"
     }
   ],
   "specimen_id": "example"
@@ -657,7 +699,7 @@ The printed document carries the emitting build's identity where this rendering 
 ```
 
 <a id="contract-request-specimen-example-support"></a>
-**Support: [check read](#contract-support-grades) for [Emitted example](#contract-request-specimen-example).** The rendering is the parsed constant, which must be a request object without an identity, test overrides, selection keys or unknown members. An edit to the constant is refused until regeneration and then moves the rendering, the request payload and the build identity. The live case requires the selected app's emitted document without its identity to equal this snapshot, submits the emitted bytes unchanged and requires admission, identity, digest and echo relationships and the pinned native results. Context: Read the constant, the extraction's constructed controls, the disposable-copy generation control and the live case with its checker and rejected controls. Evidence limit: Check read; no executed instance is credited here. Host admission and the native results are observed by the live case on a development build and one machine, under observed target prerequisites, and are not release evidence. Deeper request validity is established by execution, not by the extraction. The example's content carries no stability promise between builds. [Evidence details](#contract-request-specimen-example-support-details).
+**Support: [check read](#contract-support-grades) for [Emitted example](#contract-request-specimen-example).** The rendering is the parsed constant, which must be a request object without an identity, test overrides, selection keys or unknown members. An edit to the constant is refused until regeneration and then moves the rendering, the request payload and the build identity. The live case requires the selected app's emitted document without its identity to equal this snapshot and to be a three-step read-only workload: a data-read query and open of one target, a metadata query on a second target beside a fresh read of a third, and a data-read query and open of the second. It submits the emitted bytes unchanged and requires admission, identity, digest and echo relationships. Under observed target prerequisites it then requires, each as its own assertion, a captured process status of 0, a finished reply, each step's answer, each step's attempt, query-first order, and a fresh read whose descriptor identity, count and bytes equal the case's own observation of that target. Context: Read the constant, the extraction's constructed controls, the disposable-copy generation control and the live case with its checker and rejected controls. Evidence limit: Check read; no executed instance is credited here. Host admission and the native results are observed by the live case on a development build and one machine, under observed target prerequisites, and are not release evidence. The case compares no answer with its attempt and assigns no cause to the failed open. It cannot distinguish the first two steps' allow answers exchanged, samples its targets only before and after the run, and does not establish which object a native query consulted. Deeper request validity is established by execution, not by the extraction. The example's content carries no stability promise between builds. [Evidence details](#contract-request-specimen-example-support-details).
 
 <a id="contract-request-specimen-duplicate_keys"></a>
 ##### Repeated members at each entry
@@ -908,7 +950,7 @@ One paired probe contributes one action and at most one eligible validator query
 
 Uses [Emitted example](#contract-request-specimen-example).
 
-This step of the emitted example pairs a path query with an open-read attempt. The open-read operation's success establishes its open boundary. A `read_fresh` attempt supplies the separate read-count, content and close observations described by the step-result surface.
+The first step of the emitted example pairs a path query with an open-read attempt. The open-read operation's success establishes its open boundary. A `read_fresh` attempt supplies the separate read-count, content and close observations described by the step-result surface.
 
 ```json
 {
@@ -929,7 +971,7 @@ This step of the emitted example pairs a path query with an open-read attempt. T
 ```
 
 <a id="contract-probes-step-support"></a>
-**Support: [source read](#contract-support-grades) for [Paired probe](#contract-probes-step) and its descendants.** The adjacent field meanings and operations follow the named implementation. Evidence limit: Grammar and uniqueness branches read. The teaching step is extracted from the controller's example; this owner claims no live result. [Evidence details](#contract-probes-step-support-details).
+**Support: [source read](#contract-support-grades) for [Paired probe](#contract-probes-step) and its descendants.** The adjacent field meanings and operations follow the named implementation. Evidence limit: Grammar and uniqueness branches read. The read-hosts pair is the first step of the controller's example, extracted from its constant; this owner claims no live result. [Evidence details](#contract-probes-step-support-details).
 
 <a id="contract-probes-query"></a>
 #### Sandbox query

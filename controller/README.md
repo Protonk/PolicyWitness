@@ -69,9 +69,10 @@ The [build-stamp contract](../docs/CONTRACT.md#contract-identity-build) defines 
 [example.rs](src/example.rs) with this binary's identity as `contract`,
 followed by one newline. It uses `run`'s parser, contract gate and held
 serialization, renders the whole document before writing, and reads no file,
-app root, manifest or registry. Exit 0 supplies the complete document; an
-argument, an empty or `unbound` identity, a gate refusal or a failed write or
-flush is exit 2, and the caller discards stdout. The reason goes to stderr
+app root, manifest or registry. Exit 0 supplies the complete document, and the
+build guarantees that its own `run` admits it; emission performs no admission.
+An argument, an empty or `unbound` identity, a gate refusal or a failed write
+or flush is exit 2, and the caller discards stdout. The reason goes to stderr
 when it is writable and never changes the status. The
 [example rule](../docs/CONTRACT.md#contract-request-specimen-emit_example)
 states the public promise.
@@ -80,9 +81,10 @@ states the public promise.
 and the supplied absolute UTF-8 target, preserving the target in both query and
 attempt without normalization or filesystem inspection. It parses the template
 and checks identity before rendering; `run` independently admits or refuses the
-result, including the deliberate unknown field in `capture_typo`. The command
+result. `capture_typo` carries a deliberately unknown policy field. The command
 reads no external file and launches no process. Exit 0 means complete JSON
-publication with one newline and a successful flush. Usage, target, unbound or
+publication with one newline and a successful flush; it reports neither
+admission nor an effect. Usage, target, unbound or
 empty identity, rendering and write/flush failures exit 2; discard stdout and
 read stderr when available. The
 [lesson rule](../docs/CONTRACT.md#contract-request-specimen-emit_lesson)

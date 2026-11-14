@@ -3201,7 +3201,7 @@
             },
             "id": "request.specimen.emit_example",
             "kind": "reports",
-            "prose": "`policy-witness example` takes no argument and prints one specimen defined by the emitting build, followed by one newline. The output is a request document, not an envelope. Process exit 0 supplies the complete document, and the same build's `run` admits it. Every failure to emit is process exit 2: an argument, a build whose identity is empty or `unbound`, an example the contract gate refuses, or a failed write or flush. A reason is written to standard error when that stream accepts it; the exit status does not depend on it. On exit 2 discard standard output, even when it holds a complete document. The document's content, layout and labels carry no stability promise between builds. The command reads no file, starts no runner and reports nothing about a caller's document; `run` remains the only admission.",
+            "prose": "`policy-witness example` takes no argument and prints one specimen defined by the emitting build, followed by one newline. The output is a request document, not an envelope. Process exit 0 supplies the complete document. The build guarantees that its own `run` admits that document; emission performs no admission and observes none. Every failure to emit is process exit 2: an argument, a build whose identity is empty or `unbound`, an example the contract gate refuses, or a failed write or flush. A reason is written to standard error when that stream accepts it; the exit status does not depend on it. On exit 2 discard standard output, even when it holds a complete document. The document's content, layout and labels carry no stability promise between builds. The command reads no file, starts no runner and reports nothing about a caller's document; `run` remains the only admission.",
             "referenced_types": {
               "specimen.contract": {
                 "json_null": false,
@@ -3301,7 +3301,7 @@
             "document": {
               "policy": {
                 "format": "sbpl",
-                "sbpl_source": "(version 1) (allow default)"
+                "sbpl_source": "(version 1) (allow default) (deny file-read-data (literal \"/usr/share/dict/propernames\") (with no-report))"
               },
               "probe_plan": [
                 {
@@ -3318,14 +3318,48 @@
                     "operation": "file-read-data"
                   },
                   "step_id": "read-hosts"
+                },
+                {
+                  "attempt": {
+                    "action": "read_fresh",
+                    "kind": "file",
+                    "target": "/usr/share/dict/connectives"
+                  },
+                  "sandbox_check": {
+                    "filter": {
+                      "kind": "path",
+                      "value": "/usr/share/dict/propernames"
+                    },
+                    "operation": "file-read-metadata"
+                  },
+                  "step_id": "metadata-propernames-read-connectives"
+                },
+                {
+                  "attempt": {
+                    "action": "open_read",
+                    "kind": "file",
+                    "target": "/usr/share/dict/propernames"
+                  },
+                  "sandbox_check": {
+                    "filter": {
+                      "kind": "path",
+                      "value": "/usr/share/dict/propernames"
+                    },
+                    "operation": "file-read-data"
+                  },
+                  "step_id": "read-propernames"
                 }
               ],
               "specimen_id": "example"
             },
-            "facts": {},
+            "facts": {
+              "uses": [
+                "identity.definitions.cause"
+              ]
+            },
             "id": "request.specimen.example",
             "kind": "example",
-            "prose": "These commands print the example and submit it unchanged:\n\n```sh\npolicy-witness example > example.json\npolicy-witness run example.json\n```\n\nThe printed document carries the emitting build's identity where this rendering shows `<reported-contract>`.",
+            "prose": "These commands print the example and submit it unchanged:\n\n```sh\npolicy-witness example > example.json\npolicy-witness run example.json\n```\n\nThe printed document carries the emitting build's identity where this rendering shows `<reported-contract>`.\n\nThe policy allows by default and denies data reads of the one file its specific rule names. Each step establishes something different:\n\n- `read-hosts` asks about data reads of one file and opens that file. It supplies a native answer about the path and a witnessed open of it.\n- `metadata-propernames-read-connectives` asks about metadata reads of the file the policy names and reads another file through a fresh descriptor. Its answer concerns a file its attempt does not read, so the answer predicts nothing about that read. The read is witnessed separately by its descriptor identity, byte count and bytes.\n- `read-propernames` asks about data reads of the file the policy names and opens that file. It supplies a native answer about that path and a witnessed attempt to open it.\n\nWhere the three files exist and the caller can read them, the first two answers are `allow` and their attempts succeed; the third answer is `deny` and its open fails with errno 1 (`EPERM`). The run still finishes and its process exits 0: a finished run can hold a failed attempt. The deny answer and the failed open are separate observations. The reply records them side by side and states neither that they agree nor what caused the failure.\n\nThese results are observations on the build and machine that produced them, under those conditions. They are not commitments. The paths, labels, step count and order, the policy text with its `(with no-report)` modifier, the errno and every native result can differ between builds. The modifier asks the kernel not to report the refused open in the system log; it promises nothing about what a run logs.",
             "title": "Emitted example"
           },
           {
@@ -34575,6 +34609,16 @@
           {
             "context": {},
             "facts": {
+              "defines": "assessment"
+            },
+            "id": "identity.definitions.cause",
+            "kind": "definition",
+            "prose": "A cause identifies why an event occurred. Permission-shaped return values\nsupport the `permission_failure` observation class; they leave sandbox cause\nunresolved. A termination request and a later owned reap support the specific\nlifecycle relationship stated by the lifecycle assessment. Query answers and\nattempt returns retain their individual observation scopes.",
+            "title": "Cause"
+          },
+          {
+            "context": {},
+            "facts": {
               "defines": "component"
             },
             "id": "identity.definitions.controller",
@@ -36453,7 +36497,7 @@
             },
             "id": "probes.step.read_hosts",
             "kind": "example",
-            "prose": "This step of the emitted example pairs a path query with an open-read attempt. The open-read operation's success establishes its open boundary. A `read_fresh` attempt supplies the separate read-count, content and close observations described by the step-result surface.",
+            "prose": "The first step of the emitted example pairs a path query with an open-read attempt. The open-read operation's success establishes its open boundary. A `read_fresh` attempt supplies the separate read-count, content and close observations described by the step-result surface.",
             "title": "Read-hosts pair"
           },
           {
@@ -43211,7 +43255,7 @@
             },
             "id": "probes.step.read_hosts",
             "kind": "example",
-            "prose": "This step of the emitted example pairs a path query with an open-read attempt. The open-read operation's success establishes its open boundary. A `read_fresh` attempt supplies the separate read-count, content and close observations described by the step-result surface.",
+            "prose": "The first step of the emitted example pairs a path query with an open-read attempt. The open-read operation's success establishes its open boundary. A `read_fresh` attempt supplies the separate read-count, content and close observations described by the step-result surface.",
             "title": "Read-hosts pair"
           },
           {
@@ -74330,6 +74374,16 @@
           {
             "context": {},
             "facts": {
+              "defines": "assessment"
+            },
+            "id": "identity.definitions.cause",
+            "kind": "definition",
+            "prose": "A cause identifies why an event occurred. Permission-shaped return values\nsupport the `permission_failure` observation class; they leave sandbox cause\nunresolved. A termination request and a later owned reap support the specific\nlifecycle relationship stated by the lifecycle assessment. Query answers and\nattempt returns retain their individual observation scopes.",
+            "title": "Cause"
+          },
+          {
+            "context": {},
+            "facts": {
               "defines": "component"
             },
             "id": "identity.definitions.controller",
@@ -76855,7 +76909,7 @@
             },
             "id": "request.specimen.emit_example",
             "kind": "reports",
-            "prose": "`policy-witness example` takes no argument and prints one specimen defined by the emitting build, followed by one newline. The output is a request document, not an envelope. Process exit 0 supplies the complete document, and the same build's `run` admits it. Every failure to emit is process exit 2: an argument, a build whose identity is empty or `unbound`, an example the contract gate refuses, or a failed write or flush. A reason is written to standard error when that stream accepts it; the exit status does not depend on it. On exit 2 discard standard output, even when it holds a complete document. The document's content, layout and labels carry no stability promise between builds. The command reads no file, starts no runner and reports nothing about a caller's document; `run` remains the only admission.",
+            "prose": "`policy-witness example` takes no argument and prints one specimen defined by the emitting build, followed by one newline. The output is a request document, not an envelope. Process exit 0 supplies the complete document. The build guarantees that its own `run` admits that document; emission performs no admission and observes none. Every failure to emit is process exit 2: an argument, a build whose identity is empty or `unbound`, an example the contract gate refuses, or a failed write or flush. A reason is written to standard error when that stream accepts it; the exit status does not depend on it. On exit 2 discard standard output, even when it holds a complete document. The document's content, layout and labels carry no stability promise between builds. The command reads no file, starts no runner and reports nothing about a caller's document; `run` remains the only admission.",
             "referenced_types": {
               "specimen.contract": {
                 "json_null": false,
@@ -76955,7 +77009,7 @@
             "document": {
               "policy": {
                 "format": "sbpl",
-                "sbpl_source": "(version 1) (allow default)"
+                "sbpl_source": "(version 1) (allow default) (deny file-read-data (literal \"/usr/share/dict/propernames\") (with no-report))"
               },
               "probe_plan": [
                 {
@@ -76972,14 +77026,48 @@
                     "operation": "file-read-data"
                   },
                   "step_id": "read-hosts"
+                },
+                {
+                  "attempt": {
+                    "action": "read_fresh",
+                    "kind": "file",
+                    "target": "/usr/share/dict/connectives"
+                  },
+                  "sandbox_check": {
+                    "filter": {
+                      "kind": "path",
+                      "value": "/usr/share/dict/propernames"
+                    },
+                    "operation": "file-read-metadata"
+                  },
+                  "step_id": "metadata-propernames-read-connectives"
+                },
+                {
+                  "attempt": {
+                    "action": "open_read",
+                    "kind": "file",
+                    "target": "/usr/share/dict/propernames"
+                  },
+                  "sandbox_check": {
+                    "filter": {
+                      "kind": "path",
+                      "value": "/usr/share/dict/propernames"
+                    },
+                    "operation": "file-read-data"
+                  },
+                  "step_id": "read-propernames"
                 }
               ],
               "specimen_id": "example"
             },
-            "facts": {},
+            "facts": {
+              "uses": [
+                "identity.definitions.cause"
+              ]
+            },
             "id": "request.specimen.example",
             "kind": "example",
-            "prose": "These commands print the example and submit it unchanged:\n\n```sh\npolicy-witness example > example.json\npolicy-witness run example.json\n```\n\nThe printed document carries the emitting build's identity where this rendering shows `<reported-contract>`.",
+            "prose": "These commands print the example and submit it unchanged:\n\n```sh\npolicy-witness example > example.json\npolicy-witness run example.json\n```\n\nThe printed document carries the emitting build's identity where this rendering shows `<reported-contract>`.\n\nThe policy allows by default and denies data reads of the one file its specific rule names. Each step establishes something different:\n\n- `read-hosts` asks about data reads of one file and opens that file. It supplies a native answer about the path and a witnessed open of it.\n- `metadata-propernames-read-connectives` asks about metadata reads of the file the policy names and reads another file through a fresh descriptor. Its answer concerns a file its attempt does not read, so the answer predicts nothing about that read. The read is witnessed separately by its descriptor identity, byte count and bytes.\n- `read-propernames` asks about data reads of the file the policy names and opens that file. It supplies a native answer about that path and a witnessed attempt to open it.\n\nWhere the three files exist and the caller can read them, the first two answers are `allow` and their attempts succeed; the third answer is `deny` and its open fails with errno 1 (`EPERM`). The run still finishes and its process exits 0: a finished run can hold a failed attempt. The deny answer and the failed open are separate observations. The reply records them side by side and states neither that they agree nor what caused the failure.\n\nThese results are observations on the build and machine that produced them, under those conditions. They are not commitments. The paths, labels, step count and order, the policy text with its `(with no-report)` modifier, the errno and every native result can differ between builds. The modifier asks the kernel not to report the refused open in the system log; it promises nothing about what a run logs.",
             "title": "Emitted example"
           },
           {
@@ -108242,6 +108330,16 @@
           {
             "context": {},
             "facts": {
+              "defines": "assessment"
+            },
+            "id": "identity.definitions.cause",
+            "kind": "definition",
+            "prose": "A cause identifies why an event occurred. Permission-shaped return values\nsupport the `permission_failure` observation class; they leave sandbox cause\nunresolved. A termination request and a later owned reap support the specific\nlifecycle relationship stated by the lifecycle assessment. Query answers and\nattempt returns retain their individual observation scopes.",
+            "title": "Cause"
+          },
+          {
+            "context": {},
+            "facts": {
               "defines": "component"
             },
             "id": "identity.definitions.controller",
@@ -110014,7 +110112,7 @@
             },
             "id": "probes.step.read_hosts",
             "kind": "example",
-            "prose": "This step of the emitted example pairs a path query with an open-read attempt. The open-read operation's success establishes its open boundary. A `read_fresh` attempt supplies the separate read-count, content and close observations described by the step-result surface.",
+            "prose": "The first step of the emitted example pairs a path query with an open-read attempt. The open-read operation's success establishes its open boundary. A `read_fresh` attempt supplies the separate read-count, content and close observations described by the step-result surface.",
             "title": "Read-hosts pair"
           },
           {
@@ -111996,7 +112094,7 @@
             },
             "id": "request.specimen.emit_example",
             "kind": "reports",
-            "prose": "`policy-witness example` takes no argument and prints one specimen defined by the emitting build, followed by one newline. The output is a request document, not an envelope. Process exit 0 supplies the complete document, and the same build's `run` admits it. Every failure to emit is process exit 2: an argument, a build whose identity is empty or `unbound`, an example the contract gate refuses, or a failed write or flush. A reason is written to standard error when that stream accepts it; the exit status does not depend on it. On exit 2 discard standard output, even when it holds a complete document. The document's content, layout and labels carry no stability promise between builds. The command reads no file, starts no runner and reports nothing about a caller's document; `run` remains the only admission.",
+            "prose": "`policy-witness example` takes no argument and prints one specimen defined by the emitting build, followed by one newline. The output is a request document, not an envelope. Process exit 0 supplies the complete document. The build guarantees that its own `run` admits that document; emission performs no admission and observes none. Every failure to emit is process exit 2: an argument, a build whose identity is empty or `unbound`, an example the contract gate refuses, or a failed write or flush. A reason is written to standard error when that stream accepts it; the exit status does not depend on it. On exit 2 discard standard output, even when it holds a complete document. The document's content, layout and labels carry no stability promise between builds. The command reads no file, starts no runner and reports nothing about a caller's document; `run` remains the only admission.",
             "referenced_types": {
               "specimen.contract": {
                 "json_null": false,
@@ -112096,7 +112194,7 @@
             "document": {
               "policy": {
                 "format": "sbpl",
-                "sbpl_source": "(version 1) (allow default)"
+                "sbpl_source": "(version 1) (allow default) (deny file-read-data (literal \"/usr/share/dict/propernames\") (with no-report))"
               },
               "probe_plan": [
                 {
@@ -112113,14 +112211,48 @@
                     "operation": "file-read-data"
                   },
                   "step_id": "read-hosts"
+                },
+                {
+                  "attempt": {
+                    "action": "read_fresh",
+                    "kind": "file",
+                    "target": "/usr/share/dict/connectives"
+                  },
+                  "sandbox_check": {
+                    "filter": {
+                      "kind": "path",
+                      "value": "/usr/share/dict/propernames"
+                    },
+                    "operation": "file-read-metadata"
+                  },
+                  "step_id": "metadata-propernames-read-connectives"
+                },
+                {
+                  "attempt": {
+                    "action": "open_read",
+                    "kind": "file",
+                    "target": "/usr/share/dict/propernames"
+                  },
+                  "sandbox_check": {
+                    "filter": {
+                      "kind": "path",
+                      "value": "/usr/share/dict/propernames"
+                    },
+                    "operation": "file-read-data"
+                  },
+                  "step_id": "read-propernames"
                 }
               ],
               "specimen_id": "example"
             },
-            "facts": {},
+            "facts": {
+              "uses": [
+                "identity.definitions.cause"
+              ]
+            },
             "id": "request.specimen.example",
             "kind": "example",
-            "prose": "These commands print the example and submit it unchanged:\n\n```sh\npolicy-witness example > example.json\npolicy-witness run example.json\n```\n\nThe printed document carries the emitting build's identity where this rendering shows `<reported-contract>`.",
+            "prose": "These commands print the example and submit it unchanged:\n\n```sh\npolicy-witness example > example.json\npolicy-witness run example.json\n```\n\nThe printed document carries the emitting build's identity where this rendering shows `<reported-contract>`.\n\nThe policy allows by default and denies data reads of the one file its specific rule names. Each step establishes something different:\n\n- `read-hosts` asks about data reads of one file and opens that file. It supplies a native answer about the path and a witnessed open of it.\n- `metadata-propernames-read-connectives` asks about metadata reads of the file the policy names and reads another file through a fresh descriptor. Its answer concerns a file its attempt does not read, so the answer predicts nothing about that read. The read is witnessed separately by its descriptor identity, byte count and bytes.\n- `read-propernames` asks about data reads of the file the policy names and opens that file. It supplies a native answer about that path and a witnessed attempt to open it.\n\nWhere the three files exist and the caller can read them, the first two answers are `allow` and their attempts succeed; the third answer is `deny` and its open fails with errno 1 (`EPERM`). The run still finishes and its process exits 0: a finished run can hold a failed attempt. The deny answer and the failed open are separate observations. The reply records them side by side and states neither that they agree nor what caused the failure.\n\nThese results are observations on the build and machine that produced them, under those conditions. They are not commitments. The paths, labels, step count and order, the policy text with its `(with no-report)` modifier, the errno and every native result can differ between builds. The modifier asks the kernel not to report the refused open in the system log; it promises nothing about what a run logs.",
             "title": "Emitted example"
           },
           {
@@ -148081,6 +148213,16 @@
           {
             "context": {},
             "facts": {
+              "defines": "assessment"
+            },
+            "id": "identity.definitions.cause",
+            "kind": "definition",
+            "prose": "A cause identifies why an event occurred. Permission-shaped return values\nsupport the `permission_failure` observation class; they leave sandbox cause\nunresolved. A termination request and a later owned reap support the specific\nlifecycle relationship stated by the lifecycle assessment. Query answers and\nattempt returns retain their individual observation scopes.",
+            "title": "Cause"
+          },
+          {
+            "context": {},
+            "facts": {
               "defines": "component"
             },
             "id": "identity.definitions.controller",
@@ -150037,7 +150179,7 @@
             },
             "id": "probes.step.read_hosts",
             "kind": "example",
-            "prose": "This step of the emitted example pairs a path query with an open-read attempt. The open-read operation's success establishes its open boundary. A `read_fresh` attempt supplies the separate read-count, content and close observations described by the step-result surface.",
+            "prose": "The first step of the emitted example pairs a path query with an open-read attempt. The open-read operation's success establishes its open boundary. A `read_fresh` attempt supplies the separate read-count, content and close observations described by the step-result surface.",
             "title": "Read-hosts pair"
           },
           {
@@ -152019,7 +152161,7 @@
             },
             "id": "request.specimen.emit_example",
             "kind": "reports",
-            "prose": "`policy-witness example` takes no argument and prints one specimen defined by the emitting build, followed by one newline. The output is a request document, not an envelope. Process exit 0 supplies the complete document, and the same build's `run` admits it. Every failure to emit is process exit 2: an argument, a build whose identity is empty or `unbound`, an example the contract gate refuses, or a failed write or flush. A reason is written to standard error when that stream accepts it; the exit status does not depend on it. On exit 2 discard standard output, even when it holds a complete document. The document's content, layout and labels carry no stability promise between builds. The command reads no file, starts no runner and reports nothing about a caller's document; `run` remains the only admission.",
+            "prose": "`policy-witness example` takes no argument and prints one specimen defined by the emitting build, followed by one newline. The output is a request document, not an envelope. Process exit 0 supplies the complete document. The build guarantees that its own `run` admits that document; emission performs no admission and observes none. Every failure to emit is process exit 2: an argument, a build whose identity is empty or `unbound`, an example the contract gate refuses, or a failed write or flush. A reason is written to standard error when that stream accepts it; the exit status does not depend on it. On exit 2 discard standard output, even when it holds a complete document. The document's content, layout and labels carry no stability promise between builds. The command reads no file, starts no runner and reports nothing about a caller's document; `run` remains the only admission.",
             "referenced_types": {
               "specimen.contract": {
                 "json_null": false,
@@ -152119,7 +152261,7 @@
             "document": {
               "policy": {
                 "format": "sbpl",
-                "sbpl_source": "(version 1) (allow default)"
+                "sbpl_source": "(version 1) (allow default) (deny file-read-data (literal \"/usr/share/dict/propernames\") (with no-report))"
               },
               "probe_plan": [
                 {
@@ -152136,14 +152278,48 @@
                     "operation": "file-read-data"
                   },
                   "step_id": "read-hosts"
+                },
+                {
+                  "attempt": {
+                    "action": "read_fresh",
+                    "kind": "file",
+                    "target": "/usr/share/dict/connectives"
+                  },
+                  "sandbox_check": {
+                    "filter": {
+                      "kind": "path",
+                      "value": "/usr/share/dict/propernames"
+                    },
+                    "operation": "file-read-metadata"
+                  },
+                  "step_id": "metadata-propernames-read-connectives"
+                },
+                {
+                  "attempt": {
+                    "action": "open_read",
+                    "kind": "file",
+                    "target": "/usr/share/dict/propernames"
+                  },
+                  "sandbox_check": {
+                    "filter": {
+                      "kind": "path",
+                      "value": "/usr/share/dict/propernames"
+                    },
+                    "operation": "file-read-data"
+                  },
+                  "step_id": "read-propernames"
                 }
               ],
               "specimen_id": "example"
             },
-            "facts": {},
+            "facts": {
+              "uses": [
+                "identity.definitions.cause"
+              ]
+            },
             "id": "request.specimen.example",
             "kind": "example",
-            "prose": "These commands print the example and submit it unchanged:\n\n```sh\npolicy-witness example > example.json\npolicy-witness run example.json\n```\n\nThe printed document carries the emitting build's identity where this rendering shows `<reported-contract>`.",
+            "prose": "These commands print the example and submit it unchanged:\n\n```sh\npolicy-witness example > example.json\npolicy-witness run example.json\n```\n\nThe printed document carries the emitting build's identity where this rendering shows `<reported-contract>`.\n\nThe policy allows by default and denies data reads of the one file its specific rule names. Each step establishes something different:\n\n- `read-hosts` asks about data reads of one file and opens that file. It supplies a native answer about the path and a witnessed open of it.\n- `metadata-propernames-read-connectives` asks about metadata reads of the file the policy names and reads another file through a fresh descriptor. Its answer concerns a file its attempt does not read, so the answer predicts nothing about that read. The read is witnessed separately by its descriptor identity, byte count and bytes.\n- `read-propernames` asks about data reads of the file the policy names and opens that file. It supplies a native answer about that path and a witnessed attempt to open it.\n\nWhere the three files exist and the caller can read them, the first two answers are `allow` and their attempts succeed; the third answer is `deny` and its open fails with errno 1 (`EPERM`). The run still finishes and its process exits 0: a finished run can hold a failed attempt. The deny answer and the failed open are separate observations. The reply records them side by side and states neither that they agree nor what caused the failure.\n\nThese results are observations on the build and machine that produced them, under those conditions. They are not commitments. The paths, labels, step count and order, the policy text with its `(with no-report)` modifier, the errno and every native result can differ between builds. The modifier asks the kernel not to report the refused open in the system log; it promises nothing about what a run logs.",
             "title": "Emitted example"
           },
           {
@@ -184557,6 +184733,16 @@
           {
             "context": {},
             "facts": {
+              "defines": "assessment"
+            },
+            "id": "identity.definitions.cause",
+            "kind": "definition",
+            "prose": "A cause identifies why an event occurred. Permission-shaped return values\nsupport the `permission_failure` observation class; they leave sandbox cause\nunresolved. A termination request and a later owned reap support the specific\nlifecycle relationship stated by the lifecycle assessment. Query answers and\nattempt returns retain their individual observation scopes.",
+            "title": "Cause"
+          },
+          {
+            "context": {},
+            "facts": {
               "defines": "component"
             },
             "id": "identity.definitions.controller",
@@ -186435,7 +186621,7 @@
             },
             "id": "probes.step.read_hosts",
             "kind": "example",
-            "prose": "This step of the emitted example pairs a path query with an open-read attempt. The open-read operation's success establishes its open boundary. A `read_fresh` attempt supplies the separate read-count, content and close observations described by the step-result surface.",
+            "prose": "The first step of the emitted example pairs a path query with an open-read attempt. The open-read operation's success establishes its open boundary. A `read_fresh` attempt supplies the separate read-count, content and close observations described by the step-result surface.",
             "title": "Read-hosts pair"
           },
           {
@@ -188534,7 +188720,7 @@
             },
             "id": "request.specimen.emit_example",
             "kind": "reports",
-            "prose": "`policy-witness example` takes no argument and prints one specimen defined by the emitting build, followed by one newline. The output is a request document, not an envelope. Process exit 0 supplies the complete document, and the same build's `run` admits it. Every failure to emit is process exit 2: an argument, a build whose identity is empty or `unbound`, an example the contract gate refuses, or a failed write or flush. A reason is written to standard error when that stream accepts it; the exit status does not depend on it. On exit 2 discard standard output, even when it holds a complete document. The document's content, layout and labels carry no stability promise between builds. The command reads no file, starts no runner and reports nothing about a caller's document; `run` remains the only admission.",
+            "prose": "`policy-witness example` takes no argument and prints one specimen defined by the emitting build, followed by one newline. The output is a request document, not an envelope. Process exit 0 supplies the complete document. The build guarantees that its own `run` admits that document; emission performs no admission and observes none. Every failure to emit is process exit 2: an argument, a build whose identity is empty or `unbound`, an example the contract gate refuses, or a failed write or flush. A reason is written to standard error when that stream accepts it; the exit status does not depend on it. On exit 2 discard standard output, even when it holds a complete document. The document's content, layout and labels carry no stability promise between builds. The command reads no file, starts no runner and reports nothing about a caller's document; `run` remains the only admission.",
             "referenced_types": {
               "specimen.contract": {
                 "json_null": false,
@@ -188634,7 +188820,7 @@
             "document": {
               "policy": {
                 "format": "sbpl",
-                "sbpl_source": "(version 1) (allow default)"
+                "sbpl_source": "(version 1) (allow default) (deny file-read-data (literal \"/usr/share/dict/propernames\") (with no-report))"
               },
               "probe_plan": [
                 {
@@ -188651,14 +188837,48 @@
                     "operation": "file-read-data"
                   },
                   "step_id": "read-hosts"
+                },
+                {
+                  "attempt": {
+                    "action": "read_fresh",
+                    "kind": "file",
+                    "target": "/usr/share/dict/connectives"
+                  },
+                  "sandbox_check": {
+                    "filter": {
+                      "kind": "path",
+                      "value": "/usr/share/dict/propernames"
+                    },
+                    "operation": "file-read-metadata"
+                  },
+                  "step_id": "metadata-propernames-read-connectives"
+                },
+                {
+                  "attempt": {
+                    "action": "open_read",
+                    "kind": "file",
+                    "target": "/usr/share/dict/propernames"
+                  },
+                  "sandbox_check": {
+                    "filter": {
+                      "kind": "path",
+                      "value": "/usr/share/dict/propernames"
+                    },
+                    "operation": "file-read-data"
+                  },
+                  "step_id": "read-propernames"
                 }
               ],
               "specimen_id": "example"
             },
-            "facts": {},
+            "facts": {
+              "uses": [
+                "identity.definitions.cause"
+              ]
+            },
             "id": "request.specimen.example",
             "kind": "example",
-            "prose": "These commands print the example and submit it unchanged:\n\n```sh\npolicy-witness example > example.json\npolicy-witness run example.json\n```\n\nThe printed document carries the emitting build's identity where this rendering shows `<reported-contract>`.",
+            "prose": "These commands print the example and submit it unchanged:\n\n```sh\npolicy-witness example > example.json\npolicy-witness run example.json\n```\n\nThe printed document carries the emitting build's identity where this rendering shows `<reported-contract>`.\n\nThe policy allows by default and denies data reads of the one file its specific rule names. Each step establishes something different:\n\n- `read-hosts` asks about data reads of one file and opens that file. It supplies a native answer about the path and a witnessed open of it.\n- `metadata-propernames-read-connectives` asks about metadata reads of the file the policy names and reads another file through a fresh descriptor. Its answer concerns a file its attempt does not read, so the answer predicts nothing about that read. The read is witnessed separately by its descriptor identity, byte count and bytes.\n- `read-propernames` asks about data reads of the file the policy names and opens that file. It supplies a native answer about that path and a witnessed attempt to open it.\n\nWhere the three files exist and the caller can read them, the first two answers are `allow` and their attempts succeed; the third answer is `deny` and its open fails with errno 1 (`EPERM`). The run still finishes and its process exits 0: a finished run can hold a failed attempt. The deny answer and the failed open are separate observations. The reply records them side by side and states neither that they agree nor what caused the failure.\n\nThese results are observations on the build and machine that produced them, under those conditions. They are not commitments. The paths, labels, step count and order, the policy text with its `(with no-report)` modifier, the errno and every native result can differ between builds. The modifier asks the kernel not to report the refused open in the system log; it promises nothing about what a run logs.",
             "title": "Emitted example"
           },
           {
@@ -239463,6 +239683,16 @@
           {
             "context": {},
             "facts": {
+              "defines": "assessment"
+            },
+            "id": "identity.definitions.cause",
+            "kind": "definition",
+            "prose": "A cause identifies why an event occurred. Permission-shaped return values\nsupport the `permission_failure` observation class; they leave sandbox cause\nunresolved. A termination request and a later owned reap support the specific\nlifecycle relationship stated by the lifecycle assessment. Query answers and\nattempt returns retain their individual observation scopes.",
+            "title": "Cause"
+          },
+          {
+            "context": {},
+            "facts": {
               "defines": "component"
             },
             "id": "identity.definitions.controller",
@@ -255022,7 +255252,7 @@
             },
             "id": "probes.step.read_hosts",
             "kind": "example",
-            "prose": "This step of the emitted example pairs a path query with an open-read attempt. The open-read operation's success establishes its open boundary. A `read_fresh` attempt supplies the separate read-count, content and close observations described by the step-result surface.",
+            "prose": "The first step of the emitted example pairs a path query with an open-read attempt. The open-read operation's success establishes its open boundary. A `read_fresh` attempt supplies the separate read-count, content and close observations described by the step-result surface.",
             "title": "Read-hosts pair"
           },
           {
@@ -260590,7 +260820,7 @@
             },
             "id": "request.specimen.emit_example",
             "kind": "reports",
-            "prose": "`policy-witness example` takes no argument and prints one specimen defined by the emitting build, followed by one newline. The output is a request document, not an envelope. Process exit 0 supplies the complete document, and the same build's `run` admits it. Every failure to emit is process exit 2: an argument, a build whose identity is empty or `unbound`, an example the contract gate refuses, or a failed write or flush. A reason is written to standard error when that stream accepts it; the exit status does not depend on it. On exit 2 discard standard output, even when it holds a complete document. The document's content, layout and labels carry no stability promise between builds. The command reads no file, starts no runner and reports nothing about a caller's document; `run` remains the only admission.",
+            "prose": "`policy-witness example` takes no argument and prints one specimen defined by the emitting build, followed by one newline. The output is a request document, not an envelope. Process exit 0 supplies the complete document. The build guarantees that its own `run` admits that document; emission performs no admission and observes none. Every failure to emit is process exit 2: an argument, a build whose identity is empty or `unbound`, an example the contract gate refuses, or a failed write or flush. A reason is written to standard error when that stream accepts it; the exit status does not depend on it. On exit 2 discard standard output, even when it holds a complete document. The document's content, layout and labels carry no stability promise between builds. The command reads no file, starts no runner and reports nothing about a caller's document; `run` remains the only admission.",
             "referenced_types": {
               "specimen.contract": {
                 "json_null": false,
@@ -260690,7 +260920,7 @@
             "document": {
               "policy": {
                 "format": "sbpl",
-                "sbpl_source": "(version 1) (allow default)"
+                "sbpl_source": "(version 1) (allow default) (deny file-read-data (literal \"/usr/share/dict/propernames\") (with no-report))"
               },
               "probe_plan": [
                 {
@@ -260707,14 +260937,48 @@
                     "operation": "file-read-data"
                   },
                   "step_id": "read-hosts"
+                },
+                {
+                  "attempt": {
+                    "action": "read_fresh",
+                    "kind": "file",
+                    "target": "/usr/share/dict/connectives"
+                  },
+                  "sandbox_check": {
+                    "filter": {
+                      "kind": "path",
+                      "value": "/usr/share/dict/propernames"
+                    },
+                    "operation": "file-read-metadata"
+                  },
+                  "step_id": "metadata-propernames-read-connectives"
+                },
+                {
+                  "attempt": {
+                    "action": "open_read",
+                    "kind": "file",
+                    "target": "/usr/share/dict/propernames"
+                  },
+                  "sandbox_check": {
+                    "filter": {
+                      "kind": "path",
+                      "value": "/usr/share/dict/propernames"
+                    },
+                    "operation": "file-read-data"
+                  },
+                  "step_id": "read-propernames"
                 }
               ],
               "specimen_id": "example"
             },
-            "facts": {},
+            "facts": {
+              "uses": [
+                "identity.definitions.cause"
+              ]
+            },
             "id": "request.specimen.example",
             "kind": "example",
-            "prose": "These commands print the example and submit it unchanged:\n\n```sh\npolicy-witness example > example.json\npolicy-witness run example.json\n```\n\nThe printed document carries the emitting build's identity where this rendering shows `<reported-contract>`.",
+            "prose": "These commands print the example and submit it unchanged:\n\n```sh\npolicy-witness example > example.json\npolicy-witness run example.json\n```\n\nThe printed document carries the emitting build's identity where this rendering shows `<reported-contract>`.\n\nThe policy allows by default and denies data reads of the one file its specific rule names. Each step establishes something different:\n\n- `read-hosts` asks about data reads of one file and opens that file. It supplies a native answer about the path and a witnessed open of it.\n- `metadata-propernames-read-connectives` asks about metadata reads of the file the policy names and reads another file through a fresh descriptor. Its answer concerns a file its attempt does not read, so the answer predicts nothing about that read. The read is witnessed separately by its descriptor identity, byte count and bytes.\n- `read-propernames` asks about data reads of the file the policy names and opens that file. It supplies a native answer about that path and a witnessed attempt to open it.\n\nWhere the three files exist and the caller can read them, the first two answers are `allow` and their attempts succeed; the third answer is `deny` and its open fails with errno 1 (`EPERM`). The run still finishes and its process exits 0: a finished run can hold a failed attempt. The deny answer and the failed open are separate observations. The reply records them side by side and states neither that they agree nor what caused the failure.\n\nThese results are observations on the build and machine that produced them, under those conditions. They are not commitments. The paths, labels, step count and order, the policy text with its `(with no-report)` modifier, the errno and every native result can differ between builds. The modifier asks the kernel not to report the refused open in the system log; it promises nothing about what a run logs.",
             "title": "Emitted example"
           },
           {
@@ -430171,6 +430435,16 @@
           {
             "context": {},
             "facts": {
+              "defines": "assessment"
+            },
+            "id": "identity.definitions.cause",
+            "kind": "definition",
+            "prose": "A cause identifies why an event occurred. Permission-shaped return values\nsupport the `permission_failure` observation class; they leave sandbox cause\nunresolved. A termination request and a later owned reap support the specific\nlifecycle relationship stated by the lifecycle assessment. Query answers and\nattempt returns retain their individual observation scopes.",
+            "title": "Cause"
+          },
+          {
+            "context": {},
+            "facts": {
               "defines": "component"
             },
             "id": "identity.definitions.controller",
@@ -448369,7 +448643,7 @@
             },
             "id": "probes.step.read_hosts",
             "kind": "example",
-            "prose": "This step of the emitted example pairs a path query with an open-read attempt. The open-read operation's success establishes its open boundary. A `read_fresh` attempt supplies the separate read-count, content and close observations described by the step-result surface.",
+            "prose": "The first step of the emitted example pairs a path query with an open-read attempt. The open-read operation's success establishes its open boundary. A `read_fresh` attempt supplies the separate read-count, content and close observations described by the step-result surface.",
             "title": "Read-hosts pair"
           },
           {
@@ -455988,7 +456262,7 @@
             },
             "id": "request.specimen.emit_example",
             "kind": "reports",
-            "prose": "`policy-witness example` takes no argument and prints one specimen defined by the emitting build, followed by one newline. The output is a request document, not an envelope. Process exit 0 supplies the complete document, and the same build's `run` admits it. Every failure to emit is process exit 2: an argument, a build whose identity is empty or `unbound`, an example the contract gate refuses, or a failed write or flush. A reason is written to standard error when that stream accepts it; the exit status does not depend on it. On exit 2 discard standard output, even when it holds a complete document. The document's content, layout and labels carry no stability promise between builds. The command reads no file, starts no runner and reports nothing about a caller's document; `run` remains the only admission.",
+            "prose": "`policy-witness example` takes no argument and prints one specimen defined by the emitting build, followed by one newline. The output is a request document, not an envelope. Process exit 0 supplies the complete document. The build guarantees that its own `run` admits that document; emission performs no admission and observes none. Every failure to emit is process exit 2: an argument, a build whose identity is empty or `unbound`, an example the contract gate refuses, or a failed write or flush. A reason is written to standard error when that stream accepts it; the exit status does not depend on it. On exit 2 discard standard output, even when it holds a complete document. The document's content, layout and labels carry no stability promise between builds. The command reads no file, starts no runner and reports nothing about a caller's document; `run` remains the only admission.",
             "referenced_types": {
               "specimen.contract": {
                 "json_null": false,
@@ -456088,7 +456362,7 @@
             "document": {
               "policy": {
                 "format": "sbpl",
-                "sbpl_source": "(version 1) (allow default)"
+                "sbpl_source": "(version 1) (allow default) (deny file-read-data (literal \"/usr/share/dict/propernames\") (with no-report))"
               },
               "probe_plan": [
                 {
@@ -456105,14 +456379,48 @@
                     "operation": "file-read-data"
                   },
                   "step_id": "read-hosts"
+                },
+                {
+                  "attempt": {
+                    "action": "read_fresh",
+                    "kind": "file",
+                    "target": "/usr/share/dict/connectives"
+                  },
+                  "sandbox_check": {
+                    "filter": {
+                      "kind": "path",
+                      "value": "/usr/share/dict/propernames"
+                    },
+                    "operation": "file-read-metadata"
+                  },
+                  "step_id": "metadata-propernames-read-connectives"
+                },
+                {
+                  "attempt": {
+                    "action": "open_read",
+                    "kind": "file",
+                    "target": "/usr/share/dict/propernames"
+                  },
+                  "sandbox_check": {
+                    "filter": {
+                      "kind": "path",
+                      "value": "/usr/share/dict/propernames"
+                    },
+                    "operation": "file-read-data"
+                  },
+                  "step_id": "read-propernames"
                 }
               ],
               "specimen_id": "example"
             },
-            "facts": {},
+            "facts": {
+              "uses": [
+                "identity.definitions.cause"
+              ]
+            },
             "id": "request.specimen.example",
             "kind": "example",
-            "prose": "These commands print the example and submit it unchanged:\n\n```sh\npolicy-witness example > example.json\npolicy-witness run example.json\n```\n\nThe printed document carries the emitting build's identity where this rendering shows `<reported-contract>`.",
+            "prose": "These commands print the example and submit it unchanged:\n\n```sh\npolicy-witness example > example.json\npolicy-witness run example.json\n```\n\nThe printed document carries the emitting build's identity where this rendering shows `<reported-contract>`.\n\nThe policy allows by default and denies data reads of the one file its specific rule names. Each step establishes something different:\n\n- `read-hosts` asks about data reads of one file and opens that file. It supplies a native answer about the path and a witnessed open of it.\n- `metadata-propernames-read-connectives` asks about metadata reads of the file the policy names and reads another file through a fresh descriptor. Its answer concerns a file its attempt does not read, so the answer predicts nothing about that read. The read is witnessed separately by its descriptor identity, byte count and bytes.\n- `read-propernames` asks about data reads of the file the policy names and opens that file. It supplies a native answer about that path and a witnessed attempt to open it.\n\nWhere the three files exist and the caller can read them, the first two answers are `allow` and their attempts succeed; the third answer is `deny` and its open fails with errno 1 (`EPERM`). The run still finishes and its process exits 0: a finished run can hold a failed attempt. The deny answer and the failed open are separate observations. The reply records them side by side and states neither that they agree nor what caused the failure.\n\nThese results are observations on the build and machine that produced them, under those conditions. They are not commitments. The paths, labels, step count and order, the policy text with its `(with no-report)` modifier, the errno and every native result can differ between builds. The modifier asks the kernel not to report the refused open in the system log; it promises nothing about what a run logs.",
             "title": "Emitted example"
           },
           {
@@ -563121,6 +563429,16 @@
           {
             "context": {},
             "facts": {
+              "defines": "assessment"
+            },
+            "id": "identity.definitions.cause",
+            "kind": "definition",
+            "prose": "A cause identifies why an event occurred. Permission-shaped return values\nsupport the `permission_failure` observation class; they leave sandbox cause\nunresolved. A termination request and a later owned reap support the specific\nlifecycle relationship stated by the lifecycle assessment. Query answers and\nattempt returns retain their individual observation scopes.",
+            "title": "Cause"
+          },
+          {
+            "context": {},
+            "facts": {
               "defines": "component"
             },
             "id": "identity.definitions.client",
@@ -578690,7 +579008,7 @@
             },
             "id": "probes.step.read_hosts",
             "kind": "example",
-            "prose": "This step of the emitted example pairs a path query with an open-read attempt. The open-read operation's success establishes its open boundary. A `read_fresh` attempt supplies the separate read-count, content and close observations described by the step-result surface.",
+            "prose": "The first step of the emitted example pairs a path query with an open-read attempt. The open-read operation's success establishes its open boundary. A `read_fresh` attempt supplies the separate read-count, content and close observations described by the step-result surface.",
             "title": "Read-hosts pair"
           },
           {
@@ -586274,7 +586592,7 @@
             },
             "id": "request.specimen.emit_example",
             "kind": "reports",
-            "prose": "`policy-witness example` takes no argument and prints one specimen defined by the emitting build, followed by one newline. The output is a request document, not an envelope. Process exit 0 supplies the complete document, and the same build's `run` admits it. Every failure to emit is process exit 2: an argument, a build whose identity is empty or `unbound`, an example the contract gate refuses, or a failed write or flush. A reason is written to standard error when that stream accepts it; the exit status does not depend on it. On exit 2 discard standard output, even when it holds a complete document. The document's content, layout and labels carry no stability promise between builds. The command reads no file, starts no runner and reports nothing about a caller's document; `run` remains the only admission.",
+            "prose": "`policy-witness example` takes no argument and prints one specimen defined by the emitting build, followed by one newline. The output is a request document, not an envelope. Process exit 0 supplies the complete document. The build guarantees that its own `run` admits that document; emission performs no admission and observes none. Every failure to emit is process exit 2: an argument, a build whose identity is empty or `unbound`, an example the contract gate refuses, or a failed write or flush. A reason is written to standard error when that stream accepts it; the exit status does not depend on it. On exit 2 discard standard output, even when it holds a complete document. The document's content, layout and labels carry no stability promise between builds. The command reads no file, starts no runner and reports nothing about a caller's document; `run` remains the only admission.",
             "referenced_types": {
               "specimen.contract": {
                 "json_null": false,
@@ -586374,7 +586692,7 @@
             "document": {
               "policy": {
                 "format": "sbpl",
-                "sbpl_source": "(version 1) (allow default)"
+                "sbpl_source": "(version 1) (allow default) (deny file-read-data (literal \"/usr/share/dict/propernames\") (with no-report))"
               },
               "probe_plan": [
                 {
@@ -586391,14 +586709,48 @@
                     "operation": "file-read-data"
                   },
                   "step_id": "read-hosts"
+                },
+                {
+                  "attempt": {
+                    "action": "read_fresh",
+                    "kind": "file",
+                    "target": "/usr/share/dict/connectives"
+                  },
+                  "sandbox_check": {
+                    "filter": {
+                      "kind": "path",
+                      "value": "/usr/share/dict/propernames"
+                    },
+                    "operation": "file-read-metadata"
+                  },
+                  "step_id": "metadata-propernames-read-connectives"
+                },
+                {
+                  "attempt": {
+                    "action": "open_read",
+                    "kind": "file",
+                    "target": "/usr/share/dict/propernames"
+                  },
+                  "sandbox_check": {
+                    "filter": {
+                      "kind": "path",
+                      "value": "/usr/share/dict/propernames"
+                    },
+                    "operation": "file-read-data"
+                  },
+                  "step_id": "read-propernames"
                 }
               ],
               "specimen_id": "example"
             },
-            "facts": {},
+            "facts": {
+              "uses": [
+                "identity.definitions.cause"
+              ]
+            },
             "id": "request.specimen.example",
             "kind": "example",
-            "prose": "These commands print the example and submit it unchanged:\n\n```sh\npolicy-witness example > example.json\npolicy-witness run example.json\n```\n\nThe printed document carries the emitting build's identity where this rendering shows `<reported-contract>`.",
+            "prose": "These commands print the example and submit it unchanged:\n\n```sh\npolicy-witness example > example.json\npolicy-witness run example.json\n```\n\nThe printed document carries the emitting build's identity where this rendering shows `<reported-contract>`.\n\nThe policy allows by default and denies data reads of the one file its specific rule names. Each step establishes something different:\n\n- `read-hosts` asks about data reads of one file and opens that file. It supplies a native answer about the path and a witnessed open of it.\n- `metadata-propernames-read-connectives` asks about metadata reads of the file the policy names and reads another file through a fresh descriptor. Its answer concerns a file its attempt does not read, so the answer predicts nothing about that read. The read is witnessed separately by its descriptor identity, byte count and bytes.\n- `read-propernames` asks about data reads of the file the policy names and opens that file. It supplies a native answer about that path and a witnessed attempt to open it.\n\nWhere the three files exist and the caller can read them, the first two answers are `allow` and their attempts succeed; the third answer is `deny` and its open fails with errno 1 (`EPERM`). The run still finishes and its process exits 0: a finished run can hold a failed attempt. The deny answer and the failed open are separate observations. The reply records them side by side and states neither that they agree nor what caused the failure.\n\nThese results are observations on the build and machine that produced them, under those conditions. They are not commitments. The paths, labels, step count and order, the policy text with its `(with no-report)` modifier, the errno and every native result can differ between builds. The modifier asks the kernel not to report the refused open in the system log; it promises nothing about what a run logs.",
             "title": "Emitted example"
           },
           {

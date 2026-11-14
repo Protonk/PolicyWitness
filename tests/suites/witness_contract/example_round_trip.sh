@@ -25,7 +25,7 @@ invoke "${CAPTURE}/version" --version
 invoke "${CAPTURE}/example-1" example
 invoke "${CAPTURE}/example-2" example
 
-test_step prepare "gate the emitted bytes, observe the attempt targets and change the bytes in one place per refusal"
+test_step prepare "gate the emitted bytes, observe every query and attempt path and change the bytes in one place per refusal"
 if ! "${PW_PYTHON}" -B -S "${CHECKER}" prepare "${CAPTURE}" "${PW_APP_DIR}" \
     "${ROOT_DIR}/docs/contract/public.json" >"${PW_TEST_ARTIFACTS}/prepare.log" 2>&1; then
   cat "${PW_TEST_ARTIFACTS}/prepare.log" >&2 || true

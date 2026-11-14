@@ -15,7 +15,7 @@ use crate::request_patch::{parse_request, validate_contract};
 
 // The contract generator extracts this constant and accepts this one form: a
 // single `r#"`...`"#` raw string holding a JSON object without `contract`.
-pub const EXAMPLE_DOCUMENT: &str = r#"{"specimen_id":"example","policy":{"format":"sbpl","sbpl_source":"(version 1) (allow default)"},"probe_plan":[{"step_id":"read-hosts","sandbox_check":{"operation":"file-read-data","filter":{"kind":"path","value":"/etc/hosts"}},"attempt":{"kind":"file","action":"open_read","target":"/etc/hosts"}}]}"#;
+pub const EXAMPLE_DOCUMENT: &str = r#"{"specimen_id":"example","policy":{"format":"sbpl","sbpl_source":"(version 1) (allow default) (deny file-read-data (literal \"/usr/share/dict/propernames\") (with no-report))"},"probe_plan":[{"step_id":"read-hosts","sandbox_check":{"operation":"file-read-data","filter":{"kind":"path","value":"/etc/hosts"}},"attempt":{"kind":"file","action":"open_read","target":"/etc/hosts"}},{"step_id":"metadata-propernames-read-connectives","sandbox_check":{"operation":"file-read-metadata","filter":{"kind":"path","value":"/usr/share/dict/propernames"}},"attempt":{"kind":"file","action":"read_fresh","target":"/usr/share/dict/connectives"}},{"step_id":"read-propernames","sandbox_check":{"operation":"file-read-data","filter":{"kind":"path","value":"/usr/share/dict/propernames"}},"attempt":{"kind":"file","action":"open_read","target":"/usr/share/dict/propernames"}}]}"#;
 
 /// Why no document was printed. Every case is process exit 2.
 #[derive(Debug, PartialEq, Eq)]

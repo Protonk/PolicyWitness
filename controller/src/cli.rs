@@ -26,8 +26,8 @@ usage:
 notes:
   - runs the selected PWRunner XPC service once and prints a single JSON result to stdout
   - request.json is parsed once; the resolved request is delivered to the runner client on stdin (`--request -`), never through a temporary file
-  - example takes no argument and prints the specimen this build defines, carrying this build's contract, as a request.json that the same build's run admits; exit 0 supplies the complete document, and on exit 2 discard stdout
-  - lesson emits a teaching input for an absolute UTF-8 target; capture_typo is deliberately refused by run; exit 0 means complete publication, and on exit 2 discard stdout\n  - --version prints a JSON envelope (kind=version) with the build stamp and the public contract this build asserts; every envelope also carries the stamp under `build`";
+  - example takes no argument and prints the specimen this build defines, carrying this build's contract; exit 0 supplies the complete document, and the build guarantees that its own run admits it; emission performs no admission; on exit 2 discard stdout
+  - lesson emits a teaching input for an absolute UTF-8 target; capture_typo carries a deliberately unknown policy field; exit 0 means complete publication and reports neither admission nor an effect; on exit 2 discard stdout\n  - --version prints a JSON envelope (kind=version) with the build stamp and the public contract this build asserts; every envelope also carries the stamp under `build`";
 
 pub fn print_usage() {
     eprintln!("{USAGE}");

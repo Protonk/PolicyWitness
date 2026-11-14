@@ -1112,15 +1112,36 @@ invocations, the `run` of the emitted bytes and each changed input under
 `artifacts/capture/`. `check_example_round_trip.py` reads those files. Before
 anything is submitted it requires both emissions to exit 0 with empty stderr
 and one JSON object followed by one newline, and it refuses to run a document
-outside its bounds: the ordinary form with a nonempty plan, at least one step
-pairing a `sandbox_check` with a read-only file attempt, only read-only file
-attempts, and no `_test_overrides`, runner selection, augments or entitlement
-requirement. A failure there is reported with every run assertion unevaluated,
-and `run` is not invoked.
+outside its bounds: the ordinary form with a nonempty plan, only read-only file
+attempts, no `_test_overrides`, runner selection, augments or entitlement
+requirement, and the three-step workload below. A failure there is reported
+with every run assertion unevaluated, and `run` is not invoked.
+
+The workload is identified by position and by the relationships among its
+submitted operands. No step identifier, path or policy text decides a role,
+and the checker does not read the policy source:
+
+| Step | Query | Attempt |
+| --- | --- | --- |
+| 1 | `file-read-data` on target A | `open_read` of A |
+| 2 | `file-read-metadata` on target B | `read_fresh` of target C |
+| 3 | `file-read-data` on B | `open_read` of B |
+
+A, B and C are three different submitted paths. A document with another
+number of steps, a role missing, repeated, collapsed onto another target or in
+another order is another workload and is not run.
+
+Before submission the checker samples every submitted query path and attempt
+target, B included, and it samples them again after the run. Each sample opens
+the path once, takes the device, inode and other metadata from that descriptor,
+reads the content from the same descriptor and closes it. It keeps the
+SHA-256 digest and length of the content and of its bounded prefix, the first
+64 bytes, which is the most one `read_fresh` reads. No content is kept.
 
 The emitted file is then submitted unchanged. Each assertion has a stable
-identifier, a group and a classification, and `capture/report.json` lists every
-assertion's result:
+identifier, a group and a classification. `capture/report.json` lists every
+assertion's result with a one-sentence statement keyed by role, and its
+`workload` member names the submitted step identifier and path in each role:
 
 | Group | Demand |
 | --- | --- |
@@ -1130,53 +1151,135 @@ assertion's result:
 | Echo | The reply echoes the document's `specimen_id`, its step identifiers in order, and each submitted operation, filter, attempt kind, action and target. |
 | Reported against observed | The process exit status the case captured equals `result.exit_code`. |
 | Existing readers | `consumer.validate` reports no error, as the one aggregate assertion `consumer_validation`; the controller's `disposition_integrity` is `valid` with no `disposition_issues`. |
-| Native | Under the prerequisite that each attempt target resolves to a regular file this user can read: the reply is `finished`, each prediction is a validator `allow` with `native_rc` 0, `order` is `query_first` given that prediction, each attempt is `ok` with `rc` 0, and each target's SHA-256 digest, length and `st_dev`, `st_ino`, `st_mode`, `st_uid`, `st_gid`, `st_size`, `st_mtime_ns` and `st_ctime_ns` are equal in the case's observations before and after the run. |
+| Prerequisites | A, B and C were each a regular file this user opened and read before the run; they have three distinct device and inode identities; each bounded prefix is nonempty and C's differs from A's and from B's. |
+| Native | Listed below; evaluated only when every prerequisite holds. |
 | Refusals | Six inputs, each the emitted bytes with one change, go through `run`: another development identity, another release, `unbound`, no identity, a removed closing brace and one unknown member. The first five stop at the controller with their code, path, expected identity where one applies and no client capture or reply; the last is refused by the host as `unknown_field` with no step results. |
 
+The native expectations are pinned to the present example and change with it.
+Each is its own assertion:
+
+| Identifier | Expectation |
+| --- | --- |
+| `native.process_status` | The captured exit status of the `run` process is 0. It is read from the capture and never from the envelope; `reported.exit_code` separately compares the two. |
+| `native.completion` | The reply's `normalized_outcome` is `finished`. |
+| `native.step1.prediction`, `native.step2.prediction` | The answer is a validator `allow` with `native_rc` 0. |
+| `native.step3.prediction` | The answer is a validator `deny` with `native_rc` 1 and a query `errno` of 0. |
+| `native.order` | Each step whose answer met its expectation records `order` `query_first`. |
+| `native.step1.attempt`, `native.step2.attempt` | A worker result with outcome `ok` and `rc` 0. |
+| `native.step2.fresh_syscalls` | The open returned a descriptor, which is any nonnegative integer; the descriptor stat and the close returned 0; the read returned a count within the bound. |
+| `native.step2.fresh_identity` | The descriptor's device and inode are those the checker observed for C. |
+| `native.step2.fresh_content` | The read count and the SHA-256 of the bytes read are the length and digest of C's bounded prefix as the checker observed it. |
+| `native.step3.attempt` | A worker result with outcome `open_failed` and an attempt `errno` of exactly 1 (`EPERM`). `EACCES` fails this assertion as a deviation from the present example; the consumer still reads that record as permission-shaped. |
+| `native.targets_unchanged` | Each target's digest, length, bounded prefix, resolved path and `st_dev`, `st_ino`, `st_mode`, `st_uid`, `st_gid`, `st_size`, `st_mtime_ns` and `st_ctime_ns` are equal in the two samples. |
+
+Step 3's answer and its attempt are evaluated apart. No assertion compares
+them, none states that a deny answer and a failed open agree, and none
+attributes the failure to the policy; the `permission_failure` observation
+class stays with the consumer's rules. Step 2's answer concerns B and its
+attempt reads C, so that answer predicts nothing about that read.
+
+Reply steps are found by submitted identifier, and their order is the separate
+assertion `echo.step_ids`. A step's native expectations are read only from the
+one reply step that carries its identifier, and an answer or attempt only from
+a record that echoes what that step submitted. When a step has no such reply
+step or more than one, its native assertions are unevaluated; when a query or
+attempt record echoes something else, the assertions that read that record are
+unevaluated. The echo assertion carries the failure in each case. When C's
+two samples differ, `native.targets_unchanged` fails and the two
+correspondence assertions are unevaluated. When the descriptor stat or the read
+did not succeed, the correspondence that needs it is unevaluated and
+`native.step2.fresh_syscalls` carries the failure.
+
 Identity, digest and echo expectations come from the emitted document or
-another output of the same app. The native expectations are pinned to the
-present example and change with it. Shape, record, ordering and outcome-mapping
+another output of the same app. Shape, record, ordering and outcome-mapping
 rules belong to the consumer and are not restated; the delivery-length
 assertion is a length observation, and exact request bytes at the client
 boundary are checked by the controller's orchestration unit test under the
 test identity. The target observations establish equality at the sampled
-boundaries and assign no writer. Nothing states that a prediction and an
-attempt agree.
+boundaries and assign no writer. They do not establish that a file was stable
+between the samples or which object a native query consulted.
+
+The workload does not distinguish everything. Steps 1 and 2 expect the same
+answer, so those two answers exchanged leave the capture unchanged. It
+exercises `matched` with `same_submitted` and `different` with
+`different_submitted`, and never the two relation axes apart; the constructed
+rows of the [scenario matrix](../../fixtures/comparison/matrix.json) do. It
+holds one literal data-read rule on a path with one spelling, observes no
+failed fresh read, and supplies nothing that separates a sandbox cause from
+another permission cause beyond this user's own successful read of B.
 
 The case passes or fails and declares no skip. A failure carries its
 classification: `consistency` for a relationship that must hold whatever the
 native results, `execution_unavailable` when the run yields no admitted reply
 (nothing behind the reply is then credited or faulted),
 `prerequisite_unestablished` when a target prerequisite was not observed
-(native expectations are then unevaluated) and `native_observation` when a
-pinned native expectation fails under observed prerequisites. The log prints
-each as `FAIL <identifier> [<classification>]`. Both cases are default members:
-they write nothing, need no signing identity, GUI session or network, and add
-a few CLI invocations.
+(native expectations are then unevaluated; no other target is substituted) and
+`native_observation` when a pinned native expectation fails under observed
+prerequisites. The log prints each as `FAIL <identifier> [<classification>]`.
+Both cases are default members: they write nothing, need no signing identity,
+GUI session or network, and add a few CLI invocations.
 
 `example_round_trip_controls` runs the same checker offline over constructed
-captures; a constructed document stands in for the emission. Each of its
+captures; a constructed document stands in for the emission. Its passing
+capture is the authored run under `tests/fixtures/blackbox_e2e/checker/current/`
+with the allowed and denied file steps read as steps 1 and 3, and one
+fresh-read step and three target samples authored in the control. Each of its
 rejected controls introduces one logical fault and states the exact set of
 identifier and classification pairs it must produce; a control earns coverage
 for its target assertions only when the actual set matches. The case spells
 each assertion's expected classification itself and fails if the checker's
-table carries another. The consumer's
-aggregate diagnostic is permitted beside another control's set and earns
-nothing there, and its own propagation control requires it exactly. Controls
-also require the stated assertions to be unevaluated after a failed emission
-or bound, behind a differing identity, without an admitted reply and under an
-unobserved prerequisite; require coherent replies (a validator-spawn failure
-with matching exits, a deny prediction, a failed read and an unestablished
-order) to be read cleanly by the consumer and to fail only native
-expectations; and keep every diagnostic of combined faults. Each refusal input
-is judged against the emitted bytes and its stated change, not against the
-function that wrote it. Further controls run the checker's `prepare` step on
-constructed emissions: a failed emission or bound writes a report and no
-target observation or refusal input, so nothing can be submitted. The case fails if any assertion in the checker's table lacks a
-matched control, and `artifacts/example-round-trip-controls.json` holds each
-control's expected and actual sets and the coverage it earned. Shape and record
-validity rest on `blackbox_e2e/checker_controls`; that the app is validly
-signed and unchanged rests on the dispatcher's inspection.
+table carries another. The consumer's aggregate diagnostic is permitted beside
+another control's set and earns nothing there, and its own propagation control
+requires it exactly. Most controls also state the rest of the report: which
+assertions are unevaluated, and that every other one holds.
+
+A coherent control changes every dependent field, so the consumer reads the
+altered reply without error and only the stated assertion rejects it. The
+controls establish what the checker distinguishes, not that a native producer
+makes these faults:
+
+| Alteration | What rejects it |
+| --- | --- |
+| Another workload: a role missing, repeated, collapsed onto another target or out of order | `bounds.workload_roles`; nothing is run. |
+| Reply records reordered | `echo.step_ids` alone; every identifier-based assertion keeps its result. |
+| A record dropped, renamed or duplicated, including a duplicate that would pass placed first | `echo.step_ids`; that step's native assertions are unevaluated. |
+| Whole query or attempt records exchanged under unchanged identifiers | `echo.queries` or `echo.attempts`; nothing is read from the misplaced records. |
+| Allow and deny answers exchanged between steps 2 and 3, or 1 and 3, with every echo still its own step's | Each of the two steps' own prediction assertions. |
+| Step 3: deny answer with a successful open | `native.step3.attempt` alone. |
+| Step 3: allow answer with the `EPERM` failure | `native.step3.prediction` alone. |
+| Step 3: failed open with `EACCES`, or with a non-permission errno | `native.step3.attempt` alone. |
+| Step 3: deny with a nonzero query errno, an error answer, or another native return | `native.step3.prediction` alone. |
+| Captured status and `result.exit_code` disagreeing each way, and agreeing on a nonzero status | `native.process_status`, `reported.exit_code`, or both, as each is true. |
+| A fresh read that reads cleanly and carries the identity, the content or both of another sampled file; one byte, the device, the inode or the count alone | `native.step2.fresh_identity`, `native.step2.fresh_content`, or both. |
+| A fresh read failing at open, stat, read or close | `native.step2.attempt` and `native.step2.fresh_syscalls`; the correspondence that call supplies is unevaluated. |
+| A changed, unreadable or missing second sample of A, B or C | `native.targets_unchanged`; for C the correspondence is also unevaluated. |
+| A, B or C unreadable, not regular or unsampled; two targets one file; C's prefix equal to another's or empty | The prerequisite; every native assertion is unevaluated whatever the reply says. |
+| An association fault beside a native fault; several native faults | Every diagnostic stays. |
+
+Further controls require the stated assertions to be unevaluated after a failed
+emission or bound, behind a differing identity and without an admitted reply,
+and require a validator-spawn failure and an unestablished order to be read
+cleanly and to fail only native expectations. Each refusal input is judged
+against the emitted bytes and its stated change, not against the function that
+wrote it. Controls of the checker's `prepare` step show that a failed emission
+or bound writes a report and no target observation or refusal input, so nothing
+can be submitted.
+
+Three alterations must pass: a fresh read whose open returned descriptor 0, a
+fresh read of a target shorter than the bound, and the answers of steps 1 and 2
+exchanged, which is the blind spot stated above. The case also shows what a
+workload with uniform answers could not distinguish, without a second checker:
+in a constructed capture where step 3 is allowed and succeeds like the others,
+exchanging any two steps' answers leaves the capture identical, so no reader
+could tell them apart; in the present capture the same exchange changes it for
+both pairs that involve step 3.
+
+The case fails if any assertion in the checker's table lacks a matched control,
+and `artifacts/example-round-trip-controls.json` holds each control's expected
+and actual sets, the coverage it earned, the accepted alterations and the
+uniform-answer comparison. Shape and record validity rest on
+`blackbox_e2e/checker_controls`; that the app is validly signed and unchanged
+rests on the dispatcher's inspection.
 
 ## Specimen dossier
 
