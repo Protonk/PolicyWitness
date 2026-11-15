@@ -1,10 +1,13 @@
 # Generate `policy-witness help` cards from the executable interface
 
-Status: sequence steps 1 to 3 are complete; implementation has not started.
+Status: implemented in `b16f32d0` and verified; the plan is ready for the
+maintainer's acceptance and retirement.
 [RESULTS.md](records/plain-help/RESULTS.md) records E1–E4,
-[DECISIONS.md](records/plain-help/DECISIONS.md) sets out the options, and the
+[DECISIONS.md](records/plain-help/DECISIONS.md) sets out the options, the
 [recorded decisions](#appendix-decisions-recorded-at-step-3) are the
-maintainer's choices.
+maintainer's choices, and
+[VERIFICATION.md](records/plain-help/VERIFICATION.md) records the acceptance
+evidence, one deviation and what was not run.
 
 ## Problem
 
