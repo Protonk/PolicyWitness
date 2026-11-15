@@ -1,9 +1,8 @@
 # Expand the controlled-input seam into several independent views
 
-Status: proposed for maintainer review. This document specifies implementation
+Status: implementation in progress; increment 1 accepted. This document specifies implementation
 and acceptance work. The statements about existing owners were checked against
-the cited sources; the native expectations for the added passages have not been
-executed.
+the cited sources; native acceptance is recorded by increment below.
 
 ## Purpose
 
@@ -460,3 +459,31 @@ expose them. The value of the expansion is a controlled set of observations
 that are known to distinguish some changes and known not to distinguish
 others, with rejected and accepted controls that show which conclusions each
 can carry.
+
+## Execution acceptance
+
+Increment 1: source review and constructed controls establish the two identity
+generations, four content classes, exact saved request and four independently
+expected distinction pairs. `witness_contract/test_input_controls` passed in
+`tests/out/runs/input-expansion-1-controls`; the native
+`witness_contract/test_input` passed in
+`tests/out/runs/input-expansion-1-native`. The selected signed candidate reports
+`development:c2b33f9eca0cb15a83addf93fc0072f646b12a5cd1c579fc5fbb0664ea0192bc`,
+which matches current `docs/build_contract.py` derivation. Its build number is
+1447; its recorded build commit is `7cd93676` with dirty sources. The matching
+selected-input identity, rather than that commit alone, establishes source
+applicability for the unchanged product.
+
+Native observations: allow queries returned 0/errno 0; the deny-B query returned
+1/errno 0 beside open -1/EPERM. All successful reads published descriptor
+identity, bounded bytes and close; the empty read returned zero bytes. The four
+distinction pairs matched, including both accepted indistinguishable returned
+contents. Accounting recorded 11 submissions, 10 executions, one refusal and
+16 selected-app commands. Cleanup confirmed all exits and removed the owned
+directory. These development captures are disposable, not release evidence.
+
+Increment 1 final checks: `witness_contract/test_input_controls` and all ten
+`source_drift` cases passed in `tests/out/runs/input-expansion-1-accept`;
+`tests/lib/python.sh docs/generate_limits.py --check` passed. The native run
+used the same checker, helpers and acquisition code; subsequent changes only
+updated case descriptions and documentation.

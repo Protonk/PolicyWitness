@@ -84,13 +84,29 @@ literal `$EFFECT`, quotes, a backslash and Unicode. Failed preparation prevents
 sampling, derivatives and submission.
 
 The case owns a resolved private directory under `/private/tmp`, retained byte
-recipes and descriptor samples. Seven ordinary submissions cover initial A,
+recipes and descriptor samples. Eleven ordinary submissions cover initial A,
 in-place updated A using the exact saved request, long B, a harness-injected
 unknown-field refusal, exact repair, denied B and allowed A under the identical
-policy. Six execute; one is refused. Four publications and one version command
-make twelve CLI invocations. A and B have equal long content/device/mode/owner/
+policy, then replacement A, a suffix-only update, an empty file and an exactly
+bounded file. Ten execute; one is refused. Four publications and one version
+command make sixteen CLI invocations. A and B have equal long content/device/mode/owner/
 group and different inodes; A's inode survives both updates. Before/after
-samples establish sampled stability, not continuous stability.
+samples establish sampled stability, not continuous stability. The replacement
+is created separately with equal bytes and metadata, then installed under A's
+name while the original is parked. Samples require two distinct generations,
+unchanged parked bytes and an unchanged B. Every replacement passage submits
+exactly the saved deny-B/allowed-A request bytes.
+
+`distinctions.json` compares a fixed set of request, query, attempt, descriptor,
+content, sample and ownership facts against independently authored equality
+expectations. Replacement changes the descriptor inode; a suffix-only change
+and removal of the suffix at the bound change external samples but leave the
+returned bytes indistinguishable. Empty reads require successful open/stat/close,
+zero returned bytes and the empty digest. Controls accept the indistinguishable
+read-record substitutions beside each passage's own samples, and reject old
+whole captures, identity-generation changes, missing parked samples, stale full
+samples and changed prefix/count evidence. The samples do not show that the
+worker read beyond the bound or that the path stayed unchanged between samples.
 
 The separate checker pins observed and published status, identity admission,
 request transformations, policy digest and operand association, completed worker

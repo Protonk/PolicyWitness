@@ -68,7 +68,7 @@ def envelope(name, document, observed):
         disposition['steps'] = disposition['steps'][:1]
         disposition['steps'][0].update(step_id='read-target', index=0)
         if name != 'denied_b':
-            payload = checker.SHORT_0 if name == 'initial_a' else checker.SHORT_1 if name == 'updated_a' else checker.LONG
+            payload = checker.payload_for(name)
             fields = {key: observed['stat'][field] for key, field in checker.IDENTITY_FIELDS.items()}
             attempt.update(rc=0, errno=None, outcome='ok', fresh_read=fresh_record(payload, fields, bound=checker.BOUND))
             step['comparison'].update(observation='succeeded', observation_basis='completed_worker_status')
@@ -95,12 +95,18 @@ def build():
     state = dict(paths=dict(PATHS), publication=public, passages={}, extended_a=sample(PATHS['A'], checker.LONG, 41))
     documents = checker.expected_inputs(state)
     for name in checker.PASSAGES:
-        letter = 'A' if name in ('initial_a', 'updated_a', 'allowed_a') else 'B'
-        payload = checker.SHORT_0 if name == 'initial_a' else checker.SHORT_1 if name == 'updated_a' else checker.LONG
-        observed = sample(PATHS[letter], payload, 41 if letter == 'A' else 42)
+        letter = 'A' if name in ('initial_a', 'updated_a', 'allowed_a') + checker.REPLACEMENTS else 'B'
+        payload = checker.payload_for(name)
+        observed = sample(PATHS[letter], payload, 43 if name in checker.REPLACEMENTS else 41 if letter == 'A' else 42)
         raw = checker.encode(documents[name])
         state['passages'][name] = dict(before=observed, after=copy.deepcopy(observed), capture=dict(input=raw,
             request_path='/constructed/input.json', run=run_record(name, documents[name], observed, raw)))
+        if name in checker.REPLACEMENTS:
+            for key, target, inode in (('parked', PATHS['A'] + '.previous', 41), ('bystander', PATHS['B'], 42)):
+                state['passages'][name][key] = {t: sample(target, checker.LONG, inode) for t in ('before', 'after')}
+    state['replacement'] = dict(original=sample(PATHS['A'], checker.LONG, 41),
+        prepared=sample(PATHS['A'] + '.replacement', checker.LONG, 43),
+        renames=[[PATHS['A'], PATHS['A'] + '.previous'], [PATHS['A'] + '.replacement', PATHS['A']]])
     return state
 
 
@@ -155,7 +161,7 @@ def controls():
         mutate_capture(s, 'denied_b', lambda e: set_query(e, False))
         mutate_capture(s, 'allowed_a', lambda e: set_query(e, True))
     yield 'exchanged_query_answers', exchanged, failed('denied_b.query', 'allowed_a.query') | {
-        ('denied_b.order', 'not_evaluated'), ('allowed_a.order', 'not_evaluated')}
+        ('denied_b.order', 'not_evaluated'), ('allowed_a.order', 'not_evaluated'), ('distinction.allowed_a--replaced_a', 'failed')}
     yield 'observed_exit_not_published', lambda s: s['passages']['initial_a']['capture']['run'].update(exit=2), failed('initial_a.status')
     yield 'unreaped_worker', lambda s: mutate_capture(s, 'b', lambda e: e['data']['runner_result']['runner_subprocess'].update(reaped=False)), failed('b.worker')
     yield 'incomplete_phase', lambda s: mutate_capture(s, 'b', lambda e: e['data']['runner_result']['phases'][0].update(completion_observed=False)), failed('b.collections')
@@ -187,7 +193,7 @@ def controls():
     yield 'run_of_other_passage', lambda s: s['passages']['allowed_a']['capture'].update(
         run=copy.deepcopy(s['passages']['b']['capture']['run'])), failed('allowed_a.association') | unread('allowed_a')
     yield 'denied_read_reported_successful', lambda s: other_outcome(s, 'denied_b', 'b'), failed('denied_b.attempt')
-    yield 'allowed_read_reported_refused', lambda s: other_outcome(s, 'allowed_a', 'denied_b'), failed('allowed_a.attempt') | unread('allowed_a')
+    yield 'allowed_read_reported_refused', lambda s: other_outcome(s, 'allowed_a', 'denied_b'), failed('allowed_a.attempt', 'distinction.allowed_a--replaced_a') | unread('allowed_a')
     def unordered(s):
         def change(e):
             reply = e['data']['runner_result']
@@ -201,13 +207,66 @@ def controls():
     yield 'order_uncredited_beside_wrong_answer', wrong_answer_and_order, failed('b.collections', 'b.query') | {('b.order', 'not_evaluated')}
     # Fixture relationships the experiment depends on, with captures that agree with the earlier inodes.
     yield 'a_replaced_instead_of_updated', lambda s: resample(s, ['updated_a'], 43), failed('fixtures', 'updated_a.identity')
-    yield 'b_shares_a_inode', lambda s: resample(s, ['b', 'refusal', 'repair', 'denied_b'], 41), failed('fixtures', 'b.identity', 'repair.identity')
+    yield 'b_shares_a_inode', lambda s: resample(s, ['b', 'refusal', 'repair', 'denied_b'], 41), failed('fixtures', 'b.identity', 'repair.identity',
+        *(name + '.bystander' for name in checker.REPLACEMENTS))
     def other_acquisition(s):
         s['publication']['targets']['b'] = PATHS['A']
     yield 'publication_recorded_for_other_target', other_acquisition, failed('publication.targets', 'publication.b.binding', 'publication.b.invocation')
     yield 'publication_second_newline', lambda s: s['publication']['emissions']['literal'].update(
         stdout=s['publication']['emissions']['literal']['stdout'] + '\n'), failed('publication.literal.framing')
     yield 'publication_other_command', lambda s: s['publication']['emissions']['literal']['argv'].__setitem__(1, 'example'), failed('publication.literal.invocation')
+
+
+def boundary_controls():
+    failed = lambda *names: {(name, 'failed') for name in names}
+    pair = lambda a, b: 'distinction.' + a + '--' + b
+    first = pair('allowed_a', 'replaced_a')
+    second = pair('replaced_a', 'suffix_a')
+    third = pair('suffix_a', 'bound_a')
+    fourth = pair('bound_a', 'empty_a')
+    def read_from(s, dst, src):
+        read = attempt(json.loads(s['passages'][src]['capture']['run']['stdout']))['fresh_read']
+        mutate_capture(s, dst, lambda e: attempt(e).update(fresh_read=copy.deepcopy(read)))
+    yield 'suffix_read_in_replaced', lambda s: read_from(s, 'replaced_a', 'suffix_a'), set()
+    yield 'bound_read_in_suffix', lambda s: read_from(s, 'suffix_a', 'bound_a'), set()
+    yield 'old_whole_allowed_capture', lambda s: s['passages']['replaced_a'].update(
+        capture=copy.deepcopy(s['passages']['allowed_a']['capture'])), failed('replaced_a.identity', first, second)
+    yield 'old_identity_current_content', lambda s: mutate_capture(s, 'replaced_a',
+        lambda e: attempt(e)['fresh_read']['identity'].update(inode=41)), failed('replaced_a.identity', first, second)
+    for inode in (41, 42):
+        def shared(s, inode=inode):
+            s['replacement']['prepared']['stat']['st_ino'] = inode
+            resample(s, checker.REPLACEMENTS, inode)
+            for name in checker.REPLACEMENTS:
+                mutate_capture(s, name, lambda e: attempt(e)['fresh_read']['identity'].update(inode=inode))
+        yield 'replacement_shared_' + str(inode), shared, failed('replacement', *([first] if inode == 41 else []))
+    yield 'replacement_changed_in_generation', lambda s: resample(s, ['suffix_a'], 44), failed('suffix_a.generation', 'suffix_a.identity', second, third)
+    for field, value in (('before', None), ('after', sample(PATHS['A'] + '.previous', b'x', 41))):
+        yield 'parked_' + field, lambda s, field=field, value=value: s['passages']['replaced_a']['parked'].update({field: value}), failed('replaced_a.parked')
+    yield 'empty_reported_unavailable', lambda s: other_outcome(s, 'empty_a', 'denied_b'), failed('empty_a.attempt', fourth) | {
+        ('empty_a.identity', 'not_evaluated'), ('empty_a.content', 'not_evaluated')}
+    # Counts and bytes remain mutually coherent so the consumer accepts them.
+    for name, payload, distinctions in (('empty_a', b'x', []), ('updated_a', checker.SHORT_1[:-1], []),
+                                        ('bound_a', checker.PREFIX[:-1], [third])):
+        for mode in ('count', 'digest'):
+            data = payload if mode == 'count' else (b'x' * len(checker.payload_for(name)[:checker.BOUND]) or b'x')
+            def change(s, name=name, data=data):
+                mutate_capture(s, name, lambda e: attempt(e)['fresh_read'].update(read_rc=len(data), content_hex=data.hex()))
+            yield name + '_wrong_' + mode, change, failed(name + '.content', *distinctions)
+    def stale(s):
+        for t in ('before', 'after'):
+            s['passages']['suffix_a'][t]['sha256'] = hashlib.sha256(checker.LONG).hexdigest()
+    yield 'stale_full_sample', stale, failed('suffix_a.fixture', 'suffix_a.after_fixture', second) | {
+        ('suffix_a.stability', 'not_evaluated'), ('suffix_a.identity', 'not_evaluated'), ('suffix_a.content', 'not_evaluated')}
+    yield 'inside_prefix_change', lambda s: mutate_capture(s, 'suffix_a', lambda e: attempt(e)['fresh_read'].update(
+        content_hex=(b'x' + checker.PREFIX[1:]).hex())), failed('suffix_a.content', second, third)
+    def combined(s):
+        mutate_capture(s, 'replaced_a', lambda e: set_query(e, True))
+        mutate_capture(s, 'replaced_a', lambda e: attempt(e)['fresh_read']['identity'].update(inode=41))
+        mutate_capture(s, 'replaced_a', lambda e: e['data']['runner_result']['runner_subprocess'].update(reaped=False))
+        s['passages']['replaced_a']['parked']['before'] = None
+    yield 'replacement_combined', combined, failed('replaced_a.query', 'replaced_a.identity', 'replaced_a.worker', 'replaced_a.parked', first, second) | {
+        ('replaced_a.order', 'not_evaluated')}
 
 
 def unadmitted_controls():
@@ -223,6 +282,8 @@ def unadmitted_controls():
 def kind(ident):
     """A row's obligation without its passage or emission name."""
     parts = ident.split('.')
+    if parts[0] == 'distinction':
+        return 'distinction'
     if parts[0] in checker.PASSAGES:
         return parts[1]
     return ident if len(parts) < 3 else parts[0] + '.' + parts[2]
@@ -333,7 +394,7 @@ def main(directory):
     directory = Path(directory)
     records = []
     rejected = set()
-    for coherent, group in ((True, controls()), (False, unadmitted_controls())):
+    for coherent, group in ((True, controls()), (True, boundary_controls()), (False, unadmitted_controls())):
         for name, change, expected in group:
             state = build()
             change(state)

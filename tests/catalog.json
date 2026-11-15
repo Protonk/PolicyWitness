@@ -1636,7 +1636,7 @@
         },
         {
           "id": "test_input",
-          "description": "Build-owned read publication with exact target binding, seven controlled passages and independent current-file observations",
+          "description": "Build-owned read publication with exact target binding, eleven controlled passages, replacement generations, content boundaries and independent distinction table",
           "command": [
             "bash",
             "tests/suites/witness_contract/test_input.sh"

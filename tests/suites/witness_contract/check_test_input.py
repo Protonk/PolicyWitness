@@ -19,8 +19,10 @@ from file_observation import fresh_content, fresh_identity, fresh_syscalls, targ
 BOUND = 64  # Independently authored from the documented read_fresh bound.
 SHORT_0 = b'a' * (BOUND - 1)
 SHORT_1 = b'b' * (BOUND - 1)
-LONG = SHORT_1 + b'cd'
-PASSAGES = ('initial_a', 'updated_a', 'b', 'refusal', 'repair', 'denied_b', 'allowed_a')
+PREFIX = SHORT_1 + b'c'
+LONG = PREFIX + b'd'
+REPLACEMENTS = ('replaced_a', 'suffix_a', 'empty_a', 'bound_a')
+PASSAGES = ('initial_a', 'updated_a', 'b', 'refusal', 'repair', 'denied_b', 'allowed_a') + REPLACEMENTS
 UNKNOWN = 'test_input_unknown_field'
 ALLOW = '(version 1)\n(allow default)'
 PACKAGED = re.compile(r'(?:release:v[0-9]+\.[0-9]+\.[0-9]+|development:[0-9a-f]{64})')
@@ -135,10 +137,16 @@ def expected_inputs(state):
     denied['policy']['sbpl_source'] = policy_for(state['paths']['B'])
     allowed = copy.deepcopy(a)
     allowed['policy'] = copy.deepcopy(denied['policy'])
-    return dict(initial_a=a, updated_a=a, b=b, refusal=refusal, repair=b, denied_b=denied, allowed_a=allowed)
+    return dict(initial_a=a, updated_a=a, b=b, refusal=refusal, repair=b, denied_b=denied, allowed_a=allowed,
+                **{name: allowed for name in REPLACEMENTS})
+
+
+def payload_for(name):
+    return dict(initial_a=SHORT_0, updated_a=SHORT_1, suffix_a=PREFIX + b'e', empty_a=b'', bound_a=PREFIX).get(name, LONG)
 
 
 def evaluate(state, *, authored_fixture=False):
+    from test_input_views import replacement_rows, distinction_rows
     r = Results()
     r.rows.extend(publication(state['publication'])['rows'])
     r.check('publication.targets', get(state, 'publication', 'targets', 'a1') == get(state, 'paths', 'A') and
@@ -164,15 +172,19 @@ def evaluate(state, *, authored_fixture=False):
             all(get(extended, 'stat', f) == get(b_sample, 'stat', f) for f in equal_fields) and
             get(extended, 'stat', 'st_ino') != get(b_sample, 'stat', 'st_ino'),
             'exact payload transitions, retained A identity, matched A/B metadata and distinct inodes')
+    replacement_rows(r, state)
+    admitted = {}
     for name in PASSAGES:
         p = passages.get(name) or {}
         capture = p.get('capture') or {}
         document = parsed(capture.get('input'))
         raw_expected = get(state, 'publication', 'emissions', 'a1' if name in ('initial_a', 'updated_a') else 'b', 'stdout')
         same_bytes = name not in ('initial_a', 'updated_a', 'b') or capture.get('input') == raw_expected
+        if name in REPLACEMENTS:
+            same_bytes = capture.get('input') == get(passages, 'allowed_a', 'capture', 'input')
         r.check(name + '.transformation', document == expected[name] and same_bytes, 'declared derivative or exact emitted bytes')
-        target = paths['A' if name in ('initial_a', 'updated_a', 'allowed_a') else 'B']
-        payload = SHORT_0 if name == 'initial_a' else SHORT_1 if name == 'updated_a' else LONG
+        target = paths['A' if name in ('initial_a', 'updated_a', 'allowed_a') + REPLACEMENTS else 'B']
+        payload = payload_for(name)
         before, after = p.get('before'), p.get('after')
         readable = sample_ok(before, target, payload)
         readable_after = sample_ok(after, target, payload)
@@ -192,6 +204,7 @@ def evaluate(state, *, authored_fixture=False):
         errors = consumer.validate(envelope, identity, allow_fixture_json=authored_fixture) if isinstance(envelope, dict) else ['no envelope']
         r.check(name + '.consumer', not errors, errors)
         reply = consumer.admitted_reply(envelope, identity, allow_fixture_json=authored_fixture) if identified else None
+        admitted[name] = reply
         if name == 'refusal':
             failure = dict(code='unknown_field', path=['policy', UNKNOWN])
             r.check(name + '.refusal', get(envelope, 'result', 'normalized_outcome') == 'bad_request' and
@@ -253,11 +266,14 @@ def evaluate(state, *, authored_fixture=False):
                     available=stable and exact(get(attempt, 'fresh_read', 'stat_rc'), 0))
             r.check(name + '.content', not fresh_content(attempt, before or {}, target), 'current bounded count and bytes versus independent sample',
                     available=stable and type(get(attempt, 'fresh_read', 'read_rc')) is int and get(attempt, 'fresh_read', 'read_rc') >= 0)
-    return r.report()
+    distinctions = distinction_rows(r, state, admitted)
+    return dict(r.report(), distinctions=distinctions)
 
 
 def write_report(directory, report):
     (Path(directory) / 'report.json').write_text(encode(report))
+    if 'distinctions' in report:
+        (Path(directory) / 'distinctions.json').write_text(encode(report['distinctions']))
     for row in report['rows']:
         if row['status'] != 'passed':
             print(row['id'], row['status'], row['detail'])

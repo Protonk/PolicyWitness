@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Acquire the selected publisher, prepare owned fixtures, retain seven submissions."""
+"""Acquire the selected publisher and retain independently sampled owned passages."""
 import copy
 import json
 import os
@@ -149,11 +149,12 @@ def run_case(directory, pw, app, snapshot):
             document = checker.parsed(raw)
             expected = checker.expected_inputs(dict(publication=publication, paths=paths))[name]
             exact_emission = (publication['emissions']['a1']['stdout'] if name in ('initial_a', 'updated_a') else
-                              publication['emissions']['b']['stdout'] if name == 'b' else None)
+                              publication['emissions']['b']['stdout'] if name == 'b' else
+                              state['passages']['allowed_a']['capture']['input'] if name in checker.REPLACEMENTS else None)
             transformed = document == expected and (exact_emission is None or raw == exact_emission)
             observed_before = before if before is not None else observe_target(target, checker.BOUND)
             (dest / 'before.json').write_text(checker.encode(observed_before))
-            payload = checker.SHORT_0 if name == 'initial_a' else checker.SHORT_1 if name == 'updated_a' else checker.LONG
+            payload = checker.payload_for(name)
             fixture = checker.sample_ok(observed_before, target, payload)
             current_identity = (checker.get(observed_before, 'stat', 'st_dev'),
                                 checker.get(observed_before, 'stat', 'st_ino'))
@@ -164,6 +165,9 @@ def run_case(directory, pw, app, snapshot):
             identities.setdefault(target, current_identity)
             capture = dict(input=input_path.read_text(), request_path=str(input_path))
             state['passages'][name] = dict(before=observed_before, after=None, capture=capture)
+            companions = dict(parked=paths['A'] + '.previous', bystander=paths['B']) if name in checker.REPLACEMENTS else {}
+            for key, path in companions.items():
+                state['passages'][name][key] = dict(before=observe_target(path, checker.BOUND), after=None)
             save()
             entry = dict(passage=name, capture=str(dest.resolve()), worker_exit_witnessed=False,
                          witness='submission may be in progress')
@@ -175,6 +179,8 @@ def run_case(directory, pw, app, snapshot):
                 observed_after = observe_target(target, checker.BOUND)
                 (dest / 'after.json').write_text(checker.encode(observed_after))
                 state['passages'][name]['after'] = observed_after
+                for key, path in companions.items():
+                    state['passages'][name][key]['after'] = observe_target(path, checker.BOUND)
                 entry['worker_exit_witnessed'], entry['witness'] = cleanup_disposition(
                     capture, publication['identity'], refusal=name == 'refusal')
                 persist_owner()
@@ -216,6 +222,28 @@ def run_case(directory, pw, app, snapshot):
         allowed = json.loads(a_raw)
         allowed['policy'] = copy.deepcopy(denied['policy'])
         passage('allowed_a', checker.encode(allowed), paths['A'])
+        original = observe_target(paths['A'], checker.BOUND)
+        temporary, previous = Path(paths['A'] + '.replacement'), Path(paths['A'] + '.previous')
+        temporary.write_bytes(checker.LONG)
+        temporary.chmod(0o600)
+        prepared = observe_target(str(temporary), checker.BOUND)
+        transition = state['replacement'] = dict(original=original, prepared=prepared, renames=[])
+        save()
+        assert checker.sample_ok(original, paths['A'], checker.LONG)
+        assert (original['stat']['st_dev'], original['stat']['st_ino']) == identities[paths['A']]
+        assert checker.sample_ok(prepared, str(temporary), checker.LONG)
+        assert all(original['stat'][k] == prepared['stat'][k] for k in equal_fields)
+        assert prepared['stat']['st_ino'] not in (original['stat']['st_ino'], b_before['stat']['st_ino'])
+        for src, dst in ((a, previous), (temporary, a)):
+            src.rename(dst)
+            transition['renames'].append([str(src), str(dst)])
+            save()
+        identities[paths['A']] = (prepared['stat']['st_dev'], prepared['stat']['st_ino'])
+        saved = state['passages']['allowed_a']['capture']['input']
+        passage('replaced_a', saved, paths['A'])
+        for name, payload in (('suffix_a', checker.PREFIX + b'e'), ('empty_a', b''), ('bound_a', checker.PREFIX)):
+            write_in_place(a, payload)
+            passage(name, saved, paths['A'])
         report = checker.evaluate(state)
         checker.write_report(directory, report)
         assert report['ok'], 'test-input observations did not meet independently pinned expectations'
@@ -231,8 +259,8 @@ def run_case(directory, pw, app, snapshot):
         (directory / 'accounting.json').write_text(checker.encode(accounting))
         counted = {key: accounting[key] for key in ('submissions', 'execution_passages', 'refusals',
                                                     'publication_commands', 'version_commands')}
-        assert counted == dict(submissions=7, execution_passages=6, refusals=1, publication_commands=4,
-                               version_commands=1) and len(commands) == 12, accounting
+        assert counted == dict(submissions=11, execution_passages=10, refusals=1, publication_commands=4,
+                               version_commands=1) and len(commands) == 16, accounting
     finally:
         cleanup_safe = all(entry['worker_exit_witnessed'] for entry in ownership['attempts'])
         try:
