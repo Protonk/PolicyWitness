@@ -123,6 +123,47 @@ class InterfaceInventoryTests(receipts.TestCase):
             with self.subTest(refusal=expected):
                 self.refused(self.with_inventory(mutate), expected)
 
+    def test_derived_result_facts_are_complete_and_witnessed(self):
+        def missing_function(data):
+            data['result']['derived']['output_functions'].pop()
+
+        def duplicate_function(data):
+            functions = data['result']['derived']['output_functions']
+            functions.append(copy.deepcopy(functions[0]))
+
+        def false_function(data):
+            return next(fact for fact in data['result']['derived']['output_functions']
+                        if not fact['is_a_function'])
+
+        def missing_counterexample(data):
+            false_function(data)['counterexample'] = None
+
+        def uninformative_counterexample(data):
+            fact = false_function(data)
+            fact['counterexample'][1] = copy.deepcopy(fact['counterexample'][0])
+
+        def false_counterexample(data):
+            fact = next(fact for fact in data['result']['derived']['output_functions']
+                        if fact['is_a_function'])
+            fact['counterexample'] = copy.deepcopy(false_function(data)['counterexample'])
+
+        def wrong_shared_output(data):
+            data['result']['derived']['rows_sharing_outputs'][0]['shared_outputs'] = ['finished', True, 0]
+
+        def missing_shared_output(data):
+            del data['result']['derived']['rows_sharing_outputs'][0]['shared_outputs']
+
+        for mutate, expected in (
+                (missing_function, 'output functions must cover every ordered pair'),
+                (duplicate_function, 'output functions must cover every ordered pair'),
+                (missing_counterexample, 'needs a reachable counterexample'),
+                (uninformative_counterexample, 'needs a reachable counterexample'),
+                (false_counterexample, 'must have no counterexample'),
+                (wrong_shared_output, 'are not reachable from both rows'),
+                (missing_shared_output, 'are not reachable from both rows')):
+            with self.subTest(mutation=mutate.__name__):
+                self.refused(self.with_inventory(mutate), expected)
+
     def test_residue_accepts_reductions_and_refuses_new_members(self):
         # A member that moves between classes leaves every total unchanged and is still an addition.
         def moved(data):
@@ -183,9 +224,23 @@ class InterfaceInventoryTests(receipts.TestCase):
         self.assertEqual(reached('help', 'run', 'junk'), ['command.help', 'topic.run', 'tail.help'])
         self.assertEqual(reached('help', '--run'), ['command.help', 'tail.help'])
         self.assertEqual(reached('help', {'hex': 'fffe'}), ['command.help', 'tail.help'])
+        self.assertEqual(reached({'hex': '68656c70'}, {'hex': '72756e'}), ['command.help', 'topic.run'])
         self.assertEqual(reached('run', '--runner-mode', 'byoxpc', '/r.json'),
                          ['command.run', 'run.option.runner_mode', 'runner_kind.byoxpc@run_option', 'run.request_path'])
         self.assertEqual(reached('run', '--runner-mode', 'machme'), ['command.run', 'run.option.runner_mode'])
+        for value in ('0', '-1', ' 1', '1_0', '18446744073709551616', {'hex': 'ff'}):
+            with self.subTest(timeout=value):
+                self.assertEqual(reached('run', '--timeout-ms', value, '--runner-mode', 'byoxpc', '/r.json'),
+                                 ['command.run', 'run.option.timeout_ms'])
+        self.assertEqual(reached('run', '--timeout-ms'), ['command.run', 'run.option.timeout_ms'])
+        self.assertEqual(reached('run', '--timeout-ms', '+1', '/r.json'),
+                         ['command.run', 'run.option.timeout_ms', 'run.request_path'])
+        self.assertEqual(reached('run', '--runner-mode', 'machme', '--timeout-ms', '5'),
+                         ['command.run', 'run.option.runner_mode'])
+        self.assertEqual(reached('run', '/first.json', '/second.json', '--runner-mode', 'byoxpc'),
+                         ['command.run', 'run.request_path'])
+        self.assertEqual(reached('run', {'hex': '2d2dff'}, '/r.json'),
+                         ['command.run', 'run.unknown_flag'])
         self.assertEqual(reached('run', '/r.json', '--bogus', '--timeout-ms', '5'),
                          ['command.run', 'run.request_path', 'run.unknown_flag'])
         self.assertEqual(reached('run', '--timeout-ms', '5', '--', '/r.json'),
@@ -206,11 +261,15 @@ class InterfaceInventoryTests(receipts.TestCase):
         self.assertEqual(rows('bad_request', False, 1), ['result.local_request_refusal', 'result.admitted_other'])
         self.assertEqual(rows('runner_failed', False, 1), ['result.admitted_other'])
         self.assertEqual(rows('finished', False, 1), [])
+        self.assertEqual(rows('tool_error', 0, 2), [])
+        self.assertEqual(rows('finished', True, False), [])
+        self.assertEqual(rows(False, False, 1), [])
         self.assertEqual(generator.result_rows({'stdout_json': {'/kind': 'version', '/result/ok': True}}, self.inventory), [])
         request = json.dumps({'contract': '{contract}', 'runner': {'mode': 'standard'}})
-        self.assertEqual(generator.content_entries({'args': ['run', '{scratch}/r.json'], 'status': 2,
-                                                    'files': {'r.json': request}}, self.inventory),
-                         ['runner_kind.standard@request_selector'])
+        for arguments in (['run', '{scratch}/r.json'], ['run', '--timeout-ms', '0']):
+            # Staging bytes cannot establish that request admission reached a reader.
+            self.assertEqual(generator.content_entries({'args': arguments, 'status': 2,
+                                                        'files': {'r.json': request}}, self.inventory), [])
         self.assertEqual(generator.content_entries({'args': ['example'], 'status': 0}, self.inventory), ['example.document'])
         self.assertEqual(generator.content_entries({'args': ['example', 'x'], 'status': 2}, self.inventory), [])
 
@@ -239,6 +298,18 @@ class InterfaceInventoryTests(receipts.TestCase):
         (root / generator.MUTATIONS).write_text(json.dumps(record))
         self.assertEqual(self.command(root, '--check').returncode, 0)
 
+    def test_unrun_checks_cannot_establish_that_only_cases_moved(self):
+        root = self.fixture()
+        record = json.loads((root / generator.MUTATIONS).read_text())
+        mutation = record['mutations'][0]
+        mutation['checks'] = {'card': 'not_run', 'contract': 'unchanged', 'cases': 'failed'}
+        (root / generator.MUTATIONS).write_text(json.dumps(record))
+        problems, report = generator.joins(root, self.inventory)
+        self.assertEqual(problems, [])
+        result = next(item for item in report['mutations'] if item['id'] == mutation['id'])
+        self.assertEqual(result['not_run'], ['card'])
+        self.assertFalse(result['only_cases_moved'])
+
     def test_contract_join_compares_structured_facts_and_reports_prose(self):
         tree = contract.contract_module('tree').load_tree(ROOT)
         join = contract.contract_module('interface_join')
@@ -254,6 +325,10 @@ class InterfaceInventoryTests(receipts.TestCase):
             if not item['compared']:
                 self.assertTrue(item['prose'], item['node'])
         self.assertEqual(next(item for item in report if item['node'] == 'request.options.precedence')['free'], ['free.effect'])
+        finished = next(item for item in report if item['node'] == 'envelope.data.select.finished')
+        self.assertIn('Client capture and host reply admission have succeeded.', finished['free_when'])
+        self.assertIn('result.admitted_finished: input class "admitted" (no structured contract binding)',
+                      finished['uncompared'])
         rows = lambda data: {row['id']: row for row in data['result']['rows']}
 
         def swap(data):
@@ -285,6 +360,23 @@ class InterfaceInventoryTests(receipts.TestCase):
                 mutate(data)
                 found, _ = join.join(tree, data)
                 self.assertTrue(any(expected in problem for problem in found), found)
+
+    def test_contract_join_requires_positive_host_presence_for_the_fallback(self):
+        tree = contract.contract_module('tree').load_tree(ROOT)
+        join = contract.contract_module('interface_join')
+        other = next(node for node in tree.nodes if node.id == 'envelope.data.select.other')
+        for condition, necessary in (
+                ('present(envelope.data.runner_result)', True),
+                ('True and present(envelope.data.runner_result)', True),
+                ('not present(envelope.data.runner_result)', False),
+                ('True or present(envelope.data.runner_result)', False)):
+            with self.subTest(condition=condition):
+                other.context['when'] = condition
+                problems, report = join.join(tree, self.inventory)
+                self.assertEqual(problems, [])
+                item = next(item for item in report if item['node'] == other.id)
+                self.assertEqual(any('test True under present(' in fact for fact in item['compared']), necessary)
+                self.assertIn(f'{other.id}: applicability {condition}', item['uncompared'])
 
     def literal_fixture(self):
         directory = tempfile.TemporaryDirectory(prefix='pw-interface-literals-')
@@ -322,8 +414,8 @@ class InterfaceInventoryTests(receipts.TestCase):
                '    if matches!(value, "legacy") {\n        return Ok(RunnerKind::Byoxpc);\n    }\n'
                '    Reader::RequestSelector.resolve(value).ok_or_else(|| {\n',
                'fn parse_runner_mode: matched against a literal pattern: "legacy"')
-        edited('controller/interface/cards.rs', '            out.line(depth, option.def().spelling);\n',
-               '            out.line(depth, if depth > 9 { "--runner-mode" } else { option.def().spelling });\n',
+        edited('controller/interface/cards.rs', '            out.line(1, option.def().spelling);\n',
+               '            out.line(1, "--runner-mode");\n',
                'the card renderer spells a card element itself: "--runner-mode"')
         edited('controller/src/runner_commands.rs', '    Reader::InstallOption\n',
                '    let _hint = "use byoxpc, not machme";\n    Reader::InstallOption\n',

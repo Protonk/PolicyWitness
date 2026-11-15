@@ -1,2 +1,0 @@
-4:==> [runner_byoxpc/registry_recovery] pass: registry state survives partial installation and cleanup; live owned services are absent after recovery
-8:==> [runner_byoxpc/runner_install] pass: disposable BYOXPC runner signed, installed, and verified

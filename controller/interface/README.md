@@ -11,7 +11,7 @@ describes the command line they produce.
 
 | File | Owner | Content |
 | --- | --- | --- |
-| [cards.rs](cards.rs) | authored | Each help card's specification, as typed references to definitions, and the renderer. |
+| [cards.rs](cards.rs) | authored | Each card's explicit layout, selected definitions and typed references. |
 | [inventory.rs](inventory.rs) | authored | The inventory writer and the facts it derives by evaluating result selection. |
 | [inventory.json](inventory.json) | generated | The inventory: entries, the result relation, the example projection and the four cards. |
 | [joins.json](joins.json) | generated | Which entries each corpus case reaches and what each recorded mutation moved. |
@@ -27,15 +27,19 @@ time, with [example_document.rs](../src/example_document.rs),
 inventory into Cargo's output directory. The binary embeds the cards from
 there, and `policy-witness help` prints those bytes.
 
-A card specification holds no text that is printed. It names a command, a
-topic, an option, an option's admitted words, the example document's phases or
-fields and rows of the result relation, and the renderer prints what each
-definition spells: the example card's lines are fields of the constant
-`example` publishes, and each result card line is the serialized fields of the
-result that `run`'s constructor builds from one selection. The renderer
-refuses a reference placed under a definition it does not belong to, a topic
-address that is empty, shared or starts with the flag prefix, and a base card
-that is not exactly the topic addresses.
+The renderer has one branch per card. `RUN_OPTION` selects the run card's
+option and its reader supplies the admitted words. `RESULT_FIELDS` selects
+the result columns in order. The example card reads named phase and attempt
+fields from the constant `example` publishes. Each result line uses the
+serialized fields of the result that `run`'s constructor builds from one
+selection; serialized column names are resolved once for the card.
+
+Rendering records typed references alongside the text. The inventory writer
+converts those references to external identifiers; rendering does not read
+the inventory or construct identifiers. Command headings must agree with the
+topic's command, and the selected run option must take runner-kind words.
+The renderer also refuses a topic address that is empty, shared or starts
+with the flag prefix, and a base card that is not exactly the topic addresses.
 
 The build script then compares the inventory with `inventory.json` and stops
 Cargo when they differ. Every `cargo build`, `cargo check` and `cargo test`
@@ -76,6 +80,14 @@ output is a function of which, which rows can produce the same outputs, and
 which inputs change no output. `example` holds the projected phases and
 attempts. `cards` holds each card's bytes and references.
 
+The offline generator recomputes every ordered output dependency and every
+pair of rows sharing outputs, including their counterexamples and shared
+values. Inputs absent from row predicates, such as the integrity-issue
+count, are evaluated only by the build script: it holds the class and host
+label fixed while varying the count. The build's inventory comparison holds
+those derived facts; the offline row check does not independently establish
+them.
+
 ## Joins
 
 **Contract.** A node of the [contract tree](../../docs/contract/README.md)
@@ -88,15 +100,22 @@ Two operand roots are bound by name, `envelope.result.` for the result fields
 and `envelope.data.runner_result` for the admitted host reply.
 `docs/generate_contract_stamps.py --interface-report` prints, for each citing
 node, what was compared and which `free.*` facts and prose stand beside it.
-Resolving an identifier gives that prose no credit.
+Resolving an identifier gives that prose no credit. The report includes
+inherited `free.when` text and lists the row's admission class as uncompared:
+the contract has no structured operand bound to that class. A positive host
+presence conjunct can support the fallback test; negated or disjunctive
+mentions of presence cannot. The complete applicability expression remains
+uncompared.
 
 **Cases.** `joins.json` associates each case of the
 [case corpus](../integration/interface_cases.json) with the entries it
 reaches. The association is derived from the case's argument vector, a
-request file it submits, a successful `example` and, for a `run` envelope, the
-three required result fields. Where two rows select the same fields, or a
-word follows an option of an unenumerated tail, derivation is impossible and
-`mutations.json` holds a declared association with its reason. The join
+successful `example` and, for a `run` envelope, the three required result
+fields. Argument derivation stops at the first refusal or terminator.
+Where two rows select the same fields, or a word is read beyond the
+enumerated CLI, `mutations.json` holds a declared association with its
+reason. Request-file staging alone establishes no reader reach: request
+admission and selector ordering are outside the inventory. The join
 reports entries no case reaches, and separately entries whose reaching cases
 all supply test-owned files or environment. The second is a fact about the
 retained cases, not a claim that production inputs cannot reach the entry.
@@ -104,7 +123,8 @@ retained cases, not a claim that production inputs cannot reach the entry.
 **Mutations.** `mutations.json` retains each mutation that was applied to a
 governing source: the entry, the change, and for each of the card, the
 contract check and the cases one of `not_run`, `unchanged`, `changed` or
-`failed`. The join reports a mutation that moved the cases and nothing else,
+`failed`. The join reports a mutation that moved the cases while both other
+checks ran and stayed unchanged,
 and entries no mutation names.
 
 ## Residue

@@ -1957,7 +1957,8 @@ fn copy_tree(from: &Path, to: &Path) {
 /// The package's build script compares the inventory it renders with the
 /// committed copy. In a copy of the package, a changed definition and a
 /// changed committed inventory each stop Cargo before the binary compiles,
-/// naming the copy and the command that regenerates it.
+/// naming the copy and the command that regenerates it. Incompatible card
+/// references are rejected by rendering before that freshness comparison.
 #[test]
 fn stale_interface_inventory_stops_the_build_script() {
     if !integration_enabled() {
@@ -2032,6 +2033,31 @@ fn stale_interface_inventory_stops_the_build_script() {
         "{stderr}"
     );
     std::fs::write(&definitions, &original).unwrap();
+
+    for (label, relative, old, new, reason) in [
+        (
+            "option-without-kind-words",
+            "interface/cards.rs",
+            "pub const RUN_OPTION: RunOption = RunOption::RunnerMode;",
+            "pub const RUN_OPTION: RunOption = RunOption::TimeoutMs;",
+            "TimeoutMs does not take a runner-kind word",
+        ),
+        (
+            "topic-with-another-command",
+            "src/interface/commands.rs",
+            "Topic::Run => Address::Command(Command::Run)",
+            "Topic::Run => Address::Command(Command::Version)",
+            "Run heads a card whose topic is not that command",
+        ),
+    ] {
+        let path = package.join(relative);
+        let original = std::fs::read_to_string(&path).unwrap();
+        assert_eq!(original.matches(old).count(), 1, "{label}");
+        std::fs::write(&path, original.replace(old, new)).unwrap();
+        let (passed, stderr) = check(label);
+        assert!(!passed && stderr.contains(reason), "{label}: {stderr}");
+        std::fs::write(&path, original).unwrap();
+    }
 
     let committed = package.join("interface/inventory.json");
     let original = std::fs::read_to_string(&committed).unwrap();

@@ -1,9 +1,8 @@
 //! The help cards: what each card selects, and its rendering.
 //!
-//! A card specification holds typed references to governing definitions and
-//! to fields of the example document and the run result. It holds no
-//! spelling. The renderer prints what each reference's definition spells and
-//! lays children out two spaces deeper than their parent.
+//! Each card has an explicit layout and selects typed definitions. Rendering
+//! records those references alongside the text; inventory generation assigns
+//! their external identifiers. No card carries independent wording.
 
 use serde::Deserialize;
 
@@ -11,8 +10,7 @@ use crate::example_document::EXAMPLE_DOCUMENT;
 use crate::interface::commands::{Address, Command, Topic};
 use crate::interface::result::{Disposition, Label, Outcome, Refusal, Row, select};
 use crate::interface::run_args::{RunOption, Value};
-use crate::interface::runner_kind::{Rule, Word};
-use crate::inventory::{id, snake};
+use crate::interface::runner_kind::{Reader, Rule, Word};
 use crate::json_contract::JsonResult;
 use crate::run_result::run_result;
 
@@ -31,68 +29,27 @@ pub const RESULT_FIELDS: &[ResultField] = &[
     ResultField::ExitCode,
 ];
 
-/// One selected element of a card.
-#[derive(Clone, Copy, Debug)]
-pub enum Element {
-    /// Every registered topic address, one line each.
-    TopicAddresses,
-    /// The command a command topic describes.
+/// The option selected by the run card; its value reader supplies the words.
+pub const RUN_OPTION: RunOption = RunOption::RunnerMode;
+
+/// The definitions a rendered card uses. These remain typed until the
+/// inventory writer assigns identifiers.
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub enum Reference {
     Command(Command),
-    /// A topic's own address.
     Topic(Topic),
     Option(RunOption),
-    /// The words the option's reader admits.
-    AdmittedWords(RunOption),
-    /// Each phase of the example document with its attempts.
-    ExamplePhases,
-    /// The serialized names of the selected result fields, on one line.
-    ResultFieldNames,
-    /// One line per result the relation selects with a fixed label: the
-    /// selected fields of the result `run` constructs.
-    ResultRows,
-}
-
-pub struct Node {
-    pub element: Element,
-    pub children: Vec<Node>,
-}
-
-fn node(element: Element, children: Vec<Node>) -> Node {
-    Node { element, children }
-}
-
-fn leaf(element: Element) -> Node {
-    node(element, Vec::new())
-}
-
-/// The editorial selection and order of each card.
-pub fn specification(card: Option<Topic>) -> Vec<Node> {
-    match card {
-        None => vec![leaf(Element::TopicAddresses)],
-        Some(Topic::Run) => vec![node(
-            Element::Command(Command::Run),
-            vec![node(
-                Element::Option(RunOption::RunnerMode),
-                vec![leaf(Element::AdmittedWords(RunOption::RunnerMode))],
-            )],
-        )],
-        Some(Topic::Example) => vec![node(
-            Element::Command(Command::Example),
-            vec![leaf(Element::ExamplePhases)],
-        )],
-        Some(Topic::Result) => vec![node(
-            Element::Topic(Topic::Result),
-            vec![leaf(Element::ResultFieldNames), leaf(Element::ResultRows)],
-        )],
-    }
+    Word(Word, Reader),
+    ExampleDocument,
+    ResultFields,
+    ResultRow(Row),
 }
 
 pub struct Rendered {
-    /// The stored file's stem; never printed.
-    pub name: String,
+    pub topic: Option<Topic>,
     pub text: String,
     /// The inventory entries the card's elements reference.
-    pub references: Vec<String>,
+    pub references: Vec<Reference>,
 }
 
 #[derive(Deserialize)]
@@ -100,37 +57,26 @@ struct Document {
     phases: Vec<Phase>,
 }
 #[derive(Deserialize)]
-struct Phase {
-    phase_id: String,
-    actions: Vec<Action>,
+pub struct Phase {
+    pub phase_id: String,
+    pub actions: Vec<Action>,
 }
 #[derive(Deserialize)]
-struct Action {
-    attempt: Attempt,
+pub struct Action {
+    pub attempt: Attempt,
 }
 #[derive(Deserialize)]
-struct Attempt {
-    action: String,
-    target: String,
+pub struct Attempt {
+    pub action: String,
+    pub target: String,
 }
 
-/// The example document's phases as (phase_id, [(action, target)]).
-pub fn example_phases() -> Result<Vec<(String, Vec<(String, String)>)>, String> {
+/// The fields of the published example used by the card and inventory.
+pub fn example_phases() -> Result<Vec<Phase>, String> {
     let document: Document = serde_json::from_str(EXAMPLE_DOCUMENT).map_err(|error| {
         format!("the example card's fields are not in EXAMPLE_DOCUMENT: {error}")
     })?;
-    Ok(document
-        .phases
-        .into_iter()
-        .map(|phase| {
-            let attempts = phase
-                .actions
-                .into_iter()
-                .map(|action| (action.attempt.action, action.attempt.target))
-                .collect();
-            (phase.phase_id, attempts)
-        })
-        .collect())
+    Ok(document.phases)
 }
 
 /// The name serialization gives a result field: the one key whose value
@@ -209,100 +155,73 @@ fn scalar(value: &serde_json::Value) -> Result<String, String> {
 
 struct Output {
     lines: Vec<String>,
-    references: Vec<String>,
+    references: Vec<Reference>,
 }
 
 impl Output {
     fn line(&mut self, depth: usize, text: &str) {
         self.lines.push(format!("{}{text}", "  ".repeat(depth)));
     }
+
+    fn command(&mut self, topic: Topic, command: Command) -> Result<(), String> {
+        if topic.source() != Address::Command(command) {
+            return Err(format!(
+                "{command:?} heads a card whose topic is not that command"
+            ));
+        }
+        self.line(0, command.def().spelling);
+        self.references.push(Reference::Command(command));
+        Ok(())
+    }
 }
 
-/// Renders one node and its children. `parent` is the enclosing element: a
-/// child is rejected when its definition does not belong to that parent.
-fn render_node(
-    card: Option<Topic>,
-    parent: Option<Element>,
-    item: &Node,
-    depth: usize,
-    out: &mut Output,
-) -> Result<(), String> {
-    match item.element {
-        Element::TopicAddresses => {
+fn render(card: Option<Topic>) -> Result<Rendered, String> {
+    let mut out = Output {
+        lines: Vec::new(),
+        references: Vec::new(),
+    };
+    match card {
+        None => {
             for topic in Topic::ALL.iter().copied() {
-                out.line(depth, topic.address());
-                out.references.push(id(&topic));
+                out.line(0, topic.address());
+                out.references.push(Reference::Topic(topic));
             }
         }
-        Element::Command(command) => {
-            let describes = card.map(Topic::source);
-            if describes != Some(Address::Command(command)) {
-                return Err(format!(
-                    "{command:?} heads a card whose topic is not that command"
-                ));
-            }
-            out.line(depth, command.def().spelling);
-            out.references.push(id(&command));
-        }
-        Element::Topic(topic) => {
-            if card != Some(topic) {
-                return Err(format!("{topic:?} heads another topic's card"));
-            }
-            out.line(depth, topic.address());
-            out.references.push(id(&topic));
-        }
-        Element::Option(option) => {
-            if !matches!(parent, Some(Element::Command(Command::Run))) {
-                return Err(format!(
-                    "{option:?} is not under the command that admits it"
-                ));
-            }
-            out.line(depth, option.def().spelling);
-            out.references.push(id(&option));
-        }
-        Element::AdmittedWords(option) => {
+        Some(Topic::Run) => {
+            out.command(Topic::Run, Command::Run)?;
+            let option = RUN_OPTION;
+            out.line(1, option.def().spelling);
+            out.references.push(Reference::Option(option));
             let Value::Kind(reader) = option.def().value else {
                 return Err(format!("{option:?} does not take a runner-kind word"));
             };
-            if !matches!(parent, Some(Element::Option(under)) if under == option) {
-                return Err(format!("the words of {option:?} are not under that option"));
-            }
             for word in Word::ALL.iter().copied() {
                 if word.rule(reader) == Some(Rule::Admits) {
-                    out.line(depth, word.spelling());
-                    out.references
-                        .push(format!("{}@{}", id(&word), snake(&reader)));
+                    out.line(2, word.spelling());
+                    out.references.push(Reference::Word(word, reader));
                 }
             }
         }
-        Element::ExamplePhases => {
-            if !matches!(parent, Some(Element::Command(Command::Example))) {
-                return Err("the example phases are not under the example command".into());
-            }
-            for (phase_id, attempts) in example_phases()? {
-                out.line(depth, &phase_id);
-                for (action, target) in attempts {
-                    out.line(depth + 1, &format!("{action} {target}"));
+        Some(Topic::Example) => {
+            out.command(Topic::Example, Command::Example)?;
+            for phase in example_phases()? {
+                out.line(1, &phase.phase_id);
+                for action in phase.actions {
+                    let attempt = action.attempt;
+                    out.line(2, &format!("{} {}", attempt.action, attempt.target));
                 }
             }
-            out.references.push("example.document".into());
+            out.references.push(Reference::ExampleDocument);
         }
-        Element::ResultFieldNames => {
-            if !matches!(parent, Some(Element::Topic(Topic::Result))) {
-                return Err("the result fields are not under the result topic".into());
-            }
-            let names: Result<Vec<String>, String> = RESULT_FIELDS
+        Some(Topic::Result) => {
+            out.line(0, Topic::Result.address());
+            out.references.push(Reference::Topic(Topic::Result));
+            let names = RESULT_FIELDS
                 .iter()
                 .map(|field| result_key(*field))
-                .collect();
-            out.line(depth, &names?.join(" "));
-            out.references.push("result.fields".into());
-        }
-        Element::ResultRows => {
-            if !matches!(parent, Some(Element::Topic(Topic::Result))) {
-                return Err("the result rows are not under the result topic".into());
-            }
-            let mut rows: Vec<Row> = Vec::new();
+                .collect::<Result<Vec<_>, _>>()?;
+            out.line(1, &names.join(" "));
+            out.references.push(Reference::ResultFields);
             for (row, disposition) in fixed_dispositions() {
                 let selection = select(&disposition);
                 if selection.row != row {
@@ -311,30 +230,16 @@ fn render_node(
                 let result = serde_json::to_value(run_result(&selection, None))
                     .map_err(|error| error.to_string())?;
                 let mut cells = Vec::new();
-                for field in RESULT_FIELDS {
-                    cells.push(scalar(&result[result_key(*field)?.as_str()])?);
+                for name in &names {
+                    cells.push(scalar(&result[name])?);
                 }
-                out.line(depth, &cells.join(" "));
-                if !rows.contains(&row) {
-                    rows.push(row);
+                out.line(1, &cells.join(" "));
+                let reference = Reference::ResultRow(row);
+                if !out.references.contains(&reference) {
+                    out.references.push(reference);
                 }
             }
-            out.references.extend(rows.iter().map(id));
         }
-    }
-    for child in &item.children {
-        render_node(card, Some(item.element), child, depth + 1, out)?;
-    }
-    Ok(())
-}
-
-fn render(card: Option<Topic>) -> Result<Rendered, String> {
-    let mut out = Output {
-        lines: Vec::new(),
-        references: Vec::new(),
-    };
-    for item in specification(card) {
-        render_node(card, None, &item, 0, &mut out)?;
     }
     if out.lines.is_empty() || out.lines.iter().any(|line| line.trim().is_empty()) {
         return Err(format!("card {card:?} has an empty line or no line"));
@@ -345,7 +250,7 @@ fn render(card: Option<Topic>) -> Result<Rendered, String> {
     let mut text = out.lines.join("\n");
     text.push('\n');
     Ok(Rendered {
-        name: card.map_or_else(|| "base".to_string(), |topic| snake(&topic)),
+        topic: card,
         text,
         references: out.references,
     })

@@ -210,6 +210,15 @@ rule. The `interface_inventory` case holds its accepted and rejected controls.
 
 ### Interface inventory
 
+The offline result checks require one dependency fact for every ordered pair
+of output fields. A non-function needs two reachable outputs that agree on
+the source field and differ on the target; a shared-output witness must be
+reachable from both named rows. Controls remove and duplicate facts, omit
+witnesses and supply reachable witnesses that do not establish the claim.
+Inputs absent from the row predicates, including the integrity-issue count,
+are evaluated by the build script and held by its committed-copy comparison;
+the offline checks do not independently recompute those facts.
+
 The `interface_inventory` case in [interface.py](interface.py) runs the real
 generator command over the checkout and over disposable copies of its declared
 inputs. `--check` passes on the checkout. A stale `joins.json` is refused

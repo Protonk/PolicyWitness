@@ -73,7 +73,8 @@ fn main() {
         cards::render_all().unwrap_or_else(|error| stop(&format!("help cards: {error}")));
     for card in &rendered {
         write(
-            &out.join("help").join(format!("{}.txt", card.name)),
+            &out.join("help")
+                .join(format!("{}.txt", inventory::card_name(card.topic))),
             &card.text,
         );
     }

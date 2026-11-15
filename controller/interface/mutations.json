@@ -470,9 +470,115 @@
       ],
       "card_execution_agreement": "FAILED",
       "unit_tests_newly_failing": []
+    },
+    {
+      "id": "acceptance_connected_exit",
+      "entry": "result.admitted_finished",
+      "mutation": "Change the finished row exit from 0 to 9 with the direct renderer connected.",
+      "patch": "--- a/controller/src/interface/result.rs\n+++ b/controller/src/interface/result.rs\n@@ -168,7 +168,7 @@\n                 Host::Is(Label::Finished),\n                 Outcome::HostLabel,\n                 true,\n-                0,\n+                9,\n             ),\n             Row::AdmittedOther => (Class::Admitted, Host::Present, Outcome::HostLabel, false, 1),\n             Row::AdmittedUnavailable => (\n",
+      "checks": {
+        "card": "changed",
+        "contract": "failed",
+        "cases": "not_run"
+      },
+      "first_build": "stale_inventory",
+      "first_build_status": 101,
+      "generator_problems": [],
+      "contract_problems": [
+        "envelope.data.select.finished: envelope.data.select.finished: set_value(envelope.result.exit_code, 0) disagrees with result.admitted_finished, whose exit_code is 9"
+      ],
+      "card_text": "result\n  normalized_outcome ok exit_code\n  bad_request false 1\n  tool_error false 2\n  missing_runner_client false 1\n  unsupported_runner_client false 1\n  malformed_runner_client false 1\n  runner_reply_truncated false 1\n  unsupported_runner_response false 1\n  malformed_runner_response false 1\n  xpc_error false 1\n  xpc_timeout false 1\n  xpc_acquisition_failed false 1\n  xpc_submission_refused false 1\n  xpc_protocol_error false 1\n  runner_client_error false 1\n  finished true 9\n  runner_response_unavailable false 1\n",
+      "command": "cargo check --locked --offline --bin policy-witness --target aarch64-apple-darwin --target-dir <isolated target> --manifest-path <copied controller>/Cargo.toml",
+      "seconds": 0.494,
+      "observed_on": {
+        "tree": "acceptance working tree based on 78abff08; source hashes identify the exercised inputs",
+        "build": "unsigned Cargo check of a copied controller; generated inventory checked with validate and contract interface_join.join; no runtime cases",
+        "source_sha256": {
+          "controller/interface/cards.rs": "9a68c368ad2593729614385917af1f96b5fdcb2e9b19d66b88462d8da3cdf50a",
+          "controller/interface/inventory.rs": "f5b4479099f579b73423327356185fbb29290c7e236a9e6bcc1abed0dd1c749b",
+          "controller/src/interface/result.rs": "adcf72d87e000edb8d5eb263437fcd5925f2e8b34b19e8b987a313f05fd39e28",
+          "controller/build.rs": "7accd440f45b50be61c92bea5c958b724f7d7124240756ccccca356fb3f9ef5e",
+          "docs/generate_interface.py": "d619d559064c3068753b7d7f39a7b409b0aa883c7ddd89627bc3cc8a06e31094",
+          "docs/contract/interface_join.py": "f0d7dd7566cf96d62bd8817d2ee7cad355e065be31bed0e693f99d7733f96d26"
+        }
+      }
+    },
+    {
+      "id": "acceptance_numeric_copy",
+      "entry": "result.admitted_finished",
+      "mutation": "Copy the finished exit value 0 into the direct renderer; leave its definition unchanged.",
+      "patch": "--- a/controller/interface/cards.rs\n+++ b/controller/interface/cards.rs\n@@ -223,7 +223,10 @@\n             out.line(1, &names.join(\" \"));\n             out.references.push(Reference::ResultFields);\n             for (row, disposition) in fixed_dispositions() {\n-                let selection = select(&disposition);\n+                let mut selection = select(&disposition);\n+                if row == Row::AdmittedFinished {\n+                    selection.exit = 0;\n+                }\n                 if selection.row != row {\n                     return Err(format!(\"{row:?} does not select its own disposition\"));\n                 }\n",
+      "checks": {
+        "card": "unchanged",
+        "contract": "unchanged",
+        "cases": "not_run"
+      },
+      "first_build": "passed",
+      "first_build_status": 0,
+      "generator_problems": [],
+      "contract_problems": [],
+      "card_text": "result\n  normalized_outcome ok exit_code\n  bad_request false 1\n  tool_error false 2\n  missing_runner_client false 1\n  unsupported_runner_client false 1\n  malformed_runner_client false 1\n  runner_reply_truncated false 1\n  unsupported_runner_response false 1\n  malformed_runner_response false 1\n  xpc_error false 1\n  xpc_timeout false 1\n  xpc_acquisition_failed false 1\n  xpc_submission_refused false 1\n  xpc_protocol_error false 1\n  runner_client_error false 1\n  finished true 0\n  runner_response_unavailable false 1\n",
+      "command": "cargo check --locked --offline --bin policy-witness --target aarch64-apple-darwin --target-dir <isolated target> --manifest-path <copied controller>/Cargo.toml",
+      "seconds": 0.68,
+      "observed_on": {
+        "tree": "acceptance working tree based on 78abff08; source hashes identify the exercised inputs",
+        "build": "unsigned Cargo check of a copied controller; generated inventory checked with validate and contract interface_join.join; no runtime cases",
+        "source_sha256": {
+          "controller/interface/cards.rs": "9a68c368ad2593729614385917af1f96b5fdcb2e9b19d66b88462d8da3cdf50a",
+          "controller/interface/inventory.rs": "f5b4479099f579b73423327356185fbb29290c7e236a9e6bcc1abed0dd1c749b",
+          "controller/src/interface/result.rs": "adcf72d87e000edb8d5eb263437fcd5925f2e8b34b19e8b987a313f05fd39e28",
+          "controller/build.rs": "7accd440f45b50be61c92bea5c958b724f7d7124240756ccccca356fb3f9ef5e",
+          "docs/generate_interface.py": "d619d559064c3068753b7d7f39a7b409b0aa883c7ddd89627bc3cc8a06e31094",
+          "docs/contract/interface_join.py": "f0d7dd7566cf96d62bd8817d2ee7cad355e065be31bed0e693f99d7733f96d26"
+        }
+      }
+    },
+    {
+      "id": "acceptance_numeric_copy_then_exit",
+      "entry": "result.admitted_finished",
+      "mutation": "Leave the private numeric copy at 0 and change its governing finished row exit to 9.",
+      "patch": "--- a/controller/src/interface/result.rs\n+++ b/controller/src/interface/result.rs\n@@ -168,7 +168,7 @@\n                 Host::Is(Label::Finished),\n                 Outcome::HostLabel,\n                 true,\n-                0,\n+                9,\n             ),\n             Row::AdmittedOther => (Class::Admitted, Host::Present, Outcome::HostLabel, false, 1),\n             Row::AdmittedUnavailable => (\n--- a/controller/interface/cards.rs\n+++ b/controller/interface/cards.rs\n@@ -223,7 +223,10 @@\n             out.line(1, &names.join(\" \"));\n             out.references.push(Reference::ResultFields);\n             for (row, disposition) in fixed_dispositions() {\n-                let selection = select(&disposition);\n+                let mut selection = select(&disposition);\n+                if row == Row::AdmittedFinished {\n+                    selection.exit = 0;\n+                }\n                 if selection.row != row {\n                     return Err(format!(\"{row:?} does not select its own disposition\"));\n                 }\n",
+      "checks": {
+        "card": "failed",
+        "contract": "failed",
+        "cases": "not_run"
+      },
+      "first_build": "stale_inventory",
+      "first_build_status": 101,
+      "generator_problems": [
+        "card result: token '0' comes from no referenced entry"
+      ],
+      "contract_problems": [
+        "envelope.data.select.finished: envelope.data.select.finished: set_value(envelope.result.exit_code, 0) disagrees with result.admitted_finished, whose exit_code is 9"
+      ],
+      "card_text": "result\n  normalized_outcome ok exit_code\n  bad_request false 1\n  tool_error false 2\n  missing_runner_client false 1\n  unsupported_runner_client false 1\n  malformed_runner_client false 1\n  runner_reply_truncated false 1\n  unsupported_runner_response false 1\n  malformed_runner_response false 1\n  xpc_error false 1\n  xpc_timeout false 1\n  xpc_acquisition_failed false 1\n  xpc_submission_refused false 1\n  xpc_protocol_error false 1\n  runner_client_error false 1\n  finished true 0\n  runner_response_unavailable false 1\n",
+      "command": "cargo check --locked --offline --bin policy-witness --target aarch64-apple-darwin --target-dir <isolated target> --manifest-path <copied controller>/Cargo.toml",
+      "seconds": 0.443,
+      "observed_on": {
+        "tree": "acceptance working tree based on 78abff08; source hashes identify the exercised inputs",
+        "build": "unsigned Cargo check of a copied controller; generated inventory checked with validate and contract interface_join.join; no runtime cases",
+        "source_sha256": {
+          "controller/interface/cards.rs": "9a68c368ad2593729614385917af1f96b5fdcb2e9b19d66b88462d8da3cdf50a",
+          "controller/interface/inventory.rs": "f5b4479099f579b73423327356185fbb29290c7e236a9e6bcc1abed0dd1c749b",
+          "controller/src/interface/result.rs": "adcf72d87e000edb8d5eb263437fcd5925f2e8b34b19e8b987a313f05fd39e28",
+          "controller/build.rs": "7accd440f45b50be61c92bea5c958b724f7d7124240756ccccca356fb3f9ef5e",
+          "docs/generate_interface.py": "d619d559064c3068753b7d7f39a7b409b0aa883c7ddd89627bc3cc8a06e31094",
+          "docs/contract/interface_join.py": "f0d7dd7566cf96d62bd8817d2ee7cad355e065be31bed0e693f99d7733f96d26"
+        }
+      }
     }
   ],
   "declared_associations": [
+    {
+      "case": "run.request_mode_standard_with_external_id",
+      "entry": "runner_kind.standard@request_selector",
+      "reason": "The expected conflicting_selector refusal exercises the request selector with standard and an external id. Request admission and selector ordering are not enumerated, so staged request bytes alone cannot establish reader reach."
+    },
+    {
+      "case": "run.request_mode_byoxpc_without_selector",
+      "entry": "runner_kind.byoxpc@request_selector",
+      "reason": "The expected conflicting_selector refusal exercises the request selector with byoxpc and no external selector. Request admission and selector ordering are not enumerated, so staged request bytes alone cannot establish reader reach."
+    },
     {
       "case": "run.request_mode_machme",
       "entry": "result.local_request_refusal",

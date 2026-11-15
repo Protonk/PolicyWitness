@@ -9,7 +9,7 @@ use std::fmt::Debug;
 
 use serde_json::{Value, json};
 
-use crate::cards::{self, RESULT_FIELDS, Rendered};
+use crate::cards::{self, RESULT_FIELDS, Reference, Rendered};
 use crate::interface::commands::{Address, Command, Tail, Topic};
 use crate::interface::result::{
     Class, Disposition, Host, Label, Outcome, Refusal, Row, Selection, select,
@@ -54,6 +54,23 @@ impl Identified for Row {
 
 pub fn id<T: Identified>(value: &T) -> String {
     format!("{}.{}", T::TABLE, snake(value))
+}
+
+/// Internal card file/key name; never printed on a card.
+pub fn card_name(topic: Option<Topic>) -> String {
+    topic.map_or_else(|| "base".to_string(), |topic| snake(&topic))
+}
+
+fn reference_id(reference: &Reference) -> String {
+    match reference {
+        Reference::Command(command) => id(command),
+        Reference::Topic(topic) => id(topic),
+        Reference::Option(option) => id(option),
+        Reference::Word(word, reader) => format!("{}@{}", id(word), snake(reader)),
+        Reference::ExampleDocument => "example.document".into(),
+        Reference::ResultFields => "result.fields".into(),
+        Reference::ResultRow(row) => id(row),
+    }
 }
 
 /// The admission kinds an entry can carry, named for the value dispatch or
@@ -324,15 +341,19 @@ fn result_section() -> Value {
 
     // An input that never changes an output while the others are held.
     let mut integrity_changes = false;
-    for pair in evaluated.chunks(2) {
-        if let [(_, first_inputs, first), (_, second_inputs, second)] = pair {
-            if first_inputs.get("integrity_issues").is_some()
-                && first_inputs["host_outcome"] == second_inputs["host_outcome"]
-                && first != second
-            {
-                integrity_changes = true;
-            }
+    for (_, first_inputs, first) in &evaluated {
+        if first_inputs.get("integrity_issues").and_then(Value::as_u64) != Some(0) {
+            continue;
         }
+        let (_, _, second) = evaluated
+            .iter()
+            .find(|(_, inputs, _)| {
+                inputs.get("integrity_issues").and_then(Value::as_u64) == Some(1)
+                    && inputs["class"] == first_inputs["class"]
+                    && inputs["host_outcome"] == first_inputs["host_outcome"]
+            })
+            .expect("every zero-issue sample has a matching one-issue sample");
+        integrity_changes |= first != second;
     }
     let unselecting = if integrity_changes {
         json!([])
@@ -400,10 +421,10 @@ fn example_section() -> Value {
     let phases: Vec<Value> = cards::example_phases()
         .unwrap_or_else(|error| panic!("{error}"))
         .into_iter()
-        .map(|(phase_id, attempts)| {
+        .map(|phase| {
             json!({
-                "phase_id": phase_id,
-                "attempts": attempts.into_iter().map(|(action, target)| json!({"action": action, "target": target})).collect::<Vec<_>>(),
+                "phase_id": phase.phase_id,
+                "attempts": phase.actions.into_iter().map(|action| json!({"action": action.attempt.action, "target": action.attempt.target})).collect::<Vec<_>>(),
             })
         })
         .collect();
@@ -421,9 +442,9 @@ fn cards_referencing(identifier: &str, rendered: &[Rendered]) -> Vec<String> {
         .filter(|card| {
             card.references
                 .iter()
-                .any(|reference| reference == identifier)
+                .any(|reference| reference_id(reference) == identifier)
         })
-        .map(|card| card.name.clone())
+        .map(|card| card_name(card.topic))
         .collect()
 }
 
@@ -457,17 +478,15 @@ pub fn render(rendered: &[Rendered]) -> String {
     let cards: serde_json::Map<String, Value> = rendered
         .iter()
         .map(|card| {
-            for reference in &card.references {
+            let name = card_name(card.topic);
+            let references: Vec<String> = card.references.iter().map(reference_id).collect();
+            for reference in &references {
                 assert!(
                     known.contains(reference),
-                    "card {} references no entry: {reference}",
-                    card.name
+                    "card {name} references no entry: {reference}",
                 );
             }
-            (
-                card.name.clone(),
-                json!({"text": card.text, "references": card.references}),
-            )
+            (name, json!({"text": card.text, "references": references}))
         })
         .collect();
     let document = json!({

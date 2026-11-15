@@ -329,6 +329,7 @@
         ]
       ],
       "declared": [
+        "runner_kind.byoxpc@request_selector",
         "result.local_request_refusal"
       ],
       "entries": [
@@ -364,6 +365,7 @@
         ]
       ],
       "declared": [
+        "runner_kind.standard@request_selector",
         "result.local_request_refusal"
       ],
       "entries": [
@@ -1120,6 +1122,39 @@
       "entry": "command.example",
       "id": "command_spelling",
       "not_run": [],
+      "only_cases_moved": false
+    },
+    {
+      "card": "changed",
+      "cases": "not_run",
+      "contract": "failed",
+      "entry": "result.admitted_finished",
+      "id": "acceptance_connected_exit",
+      "not_run": [
+        "cases"
+      ],
+      "only_cases_moved": false
+    },
+    {
+      "card": "unchanged",
+      "cases": "not_run",
+      "contract": "unchanged",
+      "entry": "result.admitted_finished",
+      "id": "acceptance_numeric_copy",
+      "not_run": [
+        "cases"
+      ],
+      "only_cases_moved": false
+    },
+    {
+      "card": "failed",
+      "cases": "not_run",
+      "contract": "failed",
+      "entry": "result.admitted_finished",
+      "id": "acceptance_numeric_copy_then_exit",
+      "not_run": [
+        "cases"
+      ],
       "only_cases_moved": false
     }
   ]

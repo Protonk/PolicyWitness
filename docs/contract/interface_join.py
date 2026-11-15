@@ -71,11 +71,17 @@ def _host_present(node):
     when = node.context.get('when')
     if not when:
         return False
-    return any(isinstance(item, ast.Call) and getattr(item.func, 'id', None) == 'present'
-               and _path(item.args[0]) == HOST_REPLY for item in ast.walk(ast.parse(when, mode='eval')))
+    def requires_presence(item):
+        if isinstance(item, ast.BoolOp) and isinstance(item.op, ast.And):
+            return any(requires_presence(term) for term in item.values)
+        return (isinstance(item, ast.Call) and getattr(item.func, 'id', None) == 'present'
+                and len(item.args) == 1 and _path(item.args[0]) == HOST_REPLY)
+    return requires_presence(ast.parse(when, mode='eval').body)
 
 
 def _compare_row(node, row, outputs, problems, compared, uncompared):
+    uncompared.append(f'{row["id"]}: input class {json.dumps(row["inputs"]["class"])} '
+                      '(no structured contract binding)')
     for owner, target, value in _set_values(node):
         path = _path(target) or ''
         if not path.startswith(RESULT) or path[len(RESULT):] not in outputs:
@@ -135,6 +141,10 @@ def join(tree, inventory):
         if not cited:
             continue
         compared, uncompared = [], []
+        if node.context.get('when'):
+            # A fallback test can use a necessary presence conjunct below;
+            # the complete applicability expression is not evaluated here.
+            uncompared.append(f'{node.id}: applicability {node.context["when"]}')
         rows = []
         for identifier in cited:
             if identifier not in known:
@@ -154,6 +164,7 @@ def join(tree, inventory):
         report.append({
             'node': node.id, 'interface': cited, 'compared': compared, 'uncompared': uncompared,
             'free': sorted(key for key in node.facts if key.startswith('free.')),
+            'free_when': node.context.get('free_when', []),
             'prose': bool(node.prose.strip()),
             '_rows': [row['id'] for row in rows],
         })

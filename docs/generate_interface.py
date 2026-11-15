@@ -12,6 +12,7 @@ committed inventory from a build-script run.
 import argparse
 import json
 import os
+import re
 from pathlib import Path
 import subprocess
 import sys
@@ -165,7 +166,8 @@ def validate(inventory):
     if base != topics:
         problems.append('the base card does not list exactly the topic addresses, in order')
     problems += [f'topic address {address!r} is flag-shaped' for address in topics if address.startswith('-')]
-    # Recompute the derived result facts from the rows.
+    # Recompute output dependencies and shared outputs from the rows. Inputs
+    # absent from the row predicates are evaluated by the build script instead.
     try:
         evaluated = relation(inventory)
     except ValueError as error:
@@ -174,38 +176,73 @@ def validate(inventory):
     if derived['outputs'] != names:
         problems.append('result: derived outputs are not the result fields')
     tuples = [outputs for _, outputs in evaluated]
+    reachable = {canonical(outputs) for outputs in tuples}
+    expected_pairs = {(source, target) for source in names for target in names if source != target}
+    recorded_pairs = [(fact['of'], fact['output']) for fact in derived['output_functions']]
+    if set(recorded_pairs) != expected_pairs or len(recorded_pairs) != len(expected_pairs):
+        problems.append('result: output functions must cover every ordered pair of distinct result fields exactly once')
     for fact in derived['output_functions']:
+        if (fact['of'], fact['output']) not in expected_pairs:
+            continue
         source, target = names.index(fact['of']), names.index(fact['output'])
-        function = not any(first[source] == second[source] and first[target] != second[target]
+        function = not any(canonical(first[source]) == canonical(second[source])
+                           and canonical(first[target]) != canonical(second[target])
                            for first in tuples for second in tuples)
-        if function != fact['is_a_function']:
+        if type(fact['is_a_function']) is not bool or function != fact['is_a_function']:
             problems.append(f'result: {fact["output"]} as a function of {fact["of"]} is recorded as {fact["is_a_function"]}; the rows give {function}')
-        for witness in fact['counterexample'] or []:
-            if witness not in tuples:
-                problems.append(f'result: a recorded counterexample is not reachable from the rows: {witness}')
-    shared = sorted(sorted([first, second]) for index, (first, outputs) in enumerate(evaluated)
-                    for second, other in evaluated[index + 1:] if first != second and outputs == other)
-    shared = [pair for index, pair in enumerate(shared) if pair not in shared[:index]]
+        witness = fact.get('counterexample')
+        if function:
+            if witness is not None:
+                problems.append(f'result: {fact["output"]} as a function of {fact["of"]} must have no counterexample')
+        elif (not isinstance(witness, list) or len(witness) != 2
+              or any(canonical(item) not in reachable for item in witness)
+              or canonical(witness[0][source]) != canonical(witness[1][source])
+              or canonical(witness[0][target]) == canonical(witness[1][target])):
+            problems.append(f'result: {fact["output"]} as a function of {fact["of"]} needs a reachable counterexample with equal {fact["of"]} and different {fact["output"]}')
+    row_outputs = {}
+    for row, outputs in evaluated:
+        row_outputs.setdefault(row, set()).add(canonical(outputs))
+    shared = {tuple(sorted([first, second])): first_outputs & second_outputs
+              for first, first_outputs in row_outputs.items()
+              for second, second_outputs in row_outputs.items()
+              if first < second and first_outputs & second_outputs}
     recorded = sorted(sorted(item['rows']) for item in derived['rows_sharing_outputs'])
-    if shared != recorded:
-        problems.append(f'result: rows sharing outputs are recorded as {recorded}; the rows give {shared}')
+    expected = sorted(list(pair) for pair in shared)
+    if expected != recorded:
+        problems.append(f'result: rows sharing outputs are recorded as {recorded}; the rows give {expected}')
+    for fact in derived['rows_sharing_outputs']:
+        pair = tuple(sorted(fact['rows']))
+        if canonical(fact.get('shared_outputs')) not in shared.get(pair, set()):
+            problems.append(f'result: shared outputs for {list(pair)} are not reachable from both rows')
     return problems
+
+
+def argument_text(argument, errors='strict'):
+    """Decode the corpus's byte arguments with the reader's UTF-8 policy."""
+    if isinstance(argument, str):
+        return argument
+    try:
+        return bytes.fromhex(argument['hex']).decode('utf-8', errors=errors)
+    except UnicodeDecodeError:
+        return None
 
 
 def exercised(arguments, inventory):
     """The entries one argument vector reaches, derived from the spellings and rules the inventory records."""
     entries = {entry['id']: entry for entry in inventory['entries']}
     commands = {entry['spellings'][0]: entry for entry in entries.values() if entry['id'].startswith('command.')}
-    if not arguments or not isinstance(arguments[0], str) or arguments[0] not in commands:
+    first = argument_text(arguments[0]) if arguments else None
+    if first not in commands:
         return []
-    command = commands[arguments[0]]
+    command = commands[first]
     reached, tail = [command['id']], arguments[1:]
     name = command['id'].split('.', 1)[1]
     rule = command['relationships']['tail']
     if rule == 'topic':
         topics = {entry['spellings'][0]: entry['id'] for entry in entries.values() if entry['id'].startswith('topic.')}
-        if tail and isinstance(tail[0], str) and tail[0] in topics:
-            reached.append(topics[tail[0]])
+        topic = argument_text(tail[0]) if tail else None
+        if topic in topics:
+            reached.append(topics[topic])
             tail = tail[1:]
         if tail:
             reached.append('tail.' + name)
@@ -214,26 +251,42 @@ def exercised(arguments, inventory):
         prefix = entries['run.unknown_flag']['relationships']['flag_prefix']
         terminator = entries['run.terminator']['spellings'][0]
         index = 0
+        has_path = False
         while index < len(tail):
-            argument = tail[index] if isinstance(tail[index], str) else '�'
+            argument = argument_text(tail[index], errors='replace')
             if argument == terminator:
                 reached.append('run.terminator')
                 break
             if not argument.startswith(prefix):
                 reached.append('run.request_path')
+                if has_path:
+                    break
+                has_path = True
                 index += 1
                 continue
             if argument not in options:
                 reached.append('run.unknown_flag')
                 break
             reached.append(options[argument]['id'])
-            reader = options[argument]['relationships']['value'].get('runner_kind_reader')
-            value = tail[index + 1] if index + 1 < len(tail) else None
-            word = next((entry['id'] for entry in entries.values() if reader and isinstance(value, str)
+            rule = options[argument]['relationships']['value']
+            reader = rule.get('runner_kind_reader')
+            value = argument_text(tail[index + 1]) if index + 1 < len(tail) else None
+            word = next((entry for entry in entries.values() if reader and isinstance(value, str)
                          and entry['id'].startswith('runner_kind.') and entry['id'].endswith('@' + reader)
                          and entry['spellings'] == [value]), None)
             if word:
-                reached.append(word)
+                reached.append(word['id'])
+            if reader:
+                if not word or word['kind'] not in ('admits', 'alias'):
+                    break
+            elif 'milliseconds' in rule:
+                # Rust's u64 parser accepts ASCII decimal digits and an optional +.
+                if (not isinstance(value, str) or not re.fullmatch(r'\+?[0-9]+', value)
+                        or len(value.lstrip('+0')) > 20
+                        or not rule['milliseconds']['min'] <= int(value.lstrip('+0') or '0') <= 2**64 - 1):
+                    break
+            else:
+                raise ValueError(f'no case derivation for option value rule: {rule}')
             index += 2
     elif rule == 'unenumerated' or tail:
         reached.append('tail.' + name)
@@ -241,22 +294,11 @@ def exercised(arguments, inventory):
 
 
 def content_entries(step, inventory):
-    """Entries a step reaches through what it publishes or submits, not through an argument's spelling."""
-    entries = {entry['id']: entry for entry in inventory['entries']}
+    """A successful publisher establishes its document; staged files establish no reader reach."""
     reached = exercised(step['args'], inventory)
-    found = []
-    # A successful `example` publishes the example document.
     if 'command.example' in reached and step.get('status') == 0:
-        found.append(inventory['example']['id'])
-    # A submitted request file's runner.mode is read by the request selector.
-    for content in (step.get('files') or {}).values():
-        try:
-            mode = json.loads(content.replace('{contract}', 'c')).get('runner', {}).get('mode')
-        except (ValueError, AttributeError):
-            continue
-        found += [name for name, entry in entries.items()
-                  if name.startswith('runner_kind.') and name.endswith('@request_selector') and entry['spellings'] == [mode]]
-    return found
+        return [inventory['example']['id']]
+    return []
 
 
 def result_rows(expected, inventory):
@@ -270,8 +312,10 @@ def result_rows(expected, inventory):
     listed = {outputs[0] for _, outputs in evaluated if isinstance(outputs[0], str)}
     # A label the relation spells nowhere can only be a retained host label.
     return list(dict.fromkeys(row for row, outputs in evaluated
-                              if outputs == wanted or (outputs[0] == UNLISTED and wanted[0] not in listed
-                                                       and outputs[1:] == wanted[1:])))
+                              if canonical(outputs) == canonical(wanted)
+                              or (outputs[0] == UNLISTED and isinstance(wanted[0], str)
+                                  and wanted[0] not in listed
+                                  and canonical(outputs[1:]) == canonical(wanted[1:]))))
 
 
 def joins(root, inventory):
@@ -316,7 +360,7 @@ def joins(root, inventory):
         moved = [name for name in CHECKS if states[name] in ('changed', 'failed')]
         table.append({'id': mutation['id'], 'entry': mutation['entry'], **states,
                       'not_run': [name for name in CHECKS if states[name] == 'not_run'],
-                      'only_cases_moved': moved == ['cases']})
+                      'only_cases_moved': moved == ['cases'] and all(state != 'not_run' for state in states.values())})
     report = {
         'cases': by_case,
         'entries_no_case_reaches': sorted(name for name, found in reaching.items() if not found),

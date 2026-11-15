@@ -35,7 +35,9 @@ Rust integration tests that exercise the CLI contract against a built app.
   executable outside its bundle, so that copy is not the specimen.
 - In a copy of the controller package, a changed interface definition and a
   changed committed inventory each stop the build script before the binary
-  compiles, naming the stale copy and the command that regenerates it.
+  compiles, naming the stale copy and the command that regenerates it. An option
+  without runner-kind words and a topic naming another command are rejected
+  by the card renderer before the freshness comparison.
 - `example` whose stdout is a pipe with no reader exits 2 without a panic,
   whether or not stderr can be written; the reason reaches stderr when that
   stream is writable. An argument refused beside an unwritable or closed
