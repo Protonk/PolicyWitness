@@ -597,8 +597,10 @@ This template applies a policy with no probe actions. Replace the assertion with
 `policy-witness test-input read --target <absolute-path>` accepts exactly the
 read selector followed by one target option. This is a build-bound developer
 publisher. The target must be a nonempty absolute UTF-8 path without NUL.
-The controller validates the complete fixed template, inserts its binary's
-contract and preserves the target verbatim at the query and attempt operands.
+The controller checks the positions it assigns in its embedded body: `contract`
+is absent, and the one step holds the `$EFFECT` placeholder at its query and
+attempt operands. It then inserts its binary's contract and preserves the
+target verbatim at those operands. Other members are published as embedded.
 Substitution is positional; literal `$EFFECT` text in caller input is data.
 The document's content, layout and labels carry no stability promise between builds.
 
@@ -615,7 +617,7 @@ admission promise. The harness owns fixture creation, mutation, cleanup,
 independently authored expectations and observations.
 
 <a id="contract-request-specimen-emit_test_input-support"></a>
-**Support: [check read](#contract-support-grades) for [Publish a developer read input](#contract-request-specimen-emit_test_input).** The fixed read template binds the binary identity and caller target positionally, including literal marker text, quotes, backslashes and non-ASCII characters. Malformed template structure and fixed values refuse before output. Argument, target and identity refusals write nothing. Short writes complete the document, while partial-write and late-flush failures refuse. Selected-app controls check deterministic publication and exact request content, removed lesson dispatch, status 2 on invalid arguments and unreadable stdout, and status independence from stderr closed at launch. Isolated Cargo builds check absent and supplied identities. Context: Read the embedded-template materializer, dispatch, constructed argument/template/writer controls and CLI integration assertions. Evidence limit: Check read; no execution is credited. Publication controls establish neither host admission nor native file effects. No control observes the absence of operating-system reads or process launches; those claims have source support. Stderr controls close that stream at launch. These checks do not promise admission for arbitrary target lengths or environments. [Evidence details](#contract-request-specimen-emit_test_input-support-details).
+**Support: [check read](#contract-support-grades) for [Publish a developer read input](#contract-request-specimen-emit_test_input).** The fixed read template binds the binary identity and caller target positionally, including literal marker text, quotes, backslashes and non-ASCII characters. A body that is not an object, carries a contract, has no step or a second step, or lacks the placeholder at an assigned operand or a container leading to it refuses before output. A body differing elsewhere is published with the same three assignments. Argument, target and identity refusals write nothing. Short writes complete the document, while partial-write and late-flush failures refuse. Selected-app controls check deterministic publication and exact request content, removed lesson dispatch, status 2 on invalid arguments and unreadable stdout, and status independence from stderr closed at launch. Isolated Cargo builds check absent and supplied identities. Context: Read the embedded-template materializer, dispatch, constructed argument/template/writer controls and CLI integration assertions. Evidence limit: Check read; no execution is credited. Publication controls establish neither host admission nor native file effects. No control observes the absence of operating-system reads or process launches; those claims have source support. Stderr controls close that stream at launch. These checks do not promise admission for arbitrary target lengths or environments. [Evidence details](#contract-request-specimen-emit_test_input-support-details).
 
 <a id="contract-request-specimen-read_input"></a>
 ##### Developer read body
@@ -654,7 +656,7 @@ compares this authored body with publication separately from native outcomes.
 ```
 
 <a id="contract-request-specimen-read_input-support"></a>
-**Support: [check read](#contract-support-grades) for [Developer read body](#contract-request-specimen-read_input).** The selected-app publication assertion independently states the read body's identity, policy, query, attempt and target binding. Context: Read the fixed template validation and the independently authored CLI publication expectation. Evidence limit: Check read; no execution or native outcome is credited. This body is build-specific public content, not a compatibility promise for later builds. [Evidence details](#contract-request-specimen-read_input-support-details).
+**Support: [check read](#contract-support-grades) for [Developer read body](#contract-request-specimen-read_input).** The selected-app publication assertion independently states the read body's identity, policy, query, attempt and target binding. Context: Read the binding of the embedded body and the independently authored CLI publication expectation. Evidence limit: Check read; no execution or native outcome is credited. This body is build-specific public content, not a compatibility promise for later builds. [Evidence details](#contract-request-specimen-read_input-support-details).
 
 <a id="contract-request-specimen-example"></a>
 ##### Emitted example
@@ -5620,7 +5622,7 @@ Source: [example.rs](../controller/src/example.rs): `pub fn render`, `fn emit`, 
 
 [Local support](#contract-request-specimen-emit_test_input-support).
 
-Source: [test_input.rs](../controller/src/test_input.rs): `fn render_template`, `fn emit_template`, `pub fn cmd_test_input`; [cli.rs](../controller/src/cli.rs): `pub fn run`. Check: [test_input.rs](../controller/src/test_input.rs): `read_input_preserves_target_identity_and_fixed_workload`, `malformed_templates_refuse_before_output`, `argument_target_and_identity_refusals_write_nothing`, `complete_publication_requires_all_writes_and_flush`; [cli_contract.rs](../controller/integration/cli_contract.rs): `test_input_publishes_read_from_the_installed_binary`, `test_input_cli_refusals_and_write_failures_exit_2_safely`, `supplied_direct_cargo_identity_is_embedded_without_release_provenance`.
+Source: [test_input.rs](../controller/src/test_input.rs): `fn render_template`, `fn emit_template`, `pub fn cmd_test_input`; [cli.rs](../controller/src/cli.rs): `pub fn run`. Check: [test_input.rs](../controller/src/test_input.rs): `read_input_preserves_target_identity_and_fixed_workload`, `malformed_templates_refuse_before_output`, `members_outside_the_assigned_positions_are_published_as_embedded`, `argument_target_and_identity_refusals_write_nothing`, `complete_publication_requires_all_writes_and_flush`; [cli_contract.rs](../controller/integration/cli_contract.rs): `test_input_publishes_read_from_the_installed_binary`, `test_input_cli_refusals_and_write_failures_exit_2_safely`, `supplied_direct_cargo_identity_is_embedded_without_release_provenance`.
 
 <a id="contract-request-specimen-read_input-support-details"></a>
 ### Developer read body — Body support

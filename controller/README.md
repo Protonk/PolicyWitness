@@ -80,9 +80,9 @@ when it is writable and never changes the status. The
 states the public promise.
 
 `test-input read` publishes one build-bound developer read input with this
-binary's contract and the supplied absolute UTF-8 target. It validates the
-embedded template before inserting the target positionally into its query and
-attempt, preserving caller text without normalization or filesystem inspection.
+binary's contract and the supplied absolute UTF-8 target. It checks the
+positions it assigns in the embedded body before inserting the target into its
+query and attempt, preserving caller text without normalization or filesystem inspection.
 The command reads no external file, prepares no fixtures and launches no process.
 Exit 0 means complete JSON publication with one newline and a successful flush;
 it reports neither admission nor an effect. Usage, target, unbound or empty

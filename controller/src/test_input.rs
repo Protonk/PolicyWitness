@@ -9,6 +9,12 @@ use crate::json_contract::BUILD_CONTRACT;
 use crate::request_patch::{parse_request, validate_contract};
 
 const READ: &str = include_str!("test_inputs/read.json");
+/// What the embedded body holds at each position that receives the target.
+const SLOT: &str = "$EFFECT";
+const TARGETS: [&str; 2] = [
+    "/probe_plan/0/sandbox_check/filter/value",
+    "/probe_plan/0/attempt/target",
+];
 
 #[derive(Debug, PartialEq, Eq)]
 enum Refusal {
@@ -20,10 +26,7 @@ enum Refusal {
 }
 
 fn render_template(args: &[OsString], identity: &str, document: &str) -> Result<String, Refusal> {
-    if args.len() != 3 || args[1] != "--target" {
-        return Err(Refusal::Usage);
-    }
-    if args[0] != "read" {
+    if args.len() != 3 || args[0] != "read" || args[1] != "--target" {
         return Err(Refusal::Usage);
     }
     let target = args[2].to_str().ok_or(Refusal::Target)?;
@@ -34,22 +37,20 @@ fn render_template(args: &[OsString], identity: &str, document: &str) -> Result<
         return Err(Refusal::NoPublicIdentity);
     }
     let mut value = parse_request(document).map_err(|_| Refusal::Render)?;
-    // Validate the complete fixed body before indexing. A malformed embedded
-    // template is a rendering refusal, never a panic or a partially bound input.
-    let expected = serde_json::json!({
-        "specimen_id": "test-input",
-        "policy": {"format": "sbpl", "sbpl_source": "(version 1)\n(allow default)"},
-        "probe_plan": [{"step_id": "read-target",
-            "sandbox_check": {"operation": "file-read-data",
-                "filter": {"kind": "path", "value": "$EFFECT"}},
-            "attempt": {"kind": "file", "action": "read_fresh", "target": "$EFFECT"}}]
-    });
-    if value != expected {
+    // Check every assigned position before the first assignment: no contract
+    // yet, one step, and the slot at both targets. A malformed embedded body is
+    // a rendering refusal, never a panic or a partially bound input.
+    let one_step = value["probe_plan"]
+        .as_array()
+        .is_some_and(|plan| plan.len() == 1);
+    let marked = |path: &&str| value.pointer(path).and_then(Value::as_str) == Some(SLOT);
+    if value.get("contract").is_some() || !one_step || !TARGETS.iter().all(marked) {
         return Err(Refusal::Render);
     }
     value["contract"] = Value::String(identity.into());
-    value["probe_plan"][0]["sandbox_check"]["filter"]["value"] = Value::String(target.into());
-    value["probe_plan"][0]["attempt"]["target"] = Value::String(target.into());
+    for path in TARGETS {
+        *value.pointer_mut(path).ok_or(Refusal::Render)? = Value::String(target.into());
+    }
     // Only the preparatory identity gate runs here; the host owns admission.
     validate_contract(&value, identity).map_err(|_| Refusal::Render)?;
     let mut text = serde_json::to_string_pretty(&value).map_err(|_| Refusal::Render)?;
@@ -127,63 +128,29 @@ mod tests {
     fn malformed_templates_refuse_before_output() {
         let baseline: Value = serde_json::from_str(READ).unwrap();
         let mut documents = vec!["{invalid".to_owned(), "null".to_owned(), "[]".to_owned()];
-        // Each fixed scalar, container and operand is independently malformed.
-        fn variants(value: &Value, root: &Value, path: &str, output: &mut Vec<String>) {
-            if !path.is_empty() {
-                let mut changed = root.clone();
-                *changed.pointer_mut(path).unwrap() = Value::Null;
-                output.push(serde_json::to_string(&changed).unwrap());
-                let mut changed = root.clone();
-                *changed.pointer_mut(path).unwrap() = Value::String("wrong".into());
-                output.push(serde_json::to_string(&changed).unwrap());
-            }
-            match value {
-                Value::Object(members) => {
-                    for (key, child) in members {
-                        let mut changed = root.clone();
-                        changed
-                            .pointer_mut(path)
-                            .unwrap()
-                            .as_object_mut()
-                            .unwrap()
-                            .remove(key);
-                        output.push(serde_json::to_string(&changed).unwrap());
-                        variants(child, root, &format!("{path}/{key}"), output);
-                    }
-                    let mut changed = root.clone();
-                    changed
-                        .pointer_mut(path)
-                        .unwrap()
-                        .as_object_mut()
-                        .unwrap()
-                        .insert("unexpected".into(), true.into());
-                    output.push(serde_json::to_string(&changed).unwrap());
+        let mut changed = |change: &dyn Fn(&mut Value)| {
+            let mut document = baseline.clone();
+            change(&mut document);
+            documents.push(document.to_string());
+        };
+        changed(&|document| document["contract"] = BUILD_CONTRACT.into());
+        changed(&|document| document["probe_plan"].as_array_mut().unwrap().clear());
+        changed(&|document| {
+            let step = document["probe_plan"][0].clone();
+            document["probe_plan"].as_array_mut().unwrap().push(step);
+        });
+        // Each target and each container on the way to it, absent or not the slot.
+        for path in TARGETS {
+            let ends = path.match_indices('/').map(|(index, _)| index).skip(1);
+            for end in ends.chain([path.len()]) {
+                for wrong in [Value::Null, Value::String("wrong".into())] {
+                    changed(&|document| {
+                        *document.pointer_mut(&path[..end]).unwrap() = wrong.clone()
+                    });
                 }
-                Value::Array(items) => {
-                    let mut changed = root.clone();
-                    changed
-                        .pointer_mut(path)
-                        .unwrap()
-                        .as_array_mut()
-                        .unwrap()
-                        .clear();
-                    output.push(serde_json::to_string(&changed).unwrap());
-                    let mut changed = root.clone();
-                    changed
-                        .pointer_mut(path)
-                        .unwrap()
-                        .as_array_mut()
-                        .unwrap()
-                        .push(items[0].clone());
-                    output.push(serde_json::to_string(&changed).unwrap());
-                    for (index, child) in items.iter().enumerate() {
-                        variants(child, root, &format!("{path}/{index}"), output);
-                    }
-                }
-                _ => {}
             }
         }
-        variants(&baseline, &baseline, "", &mut documents);
+        assert_eq!(documents.len(), 24);
         for document in documents {
             let mut output = Vec::new();
             assert_eq!(
@@ -198,6 +165,18 @@ mod tests {
             );
             assert!(output.is_empty());
         }
+    }
+
+    #[test]
+    fn members_outside_the_assigned_positions_are_published_as_embedded() {
+        let mut body: Value = serde_json::from_str(READ).unwrap();
+        body["specimen_id"] = "another-body".into();
+        body["policy"]["unread_member"] = true.into();
+        let text = render_template(&args("read", "/x"), BUILD_CONTRACT, &body.to_string()).unwrap();
+        body["contract"] = BUILD_CONTRACT.into();
+        body["probe_plan"][0]["sandbox_check"]["filter"]["value"] = "/x".into();
+        body["probe_plan"][0]["attempt"]["target"] = "/x".into();
+        assert_eq!(serde_json::from_str::<Value>(&text).unwrap(), body);
     }
 
     #[test]
@@ -263,29 +242,27 @@ mod tests {
 
     #[test]
     fn complete_publication_requires_all_writes_and_flush() {
-        for selector in ["read"] {
-            let arguments = args(selector, "/absent");
-            let expected = render(&arguments, BUILD_CONTRACT).unwrap().into_bytes();
-            for (fail_after, fail_flush) in [(None, false), (Some(30), false), (None, true)] {
-                let mut writer = Writer {
-                    bytes: vec![],
-                    fail_after,
-                    fail_flush,
-                    flushed: false,
-                };
-                let result = emit(&arguments, BUILD_CONTRACT, &mut writer);
-                if fail_after.is_some() || fail_flush {
-                    assert_eq!(result, Err(Refusal::Write));
-                    assert!(!writer.flushed);
-                } else {
-                    assert_eq!(result, Ok(()));
-                    assert!(writer.flushed);
-                }
-                assert_eq!(
-                    writer.bytes,
-                    expected[..fail_after.unwrap_or(expected.len())]
-                );
+        let arguments = args("read", "/absent");
+        let expected = render(&arguments, BUILD_CONTRACT).unwrap().into_bytes();
+        for (fail_after, fail_flush) in [(None, false), (Some(30), false), (None, true)] {
+            let mut writer = Writer {
+                bytes: vec![],
+                fail_after,
+                fail_flush,
+                flushed: false,
+            };
+            let result = emit(&arguments, BUILD_CONTRACT, &mut writer);
+            if fail_after.is_some() || fail_flush {
+                assert_eq!(result, Err(Refusal::Write));
+                assert!(!writer.flushed);
+            } else {
+                assert_eq!(result, Ok(()));
+                assert!(writer.flushed);
             }
+            assert_eq!(
+                writer.bytes,
+                expected[..fail_after.unwrap_or(expected.len())]
+            );
         }
     }
 }

@@ -506,12 +506,48 @@ The other 81 results of the corrected acceptance selection are reused. The
 changed files are the seam's checker, driver and controls, read only by the two
 seam cases, and three test READMEs. This is reviewed applicability, as above.
 
-Two publisher details were left for a maintainer decision, since either edit
-changes the build identity and needs a new candidate:
+### Publisher position checks
 
-- `render_template` validates the embedded body by equality with a second
-  complete copy in the same source file, so the product holds the body twice
-  and the stamped rule promises validation of the complete fixed template.
-  Checking only the assigned positions would change that sentence.
-- `complete_publication_requires_all_writes_and_flush` loops over a
-  one-element selector list left from the two-lesson emitter.
+The maintainer then asked for two publisher changes the review had left open.
+`render_template` no longer compares the embedded body with a second complete
+copy in its own source. It checks the positions it assigns before the first
+assignment: `contract` is absent, there is exactly one step, and that step's
+query and attempt operands hold the `$EFFECT` placeholder. Any other body is a
+rendering refusal with no output. Members outside those positions are
+published as embedded; the integration test and the seam checker still state
+the whole body independently. The stamped rule and its support say this in
+place of validation of the complete fixed template. The write-failure unit
+test lost its one-element selector loop.
+
+These edits change the build identity. Signed development build **1447** was
+made from commit `7cd93676` with these changes uncommitted, so its stamp reads
+`v0.3.7-113-g7cd93676-dirty`; its contract is
+`development:c2b33f9eca0cb15a83addf93fc0072f646b12a5cd1c579fc5fbb0664ea0192bc`.
+The worker identity did not change. Build 1445 and the runs above no longer
+describe the current source.
+
+Run `20261115T015750Z_6e559f90` at
+`tests/out/runs/test-input-positions-acceptance` executed the same 93-case
+selection against build 1447, with both opt-in wait experiments excluded by
+explicit case IDs: **92 passed and one failed**, with no system sleep and
+unchanged app inventory. It is a failed run and remains recorded as such.
+
+- `runner_unit/pwrunner_core_unit_executable` passed 604 of 605 tests. `exit
+  wakes the final wait after 2 collections without a timer sleep` in
+  `CWorkerFinalWaitTests.swift` expected no short sleep and observed one
+  `HostWaitClock.exitSettleNs` sleep: the pipe hangup arrived before the child
+  was reapable, a branch the driver handles by design and this test's oracle
+  does not allow. Neither that test, its fixture nor the runner sources changed
+  here. `20261115T021454Z_1f4d8f50` (`test-input-positions-runner-unit`) reran
+  the complete case on the unchanged candidate and passed all 605. The oracle
+  remains racy and is not repaired by this plan; allowing settle sleeps after a
+  notification in that test would remove the cause.
+
+The other 92 include all unit, integration and source-drift cases, the 60
+production C-worker cases, the corpus case, checker controls, both example
+cases, both seam cases and the whole guide workflow. The live seam again passed
+123 rows with seven submissions, and 45 offline controls matched. The guide
+installed, verified and removed its owned runner; the registry, pending cleanup
+and reconciliation candidates were empty before and after. Source drift was run
+again on this section's final text in
+`tests/out/runs/test-input-positions-docs`.

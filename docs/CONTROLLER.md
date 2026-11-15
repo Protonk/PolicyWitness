@@ -62,7 +62,7 @@ identity, uses the request parser and identity gate, serializes the whole
 object and appends one newline. `emit` writes only after rendering and requires
 a successful flush. [test_input.rs](../controller/src/test_input.rs) follows the same
 sequence for one embedded [read input](../controller/src/test_inputs/README.md).
-It checks its selector, target and complete fixed template structure, then writes the caller's absolute target unchanged into
+It checks its selector, its target and the positions it assigns in the embedded body, then writes the caller's absolute target unchanged into
 the query and attempt operands. Neither command reads a request, app manifest
 or registry, launches anything or consults the host's grammar. For both, exit 0
 reports complete publication and nothing the host decided. Version dispatch

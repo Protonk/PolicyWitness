@@ -219,8 +219,10 @@ effects: set_value(specimen.contract, ref("identity.build.contract"))
 `policy-witness test-input read --target <absolute-path>` accepts exactly the
 read selector followed by one target option. This is a build-bound developer
 publisher. The target must be a nonempty absolute UTF-8 path without NUL.
-The controller validates the complete fixed template, inserts its binary's
-contract and preserves the target verbatim at the query and attempt operands.
+The controller checks the positions it assigns in its embedded body: `contract`
+is absent, and the one step holds the `$EFFECT` placeholder at its query and
+attempt operands. It then inserts its binary's contract and preserves the
+target verbatim at those operands. Other members are published as embedded.
 Substitution is positional; literal `$EFFECT` text in caller input is data.
 The document's content, layout and labels carry no stability promise between builds.
 
@@ -241,8 +243,8 @@ independently authored expectations and observations.
 ```contract
 grade: "check_read"
 source: [{"path": "controller/src/test_input.rs", "symbol": "fn render_template"}, {"path": "controller/src/test_input.rs", "symbol": "fn emit_template"}, {"path": "controller/src/test_input.rs", "symbol": "pub fn cmd_test_input"}, {"path": "controller/src/cli.rs", "symbol": "pub fn run"}]
-check: [{"path": "controller/src/test_input.rs", "symbol": "read_input_preserves_target_identity_and_fixed_workload", "form": "test"}, {"path": "controller/src/test_input.rs", "symbol": "malformed_templates_refuse_before_output", "form": "test"}, {"path": "controller/src/test_input.rs", "symbol": "argument_target_and_identity_refusals_write_nothing", "form": "test"}, {"path": "controller/src/test_input.rs", "symbol": "complete_publication_requires_all_writes_and_flush", "form": "test"}, {"path": "controller/integration/cli_contract.rs", "symbol": "test_input_publishes_read_from_the_installed_binary", "form": "test"}, {"path": "controller/integration/cli_contract.rs", "symbol": "test_input_cli_refusals_and_write_failures_exit_2_safely", "form": "test"}, {"path": "controller/integration/cli_contract.rs", "symbol": "supplied_direct_cargo_identity_is_embedded_without_release_provenance", "form": "test"}]
-pins: "The fixed read template binds the binary identity and caller target positionally, including literal marker text, quotes, backslashes and non-ASCII characters. Malformed template structure and fixed values refuse before output. Argument, target and identity refusals write nothing. Short writes complete the document, while partial-write and late-flush failures refuse. Selected-app controls check deterministic publication and exact request content, removed lesson dispatch, status 2 on invalid arguments and unreadable stdout, and status independence from stderr closed at launch. Isolated Cargo builds check absent and supplied identities."
+check: [{"path": "controller/src/test_input.rs", "symbol": "read_input_preserves_target_identity_and_fixed_workload", "form": "test"}, {"path": "controller/src/test_input.rs", "symbol": "malformed_templates_refuse_before_output", "form": "test"}, {"path": "controller/src/test_input.rs", "symbol": "members_outside_the_assigned_positions_are_published_as_embedded", "form": "test"}, {"path": "controller/src/test_input.rs", "symbol": "argument_target_and_identity_refusals_write_nothing", "form": "test"}, {"path": "controller/src/test_input.rs", "symbol": "complete_publication_requires_all_writes_and_flush", "form": "test"}, {"path": "controller/integration/cli_contract.rs", "symbol": "test_input_publishes_read_from_the_installed_binary", "form": "test"}, {"path": "controller/integration/cli_contract.rs", "symbol": "test_input_cli_refusals_and_write_failures_exit_2_safely", "form": "test"}, {"path": "controller/integration/cli_contract.rs", "symbol": "supplied_direct_cargo_identity_is_embedded_without_release_provenance", "form": "test"}]
+pins: "The fixed read template binds the binary identity and caller target positionally, including literal marker text, quotes, backslashes and non-ASCII characters. A body that is not an object, carries a contract, has no step or a second step, or lacks the placeholder at an assigned operand or a container leading to it refuses before output. A body differing elsewhere is published with the same three assignments. Argument, target and identity refusals write nothing. Short writes complete the document, while partial-write and late-flush failures refuse. Selected-app controls check deterministic publication and exact request content, removed lesson dispatch, status 2 on invalid arguments and unreadable stdout, and status independence from stderr closed at launch. Isolated Cargo builds check absent and supplied identities."
 context: "Read the embedded-template materializer, dispatch, constructed argument/template/writer controls and CLI integration assertions."
 limits: "Check read; no execution is credited. Publication controls establish neither host admission nor native file effects. No control observes the absence of operating-system reads or process launches; those claims have source support. Stderr controls close that stream at launch. These checks do not promise admission for arbitrary target lengths or environments."
 ```
@@ -289,7 +291,7 @@ grade: "check_read"
 source: [{"path": "controller/src/test_input.rs", "symbol": "fn render_template"}]
 check: [{"path": "controller/integration/cli_contract.rs", "symbol": "test_input_publishes_read_from_the_installed_binary", "form": "test"}]
 pins: "The selected-app publication assertion independently states the read body's identity, policy, query, attempt and target binding."
-context: "Read the fixed template validation and the independently authored CLI publication expectation."
+context: "Read the binding of the embedded body and the independently authored CLI publication expectation."
 limits: "Check read; no execution or native outcome is credited. This body is build-specific public content, not a compatibility promise for later builds."
 ```
 
