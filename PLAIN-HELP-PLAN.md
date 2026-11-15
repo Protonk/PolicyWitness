@@ -16,8 +16,8 @@ The plan has four kinds of statement and keeps them apart:
 maintainer makes. An executor should not promote an item from one kind to
 another without the evidence the plan names for it. The remaining sections
 are this plan's proposal: provisional cards, editorial representation,
-recognition, connection evidence, sequence, verification and consequences.
-They can be revised by review and by what the experiments show.
+connection evidence, sequence, verification and consequences. They can be
+revised by review and by what the experiments show.
 
 ## Problem
 
@@ -42,8 +42,9 @@ line can fail a job or bury a card in the error stream.
 `policy-witness help` selects and prints short cards on stdout. A card
 carries no explanatory sentences. Its contents are a projection of the
 executable interface, assembled and verified while the product is built, and
-delivered at invocation without consulting operational state. An invocation
-recognized as help exits 0 whatever else is on its command line.
+delivered at invocation without consulting operational state. Help is the
+word `help` as the first argument and nothing else: such an invocation exits
+0 whatever follows it, and no `--help` or `-h` flag is help anywhere.
 
 The strictness is deliberate. Cards that can only say what the interface
 mechanically supports make the interface's unstated rules visible, and that
@@ -55,8 +56,8 @@ plan preserves that use and does not require acting on it.
 These are the maintainer's decisions. They are not reopened by this plan.
 
 1. **Bare card output.** Help selects and prints simple cards: specific
-   information for recognized subjects and a bare fallback for anything
-   unrecognized. Selection stays deliberately limited. An incidental help
+   information for recognized subjects and a bare fallback, the base card,
+   for anything unrecognized. Selection stays deliberately limited. An incidental help
    invocation adds text to a CI log and causes no usage failure.
 2. **No operational prerequisites.** Once an invocation is recognized as
    help, malformed arguments trigger no operational work, no stderr
@@ -77,6 +78,15 @@ These are the maintainer's decisions. They are not reopened by this plan.
    Execution, test fixtures and help must agree, and the mechanism for that
    agreement is not decided here. A declared obligation or guarantee stays
    distinguishable from something observed in an example.
+
+5. **Word form only.** The [help grammar](#help-grammar) is settled: `help`
+   prints the base card, `help` followed by a topic prints that topic's
+   card, and `help` followed by anything else prints the base card. The
+   topics are `run`, `example` and one more still to be chosen. Help has no
+   flag form and takes no flags. Requirement 1's protection for an
+   incidental invocation therefore covers the word form; `--help` and `-h`
+   are ordinary arguments wherever they appear, and the implementation is
+   guarded against acquiring a flag form.
 
 **Editorial responsibility.** Refusing authored text leaves selection and
 arrangement as deliberate editorial acts. Each proposed card element, and
@@ -334,7 +344,7 @@ promise it appears to cover:
 
 These candidates give the editorial examination a concrete starting point.
 They do not settle the inventory, a rendering mechanism or any exception to
-requirement 3. The subject card for `help run` answers which runner-mode
+requirement 3. The topic card for `help run` answers which runner-mode
 values the command accepts:
 
 ```text
@@ -345,9 +355,9 @@ run
 ```
 
 This is a vocabulary card; it does not supply a complete invocation or imply
-that selecting a mode guarantees a successful run. The bare fallback lists
-selected top-level command spellings, including commands whose subject cards
-are not yet proposed:
+that selecting a mode guarantees a successful run. The base card lists
+selected top-level command spellings, including commands that have no topic
+card:
 
 ```text
 help
@@ -358,19 +368,26 @@ test-input
 version
 ```
 
-Both candidates end with one newline. Their content has the following
-ledger; the linkage column describes work still needed, not an established
+Both candidates end with one newline. No sketch is proposed for the
+`example` topic card: each candidate element that would be useful there
+raises a question the plan has not resolved, and the ledger lists them so
+the examination starts from something concrete. The third topic is not
+chosen. The linkage column describes work still needed, not an established
 connection.
 
 | Element | Governing source and status | Use to the reader and what it clarifies | Linkage needed and rule exposed |
 | --- | --- | --- | --- |
-| `run` on the subject card; `help`, `run`, `runner`, `example`, `test-input`, `version` on the fallback | The recognized first arguments in `cli::run` in [cli.rs](controller/src/cli.rs); declared admission and dispatch behavior. | Names the subject and gives the reader other entry points. | Give each accepted spelling a typed reference to its governing dispatch definition. Select and order those references as described below. The current match arms are not enumerable; E1 compares the hand-table and clap ways of supplying these definitions. |
+| `run` on its topic card; `help`, `run`, `runner`, `example`, `test-input`, `version` on the base card | The recognized first arguments in `cli::run` in [cli.rs](controller/src/cli.rs); declared admission and dispatch behavior. | Names the topic and gives the reader other entry points. The base card does not show which entries are help topics; whether it should is part of the inventory decision. | Give each accepted spelling a typed reference to its governing dispatch definition. Select and order those references as described below. The current match arms are not enumerable; E1 compares the hand-table and clap ways of supplying these definitions. |
+| The topic addresses `run` and `example` after `help` | The help recognizer, which does not exist yet; declared address behavior. | Not printed on a card unless the base card is chosen to list topics. | A command topic's address shares the spelling definition of its command, so renaming the command moves the command, the address and the card text together. A third topic that is not a command is governed by the help recognizer's own definition. |
 | `--runner-mode` under `run` | `parse_arguments` in [run_flow.rs](controller/src/run_flow.rs); declared flag recognition and value consumption. | Identifies the option to which the displayed vocabulary belongs. | Give the option a typed reference to the definition the parser consumes, including its command and value relationship. E1 compares both mechanisms for this same element. Parsing a flag and successfully completing a run are separate obligations. |
 | `standard`, `byoxpc` under `--runner-mode` | `RunnerKind::parse` in [runner_manager.rs](controller/src/runner_manager.rs), called by `parse_arguments`; declared value admission. | Shows the accepted spellings and makes the CLI vocabulary distinct from legacy registry input. | Make the parser's vocabulary enumerable without introducing a rendering-only copy. `as_str` has its own spelling matches today; serde's legacy `machme` and `debuggable` aliases do not establish CLI acceptance. |
+| Candidate for the `example` card: the phase and step identifiers of the emitted specimen | `EXAMPLE_DOCUMENT` in [example.rs](controller/src/example.rs), which the command prints; declared content of this build's example. | Shows the shape of what the command emits before it is run. The command already prints the whole document, so the use is doubtful. | The constant is a JSON string; a card builder would read the same constant the publisher renders. |
+| Candidate for the `example` card: the command line that feeds the emitted document to `run` | The publisher and `run`'s admission; the build guarantees that its own `run` admits the document, a declared guarantee held by `emitted_example_reaches_the_client_as_the_emitted_document` and the live round trip. | The most useful thing a reader could learn from this card. | Needs a file placeholder or an executed case, so it waits on the non-derived token decision or on E4. |
+| Candidate for the `example` card: the query answers and attempt results of the workload | One execution on one host; an observation, stated as such in [DEPENDENCIES.md](docs/DEPENDENCIES.md#files-used-by-the-emitted-example). | Tells a reader what a working installation returns. | Waits on the decision about observations on cards and on E4's account of build order and ownership. |
 | Indentation, ordering and final newline | Renderer layout; editorial arrangement under the settled requirements. | Groups each value with its option and the option with its command. | Derive the command/option/value relationships from the governing interface. Layout must not introduce an unsupported relationship or turn these fragments into a promise of successful execution. |
 
-All semantic elements in these candidates express declared behavior; none is
-an execution observation. Labels and placeholders remain explicit unresolved
+All semantic elements in the two sketches express declared behavior; none is
+an execution observation. The `example` candidates include one observation. Labels and placeholders remain explicit unresolved
 candidates: `<request.json>`, `<n>`, `Usage:`, and `default:` have no proposed
 derivation here and are omitted from the sketches. In particular,
 `DEFAULT_TIMEOUT_MS` governs `240000`, but printing that number alone would
@@ -396,14 +413,14 @@ text, display-name fields, or string lookups such as `lookup("run")`.
 A separate list of spellings, even if checked against the parser, is ruled
 out by requirement 3.
 
-For example, schematic references `EntrySpelling::HelpWord` and
-`EntrySpelling::VersionWord` select the word forms on the fallback while
-omitting their flag aliases. `Command::Run` and `RunOption::RunnerMode`
-select the subject and its displayed option while omitting
-`RunOption::TimeoutMs`. These identifiers are illustrative internal names,
+For example, a schematic reference `EntrySpelling::VersionWord` selects the
+word form on the base card while omitting the `--version` alias.
+`Command::Run` and `RunOption::RunnerMode` select the topic and its displayed
+option while omitting `RunOption::TimeoutMs`. The help recognizer resolves
+the address `run` through the same `Command::Run` spelling. These identifiers are illustrative internal names,
 not card text or an imposed Rust API. Rendering dereferences them to the
 definitions actually consumed by recognition, dispatch or argument parsing;
-the identifiers' own names are never rendered. The fallback order comes
+the identifiers' own names are never rendered. The base card's order comes
 from the reference sequence, independently of dispatch order. The values
 under `RunnerMode` come from its governing vocabulary, including their
 association with that option.
@@ -429,94 +446,68 @@ account for selection changes; rename and invalid-reference controls check
 the text linkage. Labels and placeholders would still need individually
 named exceptions, rather than a general text field in the card specification.
 
-## Proposed recognition and address matrix
+## Help grammar
 
-This is a proposal for the recognition and address decisions, not a new
-settled requirement. Resolve it with the maintainer before E1 so the parser
-experiment has an explicit compatibility target.
+This grammar is settled (requirement 5). The table states its consequences
+for particular command lines so that tests and reviewers share one reading.
 
-- First-argument `help`, `--help` and `-h` recognize help immediately. The
-  next argument alone selects the `run` card when it is exactly `run`;
-  anything else, including no argument or a non-UTF-8 argument, selects the
-  fallback. Remaining arguments cannot change that selection.
-- After `run` or `runner`, an exact `--help` or `-h` anywhere before the
-  first exact `--` recognizes help before ordinary argument parsing. It
-  overrides earlier errors and option-value consumption. `run` selects its
-  card; `runner` selects the fallback until its card is chosen.
-- The existing `runner help` prefix also recognizes help and selects the
-  fallback, ignoring its tail. Other uses of the word `help` retain their
-  ordinary meaning. Unknown top-level commands and the version command do
-  not acquire help recognition from a trailing flag.
-- `example` and `test-input` retain their publisher grammars. Help flags
-  anywhere after either command remain ordinary publisher input and do not
-  enter the help path. Request help through the leading forms, such as
-  `help example` or `help test-input`; both select the fallback for now.
+- The first argument is compared with `help` as an exact `OsString`. If it
+  matches, the invocation is help: exit 0, one card on stdout, empty stderr,
+  subject to the settled stdout-failure exclusion. The comparison precedes
+  host facts, app-root resolution and all command dispatch.
+- The second argument alone selects the card. An exact topic name selects
+  that topic's card. Anything else selects the base card: no second
+  argument, an unknown word, a different letter case, a flag-shaped token,
+  an empty or non-UTF-8 argument.
+- Arguments after the second are ignored. They cannot change the selection
+  and are never searched for a topic.
+- Nothing else is help. `--help` and `-h` have no special meaning at the top
+  level or after any command, and the word `help` has no special meaning
+  after a command.
 
-**Publisher boundary.** This proposal preserves both publication promises:
-exit 0 from `example` supplies its complete specimen, and exit 0 from
-`test-input` establishes complete publication of its JSON object, framing
-newline and flush. A trailing `--help` or `-h` does not produce exit 0 from
-either publisher. The [example emission rule](docs/CONTRACT.md#contract-request-specimen-emit_example)
-and [test-input publication rule](docs/CONTRACT.md#contract-request-specimen-emit_test_input)
-keep their meanings. In particular, `example --help > request.json` exits 2
-with empty stdout; a successful help card requires a leading help invocation.
-
-This leaves the decision to make help's own promises public at step 3. Any
-proposal to add help recognition after either publisher must first resolve
-the corresponding narrowing of that publisher's exit-0 promise and help's
-contract boundary, before E1 uses it as a compatibility target. Such a
-change would require coordinated authored-contract, test and reader updates;
-it cannot be treated as merely enabling another help spelling.
-
-**`run` and `runner` refusal boundary.** The proposal does change behavior
-the contract states for `run`. An invocation with an argument error and a
-help flag before `--`, such as `run --bad --help` or
-`run --runner-mode machme --help`, prints a card and exits 0 where the
-[controller pre-invocation refusal](docs/CONTRACT.md#contract-refusals-controller-consequence)
-selects a `tool_error` envelope for argument parsing. `runner install`'s
-stated refusal of `--bundle-id` and `--executable` is narrowed the same way
-when a help flag accompanies them. The contract is already silent about the
-existing `run --help` result, so the gap is not new, but these rows widen
-it. Accepting them means deciding, with the matrix and before E1, between
-two costs: a stated help precedence in those contract rules, which is an
-authored-contract change that moves the build identity, or a narrower rule
-in which help does not override an argument error, which leaves
-`run --bad --help` a usage failure of the kind requirement 1 is meant to
-remove. This plan does not choose.
-
-Recognition compares exact `OsString` tokens without requiring the rest to
-be UTF-8. It precedes host facts, app-root resolution and all command
-dispatch with operational effects. Every recognized row below means exit 0,
-the selected card on stdout and empty stderr, subject to the settled stdout
-failure exclusion. Excluded rows keep ordinary command behavior, which may
-depend on operational state.
-
-| Arguments after `policy-witness` | Proposed recognition and card | Precedence or compatibility consequence |
+| Arguments after `policy-witness` | Result | Change from today |
 | --- | --- | --- |
-| `help`, `--help`, `-h` | Help; fallback. | Moves top-level help from stderr to stdout. |
-| `help example`, `help test-input`, `--help example`, `-h test-input` | Help; fallback. | These enter leading help dispatch; neither invokes a publisher or supplies a request document. |
-| `help run`, `help run junk`, `--help run --bad`, `-h run -- --help` | Help; `run`. | The immediate subject wins; all later tokens are ignored. |
-| `help bogus run`, `help -- run`, `help` followed by a non-UTF-8 token | Help; fallback. | Selection never searches the tail for a known subject. |
-| `run --help`, `run -h`, `run x --help` | Help; `run`. | No host-fact collection or ordinary run preparation. |
-| `run --bad --help`, `run --timeout-ms --help`, `run --runner-mode --help`, `run --runner-mode machme --help` | Help; `run`. | Help wins over earlier argument errors and a pending option value. These are deliberate behavior changes and fall under the refusal boundary above: the contract selects `tool_error` for them today. |
-| `run` followed by a non-UTF-8 token and `--help` | Help; `run`. | Earlier opaque input cannot prevent recognition. |
-| `run help` | Ordinary `run`; no card. | `help` remains a legal request path. |
-| `run -- --help`, `run request.json -- --help` | Ordinary `run`; no card. | The separator stops the help scan. The existing parser stops processing there; it does not reinterpret the tail as a request path. |
-| `run --help --`, `run --timeout-ms -- --help` | First form: help, `run`; second form: ordinary `run`. | A help token before the separator wins; one after it cannot override an invalid option value. |
-| `runner help`, `runner --help`, `runner install --help`, `runner status --help`, `runner reconcile --help` | Help; fallback. | Recognizes help before subcommand validation or operational work, including the stated refusal of `--bundle-id` and `--executable`. |
-| `runner list --help`, `runner validate --help` | Help; fallback. | Prevents registry listing, locking and validation for these invocations. |
-| `example --help`, `example -h`, `test-input --help`, `test-input -h` | Ordinary publisher refusal: exit 2, empty stdout, diagnostic on writable stderr; no card. | Preserves both exit-0 publication promises. |
-| `test-input read --target /tmp/input --help`, `test-input read --target --help` | Ordinary publisher refusal: exit 2, empty stdout, diagnostic on writable stderr; no card. | Neither a trailing flag nor a flag in the target position enters help recognition. |
-| `example help`, `test-input help` | Ordinary usage refusal; no card. | The word form is reserved to the explicit prefixes above. |
-| No arguments, `bogus`, `HELP`, `bogus --help` | Ordinary top-level usage refusal; no card. | Unknown top-level commands are not promoted to help. |
-| `version --help`, `--version --help` | Ordinary version output; no card. | Preserves the version command's existing treatment of trailing arguments. |
+| `help` | Base card. | Moves from stderr to stdout. |
+| `help run`, `help run junk`, `help run --bad`, `help run -- x` | `run` card. | The tail was already ignored; the subject is now read. |
+| `help example`, `help example extra` | `example` card. | Invokes no publisher and supplies no request document. |
+| `help` and the third topic | That topic's card. | Applies once the topic is chosen. |
+| `help bogus`, `help bogus run`, `help RUN`, `help runner`, `help test-input`, `help version`, `help help` | Base card. | Only an exact topic name in second position selects a topic card. |
+| `help --run`, `help --help`, `help -h`, `help -- run`, `help ''`, `help` and a non-UTF-8 token | Base card. | Help parses no flags; these are unknown addresses. |
+| `--help`, `-h` | Ordinary unknown-command refusal: exit 2, no card. | Exit 0 today. |
+| `run --help`, `run -h`, `run x --help` | Ordinary `run` argument refusal: a `tool_error` envelope, exit 2. | Exit 0 today. The result now matches the contract's stated selection for argument parsing. |
+| `runner help`, `runner --help` | Ordinary unknown-runner-command refusal: exit 2, no card. | Exit 0 today. |
+| `runner install --help`, `runner status --help`, `runner reconcile --help`, `example --help`, `example -h`, `example help`, `test-input --help`, `test-input help` | Each command's existing refusal: exit 2, empty stdout. | None. |
+| `runner list --help`, `runner validate --help`, `version --help`, `--version --help` | Each command's existing behavior with its trailing arguments discarded: the registry is listed, the registry is locked and validated, the version envelope is printed. | None. These are not help and print no card. Whether such commands should refuse extra arguments belongs to the [repair decision](#open-decisions). |
+| `run help` | Ordinary `run` with the request path `help`. | None. It exits 2 with `request.json not found` unless a file of that name exists, in which case that file is the request. |
+| No arguments, `bogus`, `HELP` | Ordinary top-level usage refusal. | None. |
 
-For `run` and `runner`, the flag rule trades ordinary argument interpretation
-for reliable help recognition before `--`. Review that tradeoff explicitly.
-If a row is revised, update the rule, expected card and affected contract/test
-expectations together before interpreting E1's differences. Publisher rows
-also follow the publication boundary above, and rows where help overrides an
-argument error follow the refusal boundary.
+No operational command's grammar changes and no existing contract rule is
+narrowed. Both publisher promises stand as written: exit 0 from `example`
+or `test-input` still means a complete document on stdout. The contract's
+`tool_error` selection for `run` argument parsing loses its one unstated
+exception.
+
+Three groups of invocations that succeed today become refusals: top-level
+`--help` and `-h`, the `run` flag forms, and `runner help` with
+`runner --help`. A script that calls one of them under `set -e` will start
+failing. What the refusal prints is the reader's only path from the flag to
+the word, which gives the [usage-failure decision](#open-decisions) more
+weight than it had.
+
+### Flag guard
+
+The absence of a flag form is to be held by checks, not by restraint.
+
+- The `-h` and `--help` arms in `cli::run`, `parse_arguments` and
+  `cmd_runner`, with `Arguments::Help` and `RunOutput::Help`, are removed.
+  No path remains by which a flag reaches a card.
+- A retained control runs `--help` and `-h` at the top level and after every
+  command and subcommand. For each it requires that stdout is not a card and
+  that the status and streams are the ones in the table above.
+- The card builder refuses a topic whose address begins with `-`.
+- If a parser library is adopted, a check enumerates its declaration and
+  fails on any argument with the long name `help` or the short name `h`, and
+  on an enabled built-in help subcommand. clap adds all three by default.
 
 ## What would demonstrate a real connection
 
@@ -589,18 +580,14 @@ What can pass while leaving the result unestablished:
 
 ## Sequence
 
-1. **Review the candidates and recognition proposal.** Review the
+1. **Review the candidates.** Review the
    [provisional cards and ledger](#provisional-cards-and-derivation-ledger)
    for reader usefulness and derivation gaps; extend the ledger when adding
-   an element. Settle the
-   [recognition and address matrix](#proposed-recognition-and-address-matrix)
-   with the maintainer before E1, preserving the publisher boundary unless
-   its contract consequences are explicitly resolved, and resolving the
-   `run` and `runner` refusal boundary for the rows that are accepted. Fix
-   the common
-   elements and ordinary cases for E1's comparison and the common corpus
-   for E4. Keep the ledger here or in a record under `records/` linked only
-   from this plan.
+   an element. Examine the `example` candidates and choose or defer the
+   third topic. The [help grammar](#help-grammar) is settled and is not
+   reviewed again here. Fix the common elements and ordinary cases for E1's
+   comparison and the common corpus for E4. Keep the ledger here or in a
+   record under `records/` linked only from this plan.
 2. **Experiments.** Run E1 through E4. E1 compares the hand table and clap
    for the same card elements and behavior. E2 can begin with E1's hand-table
    prototype, including its typed references, while the clap comparison
@@ -617,9 +604,8 @@ What can pass while leaving the result unestablished:
    maintainer with the ledger and the experiment results. Present each
    commitment as the distinction, why it matters and what changes. Amend
    this plan with the resulting MVP, meaning the first slice to implement:
-   its resolved recognition rule and address grammar, card inventory,
-   linkage and rendering mechanism, permitted repair and dependency
-   adoption. Reopen an earlier decision only with the experiment result
+   its card inventory, linkage and rendering mechanism, permitted repair
+   and dependency adoption. Reopen an earlier decision only with the experiment result
    that warrants reconsideration.
 4. **Implementation of the MVP** as amended.
 5. **Verification and alignment** as described under
@@ -643,8 +629,9 @@ E4's execution-tool comparison are not optional on that basis.
 **E1. How do a governing hand table and a governing clap declaration compare
 for the same interface?** The provisional cards trigger this experiment now:
 their command names and option spelling have no enumerable governing
-definition today. After resolving the recognition matrix, prototype both
-alternatives in scratch worktrees:
+definition today. Help recognition is not part of the comparison: it is the
+settled first-argument rule in both alternatives. Prototype both in scratch
+worktrees:
 
 - A hand-built definition table supplies the typed identities, admitted
   spellings and command/option/value relationships. Top-level recognition
@@ -653,14 +640,16 @@ alternatives in scratch worktrees:
   alternative.
 - A clap declaration governs those same admission paths through
   `try_get_matches_from`, with typed references for editorial selection.
-  Explicit early help recognition preserves the matrix; clap's built-in
-  help defaults cannot decide it. Other command tails continue to their
-  existing parsers, including unchanged publisher admission.
+  clap's help flag, help subcommand and version flag are disabled and the
+  [flag guard](#flag-guard) is applied to the declaration. Other command
+  tails continue to their existing parsers, including unchanged publisher
+  admission.
 
-Use the same fallback spellings, `run` subject and runner-mode values in
-both. Exercise `run`'s ordinary arguments, including the unprinted timeout
+Use the same base-card spellings, `run` topic, shared topic address and
+runner-mode values in both. Exercise `run`'s ordinary arguments, including the unprinted timeout
 option and request path, because adopting a parser must preserve their
-behavior too. The comparison includes the matrix, repeated options and
+behavior too. The comparison includes the help grammar table, repeated
+options and
 paths, `--`, non-UTF-8 paths, `--timeout-ms 0`, `--timeout-ms=5`, invalid
 values and the `machme` refusal. Keep input cases and independent expected results
 common to both prototypes. Every ordinary `run` refusal must retain its
@@ -668,7 +657,8 @@ common to both prototypes. Every ordinary `run` refusal must retain its
 root, and request paths must remain `OsString` values.
 
 For each alternative, record behavioral differences from the current parser,
-separating approved help changes from incidental or additional changes and
+separating the settled flag-form changes from incidental or additional
+changes and
 identifying contract and test constraints. Record how the definitions and
 editorial references feed E2, the E3 controls, the amount of handwritten
 parsing or adaptation retained, and dependency/build costs. Supply an
@@ -750,9 +740,11 @@ cases under
 Run this comparison even when cards contain no executed example or observed
 transcript. Compare the existing `std::process` assertions, trycmd cases and
 snapbox-only assertions against the same signed app's controller through the
-dispatcher. Use one corpus covering leading help, a help-shaped usage
-failure, successful publication from each publisher, and publisher refusals
-for trailing help flags. Record the artifact and its actual behavior; if it
+dispatcher. Use one corpus covering `help` with each topic and with an
+unknown address, a flag form refused at the top level and after `run`,
+successful publication from each publisher, and publisher refusals for
+trailing help flags. The `example` card's command-line and observation
+candidates are the concrete card material this experiment has to assess. Record the artifact and its actual behavior; if it
 predates the proposed help behavior, label its expectations as the current
 baseline and apply the same updated expectations to all three approaches
 when comparing a candidate build. Include non-UTF-8 and failed-write cases
@@ -785,24 +777,21 @@ that decision.
 
 ## Open decisions
 
-None of these is settled merely by appearing in this plan. The recognition
-and address proposals are resolved before E1, with both publisher exit-0
-promises preserved by the proposed matrix. The remaining decisions use the
-ledger and completed E1 through E4 comparisons; card inventory size cannot
-substitute for those results.
+None of these is settled merely by appearing in this plan. Recognition and
+addressing are no longer among them: the [help grammar](#help-grammar) is
+settled. The decisions use the ledger and completed E1 through E4
+comparisons; card inventory size cannot substitute for those results.
 
 | Decision | Informed by | What depends on it |
 | --- | --- | --- |
-| **Recognition rule.** Accept or revise the [proposed matrix](#proposed-recognition-and-address-matrix), including precedence over errors and option values, the `--` boundary, preservation of `run help` as a path and both publisher grammars. Resolve before E1; admitting help after a publisher also requires its exit-0 and help-contract decisions at that point, and accepting help over an argument error requires the refusal-boundary decision. | The findings table; the contract's `example` and `test-input` rules; the maintainer's view of which careless forms occur. | Which existing tests and contract statements change; how much of each command's parsing help recognition must precede. |
-| **Address grammar.** Accept or revise immediate-subject selection and the fallback outcomes in the matrix before E1. | The provisional cards; requirement 1's limit on selection. | Card inventory; the selection code. |
-| **Card inventory.** Accept, revise or extend the [provisional cards](#provisional-cards-and-derivation-ledger) and their ledger. | The ledger's two-ground examination of each element. | The elements each required experiment covers and the implemented projection; E1 and E4 still run for the provisional inventory. |
+| **Card inventory.** Accept, revise or extend the [provisional cards](#provisional-cards-and-derivation-ledger) and their ledger: the content of the `example` card, the third topic (now, during implementation, or in a follow-up plan), and whether the base card lists command spellings, help topics or both. | The ledger's two-ground examination of each element. | The elements each required experiment covers and the implemented projection; E1 and E4 still run for the provisional inventory. |
 | **Linkage architecture.** Choose the governing hand table, clap declaration or justified mix using the same-element comparison. Editorial selection uses typed references under [editorial representation](#editorial-representation); spelling lists and text overrides are excluded. Executed elements additionally need E4's ownership account. | E1, E2, E3, E4. | Parser changes; dependency adoption. |
 | **Rendering mechanism and build placement.** | E2. | `build.sh`, `build.json`, generator registration or Cargo provenance. |
-| **Repair and refactoring before the MVP.** How much parser change is accepted so that elements have governing declarations, and which exposed rules (arguments discarded by `runner list` and `runner validate`, flags matched only to be refused, `--timeout-ms 0` becoming 1, the last request path winning) are repaired, declared or left off the cards. | E1's difference list; the ledger's exposures. | Scope and risk of the MVP; contract and test changes. |
+| **Repair and refactoring before the MVP.** How much parser change is accepted so that elements have governing declarations, and which exposed rules (arguments discarded by `runner list` and `runner validate`, which leaves `runner validate --help` locking and validating the registry; flags matched only to be refused; `--timeout-ms 0` becoming 1, the last request path winning) are repaired, declared or left off the cards. | E1's difference list; the ledger's exposures. | Scope and risk of the MVP; contract and test changes. |
 | **Non-derived tokens.** Whether a card may carry any token that does not come from governing code: section labels, renderer-supplied words, value placeholders, the word that separates an observation from an obligation. The ledger explicitly leaves `<request.json>`, `<n>`, `Usage:` and `default:` unresolved. Each is an exception under requirement 3 unless a derived substitute exists. | The ledger; clap's observed output; E3. | Whether clap's renderer can be used as is; card legibility. |
-| **Observations on cards.** Whether any element may be an observation, and how a card marks it without prose. This is separate from the required E4 comparison and its test-tool decision. | E4; requirement 4. | Build order; fixture ownership. |
-| **Usage failures.** What a non-help usage failure prints: `USAGE`, `runner_usage` and the `test-input` usage line serve failures today. If they stay for failures, authored help prose remains in the binary beside the cards. | Recognition rule; requirement 3. | `example`'s refusal output; bare and unknown-command behavior; the README block. |
-| **Public status of help.** Whether the help promises become contract rules. This remains at step 3 while publisher help flags remain refusals, except for the `run` and `runner` refusal boundary, which is resolved with the matrix. Reopening the publisher rows moves the affected publisher exit-0 and help applicability decisions before E1. A contract change moves the build identity and requires the authored-tree procedure. | Maintainer; the publisher boundary in the recognition proposal. | Contract sources, stamps, shape goldens, support citations. |
+| **Observations on cards.** Whether any element may be an observation, and how a card marks it without prose. The `example` card's workload results are the live candidate. This is separate from the required E4 comparison and its test-tool decision. | E4; requirement 4. | Build order; fixture ownership. |
+| **Usage failures.** What a non-help usage failure prints: `USAGE`, `runner_usage` and the `test-input` usage line serve failures today. If they stay for failures, authored help prose remains in the binary beside the cards. Because `--help` and `-h` are now refusals, this output is what leads a reader from the flag to the word; printing the base card on stderr is one derived candidate. | The help grammar; requirement 3. | `example`'s refusal output; bare and unknown-command behavior; the README block. |
+| **Public status of help.** Whether the help promises become contract rules. The settled grammar narrows no existing rule, so nothing forces this before step 3. A contract change moves the build identity and requires the authored-tree procedure. | Maintainer. | Contract sources, stamps, shape goldens, support citations. |
 | **Build identity on cards.** Whether a card shows the contract identity, which differs in every build. | Ledger. | Expected-output handling in tests. |
 | **Failed stdout write.** Outside the promise, but the current result is a panic with exit 101. `example` and `test-input` define exit 2 without a panic. | Existing publisher pattern. | A small part of the help path and its tests. |
 | **Dependencies.** Whether clap, trycmd or snapbox are adopted, and in which `Cargo.toml` section. Neither adoption nor rejection is presumed; the E1 and E4 comparison records must support the decision even for the provisional cards. | E1, E2, E3, E4; the lock file's status as a build input. | `Cargo.lock`, `DEPENDENCIES.md`, provenance. |
@@ -824,18 +813,17 @@ the minimum.
   there, executed on the signed app's controller and on a copy of that
   binary outside the bundle, with stdout, stderr and
   exit status asserted separately and exactly. Cover every row of the
-  resolved recognition matrix, including its ordering, separator and
-  non-UTF-8 cases, as well as the invocations in the findings table that
-  the rule covers. For each excluded help-shaped invocation, retain a case
-  establishing ordinary behavior under explicit fixture conditions. Check
-  selected card identity as well as status and streams.
-- **Publisher promises.** On a signed build, each successful publisher
-  invocation still emits exactly one complete JSON document with its framing
-  newline. Trailing help flags, including the listed `test-input` argument
-  positions, exit 2 with empty stdout and the ordinary diagnostic when stderr
-  is writable. Leading `help example` and `help test-input` print cards and
-  invoke neither publisher. Retain the existing write/flush-failure and
-  publication-versus-admission assertions.
+  [help grammar](#help-grammar) table, including the ignored tail, the
+  flag-shaped addresses and the non-UTF-8 case. For each row that is not
+  help, retain a case establishing its ordinary behavior under explicit
+  fixture conditions. Check selected card identity as well as status and
+  streams.
+- **Flag guard.** Each check under [flag guard](#flag-guard) is present and
+  has a rejected control: a restored `--help` arm, a topic address beginning
+  with `-`, and a parser declaration with its help flag left enabled.
+- **Publisher promises.** Unchanged. The existing publication, refusal,
+  write-failure and publication-versus-admission assertions are retained as
+  they are. `help example` prints a card and invokes no publisher.
 - **Comparison record.** Step 3 includes E1's hand-table/clap comparison and
   E4's `std::process`/trycmd/snapbox comparison for the common inputs, with
   failures and uncompleted work stated. The record supports separate choices
@@ -858,22 +846,26 @@ decisions; those that do change together:
 - `USAGE`, `print_usage`, `runner_usage`, the `test-input` usage line and
   their callers in `cli.rs`, `run_flow.rs`, `runner_commands.rs`,
   `example.rs` and `test_input.rs`.
+- The flag arms and the `Arguments::Help` and `RunOutput::Help` variants,
+  which are removed, and the three tests that pin today's exit 0: the
+  top-level `--help` assertion in
+  `example_prints_one_request_and_refuses_every_argument`, the `-h`
+  assertion beside `parse_arguments`, and the `--help` observation in
+  `refusals_before_selection_load_at_most_once_and_never_invoke_the_client`.
 - `example_prints_one_request_and_refuses_every_argument`,
   `test_input_cli_refusals_and_write_failures_exit_2_safely`, the
   `RunOutput::Help` assertions in `run_flow.rs`, and the
   [integration invariants](tests/suites/integration/README.md). Preserve the
-  publisher refusal/publication assertions while updating leading-help
-  assertions and adding the recognition-matrix cases.
+  publisher refusal/publication assertions while adding the help grammar
+  cases.
 - `check_cli_surface_agreement`, which reads the `usage: ... notes:` text
   directly, the README block it compares, the synchronization rule in
   `controller/AGENTS.md`, and in `architecture.json` the `cli_rs`, `D24`
   and `D30` entries plus the caller and argv-channel entries that cite
   `cli.rs`: `pub fn run`, with the regenerated architecture account.
 - Contract support citations that name `cli.rs`: `pub fn run`, if dispatch
-  moves out of that function, the controller pre-invocation refusal and
-  selection precedence rules if help is given stated precedence over
-  argument errors, and new rules with their own support if help becomes
-  public.
+  moves out of that function, and new rules with their own support if help
+  becomes public.
 - `docs/build.json` and `BUILD.md` if a build stage is added,
   `DEPENDENCIES.md` and the lock file if a crate is adopted, and the
   generator contracts if a generator is registered.
