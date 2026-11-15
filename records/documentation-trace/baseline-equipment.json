@@ -1,0 +1,283 @@
+{
+  "app_present": true,
+  "cache_toolchain_stamp": {
+    "extended_at": null,
+    "fields": {
+      "compilers.c.command": [
+        "cc"
+      ],
+      "compilers.c.identity": "Apple clang version 21.0.0 (clang-2100.4.1.1)",
+      "compilers.swift.command": [
+        "swiftc"
+      ],
+      "compilers.swift.identity": "Apple Swift version 6.4.2 (swiftlang-6.4.2.1.9 clang-2100.4.1.1)",
+      "developer_dir": "/Applications/Xcode.app/Contents/Developer",
+      "output.c_arch": [
+        "arm64"
+      ],
+      "output.cargo_triple": "aarch64-apple-darwin",
+      "output.cpu_family": "aarch64",
+      "output.link_arch": [
+        "arm64"
+      ],
+      "output.swift_target": [
+        "arm64-apple-macosx26.0"
+      ],
+      "output.system": "darwin",
+      "rustc.command": "/opt/homebrew/opt/rustup/bin/rustc",
+      "rustc.identity": "rustc 1.99.0 (b940084d7 2026-09-28)",
+      "rustc.wrappers": {},
+      "sdk.build": "26B118",
+      "sdk.path": "/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX27.2.sdk",
+      "sdk.version": "27.2"
+    },
+    "published_at": "2026-11-11T04:35:31Z",
+    "schema_version": 2,
+    "scope": {
+      "xpc": true
+    },
+    "source_dir": "/Users/raccoon/Desktop/Security/PolicyWitness"
+  },
+  "commands": [
+    {
+      "argv": [
+        "uname",
+        "-m"
+      ],
+      "executable": "/usr/bin/uname",
+      "exit_code": 0,
+      "stderr": "",
+      "stdout": "arm64\n"
+    },
+    {
+      "argv": [
+        "sw_vers"
+      ],
+      "executable": "/usr/bin/sw_vers",
+      "exit_code": 0,
+      "stderr": "",
+      "stdout": "ProductName:\t\tmacOS\nProductVersion:\t\t26.7.1\nBuildVersion:\t\t25G241\n"
+    },
+    {
+      "argv": [
+        "sysctl",
+        "-n",
+        "hw.optional.arm64"
+      ],
+      "executable": "/usr/sbin/sysctl",
+      "exit_code": 1,
+      "stderr": "sysctl: sysctl fmt -1 1024 1: Operation not permitted\n",
+      "stdout": ""
+    },
+    {
+      "argv": [
+        "sysctl",
+        "-n",
+        "sysctl.proc_translated"
+      ],
+      "executable": "/usr/sbin/sysctl",
+      "exit_code": 1,
+      "stderr": "sysctl: sysctl fmt -1 1024 1: Operation not permitted\n",
+      "stdout": ""
+    },
+    {
+      "argv": [
+        "xcode-select",
+        "-p"
+      ],
+      "executable": "/usr/bin/xcode-select",
+      "exit_code": 0,
+      "stderr": "",
+      "stdout": "/Applications/Xcode.app/Contents/Developer\n"
+    },
+    {
+      "argv": [
+        "xcrun",
+        "--sdk",
+        "macosx",
+        "--show-sdk-version"
+      ],
+      "executable": "/usr/bin/xcrun",
+      "exit_code": 0,
+      "stderr": "",
+      "stdout": "27.2\n"
+    },
+    {
+      "argv": [
+        "clang",
+        "--version"
+      ],
+      "executable": "/usr/bin/clang",
+      "exit_code": 0,
+      "stderr": "",
+      "stdout": "Apple clang version 21.0.0 (clang-2100.4.1.1)\nTarget: arm64-apple-darwin25.6.0\nThread model: posix\nInstalledDir: /Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/bin\n"
+    },
+    {
+      "argv": [
+        "swift",
+        "--version"
+      ],
+      "executable": "/usr/bin/swift",
+      "exit_code": 0,
+      "stderr": "swift-driver version: 1.168.6 ",
+      "stdout": "Apple Swift version 6.4.2 (swiftlang-6.4.2.1.9 clang-2100.4.1.1)\nTarget: arm64-apple-macosx26.0\n"
+    },
+    {
+      "argv": [
+        "cargo",
+        "--version"
+      ],
+      "executable": "/opt/homebrew/opt/rustup/bin/cargo",
+      "exit_code": 0,
+      "stderr": "",
+      "stdout": "cargo 1.99.0 (5f94df478 2026-08-27)\n"
+    },
+    {
+      "argv": [
+        "rustc",
+        "--version"
+      ],
+      "executable": "/opt/homebrew/opt/rustup/bin/rustc",
+      "exit_code": 0,
+      "stderr": "",
+      "stdout": "rustc 1.99.0 (b940084d7 2026-09-28)\n"
+    },
+    {
+      "argv": [
+        "rustup",
+        "--version"
+      ],
+      "executable": "/opt/homebrew/opt/rustup/bin/rustup",
+      "exit_code": 0,
+      "stderr": "info: This is the version for the rustup toolchain manager, not the rustc compiler.\ninfo: the currently active `rustc` version is `rustc 1.99.0 (b940084d7 2026-09-28)`\n",
+      "stdout": "rustup 1.29.2 (2026-10-21)\n"
+    },
+    {
+      "argv": [
+        "rustup",
+        "target",
+        "list",
+        "--installed"
+      ],
+      "executable": "/opt/homebrew/opt/rustup/bin/rustup",
+      "exit_code": 0,
+      "stderr": "",
+      "stdout": "aarch64-apple-darwin\n"
+    },
+    {
+      "argv": [
+        "rustfmt",
+        "--version"
+      ],
+      "executable": "/opt/homebrew/opt/rustup/bin/rustfmt",
+      "exit_code": 0,
+      "stderr": "",
+      "stdout": "rustfmt 1.10.0-stable (b940084d7e 2026-09-28)\n"
+    },
+    {
+      "argv": [
+        "meson",
+        "--version"
+      ],
+      "executable": "/opt/homebrew/bin/meson",
+      "exit_code": 0,
+      "stderr": "",
+      "stdout": "1.12.1\n"
+    },
+    {
+      "argv": [
+        "ninja",
+        "--version"
+      ],
+      "executable": "/opt/homebrew/bin/ninja",
+      "exit_code": 0,
+      "stderr": "",
+      "stdout": "1.13.2\n"
+    },
+    {
+      "argv": [
+        "security",
+        "list-keychains",
+        "-d",
+        "user"
+      ],
+      "executable": "/usr/bin/security",
+      "exit_code": 0,
+      "stderr": "",
+      "stdout": "    \"/Users/raccoon/Library/Keychains/login.keychain-db\"\n"
+    }
+  ],
+  "escalated_retries": [
+    {
+      "argv": [
+        "sysctl",
+        "-n",
+        "hw.optional.arm64"
+      ],
+      "exit_code": 0,
+      "stderr": "",
+      "stdout": "1\n"
+    },
+    {
+      "argv": [
+        "sysctl",
+        "-n",
+        "sysctl.proc_translated"
+      ],
+      "exit_code": 0,
+      "stderr": "",
+      "stdout": "0\n"
+    }
+  ],
+  "example_targets": {
+    "/etc/hosts": {
+      "device": 16777233,
+      "inode": 966742,
+      "prefix_bytes": 213,
+      "prefix_sha256": "c7dd0e2ed261ce76d76f852596c5b54026b9a894fa481381ffd399b556c0e2da",
+      "regular": true,
+      "size": 213
+    },
+    "/usr/share/dict/connectives": {
+      "device": 16777233,
+      "inode": 1152921500312576679,
+      "prefix_bytes": 706,
+      "prefix_sha256": "5d2e495b5b12226bc89802ac6ebfabfc7fe1b0b374b2bfa19eb50145d5ccff76",
+      "regular": true,
+      "size": 706
+    },
+    "/usr/share/dict/propernames": {
+      "device": 16777233,
+      "inode": 1152921500312576681,
+      "prefix_bytes": 4096,
+      "prefix_sha256": "7f9a1fb52404d7cc997be5262f6685e70ebeb5617edfb25152cab86672710765",
+      "regular": true,
+      "size": 8546
+    }
+  },
+  "pytest": {
+    "packages": [
+      "iniconfig-2.3.1-py3-none-any.whl",
+      "packaging-26.3-py3-none-any.whl",
+      "pluggy-1.7.0-py3-none-any.whl",
+      "pygments-2.21.0-py3-none-any.whl",
+      "pytest-9.0.2-py3-none-any.whl"
+    ],
+    "target": "/Users/raccoon/Desktop/Security/PolicyWitness/.tmp/pytest/6ef73c338e2f6f696446bb1a3337b7c1fcb2dc1023846105d9ea7e44dfb90392",
+    "valid": true
+  },
+  "python_executable": "/opt/homebrew/Cellar/python@3.14/3.14.9/bin/python3.14",
+  "python_version": "3.14.9 (main, Oct 21 2026, 06:02:15) [Clang 21.0.0 (clang-2100.3.34.2)]",
+  "signing_identity_observation": {
+    "command": [
+      "security",
+      "find-identity",
+      "-v",
+      "-p",
+      "codesigning"
+    ],
+    "escalated_stdout": "  1) 1A6E85D06FC762993C8BD3E932556DED3985F030 \"Developer ID Application: Adam Hyland (42D369QV8E)\"\n     1 valid identities found\n",
+    "private_key_signing_tested": false,
+    "sandbox_stdout": "     0 valid identities found\n"
+  }
+}

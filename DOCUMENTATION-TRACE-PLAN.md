@@ -911,5 +911,25 @@ ordering account supports reading collection before release whole, which
 statements the header comment relies on, and what source text beyond path
 citations describes the contract's layout. Steps 2, 6 and 8 answer these.
 
-Implementation has not started. Next action: reconcile against the current
-checkout and capture the baseline and complete map in step 1.
+Execution began from `2fcf9dbc9f08b1643426b4cf9b9b32e3782c86cc`. Step 1 is complete.
+The checkout was clean; the only differences from the reviewed baseline were
+three plan commits. [Baseline capture](records/documentation-trace/baseline.md),
+[comparison inventory](records/documentation-trace/baseline.json),
+[equipment](records/documentation-trace/baseline-equipment.json) and the
+[complete initial routing/inbound inventory](records/documentation-trace/baseline-routing.json)
+record the reconciled state. The initial map follows the placement table.
+
+Selected `IDENTITY`: `Developer ID Application: Adam Hyland (42D369QV8E)`.
+Identity discovery and native-host sysctls succeeded on identical escalated
+retries. Required tools and installed pytest are present; compiler/SDK/Rust
+versions match the existing toolchain stamp. Private-key signing, timestamp
+service access and XPC execution remain to be established by the final build
+and live battery. No equipment gap currently prevents implementation.
+
+Independent source reviews are recorded in the
+[interface/example trace](records/documentation-trace/interface-example-review.md)
+and [controlled-read trace](records/documentation-trace/controlled-read-review.md).
+These are source readings and historical-evidence reviews, not newly executed
+native observations. Step 2 is in progress: explicit map, partial region
+ownership, destination-aware links and fixture controls. Next action: prove the
+placement change before retiring `part`.
