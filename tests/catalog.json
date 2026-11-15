@@ -1577,13 +1577,6 @@
           "requires": []
         },
         {
-          "id": "bug_report_returns_attempts",
-          "command": [
-            "bash",
-            "tests/suites/witness_contract/bug_report_returns_attempts.sh"
-          ]
-        },
-        {
           "id": "bug_report_returns_verdicts",
           "command": [
             "bash",

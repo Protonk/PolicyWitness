@@ -1,6 +1,7 @@
 # Expand the controlled-input seam into several independent views
 
-Status: increments 1 and 2 complete; increment 3 and the retirement in progress. This document specifies implementation
+Status: increments 1 and 2 and the independent retirement complete; increment 3
+acceptance is being recorded. This document specifies implementation
 and acceptance work. The statements about existing owners were checked against
 the cited sources; native acceptance is recorded by increment below.
 
@@ -514,3 +515,20 @@ checker and control sources are unchanged from the passing increment-2 native
 run; subsequent edits only updated descriptions and the plan's checkpoint.
 The resumed review confirmed all 244 report rows, seven distinctions, 12/11/17
 accounting and verified cleanup. No product or shared-helper source changed.
+
+Independent retirement: source comparison found no assertion in
+`witness_contract/bug_report_returns_attempts` absent from
+`witness_contract/bug_report_returns_verdicts`. Both passed before deletion in
+`tests/out/runs/input-expansion-1-native` on the candidate identity above.
+The redundant script and catalog row are removed together; the survivor's
+assertions are unchanged. A repository search after removal found only this
+plan and the historical `records/tests/TEST-WORK-SURVEY-REPORT.md` references,
+which describe their recorded source snapshot and remain intact.
+
+The surviving case and all ten `source_drift` cases passed after removal in
+`tests/out/runs/input-expansion-final-accept` (run
+`20261115T131759Z_d80074cb`). The regression still observed its allow query,
+published integer attempt return, established order and clean worker exit,
+plus the successful allow-default neighbour. No case overlapped system sleep.
+This final run also covers the independently implemented returning-form work;
+retirement changes only the redundant script and catalog membership.
