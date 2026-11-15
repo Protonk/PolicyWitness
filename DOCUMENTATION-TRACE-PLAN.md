@@ -41,8 +41,8 @@ does not establish that the new accounts are useful.
 stamp row. Breaking changes to the public representation are authorized, and
 expected wherever the reorganization exposes their need: retiring a fact,
 splitting, merging or renaming a subject, rewording a title or stamped prose,
-changing an anchor, renaming a document. Make each one deliberately, in its own
-commit, with its payload difference accounted for as described under
+changing an anchor, renaming a document. Commit these as deliberate, coherent
+conceptual changes, with their payload differences accounted for under
 [change classes](#change-classes). Do not preserve a structure only because it
 is the current one.
 
@@ -315,8 +315,10 @@ every public payload unchanged. The executor decides those, and the map file is
 the reviewable record. A move that departs from the table needs a sentence of
 reason in the execution record.
 
-These are not cheap to reverse. Give each its own commit and list it in the
-execution record with its cause and the surfaces affected:
+For the following choices, use one coherent conceptual change per commit and
+list its cause and affected surfaces in the execution record. Related title or
+prose edits may share a commit; individual sentences do not need separate
+commits. Keep placement, `part` retirement and public changes separate:
 
 - a tree split, merge or rename, which changes identities and anchors;
 - retirement of a fact, or rewording of a title or stamped prose;
@@ -541,9 +543,15 @@ tree as a stamped fact that controls nothing.
 7. **Interacting generators.** Update limits' renamed span document,
    architecture document/edge records, and receiving generator inputs. Keep
    regions disjoint. Statement regions carry limit spans into REQUEST and
-   ARCHITECTURE, which the limits generator scans as span documents: inspect
-   that path and settle one owner for those bytes, either by excluding contract
-   regions from the span scan or by another explicit rule, and control it.
+   ARCHITECTURE, which the limits generator scans as span documents. Use the
+   existing `BEGIN GENERATED ...` / `END GENERATED ...` region convention:
+   `authoring_excluded_ranges` and `authored_spans` in
+   [generator_common.py](docs/generator_common.py) already exclude those regions
+   from scalar rendering. Limits owns the authored surface spans; the contract
+   generator owns their rendered copies. Reuse that exclusion and add a focused
+   control showing that limits leaves contract-region spans untouched while
+   updating authored spans outside them. A separate exclusion mechanism is not
+   needed for regions following the existing convention.
    Ensure a complete regeneration reaches a fixed point: a later generator must
    not silently stale an earlier output. Keep copied guide sections unchanged.
 
@@ -601,7 +609,14 @@ investigation or expensive checks.
    artifacts and the guide's bytes. Identify available release history. Produce
    the complete map from the placement table, with inbound links per unit, and
    the list of position-dependent passages. Read source and check owners before
-   crediting them.
+   crediting them. Establish the available Developer ID signing identity and
+   keychain access, and inspect the toolchain and host prerequisites for the
+   final build and selected tests using the [build dependencies](docs/DEPENDENCIES.md)
+   and [test equipment guidance](tests/README.md#equipment-checks). Record the
+   selected `IDENTITY` and any unavailable prerequisites in the execution
+   record. Resolve missing equipment early while continuing independent
+   documentation work. Leave the signed build and live verification until the
+   final source has settled in steps 8 and 9.
 2. **Implement the smallest complete rendering path.** Add the map, region and
    output ownership and link resolution. Exercise a request subject, a response
    subject and `transport.delivery` in ARCHITECTURE with its surface-level
@@ -885,13 +900,16 @@ Preparation completed on 2026-11-15:
   the named cases and linked verification anchors exist. No test suite, live
   specimen, signed build or implementation acceptance was run for this
   planning-only change.
+- Follow-up review confirmed that the shared span reader excludes a span inside
+  a contract region using the existing generated-region convention, while
+  recognizing the same span outside it. This establishes the existing exclusion
+  behavior; the integrated ownership control remains implementation work.
 
 Not established by preparation: how each generator treats a foreign region in a
-file it owns, the limits generator's behavior on spans inside a contract
-region, whether ARCHITECTURE's present ordering account supports reading
-collection before release whole, which statements the header comment relies on,
-and what source text beyond path citations describes the contract's layout.
-Steps 2, 6 and 8 answer these.
+file it owns beyond the shared span exclusion, whether ARCHITECTURE's present
+ordering account supports reading collection before release whole, which
+statements the header comment relies on, and what source text beyond path
+citations describes the contract's layout. Steps 2, 6 and 8 answer these.
 
 Implementation has not started. Next action: reconcile against the current
 checkout and capture the baseline and complete map in step 1.
