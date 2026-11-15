@@ -80,8 +80,11 @@ own this refusal; the extension subreader has an explicitly separate expectation
 - `CWorkerFinalWaitTests` separates final publication, pipe notification and
   owned reap with gated ABI children. It covers one and two phases, publication
   before delayed exit, early hangup, absent/unusable pipes, late ready-write
-  EPIPE, an interrupted wait, deadline and clock failure. These are decision
-  and ownership controls; native performance and restrictive-profile operation
+  EPIPE, an interrupted wait, deadline and clock failure. Short sleeps are
+  recorded separately before and after the exit grace's first wait: the final
+  wait takes none when the exit notifies it, while the grace may take settle
+  sleeps when the hangup precedes reapability, which one control forces by
+  withholding two reap samples. These are decision and ownership controls; native performance and restrictive-profile operation
   require the signed-app checks.
 - `DispositionResolverTests` drives the disposition resolver against fixture
   publications (`started_attempt` with two slots, `skip_publication`'s real D5

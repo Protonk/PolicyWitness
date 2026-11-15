@@ -13,12 +13,15 @@ private final class FinalWaitControl {
     var pid: pid_t = 0
     var waits: [UInt64] = []
     var sleeps: [UInt64] = []
+    var graceSleeps: [UInt64] = []
+    var graceStarted = false
     var outcomes: [ExitWatchOutcome] = []
     var waitBeforeFinalCollection = false
     var gateFailed = false
     var gateOpened = false
     var notified = false
     var ownedChecksAfterNotification = 0
+    var withheldReaps = 0
     var now: UInt64 = 1_000_000_000_000
     var clockFailed = false
 
@@ -52,12 +55,22 @@ private final class FinalWaitControl {
         calls.wait = { [unowned self] pid, status, options in
             self.pid = pid
             if self.notified { self.ownedChecksAfterNotification += 1 }
+            // A sample taken after the hangup and before the child is reapable.
+            if self.notified && self.withheldReaps > 0 && options & WNOHANG != 0 {
+                self.withheldReaps -= 1
+                return 0
+            }
             return Darwin.waitpid(pid, status, options)
         }
         calls.waitExit = { [unowned self] watch, ns in
             // Grace waits request 10 ms; the sentinel requests at most 2 ms.
             // These fixtures finish well before the grace's last partial wait.
-            guard ns <= 2_000_000 else { return waitExitNs(watch, ns) }
+            // A grace settle sleep follows a grace wait, so short sleeps from
+            // here on belong to the grace and not to the final wait.
+            guard ns <= 2_000_000 else {
+                self.graceStarted = true
+                return waitExitNs(watch, ns)
+            }
             self.waitBeforeFinalCollection = self.waitBeforeFinalCollection || self.collections != self.phaseCount
             self.waits.append(ns)
             let outcome: ExitWatchOutcome
@@ -86,7 +99,7 @@ private final class FinalWaitControl {
         }
         calls.sleep = { [unowned self] ns in
             if self.collections == self.phaseCount && ns <= 2_000_000 {
-                self.sleeps.append(ns)
+                if self.graceStarted { self.graceSleeps.append(ns) } else { self.sleeps.append(ns) }
                 if self.scenario == "unusable" || self.scenario == "missing_pipe" ||
                     (self.scenario == "early_hangup" && self.notified) { self.openGate() }
             }
@@ -149,12 +162,34 @@ func runCWorkerFinalWaitTests(_ tk: TestKit) {
                 let out = try control.run()
                 try expectTrue(!control.waits.isEmpty && control.notified)
                 try expectEqual(control.sleeps, [])
+                // The hangup can precede reapability by microseconds. The
+                // grace then settles; that is not a final-wait timer sleep.
+                try expectTrue(control.graceSleeps.count <= HostWaitClock.exitSettleSleeps
+                               && control.graceSleeps.allSatisfy { $0 == HostWaitClock.exitSettleNs },
+                               "only settle sleeps may follow the grace's hangup: \(control.graceSleeps)")
                 try expectEqual(out.pollStopReason, "done")
                 try expectTrue(out.done && out.proceedObserved)
                 try expectTrue(out.slots.allSatisfy { $0.completed })
                 try expectEqual(out.exitCode, 0)
                 try expectNil(out.terminationRequest)
             }
+        }
+        tk.run("a hangup before reapability costs the grace a settle sleep and the final wait none") {
+            let control = FinalWaitControl("exit", phases: 2)
+            // The grace's first sample and the sample after its hangup both find the child pending.
+            control.withheldReaps = 2
+            let out = try control.run()
+            try expectTrue(control.notified && control.graceStarted)
+            try expectEqual(control.withheldReaps, 0)
+            try expectEqual(control.sleeps, [])
+            try expectTrue(!control.graceSleeps.isEmpty
+                           && control.graceSleeps.count <= HostWaitClock.exitSettleSleeps
+                           && control.graceSleeps.allSatisfy { $0 == HostWaitClock.exitSettleNs },
+                           "\(control.graceSleeps)")
+            try expectEqual(out.pollStopReason, "done")
+            try expectEqual(out.graceEnd, "reaped_during_grace")
+            try expectEqual(out.exitCode, 0)
+            try expectNil(out.terminationRequest)
         }
         tk.run("publication ends a bounded wait while exit still depends on the host request") {
             let control = FinalWaitControl("linger")

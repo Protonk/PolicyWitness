@@ -540,8 +540,9 @@ unchanged app inventory. It is a failed run and remains recorded as such.
   does not allow. Neither that test, its fixture nor the runner sources changed
   here. `20261115T021454Z_1f4d8f50` (`test-input-positions-runner-unit`) reran
   the complete case on the unchanged candidate and passed all 605. The oracle
-  remains racy and is not repaired by this plan; allowing settle sleeps after a
-  notification in that test would remove the cause.
+  was repaired afterwards, outside this plan: the test now records exit-grace
+  sleeps apart from final-wait sleeps and has a control that forces this
+  ordering.
 
 The other 92 include all unit, integration and source-drift cases, the 60
 production C-worker cases, the corpus case, checker controls, both example
