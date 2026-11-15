@@ -99,12 +99,31 @@ def build():
         payload = checker.SHORT_0 if name == 'initial_a' else checker.SHORT_1 if name == 'updated_a' else checker.LONG
         observed = sample(PATHS[letter], payload, 41 if letter == 'A' else 42)
         raw = checker.encode(documents[name])
-        env = envelope(name, documents[name], observed)
-        env['data']['runner_client']['request_delivery']['bytes_written'] = len(raw.encode()) - 1
         state['passages'][name] = dict(before=observed, after=copy.deepcopy(observed), capture=dict(input=raw,
-            request_path='/constructed/input.json', run=dict(argv=['constructed', 'run', '/constructed/input.json'],
-                stdout=checker.encode(env), stderr='', exit=1 if name == 'refusal' else 0)))
+            request_path='/constructed/input.json', run=run_record(name, documents[name], observed, raw)))
     return state
+
+
+def run_record(outcome, document, observed, raw):
+    """A coherent run of `document` with the named passage's outcome, delivered as `raw`."""
+    env = envelope(outcome, document, observed)
+    env['data']['runner_client']['request_delivery']['bytes_written'] = len(raw.encode()) - 1
+    return dict(argv=['constructed', 'run', '/constructed/input.json'], stdout=checker.encode(env), stderr='',
+                exit=1 if outcome == 'refusal' else 0)
+
+
+def other_outcome(state, name, outcome):
+    """The passage's own request and delivery, reported with another passage's query and attempt results."""
+    passage = state['passages'][name]
+    raw = passage['capture']['input']
+    passage['capture']['run'] = run_record(outcome, json.loads(raw), passage['before'], raw)
+    mutate_capture(state, name, lambda e: set_query(e, name == 'denied_b'))
+
+
+def resample(state, names, inode):
+    for name in names:
+        for moment in ('before', 'after'):
+            state['passages'][name][moment]['stat']['st_ino'] = inode
 
 
 def mutate_capture(state, name, change):
@@ -135,7 +154,8 @@ def controls():
     def exchanged(s):
         mutate_capture(s, 'denied_b', lambda e: set_query(e, False))
         mutate_capture(s, 'allowed_a', lambda e: set_query(e, True))
-    yield 'exchanged_query_answers', exchanged, failed('denied_b.query', 'allowed_a.query')
+    yield 'exchanged_query_answers', exchanged, failed('denied_b.query', 'allowed_a.query') | {
+        ('denied_b.order', 'not_evaluated'), ('allowed_a.order', 'not_evaluated')}
     yield 'observed_exit_not_published', lambda s: s['passages']['initial_a']['capture']['run'].update(exit=2), failed('initial_a.status')
     yield 'unreaped_worker', lambda s: mutate_capture(s, 'b', lambda e: e['data']['runner_result']['runner_subprocess'].update(reaped=False)), failed('b.worker')
     yield 'incomplete_phase', lambda s: mutate_capture(s, 'b', lambda e: e['data']['runner_result']['phases'][0].update(completion_observed=False)), failed('b.collections')
@@ -148,7 +168,8 @@ def controls():
         s['passages']['updated_a']['capture']['run']['exit'] = 2
         mutate_capture(s, 'denied_b', lambda e: set_query(e, False))
     yield 'missing_observation_independent_faults', combined, failed('fixtures', 'updated_a.fixture', 'updated_a.status', 'denied_b.query') | {
-        ('updated_a.stability', 'not_evaluated'), ('updated_a.identity', 'not_evaluated'), ('updated_a.content', 'not_evaluated')}
+        ('updated_a.stability', 'not_evaluated'), ('updated_a.identity', 'not_evaluated'), ('updated_a.content', 'not_evaluated'),
+        ('denied_b.order', 'not_evaluated')}
     def unstable(s):
         s['passages']['b']['after']['stat']['st_mtime_ns'] += 1
     yield 'unstable_target', unstable, failed('b.stability') | {('b.identity', 'not_evaluated'), ('b.content', 'not_evaluated')}
@@ -161,6 +182,50 @@ def controls():
         s['passages']['b']['capture']['run']['exit'] = 2
     yield 'publication_independent_capture_fault', publication_and_status, failed('publication.a1.binding', 'publication.determinism',
             'initial_a.transformation', 'updated_a.transformation', 'b.status')
+    unread = lambda name: {(name + '.identity', 'not_evaluated'), (name + '.content', 'not_evaluated')}
+    # Another passage's coherent run: correct answers for its own request cannot stand in for this one.
+    yield 'run_of_other_passage', lambda s: s['passages']['allowed_a']['capture'].update(
+        run=copy.deepcopy(s['passages']['b']['capture']['run'])), failed('allowed_a.association') | unread('allowed_a')
+    yield 'denied_read_reported_successful', lambda s: other_outcome(s, 'denied_b', 'b'), failed('denied_b.attempt')
+    yield 'allowed_read_reported_refused', lambda s: other_outcome(s, 'allowed_a', 'denied_b'), failed('allowed_a.attempt') | unread('allowed_a')
+    def unordered(s):
+        def change(e):
+            reply = e['data']['runner_result']
+            reply['phases'][0]['ordering'].update(worker_lifetime_established=False)
+            reply['steps'][0]['comparison'].update(order='unestablished')
+        mutate_capture(s, 'b', change)
+    yield 'unestablished_order', unordered, failed('b.collections', 'b.order')
+    def wrong_answer_and_order(s):
+        unordered(s)
+        mutate_capture(s, 'b', lambda e: set_query(e, True))
+    yield 'order_uncredited_beside_wrong_answer', wrong_answer_and_order, failed('b.collections', 'b.query') | {('b.order', 'not_evaluated')}
+    # Fixture relationships the experiment depends on, with captures that agree with the earlier inodes.
+    yield 'a_replaced_instead_of_updated', lambda s: resample(s, ['updated_a'], 43), failed('fixtures', 'updated_a.identity')
+    yield 'b_shares_a_inode', lambda s: resample(s, ['b', 'refusal', 'repair', 'denied_b'], 41), failed('fixtures', 'b.identity', 'repair.identity')
+    def other_acquisition(s):
+        s['publication']['targets']['b'] = PATHS['A']
+    yield 'publication_recorded_for_other_target', other_acquisition, failed('publication.targets', 'publication.b.binding', 'publication.b.invocation')
+    yield 'publication_second_newline', lambda s: s['publication']['emissions']['literal'].update(
+        stdout=s['publication']['emissions']['literal']['stdout'] + '\n'), failed('publication.literal.framing')
+    yield 'publication_other_command', lambda s: s['publication']['emissions']['literal']['argv'].__setitem__(1, 'example'), failed('publication.literal.invocation')
+
+
+def unadmitted_controls():
+    """Captures the consumer itself refuses: nothing under the reply is read or credited."""
+    def other_build(s):
+        def change(e):
+            e['build']['contract'] = 'development:' + '5' * 64
+        mutate_capture(s, 'b', change)
+    yield 'envelope_of_other_build', other_build, {('b.build', 'failed'), ('b.consumer', 'failed'), ('b.reply', 'failed')} | {
+        ('b.' + kind, 'not_evaluated') for kind in ('association', 'worker', 'collections', 'query', 'order', 'attempt', 'identity', 'content')}
+
+
+def kind(ident):
+    """A row's obligation without its passage or emission name."""
+    parts = ident.split('.')
+    if parts[0] in checker.PASSAGES:
+        return parts[1]
+    return ident if len(parts) < 3 else parts[0] + '.' + parts[2]
 
 
 def preparation_controls(directory):
@@ -267,22 +332,30 @@ def cleanup_controls(directory):
 def main(directory):
     directory = Path(directory)
     records = []
-    for name, change, expected in controls():
-        state = build()
-        change(state)
-        report = checker.evaluate(state, authored_fixture=True)
-        dest = directory / name
-        dest.mkdir()
-        (dest / 'state.json').write_text(checker.encode(state))
-        checker.write_report(dest, report)
-        found = checker.diagnostics(report)
-        assert found == expected, (name, sorted(expected), sorted(found))
-        # All these mutations are coherent from the consumer's perspective.
-        assert not any(ident.endswith('.consumer') for ident, _ in found), name
-        records.append(dict(name=name, expected=sorted(expected), actual=sorted(found), consumer_accepted=True))
+    rejected = set()
+    for coherent, group in ((True, controls()), (False, unadmitted_controls())):
+        for name, change, expected in group:
+            state = build()
+            change(state)
+            report = checker.evaluate(state, authored_fixture=True)
+            dest = directory / name
+            dest.mkdir()
+            (dest / 'state.json').write_text(checker.encode(state))
+            checker.write_report(dest, report)
+            found = checker.diagnostics(report)
+            assert found == expected, (name, sorted(expected), sorted(found))
+            # Correspondence controls are coherent to the consumer; only the unadmitted group is not.
+            assert coherent is not any(ident.endswith('.consumer') for ident, _ in found), name
+            rejected |= {kind(ident) for ident, status in found if status == 'failed'}
+            records.append(dict(name=name, expected=sorted(expected), actual=sorted(found), consumer_accepted=coherent))
     preparation = directory / 'preparation'
     preparation.mkdir()
-    records.extend(preparation_controls(preparation))
+    prepared = preparation_controls(preparation)
+    rejected |= {kind(ident) for row in prepared for ident, status in row['diagnostics'] if status == 'failed'}
+    # Every obligation the checker reports has a control that fails it; a row no control can fail earns nothing.
+    obligations = {kind(row['id']) for row in checker.evaluate(build(), authored_fixture=True)['rows']}
+    assert obligations == rejected, (sorted(obligations - rejected), sorted(rejected - obligations))
+    records.extend(prepared)
     records.extend(cleanup_controls(directory))
     (directory / 'controls.json').write_text(checker.encode(records))
     print(f'{len(records)} exact controls matched')

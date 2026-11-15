@@ -95,7 +95,8 @@ samples establish sampled stability, not continuous stability.
 The separate checker pins observed and published status, identity admission,
 request transformations, policy digest and operand association, completed worker
 and phase collections, query answers, independent syscall results and successful
-read identity/count/prefix. The deny expects query rc 1/errno 0 separately from
+read identity/count/prefix. `query_first` order has its own row, credited only
+beside the expected answer. The deny expects query rc 1/errno 0 separately from
 open EPERM/read_failed and a completed process exit 0. The consumer validates
 internal evidence and unavailable later operations after failed open. These
 observations do not identify the queried object or establish sandbox causation.
@@ -105,8 +106,16 @@ wrong inode with identical bytes, old bytes with current identity, replay of the
 whole previous run capture, omitted refusal injection, exchanged query answers,
 observed status distinct from published status, unreaped worker, incomplete
 phase and independent faults beside missing observations or bad publication.
+Further captures supply another passage's coherent run, a successful read
+beside the deny and a refused read beside the allow, an unestablished order,
+a replaced A inode, a B sharing A's inode, and publication records with another
+target, command or second newline.
 Controls require exact diagnostic IDs and statuses (`passed`, `failed`,
 `not_evaluated`) and consumer acceptance for coherent correspondence faults.
+One capture from another build is the only control the consumer refuses; its
+reply rows are `not_evaluated`. The case fails unless every obligation the
+checker reports, taken without its passage or emission name, is failed by some
+control.
 The real acquisition path is exercised with recorded stand-in executables;
 wrong-target output fails before the observer, and deliberately ignoring the
 supplied emitter is detected by that scenario's oracle.

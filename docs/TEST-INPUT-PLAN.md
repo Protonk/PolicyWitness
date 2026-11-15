@@ -469,3 +469,49 @@ stability; the query contrast does not identify a queried object or establish
 sandbox causation. Constructed controls show sensitivity, not native occurrence.
 All cited runs are disposable development observations, not retained release
 acceptance. The later guide overhaul and 0.3.8 tag remain separate work.
+
+### Review after completion
+
+A review of the two implementing commits changed the seam's test code and test
+documentation. No build input changed; build 1445 remains the candidate.
+
+- **Order has its own row.** `query_first` was part of each `.query` row, so an
+  order fault read as a wrong answer. Each executed passage now has `.order`,
+  credited only beside the expected answer. The retained-A comparison also
+  includes A's sample before `allowed_a`.
+- **Every obligation has a rejecting control.** No earlier control could fail
+  `association`, `attempt`, `build`, `reply` or `consumer`, or the publication
+  `targets`, `framing` and `invocation` rows, and `fixtures` failed only through
+  a missing sample. Ten coherent captures and one capture from another build
+  were added; the consumer accepts the ten and refuses the one. The case now
+  fails unless each obligation, taken without its passage or emission name, is
+  failed by some control. Removing the single association control made that
+  assertion refuse.
+- **Accounting is counted.** The driver wrote its submission and publication
+  counts as constants. It now counts the recorded command lines and refused
+  passages, then compares them with the expected seven, six, one, four and one.
+  A second copy of the per-passage request expectations was removed in favor of
+  the checker's.
+
+Run `20261115T011916Z_0404749d` at `tests/out/runs/test-input-review-1` passed
+its 12 cases without system sleep or harness error: both seam cases and all ten
+source-drift cases. The live case passed **123 report rows**, the earlier 117
+and six order rows, with the same seven submissions; staging was removed and
+observed absent. **45 offline controls** matched: 31 coherent captures, one
+unadmitted capture, seven preparation scenarios and six cleanup-witness
+controls. Source drift was run again on this section's final text in
+`tests/out/runs/test-input-review-docs`.
+
+The other 81 results of the corrected acceptance selection are reused. The
+changed files are the seam's checker, driver and controls, read only by the two
+seam cases, and three test READMEs. This is reviewed applicability, as above.
+
+Two publisher details were left for a maintainer decision, since either edit
+changes the build identity and needs a new candidate:
+
+- `render_template` validates the embedded body by equality with a second
+  complete copy in the same source file, so the product holds the body twice
+  and the stamped rule promises validation of the complete fixed template.
+  Checking only the assigned positions would change that sentence.
+- `complete_publication_requires_all_writes_and_flush` loops over a
+  one-element selector list left from the two-lesson emitter.

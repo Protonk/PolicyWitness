@@ -82,17 +82,6 @@ def write_in_place(path, payload):
         os.fsync(stream.fileno())
 
 
-def expected_request(name, identity, paths):
-    """Independent passage expectations, without consulting published bytes."""
-    target = paths['A' if name in ('initial_a', 'updated_a', 'allowed_a') else 'B']
-    expected = checker.expected_document(identity, target)
-    if name == 'refusal':
-        expected['policy'][checker.UNKNOWN] = True
-    elif name in ('denied_b', 'allowed_a'):
-        expected['policy']['sbpl_source'] = checker.policy_for(paths['B'])
-    return expected
-
-
 def cleanup_disposition(capture, identity, *, refusal=False, authored_fixture=False):
     """Admitted host reap, or the exact validated pre-launch host refusal."""
     run = capture.get('run') or {}
@@ -158,7 +147,7 @@ def run_case(directory, pw, app, snapshot):
             input_path = dest / 'input.json'
             input_path.write_text(raw)
             document = checker.parsed(raw)
-            expected = expected_request(name, publication['identity'], paths)
+            expected = checker.expected_inputs(dict(publication=publication, paths=paths))[name]
             exact_emission = (publication['emissions']['a1']['stdout'] if name in ('initial_a', 'updated_a') else
                               publication['emissions']['b']['stdout'] if name == 'b' else None)
             transformed = document == expected and (exact_emission is None or raw == exact_emission)
@@ -230,11 +219,20 @@ def run_case(directory, pw, app, snapshot):
         report = checker.evaluate(state)
         checker.write_report(directory, report)
         assert report['ok'], 'test-input observations did not meet independently pinned expectations'
-        commands = sorted(str(p.relative_to(directory)) for p in directory.rglob('*.command.json'))
-        accounting = dict(submissions=7, execution_passages=6, refusals=1, publication_commands=4, version_commands=1,
-                          commands=commands, owned_directory=str(work), cleanup='owned directory after witnessed exits or exact host refusal')
-        assert len(commands) == 12, commands
+        # Count what was recorded: each invocation left its argv beside its output.
+        commands = {str(p.relative_to(directory)): json.loads(p.read_text())[1:]
+                    for p in sorted(directory.rglob('*.command.json'))}
+        verbs = [argv[0] for argv in commands.values()]
+        refused = [name for name in checker.PASSAGES if state['passages'][name]['capture']['run']['exit'] != 0]
+        accounting = dict(submissions=verbs.count('run'), execution_passages=verbs.count('run') - len(refused),
+                          refusals=len(refused), publication_commands=verbs.count('test-input'),
+                          version_commands=verbs.count('--version'), commands=sorted(commands), owned_directory=str(work),
+                          cleanup='owned directory after witnessed exits or exact host refusal')
         (directory / 'accounting.json').write_text(checker.encode(accounting))
+        counted = {key: accounting[key] for key in ('submissions', 'execution_passages', 'refusals',
+                                                    'publication_commands', 'version_commands')}
+        assert counted == dict(submissions=7, execution_passages=6, refusals=1, publication_commands=4,
+                               version_commands=1) and len(commands) == 12, accounting
     finally:
         cleanup_safe = all(entry['worker_exit_witnessed'] for entry in ownership['attempts'])
         try:

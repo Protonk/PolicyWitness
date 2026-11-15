@@ -30,7 +30,7 @@ Related docs:
 - Build and signing: [docs/BUILD.md](../docs/BUILD.md)
 - Release and notarization: [docs/SIGNING.md](../docs/SIGNING.md)
 - Limits inventory and checks: [docs/LIMITS.md](../docs/LIMITS.md)
-- Executable request-contract lesson: [docs/REQUEST-GRAMMAR.md](../docs/REQUEST-GRAMMAR.md)
+- Executable request-contract guide: [docs/REQUEST-GRAMMAR.md](../docs/REQUEST-GRAMMAR.md)
 
 ## How to run
 
@@ -378,11 +378,6 @@ evidence checks pass, including when those cases run through BYOXPC.
 
 ## Shared test infrastructure
 
-`lib/file_observation.py` supplies descriptor-bound samples and small fresh-read
-comparisons to the example and controlled-input cases; each case owns its own
-workload, fixtures and expected observations.
-
-
 ### Shell case setup and checking
 
 Shared shell startup rejects Python with assertions disabled (for example,
@@ -427,6 +422,12 @@ arguments and a test-side wait deadline, decides when to decode JSON, and owns
 all outcome assertions and independent observations. Cleanup runs after those
 observations. [run_capture](suites/run_capture/README.md) documents the API,
 artifact contract and independent controls.
+
+### File observation
+
+`tests/lib/file_observation.py` supplies descriptor-bound samples and small
+fresh-read comparisons to the example and controlled-input cases. Each case
+owns its workload, fixtures, bounds and expected observations.
 
 ### Black-box validation
 

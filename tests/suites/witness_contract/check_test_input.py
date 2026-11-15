@@ -153,11 +153,12 @@ def evaluate(state, *, authored_fixture=False):
     updated = get(passages, 'updated_a', 'before')
     extended = state.get('extended_a')
     b_sample = get(passages, 'b', 'before')
-    samples = ((initial, paths['A'], SHORT_0), (updated, paths['A'], SHORT_1),
-               (extended, paths['A'], LONG), (b_sample, paths['B'], LONG))
+    last_a = get(passages, 'allowed_a', 'before')
+    samples = ((initial, paths['A'], SHORT_0), (updated, paths['A'], SHORT_1), (extended, paths['A'], LONG),
+               (last_a, paths['A'], LONG), (b_sample, paths['B'], LONG))
     usable = all(sample_ok(*row) for row in samples)
     a_ids = [(get(sample, 'stat', 'st_dev'), get(sample, 'stat', 'st_ino'))
-             for sample in (initial, updated, extended)]
+             for sample in (initial, updated, extended, last_a)]
     equal_fields = ('st_dev', 'st_mode', 'st_uid', 'st_gid', 'st_size')
     r.check('fixtures', BOUND > 1 and usable and len(set(a_ids)) == 1 and
             all(get(extended, 'stat', f) == get(b_sample, 'stat', f) for f in equal_fields) and
@@ -233,9 +234,12 @@ def evaluate(state, *, authored_fixture=False):
         r.check(name + '.collections', collections_ok, 'phase arrival/completion and collection/release chain', available=available)
         denied = name == 'denied_b'
         query = mapping(step.get('sandbox_check'))
-        r.check(name + '.query', query.get('result_source') == 'validator' and query.get('outcome') == ('deny' if denied else 'allow') and
-                exact(query.get('native_rc'), 1 if denied else 0) and exact(query.get('errno'), 0) and
-                get(step, 'comparison', 'order') == 'query_first', 'independent query result and order', available=available)
+        answered = query.get('result_source') == 'validator' and query.get('outcome') == ('deny' if denied else 'allow') and \
+            exact(query.get('native_rc'), 1 if denied else 0) and exact(query.get('errno'), 0)
+        r.check(name + '.query', answered, 'independent query result', available=available)
+        # Order is credited only beside the expected answer, and never changes that answer's row.
+        r.check(name + '.order', get(step, 'comparison', 'order') == 'query_first', 'query placed before the attempt',
+                available=available and answered)
         attempt = mapping(step.get('attempt'))
         r.check(name + '.attempt', attempt.get('result_source') == 'worker' and
                 exact(attempt.get('rc'), -1 if denied else 0) and exact(attempt.get('errno'), 1 if denied else None) and
