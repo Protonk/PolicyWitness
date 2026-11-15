@@ -1,84 +1,72 @@
 //! Command-line entrypoint for the PolicyWitness controller.
 //!
-//! This module owns the public CLI surface and keeps the dispatch logic
-//! together so the rest of the controller can focus on orchestration.
+//! Dispatch reads the command table in `interface::commands`: the first
+//! argument is compared with each command's spelling, and the command's tail
+//! rule decides what its handler receives.
 
 use serde_json::json;
 use std::ffi::OsString;
+use std::io::Write;
 
 use crate::example;
+use crate::help;
+use crate::interface::commands::{Command, TailRefused};
 use crate::json_contract;
 use crate::run_flow;
 use crate::runner_commands;
 use crate::test_input;
 
-/// The usage text. `print_usage` prints it; a command that must not panic on
-/// an unwritable stderr writes it itself.
-pub const USAGE: &str = "\
-usage:
-  policy-witness run <request.json> [--timeout-ms <n>] [--runner-mode <standard|byoxpc>]
-  policy-witness runner <command> [options]
-    commands: install, list, status, verify, remove, validate, reconcile
-  policy-witness example
-  policy-witness --version
+/// A refusal's reason, for a person. An unwritable stderr leaves the exit
+/// status as the whole report.
+pub fn diagnose(reason: &str) {
+    let _ = writeln!(std::io::stderr(), "{reason}");
+}
 
-developer:
-  policy-witness test-input read --target <absolute-path>
-
-notes:
-  - runs the selected PWRunner XPC service once and prints a single JSON result to stdout
-  - request.json is parsed once; the resolved request is delivered to the runner client on stdin (`--request -`), never through a temporary file
-  - example takes no argument and prints the specimen this build defines, carrying this build's contract; exit 0 supplies the complete document, and the build guarantees that its own run admits it; emission performs no admission; on exit 2 discard stdout
-  - test-input read emits a build-bound developer read input for an absolute UTF-8 target; exit 0 means complete publication and reports neither admission nor an effect; on exit 2 discard stdout\n  - --version prints a JSON envelope (kind=version) with the build stamp and the public contract this build asserts; every envelope also carries the stamp under `build`";
-
-pub fn print_usage() {
-    eprintln!("{USAGE}");
+/// The refusal for an invocation that names no command: exit 2, nothing on
+/// stdout.
+fn refuse_command() -> i32 {
+    diagnose(&format!(
+        "policy-witness: no command recognized; `policy-witness {}` prints the help topics",
+        Command::Help.def().spelling
+    ));
+    2
 }
 
 pub fn run(argv: Vec<OsString>) -> i32 {
-    if argv.is_empty() {
-        print_usage();
-        return 2;
-    }
-
-    let sub = argv[0].to_string_lossy().to_string();
-    let rest = &argv[1..];
-
-    if sub == "-h" || sub == "--help" || sub == "help" {
-        print_usage();
-        return 0;
-    }
-
-    if sub == "--version" || sub == "version" {
-        let result = json_contract::JsonResult::new(true, 0, None, None);
-        let data = json!({"contract": json_contract::BUILD_CONTRACT});
-        return match json_contract::print_envelope("version", result, &data) {
-            Ok(()) => 0,
-            Err(_) => 2,
-        };
-    }
-
-    match sub.as_str() {
-        "run" => match run_flow::cmd_run(rest) {
-            Ok(code) => code,
-            Err(err) => {
-                // Errors that escape cmd_run still use the uniform run envelope.
-                let _ = run_flow::print_escaped_tool_error(err);
-                2
-            }
-        },
-        "example" => example::cmd_example(rest),
-        "test-input" => test_input::cmd_test_input(rest),
-        "runner" => match runner_commands::cmd_runner(rest) {
-            Ok(code) => code,
-            Err(err) => {
-                eprintln!("{err}");
-                2
-            }
-        },
-        _ => {
-            print_usage();
+    let Some(command) = argv.first().and_then(|first| Command::recognize(first)) else {
+        return refuse_command();
+    };
+    match (command, command.def().tail.admit(&argv[1..])) {
+        // `example` reports each of its refusals itself, a refused tail among them.
+        (Command::Example, admitted) => example::cmd_example(admitted),
+        (_, Err(TailRefused)) => {
+            diagnose(&format!(
+                "policy-witness {}: accepts no arguments",
+                command.def().spelling
+            ));
             2
         }
+        (Command::Help, Ok(tail)) => help::cmd_help(tail),
+        (Command::VersionFlag | Command::Version, Ok(_)) => {
+            let result = json_contract::JsonResult::new(true, 0, None, None);
+            let data = json!({"contract": json_contract::BUILD_CONTRACT});
+            match json_contract::print_envelope("version", result, &data) {
+                Ok(()) => 0,
+                Err(_) => 2,
+            }
+        }
+        (Command::Run, Ok(tail)) => match run_flow::cmd_run(tail) {
+            Ok(code) => code,
+            // Errors that escape cmd_run still use the uniform run envelope.
+            Err(err) => run_flow::print_escaped_tool_error(err),
+        },
+        (Command::TestInput, Ok(tail)) => test_input::cmd_test_input(tail),
+        (Command::Runner, Ok(tail)) => match runner_commands::cmd_runner(tail) {
+            Ok(code) => code,
+            Err(err) => {
+                diagnose(&err);
+                2
+            }
+        },
     }
 }

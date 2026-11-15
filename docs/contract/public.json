@@ -1051,7 +1051,7 @@
             },
             "id": "identity.version.emit",
             "kind": "reports",
-            "prose": "Version dispatch reports the compiled context without loading a specimen or\nstarting the runner client. Remaining arguments are ignored.\n`generated_at_unix_ms` is the producer's current\nwall-clock time in milliseconds since the Unix epoch; the shared serializer\nuses zero if its system time precedes that epoch.",
+            "prose": "Version dispatch reports the compiled context without loading a specimen or\nstarting the runner client. The command takes no argument: one after it is\nrefused with process exit 2 and an empty standard output, before anything it\nnames is read, and a reason is written to standard error when that stream\naccepts it.\n`generated_at_unix_ms` is the producer's current\nwall-clock time in milliseconds since the Unix epoch; the shared serializer\nuses zero if its system time precedes that epoch.",
             "referenced_types": {
               "result.errno": {
                 "json_null": true,

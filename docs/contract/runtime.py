@@ -15,6 +15,7 @@ for directory in (HERE, HERE.parent):
         sys.path.insert(0, str(directory))
 import history_v0
 import history_v1
+import interface_join
 import tree as model
 from generate_porcelain import wire_identity
 
@@ -245,6 +246,7 @@ def assemble(tree, body):
 
 def render(root, release=None, refresh_shapes=False, tree=None):
     tree = tree or model.load_tree(root)
+    interface_join.check(root, tree)
     tags = release_tags(root)
     require_available_history(root, tags, release)
     check_ratchet(root, tree)
@@ -266,6 +268,7 @@ def render(root, release=None, refresh_shapes=False, tree=None):
 
 def check(root, require_history=False):
     tree = model.load_tree(root)
+    interface_join.check(root, tree)
     check_shapes(root, tree=tree)
     check_ratchet(root, tree)
     tags = release_tags(root)

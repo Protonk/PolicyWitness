@@ -306,7 +306,7 @@ Known runner kind when recorded. Historical machme/debuggable deserialize to byo
 
 ```contract
 grade: "check_read"
-source: [{"path":"controller/src/runner_manager.rs","symbol":"pub enum RunnerKind"},{"path":"controller/src/runner_manager.rs","symbol":"pub fn parse"},{"path":"tests/suites/runner_byoxpc/opt_in/registry_recovery.py","symbol":"historical-after-remove"}]
+source: [{"path":"controller/src/interface/runner_kind.rs","symbol":"pub const fn rule"},{"path":"controller/src/runner_manager.rs","symbol":"for RunnerKind"},{"path":"tests/suites/runner_byoxpc/opt_in/registry_recovery.py","symbol":"historical-after-remove"}]
 pins: "Registry normalization and durable cleanup preserve historical records and opaque metadata."
 context: "Static review of the cited producer and assertion branches."
 check: [{"path":"tests/suites/runner_byoxpc/opt_in/registry_recovery.sh","symbol":"registry_recovery","form":"test"},{"path":"controller/src/runner_manager.rs","symbol":"legacy_machme_kind_deserializes_as_byoxpc","form":"test"},{"path":"controller/src/runner_manager.rs","symbol":"legacy_debuggable_kind_deserializes_as_byoxpc","form":"test"},{"path":"controller/src/runner_manager.rs","symbol":"caller_facing_parse_rejects_legacy_aliases","form":"test"}]

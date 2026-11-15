@@ -1,0 +1,137 @@
+{
+  "classes": {
+    "non_admits": {
+      "alias": {
+        "registry": {
+          "count": 2,
+          "members": [
+            "runner_kind.debuggable@registry",
+            "runner_kind.machme@registry"
+          ]
+        }
+      },
+      "discards": {
+        "fn parse_arguments": {
+          "count": 1,
+          "members": [
+            "run.terminator"
+          ]
+        },
+        "pub fn run": {
+          "count": 1,
+          "members": [
+            "tail.help"
+          ]
+        }
+      },
+      "refuses_always": {
+        "fn parse_arguments": {
+          "count": 1,
+          "members": [
+            "run.unknown_flag"
+          ]
+        },
+        "pub fn run": {
+          "count": 3,
+          "members": [
+            "tail.example",
+            "tail.version",
+            "tail.version_flag"
+          ]
+        }
+      },
+      "unenumerated": {
+        "pub fn run": {
+          "count": 2,
+          "members": [
+            "tail.runner",
+            "tail.test_input"
+          ]
+        }
+      }
+    },
+    "reached_only_with_test_owned_inputs": {
+      "count": 3,
+      "members": [
+        "result.local_request_refusal",
+        "runner_kind.byoxpc@request_selector",
+        "runner_kind.standard@request_selector"
+      ]
+    },
+    "referenced_by_no_card": {
+      "count": 24,
+      "members": [
+        "command.help",
+        "command.runner",
+        "command.test_input",
+        "command.version",
+        "command.version_flag",
+        "result.admitted_other",
+        "run.option.timeout_ms",
+        "run.request_path",
+        "run.terminator",
+        "run.unknown_flag",
+        "runner_kind.byoxpc@install_option",
+        "runner_kind.byoxpc@registry",
+        "runner_kind.byoxpc@request_selector",
+        "runner_kind.debuggable@registry",
+        "runner_kind.machme@registry",
+        "runner_kind.standard@install_option",
+        "runner_kind.standard@registry",
+        "runner_kind.standard@request_selector",
+        "tail.example",
+        "tail.help",
+        "tail.runner",
+        "tail.test_input",
+        "tail.version",
+        "tail.version_flag"
+      ]
+    },
+    "token_exceptions": {
+      "count": 0,
+      "members": []
+    }
+  },
+  "expansions": [],
+  "identifiers": [
+    "command.example",
+    "command.help",
+    "command.run",
+    "command.runner",
+    "command.test_input",
+    "command.version",
+    "command.version_flag",
+    "example.document",
+    "result.admission_refusal",
+    "result.admitted_finished",
+    "result.admitted_other",
+    "result.admitted_unavailable",
+    "result.fields",
+    "result.local_request_refusal",
+    "result.tool_failure",
+    "run.option.runner_mode",
+    "run.option.timeout_ms",
+    "run.request_path",
+    "run.terminator",
+    "run.unknown_flag",
+    "runner_kind.byoxpc@install_option",
+    "runner_kind.byoxpc@registry",
+    "runner_kind.byoxpc@request_selector",
+    "runner_kind.byoxpc@run_option",
+    "runner_kind.debuggable@registry",
+    "runner_kind.machme@registry",
+    "runner_kind.standard@install_option",
+    "runner_kind.standard@registry",
+    "runner_kind.standard@request_selector",
+    "runner_kind.standard@run_option",
+    "tail.example",
+    "tail.help",
+    "tail.runner",
+    "tail.test_input",
+    "tail.version",
+    "tail.version_flag",
+    "topic.example",
+    "topic.result",
+    "topic.run"
+  ]
+}

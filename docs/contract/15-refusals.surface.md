@@ -169,6 +169,7 @@ These results identify local refusal, while the client capture owns whether a la
 #### Selected request refusal {request_refusal: outcome}
 
 ```contract
+interface: ["result.local_request_refusal"]
 test: envelope.result.normalized_outcome == "bad_request"
 effects: [set_value(envelope.result.exit_code, 1)]
 ```
@@ -176,6 +177,7 @@ effects: [set_value(envelope.result.exit_code, 1)]
 #### Selected tool failure {tool_failure: outcome}
 
 ```contract
+interface: ["result.tool_failure"]
 test: envelope.result.normalized_outcome == "tool_error"
 effects: [set_value(envelope.result.exit_code, 2)]
 ```

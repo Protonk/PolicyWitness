@@ -228,6 +228,7 @@ echo "==> Checking public contract stamps"
 "${PW_PYTHON}" -B -S "${ROOT_DIR}/docs/generate_architecture.py" --check
 "${PW_PYTHON}" -B -S "${ROOT_DIR}/docs/generate_footprint.py" --check
 "${PW_PYTHON}" -B -S "${ROOT_DIR}/docs/generate_porcelain.py" --check
+"${PW_PYTHON}" -B -S "${ROOT_DIR}/docs/generate_interface.py" --check
 echo "==> Checking build documentation"
 "${PW_PYTHON}" -B -S "${ROOT_DIR}/docs/generate_build.py" --check
 echo "==> Checking host/worker identity"

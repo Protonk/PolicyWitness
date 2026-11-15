@@ -26,6 +26,7 @@ digraph documents {
         markdown_reader;
         gen_footprint;
         gen_porcelain;
+        gen_interface;
         contract_records;
     }
     subgraph cluster_docs {
@@ -55,7 +56,8 @@ digraph documents {
         contract_py;
         abi_header;
         cworker_swift;
-        cli_rs;
+        interface_tables;
+        interface_inventory;
         identity_sources;
         meson_build;
         suites;
@@ -102,11 +104,12 @@ digraph documents {
     contract_py [shape="box", style="filled", fillcolor="#f2f2f2", color="#444444", label="tests/lib/contract.py\ncontract_py", URL="ARCHITECTURE.md#the-document-graph-nodes", tooltip="contract_py: tests/lib/contract.py | the generated worker ABI identity for independent tests "];
     abi_header [shape="box", style="filled", fillcolor="#f2f2f2", color="#444444", label="pw_probe_runner_abi.h\nabi_header", URL="ARCHITECTURE.md#the-document-graph-nodes", tooltip="abi_header: pw_probe_runner_abi.h | the C identity region and the shared-region layout "];
     cworker_swift [shape="box", style="filled", fillcolor="#f2f2f2", color="#444444", label="CWorker.swift\ncworker_swift", URL="ARCHITECTURE.md#the-document-graph-nodes", tooltip="cworker_swift: CWorker.swift | the Swift identity region and the layout mirror "];
-    cli_rs [shape="box", style="filled", fillcolor="#f2f2f2", color="#444444", label="cli.rs\ncli_rs", URL="ARCHITECTURE.md#the-document-graph-nodes", tooltip="cli_rs: cli.rs | the usage text the controller README mirrors "];
+    interface_tables [shape="box", style="filled", fillcolor="#f2f2f2", color="#444444", label="controller/src/interface/\ninterface_tables", URL="ARCHITECTURE.md#the-document-graph-nodes", tooltip="interface_tables: controller/src/interface/ | the command, topic, option, runner-kind and result definitions that dispatch, argument parsing, every kind reader and result selection read "];
+    interface_inventory [shape="note", style="filled", fillcolor="#e8f0fe", color="#2f5597", label="controller/interface/inventory.json\ninterface_inventory", URL="ARCHITECTURE.md#the-document-graph-nodes", tooltip="interface_inventory: controller/interface/inventory.json | every interface definition with its admission kind and reader, the result relation's rows and derived facts, and the four help cards with the entries each references "];
     identity_sources [shape="box", style="filled", fillcolor="#f2f2f2", color="#444444", label="worker and runner sources\nidentity_sources", URL="ARCHITECTURE.md#the-document-graph-nodes", tooltip="identity_sources: worker and runner sources | every byte the identity digest covers "];
     meson_build [shape="box", style="filled", fillcolor="#f2f2f2", color="#444444", label="meson.build\nmeson_build", URL="ARCHITECTURE.md#the-document-graph-nodes", tooltip="meson_build: meson.build | the native targets and their explicit source lists "];
     suites [shape="box", style="filled", fillcolor="#f2f2f2", color="#444444", label="tests/suites/<name>/\nsuites", URL="ARCHITECTURE.md#the-document-graph-nodes", tooltip="suites: tests/suites/<name>/ | a README per suite and the case scripts the catalog names; no script is an entry point "];
-    drift_check [shape="octagon", style="dashed", color="#8e24aa", label="source_drift check.py\ndrift_check", URL="ARCHITECTURE.md#the-document-graph-nodes", tooltip="drift_check: source_drift check.py | copies and vocabularies that are not generated, workflow guidance sections and diagnostic routes, the Known gap indexes in the architecture, build, worker and controller tours, and the evidence-channel landing paths "];
+    drift_check [shape="octagon", style="dashed", color="#8e24aa", label="source_drift check.py\ndrift_check", URL="ARCHITECTURE.md#the-document-graph-nodes", tooltip="drift_check: source_drift check.py | copies and vocabularies that are not generated, the interface literal convention, workflow guidance sections and diagnostic routes, the Known gap indexes in the architecture, build, worker and controller tours, and the evidence-channel landing paths "];
     drift_limits [shape="octagon", style="dashed", color="#8e24aa", label="source_drift limits.py\ndrift_limits", URL="ARCHITECTURE.md#the-document-graph-nodes", tooltip="drift_limits: source_drift limits.py | the limits generator's copies and the standalone guide's structure and internal links "];
     drift_contract [shape="octagon", style="dashed", color="#8e24aa", label="source_drift contract controls\ndrift_contract", URL="ARCHITECTURE.md#the-document-graph-nodes", tooltip="drift_contract: source_drift contract controls | public build identity, authored tree and imported field checks, retained surface history and worker identity controls "];
     drift_architecture [shape="octagon", style="dashed", color="#8e24aa", label="source_drift architecture.py\ndrift_architecture", URL="ARCHITECTURE.md#the-document-graph-nodes", tooltip="drift_architecture: source_drift architecture.py | this manifest against its dot, SVG and document copies "];
@@ -129,6 +132,7 @@ digraph documents {
     drift_footprint [shape="octagon", style="dashed", color="#8e24aa", label="source_drift footprint.py\ndrift_footprint", URL="ARCHITECTURE.md#the-document-graph-nodes", tooltip="drift_footprint: source_drift footprint.py | qualified quantities and generated copies "];
     porcelain_json [shape="folder", style="filled", fillcolor="#fff6c2", color="#8a7400", label="docs/porcelain.json\nporcelain_json", URL="ARCHITECTURE.md#the-document-graph-nodes", tooltip="porcelain_json: docs/porcelain.json | typed record fields, tags, primitive kinds and public presentation rules "];
     gen_porcelain [shape="component", style="filled", fillcolor="#e6f4ea", color="#2e7d32", label="generate_porcelain.py\ngen_porcelain", URL="ARCHITECTURE.md#the-document-graph-nodes", tooltip="gen_porcelain: generate_porcelain.py | Swift stored-field regions, Swift writers, Rust records/readers and Python structural tables "];
+    gen_interface [shape="component", style="filled", fillcolor="#e6f4ea", color="#2e7d32", label="generate_interface.py\ngen_interface", URL="ARCHITECTURE.md#the-document-graph-nodes", tooltip="gen_interface: generate_interface.py | the committed interface inventory, its case and mutation joins and the residue baseline "];
     porcelain_records [shape="box", style="filled", fillcolor="#f2f2f2", color="#444444", label="generated typed records and tables\nporcelain_records", URL="ARCHITECTURE.md#the-document-graph-nodes", tooltip="porcelain_records: generated typed records and tables | binary structure shared by producers and readers; semantic checks remain authored "];
     contract_records [shape="component", style="dashed", color="#2e7d32", label="record_definitions.py\ncontract_records", URL="ARCHITECTURE.md#the-document-graph-nodes", tooltip="contract_records: record_definitions.py | public field types and presence imported from porcelain, Swift request decoders and Rust serialization declarations "];
     contract_history [shape="note", style="filled", fillcolor="#e8f0fe", color="#2f5597", label="public snapshots and release shapes\ncontract_history", URL="ARCHITECTURE.md#the-document-graph-nodes", tooltip="contract_history: public snapshots and release shapes | the current canonical public view and each release's own public definitions and shape files, read through retained layout readers "];
@@ -150,13 +154,13 @@ digraph documents {
     gen_architecture -> architecture_md [style="bold", color="#2e7d32", label="D21 regions, dot, svg", URL="ARCHITECTURE.md#the-document-graph-edges", tooltip="D21: figure regions; dot and stamped SVG files beside the document |  "];
     agents_md -> runner_agents [style="solid", color="#444444", label="D22 diagnostics", URL="ARCHITECTURE.md#the-document-graph-edges", tooltip="D22: links to workflow-local sandbox diagnostics; destination section and root route are checked |  "];
     agents_md -> tests_agents [style="solid", color="#444444", label="D23 diagnostics", URL="ARCHITECTURE.md#the-document-graph-edges", tooltip="D23: links to workflow-local sandbox diagnostics; destination section and root route are checked |  "];
-    cli_rs -> controller_readme [style="dotted", color="#444444", label="D24 usage text", URL="ARCHITECTURE.md#the-document-graph-edges", tooltip="D24: usage text |  "];
+    interface_inventory -> controller_readme [style="dotted", color="#444444", label="D24 command spellings", URL="ARCHITECTURE.md#the-document-graph-edges", tooltip="D24: command spellings |  "];
     api_swift -> coverage_md [style="dotted", color="#444444", label="D25 matrix rows", URL="ARCHITECTURE.md#the-document-graph-edges", tooltip="D25: one matrix row per outcome constant |  "];
     request_swift -> runner_readme [style="dotted", color="#444444", label="D26 seam table", URL="ARCHITECTURE.md#the-document-graph-edges", tooltip="D26: test-seam table from PWRunnerTestOverrides |  "];
     suites -> tests_readme [style="dotted", color="#444444", label="D27 suite rows", URL="ARCHITECTURE.md#the-document-graph-edges", tooltip="D27: one suite-table row per suite |  "];
     suites -> catalog_json [style="dotted", color="#444444", label="D28 suite names", URL="ARCHITECTURE.md#the-document-graph-edges", tooltip="D28: suite directories equal catalog suites |  "];
     drift_check -> agents_md [style="dashed", color="#8e24aa", label="D29 guidance routes", URL="ARCHITECTURE.md#the-document-graph-edges", tooltip="D29: nonempty sandbox guidance sections at workflow entry points and root links to their diagnostics |  "];
-    drift_check -> controller_readme [style="dashed", color="#8e24aa", label="D30 CLI surface", URL="ARCHITECTURE.md#the-document-graph-edges", tooltip="D30: CLI surface block equals cli.rs usage |  "];
+    drift_check -> controller_readme [style="dashed", color="#8e24aa", label="D30 CLI surface", URL="ARCHITECTURE.md#the-document-graph-edges", tooltip="D30: CLI surface block equals the inventory's command spellings |  "];
     drift_check -> coverage_md [style="dashed", color="#8e24aa", label="D31 matrix rows", URL="ARCHITECTURE.md#the-document-graph-edges", tooltip="D31: every outcome constant has a row and every row a constant |  "];
     drift_check -> tests_readme [style="dashed", color="#8e24aa", label="D32 suite table", URL="ARCHITECTURE.md#the-document-graph-edges", tooltip="D32: suite table equals suites and catalog |  "];
     drift_limits -> gen_limits [style="dashed", color="#8e24aa", label="D33 --check; staging", URL="ARCHITECTURE.md#the-document-graph-edges", tooltip="D33: --check, stale-copy and standalone-guide staging controls |  "];
@@ -211,4 +215,9 @@ digraph documents {
     contract_records -> gen_contract [style="solid", color="#8a7400", label="D84 field facts", URL="ARCHITECTURE.md#the-document-graph-edges", tooltip="D84: join imported public fields to their authored meanings |  "];
     gen_contract -> contract_history [style="bold", color="#2e7d32", label="D85 snapshot", URL="ARCHITECTURE.md#the-document-graph-edges", tooltip="D85: canonical public snapshot and refreshed shape views |  "];
     contract_history -> gen_contract [style="solid", color="#8a7400", label="D86 released inputs", URL="ARCHITECTURE.md#the-document-graph-edges", tooltip="D86: released public definitions and their own shape files |  "];
+    interface_tables -> gen_interface [style="solid", color="#8a7400", label="D87 definitions", URL="ARCHITECTURE.md#the-document-graph-edges", tooltip="D87: definitions, rendered by the controller's build script |  "];
+    gen_interface -> interface_inventory [style="bold", color="#2e7d32", label="D88 inventory", URL="ARCHITECTURE.md#the-document-graph-edges", tooltip="D88: inventory, joins and residue baseline |  "];
+    build -> gen_interface [style="dashed", color="#8e24aa", label="D89 stale copies", URL="ARCHITECTURE.md#the-document-graph-edges", tooltip="D89: refuse stale copies before compilation; the build script refuses a stale inventory |  "];
+    interface_inventory -> gen_contract [style="solid", color="#8a7400", label="D90 cited identifiers", URL="ARCHITECTURE.md#the-document-graph-edges", tooltip="D90: identifiers the contract cites, compared with its structured facts |  "];
+    drift_check -> interface_tables [style="dashed", color="#8e24aa", label="D91 literal rule", URL="ARCHITECTURE.md#the-document-graph-edges", tooltip="D91: no spelling matched beside the tables |  "];
 }

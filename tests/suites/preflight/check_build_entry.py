@@ -64,6 +64,7 @@ class BuildEntryTests(receipts.TestCase):
         extra = (LIMITS_FILES | set(fixture_inputs.generator_inputs(ROOT, 'architecture'))
                  | set(fixture_inputs.generator_inputs(ROOT, 'footprint'))
                  | set(fixture_inputs.generator_inputs(ROOT, 'porcelain'))
+                 | set(fixture_inputs.generator_inputs(ROOT, 'interface'))
                  | set(fixture_inputs.generator_inputs(ROOT, 'build')) | set(fixture_inputs.build_script_inputs(ROOT))
                  | set(fixture_inputs.generator_inputs(ROOT, 'worker_identity')) | {'Info.plist', 'meson.build', 'meson.options'})
         return self.checkout(extra=extra)
@@ -311,6 +312,19 @@ class BuildEntryTests(receipts.TestCase):
         result, destination = self.build(root, {'IDENTITY': ''})
         self.assertEqual(result.returncode, 1, result.stdout + result.stderr)
         self.assertIn('stale porcelain output', result.stderr)
+        self.assertIn('Checking public contract stamps', result.stdout)
+        self.assertNotIn('Checking build documentation', result.stdout)
+        self.assertFalse(destination.exists())
+
+    def test_build_refuses_a_stale_interface_copy_before_compiling(self):
+        root = self.build_checkout()
+        joins = root / 'controller/interface/joins.json'
+        data = json.loads(joins.read_text())
+        data['entries_no_case_reaches'].append('stale.control')
+        joins.write_text(json.dumps(data, indent=2, sort_keys=True) + '\n')
+        result, destination = self.build(root, {'IDENTITY': ''})
+        self.assertEqual(result.returncode, 1, result.stdout + result.stderr)
+        self.assertIn('interface: stale: controller/interface/joins.json', result.stderr)
         self.assertIn('Checking public contract stamps', result.stdout)
         self.assertNotIn('Checking build documentation', result.stdout)
         self.assertFalse(destination.exists())

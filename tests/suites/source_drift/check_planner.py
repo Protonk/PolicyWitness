@@ -828,7 +828,7 @@ def entry_point_scenarios(repo, out):
         problems = []
         if result.returncode != 0:
             problems.append(f'status {result.returncode}')
-        if not result.stdout.startswith('rules: 19 evaluated, 0 input_blocked, 0 gate_blocked\n'):
+        if not result.stdout.startswith('rules: 20 evaluated, 0 input_blocked, 0 gate_blocked\n'):
             problems.append('summary line missing')
         if not result.stdout.rstrip('\n').splitlines()[-1].startswith('all drift checks pass: '):
             problems.append('facts line is not last')
@@ -848,7 +848,7 @@ def entry_point_scenarios(repo, out):
                                              'must not define a local exclusion table', 'missing diagnostic route runner/AGENTS.md'])
         if positions is None or positions != sorted(positions):
             problems.append(f'stderr order {positions} is not table order')
-        if 'rules: 19 evaluated, 0 input_blocked, 0 gate_blocked' not in result.stdout:
+        if 'rules: 20 evaluated, 0 input_blocked, 0 gate_blocked' not in result.stdout:
             problems.append('summary line missing')
         return problems
 
@@ -921,7 +921,7 @@ def precondition_scenarios(repo, out):
     originals = {path: path.read_text() for path in (readme, host)}
     assert originals[readme].count('## Suite coverage') == 1, 'fixture requires the suite coverage heading'
     declared = declared_rules(repo)
-    assert len(declared) == 19, declared
+    assert len(declared) == 20, declared
     receipts = []
 
     def scenario(name, mutate, expect):
@@ -965,7 +965,7 @@ def precondition_scenarios(repo, out):
             if (len(records) != 1 or records[0]['key'] != 'section.missing' or records[0]['path'] != 'tests/README.md'
                     or records[0]['severity'] != 'precondition'):
                 problems.append(f'{rule_id} records {records}')
-        if len(outcomes) != 19 or len(evaluated) != 17:
+        if len(outcomes) != 20 or len(evaluated) != 18:
             problems.append(f'{len(outcomes)} rules reported, {len(evaluated)} evaluated')
         host_records = outcomes.get(HOSTS, {}).get('problems', [])
         if not any(r['key'] == 'host.native_use' and r['path'] == HOST.as_posix() for r in host_records):
@@ -983,7 +983,7 @@ def precondition_scenarios(repo, out):
         problems = []
         if result.returncode != 0:
             problems.append(f'status {result.returncode} != 0')
-        if len(outcomes) != 19 or any(r['outcome'] != 'evaluated' or r['problems'] for r in outcomes.values()):
+        if len(outcomes) != 20 or any(r['outcome'] != 'evaluated' or r['problems'] for r in outcomes.values()):
             problems.append('not every rule evaluated cleanly after restoration')
         return problems
 
@@ -1033,7 +1033,7 @@ def dispatch_omission_scenario(repo, out):
                 problems.append('the omitted rule was reported')
             if not any(HOSTS in line for line in integrity):
                 problems.append(f'the integrity check did not name the omitted rule: {integrity}')
-        elif integrity or len(reported_ids) != 19:
+        elif integrity or len(reported_ids) != 20:
             problems.append(f'restored dispatcher: {integrity} {reported_ids}')
         if problems:
             raise AssertionError(f'{name}: {problems}\n{result.stdout}\n{result.stderr}')
@@ -1247,7 +1247,7 @@ def isolation_controls(out):
     roots = {}
     for name in ('a', 'b'):
         root = base / name
-        for relative in (check.CLI_RS, check.CONTROLLER_README):
+        for relative in (check.INTERFACE_INVENTORY, check.CONTROLLER_README):
             target = root / relative
             target.parent.mkdir(parents=True, exist_ok=True)
             shutil.copy2(ROOT / relative, target)

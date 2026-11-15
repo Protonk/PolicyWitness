@@ -77,6 +77,8 @@ sys.path.insert(0, str(REPO_ROOT / "docs"))
 import markdown_reader  # noqa: E402  (every Markdown structure below is read through it)
 import repository_tree  # noqa: E402  (explicit-root inventories and reads)
 import drift_rules  # noqa: E402  (rule rows, records and the dispatcher)
+sys.path.insert(0, str(Path(__file__).resolve().parent))
+import interface_literals  # noqa: E402  (the token scan behind the interface literal rule)
 from drift_rules import InputFailure, Problem, Rule  # noqa: E402
 from repository_tree import directory, inventory, members, optional, pattern, required  # noqa: E402
 
@@ -1012,22 +1014,19 @@ def check_harness_guidance_routes(tree: repository_tree.Tree) -> list[Problem]:
 
 
 # ---------------------------------------------------------------------------
-# CLI surface agreement.
-#
-# controller/README.md ("CLI surface (contract)") promises the exact usage
-# lines and controller/src/cli.rs prints them. A flag added or removed on one
-# side only ships a README that lies about the binary; compare the lines.
+# CLI surface agreement: the controller README lists the command spellings,
+# and the interface inventory records the spellings dispatch admits. A command
+# added, removed or renamed on one side only ships a README that lies about
+# the binary; compare the lines.
 # ---------------------------------------------------------------------------
-CLI_RS = "controller/src/cli.rs"
+INTERFACE_INVENTORY = "controller/interface/inventory.json"
 CONTROLLER_README = "controller/README.md"
 
 
-def parse_cli_usage_lines(tree: repository_tree.Tree) -> list[str]:
-    text = tree.read_text(CLI_RS)
-    match = re.search(r"usage:\n(.*?)\n\nnotes:", text, re.DOTALL)
-    if match is None:
-        return []
-    return [line[2:] for line in match.group(1).splitlines() if line.startswith("  policy-witness ")]
+def parse_inventory_command_lines(tree: repository_tree.Tree) -> list[str]:
+    inventory = json.loads(tree.read_text(INTERFACE_INVENTORY))
+    return [f"policy-witness {spelling}" for entry in inventory["entries"]
+            if entry["id"].startswith("command.") for spelling in entry["spellings"]]
 
 
 def parse_readme_surface_lines(tree: repository_tree.Tree) -> list[str]:
@@ -1041,18 +1040,33 @@ def parse_readme_surface_lines(tree: repository_tree.Tree) -> list[str]:
 
 def check_cli_surface_agreement(tree: repository_tree.Tree) -> list[Problem]:
     problems: list[Problem] = []
-    cli = parse_cli_usage_lines(tree)
+    commands = parse_inventory_command_lines(tree)
     readme = parse_readme_surface_lines(tree)
-    if not cli:
-        problems.append(problem("cli.usage_missing", "controller/src/cli.rs: could not locate the usage block (usage: ... notes:)", CLI_RS))
+    if not commands:
+        problems.append(problem("cli.inventory_missing", f"{INTERFACE_INVENTORY}: no command entry", INTERFACE_INVENTORY))
     if not readme:
         problems.append(problem("cli.readme_missing", "controller/README.md: could not locate the CLI surface (contract) text block",
                                 CONTROLLER_README))
-    if cli and readme and cli != readme:
-        lines = ["CLI surface drift between controller/src/cli.rs usage and controller/README.md:"]
-        lines += [f"  cli.rs   : {line}" for line in cli] + [f"  README.md: {line}" for line in readme]
+    if commands and readme and commands != readme:
+        lines = ["CLI surface drift between the interface inventory's command spellings and controller/README.md:"]
+        lines += [f"  inventory: {line}" for line in commands] + [f"  README.md: {line}" for line in readme]
         problems.append(problem("cli.mismatch", "\n".join(lines), CONTROLLER_README))
     return problems
+
+
+# ---------------------------------------------------------------------------
+# Interface literals: no spelling is matched beside the interface tables, the
+# card renderer spells no card element itself, and a word the runner-kind table
+# aliases is written nowhere else. The scan lives in interface_literals.py.
+# ---------------------------------------------------------------------------
+INTERFACE_SOURCES = "controller/src"
+INTERFACE_RENDERER = "controller/interface/cards.rs"
+
+
+def check_interface_literals(tree: repository_tree.Tree) -> list[Problem]:
+    inventory = json.loads(tree.read_text(INTERFACE_INVENTORY))
+    return [problem("interface.literal", message, path, line)
+            for path, line, message in interface_literals.findings(tree.root, inventory)]
 
 
 ARCHITECTURE_DOC = "docs/ARCHITECTURE.md"
@@ -1189,7 +1203,10 @@ RULES = (
     Rule("harness_guidance_routes", check_harness_guidance_routes,
          inputs=tuple(required(path) for path in HARNESS_GUIDANCE_FILES), helpers=MARKDOWN_HELPERS),
     Rule("cli_surface_agreement", check_cli_surface_agreement,
-         inputs=(required(CLI_RS), required(CONTROLLER_README)), helpers=MARKDOWN_HELPERS),
+         inputs=(required(INTERFACE_INVENTORY), required(CONTROLLER_README)), helpers=MARKDOWN_HELPERS),
+    Rule("interface_literals", check_interface_literals,
+         inputs=(required(INTERFACE_INVENTORY), required(INTERFACE_RENDERER), directory(INTERFACE_SOURCES, (".rs",))),
+         helpers=("tests/suites/source_drift/interface_literals.py",)),
     Rule("host_invariance", check_host_invariance,
          inputs=(directory(RUNNER_SOURCES, (".swift", ".c", ".h", ".m", ".mm")),)),
     Rule("known_gap_index", check_known_gap_index,

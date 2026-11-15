@@ -12,7 +12,7 @@ import sys
 from source_identity import source_paths
 
 ROOT = Path(__file__).resolve().parents[1]
-DIRECTORIES = ('controller/src', 'controller/tools', 'runner/Sources', 'runner/Clients',
+DIRECTORIES = ('controller/src', 'controller/tools', 'controller/interface', 'runner/Sources', 'runner/Clients',
                'runner/Services', 'runner/augments')
 FILES = ('build.sh', 'meson.build', 'meson.options', 'runner/Package.swift',
          'controller/Cargo.toml', 'controller/Cargo.lock', 'controller/build.rs',

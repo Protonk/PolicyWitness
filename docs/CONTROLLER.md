@@ -66,7 +66,9 @@ It checks its selector, its target and the positions it assigns in the embedded 
 the query and attempt operands. Neither command reads a request, app manifest
 or registry, launches anything or consults the host's grammar. For both, exit 0
 reports complete publication and nothing the host decided. Version dispatch
-likewise reports compiled identity without executing work.
+likewise reports compiled identity without executing work, and `help` prints
+one card the build stored without reading a request, app root, manifest,
+registry or host fact.
 
 The commands then carry different promises. For `example`, the build also
 guarantees that its own `run` admits the published specimen. That guarantee

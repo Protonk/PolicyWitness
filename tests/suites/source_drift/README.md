@@ -153,7 +153,7 @@ refuses), otherwise 0. The summary names every rule in exactly one category,
 checker at a fixture, `--rule` selects rows and `--json` writes the records.
 Planner controls remove the suite-coverage heading and add a host binding in
 one scenario and require exactly `index_vs_disk` and
-`baseline_in_catalog_defaults` blocked, each with its own record, the other 17
+`baseline_in_catalog_defaults` blocked, each with its own record, the other 18
 rules evaluated with the host diagnostic reported, and status 2. Every
 scenario's reported rule set must equal the statically declared table, and a
 dispatcher mutated to skip a registered rule passes an unexamined host binding
@@ -176,9 +176,70 @@ checkout controls add an unindexed gap, add its matching index entry, remove
 the final heading and add a spurious index entry in each tour. Repaired and
 restored copies pass; each rejected mutation names its document. Structure
 controls hide a suite-coverage row, an outcome-matrix row, a test-seam row, a
-prediction-unavailable bullet, the CLI usage block, a Known gap paragraph, the
+prediction-unavailable bullet, the CLI command block, a Known gap paragraph, the
 evidence-channels table in comments, and each is reported; so
 are an evidence row without a landing column and a numbered index entry.
+
+### CLI command block
+
+`check_cli_surface_agreement` compares the first text block under the
+controller README's "CLI surface (contract)" heading with the command
+spellings of the [interface inventory](../../../controller/interface/README.md),
+line for line and in order. A command added, removed, renamed or reordered on
+one side only is reported.
+
+### Interface literals
+
+`check_interface_literals` reads the committed inventory for the functions
+that consume each interface table, adds the two help functions, and scans
+those blocks in [interface_literals.py](interface_literals.py). Inside them a
+string or character literal may not be compared with `==` or `!=`, used as a
+match or `matches!` pattern, or passed to a searching method such as
+`starts_with` or `contains`: a spelling a governed path recognizes is a
+definition under `controller/src/interface/`. The card renderer may hold no
+literal equal to a card token or a card line. A runner-kind word that the
+table gives any reader as an alias may appear in no string literal of the
+controller's non-test source outside the tables. A named block the scan
+cannot find is reported.
+
+This is a token scan over one file at a time, not Rust semantic analysis. A
+diagnostic, a literal passed as an ordinary argument and anything in a unit-test
+module pass. A comparison against a constant defined outside the tables, and a
+card element printed from a number or assembled from pieces, are outside the
+rule. The `interface_inventory` case holds its accepted and rejected controls.
+
+### Interface inventory
+
+The `interface_inventory` case in [interface.py](interface.py) runs the real
+generator command over the checkout and over disposable copies of its declared
+inputs. `--check` passes on the checkout. A stale `joins.json` is refused
+without a write and repaired by a default run. Nine inventory defects are each
+refused in both modes without a write: a card token that no referenced entry
+supplies, a reference to no entry, a duplicate identifier, an unknown
+admission kind, a base card that is not the topic addresses, a recorded
+output function and a recorded row pair that the rows contradict, an entry
+whose cards disagree with the references, and a card with a second trailing
+newline. For the residue baseline, a member moved between classes at
+unchanged totals is refused until `--refresh-residue`, a removed member is
+recorded by a default run, and an expansion is recorded only with `--expand`
+naming a baseline `unenumerated` entry that is gone. Malformed mutation
+records and declared associations that name no entry or case are refused.
+
+Case association is checked against independently written expectations for
+argument vectors, required result fields and a submitted request file,
+including the result whose fields two rows select. The contract join is run
+over the authored tree: it reports the six citing nodes with what was
+compared, and ten changed inventory facts are each refused with the node, the
+fact and the entry named. The literal rule passes on a copy of its declared
+inputs and reports each of seven edits: a comparison in `parse_arguments`, a
+match arm in `cli::run`, a search in the help function, a `matches!` pattern in
+the request selector reader, a card element in the renderer, an aliased word
+in a diagnostic, and a renamed governed function.
+
+These controls establish the checks' own behavior on constructed inputs. That
+the inventory matches the definitions is established by the controller's
+build script, and that the definitions govern execution by the `unit` and
+`integration` suites.
 
 ### Workflow guidance and checked routes
 
@@ -235,6 +296,16 @@ bounds after peer and parent headings, code labels, images and the refusal.
 The `generator_contract` case in [generators.py](generators.py) holds these
 invariants across the registered generators. Per-generator cases retain their shape,
 stale-copy, marker and build-refusal controls.
+
+The interface inventory under [controller/interface/](../../../controller/interface/README.md)
+is maintained by [docs/generate_interface.py](../../../docs/generate_interface.py),
+which owns `inventory.json`, `joins.json` and `residue.json` as whole files.
+Its default and `--check` runs read the committed inventory and never start
+Cargo. G3's stale-copy refusal is therefore split for this generator: `--check`
+refuses a stale `joins.json` or `residue.json` and an inconsistent inventory,
+and the controller's build script refuses an `inventory.json` that differs
+from what the definitions render, in the same build and before signing. Only
+`--refresh-inventory` runs the build script and rewrites the inventory.
 
 The porcelain schema, [docs/porcelain.json](../../../docs/porcelain.json),
 is rendered by [docs/generate_porcelain.py](../../../docs/generate_porcelain.py).

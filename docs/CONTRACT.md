@@ -5472,16 +5472,19 @@ Record `version_data`: `VersionData`.
 [Controller](#contract-identity-definitions-controller) reports at CLI version dispatch. Entry: version. Recipient: cli caller. Reports: version. [set_value(`version_data.contract`, [Contract](#contract-identity-build-contract)), set_value(`result.ok`, `true`), set_value(`result.exit_code`, `0`), set_value(`result.rc`, `null`), set_value(`result.normalized_outcome`, `null`), set_value(`result.errno`, `null`), set_value(`result.error`, `null`), set_value(`result.stderr`, `null`), set_value(`result.stdout`, `null`)]. Uses [Envelope](#contract-identity-definitions-envelope), [Contract](#contract-identity-build-contract). The first command argument is --version or version. Emit the version envelope with its version payload and current build context; return process exit 0 after successful rendering, or 2 when envelope rendering returns an error.
 
 Version dispatch reports the compiled context without loading a specimen or
-starting the runner client. Remaining arguments are ignored.
+starting the runner client. The command takes no argument: one after it is
+refused with process exit 2 and an empty standard output, before anything it
+names is read, and a reason is written to standard error when that stream
+accepts it.
 `generated_at_unix_ms` is the producer's current
 wall-clock time in milliseconds since the Unix epoch; the shared serializer
 uses zero if its system time precedes that epoch.
 
 <a id="contract-identity-version-emit-support"></a>
-**Support: [check read](#contract-support-grades) for [Version command](#contract-identity-version-emit).** --version succeeds, emits kind version and result.ok true, supplies populated packaged build fields, and reports candidate-plist identity in data and build. Context: Read dispatch and serializer branches; read integration test invoking the selected controller binary and independently extracting its app plist identity. Evidence limit: Check read without execution. Alias version, trailing arguments, exact null result fields and rendering-error exit are source-established here; the cited check exercises --version success. [Evidence details](#contract-identity-version-emit-support-details).
+**Support: [check read](#contract-support-grades) for [Version command](#contract-identity-version-emit).** --version succeeds, emits kind version and result.ok true, supplies populated packaged build fields, and reports candidate-plist identity in data and build. Context: Read dispatch and serializer branches; read integration test invoking the selected controller binary and independently extracting its app plist identity. Evidence limit: Check read without execution. Alias version, exact null result fields and rendering-error exit are source-established here; the cited check exercises --version success. [Evidence details](#contract-identity-version-emit-support-details).
 
 <a id="contract-identity-version-emit-disposition_support"></a>
-**Support: [check read](#contract-support-grades) for [Version command](#contract-identity-version-emit).** Version dispatch precedes other command parsing. Context: Static review of the cited producer and assertion branches. Evidence limit: The argument matrix compares kind, build, result and data while allowing each invocation its own timestamp. [Evidence details](#contract-identity-version-emit-disposition_support-details).
+**Support: [check read](#contract-support-grades) for [Version command](#contract-identity-version-emit).** The first argument alone selects version dispatch, and an argument after it is refused with exit 2 and an empty standard output. Context: Static review of the cited producer and assertion branches. Evidence limit: The alias comparison covers kind, build, result and data while allowing each invocation its own timestamp. The refusal matrix has three argument vectors. [Evidence details](#contract-identity-version-emit-disposition_support-details).
 
 <a id="contract-notation"></a>
 ## Reading the notation
@@ -5636,7 +5639,7 @@ Source: [test_input.rs](../controller/src/test_input.rs): `fn render_template`. 
 
 [Local support](#contract-request-specimen-example-support).
 
-Source: [example.rs](../controller/src/example.rs): `EXAMPLE_DOCUMENT`. Check: [contract_tree_controls.py](../tests/suites/source_drift/contract_tree_controls.py): `test_example_document_is_extracted_from_its_cited_constant`, `test_example_document_refusals_name_the_source`; [generators.py](../tests/suites/source_drift/generators.py): `test_example_source_edit_is_stale_until_regeneration_and_moves_content_and_identity`; [example_round_trip.sh](../tests/suites/witness_contract/example_round_trip.sh): `example_round_trip`; [check_example_round_trip.py](../tests/suites/witness_contract/check_example_round_trip.py): `evaluate`.
+Source: [example_document.rs](../controller/src/example_document.rs): `EXAMPLE_DOCUMENT`. Check: [contract_tree_controls.py](../tests/suites/source_drift/contract_tree_controls.py): `test_example_document_is_extracted_from_its_cited_constant`, `test_example_document_refusals_name_the_source`; [generators.py](../tests/suites/source_drift/generators.py): `test_example_source_edit_is_stale_until_regeneration_and_moves_content_and_identity`; [example_round_trip.sh](../tests/suites/witness_contract/example_round_trip.sh): `example_round_trip`; [check_example_round_trip.py](../tests/suites/witness_contract/check_example_round_trip.py): `evaluate`.
 
 <a id="contract-request-specimen-duplicate_keys-disposition_support-details"></a>
 ### Repeated members at each entry — Disposition support
@@ -6546,7 +6549,7 @@ Source: [runner_manager.rs](../controller/src/runner_manager.rs): `record_locati
 
 [Local support](#contract-installation-runner-kind-disposition_support).
 
-Source: [runner_manager.rs](../controller/src/runner_manager.rs): `pub enum RunnerKind`, `pub fn parse`; [registry_recovery.py](../tests/suites/runner_byoxpc/opt_in/registry_recovery.py): `historical-after-remove`. Check: [registry_recovery.sh](../tests/suites/runner_byoxpc/opt_in/registry_recovery.sh): `registry_recovery`; [runner_manager.rs](../controller/src/runner_manager.rs): `legacy_machme_kind_deserializes_as_byoxpc`, `legacy_debuggable_kind_deserializes_as_byoxpc`, `caller_facing_parse_rejects_legacy_aliases`.
+Source: [runner_kind.rs](../controller/src/interface/runner_kind.rs): `pub const fn rule`; [runner_manager.rs](../controller/src/runner_manager.rs): `for RunnerKind`; [registry_recovery.py](../tests/suites/runner_byoxpc/opt_in/registry_recovery.py): `historical-after-remove`. Check: [registry_recovery.sh](../tests/suites/runner_byoxpc/opt_in/registry_recovery.sh): `registry_recovery`; [runner_manager.rs](../controller/src/runner_manager.rs): `legacy_machme_kind_deserializes_as_byoxpc`, `legacy_debuggable_kind_deserializes_as_byoxpc`, `caller_facing_parse_rejects_legacy_aliases`.
 
 <a id="contract-installation-cleanup-retention-support-details"></a>
 ### Retained recovery account — Source support

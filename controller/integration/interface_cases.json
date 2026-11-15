@@ -1,0 +1,1140 @@
+{
+  "cases": [
+    {
+      "id": "help.base",
+      "args": [
+        "help"
+      ],
+      "status": 0,
+      "stdout": "run\nexample\nresult\n",
+      "stderr": ""
+    },
+    {
+      "id": "help.run",
+      "args": [
+        "help",
+        "run"
+      ],
+      "status": 0,
+      "stdout": "run\n  --runner-mode\n    standard\n    byoxpc\n",
+      "stderr": ""
+    },
+    {
+      "id": "help.run.junk",
+      "args": [
+        "help",
+        "run",
+        "junk"
+      ],
+      "status": 0,
+      "stdout": "run\n  --runner-mode\n    standard\n    byoxpc\n",
+      "stderr": ""
+    },
+    {
+      "id": "help.run.bad_flag",
+      "args": [
+        "help",
+        "run",
+        "--bad"
+      ],
+      "status": 0,
+      "stdout": "run\n  --runner-mode\n    standard\n    byoxpc\n",
+      "stderr": ""
+    },
+    {
+      "id": "help.run.terminator",
+      "args": [
+        "help",
+        "run",
+        "--",
+        "x"
+      ],
+      "status": 0,
+      "stdout": "run\n  --runner-mode\n    standard\n    byoxpc\n",
+      "stderr": ""
+    },
+    {
+      "id": "help.example",
+      "args": [
+        "help",
+        "example"
+      ],
+      "status": 0,
+      "stdout": "example\n  initial-reads\n    open_read /etc/hosts\n    read_fresh /usr/share/dict/connectives\n  restricted-read\n    open_read /usr/share/dict/propernames\n",
+      "stderr": ""
+    },
+    {
+      "id": "help.example.extra",
+      "args": [
+        "help",
+        "example",
+        "extra"
+      ],
+      "status": 0,
+      "stdout": "example\n  initial-reads\n    open_read /etc/hosts\n    read_fresh /usr/share/dict/connectives\n  restricted-read\n    open_read /usr/share/dict/propernames\n",
+      "stderr": ""
+    },
+    {
+      "id": "help.result",
+      "args": [
+        "help",
+        "result"
+      ],
+      "status": 0,
+      "stdout": "result\n  normalized_outcome ok exit_code\n  bad_request false 1\n  tool_error false 2\n  missing_runner_client false 1\n  unsupported_runner_client false 1\n  malformed_runner_client false 1\n  runner_reply_truncated false 1\n  unsupported_runner_response false 1\n  malformed_runner_response false 1\n  xpc_error false 1\n  xpc_timeout false 1\n  xpc_acquisition_failed false 1\n  xpc_submission_refused false 1\n  xpc_protocol_error false 1\n  runner_client_error false 1\n  finished true 0\n  runner_response_unavailable false 1\n",
+      "stderr": ""
+    },
+    {
+      "id": "help.result.extra",
+      "args": [
+        "help",
+        "result",
+        "extra"
+      ],
+      "status": 0,
+      "stdout": "result\n  normalized_outcome ok exit_code\n  bad_request false 1\n  tool_error false 2\n  missing_runner_client false 1\n  unsupported_runner_client false 1\n  malformed_runner_client false 1\n  runner_reply_truncated false 1\n  unsupported_runner_response false 1\n  malformed_runner_response false 1\n  xpc_error false 1\n  xpc_timeout false 1\n  xpc_acquisition_failed false 1\n  xpc_submission_refused false 1\n  xpc_protocol_error false 1\n  runner_client_error false 1\n  finished true 0\n  runner_response_unavailable false 1\n",
+      "stderr": ""
+    },
+    {
+      "id": "help.result.bad_flag",
+      "args": [
+        "help",
+        "result",
+        "--bad"
+      ],
+      "status": 0,
+      "stdout": "result\n  normalized_outcome ok exit_code\n  bad_request false 1\n  tool_error false 2\n  missing_runner_client false 1\n  unsupported_runner_client false 1\n  malformed_runner_client false 1\n  runner_reply_truncated false 1\n  unsupported_runner_response false 1\n  malformed_runner_response false 1\n  xpc_error false 1\n  xpc_timeout false 1\n  xpc_acquisition_failed false 1\n  xpc_submission_refused false 1\n  xpc_protocol_error false 1\n  runner_client_error false 1\n  finished true 0\n  runner_response_unavailable false 1\n",
+      "stderr": ""
+    },
+    {
+      "id": "help.bogus",
+      "args": [
+        "help",
+        "bogus"
+      ],
+      "status": 0,
+      "stdout": "run\nexample\nresult\n",
+      "stderr": ""
+    },
+    {
+      "id": "help.bogus.run",
+      "args": [
+        "help",
+        "bogus",
+        "run"
+      ],
+      "status": 0,
+      "stdout": "run\nexample\nresult\n",
+      "stderr": ""
+    },
+    {
+      "id": "help.uppercase_topic",
+      "args": [
+        "help",
+        "RUN"
+      ],
+      "status": 0,
+      "stdout": "run\nexample\nresult\n",
+      "stderr": ""
+    },
+    {
+      "id": "help.flag_shaped_run",
+      "args": [
+        "help",
+        "--run"
+      ],
+      "status": 0,
+      "stdout": "run\nexample\nresult\n",
+      "stderr": ""
+    },
+    {
+      "id": "help.help_flag",
+      "args": [
+        "help",
+        "--help"
+      ],
+      "status": 0,
+      "stdout": "run\nexample\nresult\n",
+      "stderr": ""
+    },
+    {
+      "id": "help.h_flag",
+      "args": [
+        "help",
+        "-h"
+      ],
+      "status": 0,
+      "stdout": "run\nexample\nresult\n",
+      "stderr": ""
+    },
+    {
+      "id": "help.terminator_run",
+      "args": [
+        "help",
+        "--",
+        "run"
+      ],
+      "status": 0,
+      "stdout": "run\nexample\nresult\n",
+      "stderr": ""
+    },
+    {
+      "id": "help.empty",
+      "args": [
+        "help",
+        ""
+      ],
+      "status": 0,
+      "stdout": "run\nexample\nresult\n",
+      "stderr": ""
+    },
+    {
+      "id": "help.non_utf8",
+      "args": [
+        "help",
+        {
+          "hex": "fffe"
+        }
+      ],
+      "status": 0,
+      "stdout": "run\nexample\nresult\n",
+      "stderr": ""
+    },
+    {
+      "id": "top.help_flag",
+      "args": [
+        "--help"
+      ],
+      "status": 2,
+      "stdout": "",
+      "stderr": "policy-witness: no command recognized; `policy-witness help` prints the help topics\n"
+    },
+    {
+      "id": "top.h_flag",
+      "args": [
+        "-h"
+      ],
+      "status": 2,
+      "stdout": "",
+      "stderr": "policy-witness: no command recognized; `policy-witness help` prints the help topics\n"
+    },
+    {
+      "id": "top.no_arguments",
+      "args": [],
+      "status": 2,
+      "stdout": "",
+      "stderr": "policy-witness: no command recognized; `policy-witness help` prints the help topics\n"
+    },
+    {
+      "id": "top.bogus",
+      "args": [
+        "bogus"
+      ],
+      "status": 2,
+      "stdout": "",
+      "stderr": "policy-witness: no command recognized; `policy-witness help` prints the help topics\n"
+    },
+    {
+      "id": "top.uppercase_help",
+      "args": [
+        "HELP"
+      ],
+      "status": 2,
+      "stdout": "",
+      "stderr": "policy-witness: no command recognized; `policy-witness help` prints the help topics\n"
+    },
+    {
+      "id": "top.result",
+      "args": [
+        "result"
+      ],
+      "status": 2,
+      "stdout": "",
+      "stderr": "policy-witness: no command recognized; `policy-witness help` prints the help topics\n"
+    },
+    {
+      "id": "run.help_flag",
+      "args": [
+        "run",
+        "--help"
+      ],
+      "status": 2,
+      "stdout_json": {
+        "/kind": "run",
+        "/result/normalized_outcome": "tool_error",
+        "/result/ok": false,
+        "/result/exit_code": 2,
+        "/result/error": "unknown argument: --help"
+      },
+      "stderr": ""
+    },
+    {
+      "id": "run.h_flag",
+      "args": [
+        "run",
+        "-h"
+      ],
+      "status": 2,
+      "stdout_json": {
+        "/kind": "run",
+        "/result/normalized_outcome": "tool_error",
+        "/result/ok": false,
+        "/result/exit_code": 2,
+        "/result/error": "unknown argument: -h"
+      },
+      "stderr": ""
+    },
+    {
+      "id": "run.path_then_help_flag",
+      "args": [
+        "run",
+        "x",
+        "--help"
+      ],
+      "status": 2,
+      "stdout_json": {
+        "/kind": "run",
+        "/result/normalized_outcome": "tool_error",
+        "/result/ok": false,
+        "/result/exit_code": 2,
+        "/result/error": "unknown argument: --help",
+        "/data/specimen/request_path": "x"
+      },
+      "stderr": ""
+    },
+    {
+      "id": "run.help_word",
+      "args": [
+        "run",
+        "help"
+      ],
+      "status": 2,
+      "stdout_json": {
+        "/kind": "run",
+        "/result/normalized_outcome": "tool_error",
+        "/result/ok": false,
+        "/result/exit_code": 2,
+        "/result/error": "request.json not found: help",
+        "/data/specimen/request_path": "help"
+      },
+      "stderr": ""
+    },
+    {
+      "id": "run.no_arguments",
+      "args": [
+        "run"
+      ],
+      "status": 2,
+      "stdout_json": {
+        "/kind": "run",
+        "/result/normalized_outcome": "tool_error",
+        "/result/ok": false,
+        "/result/exit_code": 2,
+        "/result/error": "missing <request.json>",
+        "/data/timeout_ms": 240000
+      },
+      "stderr": ""
+    },
+    {
+      "id": "run.repeated_timeout",
+      "args": [
+        "run",
+        "--timeout-ms",
+        "5",
+        "--timeout-ms",
+        "7"
+      ],
+      "status": 2,
+      "stdout_json": {
+        "/kind": "run",
+        "/result/normalized_outcome": "tool_error",
+        "/result/ok": false,
+        "/result/exit_code": 2,
+        "/data/timeout_ms": 7
+      },
+      "stderr": ""
+    },
+    {
+      "id": "run.timeout_zero",
+      "args": [
+        "run",
+        "--timeout-ms",
+        "0"
+      ],
+      "status": 2,
+      "stdout_json": {
+        "/kind": "run",
+        "/result/normalized_outcome": "tool_error",
+        "/result/ok": false,
+        "/result/exit_code": 2,
+        "/result/error": "invalid value for --timeout-ms",
+        "/data/timeout_ms": null
+      },
+      "stderr": ""
+    },
+    {
+      "id": "run.timeout_one",
+      "args": [
+        "run",
+        "--timeout-ms",
+        "1"
+      ],
+      "status": 2,
+      "stdout_json": {
+        "/kind": "run",
+        "/result/normalized_outcome": "tool_error",
+        "/result/ok": false,
+        "/result/exit_code": 2,
+        "/result/error": "missing <request.json>",
+        "/data/timeout_ms": 1
+      },
+      "stderr": ""
+    },
+    {
+      "id": "run.timeout_equals",
+      "args": [
+        "run",
+        "--timeout-ms=5"
+      ],
+      "status": 2,
+      "stdout_json": {
+        "/kind": "run",
+        "/result/normalized_outcome": "tool_error",
+        "/result/ok": false,
+        "/result/exit_code": 2,
+        "/result/error": "unknown argument: --timeout-ms=5"
+      },
+      "stderr": ""
+    },
+    {
+      "id": "run.timeout_invalid",
+      "args": [
+        "run",
+        "--timeout-ms",
+        "soon"
+      ],
+      "status": 2,
+      "stdout_json": {
+        "/kind": "run",
+        "/result/normalized_outcome": "tool_error",
+        "/result/ok": false,
+        "/result/exit_code": 2,
+        "/result/error": "invalid value for --timeout-ms"
+      },
+      "stderr": ""
+    },
+    {
+      "id": "run.timeout_missing",
+      "args": [
+        "run",
+        "--timeout-ms"
+      ],
+      "status": 2,
+      "stdout_json": {
+        "/kind": "run",
+        "/result/normalized_outcome": "tool_error",
+        "/result/ok": false,
+        "/result/exit_code": 2,
+        "/result/error": "invalid value for --timeout-ms"
+      },
+      "stderr": ""
+    },
+    {
+      "id": "run.timeout_takes_help_flag",
+      "args": [
+        "run",
+        "--timeout-ms",
+        "--help"
+      ],
+      "status": 2,
+      "stdout_json": {
+        "/kind": "run",
+        "/result/normalized_outcome": "tool_error",
+        "/result/ok": false,
+        "/result/exit_code": 2,
+        "/result/error": "invalid value for --timeout-ms"
+      },
+      "stderr": ""
+    },
+    {
+      "id": "run.runner_mode_machme",
+      "args": [
+        "run",
+        "--runner-mode",
+        "machme"
+      ],
+      "status": 2,
+      "stdout_json": {
+        "/kind": "run",
+        "/result/normalized_outcome": "tool_error",
+        "/result/ok": false,
+        "/result/exit_code": 2,
+        "/result/error": "invalid value for --runner-mode: machme"
+      },
+      "stderr": ""
+    },
+    {
+      "id": "run.runner_mode_debuggable",
+      "args": [
+        "run",
+        "--runner-mode",
+        "debuggable"
+      ],
+      "status": 2,
+      "stdout_json": {
+        "/kind": "run",
+        "/result/normalized_outcome": "tool_error",
+        "/result/ok": false,
+        "/result/exit_code": 2,
+        "/result/error": "invalid value for --runner-mode: debuggable"
+      },
+      "stderr": ""
+    },
+    {
+      "id": "run.runner_mode_invalid",
+      "args": [
+        "run",
+        "--runner-mode",
+        "fast"
+      ],
+      "status": 2,
+      "stdout_json": {
+        "/kind": "run",
+        "/result/normalized_outcome": "tool_error",
+        "/result/ok": false,
+        "/result/exit_code": 2,
+        "/result/error": "invalid value for --runner-mode: fast"
+      },
+      "stderr": ""
+    },
+    {
+      "id": "run.runner_mode_missing",
+      "args": [
+        "run",
+        "--runner-mode"
+      ],
+      "status": 2,
+      "stdout_json": {
+        "/kind": "run",
+        "/result/normalized_outcome": "tool_error",
+        "/result/ok": false,
+        "/result/exit_code": 2,
+        "/result/error": "missing value for --runner-mode"
+      },
+      "stderr": ""
+    },
+    {
+      "id": "run.runner_mode_standard",
+      "args": [
+        "run",
+        "--runner-mode",
+        "standard"
+      ],
+      "status": 2,
+      "stdout_json": {
+        "/kind": "run",
+        "/result/normalized_outcome": "tool_error",
+        "/result/ok": false,
+        "/result/exit_code": 2,
+        "/result/error": "missing <request.json>"
+      },
+      "stderr": ""
+    },
+    {
+      "id": "run.runner_mode_byoxpc",
+      "args": [
+        "run",
+        "--runner-mode",
+        "byoxpc"
+      ],
+      "status": 2,
+      "stdout_json": {
+        "/kind": "run",
+        "/result/normalized_outcome": "tool_error",
+        "/result/ok": false,
+        "/result/exit_code": 2,
+        "/result/error": "missing <request.json>"
+      },
+      "stderr": ""
+    },
+    {
+      "id": "run.terminator",
+      "args": [
+        "run",
+        "--",
+        "x"
+      ],
+      "status": 2,
+      "stdout_json": {
+        "/kind": "run",
+        "/result/normalized_outcome": "tool_error",
+        "/result/ok": false,
+        "/result/exit_code": 2,
+        "/result/error": "missing <request.json>"
+      },
+      "stderr": ""
+    },
+    {
+      "id": "run.repeated_path",
+      "args": [
+        "run",
+        "a",
+        "b"
+      ],
+      "status": 2,
+      "stdout_json": {
+        "/kind": "run",
+        "/result/normalized_outcome": "tool_error",
+        "/result/ok": false,
+        "/result/exit_code": 2,
+        "/result/error": "unexpected argument: b",
+        "/data/specimen/request_path": "a"
+      },
+      "stderr": ""
+    },
+    {
+      "id": "run.non_utf8_path",
+      "args": [
+        "run",
+        {
+          "hex": "2f6e6fff"
+        }
+      ],
+      "status": 2,
+      "stdout_json": {
+        "/kind": "run",
+        "/result/normalized_outcome": "tool_error",
+        "/result/ok": false,
+        "/result/exit_code": 2,
+        "/data/specimen/request_path": "/no\ufffd"
+      },
+      "stderr": ""
+    },
+    {
+      "id": "runner.help_word",
+      "args": [
+        "runner",
+        "help"
+      ],
+      "status": 2,
+      "stdout": "",
+      "stderr_prefix": "unknown runner command: help\n"
+    },
+    {
+      "id": "runner.help_flag",
+      "args": [
+        "runner",
+        "--help"
+      ],
+      "status": 2,
+      "stdout": "",
+      "stderr_prefix": "unknown runner command: --help\n"
+    },
+    {
+      "id": "runner.install.help_flag",
+      "args": [
+        "runner",
+        "install",
+        "--help"
+      ],
+      "status": 2,
+      "stdout": "",
+      "stderr": "unknown argument: --help\n"
+    },
+    {
+      "id": "runner.status.help_flag",
+      "args": [
+        "runner",
+        "status",
+        "--help"
+      ],
+      "status": 2,
+      "stdout": "",
+      "stderr": "unknown argument: --help\n"
+    },
+    {
+      "id": "runner.reconcile.help_flag",
+      "args": [
+        "runner",
+        "reconcile",
+        "--help"
+      ],
+      "status": 2,
+      "stdout": "",
+      "stderr": "runner reconcile accepts no arguments\n"
+    },
+    {
+      "id": "runner.install.kind_machme",
+      "args": [
+        "runner",
+        "install",
+        "--kind",
+        "machme"
+      ],
+      "status": 2,
+      "stdout": "",
+      "stderr": "invalid value for --kind: machme\n"
+    },
+    {
+      "id": "runner.install.kind_standard",
+      "args": [
+        "runner",
+        "install",
+        "--kind",
+        "standard"
+      ],
+      "status": 2,
+      "stdout": "",
+      "stderr": "runner install does not accept kind=standard\n"
+    },
+    {
+      "id": "runner.install.kind_byoxpc",
+      "args": [
+        "runner",
+        "install",
+        "--kind",
+        "byoxpc"
+      ],
+      "status": 2,
+      "stdout": "",
+      "stderr": "missing --bundle\n"
+    },
+    {
+      "id": "runner.install.executable",
+      "args": [
+        "runner",
+        "install",
+        "--executable",
+        "/x"
+      ],
+      "status": 2,
+      "stdout": "",
+      "stderr": "unknown argument: --executable\n"
+    },
+    {
+      "id": "runner.install.bundle_id",
+      "args": [
+        "runner",
+        "install",
+        "--bundle-id",
+        "x"
+      ],
+      "status": 2,
+      "stdout": "",
+      "stderr": "unknown argument: --bundle-id\n"
+    },
+    {
+      "id": "example.help_flag",
+      "args": [
+        "example",
+        "--help"
+      ],
+      "status": 2,
+      "stdout": "",
+      "stderr": "policy-witness example: accepts no arguments\n"
+    },
+    {
+      "id": "example.h_flag",
+      "args": [
+        "example",
+        "-h"
+      ],
+      "status": 2,
+      "stdout": "",
+      "stderr": "policy-witness example: accepts no arguments\n"
+    },
+    {
+      "id": "example.help_word",
+      "args": [
+        "example",
+        "help"
+      ],
+      "status": 2,
+      "stdout": "",
+      "stderr": "policy-witness example: accepts no arguments\n"
+    },
+    {
+      "id": "test_input.help_flag",
+      "args": [
+        "test-input",
+        "--help"
+      ],
+      "status": 2,
+      "stdout": "",
+      "stderr": "policy-witness test-input: expected test-input read --target PATH\n"
+    },
+    {
+      "id": "test_input.help_word",
+      "args": [
+        "test-input",
+        "help"
+      ],
+      "status": 2,
+      "stdout": "",
+      "stderr": "policy-witness test-input: expected test-input read --target PATH\n"
+    },
+    {
+      "id": "test_input.h_flag",
+      "args": [
+        "test-input",
+        "-h"
+      ],
+      "status": 2,
+      "stdout": "",
+      "stderr": "policy-witness test-input: expected test-input read --target PATH\n"
+    },
+    {
+      "id": "test_input.read.help_flag",
+      "args": [
+        "test-input",
+        "read",
+        "--help"
+      ],
+      "status": 2,
+      "stdout": "",
+      "stderr": "policy-witness test-input: expected test-input read --target PATH\n"
+    },
+    {
+      "id": "test_input.read.h_flag",
+      "args": [
+        "test-input",
+        "read",
+        "-h"
+      ],
+      "status": 2,
+      "stdout": "",
+      "stderr": "policy-witness test-input: expected test-input read --target PATH\n"
+    },
+    {
+      "id": "version.h_flag",
+      "args": [
+        "version",
+        "-h"
+      ],
+      "status": 2,
+      "stdout": "",
+      "stderr": "policy-witness version: accepts no arguments\n"
+    },
+    {
+      "id": "version_flag.h_flag",
+      "args": [
+        "--version",
+        "-h"
+      ],
+      "status": 2,
+      "stdout": "",
+      "stderr": "policy-witness --version: accepts no arguments\n"
+    },
+    {
+      "id": "runner.h_flag",
+      "args": [
+        "runner",
+        "-h"
+      ],
+      "status": 2,
+      "stdout": "",
+      "stderr_prefix": "unknown runner command: -h\n"
+    },
+    {
+      "id": "runner.install.h_flag",
+      "args": [
+        "runner",
+        "install",
+        "-h"
+      ],
+      "status": 2,
+      "stdout": "",
+      "stderr": "unknown argument: -h\n"
+    },
+    {
+      "id": "runner.status.h_flag",
+      "args": [
+        "runner",
+        "status",
+        "-h"
+      ],
+      "status": 2,
+      "stdout": "",
+      "stderr": "unknown argument: -h\n"
+    },
+    {
+      "id": "runner.verify.help_flag",
+      "args": [
+        "runner",
+        "verify",
+        "--help"
+      ],
+      "status": 2,
+      "stdout": "",
+      "stderr": "unknown argument: --help\n"
+    },
+    {
+      "id": "runner.verify.h_flag",
+      "args": [
+        "runner",
+        "verify",
+        "-h"
+      ],
+      "status": 2,
+      "stdout": "",
+      "stderr": "unknown argument: -h\n"
+    },
+    {
+      "id": "runner.remove.help_flag",
+      "args": [
+        "runner",
+        "remove",
+        "--help"
+      ],
+      "status": 2,
+      "stdout": "",
+      "stderr": "unknown argument: --help\n"
+    },
+    {
+      "id": "runner.remove.h_flag",
+      "args": [
+        "runner",
+        "remove",
+        "-h"
+      ],
+      "status": 2,
+      "stdout": "",
+      "stderr": "unknown argument: -h\n"
+    },
+    {
+      "id": "runner.list.h_flag",
+      "args": [
+        "runner",
+        "list",
+        "-h"
+      ],
+      "status": 2,
+      "stdout": "",
+      "stderr": "runner list accepts no arguments\n"
+    },
+    {
+      "id": "runner.validate.h_flag",
+      "args": [
+        "runner",
+        "validate",
+        "-h"
+      ],
+      "status": 2,
+      "stdout": "",
+      "stderr": "runner validate accepts no arguments\n"
+    },
+    {
+      "id": "runner.reconcile.h_flag",
+      "args": [
+        "runner",
+        "reconcile",
+        "-h"
+      ],
+      "status": 2,
+      "stdout": "",
+      "stderr": "runner reconcile accepts no arguments\n"
+    },
+    {
+      "id": "version.help_flag",
+      "args": [
+        "version",
+        "--help"
+      ],
+      "status": 2,
+      "stdout": "",
+      "stderr": "policy-witness version: accepts no arguments\n"
+    },
+    {
+      "id": "version_flag.help_flag",
+      "args": [
+        "--version",
+        "--help"
+      ],
+      "status": 2,
+      "stdout": "",
+      "stderr": "policy-witness --version: accepts no arguments\n"
+    },
+    {
+      "id": "version_flag",
+      "args": [
+        "--version"
+      ],
+      "status": 0,
+      "stdout_json": {
+        "/kind": "version",
+        "/result/ok": true
+      },
+      "stderr": ""
+    },
+    {
+      "id": "version",
+      "args": [
+        "version"
+      ],
+      "status": 0,
+      "stdout_json": {
+        "/kind": "version",
+        "/result/ok": true
+      },
+      "stderr": ""
+    },
+    {
+      "id": "version.extra",
+      "args": [
+        "version",
+        "unrecognized"
+      ],
+      "status": 2,
+      "stdout": "",
+      "stderr": "policy-witness version: accepts no arguments\n"
+    },
+    {
+      "id": "runner.list.help_flag",
+      "args": [
+        "runner",
+        "list",
+        "--help"
+      ],
+      "status": 2,
+      "stdout": "",
+      "stderr": "runner list accepts no arguments\n"
+    },
+    {
+      "id": "runner.validate.help_flag",
+      "args": [
+        "runner",
+        "validate",
+        "--help"
+      ],
+      "status": 2,
+      "stdout": "",
+      "stderr": "runner validate accepts no arguments\n"
+    },
+    {
+      "id": "example.publish",
+      "args": [
+        "example"
+      ],
+      "status": 0,
+      "stdout_json": {
+        "/specimen_id": "example",
+        "/phases/0/phase_id": "initial-reads",
+        "/phases/1/actions/0/attempt/target": "/usr/share/dict/propernames"
+      },
+      "stderr": ""
+    },
+    {
+      "id": "test_input.publish",
+      "args": [
+        "test-input",
+        "read",
+        "--target",
+        "/absent"
+      ],
+      "status": 0,
+      "stdout_json": {
+        "/probe_plan/0/attempt/target": "/absent"
+      },
+      "stderr": ""
+    },
+    {
+      "id": "help.stdout_without_reader",
+      "args": [
+        "help"
+      ],
+      "stdout_pipe": "no_reader",
+      "status": 2,
+      "stderr": ""
+    },
+    {
+      "id": "example.save_and_run",
+      "steps": [
+        {
+          "args": [
+            "example"
+          ],
+          "status": 0,
+          "save_stdout": "request.json",
+          "stderr": ""
+        },
+        {
+          "args": [
+            "run",
+            "{scratch}/request.json"
+          ],
+          "status": 0,
+          "stdout_json": {
+            "/kind": "run",
+            "/result/normalized_outcome": "finished",
+            "/result/ok": true,
+            "/result/exit_code": 0
+          },
+          "stderr": ""
+        }
+      ]
+    },
+    {
+      "id": "run.request_mode_machme",
+      "args": [
+        "run",
+        "{scratch}/request.json"
+      ],
+      "status": 1,
+      "stdout_json": {
+        "/kind": "run",
+        "/result/normalized_outcome": "bad_request",
+        "/result/ok": false,
+        "/result/exit_code": 1,
+        "/data/request_failure/code": "invalid_value",
+        "/data/request_failure/path": [
+          "runner",
+          "mode"
+        ]
+      },
+      "stderr": "",
+      "files": {
+        "request.json": "{\"contract\": \"{contract}\", \"specimen_id\": \"selector\", \"policy\": {\"format\": \"sbpl\", \"sbpl_source\": \"(version 1)\\n(allow default)\\n\"}, \"probe_plan\": [], \"runner\": {\"mode\": \"machme\"}}"
+      }
+    },
+    {
+      "id": "run.request_mode_standard_with_external_id",
+      "args": [
+        "run",
+        "{scratch}/request.json"
+      ],
+      "status": 1,
+      "stdout_json": {
+        "/kind": "run",
+        "/result/normalized_outcome": "bad_request",
+        "/result/ok": false,
+        "/result/exit_code": 1,
+        "/data/request_failure/code": "conflicting_selector",
+        "/data/request_failure/path": []
+      },
+      "stderr": "",
+      "files": {
+        "request.json": "{\"contract\": \"{contract}\", \"specimen_id\": \"selector\", \"policy\": {\"format\": \"sbpl\", \"sbpl_source\": \"(version 1)\\n(allow default)\\n\"}, \"probe_plan\": [], \"runner\": {\"mode\": \"standard\", \"id\": \"external\"}}"
+      }
+    },
+    {
+      "id": "run.request_mode_byoxpc_without_selector",
+      "args": [
+        "run",
+        "{scratch}/request.json"
+      ],
+      "status": 1,
+      "stdout_json": {
+        "/kind": "run",
+        "/result/normalized_outcome": "bad_request",
+        "/result/ok": false,
+        "/result/exit_code": 1,
+        "/data/request_failure/code": "conflicting_selector",
+        "/data/request_failure/path": []
+      },
+      "stderr": "",
+      "files": {
+        "request.json": "{\"contract\": \"{contract}\", \"specimen_id\": \"selector\", \"policy\": {\"format\": \"sbpl\", \"sbpl_source\": \"(version 1)\\n(allow default)\\n\"}, \"probe_plan\": [], \"runner\": {\"mode\": \"byoxpc\"}}"
+      }
+    }
+  ]
+}

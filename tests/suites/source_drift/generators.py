@@ -59,6 +59,8 @@ def region_ownership(root, name):
     gen = module('owner_' + name, root / f'docs/generate_{name}.py')
     if name == 'porcelain':
         return gen.ownership(root)
+    if name == 'interface':
+        return {}, set(gen.OUTPUTS)
     if name == 'contract_stamps':
         runtime = gen.contract_module('runtime')
         return {'docs/PolicyWitness.md': [(gen.BEGIN, gen.END)]}, {
@@ -95,6 +97,11 @@ def region_ownership(root, name):
         whole.update(str(Path(document).parent / (graph['file'] + suffix)) for suffix in ('.dot', '.svg'))
     return regions, whole
 
+
+
+def gen_interface_cases(root):
+    """The case corpus the interface generator reads: an input it does not own."""
+    return module('interface_cases', root / 'docs/generate_interface.py').CASES
 
 
 def outside(data, regions):
@@ -406,6 +413,13 @@ class GeneratorContractTests(receipts.TestCase):
                     changed = original.replace(node.prose, node.prose + '\n\nAuthored property control.', 1)
                     self.assertNotEqual(original, changed)
                     path.write_text(changed)
+                elif name == 'interface':
+                    # One case fewer changes the case join and can only reduce the residue.
+                    # The first case is named by no declared association.
+                    path = root / gen_interface_cases(root)
+                    data = json.loads(path.read_text())
+                    del data['cases'][0]
+                    path.write_text(json.dumps(data))
                 else:
                     path = root / f'docs/{name}.json'
                     data = json.loads(path.read_text())
@@ -434,7 +448,8 @@ class GeneratorContractTests(receipts.TestCase):
                 self.assertEqual(self.snapshot(root), after)
                 self.assertEqual({path: (root / path).stat().st_mtime_ns for path in after}, modified)
                 # A real command that corrupts bytes past its END marker must fail the property.
-                target = next(iter(regions))
+                # A generator with whole-file outputs only corrupts one of its inputs instead.
+                target = next(iter(regions), None) or gen_interface_cases(root)
                 script = root / f'docs/generate_{name}.py'
                 original = script.read_text()
                 self.assertIn('sys.exit(main())', original)
@@ -930,7 +945,7 @@ class GeneratorContractTests(receipts.TestCase):
         fixture_inputs.copy_declared(ROOT, root, sorted(set(stamps.input_paths(ROOT)) | set(build_contract.inputs(ROOT))))
         self.track_inputs(root)
         contract_fixture.fresh_authoring(root, module('example_contract', root / 'docs/generate_contract_stamps.py'))
-        source = root / 'controller/src/example.rs'
+        source = root / 'controller/src/example_document.rs'
         original = source.read_text()
 
         def generated():
@@ -963,7 +978,7 @@ class GeneratorContractTests(receipts.TestCase):
         for args in (('--check',), ()):
             result = self.command(root, 'contract_stamps', *args)
             self.assertEqual(result.returncode, 1, result.stdout)
-            self.assertIn("controller/src/example.rs: EXAMPLE_DOCUMENT carries the forbidden member 'contract'", result.stderr)
+            self.assertIn("controller/src/example_document.rs: EXAMPLE_DOCUMENT carries the forbidden member 'contract'", result.stderr)
             self.assertEqual(self.snapshot(root), taken, 'refusal changed checkout')
 
     def test_whole_file_staging_is_owned_and_idempotent(self):
@@ -1086,6 +1101,9 @@ class GeneratorContractTests(receipts.TestCase):
                       'docs/markdown_reader.py', 'docs/build.json', 'docs/BUILD.md', 'docs/build-steps.dot', 'docs/build-steps.svg',
                       'tests/fixtures/docs/build_baseline.json', 'build.sh', 'meson.build', 'Makefile', 'README.md',
                       'tests/lib/artifact.py', 'tests/build-evidence.py', 'tests/suites/source_drift/build_rules.py'],
+            'interface': ['docs/generate_interface.py', 'controller/interface/inventory.json',
+                          'controller/interface/joins.json', 'controller/interface/residue.json',
+                          'controller/interface/mutations.json', 'controller/integration/interface_cases.json'],
         }
         for name in GENERATORS:
             with self.subTest(generator=name):

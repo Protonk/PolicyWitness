@@ -157,21 +157,30 @@ fn version_dispatch_uses_the_first_argument() {
     let reference = run_pw(&bin, &["--version"]);
     assert_eq!(reference.status.code(), Some(0));
     let expected: serde_json::Value = serde_json::from_slice(&reference.stdout).unwrap();
+    let output = run_pw(&bin, &["version"]);
+    assert_eq!(output.status.code(), Some(0));
+    assert!(output.stderr.is_empty());
+    let value: serde_json::Value = serde_json::from_slice(&output.stdout).unwrap();
+    // Per-invocation timestamps belong to the envelope header; compare the
+    // identity, result and version data rather than those fresh observations.
+    for field in ["kind", "build", "result", "data"] {
+        assert_eq!(value[field], expected[field], "version: {field}");
+    }
+    // The first argument alone selects the command, and it takes no other:
+    // an argument after it is refused before anything it names is read.
     for args in [
-        vec!["version"],
         vec!["version", "unrecognized"],
         vec!["--version", "run", "/a/request/that/does/not/exist"],
         vec!["--version", "--invalid"],
     ] {
         let output = run_pw(&bin, &args);
-        assert_eq!(output.status.code(), Some(0), "{args:?}");
-        assert!(output.stderr.is_empty(), "{args:?}");
-        let value: serde_json::Value = serde_json::from_slice(&output.stdout).unwrap();
-        // Per-invocation timestamps belong to the envelope header; compare the
-        // identity, result and version data rather than those fresh observations.
-        for field in ["kind", "build", "result", "data"] {
-            assert_eq!(value[field], expected[field], "{args:?}: {field}");
-        }
+        assert_eq!(output.status.code(), Some(2), "{args:?}");
+        assert!(output.stdout.is_empty(), "{args:?}");
+        assert_eq!(
+            String::from_utf8(output.stderr).unwrap(),
+            format!("policy-witness {}: accepts no arguments\n", args[0]),
+            "{args:?}"
+        );
     }
 }
 
@@ -436,6 +445,7 @@ fn example_prints_one_request_and_refuses_every_argument() {
     for args in [
         vec!["example", "--help"],
         vec!["example", "-h"],
+        vec!["example", "help"],
         vec!["example", "read-hosts"],
         vec!["example", ""],
         vec!["example", "--version"],
@@ -443,18 +453,12 @@ fn example_prints_one_request_and_refuses_every_argument() {
         let output = run_pw(&bin, &args);
         assert_eq!(output.status.code(), Some(2), "{args:?}");
         assert!(output.stdout.is_empty(), "{args:?}");
-        let usage = String::from_utf8(output.stderr).unwrap();
-        assert!(usage.starts_with("usage:\n"), "{args:?}: {usage:?}");
-        assert!(usage.contains("\n  policy-witness example\n"), "{args:?}");
+        assert_eq!(
+            String::from_utf8(output.stderr).unwrap(),
+            "policy-witness example: accepts no arguments\n",
+            "{args:?}"
+        );
     }
-    // The general usage lists the command.
-    let help = run_pw(&bin, &["--help"]);
-    assert_eq!(help.status.code(), Some(0));
-    assert!(
-        String::from_utf8(help.stderr)
-            .unwrap()
-            .contains("\n  policy-witness example\n")
-    );
 }
 
 #[test]
@@ -1638,4 +1642,413 @@ fn test_input_cli_refusals_and_write_failures_exit_2_safely() {
             assert!(output.stdout.is_empty());
         }
     }
+}
+
+/// One step of an interface case: the invocation and what it must produce.
+/// Expectations are spelled in the corpus; nothing here reads the interface
+/// definitions or the inventory.
+fn run_interface_step(bin: &Path, step: &serde_json::Value, scratch: &Path) -> Result<(), String> {
+    use std::os::unix::ffi::OsStringExt;
+    use std::process::Stdio;
+
+    let place = |text: &str| text.replace("{scratch}", &scratch.to_string_lossy());
+    for (name, content) in step["files"].as_object().into_iter().flatten() {
+        let content = content.as_str().expect("a file's text");
+        let content = if content.contains("{contract}") {
+            content.replace("{contract}", &candidate_contract())
+        } else {
+            content.to_string()
+        };
+        std::fs::write(scratch.join(name), content).map_err(|error| error.to_string())?;
+    }
+    let mut command = Command::new(bin);
+    for argument in step["args"].as_array().expect("args") {
+        match argument {
+            serde_json::Value::String(text) => command.arg(place(text)),
+            other => {
+                let hex = other["hex"]
+                    .as_str()
+                    .expect("an argument is text or hex bytes");
+                let bytes = (0..hex.len())
+                    .step_by(2)
+                    .map(|index| u8::from_str_radix(&hex[index..index + 2], 16).unwrap())
+                    .collect();
+                command.arg(std::ffi::OsString::from_vec(bytes))
+            }
+        };
+    }
+    for (name, value) in step["env"].as_object().into_iter().flatten() {
+        command.env(name, place(value.as_str().expect("an environment value")));
+    }
+    command.stdin(Stdio::null()).stderr(Stdio::piped());
+    match step["stdout_pipe"].as_str() {
+        None => command.stdout(Stdio::piped()),
+        Some("no_reader") => command.stdout(unwritable()),
+        Some(other) => panic!("unknown stdout_pipe {other}"),
+    };
+    let output = command
+        .output()
+        .map_err(|error| format!("launch: {error}"))?;
+    let mut problems = Vec::new();
+    let status = output.status.code();
+    if status.map(i64::from) != step["status"].as_i64() {
+        problems.push(format!("status {status:?}, expected {}", step["status"]));
+    }
+    let stdout = String::from_utf8_lossy(&output.stdout);
+    let stderr = String::from_utf8_lossy(&output.stderr);
+    if let Some(expected) = step["stdout"].as_str() {
+        if output.stdout != expected.as_bytes() {
+            problems.push(format!("stdout {stdout:?}, expected {expected:?}"));
+        }
+    }
+    if let Some(expected) = step["stdout_json"].as_object() {
+        match serde_json::from_slice::<serde_json::Value>(&output.stdout) {
+            Ok(value) => {
+                for (pointer, wanted) in expected {
+                    if value.pointer(pointer) != Some(wanted) {
+                        problems.push(format!(
+                            "stdout {pointer} is {:?}, expected {wanted}",
+                            value.pointer(pointer)
+                        ));
+                    }
+                }
+                if !stdout.ends_with('\n') || stdout.ends_with("\n\n") {
+                    problems.push("stdout is not one document and one newline".into());
+                }
+            }
+            Err(error) => problems.push(format!("stdout is not one JSON document: {error}")),
+        }
+    }
+    match (step["stderr"].as_str(), step["stderr_prefix"].as_str()) {
+        (Some(expected), None) => {
+            if output.stderr != expected.as_bytes() {
+                problems.push(format!("stderr {stderr:?}, expected {expected:?}"));
+            }
+        }
+        (None, Some(prefix)) => {
+            if !stderr.starts_with(prefix) {
+                problems.push(format!("stderr {stderr:?}, expected the prefix {prefix:?}"));
+            }
+        }
+        _ => panic!("a step states stderr or stderr_prefix, one of them"),
+    }
+    if let Some(name) = step["save_stdout"].as_str() {
+        std::fs::write(scratch.join(name), &output.stdout).map_err(|error| error.to_string())?;
+    }
+    if problems.is_empty() {
+        Ok(())
+    } else {
+        Err(problems.join("; "))
+    }
+}
+
+/// Runs every case of the corpus and returns the failures, each named.
+fn run_interface_cases(bin: &Path, corpus: &serde_json::Value) -> Vec<String> {
+    // Tests in this binary run in parallel; each call takes directories of its own.
+    static CALLS: std::sync::atomic::AtomicU64 = std::sync::atomic::AtomicU64::new(0);
+    let call = CALLS.fetch_add(1, std::sync::atomic::Ordering::Relaxed);
+    let mut failures = Vec::new();
+    for (index, case) in corpus["cases"]
+        .as_array()
+        .expect("cases")
+        .iter()
+        .enumerate()
+    {
+        let id = case["id"].as_str().expect("case id");
+        let scratch = env::temp_dir().join(format!(
+            "pw-interface-{}-{call}-{index}",
+            std::process::id()
+        ));
+        std::fs::create_dir_all(&scratch).unwrap();
+        let steps = match case["steps"].as_array() {
+            Some(steps) => steps.clone(),
+            None => vec![case.clone()],
+        };
+        for (number, step) in steps.iter().enumerate() {
+            if let Err(problem) = run_interface_step(bin, step, &scratch) {
+                failures.push(format!("{id} step {number}: {problem}"));
+            }
+        }
+        std::fs::remove_dir_all(&scratch).unwrap();
+    }
+    failures
+}
+
+fn interface_corpus() -> serde_json::Value {
+    serde_json::from_str(include_str!("interface_cases.json")).expect("the case corpus")
+}
+
+#[test]
+fn interface_cases_hold_on_the_signed_controller() {
+    if !integration_enabled() {
+        return;
+    }
+    let failures = run_interface_cases(&require_pw_bin(), &interface_corpus());
+    assert!(failures.is_empty(), "{}", failures.join("\n"));
+}
+
+/// The executor rejects a wrong status and output on the wrong stream.
+#[test]
+fn interface_case_executor_rejects_wrong_status_and_stream() {
+    if !integration_enabled() {
+        return;
+    }
+    let bin = require_pw_bin();
+    let case = |status: i64, stdout: &str, stderr: &str| {
+        serde_json::json!({"cases": [{"id": "control", "args": ["help"], "status": status,
+                                      "stdout": stdout, "stderr": stderr}]})
+    };
+    let card = "run\nexample\nresult\n";
+    assert!(run_interface_cases(&bin, &case(0, card, "")).is_empty());
+    let wrong_status = run_interface_cases(&bin, &case(2, card, ""));
+    assert!(wrong_status.len() == 1 && wrong_status[0].contains("status Some(0), expected 2"));
+    let wrong_stream = run_interface_cases(&bin, &case(0, "", card));
+    assert!(
+        wrong_stream.len() == 1
+            && wrong_stream[0].contains("stdout")
+            && wrong_stream[0].contains("stderr"),
+        "{wrong_stream:?}"
+    );
+}
+
+/// What each card shows is what the same binary does: a listed topic
+/// addresses a card of its own, a shown option and value pass argument
+/// admission, and the example card's lines are the emitted specimen's.
+/// Every expectation is read from the binary's output, none from the
+/// interface definitions.
+#[test]
+fn help_cards_agree_with_execution() {
+    if !integration_enabled() {
+        return;
+    }
+    let bin = require_pw_bin();
+    let card = |args: &[&str]| {
+        let output = run_pw(&bin, args);
+        assert_eq!(output.status.code(), Some(0), "{args:?}");
+        assert!(output.stderr.is_empty(), "{args:?}");
+        String::from_utf8(output.stdout).unwrap()
+    };
+    let base = card(&["help"]);
+    assert!(base.lines().count() > 0);
+    for topic in base.lines() {
+        let addressed = card(&["help", topic]);
+        assert_ne!(addressed, base, "{topic} addresses its own card");
+        assert_eq!(addressed.lines().next(), Some(topic));
+    }
+
+    let run = card(&["help", "run"]);
+    let mut lines = run.lines();
+    let command = lines.next().unwrap();
+    let mut option = None;
+    let mut pairs = 0;
+    for line in lines {
+        match line.strip_prefix("    ") {
+            Some(value) => {
+                let option: &str = option.expect("a value follows its option");
+                let output = run_pw(&bin, &[command, option, value]);
+                let envelope: serde_json::Value = serde_json::from_slice(&output.stdout).unwrap();
+                assert_eq!(
+                    envelope["result"]["error"], "missing <request.json>",
+                    "{command} {option} {value} passes argument admission"
+                );
+                pairs += 1;
+            }
+            None => option = Some(line.strip_prefix("  ").expect("an option line")),
+        }
+    }
+    assert!(pairs > 0, "the run card shows no option value");
+
+    let example = card(&["help", "example"]);
+    let mut lines = example.lines();
+    let command = lines.next().unwrap();
+    let emitted: serde_json::Value =
+        serde_json::from_slice(&run_pw(&bin, &[command]).stdout).expect("the emitted specimen");
+    let mut expected = Vec::new();
+    for phase in emitted["phases"].as_array().unwrap() {
+        expected.push(format!("  {}", phase["phase_id"].as_str().unwrap()));
+        for action in phase["actions"].as_array().unwrap() {
+            expected.push(format!(
+                "    {} {}",
+                action["attempt"]["action"].as_str().unwrap(),
+                action["attempt"]["target"].as_str().unwrap()
+            ));
+        }
+    }
+    assert_eq!(lines.collect::<Vec<_>>(), expected);
+}
+
+/// Help needs nothing a run needs. The Cargo-built binary, which has no
+/// bundle around it, with no usable home directory, no registry and
+/// malformed tails, prints the bytes the bundled binary prints, with status 0
+/// and an empty stderr. A copy of the bundle's own signed executable cannot
+/// stand in for it: outside its bundle the system refuses to run it.
+#[test]
+fn help_needs_no_app_home_registry_or_valid_tail() {
+    use std::os::unix::ffi::OsStringExt;
+    use std::os::unix::fs::PermissionsExt;
+    if !integration_enabled() {
+        return;
+    }
+    let bin = require_pw_bin();
+    let scratch = env::temp_dir().join(format!("pw-help-prerequisites-{}", std::process::id()));
+    std::fs::create_dir_all(&scratch).unwrap();
+    let unbundled = Path::new(env!("CARGO_BIN_EXE_policy-witness"));
+    let unwritable = scratch.join("unwritable-home");
+    std::fs::create_dir(&unwritable).unwrap();
+    std::fs::set_permissions(&unwritable, std::fs::Permissions::from_mode(0o500)).unwrap();
+    let absent = scratch.join("absent");
+    let non_utf8 = || std::ffi::OsString::from_vec(vec![0xff, 0xfe]);
+    let tails: Vec<Vec<std::ffi::OsString>> = vec![
+        vec![],
+        vec!["run".into()],
+        vec!["run".into(), "--bad".into(), non_utf8()],
+        vec!["example".into(), "extra".into()],
+        vec!["result".into(), "--".into()],
+        vec![non_utf8()],
+        vec!["bogus".into(), "run".into()],
+    ];
+    for tail in &tails {
+        let reference = Command::new(&bin).arg("help").args(tail).output().unwrap();
+        assert_eq!(reference.status.code(), Some(0), "{tail:?}");
+        assert!(reference.stderr.is_empty(), "{tail:?}");
+        assert!(reference.stdout.ends_with(b"\n") && !reference.stdout.ends_with(b"\n\n"));
+        let states: [(&str, Option<&Path>, Option<&Path>); 4] = [
+            ("no HOME", None, None),
+            ("absent HOME", Some(&absent), None),
+            ("unwritable HOME", Some(&unwritable), None),
+            ("absent registry", Some(&absent), Some(&absent)),
+        ];
+        for (state, home, registry) in states {
+            let mut command = Command::new(unbundled);
+            command
+                .arg("help")
+                .args(tail)
+                .env_remove("HOME")
+                .env_remove("PW_RUNNER_REGISTRY");
+            if let Some(home) = home {
+                command.env("HOME", home);
+            }
+            if let Some(registry) = registry {
+                command.env("PW_RUNNER_REGISTRY", registry);
+            }
+            let output = command.stdin(std::process::Stdio::null()).output().unwrap();
+            assert_eq!(output.status.code(), Some(0), "{state}: {tail:?}");
+            assert!(output.stderr.is_empty(), "{state}: {tail:?}");
+            assert_eq!(output.stdout, reference.stdout, "{state}: {tail:?}");
+        }
+    }
+    std::fs::set_permissions(&unwritable, std::fs::Permissions::from_mode(0o700)).unwrap();
+    std::fs::remove_dir_all(&scratch).unwrap();
+}
+
+fn copy_tree(from: &Path, to: &Path) {
+    std::fs::create_dir_all(to).unwrap();
+    for entry in std::fs::read_dir(from).unwrap() {
+        let entry = entry.unwrap();
+        let target = to.join(entry.file_name());
+        if entry.file_type().unwrap().is_dir() {
+            copy_tree(&entry.path(), &target);
+        } else {
+            std::fs::copy(entry.path(), target).unwrap();
+        }
+    }
+}
+
+/// The package's build script compares the inventory it renders with the
+/// committed copy. In a copy of the package, a changed definition and a
+/// changed committed inventory each stop Cargo before the binary compiles,
+/// naming the copy and the command that regenerates it.
+#[test]
+fn stale_interface_inventory_stops_the_build_script() {
+    if !integration_enabled() {
+        return;
+    }
+    let scratch = PathBuf::from(env::var_os("PW_TEST_SCRATCH").expect("dispatcher scratch"))
+        .join("stale-interface-inventory");
+    let artifacts = PathBuf::from(env::var_os("PW_TEST_ARTIFACTS").expect("dispatcher artifacts"))
+        .join("stale-interface-inventory");
+    std::fs::create_dir_all(&scratch).unwrap();
+    std::fs::create_dir(&artifacts).unwrap();
+    let package = scratch.join("controller");
+    let source = repo_root().join("controller");
+    std::fs::create_dir(&package).unwrap();
+    for file in ["Cargo.toml", "Cargo.lock", "build.rs"] {
+        std::fs::copy(source.join(file), package.join(file)).unwrap();
+    }
+    for directory in ["src", "interface", "integration"] {
+        copy_tree(&source.join(directory), &package.join(directory));
+    }
+    let check = |label: &str| {
+        let mut command = Command::new("cargo");
+        command
+            .args([
+                "check",
+                "--locked",
+                "--offline",
+                "--bin",
+                "policy-witness",
+                "--target",
+                "aarch64-apple-darwin",
+                "--target-dir",
+            ])
+            .arg(scratch.join("target"))
+            .arg("--manifest-path")
+            .arg(package.join("Cargo.toml"));
+        for key in [
+            "PW_BUILD_CONTRACT",
+            "PW_BUILD_VERSION",
+            "PW_BUILD_NUMBER",
+            "PW_BUILD_DESCRIBE",
+            "PW_BUILD_COMMIT",
+            "PW_INTERFACE_REFRESH",
+        ] {
+            command.env_remove(key);
+        }
+        let output = command.output().expect("cargo check");
+        std::fs::write(artifacts.join(format!("{label}.stderr")), &output.stderr).unwrap();
+        (
+            output.status.success(),
+            String::from_utf8_lossy(&output.stderr).into_owned(),
+        )
+    };
+    let stale = "controller/interface/inventory.json is stale";
+    let remedy = "tests/lib/python.sh docs/generate_interface.py --refresh-inventory";
+
+    let (passed, stderr) = check("unchanged");
+    assert!(passed, "{stderr}");
+
+    let definitions = package.join("src/interface/run_args.rs");
+    let original = std::fs::read_to_string(&definitions).unwrap();
+    assert_eq!(original.matches("\"--runner-mode\"").count(), 1);
+    std::fs::write(
+        &definitions,
+        original.replace("\"--runner-mode\"", "\"--runner-kind\""),
+    )
+    .unwrap();
+    let (passed, stderr) = check("changed-definition");
+    assert!(!passed);
+    assert!(
+        stderr.contains(stale) && stderr.contains(remedy),
+        "{stderr}"
+    );
+    std::fs::write(&definitions, &original).unwrap();
+
+    let committed = package.join("interface/inventory.json");
+    let original = std::fs::read_to_string(&committed).unwrap();
+    assert_eq!(original.matches("--runner-mode\\n").count(), 1);
+    std::fs::write(
+        &committed,
+        original.replace("--runner-mode\\n", "--runner-kind\\n"),
+    )
+    .unwrap();
+    let (passed, stderr) = check("changed-committed-copy");
+    assert!(!passed);
+    assert!(
+        stderr.contains(stale) && stderr.contains(remedy),
+        "{stderr}"
+    );
+    std::fs::write(&committed, &original).unwrap();
+
+    let (passed, stderr) = check("restored");
+    assert!(passed, "{stderr}");
 }

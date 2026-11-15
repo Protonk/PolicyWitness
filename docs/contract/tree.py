@@ -49,7 +49,7 @@ CHILDREN = {
     'outcome': {'condition', 'effect', *AUXILIARY},
     'gap': {'owner'}, 'example': {'owner', 'gap'}, 'owner': set(),
 }
-COMMON_FACTS = {*CONTEXT, 'uses', 'after', 'precedes', 'requires', 'each', 'retained_free'}
+COMMON_FACTS = {*CONTEXT, 'uses', 'after', 'precedes', 'requires', 'each', 'retained_free', 'interface'}
 FACTS_BY_KIND = {
     'surface': {'syntax', 'artifact', 'part', 'goldens', 'checks', 'coverage'},
     'subject': {'record', 'as', 'at', 'part', 'coverage', 'open'},
@@ -79,7 +79,7 @@ EFFECT_CALLS = {'set_value', 'prevent', 'retain_records', 'retain_assessments',
                 'withhold', 'emit', 'perform'}
 COMPARE_OPERATORS = {ast.Eq, ast.NotEq, ast.Lt, ast.LtE, ast.Gt, ast.GtE,
                      ast.In, ast.NotIn}
-PUBLIC_EXCLUSIONS = {'syntax', 'goldens', 'checks', 'coverage', 'retained_free'}
+PUBLIC_EXCLUSIONS = {'syntax', 'goldens', 'checks', 'coverage', 'retained_free', 'interface'}
 SUPPORT_GRADES = {
     'source_read': 'The named source was inspected for the stated assertions.',
     'check_read': 'The named source and check assertions were inspected in the stated context.',
@@ -868,7 +868,7 @@ def _selection(node):
     for index, case in enumerate(cases):
         if not {'test', 'effects'} <= case.facts.keys():
             case.fail('first_match case requires a test and explicit effects')
-        if (set(case.facts) - {'test', 'effects', 'uses', 'object', 'value'}
+        if (set(case.facts) - {'test', 'effects', 'uses', 'object', 'value', 'interface'}
                 or any(child.kind in {'condition', 'effect'} for child in case.children)):
             case.fail('first_match case uses its test and direct effects for selection')
         fallback = case.expressions.get('test')
@@ -915,6 +915,10 @@ def _validate(tree):
                     value = f'({node.context[key]}) and ({value})'
                 node.context[key] = value
         _retained_free(tree, node)
+        if 'interface' in facts:
+            _strings(node, 'interface', facts['interface'])
+            if len(set(facts['interface'])) != len(facts['interface']):
+                node.fail('interface identifiers must be distinct', 'interface')
         if 'part' in facts and facts['part'] not in PARTS:
             node.fail('unknown document part', 'part')
         if node.kind == 'surface':

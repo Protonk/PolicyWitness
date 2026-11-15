@@ -16,17 +16,20 @@ use std::path::{Path, PathBuf};
 
 use crate::app_layout::app_root_from_current_exe;
 use crate::augments::{AugmentResolution, resolve_augments};
-use crate::cli;
 use crate::dossier::{
     AppProvenance, Augmentation, Binaries, HostFacts, Imports, PolicyDossier, Specimen,
 };
 use crate::evidence::{self, EvidenceManifest};
+use crate::interface::result::{Disposition, Label, Refusal, Selection, select};
+use crate::interface::run_args::{self, RunOption, Token, Value as OptionValue};
+use crate::interface::runner_kind::Reader;
 use crate::json_contract;
 use crate::policy_check::{PolicyCheckCapture, run_policy_check};
 use crate::porcelain_admission::{self, RunnerExecutionDiagnostics};
 use crate::porcelain_records::{PWRunnerRequestFailure, PWRunnerRunResult};
 use crate::request_patch::{RequestError, parse_request, validate_request_contract};
-use crate::runner_client::{RunnerClientRun, run_pw_runner_client};
+use crate::run_result::run_result;
+use crate::runner_client::{ClientFailure, RunnerClientRun, run_pw_runner_client};
 use crate::runner_manager::RunnerKind;
 use crate::runner_select::{
     RunnerConnectionKind, parse_runner_selector_value, resolve_runner_target_with_registry,
@@ -71,8 +74,8 @@ struct RunData {
 struct CompletedExecution {
     data: ExecutionData,
     diagnostics: RunnerExecutionDiagnostics,
-    result: json_contract::JsonResult,
-    exit_code: i32,
+    selection: Selection,
+    error: Option<String>,
 }
 
 /// The version gate for a received runner reply.
@@ -124,46 +127,40 @@ fn execution_only(
     }
 }
 
-/// The uniform `kind: "run"` envelope for a controller failure before or
-/// without execution: `tool_error`, exit 2, the dossier collected so far and
-/// null execution records.
-fn tool_error_envelope(
-    specimen: Specimen,
-    timeout_ms: Option<u64>,
-    error: String,
-) -> (json_contract::JsonResult, RunData) {
-    (
-        json_contract::JsonResult::new(false, 2, Some("tool_error"), Some(error)),
-        execution_only(specimen, timeout_ms, None, None),
-    )
-}
-
-/// What a run produces: the usage text request, or one rendered `kind: "run"`
-/// envelope with the process exit code it carries. `cmd_run` prints it; the
-/// controlled orchestration tests read it.
-enum RunOutput {
-    Help,
-    Envelope { text: String, exit_code: i32 },
-}
-
-fn envelope<T: Serialize>(
-    result: json_contract::JsonResult,
-    data: &T,
+/// What a run produces: one rendered `kind: "run"` envelope with the process
+/// exit code it carries. `cmd_run` prints it; the controlled orchestration
+/// tests read it.
+struct RunOutput {
+    text: String,
     exit_code: i32,
+}
+
+/// The envelope a selection determines. The selection's exit status is the
+/// result's exit field and the process status; no caller supplies either.
+fn envelope<T: Serialize>(
+    selection: &Selection,
+    error: Option<String>,
+    data: &T,
 ) -> Result<RunOutput, String> {
-    Ok(RunOutput::Envelope {
-        text: json_contract::render_envelope("run", result, data)?,
-        exit_code,
+    Ok(RunOutput {
+        text: json_contract::render_envelope("run", run_result(selection, error), data)?,
+        exit_code: selection.exit,
     })
 }
 
+/// The uniform `kind: "run"` envelope for a controller failure before or
+/// without execution: the tool-failure selection, the dossier collected so
+/// far and null execution records.
 fn tool_error(
     specimen: Specimen,
     timeout_ms: Option<u64>,
     error: String,
 ) -> Result<RunOutput, String> {
-    let (result, data) = tool_error_envelope(specimen, timeout_ms, error);
-    envelope(result, &data, 2)
+    envelope(
+        &select(&Disposition::ToolFailure),
+        Some(error),
+        &execution_only(specimen, timeout_ms, None, None),
+    )
 }
 
 fn bad_request(
@@ -174,21 +171,25 @@ fn bad_request(
     let mut data = execution_only(specimen, timeout_ms, None, None);
     data.execution.request_failure = Some(RequestFailureProjection::Controller(error.failure));
     envelope(
-        json_contract::JsonResult::new(false, 1, Some("bad_request"), Some(error.message)),
+        &select(&Disposition::LocalRequestRefusal),
+        Some(error.message),
         &data,
-        1,
     )
 }
 
-/// The envelope for an error that escaped `cmd_run` (the `cli.rs` catch-all).
-pub fn print_escaped_tool_error(error: String) -> Result<(), String> {
+/// Prints the envelope for an error that escaped `cmd_run` (the `cli.rs`
+/// catch-all) and returns the process status the tool-failure selection
+/// carries, printed or not.
+pub fn print_escaped_tool_error(error: String) -> i32 {
     let specimen = Specimen::unavailable(
         None,
         HostFacts::collect(),
         "the run failed before runner selection",
     );
-    let (result, data) = tool_error_envelope(specimen, None, error);
-    json_contract::print_envelope("run", result, &data)
+    if let Ok(output) = tool_error(specimen, None, error) {
+        println!("{}", output.text);
+    }
+    select(&Disposition::ToolFailure).exit
 }
 
 /// The dependencies a run acquires from its environment, named at the
@@ -322,10 +323,7 @@ pub(crate) fn actor_policy_dossiers(
 /// version gates every semantic reader.
 pub(crate) enum ReplyAdmission {
     DeliveryFailed(String),
-    Refused {
-        outcome: &'static str,
-        error: String,
-    },
+    Refused { refusal: Refusal, error: String },
     Admitted,
 }
 
@@ -333,36 +331,27 @@ pub(crate) fn admit_reply(
     client: &RunnerClientRun,
     reply: Option<&PWRunnerRunResult>,
 ) -> ReplyAdmission {
-    if let Some(error) = client
-        .request_delivery
-        .as_ref()
-        .and_then(|d| d.error.clone())
-    {
-        return ReplyAdmission::DeliveryFailed(error);
-    }
-    if let Some((outcome, error)) = client.failure() {
-        return ReplyAdmission::Refused { outcome, error };
+    match client.failure() {
+        Some(ClientFailure::Delivery(error)) => return ReplyAdmission::DeliveryFailed(error),
+        Some(ClientFailure::Refused(refusal, error)) => {
+            return ReplyAdmission::Refused { refusal, error };
+        }
+        None => {}
     }
     match reply.map(reply_version) {
         None | Some(ReplyVersion::Supported) => ReplyAdmission::Admitted,
         Some(ReplyVersion::Unsupported(version)) => ReplyAdmission::Refused {
-            outcome: "unsupported_runner_response",
+            refusal: Refusal::UnsupportedRunnerResponse,
             error: format!(
                 "runner reply carries contract {version}; this controller reads only {}",
                 json_contract::BUILD_CONTRACT
             ),
         },
         Some(ReplyVersion::Malformed(error)) => ReplyAdmission::Refused {
-            outcome: "malformed_runner_response",
+            refusal: Refusal::MalformedRunnerResponse,
             error,
         },
     }
-}
-
-fn runner_outcome(reply: Option<&PWRunnerRunResult>) -> &str {
-    reply
-        .map(|reply| reply.normalized_outcome.as_str())
-        .unwrap_or("runner_response_unavailable")
 }
 
 /// The independent fallback compilation, requested only for an admitted
@@ -412,7 +401,6 @@ struct Parsed {
 
 enum Arguments {
     Run(Parsed),
-    Help,
     /// An argument error: the path seen so far (if any) and the diagnostic.
     Error(Option<PathBuf>, String),
 }
@@ -426,73 +414,75 @@ fn parse_arguments(args: &[OsString]) -> Arguments {
     let mut idx = 0usize;
     while idx < args.len() {
         let arg = args[idx].to_string_lossy();
-        if arg == "--" {
-            break;
-        }
-        if !arg.starts_with('-') {
-            parsed.request_path = Some(PathBuf::from(args[idx].clone()));
-            idx += 1;
-            continue;
-        }
-        match arg.as_ref() {
-            "-h" | "--help" => return Arguments::Help,
-            "--timeout-ms" => {
-                let Some(value) = args
-                    .get(idx + 1)
-                    .and_then(|s| s.to_string_lossy().parse::<u64>().ok())
-                else {
-                    return Arguments::Error(None, "invalid value for --timeout-ms".to_string());
-                };
-                parsed.timeout_ms = value.max(1);
-                idx += 2;
+        let option = match run_args::classify(&arg) {
+            Token::Terminator => break,
+            Token::RequestPath if parsed.request_path.is_some() => {
+                return Arguments::Error(
+                    parsed.request_path,
+                    format!("unexpected argument: {arg}"),
+                );
             }
-            "--runner-mode" => {
-                let Some(value) = args.get(idx + 1).and_then(|s| s.to_str()) else {
+            Token::RequestPath => {
+                parsed.request_path = Some(PathBuf::from(args[idx].clone()));
+                idx += 1;
+                continue;
+            }
+            Token::UnknownFlag => {
+                return Arguments::Error(parsed.request_path, format!("unknown argument: {arg}"));
+            }
+            Token::Option(option) => option,
+        };
+        let spelling = option.def().spelling;
+        let value = args.get(idx + 1);
+        match (option, option.def().value) {
+            (RunOption::TimeoutMs, OptionValue::Milliseconds { min }) => {
+                let Some(value) = value
+                    .and_then(|s| s.to_string_lossy().parse::<u64>().ok())
+                    .filter(|value| *value >= min)
+                else {
+                    return Arguments::Error(None, format!("invalid value for {spelling}"));
+                };
+                parsed.timeout_ms = value;
+            }
+            (RunOption::RunnerMode, OptionValue::Kind(reader)) => {
+                let Some(value) = value.and_then(|s| s.to_str()) else {
                     return Arguments::Error(
                         parsed.request_path,
-                        "missing value for --runner-mode".to_string(),
+                        format!("missing value for {spelling}"),
                     );
                 };
-                if value == "machme" {
-                    return Arguments::Error(
-                        None,
-                        "--runner-mode machme is not supported; use --runner-mode byoxpc"
-                            .to_string(),
-                    );
-                }
-                if RunnerKind::parse(value).is_none() {
-                    return Arguments::Error(
-                        None,
-                        format!("invalid value for --runner-mode: {value}"),
-                    );
+                if let Err(error) = runner_mode_kind(reader, value) {
+                    return Arguments::Error(None, error);
                 }
                 parsed.runner_mode_arg = Some(value.to_string());
-                idx += 2;
             }
-            _ => return Arguments::Error(parsed.request_path, format!("unknown argument: {arg}")),
+            // The option table pairs each option with the value its field holds.
+            (RunOption::TimeoutMs, OptionValue::Kind(_))
+            | (RunOption::RunnerMode, OptionValue::Milliseconds { .. }) => {
+                unreachable!("{spelling} carries another option's value rule")
+            }
         }
+        idx += 2;
     }
     Arguments::Run(parsed)
+}
+
+/// The kind a `--runner-mode` value names for this reader, or the refusal.
+fn runner_mode_kind(reader: Reader, value: &str) -> Result<RunnerKind, String> {
+    reader.resolve(value).ok_or_else(|| {
+        format!(
+            "invalid value for {}: {value}",
+            RunOption::RunnerMode.def().spelling
+        )
+    })
 }
 
 /// Inject `--runner-mode` into the request value; errors are request errors.
 fn inject_runner_mode(request_value: &mut Value, mode: &str) -> Result<(), RequestError> {
     // Check the submitted selector before an option can replace an invalid value.
     parse_runner_selector_value(request_value)?;
-    if mode == "machme" {
-        return Err(RequestError::new(
-            "invalid_value",
-            &["runner", "mode"],
-            "--runner-mode machme is not supported; use --runner-mode byoxpc",
-        ));
-    }
-    let kind = RunnerKind::parse(mode).ok_or_else(|| {
-        RequestError::new(
-            "invalid_value",
-            &["runner", "mode"],
-            format!("invalid value for --runner-mode: {mode}"),
-        )
-    })?;
+    let kind = runner_mode_kind(Reader::RunOption, mode)
+        .map_err(|error| RequestError::new("invalid_value", &["runner", "mode"], error))?;
     let obj = request_value.as_object_mut().ok_or_else(|| {
         RequestError::new("type_mismatch", &[], "request.json must be a JSON object")
     })?;
@@ -520,16 +510,9 @@ fn inject_runner_mode(request_value: &mut Value, mode: &str) -> Result<(), Reque
 }
 
 pub fn cmd_run(args: &[OsString]) -> Result<i32, String> {
-    match run(args, &RunDependencies::production())? {
-        RunOutput::Help => {
-            cli::print_usage();
-            Ok(0)
-        }
-        RunOutput::Envelope { text, exit_code } => {
-            println!("{text}");
-            Ok(exit_code)
-        }
-    }
+    let output = run(args, &RunDependencies::production())?;
+    println!("{}", output.text);
+    Ok(output.exit_code)
 }
 
 /// One run through production orchestration: argument admission, one manifest
@@ -538,7 +521,6 @@ pub fn cmd_run(args: &[OsString]) -> Result<i32, String> {
 fn run(args: &[OsString], deps: &RunDependencies) -> Result<RunOutput, String> {
     let host = HostFacts::collect();
     let parsed = match parse_arguments(args) {
-        Arguments::Help => return Ok(RunOutput::Help),
         Arguments::Error(path, error) => {
             let specimen = Specimen::unavailable(
                 path.map(|p| p.to_string_lossy().to_string()),
@@ -708,9 +690,11 @@ fn run(args: &[OsString], deps: &RunDependencies) -> Result<RunOutput, String> {
 
     // A decoded reply stays in the envelope on every refusal; nothing
     // interprets it before admission.
-    let (outcome, exit_code, error) = match admit_reply(&runner_client, runner_result.as_ref()) {
-        ReplyAdmission::DeliveryFailed(error) => ("tool_error", 2, error),
-        ReplyAdmission::Refused { outcome, error } => (outcome, 1, error),
+    let (disposition, error) = match admit_reply(&runner_client, runner_result.as_ref()) {
+        ReplyAdmission::DeliveryFailed(error) => (Disposition::ToolFailure, error),
+        ReplyAdmission::Refused { refusal, error } => {
+            (Disposition::AdmissionRefusal(refusal), error)
+        }
         ReplyAdmission::Admitted => {
             let policy_check = fallback_policy_check(&runner_client, || (deps.policy_check)(&held));
             let actor_policy_checks =
@@ -724,8 +708,8 @@ fn run(args: &[OsString], deps: &RunDependencies) -> Result<RunOutput, String> {
                 runner_result,
                 request_failure: None,
             });
-            let (result, data, exit_code) = execution_envelope(execution);
-            return envelope(result, &data, exit_code);
+            let (selection, error, data) = execution_parts(execution);
+            return envelope(&selection, error, &data);
         }
     };
     let mut data = execution_only(specimen, timeout_ms, Some(runner_client), runner_result);
@@ -738,17 +722,26 @@ fn run(args: &[OsString], deps: &RunDependencies) -> Result<RunOutput, String> {
         &actor_policies,
         deps.policy_check,
     );
-    envelope(
-        json_contract::JsonResult::new(false, exit_code, Some(outcome), Some(error)),
-        &data,
-        exit_code,
-    )
+    envelope(&select(&disposition), Some(error), &data)
 }
 
 fn complete_execution(mut data: ExecutionData) -> CompletedExecution {
     let diagnostics = porcelain_admission::execution_diagnostics(data.runner_result.as_ref());
-    let runner_outcome = runner_outcome(data.runner_result.as_ref()).to_string();
-    if runner_outcome == "bad_request" {
+    let integrity_issues = diagnostics.disposition_issues.len()
+        + diagnostics
+            .actors
+            .iter()
+            .flatten()
+            .map(|actor| actor.disposition_issues.len())
+            .sum::<usize>();
+    let selection = select(&Disposition::Admitted {
+        host_outcome: data
+            .runner_result
+            .as_ref()
+            .map(|reply| reply.normalized_outcome.as_str()),
+        integrity_issues,
+    });
+    if selection.outcome == Label::BadRequest.spelling() {
         data.request_failure = data.runner_result.as_ref().and_then(|reply| {
             reply
                 .request_failure
@@ -756,8 +749,7 @@ fn complete_execution(mut data: ExecutionData) -> CompletedExecution {
                 .map(RequestFailureProjection::Runner)
         });
     }
-    let ok = runner_outcome == "finished";
-    let exit_code = if ok { 0 } else { 1 };
+    let ok = selection.ok;
 
     let client_output = data.runner_client.as_ref().map(|c| &c.output);
     let error = if ok {
@@ -776,28 +768,35 @@ fn complete_execution(mut data: ExecutionData) -> CompletedExecution {
         Some("run did not complete successfully".to_string())
     };
 
-    let result =
-        json_contract::JsonResult::new(ok, exit_code, Some(runner_outcome.as_str()), error);
-
     CompletedExecution {
         data,
         diagnostics,
-        result,
-        exit_code,
+        selection,
+        error,
     }
 }
 
-fn execution_envelope(execution: CompletedExecution) -> (json_contract::JsonResult, RunData, i32) {
+fn execution_parts(execution: CompletedExecution) -> (Selection, Option<String>, RunData) {
     let data = RunData {
         execution: execution.data,
         runner_sandbox_diagnostics: Some(execution.diagnostics),
     };
-    (execution.result, data, execution.exit_code)
+    (execution.selection, execution.error, data)
 }
 
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    /// The result, payload and process status of a completed execution, as
+    /// `envelope` takes them from its one selection.
+    fn execution_envelope(
+        execution: CompletedExecution,
+    ) -> (json_contract::JsonResult, RunData, i32) {
+        let (selection, error, data) = execution_parts(execution);
+        let exit_code = selection.exit;
+        (run_result(&selection, error), data, exit_code)
+    }
     use crate::porcelain_admission::IntegrityIssue;
     use crate::reply_fixtures::*;
     use crate::utils::RequestDelivery;
@@ -838,8 +837,8 @@ mod tests {
             request_failure: None,
         };
         let execution = complete_execution(data);
-        assert_eq!(execution.exit_code, 0);
-        assert!(execution.result.ok);
+        assert_eq!(execution.selection.exit, 0);
+        assert!(execution.selection.ok);
         assert_eq!(
             execution.data.runner_result.as_ref().unwrap().steps[0]
                 .attempt
@@ -1843,6 +1842,30 @@ else:
                 "{flag}: invalid flag values carry no request path"
             );
         }
+        // Zero is below the timeout's minimum, and a second path is not taken.
+        assert!(matches!(
+            parse_arguments(&["/r.json".into(), "--timeout-ms".into(), "0".into()]),
+            Arguments::Error(None, error) if error == "invalid value for --timeout-ms"
+        ));
+        match parse_arguments(&["/r.json".into(), "/other.json".into()]) {
+            Arguments::Error(Some(path), error) => {
+                assert_eq!(path, PathBuf::from("/r.json"));
+                assert_eq!(error, "unexpected argument: /other.json");
+            }
+            _ => panic!("a second request path accepted"),
+        }
+        match parse_arguments(&[
+            "--timeout-ms".into(),
+            "1".into(),
+            "--".into(),
+            "/r.json".into(),
+        ]) {
+            Arguments::Run(parsed) => {
+                assert_eq!(parsed.timeout_ms, 1);
+                assert_eq!(parsed.request_path, None, "nothing after -- is read");
+            }
+            Arguments::Error(..) => panic!("the minimum timeout refused"),
+        }
         // The path seen so far is retained for the dossier of the refusal.
         match parse_arguments(&["/r.json".into(), "--bogus".into()]) {
             Arguments::Error(Some(path), error) => {
@@ -1851,7 +1874,16 @@ else:
             }
             _ => panic!("unknown argument accepted"),
         }
-        assert!(matches!(parse_arguments(&["-h".into()]), Arguments::Help));
+        // A help flag is an unknown argument like any other.
+        for flag in ["-h", "--help"] {
+            match parse_arguments(&["/r.json".into(), flag.into()]) {
+                Arguments::Error(Some(path), error) => {
+                    assert_eq!(path, PathBuf::from("/r.json"));
+                    assert_eq!(error, format!("unknown argument: {flag}"));
+                }
+                _ => panic!("{flag} accepted"),
+            }
+        }
     }
 
     #[test]
@@ -1967,8 +1999,8 @@ else:
             ReplyAdmission::Admitted
         ));
         match admit_reply(&intact, Some(&unsupported)) {
-            ReplyAdmission::Refused { outcome, error } => {
-                assert_eq!(outcome, "unsupported_runner_response");
+            ReplyAdmission::Refused { refusal, error } => {
+                assert_eq!(refusal.spelling(), "unsupported_runner_response");
                 assert!(error.contains("contract test:foreign"), "{error}");
                 assert!(error.contains(&format!("reads only {current}")), "{error}");
             }
@@ -2076,7 +2108,10 @@ else:
                 envelope: envelope.clone(),
             };
             let client = client_run(None);
-            let (outcome, error) = client.failure().unwrap();
+            let Some(ClientFailure::Refused(refusal, error)) = client.failure() else {
+                panic!("the controlled client run is refused")
+            };
+            let outcome = refusal.spelling();
             let mut data = execution_only(specimen(), Some(7), Some(client), None);
             data.execution.policy_check = Some(capture);
             let text = json_contract::render_envelope(
@@ -2101,9 +2136,9 @@ else:
 
     #[test]
     fn tool_error_envelope_has_the_uniform_run_shape() {
-        let (result, data) = tool_error_envelope(specimen(), None, "missing <request.json>".into());
-        let text = json_contract::render_envelope("run", result, &data).unwrap();
-        let wire: Value = serde_json::from_str(&text).unwrap();
+        let output = tool_error(specimen(), None, "missing <request.json>".into()).unwrap();
+        assert_eq!(output.exit_code, 2);
+        let wire: Value = serde_json::from_str(&output.text).unwrap();
         assert_eq!(wire["kind"], "run");
         assert_eq!(wire["build"]["contract"], json_contract::BUILD_CONTRACT);
         assert_eq!(wire["result"]["ok"], false);
@@ -2343,18 +2378,13 @@ else:
     #[test]
     fn runner_mode_injection_rules() {
         let mut request = json!({"policy": {}, "runner": {"id": "external"}});
-        assert!(
-            inject_runner_mode(&mut request, "machme")
-                .unwrap_err()
-                .message
-                .contains("byoxpc")
-        );
-        assert!(
-            inject_runner_mode(&mut request, "nope")
-                .unwrap_err()
-                .message
-                .contains("invalid value for --runner-mode")
-        );
+        // A retired registry word is an invalid value like any other.
+        for value in ["machme", "debuggable", "nope"] {
+            assert_eq!(
+                inject_runner_mode(&mut request, value).unwrap_err().message,
+                format!("invalid value for --runner-mode: {value}")
+            );
+        }
         inject_runner_mode(&mut request, "byoxpc").unwrap();
         assert_eq!(request["runner"]["mode"], "byoxpc");
         inject_runner_mode(&mut request, "byoxpc").unwrap();
@@ -2631,6 +2661,31 @@ else:
             args: &[&str],
             reply: Option<Value>,
         ) -> Observed {
+            observe_capture(app, registry, args, &|| {
+                let reply = reply.clone();
+                let mut run = client_run(reply.as_ref());
+                let typed = reply.and_then(|value| match serde_json::from_value(value) {
+                    Ok(record) => Some(record),
+                    Err(error) => {
+                        run.runner_reply_error = Some(crate::runner_client::ReplyError {
+                            refusal: crate::runner_client::ReplyRefusal::Malformed,
+                            message: error.to_string(),
+                        });
+                        None
+                    }
+                });
+                (run, typed)
+            })
+        }
+
+        /// The same orchestration with the controlled client returning what
+        /// `capture` constructs: the client run and the decoded reply.
+        fn observe_capture(
+            app: &Path,
+            registry: Option<&Path>,
+            args: &[&str],
+            capture: &dyn Fn() -> (RunnerClientRun, Option<PWRunnerRunResult>),
+        ) -> Observed {
             let loads = RefCell::new(Vec::new());
             let calls = RefCell::new(Vec::new());
             let load_manifest = |path: &Path| {
@@ -2647,19 +2702,7 @@ else:
                     timeout_ms,
                     connection: *connection,
                 });
-                let reply = reply.clone();
-                let mut run = client_run(reply.as_ref());
-                let typed = reply.and_then(|value| match serde_json::from_value(value) {
-                    Ok(record) => Some(record),
-                    Err(error) => {
-                        run.runner_reply_error = Some(crate::runner_client::ReplyError {
-                            refusal: crate::runner_client::ReplyRefusal::Malformed,
-                            message: error.to_string(),
-                        });
-                        None
-                    }
-                });
-                Ok((run, typed))
+                Ok(capture())
             };
             let app_root = app.to_path_buf();
             let deps = RunDependencies {
@@ -2679,12 +2722,10 @@ else:
         }
 
         fn envelope_of(output: &RunOutput) -> (Value, i32) {
-            match output {
-                RunOutput::Envelope { text, exit_code } => {
-                    (serde_json::from_str(text).unwrap(), *exit_code)
-                }
-                RunOutput::Help => panic!("usage requested"),
-            }
+            (
+                serde_json::from_str(&output.text).unwrap(),
+                output.exit_code,
+            )
         }
 
         fn forwarded_request_value(path: &Path) -> Value {
@@ -3577,6 +3618,256 @@ else:
             fs::remove_dir_all(&root).unwrap();
         }
 
+        /// Every class of the result relation through production
+        /// orchestration. The expectations are spelled here: the envelope's
+        /// fields, the returned process status, and the line the stored
+        /// result card gives a label the relation fixes.
+        #[test]
+        fn each_result_class_agrees_in_fields_process_status_and_card() {
+            use crate::runner_client::{ReplyError, ReplyRefusal};
+            let root = scratch("result-classes");
+            let app = synthetic_app(&root);
+            install_manifest(&app, ManifestState::Valid);
+            let request = request_file(&root, None);
+            let request = request.to_str().unwrap();
+            let malformed = root.join("malformed.json");
+            write(&malformed, b"{");
+            let typed =
+                |value: Value| -> PWRunnerRunResult { serde_json::from_value(value).unwrap() };
+            let steps = || {
+                vec![
+                    crate::reply_fixtures::step("allowed", "open_read", "/allowed", "succeeded"),
+                    crate::reply_fixtures::step(
+                        "denied",
+                        "open_read",
+                        "/denied",
+                        "permission_failure",
+                    ),
+                ]
+            };
+            let reply = |outcome: &str| crate::reply_fixtures::reply_with(outcome, None, steps());
+            let admitted = |value: Value| -> Observed {
+                observe_capture(&app, None, &[request], &|| {
+                    (client_run(Some(&value)), Some(typed(value.clone())))
+                })
+            };
+            let refused = |admission: Option<&str>, refusal: Option<ReplyRefusal>| -> Observed {
+                observe_capture(&app, None, &[request], &|| {
+                    // The capture carries a decoded `finished` reply beside the refusal.
+                    let value = controlled_reply();
+                    let mut run = client_run(Some(&value));
+                    if let Some(admission) = admission {
+                        run.transport_admission = admission.into();
+                        run.transport_error = Some("controlled capture refusal".into());
+                    }
+                    if let Some(refusal) = refusal {
+                        run.runner_reply_error = Some(ReplyError {
+                            refusal,
+                            message: "controlled reply refusal".into(),
+                        });
+                    }
+                    (run, Some(typed(value)))
+                })
+            };
+            let mut foreign = controlled_reply();
+            foreign["producer"]["contract"] = "test:foreign".into();
+            let mut degraded = reply("finished");
+            degraded["steps"][0]["attempt"]["result_source"] = "host".into();
+
+            // (class, observed run, normalized_outcome, ok, exit status, on the card)
+            let observed: Vec<(&str, Observed, &str, bool, i32, bool)> = vec![
+                (
+                    "local request refusal",
+                    observe(&app, None, &[malformed.to_str().unwrap()]),
+                    "bad_request",
+                    false,
+                    1,
+                    true,
+                ),
+                (
+                    "tool failure",
+                    observe(&app, None, &["--bogus"]),
+                    "tool_error",
+                    false,
+                    2,
+                    true,
+                ),
+                (
+                    "delivery failure beside a received finished reply",
+                    observe_capture(&app, None, &[request], &|| {
+                        let value = controlled_reply();
+                        let mut run = client_run(Some(&value));
+                        run.request_delivery.as_mut().unwrap().error =
+                            Some("controlled broken pipe".into());
+                        (run, Some(typed(value)))
+                    }),
+                    "tool_error",
+                    false,
+                    2,
+                    true,
+                ),
+                (
+                    "capture missing",
+                    refused(Some("missing"), None),
+                    "missing_runner_client",
+                    false,
+                    1,
+                    true,
+                ),
+                (
+                    "capture unsupported",
+                    refused(Some("unsupported"), None),
+                    "unsupported_runner_client",
+                    false,
+                    1,
+                    true,
+                ),
+                (
+                    "capture malformed",
+                    refused(Some("malformed"), None),
+                    "malformed_runner_client",
+                    false,
+                    1,
+                    true,
+                ),
+                (
+                    "reply truncated",
+                    refused(None, Some(ReplyRefusal::Truncated)),
+                    "runner_reply_truncated",
+                    false,
+                    1,
+                    true,
+                ),
+                (
+                    "reply schema unsupported",
+                    refused(None, Some(ReplyRefusal::UnsupportedSchema)),
+                    "unsupported_runner_response",
+                    false,
+                    1,
+                    true,
+                ),
+                (
+                    "reply malformed",
+                    refused(None, Some(ReplyRefusal::Malformed)),
+                    "malformed_runner_response",
+                    false,
+                    1,
+                    true,
+                ),
+                (
+                    "reply contract foreign",
+                    admitted(foreign),
+                    "unsupported_runner_response",
+                    false,
+                    1,
+                    true,
+                ),
+                (
+                    "client transport failure",
+                    observe_client(&app, None, &[request], None),
+                    "xpc_error",
+                    false,
+                    1,
+                    true,
+                ),
+                (
+                    "admitted finished",
+                    admitted(controlled_reply()),
+                    "finished",
+                    true,
+                    0,
+                    true,
+                ),
+                (
+                    "admitted finished with a failed attempt",
+                    admitted(reply("finished")),
+                    "finished",
+                    true,
+                    0,
+                    true,
+                ),
+                (
+                    "admitted finished with integrity findings",
+                    admitted(degraded),
+                    "finished",
+                    true,
+                    0,
+                    true,
+                ),
+                (
+                    "admitted other outcome",
+                    admitted(reply("runner_failed")),
+                    "runner_failed",
+                    false,
+                    1,
+                    false,
+                ),
+                (
+                    "admitted completion with no host reply",
+                    observe_capture(&app, None, &[request], &|| {
+                        (client_run(Some(&controlled_reply())), None)
+                    }),
+                    "runner_response_unavailable",
+                    false,
+                    1,
+                    true,
+                ),
+            ];
+            let card = crate::help::card(Some(crate::interface::commands::Topic::Result));
+            for (class, observed, outcome, ok, status, on_card) in &observed {
+                let (wire, exit_code) = envelope_of(&observed.output);
+                assert_eq!(wire["result"]["normalized_outcome"], *outcome, "{class}");
+                assert_eq!(wire["result"]["ok"], *ok, "{class}");
+                assert_eq!(
+                    wire["result"]["exit_code"], *status,
+                    "{class}: the result's exit field"
+                );
+                assert_eq!(exit_code, *status, "{class}: the process status");
+                let line = format!("  {outcome} {ok} {status}");
+                assert_eq!(
+                    card.lines().any(|found| found == line),
+                    *on_card,
+                    "{class}: {line:?} in\n{card}"
+                );
+            }
+            // The findings and the failed attempt are present beside the finished results.
+            let (wire, _) = envelope_of(&observed[13].1.output);
+            assert!(
+                !wire["data"]["runner_sandbox_diagnostics"]["disposition_issues"]
+                    .as_array()
+                    .unwrap()
+                    .is_empty(),
+                "the degraded reply carries integrity findings"
+            );
+            let (wire, _) = envelope_of(&observed[12].1.output);
+            assert_eq!(
+                wire["data"]["runner_result"]["steps"][1]["attempt"]["rc"],
+                -1
+            );
+            // The card's remaining lines are the transport refusals, each false and 1.
+            let fixed: Vec<String> = observed
+                .iter()
+                .filter(|row| row.5)
+                .map(|(_, _, outcome, ok, status, _)| format!("  {outcome} {ok} {status}"))
+                .collect();
+            let rest: Vec<&str> = card
+                .lines()
+                .skip(2)
+                .filter(|line| !fixed.iter().any(|known| known == line))
+                .collect();
+            assert_eq!(
+                rest,
+                [
+                    "  xpc_timeout false 1",
+                    "  xpc_acquisition_failed false 1",
+                    "  xpc_submission_refused false 1",
+                    "  xpc_protocol_error false 1",
+                    "  runner_client_error false 1",
+                ]
+            );
+            fs::remove_dir_all(&root).unwrap();
+        }
+
         #[test]
         fn refusals_before_selection_load_at_most_once_and_never_invoke_the_client() {
             let root = scratch("arguments");
@@ -3585,6 +3876,9 @@ else:
             // Argument refusals never reach the app root.
             for args in [
                 &["--bogus"][..],
+                &["--help"],
+                &["-h"],
+                &["/r.json", "--help"],
                 &["--runner-mode", "machme"],
                 &["--timeout-ms", "soon"],
                 &["/r.json", "--bogus"],
@@ -3600,9 +3894,6 @@ else:
                     "{args:?}"
                 );
             }
-            let observed = observe(&app, None, &["--help"]);
-            assert!(matches!(observed.output, RunOutput::Help));
-            assert!(observed.loads.is_empty() && observed.calls.is_empty());
             // Request refusals after admission carry the provenance of the one load.
             let missing = root.join("absent.json");
             for (label, args, error) in [

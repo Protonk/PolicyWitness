@@ -182,6 +182,7 @@ This template applies a policy with no probe actions. Replace the assertion with
 ### Emit the example specimen {emit_example: reports}
 
 ```contract
+interface: ["command.example", "tail.example", "example.document"]
 who: ["identity.definitions.controller"]
 where: "CLI example dispatch"
 entry: ["cli_example"]
@@ -298,7 +299,7 @@ limits: "Check read; no execution or native outcome is credited. This body is bu
 ### Emitted example {example: example}
 
 ```contract
-document: {"path": "controller/src/example.rs", "symbol": "EXAMPLE_DOCUMENT"}
+document: {"path": "controller/src/example_document.rs", "symbol": "EXAMPLE_DOCUMENT"}
 uses: ["identity.definitions.cause"]
 ```
 
@@ -327,7 +328,7 @@ These results are observations on the build and machine that produced them, unde
 
 ```contract
 grade: "check_read"
-source: [{"path": "controller/src/example.rs", "symbol": "EXAMPLE_DOCUMENT"}]
+source: [{"path": "controller/src/example_document.rs", "symbol": "EXAMPLE_DOCUMENT"}]
 check: [{"path": "tests/suites/source_drift/contract_tree_controls.py", "symbol": "test_example_document_is_extracted_from_its_cited_constant", "form": "test"}, {"path": "tests/suites/source_drift/contract_tree_controls.py", "symbol": "test_example_document_refusals_name_the_source", "form": "test"}, {"path": "tests/suites/source_drift/generators.py", "symbol": "test_example_source_edit_is_stale_until_regeneration_and_moves_content_and_identity", "form": "test"}, {"path": "tests/suites/witness_contract/example_round_trip.sh", "symbol": "example_round_trip", "form": "test"}, {"path": "tests/suites/witness_contract/check_example_round_trip.py", "symbol": "evaluate", "form": "test"}]
 pins: "The rendering is the parsed constant, which must be a request object without an identity, test overrides, selection keys or unknown members. An edit to the constant is refused until regeneration and then moves the rendering, the request payload and the build identity. The live case requires the selected app's emitted document without its identity to equal this snapshot and to be an ordinary two-phase read-only workload with two actions then one: a data-read query and open of one target, a metadata query on a second target beside a fresh read of a third, and a data-read query and open of the second. It submits the emitted bytes unchanged and derives flat and single-applied-actor forms with the same actions and policy. Each submission independently requires admission, identity, digest, phase/action ownership and echo relationships; the actor also requires applied-once, selected-equipment and reaped-process observations. A diagnostic summary carries no equality assertion. Under observed target prerequisites it then requires, each as its own assertion, a captured process status of 0, a finished reply, each step's answer, each step's attempt, query-first order, and a fresh read whose descriptor identity, count and bytes equal the case's own observation of that target."
 context: "Read the constant, the extraction's constructed controls, the disposable-copy generation control and the live case with its checker and rejected controls."
@@ -432,6 +433,7 @@ Legacy runner mode. Null means absent. The accepted values are `standard` and `b
 ### Selector precedence {precedence: acts}
 
 ```contract
+interface: ["run.option.runner_mode", "runner_kind.standard@run_option", "runner_kind.byoxpc@run_option"]
 who: ["identity.definitions.controller"]
 where: "runner selector parsing"
 entry: ["cli_run"]

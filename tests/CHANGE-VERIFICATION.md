@@ -26,6 +26,7 @@ they do not exhaust the verification relevant to a change.
 | Admission or validator receivers | [Integrated verification guidance](AGENTS.md#choose-the-most-integrated-test-that-can-establish-the-behavior), including the boundary and its readers. |
 | Porcelain schema or binary representation | [Independent structural controls](suites/source_drift/README.md#porcelain-structural-reader), `source_drift/generator_contract` and `preflight/build_entry_controls`; retain the applicable ordinary, ordering, actor and ending semantic controls. |
 | Limits | [Limit-change verification](AGENTS.md#verify-a-limit-change) and the [limits coverage account](../docs/LIMITS.md#grounding-and-coverage). |
+| Command, topic, `run` option or runner-kind definitions; help cards; `run` result selection; the example document | [Interface definitions and help cards](#interface-definitions-and-help-cards). |
 | Ordering barriers, worker wait/release, query eligibility or observers | [Required ordering controls](AGENTS.md#choose-the-most-integrated-test-that-can-establish-the-behavior) and [order-barrier mutations](#order-barrier-mutation-controls). |
 | Worker clock source, timebase or sample validation; OS/SDK updates or another supported machine | [Native worker clock applicability](#native-worker-clock-applicability), including its required worker-change control and environmental scope. |
 | Exec publication, compatible absence handling or confirmed-reap reconciliation and race controls | [Exec-reader mutations](#exec-reader-publication-and-absence-mutations) and [confirmed-reap mutation](#confirmed-reap-acknowledgement-mutation). |
@@ -219,6 +220,32 @@ public command, or the explicit `PW_TEST_OUT_DIR`.
 - **Artifacts:** `<run>/suites/witness_contract/path_query_integrated/artifacts/`
   retains specimens, raw envelopes, native receipts, independent state and cleanup.
 
+### Interface definitions and help cards
+
+- **Cases:** `unit/rust.unit`, `integration/cli.integration`,
+  `source_drift/interface_inventory`, `source_drift/runner_source_manifests_agree`
+  and `source_drift/generator_contract`.
+- **Location:** `controller/src/interface/`, `controller/interface/`,
+  `controller/integration/interface_cases.json`,
+  `tests/suites/source_drift/interface.py`.
+- **Purpose:** Hold the behavior the definitions govern with literal
+  expectations (the case corpus and the result-class unit test), hold card and
+  execution agreement from the binary's own output, and hold the inventory,
+  joins, residue baseline, contract join and literal rule with rejected
+  controls. The [inventory README](../controller/interface/README.md) describes
+  each check and its limits.
+- **Resource dependency:** `cargo`; a signed app for `integration`. The
+  `source_drift` cases need neither.
+- **When to run:** After changing a definition under
+  `controller/src/interface/`, a card specification, `EXAMPLE_DOCUMENT`, a
+  reader of the runner-kind vocabulary, `run`'s argument parser or its result
+  construction, the case corpus, or the generator. A changed governing
+  definition also needs its mutation recorded in
+  `controller/interface/mutations.json`: apply the change without editing any
+  help input, and record whether the card, the contract check and the cases
+  changed or failed.
+- **Artifacts:** the cases' ordinary logs under `<run>/suites/`.
+
 ### signed artifact controls
 
 - **Case:** `preflight/signed_artifact_controls`
@@ -244,8 +271,8 @@ public command, or the explicit `PW_TEST_OUT_DIR`.
   unknown argument, an unexecutable interpreter, a malformed plist minimum, a
   build directory configured for another checkout or without a stamp, an
   identity the keychain lacks in every class, stale identity, architecture,
-  build-document, contract and guide copies, and the `make` header and build
-  recipe. Assert the banners that did and did not print and that no output,
+  build-document, contract, interface and guide copies, and the `make` header
+  and build recipe. Assert the banners that did and did not print and that no output,
   build directory or lock was created.
 - **Resource dependency:** The macOS shell, `sysctl`, `sandbox-exec`, `make`
   and keychain queries for an identity the keychain does not hold; no signed

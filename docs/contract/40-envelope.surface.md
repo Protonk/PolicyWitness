@@ -212,6 +212,7 @@ The observations and supported assessments state what the run establishes.
 #### Admitted finished outcome {finished: outcome}
 
 ```contract
+interface: ["result.admitted_finished"]
 test: envelope.data.runner_result.normalized_outcome == "finished"
 effects: [set_value(envelope.result.ok, True), set_value(envelope.result.exit_code, 0), set_value(envelope.result.normalized_outcome, envelope.data.runner_result.normalized_outcome), retain_records(envelope.data.runner_result)]
 ```
@@ -219,6 +220,7 @@ effects: [set_value(envelope.result.ok, True), set_value(envelope.result.exit_co
 #### Other admitted outcome {other: outcome}
 
 ```contract
+interface: ["result.admitted_other"]
 test: True
 effects: [set_value(envelope.result.ok, False), set_value(envelope.result.exit_code, 1), set_value(envelope.result.normalized_outcome, envelope.data.runner_result.normalized_outcome), retain_records(envelope.data.runner_result)]
 ```

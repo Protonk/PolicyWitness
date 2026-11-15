@@ -136,6 +136,15 @@ def _rust_records(read, known):
             if not re.fullmatch(r'(?:\s*\w+\s*,)+\s*', body):
                 raise ValueError(f'{path}: unsupported serializable enum {match[2]}')
             scalar_types.add(match[2])
+    # RunnerKind is the interface table's kind; its registry projection is the
+    # kind's canonical word, written by hand because the table spells it.
+    kind_text = texts['controller/src/runner_manager.rs']
+    kind_serializer = re.search(r'impl Serialize for RunnerKind\s*\{', kind_text)
+    if not kind_serializer or not re.search(
+            r'\{\s*serializer\.serialize_str\(self\.as_str\(\)\)\s*\}',
+            _block(kind_text, kind_serializer.end() - 1)):
+        raise ValueError('RunnerKind string projection needs review')
+    scalar_types.add('RunnerKind')
     reply_text = texts['controller/src/runner_client.rs']
     reply_serializer = re.search(r'impl Serialize for ReplyError\s*\{', reply_text)
     if not reply_serializer or not re.search(

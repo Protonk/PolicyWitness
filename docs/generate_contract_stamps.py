@@ -42,6 +42,7 @@ def tree_input_paths(root):
     paths.update(markdown_reader.source_files(root))
     paths.add('docs/generator_common.py')
     paths.update(contract_module('record_definitions').input_paths(root))
+    paths.add(contract_module('interface_join').INVENTORY)
     for path in sorted(directory.glob('*.surface.md')):
         try:
             document = markdown_reader.parse(path.read_text(), path.as_posix())
@@ -90,8 +91,14 @@ def main():
     parser.add_argument('--refresh-shapes', action='store_true', help='recollect surface shape goldens for review')
     parser.add_argument('--preview', metavar='PATH', help='render the draft tree separately from the public contract')
     parser.add_argument('--tree-check', action='store_true', help='require complete definitions and support in the draft tree')
+    parser.add_argument('--interface-report', action='store_true',
+                        help='print what the interface inventory join compared and what it left as prose')
     args = parser.parse_args()
     try:
+        if args.interface_report:
+            tree = contract_module('tree').load_tree(ROOT)
+            print(json.dumps(contract_module('interface_join').check(ROOT, tree), indent=2, sort_keys=True))
+            return
         if args.preview or args.tree_check:
             if args.check or args.release or args.refresh_shapes or args.require_history:
                 raise ValueError('draft tree modes cannot change or check release stamps')

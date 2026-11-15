@@ -2982,13 +2982,13 @@ SELF_CHECK_MARKERS = ('is stale', 'missing symbol', 'disagrees with the script',
 
 
 def _without_self_checks(text):
-    """Remove limits, contract, architecture, footprint, porcelain, build-document and both identity checks.
+    """Remove limits, contract, architecture, footprint, porcelain, interface, build-document and both identity checks.
 
-    Their banners stay. Each of those checks compares a document or a digest with
-    the script, so a mutated script fails one of them before any guard runs."""
+    Their banners stay. All but the interface check compare a document or a digest
+    with the script, so a mutated script fails one of them before any guard runs."""
     names = SELF_CHECK_RE.findall(text)
     assert sorted(names) == sorted(('limits', 'contract_stamps', 'architecture', 'footprint', 'porcelain',
-                                   'build', 'worker_identity', 'worker_identity')), names
+                                   'interface', 'build', 'worker_identity', 'worker_identity')), names
     return SELF_CHECK_RE.sub('', text)
 
 

@@ -5,6 +5,8 @@
 //! system domain.
 
 use serde::{Deserialize, Serialize};
+
+use crate::interface::runner_kind::Reader;
 use serde_json::{Value, json};
 use std::collections::BTreeMap;
 use std::fs;
@@ -39,33 +41,25 @@ const TEARDOWN_POLL_INTERVAL_MS: u64 = 50;
 /// (docs/limits.json: `byoxpc_throttle_interval`).
 const BYOXPC_THROTTLE_INTERVAL_SECONDS: u64 = 1;
 
-#[derive(Debug, Clone, Copy, Serialize, Deserialize, PartialEq, Eq)]
-#[serde(rename_all = "lowercase")]
-pub enum RunnerKind {
-    Standard,
-    // The aliases accept legacy on-disk registry entries carrying
-    // `kind: "machme"` or `kind: "debuggable"` and coerce them to
-    // Byoxpc on load so upgraded integrators don't have a stranded
-    // registry. New input that uses either string is rejected by
-    // RunnerKind::parse.
-    #[serde(alias = "machme", alias = "debuggable")]
-    Byoxpc,
+/// The kind vocabulary and each reader's rule live in the interface table.
+pub use crate::interface::runner_kind::Kind as RunnerKind;
+
+impl Serialize for RunnerKind {
+    fn serialize<S: serde::Serializer>(&self, serializer: S) -> Result<S::Ok, S::Error> {
+        serializer.serialize_str(self.as_str())
+    }
 }
 
-impl RunnerKind {
-    pub fn parse(value: &str) -> Option<Self> {
-        match value {
-            "standard" => Some(RunnerKind::Standard),
-            "byoxpc" => Some(RunnerKind::Byoxpc),
-            _ => None,
-        }
-    }
-
-    pub fn as_str(&self) -> &'static str {
-        match self {
-            RunnerKind::Standard => "standard",
-            RunnerKind::Byoxpc => "byoxpc",
-        }
+/// The registry reader. Its aliases accept stored records written with a
+/// retired kind word and resolve them on load, so an upgraded registry is
+/// not stranded. The other readers do not know those words.
+impl<'de> Deserialize<'de> for RunnerKind {
+    fn deserialize<D: serde::Deserializer<'de>>(deserializer: D) -> Result<Self, D::Error> {
+        const WRITTEN: [&str; 2] = [RunnerKind::Standard.as_str(), RunnerKind::Byoxpc.as_str()];
+        let value = String::deserialize(deserializer)?;
+        Reader::Registry
+            .resolve(&value)
+            .ok_or_else(|| serde::de::Error::unknown_variant(&value, &WRITTEN))
     }
 }
 
@@ -2122,12 +2116,19 @@ mod tests {
 
     #[test]
     fn caller_facing_parse_rejects_legacy_aliases() {
-        // RunnerKind::parse is for CLI / specimen input where we want a
-        // clean error pointing at byoxpc, not silent migration.
-        assert_eq!(RunnerKind::parse("machme"), None);
-        assert_eq!(RunnerKind::parse("debuggable"), None);
-        assert_eq!(RunnerKind::parse("byoxpc"), Some(RunnerKind::Byoxpc));
-        assert_eq!(RunnerKind::parse("standard"), Some(RunnerKind::Standard));
+        // The readers of caller input do not know the retired words; only
+        // the registry reader resolves them.
+        for reader in [
+            Reader::RunOption,
+            Reader::RequestSelector,
+            Reader::InstallOption,
+        ] {
+            assert_eq!(reader.resolve("machme"), None);
+            assert_eq!(reader.resolve("debuggable"), None);
+            assert_eq!(reader.resolve("byoxpc"), Some(RunnerKind::Byoxpc));
+            assert_eq!(reader.resolve("standard"), Some(RunnerKind::Standard));
+            assert_eq!(reader.resolve("BYOXPC"), None);
+        }
     }
 
     #[test]

@@ -14,6 +14,7 @@ use std::ffi::OsString;
 use std::process::Command;
 
 use crate::app_layout::resolve_contents_macos_tool;
+use crate::interface::result::Refusal;
 use crate::runner_select::RunnerConnectionKind;
 use crate::utils::{OutputCapture, RequestDelivery, now_unix_ms, run_with_stdin};
 
@@ -587,38 +588,46 @@ fn validate_capture(value: &Capture) -> Result<(), String> {
     Ok(())
 }
 
+/// A client failure: the request was not delivered, or admission of the
+/// capture refused it for the named reason.
+#[derive(Debug, PartialEq, Eq)]
+pub enum ClientFailure {
+    Delivery(String),
+    Refused(Refusal, String),
+}
+
 impl RunnerClientRun {
     /// A current client failure, without inventing a host result. Host response
     /// version/semantic admission remains the caller's separate responsibility.
-    pub fn failure(&self) -> Option<(&'static str, String)> {
+    pub fn failure(&self) -> Option<ClientFailure> {
         if let Some(error) = self
             .request_delivery
             .as_ref()
             .and_then(|d| d.error.as_ref())
         {
-            return Some(("tool_error", error.clone()));
+            return Some(ClientFailure::Delivery(error.clone()));
         }
         if self.transport_admission != "accepted" {
-            let outcome = match self.transport_admission.as_str() {
-                "missing" => "missing_runner_client",
-                "unsupported" => "unsupported_runner_client",
-                _ => "malformed_runner_client",
+            let refusal = match self.transport_admission.as_str() {
+                "missing" => Refusal::MissingRunnerClient,
+                "unsupported" => Refusal::UnsupportedRunnerClient,
+                _ => Refusal::MalformedRunnerClient,
             };
-            return Some((
-                outcome,
+            return Some(ClientFailure::Refused(
+                refusal,
                 self.transport_error
                     .clone()
                     .unwrap_or_else(|| "client capture unavailable".into()),
             ));
         }
         if let Some(error) = &self.runner_reply_error {
-            return Some((
+            return Some(ClientFailure::Refused(
                 match error.refusal {
-                    ReplyRefusal::Truncated => "runner_reply_truncated",
+                    ReplyRefusal::Truncated => Refusal::RunnerReplyTruncated,
                     ReplyRefusal::UnsupportedSchema | ReplyRefusal::UnsupportedContract => {
-                        "unsupported_runner_response"
+                        Refusal::UnsupportedRunnerResponse
                     }
-                    ReplyRefusal::Malformed => "malformed_runner_response",
+                    ReplyRefusal::Malformed => Refusal::MalformedRunnerResponse,
                 },
                 error.message.clone(),
             ));
@@ -627,17 +636,17 @@ impl RunnerClientRun {
         let terminal = value
             .terminal()
             .expect("accepted capture has a terminal event");
-        let outcome = match terminal {
+        let refusal = match terminal {
             "runner_reply" => return None,
-            "xpc_error" => "xpc_error",
-            "xpc_timeout" => "xpc_timeout",
-            "acquisition_failed" => "xpc_acquisition_failed",
-            "submission_refused" => "xpc_submission_refused",
-            "protocol_error" => "xpc_protocol_error",
-            _ => "runner_client_error",
+            "xpc_error" => Refusal::XpcError,
+            "xpc_timeout" => Refusal::XpcTimeout,
+            "acquisition_failed" => Refusal::XpcAcquisitionFailed,
+            "submission_refused" => Refusal::XpcSubmissionRefused,
+            "protocol_error" => Refusal::XpcProtocolError,
+            _ => Refusal::RunnerClientError,
         };
         let message = value.failure_message().unwrap_or(terminal);
-        Some((outcome, message.to_string()))
+        Some(ClientFailure::Refused(refusal, message.to_string()))
     }
     pub fn fallback_eligible(&self) -> bool {
         self.transport_admission == "accepted"
@@ -1056,6 +1065,14 @@ mod tests {
 mod binary_tests {
     use super::*;
 
+    /// A failure's public label and message, compared with spelled expectations.
+    fn labelled(failure: Option<ClientFailure>) -> (&'static str, String) {
+        match failure.expect("a client failure") {
+            ClientFailure::Delivery(message) => ("tool_error", message),
+            ClientFailure::Refused(refusal, message) => (refusal.spelling(), message),
+        }
+    }
+
     // Authored independently of the generated writer/schema field tables. Only
     // the negotiated fingerprint follows the candidate so field/tag mistakes
     // are not silently copied into these admission expectations.
@@ -1294,7 +1311,7 @@ mod binary_tests {
                 None,
             );
             assert_eq!(run.transport_admission, "accepted");
-            assert_eq!(run.failure().unwrap().0, "malformed_runner_response");
+            assert_eq!(labelled(run.failure()).0, "malformed_runner_response");
             assert!(!run.fallback_eligible());
             assert!(reply.is_none());
             let Some(TransportCapture::Typed(capture)) = run.transport else {
@@ -1320,7 +1337,7 @@ mod binary_tests {
             assert_eq!(run.transport_admission, "accepted");
             assert_eq!(run.submission, "invoked");
             assert!(reply.is_none());
-            let (outcome, message) = run.failure().unwrap();
+            let (outcome, message) = labelled(run.failure());
             assert_eq!(outcome, "unsupported_runner_response");
             assert!(
                 message.contains("unsupported porcelain schema"),
@@ -1340,7 +1357,7 @@ mod binary_tests {
         // A header cut inside the fingerprint names no schema.
         let cut = host()[..20].to_vec();
         let (run, _) = parse(capture(Some(&cut), protocol(), 123, cut.len() as i64), None);
-        assert_eq!(run.failure().unwrap().0, "malformed_runner_response");
+        assert_eq!(labelled(run.failure()).0, "malformed_runner_response");
     }
 
     #[test]
@@ -1379,7 +1396,7 @@ mod binary_tests {
         let bytes = capture(Some(&host()), protocol(), 123, host().len() as i64);
         let (run, reply) = parse(bytes.clone(), Some("controlled delivery failure"));
         assert_eq!(run.transport_admission, "delivery_failed");
-        assert_eq!(run.failure().unwrap().0, "tool_error");
+        assert_eq!(labelled(run.failure()).0, "tool_error");
         assert_eq!(run.submission, "unknown");
         assert!(reply.is_none() && run.runner_reply_error.is_none());
         let Some(TransportCapture::Rejected { data_base64, .. }) = run.transport else {
@@ -1393,7 +1410,7 @@ mod binary_tests {
         let (run, reply) = parse(capture(None, protocol(), 123, 0), None);
         assert_eq!(run.transport_admission, "accepted");
         assert_eq!(
-            run.failure().unwrap(),
+            labelled(run.failure()),
             ("xpc_error", "independent failure".into())
         );
         assert!(run.fallback_eligible());
@@ -1458,7 +1475,7 @@ mod binary_tests {
         error.reason = "overall_deadline".into();
         let run = typed_failure_run(deadline);
         assert_eq!(run.submission, "not_invoked");
-        assert_eq!(run.failure().unwrap().0, "xpc_timeout");
+        assert_eq!(labelled(run.failure()).0, "xpc_timeout");
         assert!(!run.fallback_eligible());
         for invoked in [false, true] {
             let mut c: Capture =
@@ -1503,14 +1520,14 @@ mod binary_tests {
             });
             let run = typed_failure_run(c);
             assert_eq!(run.submission, "invoked");
-            assert_eq!(run.failure().unwrap().0, "xpc_submission_refused");
+            assert_eq!(labelled(run.failure()).0, "xpc_submission_refused");
             assert!(!run.fallback_eligible());
         }
         let mut c: Capture = crate::porcelain::decode(&capture(None, protocol(), 123, 0)).unwrap();
         c.error.as_mut().unwrap().reason = "proxy_type_mismatch".into();
         let run = typed_failure_run(c);
         assert_eq!(run.submission, "invoked");
-        assert_eq!(run.failure().unwrap().0, "xpc_error");
+        assert_eq!(labelled(run.failure()).0, "xpc_error");
     }
 
     fn python(program: String) -> Vec<OsString> {

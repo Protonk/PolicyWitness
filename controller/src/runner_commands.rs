@@ -11,6 +11,7 @@ use std::path::{Path, PathBuf};
 
 use crate::app_layout::{BUNDLE_UNENTITLED_WORKER_REL, BUNDLE_VALIDATOR_REL, BUNDLE_WORKER_REL};
 use crate::bundle::read_bundle_info;
+use crate::interface::runner_kind::Reader;
 use crate::json_contract;
 use crate::porcelain_records::PWRunnerRunResult;
 use crate::runner_client::{RunnerClientRun, run_pw_runner_client};
@@ -122,14 +123,19 @@ fn flag_value<'a>(args: &'a [OsString], idx: usize, flag: &str) -> Result<&'a Os
         .ok_or_else(|| format!("missing value for {flag}"))
 }
 
+/// The kind a `runner install --kind` value names, or the refusal.
+fn install_kind(raw: &str) -> Result<RunnerKind, String> {
+    Reader::InstallOption
+        .resolve(raw)
+        .ok_or_else(|| format!("invalid value for --kind: {raw}"))
+}
+
 fn cmd_runner_install(args: &[OsString]) -> Result<i32, String> {
     let mut bundle_path: Option<PathBuf> = None;
     let mut service_name: Option<String> = None;
     let mut scope = RunnerScope::User;
     let mut identity: Option<String> = None;
     let mut entitlements_path: Option<PathBuf> = None;
-    let mut executable_override: Option<PathBuf> = None;
-    let mut bundle_id_override: Option<String> = None;
     let mut kind_override: Option<RunnerKind> = None;
     let mut allow_adhoc = false;
     let mut skip_bootstrap = false;
@@ -166,24 +172,9 @@ fn cmd_runner_install(args: &[OsString]) -> Result<i32, String> {
                 entitlements_path = Some(PathBuf::from(path));
                 idx += 2;
             }
-            "--executable" => {
-                let path = flag_value(args, idx, "--executable")?;
-                executable_override = Some(PathBuf::from(path));
-                idx += 2;
-            }
-            "--bundle-id" => {
-                let value = flag_value(args, idx, "--bundle-id")?;
-                bundle_id_override = Some(value.to_string_lossy().to_string());
-                idx += 2;
-            }
             "--kind" => {
                 let value = flag_value(args, idx, "--kind")?;
-                let raw = value.to_string_lossy();
-                if raw == "machme" {
-                    return Err("--kind machme is not supported; use --kind byoxpc".to_string());
-                }
-                let kind = RunnerKind::parse(raw.as_ref())
-                    .ok_or_else(|| format!("invalid value for --kind: {raw}"))?;
+                let kind = install_kind(value.to_string_lossy().as_ref())?;
                 if matches!(kind, RunnerKind::Standard) {
                     return Err(format!(
                         "runner install does not accept kind={}",
@@ -234,15 +225,6 @@ fn cmd_runner_install(args: &[OsString]) -> Result<i32, String> {
             "runner install does not accept kind={}",
             kind.as_str()
         ));
-    }
-
-    if bundle_id_override.is_some() {
-        return Err("external runners use CFBundleIdentifier; remove --bundle-id".to_string());
-    }
-    if executable_override.is_some() {
-        return Err("external runners do not accept --executable; \
-             the binary is derived from <bundle>/Contents/MacOS/<CFBundleExecutable>"
-            .to_string());
     }
 
     if !bundle_path.is_dir() {
@@ -633,8 +615,8 @@ fn cmd_runner_verify(args: &[OsString]) -> Result<i32, String> {
             crate::run_flow::ReplyAdmission::DeliveryFailed(error) => {
                 (None, "tool_error".into(), 2, Some(error))
             }
-            crate::run_flow::ReplyAdmission::Refused { outcome, error } => {
-                (None, outcome.into(), 1, Some(error))
+            crate::run_flow::ReplyAdmission::Refused { refusal, error } => {
+                (None, refusal.spelling().into(), 1, Some(error))
             }
             crate::run_flow::ReplyAdmission::Admitted => {
                 let (pid, outcome) = project_verify_typed_reply(runner_result.as_ref());
@@ -895,20 +877,26 @@ pub fn cmd_runner(args: &[OsString]) -> Result<i32, String> {
     let rest = &args[1..];
     match sub.as_str() {
         "install" => cmd_runner_install(rest),
-        "list" => cmd_runner_list(),
+        "list" => {
+            if !rest.is_empty() {
+                return Err("runner list accepts no arguments".into());
+            }
+            cmd_runner_list()
+        }
         "status" => cmd_runner_status(rest),
         "verify" => cmd_runner_verify(rest),
         "remove" => cmd_runner_remove(rest),
-        "validate" => cmd_runner_validate(),
+        "validate" => {
+            if !rest.is_empty() {
+                return Err("runner validate accepts no arguments".into());
+            }
+            cmd_runner_validate()
+        }
         "reconcile" => {
             if !rest.is_empty() {
                 return Err("runner reconcile accepts no arguments".into());
             }
             cmd_runner_reconcile()
-        }
-        "-h" | "--help" | "help" => {
-            println!("{}", runner_usage());
-            Ok(0)
         }
         _ => Err(format!(
             "unknown runner command: {sub}\n\n{}",

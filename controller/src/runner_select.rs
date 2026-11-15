@@ -12,6 +12,7 @@ use crate::app_layout::{
     SHIPPED_SERVICE, SHIPPED_UNENTITLED_WORKER, SHIPPED_VALIDATOR, SHIPPED_WORKER, ShippedBinary,
 };
 use crate::evidence::{self, EvidenceManifest};
+use crate::interface::runner_kind::Reader;
 use crate::request_patch::RequestError;
 use crate::runner_manager::{
     self, RunnerEntitlements, RunnerKind, RunnerRecord, RunnerRegistry, RunnerScope,
@@ -231,12 +232,7 @@ pub fn strip_runner_selector(value: &mut Value) {
 }
 
 fn parse_runner_mode(value: &str, field: &str) -> Result<RunnerKind, String> {
-    if value == "machme" {
-        return Err(format!(
-            "{field}=\"machme\" is not supported; use \"byoxpc\""
-        ));
-    }
-    RunnerKind::parse(value).ok_or_else(|| {
+    Reader::RequestSelector.resolve(value).ok_or_else(|| {
         let shown = if value.len() <= 63 {
             format!("{value:?}")
         } else {
@@ -763,15 +759,16 @@ mod tests {
     }
 
     #[test]
-    fn parse_runner_mode_rejects_machme_with_byoxpc_hint() {
-        let err = parse_runner_mode("machme", "runner.mode").unwrap_err();
-        assert!(
-            err.contains("byoxpc"),
-            "message should steer to byoxpc: {err}"
-        );
-        assert!(
-            err.contains("runner.mode"),
-            "message should name the field: {err}"
+    fn parse_runner_mode_refuses_retired_registry_words_as_invalid_values() {
+        for value in ["machme", "debuggable"] {
+            assert_eq!(
+                parse_runner_mode(value, "runner.mode").unwrap_err(),
+                format!("invalid runner.mode value: {value:?}")
+            );
+        }
+        assert_eq!(
+            parse_runner_mode("byoxpc", "runner.mode"),
+            Ok(RunnerKind::Byoxpc)
         );
     }
 

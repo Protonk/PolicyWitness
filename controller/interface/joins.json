@@ -1,0 +1,1126 @@
+{
+  "cases": {
+    "example.h_flag": {
+      "ambiguous_rows": [],
+      "declared": [],
+      "entries": [
+        "command.example",
+        "tail.example"
+      ],
+      "test_owned_inputs": false
+    },
+    "example.help_flag": {
+      "ambiguous_rows": [],
+      "declared": [],
+      "entries": [
+        "command.example",
+        "tail.example"
+      ],
+      "test_owned_inputs": false
+    },
+    "example.help_word": {
+      "ambiguous_rows": [],
+      "declared": [],
+      "entries": [
+        "command.example",
+        "tail.example"
+      ],
+      "test_owned_inputs": false
+    },
+    "example.publish": {
+      "ambiguous_rows": [],
+      "declared": [],
+      "entries": [
+        "command.example",
+        "example.document"
+      ],
+      "test_owned_inputs": false
+    },
+    "example.save_and_run": {
+      "ambiguous_rows": [],
+      "declared": [],
+      "entries": [
+        "command.example",
+        "example.document",
+        "command.run",
+        "run.request_path",
+        "result.admitted_finished",
+        "result.fields"
+      ],
+      "test_owned_inputs": false
+    },
+    "help.base": {
+      "ambiguous_rows": [],
+      "declared": [],
+      "entries": [
+        "command.help"
+      ],
+      "test_owned_inputs": false
+    },
+    "help.bogus": {
+      "ambiguous_rows": [],
+      "declared": [],
+      "entries": [
+        "command.help",
+        "tail.help"
+      ],
+      "test_owned_inputs": false
+    },
+    "help.bogus.run": {
+      "ambiguous_rows": [],
+      "declared": [],
+      "entries": [
+        "command.help",
+        "tail.help"
+      ],
+      "test_owned_inputs": false
+    },
+    "help.empty": {
+      "ambiguous_rows": [],
+      "declared": [],
+      "entries": [
+        "command.help",
+        "tail.help"
+      ],
+      "test_owned_inputs": false
+    },
+    "help.example": {
+      "ambiguous_rows": [],
+      "declared": [],
+      "entries": [
+        "command.help",
+        "topic.example"
+      ],
+      "test_owned_inputs": false
+    },
+    "help.example.extra": {
+      "ambiguous_rows": [],
+      "declared": [],
+      "entries": [
+        "command.help",
+        "topic.example",
+        "tail.help"
+      ],
+      "test_owned_inputs": false
+    },
+    "help.flag_shaped_run": {
+      "ambiguous_rows": [],
+      "declared": [],
+      "entries": [
+        "command.help",
+        "tail.help"
+      ],
+      "test_owned_inputs": false
+    },
+    "help.h_flag": {
+      "ambiguous_rows": [],
+      "declared": [],
+      "entries": [
+        "command.help",
+        "tail.help"
+      ],
+      "test_owned_inputs": false
+    },
+    "help.help_flag": {
+      "ambiguous_rows": [],
+      "declared": [],
+      "entries": [
+        "command.help",
+        "tail.help"
+      ],
+      "test_owned_inputs": false
+    },
+    "help.non_utf8": {
+      "ambiguous_rows": [],
+      "declared": [],
+      "entries": [
+        "command.help",
+        "tail.help"
+      ],
+      "test_owned_inputs": false
+    },
+    "help.result": {
+      "ambiguous_rows": [],
+      "declared": [],
+      "entries": [
+        "command.help",
+        "topic.result"
+      ],
+      "test_owned_inputs": false
+    },
+    "help.result.bad_flag": {
+      "ambiguous_rows": [],
+      "declared": [],
+      "entries": [
+        "command.help",
+        "topic.result",
+        "tail.help"
+      ],
+      "test_owned_inputs": false
+    },
+    "help.result.extra": {
+      "ambiguous_rows": [],
+      "declared": [],
+      "entries": [
+        "command.help",
+        "topic.result",
+        "tail.help"
+      ],
+      "test_owned_inputs": false
+    },
+    "help.run": {
+      "ambiguous_rows": [],
+      "declared": [],
+      "entries": [
+        "command.help",
+        "topic.run"
+      ],
+      "test_owned_inputs": false
+    },
+    "help.run.bad_flag": {
+      "ambiguous_rows": [],
+      "declared": [],
+      "entries": [
+        "command.help",
+        "topic.run",
+        "tail.help"
+      ],
+      "test_owned_inputs": false
+    },
+    "help.run.junk": {
+      "ambiguous_rows": [],
+      "declared": [],
+      "entries": [
+        "command.help",
+        "topic.run",
+        "tail.help"
+      ],
+      "test_owned_inputs": false
+    },
+    "help.run.terminator": {
+      "ambiguous_rows": [],
+      "declared": [],
+      "entries": [
+        "command.help",
+        "topic.run",
+        "tail.help"
+      ],
+      "test_owned_inputs": false
+    },
+    "help.stdout_without_reader": {
+      "ambiguous_rows": [],
+      "declared": [],
+      "entries": [
+        "command.help"
+      ],
+      "test_owned_inputs": false
+    },
+    "help.terminator_run": {
+      "ambiguous_rows": [],
+      "declared": [],
+      "entries": [
+        "command.help",
+        "tail.help"
+      ],
+      "test_owned_inputs": false
+    },
+    "help.uppercase_topic": {
+      "ambiguous_rows": [],
+      "declared": [],
+      "entries": [
+        "command.help",
+        "tail.help"
+      ],
+      "test_owned_inputs": false
+    },
+    "run.h_flag": {
+      "ambiguous_rows": [],
+      "declared": [],
+      "entries": [
+        "command.run",
+        "run.unknown_flag",
+        "result.tool_failure",
+        "result.fields"
+      ],
+      "test_owned_inputs": false
+    },
+    "run.help_flag": {
+      "ambiguous_rows": [],
+      "declared": [],
+      "entries": [
+        "command.run",
+        "run.unknown_flag",
+        "result.tool_failure",
+        "result.fields"
+      ],
+      "test_owned_inputs": false
+    },
+    "run.help_word": {
+      "ambiguous_rows": [],
+      "declared": [],
+      "entries": [
+        "command.run",
+        "run.request_path",
+        "result.tool_failure",
+        "result.fields"
+      ],
+      "test_owned_inputs": false
+    },
+    "run.no_arguments": {
+      "ambiguous_rows": [],
+      "declared": [],
+      "entries": [
+        "command.run",
+        "result.tool_failure",
+        "result.fields"
+      ],
+      "test_owned_inputs": false
+    },
+    "run.non_utf8_path": {
+      "ambiguous_rows": [],
+      "declared": [],
+      "entries": [
+        "command.run",
+        "run.request_path",
+        "result.tool_failure",
+        "result.fields"
+      ],
+      "test_owned_inputs": false
+    },
+    "run.path_then_help_flag": {
+      "ambiguous_rows": [],
+      "declared": [],
+      "entries": [
+        "command.run",
+        "run.request_path",
+        "run.unknown_flag",
+        "result.tool_failure",
+        "result.fields"
+      ],
+      "test_owned_inputs": false
+    },
+    "run.repeated_path": {
+      "ambiguous_rows": [],
+      "declared": [],
+      "entries": [
+        "command.run",
+        "run.request_path",
+        "result.tool_failure",
+        "result.fields"
+      ],
+      "test_owned_inputs": false
+    },
+    "run.repeated_timeout": {
+      "ambiguous_rows": [],
+      "declared": [],
+      "entries": [
+        "command.run",
+        "run.option.timeout_ms",
+        "result.tool_failure",
+        "result.fields"
+      ],
+      "test_owned_inputs": false
+    },
+    "run.request_mode_byoxpc_without_selector": {
+      "ambiguous_rows": [
+        [
+          "result.local_request_refusal",
+          "result.admitted_other"
+        ]
+      ],
+      "declared": [
+        "result.local_request_refusal"
+      ],
+      "entries": [
+        "command.run",
+        "run.request_path",
+        "runner_kind.byoxpc@request_selector",
+        "result.local_request_refusal"
+      ],
+      "test_owned_inputs": true
+    },
+    "run.request_mode_machme": {
+      "ambiguous_rows": [
+        [
+          "result.local_request_refusal",
+          "result.admitted_other"
+        ]
+      ],
+      "declared": [
+        "result.local_request_refusal"
+      ],
+      "entries": [
+        "command.run",
+        "run.request_path",
+        "result.local_request_refusal"
+      ],
+      "test_owned_inputs": true
+    },
+    "run.request_mode_standard_with_external_id": {
+      "ambiguous_rows": [
+        [
+          "result.local_request_refusal",
+          "result.admitted_other"
+        ]
+      ],
+      "declared": [
+        "result.local_request_refusal"
+      ],
+      "entries": [
+        "command.run",
+        "run.request_path",
+        "runner_kind.standard@request_selector",
+        "result.local_request_refusal"
+      ],
+      "test_owned_inputs": true
+    },
+    "run.runner_mode_byoxpc": {
+      "ambiguous_rows": [],
+      "declared": [],
+      "entries": [
+        "command.run",
+        "run.option.runner_mode",
+        "runner_kind.byoxpc@run_option",
+        "result.tool_failure",
+        "result.fields"
+      ],
+      "test_owned_inputs": false
+    },
+    "run.runner_mode_debuggable": {
+      "ambiguous_rows": [],
+      "declared": [],
+      "entries": [
+        "command.run",
+        "run.option.runner_mode",
+        "result.tool_failure",
+        "result.fields"
+      ],
+      "test_owned_inputs": false
+    },
+    "run.runner_mode_invalid": {
+      "ambiguous_rows": [],
+      "declared": [],
+      "entries": [
+        "command.run",
+        "run.option.runner_mode",
+        "result.tool_failure",
+        "result.fields"
+      ],
+      "test_owned_inputs": false
+    },
+    "run.runner_mode_machme": {
+      "ambiguous_rows": [],
+      "declared": [],
+      "entries": [
+        "command.run",
+        "run.option.runner_mode",
+        "result.tool_failure",
+        "result.fields"
+      ],
+      "test_owned_inputs": false
+    },
+    "run.runner_mode_missing": {
+      "ambiguous_rows": [],
+      "declared": [],
+      "entries": [
+        "command.run",
+        "run.option.runner_mode",
+        "result.tool_failure",
+        "result.fields"
+      ],
+      "test_owned_inputs": false
+    },
+    "run.runner_mode_standard": {
+      "ambiguous_rows": [],
+      "declared": [],
+      "entries": [
+        "command.run",
+        "run.option.runner_mode",
+        "runner_kind.standard@run_option",
+        "result.tool_failure",
+        "result.fields"
+      ],
+      "test_owned_inputs": false
+    },
+    "run.terminator": {
+      "ambiguous_rows": [],
+      "declared": [],
+      "entries": [
+        "command.run",
+        "run.terminator",
+        "result.tool_failure",
+        "result.fields"
+      ],
+      "test_owned_inputs": false
+    },
+    "run.timeout_equals": {
+      "ambiguous_rows": [],
+      "declared": [],
+      "entries": [
+        "command.run",
+        "run.unknown_flag",
+        "result.tool_failure",
+        "result.fields"
+      ],
+      "test_owned_inputs": false
+    },
+    "run.timeout_invalid": {
+      "ambiguous_rows": [],
+      "declared": [],
+      "entries": [
+        "command.run",
+        "run.option.timeout_ms",
+        "result.tool_failure",
+        "result.fields"
+      ],
+      "test_owned_inputs": false
+    },
+    "run.timeout_missing": {
+      "ambiguous_rows": [],
+      "declared": [],
+      "entries": [
+        "command.run",
+        "run.option.timeout_ms",
+        "result.tool_failure",
+        "result.fields"
+      ],
+      "test_owned_inputs": false
+    },
+    "run.timeout_one": {
+      "ambiguous_rows": [],
+      "declared": [],
+      "entries": [
+        "command.run",
+        "run.option.timeout_ms",
+        "result.tool_failure",
+        "result.fields"
+      ],
+      "test_owned_inputs": false
+    },
+    "run.timeout_takes_help_flag": {
+      "ambiguous_rows": [],
+      "declared": [],
+      "entries": [
+        "command.run",
+        "run.option.timeout_ms",
+        "result.tool_failure",
+        "result.fields"
+      ],
+      "test_owned_inputs": false
+    },
+    "run.timeout_zero": {
+      "ambiguous_rows": [],
+      "declared": [],
+      "entries": [
+        "command.run",
+        "run.option.timeout_ms",
+        "result.tool_failure",
+        "result.fields"
+      ],
+      "test_owned_inputs": false
+    },
+    "runner.h_flag": {
+      "ambiguous_rows": [],
+      "declared": [],
+      "entries": [
+        "command.runner",
+        "tail.runner"
+      ],
+      "test_owned_inputs": false
+    },
+    "runner.help_flag": {
+      "ambiguous_rows": [],
+      "declared": [],
+      "entries": [
+        "command.runner",
+        "tail.runner"
+      ],
+      "test_owned_inputs": false
+    },
+    "runner.help_word": {
+      "ambiguous_rows": [],
+      "declared": [],
+      "entries": [
+        "command.runner",
+        "tail.runner"
+      ],
+      "test_owned_inputs": false
+    },
+    "runner.install.bundle_id": {
+      "ambiguous_rows": [],
+      "declared": [],
+      "entries": [
+        "command.runner",
+        "tail.runner"
+      ],
+      "test_owned_inputs": false
+    },
+    "runner.install.executable": {
+      "ambiguous_rows": [],
+      "declared": [],
+      "entries": [
+        "command.runner",
+        "tail.runner"
+      ],
+      "test_owned_inputs": false
+    },
+    "runner.install.h_flag": {
+      "ambiguous_rows": [],
+      "declared": [],
+      "entries": [
+        "command.runner",
+        "tail.runner"
+      ],
+      "test_owned_inputs": false
+    },
+    "runner.install.help_flag": {
+      "ambiguous_rows": [],
+      "declared": [],
+      "entries": [
+        "command.runner",
+        "tail.runner"
+      ],
+      "test_owned_inputs": false
+    },
+    "runner.install.kind_byoxpc": {
+      "ambiguous_rows": [],
+      "declared": [
+        "runner_kind.byoxpc@install_option"
+      ],
+      "entries": [
+        "command.runner",
+        "tail.runner",
+        "runner_kind.byoxpc@install_option"
+      ],
+      "test_owned_inputs": false
+    },
+    "runner.install.kind_machme": {
+      "ambiguous_rows": [],
+      "declared": [],
+      "entries": [
+        "command.runner",
+        "tail.runner"
+      ],
+      "test_owned_inputs": false
+    },
+    "runner.install.kind_standard": {
+      "ambiguous_rows": [],
+      "declared": [
+        "runner_kind.standard@install_option"
+      ],
+      "entries": [
+        "command.runner",
+        "tail.runner",
+        "runner_kind.standard@install_option"
+      ],
+      "test_owned_inputs": false
+    },
+    "runner.list.h_flag": {
+      "ambiguous_rows": [],
+      "declared": [],
+      "entries": [
+        "command.runner",
+        "tail.runner"
+      ],
+      "test_owned_inputs": false
+    },
+    "runner.list.help_flag": {
+      "ambiguous_rows": [],
+      "declared": [],
+      "entries": [
+        "command.runner",
+        "tail.runner"
+      ],
+      "test_owned_inputs": false
+    },
+    "runner.reconcile.h_flag": {
+      "ambiguous_rows": [],
+      "declared": [],
+      "entries": [
+        "command.runner",
+        "tail.runner"
+      ],
+      "test_owned_inputs": false
+    },
+    "runner.reconcile.help_flag": {
+      "ambiguous_rows": [],
+      "declared": [],
+      "entries": [
+        "command.runner",
+        "tail.runner"
+      ],
+      "test_owned_inputs": false
+    },
+    "runner.remove.h_flag": {
+      "ambiguous_rows": [],
+      "declared": [],
+      "entries": [
+        "command.runner",
+        "tail.runner"
+      ],
+      "test_owned_inputs": false
+    },
+    "runner.remove.help_flag": {
+      "ambiguous_rows": [],
+      "declared": [],
+      "entries": [
+        "command.runner",
+        "tail.runner"
+      ],
+      "test_owned_inputs": false
+    },
+    "runner.status.h_flag": {
+      "ambiguous_rows": [],
+      "declared": [],
+      "entries": [
+        "command.runner",
+        "tail.runner"
+      ],
+      "test_owned_inputs": false
+    },
+    "runner.status.help_flag": {
+      "ambiguous_rows": [],
+      "declared": [],
+      "entries": [
+        "command.runner",
+        "tail.runner"
+      ],
+      "test_owned_inputs": false
+    },
+    "runner.validate.h_flag": {
+      "ambiguous_rows": [],
+      "declared": [],
+      "entries": [
+        "command.runner",
+        "tail.runner"
+      ],
+      "test_owned_inputs": false
+    },
+    "runner.validate.help_flag": {
+      "ambiguous_rows": [],
+      "declared": [],
+      "entries": [
+        "command.runner",
+        "tail.runner"
+      ],
+      "test_owned_inputs": false
+    },
+    "runner.verify.h_flag": {
+      "ambiguous_rows": [],
+      "declared": [],
+      "entries": [
+        "command.runner",
+        "tail.runner"
+      ],
+      "test_owned_inputs": false
+    },
+    "runner.verify.help_flag": {
+      "ambiguous_rows": [],
+      "declared": [],
+      "entries": [
+        "command.runner",
+        "tail.runner"
+      ],
+      "test_owned_inputs": false
+    },
+    "test_input.h_flag": {
+      "ambiguous_rows": [],
+      "declared": [],
+      "entries": [
+        "command.test_input",
+        "tail.test_input"
+      ],
+      "test_owned_inputs": false
+    },
+    "test_input.help_flag": {
+      "ambiguous_rows": [],
+      "declared": [],
+      "entries": [
+        "command.test_input",
+        "tail.test_input"
+      ],
+      "test_owned_inputs": false
+    },
+    "test_input.help_word": {
+      "ambiguous_rows": [],
+      "declared": [],
+      "entries": [
+        "command.test_input",
+        "tail.test_input"
+      ],
+      "test_owned_inputs": false
+    },
+    "test_input.publish": {
+      "ambiguous_rows": [],
+      "declared": [],
+      "entries": [
+        "command.test_input",
+        "tail.test_input"
+      ],
+      "test_owned_inputs": false
+    },
+    "test_input.read.h_flag": {
+      "ambiguous_rows": [],
+      "declared": [],
+      "entries": [
+        "command.test_input",
+        "tail.test_input"
+      ],
+      "test_owned_inputs": false
+    },
+    "test_input.read.help_flag": {
+      "ambiguous_rows": [],
+      "declared": [],
+      "entries": [
+        "command.test_input",
+        "tail.test_input"
+      ],
+      "test_owned_inputs": false
+    },
+    "top.bogus": {
+      "ambiguous_rows": [],
+      "declared": [],
+      "entries": [],
+      "test_owned_inputs": false
+    },
+    "top.h_flag": {
+      "ambiguous_rows": [],
+      "declared": [],
+      "entries": [],
+      "test_owned_inputs": false
+    },
+    "top.help_flag": {
+      "ambiguous_rows": [],
+      "declared": [],
+      "entries": [],
+      "test_owned_inputs": false
+    },
+    "top.no_arguments": {
+      "ambiguous_rows": [],
+      "declared": [],
+      "entries": [],
+      "test_owned_inputs": false
+    },
+    "top.result": {
+      "ambiguous_rows": [],
+      "declared": [],
+      "entries": [],
+      "test_owned_inputs": false
+    },
+    "top.uppercase_help": {
+      "ambiguous_rows": [],
+      "declared": [],
+      "entries": [],
+      "test_owned_inputs": false
+    },
+    "version": {
+      "ambiguous_rows": [],
+      "declared": [],
+      "entries": [
+        "command.version"
+      ],
+      "test_owned_inputs": false
+    },
+    "version.extra": {
+      "ambiguous_rows": [],
+      "declared": [],
+      "entries": [
+        "command.version",
+        "tail.version"
+      ],
+      "test_owned_inputs": false
+    },
+    "version.h_flag": {
+      "ambiguous_rows": [],
+      "declared": [],
+      "entries": [
+        "command.version",
+        "tail.version"
+      ],
+      "test_owned_inputs": false
+    },
+    "version.help_flag": {
+      "ambiguous_rows": [],
+      "declared": [],
+      "entries": [
+        "command.version",
+        "tail.version"
+      ],
+      "test_owned_inputs": false
+    },
+    "version_flag": {
+      "ambiguous_rows": [],
+      "declared": [],
+      "entries": [
+        "command.version_flag"
+      ],
+      "test_owned_inputs": false
+    },
+    "version_flag.h_flag": {
+      "ambiguous_rows": [],
+      "declared": [],
+      "entries": [
+        "command.version_flag",
+        "tail.version_flag"
+      ],
+      "test_owned_inputs": false
+    },
+    "version_flag.help_flag": {
+      "ambiguous_rows": [],
+      "declared": [],
+      "entries": [
+        "command.version_flag",
+        "tail.version_flag"
+      ],
+      "test_owned_inputs": false
+    }
+  },
+  "entries_no_case_reaches": [
+    "result.admission_refusal",
+    "result.admitted_other",
+    "result.admitted_unavailable",
+    "runner_kind.byoxpc@registry",
+    "runner_kind.debuggable@registry",
+    "runner_kind.machme@registry",
+    "runner_kind.standard@registry"
+  ],
+  "entries_no_mutation_names": [
+    "command.run",
+    "command.runner",
+    "command.test_input",
+    "command.version",
+    "command.version_flag",
+    "result.admission_refusal",
+    "result.admitted_unavailable",
+    "result.fields",
+    "result.local_request_refusal",
+    "run.request_path",
+    "run.terminator",
+    "runner_kind.byoxpc@install_option",
+    "runner_kind.byoxpc@registry",
+    "runner_kind.byoxpc@request_selector",
+    "runner_kind.byoxpc@run_option",
+    "runner_kind.machme@registry",
+    "runner_kind.standard@install_option",
+    "runner_kind.standard@registry",
+    "runner_kind.standard@request_selector",
+    "runner_kind.standard@run_option",
+    "tail.help",
+    "tail.runner",
+    "tail.test_input",
+    "tail.version_flag",
+    "topic.example",
+    "topic.run"
+  ],
+  "entries_reached_only_with_test_owned_inputs": [
+    "result.local_request_refusal",
+    "runner_kind.byoxpc@request_selector",
+    "runner_kind.standard@request_selector"
+  ],
+  "mutations": [
+    {
+      "card": "changed",
+      "cases": "failed",
+      "contract": "unchanged",
+      "entry": "run.option.runner_mode",
+      "id": "rename_option",
+      "not_run": [],
+      "only_cases_moved": false
+    },
+    {
+      "card": "unchanged",
+      "cases": "unchanged",
+      "contract": "unchanged",
+      "entry": "run.option.runner_mode",
+      "id": "private_copy_option",
+      "not_run": [],
+      "only_cases_moved": false
+    },
+    {
+      "card": "failed",
+      "cases": "not_run",
+      "contract": "unchanged",
+      "entry": "run.option.runner_mode",
+      "id": "private_copy_option_then_rename",
+      "not_run": [
+        "cases"
+      ],
+      "only_cases_moved": false
+    },
+    {
+      "card": "not_run",
+      "cases": "not_run",
+      "contract": "unchanged",
+      "entry": "run.option.runner_mode",
+      "id": "remove_definition",
+      "not_run": [
+        "card",
+        "cases"
+      ],
+      "only_cases_moved": false
+    },
+    {
+      "card": "failed",
+      "cases": "not_run",
+      "contract": "unchanged",
+      "entry": "run.option.timeout_ms",
+      "id": "invalid_relationship",
+      "not_run": [
+        "cases"
+      ],
+      "only_cases_moved": false
+    },
+    {
+      "card": "changed",
+      "cases": "failed",
+      "contract": "failed",
+      "entry": "example.document",
+      "id": "example_field",
+      "not_run": [],
+      "only_cases_moved": false
+    },
+    {
+      "card": "changed",
+      "cases": "failed",
+      "contract": "failed",
+      "entry": "result.tool_failure",
+      "id": "result_exit_status",
+      "not_run": [],
+      "only_cases_moved": false
+    },
+    {
+      "card": "unchanged",
+      "cases": "unchanged",
+      "contract": "unchanged",
+      "entry": "result.tool_failure",
+      "id": "private_copy_result_row",
+      "not_run": [],
+      "only_cases_moved": false
+    },
+    {
+      "card": "failed",
+      "cases": "not_run",
+      "contract": "unchanged",
+      "entry": "result.tool_failure",
+      "id": "private_copy_result_row_then_exit_status",
+      "not_run": [
+        "cases"
+      ],
+      "only_cases_moved": false
+    },
+    {
+      "card": "unchanged",
+      "cases": "failed",
+      "contract": "unchanged",
+      "entry": "run.unknown_flag",
+      "id": "literal_beside_run_table",
+      "not_run": [],
+      "only_cases_moved": true
+    },
+    {
+      "card": "unchanged",
+      "cases": "failed",
+      "contract": "unchanged",
+      "entry": "command.help",
+      "id": "restored_flag_help_arm",
+      "not_run": [],
+      "only_cases_moved": true
+    },
+    {
+      "card": "unchanged",
+      "cases": "unchanged",
+      "contract": "unchanged",
+      "entry": "result.admitted_finished",
+      "id": "rename_identifier",
+      "not_run": [],
+      "only_cases_moved": false
+    },
+    {
+      "card": "failed",
+      "cases": "not_run",
+      "contract": "unchanged",
+      "entry": "result.admitted_finished",
+      "id": "admission_condition",
+      "not_run": [
+        "cases"
+      ],
+      "only_cases_moved": false
+    },
+    {
+      "card": "failed",
+      "cases": "not_run",
+      "contract": "unchanged",
+      "entry": "result.admitted_other",
+      "id": "row_order",
+      "not_run": [
+        "cases"
+      ],
+      "only_cases_moved": false
+    },
+    {
+      "card": "failed",
+      "cases": "not_run",
+      "contract": "unchanged",
+      "entry": "topic.result",
+      "id": "flag_shaped_topic",
+      "not_run": [
+        "cases"
+      ],
+      "only_cases_moved": false
+    },
+    {
+      "card": "unchanged",
+      "cases": "failed",
+      "contract": "unchanged",
+      "entry": "tail.version",
+      "id": "tail_kind",
+      "not_run": [],
+      "only_cases_moved": true
+    },
+    {
+      "card": "unchanged",
+      "cases": "unchanged",
+      "contract": "unchanged",
+      "entry": "runner_kind.debuggable@registry",
+      "id": "remove_alias",
+      "not_run": [],
+      "only_cases_moved": false
+    },
+    {
+      "card": "unchanged",
+      "cases": "failed",
+      "contract": "unchanged",
+      "entry": "run.option.timeout_ms",
+      "id": "timeout_minimum",
+      "not_run": [],
+      "only_cases_moved": true
+    },
+    {
+      "card": "unchanged",
+      "cases": "failed",
+      "contract": "unchanged",
+      "entry": "tail.example",
+      "id": "example_tail_rule",
+      "not_run": [],
+      "only_cases_moved": true
+    },
+    {
+      "card": "changed",
+      "cases": "failed",
+      "contract": "unchanged",
+      "entry": "topic.result",
+      "id": "topic_address",
+      "not_run": [],
+      "only_cases_moved": false
+    },
+    {
+      "card": "changed",
+      "cases": "failed",
+      "contract": "unchanged",
+      "entry": "command.example",
+      "id": "command_spelling",
+      "not_run": [],
+      "only_cases_moved": false
+    }
+  ]
+}

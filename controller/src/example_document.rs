@@ -1,0 +1,6 @@
+//! The example specimen document. `example` publishes it; `build.rs` includes
+//! this file to render the example help card from the same constant.
+
+// The contract generator extracts this constant and accepts this one form: a
+// single `r#"`...`"#` raw string holding a JSON object without `contract`.
+pub const EXAMPLE_DOCUMENT: &str = r#"{"specimen_id":"example","policy":{"format":"sbpl","sbpl_source":"(version 1) (allow default) (deny file-read-data (literal \"/usr/share/dict/propernames\") (with no-report))"},"phases":[{"phase_id":"initial-reads","actions":[{"step_id":"read-hosts","sandbox_check":{"operation":"file-read-data","filter":{"kind":"path","value":"/etc/hosts"}},"attempt":{"kind":"file","action":"open_read","target":"/etc/hosts"}},{"step_id":"metadata-propernames-read-connectives","sandbox_check":{"operation":"file-read-metadata","filter":{"kind":"path","value":"/usr/share/dict/propernames"}},"attempt":{"kind":"file","action":"read_fresh","target":"/usr/share/dict/connectives"}}]},{"phase_id":"restricted-read","actions":[{"step_id":"read-propernames","sandbox_check":{"operation":"file-read-data","filter":{"kind":"path","value":"/usr/share/dict/propernames"}},"attempt":{"kind":"file","action":"open_read","target":"/usr/share/dict/propernames"}}]}]}"#;

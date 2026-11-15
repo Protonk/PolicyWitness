@@ -802,7 +802,10 @@ retained_free: {"condition": {"kind": "raw_admission", "reason": "The first raw 
 ```
 
 Version dispatch reports the compiled context without loading a specimen or
-starting the runner client. Remaining arguments are ignored.
+starting the runner client. The command takes no argument: one after it is
+refused with process exit 2 and an empty standard output, before anything it
+names is read, and a reason is written to standard error when that stream
+accepts it.
 `generated_at_unix_ms` is the producer's current
 wall-clock time in milliseconds since the Unix epoch; the shared serializer
 uses zero if its system time precedes that epoch.
@@ -815,7 +818,7 @@ source: [{"path":"controller/src/cli.rs","symbol":"pub fn run"},{"path":"control
 check: {"path":"controller/integration/cli_contract.rs","symbol":"version_flag_reports_build_stamp_and_contract","form":"test"}
 pins: "--version succeeds, emits kind version and result.ok true, supplies populated packaged build fields, and reports candidate-plist identity in data and build."
 context: "Read dispatch and serializer branches; read integration test invoking the selected controller binary and independently extracting its app plist identity."
-limits: "Check read without execution. Alias version, trailing arguments, exact null result fields and rendering-error exit are source-established here; the cited check exercises --version success."
+limits: "Check read without execution. Alias version, exact null result fields and rendering-error exit are source-established here; the cited check exercises --version success."
 ```
 
 #### Disposition support {disposition_support: owner}
@@ -823,8 +826,8 @@ limits: "Check read without execution. Alias version, trailing arguments, exact 
 ```contract
 grade: "check_read"
 source: {"path":"controller/src/cli.rs","symbol":"pub fn run"}
-pins: "Version dispatch precedes other command parsing."
+pins: "The first argument alone selects version dispatch, and an argument after it is refused with exit 2 and an empty standard output."
 context: "Static review of the cited producer and assertion branches."
 check: [{"path":"controller/integration/cli_contract.rs","symbol":"version_dispatch_uses_the_first_argument","form":"test"}]
-limits: "The argument matrix compares kind, build, result and data while allowing each invocation its own timestamp."
+limits: "The alias comparison covers kind, build, result and data while allowing each invocation its own timestamp. The refusal matrix has three argument vectors."
 ```

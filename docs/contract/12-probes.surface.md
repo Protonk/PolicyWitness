@@ -34,7 +34,7 @@ Requested native operation.
 ### Read-hosts pair {read_hosts: example}
 
 ```contract
-document: {"path": "controller/src/example.rs", "symbol": "EXAMPLE_DOCUMENT", "member": ["phases", {"phase_id": "initial-reads"}, "actions", {"step_id": "read-hosts"}]}
+document: {"path": "controller/src/example_document.rs", "symbol": "EXAMPLE_DOCUMENT", "member": ["phases", {"phase_id": "initial-reads"}, "actions", {"step_id": "read-hosts"}]}
 uses: ["request.specimen.example"]
 ```
 

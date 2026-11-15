@@ -148,7 +148,7 @@
       "cases": [
         {
           "id": "runner_source_manifests_agree",
-          "description": "Runner sources, test registry, shared outcome vocabularies and the CLI usage/README surface agree",
+          "description": "Runner sources, test registry, shared outcome vocabularies, the README command block and the interface literal rule agree",
           "requires": [
             "meson"
           ]
@@ -184,6 +184,10 @@
         {
           "id": "footprint_documentation",
           "description": "Footprint rows, qualified quantities and table regions agree; malformed and stale inputs are rejected"
+        },
+        {
+          "id": "interface_inventory",
+          "description": "Interface inventory, case and mutation joins and residue baseline agree; stale and inconsistent copies, residue additions, contract disagreements and literal spellings beside the tables are rejected"
         },
         {
           "id": "porcelain_codec",

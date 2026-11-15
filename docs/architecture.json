@@ -227,9 +227,9 @@
           ],
           "checks": [
             {
-              "path": "tests/suites/source_drift/check.py",
-              "symbol": "check_cli_surface_agreement",
-              "form": "rule"
+              "path": "controller/integration/cli_contract.rs",
+              "symbol": "interface_cases_hold_on_the_signed_controller",
+              "form": "test"
             }
           ]
         },
@@ -622,9 +622,9 @@
           ],
           "checks": [
             {
-              "path": "tests/suites/source_drift/check.py",
-              "symbol": "check_cli_surface_agreement",
-              "form": "rule"
+              "path": "controller/integration/cli_contract.rs",
+              "symbol": "interface_cases_hold_on_the_signed_controller",
+              "form": "test"
             },
             {
               "path": "controller/src/run_flow.rs",
@@ -1472,8 +1472,8 @@
               "symbol": "RUNNER_REGISTRY_SCHEMA_VERSION"
             },
             {
-              "path": "controller/src/runner_manager.rs",
-              "symbol": "alias = \"machme\""
+              "path": "controller/src/interface/runner_kind.rs",
+              "symbol": "Reader::Registry) => Some(Rule::Alias)"
             }
           ],
           "checks": [
@@ -2375,6 +2375,7 @@
             "markdown_reader",
             "gen_footprint",
             "gen_porcelain",
+            "gen_interface",
             "contract_records"
           ]
         },
@@ -2410,7 +2411,8 @@
             "contract_py",
             "abi_header",
             "cworker_swift",
-            "cli_rs",
+            "interface_tables",
+            "interface_inventory",
             "identity_sources",
             "meson_build",
             "suites",
@@ -3086,23 +3088,57 @@
           ]
         },
         {
-          "id": "cli_rs",
-          "label": "cli.rs",
+          "id": "interface_tables",
+          "label": "controller/src/interface/",
           "kind": "source",
           "facts": {
-            "Carries": "the usage text the controller README mirrors"
+            "Carries": "the command, topic, option, runner-kind and result definitions that dispatch, argument parsing, every kind reader and result selection read"
           },
           "sources": [
             {
-              "path": "controller/src/cli.rs",
-              "symbol": "pub fn run"
+              "path": "controller/src/interface/commands.rs",
+              "symbol": "pub fn recognize"
+            },
+            {
+              "path": "controller/src/interface/result.rs",
+              "symbol": "pub fn select"
             }
           ],
           "checks": [
             {
               "path": "tests/suites/source_drift/check.py",
-              "symbol": "check_cli_surface_agreement",
+              "symbol": "check_interface_literals",
               "form": "rule"
+            },
+            {
+              "path": "controller/src/run_flow.rs",
+              "symbol": "each_result_class_agrees_in_fields_process_status_and_card",
+              "form": "test"
+            }
+          ]
+        },
+        {
+          "id": "interface_inventory",
+          "label": "controller/interface/inventory.json",
+          "kind": "record",
+          "facts": {
+            "Carries": "every interface definition with its admission kind and reader, the result relation's rows and derived facts, and the four help cards with the entries each references"
+          },
+          "sources": [
+            {
+              "path": "controller/build.rs",
+              "symbol": "COMMITTED_INVENTORY"
+            },
+            {
+              "path": "docs/generate_interface.py",
+              "symbol": "def validate"
+            }
+          ],
+          "checks": [
+            {
+              "path": "tests/suites/source_drift/interface.py",
+              "symbol": "test_inventory_refusals",
+              "form": "test"
             }
           ]
         },
@@ -3184,7 +3220,7 @@
           "label": "source_drift check.py",
           "kind": "check",
           "facts": {
-            "Guards": "copies and vocabularies that are not generated, workflow guidance sections and diagnostic routes, the Known gap indexes in the architecture, build, worker and controller tours, and the evidence-channel landing paths"
+            "Guards": "copies and vocabularies that are not generated, the interface literal convention, workflow guidance sections and diagnostic routes, the Known gap indexes in the architecture, build, worker and controller tours, and the evidence-channel landing paths"
           },
           "sources": [
             {
@@ -3266,6 +3302,11 @@
             {
               "path": "tests/suites/source_drift/check.py",
               "symbol": "check_cli_surface_agreement",
+              "form": "rule"
+            },
+            {
+              "path": "tests/suites/source_drift/check.py",
+              "symbol": "check_interface_literals",
               "form": "rule"
             },
             {
@@ -3822,6 +3863,32 @@
           ]
         },
         {
+          "id": "gen_interface",
+          "label": "generate_interface.py",
+          "kind": "generator",
+          "facts": {
+            "Owns": "the committed interface inventory, its case and mutation joins and the residue baseline"
+          },
+          "sources": [
+            {
+              "path": "docs/generate_interface.py",
+              "symbol": "def residue"
+            }
+          ],
+          "checks": [
+            {
+              "path": "tests/suites/source_drift/interface.py",
+              "symbol": "test_residue_accepts_reductions_and_refuses_new_members",
+              "form": "test"
+            },
+            {
+              "path": "tests/suites/source_drift/interface.py",
+              "symbol": "test_stale_refusal_and_no_check_writes",
+              "form": "test"
+            }
+          ]
+        },
+        {
           "id": "porcelain_records",
           "label": "generated typed records and tables",
           "kind": "source",
@@ -4338,11 +4405,11 @@
         },
         {
           "id": "D24",
-          "from": "cli_rs",
+          "from": "interface_inventory",
           "to": "controller_readme",
           "kind": "copies",
-          "label": "usage text",
-          "short": "usage text",
+          "label": "command spellings",
+          "short": "command spellings",
           "sources": [
             {
               "path": "tests/suites/source_drift/check.py",
@@ -4467,7 +4534,7 @@
           "from": "drift_check",
           "to": "controller_readme",
           "kind": "checks",
-          "label": "CLI surface block equals cli.rs usage",
+          "label": "CLI surface block equals the inventory's command spellings",
           "short": "CLI surface",
           "sources": [
             {
@@ -5653,6 +5720,129 @@
             {
               "path": "tests/suites/source_drift/build_contracts.py",
               "symbol": "test_missing_released_inputs_propagate_without_current_tree_fallback",
+              "form": "test"
+            }
+          ]
+        },
+        {
+          "id": "D87",
+          "from": "interface_tables",
+          "to": "gen_interface",
+          "kind": "reads",
+          "label": "definitions, rendered by the controller's build script",
+          "short": "definitions",
+          "sources": [
+            {
+              "path": "controller/build.rs",
+              "symbol": "inventory::render"
+            },
+            {
+              "path": "docs/generate_interface.py",
+              "symbol": "def built_inventory"
+            }
+          ],
+          "checks": [
+            {
+              "path": "controller/integration/cli_contract.rs",
+              "symbol": "stale_interface_inventory_stops_the_build_script",
+              "form": "test"
+            }
+          ]
+        },
+        {
+          "id": "D88",
+          "from": "gen_interface",
+          "to": "interface_inventory",
+          "kind": "writes",
+          "label": "inventory, joins and residue baseline",
+          "short": "inventory",
+          "sources": [
+            {
+              "path": "docs/generate_interface.py",
+              "symbol": "OUTPUTS"
+            }
+          ],
+          "checks": [
+            {
+              "path": "tests/suites/source_drift/interface.py",
+              "symbol": "test_stale_refusal_and_no_check_writes",
+              "form": "test"
+            }
+          ]
+        },
+        {
+          "id": "D89",
+          "from": "build",
+          "to": "gen_interface",
+          "kind": "checks",
+          "label": "refuse stale copies before compilation; the build script refuses a stale inventory",
+          "short": "stale copies",
+          "sources": [
+            {
+              "path": "build.sh",
+              "symbol": "generate_interface.py"
+            },
+            {
+              "path": "controller/build.rs",
+              "symbol": "is stale"
+            }
+          ],
+          "checks": [
+            {
+              "path": "tests/suites/source_drift/generators.py",
+              "symbol": "test_build_checks_every_generator_before_signing",
+              "form": "test"
+            },
+            {
+              "path": "tests/suites/preflight/check_build_entry.py",
+              "symbol": "test_build_refuses_a_stale_interface_copy_before_compiling",
+              "form": "test"
+            },
+            {
+              "path": "controller/integration/cli_contract.rs",
+              "symbol": "stale_interface_inventory_stops_the_build_script",
+              "form": "test"
+            }
+          ]
+        },
+        {
+          "id": "D90",
+          "from": "interface_inventory",
+          "to": "gen_contract",
+          "kind": "reads",
+          "label": "identifiers the contract cites, compared with its structured facts",
+          "short": "cited identifiers",
+          "sources": [
+            {
+              "path": "docs/contract/interface_join.py",
+              "symbol": "def join"
+            }
+          ],
+          "checks": [
+            {
+              "path": "tests/suites/source_drift/interface.py",
+              "symbol": "test_contract_join_compares_structured_facts_and_reports_prose",
+              "form": "test"
+            }
+          ]
+        },
+        {
+          "id": "D91",
+          "from": "drift_check",
+          "to": "interface_tables",
+          "kind": "checks",
+          "label": "no spelling matched beside the tables",
+          "short": "literal rule",
+          "sources": [
+            {
+              "path": "tests/suites/source_drift/check.py",
+              "symbol": "check_interface_literals"
+            }
+          ],
+          "checks": [
+            {
+              "path": "tests/suites/source_drift/interface.py",
+              "symbol": "test_literal_rule_refuses_spellings_beside_the_tables",
               "form": "test"
             }
           ]

@@ -10,12 +10,11 @@ use std::io::Write;
 use serde_json::Value;
 
 use crate::cli;
+use crate::interface::commands::{Command, TailRefused};
 use crate::json_contract::BUILD_CONTRACT;
 use crate::request_patch::{parse_request, validate_contract};
 
-// The contract generator extracts this constant and accepts this one form: a
-// single `r#"`...`"#` raw string holding a JSON object without `contract`.
-pub const EXAMPLE_DOCUMENT: &str = r#"{"specimen_id":"example","policy":{"format":"sbpl","sbpl_source":"(version 1) (allow default) (deny file-read-data (literal \"/usr/share/dict/propernames\") (with no-report))"},"phases":[{"phase_id":"initial-reads","actions":[{"step_id":"read-hosts","sandbox_check":{"operation":"file-read-data","filter":{"kind":"path","value":"/etc/hosts"}},"attempt":{"kind":"file","action":"open_read","target":"/etc/hosts"}},{"step_id":"metadata-propernames-read-connectives","sandbox_check":{"operation":"file-read-metadata","filter":{"kind":"path","value":"/usr/share/dict/propernames"}},"attempt":{"kind":"file","action":"read_fresh","target":"/usr/share/dict/connectives"}}]},{"phase_id":"restricted-read","actions":[{"step_id":"read-propernames","sandbox_check":{"operation":"file-read-data","filter":{"kind":"path","value":"/usr/share/dict/propernames"}},"attempt":{"kind":"file","action":"open_read","target":"/usr/share/dict/propernames"}}]}]}"#;
+pub use crate::example_document::EXAMPLE_DOCUMENT;
 
 /// Why no document was printed. Every case is process exit 2.
 #[derive(Debug, PartialEq, Eq)]
@@ -49,27 +48,29 @@ pub fn render(document: &str, identity: &str) -> Result<String, Refusal> {
 /// Nothing is written unless the whole document rendered and passed the gate.
 /// Only complete output with a successful flush is success.
 fn emit(
-    args: &[OsString],
+    tail: Result<&[OsString], TailRefused>,
     document: &str,
     identity: &str,
     out: &mut dyn Write,
 ) -> Result<(), Refusal> {
-    if !args.is_empty() {
-        return Err(Refusal::Usage);
-    }
+    tail.map_err(|TailRefused| Refusal::Usage)?;
     let text = render(document, identity)?;
     out.write_all(text.as_bytes())
         .and_then(|()| out.flush())
         .map_err(|_| Refusal::Write)
 }
 
-pub fn cmd_example(args: &[OsString]) -> i32 {
+/// `tail` is the dispatcher's answer for the arguments after `example`.
+pub fn cmd_example(tail: Result<&[OsString], TailRefused>) -> i32 {
     let mut out = std::io::stdout().lock();
-    match emit(args, EXAMPLE_DOCUMENT, BUILD_CONTRACT, &mut out) {
+    match emit(tail, EXAMPLE_DOCUMENT, BUILD_CONTRACT, &mut out) {
         Ok(()) => 0,
         Err(refusal) => {
             let reason = match refusal {
-                Refusal::Usage => cli::USAGE.to_string(),
+                Refusal::Usage => format!(
+                    "policy-witness {}: accepts no arguments",
+                    Command::Example.def().spelling
+                ),
                 Refusal::NoPublicIdentity => {
                     "policy-witness example: this build has no public identity".into()
                 }
@@ -78,9 +79,7 @@ pub fn cmd_example(args: &[OsString]) -> i32 {
                 }
                 Refusal::Write => "policy-witness example: failed to write stdout".into(),
             };
-            // The reason is for a person. An unwritable stderr leaves the
-            // exit status as the whole report.
-            let _ = writeln!(std::io::stderr(), "{reason}");
+            cli::diagnose(&reason);
             2
         }
     }
@@ -93,7 +92,7 @@ mod tests {
 
     fn emitted(identity: &str) -> String {
         let mut out = Vec::new();
-        emit(&[], EXAMPLE_DOCUMENT, identity, &mut out).unwrap();
+        emit(Ok(&[]), EXAMPLE_DOCUMENT, identity, &mut out).unwrap();
         String::from_utf8(out).unwrap()
     }
 
@@ -166,7 +165,8 @@ mod tests {
             ),
         ] {
             let mut out = Vec::new();
-            assert_eq!(emit(&args, document, identity, &mut out), Err(expected));
+            let tail = Command::Example.def().tail.admit(&args);
+            assert_eq!(emit(tail, document, identity, &mut out), Err(expected));
             assert!(out.is_empty());
         }
     }
@@ -224,7 +224,7 @@ mod tests {
 
         let mut short = Limited::new(7, None, false);
         assert_eq!(
-            emit(&[], EXAMPLE_DOCUMENT, BUILD_CONTRACT, &mut short),
+            emit(Ok(&[]), EXAMPLE_DOCUMENT, BUILD_CONTRACT, &mut short),
             Ok(())
         );
         assert_eq!(short.accepted, complete);
@@ -232,14 +232,14 @@ mod tests {
 
         let mut partial = Limited::new(7, Some(40), false);
         assert_eq!(
-            emit(&[], EXAMPLE_DOCUMENT, BUILD_CONTRACT, &mut partial),
+            emit(Ok(&[]), EXAMPLE_DOCUMENT, BUILD_CONTRACT, &mut partial),
             Err(Refusal::Write)
         );
         assert_eq!(partial.accepted, complete[..40]);
 
         let mut unflushed = Limited::new(usize::MAX, None, true);
         assert_eq!(
-            emit(&[], EXAMPLE_DOCUMENT, BUILD_CONTRACT, &mut unflushed),
+            emit(Ok(&[]), EXAMPLE_DOCUMENT, BUILD_CONTRACT, &mut unflushed),
             Err(Refusal::Write)
         );
         assert_eq!(unflushed.accepted, complete);

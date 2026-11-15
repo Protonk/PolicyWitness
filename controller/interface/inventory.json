@@ -1,0 +1,856 @@
+{
+  "cards": {
+    "base": {
+      "references": [
+        "topic.run",
+        "topic.example",
+        "topic.result"
+      ],
+      "text": "run\nexample\nresult\n"
+    },
+    "example": {
+      "references": [
+        "command.example",
+        "example.document"
+      ],
+      "text": "example\n  initial-reads\n    open_read /etc/hosts\n    read_fresh /usr/share/dict/connectives\n  restricted-read\n    open_read /usr/share/dict/propernames\n"
+    },
+    "result": {
+      "references": [
+        "topic.result",
+        "result.fields",
+        "result.local_request_refusal",
+        "result.tool_failure",
+        "result.admission_refusal",
+        "result.admitted_finished",
+        "result.admitted_unavailable"
+      ],
+      "text": "result\n  normalized_outcome ok exit_code\n  bad_request false 1\n  tool_error false 2\n  missing_runner_client false 1\n  unsupported_runner_client false 1\n  malformed_runner_client false 1\n  runner_reply_truncated false 1\n  unsupported_runner_response false 1\n  malformed_runner_response false 1\n  xpc_error false 1\n  xpc_timeout false 1\n  xpc_acquisition_failed false 1\n  xpc_submission_refused false 1\n  xpc_protocol_error false 1\n  runner_client_error false 1\n  finished true 0\n  runner_response_unavailable false 1\n"
+    },
+    "run": {
+      "references": [
+        "command.run",
+        "run.option.runner_mode",
+        "runner_kind.standard@run_option",
+        "runner_kind.byoxpc@run_option"
+      ],
+      "text": "run\n  --runner-mode\n    standard\n    byoxpc\n"
+    }
+  },
+  "entries": [
+    {
+      "cards": [],
+      "id": "command.help",
+      "kind": "admits",
+      "reader": {
+        "path": "controller/src/cli.rs",
+        "symbol": "pub fn run"
+      },
+      "relationships": {
+        "tail": "topic"
+      },
+      "spellings": [
+        "help"
+      ]
+    },
+    {
+      "cards": [],
+      "id": "tail.help",
+      "kind": "discards",
+      "reader": {
+        "path": "controller/src/cli.rs",
+        "symbol": "pub fn run"
+      },
+      "relationships": {
+        "command": "command.help",
+        "except_first_argument": [
+          "topic.run",
+          "topic.example",
+          "topic.result"
+        ],
+        "rule": "topic"
+      },
+      "spellings": []
+    },
+    {
+      "cards": [
+        "run"
+      ],
+      "id": "command.run",
+      "kind": "admits",
+      "reader": {
+        "path": "controller/src/cli.rs",
+        "symbol": "pub fn run"
+      },
+      "relationships": {
+        "tail": "run_arguments"
+      },
+      "spellings": [
+        "run"
+      ]
+    },
+    {
+      "cards": [
+        "example"
+      ],
+      "id": "command.example",
+      "kind": "admits",
+      "reader": {
+        "path": "controller/src/cli.rs",
+        "symbol": "pub fn run"
+      },
+      "relationships": {
+        "tail": "refuses_any"
+      },
+      "spellings": [
+        "example"
+      ]
+    },
+    {
+      "cards": [],
+      "id": "tail.example",
+      "kind": "refuses_always",
+      "reader": {
+        "path": "controller/src/cli.rs",
+        "symbol": "pub fn run"
+      },
+      "relationships": {
+        "command": "command.example",
+        "rule": "refuses_any"
+      },
+      "spellings": []
+    },
+    {
+      "cards": [],
+      "id": "command.test_input",
+      "kind": "admits",
+      "reader": {
+        "path": "controller/src/cli.rs",
+        "symbol": "pub fn run"
+      },
+      "relationships": {
+        "tail": "unenumerated"
+      },
+      "spellings": [
+        "test-input"
+      ]
+    },
+    {
+      "cards": [],
+      "id": "tail.test_input",
+      "kind": "unenumerated",
+      "reader": {
+        "path": "controller/src/cli.rs",
+        "symbol": "pub fn run"
+      },
+      "relationships": {
+        "command": "command.test_input",
+        "rule": "unenumerated"
+      },
+      "spellings": []
+    },
+    {
+      "cards": [],
+      "id": "command.runner",
+      "kind": "admits",
+      "reader": {
+        "path": "controller/src/cli.rs",
+        "symbol": "pub fn run"
+      },
+      "relationships": {
+        "tail": "unenumerated"
+      },
+      "spellings": [
+        "runner"
+      ]
+    },
+    {
+      "cards": [],
+      "id": "tail.runner",
+      "kind": "unenumerated",
+      "reader": {
+        "path": "controller/src/cli.rs",
+        "symbol": "pub fn run"
+      },
+      "relationships": {
+        "command": "command.runner",
+        "rule": "unenumerated"
+      },
+      "spellings": []
+    },
+    {
+      "cards": [],
+      "id": "command.version_flag",
+      "kind": "admits",
+      "reader": {
+        "path": "controller/src/cli.rs",
+        "symbol": "pub fn run"
+      },
+      "relationships": {
+        "tail": "refuses_any"
+      },
+      "spellings": [
+        "--version"
+      ]
+    },
+    {
+      "cards": [],
+      "id": "tail.version_flag",
+      "kind": "refuses_always",
+      "reader": {
+        "path": "controller/src/cli.rs",
+        "symbol": "pub fn run"
+      },
+      "relationships": {
+        "command": "command.version_flag",
+        "rule": "refuses_any"
+      },
+      "spellings": []
+    },
+    {
+      "cards": [],
+      "id": "command.version",
+      "kind": "admits",
+      "reader": {
+        "path": "controller/src/cli.rs",
+        "symbol": "pub fn run"
+      },
+      "relationships": {
+        "tail": "refuses_any"
+      },
+      "spellings": [
+        "version"
+      ]
+    },
+    {
+      "cards": [],
+      "id": "tail.version",
+      "kind": "refuses_always",
+      "reader": {
+        "path": "controller/src/cli.rs",
+        "symbol": "pub fn run"
+      },
+      "relationships": {
+        "command": "command.version",
+        "rule": "refuses_any"
+      },
+      "spellings": []
+    },
+    {
+      "cards": [
+        "base"
+      ],
+      "id": "topic.run",
+      "kind": "admits",
+      "reader": {
+        "path": "controller/src/interface/commands.rs",
+        "symbol": "pub fn select"
+      },
+      "relationships": {
+        "shares_spelling_of": "command.run"
+      },
+      "spellings": [
+        "run"
+      ]
+    },
+    {
+      "cards": [
+        "base"
+      ],
+      "id": "topic.example",
+      "kind": "admits",
+      "reader": {
+        "path": "controller/src/interface/commands.rs",
+        "symbol": "pub fn select"
+      },
+      "relationships": {
+        "shares_spelling_of": "command.example"
+      },
+      "spellings": [
+        "example"
+      ]
+    },
+    {
+      "cards": [
+        "base",
+        "result"
+      ],
+      "id": "topic.result",
+      "kind": "admits",
+      "reader": {
+        "path": "controller/src/interface/commands.rs",
+        "symbol": "pub fn select"
+      },
+      "relationships": {
+        "shares_spelling_of": null
+      },
+      "spellings": [
+        "result"
+      ]
+    },
+    {
+      "cards": [],
+      "id": "run.request_path",
+      "kind": "admits",
+      "reader": {
+        "path": "controller/src/run_flow.rs",
+        "symbol": "fn parse_arguments"
+      },
+      "relationships": {
+        "classified_as": "request_path",
+        "command": "command.run",
+        "flag_prefix": "-"
+      },
+      "spellings": []
+    },
+    {
+      "cards": [],
+      "id": "run.terminator",
+      "kind": "discards",
+      "reader": {
+        "path": "controller/src/run_flow.rs",
+        "symbol": "fn parse_arguments"
+      },
+      "relationships": {
+        "classified_as": "terminator",
+        "command": "command.run",
+        "flag_prefix": "-"
+      },
+      "spellings": [
+        "--"
+      ]
+    },
+    {
+      "cards": [],
+      "id": "run.unknown_flag",
+      "kind": "refuses_always",
+      "reader": {
+        "path": "controller/src/run_flow.rs",
+        "symbol": "fn parse_arguments"
+      },
+      "relationships": {
+        "classified_as": "unknown_flag",
+        "command": "command.run",
+        "flag_prefix": "-"
+      },
+      "spellings": []
+    },
+    {
+      "cards": [],
+      "id": "run.option.timeout_ms",
+      "kind": "admits",
+      "reader": {
+        "path": "controller/src/run_flow.rs",
+        "symbol": "fn parse_arguments"
+      },
+      "relationships": {
+        "command": "command.run",
+        "value": {
+          "milliseconds": {
+            "min": 1
+          }
+        }
+      },
+      "spellings": [
+        "--timeout-ms"
+      ]
+    },
+    {
+      "cards": [
+        "run"
+      ],
+      "id": "run.option.runner_mode",
+      "kind": "admits",
+      "reader": {
+        "path": "controller/src/run_flow.rs",
+        "symbol": "fn parse_arguments"
+      },
+      "relationships": {
+        "command": "command.run",
+        "value": {
+          "runner_kind_reader": "run_option"
+        }
+      },
+      "spellings": [
+        "--runner-mode"
+      ]
+    },
+    {
+      "cards": [
+        "run"
+      ],
+      "id": "runner_kind.standard@run_option",
+      "kind": "admits",
+      "reader": {
+        "path": "controller/src/run_flow.rs",
+        "reader": "run_option",
+        "symbol": "fn runner_mode_kind"
+      },
+      "relationships": {
+        "kind": "standard"
+      },
+      "spellings": [
+        "standard"
+      ]
+    },
+    {
+      "cards": [],
+      "id": "runner_kind.standard@request_selector",
+      "kind": "admits",
+      "reader": {
+        "path": "controller/src/runner_select.rs",
+        "reader": "request_selector",
+        "symbol": "fn parse_runner_mode"
+      },
+      "relationships": {
+        "kind": "standard"
+      },
+      "spellings": [
+        "standard"
+      ]
+    },
+    {
+      "cards": [],
+      "id": "runner_kind.standard@install_option",
+      "kind": "admits",
+      "reader": {
+        "path": "controller/src/runner_commands.rs",
+        "reader": "install_option",
+        "symbol": "fn install_kind"
+      },
+      "relationships": {
+        "kind": "standard"
+      },
+      "spellings": [
+        "standard"
+      ]
+    },
+    {
+      "cards": [],
+      "id": "runner_kind.standard@registry",
+      "kind": "admits",
+      "reader": {
+        "path": "controller/src/runner_manager.rs",
+        "reader": "registry",
+        "symbol": "Deserialize<'de> for RunnerKind"
+      },
+      "relationships": {
+        "kind": "standard"
+      },
+      "spellings": [
+        "standard"
+      ]
+    },
+    {
+      "cards": [
+        "run"
+      ],
+      "id": "runner_kind.byoxpc@run_option",
+      "kind": "admits",
+      "reader": {
+        "path": "controller/src/run_flow.rs",
+        "reader": "run_option",
+        "symbol": "fn runner_mode_kind"
+      },
+      "relationships": {
+        "kind": "byoxpc"
+      },
+      "spellings": [
+        "byoxpc"
+      ]
+    },
+    {
+      "cards": [],
+      "id": "runner_kind.byoxpc@request_selector",
+      "kind": "admits",
+      "reader": {
+        "path": "controller/src/runner_select.rs",
+        "reader": "request_selector",
+        "symbol": "fn parse_runner_mode"
+      },
+      "relationships": {
+        "kind": "byoxpc"
+      },
+      "spellings": [
+        "byoxpc"
+      ]
+    },
+    {
+      "cards": [],
+      "id": "runner_kind.byoxpc@install_option",
+      "kind": "admits",
+      "reader": {
+        "path": "controller/src/runner_commands.rs",
+        "reader": "install_option",
+        "symbol": "fn install_kind"
+      },
+      "relationships": {
+        "kind": "byoxpc"
+      },
+      "spellings": [
+        "byoxpc"
+      ]
+    },
+    {
+      "cards": [],
+      "id": "runner_kind.byoxpc@registry",
+      "kind": "admits",
+      "reader": {
+        "path": "controller/src/runner_manager.rs",
+        "reader": "registry",
+        "symbol": "Deserialize<'de> for RunnerKind"
+      },
+      "relationships": {
+        "kind": "byoxpc"
+      },
+      "spellings": [
+        "byoxpc"
+      ]
+    },
+    {
+      "cards": [],
+      "id": "runner_kind.machme@registry",
+      "kind": "alias",
+      "reader": {
+        "path": "controller/src/runner_manager.rs",
+        "reader": "registry",
+        "symbol": "Deserialize<'de> for RunnerKind"
+      },
+      "relationships": {
+        "kind": "byoxpc"
+      },
+      "spellings": [
+        "machme"
+      ]
+    },
+    {
+      "cards": [],
+      "id": "runner_kind.debuggable@registry",
+      "kind": "alias",
+      "reader": {
+        "path": "controller/src/runner_manager.rs",
+        "reader": "registry",
+        "symbol": "Deserialize<'de> for RunnerKind"
+      },
+      "relationships": {
+        "kind": "byoxpc"
+      },
+      "spellings": [
+        "debuggable"
+      ]
+    }
+  ],
+  "example": {
+    "cards": [
+      "example"
+    ],
+    "id": "example.document",
+    "phases": [
+      {
+        "attempts": [
+          {
+            "action": "open_read",
+            "target": "/etc/hosts"
+          },
+          {
+            "action": "read_fresh",
+            "target": "/usr/share/dict/connectives"
+          }
+        ],
+        "phase_id": "initial-reads"
+      },
+      {
+        "attempts": [
+          {
+            "action": "open_read",
+            "target": "/usr/share/dict/propernames"
+          }
+        ],
+        "phase_id": "restricted-read"
+      }
+    ],
+    "reader": {
+      "path": "controller/src/example.rs",
+      "symbol": "pub fn render"
+    },
+    "source": {
+      "path": "controller/src/example_document.rs",
+      "symbol": "EXAMPLE_DOCUMENT"
+    }
+  },
+  "result": {
+    "cards": [
+      "result"
+    ],
+    "derived": {
+      "inputs_that_change_no_output": [
+        {
+          "changes_an_output": false,
+          "class": "admitted",
+          "input": "integrity_issues"
+        }
+      ],
+      "output_functions": [
+        {
+          "counterexample": null,
+          "is_a_function": true,
+          "of": "normalized_outcome",
+          "output": "ok"
+        },
+        {
+          "counterexample": [
+            [
+              "tool_error",
+              false,
+              2
+            ],
+            [
+              "tool_error",
+              false,
+              1
+            ]
+          ],
+          "is_a_function": false,
+          "of": "normalized_outcome",
+          "output": "exit_code"
+        },
+        {
+          "counterexample": [
+            [
+              "bad_request",
+              false,
+              1
+            ],
+            [
+              "tool_error",
+              false,
+              2
+            ]
+          ],
+          "is_a_function": false,
+          "of": "ok",
+          "output": "normalized_outcome"
+        },
+        {
+          "counterexample": [
+            [
+              "bad_request",
+              false,
+              1
+            ],
+            [
+              "tool_error",
+              false,
+              2
+            ]
+          ],
+          "is_a_function": false,
+          "of": "ok",
+          "output": "exit_code"
+        },
+        {
+          "counterexample": [
+            [
+              "bad_request",
+              false,
+              1
+            ],
+            [
+              "missing_runner_client",
+              false,
+              1
+            ]
+          ],
+          "is_a_function": false,
+          "of": "exit_code",
+          "output": "normalized_outcome"
+        },
+        {
+          "counterexample": null,
+          "is_a_function": true,
+          "of": "exit_code",
+          "output": "ok"
+        }
+      ],
+      "outputs": [
+        "normalized_outcome",
+        "ok",
+        "exit_code"
+      ],
+      "rows_sharing_outputs": [
+        {
+          "rows": [
+            "result.local_request_refusal",
+            "result.admitted_other"
+          ],
+          "shared_outputs": [
+            "bad_request",
+            false,
+            1
+          ]
+        },
+        {
+          "rows": [
+            "result.admission_refusal",
+            "result.admitted_other"
+          ],
+          "shared_outputs": [
+            "missing_runner_client",
+            false,
+            1
+          ]
+        },
+        {
+          "rows": [
+            "result.admitted_other",
+            "result.admitted_unavailable"
+          ],
+          "shared_outputs": [
+            "runner_response_unavailable",
+            false,
+            1
+          ]
+        }
+      ]
+    },
+    "fields": [
+      {
+        "id": "result.field.normalized_outcome",
+        "name": "normalized_outcome"
+      },
+      {
+        "id": "result.field.ok",
+        "name": "ok"
+      },
+      {
+        "id": "result.field.exit_code",
+        "name": "exit_code"
+      }
+    ],
+    "reader": {
+      "path": "controller/src/interface/result.rs",
+      "symbol": "pub fn select"
+    },
+    "rows": [
+      {
+        "cards": [
+          "result"
+        ],
+        "id": "result.local_request_refusal",
+        "inputs": {
+          "class": "local_request_refusal",
+          "host_outcome": "unread"
+        },
+        "order": 0,
+        "outputs": {
+          "exit_code": 1,
+          "normalized_outcome": {
+            "fixed": "bad_request"
+          },
+          "ok": false
+        }
+      },
+      {
+        "cards": [
+          "result"
+        ],
+        "id": "result.tool_failure",
+        "inputs": {
+          "class": "tool_failure",
+          "host_outcome": "unread"
+        },
+        "order": 1,
+        "outputs": {
+          "exit_code": 2,
+          "normalized_outcome": {
+            "fixed": "tool_error"
+          },
+          "ok": false
+        }
+      },
+      {
+        "cards": [
+          "result"
+        ],
+        "id": "result.admission_refusal",
+        "inputs": {
+          "class": "admission_refusal",
+          "host_outcome": "unread"
+        },
+        "order": 2,
+        "outputs": {
+          "exit_code": 1,
+          "normalized_outcome": {
+            "refusal": [
+              "missing_runner_client",
+              "unsupported_runner_client",
+              "malformed_runner_client",
+              "runner_reply_truncated",
+              "unsupported_runner_response",
+              "malformed_runner_response",
+              "xpc_error",
+              "xpc_timeout",
+              "xpc_acquisition_failed",
+              "xpc_submission_refused",
+              "xpc_protocol_error",
+              "runner_client_error"
+            ]
+          },
+          "ok": false
+        }
+      },
+      {
+        "cards": [
+          "result"
+        ],
+        "id": "result.admitted_finished",
+        "inputs": {
+          "class": "admitted",
+          "host_outcome": {
+            "is": "finished"
+          }
+        },
+        "order": 3,
+        "outputs": {
+          "exit_code": 0,
+          "normalized_outcome": "host_label",
+          "ok": true
+        }
+      },
+      {
+        "cards": [],
+        "id": "result.admitted_other",
+        "inputs": {
+          "class": "admitted",
+          "host_outcome": "present"
+        },
+        "order": 4,
+        "outputs": {
+          "exit_code": 1,
+          "normalized_outcome": "host_label",
+          "ok": false
+        }
+      },
+      {
+        "cards": [
+          "result"
+        ],
+        "id": "result.admitted_unavailable",
+        "inputs": {
+          "class": "admitted",
+          "host_outcome": "absent"
+        },
+        "order": 5,
+        "outputs": {
+          "exit_code": 1,
+          "normalized_outcome": {
+            "fixed": "runner_response_unavailable"
+          },
+          "ok": false
+        }
+      }
+    ],
+    "selection": "first_match"
+  },
+  "schema": 1
+}

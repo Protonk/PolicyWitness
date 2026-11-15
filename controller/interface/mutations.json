@@ -1,0 +1,510 @@
+{
+  "mutations": [
+    {
+      "id": "rename_option",
+      "entry": "run.option.runner_mode",
+      "mutation": "Rename the governing spelling --runner-mode to --runner-kind; no help input edited.",
+      "patch": "diff --git a/controller/src/interface/run_args.rs b/controller/src/interface/run_args.rs\nindex e2063f4a..6dba9c78 100644\n--- a/controller/src/interface/run_args.rs\n+++ b/controller/src/interface/run_args.rs\n@@ -28,7 +28,7 @@ impl RunOption {\n     pub const fn def(self) -> RunOptionDef {\n         let (spelling, value) = match self {\n             RunOption::TimeoutMs => (\"--timeout-ms\", Value::Milliseconds { min: 1 }),\n-            RunOption::RunnerMode => (\"--runner-mode\", Value::Kind(Reader::RunOption)),\n+            RunOption::RunnerMode => (\"--runner-kind\", Value::Kind(Reader::RunOption)),\n         };\n         RunOptionDef { spelling, value }\n     }\n",
+      "checks": {
+        "card": "changed",
+        "contract": "unchanged",
+        "cases": "failed"
+      },
+      "first_build": "stale_inventory",
+      "first_build_message": "controller/interface/inventory.json is stale",
+      "literal_rule": "unchanged",
+      "cards_changed": [
+        "run"
+      ],
+      "cases_newly_failing": [
+        "help.run",
+        "help.run.bad_flag",
+        "help.run.junk",
+        "help.run.terminator",
+        "run.runner_mode_byoxpc",
+        "run.runner_mode_debuggable",
+        "run.runner_mode_invalid",
+        "run.runner_mode_machme",
+        "run.runner_mode_missing",
+        "run.runner_mode_standard"
+      ],
+      "card_execution_agreement": "ok",
+      "unit_tests_newly_failing": [
+        "run_flow::tests::argument_errors_are_reported_before_any_runner_or_specimen_work",
+        "run_flow::tests::runner_mode_injection_rules"
+      ]
+    },
+    {
+      "id": "private_copy_option",
+      "entry": "run.option.runner_mode",
+      "mutation": "Render the run card's option from a private, identical copy of the spellings in the card renderer.",
+      "patch": "diff --git a/controller/interface/cards.rs b/controller/interface/cards.rs\nindex c10088c5..353ffdeb 100644\n--- a/controller/interface/cards.rs\n+++ b/controller/interface/cards.rs\n@@ -257,7 +257,13 @@ fn render_node(\n                     \"{option:?} is not under the command that admits it\"\n                 ));\n             }\n-            out.line(depth, option.def().spelling);\n+            out.line(\n+                depth,\n+                match option {\n+                    RunOption::TimeoutMs => \"--timeout-ms\",\n+                    RunOption::RunnerMode => \"--runner-mode\",\n+                },\n+            );\n             out.references.push(id(&option));\n         }\n         Element::AdmittedWords(option) => {\n",
+      "checks": {
+        "card": "unchanged",
+        "contract": "unchanged",
+        "cases": "unchanged"
+      },
+      "first_build": "built",
+      "first_build_message": "",
+      "literal_rule": "failed",
+      "cards_changed": [],
+      "cases_newly_failing": [],
+      "card_execution_agreement": "ok",
+      "unit_tests_newly_failing": []
+    },
+    {
+      "id": "private_copy_option_then_rename",
+      "entry": "run.option.runner_mode",
+      "mutation": "With the private copy in the renderer, rename the governing spelling as in rename_option.",
+      "patch": "diff --git a/controller/interface/cards.rs b/controller/interface/cards.rs\nindex c10088c5..353ffdeb 100644\n--- a/controller/interface/cards.rs\n+++ b/controller/interface/cards.rs\n@@ -257,7 +257,13 @@ fn render_node(\n                     \"{option:?} is not under the command that admits it\"\n                 ));\n             }\n-            out.line(depth, option.def().spelling);\n+            out.line(\n+                depth,\n+                match option {\n+                    RunOption::TimeoutMs => \"--timeout-ms\",\n+                    RunOption::RunnerMode => \"--runner-mode\",\n+                },\n+            );\n             out.references.push(id(&option));\n         }\n         Element::AdmittedWords(option) => {\ndiff --git a/controller/src/interface/run_args.rs b/controller/src/interface/run_args.rs\nindex e2063f4a..6dba9c78 100644\n--- a/controller/src/interface/run_args.rs\n+++ b/controller/src/interface/run_args.rs\n@@ -28,7 +28,7 @@ impl RunOption {\n     pub const fn def(self) -> RunOptionDef {\n         let (spelling, value) = match self {\n             RunOption::TimeoutMs => (\"--timeout-ms\", Value::Milliseconds { min: 1 }),\n-            RunOption::RunnerMode => (\"--runner-mode\", Value::Kind(Reader::RunOption)),\n+            RunOption::RunnerMode => (\"--runner-kind\", Value::Kind(Reader::RunOption)),\n         };\n         RunOptionDef { spelling, value }\n     }\n",
+      "checks": {
+        "card": "failed",
+        "contract": "unchanged",
+        "cases": "not_run"
+      },
+      "first_build": "stale_inventory",
+      "first_build_message": "controller/interface/inventory.json is stale",
+      "literal_rule": "failed",
+      "generator_refusal": "card run: token '--runner-mode' comes from no referenced entry"
+    },
+    {
+      "id": "remove_definition",
+      "entry": "run.option.runner_mode",
+      "mutation": "Remove the RunnerMode option definition the run card references.",
+      "patch": "diff --git a/controller/src/interface/run_args.rs b/controller/src/interface/run_args.rs\nindex e2063f4a..50ad0191 100644\n--- a/controller/src/interface/run_args.rs\n+++ b/controller/src/interface/run_args.rs\n@@ -6,7 +6,6 @@ enumerated!(\n     /// An option `run` admits.\n     RunOption {\n         TimeoutMs,\n-        RunnerMode,\n     }\n );\n \n@@ -28,7 +27,6 @@ impl RunOption {\n     pub const fn def(self) -> RunOptionDef {\n         let (spelling, value) = match self {\n             RunOption::TimeoutMs => (\"--timeout-ms\", Value::Milliseconds { min: 1 }),\n-            RunOption::RunnerMode => (\"--runner-mode\", Value::Kind(Reader::RunOption)),\n         };\n         RunOptionDef { spelling, value }\n     }\n",
+      "checks": {
+        "card": "not_run",
+        "contract": "unchanged",
+        "cases": "not_run"
+      },
+      "first_build": "compile_error",
+      "first_build_message": "error[E0599]: no variant, associated function, or constant named `RunnerMode` found for enum `RunOption` in the current scope; error: could not compile `controller` (build script) due to 2 previous errors",
+      "literal_rule": "unchanged"
+    },
+    {
+      "id": "invalid_relationship",
+      "entry": "run.option.timeout_ms",
+      "mutation": "Put the admitted words of the timeout option under the runner-mode option in the card specification.",
+      "patch": "diff --git a/controller/interface/cards.rs b/controller/interface/cards.rs\nindex c10088c5..39f2e753 100644\n--- a/controller/interface/cards.rs\n+++ b/controller/interface/cards.rs\n@@ -73,7 +73,7 @@ pub fn specification(card: Option<Topic>) -> Vec<Node> {\n             Element::Command(Command::Run),\n             vec![node(\n                 Element::Option(RunOption::RunnerMode),\n-                vec![leaf(Element::AdmittedWords(RunOption::RunnerMode))],\n+                vec![leaf(Element::AdmittedWords(RunOption::TimeoutMs))],\n             )],\n         )],\n         Some(Topic::Example) => vec![node(\n",
+      "checks": {
+        "card": "failed",
+        "contract": "unchanged",
+        "cases": "not_run"
+      },
+      "first_build": "card_validation",
+      "first_build_message": "help cards: TimeoutMs does not take a runner-kind word",
+      "literal_rule": "unchanged"
+    },
+    {
+      "id": "example_field",
+      "entry": "example.document",
+      "mutation": "Change the first attempt's target in EXAMPLE_DOCUMENT from /etc/hosts to /etc/services.",
+      "patch": "diff --git a/controller/src/example_document.rs b/controller/src/example_document.rs\nindex 09cf2315..6cd66c75 100644\n--- a/controller/src/example_document.rs\n+++ b/controller/src/example_document.rs\n@@ -3,4 +3,4 @@\n \n // The contract generator extracts this constant and accepts this one form: a\n // single `r#\"`...`\"#` raw string holding a JSON object without `contract`.\n-pub const EXAMPLE_DOCUMENT: &str = r#\"{\"specimen_id\":\"example\",\"policy\":{\"format\":\"sbpl\",\"sbpl_source\":\"(version 1) (allow default) (deny file-read-data (literal \\\"/usr/share/dict/propernames\\\") (with no-report))\"},\"phases\":[{\"phase_id\":\"initial-reads\",\"actions\":[{\"step_id\":\"read-hosts\",\"sandbox_check\":{\"operation\":\"file-read-data\",\"filter\":{\"kind\":\"path\",\"value\":\"/etc/hosts\"}},\"attempt\":{\"kind\":\"file\",\"action\":\"open_read\",\"target\":\"/etc/hosts\"}},{\"step_id\":\"metadata-propernames-read-connectives\",\"sandbox_check\":{\"operation\":\"file-read-metadata\",\"filter\":{\"kind\":\"path\",\"value\":\"/usr/share/dict/propernames\"}},\"attempt\":{\"kind\":\"file\",\"action\":\"read_fresh\",\"target\":\"/usr/share/dict/connectives\"}}]},{\"phase_id\":\"restricted-read\",\"actions\":[{\"step_id\":\"read-propernames\",\"sandbox_check\":{\"operation\":\"file-read-data\",\"filter\":{\"kind\":\"path\",\"value\":\"/usr/share/dict/propernames\"}},\"attempt\":{\"kind\":\"file\",\"action\":\"open_read\",\"target\":\"/usr/share/dict/propernames\"}}]}]}\"#;\n+pub const EXAMPLE_DOCUMENT: &str = r#\"{\"specimen_id\":\"example\",\"policy\":{\"format\":\"sbpl\",\"sbpl_source\":\"(version 1) (allow default) (deny file-read-data (literal \\\"/usr/share/dict/propernames\\\") (with no-report))\"},\"phases\":[{\"phase_id\":\"initial-reads\",\"actions\":[{\"step_id\":\"read-hosts\",\"sandbox_check\":{\"operation\":\"file-read-data\",\"filter\":{\"kind\":\"path\",\"value\":\"/etc/hosts\"}},\"attempt\":{\"kind\":\"file\",\"action\":\"open_read\",\"target\":\"/etc/services\"}},{\"step_id\":\"metadata-propernames-read-connectives\",\"sandbox_check\":{\"operation\":\"file-read-metadata\",\"filter\":{\"kind\":\"path\",\"value\":\"/usr/share/dict/propernames\"}},\"attempt\":{\"kind\":\"file\",\"action\":\"read_fresh\",\"target\":\"/usr/share/dict/connectives\"}}]},{\"phase_id\":\"restricted-read\",\"actions\":[{\"step_id\":\"read-propernames\",\"sandbox_check\":{\"operation\":\"file-read-data\",\"filter\":{\"kind\":\"path\",\"value\":\"/usr/share/dict/propernames\"}},\"attempt\":{\"kind\":\"file\",\"action\":\"open_read\",\"target\":\"/usr/share/dict/propernames\"}}]}]}\"#;\n",
+      "checks": {
+        "card": "changed",
+        "contract": "failed",
+        "cases": "failed"
+      },
+      "first_build": "stale_inventory",
+      "first_build_message": "controller/interface/inventory.json is stale",
+      "literal_rule": "unchanged",
+      "contract_refusal": "contract stamps: stale generated contract: docs/CONTRACT.md, docs/contract/public.json; run tests/lib/python.sh docs/generate_contract_stamps.py",
+      "cards_changed": [
+        "example"
+      ],
+      "cases_newly_failing": [
+        "help.example",
+        "help.example.extra"
+      ],
+      "card_execution_agreement": "ok",
+      "unit_tests_newly_failing": []
+    },
+    {
+      "id": "result_exit_status",
+      "entry": "result.tool_failure",
+      "mutation": "Change the tool-failure row's exit status from 2 to 3; contract facts not updated.",
+      "patch": "diff --git a/controller/src/interface/result.rs b/controller/src/interface/result.rs\nindex f8e2eb20..a8e5eb4b 100644\n--- a/controller/src/interface/result.rs\n+++ b/controller/src/interface/result.rs\n@@ -154,7 +154,7 @@ impl Row {\n                 Host::Unread,\n                 Outcome::Fixed(Label::ToolError),\n                 false,\n-                2,\n+                3,\n             ),\n             Row::AdmissionRefusal => (\n                 Class::AdmissionRefusal,\n",
+      "checks": {
+        "card": "changed",
+        "contract": "failed",
+        "cases": "failed"
+      },
+      "first_build": "stale_inventory",
+      "first_build_message": "controller/interface/inventory.json is stale",
+      "literal_rule": "unchanged",
+      "contract_refusal": "contract stamps: contract and interface inventory disagree:\n  refusals.controller.consequence.tool_failure: refusals.controller.consequence.tool_failure: set_value(envelope.result.exit_code, 2) disagrees with result.tool_failure, whose exit_code is 3",
+      "cards_changed": [
+        "result"
+      ],
+      "cases_newly_failing": [
+        "help.result",
+        "help.result.bad_flag",
+        "help.result.extra",
+        "run.h_flag",
+        "run.help_flag",
+        "run.help_word",
+        "run.no_arguments",
+        "run.non_utf8_path",
+        "run.path_then_help_flag",
+        "run.repeated_path",
+        "run.repeated_timeout",
+        "run.runner_mode_byoxpc",
+        "run.runner_mode_debuggable",
+        "run.runner_mode_invalid",
+        "run.runner_mode_machme",
+        "run.runner_mode_missing",
+        "run.runner_mode_standard",
+        "run.terminator",
+        "run.timeout_equals",
+        "run.timeout_invalid",
+        "run.timeout_missing",
+        "run.timeout_one",
+        "run.timeout_takes_help_flag",
+        "run.timeout_zero"
+      ],
+      "card_execution_agreement": "ok",
+      "unit_tests_newly_failing": [
+        "run_flow::tests::orchestration::builtin_manifest_failures_refuse_before_the_client_with_one_load",
+        "run_flow::tests::orchestration::byoxpc_selection_failures_make_one_load_and_no_client_call",
+        "run_flow::tests::orchestration::each_result_class_agrees_in_fields_process_status_and_card",
+        "run_flow::tests::orchestration::refusals_before_selection_load_at_most_once_and_never_invoke_the_client",
+        "run_flow::tests::tool_error_envelope_has_the_uniform_run_shape"
+      ]
+    },
+    {
+      "id": "private_copy_result_row",
+      "entry": "result.tool_failure",
+      "mutation": "Print the tool-failure row's exit status on the result card from a private copy.",
+      "patch": "diff --git a/controller/interface/cards.rs b/controller/interface/cards.rs\nindex c10088c5..ca88a7e6 100644\n--- a/controller/interface/cards.rs\n+++ b/controller/interface/cards.rs\n@@ -314,6 +314,10 @@ fn render_node(\n                 for field in RESULT_FIELDS {\n                     cells.push(scalar(&result[result_key(*field)?.as_str()])?);\n                 }\n+                // A private copy of the tool-failure row's exit status.\n+                if row == Row::ToolFailure {\n+                    cells[2] = 2.to_string();\n+                }\n                 out.line(depth, &cells.join(\" \"));\n                 if !rows.contains(&row) {\n                     rows.push(row);\n",
+      "checks": {
+        "card": "unchanged",
+        "contract": "unchanged",
+        "cases": "unchanged"
+      },
+      "first_build": "built",
+      "first_build_message": "",
+      "literal_rule": "unchanged",
+      "cards_changed": [],
+      "cases_newly_failing": [],
+      "card_execution_agreement": "ok",
+      "unit_tests_newly_failing": []
+    },
+    {
+      "id": "private_copy_result_row_then_exit_status",
+      "entry": "result.tool_failure",
+      "mutation": "With the private copy in the renderer, change the tool-failure row's exit status as in result_exit_status.",
+      "patch": "diff --git a/controller/interface/cards.rs b/controller/interface/cards.rs\nindex c10088c5..ca88a7e6 100644\n--- a/controller/interface/cards.rs\n+++ b/controller/interface/cards.rs\n@@ -314,6 +314,10 @@ fn render_node(\n                 for field in RESULT_FIELDS {\n                     cells.push(scalar(&result[result_key(*field)?.as_str()])?);\n                 }\n+                // A private copy of the tool-failure row's exit status.\n+                if row == Row::ToolFailure {\n+                    cells[2] = 2.to_string();\n+                }\n                 out.line(depth, &cells.join(\" \"));\n                 if !rows.contains(&row) {\n                     rows.push(row);\ndiff --git a/controller/src/interface/result.rs b/controller/src/interface/result.rs\nindex f8e2eb20..a8e5eb4b 100644\n--- a/controller/src/interface/result.rs\n+++ b/controller/src/interface/result.rs\n@@ -154,7 +154,7 @@ impl Row {\n                 Host::Unread,\n                 Outcome::Fixed(Label::ToolError),\n                 false,\n-                2,\n+                3,\n             ),\n             Row::AdmissionRefusal => (\n                 Class::AdmissionRefusal,\n",
+      "checks": {
+        "card": "failed",
+        "contract": "unchanged",
+        "cases": "not_run"
+      },
+      "first_build": "stale_inventory",
+      "first_build_message": "controller/interface/inventory.json is stale",
+      "literal_rule": "unchanged",
+      "generator_refusal": "card result: token '2' comes from no referenced entry"
+    },
+    {
+      "id": "literal_beside_run_table",
+      "entry": "run.unknown_flag",
+      "mutation": "Compare an argument with the literal --help inside parse_arguments, beside the option table.",
+      "patch": "diff --git a/controller/src/run_flow.rs b/controller/src/run_flow.rs\nindex 0e6e129e..18119d09 100644\n--- a/controller/src/run_flow.rs\n+++ b/controller/src/run_flow.rs\n@@ -414,6 +414,9 @@ fn parse_arguments(args: &[OsString]) -> Arguments {\n     let mut idx = 0usize;\n     while idx < args.len() {\n         let arg = args[idx].to_string_lossy();\n+        if arg == \"--help\" {\n+            return Arguments::Error(None, String::new());\n+        }\n         let option = match run_args::classify(&arg) {\n             Token::Terminator => break,\n             Token::RequestPath if parsed.request_path.is_some() => {\n",
+      "checks": {
+        "card": "unchanged",
+        "contract": "unchanged",
+        "cases": "failed"
+      },
+      "first_build": "built",
+      "first_build_message": "",
+      "literal_rule": "failed",
+      "cards_changed": [],
+      "cases_newly_failing": [
+        "run.help_flag",
+        "run.path_then_help_flag"
+      ],
+      "card_execution_agreement": "ok",
+      "unit_tests_newly_failing": [
+        "run_flow::tests::argument_errors_are_reported_before_any_runner_or_specimen_work"
+      ]
+    },
+    {
+      "id": "restored_flag_help_arm",
+      "entry": "command.help",
+      "mutation": "Restore a top-level --help arm in cli::run that prints the base card.",
+      "patch": "diff --git a/controller/src/cli.rs b/controller/src/cli.rs\nindex 4a4031cf..aed58711 100644\n--- a/controller/src/cli.rs\n+++ b/controller/src/cli.rs\n@@ -33,6 +33,9 @@ fn refuse_command() -> i32 {\n }\n \n pub fn run(argv: Vec<OsString>) -> i32 {\n+    if argv.first().is_some_and(|first| first == \"--help\") {\n+        return help::cmd_help(&[]);\n+    }\n     let Some(command) = argv.first().and_then(|first| Command::recognize(first)) else {\n         return refuse_command();\n     };\n",
+      "checks": {
+        "card": "unchanged",
+        "contract": "unchanged",
+        "cases": "failed"
+      },
+      "first_build": "built",
+      "first_build_message": "",
+      "literal_rule": "failed",
+      "cards_changed": [],
+      "cases_newly_failing": [
+        "top.help_flag"
+      ],
+      "card_execution_agreement": "ok",
+      "unit_tests_newly_failing": []
+    },
+    {
+      "id": "rename_identifier",
+      "entry": "result.admitted_finished",
+      "mutation": "Rename the row identity AdmittedFinished to AdmittedDone and update the contract node that cites it.",
+      "patch": "diff --git a/controller/interface/cards.rs b/controller/interface/cards.rs\nindex c10088c5..ba15f542 100644\n--- a/controller/interface/cards.rs\n+++ b/controller/interface/cards.rs\n@@ -171,7 +171,7 @@ pub fn fixed_dispositions() -> Vec<(Row, Disposition<'static>)> {\n                     .iter()\n                     .map(|refusal| (row, Disposition::AdmissionRefusal(*refusal))),\n             ),\n-            (Row::AdmittedFinished, _) => samples.push((\n+            (Row::AdmittedDone, _) => samples.push((\n                 row,\n                 Disposition::Admitted {\n                     host_outcome: Some(Label::Finished.spelling()),\ndiff --git a/controller/src/interface/result.rs b/controller/src/interface/result.rs\nindex f8e2eb20..09ab9441 100644\n--- a/controller/src/interface/result.rs\n+++ b/controller/src/interface/result.rs\n@@ -125,7 +125,7 @@ enumerated!(\n         LocalRequestRefusal,\n         ToolFailure,\n         AdmissionRefusal,\n-        AdmittedFinished,\n+        AdmittedDone,\n         AdmittedOther,\n         AdmittedUnavailable,\n     }\n@@ -163,7 +163,7 @@ impl Row {\n                 false,\n                 1,\n             ),\n-            Row::AdmittedFinished => (\n+            Row::AdmittedDone => (\n                 Class::Admitted,\n                 Host::Is(Label::Finished),\n                 Outcome::HostLabel,\ndiff --git a/docs/contract/40-envelope.surface.md b/docs/contract/40-envelope.surface.md\nindex 75857267..a5d5cb1d 100644\n--- a/docs/contract/40-envelope.surface.md\n+++ b/docs/contract/40-envelope.surface.md\n@@ -212,7 +212,7 @@ The observations and supported assessments state what the run establishes.\n #### Admitted finished outcome {finished: outcome}\n \n ```contract\n-interface: [\"result.admitted_finished\"]\n+interface: [\"result.admitted_done\"]\n test: envelope.data.runner_result.normalized_outcome == \"finished\"\n effects: [set_value(envelope.result.ok, True), set_value(envelope.result.exit_code, 0), set_value(envelope.result.normalized_outcome, envelope.data.runner_result.normalized_outcome), retain_records(envelope.data.runner_result)]\n ```\n",
+      "checks": {
+        "card": "unchanged",
+        "contract": "unchanged",
+        "cases": "unchanged"
+      },
+      "first_build": "stale_inventory",
+      "first_build_message": "controller/interface/inventory.json is stale",
+      "literal_rule": "unchanged",
+      "cards_changed": [],
+      "cases_newly_failing": [],
+      "card_execution_agreement": "ok",
+      "unit_tests_newly_failing": []
+    },
+    {
+      "id": "admission_condition",
+      "entry": "result.admitted_finished",
+      "mutation": "Change the finished row's host-label condition from finished to bad_request; contract facts not updated.",
+      "patch": "diff --git a/controller/src/interface/result.rs b/controller/src/interface/result.rs\nindex f8e2eb20..4358dca6 100644\n--- a/controller/src/interface/result.rs\n+++ b/controller/src/interface/result.rs\n@@ -165,7 +165,7 @@ impl Row {\n             ),\n             Row::AdmittedFinished => (\n                 Class::Admitted,\n-                Host::Is(Label::Finished),\n+                Host::Is(Label::BadRequest),\n                 Outcome::HostLabel,\n                 true,\n                 0,\n",
+      "checks": {
+        "card": "failed",
+        "contract": "unchanged",
+        "cases": "not_run"
+      },
+      "first_build": "card_validation",
+      "first_build_message": "help cards: AdmittedFinished does not select its own disposition",
+      "literal_rule": "unchanged"
+    },
+    {
+      "id": "row_order",
+      "entry": "result.admitted_other",
+      "mutation": "Move the other-admitted row before the finished row in the relation's order; contract facts not updated.",
+      "patch": "diff --git a/controller/src/interface/result.rs b/controller/src/interface/result.rs\nindex f8e2eb20..33cb4503 100644\n--- a/controller/src/interface/result.rs\n+++ b/controller/src/interface/result.rs\n@@ -125,8 +125,8 @@ enumerated!(\n         LocalRequestRefusal,\n         ToolFailure,\n         AdmissionRefusal,\n-        AdmittedFinished,\n         AdmittedOther,\n+        AdmittedFinished,\n         AdmittedUnavailable,\n     }\n );\n",
+      "checks": {
+        "card": "failed",
+        "contract": "unchanged",
+        "cases": "not_run"
+      },
+      "first_build": "card_validation",
+      "first_build_message": "help cards: AdmittedFinished does not select its own disposition",
+      "literal_rule": "unchanged"
+    },
+    {
+      "id": "flag_shaped_topic",
+      "entry": "topic.result",
+      "mutation": "Give the result topic the address --result.",
+      "patch": "diff --git a/controller/src/interface/commands.rs b/controller/src/interface/commands.rs\nindex 3fd93825..a548abc3 100644\n--- a/controller/src/interface/commands.rs\n+++ b/controller/src/interface/commands.rs\n@@ -96,7 +96,7 @@ impl Topic {\n         match self {\n             Topic::Run => Address::Command(Command::Run),\n             Topic::Example => Address::Command(Command::Example),\n-            Topic::Result => Address::Own(\"result\"),\n+            Topic::Result => Address::Own(\"--result\"),\n         }\n     }\n \n",
+      "checks": {
+        "card": "failed",
+        "contract": "unchanged",
+        "cases": "not_run"
+      },
+      "first_build": "card_validation",
+      "first_build_message": "help cards: topic Result has an empty or flag-shaped address",
+      "literal_rule": "unchanged"
+    },
+    {
+      "id": "tail_kind",
+      "entry": "tail.version",
+      "mutation": "Change the version command's tail rule from RefusesAny to Unenumerated.",
+      "patch": "diff --git a/controller/src/interface/commands.rs b/controller/src/interface/commands.rs\nindex 3fd93825..42df3216 100644\n--- a/controller/src/interface/commands.rs\n+++ b/controller/src/interface/commands.rs\n@@ -43,7 +43,7 @@ impl Command {\n             Command::TestInput => (\"test-input\", Tail::Unenumerated),\n             Command::Runner => (\"runner\", Tail::Unenumerated),\n             Command::VersionFlag => (\"--version\", Tail::RefusesAny),\n-            Command::Version => (\"version\", Tail::RefusesAny),\n+            Command::Version => (\"version\", Tail::Unenumerated),\n         };\n         CommandDef { spelling, tail }\n     }\n",
+      "checks": {
+        "card": "unchanged",
+        "contract": "unchanged",
+        "cases": "failed"
+      },
+      "first_build": "stale_inventory",
+      "first_build_message": "controller/interface/inventory.json is stale",
+      "literal_rule": "unchanged",
+      "residue_without_refresh": "refused",
+      "cards_changed": [],
+      "cases_newly_failing": [
+        "version.extra",
+        "version.help_flag"
+      ],
+      "card_execution_agreement": "ok",
+      "unit_tests_newly_failing": []
+    },
+    {
+      "id": "remove_alias",
+      "entry": "runner_kind.debuggable@registry",
+      "mutation": "Remove the registry reader's debuggable alias.",
+      "patch": "diff --git a/controller/src/interface/runner_kind.rs b/controller/src/interface/runner_kind.rs\nindex c6fa69e4..d46f75ca 100644\n--- a/controller/src/interface/runner_kind.rs\n+++ b/controller/src/interface/runner_kind.rs\n@@ -63,7 +63,7 @@ impl Word {\n     pub const fn rule(self, reader: Reader) -> Option<Rule> {\n         match (self, reader) {\n             (Word::Standard | Word::Byoxpc, _) => Some(Rule::Admits),\n-            (Word::Machme | Word::Debuggable, Reader::Registry) => Some(Rule::Alias),\n+            (Word::Machme, Reader::Registry) => Some(Rule::Alias),\n             (Word::Machme | Word::Debuggable, _) => None,\n         }\n     }\n",
+      "checks": {
+        "card": "unchanged",
+        "contract": "unchanged",
+        "cases": "unchanged"
+      },
+      "first_build": "stale_inventory",
+      "first_build_message": "controller/interface/inventory.json is stale",
+      "literal_rule": "unchanged",
+      "residue_without_refresh": "ok",
+      "cards_changed": [],
+      "cases_newly_failing": [],
+      "card_execution_agreement": "ok",
+      "unit_tests_newly_failing": [
+        "runner_manager::tests::legacy_debuggable_kind_deserializes_as_byoxpc",
+        "runner_manager::tests::legacy_metadata_survives_unrelated_writes_and_pending_cleanup"
+      ]
+    },
+    {
+      "id": "timeout_minimum",
+      "entry": "run.option.timeout_ms",
+      "mutation": "Lower the timeout option's minimum from 1 to 0, so that zero is admitted.",
+      "patch": "diff --git a/controller/src/interface/run_args.rs b/controller/src/interface/run_args.rs\nindex e2063f4a..ed3734e8 100644\n--- a/controller/src/interface/run_args.rs\n+++ b/controller/src/interface/run_args.rs\n@@ -27,7 +27,7 @@ pub struct RunOptionDef {\n impl RunOption {\n     pub const fn def(self) -> RunOptionDef {\n         let (spelling, value) = match self {\n-            RunOption::TimeoutMs => (\"--timeout-ms\", Value::Milliseconds { min: 1 }),\n+            RunOption::TimeoutMs => (\"--timeout-ms\", Value::Milliseconds { min: 0 }),\n             RunOption::RunnerMode => (\"--runner-mode\", Value::Kind(Reader::RunOption)),\n         };\n         RunOptionDef { spelling, value }\n",
+      "checks": {
+        "card": "unchanged",
+        "contract": "unchanged",
+        "cases": "failed"
+      },
+      "first_build": "stale_inventory",
+      "first_build_message": "controller/interface/inventory.json is stale",
+      "literal_rule": "unchanged",
+      "cards_changed": [],
+      "cases_newly_failing": [
+        "run.timeout_zero"
+      ],
+      "card_execution_agreement": "ok",
+      "unit_tests_newly_failing": [
+        "run_flow::tests::argument_errors_are_reported_before_any_runner_or_specimen_work"
+      ]
+    },
+    {
+      "id": "example_tail_rule",
+      "entry": "tail.example",
+      "mutation": "Change the example command's tail rule from RefusesAny to Unenumerated, so that its arguments reach the handler unrefused.",
+      "patch": "diff --git a/controller/src/interface/commands.rs b/controller/src/interface/commands.rs\nindex 3fd93825..067a958f 100644\n--- a/controller/src/interface/commands.rs\n+++ b/controller/src/interface/commands.rs\n@@ -39,7 +39,7 @@ impl Command {\n         let (spelling, tail) = match self {\n             Command::Help => (\"help\", Tail::Topic),\n             Command::Run => (\"run\", Tail::RunArguments),\n-            Command::Example => (\"example\", Tail::RefusesAny),\n+            Command::Example => (\"example\", Tail::Unenumerated),\n             Command::TestInput => (\"test-input\", Tail::Unenumerated),\n             Command::Runner => (\"runner\", Tail::Unenumerated),\n             Command::VersionFlag => (\"--version\", Tail::RefusesAny),\n",
+      "checks": {
+        "card": "unchanged",
+        "contract": "unchanged",
+        "cases": "failed"
+      },
+      "first_build": "stale_inventory",
+      "first_build_message": "controller/interface/inventory.json is stale",
+      "literal_rule": "unchanged",
+      "residue_without_refresh": "refused",
+      "cards_changed": [],
+      "cases_newly_failing": [
+        "example.h_flag",
+        "example.help_flag",
+        "example.help_word"
+      ],
+      "card_execution_agreement": "ok",
+      "unit_tests_newly_failing": [
+        "example::tests::refusals_are_typed_and_write_nothing"
+      ]
+    },
+    {
+      "id": "topic_address",
+      "entry": "topic.result",
+      "mutation": "Rename the result topic's own address from result to outcome.",
+      "patch": "diff --git a/controller/src/interface/commands.rs b/controller/src/interface/commands.rs\nindex 3fd93825..048b9508 100644\n--- a/controller/src/interface/commands.rs\n+++ b/controller/src/interface/commands.rs\n@@ -96,7 +96,7 @@ impl Topic {\n         match self {\n             Topic::Run => Address::Command(Command::Run),\n             Topic::Example => Address::Command(Command::Example),\n-            Topic::Result => Address::Own(\"result\"),\n+            Topic::Result => Address::Own(\"outcome\"),\n         }\n     }\n \n",
+      "checks": {
+        "card": "changed",
+        "contract": "unchanged",
+        "cases": "failed"
+      },
+      "first_build": "stale_inventory",
+      "first_build_message": "controller/interface/inventory.json is stale",
+      "literal_rule": "unchanged",
+      "cards_changed": [
+        "base",
+        "result"
+      ],
+      "cases_newly_failing": [
+        "help.base",
+        "help.bogus",
+        "help.bogus.run",
+        "help.empty",
+        "help.flag_shaped_run",
+        "help.h_flag",
+        "help.help_flag",
+        "help.non_utf8",
+        "help.result",
+        "help.result.bad_flag",
+        "help.result.extra",
+        "help.terminator_run",
+        "help.uppercase_topic"
+      ],
+      "card_execution_agreement": "ok",
+      "unit_tests_newly_failing": []
+    },
+    {
+      "id": "command_spelling",
+      "entry": "command.example",
+      "mutation": "Rename the example command's spelling from example to specimen.",
+      "patch": "diff --git a/controller/src/interface/commands.rs b/controller/src/interface/commands.rs\nindex 3fd93825..d3b50014 100644\n--- a/controller/src/interface/commands.rs\n+++ b/controller/src/interface/commands.rs\n@@ -39,7 +39,7 @@ impl Command {\n         let (spelling, tail) = match self {\n             Command::Help => (\"help\", Tail::Topic),\n             Command::Run => (\"run\", Tail::RunArguments),\n-            Command::Example => (\"example\", Tail::RefusesAny),\n+            Command::Example => (\"specimen\", Tail::RefusesAny),\n             Command::TestInput => (\"test-input\", Tail::Unenumerated),\n             Command::Runner => (\"runner\", Tail::Unenumerated),\n             Command::VersionFlag => (\"--version\", Tail::RefusesAny),\n",
+      "checks": {
+        "card": "changed",
+        "contract": "unchanged",
+        "cases": "failed"
+      },
+      "first_build": "stale_inventory",
+      "first_build_message": "controller/interface/inventory.json is stale",
+      "literal_rule": "unchanged",
+      "cards_changed": [
+        "base",
+        "example"
+      ],
+      "cases_newly_failing": [
+        "example.h_flag",
+        "example.help_flag",
+        "example.help_word",
+        "example.publish",
+        "help.base",
+        "help.bogus",
+        "help.bogus.run",
+        "help.empty",
+        "help.example",
+        "help.example.extra",
+        "help.flag_shaped_run",
+        "help.h_flag",
+        "help.help_flag",
+        "help.non_utf8",
+        "help.terminator_run",
+        "help.uppercase_topic"
+      ],
+      "card_execution_agreement": "FAILED",
+      "unit_tests_newly_failing": []
+    }
+  ],
+  "declared_associations": [
+    {
+      "case": "run.request_mode_machme",
+      "entry": "result.local_request_refusal",
+      "reason": "The required fields bad_request, false and 1 are also what an admitted host bad_request selects; the case's refusal is the controller's because no client is invoked for a refused selector."
+    },
+    {
+      "case": "run.request_mode_byoxpc_without_selector",
+      "entry": "result.local_request_refusal",
+      "reason": "The required fields bad_request, false and 1 are also what an admitted host bad_request selects; the case's refusal is the controller's because no client is invoked for a refused selector."
+    },
+    {
+      "case": "run.request_mode_standard_with_external_id",
+      "entry": "result.local_request_refusal",
+      "reason": "The required fields bad_request, false and 1 are also what an admitted host bad_request selects; the case's refusal is the controller's because no client is invoked for a refused selector."
+    },
+    {
+      "case": "runner.install.kind_standard",
+      "entry": "runner_kind.standard@install_option",
+      "reason": "The word follows an option of the unenumerated runner tail, which the inventory does not spell."
+    },
+    {
+      "case": "runner.install.kind_byoxpc",
+      "entry": "runner_kind.byoxpc@install_option",
+      "reason": "The word follows an option of the unenumerated runner tail, which the inventory does not spell."
+    }
+  ],
+  "observed_on": {
+    "tree": "the implementing tree before this record was added",
+    "build": "unsigned debug build in a scratch app directory",
+    "baseline_cases_failing": [
+      "example.save_and_run"
+    ],
+    "baseline_note": "example.save_and_run needs a runner, which the scratch app directory lacks"
+  }
+}

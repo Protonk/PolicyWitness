@@ -325,13 +325,14 @@
         "full",
         "partial"
       ],
-      "reads": "docs/contract/*.surface.md, imported public record declarations, canonical shapes, the generated public snapshot and annotated release history; docs/architecture.json and their generated copies; docs/footprint.json and its generated document; docs/porcelain.json and its generated typed record declarations and codecs",
+      "reads": "docs/contract/*.surface.md, imported public record declarations, canonical shapes, the generated public snapshot and annotated release history; docs/architecture.json and their generated copies; docs/footprint.json and its generated document; docs/porcelain.json and its generated typed record declarations and codecs; controller/interface/inventory.json with the case corpus, the mutation record, the joins and the residue baseline",
       "writes": "nothing",
       "refusals": [
         "stale_contract_stamps",
         "stale_architecture",
         "stale_footprint",
-        "stale_porcelain"
+        "stale_porcelain",
+        "stale_interface"
       ],
       "sources": [
         {
@@ -768,7 +769,7 @@
         "full",
         "partial"
       ],
-      "reads": "cargo on PATH with its configuration, caches and registries; controller/ sources and the output triple passed with --target, the stamp variables, MACOSX_DEPLOYMENT_TARGET, SDKROOT and RUSTFLAGS; the artifact paths and per-target reuse judgments Cargo reports, each a literal boolean bound to the shipped target, a typed non-test profile and the admitted executable, and Cargo's fingerprint for each shipped target; each shipped output's container, architecture names and platform, from its header, lipo -archs and its load commands",
+      "reads": "cargo on PATH with its configuration, caches and registries; controller/ sources, which the package's build script compiles a second time to render the help cards and the interface inventory and to compare that inventory with the committed controller/interface/inventory.json, and the output triple passed with --target, the stamp variables, MACOSX_DEPLOYMENT_TARGET, SDKROOT and RUSTFLAGS; the artifact paths and per-target reuse judgments Cargo reports, each a literal boolean bound to the shipped target, a typed non-test profile and the admitted executable, and Cargo's fingerprint for each shipped target; each shipped output's container, architecture names and platform, from its header, lipo -archs and its load commands",
       "writes": "controller/target/aarch64-apple-darwin/release/ under the pinned output directory for the shipped executables and controller/target/release/ for build scripts and procedural macros, the messages file Cargo reports its artifacts in, and the output check's observations and the judgments into the build session",
       "refusals": [
         "cargo_artifact_elsewhere",
@@ -3338,6 +3339,49 @@
       ]
     },
     {
+      "id": "stale_interface",
+      "message": "interface: stale",
+      "kind": "propagated",
+      "steps": [
+        "check_contract_stamps"
+      ],
+      "status": "1",
+      "variants": [
+        "full",
+        "partial"
+      ],
+      "sources": [
+        {
+          "path": "build.sh",
+          "symbol": "generate_interface.py"
+        },
+        {
+          "path": "docs/generate_interface.py",
+          "symbol": "stale: "
+        }
+      ],
+      "checks": [
+        {
+          "path": "tests/suites/source_drift/build_rules.py",
+          "symbol": "check_propagated_refusals",
+          "form": "rule",
+          "coverage": "textual"
+        },
+        {
+          "path": "tests/suites/source_drift/generators.py",
+          "symbol": "test_build_checks_every_generator_before_signing",
+          "form": "test",
+          "coverage": "textual"
+        },
+        {
+          "path": "tests/suites/preflight/check_build_entry.py",
+          "symbol": "test_build_refuses_a_stale_interface_copy_before_compiling",
+          "form": "test",
+          "coverage": "behavioral"
+        }
+      ]
+    },
+    {
       "id": "stale_build_doc",
       "message": "build documentation is stale",
       "kind": "propagated",
@@ -4563,6 +4607,35 @@
         {
           "path": "build.sh",
           "symbol": "docs/generate_porcelain.py\" --check"
+        }
+      ],
+      "checks": [
+        {
+          "path": "tests/suites/source_drift/build_rules.py",
+          "symbol": "check_invocations",
+          "form": "rule",
+          "coverage": "textual"
+        },
+        {
+          "path": "tests/suites/source_drift/generators.py",
+          "symbol": "test_build_checks_every_generator_before_signing",
+          "form": "test",
+          "coverage": "textual"
+        }
+      ]
+    },
+    {
+      "id": "inv_interface_check",
+      "command": "docs/generate_interface.py --check",
+      "step": "check_contract_stamps",
+      "variants": [
+        "full",
+        "partial"
+      ],
+      "sources": [
+        {
+          "path": "build.sh",
+          "symbol": "docs/generate_interface.py\" --check"
         }
       ],
       "checks": [

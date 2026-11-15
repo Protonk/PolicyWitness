@@ -55,6 +55,17 @@ if test_selected "${PW_TEST_ID}"; then
   test_pass "footprint manifest and tables agree; malformed and stale inputs are rejected" "{\"log\":\"${RUN_LOG}\"}"
 fi
 
+PW_TEST_ID="interface_inventory"
+if test_selected "${PW_TEST_ID}"; then
+  test_begin "${PW_TEST_SUITE}" "${PW_TEST_ID}"
+  test_step interface "check the interface inventory, its joins and residue baseline, the contract join and the literal rule"
+  RUN_LOG="${PW_TEST_ARTIFACTS}/interface.log"
+  if ! "${PW_PYTHON}" -B -S "${ROOT_DIR}/tests/suites/source_drift/interface.py" >"${RUN_LOG}" 2>&1; then
+    test_fail "interface inventory controls failed" "{\"log\":\"${RUN_LOG}\"}"
+  fi
+  test_pass "interface inventory, joins and residue baseline agree; stale, inconsistent, residue, contract and literal controls are rejected" "{\"log\":\"${RUN_LOG}\"}"
+fi
+
 PW_TEST_ID="build_contracts"
 if test_selected "${PW_TEST_ID}"; then
   test_begin "${PW_TEST_SUITE}" "${PW_TEST_ID}"

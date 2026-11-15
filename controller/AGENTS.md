@@ -55,7 +55,19 @@ independent consumers, fixtures, shape goldens and documentation. Use the
 do not hand-edit generated contracts, limits, layouts or worker identity.
 Native source additions/moves also require the owning Meson target.
 
-Keep the README's CLI block synchronized with [cli.rs](src/cli.rs).
+A spelling that dispatch, help selection, `run`'s parser or a runner-kind
+reader recognizes is a definition in [src/interface/](src/interface/), never
+a literal compared beside the tables; a help card's content is a typed
+reference in [cards.rs](interface/cards.rs), never text. After changing a
+definition, a card specification or the example document, regenerate the
+[interface inventory](interface/README.md#commands) and review its diff with
+the residue baseline; the build script refuses a stale copy. Keep the
+README's command block equal to the inventory's command spellings.
+
+Result selection for a run envelope has one owner, the relation in
+[result.rs](src/interface/result.rs). Do not choose an outcome label, a
+success value or an exit status for it anywhere else.
+
 Put public field definitions in the [contract sources](../docs/contract/README.md),
 user workflows in the guide, implementation responsibilities in this README, and detailed assertions beside their suites. Preserve inbound
 anchors when condensing documentation, or update their callers together.
@@ -70,6 +82,7 @@ Select the cases that establish the change:
 | --- | --- |
 | Rust helpers, orchestration or formatting | [unit](../tests/suites/unit/README.md): binary unit tests, controlled dependencies and rustfmt. |
 | Public CLI arguments and envelope behavior | [integration](../tests/suites/integration/README.md); use live suites when the behavior needs XPC or the kernel. |
+| Interface definitions, help cards, result selection or the example document | The [interface routes](../tests/CHANGE-VERIFICATION.md#interface-definitions-and-help-cards): `unit`, `integration` and `source_drift`, and the mutation record when a governing definition changes. |
 | Request/reply admission or evidence interpretation | [failure_boundaries](../tests/suites/failure_boundaries/README.md), [blackbox_e2e](../tests/suites/blackbox_e2e/README.md) consumer controls and affected [witness_contract](../tests/suites/witness_contract/README.md) cases; follow the coordinated runner checks in test guidance. |
 | Selection, signing, registry or recovery | Rust selection/registry controls and applicable [runner_byoxpc](../tests/suites/runner_byoxpc/README.md) cases, including applicable controls in the [change-verification guide](../tests/CHANGE-VERIFICATION.md). |
 | Documentation or generated contracts | [source_drift](../tests/suites/source_drift/README.md), plus behavioral checks when meanings change. |
