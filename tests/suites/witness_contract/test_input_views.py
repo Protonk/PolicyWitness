@@ -43,7 +43,8 @@ PAIRS = (
 
 def facts(passage, reply, step_id='read-target'):
     document = c.parsed(c.get(passage, 'capture', 'input'))
-    submitted = next((s for s in (c.get(document, 'probe_plan') or []) if s.get('step_id') == step_id), None)
+    declared = (c.get(document, 'probe_plan') or []) + [s for p in (c.get(document, 'phases') or []) for s in p.get('actions', [])]
+    submitted = next((s for s in declared if s.get('step_id') == step_id), None)
     step = next((s for s in (c.get(reply, 'steps') or []) if s.get('step_id') == step_id), None)
     sample = (c.get(passage, 'peer', 'before') if c.get(submitted, 'attempt', 'target') != c.get(passage, 'before', 'target') else passage.get('before'))
     if submitted is None or step is None or not isinstance(sample, dict) or not sample.get('readable'):
@@ -73,17 +74,26 @@ def facts(passage, reply, step_id='read-target'):
     }
 
 
+FIELDS = ('request_bytes', 'query_operation', 'query_target', 'attempt_target', 'query', 'attempt', 'descriptor_identity',
+          'content', 'external.length', 'external.sha256', 'external.prefix_sha256', 'external.device', 'external.inode', 'ownership')
+
+
 def distinction_rows(r, state, admitted):
     rows = []
     pairs = [(left, 'read-target', right, 'read-target', diff) for left, right, diff in PAIRS]
     pairs += [('crossed', 'read-aa', 'crossed', 'read-ba', {'query_target', 'query'}),
               ('crossed', 'read-aa', 'crossed', 'read-ab', {'attempt_target', 'attempt', 'descriptor_identity', 'content', 'external.inode'}),
               ('crossed', 'read-bb', 'crossed', 'metadata-b', {'query_operation', 'query'})]
+    actor_input = c.expected_inputs(state)['returning']
+    actor_ids = [s['step_id'] for p in actor_input['phases'] for s in p['actions']]
+    pairs += [('crossed', row[0], 'returning', ident, {'request_bytes', 'ownership'}) for row, ident in zip(c.MATRIX, actor_ids)]
     for left, left_id, right, right_id, differences in pairs:
         a, b = [facts(state['passages'].get(name) or {}, admitted.get(name), ident) for name, ident in ((left, left_id), (right, right_id))]
         observed = {k: 'equal' if a[k] == b[k] else 'different' for k in a} if a is not None and b is not None else None
-        expected = {k: 'different' if k in differences else 'equal' for k in (a or b or {})}
+        expected = {k: 'different' if k in differences else 'equal' for k in FIELDS}
         ident = 'distinction.' + (left + '--' + right if left != right else left + '.' + left_id + '--' + right_id)
+        if right == 'returning':
+            ident += '.' + left_id
         r.check(ident, observed == expected, dict(expected=expected, observed=observed), available=observed is not None)
         rows.append(dict(id=ident, expected=expected, observed=observed))
     return rows

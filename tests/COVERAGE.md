@@ -156,11 +156,12 @@ completed attempts and independent cleanup evidence. No new normalized or
 attempt outcome names are introduced by phases.
 
 The default `witness_contract/test_input` qualifies the signed read publisher's
-verbatim target binding and twelve controlled passages: eleven executions and one
+verbatim target binding and thirteen controlled passages: twelve executions and one
 closed-field refusal. Independent descriptor samples discriminate identical-byte
 files, replacement generations and empty/short/exact/long content boundaries;
 the distinction table records accepted indistinguishability and crossed query,
-attempt and operation observations. Policy variants pin query answers separately
+attempt and operation observations, including a returning two-actor form with
+distinct visit numbers and global phase ordinals. Policy variants pin query answers separately
 from native attempt outcomes. `test_input_controls` checks exact diagnostics,
 coherent wrong-file/stale-content/whole-capture substitutions, completion gaps
 and actual publication preflight. See the [owning account](suites/witness_contract/README.md#controlled-read-input)

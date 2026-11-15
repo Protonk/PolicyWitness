@@ -107,6 +107,17 @@ def cleanup_disposition(capture, identity, *, refusal=False, authored_fixture=Fa
     return False, reason
 
 
+
+def crossed_gate(directory, state, *, authored_fixture=False):
+    """Only the same acquisition's established matrix permits the actor derivative."""
+    report = checker.evaluate(state, authored_fixture=authored_fixture)
+    rows = [row for row in report['rows'] if row['id'].startswith(('crossed.', 'distinction.crossed.'))]
+    passed = bool(rows) and all(row['status'] == 'passed' for row in rows)
+    (Path(directory) / 'crossed-gate.json').write_text(checker.encode(dict(ok=passed, rows=rows)))
+    if not passed:
+        raise ValueError('crossed native expectations failed; returning form not submitted')
+
+
 def run_case(directory, pw, app, snapshot):
     directory = Path(directory)
     directory.mkdir(parents=True)
@@ -159,7 +170,7 @@ def run_case(directory, pw, app, snapshot):
             current_identity = (checker.get(observed_before, 'stat', 'st_dev'),
                                 checker.get(observed_before, 'stat', 'st_ino'))
             retained = target not in identities or identities[target] == current_identity
-            peer = observe_target(paths['B'], checker.BOUND) if name == 'crossed' else None
+            peer = observe_target(paths['B'], checker.BOUND) if name in ('crossed', 'returning') else None
             preflight = dict(transformation=transformed, fixture=fixture, retained_identity=retained)
             if peer is not None:
                 preflight['peer'] = checker.sample_ok(peer, paths['B'], checker.LONG) and (peer['stat']['st_dev'], peer['stat']['st_ino']) == identities[paths['B']]
@@ -170,7 +181,7 @@ def run_case(directory, pw, app, snapshot):
             capture = dict(input=input_path.read_text(), request_path=str(input_path))
             state['passages'][name] = dict(before=observed_before, after=None, capture=capture)
             companions = dict(parked=paths['A'] + '.previous', bystander=paths['B']) if name in checker.REPLACEMENTS else {}
-            if name == 'crossed':
+            if name in ('crossed', 'returning'):
                 companions['peer'] = paths['B']
             for key, path in companions.items():
                 state['passages'][name][key] = dict(before=peer if key == 'peer' else observe_target(path, checker.BOUND), after=None)
@@ -243,6 +254,14 @@ def run_case(directory, pw, app, snapshot):
             row['attempt']['target'] = paths[attempted]
             crossed['probe_plan'].append(row)
         passage('crossed', checker.encode(crossed), paths['A'])
+        crossed_gate(directory, state)
+        returning = dict(contract=crossed['contract'], specimen_id=crossed['specimen_id'],
+                         actors=[dict(actor_id=actor, equipment='selected',
+                                      sandbox=dict(mode='apply', policy=copy.deepcopy(crossed['policy']))) for actor in ('Left', 'Right')],
+                         phases=[dict(phase_id=phase, actor_id=actor, actions=copy.deepcopy(crossed['probe_plan'][start:stop]))
+                                 for phase, actor, start, stop in (('left-first', 'Left', 0, 2),
+                                     ('right-only', 'Right', 2, 3), ('left-second', 'Left', 3, 5))])
+        passage('returning', checker.encode(returning), paths['A'])
         original = observe_target(paths['A'], checker.BOUND)
         temporary, previous = Path(paths['A'] + '.replacement'), Path(paths['A'] + '.previous')
         temporary.write_bytes(checker.LONG)
@@ -280,8 +299,8 @@ def run_case(directory, pw, app, snapshot):
         (directory / 'accounting.json').write_text(checker.encode(accounting))
         counted = {key: accounting[key] for key in ('submissions', 'execution_passages', 'refusals',
                                                     'publication_commands', 'version_commands')}
-        assert counted == dict(submissions=12, execution_passages=11, refusals=1, publication_commands=4,
-                               version_commands=1) and len(commands) == 17, accounting
+        assert counted == dict(submissions=13, execution_passages=12, refusals=1, publication_commands=4,
+                               version_commands=1) and len(commands) == 18, accounting
     finally:
         cleanup_safe = all(entry['worker_exit_witnessed'] for entry in ownership['attempts'])
         try:

@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Independent expectations for the developer read publisher and seven passages.
+"""Independent expectations for the developer read publisher and controlled passages.
 
 Publication, observed process status, internal validity and external correspondence
 are separate obligations. Samples and fixture transitions live outside replaceable
@@ -22,7 +22,7 @@ SHORT_1 = b'b' * (BOUND - 1)
 PREFIX = SHORT_1 + b'c'
 LONG = PREFIX + b'd'
 REPLACEMENTS = ('replaced_a', 'suffix_a', 'empty_a', 'bound_a')
-PASSAGES = ('initial_a', 'updated_a', 'b', 'refusal', 'repair', 'denied_b', 'allowed_a', 'crossed') + REPLACEMENTS
+PASSAGES = ('initial_a', 'updated_a', 'b', 'refusal', 'repair', 'denied_b', 'allowed_a', 'crossed', 'returning') + REPLACEMENTS
 UNKNOWN = 'test_input_unknown_field'
 ALLOW = '(version 1)\n(allow default)'
 PACKAGED = re.compile(r'(?:release:v[0-9]+\.[0-9]+\.[0-9]+|development:[0-9a-f]{64})')
@@ -139,7 +139,9 @@ def expected_inputs(state):
     allowed['policy'] = copy.deepcopy(denied['policy'])
     crossed = copy.deepcopy(denied)
     crossed['probe_plan'] = matrix_steps(state['paths'])
-    return dict(crossed=crossed, initial_a=a, updated_a=a, b=b, refusal=refusal, repair=b, denied_b=denied, allowed_a=allowed,
+    from test_input_actors import expected as expected_actor
+    returning = expected_actor(state['publication']['identity'], state['paths'], parsed(get(state, 'passages', 'returning', 'capture', 'input')))
+    return dict(returning=returning, crossed=crossed, initial_a=a, updated_a=a, b=b, refusal=refusal, repair=b, denied_b=denied, allowed_a=allowed,
                 **{name: allowed for name in REPLACEMENTS})
 
 
@@ -232,7 +234,7 @@ def evaluate(state, *, authored_fixture=False):
         if name in REPLACEMENTS:
             same_bytes = capture.get('input') == get(passages, 'allowed_a', 'capture', 'input')
         r.check(name + '.transformation', document == expected[name] and same_bytes, 'declared derivative or exact emitted bytes')
-        target = paths['A' if name in ('initial_a', 'updated_a', 'allowed_a', 'crossed') + REPLACEMENTS else 'B']
+        target = paths['A' if name in ('initial_a', 'updated_a', 'allowed_a', 'crossed', 'returning') + REPLACEMENTS else 'B']
         payload = payload_for(name)
         before, after = p.get('before'), p.get('after')
         readable = sample_ok(before, target, payload)
@@ -242,6 +244,9 @@ def evaluate(state, *, authored_fixture=False):
         r.check(name + '.stability', not changes and isinstance(after, dict), str(changes), available=readable)
         r.check(name + '.after_fixture', readable_after, 'resolved regular file and exact bytes after passage')
         r.check(name + '.fixture', readable, 'resolved regular file and exact independently prepared bytes')
+        if name in ('refusal', 'repair', 'denied_b'):
+            r.check(name + '.generation', all(get(before, 'stat', f) == get(b_sample, 'stat', f)
+                    for f in ('st_dev', 'st_ino')), 'B retains its first sampled identity between submissions')
         run = capture.get('run') or {}
         envelope = parsed(run.get('stdout'))
         wanted_exit = 1 if name == 'refusal' else 0
@@ -264,8 +269,20 @@ def evaluate(state, *, authored_fixture=False):
                     not reply.get('phases'), 'exact host refusal and reported absence of execution records')
             continue
         available = isinstance(reply, dict)
-        r.check(name + '.reply', available, 'identity-admitted ordinary reply')
+        r.check(name + '.reply', available, 'identity-admitted reply')
         reply = mapping(reply)
+        if name in ('crossed', 'returning'):
+            peer_before, peer_after = get(p, 'peer', 'before'), get(p, 'peer', 'after')
+            r.check(name + '.peer', sample_ok(peer_before, paths['B'], LONG) and sample_ok(peer_after, paths['B'], LONG) and
+                    not target_changes({paths['B']: peer_before} if isinstance(peer_before, dict) else {}, {paths['B']: peer_after}) and
+                    get(peer_before, 'stat', 'st_ino') == get(b_sample, 'stat', 'st_ino'), 'unchanged independently sampled B')
+            r.check(name + '.generation', all((get(s, 'stat', 'st_dev'), get(s, 'stat', 'st_ino')) == a_ids[0] for s in (before, after)),
+                    'original A generation across the matrix')
+        if name == 'returning':
+            from test_input_actors import rows as actor_rows
+            actor_rows(r, p, reply, envelope, expected[name], available=available,
+                       stable=available and readable and readable_after and not changes)
+            continue
         step = mapping(get(reply, 'steps', 0))
         planned = expected[name]['probe_plan']
         ids = [s['step_id'] for s in planned]
@@ -295,12 +312,6 @@ def evaluate(state, *, authored_fixture=False):
             order.get('validator_disposition') == 'reaped' and order.get('protocol_violations') == []
         r.check(name + '.collections', collections_ok, 'phase arrival/completion and collection/release chain', available=available)
         if name == 'crossed':
-            peer_before, peer_after = get(p, 'peer', 'before'), get(p, 'peer', 'after')
-            r.check(name + '.peer', sample_ok(peer_before, paths['B'], LONG) and sample_ok(peer_after, paths['B'], LONG) and
-                    not target_changes({paths['B']: peer_before} if isinstance(peer_before, dict) else {}, {paths['B']: peer_after}) and
-                    get(peer_before, 'stat', 'st_ino') == get(b_sample, 'stat', 'st_ino'), 'unchanged independently sampled B')
-            r.check(name + '.generation', all((get(s, 'stat', 'st_dev'), get(s, 'stat', 'st_ino')) == a_ids[0] for s in (before, after)),
-                    'original A generation across the matrix')
             for submitted, (_, _, _, _, denied, failed) in zip(planned, MATRIX):
                 matches = [s for s in reply.get('steps', []) if s.get('step_id') == submitted['step_id']]
                 row = mapping(matches[0]) if len(matches) == 1 else {}

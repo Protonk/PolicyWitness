@@ -123,13 +123,13 @@ def build():
     state = dict(paths=dict(PATHS), publication=public, passages={}, extended_a=sample(PATHS['A'], checker.LONG, 41))
     documents = checker.expected_inputs(state)
     for name in checker.PASSAGES:
-        letter = 'A' if name in ('initial_a', 'updated_a', 'allowed_a', 'crossed') + checker.REPLACEMENTS else 'B'
+        letter = 'A' if name in ('initial_a', 'updated_a', 'allowed_a', 'crossed', 'returning') + checker.REPLACEMENTS else 'B'
         payload = checker.payload_for(name)
         observed = sample(PATHS[letter], payload, 43 if name in checker.REPLACEMENTS else 41 if letter == 'A' else 42)
         raw = checker.encode(documents[name])
         state['passages'][name] = dict(before=observed, after=copy.deepcopy(observed), capture=dict(input=raw,
             request_path='/constructed/input.json', run=run_record(name, documents[name], observed, raw)))
-        if name == 'crossed':
+        if name in ('crossed', 'returning'):
             state['passages'][name]['peer'] = {t: sample(PATHS['B'], checker.LONG, 42) for t in ('before', 'after')}
         if name in checker.REPLACEMENTS:
             for key, target, inode in (('parked', PATHS['A'] + '.previous', 41), ('bystander', PATHS['B'], 42)):
@@ -142,7 +142,11 @@ def build():
 
 def run_record(outcome, document, observed, raw):
     """A coherent run of `document` with the named passage's outcome, delivered as `raw`."""
-    env = matrix_envelope(document, observed) if outcome == 'crossed' else envelope(outcome, document, observed)
+    if outcome == 'returning':
+        from test_input_actor_controls import envelope as actor_envelope
+        env = actor_envelope(document, observed)
+    else:
+        env = matrix_envelope(document, observed) if outcome == 'crossed' else envelope(outcome, document, observed)
     env['data']['runner_client']['request_delivery']['bytes_written'] = len(raw.encode()) - 1
     return dict(argv=['constructed', 'run', '/constructed/input.json'], stdout=checker.encode(env), stderr='',
                 exit=1 if outcome == 'refusal' else 0)
@@ -237,8 +241,12 @@ def controls():
     yield 'order_uncredited_beside_wrong_answer', wrong_answer_and_order, failed('b.collections', 'b.query') | {('b.order', 'not_evaluated')}
     # Fixture relationships the experiment depends on, with captures that agree with the earlier inodes.
     yield 'a_replaced_instead_of_updated', lambda s: resample(s, ['updated_a'], 43), failed('fixtures', 'updated_a.identity')
-    yield 'b_shares_a_inode', lambda s: resample(s, ['b', 'refusal', 'repair', 'denied_b'], 41), failed('fixtures', 'b.identity', 'repair.identity', 'crossed.peer',
+    yield 'b_shares_a_inode', lambda s: resample(s, ['b', 'refusal', 'repair', 'denied_b'], 41), failed('fixtures', 'b.identity', 'repair.identity', 'crossed.peer', 'returning.peer',
         *(name + '.bystander' for name in checker.REPLACEMENTS))
+    def changed_b(s):
+        resample(s, ['repair'], 44)
+        mutate_capture(s, 'repair', lambda e: attempt(e)['fresh_read']['identity'].update(inode=44))
+    yield 'b_changed_between_passages', changed_b, failed('repair.generation')
     def other_acquisition(s):
         s['publication']['targets']['b'] = PATHS['A']
     yield 'publication_recorded_for_other_target', other_acquisition, failed('publication.targets', 'publication.b.binding', 'publication.b.invocation')
@@ -490,21 +498,31 @@ def main(directory):
     directory = Path(directory)
     records = []
     rejected = set()
-    for coherent, group in ((True, controls()), (True, boundary_controls()), (True, matrix_controls()), (False, unadmitted_controls())):
-        for name, change, expected in group:
-            state = build()
-            change(state)
-            report = checker.evaluate(state, authored_fixture=True)
-            dest = directory / name
-            dest.mkdir()
-            (dest / 'state.json').write_text(checker.encode(state))
-            checker.write_report(dest, report)
-            found = checker.diagnostics(report)
-            assert found == expected, (name, sorted(expected), sorted(found))
-            # Correspondence controls are coherent to the consumer; only the unadmitted group is not.
-            assert coherent is not any(ident.endswith('.consumer') for ident, _ in found), name
-            rejected |= {kind(ident) for ident, status in found if status == 'failed'}
-            records.append(dict(name=name, expected=sorted(expected), actual=sorted(found), consumer_accepted=coherent))
+    from test_input_actor_controls import controls as actor_controls
+    groups = [(coherent, name, change, expected)
+              for coherent, group in ((True, controls()), (True, boundary_controls()), (True, matrix_controls()), (False, unadmitted_controls()))
+              for name, change, expected in group] + list(actor_controls())
+    # Independently named cross-form consequences of the existing matrix controls.
+    form_faults = dict(matrix_query_operand=['read-ba'], matrix_attempt_operand=['read-ab'], matrix_query_operation=['metadata-b'],
+                       matrix_wrong_query=['read-ba'], matrix_wrong_attempt=['read-ba'], matrix_equal_bytes_wrong_object=['read-ba'],
+                       matrix_other_step_under_id=['read-aa', 'read-ba'])
+    for coherent, name, change, expected in groups:
+        expected = expected | {(f'distinction.crossed--returning.{ident}', 'failed') for ident in form_faults.get(name, ())}
+        if name == 'matrix_omitted':
+            expected |= {('distinction.crossed--returning.metadata-b', 'not_evaluated')}
+        state = build()
+        change(state)
+        report = checker.evaluate(state, authored_fixture=True)
+        dest = directory / name
+        dest.mkdir()
+        (dest / 'state.json').write_text(checker.encode(state))
+        checker.write_report(dest, report)
+        found = checker.diagnostics(report)
+        assert found == expected, (name, sorted(expected), sorted(found))
+        # Correspondence controls are coherent to the consumer; only the unadmitted group is not.
+        assert coherent is not any(ident.endswith('.consumer') for ident, _ in found), name
+        rejected |= {kind(ident) for ident, status in found if status == 'failed'}
+        records.append(dict(name=name, expected=sorted(expected), actual=sorted(found), consumer_accepted=coherent))
     preparation = directory / 'preparation'
     preparation.mkdir()
     prepared = preparation_controls(preparation)
@@ -514,6 +532,21 @@ def main(directory):
     assert obligations == rejected, (sorted(obligations - rejected), sorted(rejected - obligations))
     records.extend(prepared)
     records.extend(cleanup_controls(directory))
+    # Exercise the actual acquisition gate before allowing the actor derivative.
+    for name, changed in (('matrix_gate_accepted', False), ('matrix_gate_wrong_query', True)):
+        state = build()
+        if changed:
+            mutate_capture(state, 'crossed', lambda e: set_query(e, False, 2))
+        dest = directory / name
+        dest.mkdir()
+        reached_derivative = False
+        try:
+            driver.crossed_gate(dest, state, authored_fixture=True)
+            reached_derivative = True
+        except ValueError:
+            pass
+        assert reached_derivative is not changed, name
+        records.append(dict(name=name, reached_derivative=reached_derivative))
     (directory / 'controls.json').write_text(checker.encode(records))
     print(f'{len(records)} exact controls matched')
 

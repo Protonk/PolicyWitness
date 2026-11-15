@@ -1018,7 +1018,8 @@ observer, select `witness_contract/test_input_controls` and
 `witness_contract/test_input` with `unit`, `integration` and `source_drift`.
 For harness-only passage, checker or control changes, the two test-input cases
 and `source_drift` suffice; inspect their exact diagnostics, distinction table,
-command accounting and cleanup receipt. Shared file-observation changes also require both example round-trip cases and
+command accounting, the crossed-to-returning gate and each actor's cleanup
+receipt. Shared file-observation changes also require both example round-trip cases and
 `blackbox_e2e/checker_controls`. The request corpus remains independently owned;
 loader changes require `runner_unit`, `runner_c_worker_harness` and
 `runner_outcome_bad_request/accepted_input_contract`. Changes to ordinary guide

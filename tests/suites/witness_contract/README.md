@@ -84,13 +84,14 @@ literal `$EFFECT`, quotes, a backslash and Unicode. Failed preparation prevents
 sampling, derivatives and submission.
 
 The case owns a resolved private directory under `/private/tmp`, retained byte
-recipes and descriptor samples. Twelve ordinary submissions cover initial A,
+recipes and descriptor samples. Thirteen submissions cover initial A,
 in-place updated A using the exact saved request, long B, a harness-injected
 unknown-field refusal, exact repair, denied B and allowed A under the identical
-policy, then replacement A, a suffix-only update, an empty file and an exactly
-bounded file, plus a five-step crossed matrix before replacement. Eleven execute; one is refused. Four publications and one version
-command make seventeen CLI invocations. A and B have equal long content/device/mode/owner/
-group and different inodes; A's inode survives both updates. Before/after
+policy, then the crossed matrix and returning actors, replacement A, a
+suffix-only update, an empty file and an exactly bounded file. Twelve execute;
+one is refused. Four publications and one version command make eighteen CLI
+invocations. A and B have equal long content/device/mode/owner/group and
+different inodes; A's inode survives both updates. Before/after
 samples establish sampled stability, not continuous stability. The replacement
 is created separately with equal bytes and metadata, then installed under A's
 name while the original is parked. Samples require two distinct generations,
@@ -129,6 +130,43 @@ omit/duplicate/reorder rows, exchange coherent step evidence, change query or
 attempt results independently, substitute B's identity and remove established
 order. These observations do not claim prediction/enforcement agreement.
 
+The `returning` passage submits the same five rows using two applied actors
+with equal deny-B policies and explicit `selected` equipment. It runs only
+after the same acquisition's `crossed` rows and distinction pairs pass.
+
+| Phase | Actor | Rows | Global ordinal | Actor visit |
+| --- | --- | --- | --- | --- |
+| `left-first` | Left | `read-aa`, `read-ab` | 1 | 1 |
+| `right-only` | Right | `read-ba` | 2 | 1 |
+| `left-second` | Left | `read-bb`, `metadata-b` | 3 | 2 |
+
+The checker requires Left's visits `[1, 3]`, Right's `[2]`, distinct launch
+PIDs, one application and one reaped subprocess per actor, and each phase's
+submitted owner, ordinal, visit, step IDs and validator expected IDs. It reuses
+the matrix's native step expectations and leaves internal joins to the consumer.
+Five pairs compare each row across the forms: request bytes and ownership
+differ while operands, query, attempt, identity and returned content agree.
+Together with the four boundary and three within-matrix pairs, the table has
+twelve independently expected rows.
+
+The constructed two-actor capture uses the
+[authored actor fixture](../../fixtures/example_round_trip/README.md) as a
+structural template with separately constructed matrix observations. Controls
+exchange actors, misnumber visits, move complete steps between phases, alter
+visit/validator lists, share a PID, report a second application or an unreaped
+actor, and accept consistent actor/phase/step renaming. The unreaped control
+also requires the real cleanup decision to withhold removal. The real
+crossed-matrix gate has accepted and rejected controls before actor derivation.
+
+Equal policies do not distinguish whether policies reached the correct actors,
+and these finite observations do not establish execution-form equivalence.
+`actor_compositions` retains distinct-policy, gate and extension obligations;
+`comparison_matrix` retains general relation classification; the independent
+prediction-target case retains write effects; and `example_round_trip` retains
+its exact published bytes, refusals and one-actor derivative. Their detailed
+[ownership comparison](../../../docs/TEST-INPUT-EXPANSION-PLAN.md#what-existing-cases-already-establish)
+records the limits of this expansion.
+
 The separate checker pins observed and published status, identity admission,
 request transformations, policy digest and operand association, completed worker
 and phase collections, query answers, independent syscall results and successful
@@ -149,8 +187,9 @@ a replaced A inode, a B sharing A's inode, and publication records with another
 target, command or second newline.
 Controls require exact diagnostic IDs and statuses (`passed`, `failed`,
 `not_evaluated`) and consumer acceptance for coherent correspondence faults.
-One capture from another build is the only control the consumer refuses; its
-reply rows are `not_evaluated`. The case fails unless every obligation the
+A capture from another build has its reply rows withheld as `not_evaluated`.
+Malformed actor joins remain consumer-owned rejection controls; coherent
+association faults must still pass that consumer. The case fails unless every obligation the
 checker reports, taken without its passage or emission name, is failed by some
 control.
 The real acquisition path is exercised with recorded stand-in executables;

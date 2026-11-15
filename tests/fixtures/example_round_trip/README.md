@@ -28,3 +28,9 @@ keeping all dependent ownership and carrier fields coherent, and running
 `tests/run.sh --case witness_contract/example_round_trip_controls`. The case
 never refreshes the file or downloads replacement material. It establishes
 reader sensitivity, not native execution or signature verification.
+
+The controlled read input's `test_input_actor_controls.py` also uses this file
+as a structural template. It authors two actor records, a 2+1+2 returning
+schedule and matrix read observations, then requires the full consumer to
+accept the constructed envelope. That case owns its request, native answers,
+file samples and distinction expectations independently of the example checker.

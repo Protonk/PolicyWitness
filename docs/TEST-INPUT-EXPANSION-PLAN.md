@@ -1,7 +1,7 @@
 # Expand the controlled-input seam into several independent views
 
-Status: increments 1 and 2 and the independent retirement complete; increment 3
-acceptance is being recorded. This document specifies implementation
+Status: complete. All three increments and the independent retirement are
+implemented and accepted. This document records the implementation scope
 and acceptance work. The statements about existing owners were checked against
 the cited sources; native acceptance is recorded by increment below.
 
@@ -52,7 +52,7 @@ increment below is stated against this table.
 | [`prediction_target_is_independent_of_attempt_target`](../tests/suites/witness_contract/README.md#independent-prediction-and-attempt-targets) | Swapped prediction targets for write attempts, with external byte observations of the effect. | Read attempts, which leave no effect to observe externally and therefore rest on descriptor identity. |
 | [`example_round_trip`](../tests/suites/witness_contract/README.md#the-apps-own-example) | A `file-read-metadata` query on a path whose data read is denied, pinned to `allow`; a `read_fresh` whose identity is the attempt target's while the query names another file; flat and one-actor derivatives. Its account states that one actor's visit numbers equal the global ordinals and that it observes no failed fresh read. | Two actors with a returning visit, so visit number and ordinal differ; failed fresh reads; a query that denies the path beside a read of the other object. |
 | [`actor_compositions`](../tests/suites/witness_contract/README.md#principal-re-delegation-acceptance) and the extension cases | Multi-actor schedules, distinct policies per actor, gates and extension transfers. | Nothing in that territory. The returning passage uses equal policies, no gate and no extension. |
-| [The shared consumer](../tests/lib/consumer.py), whose `validate` runs once per passage | Internal validity of the reply, and reader agreement: [the client-capture reader](../tests/lib/runner_client_capture.py) decodes the exact retained host bytes with the independent Python wire reader under the expected identity and requires type-sensitive equality with the controller's `runner_result`. The actor rules join launch, subprocess, phase owner and application records. | The seam's own submitted association and native expectations. It does not repeat the consumer's joins. |
+| [The shared consumer](../tests/lib/consumer.py), whose `validate` checks each retained passage | Internal validity of the reply, and reader agreement: [the client-capture reader](../tests/lib/runner_client_capture.py) decodes the exact retained host bytes with the independent Python wire reader under the expected identity and requires type-sensitive equality with the controller's `runner_result`. The actor rules join launch, subprocess, phase owner and application records. | The seam's own submitted association and native expectations. It does not repeat the consumer's joins. |
 
 ## Current owners and constraints
 
@@ -105,7 +105,7 @@ after them.
 
 | Increments present | `run` submissions | Executions | Selected-app commands |
 | --- | --- | --- | --- |
-| None (today) | 7 | 6 | 12 |
+| None (baseline) | 7 | 6 | 12 |
 | 1 | 11 | 10 | 16 |
 | 1 and 2 | 12 | 11 | 17 |
 | 1, 2 and 3 | 13 | 12 | 18 |
@@ -532,3 +532,51 @@ published integer attempt return, established order and clean worker exit,
 plus the successful allow-default neighbour. No case overlapped system sleep.
 This final run also covers the independently implemented returning-form work;
 retirement changes only the redundant script and catalog membership.
+
+Increment 3 source review: returning acquisition uses the same five crossed
+rows and equal policies in the prescribed 2+1+2 partition. The actual
+acquisition gate requires the same run's crossed expectations before actor
+derivation; final evaluation checks all retained captures. Internal actor joins
+remain owned by the consumer. The actor-specific checker and constructed
+capture/controls occupy 84 and 139 lines respectively, keeping this increment
+near the size of an existing seam file rather than creating another example
+engine. Shared helpers, product code and public interfaces are unchanged.
+The final review also pins B's identity between the refusal, repair and denied
+submissions with a coherent replacement control.
+
+Constructed acceptance: `witness_contract/test_input_controls` passed all 91
+controls in `tests/out/runs/input-expansion-3-final-controls`, including the
+accepted suffix/bound read substitutions, consistent actor/phase/step renaming,
+the actual crossed gate and an unreaped actor withholding cleanup. Malformed
+internal actor joins remain explicitly consumer-rejected controls; coherent
+correspondence faults are required to pass that consumer. The two-actor capture
+is constructed from the existing authored actor template and separately
+constructed matrix observations, not from a native output.
+
+Native acceptance: `witness_contract/test_input` passed all 302 report rows in
+`tests/out/runs/input-expansion-final-accept`, under the same current candidate
+identity recorded above. `source_drift` passed all ten cases in that run, and
+`docs/generate_limits.py --check` passed. Left's PID was 45544 with visits
+`[1, 3]`; Right's was 45545 with visits `[2]`. Both applied once and exited 0
+with confirmed reap. Phase ownership was Left/1/1, Right/2/1, Left/3/2
+(actor/global ordinal/visit), with exactly the planned step partitions.
+Both forms observed query answers allow, allow, deny, deny, allow with native
+rc 0, 0, 1, 1, 0 and errno 0. Reads of A succeeded with A's descriptor
+identity and bounded content; B opens failed with -1/EPERM.
+
+All twelve distinction pairs matched their independently authored cells.
+Accounting recorded 13 submissions, 12 execution passages, one refusal,
+four publications and one version command: 18 selected-app commands. Every
+launched worker's exit was witnessed and the owned fixture directory was
+removed. No case overlapped system sleep. This supersedes the preliminary
+299-row `input-expansion-3-native` run by including the final B-continuity rows.
+The checker, driver, controls and fixtures are identical between the final
+control run and native acceptance; only acceptance prose is appended afterward.
+
+The observed limits are retained: suffix-only changes and shortening to the
+bound can leave returned content indistinguishable; samples do not establish
+continuous stability or a read beyond the bound. Equal actor policies cannot
+identify a swapped policy destination. These results establish neither general
+form equivalence, prediction/enforcement agreement nor sandbox causation.
+All run paths above contain disposable development evidence, not release
+acceptance evidence. The owning accounts and catalog describe the final scope.

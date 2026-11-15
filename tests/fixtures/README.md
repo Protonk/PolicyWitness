@@ -115,7 +115,8 @@ deterministic, and checked into the repo so tests are hermetic.
   under `checker/` for independent controls of the evidence checker
   ([README](blackbox_e2e/checker/README.md)).
 - `example_round_trip/`: a complete identity-free, authored single-actor
-  envelope for the example's three-form checker controls, with independent
+  envelope for the example's three-form checker controls and a structural template
+  for the controlled input's constructed two-actor capture, with independent
   application, equipment, collection and reap observations; see its
   [README](example_round_trip/README.md).
 - `comparison/`: the comparison-record scenario matrix. `matrix.json` holds
