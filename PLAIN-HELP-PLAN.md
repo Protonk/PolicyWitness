@@ -780,3 +780,30 @@ Observed limits:
   own expectation and the run reported success.
 - Arguments in case files are strings, so a non-UTF-8 argument and a stream
   without a reader need hand-written tests.
+
+## Appendix: executor questions at the start of execution
+
+Recorded on 2026-11-15 before step 1, from the executor's preparation reply.
+None blocked steps 1 and 2. The maintainer approved proceeding on these
+recommendations; the step 3 stop for the [open decisions](#open-decisions)
+stands.
+
+- **Commit shape.** The experiment records will sit uncommitted in a shared checkout while you decide at step 3. I recommend one records commit at step 3 (E1–E4 records under `records/plain-help/`, linked only from the plan, with the plan's status and your decisions recorded there), then the implementation as a single atomic commit. If you want strictly one commit, I'll hold the records uncommitted through the pause.
+
+- **Runner-mode vocabulary readers.** The plan names the CLI and registry readers, but four sites read this vocabulary:
+  - `run --runner-mode` in `run_flow.rs`
+  - the request's `runner.mode` in `runner_select.rs`, with its own `machme` refusal
+  - `runner install --kind` in `runner_commands.rs`, with its own `machme` refusal
+  - the registry's serde aliases in `runner_manager.rs`
+
+  I recommend one table with reader-qualified rules covering all four, which replaces the derive aliases with table-driven deserialization at unchanged behavior. Otherwise two literal `machme` matches stay beside a governing table and the exhaustiveness check has to exempt them. The `runner install` tail itself stays unenumerated.
+
+- **Result card labels.** Two rows of the result relation have variable labels.
+  - **Refusal labels:** these are a closed set of static strings in `RunnerClientRun::failure` and `admit_reply`. I recommend enumerating them in the relation, which extends the refactor into `runner_client.rs`; the plan's source table doesn't name that file.
+  - **Other admitted host labels:** these are open, defined by the Swift host. I'll bring that row to step 3 as a choice between a token exception and omitting the label.
+
+- **Mutation data for the shipped tree.** E3 runs on prototypes. I recommend rerunning the chosen candidate's mutations against the implementing tree, so the retained mutation join describes shipped entries. The losing candidate's records stay in `records/` only.
+
+- **Parser-library guard control.** The "built-in help enabled" rejected control exists only for a clap declaration. If the hand table is chosen, I recommend recording that control from the prototype and marking it not applicable in final verification, not keeping a standing check for a library the tree doesn't use.
+
+- **Plan closeout.** I recommend leaving retirement of the plan and its records to you after acceptance, as separate commits like the earlier plans.
