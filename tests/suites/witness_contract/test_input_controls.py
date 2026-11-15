@@ -25,11 +25,11 @@ def sample(target, payload, inode):
                 prefix_sha256=hashlib.sha256(payload[:checker.BOUND]).hexdigest(), prefix_length=len(payload[:checker.BOUND]))
 
 
-def set_query(envelope, denied):
+def set_query(envelope, denied, index=0):
     reply = envelope['data']['runner_result']
-    query = reply['steps'][0]['sandbox_check']
+    query = reply['steps'][index]['sandbox_check']
     query.update(outcome='deny' if denied else 'allow', rc=int(denied), native_rc=int(denied), errno=0)
-    record = reply['phases'][0]['validator_subprocess']['records'][0]
+    record = reply['phases'][0]['validator_subprocess']['records'][index]
     record.update(outcome=query['outcome'], rc=query['native_rc'], errno=0)
     raw = json.loads(record['raw_line'])
     raw.update(outcome=query['outcome'], rc=query['native_rc'], errno=0)
@@ -83,6 +83,34 @@ def envelope(name, document, observed):
     return recapture_host_reply(result)
 
 
+
+def matrix_envelope(document, observed):
+    steps, records, dispositions = [], [], []
+    for index, submitted in enumerate(document['probe_plan']):
+        single = dict(document, probe_plan=[submitted])
+        env = envelope('denied_b' if index in (1, 3, 4) else 'b', single, observed)
+        set_query(env, index in (2, 3))
+        reply = env['data']['runner_result']
+        step = reply['steps'][0]
+        step['step_id'] = submitted['step_id']
+        query = submitted['sandbox_check']
+        step['sandbox_check'].update(operation=query['operation'], filter_value=query['filter']['value'])
+        step['comparison'].update(operation_relation='different' if index == 4 else 'matched',
+                                  target_relation='different_submitted' if index in (1, 2) else 'same_submitted')
+        record = reply['phases'][0]['validator_subprocess']['records'][0]
+        record.update(step_id=step['step_id'], operation=query['operation'], filter_value=query['filter']['value'])
+        raw = json.loads(record['raw_line'])
+        raw.update({k: record[k] for k in ('step_id', 'operation', 'filter_value')})
+        record['raw_line'] = json.dumps(raw, separators=(',', ':'))
+        disposition = reply['runner_subprocess']['disposition']['steps'][0]
+        disposition.update(step_id=step['step_id'], index=index)
+        steps.append(step); records.append(record); dispositions.append(disposition)
+    reply['steps'] = steps
+    reply['phases'][0]['action_ids'] = [s['step_id'] for s in steps]
+    reply['phases'][0]['validator_subprocess'].update(expected_step_ids=reply['phases'][0]['action_ids'], records=records)
+    reply['runner_subprocess']['disposition']['steps'] = dispositions
+    return recapture_host_reply(env)
+
 def build():
     version = dict(argv=['constructed', '--version'], exit=0, stderr='', stdout=checker.encode(dict(
         build=dict(contract=IDENTITY), data=dict(contract=IDENTITY))))
@@ -95,12 +123,14 @@ def build():
     state = dict(paths=dict(PATHS), publication=public, passages={}, extended_a=sample(PATHS['A'], checker.LONG, 41))
     documents = checker.expected_inputs(state)
     for name in checker.PASSAGES:
-        letter = 'A' if name in ('initial_a', 'updated_a', 'allowed_a') + checker.REPLACEMENTS else 'B'
+        letter = 'A' if name in ('initial_a', 'updated_a', 'allowed_a', 'crossed') + checker.REPLACEMENTS else 'B'
         payload = checker.payload_for(name)
         observed = sample(PATHS[letter], payload, 43 if name in checker.REPLACEMENTS else 41 if letter == 'A' else 42)
         raw = checker.encode(documents[name])
         state['passages'][name] = dict(before=observed, after=copy.deepcopy(observed), capture=dict(input=raw,
             request_path='/constructed/input.json', run=run_record(name, documents[name], observed, raw)))
+        if name == 'crossed':
+            state['passages'][name]['peer'] = {t: sample(PATHS['B'], checker.LONG, 42) for t in ('before', 'after')}
         if name in checker.REPLACEMENTS:
             for key, target, inode in (('parked', PATHS['A'] + '.previous', 41), ('bystander', PATHS['B'], 42)):
                 state['passages'][name][key] = {t: sample(target, checker.LONG, inode) for t in ('before', 'after')}
@@ -112,7 +142,7 @@ def build():
 
 def run_record(outcome, document, observed, raw):
     """A coherent run of `document` with the named passage's outcome, delivered as `raw`."""
-    env = envelope(outcome, document, observed)
+    env = matrix_envelope(document, observed) if outcome == 'crossed' else envelope(outcome, document, observed)
     env['data']['runner_client']['request_delivery']['bytes_written'] = len(raw.encode()) - 1
     return dict(argv=['constructed', 'run', '/constructed/input.json'], stdout=checker.encode(env), stderr='',
                 exit=1 if outcome == 'refusal' else 0)
@@ -207,7 +237,7 @@ def controls():
     yield 'order_uncredited_beside_wrong_answer', wrong_answer_and_order, failed('b.collections', 'b.query') | {('b.order', 'not_evaluated')}
     # Fixture relationships the experiment depends on, with captures that agree with the earlier inodes.
     yield 'a_replaced_instead_of_updated', lambda s: resample(s, ['updated_a'], 43), failed('fixtures', 'updated_a.identity')
-    yield 'b_shares_a_inode', lambda s: resample(s, ['b', 'refusal', 'repair', 'denied_b'], 41), failed('fixtures', 'b.identity', 'repair.identity',
+    yield 'b_shares_a_inode', lambda s: resample(s, ['b', 'refusal', 'repair', 'denied_b'], 41), failed('fixtures', 'b.identity', 'repair.identity', 'crossed.peer',
         *(name + '.bystander' for name in checker.REPLACEMENTS))
     def other_acquisition(s):
         s['publication']['targets']['b'] = PATHS['A']
@@ -269,6 +299,72 @@ def boundary_controls():
         ('replaced_a.order', 'not_evaluated')}
 
 
+
+def matrix_controls():
+    failed = lambda *names: {(name, 'failed') for name in names}
+    first = 'distinction.crossed.read-aa--read-ba'
+    second = 'distinction.crossed.read-aa--read-ab'
+    third = 'distinction.crossed.read-bb--metadata-b'
+    def input_change(s, change):
+        capture = s['passages']['crossed']['capture']
+        document = json.loads(capture['input'])
+        change(document['probe_plan'])
+        capture['input'] = checker.encode(document)
+        mutate_capture(s, 'crossed', lambda e: e['data']['runner_client']['request_delivery'].update(bytes_written=len(capture['input'].encode())-1))
+    for label, change, extra in (
+        ('query_operand', lambda rows: rows[2]['sandbox_check']['filter'].update(value=PATHS['A']), failed(first)),
+        ('attempt_operand', lambda rows: rows[1]['attempt'].update(target=PATHS['A']), failed(second)),
+        ('query_operation', lambda rows: rows[4]['sandbox_check'].update(operation='file-read-data'), failed(third)),
+        ('omitted', lambda rows: rows.pop(), {(third, 'not_evaluated')}),
+        ('duplicated', lambda rows: rows.append(copy.deepcopy(rows[0])), set()),
+        ('reordered', lambda rows: rows.reverse(), set())):
+        yield 'matrix_' + label, lambda s, change=change: input_change(s, change), failed('crossed.transformation') | extra
+    yield 'matrix_wrong_query', lambda s: mutate_capture(s, 'crossed', lambda e: set_query(e, False, 2)), failed('crossed.read-ba.query', first) | {('crossed.read-ba.order', 'not_evaluated')}
+    def wrong_attempt(s):
+        def change(e):
+            steps = e['data']['runner_result']['steps']
+            steps[2]['attempt'].update(rc=-1, errno=1, outcome='read_failed', fresh_read=dict(open_rc=-1, open_errno=1))
+            steps[2]['comparison'].update(observation='permission_failure', observation_basis='permission_errno')
+        mutate_capture(s, 'crossed', change)
+    yield 'matrix_wrong_attempt', wrong_attempt, failed('crossed.read-ba.attempt', first) | {('crossed.read-ba.'+k, 'not_evaluated') for k in ('identity','content')}
+    yield 'matrix_equal_bytes_wrong_object', lambda s: mutate_capture(s, 'crossed', lambda e:
+        e['data']['runner_result']['steps'][2]['attempt']['fresh_read']['identity'].update(inode=42)), failed('crossed.read-ba.identity', first)
+    def swapped(s):
+        def change(e):
+            r=e['data']['runner_result']
+            ids=[step['step_id'] for step in r['steps']]
+            r['steps'][0], r['steps'][2] = r['steps'][2], r['steps'][0]
+            records=r['phases'][0]['validator_subprocess']['records']
+            records[0], records[2] = records[2], records[0]
+            for i in (0, 2):
+                r['steps'][i]['step_id']=ids[i]
+                records[i]['step_id']=ids[i]
+                raw=json.loads(records[i]['raw_line']);raw['step_id']=ids[i]
+                records[i]['raw_line']=json.dumps(raw,separators=(',', ':'))
+        mutate_capture(s, 'crossed', change)
+    yield 'matrix_other_step_under_id', swapped, failed('crossed.read-aa.association', 'crossed.read-ba.association',
+        'crossed.read-aa.query', 'crossed.read-ba.query', second) | {('crossed.'+step+'.'+k, 'not_evaluated')
+        for step in ('read-aa','read-ba') for k in ('order','identity','content')}
+    # Wrong relations remain consumer-valid only when their submitted echoes change coherently.
+    def relation(s):
+        def change(e):
+            r=e['data']['runner_result'];step=r['steps'][2]
+            step['sandbox_check']['filter_value']=PATHS['A']
+            step['comparison']['target_relation']='same_submitted'
+            rec=r['phases'][0]['validator_subprocess']['records'][2]
+            rec['filter_value']=PATHS['A'];raw=json.loads(rec['raw_line']);raw['filter_value']=PATHS['A']
+            rec['raw_line']=json.dumps(raw,separators=(',', ':'))
+        mutate_capture(s,'crossed',change)
+    yield 'matrix_wrong_relation', relation, failed('crossed.read-ba.association') | {('crossed.read-ba.'+k,'not_evaluated') for k in ('identity','content')}
+    def unordered(s):
+        def change(e):
+            r=e['data']['runner_result']
+            r['phases'][0]['ordering']['worker_lifetime_established']=False
+            for step in r['steps']:step['comparison']['order']='unestablished'
+        mutate_capture(s,'crossed',change)
+    yield 'matrix_unestablished_order', unordered, failed('crossed.collections', *('crossed.'+step+'.order' for step in ('read-aa','read-ab','read-ba','read-bb','metadata-b')))
+    yield 'matrix_peer_sample_missing', lambda s: s['passages']['crossed']['peer'].update(after=None), failed('crossed.peer')
+
 def unadmitted_controls():
     """Captures the consumer itself refuses: nothing under the reply is read or credited."""
     def other_build(s):
@@ -285,7 +381,7 @@ def kind(ident):
     if parts[0] == 'distinction':
         return 'distinction'
     if parts[0] in checker.PASSAGES:
-        return parts[1]
+        return parts[-1]
     return ident if len(parts) < 3 else parts[0] + '.' + parts[2]
 
 
@@ -394,7 +490,7 @@ def main(directory):
     directory = Path(directory)
     records = []
     rejected = set()
-    for coherent, group in ((True, controls()), (True, boundary_controls()), (False, unadmitted_controls())):
+    for coherent, group in ((True, controls()), (True, boundary_controls()), (True, matrix_controls()), (False, unadmitted_controls())):
         for name, change, expected in group:
             state = build()
             change(state)

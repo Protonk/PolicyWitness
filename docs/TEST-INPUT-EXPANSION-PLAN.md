@@ -1,6 +1,6 @@
 # Expand the controlled-input seam into several independent views
 
-Status: implementation in progress; increment 1 accepted. This document specifies implementation
+Status: increments 1 and 2 complete; increment 3 and the retirement in progress. This document specifies implementation
 and acceptance work. The statements about existing owners were checked against
 the cited sources; native acceptance is recorded by increment below.
 
@@ -487,3 +487,30 @@ Increment 1 final checks: `witness_contract/test_input_controls` and all ten
 `tests/lib/python.sh docs/generate_limits.py --check` passed. The native run
 used the same checker, helpers and acquisition code; subsequent changes only
 updated case descriptions and documentation.
+
+Increment 2: source review keeps derivation independent of the five authored
+request/native expectation rows. The 77 constructed controls passed in
+`tests/out/runs/input-expansion-2-controls-b`; the preceding controls run caught
+an incomplete expected diagnostic set for the existing B-shares-A control:
+the new matrix's independent B sample correctly added `crossed.peer`. Its
+expectation now includes that independently inspectable fault.
+`witness_contract/test_input` passed in
+`tests/out/runs/input-expansion-2-native` on the same candidate identity as
+increment 1. The five query answers were allow, allow, deny, deny, allow, with
+native rc 0, 0, 1, 1, 0 and errno 0. A opens succeeded with A's descriptor
+identity and prefix; B opens returned -1/EPERM. All workers completed/reaped;
+all seven distinction pairs matched. Accounting recorded 12 submissions,
+11 executions, one refusal and 17 selected-app commands; owned staging was
+removed. Equal bytes do not distinguish A from B; descriptor identity does.
+The metadata expectation was observed unchanged, not widened. Development
+captures remain disposable.
+
+Increment 2 final acceptance: `witness_contract/test_input_controls` and all ten
+`source_drift` cases passed in `tests/out/runs/input-expansion-2-resume-accept`.
+`docs/generate_limits.py --check` passed. The earlier
+`input-expansion-2-accept` run was deliberately interrupted for machine sleep;
+its finalized interrupted result supplies no acceptance credit. Native acquisition,
+checker and control sources are unchanged from the passing increment-2 native
+run; subsequent edits only updated descriptions and the plan's checkpoint.
+The resumed review confirmed all 244 report rows, seven distinctions, 12/11/17
+accounting and verified cleanup. No product or shared-helper source changed.

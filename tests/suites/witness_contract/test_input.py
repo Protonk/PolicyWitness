@@ -159,15 +159,21 @@ def run_case(directory, pw, app, snapshot):
             current_identity = (checker.get(observed_before, 'stat', 'st_dev'),
                                 checker.get(observed_before, 'stat', 'st_ino'))
             retained = target not in identities or identities[target] == current_identity
+            peer = observe_target(paths['B'], checker.BOUND) if name == 'crossed' else None
             preflight = dict(transformation=transformed, fixture=fixture, retained_identity=retained)
+            if peer is not None:
+                preflight['peer'] = checker.sample_ok(peer, paths['B'], checker.LONG) and (peer['stat']['st_dev'], peer['stat']['st_ino']) == identities[paths['B']]
+
             (dest / 'preflight.json').write_text(checker.encode(preflight))
             assert all(preflight.values()), (name, 'pre-submission conditions failed', preflight)
             identities.setdefault(target, current_identity)
             capture = dict(input=input_path.read_text(), request_path=str(input_path))
             state['passages'][name] = dict(before=observed_before, after=None, capture=capture)
             companions = dict(parked=paths['A'] + '.previous', bystander=paths['B']) if name in checker.REPLACEMENTS else {}
+            if name == 'crossed':
+                companions['peer'] = paths['B']
             for key, path in companions.items():
-                state['passages'][name][key] = dict(before=observe_target(path, checker.BOUND), after=None)
+                state['passages'][name][key] = dict(before=peer if key == 'peer' else observe_target(path, checker.BOUND), after=None)
             save()
             entry = dict(passage=name, capture=str(dest.resolve()), worker_exit_witnessed=False,
                          witness='submission may be in progress')
@@ -222,6 +228,21 @@ def run_case(directory, pw, app, snapshot):
         allowed = json.loads(a_raw)
         allowed['policy'] = copy.deepcopy(denied['policy'])
         passage('allowed_a', checker.encode(allowed), paths['A'])
+        crossed = json.loads(b_raw)
+        crossed['policy'] = copy.deepcopy(denied['policy'])
+        template = crossed['probe_plan'][0]
+        crossed['probe_plan'] = []
+        for ident, operation, queried, attempted in (
+                ('read-aa', 'file-read-data', 'A', 'A'), ('read-ab', 'file-read-data', 'A', 'B'),
+                ('read-ba', 'file-read-data', 'B', 'A'), ('read-bb', 'file-read-data', 'B', 'B'),
+                ('metadata-b', 'file-read-metadata', 'B', 'B')):
+            row = copy.deepcopy(template)
+            row['step_id'] = ident
+            row['sandbox_check']['operation'] = operation
+            row['sandbox_check']['filter']['value'] = paths[queried]
+            row['attempt']['target'] = paths[attempted]
+            crossed['probe_plan'].append(row)
+        passage('crossed', checker.encode(crossed), paths['A'])
         original = observe_target(paths['A'], checker.BOUND)
         temporary, previous = Path(paths['A'] + '.replacement'), Path(paths['A'] + '.previous')
         temporary.write_bytes(checker.LONG)
@@ -259,8 +280,8 @@ def run_case(directory, pw, app, snapshot):
         (directory / 'accounting.json').write_text(checker.encode(accounting))
         counted = {key: accounting[key] for key in ('submissions', 'execution_passages', 'refusals',
                                                     'publication_commands', 'version_commands')}
-        assert counted == dict(submissions=11, execution_passages=10, refusals=1, publication_commands=4,
-                               version_commands=1) and len(commands) == 16, accounting
+        assert counted == dict(submissions=12, execution_passages=11, refusals=1, publication_commands=4,
+                               version_commands=1) and len(commands) == 17, accounting
     finally:
         cleanup_safe = all(entry['worker_exit_witnessed'] for entry in ownership['attempts'])
         try:

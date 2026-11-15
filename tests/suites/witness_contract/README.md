@@ -84,12 +84,12 @@ literal `$EFFECT`, quotes, a backslash and Unicode. Failed preparation prevents
 sampling, derivatives and submission.
 
 The case owns a resolved private directory under `/private/tmp`, retained byte
-recipes and descriptor samples. Eleven ordinary submissions cover initial A,
+recipes and descriptor samples. Twelve ordinary submissions cover initial A,
 in-place updated A using the exact saved request, long B, a harness-injected
 unknown-field refusal, exact repair, denied B and allowed A under the identical
 policy, then replacement A, a suffix-only update, an empty file and an exactly
-bounded file. Ten execute; one is refused. Four publications and one version
-command make sixteen CLI invocations. A and B have equal long content/device/mode/owner/
+bounded file, plus a five-step crossed matrix before replacement. Eleven execute; one is refused. Four publications and one version
+command make seventeen CLI invocations. A and B have equal long content/device/mode/owner/
 group and different inodes; A's inode survives both updates. Before/after
 samples establish sampled stability, not continuous stability. The replacement
 is created separately with equal bytes and metadata, then installed under A's
@@ -107,6 +107,27 @@ read-record substitutions beside each passage's own samples, and reject old
 whole captures, identity-generation changes, missing parked samples, stale full
 samples and changed prefix/count evidence. The samples do not show that the
 worker read beyond the bound or that the path stayed unchanged between samples.
+
+The `crossed` passage keeps both files at the same long bytes, under distinct
+inodes and the deny-B policy. Its five rows are:
+
+| Step | Query | Attempt | Query answer | Open |
+| --- | --- | --- | --- | --- |
+| `read-aa` | data A | A | allow | success |
+| `read-ab` | data A | B | allow | EPERM |
+| `read-ba` | data B | A | deny | success |
+| `read-bb` | data B | B | deny | EPERM |
+| `metadata-b` | metadata B | B | allow | EPERM |
+
+Each row separately checks submitted operands/relations, the native query,
+order, attempt and successful read identity/content. The consumer owns internal
+joins. Three additional distinction pairs compare the crossed query target,
+crossed attempt target and changed query operation. In `read-ba`, equal file
+bytes leave descriptor identity as the observation identifying A's opened
+object beside the deny answer about B. Controls change each derivative operand,
+omit/duplicate/reorder rows, exchange coherent step evidence, change query or
+attempt results independently, substitute B's identity and remove established
+order. These observations do not claim prediction/enforcement agreement.
 
 The separate checker pins observed and published status, identity admission,
 request transformations, policy digest and operand association, completed worker

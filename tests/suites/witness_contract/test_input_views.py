@@ -45,7 +45,7 @@ def facts(passage, reply, step_id='read-target'):
     document = c.parsed(c.get(passage, 'capture', 'input'))
     submitted = next((s for s in (c.get(document, 'probe_plan') or []) if s.get('step_id') == step_id), None)
     step = next((s for s in (c.get(reply, 'steps') or []) if s.get('step_id') == step_id), None)
-    sample = passage.get('before')
+    sample = (c.get(passage, 'peer', 'before') if c.get(submitted, 'attempt', 'target') != c.get(passage, 'before', 'target') else passage.get('before'))
     if submitted is None or step is None or not isinstance(sample, dict) or not sample.get('readable'):
         return None
     q, a = c.mapping(step.get('sandbox_check')), c.mapping(step.get('attempt'))
@@ -55,6 +55,7 @@ def facts(passage, reply, step_id='read-target'):
         digest = hashlib.sha256(bytes.fromhex(raw)).hexdigest() if isinstance(raw, str) else None
     except ValueError:
         digest = None
+    phase = next((p for p in reply.get('phases', []) if p.get('phase_id') == step.get('phase_id')), {})
     return {
         'request_bytes': c.get(passage, 'capture', 'input'),
         'query_operation': c.get(submitted, 'sandbox_check', 'operation'),
@@ -68,17 +69,21 @@ def facts(passage, reply, step_id='read-target'):
         'content': [read.get('read_rc'), digest],
         **{'external.' + k: sample.get(k) for k in ('length', 'sha256', 'prefix_sha256')},
         **{'external.' + k: c.get(sample, 'stat', field) for k, field in (('device', 'st_dev'), ('inode', 'st_ino'))},
-        'ownership': [step.get('phase_id'), 1, step.get('actor_id'), step.get('actor_visit')],
+        'ownership': [step.get('phase_id'), phase.get('ordinal'), step.get('actor_id'), phase.get('actor_visit')],
     }
 
 
 def distinction_rows(r, state, admitted):
     rows = []
-    for left, right, differences in PAIRS:
-        a, b = [facts(state['passages'].get(name) or {}, admitted.get(name)) for name in (left, right)]
+    pairs = [(left, 'read-target', right, 'read-target', diff) for left, right, diff in PAIRS]
+    pairs += [('crossed', 'read-aa', 'crossed', 'read-ba', {'query_target', 'query'}),
+              ('crossed', 'read-aa', 'crossed', 'read-ab', {'attempt_target', 'attempt', 'descriptor_identity', 'content', 'external.inode'}),
+              ('crossed', 'read-bb', 'crossed', 'metadata-b', {'query_operation', 'query'})]
+    for left, left_id, right, right_id, differences in pairs:
+        a, b = [facts(state['passages'].get(name) or {}, admitted.get(name), ident) for name, ident in ((left, left_id), (right, right_id))]
         observed = {k: 'equal' if a[k] == b[k] else 'different' for k in a} if a is not None and b is not None else None
         expected = {k: 'different' if k in differences else 'equal' for k in (a or b or {})}
-        ident = 'distinction.' + left + '--' + right
+        ident = 'distinction.' + (left + '--' + right if left != right else left + '.' + left_id + '--' + right_id)
         r.check(ident, observed == expected, dict(expected=expected, observed=observed), available=observed is not None)
         rows.append(dict(id=ident, expected=expected, observed=observed))
     return rows

@@ -22,7 +22,7 @@ SHORT_1 = b'b' * (BOUND - 1)
 PREFIX = SHORT_1 + b'c'
 LONG = PREFIX + b'd'
 REPLACEMENTS = ('replaced_a', 'suffix_a', 'empty_a', 'bound_a')
-PASSAGES = ('initial_a', 'updated_a', 'b', 'refusal', 'repair', 'denied_b', 'allowed_a') + REPLACEMENTS
+PASSAGES = ('initial_a', 'updated_a', 'b', 'refusal', 'repair', 'denied_b', 'allowed_a', 'crossed') + REPLACEMENTS
 UNKNOWN = 'test_input_unknown_field'
 ALLOW = '(version 1)\n(allow default)'
 PACKAGED = re.compile(r'(?:release:v[0-9]+\.[0-9]+\.[0-9]+|development:[0-9a-f]{64})')
@@ -137,8 +137,57 @@ def expected_inputs(state):
     denied['policy']['sbpl_source'] = policy_for(state['paths']['B'])
     allowed = copy.deepcopy(a)
     allowed['policy'] = copy.deepcopy(denied['policy'])
-    return dict(initial_a=a, updated_a=a, b=b, refusal=refusal, repair=b, denied_b=denied, allowed_a=allowed,
+    crossed = copy.deepcopy(denied)
+    crossed['probe_plan'] = matrix_steps(state['paths'])
+    return dict(crossed=crossed, initial_a=a, updated_a=a, b=b, refusal=refusal, repair=b, denied_b=denied, allowed_a=allowed,
                 **{name: allowed for name in REPLACEMENTS})
+
+
+# Query operation, queried file, attempted file, native query denial, open failure.
+MATRIX = (
+    ('read-aa', 'file-read-data', 'A', 'A', False, False),
+    ('read-ab', 'file-read-data', 'A', 'B', False, True),
+    ('read-ba', 'file-read-data', 'B', 'A', True, False),
+    ('read-bb', 'file-read-data', 'B', 'B', True, True),
+    ('metadata-b', 'file-read-metadata', 'B', 'B', False, True),
+)
+
+
+def matrix_steps(paths):
+    return [dict(step_id=ident, sandbox_check=dict(operation=op, filter=dict(kind='path', value=paths[q])),
+                 attempt=dict(kind='file', action='read_fresh', target=paths[a])) for ident, op, q, a, _, _ in MATRIX]
+
+
+def step_rows(r, label, step, submitted, before, *, available, stable, denied, failed):
+    query = mapping(step.get('sandbox_check'))
+    answered = query.get('result_source') == 'validator' and query.get('outcome') == ('deny' if denied else 'allow') and \
+        exact(query.get('native_rc'), 1 if denied else 0) and exact(query.get('errno'), 0)
+    r.check(label + '.query', answered, 'independent query result', available=available)
+    r.check(label + '.order', get(step, 'comparison', 'order') == 'query_first', 'query placed before the attempt',
+            available=available and answered)
+    attempt = mapping(step.get('attempt'))
+    r.check(label + '.attempt', attempt.get('result_source') == 'worker' and
+            exact(attempt.get('rc'), -1 if failed else 0) and exact(attempt.get('errno'), 1 if failed else None) and
+            attempt.get('outcome') == ('read_failed' if failed else 'ok') and
+            (exact(get(attempt, 'fresh_read', 'open_rc'), -1) and exact(get(attempt, 'fresh_read', 'open_errno'), 1) if failed else
+             not fresh_syscalls(attempt, BOUND)), 'independent syscall and aggregate results', available=available)
+    if not failed:
+        target = submitted['attempt']['target']
+        expected_identity = {key: get(before, 'stat', field) for key, field in IDENTITY_FIELDS.items()}
+        r.check(label + '.identity', not fresh_identity(attempt, expected_identity, target), 'descriptor identity versus independent sample',
+                available=stable and exact(get(attempt, 'fresh_read', 'stat_rc'), 0))
+        r.check(label + '.content', not fresh_content(attempt, before or {}, target), 'current bounded count and bytes versus independent sample',
+                available=stable and type(get(attempt, 'fresh_read', 'read_rc')) is int and get(attempt, 'fresh_read', 'read_rc') >= 0)
+
+
+def operands_match(step, submitted):
+    return get(step, 'sandbox_check', 'operation') == get(submitted, 'sandbox_check', 'operation') and \
+        get(step, 'sandbox_check', 'filter_kind') == 'path' and \
+        get(step, 'sandbox_check', 'filter_value') == get(submitted, 'sandbox_check', 'filter', 'value') and \
+        get(step, 'attempt', 'requested_kind') == 'file' and get(step, 'attempt', 'requested_action') == 'read_fresh' and \
+        get(step, 'attempt', 'requested_path') == get(submitted, 'attempt', 'target') and \
+        get(step, 'comparison', 'operation_relation') == ('matched' if get(submitted, 'sandbox_check', 'operation') == 'file-read-data' else 'different') and \
+        get(step, 'comparison', 'target_relation') == ('same_submitted' if get(submitted, 'sandbox_check', 'filter', 'value') == get(submitted, 'attempt', 'target') else 'different_submitted')
 
 
 def payload_for(name):
@@ -183,7 +232,7 @@ def evaluate(state, *, authored_fixture=False):
         if name in REPLACEMENTS:
             same_bytes = capture.get('input') == get(passages, 'allowed_a', 'capture', 'input')
         r.check(name + '.transformation', document == expected[name] and same_bytes, 'declared derivative or exact emitted bytes')
-        target = paths['A' if name in ('initial_a', 'updated_a', 'allowed_a') + REPLACEMENTS else 'B']
+        target = paths['A' if name in ('initial_a', 'updated_a', 'allowed_a', 'crossed') + REPLACEMENTS else 'B']
         payload = payload_for(name)
         before, after = p.get('before'), p.get('after')
         readable = sample_ok(before, target, payload)
@@ -218,15 +267,15 @@ def evaluate(state, *, authored_fixture=False):
         r.check(name + '.reply', available, 'identity-admitted ordinary reply')
         reply = mapping(reply)
         step = mapping(get(reply, 'steps', 0))
+        planned = expected[name]['probe_plan']
+        ids = [s['step_id'] for s in planned]
         digest = hashlib.sha256(expected[name]['policy']['sbpl_source'].encode()).hexdigest()
         association = reply.get('specimen_id') == 'test-input' and reply.get('policy_sha256') == digest and \
             get(envelope, 'data', 'specimen', 'policy', 'augmentation', 'original_sha256') == digest and \
-            isinstance(reply.get('steps'), list) and len(reply['steps']) == 1 and step.get('step_id') == 'read-target' and \
-            step.get('phase_id') == 'main' and get(step, 'sandbox_check', 'operation') == 'file-read-data' and \
-            get(step, 'sandbox_check', 'filter_kind') == 'path' and get(step, 'sandbox_check', 'filter_value') == target and \
-            get(step, 'attempt', 'requested_kind') == 'file' and get(step, 'attempt', 'requested_action') == 'read_fresh' and \
-            get(step, 'attempt', 'requested_path') == target and not reply.get('actors') and \
+            [get(s, 'step_id') for s in (reply.get('steps') or [])] == ids and not reply.get('actors') and \
             get(envelope, 'data', 'runner_client', 'request_delivery', 'bytes_written') == len(capture.get('input', '').encode()) - 1
+        if name != 'crossed':
+            association = association and step.get('phase_id') == 'main' and operands_match(step, planned[0])
         r.check(name + '.association', association, 'submitted IDs, policy digest, operands and delivery', available=available)
         worker = mapping(reply.get('runner_subprocess'))
         pid = worker.get('pid')
@@ -238,34 +287,33 @@ def evaluate(state, *, authored_fixture=False):
         phase = mapping(get(reply, 'phases', 0))
         order = mapping(phase.get('ordering'))
         collections_ok = isinstance(reply.get('phases'), list) and len(reply['phases']) == 1 and \
-            phase.get('phase_id') == 'main' and exact(phase.get('ordinal'), 1) and phase.get('action_ids') == ['read-target'] and \
+            phase.get('phase_id') == 'main' and exact(phase.get('ordinal'), 1) and phase.get('action_ids') == ids and \
             phase.get('arrival_observed') is True and phase.get('completion_observed') is True and \
             phase.get('collection_status') == 'collected' and get(phase, 'validator_subprocess', 'reaped') is True and \
-            get(phase, 'validator_subprocess', 'expected_step_ids') == ['read-target'] and \
+            get(phase, 'validator_subprocess', 'expected_step_ids') == ids and \
             all(order.get(k) is True for k in ('collection_closed_before_proceed', 'proceed_set', 'proceed_observed', 'worker_lifetime_established')) and \
             order.get('validator_disposition') == 'reaped' and order.get('protocol_violations') == []
         r.check(name + '.collections', collections_ok, 'phase arrival/completion and collection/release chain', available=available)
-        denied = name == 'denied_b'
-        query = mapping(step.get('sandbox_check'))
-        answered = query.get('result_source') == 'validator' and query.get('outcome') == ('deny' if denied else 'allow') and \
-            exact(query.get('native_rc'), 1 if denied else 0) and exact(query.get('errno'), 0)
-        r.check(name + '.query', answered, 'independent query result', available=available)
-        # Order is credited only beside the expected answer, and never changes that answer's row.
-        r.check(name + '.order', get(step, 'comparison', 'order') == 'query_first', 'query placed before the attempt',
-                available=available and answered)
-        attempt = mapping(step.get('attempt'))
-        r.check(name + '.attempt', attempt.get('result_source') == 'worker' and
-                exact(attempt.get('rc'), -1 if denied else 0) and exact(attempt.get('errno'), 1 if denied else None) and
-                attempt.get('outcome') == ('read_failed' if denied else 'ok') and
-                (get(attempt, 'fresh_read', 'open_rc') == -1 and get(attempt, 'fresh_read', 'open_errno') == 1 if denied else
-                 not fresh_syscalls(attempt, BOUND)), 'independent syscall and aggregate results', available=available)
-        if not denied:
-            stable = available and readable and readable_after and not changes and association
-            expected_identity = {key: get(before, 'stat', field) for key, field in IDENTITY_FIELDS.items()}
-            r.check(name + '.identity', not fresh_identity(attempt, expected_identity, target), 'descriptor identity versus independent sample',
-                    available=stable and exact(get(attempt, 'fresh_read', 'stat_rc'), 0))
-            r.check(name + '.content', not fresh_content(attempt, before or {}, target), 'current bounded count and bytes versus independent sample',
-                    available=stable and type(get(attempt, 'fresh_read', 'read_rc')) is int and get(attempt, 'fresh_read', 'read_rc') >= 0)
+        if name == 'crossed':
+            peer_before, peer_after = get(p, 'peer', 'before'), get(p, 'peer', 'after')
+            r.check(name + '.peer', sample_ok(peer_before, paths['B'], LONG) and sample_ok(peer_after, paths['B'], LONG) and
+                    not target_changes({paths['B']: peer_before} if isinstance(peer_before, dict) else {}, {paths['B']: peer_after}) and
+                    get(peer_before, 'stat', 'st_ino') == get(b_sample, 'stat', 'st_ino'), 'unchanged independently sampled B')
+            r.check(name + '.generation', all((get(s, 'stat', 'st_dev'), get(s, 'stat', 'st_ino')) == a_ids[0] for s in (before, after)),
+                    'original A generation across the matrix')
+            for submitted, (_, _, _, _, denied, failed) in zip(planned, MATRIX):
+                matches = [s for s in reply.get('steps', []) if s.get('step_id') == submitted['step_id']]
+                row = mapping(matches[0]) if len(matches) == 1 else {}
+                label = name + '.' + submitted['step_id']
+                matched = row.get('phase_id') == 'main' and operands_match(row, submitted)
+                r.check(label + '.association', matched, 'submitted operands and relations', available=available)
+                step_rows(r, label, row, submitted, before, available=available and len(matches) == 1,
+                          stable=available and len(matches) == 1 and readable and readable_after and not changes and matched,
+                          denied=denied, failed=failed)
+        else:
+            step_rows(r, name, step, planned[0], before, available=available,
+                      stable=available and readable and readable_after and not changes and association,
+                      denied=name == 'denied_b', failed=name == 'denied_b')
     distinctions = distinction_rows(r, state, admitted)
     return dict(r.report(), distinctions=distinctions)
 
