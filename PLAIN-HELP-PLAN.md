@@ -1,9 +1,10 @@
 # Generate `policy-witness help` cards from the executable interface
 
-Status: sequence steps 1 and 2 are complete; implementation has not started.
-[RESULTS.md](records/plain-help/RESULTS.md) records E1–E4, and
-[DECISIONS.md](records/plain-help/DECISIONS.md) sets out the step 3 decisions
-that await the maintainer.
+Status: sequence steps 1 to 3 are complete; implementation has not started.
+[RESULTS.md](records/plain-help/RESULTS.md) records E1–E4,
+[DECISIONS.md](records/plain-help/DECISIONS.md) sets out the options, and the
+[recorded decisions](#appendix-decisions-recorded-at-step-3) are the
+maintainer's choices.
 
 ## Problem
 
@@ -810,3 +811,50 @@ stands.
 - **Parser-library guard control.** The "built-in help enabled" rejected control exists only for a clap declaration. If the hand table is chosen, I recommend recording that control from the prototype and marking it not applicable in final verification, not keeping a standing check for a library the tree doesn't use.
 
 - **Plan closeout.** I recommend leaving retirement of the plan and its records to you after acceptance, as separate commits like the earlier plans.
+
+## Appendix: decisions recorded at step 3
+
+The maintainer chose these on 2026-11-15, after E1–E4 and before
+implementation. Numbers follow [DECISIONS.md](records/plain-help/DECISIONS.md),
+which states each option's cost.
+
+1. **Exact projections.** The `run` and `example` cards as sketched. The
+   `result` card as option A: one header line of the three field names, then
+   one line per label the relation fixes. The row for another admitted host
+   label prints nothing.
+2. **Implementation and dependencies.** The hand table. `build.rs` compiles
+   the binary's own definition files to render the cards and the inventory.
+   One JSON case corpus run by `std::process`. clap, trycmd and snapbox are
+   not adopted.
+3. **Permitted repair.** All four, in this shape:
+   - `version`, `--version`, `runner list` and `runner validate` exit 2 on any
+     argument.
+   - `run --timeout-ms 0` is refused as `invalid value for --timeout-ms`.
+   - A second request path is refused as an unexpected argument; the dossier
+     keeps the first path.
+   - `machme` is an ordinary invalid value for `run --runner-mode`, the
+     request's `runner.mode` and `runner install --kind`. The registry reader
+     still resolves stored `machme` and `debuggable` records.
+   - `runner install` no longer matches `--executable` and `--bundle-id`; they
+     are refused as unknown arguments.
+   - `run -- x` still ignores what follows `--`.
+4. **Join and mutation details.** Two operand bindings in the contract join.
+   The inventory is cited from all six contract places; the two with prose
+   only are reported as uncompared. Every mutation is rerun unsigned against
+   the implementing tree, and the three-step rename procedure once against
+   signed builds.
+5. **Non-derived tokens.** None.
+6. **Refusal and write-failure output.** No command, an unknown command,
+   `--help` and `-h` print one line that names `help`; `example` with an
+   argument prints `policy-witness example: accepts no arguments`. An unknown
+   runner command keeps its text and usage block. Help exits 2 without a
+   panic when its write or flush fails. Top-level and `runner` diagnostics do
+   not panic on an unwritable stderr. `run`, `version` and `runner` envelope
+   printing is unchanged.
+7. **Public status of help.** Not public.
+8. **`generate_interface.py --check`.** Offline. The build script is the
+   freshness check for the committed inventory, and the generator contract
+   states the split.
+9. **Inputs that change no output.** The integrity-issue count is passed to
+   selection. No failed-attempt classifier is added.
+10. **`runner verify`.** Its own selection is left as it is.
