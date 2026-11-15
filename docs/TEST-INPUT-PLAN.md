@@ -1,13 +1,9 @@
 # Transform lesson into a controlled-input test seam
 
-Status: concrete checkpoint accepted by the maintainer; implementation and
-verification are in progress. Use the implemented
-[example workload and observer](../tests/suites/witness_contract/README.md#the-apps-own-example),
-including the three-form workload in `898f3ed1`, the per-condition controls in
-`c8f63bb2` and the [controls review](EXAMPLE-CONTROLS-PLAN.md). Review concrete guide replacements
-and this seam's acceptance table before removing `lesson` or building this
-plan's candidate. The command and guide inspection is against `5415dc14`;
-the proposed native experiments have not been executed.
+Status: implemented and verified after maintainer acceptance of the concrete
+checkpoint below. The completion account records the signed candidate,
+verification credits, corrected selection and remaining limits. Keep this plan
+available for review; no release evidence or support-grade promotion is claimed.
 
 ## Purpose and what needs the command
 
@@ -55,9 +51,10 @@ Reuse the following mechanisms instead of writing another implementation:
 | `prepare`, `preparation_rows`, `one_change_problems`, `diagnostics` and `failed_conditions` | Preserve the preparation boundary and explicit row/condition diagnostics. Author this publisher's target-binding and request-transformation rules separately. |
 | `WORKLOAD`, `_prerequisites`, `_structure`, `evaluate` and the three-form capture builder | Keep the workload, expectations, completion assertions and passage association separately authored for this seam. Do not reuse the whole example evaluator or its constructed workload. |
 
-The comparisons remain private to the
-[example checker](../tests/suites/witness_contract/check_example_round_trip.py).
-Extract them into a small shared test helper when implementing this seam. Preserve
+The sampler, comparisons and explicit-byte control constructor now live in
+[the shared helper](../tests/lib/file_observation.py). The
+[example checker](../tests/suites/witness_contract/check_example_round_trip.py)
+keeps its workload and existing diagnostics through small wrappers. Preserve
 example's behavior and rerun its live case and controls when their dependencies
 change. Do not create a universal workload checker or share expectations with
 the product. The acceptance table must name the landed helpers and cases
@@ -316,10 +313,12 @@ the seam's owning cases,
 `blackbox_e2e/checker_controls`, `witness_contract/example_round_trip`,
 `witness_contract/example_round_trip_controls` and the full
 `witness_contract/guide_workflows`. Include `runner_unit` and
-`runner_c_worker_harness` when their corpus inputs or loaders change, following
-[test guidance](../tests/AGENTS.md). Inspect the actual selection with `--list`;
-do not select the whole bad-request suite and accidentally add its opt-in
-multi-build experiment. The seven seam submissions exclude the separately
+the production `runner_c_worker_harness` cases when their corpus inputs or loaders
+change, following [test guidance](../tests/AGENTS.md). Inspect the actual selection
+with `--list`. Select explicit C-worker case IDs, excluding the unrelated opt-in
+`native_pause` and `arm_wait` qualification experiments; their default reader
+controls remain included. Do not select the whole bad-request suite and
+accidentally add its opt-in multi-build experiment. The seven seam submissions exclude the separately
 budgeted existing corpus, example and guide passages; no second native lesson
 subcase is retained.
 
@@ -374,3 +373,99 @@ the service it installs through its existing durable session and cleanup path.
 | Publisher and corpus | One embedded read body and positional binding with malformed-template controls. Move old creation bodies unchanged into request-corpus ownership, preserving Python/Swift and CLI/direct-host grammar coverage; retire old selector-substitution executions. |
 | Public account | Replace stamped `emit_lesson` with build-bound developer `emit_test_input`; update the single shared usage and README, build-identity inputs/mutation checks, support references and generated snapshots without raising evidence grades. |
 | Final verification | One signed candidate after offline controls, then the combined selection specified above, including both runner families because corpus loaders change and the whole guide workflow. No native admission or ordering change is intended. |
+
+## Completion account
+
+The maintainer accepted the concrete checkpoint before implementation. Commit
+`ba3a90435d5354097514051196374c7f839fef11` implements the publisher, corpus and
+guide migration, shared observer extraction and separately authored seam.
+One signed candidate was built: development build **1445**, source `ba3a9043`,
+contract `development:a4b24cf0d127f8a450050bdde17de8e8ca3415f718cda2858f683dbdd06dbcc9`.
+No native admission, worker wait, release store or eligibility code changed.
+
+### Verification credits
+
+The combined run `20261115T004609Z_a4ad194a` at
+`tests/out/runs/test-input-acceptance` completed all 95 selected cases:
+**92 passed and three failed**, with no skip, unrun case, system sleep or app
+inventory change. It is a failed run and remains recorded as such.
+
+- `runner_outcome_bad_request/accepted_input_contract` stopped before its native
+  corpus at a missing `CORPUS` import left by the migration. Restoring that one
+  import was the only executable-source repair after the combined run.
+  `20261115T010037Z_a163d65b` (`test-input-corpus-repair`) then passed that complete
+  CLI/direct-host case on the unchanged candidate, with no sleep, harness error
+  or app inventory change.
+- The whole C-worker suite selector accidentally included `native_pause` and
+  `arm_wait`. Their [owner](../tests/suites/runner_c_worker_harness/README.md#native-pause-applicability)
+  defines experimental qualification of alternative waits, outside this plan's
+  production-worker acceptance. Default nanosleep failed its qualification
+  (the deny-default first calls returned -1/EINVAL); all 24 measured children
+  were reaped, with no timeout. The ARM screen refused a missing coordinator
+  gate before executing children. Both failures remain failed and uncredited;
+  no expectation was broadened or production wait changed to obtain a pass.
+
+The corrected acceptance selection contains **93 applicable cases**: the 92
+unaffected passing cases plus the repaired corpus case. It includes all ten
+source-drift cases, all unit/integration cases, runner-unit cases, production
+C-worker cases and both experimental readers' default controls, blackbox checker
+controls, both example cases, both test-input cases and the whole guide workflow.
+The 92 passing results are reused across the one-line corpus-import repair:
+that driver is reached only by the failed corpus case; shared readers, fixtures,
+production inputs, selected app and other case commands are unchanged. The
+completion prose and selection clarification change no assertions, generated
+surface or build input. This is reviewed applicability, not a claim that the
+original run exercised a later source revision.
+
+Source-manifest checks were repeated successfully in `20261115T010316Z_ced552fc`.
+That run's generator check identified duplicated literal bounds in completion
+prose; the prose now refers to the existing recipe. The complete generator case
+then passed in `20261115T010656Z_d8115b4f` (`test-input-completion-docs-final`).
+This final receipt note changes no link, assertion, public surface or input rule.
+
+Earlier offline runs established the checker and Rust behavior before the
+candidate build. The first new fixture lacked required path diagnostics; that
+fixture was corrected. The broader offline run exposed stale plan links to the
+removed lesson and Rust formatting; both were repaired and the targeted rerun
+`20261115T004221Z_bb5b007e` passed. Failed rehearsals remain disposable evidence.
+
+### Observations and limits
+
+The live seam passed all **117 report rows** with exactly **seven submissions**
+(six execution passages and one refusal), four publications and one version
+command. Initial A returned 63 `a` bytes; the exact same request then returned
+63 `b` bytes from the same inode. A's long update and independently created B
+had equal `N + 1` payloads and required metadata, with different inodes; reads
+returned the exact `N`-byte prefix. Repair matched the emitted B document.
+Denied B separately reported query deny/rc 1/errno 0 and fresh-open -1/EPERM,
+with aggregate `read_failed` and process exit 0. A under that identical policy
+reported allow and its own successful read. All six workers were confirmed
+reaped, phases completed, and the refused passage reported the exact unknown
+policy member with no execution records.
+
+All **34 offline controls** matched their exact oracles: 21 consumer-accepted
+capture cases, seven preparation scenarios and six cleanup-witness controls.
+These include whole-capture replay rejected for current-content mismatch,
+wrong-target publication through the actual acquisition boundary, and detection
+of a driver that ignores the supplied emitter. The example retains its 158 rows,
+170 conditions and passing live/constructed coverage after extraction.
+
+The full guide produced independently observed empty 0600 files, retained its
+refusal/nonce/compiled-capture exercises, passed eight preparation-guard controls
+and completed installation, verification, execution and removal of its owned
+external runner. Independent service/plist/registry absence and unchanged app
+inventory were recorded. Both guide and seam staging directories were removed
+only after their cleanup obligations were discharged; durable receipts say
+`removed: true` and the paths were independently observed absent. Two Astra
+agents assisted: one focused on publisher/corpus migration, and one stayed
+through guide design, implementation, driver review and native evidence audit.
+
+The public change is one build-bound developer publisher and its stamped rule;
+ordinary guide teaching and corpus expectations remain separately owned. The
+maintenance added is one small shared file-observation helper and two seam
+cases. Two embedded lessons and their extra native selector-substitution
+executions were removed. Samples establish sampled stability, not continuous
+stability; the query contrast does not identify a queried object or establish
+sandbox causation. Constructed controls show sensitivity, not native occurrence.
+All cited runs are disposable development observations, not retained release
+acceptance. The later guide overhaul and 0.3.8 tag remain separate work.

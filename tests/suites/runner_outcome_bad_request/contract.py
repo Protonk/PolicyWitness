@@ -14,7 +14,7 @@ ROOT = Path(__file__).resolve().parents[3]
 sys.path.insert(0, str(ROOT / 'tests/lib'))
 import build_context
 from run_capture import RunCapture
-from request_examples import examples, materialize
+from request_examples import CORPUS, examples, materialize
 from porcelain import decode as decode_porcelain
 from runner_client_capture import host_reply
 
