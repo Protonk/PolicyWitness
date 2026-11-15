@@ -25,15 +25,46 @@ def sample(target, payload, inode):
                 prefix_sha256=hashlib.sha256(payload[:checker.BOUND]).hexdigest(), prefix_length=len(payload[:checker.BOUND]))
 
 
-def set_query(envelope, denied, index=0):
-    reply = envelope['data']['runner_result']
-    query = reply['steps'][index]['sandbox_check']
-    query.update(outcome='deny' if denied else 'allow', rc=int(denied), native_rc=int(denied), errno=0)
-    record = reply['phases'][0]['validator_subprocess']['records'][index]
-    record.update(outcome=query['outcome'], rc=query['native_rc'], errno=0)
+def rewrite_line(record, **fields):
+    """Change a validator record and the line it was parsed from together."""
+    record.update(fields)
     raw = json.loads(record['raw_line'])
-    raw.update(outcome=query['outcome'], rc=query['native_rc'], errno=0)
+    raw.update(fields)
     record['raw_line'] = json.dumps(raw, separators=(',', ':'))
+
+
+def reply_step(envelope, ident):
+    return next(step for step in envelope['data']['runner_result']['steps'] if step['step_id'] == ident)
+
+
+def set_answer(envelope, ident, denied):
+    """One step's query answer, in the step and in its phase's collected record."""
+    query = reply_step(envelope, ident)['sandbox_check']
+    query.update(outcome='deny' if denied else 'allow', rc=int(denied), native_rc=int(denied), errno=0)
+    record = next(record for phase in envelope['data']['runner_result']['phases']
+                  for record in phase['validator_subprocess']['records'] if record['step_id'] == ident)
+    rewrite_line(record, outcome=query['outcome'], rc=query['native_rc'], errno=0)
+
+
+def set_query(envelope, denied, index=0):
+    set_answer(envelope, envelope['data']['runner_result']['steps'][index]['step_id'], denied)
+
+
+def refuse_read(envelope, ident):
+    """A successful fresh read reported as the refused open, with its comparison record."""
+    step = reply_step(envelope, ident)
+    step['attempt'].update(rc=-1, errno=1, outcome='read_failed', fresh_read=dict(open_rc=-1, open_errno=1))
+    step['comparison'].update(observation='permission_failure', observation_basis='permission_errno')
+
+
+def fresh(envelope, ident):
+    return reply_step(envelope, ident)['attempt']['fresh_read']
+
+
+def replaced_before(state, name):
+    """A's inode differs for one matrix passage; its samples and its reads agree with each other."""
+    resample(state, [name], 44)
+    mutate_capture(state, name, lambda e: [fresh(e, ident)['identity'].update(inode=44) for ident in ('read-aa', 'read-ba')])
 
 
 def envelope(name, document, observed):
@@ -59,11 +90,7 @@ def envelope(name, document, observed):
         phase.update(phase_id='main', action_ids=['read-target'])
         validator = phase['validator_subprocess']
         validator.update(phase_id='main', expected_step_ids=['read-target'])
-        record = validator['records'][0]
-        record.update(step_id='read-target', filter_value=target)
-        raw = json.loads(record['raw_line'])
-        raw.update(step_id='read-target', filter_value=target)
-        record['raw_line'] = json.dumps(raw, separators=(',', ':'))
+        rewrite_line(validator['records'][0], step_id='read-target', filter_value=target)
         disposition = reply['runner_subprocess']['disposition']
         disposition['steps'] = disposition['steps'][:1]
         disposition['steps'][0].update(step_id='read-target', index=0)
@@ -83,7 +110,6 @@ def envelope(name, document, observed):
     return recapture_host_reply(result)
 
 
-
 def matrix_envelope(document, observed):
     steps, records, dispositions = [], [], []
     for index, submitted in enumerate(document['probe_plan']):
@@ -98,18 +124,18 @@ def matrix_envelope(document, observed):
         step['comparison'].update(operation_relation='different' if index == 4 else 'matched',
                                   target_relation='different_submitted' if index in (1, 2) else 'same_submitted')
         record = reply['phases'][0]['validator_subprocess']['records'][0]
-        record.update(step_id=step['step_id'], operation=query['operation'], filter_value=query['filter']['value'])
-        raw = json.loads(record['raw_line'])
-        raw.update({k: record[k] for k in ('step_id', 'operation', 'filter_value')})
-        record['raw_line'] = json.dumps(raw, separators=(',', ':'))
+        rewrite_line(record, step_id=step['step_id'], operation=query['operation'], filter_value=query['filter']['value'])
         disposition = reply['runner_subprocess']['disposition']['steps'][0]
         disposition.update(step_id=step['step_id'], index=index)
-        steps.append(step); records.append(record); dispositions.append(disposition)
+        steps.append(step)
+        records.append(record)
+        dispositions.append(disposition)
     reply['steps'] = steps
     reply['phases'][0]['action_ids'] = [s['step_id'] for s in steps]
     reply['phases'][0]['validator_subprocess'].update(expected_step_ids=reply['phases'][0]['action_ids'], records=records)
     reply['runner_subprocess']['disposition']['steps'] = dispositions
     return recapture_host_reply(env)
+
 
 def build():
     version = dict(argv=['constructed', '--version'], exit=0, stderr='', stdout=checker.encode(dict(
@@ -307,71 +333,88 @@ def boundary_controls():
         ('replaced_a.order', 'not_evaluated')}
 
 
-
 def matrix_controls():
     failed = lambda *names: {(name, 'failed') for name in names}
+    unread = lambda *steps: {('crossed.' + step + '.' + k, 'not_evaluated') for step in steps for k in ('identity', 'content')}
+    # A changed crossed step also changes its comparison with the same step in the returning form.
+    form = lambda *steps: failed(*('distinction.crossed--returning.' + step for step in steps))
     first = 'distinction.crossed.read-aa--read-ba'
     second = 'distinction.crossed.read-aa--read-ab'
     third = 'distinction.crossed.read-bb--metadata-b'
+    steps = [row[0] for row in checker.MATRIX]
+
     def input_change(s, change):
         capture = s['passages']['crossed']['capture']
         document = json.loads(capture['input'])
         change(document['probe_plan'])
         capture['input'] = checker.encode(document)
-        mutate_capture(s, 'crossed', lambda e: e['data']['runner_client']['request_delivery'].update(bytes_written=len(capture['input'].encode())-1))
+        mutate_capture(s, 'crossed', lambda e: e['data']['runner_client']['request_delivery'].update(
+            bytes_written=len(capture['input'].encode()) - 1))
     for label, change, extra in (
-        ('query_operand', lambda rows: rows[2]['sandbox_check']['filter'].update(value=PATHS['A']), failed(first)),
-        ('attempt_operand', lambda rows: rows[1]['attempt'].update(target=PATHS['A']), failed(second)),
-        ('query_operation', lambda rows: rows[4]['sandbox_check'].update(operation='file-read-data'), failed(third)),
-        ('omitted', lambda rows: rows.pop(), {(third, 'not_evaluated')}),
-        ('duplicated', lambda rows: rows.append(copy.deepcopy(rows[0])), set()),
-        ('reordered', lambda rows: rows.reverse(), set())):
+            ('query_operand', lambda rows: rows[2]['sandbox_check']['filter'].update(value=PATHS['A']), failed(first) | form('read-ba')),
+            ('attempt_operand', lambda rows: rows[1]['attempt'].update(target=PATHS['A']), failed(second) | form('read-ab')),
+            ('query_operation', lambda rows: rows[4]['sandbox_check'].update(operation='file-read-data'), failed(third) | form('metadata-b')),
+            ('omitted', lambda rows: rows.pop(), {(third, 'not_evaluated'), ('distinction.crossed--returning.metadata-b', 'not_evaluated')}),
+            ('duplicated', lambda rows: rows.append(copy.deepcopy(rows[0])), set()),
+            ('reordered', lambda rows: rows.reverse(), set())):
         yield 'matrix_' + label, lambda s, change=change: input_change(s, change), failed('crossed.transformation') | extra
-    yield 'matrix_wrong_query', lambda s: mutate_capture(s, 'crossed', lambda e: set_query(e, False, 2)), failed('crossed.read-ba.query', first) | {('crossed.read-ba.order', 'not_evaluated')}
-    def wrong_attempt(s):
-        def change(e):
-            steps = e['data']['runner_result']['steps']
-            steps[2]['attempt'].update(rc=-1, errno=1, outcome='read_failed', fresh_read=dict(open_rc=-1, open_errno=1))
-            steps[2]['comparison'].update(observation='permission_failure', observation_basis='permission_errno')
-        mutate_capture(s, 'crossed', change)
-    yield 'matrix_wrong_attempt', wrong_attempt, failed('crossed.read-ba.attempt', first) | {('crossed.read-ba.'+k, 'not_evaluated') for k in ('identity','content')}
-    yield 'matrix_equal_bytes_wrong_object', lambda s: mutate_capture(s, 'crossed', lambda e:
-        e['data']['runner_result']['steps'][2]['attempt']['fresh_read']['identity'].update(inode=42)), failed('crossed.read-ba.identity', first)
+    yield 'matrix_wrong_query', lambda s: mutate_capture(s, 'crossed', lambda e: set_answer(e, 'read-ba', False)), \
+        failed('crossed.read-ba.query', first) | form('read-ba') | {('crossed.read-ba.order', 'not_evaluated')}
+    yield 'matrix_wrong_attempt', lambda s: mutate_capture(s, 'crossed', lambda e: refuse_read(e, 'read-ba')), \
+        failed('crossed.read-ba.attempt', first) | form('read-ba') | unread('read-ba')
+    yield 'matrix_equal_bytes_wrong_object', lambda s: mutate_capture(s, 'crossed', lambda e: fresh(e, 'read-ba')['identity'].update(inode=42)), \
+        failed('crossed.read-ba.identity', first) | form('read-ba')
+    yield 'matrix_changed_returned_byte', lambda s: mutate_capture(s, 'crossed', lambda e: fresh(e, 'read-aa').update(
+        content_hex=(b'x' + checker.PREFIX[1:]).hex())), failed('crossed.read-aa.content', first) | form('read-aa')
+
     def swapped(s):
         def change(e):
-            r=e['data']['runner_result']
-            ids=[step['step_id'] for step in r['steps']]
-            r['steps'][0], r['steps'][2] = r['steps'][2], r['steps'][0]
-            records=r['phases'][0]['validator_subprocess']['records']
+            reply = e['data']['runner_result']
+            records = reply['phases'][0]['validator_subprocess']['records']
+            reply['steps'][0], reply['steps'][2] = reply['steps'][2], reply['steps'][0]
             records[0], records[2] = records[2], records[0]
-            for i in (0, 2):
-                r['steps'][i]['step_id']=ids[i]
-                records[i]['step_id']=ids[i]
-                raw=json.loads(records[i]['raw_line']);raw['step_id']=ids[i]
-                records[i]['raw_line']=json.dumps(raw,separators=(',', ':'))
+            for index in (0, 2):
+                reply['steps'][index]['step_id'] = steps[index]
+                rewrite_line(records[index], step_id=steps[index])
         mutate_capture(s, 'crossed', change)
     yield 'matrix_other_step_under_id', swapped, failed('crossed.read-aa.association', 'crossed.read-ba.association',
-        'crossed.read-aa.query', 'crossed.read-ba.query', second) | {('crossed.'+step+'.'+k, 'not_evaluated')
-        for step in ('read-aa','read-ba') for k in ('order','identity','content')}
-    # Wrong relations remain consumer-valid only when their submitted echoes change coherently.
+        'crossed.read-aa.query', 'crossed.read-ba.query', second) | form('read-aa', 'read-ba') | unread('read-aa', 'read-ba') | {
+        ('crossed.' + step + '.order', 'not_evaluated') for step in ('read-aa', 'read-ba')}
+
+    # A wrong relation stays consumer-valid only when the submitted echo changes with it.
     def relation(s):
         def change(e):
-            r=e['data']['runner_result'];step=r['steps'][2]
-            step['sandbox_check']['filter_value']=PATHS['A']
-            step['comparison']['target_relation']='same_submitted'
-            rec=r['phases'][0]['validator_subprocess']['records'][2]
-            rec['filter_value']=PATHS['A'];raw=json.loads(rec['raw_line']);raw['filter_value']=PATHS['A']
-            rec['raw_line']=json.dumps(raw,separators=(',', ':'))
-        mutate_capture(s,'crossed',change)
-    yield 'matrix_wrong_relation', relation, failed('crossed.read-ba.association') | {('crossed.read-ba.'+k,'not_evaluated') for k in ('identity','content')}
+            step = reply_step(e, 'read-ba')
+            step['sandbox_check']['filter_value'] = PATHS['A']
+            step['comparison']['target_relation'] = 'same_submitted'
+            rewrite_line(e['data']['runner_result']['phases'][0]['validator_subprocess']['records'][2], filter_value=PATHS['A'])
+        mutate_capture(s, 'crossed', change)
+    yield 'matrix_wrong_relation', relation, failed('crossed.read-ba.association') | unread('read-ba')
+
     def unordered(s):
         def change(e):
-            r=e['data']['runner_result']
-            r['phases'][0]['ordering']['worker_lifetime_established']=False
-            for step in r['steps']:step['comparison']['order']='unestablished'
-        mutate_capture(s,'crossed',change)
-    yield 'matrix_unestablished_order', unordered, failed('crossed.collections', *('crossed.'+step+'.order' for step in ('read-aa','read-ab','read-ba','read-bb','metadata-b')))
+            reply = e['data']['runner_result']
+            reply['phases'][0]['ordering']['worker_lifetime_established'] = False
+            for step in reply['steps']:
+                step['comparison']['order'] = 'unestablished'
+        mutate_capture(s, 'crossed', change)
+    yield 'matrix_unestablished_order', unordered, failed('crossed.collections', *('crossed.' + step + '.order' for step in steps))
+
+    # Every record of the reply reversed together: each step is still found by its identifier.
+    def reversed_reply(s):
+        def change(e):
+            reply = e['data']['runner_result']
+            phase, slots = reply['phases'][0], reply['runner_subprocess']['disposition']
+            reply['steps'].reverse()
+            phase['action_ids'].reverse()
+            phase['validator_subprocess']['expected_step_ids'] = list(phase['action_ids'])
+            phase['validator_subprocess']['records'].reverse()
+            slots['steps'] = [dict(slot, index=index) for index, slot in enumerate(reversed(slots['steps']))]
+        mutate_capture(s, 'crossed', change)
+    yield 'matrix_reply_reordered', reversed_reply, failed('crossed.association', 'crossed.collections')
     yield 'matrix_peer_sample_missing', lambda s: s['passages']['crossed']['peer'].update(after=None), failed('crossed.peer')
+    yield 'matrix_a_replaced_before', lambda s: replaced_before(s, 'crossed'), failed('crossed.generation') | form('read-aa', 'read-ba')
+
 
 def unadmitted_controls():
     """Captures the consumer itself refuses: nothing under the reply is read or credited."""
@@ -383,11 +426,24 @@ def unadmitted_controls():
         ('b.' + kind, 'not_evaluated') for kind in ('association', 'worker', 'collections', 'query', 'order', 'attempt', 'identity', 'content')}
 
 
+# Rows every passage computes the same way, whatever its form.
+UNIFORM = ('status', 'build', 'consumer', 'reply', 'worker', 'fixture', 'after_fixture', 'stability')
+
+
 def kind(ident):
-    """A row's obligation without its passage or emission name."""
+    """A row's obligation, without the names that only select among rows evaluated alike.
+
+    An emission, a one-step passage, and a form's step, actor or phase are such
+    names. A form keeps its own name on everything but the uniform rows, so its
+    matrix, ownership and derivative rows each need a control in that form. Each
+    distinction pair is its own obligation; the five across the forms are one.
+    """
     parts = ident.split('.')
     if parts[0] == 'distinction':
-        return 'distinction'
+        return 'distinction.crossed--returning' if parts[1] == 'crossed--returning' else ident
+    if parts[0] in ('crossed', 'returning') and not (len(parts) == 2 and parts[1] in UNIFORM):
+        family = () if len(parts) == 2 else (parts[1],) if parts[1] in ('actor', 'phase') else ('step',)
+        return '.'.join((parts[0],) + family + (parts[-1],))
     if parts[0] in checker.PASSAGES:
         return parts[-1]
     return ident if len(parts) < 3 else parts[0] + '.' + parts[2]
@@ -502,14 +558,7 @@ def main(directory):
     groups = [(coherent, name, change, expected)
               for coherent, group in ((True, controls()), (True, boundary_controls()), (True, matrix_controls()), (False, unadmitted_controls()))
               for name, change, expected in group] + list(actor_controls())
-    # Independently named cross-form consequences of the existing matrix controls.
-    form_faults = dict(matrix_query_operand=['read-ba'], matrix_attempt_operand=['read-ab'], matrix_query_operation=['metadata-b'],
-                       matrix_wrong_query=['read-ba'], matrix_wrong_attempt=['read-ba'], matrix_equal_bytes_wrong_object=['read-ba'],
-                       matrix_other_step_under_id=['read-aa', 'read-ba'])
     for coherent, name, change, expected in groups:
-        expected = expected | {(f'distinction.crossed--returning.{ident}', 'failed') for ident in form_faults.get(name, ())}
-        if name == 'matrix_omitted':
-            expected |= {('distinction.crossed--returning.metadata-b', 'not_evaluated')}
         state = build()
         change(state)
         report = checker.evaluate(state, authored_fixture=True)
@@ -519,7 +568,7 @@ def main(directory):
         checker.write_report(dest, report)
         found = checker.diagnostics(report)
         assert found == expected, (name, sorted(expected), sorted(found))
-        # Correspondence controls are coherent to the consumer; only the unadmitted group is not.
+        # A coherent control is one the consumer accepts, so only the seam's own rows reject it.
         assert coherent is not any(ident.endswith('.consumer') for ident, _ in found), name
         rejected |= {kind(ident) for ident, status in found if status == 'failed'}
         records.append(dict(name=name, expected=sorted(expected), actual=sorted(found), consumer_accepted=coherent))

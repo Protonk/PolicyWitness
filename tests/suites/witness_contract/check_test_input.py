@@ -153,6 +153,8 @@ MATRIX = (
     ('read-bb', 'file-read-data', 'B', 'B', True, True),
     ('metadata-b', 'file-read-metadata', 'B', 'B', False, True),
 )
+# Only A is ever read successfully, so each successful read is compared with A's sample.
+assert all(failed == (attempted == 'B') for _, _, _, attempted, _, failed in MATRIX)
 
 
 def matrix_steps(paths):

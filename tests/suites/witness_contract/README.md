@@ -127,8 +127,12 @@ crossed attempt target and changed query operation. In `read-ba`, equal file
 bytes leave descriptor identity as the observation identifying A's opened
 object beside the deny answer about B. Controls change each derivative operand,
 omit/duplicate/reorder rows, exchange coherent step evidence, change query or
-attempt results independently, substitute B's identity and remove established
-order. These observations do not claim prediction/enforcement agreement.
+attempt results independently, substitute B's identity, change a returned byte
+and remove established order. A reply whose records are all reversed together
+fails only the passage's association and collection rows; every step is still
+found by its identifier. A's inode changed for this passage alone, with reads
+that agree with the changed sample, fails the generation row. These
+observations do not claim prediction/enforcement agreement.
 
 The `returning` passage submits the same five rows using two applied actors
 with equal deny-B policies and explicit `selected` equipment. It runs only
@@ -155,17 +159,31 @@ structural template with separately constructed matrix observations. Controls
 exchange actors, misnumber visits, move complete steps between phases, alter
 visit/validator lists, share a PID, report a second application or an unreaped
 actor, and accept consistent actor/phase/step renaming. The unreaped control
-also requires the real cleanup decision to withhold removal. The real
-crossed-matrix gate has accepted and rejected controls before actor derivation.
+also requires the real cleanup decision to withhold removal. A derivative with
+another partition, another policy for one actor or another query operand fails
+the transformation row, which the driver requires before submission. In this
+form too, a wrong query answer, a refused read, B's identity, a changed
+returned byte, an unestablished order and a changed A generation each fail
+their own row beside correct ownership. The real crossed-matrix gate has
+accepted and rejected controls before actor derivation.
 
 Equal policies do not distinguish whether policies reached the correct actors,
 and these finite observations do not establish execution-form equivalence.
 `actor_compositions` retains distinct-policy, gate and extension obligations;
 `comparison_matrix` retains general relation classification; the independent
 prediction-target case retains write effects; and `example_round_trip` retains
-its exact published bytes, refusals and one-actor derivative. Their detailed
-[ownership comparison](../../../docs/TEST-INPUT-EXPANSION-PLAN.md#what-existing-cases-already-establish)
-records the limits of this expansion.
+its exact published bytes, refusals and one-actor derivative. Beside them this
+case adds a fresh read's descriptor identity next to a crossed query when both
+files hold the same bytes, failed fresh reads, and a returning visit whose
+number differs from its global ordinal. Reader agreement stays with the shared
+consumer, which decodes the retained host bytes independently and compares
+them with the controller's projection for every passage.
+
+`check_test_input.py` evaluates every passage. Beside it,
+`test_input_views.py` holds the generation rows and the distinction table,
+`test_input_actors.py` the returning form's expected request and rows, and
+`test_input_actor_controls.py` the constructed two-actor capture and its
+controls. They are helpers of the two cases, not cases of their own.
 
 The separate checker pins observed and published status, identity admission,
 request transformations, policy digest and operand association, completed worker
@@ -189,9 +207,15 @@ Controls require exact diagnostic IDs and statuses (`passed`, `failed`,
 `not_evaluated`) and consumer acceptance for coherent correspondence faults.
 A capture from another build has its reply rows withheld as `not_evaluated`.
 Malformed actor joins remain consumer-owned rejection controls; coherent
-association faults must still pass that consumer. The case fails unless every obligation the
-checker reports, taken without its passage or emission name, is failed by some
-control.
+association faults must still pass that consumer. The case fails unless every
+obligation the checker reports is failed by some control. An obligation is a
+row without the names that only select among rows evaluated alike: an
+emission, a one-step passage, and a form's step, actor or phase. The crossed
+and returning forms keep their own names on their matrix, ownership and
+derivative rows, so each needs a control in that form; only the status,
+build, consumer, reply, worker and sample rows, which every passage computes
+the same way, are shared. Each distinction pair is its own obligation, and
+the five pairs across the two forms are one.
 The real acquisition path is exercised with recorded stand-in executables;
 wrong-target output fails before the observer, and deliberately ignoring the
 supplied emitter is detected by that scenario's oracle.

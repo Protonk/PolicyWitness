@@ -7,6 +7,12 @@ import check_test_input as c
 import test_input_controls as t
 from blackbox import bind_constructed_envelope, recapture_host_reply
 
+ACTORS = ('Left', 'Right')
+PHASES = ('left-first', 'right-only', 'left-second')
+# Each step under the phase the request declares for it.
+PLACED = (('left-first', 'read-aa'), ('left-first', 'read-ab'), ('right-only', 'read-ba'),
+          ('left-second', 'read-bb'), ('left-second', 'metadata-b'))
+
 
 def replace(value, mapping):
     if isinstance(value, dict):
@@ -59,81 +65,142 @@ def envelope(document, observed):
         ids = [s['step_id'] for s in planned_phase['actions']]
         phase = copy.deepcopy(ordinary['phases'][0])
         phase.update(phase_id=planned_phase['phase_id'], actor_id=owner['actor_id'], ordinal=ordinal,
-                     actor_visit=owner['visits'].index(ordinal)+1, action_ids=ids)
-        phase['validator_subprocess'].update(phase_id=phase['phase_id'], ordinal=ordinal, pid=51100+ordinal,
-                                            expected_step_ids=ids, records=[records[ident] for ident in ids])
+                     actor_visit=owner['visits'].index(ordinal) + 1, action_ids=ids)
+        phase['validator_subprocess'].update(phase_id=phase['phase_id'], ordinal=ordinal, pid=51100 + ordinal,
+                                             expected_step_ids=ids, records=[records[ident] for ident in ids])
         for step in reply['steps']:
             if step['step_id'] in ids:
                 step.update(phase_id=phase['phase_id'], actor_id=owner['actor_id'])
                 step['sandbox_check']['pid'] = owner['launch']['pid']
         reply['phases'].append(phase)
-    for actor in reply['actors']:
-        local = [s['step_id'] for s in reply['steps'] if s['actor_id'] == actor['actor_id']]
-        actor['subprocess']['disposition']['steps'] = [dict(slots[ident], index=i) for i, ident in enumerate(local)]
+    assign_slots(reply, slots)
     return recapture_host_reply(env)
 
 
+def assign_slots(reply, slots):
+    """Each actor's worker carries the slots of its own steps, numbered in its own order."""
+    for actor in reply['actors']:
+        local = [s['step_id'] for s in reply['steps'] if s['actor_id'] == actor['actor_id']]
+        actor['subprocess']['disposition']['steps'] = [dict(slots[ident], index=i) for i, ident in enumerate(local)]
+
+
 def controls():
+    """Yields (the consumer accepts it, name, change, exact diagnostics)."""
     failed = lambda *names: {(name, 'failed') for name in names}
+    row = lambda ident: 'returning.' + dict((step, phase) for phase, step in PLACED)[ident] + '.' + ident
+    unread = lambda *steps: {(row(step) + '.' + k, 'not_evaluated') for step in steps for k in ('identity', 'content')}
+    form = lambda *steps: failed(*('distinction.crossed--returning.' + step for step in steps))
+    result = lambda env: env['data']['runner_result']
+
     def mutate(s, change):
         t.mutate_capture(s, 'returning', change)
+
+    def everywhere(s, mapping):
+        def change(e):
+            changed = replace(e, mapping)
+            e.clear()
+            e.update(changed)
+        mutate(s, change)
+
     def rename(s):
-        p=s['passages']['returning'];capture=p['capture']
-        mapping={name: 'renamed-'+name for name in ('Left','Right','left-first','right-only','left-second','read-aa','read-ab','read-ba','read-bb','metadata-b')}
-        capture['input']=c.encode(replace(json.loads(capture['input']),mapping))
+        capture = s['passages']['returning']['capture']
+        mapping = {name: 'renamed-' + name for name in ACTORS + PHASES + tuple(step for _, step in PLACED)}
+        capture['input'] = c.encode(replace(json.loads(capture['input']), mapping))
+
         def change(e):
-            changed=replace(e,mapping);e.clear();e.update(changed)
-            for phase in e['data']['runner_result']['phases']:
+            changed = replace(e, mapping)
+            e.clear()
+            e.update(changed)
+            for phase in result(e)['phases']:
                 for record in phase['validator_subprocess']['records']:
-                    record['raw_line']=json.dumps(replace(json.loads(record['raw_line']),mapping),separators=(',', ':'))
-            e['data']['runner_client']['request_delivery']['bytes_written']=len(capture['input'].encode())-1
-        mutate(s,change)
+                    record['raw_line'] = json.dumps(replace(json.loads(record['raw_line']), mapping), separators=(',', ':'))
+            e['data']['runner_client']['request_delivery']['bytes_written'] = len(capture['input'].encode()) - 1
+        mutate(s, change)
     yield True, 'actor_consistent_renaming', rename, set()
-    def exchange(s):
-        def change(e):
-            changed=replace(e,{'Left':'Right','Right':'Left'});e.clear();e.update(changed)
-        mutate(s,change)
-    affected = [('left-first','read-aa'),('left-first','read-ab'),('right-only','read-ba'),('left-second','read-bb'),('left-second','metadata-b')]
-    yield True, 'actor_exchanged', exchange, failed('returning.association','returning.actor.Left.association','returning.actor.Right.association',
-        *('returning.phase.'+p+'.association' for p in ('left-first','right-only','left-second')),
-        *('returning.'+p+'.'+s+'.association' for p,s in affected)) | {
-        ('returning.'+p+'.'+s+'.'+k,'not_evaluated') for p,s in affected if s in ('read-aa','read-ba') for k in ('identity','content')}
-    for visit in (1,3):
-        yield False, 'actor_second_visit_'+str(visit), lambda s, visit=visit: mutate(s,lambda e:
-            e['data']['runner_result']['phases'][2].update(actor_visit=visit)), failed('returning.consumer','returning.phase.left-second.association')
-    yield False, 'actor_wrong_visits', lambda s: mutate(s,lambda e:e['data']['runner_result']['actors'][0].update(visits=[1,2])), failed('returning.consumer','returning.actor.Left.association')
-    yield False, 'actor_wrong_validator_ids', lambda s: mutate(s,lambda e:e['data']['runner_result']['phases'][2]['validator_subprocess'].update(expected_step_ids=['read-ba'])), failed('returning.consumer','returning.phase.left-second.collections')
-    def same_pid(s):
-        def change(e):
-            changed=replace(e,{51002:51001});e.clear();e.update(changed)
-        mutate(s,change)
-    yield True, 'actor_same_pid', same_pid, failed('returning.processes')
-    yield False, 'actor_second_application', lambda s: mutate(s,lambda e:e['data']['runner_result']['actors'][0].update(application_count=2)), failed('returning.consumer','returning.actor.Left.application')
-    yield True, 'actor_equipment_default', lambda s: mutate(s,lambda e:e['data']['runner_result']['actors'][0]['equipment'].update(requested=None)), failed('returning.actor.Left.equipment')
+
+    # The request itself: each derivative fault is refused before submission by the same row.
+    def derivative(s, change):
+        capture = s['passages']['returning']['capture']
+        document = json.loads(capture['input'])
+        change(document)
+        capture['input'] = c.encode(document)
+        mutate(s, lambda e: e['data']['runner_client']['request_delivery'].update(bytes_written=len(capture['input'].encode()) - 1))
+
+    def other_partition(document):
+        document['phases'][1]['actions'].insert(0, document['phases'][0]['actions'].pop())
+
+    def other_policy(document):
+        document['actors'][1]['sandbox']['policy']['sbpl_source'] = c.ALLOW
+
+    def other_operand(document):
+        document['phases'][1]['actions'][0]['sandbox_check']['filter']['value'] = t.PATHS['A']
+    for name, change, extra in (('partition', other_partition, set()), ('policy', other_policy, set()),
+                                ('operand', other_operand, form('read-ba'))):
+        yield True, 'actor_derivative_' + name, lambda s, change=change: derivative(s, change), failed('returning.transformation') | extra
+
+    # Ownership. Faults the consumer's joins also catch are marked as not accepted by it.
+    yield True, 'actor_exchanged', lambda s: everywhere(s, {'Left': 'Right', 'Right': 'Left'}), failed(
+        'returning.association', 'returning.actor.Left.association', 'returning.actor.Right.association',
+        *('returning.phase.' + phase + '.association' for phase in PHASES),
+        *(row(step) + '.association' for _, step in PLACED)) | unread('read-aa', 'read-ba')
+    for visit in (1, 3):
+        yield False, 'actor_second_visit_' + str(visit), lambda s, visit=visit: mutate(s, lambda e: result(e)['phases'][2].update(
+            actor_visit=visit)), failed('returning.consumer', 'returning.phase.left-second.association')
+    yield False, 'actor_wrong_visits', lambda s: mutate(s, lambda e: result(e)['actors'][0].update(visits=[1, 2])), \
+        failed('returning.consumer', 'returning.actor.Left.association')
+    yield False, 'actor_wrong_validator_ids', lambda s: mutate(s, lambda e: result(e)['phases'][2]['validator_subprocess'].update(
+        expected_step_ids=['read-ba'])), failed('returning.consumer', 'returning.phase.left-second.collections')
+    yield True, 'actor_same_pid', lambda s: everywhere(s, {51002: 51001}), failed('returning.processes')
+    yield False, 'actor_second_application', lambda s: mutate(s, lambda e: result(e)['actors'][0].update(application_count=2)), \
+        failed('returning.consumer', 'returning.actor.Left.application')
+    yield True, 'actor_equipment_default', lambda s: mutate(s, lambda e: result(e)['actors'][0]['equipment'].update(requested=None)), \
+        failed('returning.actor.Left.equipment')
+
     def unreaped(s):
         def change(e):
-            actor=e['data']['runner_result']['actors'][1]
-            actor['subprocess']['reaped']=False
+            actor = result(e)['actors'][1]
+            actor['subprocess']['reaped'] = False
             actor.pop('owned_reap')
-        mutate(s,change)
-        witnessed,reason=t.driver.cleanup_disposition(s['passages']['returning']['capture'],t.IDENTITY,authored_fixture=True)
+        mutate(s, change)
+        witnessed, reason = t.driver.cleanup_disposition(s['passages']['returning']['capture'], t.IDENTITY, authored_fixture=True)
         assert not witnessed, reason
     yield True, 'actor_unreaped', unreaped, failed('returning.actor.Right.worker')
+
     def wrong_phase(s):
         def change(e):
-            r=e['data']['runner_result'];phases=r['phases'];steps={x['step_id']:x for x in r['steps']}
-            records={x['step_id']:x for p in phases for x in p['validator_subprocess']['records']}
-            slots={x['step_id']:x for a in r['actors'] for x in a['subprocess']['disposition']['steps']}
-            phases[0]['action_ids'],phases[2]['action_ids']=phases[2]['action_ids'],phases[0]['action_ids']
-            for p in phases:
-                p['validator_subprocess'].update(expected_step_ids=p['action_ids'],records=[records[x] for x in p['action_ids']])
-                for ident in p['action_ids']:steps[ident]['phase_id']=p['phase_id']
-            r['steps']=[steps[x] for p in phases for x in p['action_ids']]
-            for a in r['actors']:
-                local=[x['step_id'] for x in r['steps'] if x['actor_id']==a['actor_id']]
-                a['subprocess']['disposition']['steps']=[dict(slots[x],index=i) for i,x in enumerate(local)]
-        mutate(s,change)
+            reply = result(e)
+            phases = reply['phases']
+            steps = {x['step_id']: x for x in reply['steps']}
+            records = {x['step_id']: x for p in phases for x in p['validator_subprocess']['records']}
+            slots = {x['step_id']: x for a in reply['actors'] for x in a['subprocess']['disposition']['steps']}
+            phases[0]['action_ids'], phases[2]['action_ids'] = phases[2]['action_ids'], phases[0]['action_ids']
+            for phase in phases:
+                phase['validator_subprocess'].update(expected_step_ids=phase['action_ids'],
+                                                     records=[records[x] for x in phase['action_ids']])
+                for ident in phase['action_ids']:
+                    steps[ident]['phase_id'] = phase['phase_id']
+            reply['steps'] = [steps[x] for phase in phases for x in phase['action_ids']]
+            assign_slots(reply, slots)
+        mutate(s, change)
     yield True, 'actor_steps_wrong_phase', wrong_phase, failed('returning.association',
-        *('returning.phase.'+p+'.'+k for p in ('left-first','left-second') for k in ('association','collections')),
-        *('returning.'+p+'.'+s+'.association' for p,s in affected if p!='right-only')) | {
-        ('returning.left-first.read-aa.'+k,'not_evaluated') for k in ('identity','content')}
+        *('returning.phase.' + phase + '.' + k for phase in ('left-first', 'left-second') for k in ('association', 'collections')),
+        *(row(step) + '.association' for phase, step in PLACED if phase != 'right-only')) | unread('read-aa')
+
+    # The matrix's native expectations in this form, each beside correct ownership.
+    yield True, 'actor_wrong_query', lambda s: mutate(s, lambda e: t.set_answer(e, 'read-ba', False)), \
+        failed(row('read-ba') + '.query') | form('read-ba') | {(row('read-ba') + '.order', 'not_evaluated')}
+    yield True, 'actor_wrong_attempt', lambda s: mutate(s, lambda e: t.refuse_read(e, 'read-ba')), \
+        failed(row('read-ba') + '.attempt') | form('read-ba') | unread('read-ba')
+    yield True, 'actor_equal_bytes_wrong_object', lambda s: mutate(s, lambda e: t.fresh(e, 'read-ba')['identity'].update(inode=42)), \
+        failed(row('read-ba') + '.identity') | form('read-ba')
+    yield True, 'actor_changed_returned_byte', lambda s: mutate(s, lambda e: t.fresh(e, 'read-aa').update(
+        content_hex=(b'x' + c.PREFIX[1:]).hex())), failed(row('read-aa') + '.content') | form('read-aa')
+
+    def unordered(s):
+        def change(e):
+            result(e)['phases'][1]['ordering']['worker_lifetime_established'] = False
+            t.reply_step(e, 'read-ba')['comparison']['order'] = 'unestablished'
+        mutate(s, change)
+    yield True, 'actor_unestablished_order', unordered, failed('returning.phase.right-only.collections', row('read-ba') + '.order')
+    yield True, 'actor_a_replaced_before', lambda s: t.replaced_before(s, 'returning'), \
+        failed('returning.generation') | form('read-aa', 'read-ba')

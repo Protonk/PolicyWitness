@@ -107,7 +107,6 @@ def cleanup_disposition(capture, identity, *, refusal=False, authored_fixture=Fa
     return False, reason
 
 
-
 def crossed_gate(directory, state, *, authored_fixture=False):
     """Only the same acquisition's established matrix permits the actor derivative."""
     report = checker.evaluate(state, authored_fixture=authored_fixture)
