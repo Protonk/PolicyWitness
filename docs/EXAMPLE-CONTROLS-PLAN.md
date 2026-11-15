@@ -220,9 +220,9 @@ Read-only equipment inspection on 2026-11-14 found a matching Developer ID
 identity for the selected app's team, a logged-in GUI session, an empty
 default runner registry with no pending cleanup, and no reconciliation
 candidates or inspection errors. The source and staged guides are identical.
-No external runner was installed. These mutable prerequisites must hold again
-when the test input plan executes its full guide workflow; its guide design
-and acceptance checkpoint remain the next work.
+No external runner was installed. These mutable prerequisites must hold for
+each execution of the
+[full guide workflow](../tests/suites/witness_contract/README.md#guide-workflows).
 
 ## Limits
 
@@ -232,6 +232,7 @@ its author; the condition and row measurements are exhaustive over what the
 checker declares and reports, and the 48 source mutations are not. The
 consumer does not supply all of this workload's completion expectations:
 example's structure rows reject an unreaped ordinary worker and an incomplete
-final phase, and [TEST-INPUT-PLAN.md](TEST-INPUT-PLAN.md) explicitly requires
-those assertions for its own passages. The shared consumer's scope is unchanged.
+final phase, and the
+[test-input seam](../tests/suites/witness_contract/README.md#controlled-read-input)
+owns those assertions for its passages. The shared consumer's scope is unchanged.
 A second actor is a separate decision after this work.
