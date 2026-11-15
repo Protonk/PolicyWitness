@@ -7,7 +7,7 @@
       "cli": null,
       "xpc": null
     },
-    "request_source": "controller/src/lessons/create.json"
+    "request_source": "tests/fixtures/request_contract/create.json"
   },
   {
     "id": "current_contract",
@@ -99,7 +99,7 @@
         ]
       }
     },
-    "request_source": "controller/src/lessons/capture_typo.json"
+    "request_source": "tests/fixtures/request_contract/capture_typo.json"
   },
   {
     "id": "retired_capture_spelling",

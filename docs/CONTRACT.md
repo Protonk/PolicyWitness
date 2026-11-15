@@ -51,7 +51,8 @@ and `.ent` files discovered under `controller/src`, `controller/tools`,
 `runner/Sources`, `runner/Clients`, `runner/Services` and `runner/augments`.
 It also includes `build.sh`, `meson.build`, `meson.options`,
 `runner/Package.swift`, `controller/Cargo.toml`, `controller/Cargo.lock`,
-`controller/build.rs`, `Info.plist`, `PolicyWitness.entitlements`,
+`controller/build.rs`, `controller/src/test_inputs/read.json`, `Info.plist`,
+`PolicyWitness.entitlements`,
 `docs/build_contract.py`, `docs/source_identity.py`,
 `tests/build_equipment.py`, `tests/build-evidence.py`, and the build helpers
 `tests/lib/build_provenance.py`, `signer_check.py`, `cargo_config.py`,
@@ -588,33 +589,72 @@ This template applies a policy with no probe actions. Replace the assertion with
 <a id="contract-request-specimen-emit_example-support"></a>
 **Support: [check read](#contract-support-grades) for [Emit the example specimen](#contract-request-specimen-emit_example).** Emission parses the constant, inserts the binary's identity, passes the contract gate and uses the held request's serialization before any byte is written. An argument, an empty or unbound identity, a gate refusal and a failed write or flush each return the refusal that the command maps to exit 2. The emitted file reaches the controlled client as emitted, without its framing newline. On the selected app the command exits 0 with one JSON object and one newline carrying the app's identity, repeats it byte for byte, refuses every argument, and exits 2 when stdout has no reader whether or not stderr can be written; a build without an identity prints nothing. Context: Read the emitter and dispatch, the emitter's unit tests, the controlled orchestration test, the CLI integration tests against the selected app and isolated Cargo builds, and the live round-trip case with its checker. Evidence limit: Check read; no execution is credited. The exact request comparison runs under the test identity and ends at the client callback; on a signed app the live case observes the delivered length only. A gate refusal on a bound build has unit support and no built-app observation. No check observes the process's file reads; the isolated builds emit with no app, manifest or registry beside them. Development runs of these checks exist and are disposable; release credit awaits an archived acceptance. [Evidence details](#contract-request-specimen-emit_example-support-details).
 
-<a id="contract-request-specimen-emit_lesson"></a>
-##### Emit a request lesson
+<a id="contract-request-specimen-emit_test_input"></a>
+##### Publish a developer read input
 
-[Controller](#contract-identity-definitions-controller) reports at CLI lesson dispatch. Entry: cli lesson. Recipient: cli caller. Reports: lesson specimen. set_value(`specimen.contract`, [Contract](#contract-identity-build-contract)). Uses [Contract](#contract-identity-build-contract), [Specimen](#contract-identity-definitions-specimen).
+[Controller](#contract-identity-definitions-controller) reports at CLI test-input dispatch. Entry: cli test input. Recipient: cli caller. Reports: test input specimen. set_value(`specimen.contract`, [Contract](#contract-identity-build-contract)). Uses [Contract](#contract-identity-build-contract), [Specimen](#contract-identity-definitions-specimen).
 
-`policy-witness lesson <create|capture_typo> --target <absolute-path>` accepts
-one selector followed by one target option. The target must be a nonempty,
-absolute UTF-8 path without NUL. The controller preserves it verbatim in the
-query and attempt, inserts the emitting binary's contract, and prints one
-pretty JSON object followed by one newline. `capture_typo` deliberately includes
-an unknown policy field. The document's content, layout and labels carry no
-stability promise between builds.
+`policy-witness test-input read --target <absolute-path>` accepts exactly the
+read selector followed by one target option. This is a build-bound developer
+publisher. The target must be a nonempty absolute UTF-8 path without NUL.
+The controller validates the complete fixed template, inserts its binary's
+contract and preserves the target verbatim at the query and attempt operands.
+Substitution is positional; literal `$EFFECT` text in caller input is data.
+The document's content, layout and labels carry no stability promise between builds.
 
-Process exit 0 establishes complete publication, including a successful flush;
-it establishes neither admission nor an effect. `run` independently admits or
-refuses the emitted input. Usage, target, empty or `unbound` identity, rendering,
-write and flush failures exit 2. Discard standard output on exit 2, even when
-it contains a complete document. A reason goes to standard error when writable;
-the exit status does not depend on that stream.
+Process exit 0 establishes complete publication of one pretty JSON object,
+one framing newline and a successful flush; it establishes neither admission
+nor execution nor an effect. Ordinary `run` independently admits or refuses the
+input. Usage, target, empty or `unbound` identity, rendering, write and flush
+failures exit 2. Discard stdout on failure even when it contains complete JSON.
+A reason goes to stderr when writable; the exit status does not depend on it.
 
-Emission reads no external file, launches no process and does not inspect or
-normalize the target. It creates no directory and establishes no target-absence
-claim. The caller's workflow supplies absence checks and independent effect
-observations.
+Emission reads no external file, launches no process, normalizes or inspects
+no target and prepares no fixture. It makes no host-capacity or unconditional
+admission promise. The harness owns fixture creation, mutation, cleanup,
+independently authored expectations and observations.
 
-<a id="contract-request-specimen-emit_lesson-support"></a>
-**Support: [check read](#contract-support-grades) for [Emit a request lesson](#contract-request-specimen-emit_lesson).** Both materializations carry the supplied identity and verbatim target, retain the expected specimen/step labels, omit a nonce and differ only by the deliberately misspelled capture field. Argument, target and identity refusals write nothing. Controlled short writes assemble the complete document; partial-write and late-flush failures return a refusal even when complete JSON was written. On the selected app each selector exits 0 with an empty stderr and one JSON object followed by one newline, carrying the app's identity and a verbatim target that contains a parent reference, a quote, a backslash, a newline and a non-ASCII character. There, usage and target refusals exit 2 with an empty stdout, a stdout without a reader exits 2 without a panic, and a stderr closed at launch changes neither status. An isolated build without an identity prints nothing and exits 2; one with a supplied identity emits it. The live control submits the selected app's emitted documents unchanged through run and applies the corpus's separately authored expectations: create is admitted and its target file appears; capture_typo is refused with its code and path, no child and no file. Context: Read the embedded-template materializer, CLI dispatch, three unit controls with constructed arguments, identities and writers, the CLI integration tests against the selected app and isolated Cargo builds, and the live emitted-document control. Evidence limit: Check read; no execution is credited. The unit and integration controls establish publication behavior, not host admission or native file effects. The live control reads run's own decision on two emitted documents with short targets; it supports no admission promise, which this rule does not make, and no check submits an emitted document at the host's target capacity. The stderr controls close that stream at launch; a failing stderr write and the absence of file reads or process launches have source-read support, and no control observes operating-system activity. Rendering failure is a source-read branch without an injected malformed-template control. Development runs of these checks exist and are disposable; release credit awaits an archived acceptance. [Evidence details](#contract-request-specimen-emit_lesson-support-details).
+<a id="contract-request-specimen-emit_test_input-support"></a>
+**Support: [check read](#contract-support-grades) for [Publish a developer read input](#contract-request-specimen-emit_test_input).** The fixed read template binds the binary identity and caller target positionally, including literal marker text, quotes, backslashes and non-ASCII characters. Malformed template structure and fixed values refuse before output. Argument, target and identity refusals write nothing. Short writes complete the document, while partial-write and late-flush failures refuse. Selected-app controls check deterministic publication and exact request content, removed lesson dispatch, status 2 on invalid arguments and unreadable stdout, and status independence from stderr closed at launch. Isolated Cargo builds check absent and supplied identities. Context: Read the embedded-template materializer, dispatch, constructed argument/template/writer controls and CLI integration assertions. Evidence limit: Check read; no execution is credited. Publication controls establish neither host admission nor native file effects. No control observes the absence of operating-system reads or process launches; those claims have source support. Stderr controls close that stream at launch. These checks do not promise admission for arbitrary target lengths or environments. [Evidence details](#contract-request-specimen-emit_test_input-support-details).
+
+<a id="contract-request-specimen-read_input"></a>
+##### Developer read body
+
+This build's identity-free developer body is stated below. Insert the emitting
+binary's contract at `contract` and the caller's target at
+`probe_plan[0].sandbox_check.filter.value` and `probe_plan[0].attempt.target`.
+These are positional assignments, not recursive marker expansion. The harness
+compares this authored body with publication separately from native outcomes.
+
+```json
+{
+  "specimen_id": "test-input",
+  "policy": {
+    "format": "sbpl",
+    "sbpl_source": "(version 1)\n(allow default)"
+  },
+  "probe_plan": [
+    {
+      "step_id": "read-target",
+      "sandbox_check": {
+        "operation": "file-read-data",
+        "filter": {
+          "kind": "path",
+          "value": "$EFFECT"
+        }
+      },
+      "attempt": {
+        "kind": "file",
+        "action": "read_fresh",
+        "target": "$EFFECT"
+      }
+    }
+  ]
+}
+```
+
+<a id="contract-request-specimen-read_input-support"></a>
+**Support: [check read](#contract-support-grades) for [Developer read body](#contract-request-specimen-read_input).** The selected-app publication assertion independently states the read body's identity, policy, query, attempt and target binding. Context: Read the fixed template validation and the independently authored CLI publication expectation. Evidence limit: Check read; no execution or native outcome is credited. This body is build-specific public content, not a compatibility promise for later builds. [Evidence details](#contract-request-specimen-read_input-support-details).
 
 <a id="contract-request-specimen-example"></a>
 ##### Emitted example
@@ -5575,12 +5615,19 @@ Source: [main.rs](../controller/src/main.rs): `fn main`; [run_flow.rs](../contro
 
 Source: [example.rs](../controller/src/example.rs): `pub fn render`, `fn emit`, `pub fn cmd_example`; [cli.rs](../controller/src/cli.rs): `pub fn run`. Check: [example.rs](../controller/src/example.rs): `rendered_document_is_the_constant_with_the_given_identity`, `refusals_are_typed_and_write_nothing`, `only_complete_output_with_a_successful_flush_succeeds`; [run_flow.rs](../controller/src/run_flow.rs): `emitted_example_reaches_the_client_as_the_emitted_document`; [cli_contract.rs](../controller/integration/cli_contract.rs): `example_prints_one_request_and_refuses_every_argument`, `example_write_failures_exit_2_without_a_panic`, `supplied_direct_cargo_identity_is_embedded_without_release_provenance`; [example_round_trip.sh](../tests/suites/witness_contract/example_round_trip.sh): `example_round_trip`.
 
-<a id="contract-request-specimen-emit_lesson-support-details"></a>
-### Emit a request lesson — Lesson publication support
+<a id="contract-request-specimen-emit_test_input-support-details"></a>
+### Publish a developer read input — Publication support
 
-[Local support](#contract-request-specimen-emit_lesson-support).
+[Local support](#contract-request-specimen-emit_test_input-support).
 
-Source: [lesson.rs](../controller/src/lesson.rs): `fn render`, `fn emit`, `pub fn cmd_lesson`; [cli.rs](../controller/src/cli.rs): `pub fn run`. Check: [lesson.rs](../controller/src/lesson.rs): `both_inputs_preserve_target_identity_and_intentional_difference`, `argument_target_and_identity_refusals_write_nothing`, `complete_publication_requires_all_writes_and_flush`; [cli_contract.rs](../controller/integration/cli_contract.rs): `lesson_publishes_both_inputs_from_the_installed_binary`, `lesson_cli_refusals_and_write_failures_exit_2_safely`, `supplied_direct_cargo_identity_is_embedded_without_release_provenance`; [contract.py](../tests/suites/runner_outcome_bad_request/contract.py): `emitted_lessons`.
+Source: [test_input.rs](../controller/src/test_input.rs): `fn render_template`, `fn emit_template`, `pub fn cmd_test_input`; [cli.rs](../controller/src/cli.rs): `pub fn run`. Check: [test_input.rs](../controller/src/test_input.rs): `read_input_preserves_target_identity_and_fixed_workload`, `malformed_templates_refuse_before_output`, `argument_target_and_identity_refusals_write_nothing`, `complete_publication_requires_all_writes_and_flush`; [cli_contract.rs](../controller/integration/cli_contract.rs): `test_input_publishes_read_from_the_installed_binary`, `test_input_cli_refusals_and_write_failures_exit_2_safely`, `supplied_direct_cargo_identity_is_embedded_without_release_provenance`.
+
+<a id="contract-request-specimen-read_input-support-details"></a>
+### Developer read body — Body support
+
+[Local support](#contract-request-specimen-read_input-support).
+
+Source: [test_input.rs](../controller/src/test_input.rs): `fn render_template`. Check: [cli_contract.rs](../controller/integration/cli_contract.rs): `test_input_publishes_read_from_the_installed_binary`.
 
 <a id="contract-request-specimen-example-support-details"></a>
 ### Emitted example — Example support
@@ -6563,7 +6610,7 @@ Each linked rule states its boundary, entry, recipients, reports and conditions.
 | --- | --- |
 | [Build pipeline](#contract-identity-definitions-build_pipeline) | [Build derivation](#contract-identity-public-derive) |
 | [Contract generator](#contract-identity-definitions-contract_generator) | [Deriving the history table](#contract-identity-surfaces-derive) |
-| [Controller](#contract-identity-definitions-controller) | [Version command](#contract-identity-version-emit); [Hold and deliver the selected request](#contract-request-specimen-hold); [Emit the example specimen](#contract-request-specimen-emit_example); [Emit a request lesson](#contract-request-specimen-emit_lesson); [Selector precedence](#contract-request-options-precedence); [Selection and augmentation failure order](#contract-request-options-failure_order); [Resolve and append](#contract-policy-augments-resolve); [Resolve actor policies in request order](#contract-policy-augments-actors); [Fallback eligibility and classification](#contract-policy-fallback-classify); [Controller pre-invocation refusal](#contract-refusals-controller-consequence); [Admit client and host observations](#contract-transport-client-admit); [Checking a carried gate](#contract-actor_evidence-gate-check); [The controller checks carried labels](#contract-profile-receipt-labels); [Select the public result](#contract-envelope-data-select); [Boundary precedence](#contract-envelope-data-admit); [Decoded response collection bounds](#contract-diagnostics-execution-geometry); [Admit the response before assessment](#contract-diagnostics-execution-admit); [Project one worker or aggregate actors](#contract-diagnostics-execution-project); [Actor projection rows](#contract-diagnostics-execution-actor_rows); [Worker lifecycle validation](#contract-diagnostics-execution-ordinary-lifecycle_check); [Ending mapping](#contract-diagnostics-execution-ordinary-mapping); [Supported stop reason](#contract-diagnostics-execution-ordinary-stop); [Host-cleanup attribution](#contract-diagnostics-execution-ordinary-cause); [Copy validated host conflicts](#contract-diagnostics-execution-ordinary-host_conflicts); [Apply reply-wide findings](#contract-diagnostics-execution-reply_checks); [Worker lifecycle validation](#contract-diagnostics-actor-projection-lifecycle_check); [Ending mapping](#contract-diagnostics-actor-projection-mapping); [Supported stop reason](#contract-diagnostics-actor-projection-stop); [Host-cleanup attribution](#contract-diagnostics-actor-projection-cause); [Copy validated host conflicts](#contract-diagnostics-actor-projection-host_conflicts); [Retain observation and finding separately](#contract-diagnostics-issue-retain); [Hold the selected request](#contract-dossier-collection-held); [Scan literal imports](#contract-dossier-collection-scan); [Compare selected files](#contract-dossier-collection-compare); [Augmentation record relationships](#contract-dossier-augmentation-relationships); [Retained scan scope](#contract-dossier-imports-scope); [Classify the retained digest pair](#contract-dossier-binary-classify); [Read and select records](#contract-installation-commands-read); [Publish a registry mutation](#contract-installation-commands-publish); [Install a selected service](#contract-installation-commands-install); [Retain installation ownership](#contract-installation-commands-pending); [Refresh validation metadata](#contract-installation-commands-validate); [Reconcile observations](#contract-installation-commands-reconcile); [Remove an owned installation](#contract-installation-commands-remove); [Classify cleanup ownership](#contract-installation-commands-ownership); [Retained recovery account](#contract-installation-cleanup-retention); [Published installation state](#contract-installation-install-state_copy); [Request delivery failure](#contract-installation-verify-delivery_failure); [Select the verification operation result](#contract-installation-verify-select); [Classify the typed service observation](#contract-installation-service-classify) |
+| [Controller](#contract-identity-definitions-controller) | [Version command](#contract-identity-version-emit); [Hold and deliver the selected request](#contract-request-specimen-hold); [Emit the example specimen](#contract-request-specimen-emit_example); [Publish a developer read input](#contract-request-specimen-emit_test_input); [Selector precedence](#contract-request-options-precedence); [Selection and augmentation failure order](#contract-request-options-failure_order); [Resolve and append](#contract-policy-augments-resolve); [Resolve actor policies in request order](#contract-policy-augments-actors); [Fallback eligibility and classification](#contract-policy-fallback-classify); [Controller pre-invocation refusal](#contract-refusals-controller-consequence); [Admit client and host observations](#contract-transport-client-admit); [Checking a carried gate](#contract-actor_evidence-gate-check); [The controller checks carried labels](#contract-profile-receipt-labels); [Select the public result](#contract-envelope-data-select); [Boundary precedence](#contract-envelope-data-admit); [Decoded response collection bounds](#contract-diagnostics-execution-geometry); [Admit the response before assessment](#contract-diagnostics-execution-admit); [Project one worker or aggregate actors](#contract-diagnostics-execution-project); [Actor projection rows](#contract-diagnostics-execution-actor_rows); [Worker lifecycle validation](#contract-diagnostics-execution-ordinary-lifecycle_check); [Ending mapping](#contract-diagnostics-execution-ordinary-mapping); [Supported stop reason](#contract-diagnostics-execution-ordinary-stop); [Host-cleanup attribution](#contract-diagnostics-execution-ordinary-cause); [Copy validated host conflicts](#contract-diagnostics-execution-ordinary-host_conflicts); [Apply reply-wide findings](#contract-diagnostics-execution-reply_checks); [Worker lifecycle validation](#contract-diagnostics-actor-projection-lifecycle_check); [Ending mapping](#contract-diagnostics-actor-projection-mapping); [Supported stop reason](#contract-diagnostics-actor-projection-stop); [Host-cleanup attribution](#contract-diagnostics-actor-projection-cause); [Copy validated host conflicts](#contract-diagnostics-actor-projection-host_conflicts); [Retain observation and finding separately](#contract-diagnostics-issue-retain); [Hold the selected request](#contract-dossier-collection-held); [Scan literal imports](#contract-dossier-collection-scan); [Compare selected files](#contract-dossier-collection-compare); [Augmentation record relationships](#contract-dossier-augmentation-relationships); [Retained scan scope](#contract-dossier-imports-scope); [Classify the retained digest pair](#contract-dossier-binary-classify); [Read and select records](#contract-installation-commands-read); [Publish a registry mutation](#contract-installation-commands-publish); [Install a selected service](#contract-installation-commands-install); [Retain installation ownership](#contract-installation-commands-pending); [Refresh validation metadata](#contract-installation-commands-validate); [Reconcile observations](#contract-installation-commands-reconcile); [Remove an owned installation](#contract-installation-commands-remove); [Classify cleanup ownership](#contract-installation-commands-ownership); [Retained recovery account](#contract-installation-cleanup-retention); [Published installation state](#contract-installation-install-state_copy); [Request delivery failure](#contract-installation-verify-delivery_failure); [Select the verification operation result](#contract-installation-verify-select); [Classify the typed service observation](#contract-installation-service-classify) |
 | [Runner host](#contract-identity-definitions-host) | [Admission order and effects](#contract-request-specimen-admission); [Null and omission](#contract-request-specimen-nulls); [Bounded strings and action counts](#contract-request-specimen-capacity); [Admission and eligibility](#contract-probes-query-eligibility); [Extension participant restriction](#contract-probes-attempt-extension_exec); [Normalize actors before launch](#contract-actors-actor-normalize); [Collect, release and advance](#contract-actors-phase-order); [Validate and evaluate the dependency](#contract-actors-after_termination-gate); [Admit the declared dependency](#contract-actors-after_termination-declaration); [Action identity](#contract-actors-action-identity); [Resolve references and ownership](#contract-extensions-operation-references); [Bound the declared resource plan](#contract-extensions-operation-capacity); [Exclude exec in participating actors](#contract-extensions-operation-exec); [Observe the source answer](#contract-extensions-custody-source_answer); [Project a published issue result](#contract-extensions-event-issue_projection); [Delivered receipt prerequisites](#contract-extensions-transfer-delivered_receipt); [Source acknowledgement association](#contract-extensions-transfer-source_association); [Refuse at the first reached boundary](#contract-refusals-request-select); [Stop children and preserve safe metadata](#contract-refusals-request-consequence); [Sanitize every echoed field](#contract-refusals-admission-echo); [Admit a connection](#contract-transport-authorization-connection); [Host line admission](#contract-wire-validator-read); [Assemble execution evidence](#contract-reply-record-assemble); [Publish a report or fallback](#contract-reply-failure-publish); [Assemble the two channels](#contract-steps-assessment-assembly); [Establish query order](#contract-steps-assessment-order); [Classify an observation](#contract-steps-assessment-observe); [Add host path observations](#contract-steps-assessment-paths); [Resolve the final process status](#contract-lifecycle-worker-final_status); [Copy the polling stop](#contract-lifecycle-worker-resolve_stop_reason); [Copy the final collection basis](#contract-lifecycle-worker-resolve_collection_basis); [Resolving lifecycle claims](#contract-lifecycle-disposition-resolve); [Project ordinary canonical step claims](#contract-lifecycle-disposition-ordinary_projection); [Project actor canonical step claims](#contract-lifecycle-disposition-actor_projection); [Joining accepted validator records](#contract-lifecycle-validator-associate); [Count expected and unexpected associations](#contract-lifecycle-validator-cardinality); [Actor ownership and reporting scope](#contract-actor_evidence-actor-account); [Associated authority rows](#contract-actor_evidence-application-authority_association); [Application classification](#contract-actor_evidence-application-classify); [Prepared actor phase and gate records](#contract-actor_evidence-gate-prepared_association); [Evaluating and applying the dependency](#contract-actor_evidence-gate-evaluate); [Binding before launch](#contract-equipment-binding-bind); [Packaged bound-row equalities](#contract-equipment-binding-bound_values); [Associating the owned process](#contract-equipment-execution-inspect); [Inspection result eligibility](#contract-equipment-execution-eligibility); [Preparation refusal contents](#contract-equipment-preparation_failure-retain); [Acquiring setup decisions and operations](#contract-equipment-authority_scope-acquire); [Receipt presence](#contract-profile-receipt-presence); [The host decides capture availability](#contract-profile-receipt-host) |
 | [Runner host](#contract-identity-definitions-host), [Worker](#contract-identity-definitions-worker) | [Prepare native compiler input](#contract-policy-spec-parameters); [Fresh process and retained policy](#contract-actors-actor-fresh); [Prepare before use](#contract-extensions-custody-prepare); [Acknowledge, compare and settle delivery](#contract-extensions-custody-deliver); [Erase at declared last use and teardown](#contract-extensions-custody-erase) |
 | [Compiler helper](#contract-identity-definitions-helper) | [Read helper input](#contract-policy-helper_request-read); [Helper admission order](#contract-policy-helper_policy-admit); [Inventory, compile and report](#contract-policy-check_data-run_compile); [Select the helper verdict](#contract-policy-check_data-verdict); [Decoded policy metadata](#contract-policy-check_data-metadata); [Release native resources](#contract-policy-compile-release) |

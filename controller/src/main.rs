@@ -14,10 +14,10 @@ mod example;
 // Shared with the sbpl-check helper through #[path] includes.
 mod host_facts;
 mod json_contract;
-mod lesson;
 mod plist;
 mod policy_check;
 mod porcelain;
+mod test_input;
 #[rustfmt::skip]
 mod porcelain_records;
 mod porcelain_admission;

@@ -40,12 +40,12 @@ import json
 import os
 import plistlib
 import re
-import stat as stat_module
 import sys
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[2] / 'lib'))
 import consumer
+import file_observation
 
 CONSISTENCY = 'consistency'
 EXECUTION_UNAVAILABLE = 'execution_unavailable'
@@ -83,7 +83,7 @@ SELECTOR_FIELDS = tuple(json.loads((Path(__file__).resolve().parents[2] / 'fixtu
 ENTITLEMENT_KEY = 'required_entitlements'
 RUNNER_SELECTION_KEYS = tuple(key for key in SELECTOR_FIELDS if key != ENTITLEMENT_KEY)
 UNKNOWN_MEMBER = 'example_round_trip_unknown_member'
-STAT_FIELDS = ('st_dev', 'st_ino', 'st_mode', 'st_uid', 'st_gid', 'st_size', 'st_mtime_ns', 'st_ctime_ns')
+STAT_FIELDS = file_observation.STAT_FIELDS
 
 # Each refusal: the request-failure code and path `run` must report, whether
 # the failure names the expected identity, and which component refuses.
@@ -505,36 +505,7 @@ def observed_paths(document):
 
 
 def observe_target(target, opener=os.open):
-    """One sample: identity and content read from one descriptor this process opened, then closed.
-
-    `opener` opens the path and returns the descriptor. The observer controls
-    pass one that changes what the path names as the open returns, so that
-    everything read afterwards is read after the change.
-    """
-    record = {'target': target, 'resolved': None, 'regular_file': False, 'readable': False, 'error': None}
-    try:
-        record['resolved'] = os.path.realpath(target, strict=True)
-        descriptor = opener(target, os.O_RDONLY | os.O_NONBLOCK | os.O_CLOEXEC)
-    except OSError as error:
-        record['error'] = f'{type(error).__name__}: {error}'
-        return record
-    try:
-        status = os.fstat(descriptor)
-        record.update(regular_file=stat_module.S_ISREG(status.st_mode),
-                      stat={field: getattr(status, field) for field in STAT_FIELDS})
-        if record['regular_file']:
-            data = b''
-            while chunk := os.read(descriptor, 1 << 20):
-                data += chunk
-            prefix = data[:FRESH_READ_BOUND]
-            # Digests and lengths support the equality observations; the bytes are not retained.
-            record.update(readable=True, sha256=hashlib.sha256(data).hexdigest(), length=len(data),
-                          prefix_sha256=hashlib.sha256(prefix).hexdigest(), prefix_length=len(prefix))
-    except OSError as error:
-        record['error'] = f'{type(error).__name__}: {error}'
-    finally:
-        os.close(descriptor)
-    return record
+    return file_observation.observe_target(target, FRESH_READ_BOUND, opener=opener)
 
 
 def observe(directory, name, document):
@@ -787,25 +758,7 @@ def _samples(inputs, name):
 
 
 def _target_changes(inputs):
-    """For each path read before the run, the ways its sample after the run differs."""
-    after = _samples(inputs, 'targets-after') or {}
-    changes = {}
-    for target, earlier in (_samples(inputs, 'targets-before') or {}).items():
-        if not (earlier.get('regular_file') and earlier.get('readable')):
-            continue
-        later = after.get(target)
-        if later is None or not later.get('readable'):
-            changes[target] = ['was not read after the run']
-            continue
-        differing = [field for field in STAT_FIELDS if _get(earlier, 'stat', field) != _get(later, 'stat', field)]
-        if earlier.get('resolved') != later.get('resolved'):
-            differing.insert(0, 'resolved path')
-        for name, kind in (('prefix_sha256', str), ('prefix_length', int), ('sha256', str), ('length', int)):
-            if type(earlier.get(name)) is not kind or earlier.get(name) != later.get(name):
-                differing.insert(0, name)
-        if differing:
-            changes[target] = ['differs in ' + ', '.join(differing)]
-    return changes
+    return file_observation.target_changes(_samples(inputs, 'targets-before'), _samples(inputs, 'targets-after'))
 
 
 def _native(inputs, roles, reply, matched, echoed, ground, results, workload):
@@ -893,16 +846,7 @@ def _native(inputs, roles, reply, matched, echoed, ground, results, workload):
         return read.get('fresh_read') if isinstance(read.get('fresh_read'), dict) else {}
 
     def syscalls(attempt):
-        read, problems = fresh(attempt), []
-        # A successful open returns a descriptor, which is nonnegative and not zero by convention.
-        if type(read.get('open_rc')) is not int or read['open_rc'] < 0:
-            problems.append(f'`open_rc` is {_spell(read.get("open_rc"))}')
-        for name in ('stat_rc', 'close_rc'):
-            if not _exact_int(read.get(name), 0):
-                problems.append(f'`{name}` is {_spell(read.get(name))}')
-        if type(read.get('read_rc')) is not int or not 0 <= read['read_rc'] <= FRESH_READ_BOUND:
-            problems.append(f'`read_rc` is {_spell(read.get("read_rc"))}')
-        return problems
+        return file_observation.fresh_syscalls(attempt, FRESH_READ_BOUND)
 
     for role, letter in fresh_roles(workload).items():
         assertion(f'native.{role}.fresh_syscalls', attempts[role], syscalls)
@@ -915,23 +859,10 @@ def _native(inputs, roles, reply, matched, echoed, ground, results, workload):
         expected = {'device': _get(observed, 'stat', 'st_dev'), 'inode': _get(observed, 'stat', 'st_ino')}
 
         def identity(attempt, expected=expected, target=target):
-            found = {key: _get(fresh(attempt), 'identity', key) for key in ('device', 'inode')}
-            return [] if all(type(found[key]) is int and found[key] == expected[key] for key in found) else \
-                [f'the descriptor identity is {_spell(found)}; this checker observed {_spell(expected)} for {target}']
+            return file_observation.fresh_identity(attempt, expected, target)
 
         def content(attempt, observed=observed, target=target):
-            read, problems = fresh(attempt), []
-            if not _exact_int(read.get('read_rc'), observed.get('prefix_length')):
-                problems.append(f'`read_rc` is {_spell(read.get("read_rc"))}; this checker read a bounded prefix of '
-                                f'{_spell(observed.get("prefix_length"))} bytes from {target}')
-            try:
-                digest = hashlib.sha256(bytes.fromhex(read.get('content_hex'))).hexdigest()
-            except (TypeError, ValueError):
-                digest = None
-            if digest is None or digest != observed.get('prefix_sha256'):
-                problems.append(f'the bytes read have SHA-256 {_spell(digest)}; the bounded prefix this checker read '
-                                f'from {target} has {_spell(observed.get("prefix_sha256"))}')
-            return problems
+            return file_observation.fresh_content(attempt, observed, target)
 
         def given(supplied, reason, source=source):
             """The fresh read's record, when the call that supplies this observation succeeded."""

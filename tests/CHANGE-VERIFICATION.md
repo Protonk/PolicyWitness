@@ -1010,3 +1010,15 @@ the exact displayed commands, independent file/cleanup observations and durable
 ownership. Missing or ambiguous command anchors refuse before the affected
 command; changed instructions require review of those cut points and assertions.
 Use the existing constructed reader controls for result-interpretation examples.
+
+## Developer read publisher
+
+For `test-input` publication, positional target binding or its independent
+observer, select `witness_contract/test_input_controls` and
+`witness_contract/test_input` with `unit`, `integration` and `source_drift`.
+Shared file-observation changes also require both example round-trip cases and
+`blackbox_e2e/checker_controls`. The request corpus remains independently owned;
+loader changes require `runner_unit`, `runner_c_worker_harness` and
+`runner_outcome_bad_request/accepted_input_contract`. Changes to ordinary guide
+acquisition additionally require the complete `witness_contract/guide_workflows`
+case and its signing, GUI and empty-registry equipment.

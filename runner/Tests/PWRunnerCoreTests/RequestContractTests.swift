@@ -273,7 +273,7 @@ func requestExampleInput(_ example: [String: Any]) throws -> [String: Any] {
     if inline {
         object = example["request"]!
     } else {
-        let allowed = ["controller/src/lessons/create.json", "controller/src/lessons/capture_typo.json"]
+        let allowed = ["tests/fixtures/request_contract/create.json", "tests/fixtures/request_contract/capture_typo.json"]
         guard let source = example["request_source"] as? String, allowed.contains(source) else {
             throw TestFailure(message: "unsupported request source")
         }

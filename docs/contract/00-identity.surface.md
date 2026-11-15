@@ -66,7 +66,8 @@ and `.ent` files discovered under `controller/src`, `controller/tools`,
 `runner/Sources`, `runner/Clients`, `runner/Services` and `runner/augments`.
 It also includes `build.sh`, `meson.build`, `meson.options`,
 `runner/Package.swift`, `controller/Cargo.toml`, `controller/Cargo.lock`,
-`controller/build.rs`, `Info.plist`, `PolicyWitness.entitlements`,
+`controller/build.rs`, `controller/src/test_inputs/read.json`, `Info.plist`,
+`PolicyWitness.entitlements`,
 `docs/build_contract.py`, `docs/source_identity.py`,
 `tests/build_equipment.py`, `tests/build-evidence.py`, and the build helpers
 `tests/lib/build_provenance.py`, `signer_check.py`, `cargo_config.py`,

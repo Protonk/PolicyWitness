@@ -19,19 +19,12 @@ produce the independent file effect used by the accepted-input controls.
   The [developer lesson](../../../docs/REQUEST-GRAMMAR.md) uses the shared
   [example corpus](../../fixtures/request_contract/examples.json), also read by
   Swift unit tests. The create/capture-typo input bodies resolve explicit paths
-  to app-owned JSON under `controller/src/lessons/`; expected diagnostics remain
-  independent corpus data. Every example runs through CLI and direct XPC with exact
-  code/path expectations. For those two inputs the control also runs the selected
-  app's `lesson` command and submits its output unchanged through `run`, under
-  the same corpus rows and file observation; a missing row for either input
-  fails the control. A rejected control repeats that step with a stand-in
-  emitter that returns the `create` document for `capture_typo`. The step must
-  then fail at its exit-and-outcome assertion, with the captured process
-  status 0, the published `finished` result and the created file on record. A
-  constructed copy of that observation with a nonzero captured status must not
-  qualify. The `lesson-substituted-*` artifacts, including that constructed
-  copy, and the retained stand-in script belong to the control and report no
-  product failure.
+  to corpus-owned JSON under `tests/fixtures/request_contract/`; expected
+  diagnostics remain independently authored in the corpus. Python and Swift
+  loaders retain recursive marker substitution for those corpus templates.
+  The developer publisher's target-binding experiments belong to
+  `witness_contract/test_input` and its offline controls; this case retains
+  the ordinary CLI and direct-host corpus coverage.
   Ineffective arguments, nonces and filter values,
   unknown attempt/filter names, duplicate IDs and capacity excess refuse the
   whole specimen. Exec arguments and enabled capture have positive controls;

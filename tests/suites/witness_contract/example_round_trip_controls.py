@@ -43,6 +43,7 @@ sys.path.insert(0, str(Path(__file__).resolve().parent))
 import build_context
 import consumer
 from blackbox import bind_constructed_envelope, envelope_skeleton, recapture_host_reply
+import file_observation
 import check_example_round_trip as checker
 from check_example_round_trip import FORMS, REFUSALS, UNKNOWN_MEMBER
 
@@ -135,9 +136,9 @@ def sample(role, target):
 def fresh_read(role, *, count=BOUND, descriptor=5):
     """A completed fresh read of one constructed target, as the worker reports it."""
     device, inode = IDENTITY[role]
-    return {'open_rc': descriptor, 'stat_rc': 0, 'read_rc': len(CONTENT[role][:count]), 'close_rc': 0,
-            'identity': {'device': device, 'inode': inode, 'mode': 33188, 'uid': 0, 'gid': 0},
-            'content_hex': CONTENT[role][:count].hex()}
+    return file_observation.fresh_record(CONTENT[role],
+        dict(device=device, inode=inode, mode=33188, uid=0, gid=0), bound=count, descriptor=descriptor)
+
 
 
 def constructed_run(identity):

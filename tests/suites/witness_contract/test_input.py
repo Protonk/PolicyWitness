@@ -1,0 +1,263 @@
+#!/usr/bin/env python3
+"""Acquire the selected publisher, prepare owned fixtures, retain seven submissions."""
+import copy
+import json
+import os
+from pathlib import Path
+import plistlib
+import re
+import shutil
+import subprocess
+import sys
+import tempfile
+
+import check_test_input as checker
+from file_observation import observe_target
+from worker_exit_witness import worker_exit_witness
+
+LITERAL_TARGET = '/private/tmp/$EFFECT quote" backslash\\ café'
+
+
+def invoke(directory, name, argv):
+    directory = Path(directory)
+    result = subprocess.run([str(arg) for arg in argv], capture_output=True)
+    (directory / (name + '.command.json')).write_text(checker.encode([str(arg) for arg in argv]))
+    (directory / (name + '.stdout')).write_bytes(result.stdout)
+    (directory / (name + '.stderr')).write_bytes(result.stderr)
+    (directory / (name + '.exit')).write_text(str(result.returncode) + '\n')
+    return dict(argv=[str(arg) for arg in argv], stdout=result.stdout.decode('utf-8'),
+                stderr=result.stderr.decode('utf-8'), exit=result.returncode)
+
+
+def snapshot_document(path):
+    snapshot = json.loads(Path(path).read_text())
+    nodes = [node for surface in snapshot['surfaces'] for node in surface['public']['nodes']
+             if node['id'] == 'request.specimen.read_input']
+    blocks = re.findall(r'```json\n(.*?)\n```', nodes[0]['prose'], re.S) if len(nodes) == 1 else []
+    return json.loads(blocks[0]) if len(blocks) == 1 else None
+
+
+def emit(directory, name, emitter, target):
+    return invoke(directory, name, [emitter, 'test-input', 'read', '--target', target])
+
+
+def gate(directory, publication):
+    report = checker.publication(publication)
+    (Path(directory) / 'publication.json').write_text(checker.encode(publication))
+    (Path(directory) / 'preparation-report.json').write_text(checker.encode(report))
+    if not report['ok']:
+        raise ValueError('publication preflight failed: ' + repr(sorted(checker.diagnostics(report))))
+
+
+def start(directory, pw, app, snapshot, paths, *, emitter=None, observer=observe_target):
+    """The real preflight path. No sampler or derivative runs before its gate."""
+    emitter = emitter or pw
+    version = invoke(directory, 'version', [pw, '--version'])
+    try:
+        listed = plistlib.loads((Path(app) / 'Contents/Info.plist').read_bytes()).get('PWContract')
+    except (OSError, ValueError):
+        listed = None
+    try:
+        rendered = snapshot_document(snapshot)
+    except (OSError, ValueError, KeyError, TypeError):
+        rendered = None
+    identity = checker.get(checker.parsed(version['stdout']), 'data', 'contract')
+    publication = dict(identity=identity, plist_contract=listed, version=version, snapshot=rendered,
+                       targets=dict(a1=paths['A'], a2=paths['A'], b=paths['B'], literal=LITERAL_TARGET), emissions={})
+    for name in ('a1', 'a2', 'literal'):
+        publication['emissions'][name] = emit(directory, name, emitter, publication['targets'][name])
+    gate(directory, publication)
+    before = observer(paths['A'], checker.BOUND)
+    (Path(directory) / 'initial-before.json').write_text(checker.encode(before))
+    return publication, before
+
+
+def write_in_place(path, payload):
+    # Open/truncate the existing inode. All descriptors close before run.
+    with open(path, 'r+b') as stream:
+        stream.seek(0)
+        stream.write(payload)
+        stream.truncate()
+        stream.flush()
+        os.fsync(stream.fileno())
+
+
+def expected_request(name, identity, paths):
+    """Independent passage expectations, without consulting published bytes."""
+    target = paths['A' if name in ('initial_a', 'updated_a', 'allowed_a') else 'B']
+    expected = checker.expected_document(identity, target)
+    if name == 'refusal':
+        expected['policy'][checker.UNKNOWN] = True
+    elif name in ('denied_b', 'allowed_a'):
+        expected['policy']['sbpl_source'] = checker.policy_for(paths['B'])
+    return expected
+
+
+def cleanup_disposition(capture, identity, *, refusal=False, authored_fixture=False):
+    """Admitted host reap, or the exact validated pre-launch host refusal."""
+    run = capture.get('run') or {}
+    envelope = checker.parsed(run.get('stdout'))
+    if checker.get(envelope, 'build', 'contract') != identity:
+        return False, 'no current-build envelope; worker exit unknown'
+    reply = checker.consumer.admitted_reply(envelope, identity, allow_fixture_json=authored_fixture)
+    if not isinstance(reply, dict):
+        return False, 'no identity-admitted host reply; worker exit unknown'
+    witnessed, reason = worker_exit_witness(dict(data=dict(runner_result=reply)))
+    if witnessed:
+        return witnessed, reason
+    if refusal:
+        failure = dict(code='unknown_field', path=['policy', checker.UNKNOWN])
+        errors = checker.consumer.validate(envelope, identity, allow_fixture_json=authored_fixture)
+        if not errors and checker.exact(run.get('exit'), 1) and \
+                checker.get(envelope, 'result', 'normalized_outcome') == 'bad_request' and \
+                checker.get(envelope, 'data', 'request_failure') == failure and \
+                reply.get('request_failure') == failure and reply.get('normalized_outcome') == 'bad_request' and \
+                reply.get('runner_subprocess') is None and reply.get('validator_subprocess') is None and \
+                reply.get('steps') == [] and reply.get('phases') == [] and not reply.get('actors'):
+            return True, 'validated exact host unknown-field refusal before worker or validator launch'
+    return False, reason
+
+
+def run_case(directory, pw, app, snapshot):
+    directory = Path(directory)
+    directory.mkdir(parents=True)
+    # The dispatcher inspects this case-level receipt before ordinary pruning.
+    session_receipt = directory.parent / 'session.json'
+    assert not os.path.lexists(session_receipt), 'existing test-input owner requires recovery'
+    work = Path(tempfile.mkdtemp(prefix='pw-test-input-', dir='/private/tmp')).resolve(strict=True)
+    os.chmod(work, 0o700)
+    stat = work.stat()
+    ownership = dict(kind='test_input', staging=str(work), artifacts=str(directory.resolve()),
+                     session_receipt=str(session_receipt.resolve()),
+                     identity=[stat.st_dev, stat.st_ino], attempts=[], removed=False)
+
+    def persist_owner():
+        (work / 'ownership.json').write_text(checker.encode(ownership))
+        (directory / 'ownership.json').write_text(checker.encode(ownership))
+        session_receipt.write_text(checker.encode(ownership))
+
+    persist_owner()
+    state = None
+    try:
+        paths = dict(A=str(work / 'A'), B=str(work / 'B'))
+        a, b = Path(paths['A']), Path(paths['B'])
+        a.write_bytes(checker.SHORT_0)
+        a.chmod(0o600)
+        for name, payload in [('short_0', checker.SHORT_0), ('short_1', checker.SHORT_1), ('long', checker.LONG)]:
+            (directory / (name + '.bytes')).write_bytes(payload)
+        publication, first = start(directory, pw, app, snapshot, paths)
+        state = dict(paths=paths, publication=publication, passages={})
+        identities = {}
+
+        def save():
+            (directory / 'state.json').write_text(checker.encode(state))
+
+        def passage(name, raw, target, before=None):
+            dest = directory / name
+            dest.mkdir()
+            input_path = dest / 'input.json'
+            input_path.write_text(raw)
+            document = checker.parsed(raw)
+            expected = expected_request(name, publication['identity'], paths)
+            exact_emission = (publication['emissions']['a1']['stdout'] if name in ('initial_a', 'updated_a') else
+                              publication['emissions']['b']['stdout'] if name == 'b' else None)
+            transformed = document == expected and (exact_emission is None or raw == exact_emission)
+            observed_before = before if before is not None else observe_target(target, checker.BOUND)
+            (dest / 'before.json').write_text(checker.encode(observed_before))
+            payload = checker.SHORT_0 if name == 'initial_a' else checker.SHORT_1 if name == 'updated_a' else checker.LONG
+            fixture = checker.sample_ok(observed_before, target, payload)
+            current_identity = (checker.get(observed_before, 'stat', 'st_dev'),
+                                checker.get(observed_before, 'stat', 'st_ino'))
+            retained = target not in identities or identities[target] == current_identity
+            preflight = dict(transformation=transformed, fixture=fixture, retained_identity=retained)
+            (dest / 'preflight.json').write_text(checker.encode(preflight))
+            assert all(preflight.values()), (name, 'pre-submission conditions failed', preflight)
+            identities.setdefault(target, current_identity)
+            capture = dict(input=input_path.read_text(), request_path=str(input_path))
+            state['passages'][name] = dict(before=observed_before, after=None, capture=capture)
+            save()
+            entry = dict(passage=name, capture=str(dest.resolve()), worker_exit_witnessed=False,
+                         witness='submission may be in progress')
+            ownership['attempts'].append(entry)
+            persist_owner()
+            try:
+                capture['run'] = invoke(dest, 'run', [pw, 'run', input_path])
+            finally:
+                observed_after = observe_target(target, checker.BOUND)
+                (dest / 'after.json').write_text(checker.encode(observed_after))
+                state['passages'][name]['after'] = observed_after
+                entry['worker_exit_witnessed'], entry['witness'] = cleanup_disposition(
+                    capture, publication['identity'], refusal=name == 'refusal')
+                persist_owner()
+                save()
+            assert entry['worker_exit_witnessed'], ('unresolved native disposition; stop before changing fixtures', entry)
+
+        a_raw = publication['emissions']['a1']['stdout']
+        passage('initial_a', a_raw, paths['A'], first)
+        write_in_place(a, checker.SHORT_1)
+        passage('updated_a', a_raw, paths['A'])
+        write_in_place(a, checker.LONG)
+        b.write_bytes(checker.LONG)
+        b.chmod(0o600)
+        publication['emissions']['b'] = emit(directory, 'b', pw, paths['B'])
+        gate(directory, publication)
+        extended = state['extended_a'] = observe_target(paths['A'], checker.BOUND)
+        b_before = observe_target(paths['B'], checker.BOUND)
+        equal_fields = ('st_dev', 'st_mode', 'st_uid', 'st_gid', 'st_size')
+        pair = dict(a_recipe=checker.sample_ok(extended, paths['A'], checker.LONG),
+                    b_recipe=checker.sample_ok(b_before, paths['B'], checker.LONG),
+                    retained_a=(checker.get(extended, 'stat', 'st_dev'), checker.get(extended, 'stat', 'st_ino')) == identities[paths['A']],
+                    equal_metadata=all(checker.get(extended, 'stat', key) == checker.get(b_before, 'stat', key)
+                                       for key in equal_fields),
+                    distinct_inodes=checker.get(extended, 'stat', 'st_ino') != checker.get(b_before, 'stat', 'st_ino'))
+        (directory / 'pair-preflight.json').write_text(checker.encode(dict(checks=pair, a=extended, b=b_before)))
+        save()
+        assert all(pair.values()), ('controlled A/B prerequisites failed before B submission', pair)
+        b_raw = publication['emissions']['b']['stdout']
+        passage('b', b_raw, paths['B'], b_before)
+        bad = json.loads(b_raw)
+        bad['policy'][checker.UNKNOWN] = True
+        passage('refusal', checker.encode(bad), paths['B'])
+        repaired = copy.deepcopy(bad)
+        del repaired['policy'][checker.UNKNOWN]
+        passage('repair', checker.encode(repaired), paths['B'])
+        denied = json.loads(b_raw)
+        denied['policy']['sbpl_source'] = checker.policy_for(paths['B'])
+        passage('denied_b', checker.encode(denied), paths['B'])
+        allowed = json.loads(a_raw)
+        allowed['policy'] = copy.deepcopy(denied['policy'])
+        passage('allowed_a', checker.encode(allowed), paths['A'])
+        report = checker.evaluate(state)
+        checker.write_report(directory, report)
+        assert report['ok'], 'test-input observations did not meet independently pinned expectations'
+        commands = sorted(str(p.relative_to(directory)) for p in directory.rglob('*.command.json'))
+        accounting = dict(submissions=7, execution_passages=6, refusals=1, publication_commands=4, version_commands=1,
+                          commands=commands, owned_directory=str(work), cleanup='owned directory after witnessed exits or exact host refusal')
+        assert len(commands) == 12, commands
+        (directory / 'accounting.json').write_text(checker.encode(accounting))
+    finally:
+        cleanup_safe = all(entry['worker_exit_witnessed'] for entry in ownership['attempts'])
+        try:
+            observed = work.lstat()
+            same_directory = not work.is_symlink() and work.is_dir() and \
+                [observed.st_dev, observed.st_ino] == ownership['identity'] and work.parent == Path('/private/tmp')
+        except OSError as error:
+            same_directory = False
+            ownership['cleanup_error'] = str(error)
+        if cleanup_safe and same_directory:
+            shutil.rmtree(work)
+            ownership['removed'] = True
+        else:
+            ownership['recovery'] = 'Confirm every unwitnessed worker exit and this directory identity before removing the exact owned staging directory.'
+            if same_directory:
+                persist_owner()
+        (directory / 'cleanup.json').write_text(checker.encode(ownership))
+        (directory / 'ownership.json').write_text(checker.encode(ownership))
+        session_receipt.write_text(checker.encode(ownership))
+        if not cleanup_safe or not same_directory:
+            raise AssertionError('test-input staging retained after unknown cleanup: ' + str(work))
+    return state
+
+
+if __name__ == '__main__':
+    run_case(*sys.argv[1:])

@@ -1,4 +1,4 @@
-"""Render the developer lesson's specimens; expectations live in the corpus."""
+"""Render corpus-owned specimens; expectations live beside their inputs."""
 import argparse
 import copy
 import json
@@ -8,7 +8,7 @@ import build_context
 
 ROOT = Path(__file__).resolve().parents[2]
 CORPUS = ROOT / 'tests/fixtures/request_contract/examples.json'
-LESSON_SOURCES = {f'controller/src/lessons/{name}.json' for name in ('create', 'capture_typo')}
+CORPUS_SOURCES = {f'tests/fixtures/request_contract/{name}.json' for name in ('create', 'capture_typo')}
 
 
 def resolve_request(example):
@@ -19,7 +19,7 @@ def resolve_request(example):
         request = example['request']
     else:
         source = example['request_source']
-        if not isinstance(source, str) or source not in LESSON_SOURCES:
+        if not isinstance(source, str) or source not in CORPUS_SOURCES:
             raise ValueError(f'unsupported request source: {source!r}')
         request = json.loads((ROOT / source).read_text())
     if not isinstance(request, dict):

@@ -1,16 +1,22 @@
 # Teaching the accepted request contract
 
-This is a developer lesson. The [contract rules](CONTRACT.md#contract-request)
+This is a developer guide. The [contract rules](CONTRACT.md#contract-request)
 define the promise; the [specimen reference](PolicyWitness.md#specimen-format)
-describes authoring. The `create` and `capture_typo` inputs are embedded in the
-app from [controller-owned templates](../controller/src/lessons/README.md).
-The [test corpus](../tests/fixtures/request_contract/examples.json) references
-those inputs and owns the other examples. Expected refusals remain independent
-data, checked by both Swift unit tests and live CLI/direct-XPC controls.
+describes authoring. The [request corpus](../tests/fixtures/request_contract/examples.json)
+owns creation inputs and independently authored refusal expectations, checked
+by Swift unit tests and live CLI/direct-XPC controls. The
+[user guide exercise](PolicyWitness.md#try-an-accepted-request-and-a-refusal)
+authors ordinary requests with saved inputs and independent effect observations.
 
-The [user guide exercise](PolicyWitness.md#try-an-accepted-request-and-a-refusal)
-presents the same app-owned pair as standalone commands, with saved requests
-and independent effect observations.
+The build-bound developer publisher `test-input read --target PATH` prints one
+allow-default request pairing a file-read-data query with `file/read_fresh` on
+the supplied absolute path. It binds that target verbatim and inspects no file.
+Exit 0 means complete publication and flush; discard stdout on exit 2, even if
+it looks complete. Host admission and execution remain separate. The
+[test-input cases](../tests/suites/witness_contract/README.md#controlled-read-input)
+qualify publication, current-file correspondence and reader sensitivity using
+fixtures and expectations owned by the harness. The publisher supplies no
+answer key or fixture preparation.
 
 ## Start with an observable instruction
 
@@ -23,17 +29,15 @@ From the repository root, using a current signed build:
 ```sh
 PW=dist/PolicyWitness.app/Contents/MacOS/policy-witness
 PW_EXAMPLE_DIR=$(mktemp -d /private/tmp/pw-grammar.XXXXXX)
-"$PW" lesson create --target "$PW_EXAMPLE_DIR/created" > "$PW_EXAMPLE_DIR/request.json" &&
+tests/lib/python.sh tests/lib/request_examples.py create --effect "$PW_EXAMPLE_DIR/created" > "$PW_EXAMPLE_DIR/request.json" &&
 cat "$PW_EXAMPLE_DIR/request.json" &&
 "$PW" run "$PW_EXAMPLE_DIR/request.json" > "$PW_EXAMPLE_DIR/run.json" &&
 test -f "$PW_EXAMPLE_DIR/created"
 ```
 
-`lesson` prints a complete request with the emitting binary's contract and does
-no execution or filesystem inspection. Exit 0 establishes publication; on exit 2
-discard its output. The typo lesson deliberately produces a request that `run`
-refuses. Neither lesson supplies a nonce. Keep the directory to inspect submitted
-bytes and returned evidence.
+The corpus renderer asserts the selected app's identity. Its creation body is
+independent test material, not an app-published input. Keep the directory to
+inspect the submitted bytes and returned evidence.
 
 Reading that request teaches three boundaries:
 
@@ -76,7 +80,7 @@ request one. Expected behavior remains separately authored:
 Try the typo with a new, absent effect path:
 
 ```sh
-if "$PW" lesson capture_typo --target "$PW_EXAMPLE_DIR/refused" > "$PW_EXAMPLE_DIR/typo.json"; then
+if tests/lib/python.sh tests/lib/request_examples.py capture_typo --effect "$PW_EXAMPLE_DIR/refused" > "$PW_EXAMPLE_DIR/typo.json"; then
   "$PW" run "$PW_EXAMPLE_DIR/typo.json" > "$PW_EXAMPLE_DIR/refusal.json"
   PW_EXAMPLE_RC=$?
   test "$PW_EXAMPLE_RC" = 1
@@ -279,12 +283,12 @@ refusal never truncates a plan; automatically splitting one would change which
 actions share a process. The caller decides whether to revise the plan or use
 another build.
 
-## Keeping the lesson honest
+## Checking the examples
 
 Run the examples through the production paths:
 
 ```sh
-PW_TEST_OUT_DIR=tests/out/runs/request-lesson tests/run.sh --suite runner_outcome_bad_request --suite runner_unit --suite runner_c_worker_harness
+PW_TEST_OUT_DIR=tests/out/runs/request-contract tests/run.sh --case runner_outcome_bad_request/accepted_input_contract --suite runner_unit --suite runner_c_worker_harness
 ```
 
 Choose a fresh output name for another run. The dispatcher validates the app
@@ -296,10 +300,10 @@ and preserves artifacts; use `PW_APP_DIR` for an isolated signed build.
   Accepted cases must create a file; refused cases must leave it absent, with
   no worker/validator records and no steps. A valid earlier step in the
   unsupported-attempt example detects accidental partial execution.
-- For `create` and `capture_typo` they also submit the selected app's `lesson`
-  output unchanged through the CLI, under the same corpus expectations. The
-  rendered and emitted forms are checked separately; neither stands in for
-  the other.
+- The separate `witness_contract/test_input` case qualifies the selected app's
+  read publication with independent target/content observations and a
+  harness-authored unknown-field derivative. Its offline controls check the
+  preparation boundary and exact correspondence diagnostics.
 - The live controls retain the corpus, rendered requests, replies and effect
   observations. They verify that submitted files were not rewritten.
 - Dedicated unit controls still cover every object depth, bounded diagnostics,

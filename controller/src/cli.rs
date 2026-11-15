@@ -8,9 +8,9 @@ use std::ffi::OsString;
 
 use crate::example;
 use crate::json_contract;
-use crate::lesson;
 use crate::run_flow;
 use crate::runner_commands;
+use crate::test_input;
 
 /// The usage text. `print_usage` prints it; a command that must not panic on
 /// an unwritable stderr writes it itself.
@@ -20,14 +20,16 @@ usage:
   policy-witness runner <command> [options]
     commands: install, list, status, verify, remove, validate, reconcile
   policy-witness example
-  policy-witness lesson <create|capture_typo> --target <absolute-path>
   policy-witness --version
+
+developer:
+  policy-witness test-input read --target <absolute-path>
 
 notes:
   - runs the selected PWRunner XPC service once and prints a single JSON result to stdout
   - request.json is parsed once; the resolved request is delivered to the runner client on stdin (`--request -`), never through a temporary file
   - example takes no argument and prints the specimen this build defines, carrying this build's contract; exit 0 supplies the complete document, and the build guarantees that its own run admits it; emission performs no admission; on exit 2 discard stdout
-  - lesson emits a teaching input for an absolute UTF-8 target; capture_typo carries a deliberately unknown policy field; exit 0 means complete publication and reports neither admission nor an effect; on exit 2 discard stdout\n  - --version prints a JSON envelope (kind=version) with the build stamp and the public contract this build asserts; every envelope also carries the stamp under `build`";
+  - test-input read emits a build-bound developer read input for an absolute UTF-8 target; exit 0 means complete publication and reports neither admission nor an effect; on exit 2 discard stdout\n  - --version prints a JSON envelope (kind=version) with the build stamp and the public contract this build asserts; every envelope also carries the stamp under `build`";
 
 pub fn print_usage() {
     eprintln!("{USAGE}");
@@ -66,7 +68,7 @@ pub fn run(argv: Vec<OsString>) -> i32 {
             }
         },
         "example" => example::cmd_example(rest),
-        "lesson" => lesson::cmd_lesson(rest),
+        "test-input" => test_input::cmd_test_input(rest),
         "runner" => match runner_commands::cmd_runner(rest) {
             Ok(code) => code,
             Err(err) => {

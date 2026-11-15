@@ -20,16 +20,18 @@ ownership, exit-status capture and independent observations between commands.
 The shell state retains the guide's variables and umask; refusal commands keep
 their expected nonzero status. Source extraction controls refuse missing or
 ambiguous fences and reordered cuts. Preparation controls execute the actual
-create and capture-typo fences against a local emitter that writes partial JSON
-and exits 2, checking no submission, target or run result. Removing the successful
-preparation guard must make the same absence oracle reject a recorded submission;
+create fence with a failing writer that leaves partial JSON, and the capture-typo
+copy fence with malformed saved input that the actual `plutil` refuses. They
+check no submission or target, no new result, and preservation of an earlier
+result. Removing the successful preparation guard must make the same oracle reject a recorded submission;
 the fake run never performs a native operation. Constructed ownership controls use the
 existing fake OS tools and actual cleanup paths to observe refused foreign
 owners, uncertain submissions, each absence requirement and interrupted deletion
 recovery. The existing dispatcher retention control checks the top-level guide
 receipt through ordinary prune.
 
-The sequence creates a new empty file, observes an existing-target guard,
+The sequence authors an ordinary creation request with the current contract
+and target, creates a new empty file, observes an existing-target guard,
 repairs a misspelled capture flag and a missing nonce, reads a positive compiled
 object receipt, checks the policy through `sbpl-check`, and runs the external
 runner list/reconcile/install/status/verify/create/validate/remove workflow.
@@ -71,6 +73,52 @@ and reject source aliases; constructed controls retain changed-content and lost
 execute-permission refusals. Retained-reader interpretation and
 unavailable-capture branches have their own controls; this case records the
 native workflows it executes.
+
+## Controlled read input
+
+The default `test_input` case invokes the selected app's developer command
+`test-input read --target PATH`. Publication preparation requires the version,
+plist identity, independently authored stamped read-input example, deterministic
+A emissions and verbatim target binding. A publication-only operand includes
+literal `$EFFECT`, quotes, a backslash and Unicode. Failed preparation prevents
+sampling, derivatives and submission.
+
+The case owns a resolved private directory under `/private/tmp`, retained byte
+recipes and descriptor samples. Seven ordinary submissions cover initial A,
+in-place updated A using the exact saved request, long B, a harness-injected
+unknown-field refusal, exact repair, denied B and allowed A under the identical
+policy. Six execute; one is refused. Four publications and one version command
+make twelve CLI invocations. A and B have equal long content/device/mode/owner/
+group and different inodes; A's inode survives both updates. Before/after
+samples establish sampled stability, not continuous stability.
+
+The separate checker pins observed and published status, identity admission,
+request transformations, policy digest and operand association, completed worker
+and phase collections, query answers, independent syscall results and successful
+read identity/count/prefix. The deny expects query rc 1/errno 0 separately from
+open EPERM/read_failed and a completed process exit 0. The consumer validates
+internal evidence and unavailable later operations after failed open. These
+observations do not identify the queried object or establish sandbox causation.
+
+`test_input_controls` is offline and default. Authored ordinary captures exercise
+wrong inode with identical bytes, old bytes with current identity, replay of the
+whole previous run capture, omitted refusal injection, exchanged query answers,
+observed status distinct from published status, unreaped worker, incomplete
+phase and independent faults beside missing observations or bad publication.
+Controls require exact diagnostic IDs and statuses (`passed`, `failed`,
+`not_evaluated`) and consumer acceptance for coherent correspondence faults.
+The real acquisition path is exercised with recorded stand-in executables;
+wrong-target output fails before the observer, and deliberately ignoring the
+supplied emitter is detected by that scenario's oracle.
+
+`tests/lib/file_observation.py` shares only the same-descriptor sampler, sample
+change checks, fresh-read comparisons and explicit-byte/identity control record
+construction with example. Workloads, fixtures and expectations remain separate.
+Each run retains raw command captures, submitted inputs, samples, transformations,
+reports and owned-resource cleanup receipts. Unknown worker disposition retains
+the owned fixture directory for recovery; native deviations are failures, not
+permission-class substitutions. These development runs do not create release
+evidence or raise contract support grades.
 
 ## Public-output interruption
 

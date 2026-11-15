@@ -204,47 +204,93 @@ context: "Read the emitter and dispatch, the emitter's unit tests, the controlle
 limits: "Check read; no execution is credited. The exact request comparison runs under the test identity and ends at the client callback; on a signed app the live case observes the delivered length only. A gate refusal on a bound build has unit support and no built-app observation. No check observes the process's file reads; the isolated builds emit with no app, manifest or registry beside them. Development runs of these checks exist and are disposable; release credit awaits an archived acceptance."
 ```
 
-### Emit a request lesson {emit_lesson: reports}
+### Publish a developer read input {emit_test_input: reports}
 
 ```contract
 who: ["identity.definitions.controller"]
-where: "CLI lesson dispatch"
-entry: ["cli_lesson"]
+where: "CLI test-input dispatch"
+entry: ["cli_test_input"]
 recipient: ["cli_caller"]
-report: ["lesson_specimen"]
+report: ["test_input_specimen"]
 uses: ["identity.build.contract", "identity.definitions.specimen"]
 effects: set_value(specimen.contract, ref("identity.build.contract"))
 ```
 
-`policy-witness lesson <create|capture_typo> --target <absolute-path>` accepts
-one selector followed by one target option. The target must be a nonempty,
-absolute UTF-8 path without NUL. The controller preserves it verbatim in the
-query and attempt, inserts the emitting binary's contract, and prints one
-pretty JSON object followed by one newline. `capture_typo` deliberately includes
-an unknown policy field. The document's content, layout and labels carry no
-stability promise between builds.
+`policy-witness test-input read --target <absolute-path>` accepts exactly the
+read selector followed by one target option. This is a build-bound developer
+publisher. The target must be a nonempty absolute UTF-8 path without NUL.
+The controller validates the complete fixed template, inserts its binary's
+contract and preserves the target verbatim at the query and attempt operands.
+Substitution is positional; literal `$EFFECT` text in caller input is data.
+The document's content, layout and labels carry no stability promise between builds.
 
-Process exit 0 establishes complete publication, including a successful flush;
-it establishes neither admission nor an effect. `run` independently admits or
-refuses the emitted input. Usage, target, empty or `unbound` identity, rendering,
-write and flush failures exit 2. Discard standard output on exit 2, even when
-it contains a complete document. A reason goes to standard error when writable;
-the exit status does not depend on that stream.
+Process exit 0 establishes complete publication of one pretty JSON object,
+one framing newline and a successful flush; it establishes neither admission
+nor execution nor an effect. Ordinary `run` independently admits or refuses the
+input. Usage, target, empty or `unbound` identity, rendering, write and flush
+failures exit 2. Discard stdout on failure even when it contains complete JSON.
+A reason goes to stderr when writable; the exit status does not depend on it.
 
-Emission reads no external file, launches no process and does not inspect or
-normalize the target. It creates no directory and establishes no target-absence
-claim. The caller's workflow supplies absence checks and independent effect
-observations.
+Emission reads no external file, launches no process, normalizes or inspects
+no target and prepares no fixture. It makes no host-capacity or unconditional
+admission promise. The harness owns fixture creation, mutation, cleanup,
+independently authored expectations and observations.
 
-#### Lesson publication support {support: owner}
+#### Publication support {support: owner}
 
 ```contract
 grade: "check_read"
-source: [{"path": "controller/src/lesson.rs", "symbol": "fn render"}, {"path": "controller/src/lesson.rs", "symbol": "fn emit"}, {"path": "controller/src/lesson.rs", "symbol": "pub fn cmd_lesson"}, {"path": "controller/src/cli.rs", "symbol": "pub fn run"}]
-check: [{"path": "controller/src/lesson.rs", "symbol": "both_inputs_preserve_target_identity_and_intentional_difference", "form": "test"}, {"path": "controller/src/lesson.rs", "symbol": "argument_target_and_identity_refusals_write_nothing", "form": "test"}, {"path": "controller/src/lesson.rs", "symbol": "complete_publication_requires_all_writes_and_flush", "form": "test"}, {"path": "controller/integration/cli_contract.rs", "symbol": "lesson_publishes_both_inputs_from_the_installed_binary", "form": "test"}, {"path": "controller/integration/cli_contract.rs", "symbol": "lesson_cli_refusals_and_write_failures_exit_2_safely", "form": "test"}, {"path": "controller/integration/cli_contract.rs", "symbol": "supplied_direct_cargo_identity_is_embedded_without_release_provenance", "form": "test"}, {"path": "tests/suites/runner_outcome_bad_request/contract.py", "symbol": "emitted_lessons", "form": "test"}]
-pins: "Both materializations carry the supplied identity and verbatim target, retain the expected specimen/step labels, omit a nonce and differ only by the deliberately misspelled capture field. Argument, target and identity refusals write nothing. Controlled short writes assemble the complete document; partial-write and late-flush failures return a refusal even when complete JSON was written. On the selected app each selector exits 0 with an empty stderr and one JSON object followed by one newline, carrying the app's identity and a verbatim target that contains a parent reference, a quote, a backslash, a newline and a non-ASCII character. There, usage and target refusals exit 2 with an empty stdout, a stdout without a reader exits 2 without a panic, and a stderr closed at launch changes neither status. An isolated build without an identity prints nothing and exits 2; one with a supplied identity emits it. The live control submits the selected app's emitted documents unchanged through run and applies the corpus's separately authored expectations: create is admitted and its target file appears; capture_typo is refused with its code and path, no child and no file."
-context: "Read the embedded-template materializer, CLI dispatch, three unit controls with constructed arguments, identities and writers, the CLI integration tests against the selected app and isolated Cargo builds, and the live emitted-document control."
-limits: "Check read; no execution is credited. The unit and integration controls establish publication behavior, not host admission or native file effects. The live control reads run's own decision on two emitted documents with short targets; it supports no admission promise, which this rule does not make, and no check submits an emitted document at the host's target capacity. The stderr controls close that stream at launch; a failing stderr write and the absence of file reads or process launches have source-read support, and no control observes operating-system activity. Rendering failure is a source-read branch without an injected malformed-template control. Development runs of these checks exist and are disposable; release credit awaits an archived acceptance."
+source: [{"path": "controller/src/test_input.rs", "symbol": "fn render_template"}, {"path": "controller/src/test_input.rs", "symbol": "fn emit_template"}, {"path": "controller/src/test_input.rs", "symbol": "pub fn cmd_test_input"}, {"path": "controller/src/cli.rs", "symbol": "pub fn run"}]
+check: [{"path": "controller/src/test_input.rs", "symbol": "read_input_preserves_target_identity_and_fixed_workload", "form": "test"}, {"path": "controller/src/test_input.rs", "symbol": "malformed_templates_refuse_before_output", "form": "test"}, {"path": "controller/src/test_input.rs", "symbol": "argument_target_and_identity_refusals_write_nothing", "form": "test"}, {"path": "controller/src/test_input.rs", "symbol": "complete_publication_requires_all_writes_and_flush", "form": "test"}, {"path": "controller/integration/cli_contract.rs", "symbol": "test_input_publishes_read_from_the_installed_binary", "form": "test"}, {"path": "controller/integration/cli_contract.rs", "symbol": "test_input_cli_refusals_and_write_failures_exit_2_safely", "form": "test"}, {"path": "controller/integration/cli_contract.rs", "symbol": "supplied_direct_cargo_identity_is_embedded_without_release_provenance", "form": "test"}]
+pins: "The fixed read template binds the binary identity and caller target positionally, including literal marker text, quotes, backslashes and non-ASCII characters. Malformed template structure and fixed values refuse before output. Argument, target and identity refusals write nothing. Short writes complete the document, while partial-write and late-flush failures refuse. Selected-app controls check deterministic publication and exact request content, removed lesson dispatch, status 2 on invalid arguments and unreadable stdout, and status independence from stderr closed at launch. Isolated Cargo builds check absent and supplied identities."
+context: "Read the embedded-template materializer, dispatch, constructed argument/template/writer controls and CLI integration assertions."
+limits: "Check read; no execution is credited. Publication controls establish neither host admission nor native file effects. No control observes the absence of operating-system reads or process launches; those claims have source support. Stderr controls close that stream at launch. These checks do not promise admission for arbitrary target lengths or environments."
+```
+
+### Developer read body {read_input: example}
+
+This build's identity-free developer body is stated below. Insert the emitting
+binary's contract at `contract` and the caller's target at
+`probe_plan[0].sandbox_check.filter.value` and `probe_plan[0].attempt.target`.
+These are positional assignments, not recursive marker expansion. The harness
+compares this authored body with publication separately from native outcomes.
+
+```json
+{
+  "specimen_id": "test-input",
+  "policy": {
+    "format": "sbpl",
+    "sbpl_source": "(version 1)\n(allow default)"
+  },
+  "probe_plan": [
+    {
+      "step_id": "read-target",
+      "sandbox_check": {
+        "operation": "file-read-data",
+        "filter": {
+          "kind": "path",
+          "value": "$EFFECT"
+        }
+      },
+      "attempt": {
+        "kind": "file",
+        "action": "read_fresh",
+        "target": "$EFFECT"
+      }
+    }
+  ]
+}
+```
+
+#### Body support {support: owner}
+
+```contract
+grade: "check_read"
+source: [{"path": "controller/src/test_input.rs", "symbol": "fn render_template"}]
+check: [{"path": "controller/integration/cli_contract.rs", "symbol": "test_input_publishes_read_from_the_installed_binary", "form": "test"}]
+pins: "The selected-app publication assertion independently states the read body's identity, policy, query, attempt and target binding."
+context: "Read the fixed template validation and the independently authored CLI publication expectation."
+limits: "Check read; no execution or native outcome is credited. This body is build-specific public content, not a compatibility promise for later builds."
 ```
 
 ### Emitted example {example: example}

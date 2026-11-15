@@ -155,6 +155,15 @@ mutations. The same case drives cumulative collection exhaustion through
 completed attempts and independent cleanup evidence. No new normalized or
 attempt outcome names are introduced by phases.
 
+The default `witness_contract/test_input` qualifies the signed read publisher's
+verbatim target binding and seven controlled passages: six executions and one
+closed-field refusal. Independent descriptor samples discriminate identical-byte
+files and in-place content changes; policy variants pin query answers separately
+from native attempt outcomes. `test_input_controls` checks exact diagnostics,
+coherent wrong-file/stale-content/whole-capture substitutions, completion gaps
+and actual publication preflight. See the [owning account](suites/witness_contract/README.md#controlled-read-input)
+for scope and blind spots.
+
 The default `witness_contract/example_round_trip` executes the app's emitted
 2+1 phased workload, its exact flat derivative and its one-applied-actor
 derivative. Independent samples and per-form query/attempt expectations sit

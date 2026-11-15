@@ -1,7 +1,7 @@
 # Transform lesson into a controlled-input test seam
 
-Status: ready for guide-design and acceptance review; no implementation has
-begun. Use the implemented
+Status: concrete checkpoint accepted by the maintainer; implementation and
+verification are in progress. Use the implemented
 [example workload and observer](../tests/suites/witness_contract/README.md#the-apps-own-example),
 including the three-form workload in `898f3ed1`, the per-condition controls in
 `c8f63bb2` and the [controls review](EXAMPLE-CONTROLS-PLAN.md). Review concrete guide replacements
@@ -124,9 +124,9 @@ guide architecture or generic harness refactor is included in this budget.
 
 ## Command, materialization and public account
 
-The [existing emitter](../controller/src/lesson.rs) embeds
-[two bodies](../controller/src/lessons/README.md). Replace them with one read
-input, using an allow-default policy and one step pairing a file-read-data
+The [read publisher](../controller/src/test_input.rs) embeds
+[one body](../controller/src/test_inputs/README.md), replacing the two lesson
+inputs. It uses an allow-default policy and one step pairing a file-read-data
 path query with file/read_fresh on the caller's target. Use specimen ID
 `test-input` and step ID `read-target`; they are build-specific content.
 
@@ -156,7 +156,7 @@ Publication makes no unconditional admission or execution promise.
 Replace lesson dispatch without an alias once the guide gate is met. List
 test-input under a developer heading in the single shared CLI usage text and
 its README copy. Do not maintain a hidden alternative usage account.
-Replace the [lesson publication rule](CONTRACT.md#contract-request-specimen-emit_lesson)
+Replace the [developer publication rule](CONTRACT.md#contract-request-specimen-emit_test_input)
 with a stamped test-input rule covering its arguments, publication and failure
 promises. Developer designation does not remove it from the contract account;
 state its build-bound scope explicitly.
@@ -334,3 +334,43 @@ accurate stamped publication rule. Record source/build/run identities,
 remaining blind spots, public changes and maintenance added or removed in a
 compact acceptance account. Inspect disposable evidence before normal pruning
 and keep the plan available for maintainer review.
+
+## Concrete implementation checkpoint
+
+The guide will continue teaching creation through an ordinary public request.
+Its quick-start fence writes a quoted JSON body to `create.json`, then chains
+`plutil` replacements for the current contract and the query/attempt target.
+The existing preparation status, guarded submission, retained result and
+independent empty-file observation remain. The body uses `guide-create`, one
+`create` step, allow-default, file-write-create/path and file/create.
+
+The refusal exercise copies that saved request to `capture-typo.json`, changes
+its specimen ID and both targets, and inserts
+`policy.capture_compiled_profiel`. Its spelling repair, missing-nonce refusal,
+nonce insertion and positive capture stay intact. Helper, provenance and
+path-reading passages continue using the same create files and observations.
+The BYOXPC passage retains its create derivative and full owned installation,
+verification, execution and cleanup. No ordinary guide passage uses test-input.
+The CLI table drops lesson. The harness selects the actual here-document and
+copy fences, checks the exact derivative differences, and exercises failed
+preparation with existing-result preservation and guard-removal controls.
+
+Equipment was reconfirmed before implementation: the selected app's Developer
+ID team matches the available signing identity (`42D369QV8E`), GUI and console
+UID are 501, registry and pending cleanup are empty, reconciliation has no
+candidates or inspection errors, and source/staged guide bytes match. Receipts
+are disposable local observations under
+`/private/tmp/pw-test-input-equipment-implementation`. The guide harness owns
+the service it installs through its existing durable session and cleanup path.
+
+| Owner | Concrete mapping |
+| --- | --- |
+| `tests/lib/file_observation.py` | Extract the example's descriptor sampler, sample-change comparison, successful fresh-read comparisons and explicit-byte/identity record constructor. Bound is supplied by callers; fixture prerequisites remain separate. |
+| `witness_contract/example_round_trip` and `example_round_trip_controls` | Preserve the existing 158 rows and 170 conditions; retain observer replacement/unlink controls and coherent fresh-read controls after helper extraction. |
+| `witness_contract/test_input` | Own seven passages (`initial_a`, `updated_a`, `b`, `refusal`, `repair`, `denied_b`, `allowed_a`), six executions and one refusal. Retain each command's argv/stdout/stderr/status, exact submitted bytes, transitions and before/after samples outside run captures. |
+| `witness_contract/test_input_controls` | Own offline accepted/rejected captures and actual preparation controls. Diagnostics name `publication`, `fixtures`, `transformation`, `status`, `consumer`, `association`, `worker`, `collections`, `query`, `identity`, `content` and `stability` obligations per passage. Classifications are `passed`, `failed`, and `not_evaluated`; missing prerequisites withhold only dependent credit. Controls declare exact failing obligations. |
+| Preparation boundary | Version/plist/packaged contract identity, deterministic publication, target binding and literal `$EFFECT`/quote/backslash/Unicode publication precede any native submission. A recorded wrong-target emitter invocation must fail before sampling, derivatives or run. Publication command count is retained separately from seven submissions. |
+| Fixture ownership | Case-owned resolved private temporary directory, independent A/B bytes and samples; cleanup only that owned directory. Constructed controls use independently authored ordinary reply expectations and shared wire-capture utilities, not example's workload evaluator. |
+| Publisher and corpus | One embedded read body and positional binding with malformed-template controls. Move old creation bodies unchanged into request-corpus ownership, preserving Python/Swift and CLI/direct-host grammar coverage; retire old selector-substitution executions. |
+| Public account | Replace stamped `emit_lesson` with build-bound developer `emit_test_input`; update the single shared usage and README, build-identity inputs/mutation checks, support references and generated snapshots without raising evidence grades. |
+| Final verification | One signed candidate after offline controls, then the combined selection specified above, including both runner families because corpus loaders change and the whole guide workflow. No native admission or ordering change is intended. |

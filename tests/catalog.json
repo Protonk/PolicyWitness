@@ -1635,6 +1635,28 @@
           "default": true
         },
         {
+          "id": "test_input",
+          "description": "Build-owned read publication with exact target binding, seven controlled passages and independent current-file observations",
+          "command": [
+            "bash",
+            "tests/suites/witness_contract/test_input.sh"
+          ],
+          "requires": [
+            "app"
+          ],
+          "default": true
+        },
+        {
+          "id": "test_input_controls",
+          "description": "Offline coherent captures and actual preparation controls pin exact test-input diagnostics and independent correspondence",
+          "command": [
+            "bash",
+            "tests/suites/witness_contract/test_input_controls.sh"
+          ],
+          "requires": [],
+          "default": true
+        },
+        {
           "id": "create_existing_file_preserves_contents",
           "description": "create preserves existing bytes and identities while enforcing write permission",
           "command": [

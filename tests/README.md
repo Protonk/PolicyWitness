@@ -378,6 +378,11 @@ evidence checks pass, including when those cases run through BYOXPC.
 
 ## Shared test infrastructure
 
+`lib/file_observation.py` supplies descriptor-bound samples and small fresh-read
+comparisons to the example and controlled-input cases; each case owns its own
+workload, fixtures and expected observations.
+
+
 ### Shell case setup and checking
 
 Shared shell startup rejects Python with assertions disabled (for example,

@@ -305,19 +305,16 @@ fn supplied_direct_cargo_identity_is_embedded_without_release_provenance() {
             .unwrap();
         }
 
-        // Lesson publication uses this emitting binary's identity too; the
-        // deliberately invalid lesson is still published, without host admission.
-        for selector in ["create", "capture_typo"] {
-            let lesson = run_pw(&binary, &["lesson", selector, "--target", "/absent"]);
-            if expected == "unbound" {
-                assert_eq!(lesson.status.code(), Some(2));
-                assert!(lesson.stdout.is_empty());
-            } else {
-                assert_eq!(lesson.status.code(), Some(0));
-                let value: serde_json::Value = serde_json::from_slice(&lesson.stdout).unwrap();
-                assert_eq!(value["contract"], expected);
-                assert_eq!(value["probe_plan"][0]["attempt"]["target"], "/absent");
-            }
+        // Developer publication uses the emitting binary's identity without host admission.
+        let published = run_pw(&binary, &["test-input", "read", "--target", "/absent"]);
+        if expected == "unbound" {
+            assert_eq!(published.status.code(), Some(2));
+            assert!(published.stdout.is_empty());
+        } else {
+            assert_eq!(published.status.code(), Some(0));
+            let value: serde_json::Value = serde_json::from_slice(&published.stdout).unwrap();
+            assert_eq!(value["contract"], expected);
+            assert_eq!(value["probe_plan"][0]["attempt"]["target"], "/absent");
         }
 
         // An unbound build emits nothing. A bound build emits its own
@@ -1556,16 +1553,16 @@ fn sbpl_check_records_import_provenance_for_system_sb() {
 }
 
 #[test]
-fn lesson_publishes_both_inputs_from_the_installed_binary() {
+fn test_input_publishes_read_from_the_installed_binary() {
     if !integration_enabled() {
         return;
     }
     let bin = require_pw_bin();
-    let target = "/nonexistent-parent/../quote\" backslash\\ newline\n é";
-    let mut documents = Vec::new();
-    for selector in ["create", "capture_typo"] {
+    let target = "/nonexistent-parent/../$EFFECT quote\" backslash\\ newline\n é";
+    let mut outputs = Vec::new();
+    for _ in 0..2 {
         let output = Command::new(&bin)
-            .args(["lesson", selector, "--target", target])
+            .args(["test-input", "read", "--target", target])
             .current_dir("/")
             .stdin(std::process::Stdio::null())
             .output()
@@ -1574,22 +1571,23 @@ fn lesson_publishes_both_inputs_from_the_installed_binary() {
         assert!(output.stderr.is_empty());
         assert!(output.stdout.ends_with(b"\n") && !output.stdout.ends_with(b"\n\n"));
         let document: serde_json::Value = serde_json::from_slice(&output.stdout).unwrap();
-        assert_eq!(document["contract"], candidate_contract());
-        assert_eq!(document["specimen_id"], "request-grammar");
-        assert_eq!(document["probe_plan"][0]["step_id"], "create");
-        assert_eq!(document["probe_plan"][0]["attempt"]["target"], target);
         assert_eq!(
-            document["probe_plan"][0]["sandbox_check"]["filter"]["value"],
-            target
+            document,
+            serde_json::json!({
+                "contract": candidate_contract(), "specimen_id": "test-input",
+                "policy": {"format": "sbpl", "sbpl_source": "(version 1)\n(allow default)"},
+                "probe_plan": [{"step_id": "read-target",
+                    "sandbox_check": {"operation": "file-read-data", "filter": {"kind": "path", "value": target}},
+                    "attempt": {"kind": "file", "action": "read_fresh", "target": target}}]
+            })
         );
-        documents.push(document);
+        outputs.push(output.stdout);
     }
-    documents[0]["policy"]["capture_compiled_profiel"] = true.into();
-    assert_eq!(documents[0], documents[1]);
+    assert_eq!(outputs[0], outputs[1]);
 }
 
 #[test]
-fn lesson_cli_refusals_and_write_failures_exit_2_safely() {
+fn test_input_cli_refusals_and_write_failures_exit_2_safely() {
     use std::os::unix::ffi::OsStringExt;
     use std::process::Stdio;
     if !integration_enabled() {
@@ -1597,26 +1595,27 @@ fn lesson_cli_refusals_and_write_failures_exit_2_safely() {
     }
     let bin = require_pw_bin();
     for args in [
-        vec!["lesson"],
-        vec!["lesson", "create"],
-        vec!["lesson", "future", "--target", "/x"],
-        vec!["lesson", "create", "--target", "relative"],
-        vec!["lesson", "create", "--target", ""],
-        vec!["lesson", "create", "--target", "/x", "--target", "/y"],
+        vec!["lesson", "create", "--target", "/x"],
+        vec!["test-input"],
+        vec!["test-input", "read"],
+        vec!["test-input", "future", "--target", "/x"],
+        vec!["test-input", "read", "--target", "relative"],
+        vec!["test-input", "read", "--target", ""],
+        vec!["test-input", "read", "--target", "/x", "--target", "/y"],
     ] {
         let output = Command::new(&bin).args(args).output().unwrap();
         assert_eq!(output.status.code(), Some(2));
         assert!(output.stdout.is_empty());
     }
     let output = Command::new(&bin)
-        .args(["lesson", "create", "--target"])
+        .args(["test-input", "read", "--target"])
         .arg(std::ffi::OsString::from_vec(vec![b'/', 255]))
         .output()
         .unwrap();
     assert_eq!(output.status.code(), Some(2));
     assert!(output.stdout.is_empty());
     let output = Command::new(&bin)
-        .args(["lesson", "create", "--target", "/x"])
+        .args(["test-input", "read", "--target", "/x"])
         .stdout(unwritable())
         .stderr(Stdio::piped())
         .spawn()
@@ -1626,8 +1625,8 @@ fn lesson_cli_refusals_and_write_failures_exit_2_safely() {
     assert_eq!(output.status.code(), Some(2));
     assert!(!String::from_utf8_lossy(&output.stderr).contains("panicked"));
     for (script, expected) in [
-        ("exec \"$0\" lesson create --target /x 2>&-", 0),
-        ("exec \"$0\" lesson create --target relative 2>&-", 2),
+        ("exec \"$0\" test-input read --target /x 2>&-", 0),
+        ("exec \"$0\" test-input read --target relative 2>&-", 2),
     ] {
         let output = Command::new("/bin/sh")
             .args(["-c", script])

@@ -1,0 +1,24 @@
+{
+  "specimen_id": "test-input",
+  "policy": {
+    "format": "sbpl",
+    "sbpl_source": "(version 1)\n(allow default)"
+  },
+  "probe_plan": [
+    {
+      "step_id": "read-target",
+      "sandbox_check": {
+        "operation": "file-read-data",
+        "filter": {
+          "kind": "path",
+          "value": "$EFFECT"
+        }
+      },
+      "attempt": {
+        "kind": "file",
+        "action": "read_fresh",
+        "target": "$EFFECT"
+      }
+    }
+  ]
+}

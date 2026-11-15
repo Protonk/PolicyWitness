@@ -667,7 +667,7 @@
             },
             "id": "identity.public.inputs",
             "kind": "definition",
-            "prose": "The development digest includes `.rs`, `.c`, `.h`, `.swift`, `.sb`, `.plist`\nand `.ent` files discovered under `controller/src`, `controller/tools`,\n`runner/Sources`, `runner/Clients`, `runner/Services` and `runner/augments`.\nIt also includes `build.sh`, `meson.build`, `meson.options`,\n`runner/Package.swift`, `controller/Cargo.toml`, `controller/Cargo.lock`,\n`controller/build.rs`, `Info.plist`, `PolicyWitness.entitlements`,\n`docs/build_contract.py`, `docs/source_identity.py`,\n`tests/build_equipment.py`, `tests/build-evidence.py`, and the build helpers\n`tests/lib/build_provenance.py`, `signer_check.py`, `cargo_config.py`,\n`checkout_lock.py` and `output_target.py` in that same directory.\n\nDiscovery uses the same inventory in a checkout and a source copy. Missing\ndeclared inputs, symlinks under the selected roots and nonregular source\nobjects refuse derivation. The digest's equality concerns those paths and\nbytes; build configuration, signing identity, SDK and observed runtime\nbehavior are recorded and checked by their respective operations.",
+            "prose": "The development digest includes `.rs`, `.c`, `.h`, `.swift`, `.sb`, `.plist`\nand `.ent` files discovered under `controller/src`, `controller/tools`,\n`runner/Sources`, `runner/Clients`, `runner/Services` and `runner/augments`.\nIt also includes `build.sh`, `meson.build`, `meson.options`,\n`runner/Package.swift`, `controller/Cargo.toml`, `controller/Cargo.lock`,\n`controller/build.rs`, `controller/src/test_inputs/read.json`, `Info.plist`,\n`PolicyWitness.entitlements`,\n`docs/build_contract.py`, `docs/source_identity.py`,\n`tests/build_equipment.py`, `tests/build-evidence.py`, and the build helpers\n`tests/lib/build_provenance.py`, `signer_check.py`, `cargo_config.py`,\n`checkout_lock.py` and `output_target.py` in that same directory.\n\nDiscovery uses the same inventory in a checkout and a source copy. Missing\ndeclared inputs, symlinks under the selected roots and nonregular source\nobjects refuse derivation. The digest's equality concerns those paths and\nbytes; build configuration, signing identity, SDK and observed runtime\nbehavior are recorded and checked by their respective operations.",
             "title": "Selected build inputs"
           },
           {
@@ -3215,15 +3215,15 @@
           {
             "context": {
               "entry": [
-                "cli_lesson"
+                "cli_test_input"
               ],
               "recipient": [
                 "cli_caller"
               ],
               "report": [
-                "lesson_specimen"
+                "test_input_specimen"
               ],
-              "where": "CLI lesson dispatch",
+              "where": "CLI test-input dispatch",
               "who": [
                 "identity.definitions.controller"
               ]
@@ -3266,26 +3266,26 @@
                 "node": "Expression"
               },
               "entry": [
-                "cli_lesson"
+                "cli_test_input"
               ],
               "recipient": [
                 "cli_caller"
               ],
               "report": [
-                "lesson_specimen"
+                "test_input_specimen"
               ],
               "uses": [
                 "identity.build.contract",
                 "identity.definitions.specimen"
               ],
-              "where": "CLI lesson dispatch",
+              "where": "CLI test-input dispatch",
               "who": [
                 "identity.definitions.controller"
               ]
             },
-            "id": "request.specimen.emit_lesson",
+            "id": "request.specimen.emit_test_input",
             "kind": "reports",
-            "prose": "`policy-witness lesson <create|capture_typo> --target <absolute-path>` accepts\none selector followed by one target option. The target must be a nonempty,\nabsolute UTF-8 path without NUL. The controller preserves it verbatim in the\nquery and attempt, inserts the emitting binary's contract, and prints one\npretty JSON object followed by one newline. `capture_typo` deliberately includes\nan unknown policy field. The document's content, layout and labels carry no\nstability promise between builds.\n\nProcess exit 0 establishes complete publication, including a successful flush;\nit establishes neither admission nor an effect. `run` independently admits or\nrefuses the emitted input. Usage, target, empty or `unbound` identity, rendering,\nwrite and flush failures exit 2. Discard standard output on exit 2, even when\nit contains a complete document. A reason goes to standard error when writable;\nthe exit status does not depend on that stream.\n\nEmission reads no external file, launches no process and does not inspect or\nnormalize the target. It creates no directory and establishes no target-absence\nclaim. The caller's workflow supplies absence checks and independent effect\nobservations.",
+            "prose": "`policy-witness test-input read --target <absolute-path>` accepts exactly the\nread selector followed by one target option. This is a build-bound developer\npublisher. The target must be a nonempty absolute UTF-8 path without NUL.\nThe controller validates the complete fixed template, inserts its binary's\ncontract and preserves the target verbatim at the query and attempt operands.\nSubstitution is positional; literal `$EFFECT` text in caller input is data.\nThe document's content, layout and labels carry no stability promise between builds.\n\nProcess exit 0 establishes complete publication of one pretty JSON object,\none framing newline and a successful flush; it establishes neither admission\nnor execution nor an effect. Ordinary `run` independently admits or refuses the\ninput. Usage, target, empty or `unbound` identity, rendering, write and flush\nfailures exit 2. Discard stdout on failure even when it contains complete JSON.\nA reason goes to stderr when writable; the exit status does not depend on it.\n\nEmission reads no external file, launches no process, normalizes or inspects\nno target and prepares no fixture. It makes no host-capacity or unconditional\nadmission promise. The harness owns fixture creation, mutation, cleanup,\nindependently authored expectations and observations.",
             "referenced_types": {
               "specimen.contract": {
                 "json_null": false,
@@ -3294,7 +3294,7 @@
                 "type": "string"
               }
             },
-            "title": "Emit a request lesson"
+            "title": "Publish a developer read input"
           },
           {
             "context": {},
@@ -3500,6 +3500,14 @@
             "kind": "field",
             "prose": "Ordinary paired probes, including an empty array for apply-only execution. Exactly one of this field and `phases` must be non-null in the ordinary form. The host represents this plan as the `main` phase.",
             "title": "probe_plan"
+          },
+          {
+            "context": {},
+            "facts": {},
+            "id": "request.specimen.read_input",
+            "kind": "example",
+            "prose": "This build's identity-free developer body is stated below. Insert the emitting\nbinary's contract at `contract` and the caller's target at\n`probe_plan[0].sandbox_check.filter.value` and `probe_plan[0].attempt.target`.\nThese are positional assignments, not recursive marker expansion. The harness\ncompares this authored body with publication separately from native outcomes.\n\n```json\n{\n  \"specimen_id\": \"test-input\",\n  \"policy\": {\n    \"format\": \"sbpl\",\n    \"sbpl_source\": \"(version 1)\\n(allow default)\"\n  },\n  \"probe_plan\": [\n    {\n      \"step_id\": \"read-target\",\n      \"sandbox_check\": {\n        \"operation\": \"file-read-data\",\n        \"filter\": {\n          \"kind\": \"path\",\n          \"value\": \"$EFFECT\"\n        }\n      },\n      \"attempt\": {\n        \"kind\": \"file\",\n        \"action\": \"read_fresh\",\n        \"target\": \"$EFFECT\"\n      }\n    }\n  ]\n}\n```",
+            "title": "Developer read body"
           },
           {
             "context": {},
@@ -76933,15 +76941,15 @@
           {
             "context": {
               "entry": [
-                "cli_lesson"
+                "cli_test_input"
               ],
               "recipient": [
                 "cli_caller"
               ],
               "report": [
-                "lesson_specimen"
+                "test_input_specimen"
               ],
-              "where": "CLI lesson dispatch",
+              "where": "CLI test-input dispatch",
               "who": [
                 "identity.definitions.controller"
               ]
@@ -76984,26 +76992,26 @@
                 "node": "Expression"
               },
               "entry": [
-                "cli_lesson"
+                "cli_test_input"
               ],
               "recipient": [
                 "cli_caller"
               ],
               "report": [
-                "lesson_specimen"
+                "test_input_specimen"
               ],
               "uses": [
                 "identity.build.contract",
                 "identity.definitions.specimen"
               ],
-              "where": "CLI lesson dispatch",
+              "where": "CLI test-input dispatch",
               "who": [
                 "identity.definitions.controller"
               ]
             },
-            "id": "request.specimen.emit_lesson",
+            "id": "request.specimen.emit_test_input",
             "kind": "reports",
-            "prose": "`policy-witness lesson <create|capture_typo> --target <absolute-path>` accepts\none selector followed by one target option. The target must be a nonempty,\nabsolute UTF-8 path without NUL. The controller preserves it verbatim in the\nquery and attempt, inserts the emitting binary's contract, and prints one\npretty JSON object followed by one newline. `capture_typo` deliberately includes\nan unknown policy field. The document's content, layout and labels carry no\nstability promise between builds.\n\nProcess exit 0 establishes complete publication, including a successful flush;\nit establishes neither admission nor an effect. `run` independently admits or\nrefuses the emitted input. Usage, target, empty or `unbound` identity, rendering,\nwrite and flush failures exit 2. Discard standard output on exit 2, even when\nit contains a complete document. A reason goes to standard error when writable;\nthe exit status does not depend on that stream.\n\nEmission reads no external file, launches no process and does not inspect or\nnormalize the target. It creates no directory and establishes no target-absence\nclaim. The caller's workflow supplies absence checks and independent effect\nobservations.",
+            "prose": "`policy-witness test-input read --target <absolute-path>` accepts exactly the\nread selector followed by one target option. This is a build-bound developer\npublisher. The target must be a nonempty absolute UTF-8 path without NUL.\nThe controller validates the complete fixed template, inserts its binary's\ncontract and preserves the target verbatim at the query and attempt operands.\nSubstitution is positional; literal `$EFFECT` text in caller input is data.\nThe document's content, layout and labels carry no stability promise between builds.\n\nProcess exit 0 establishes complete publication of one pretty JSON object,\none framing newline and a successful flush; it establishes neither admission\nnor execution nor an effect. Ordinary `run` independently admits or refuses the\ninput. Usage, target, empty or `unbound` identity, rendering, write and flush\nfailures exit 2. Discard stdout on failure even when it contains complete JSON.\nA reason goes to stderr when writable; the exit status does not depend on it.\n\nEmission reads no external file, launches no process, normalizes or inspects\nno target and prepares no fixture. It makes no host-capacity or unconditional\nadmission promise. The harness owns fixture creation, mutation, cleanup,\nindependently authored expectations and observations.",
             "referenced_types": {
               "specimen.contract": {
                 "json_null": false,
@@ -77012,7 +77020,7 @@
                 "type": "string"
               }
             },
-            "title": "Emit a request lesson"
+            "title": "Publish a developer read input"
           },
           {
             "context": {},
@@ -77218,6 +77226,14 @@
             "kind": "field",
             "prose": "Ordinary paired probes, including an empty array for apply-only execution. Exactly one of this field and `phases` must be non-null in the ordinary form. The host represents this plan as the `main` phase.",
             "title": "probe_plan"
+          },
+          {
+            "context": {},
+            "facts": {},
+            "id": "request.specimen.read_input",
+            "kind": "example",
+            "prose": "This build's identity-free developer body is stated below. Insert the emitting\nbinary's contract at `contract` and the caller's target at\n`probe_plan[0].sandbox_check.filter.value` and `probe_plan[0].attempt.target`.\nThese are positional assignments, not recursive marker expansion. The harness\ncompares this authored body with publication separately from native outcomes.\n\n```json\n{\n  \"specimen_id\": \"test-input\",\n  \"policy\": {\n    \"format\": \"sbpl\",\n    \"sbpl_source\": \"(version 1)\\n(allow default)\"\n  },\n  \"probe_plan\": [\n    {\n      \"step_id\": \"read-target\",\n      \"sandbox_check\": {\n        \"operation\": \"file-read-data\",\n        \"filter\": {\n          \"kind\": \"path\",\n          \"value\": \"$EFFECT\"\n        }\n      },\n      \"attempt\": {\n        \"kind\": \"file\",\n        \"action\": \"read_fresh\",\n        \"target\": \"$EFFECT\"\n      }\n    }\n  ]\n}\n```",
+            "title": "Developer read body"
           },
           {
             "context": {},
@@ -112128,15 +112144,15 @@
           {
             "context": {
               "entry": [
-                "cli_lesson"
+                "cli_test_input"
               ],
               "recipient": [
                 "cli_caller"
               ],
               "report": [
-                "lesson_specimen"
+                "test_input_specimen"
               ],
-              "where": "CLI lesson dispatch",
+              "where": "CLI test-input dispatch",
               "who": [
                 "identity.definitions.controller"
               ]
@@ -112179,26 +112195,26 @@
                 "node": "Expression"
               },
               "entry": [
-                "cli_lesson"
+                "cli_test_input"
               ],
               "recipient": [
                 "cli_caller"
               ],
               "report": [
-                "lesson_specimen"
+                "test_input_specimen"
               ],
               "uses": [
                 "identity.build.contract",
                 "identity.definitions.specimen"
               ],
-              "where": "CLI lesson dispatch",
+              "where": "CLI test-input dispatch",
               "who": [
                 "identity.definitions.controller"
               ]
             },
-            "id": "request.specimen.emit_lesson",
+            "id": "request.specimen.emit_test_input",
             "kind": "reports",
-            "prose": "`policy-witness lesson <create|capture_typo> --target <absolute-path>` accepts\none selector followed by one target option. The target must be a nonempty,\nabsolute UTF-8 path without NUL. The controller preserves it verbatim in the\nquery and attempt, inserts the emitting binary's contract, and prints one\npretty JSON object followed by one newline. `capture_typo` deliberately includes\nan unknown policy field. The document's content, layout and labels carry no\nstability promise between builds.\n\nProcess exit 0 establishes complete publication, including a successful flush;\nit establishes neither admission nor an effect. `run` independently admits or\nrefuses the emitted input. Usage, target, empty or `unbound` identity, rendering,\nwrite and flush failures exit 2. Discard standard output on exit 2, even when\nit contains a complete document. A reason goes to standard error when writable;\nthe exit status does not depend on that stream.\n\nEmission reads no external file, launches no process and does not inspect or\nnormalize the target. It creates no directory and establishes no target-absence\nclaim. The caller's workflow supplies absence checks and independent effect\nobservations.",
+            "prose": "`policy-witness test-input read --target <absolute-path>` accepts exactly the\nread selector followed by one target option. This is a build-bound developer\npublisher. The target must be a nonempty absolute UTF-8 path without NUL.\nThe controller validates the complete fixed template, inserts its binary's\ncontract and preserves the target verbatim at the query and attempt operands.\nSubstitution is positional; literal `$EFFECT` text in caller input is data.\nThe document's content, layout and labels carry no stability promise between builds.\n\nProcess exit 0 establishes complete publication of one pretty JSON object,\none framing newline and a successful flush; it establishes neither admission\nnor execution nor an effect. Ordinary `run` independently admits or refuses the\ninput. Usage, target, empty or `unbound` identity, rendering, write and flush\nfailures exit 2. Discard stdout on failure even when it contains complete JSON.\nA reason goes to stderr when writable; the exit status does not depend on it.\n\nEmission reads no external file, launches no process, normalizes or inspects\nno target and prepares no fixture. It makes no host-capacity or unconditional\nadmission promise. The harness owns fixture creation, mutation, cleanup,\nindependently authored expectations and observations.",
             "referenced_types": {
               "specimen.contract": {
                 "json_null": false,
@@ -112207,7 +112223,7 @@
                 "type": "string"
               }
             },
-            "title": "Emit a request lesson"
+            "title": "Publish a developer read input"
           },
           {
             "context": {},
@@ -112413,6 +112429,14 @@
             "kind": "field",
             "prose": "Ordinary paired probes, including an empty array for apply-only execution. Exactly one of this field and `phases` must be non-null in the ordinary form. The host represents this plan as the `main` phase.",
             "title": "probe_plan"
+          },
+          {
+            "context": {},
+            "facts": {},
+            "id": "request.specimen.read_input",
+            "kind": "example",
+            "prose": "This build's identity-free developer body is stated below. Insert the emitting\nbinary's contract at `contract` and the caller's target at\n`probe_plan[0].sandbox_check.filter.value` and `probe_plan[0].attempt.target`.\nThese are positional assignments, not recursive marker expansion. The harness\ncompares this authored body with publication separately from native outcomes.\n\n```json\n{\n  \"specimen_id\": \"test-input\",\n  \"policy\": {\n    \"format\": \"sbpl\",\n    \"sbpl_source\": \"(version 1)\\n(allow default)\"\n  },\n  \"probe_plan\": [\n    {\n      \"step_id\": \"read-target\",\n      \"sandbox_check\": {\n        \"operation\": \"file-read-data\",\n        \"filter\": {\n          \"kind\": \"path\",\n          \"value\": \"$EFFECT\"\n        }\n      },\n      \"attempt\": {\n        \"kind\": \"file\",\n        \"action\": \"read_fresh\",\n        \"target\": \"$EFFECT\"\n      }\n    }\n  ]\n}\n```",
+            "title": "Developer read body"
           },
           {
             "context": {},
@@ -152205,15 +152229,15 @@
           {
             "context": {
               "entry": [
-                "cli_lesson"
+                "cli_test_input"
               ],
               "recipient": [
                 "cli_caller"
               ],
               "report": [
-                "lesson_specimen"
+                "test_input_specimen"
               ],
-              "where": "CLI lesson dispatch",
+              "where": "CLI test-input dispatch",
               "who": [
                 "identity.definitions.controller"
               ]
@@ -152256,26 +152280,26 @@
                 "node": "Expression"
               },
               "entry": [
-                "cli_lesson"
+                "cli_test_input"
               ],
               "recipient": [
                 "cli_caller"
               ],
               "report": [
-                "lesson_specimen"
+                "test_input_specimen"
               ],
               "uses": [
                 "identity.build.contract",
                 "identity.definitions.specimen"
               ],
-              "where": "CLI lesson dispatch",
+              "where": "CLI test-input dispatch",
               "who": [
                 "identity.definitions.controller"
               ]
             },
-            "id": "request.specimen.emit_lesson",
+            "id": "request.specimen.emit_test_input",
             "kind": "reports",
-            "prose": "`policy-witness lesson <create|capture_typo> --target <absolute-path>` accepts\none selector followed by one target option. The target must be a nonempty,\nabsolute UTF-8 path without NUL. The controller preserves it verbatim in the\nquery and attempt, inserts the emitting binary's contract, and prints one\npretty JSON object followed by one newline. `capture_typo` deliberately includes\nan unknown policy field. The document's content, layout and labels carry no\nstability promise between builds.\n\nProcess exit 0 establishes complete publication, including a successful flush;\nit establishes neither admission nor an effect. `run` independently admits or\nrefuses the emitted input. Usage, target, empty or `unbound` identity, rendering,\nwrite and flush failures exit 2. Discard standard output on exit 2, even when\nit contains a complete document. A reason goes to standard error when writable;\nthe exit status does not depend on that stream.\n\nEmission reads no external file, launches no process and does not inspect or\nnormalize the target. It creates no directory and establishes no target-absence\nclaim. The caller's workflow supplies absence checks and independent effect\nobservations.",
+            "prose": "`policy-witness test-input read --target <absolute-path>` accepts exactly the\nread selector followed by one target option. This is a build-bound developer\npublisher. The target must be a nonempty absolute UTF-8 path without NUL.\nThe controller validates the complete fixed template, inserts its binary's\ncontract and preserves the target verbatim at the query and attempt operands.\nSubstitution is positional; literal `$EFFECT` text in caller input is data.\nThe document's content, layout and labels carry no stability promise between builds.\n\nProcess exit 0 establishes complete publication of one pretty JSON object,\none framing newline and a successful flush; it establishes neither admission\nnor execution nor an effect. Ordinary `run` independently admits or refuses the\ninput. Usage, target, empty or `unbound` identity, rendering, write and flush\nfailures exit 2. Discard stdout on failure even when it contains complete JSON.\nA reason goes to stderr when writable; the exit status does not depend on it.\n\nEmission reads no external file, launches no process, normalizes or inspects\nno target and prepares no fixture. It makes no host-capacity or unconditional\nadmission promise. The harness owns fixture creation, mutation, cleanup,\nindependently authored expectations and observations.",
             "referenced_types": {
               "specimen.contract": {
                 "json_null": false,
@@ -152284,7 +152308,7 @@
                 "type": "string"
               }
             },
-            "title": "Emit a request lesson"
+            "title": "Publish a developer read input"
           },
           {
             "context": {},
@@ -152490,6 +152514,14 @@
             "kind": "field",
             "prose": "Ordinary paired probes, including an empty array for apply-only execution. Exactly one of this field and `phases` must be non-null in the ordinary form. The host represents this plan as the `main` phase.",
             "title": "probe_plan"
+          },
+          {
+            "context": {},
+            "facts": {},
+            "id": "request.specimen.read_input",
+            "kind": "example",
+            "prose": "This build's identity-free developer body is stated below. Insert the emitting\nbinary's contract at `contract` and the caller's target at\n`probe_plan[0].sandbox_check.filter.value` and `probe_plan[0].attempt.target`.\nThese are positional assignments, not recursive marker expansion. The harness\ncompares this authored body with publication separately from native outcomes.\n\n```json\n{\n  \"specimen_id\": \"test-input\",\n  \"policy\": {\n    \"format\": \"sbpl\",\n    \"sbpl_source\": \"(version 1)\\n(allow default)\"\n  },\n  \"probe_plan\": [\n    {\n      \"step_id\": \"read-target\",\n      \"sandbox_check\": {\n        \"operation\": \"file-read-data\",\n        \"filter\": {\n          \"kind\": \"path\",\n          \"value\": \"$EFFECT\"\n        }\n      },\n      \"attempt\": {\n        \"kind\": \"file\",\n        \"action\": \"read_fresh\",\n        \"target\": \"$EFFECT\"\n      }\n    }\n  ]\n}\n```",
+            "title": "Developer read body"
           },
           {
             "context": {},
@@ -188774,15 +188806,15 @@
           {
             "context": {
               "entry": [
-                "cli_lesson"
+                "cli_test_input"
               ],
               "recipient": [
                 "cli_caller"
               ],
               "report": [
-                "lesson_specimen"
+                "test_input_specimen"
               ],
-              "where": "CLI lesson dispatch",
+              "where": "CLI test-input dispatch",
               "who": [
                 "identity.definitions.controller"
               ]
@@ -188825,26 +188857,26 @@
                 "node": "Expression"
               },
               "entry": [
-                "cli_lesson"
+                "cli_test_input"
               ],
               "recipient": [
                 "cli_caller"
               ],
               "report": [
-                "lesson_specimen"
+                "test_input_specimen"
               ],
               "uses": [
                 "identity.build.contract",
                 "identity.definitions.specimen"
               ],
-              "where": "CLI lesson dispatch",
+              "where": "CLI test-input dispatch",
               "who": [
                 "identity.definitions.controller"
               ]
             },
-            "id": "request.specimen.emit_lesson",
+            "id": "request.specimen.emit_test_input",
             "kind": "reports",
-            "prose": "`policy-witness lesson <create|capture_typo> --target <absolute-path>` accepts\none selector followed by one target option. The target must be a nonempty,\nabsolute UTF-8 path without NUL. The controller preserves it verbatim in the\nquery and attempt, inserts the emitting binary's contract, and prints one\npretty JSON object followed by one newline. `capture_typo` deliberately includes\nan unknown policy field. The document's content, layout and labels carry no\nstability promise between builds.\n\nProcess exit 0 establishes complete publication, including a successful flush;\nit establishes neither admission nor an effect. `run` independently admits or\nrefuses the emitted input. Usage, target, empty or `unbound` identity, rendering,\nwrite and flush failures exit 2. Discard standard output on exit 2, even when\nit contains a complete document. A reason goes to standard error when writable;\nthe exit status does not depend on that stream.\n\nEmission reads no external file, launches no process and does not inspect or\nnormalize the target. It creates no directory and establishes no target-absence\nclaim. The caller's workflow supplies absence checks and independent effect\nobservations.",
+            "prose": "`policy-witness test-input read --target <absolute-path>` accepts exactly the\nread selector followed by one target option. This is a build-bound developer\npublisher. The target must be a nonempty absolute UTF-8 path without NUL.\nThe controller validates the complete fixed template, inserts its binary's\ncontract and preserves the target verbatim at the query and attempt operands.\nSubstitution is positional; literal `$EFFECT` text in caller input is data.\nThe document's content, layout and labels carry no stability promise between builds.\n\nProcess exit 0 establishes complete publication of one pretty JSON object,\none framing newline and a successful flush; it establishes neither admission\nnor execution nor an effect. Ordinary `run` independently admits or refuses the\ninput. Usage, target, empty or `unbound` identity, rendering, write and flush\nfailures exit 2. Discard stdout on failure even when it contains complete JSON.\nA reason goes to stderr when writable; the exit status does not depend on it.\n\nEmission reads no external file, launches no process, normalizes or inspects\nno target and prepares no fixture. It makes no host-capacity or unconditional\nadmission promise. The harness owns fixture creation, mutation, cleanup,\nindependently authored expectations and observations.",
             "referenced_types": {
               "specimen.contract": {
                 "json_null": false,
@@ -188853,7 +188885,7 @@
                 "type": "string"
               }
             },
-            "title": "Emit a request lesson"
+            "title": "Publish a developer read input"
           },
           {
             "context": {},
@@ -189059,6 +189091,14 @@
             "kind": "field",
             "prose": "Ordinary paired probes, including an empty array for apply-only execution. Exactly one of this field and `phases` must be non-null in the ordinary form. The host represents this plan as the `main` phase.",
             "title": "probe_plan"
+          },
+          {
+            "context": {},
+            "facts": {},
+            "id": "request.specimen.read_input",
+            "kind": "example",
+            "prose": "This build's identity-free developer body is stated below. Insert the emitting\nbinary's contract at `contract` and the caller's target at\n`probe_plan[0].sandbox_check.filter.value` and `probe_plan[0].attempt.target`.\nThese are positional assignments, not recursive marker expansion. The harness\ncompares this authored body with publication separately from native outcomes.\n\n```json\n{\n  \"specimen_id\": \"test-input\",\n  \"policy\": {\n    \"format\": \"sbpl\",\n    \"sbpl_source\": \"(version 1)\\n(allow default)\"\n  },\n  \"probe_plan\": [\n    {\n      \"step_id\": \"read-target\",\n      \"sandbox_check\": {\n        \"operation\": \"file-read-data\",\n        \"filter\": {\n          \"kind\": \"path\",\n          \"value\": \"$EFFECT\"\n        }\n      },\n      \"attempt\": {\n        \"kind\": \"file\",\n        \"action\": \"read_fresh\",\n        \"target\": \"$EFFECT\"\n      }\n    }\n  ]\n}\n```",
+            "title": "Developer read body"
           },
           {
             "context": {},
@@ -260884,15 +260924,15 @@
           {
             "context": {
               "entry": [
-                "cli_lesson"
+                "cli_test_input"
               ],
               "recipient": [
                 "cli_caller"
               ],
               "report": [
-                "lesson_specimen"
+                "test_input_specimen"
               ],
-              "where": "CLI lesson dispatch",
+              "where": "CLI test-input dispatch",
               "who": [
                 "identity.definitions.controller"
               ]
@@ -260935,26 +260975,26 @@
                 "node": "Expression"
               },
               "entry": [
-                "cli_lesson"
+                "cli_test_input"
               ],
               "recipient": [
                 "cli_caller"
               ],
               "report": [
-                "lesson_specimen"
+                "test_input_specimen"
               ],
               "uses": [
                 "identity.build.contract",
                 "identity.definitions.specimen"
               ],
-              "where": "CLI lesson dispatch",
+              "where": "CLI test-input dispatch",
               "who": [
                 "identity.definitions.controller"
               ]
             },
-            "id": "request.specimen.emit_lesson",
+            "id": "request.specimen.emit_test_input",
             "kind": "reports",
-            "prose": "`policy-witness lesson <create|capture_typo> --target <absolute-path>` accepts\none selector followed by one target option. The target must be a nonempty,\nabsolute UTF-8 path without NUL. The controller preserves it verbatim in the\nquery and attempt, inserts the emitting binary's contract, and prints one\npretty JSON object followed by one newline. `capture_typo` deliberately includes\nan unknown policy field. The document's content, layout and labels carry no\nstability promise between builds.\n\nProcess exit 0 establishes complete publication, including a successful flush;\nit establishes neither admission nor an effect. `run` independently admits or\nrefuses the emitted input. Usage, target, empty or `unbound` identity, rendering,\nwrite and flush failures exit 2. Discard standard output on exit 2, even when\nit contains a complete document. A reason goes to standard error when writable;\nthe exit status does not depend on that stream.\n\nEmission reads no external file, launches no process and does not inspect or\nnormalize the target. It creates no directory and establishes no target-absence\nclaim. The caller's workflow supplies absence checks and independent effect\nobservations.",
+            "prose": "`policy-witness test-input read --target <absolute-path>` accepts exactly the\nread selector followed by one target option. This is a build-bound developer\npublisher. The target must be a nonempty absolute UTF-8 path without NUL.\nThe controller validates the complete fixed template, inserts its binary's\ncontract and preserves the target verbatim at the query and attempt operands.\nSubstitution is positional; literal `$EFFECT` text in caller input is data.\nThe document's content, layout and labels carry no stability promise between builds.\n\nProcess exit 0 establishes complete publication of one pretty JSON object,\none framing newline and a successful flush; it establishes neither admission\nnor execution nor an effect. Ordinary `run` independently admits or refuses the\ninput. Usage, target, empty or `unbound` identity, rendering, write and flush\nfailures exit 2. Discard stdout on failure even when it contains complete JSON.\nA reason goes to stderr when writable; the exit status does not depend on it.\n\nEmission reads no external file, launches no process, normalizes or inspects\nno target and prepares no fixture. It makes no host-capacity or unconditional\nadmission promise. The harness owns fixture creation, mutation, cleanup,\nindependently authored expectations and observations.",
             "referenced_types": {
               "specimen.contract": {
                 "json_null": false,
@@ -260963,7 +261003,7 @@
                 "type": "string"
               }
             },
-            "title": "Emit a request lesson"
+            "title": "Publish a developer read input"
           },
           {
             "context": {},
@@ -261169,6 +261209,14 @@
             "kind": "field",
             "prose": "Ordinary paired probes, including an empty array for apply-only execution. Exactly one of this field and `phases` must be non-null in the ordinary form. The host represents this plan as the `main` phase.",
             "title": "probe_plan"
+          },
+          {
+            "context": {},
+            "facts": {},
+            "id": "request.specimen.read_input",
+            "kind": "example",
+            "prose": "This build's identity-free developer body is stated below. Insert the emitting\nbinary's contract at `contract` and the caller's target at\n`probe_plan[0].sandbox_check.filter.value` and `probe_plan[0].attempt.target`.\nThese are positional assignments, not recursive marker expansion. The harness\ncompares this authored body with publication separately from native outcomes.\n\n```json\n{\n  \"specimen_id\": \"test-input\",\n  \"policy\": {\n    \"format\": \"sbpl\",\n    \"sbpl_source\": \"(version 1)\\n(allow default)\"\n  },\n  \"probe_plan\": [\n    {\n      \"step_id\": \"read-target\",\n      \"sandbox_check\": {\n        \"operation\": \"file-read-data\",\n        \"filter\": {\n          \"kind\": \"path\",\n          \"value\": \"$EFFECT\"\n        }\n      },\n      \"attempt\": {\n        \"kind\": \"file\",\n        \"action\": \"read_fresh\",\n        \"target\": \"$EFFECT\"\n      }\n    }\n  ]\n}\n```",
+            "title": "Developer read body"
           },
           {
             "context": {},
@@ -456336,15 +456384,15 @@
           {
             "context": {
               "entry": [
-                "cli_lesson"
+                "cli_test_input"
               ],
               "recipient": [
                 "cli_caller"
               ],
               "report": [
-                "lesson_specimen"
+                "test_input_specimen"
               ],
-              "where": "CLI lesson dispatch",
+              "where": "CLI test-input dispatch",
               "who": [
                 "identity.definitions.controller"
               ]
@@ -456387,26 +456435,26 @@
                 "node": "Expression"
               },
               "entry": [
-                "cli_lesson"
+                "cli_test_input"
               ],
               "recipient": [
                 "cli_caller"
               ],
               "report": [
-                "lesson_specimen"
+                "test_input_specimen"
               ],
               "uses": [
                 "identity.build.contract",
                 "identity.definitions.specimen"
               ],
-              "where": "CLI lesson dispatch",
+              "where": "CLI test-input dispatch",
               "who": [
                 "identity.definitions.controller"
               ]
             },
-            "id": "request.specimen.emit_lesson",
+            "id": "request.specimen.emit_test_input",
             "kind": "reports",
-            "prose": "`policy-witness lesson <create|capture_typo> --target <absolute-path>` accepts\none selector followed by one target option. The target must be a nonempty,\nabsolute UTF-8 path without NUL. The controller preserves it verbatim in the\nquery and attempt, inserts the emitting binary's contract, and prints one\npretty JSON object followed by one newline. `capture_typo` deliberately includes\nan unknown policy field. The document's content, layout and labels carry no\nstability promise between builds.\n\nProcess exit 0 establishes complete publication, including a successful flush;\nit establishes neither admission nor an effect. `run` independently admits or\nrefuses the emitted input. Usage, target, empty or `unbound` identity, rendering,\nwrite and flush failures exit 2. Discard standard output on exit 2, even when\nit contains a complete document. A reason goes to standard error when writable;\nthe exit status does not depend on that stream.\n\nEmission reads no external file, launches no process and does not inspect or\nnormalize the target. It creates no directory and establishes no target-absence\nclaim. The caller's workflow supplies absence checks and independent effect\nobservations.",
+            "prose": "`policy-witness test-input read --target <absolute-path>` accepts exactly the\nread selector followed by one target option. This is a build-bound developer\npublisher. The target must be a nonempty absolute UTF-8 path without NUL.\nThe controller validates the complete fixed template, inserts its binary's\ncontract and preserves the target verbatim at the query and attempt operands.\nSubstitution is positional; literal `$EFFECT` text in caller input is data.\nThe document's content, layout and labels carry no stability promise between builds.\n\nProcess exit 0 establishes complete publication of one pretty JSON object,\none framing newline and a successful flush; it establishes neither admission\nnor execution nor an effect. Ordinary `run` independently admits or refuses the\ninput. Usage, target, empty or `unbound` identity, rendering, write and flush\nfailures exit 2. Discard stdout on failure even when it contains complete JSON.\nA reason goes to stderr when writable; the exit status does not depend on it.\n\nEmission reads no external file, launches no process, normalizes or inspects\nno target and prepares no fixture. It makes no host-capacity or unconditional\nadmission promise. The harness owns fixture creation, mutation, cleanup,\nindependently authored expectations and observations.",
             "referenced_types": {
               "specimen.contract": {
                 "json_null": false,
@@ -456415,7 +456463,7 @@
                 "type": "string"
               }
             },
-            "title": "Emit a request lesson"
+            "title": "Publish a developer read input"
           },
           {
             "context": {},
@@ -456621,6 +456669,14 @@
             "kind": "field",
             "prose": "Ordinary paired probes, including an empty array for apply-only execution. Exactly one of this field and `phases` must be non-null in the ordinary form. The host represents this plan as the `main` phase.",
             "title": "probe_plan"
+          },
+          {
+            "context": {},
+            "facts": {},
+            "id": "request.specimen.read_input",
+            "kind": "example",
+            "prose": "This build's identity-free developer body is stated below. Insert the emitting\nbinary's contract at `contract` and the caller's target at\n`probe_plan[0].sandbox_check.filter.value` and `probe_plan[0].attempt.target`.\nThese are positional assignments, not recursive marker expansion. The harness\ncompares this authored body with publication separately from native outcomes.\n\n```json\n{\n  \"specimen_id\": \"test-input\",\n  \"policy\": {\n    \"format\": \"sbpl\",\n    \"sbpl_source\": \"(version 1)\\n(allow default)\"\n  },\n  \"probe_plan\": [\n    {\n      \"step_id\": \"read-target\",\n      \"sandbox_check\": {\n        \"operation\": \"file-read-data\",\n        \"filter\": {\n          \"kind\": \"path\",\n          \"value\": \"$EFFECT\"\n        }\n      },\n      \"attempt\": {\n        \"kind\": \"file\",\n        \"action\": \"read_fresh\",\n        \"target\": \"$EFFECT\"\n      }\n    }\n  ]\n}\n```",
+            "title": "Developer read body"
           },
           {
             "context": {},
@@ -586676,15 +586732,15 @@
           {
             "context": {
               "entry": [
-                "cli_lesson"
+                "cli_test_input"
               ],
               "recipient": [
                 "cli_caller"
               ],
               "report": [
-                "lesson_specimen"
+                "test_input_specimen"
               ],
-              "where": "CLI lesson dispatch",
+              "where": "CLI test-input dispatch",
               "who": [
                 "identity.definitions.controller"
               ]
@@ -586727,26 +586783,26 @@
                 "node": "Expression"
               },
               "entry": [
-                "cli_lesson"
+                "cli_test_input"
               ],
               "recipient": [
                 "cli_caller"
               ],
               "report": [
-                "lesson_specimen"
+                "test_input_specimen"
               ],
               "uses": [
                 "identity.build.contract",
                 "identity.definitions.specimen"
               ],
-              "where": "CLI lesson dispatch",
+              "where": "CLI test-input dispatch",
               "who": [
                 "identity.definitions.controller"
               ]
             },
-            "id": "request.specimen.emit_lesson",
+            "id": "request.specimen.emit_test_input",
             "kind": "reports",
-            "prose": "`policy-witness lesson <create|capture_typo> --target <absolute-path>` accepts\none selector followed by one target option. The target must be a nonempty,\nabsolute UTF-8 path without NUL. The controller preserves it verbatim in the\nquery and attempt, inserts the emitting binary's contract, and prints one\npretty JSON object followed by one newline. `capture_typo` deliberately includes\nan unknown policy field. The document's content, layout and labels carry no\nstability promise between builds.\n\nProcess exit 0 establishes complete publication, including a successful flush;\nit establishes neither admission nor an effect. `run` independently admits or\nrefuses the emitted input. Usage, target, empty or `unbound` identity, rendering,\nwrite and flush failures exit 2. Discard standard output on exit 2, even when\nit contains a complete document. A reason goes to standard error when writable;\nthe exit status does not depend on that stream.\n\nEmission reads no external file, launches no process and does not inspect or\nnormalize the target. It creates no directory and establishes no target-absence\nclaim. The caller's workflow supplies absence checks and independent effect\nobservations.",
+            "prose": "`policy-witness test-input read --target <absolute-path>` accepts exactly the\nread selector followed by one target option. This is a build-bound developer\npublisher. The target must be a nonempty absolute UTF-8 path without NUL.\nThe controller validates the complete fixed template, inserts its binary's\ncontract and preserves the target verbatim at the query and attempt operands.\nSubstitution is positional; literal `$EFFECT` text in caller input is data.\nThe document's content, layout and labels carry no stability promise between builds.\n\nProcess exit 0 establishes complete publication of one pretty JSON object,\none framing newline and a successful flush; it establishes neither admission\nnor execution nor an effect. Ordinary `run` independently admits or refuses the\ninput. Usage, target, empty or `unbound` identity, rendering, write and flush\nfailures exit 2. Discard stdout on failure even when it contains complete JSON.\nA reason goes to stderr when writable; the exit status does not depend on it.\n\nEmission reads no external file, launches no process, normalizes or inspects\nno target and prepares no fixture. It makes no host-capacity or unconditional\nadmission promise. The harness owns fixture creation, mutation, cleanup,\nindependently authored expectations and observations.",
             "referenced_types": {
               "specimen.contract": {
                 "json_null": false,
@@ -586755,7 +586811,7 @@
                 "type": "string"
               }
             },
-            "title": "Emit a request lesson"
+            "title": "Publish a developer read input"
           },
           {
             "context": {},
@@ -586961,6 +587017,14 @@
             "kind": "field",
             "prose": "Ordinary paired probes, including an empty array for apply-only execution. Exactly one of this field and `phases` must be non-null in the ordinary form. The host represents this plan as the `main` phase.",
             "title": "probe_plan"
+          },
+          {
+            "context": {},
+            "facts": {},
+            "id": "request.specimen.read_input",
+            "kind": "example",
+            "prose": "This build's identity-free developer body is stated below. Insert the emitting\nbinary's contract at `contract` and the caller's target at\n`probe_plan[0].sandbox_check.filter.value` and `probe_plan[0].attempt.target`.\nThese are positional assignments, not recursive marker expansion. The harness\ncompares this authored body with publication separately from native outcomes.\n\n```json\n{\n  \"specimen_id\": \"test-input\",\n  \"policy\": {\n    \"format\": \"sbpl\",\n    \"sbpl_source\": \"(version 1)\\n(allow default)\"\n  },\n  \"probe_plan\": [\n    {\n      \"step_id\": \"read-target\",\n      \"sandbox_check\": {\n        \"operation\": \"file-read-data\",\n        \"filter\": {\n          \"kind\": \"path\",\n          \"value\": \"$EFFECT\"\n        }\n      },\n      \"attempt\": {\n        \"kind\": \"file\",\n        \"action\": \"read_fresh\",\n        \"target\": \"$EFFECT\"\n      }\n    }\n  ]\n}\n```",
+            "title": "Developer read body"
           },
           {
             "context": {},

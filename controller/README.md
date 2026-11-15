@@ -21,7 +21,7 @@ See [AGENTS.md](AGENTS.md) for working guidance and the
 | Area | Sources and responsibility |
 | --- | --- |
 | CLI and orchestration | [main.rs](src/main.rs), [cli.rs](src/cli.rs), [run_flow.rs](src/run_flow.rs): dispatch, run preparation and envelope assembly. |
-| Requests | [request_patch.rs](src/request_patch.rs): parsing, contract admission and structured refusals; [example.rs](src/example.rs): the build's example specimen and its emitter; [lesson.rs](src/lesson.rs) and [lessons/](src/lessons/): embedded teaching inputs and target materialization; [runner_select.rs](src/runner_select.rs): selector validation and runner resolution; [augments.rs](src/augments.rs): named policy augmentation. |
+| Requests | [request_patch.rs](src/request_patch.rs): parsing, contract admission and structured refusals; [example.rs](src/example.rs): the build's example specimen and its emitter; [test_input.rs](src/test_input.rs) and [test_inputs/](src/test_inputs/): embedded developer input and target materialization; [runner_select.rs](src/runner_select.rs): selector validation and runner resolution; [augments.rs](src/augments.rs): named policy augmentation. |
 | Reply transport and interpretation | [runner_client.rs](src/runner_client.rs): one Swift-client invocation and separate client/host capture admission; [porcelain_admission.rs](src/porcelain_admission.rs): typed worker/actor admission and projection; [json_contract.rs](src/json_contract.rs): envelope rendering. |
 | Provenance | [dossier.rs](src/dossier.rs), [evidence.rs](src/evidence.rs), [digest.rs](src/digest.rs), [host_facts.rs](src/host_facts.rs): specimen records, manifest lookup, hashes and host facts. |
 | Policy inspection | [policy_check.rs](src/policy_check.rs): independent compile-check capture; [sbpl_imports.rs](src/sbpl_imports.rs) and [sbpl_lex.rs](src/sbpl_lex.rs): bounded import scan and lexer, shared with `sbpl-check`. |
@@ -54,8 +54,10 @@ observations; rejected frames remain available as bytes.
 policy-witness run <request.json> [--timeout-ms <n>] [--runner-mode <standard|byoxpc>]
 policy-witness runner <command> [options]
 policy-witness example
-policy-witness lesson <create|capture_typo> --target <absolute-path>
 policy-witness --version
+
+developer:
+policy-witness test-input read --target <absolute-path>
 ```
 
 `--version` (or `version`) prints a `kind="version"` envelope with the public
@@ -77,19 +79,17 @@ when it is writable and never changes the status. The
 [example rule](../docs/CONTRACT.md#contract-request-specimen-emit_example)
 states the public promise.
 
-`lesson` materializes one embedded teaching input with this binary's contract
-and the supplied absolute UTF-8 target, preserving the target in both query and
-attempt without normalization or filesystem inspection. It parses the template
-and checks identity before rendering; `run` independently admits or refuses the
-result. `capture_typo` carries a deliberately unknown policy field. The command
-reads no external file and launches no process. Exit 0 means complete JSON
-publication with one newline and a successful flush; it reports neither
-admission nor an effect. Usage, target, unbound or
-empty identity, rendering and write/flush failures exit 2; discard stdout and
-read stderr when available. The
-[lesson rule](../docs/CONTRACT.md#contract-request-specimen-emit_lesson)
-defines publication; target-absence checks and effect observations belong to the
-calling workflow.
+`test-input read` publishes one build-bound developer read input with this
+binary's contract and the supplied absolute UTF-8 target. It validates the
+embedded template before inserting the target positionally into its query and
+attempt, preserving caller text without normalization or filesystem inspection.
+The command reads no external file, prepares no fixtures and launches no process.
+Exit 0 means complete JSON publication with one newline and a successful flush;
+it reports neither admission nor an effect. Usage, target, unbound or empty
+identity, rendering and write/flush failures exit 2; discard stdout and read
+stderr when available. The [publication rule](../docs/CONTRACT.md#contract-request-specimen-emit_test_input)
+defines these promises. Ordinary `run` owns admission and execution; fixture
+preparation, expected results and independent observations belong to the harness.
 
 `--timeout-ms` controls the runner RPC. `PW_VERIFY_EVIDENCE=1` adds manifest hash verification under
 `data.specimen.app_provenance.evidence_verify`.

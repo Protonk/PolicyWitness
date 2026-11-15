@@ -56,14 +56,13 @@ flowchart TD
 
 ## Originating and preparing work
 
-`example` and `lesson` originate requests the build defines. In
+`example` and `test-input` originate requests the build defines. In
 [example.rs](../controller/src/example.rs), `render` inserts the compiled
 identity, uses the request parser and identity gate, serializes the whole
 object and appends one newline. `emit` writes only after rendering and requires
-a successful flush. [lesson.rs](../controller/src/lesson.rs) follows the same
-sequence in its own code for two embedded
-[teaching inputs](../controller/src/lessons/README.md). It first checks its
-selector and target, then writes the caller's absolute target unchanged into
+a successful flush. [test_input.rs](../controller/src/test_input.rs) follows the same
+sequence for one embedded [read input](../controller/src/test_inputs/README.md).
+It checks its selector, target and complete fixed template structure, then writes the caller's absolute target unchanged into
 the query and attempt operands. Neither command reads a request, app manifest
 or registry, launches anything or consults the host's grammar. For both, exit 0
 reports complete publication and nothing the host decided. Version dispatch
@@ -79,13 +78,12 @@ admission, not the success of an attempted operation. The
 extracted example preserve that separation. The documentation extractor reads
 the source constant; documentation does not supply runtime example content.
 
-`lesson` carries no such guarantee. Its
-[rule](CONTRACT.md#contract-request-specimen-emit_lesson) states that
-publication establishes neither admission nor an effect. `capture_typo` is
-published with a policy member the host's closed object refuses, and `create`
-carries a caller-chosen target that host capacity admission still judges. The
-controller checks no closed field set, so `run` prepares and delivers either
-lesson as it would any saved specimen.
+`test-input` carries no admission guarantee. Its stamped developer
+[rule](CONTRACT.md#contract-request-specimen-emit_test_input) establishes
+build-bound publication with positional target binding. Host capacity admission
+still judges the supplied target. The publisher prepares no fixtures and
+promises neither a query answer nor an effect. `run` prepares and delivers the
+saved input through the ordinary path.
 
 For saved specimens, [run_flow.rs](../controller/src/run_flow.rs) holds the
 request text and parsed value. Its identity gate precedes interpretation of
@@ -116,11 +114,12 @@ identity. The signed-app
 [round-trip checker](../tests/suites/witness_contract/check_example_round_trip.py)
 compares the pipe's accepted byte count with prepared length: that is not an
 exact-byte observation at the pipe or proof of host receipt. No constructed
-test makes the exact comparison for a lesson. The
-[live request control](../tests/suites/runner_outcome_bad_request/contract.py)
-submits the selected app's emitted lessons unchanged and reads `run`'s
-decision and the target file against separately authored expectations; it
-compares no delivered bytes.
+test makes the exact callback comparison for test-input. The
+[controlled-input case](../tests/suites/witness_contract/test_input.py) retains
+selected-app publication and submitted bytes, compares reported delivery
+length, and independently samples descriptor identity and current content.
+Its six execution passages and one refusal have separately authored outcomes;
+none establishes exact delivered bytes at the pipe.
 
 [dossier.rs](../controller/src/dossier.rs) records selected source and available
 binary provenance. The import scan in
@@ -299,10 +298,10 @@ universal equivalence is promised.
 General envelopes are rendered before `println!` in
 [json_contract.rs](../controller/src/json_contract.rs) and run dispatch; these
 paths do not implement the explicit fallible write/flush protocol that
-`example` and `lesson` each implement. For those two commands, complete-looking
+`example` and `test-input` each implement. For those two commands, complete-looking
 JSON is unusable on exit 2, including a late flush failure.
 `only_complete_output_with_a_successful_flush_succeeds` in `example.rs` and
-`complete_publication_requires_all_writes_and_flush` in `lesson.rs` test that
+`complete_publication_requires_all_writes_and_flush` in `test_input.rs` test that
 case with injected writers. No publication path establishes downstream receipt
 or durable storage. Interrupted output can follow effects; stderr is a human
 diagnostic, not a replacement protocol.

@@ -101,8 +101,8 @@ deterministic, and checked into the repo so tests are hermetic.
   apply real deny-default profiles. Tests own cleanup of children
   deliberately left unreaped by OS-call fault controls.
 - `request_contract/`: executable request inputs and independent CLI/XPC
-  expectations. `create` and `capture_typo` reference identity-free app-owned
-  JSON in `controller/src/lessons/`; other requests remain inline. Python and
+  expectations. `create` and `capture_typo` reference identity-free corpus-owned
+  JSON in `tests/fixtures/request_contract/`; other requests remain inline. Python and
   Swift loaders require exactly one input owner and restrict source references
   to those two files. Readers supply their own candidate/test contract identity.
 - `pw_runner/`: minimal specimens for smoke/integration/runner suites and

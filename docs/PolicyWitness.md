@@ -55,13 +55,35 @@ before continuing. The string identifies the exact input/report contract; the
 remaining examples marked `BUILD_CONTRACT` need that value before submission.
 A release uses `release:vX.Y.Z`; a development build uses `development:<digest>`.
 
-Obtain this build's create lesson, which opens a new, empty file under an
-allow-all policy. `lesson` prints a request with the emitting app's contract;
-it does not execute it. Exit 0 supplies the complete request. On exit 2 discard
-its output. The target is inserted verbatim without checking the filesystem.
+Save an ordinary request that opens a new, empty file under an allow-all
+policy. The quoted JSON body keeps shell substitutions out of the request;
+`plutil` then inserts the contract and target as JSON strings. Preparation
+does not execute the request or inspect the target.
 
 ```sh
-"$PW" lesson create --target "$PW_WORK/created" > "$PW_WORK/create.json"
+cat > "$PW_WORK/create.json" <<'JSON' &&
+{
+  "contract": "BUILD_CONTRACT",
+  "specimen_id": "guide-create",
+  "policy": {
+    "format": "sbpl",
+    "sbpl_source": "(version 1) (allow default)"
+  },
+  "probe_plan": [
+    {
+      "step_id": "create",
+      "sandbox_check": {
+        "operation": "file-write-create",
+        "filter": { "kind": "path", "value": "TARGET" }
+      },
+      "attempt": { "kind": "file", "action": "create", "target": "TARGET" }
+    }
+  ]
+}
+JSON
+/usr/bin/plutil -replace contract -string "$PW_CONTRACT" "$PW_WORK/create.json" &&
+/usr/bin/plutil -replace probe_plan.0.sandbox_check.filter.value -string "$PW_WORK/created" "$PW_WORK/create.json" &&
+/usr/bin/plutil -replace probe_plan.0.attempt.target -string "$PW_WORK/created" "$PW_WORK/create.json"
 PW_PREPARE_EXIT=$?
 if test "$PW_PREPARE_EXIT" -eq 0 && test ! -e "$PW_WORK/created"; then
   "$PW" run "$PW_WORK/create.json" > "$PW_WORK/create-result.json" 2> "$PW_WORK/create-stderr.txt"
@@ -72,11 +94,11 @@ if test "$PW_PREPARE_EXIT" -eq 0 && test ! -e "$PW_WORK/created"; then
   /usr/bin/stat -f 'size=%z mode=%Sp inode=%i' "$PW_WORK/created" > "$PW_WORK/create-observation.txt"
   cat "$PW_WORK/create-observation.txt"
 else
-  printf '%s\n' 'Request emission failed or target exists; discard failed output and prepare a fresh work directory.' >&2
+  printf '%s\n' 'Request preparation failed or target exists; discard failed input and prepare a fresh work directory.' >&2
 fi
 ```
 
-The guard requires successful emission and refuses to reuse an existing target.
+The guard requires successful preparation and refuses to reuse an existing target.
 On a completed create, the run command exits 0 and the target is an empty file. The saved
 exit status and envelope describe execution; `test` and `stat` independently
 observe the file effect. `create` opens an existing file without truncating it,
@@ -527,11 +549,16 @@ The [quick start](#quick-start) retained `create.json`, its envelope and an
 independent file observation in `$PW_WORK`. Use a different target for this
 refusal exercise, so an earlier successful run cannot explain its presence.
 
-Obtain the paired lesson containing a deliberately unknown policy field.
-Successful publication by `lesson` does not mean `run` will admit this input:
+Copy the saved request, retarget it and insert a deliberately misspelled policy
+field. These edits produce valid JSON, but `run` still decides whether the
+request is admissible. The original request remains unchanged:
 
 ```sh
-"$PW" lesson capture_typo --target "$PW_WORK/capture-target" > "$PW_WORK/capture-typo.json"
+/usr/bin/plutil -replace specimen_id -string guide-capture \
+  -o "$PW_WORK/capture-typo.json" "$PW_WORK/create.json" &&
+/usr/bin/plutil -replace probe_plan.0.sandbox_check.filter.value -string "$PW_WORK/capture-target" "$PW_WORK/capture-typo.json" &&
+/usr/bin/plutil -replace probe_plan.0.attempt.target -string "$PW_WORK/capture-target" "$PW_WORK/capture-typo.json" &&
+/usr/bin/plutil -insert policy.capture_compiled_profiel -bool YES "$PW_WORK/capture-typo.json"
 PW_PREPARE_EXIT=$?
 if test "$PW_PREPARE_EXIT" -eq 0 && test ! -e "$PW_WORK/capture-target"; then
   "$PW" run "$PW_WORK/capture-typo.json" > "$PW_WORK/capture-typo-result.json" 2> "$PW_WORK/capture-typo-stderr.txt"
@@ -540,7 +567,7 @@ if test "$PW_PREPARE_EXIT" -eq 0 && test ! -e "$PW_WORK/capture-target"; then
   test "$PW_EXIT" -eq 1
   test ! -e "$PW_WORK/capture-target"
 else
-  printf '%s\n' 'Request emission failed or target exists; preserve earlier records and prepare a fresh target.' >&2
+  printf '%s\n' 'Request preparation failed or target exists; preserve earlier records and prepare a fresh target.' >&2
 fi
 ```
 
@@ -2925,7 +2952,6 @@ not the exec descendants.
 | `run FILE --runner-mode standard` or `byoxpc` | Supplies the runner-mode selection; external selection still requires its registered ID or service. |
 | `--version` | Prints a version envelope with `build.contract` and descriptive build coordinates. Save it with the specimen. |
 | `example` | Prints one specimen that this build defines, carrying the build's own contract identity, for the same build's `run`: `example > FILE`, then `run FILE`. It takes no argument and prints a request, not an envelope. Exit 0 supplies the complete document; on exit 2 discard the output. The document can differ between builds. The project uses it to test a build against its own example. |
-| `lesson create --target PATH` or `lesson capture_typo --target PATH` | Prints one of the two request lessons this build embeds, carrying the build's own contract identity and the absolute `PATH` as its query and attempt target, for the [quick start](#quick-start) and the [refusal exercise](#try-an-accepted-request-and-a-refusal). It prints a request, not an envelope. Exit 0 supplies the complete request and reports nothing about admission: `run` decides that separately, and `capture_typo` carries a deliberately unknown policy field. On exit 2 discard the output. `PATH` is inserted verbatim without checking the filesystem. The documents can differ between builds. |
 
 ### Running specimens in parallel
 

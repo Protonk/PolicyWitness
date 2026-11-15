@@ -387,11 +387,23 @@ class Workflow:
         names = ['create', 'capture-typo', 'capture-no-nonce', 'capture', 'byoxpc-create']
         values = {name: json.loads((self.work / (name + '.json')).read_bytes()) for name in names}
         assert all(value['contract'] == self.contract for value in values.values())
+        derived = json.loads(json.dumps(values['create']))
+        derived['specimen_id'] = 'guide-capture'
+        derived['probe_plan'][0]['sandbox_check']['filter']['value'] = str(self.work / 'capture-target')
+        derived['probe_plan'][0]['attempt']['target'] = str(self.work / 'capture-target')
+        derived['policy']['capture_compiled_profiel'] = True
+        assert derived == values['capture-typo']
         typo = json.loads(json.dumps(values['capture-typo']))
         typo['policy']['capture_compiled_profile'] = typo['policy'].pop('capture_compiled_profiel')
         assert typo == values['capture-no-nonce']
         typo['policy']['capture_nonce'] = self.values['PW_NONCE']
         assert typo == values['capture']
+        derived = json.loads(json.dumps(values['create']))
+        derived['specimen_id'] = 'guide-byoxpc-create'
+        derived['runner'] = dict(service=self.values['SERVICE'], mode='byoxpc')
+        derived['probe_plan'][0]['sandbox_check']['filter']['value'] = str(self.work / 'byoxpc-created')
+        derived['probe_plan'][0]['attempt']['target'] = str(self.work / 'byoxpc-created')
+        assert derived == values['byoxpc-create']
         save(self.out / 'request-hashes.json', {name: sha((self.work / (name + '.json')).read_bytes()) for name in names})
 
     def perform(self):
@@ -407,7 +419,7 @@ class Workflow:
         assert self.values['PW_CONTRACT'] == self.contract
         self.run('show-contract', shown)
         self.observe('create-independent-before', 'created', False)
-        create = self.guide.fence('Quick start', '"$PW" lesson create')
+        create = self.guide.fence('Quick start', 'cat > "$PW_WORK/create.json"')
         prepare, execute = split(create, ['if test "$PW_PREPARE_EXIT"'])
         self.run('create-request', prepare)
         assert self.values['PW_PREPARE_EXIT'] == '0'
@@ -423,7 +435,7 @@ class Workflow:
         assert file_observation(self.work / 'created') == effect_before
         save(self.out / 'existing-target-guard.json', dict(result_unchanged=True, effect_unchanged=True, saved_mtime_ns=saved))
         for name, needle, code, field in [
-            ('capture-typo', '> "$PW_WORK/capture-typo.json"', 'unknown_field', 'capture_compiled_profiel'),
+            ('capture-typo', '-o "$PW_WORK/capture-typo.json"', 'unknown_field', 'capture_compiled_profiel'),
             ('capture-no-nonce', '/usr/bin/plutil -remove policy.capture_compiled_profiel', 'invalid_capture_nonce', 'capture_nonce')]:
             text = self.guide.fence('Try an accepted request and a refusal', needle)
             prepare, execute = split(text, ['if test "$PW_PREPARE_EXIT"'])
@@ -596,47 +608,64 @@ def controls(out):
     # Exercise the displayed preparation guards without invoking a native run.
     real_guide = Guide((ROOT / 'docs/PolicyWitness.md').read_text(), 'actual guide guard controls')
     guard_receipts = []
-    for name, section, target, result_name in [
-            ('create', 'Quick start', 'created', 'create-result.json'),
-            ('capture_typo', 'Try an accepted request and a refusal', 'capture-target', 'capture-typo-result.json')]:
-        fence = real_guide.fence(section, '"$PW" lesson ' + name + ' --target')
+    for name, section, needle, target, result_name in [
+            ('create', 'Quick start', 'cat > "$PW_WORK/create.json"', 'created', 'create-result.json'),
+            ('capture_typo', 'Try an accepted request and a refusal',
+             '-o "$PW_WORK/capture-typo.json"', 'capture-target', 'capture-typo-result.json')]:
+        fence = real_guide.fence(section, needle)
         guard = 'test "$PW_PREPARE_EXIT" -eq 0 && '
         assert fence.count(guard) == 1
-        for variant, text in [('guarded', fence), ('guard-removed', fence.replace(guard, '', 1))]:
-            directory = (out / 'preparation-controls' / name / variant).resolve()
-            work = directory / 'work'
-            work.mkdir(parents=True)
-            fake = directory / 'fake-pw'
-            fake.write_text('#!/bin/sh\n'
-                            'case "$1" in\n'
-                            "  lesson) printf '{\"partial\":'; exit 2 ;;\n"
-                            '  run) : > "$PW_WORK/submitted"; exit 1 ;;\n'
-                            '  *) exit 99 ;;\n'
-                            'esac\n')
-            fake.chmod(0o700)
-            script = directory / 'fragment.sh'
-            script.write_text('export PW_WORK=' + shlex.quote(str(work)) + '\n'
-                              'PW=' + shlex.quote(str(fake)) + '\n' + text)
-            result = command(directory / 'capture', ['/bin/bash', script], check=False)
-            request_name = 'create.json' if name == 'create' else 'capture-typo.json'
-            assert (work / request_name).read_bytes() == b'{"partial":'
-            assert not (work / target).exists()
+        for previous in (False, True):
+            for variant, text in [('guarded', fence), ('guard-removed', fence.replace(guard, '', 1))]:
+                directory = (out / 'preparation-controls' / name /
+                             ('previous-result' if previous else 'no-result') / variant).resolve()
+                work = directory / 'work'
+                work.mkdir(parents=True)
+                # The quick-start writer fails after partial output. The copy
+                # exercise feeds actual plutil a malformed retained input.
+                malformed = b'{"partial":'
+                if name == 'capture_typo':
+                    (work / 'create.json').write_bytes(malformed)
+                earlier = b'{"earlier_result":"preserve"}\n'
+                if previous:
+                    (work / result_name).write_bytes(earlier)
+                fake = directory / 'fake-pw'
+                fake.write_text('#!/bin/sh\n'
+                                'case "$1" in\n'
+                                '  run) : > "$PW_WORK/submitted"; exit 1 ;;\n'
+                                '  *) exit 99 ;;\n'
+                                'esac\n')
+                fake.chmod(0o700)
+                preparation_fault = ("cat() { printf '{\"partial\":'; return 2; }\n"
+                                     if name == 'create' else '')
+                script = directory / 'fragment.sh'
+                script.write_text('export PW_WORK=' + shlex.quote(str(work)) + '\n'
+                                  'PW=' + shlex.quote(str(fake)) + '\n'
+                                  'PW_CONTRACT=development:constructed\n' + preparation_fault + text)
+                result = command(directory / 'capture', ['/bin/bash', script], check=False)
+                assert (work / 'create.json').read_bytes() == malformed
+                assert not (work / target).exists()
 
-            def preparation_stopped_submission():
-                assert not (work / 'submitted').exists(), 'failed emission reached run'
-                assert not (work / result_name).exists(), 'failed emission published a run result'
+                def preparation_stopped_submission():
+                    assert not (work / 'submitted').exists(), 'failed preparation reached run'
+                    if previous:
+                        assert (work / result_name).read_bytes() == earlier, 'failed preparation replaced earlier result'
+                    else:
+                        assert not (work / result_name).exists(), 'failed preparation published a run result'
 
-            if variant == 'guarded':
-                assert result['returncode'] == 0, result
-                preparation_stopped_submission()
-            else:
-                # The same absence oracle must reject removal of the guard.
-                assert (work / 'submitted').is_file() and (work / result_name).is_file()
-                refuses(preparation_stopped_submission)
-            guard_receipts.append(dict(lesson=name, variant=variant,
-                                       submitted=(work / 'submitted').exists(),
-                                       target_present=(work / target).exists(),
-                                       run_result_present=(work / result_name).exists()))
+                if variant == 'guarded':
+                    assert result['returncode'] == 0, result
+                    preparation_stopped_submission()
+                else:
+                    # The same oracle must reject removal of the guard.
+                    assert (work / 'submitted').is_file() and (work / result_name).is_file()
+                    refuses(preparation_stopped_submission)
+                guard_receipts.append(dict(passage=name, variant=variant, previous_result=previous,
+                                           submitted=(work / 'submitted').exists(),
+                                           target_present=(work / target).exists(),
+                                           run_result_present=(work / result_name).exists(),
+                                           previous_result_preserved=(work / result_name).read_bytes() == earlier
+                                           if previous else None))
     save(out / 'preparation-guard-controls.json', dict(fences=real_guide.used, observations=guard_receipts))
     # Construct the copy's expected private-file modes independently of the
     # comparison helper, then keep content and execute-bit failures distinct.
