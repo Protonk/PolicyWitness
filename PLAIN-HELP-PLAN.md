@@ -257,6 +257,8 @@ Each entry records:
   reference and is never printed on a card;
 - its spellings and relationships: command, option and value, or for the
   result relation a row's inputs and outputs;
+- the parser or reader whose behavior the entry describes; identifiers remain
+  stable across spelling changes, and each reader's admission rule is explicit;
 - its admission kind;
 - the cards that reference it, which may be none.
 
@@ -274,11 +276,26 @@ only for the inventory is an authored label and does not qualify.
 Enumeration is exhaustive on every path a governing table covers: there the
 recognizer, dispatcher and parser match no spelling that is not a
 definition, and a check rejects a literal match placed beside the table. A
-path no table covers appears as one unenumerated entry for its command. It
-is never simply absent. How far the tables reach in the first implementation
-is an [open decision](#open-decisions); the instances above outside
-top-level dispatch, `run`'s arguments and the runner-mode vocabulary are
-enumerated only if that decision brings their paths in.
+path no table covers appears as one unenumerated entry for its command.
+The first implementation covers top-level dispatch, help selection, all
+`run` argument handling, the runner-mode vocabulary across CLI and registry
+readers, and the definitions needed for the `example` and `result` projections.
+The `runner` and `test-input` tails remain unenumerated. In particular,
+`--executable`, `--bundle-id` and the `runner list` tail stay within the
+unenumerated `runner` entry rather than receiving individual entries.
+
+Enumeration and behavioral repair are separate decisions. Moving a refusal
+or discarded argument into a governing definition preserves its behavior;
+changing that behavior requires the permitted-repair decision. Reader-qualified
+rules preserve distinctions such as `machme` being refused by CLI parsing and
+accepted by registry reading.
+
+Commit the generated inventory beside its generator's README and residue
+baseline. The build regenerates into temporary output and compares it with
+the committed copy before signing. Offline contract checks read the committed
+copy. E2 must establish that the cards and inventory can be generated without
+a signed app or the controller's contract stamp, avoiding a dependency cycle
+between inventory generation and contract checking.
 
 For the result relation the inventory holds every row with its inputs and
 outputs, and records an input that is consulted without changing any output,
@@ -290,10 +307,18 @@ distinguishes. These are reported, not refused, and are never authored.
 Three joins use the identifiers:
 
 - **Contract.** A contract node that states a projected element cites its
-  inventory identifier. The contract generator's check resolves each cited
-  identifier, compares the node's structured facts (`test`, `set_value` and
-  listed vocabulary values) with the entry, and lists the `free.*` text
-  carried by citing nodes. In this implementation the citing nodes are the
+  identifiers in an `interface` list, for example
+  `interface: ["result.admitted_finished"]`. These references are support
+  metadata excluded from the public snapshot under the
+  [authoring rules](docs/contract/AGENTS.md); existing owner records describe
+  the check and its limits. The contract generator's check resolves each
+  identifier and compares the node's structured facts (`test`, `set_value`
+  and listed vocabulary values) with the entry. Comparison includes inherited
+  admission conditions and first-match ordering. Start with direct references
+  and deterministic comparisons; add operand bindings only where the prototype
+  demonstrates ambiguity. Report the compared facts and remaining prose,
+  including `free.*` text; resolving a reference supplies no credit to that
+  prose. In this implementation the citing nodes are the
   ones for the elements the four cards project: the
   [controller pre-invocation refusal](docs/CONTRACT.md#contract-refusals-controller-consequence)
   and the envelope's outcome and exit rules, the runner-mode option and the
@@ -302,18 +327,38 @@ Three joins use the identifiers:
   The association is derived from the case's arguments and required results;
   a declared association is accepted only where derivation is impossible and
   is then held by the mutation record. The join reports entries no case
-  reaches and entries that only test-owned inputs reach.
+  reaches and entries whose reaching cases all use test-owned inputs. The
+  latter is a property of retained evidence, not a claim that production
+  inputs cannot reach the entry. Keep entries with no reaching case separate.
 - **Mutations.** E3's mutations are retained as data: the entry, the
   mutation, and which of the card, the contract check and the cases changed
-  or failed. An entry whose mutation moves a case and nothing else is
-  reported.
+  or failed. Record `not_run`, `unchanged`, `changed` and `failed` separately
+  for each check. Run inexpensive renderer, contract and focused behavioral
+  checks wherever applicable; choose additional signed executions from E3's
+  cost measurements. Report when a mutation changes a case and leaves the
+  other checked outputs unchanged, with any omitted checks explicit.
 
-A residue baseline counts entries of each kind other than `Admits`, entries
-no card references, entries reached only by cases, and non-derived card
-tokens. Generation accepts a reduction and refuses an increase until the
-baseline is explicitly refreshed, as
-[free_text.json](docs/contract/free_text.json) does for unstructured
-contract text.
+A residue baseline records member identifiers and counts separately for:
+
+- Non-`Admits` entries, by admission kind and reader.
+- Entries referenced by no card.
+- Entries with reaching cases that all use test-owned inputs.
+- Explicit non-derived token exceptions, by card and token role. Whitespace
+  is layout and is not counted as a token exception.
+
+Compare membership as well as totals: removing one member cannot silently
+authorize a different member. Generation accepts reductions and lowers the
+committed baseline to the current sets; it refuses additions until an explicit
+refresh, following the reduction rule of
+[free_text.json](docs/contract/free_text.json). Expanded enumeration has a
+refresh path that records which opaque entry was replaced and distinguishes
+newly exposed behavior from changed behavior.
+
+The inventory generator owns the baseline. Its adjacent README documents one
+refresh command; refresh requires a maintainer-reviewed diff of members and
+counts. Normal generation never accepts additions automatically. An uncarded
+option or a reader alias may remain intentionally; a baseline reduction does
+not authorize enlarging cards or changing admission behavior.
 
 ## Help grammar
 
@@ -450,8 +495,10 @@ behavior changes; identify contract and test constraints on each difference.
 
 **E2 — Build.** Choose a plausible placement and embed the cards there for
 both candidates. Write the inventory from the same definitions in the same
-step, and establish whether it is a committed generated copy with a check
-before signing or a build artifact, and how the contract generator reads it. The first hand-table build is a comparison baseline, not an
+step. Verify the committed generated copy against temporary build output
+before signing, and exercise the offline contract join against that copy.
+Establish generation without a signed app or the controller's contract stamp.
+The first hand-table build is a comparison baseline, not an
 architecture decision. Consider shared declaration source in `build.rs`, a
 shared dependency/build-dependency crate, compile-time assembly, or a
 registered generator with `--check`. Try alternatives only as needed to
@@ -495,9 +542,13 @@ selection definitions under test.
 
 Add a literal spelling match beside the governing table and require the
 exhaustiveness check to reject it. Record every mutation in the retained
-form the inventory's mutation join uses, and measure what one mutation
-costs for each kind of check, since that bounds which checks the retained
-record can include.
+form the inventory's mutation join uses. Run inexpensive renderer, contract
+and focused behavioral checks wherever applicable; measure each check's cost
+to select additional signed executions. Omitted checks remain `not_run`.
+Rename an inventory identifier and update its references: require an unchanged
+public snapshot. Change a governing value, admission condition or row order
+without updating the corresponding contract facts: require the contract check
+to reject each disagreement, reporting the affected facts and remaining prose.
 
 Record source patches, commands, artifact identity, behavior, card bytes and
 check diagnostics once per candidate. Unrelated compilation failures and
@@ -560,9 +611,7 @@ from the first cards are fixed for this plan.
 | Exact projections | Review the `run` and `example` sketches and choose the flat rendering of the governing `result` relation, including how admission conditions are expressed without help-only wording. Confirm the obligation or declared content each element exposes. The base card lists exactly `run`, `example` and `result`. |
 | Implementation and dependencies | E1–E4 support the governing argument definitions and result-selection mechanism, rendering/build placement, test approach and adoption or rejection of clap, trycmd and snapbox. Missing comparison evidence cannot close a decision. |
 | Permitted repair | E1 identifies additional behavior changes. Decide explicitly whether to repair discarded trailing arguments, always-refused matched flags, timeout clamping or last-path-wins behavior; they are not implicit help work. |
-| Inventory reach and custody | Decide which paths the governing tables enumerate in the first implementation and which commands remain unenumerated entries; this is the same boundary as permitted repair. Using E2, decide whether the inventory is a committed generated copy or a build artifact. Using E3's cost measurement, decide which checks the retained mutation record covers. |
-| Contract citation form | Decide how a contract node cites an inventory identifier under the [authoring rules](docs/contract/AGENTS.md), and whether the citation is support metadata excluded from the public snapshot. |
-| Residue baseline | Decide the counted categories' exact definitions and the baseline's owner and refresh procedure. |
+| Inventory implementation | E2 establishes the committed-copy check and generation without a signed app or controller contract stamp. Resolve any demonstrated need for operand bindings in the contract join. E3's cost measurement selects additional signed mutation checks; inexpensive renderer, contract and focused behavioral checks remain required wherever applicable. Inventory reach, custody, citation status and baseline ownership are fixed in the inventory section. |
 | Non-derived tokens and build identity | Decide any individually named label/placeholder exception and whether contract identity is useful on a topic card. No general text override is permitted. |
 | Refusal and write-failure output | Choose exact diagnostics per affected command and the failed-stdout-write policy. A base card may be included on stderr for a refusal while status and stdout remain those in the grammar table. Distinguish this reuse from successful help. |
 | Public status of help | Decide whether help's promises become contract rules. Publisher meanings remain intact; a public-contract addition requires the authored-tree procedure, stamps and support. |
@@ -597,9 +646,11 @@ mechanism. The minimum acceptance evidence is:
   literal-match control; agreement between each card and the entries it
   references; derived result-relation facts recomputed from the rows; the
   contract check resolving every cited identifier, with a rejected control
-  for a fact that disagrees with its entry; the case and mutation joins
-  produced from retained data; and the ratchet accepting a reduction and
-  refusing an increase.
+  for a fact, admission condition or row order that disagrees with its entry;
+  identifier-only changes leaving the public snapshot unchanged; the case
+  and mutation joins produced from retained data with omitted checks explicit;
+  the baseline accepting reductions, refusing new members even at unchanged
+  totals, and recording expanded enumeration through a reviewed refresh.
 - **Build and comparison:** current cards in fresh and incremental builds,
   a stale-card control, and the E1–E4 decision records with failures and any
   unfinished work stated. The first cards contain no observed workload results.
@@ -632,10 +683,13 @@ Update affected owners together:
   authored help rules, stamps and support if help becomes public.
 - The contract authoring tree for the citation form: allowed facts in
   [tree.py](docs/contract/tree.py), the authoring rules, and the citing
-  nodes in the refusal, envelope, request and specimen surfaces.
+  nodes in the refusal, envelope, request and specimen surfaces. Exclude the
+  `interface` support metadata from the public snapshot; retain comparisons
+  of inherited conditions and first-match ordering.
 - The inventory's owner: its generator registration and check, the residue
   baseline, and a README beside it describing the entry fields and the three
-  joins as current behavior.
+  joins as current behavior, the committed-copy check, and the baseline refresh
+  command and review procedure.
 - `docs/build.json` and `BUILD.md` for build changes; `DEPENDENCIES.md`, Cargo
   manifests and lock file for adopted crates; generator registration when used.
 
