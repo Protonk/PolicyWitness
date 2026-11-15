@@ -1,0 +1,51 @@
+Testing run.runner_mode_missing.toml ... failed 319ms 620us 667ns
+Testing run.runner_mode_debuggable.toml ... failed 322ms 572us 208ns
+test invalid_augment_name_rejected_as_bad_request ... ok
+Testing run.timeout_invalid.toml ... failed 319ms 718us 250ns
+Testing run.runner_mode_invalid.toml ... failed 319ms 432us 417ns
+Testing run.runner_mode_standard.toml ... failed 8ms 799us 709ns
+test interface_case_executor_rejects_wrong_status_and_stream ... FAILED
+Testing run.h_flag.toml ... failed 323ms 307us 375ns
+Testing run.runner_mode_machme.toml ... failed 10ms 140us 334ns
+Testing run.timeout_missing.toml ... failed 7ms 171us 42ns
+run.terminator.toml ... failed 10ms 991us 83ns
+Testing run.help_flag.toml ... failed 12ms 581us 666ns
+Testing run.timeout_takes_help_flag.toml ... failed 5ms 826us
+Testing run.timeout_equals.toml ... failed 8ms 959us 375ns
+Testing run.timeout_zero.toml ... failed 7ms 76us 833ns
+Testing run.help_word.toml ... failed 10ms 244us 791ns
+Testing run.path_then_help_flag.toml ... failed 9ms 332us 84ns
+Testing run.runner_mode_byoxpc.toml ... failed 11ms 838us 708ns
+test example_write_failures_exit_2_without_a_panic ... ok
+Testing run.repeated_timeout.toml ... failed 14ms 364us 333ns
+Testing run.repeated_path.toml ... failed 11ms 597us 291ns
+Testing run.no_arguments.toml ... failed 12ms 991us 959ns
+test help_cards_agree_with_execution ... ok
+test interface_cases_hold_under_trycmd ... FAILED
+test augment_applied_records_the_applied_augmentation ... ok
+test absent_augments_record_not_requested ... ok
+test path_diagnostics_preserves_native_unicode_spelling ... ok
+test sandbox_check_emits_path_diagnostics_for_etc_hosts ... ok
+test sbpl_check_records_import_provenance_for_system_sb ... ok
+test sbpl_check_argument_and_request_failures_exit_2_without_an_envelope ... ok
+test sandbox_check_path_diagnostics_host_produces_realpath_under_strict_sandbox ... ok
+test sandbox_check_path_diagnostics_lists_forms_equal_to_input ... ok
+test sandbox_check_path_diagnostics_survives_strict_sandbox ... ok
+test snapbox_rejects_wrong_status_and_stream ... ok
+control.toml ... failed 7ms 291us
+test test_input_publishes_read_from_the_installed_binary ... ok
+Testing control.toml ... failed 4ms 431us 333ns
+Testing control.toml ... failed 4ms 806us 292ns
+test trycmd_rejects_wrong_status_and_stream_and_passes_an_unstated_stderr ... ok
+test version_flag_reports_build_stamp_and_contract ... ok
+test version_dispatch_uses_the_first_argument ... ok
+test specimen_smoke_file_read_deny ... ok
+test test_input_cli_refusals_and_write_failures_exit_2_safely ... ok
+test sbpl_check_verdicts_follow_the_native_compiler ... ok
+test plain_cargo_build_cannot_admit_public_requests ... ok
+test interface_cases_hold_on_the_signed_controller ... ok
+test interface_cases_hold_under_snapbox ... ok
+test supplied_direct_cargo_identity_is_embedded_without_release_provenance ... ok
+trycmd cannot hold 4 cases: ["help.non_utf8: a non-UTF-8 argument", "run.non_utf8_path: a non-UTF-8 argument", "help.stdout_without_reader: a stdout without a reader", "example.save_and_run: several invocations with a saved output"]
+19 of 60 tests failed
+test result: FAILED. 25 passed; 3 failed; 0 ignored; 0 measured; 0 filtered out; finished in 14.21s

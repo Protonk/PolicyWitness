@@ -1,0 +1,331 @@
+{
+ "mutations": [
+  {
+   "id": "rename_option",
+   "entry": "run.option.runner_mode",
+   "description": "Rename the governing spelling --runner-mode to --runner-kind; no help input edited.",
+   "edits": [
+    {
+     "path": "controller/src/interface/run_args.rs",
+     "old": "RunOption::RunnerMode => (\"--runner-mode\", Value::Kind(Reader::RunOption)),",
+     "new": "RunOption::RunnerMode => (\"--runner-kind\", Value::Kind(Reader::RunOption)),"
+    }
+   ],
+   "probes": [
+    [
+     "run",
+     "--runner-kind",
+     "standard"
+    ],
+    [
+     "run",
+     "--runner-mode",
+     "standard"
+    ],
+    [
+     "run",
+     "--runner-kind",
+     "machme"
+    ]
+   ]
+  },
+  {
+   "id": "private_copy_option",
+   "entry": "run.option.runner_mode",
+   "description": "Render the run card's option from a private, identical copy of the spellings in the card renderer.",
+   "edits": [
+    {
+     "path": "controller/build_help/cards.rs",
+     "old": "            out.line(depth, option.def().spelling);",
+     "new": "            out.line(\n                depth,\n                match option {\n                    RunOption::TimeoutMs => \"--timeout-ms\",\n                    RunOption::RunnerMode => \"--runner-mode\",\n                },\n            );"
+    }
+   ],
+   "probes": [
+    [
+     "run",
+     "--runner-kind",
+     "standard"
+    ],
+    [
+     "run",
+     "--runner-mode",
+     "standard"
+    ],
+    [
+     "run",
+     "--runner-kind",
+     "machme"
+    ]
+   ]
+  },
+  {
+   "id": "private_copy_option_then_rename",
+   "entry": "run.option.runner_mode",
+   "description": "With the private copy in the renderer, rename the governing spelling as in rename_option.",
+   "edits": [
+    {
+     "path": "controller/build_help/cards.rs",
+     "old": "            out.line(depth, option.def().spelling);",
+     "new": "            out.line(\n                depth,\n                match option {\n                    RunOption::TimeoutMs => \"--timeout-ms\",\n                    RunOption::RunnerMode => \"--runner-mode\",\n                },\n            );"
+    },
+    {
+     "path": "controller/src/interface/run_args.rs",
+     "old": "RunOption::RunnerMode => (\"--runner-mode\", Value::Kind(Reader::RunOption)),",
+     "new": "RunOption::RunnerMode => (\"--runner-kind\", Value::Kind(Reader::RunOption)),"
+    }
+   ],
+   "probes": [
+    [
+     "run",
+     "--runner-kind",
+     "standard"
+    ],
+    [
+     "run",
+     "--runner-mode",
+     "standard"
+    ],
+    [
+     "run",
+     "--runner-kind",
+     "machme"
+    ]
+   ]
+  },
+  {
+   "id": "remove_definition",
+   "entry": "run.option.runner_mode",
+   "description": "Remove the RunnerMode option definition the run card references.",
+   "edits": [
+    {
+     "path": "controller/src/interface/run_args.rs",
+     "old": "        TimeoutMs,\n        RunnerMode,\n",
+     "new": "        TimeoutMs,\n"
+    },
+    {
+     "path": "controller/src/interface/run_args.rs",
+     "old": "            RunOption::RunnerMode => (\"--runner-mode\", Value::Kind(Reader::RunOption)),\n",
+     "new": ""
+    }
+   ]
+  },
+  {
+   "id": "invalid_relationship",
+   "entry": "run.option.timeout_ms",
+   "description": "Put the admitted words of the timeout option under the runner-mode option in the card specification.",
+   "edits": [
+    {
+     "path": "controller/build_help/cards.rs",
+     "old": "vec![leaf(Element::AdmittedWords(RunOption::RunnerMode))],",
+     "new": "vec![leaf(Element::AdmittedWords(RunOption::TimeoutMs))],"
+    }
+   ]
+  },
+  {
+   "id": "example_field",
+   "entry": "example.document",
+   "description": "Change the first attempt's target in EXAMPLE_DOCUMENT from /etc/hosts to /etc/services.",
+   "edits": [
+    {
+     "path": "controller/src/example_document.rs",
+     "old": "\"attempt\":{\"kind\":\"file\",\"action\":\"open_read\",\"target\":\"/etc/hosts\"}",
+     "new": "\"attempt\":{\"kind\":\"file\",\"action\":\"open_read\",\"target\":\"/etc/services\"}"
+    }
+   ],
+   "probes": [
+    [
+     "example"
+    ]
+   ]
+  },
+  {
+   "id": "result_exit_status",
+   "entry": "result.tool_failure",
+   "description": "Change the tool-failure row's exit status from 2 to 3; contract facts not updated.",
+   "edits": [
+    {
+     "path": "controller/src/interface/result.rs",
+     "old": "                Outcome::Fixed(Label::ToolError),\n                false,\n                2,",
+     "new": "                Outcome::Fixed(Label::ToolError),\n                false,\n                3,"
+    }
+   ],
+   "probes": [
+    [
+     "run",
+     "--bogus"
+    ]
+   ]
+  },
+  {
+   "id": "private_copy_result_row",
+   "entry": "result.tool_failure",
+   "description": "Print the tool-failure row's exit status on the result card from a private copy.",
+   "edits": [
+    {
+     "path": "controller/build_help/cards.rs",
+     "old": "                for field in RESULT_FIELDS {\n                    cells.push(scalar(&result[result_key(*field)?.as_str()])?);\n                }",
+     "new": "                for field in RESULT_FIELDS {\n                    cells.push(scalar(&result[result_key(*field)?.as_str()])?);\n                }\n                // A private copy of the tool-failure row's exit status.\n                if row == Row::ToolFailure {\n                    cells[2] = 2.to_string();\n                }"
+    }
+   ],
+   "probes": [
+    [
+     "run",
+     "--bogus"
+    ]
+   ]
+  },
+  {
+   "id": "private_copy_result_row_then_exit_status",
+   "entry": "result.tool_failure",
+   "description": "With the private copy in the renderer, change the tool-failure row's exit status as in result_exit_status.",
+   "edits": [
+    {
+     "path": "controller/build_help/cards.rs",
+     "old": "                for field in RESULT_FIELDS {\n                    cells.push(scalar(&result[result_key(*field)?.as_str()])?);\n                }",
+     "new": "                for field in RESULT_FIELDS {\n                    cells.push(scalar(&result[result_key(*field)?.as_str()])?);\n                }\n                // A private copy of the tool-failure row's exit status.\n                if row == Row::ToolFailure {\n                    cells[2] = 2.to_string();\n                }"
+    },
+    {
+     "path": "controller/src/interface/result.rs",
+     "old": "                Outcome::Fixed(Label::ToolError),\n                false,\n                2,",
+     "new": "                Outcome::Fixed(Label::ToolError),\n                false,\n                3,"
+    }
+   ],
+   "probes": [
+    [
+     "run",
+     "--bogus"
+    ]
+   ]
+  },
+  {
+   "id": "literal_beside_run_table",
+   "entry": "run.unknown_flag",
+   "description": "Compare an argument with the literal --help inside parse_arguments, beside the option table.",
+   "edits": [
+    {
+     "path": "controller/src/run_flow.rs",
+     "old": "        let arg = args[idx].to_string_lossy();\n        let option = match run_args::classify(&arg) {",
+     "new": "        let arg = args[idx].to_string_lossy();\n        if arg == \"--help\" {\n            return Arguments::Error(None, String::new());\n        }\n        let option = match run_args::classify(&arg) {"
+    }
+   ],
+   "probes": [
+    [
+     "run",
+     "--help"
+    ]
+   ]
+  },
+  {
+   "id": "restored_flag_help_arm",
+   "entry": "command.help",
+   "description": "Restore a top-level --help arm in cli::run that prints the base card.",
+   "edits": [
+    {
+     "path": "controller/src/cli.rs",
+     "old": "pub fn run(argv: Vec<OsString>) -> i32 {\n",
+     "new": "pub fn run(argv: Vec<OsString>) -> i32 {\n    if argv.first().is_some_and(|first| first == \"--help\") {\n        return help::cmd_help(&[]);\n    }\n"
+    }
+   ],
+   "probes": [
+    [
+     "--help"
+    ]
+   ]
+  },
+  {
+   "id": "rename_identifier",
+   "entry": "result.admitted_finished",
+   "description": "Rename the row identity AdmittedFinished to AdmittedDone and update the contract node that cites it.",
+   "edits": [
+    {
+     "path": "controller/src/interface/result.rs",
+     "old": "        AdmittedFinished,\n        AdmittedOther,",
+     "new": "        AdmittedDone,\n        AdmittedOther,"
+    },
+    {
+     "path": "controller/src/interface/result.rs",
+     "old": "            Row::AdmittedFinished => (",
+     "new": "            Row::AdmittedDone => ("
+    },
+    {
+     "path": "controller/build_help/cards.rs",
+     "old": "            (Row::AdmittedFinished, _) => samples.push((",
+     "new": "            (Row::AdmittedDone, _) => samples.push(("
+    },
+    {
+     "path": "docs/contract/40-envelope.surface.md",
+     "old": "interface: [\"result.admitted_finished\"]",
+     "new": "interface: [\"result.admitted_done\"]"
+    }
+   ]
+  },
+  {
+   "id": "admission_condition",
+   "entry": "result.admitted_finished",
+   "description": "Change the finished row's host-label condition from finished to bad_request; contract facts not updated.",
+   "edits": [
+    {
+     "path": "controller/src/interface/result.rs",
+     "old": "                Host::Is(Label::Finished),",
+     "new": "                Host::Is(Label::BadRequest),"
+    }
+   ]
+  },
+  {
+   "id": "row_order",
+   "entry": "result.admitted_other",
+   "description": "Move the other-admitted row before the finished row in the relation's order; contract facts not updated.",
+   "edits": [
+    {
+     "path": "controller/src/interface/result.rs",
+     "old": "        AdmittedFinished,\n        AdmittedOther,",
+     "new": "        AdmittedOther,\n        AdmittedFinished,"
+    }
+   ]
+  },
+  {
+   "id": "flag_shaped_topic",
+   "entry": "topic.result",
+   "description": "Give the result topic the address --result.",
+   "edits": [
+    {
+     "path": "controller/src/interface/commands.rs",
+     "old": "Topic::Result => Address::Own(\"result\"),",
+     "new": "Topic::Result => Address::Own(\"--result\"),"
+    }
+   ]
+  },
+  {
+   "id": "tail_kind",
+   "entry": "tail.version",
+   "description": "Change the version command's tail rule from Discards to RefusesAny.",
+   "edits": [
+    {
+     "path": "controller/src/interface/commands.rs",
+     "old": "Command::Version => (\"version\", Tail::Discards),",
+     "new": "Command::Version => (\"version\", Tail::RefusesAny),"
+    }
+   ],
+   "generator_without_refresh": true,
+   "probes": [
+    [
+     "version",
+     "--help"
+    ]
+   ]
+  },
+  {
+   "id": "remove_alias",
+   "entry": "runner_kind.debuggable@registry",
+   "description": "Remove the registry reader's debuggable alias.",
+   "edits": [
+    {
+     "path": "controller/src/interface/runner_kind.rs",
+     "old": "            (Word::Machme | Word::Debuggable, Reader::Registry) => Some(Rule::Alias),",
+     "new": "            (Word::Machme, Reader::Registry) => Some(Rule::Alias),"
+    }
+   ],
+   "generator_without_refresh": true
+  }
+ ]
+}

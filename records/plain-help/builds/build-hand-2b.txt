@@ -1,0 +1,52 @@
+1:==> [build] build, sign and embed evidence into dist/PolicyWitness.app
+3:==> Verifying the checkout lock: .tmp/help-hand/tests/.checkout.lock
+4:ok: admitted by the owner of tests/.checkout.lock for .tmp/help-hand (acquisition c91b8b5f4dad)
+5:==> Checking limits documentation
+6:ok: 111 limits, 18 questions, 43 matrix rows; documents current
+7:==> Checking public contract stamps
+8:ok: contract surface stamps current
+9:ok: architecture manifest: 5 graphs, 175 nodes, 187 edges; dot files, svg stamps and document regions current
+10:ok: footprint manifest and generated document
+12:==> Checking build documentation
+13:ok: build manifest: 33 steps, 64 refusals (0 in the baseline), 7 signing calls, 3 knobs; script agreement, dot file, svg stamp and document regions current
+14:==> Checking host/worker identity
+15:ok: worker identity 55c17ee8ca9c57360610525b026c8d8039be78b8798259c41726408ba5ac7b28; all generated copies current
+16:==> Build stamp: 0.3.7 (1472) v0.3.7-138-g06ce3801
+17:ok: build session .tmp/help-hand/controller/target/pw-build-session.json
+18:==> Supported macOS (Info.plist LSMinimumSystemVersion): 26.0
+19:==> Selecting the macOS SDK (xcrun --sdk macosx)
+21:==> Checking the native build directory: .tmp/help-hand/builddir
+22:ok: pw-toolchain.json agrees with the selected toolchain (11 fields) and the output target (6 fields)
+23:==> Checking the signing identity
+24:==> Admitting the Cargo output and intermediate directories: .tmp/help-hand/controller/target
+25:ok: Cargo intermediate and final release state admitted under .tmp/help-hand/controller/target (output triple aarch64-apple-darwin)
+26:==> Building Rust controller + tools
+85:ok: 2 outputs are thin arm64 Mach-O for macOS (cargo)
+86:ok: Cargo judgments recorded (policy-witness: reused, sbpl-check: reused)
+87:==> Checking the native toolchain (meson, ninja 1.13.2 or newer)
+88:==> Configuring native build (meson setup --reconfigure, existing directory): -Dinspection=true -Dxpc=true
+113:==> Compiling native executables
+119:==> Checking the configured native source lists and the identity closure against the tree
+120:ok: 5 native targets carry exactly the tree's sources and the identity targets consumed only digest inputs (.tmp/help-hand/builddir (xpc=true))
+121:ok: 4 outputs are thin arm64 Mach-O for macOS (native)
+122:ok: pw-toolchain.json intact
+123:ok: 6 outputs carry SDK 27.2
+124:==> Assembling app bundle: dist/PolicyWitness.app
+125:==> Embedding PW runner client
+126:==> Embedding PWRunner XPC services
+127:==> Checking the assembled code against the output target: dist/PolicyWitness.app
+128:ok: 7 outputs are thin arm64 Mach-O for macOS (assembled)
+129:==> Checking host/worker identity again, before signing
+130:ok: worker identity 55c17ee8ca9c57360610525b026c8d8039be78b8798259c41726408ba5ac7b28; all generated copies current
+131:ok: the built worker reports the generated identity 55c17ee8ca9c...
+132:==> Codesigning embedded MacOS tools
+135:==> Codesigning embedded XPC services
+140:==> Writing evidence manifest and provenance record
+141:==> Codesigning app bundle
+143:==> Verifying signature + entitlements
+159:==> Checking every executable's signer
+170:==> Staging checked user guide
+171:ok: 111 limits, 18 questions, 43 matrix rows; guide staged at dist/PolicyWitness.md
+172:==> Creating zip (for notarization): dist/PolicyWitness.zip
+173:ok: 7 outputs are thin arm64 Mach-O for macOS (packaging)
+184:exit=0

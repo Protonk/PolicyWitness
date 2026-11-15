@@ -1,0 +1,197 @@
+{
+ "mutations": [
+  {
+   "id": "rename_option",
+   "entry": "run.option.runner_mode",
+   "description": "Rename the declared long name runner-mode to runner-kind; no help input edited.",
+   "edits": [
+    {
+     "path": "controller/src/interface/run_args.rs",
+     "old": ".long(\"runner-mode\")",
+     "new": ".long(\"runner-kind\")"
+    }
+   ],
+   "probes": [
+    [
+     "run",
+     "--runner-kind",
+     "standard"
+    ],
+    [
+     "run",
+     "--runner-mode",
+     "standard"
+    ],
+    [
+     "run",
+     "--runner-kind",
+     "machme"
+    ]
+   ]
+  },
+  {
+   "id": "private_copy_option",
+   "entry": "run.option.runner_mode",
+   "description": "Render the run card's option from a private, identical copy of the spelling in the card renderer.",
+   "edits": [
+    {
+     "path": "controller/build_help/cards.rs",
+     "old": "            out.line(depth, &spelling);",
+     "new": "            out.line(\n                depth,\n                match option {\n                    RunArg::RunnerMode => \"--runner-mode\",\n                    _ => spelling.as_str(),\n                },\n            );"
+    }
+   ],
+   "probes": [
+    [
+     "run",
+     "--runner-kind",
+     "standard"
+    ],
+    [
+     "run",
+     "--runner-mode",
+     "standard"
+    ],
+    [
+     "run",
+     "--runner-kind",
+     "machme"
+    ]
+   ]
+  },
+  {
+   "id": "private_copy_option_then_rename",
+   "entry": "run.option.runner_mode",
+   "description": "With the private copy in the renderer, rename the declared long name as in rename_option.",
+   "edits": [
+    {
+     "path": "controller/build_help/cards.rs",
+     "old": "            out.line(depth, &spelling);",
+     "new": "            out.line(\n                depth,\n                match option {\n                    RunArg::RunnerMode => \"--runner-mode\",\n                    _ => spelling.as_str(),\n                },\n            );"
+    },
+    {
+     "path": "controller/src/interface/run_args.rs",
+     "old": ".long(\"runner-mode\")",
+     "new": ".long(\"runner-kind\")"
+    }
+   ],
+   "probes": [
+    [
+     "run",
+     "--runner-kind",
+     "standard"
+    ],
+    [
+     "run",
+     "--runner-mode",
+     "standard"
+    ],
+    [
+     "run",
+     "--runner-kind",
+     "machme"
+    ]
+   ]
+  },
+  {
+   "id": "remove_definition",
+   "entry": "run.option.runner_mode",
+   "description": "Remove the RunnerMode argument the run card references.",
+   "edits": [
+    {
+     "path": "controller/src/interface/run_args.rs",
+     "old": "        TimeoutMs,\n        RunnerMode,\n",
+     "new": "        TimeoutMs,\n"
+    }
+   ]
+  },
+  {
+   "id": "invalid_relationship",
+   "entry": "run.option.timeout_ms",
+   "description": "Put the listed values of the timeout option under the runner-mode option in the card specification.",
+   "edits": [
+    {
+     "path": "controller/build_help/cards.rs",
+     "old": "vec![leaf(Element::AdmittedWords(RunArg::RunnerMode))],",
+     "new": "vec![leaf(Element::AdmittedWords(RunArg::TimeoutMs))],"
+    }
+   ]
+  },
+  {
+   "id": "literal_beside_run_declaration",
+   "entry": "run.unknown_flag",
+   "description": "Compare an argument with the literal --help inside parse_arguments, beside the declaration.",
+   "edits": [
+    {
+     "path": "controller/src/run_flow.rs",
+     "old": "fn parse_arguments(args: &[OsString]) -> Arguments {\n",
+     "new": "fn parse_arguments(args: &[OsString]) -> Arguments {\n    if args.first().is_some_and(|first| first == \"--help\") {\n        return Arguments::Error(None, String::new());\n    }\n"
+    }
+   ],
+   "probes": [
+    [
+     "run",
+     "--help"
+    ]
+   ]
+  },
+  {
+   "id": "restored_flag_help_arm",
+   "entry": "command.help",
+   "description": "Restore a top-level --help arm in cli::run that prints the base card.",
+   "edits": [
+    {
+     "path": "controller/src/cli.rs",
+     "old": "pub fn run(argv: Vec<OsString>) -> i32 {\n",
+     "new": "pub fn run(argv: Vec<OsString>) -> i32 {\n    if argv.first().is_some_and(|first| first == \"--help\") {\n        return help::cmd_help(&[]);\n    }\n"
+    }
+   ],
+   "probes": [
+    [
+     "--help"
+    ]
+   ]
+  },
+  {
+   "id": "builtin_help_enabled",
+   "entry": "command.example",
+   "description": "Leave clap's built-in help flag enabled on the command declarations parsed on their own.",
+   "edits": [
+    {
+     "path": "controller/src/interface/commands.rs",
+     "old": "        command.disable_help_flag(true)\n",
+     "new": "        command\n"
+    }
+   ],
+   "probes": [
+    [
+     "example",
+     "--help"
+    ]
+   ]
+  },
+  {
+   "id": "builtin_help_subcommand_enabled",
+   "entry": "command.help",
+   "description": "Leave clap's built-in help subcommand enabled on the root declaration.",
+   "edits": [
+    {
+     "path": "controller/src/interface/commands.rs",
+     "old": "        .disable_help_subcommand(true)\n",
+     "new": ""
+    }
+   ]
+  },
+  {
+   "id": "flag_shaped_topic",
+   "entry": "topic.result",
+   "description": "Give the result topic the address --result.",
+   "edits": [
+    {
+     "path": "controller/src/interface/commands.rs",
+     "old": "Topic::Result => Address::Own(\"result\"),",
+     "new": "Topic::Result => Address::Own(\"--result\"),"
+    }
+   ]
+  }
+ ]
+}

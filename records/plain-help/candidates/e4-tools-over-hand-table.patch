@@ -1,0 +1,256 @@
+diff --git a/controller/Cargo.toml b/controller/Cargo.toml
+index 096e33c1..8dbc520e 100644
+--- a/controller/Cargo.toml
++++ b/controller/Cargo.toml
+@@ -26,3 +26,7 @@ libc = "0.2"
+ [build-dependencies]
+ serde = { version = "1", features = ["derive"] }
+ serde_json = "1"
++
++[dev-dependencies]
++trycmd = "1.2.1"
++snapbox = "1.2.2"
+diff --git a/controller/integration/cli_contract.rs b/controller/integration/cli_contract.rs
+index ccf69811..dbef6ef3 100644
+--- a/controller/integration/cli_contract.rs
++++ b/controller/integration/cli_contract.rs
+@@ -1848,3 +1848,239 @@ fn help_cards_agree_with_execution() {
+     }
+     assert_eq!(lines.collect::<Vec<_>>(), expected);
+ }
++
++// ---- E4: the same corpus through trycmd and through snapbox ----------------
++
++fn os_arguments(step: &serde_json::Value, scratch: &Path) -> Option<Vec<std::ffi::OsString>> {
++    use std::os::unix::ffi::OsStringExt;
++    let mut arguments = Vec::new();
++    for argument in step["args"].as_array()? {
++        arguments.push(match argument {
++            serde_json::Value::String(text) => {
++                text.replace("{scratch}", &scratch.to_string_lossy()).into()
++            }
++            other => {
++                let hex = other["hex"].as_str()?;
++                std::ffi::OsString::from_vec(
++                    (0..hex.len())
++                        .step_by(2)
++                        .map(|index| u8::from_str_radix(&hex[index..index + 2], 16).unwrap())
++                        .collect(),
++                )
++            }
++        });
++    }
++    Some(arguments)
++}
++
++/// The trycmd case for one corpus case, or why its form cannot hold the case.
++/// The adapter always writes `stderr`, because trycmd leaves an absent
++/// expectation unchecked.
++fn trycmd_case(case: &serde_json::Value, scratch: &Path) -> Result<String, &'static str> {
++    if case.get("steps").is_some() {
++        return Err("several invocations with a saved output");
++    }
++    if case.get("stdout_pipe").is_some() {
++        return Err("a stdout without a reader");
++    }
++    let quoted = |text: &str| serde_json::to_string(text).unwrap();
++    let place = |text: &str| text.replace("{scratch}", &scratch.to_string_lossy());
++    let mut arguments = Vec::new();
++    for argument in case["args"].as_array().unwrap() {
++        match argument.as_str() {
++            Some(text) => arguments.push(quoted(&place(text))),
++            None => return Err("a non-UTF-8 argument"),
++        }
++    }
++    let mut toml = format!("args = [{}]\nstatus.code = {}\nstdin = \"\"\n", arguments.join(", "), case["status"]);
++    let stdout = match (case["stdout"].as_str(), case["stdout_json"].as_object()) {
++        (Some(text), _) => text.to_string(),
++        (None, Some(fields)) => {
++            // Pointer equality becomes line patterns in the document's key order.
++            let mut lines: Vec<(Vec<&str>, String)> = fields
++                .iter()
++                .map(|(pointer, value)| {
++                    let parts: Vec<&str> = pointer.split('/').skip(1).collect();
++                    (parts.clone(), format!("[..]{}: {}[..]", quoted(parts[parts.len() - 1]), value))
++                })
++                .collect();
++            lines.sort();
++            let mut pattern = String::from("{\n");
++            for (_, line) in lines {
++                pattern.push_str("...\n");
++                pattern.push_str(&line);
++                pattern.push('\n');
++            }
++            pattern.push_str("...\n");
++            pattern
++        }
++        (None, None) => return Err("no stdout expectation"),
++    };
++    toml.push_str(&format!("stdout = {}\n", quoted(&stdout)));
++    let stderr = match (case["stderr"].as_str(), case["stderr_prefix"].as_str()) {
++        (Some(text), _) => text.to_string(),
++        (None, Some(prefix)) => format!("{prefix}...\n"),
++        (None, None) => return Err("no stderr expectation"),
++    };
++    toml.push_str(&format!("stderr = {}\n", quoted(&stderr)));
++    if let Some(environment) = case["env"].as_object() {
++        toml.push_str("[env.add]\n");
++        for (name, value) in environment {
++            toml.push_str(&format!("{name} = {}\n", quoted(&place(value.as_str().unwrap()))));
++        }
++    }
++    Ok(toml)
++}
++
++/// Writes the expressible cases into a fresh directory and returns it with
++/// the cases trycmd's form cannot hold.
++fn trycmd_directory(corpus: &serde_json::Value, tag: &str) -> (PathBuf, Vec<String>) {
++    assert!(
++        env::var_os("TRYCMD").is_none(),
++        "TRYCMD rewrites or dumps expectations; unset it before running these cases"
++    );
++    let directory = env::temp_dir().join(format!("pw-trycmd-{}-{tag}", std::process::id()));
++    std::fs::create_dir_all(&directory).unwrap();
++    let mut unexpressed = Vec::new();
++    for case in corpus["cases"].as_array().unwrap() {
++        let id = case["id"].as_str().unwrap();
++        match trycmd_case(case, &directory) {
++            Ok(toml) => std::fs::write(directory.join(format!("{id}.toml")), toml).unwrap(),
++            Err(reason) => unexpressed.push(format!("{id}: {reason}")),
++        }
++    }
++    (directory, unexpressed)
++}
++
++#[test]
++fn interface_cases_hold_under_trycmd() {
++    if !integration_enabled() {
++        return;
++    }
++    let (directory, unexpressed) = trycmd_directory(&interface_corpus(), "corpus");
++    eprintln!("trycmd cannot hold {} cases: {unexpressed:?}", unexpressed.len());
++    trycmd::TestCases::new()
++        .default_bin_path(require_pw_bin())
++        .case(directory.join("*.toml"))
++        .run();
++    std::fs::remove_dir_all(&directory).unwrap();
++}
++
++#[test]
++fn trycmd_rejects_wrong_status_and_stream_and_passes_an_unstated_stderr() {
++    if !integration_enabled() {
++        return;
++    }
++    let bin = require_pw_bin();
++    let card = "run\nexample\nresult\n";
++    let run = |tag: &str, corpus: serde_json::Value, strip_stderr: bool| -> bool {
++        let (directory, _) = trycmd_directory(&corpus, tag);
++        if strip_stderr {
++            let path = directory.join("control.toml");
++            let text = std::fs::read_to_string(&path).unwrap();
++            let kept: Vec<&str> = text.lines().filter(|line| !line.starts_with("stderr = ")).collect();
++            std::fs::write(&path, kept.join("\n") + "\n").unwrap();
++        }
++        let bin = bin.clone();
++        let cases = directory.join("*.toml");
++        let passed = std::panic::catch_unwind(move || {
++            trycmd::TestCases::new().default_bin_path(bin).case(cases).run();
++        })
++        .is_ok();
++        std::fs::remove_dir_all(&directory).unwrap();
++        passed
++    };
++    let case = |args: &[&str], status: i64, stdout: &str, stderr: &str| {
++        serde_json::json!({"cases": [{"id": "control", "args": args, "status": status,
++                                      "stdout": stdout, "stderr": stderr}]})
++    };
++    assert!(run("pass", case(&["help"], 0, card, ""), false));
++    assert!(!run("status", case(&["help"], 2, card, ""), false));
++    assert!(!run("stream", case(&["help"], 0, "", card), false));
++    // The refusal writes to stderr; with the stderr expectation removed the
++    // case passes although nothing states that stream.
++    assert!(!run("stderr", case(&["bogus"], 2, "", ""), false));
++    assert!(run("unstated", case(&["bogus"], 2, "", ""), true));
++}
++
++fn snapbox_step(bin: &Path, step: &serde_json::Value, scratch: &Path) -> Result<(), &'static str> {
++    use snapbox::IntoData;
++    if step.get("stdout_pipe").is_some() {
++        return Err("a stdout without a reader");
++    }
++    let place = |text: &str| text.replace("{scratch}", &scratch.to_string_lossy());
++    let mut command = snapbox::cmd::Command::new(bin)
++        .args(os_arguments(step, scratch).unwrap())
++        .stdin("");
++    for (name, value) in step["env"].as_object().into_iter().flatten() {
++        command = command.env(name, place(value.as_str().unwrap()));
++    }
++    let mut assert = command.assert().code(step["status"].as_i64().unwrap() as i32);
++    if let Some(expected) = step["stdout"].as_str() {
++        assert = assert.stdout_eq(expected.to_string().raw());
++    }
++    match (step["stderr"].as_str(), step["stderr_prefix"].as_str()) {
++        (Some(expected), _) => assert = assert.stderr_eq(expected.to_string().raw()),
++        (None, Some(prefix)) => assert = assert.stderr_eq(format!("{prefix}...\n")),
++        (None, None) => panic!("a step states stderr or stderr_prefix"),
++    }
++    let output = assert.get_output().clone();
++    if let Some(expected) = step["stdout_json"].as_object() {
++        let value: serde_json::Value = serde_json::from_slice(&output.stdout).expect("one JSON document");
++        for (pointer, wanted) in expected {
++            assert_eq!(value.pointer(pointer), Some(wanted), "{pointer}");
++        }
++    }
++    if let Some(name) = step["save_stdout"].as_str() {
++        std::fs::write(scratch.join(name), &output.stdout).unwrap();
++    }
++    Ok(())
++}
++
++/// Runs the corpus through snapbox; returns the cases its command cannot hold.
++fn snapbox_cases(bin: &Path, corpus: &serde_json::Value) -> Vec<String> {
++    let mut unexpressed = Vec::new();
++    for (index, case) in corpus["cases"].as_array().unwrap().iter().enumerate() {
++        let id = case["id"].as_str().unwrap();
++        let scratch = env::temp_dir().join(format!("pw-snapbox-{}-{index}", std::process::id()));
++        std::fs::create_dir_all(&scratch).unwrap();
++        let steps = match case["steps"].as_array() {
++            Some(steps) => steps.clone(),
++            None => vec![case.clone()],
++        };
++        for step in &steps {
++            if let Err(reason) = snapbox_step(bin, step, &scratch) {
++                unexpressed.push(format!("{id}: {reason}"));
++            }
++        }
++        std::fs::remove_dir_all(&scratch).unwrap();
++    }
++    unexpressed
++}
++
++#[test]
++fn interface_cases_hold_under_snapbox() {
++    if !integration_enabled() {
++        return;
++    }
++    let unexpressed = snapbox_cases(&require_pw_bin(), &interface_corpus());
++    eprintln!("snapbox cannot hold {} cases: {unexpressed:?}", unexpressed.len());
++}
++
++#[test]
++fn snapbox_rejects_wrong_status_and_stream() {
++    if !integration_enabled() {
++        return;
++    }
++    let bin = require_pw_bin();
++    let card = "run\nexample\nresult\n";
++    let passes = |status: i64, stdout: &str, stderr: &str| {
++        let corpus = serde_json::json!({"cases": [{"id": "control", "args": ["help"], "status": status,
++                                                    "stdout": stdout, "stderr": stderr}]});
++        let bin = bin.clone();
++        std::panic::catch_unwind(move || snapbox_cases(&bin, &corpus)).is_ok()
++    };
++    assert!(passes(0, card, ""));
++    assert!(!passes(2, card, ""));
++    assert!(!passes(0, "", card));
++}

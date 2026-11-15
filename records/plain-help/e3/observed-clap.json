@@ -1,0 +1,696 @@
+{
+  "worktree": ".tmp/help-clap",
+  "head": "119d812c03ec378992f8f7e0c3b15f9a1a2f24a2",
+  "baseline": {
+    "build": {
+      "result": "ok",
+      "message": "",
+      "seconds": 2.1
+    },
+    "literals": {
+      "result": "ok",
+      "message": "ok: interface literals: 8 governed blocks",
+      "seconds": 0.2
+    },
+    "contract": {
+      "result": "ok",
+      "message": "ok: contract surface stamps current",
+      "seconds": 2.8,
+      "public_snapshot_sha256": "a985d8022c17730f2d8a0d2f40d1fe096b3d39e2a9872df4a6134f535f957e78"
+    },
+    "cards": {
+      "base": "run\nexample\nresult\n",
+      "example": "example\n  initial-reads\n    open_read /etc/hosts\n    read_fresh /usr/share/dict/connectives\n  restricted-read\n    open_read /usr/share/dict/propernames\n",
+      "result": "result\n  normalized_outcome ok exit_code\n  bad_request false 1\n  tool_error false 2\n  missing_runner_client false 1\n  unsupported_runner_client false 1\n  malformed_runner_client false 1\n  runner_reply_truncated false 1\n  unsupported_runner_response false 1\n  malformed_runner_response false 1\n  xpc_error false 1\n  xpc_timeout false 1\n  xpc_acquisition_failed false 1\n  xpc_submission_refused false 1\n  xpc_protocol_error false 1\n  runner_client_error false 1\n  finished true 0\n  runner_response_unavailable false 1\n",
+      "run": "run\n  --runner-mode\n    standard\n    byoxpc\n"
+    },
+    "cases": {
+      "failing": [
+        "example.h_flag",
+        "example.help_flag",
+        "example.help_word",
+        "example.save_and_run",
+        "run.path_then_help_flag",
+        "run.runner_mode_debuggable",
+        "run.runner_mode_invalid",
+        "run.runner_mode_machme",
+        "run.runner_mode_missing",
+        "run.timeout_equals",
+        "run.timeout_invalid",
+        "run.timeout_missing",
+        "run.timeout_takes_help_flag",
+        "top.bogus",
+        "top.h_flag",
+        "top.help_flag",
+        "top.no_arguments",
+        "top.result",
+        "top.uppercase_help"
+      ],
+      "agreement": "ok",
+      "agreement_message": "",
+      "ran": true,
+      "seconds": 1.0
+    },
+    "unit": {
+      "failing": [
+        "run_flow::tests::argument_errors_are_reported_before_any_runner_or_specimen_work"
+      ],
+      "ran": true,
+      "seconds": 2.4
+    },
+    "probes": [
+      {
+        "args": [
+          "--help"
+        ],
+        "status": 2,
+        "stdout": "",
+        "stderr": "error: unexpected argument '--help' found\n\nUsage: policy-witness <COMMAND>\n"
+      },
+      {
+        "args": [
+          "example",
+          "--help"
+        ],
+        "status": 2,
+        "stdout": "",
+        "stderr": "error: unexpected argument '--help' found\n\nUsage: example\n"
+      },
+      {
+        "args": [
+          "run",
+          "--help"
+        ],
+        "status": 2,
+        "error": "unknown argument: --help",
+        "exit_code": 2,
+        "normalized_outcome": "tool_error",
+        "stderr": ""
+      },
+      {
+        "args": [
+          "run",
+          "--runner-kind",
+          "machme"
+        ],
+        "status": 2,
+        "error": "unknown argument: --runner-kind",
+        "exit_code": 2,
+        "normalized_outcome": "tool_error",
+        "stderr": ""
+      },
+      {
+        "args": [
+          "run",
+          "--runner-kind",
+          "standard"
+        ],
+        "status": 2,
+        "error": "unknown argument: --runner-kind",
+        "exit_code": 2,
+        "normalized_outcome": "tool_error",
+        "stderr": ""
+      },
+      {
+        "args": [
+          "run",
+          "--runner-mode",
+          "standard"
+        ],
+        "status": 2,
+        "error": "missing <request.json>",
+        "exit_code": 2,
+        "normalized_outcome": "tool_error",
+        "stderr": ""
+      }
+    ]
+  },
+  "mutations": [
+    {
+      "id": "rename_option",
+      "entry": "run.option.runner_mode",
+      "mutation": "Rename the declared long name runner-mode to runner-kind; no help input edited.",
+      "patch": "diff --git a/controller/src/interface/run_args.rs b/controller/src/interface/run_args.rs\nindex 8a2ff7ce..6a192a92 100644\n--- a/controller/src/interface/run_args.rs\n+++ b/controller/src/interface/run_args.rs\n@@ -43,7 +43,7 @@ impl RunArg {\n                 .value_parser(value_parser!(u64)),\n             // The words come from the runner-kind table, which the request\n             // and registry readers share.\n-            RunArg::RunnerMode => argument.long(\"runner-mode\").value_parser(\n+            RunArg::RunnerMode => argument.long(\"runner-kind\").value_parser(\n                 Word::ALL\n                     .iter()\n                     .filter(|word| word.rule(Reader::RunOption) == Some(Rule::Admits))\n",
+      "observed": {
+        "build": {
+          "result": "stale_inventory",
+          "message": "controller/interface/inventory.json is stale",
+          "seconds": 0.5
+        },
+        "regenerated": {
+          "result": "ok",
+          "message": "ok: interface inventory: 40 identifiers, 4 cards, 64 cases, 0 mutations; wrote controller/interface/inventory.json, controller/interface/joins.json",
+          "seconds": 0.9
+        },
+        "build_after_regeneration": {
+          "result": "ok",
+          "message": "",
+          "seconds": 1.1
+        },
+        "literals": {
+          "result": "ok",
+          "message": "ok: interface literals: 8 governed blocks",
+          "seconds": 0.2
+        },
+        "contract": {
+          "result": "ok",
+          "message": "ok: contract surface stamps current",
+          "seconds": 2.8,
+          "public_snapshot_sha256": "a985d8022c17730f2d8a0d2f40d1fe096b3d39e2a9872df4a6134f535f957e78"
+        },
+        "cards": {
+          "base": "run\nexample\nresult\n",
+          "example": "example\n  initial-reads\n    open_read /etc/hosts\n    read_fresh /usr/share/dict/connectives\n  restricted-read\n    open_read /usr/share/dict/propernames\n",
+          "result": "result\n  normalized_outcome ok exit_code\n  bad_request false 1\n  tool_error false 2\n  missing_runner_client false 1\n  unsupported_runner_client false 1\n  malformed_runner_client false 1\n  runner_reply_truncated false 1\n  unsupported_runner_response false 1\n  malformed_runner_response false 1\n  xpc_error false 1\n  xpc_timeout false 1\n  xpc_acquisition_failed false 1\n  xpc_submission_refused false 1\n  xpc_protocol_error false 1\n  runner_client_error false 1\n  finished true 0\n  runner_response_unavailable false 1\n",
+          "run": "run\n  --runner-kind\n    standard\n    byoxpc\n"
+        },
+        "cases": {
+          "failing": [
+            "example.h_flag",
+            "example.help_flag",
+            "example.help_word",
+            "example.save_and_run",
+            "help.run",
+            "help.run.bad_flag",
+            "help.run.junk",
+            "help.run.terminator",
+            "run.path_then_help_flag",
+            "run.runner_mode_byoxpc",
+            "run.runner_mode_debuggable",
+            "run.runner_mode_invalid",
+            "run.runner_mode_machme",
+            "run.runner_mode_missing",
+            "run.runner_mode_standard",
+            "run.timeout_equals",
+            "run.timeout_invalid",
+            "run.timeout_missing",
+            "run.timeout_takes_help_flag",
+            "top.bogus",
+            "top.h_flag",
+            "top.help_flag",
+            "top.no_arguments",
+            "top.result",
+            "top.uppercase_help"
+          ],
+          "agreement": "ok",
+          "agreement_message": "",
+          "ran": true,
+          "seconds": 0.9
+        },
+        "unit": {
+          "failing": [
+            "run_flow::tests::argument_errors_are_reported_before_any_runner_or_specimen_work",
+            "run_flow::tests::runner_mode_injection_rules"
+          ],
+          "ran": true,
+          "seconds": 2.2
+        },
+        "probes": [
+          {
+            "args": [
+              "run",
+              "--runner-kind",
+              "standard"
+            ],
+            "status": 2,
+            "error": "missing <request.json>",
+            "exit_code": 2,
+            "normalized_outcome": "tool_error",
+            "stderr": ""
+          },
+          {
+            "args": [
+              "run",
+              "--runner-mode",
+              "standard"
+            ],
+            "status": 2,
+            "error": "unknown argument: --runner-mode",
+            "exit_code": 2,
+            "normalized_outcome": "tool_error",
+            "stderr": ""
+          },
+          {
+            "args": [
+              "run",
+              "--runner-kind",
+              "machme"
+            ],
+            "status": 2,
+            "error": "invalid value 'machme' for '--runner-kind <runner_mode>'",
+            "exit_code": 2,
+            "normalized_outcome": "tool_error",
+            "stderr": ""
+          }
+        ]
+      },
+      "cards_changed": [
+        "run"
+      ],
+      "cases_newly_failing": [
+        "help.run",
+        "help.run.bad_flag",
+        "help.run.junk",
+        "help.run.terminator",
+        "run.runner_mode_byoxpc",
+        "run.runner_mode_standard"
+      ],
+      "cases_newly_passing": [],
+      "unit_newly_failing": [
+        "run_flow::tests::runner_mode_injection_rules"
+      ],
+      "public_snapshot_changed": false
+    },
+    {
+      "id": "private_copy_option",
+      "entry": "run.option.runner_mode",
+      "mutation": "Render the run card's option from a private, identical copy of the spelling in the card renderer.",
+      "patch": "diff --git a/controller/build_help/cards.rs b/controller/build_help/cards.rs\nindex 4f446bab..74716985 100644\n--- a/controller/build_help/cards.rs\n+++ b/controller/build_help/cards.rs\n@@ -254,7 +254,13 @@ fn render_node(\n             let Some(spelling) = crate::interface::run_args::option_spelling(option) else {\n                 return Err(format!(\"{option:?} is not declared as an option\"));\n             };\n-            out.line(depth, &spelling);\n+            out.line(\n+                depth,\n+                match option {\n+                    RunArg::RunnerMode => \"--runner-mode\",\n+                    _ => spelling.as_str(),\n+                },\n+            );\n             out.references.push(id(&option));\n         }\n         Element::AdmittedWords(option) => {\n",
+      "observed": {
+        "build": {
+          "result": "ok",
+          "message": "",
+          "seconds": 1.1
+        },
+        "literals": {
+          "result": "refused",
+          "message": "controller/build_help/cards.rs:260: the card renderer spells a card element itself: \"--runner-mode\"\nFAIL: interface literals: 8 governed blocks",
+          "seconds": 0.2
+        },
+        "contract": {
+          "result": "ok",
+          "message": "ok: contract surface stamps current",
+          "seconds": 2.9,
+          "public_snapshot_sha256": "a985d8022c17730f2d8a0d2f40d1fe096b3d39e2a9872df4a6134f535f957e78"
+        },
+        "cards": {
+          "base": "run\nexample\nresult\n",
+          "example": "example\n  initial-reads\n    open_read /etc/hosts\n    read_fresh /usr/share/dict/connectives\n  restricted-read\n    open_read /usr/share/dict/propernames\n",
+          "result": "result\n  normalized_outcome ok exit_code\n  bad_request false 1\n  tool_error false 2\n  missing_runner_client false 1\n  unsupported_runner_client false 1\n  malformed_runner_client false 1\n  runner_reply_truncated false 1\n  unsupported_runner_response false 1\n  malformed_runner_response false 1\n  xpc_error false 1\n  xpc_timeout false 1\n  xpc_acquisition_failed false 1\n  xpc_submission_refused false 1\n  xpc_protocol_error false 1\n  runner_client_error false 1\n  finished true 0\n  runner_response_unavailable false 1\n",
+          "run": "run\n  --runner-mode\n    standard\n    byoxpc\n"
+        },
+        "cases": {
+          "failing": [
+            "example.h_flag",
+            "example.help_flag",
+            "example.help_word",
+            "example.save_and_run",
+            "run.path_then_help_flag",
+            "run.runner_mode_debuggable",
+            "run.runner_mode_invalid",
+            "run.runner_mode_machme",
+            "run.runner_mode_missing",
+            "run.timeout_equals",
+            "run.timeout_invalid",
+            "run.timeout_missing",
+            "run.timeout_takes_help_flag",
+            "top.bogus",
+            "top.h_flag",
+            "top.help_flag",
+            "top.no_arguments",
+            "top.result",
+            "top.uppercase_help"
+          ],
+          "agreement": "ok",
+          "agreement_message": "",
+          "ran": true,
+          "seconds": 0.8
+        },
+        "unit": {
+          "failing": [
+            "run_flow::tests::argument_errors_are_reported_before_any_runner_or_specimen_work"
+          ],
+          "ran": true,
+          "seconds": 2.0
+        },
+        "probes": [
+          {
+            "args": [
+              "run",
+              "--runner-kind",
+              "standard"
+            ],
+            "status": 2,
+            "error": "unknown argument: --runner-kind",
+            "exit_code": 2,
+            "normalized_outcome": "tool_error",
+            "stderr": ""
+          },
+          {
+            "args": [
+              "run",
+              "--runner-mode",
+              "standard"
+            ],
+            "status": 2,
+            "error": "missing <request.json>",
+            "exit_code": 2,
+            "normalized_outcome": "tool_error",
+            "stderr": ""
+          },
+          {
+            "args": [
+              "run",
+              "--runner-kind",
+              "machme"
+            ],
+            "status": 2,
+            "error": "unknown argument: --runner-kind",
+            "exit_code": 2,
+            "normalized_outcome": "tool_error",
+            "stderr": ""
+          }
+        ]
+      },
+      "cards_changed": [],
+      "cases_newly_failing": [],
+      "cases_newly_passing": [],
+      "unit_newly_failing": [],
+      "public_snapshot_changed": false
+    },
+    {
+      "id": "private_copy_option_then_rename",
+      "entry": "run.option.runner_mode",
+      "mutation": "With the private copy in the renderer, rename the declared long name as in rename_option.",
+      "patch": "diff --git a/controller/build_help/cards.rs b/controller/build_help/cards.rs\nindex 4f446bab..74716985 100644\n--- a/controller/build_help/cards.rs\n+++ b/controller/build_help/cards.rs\n@@ -254,7 +254,13 @@ fn render_node(\n             let Some(spelling) = crate::interface::run_args::option_spelling(option) else {\n                 return Err(format!(\"{option:?} is not declared as an option\"));\n             };\n-            out.line(depth, &spelling);\n+            out.line(\n+                depth,\n+                match option {\n+                    RunArg::RunnerMode => \"--runner-mode\",\n+                    _ => spelling.as_str(),\n+                },\n+            );\n             out.references.push(id(&option));\n         }\n         Element::AdmittedWords(option) => {\ndiff --git a/controller/src/interface/run_args.rs b/controller/src/interface/run_args.rs\nindex 8a2ff7ce..6a192a92 100644\n--- a/controller/src/interface/run_args.rs\n+++ b/controller/src/interface/run_args.rs\n@@ -43,7 +43,7 @@ impl RunArg {\n                 .value_parser(value_parser!(u64)),\n             // The words come from the runner-kind table, which the request\n             // and registry readers share.\n-            RunArg::RunnerMode => argument.long(\"runner-mode\").value_parser(\n+            RunArg::RunnerMode => argument.long(\"runner-kind\").value_parser(\n                 Word::ALL\n                     .iter()\n                     .filter(|word| word.rule(Reader::RunOption) == Some(Rule::Admits))\n",
+      "observed": {
+        "build": {
+          "result": "stale_inventory",
+          "message": "controller/interface/inventory.json is stale",
+          "seconds": 0.5
+        },
+        "regenerated": {
+          "result": "refused",
+          "message": "interface: interface inventory:\n  card run: token '--runner-mode' comes from no referenced entry",
+          "seconds": 0.9
+        },
+        "build_after_regeneration": {
+          "result": "stale_inventory",
+          "message": "controller/interface/inventory.json is stale",
+          "seconds": 0.5
+        },
+        "literals": {
+          "result": "refused",
+          "message": "controller/build_help/cards.rs:260: the card renderer spells a card element itself: \"--runner-mode\"\nFAIL: interface literals: 8 governed blocks",
+          "seconds": 0.2
+        },
+        "contract": {
+          "result": "ok",
+          "message": "ok: contract surface stamps current",
+          "seconds": 2.8,
+          "public_snapshot_sha256": "a985d8022c17730f2d8a0d2f40d1fe096b3d39e2a9872df4a6134f535f957e78"
+        }
+      },
+      "public_snapshot_changed": false
+    },
+    {
+      "id": "remove_definition",
+      "entry": "run.option.runner_mode",
+      "mutation": "Remove the RunnerMode argument the run card references.",
+      "patch": "diff --git a/controller/src/interface/run_args.rs b/controller/src/interface/run_args.rs\nindex 8a2ff7ce..57a23307 100644\n--- a/controller/src/interface/run_args.rs\n+++ b/controller/src/interface/run_args.rs\n@@ -14,7 +14,6 @@ enumerated!(\n         /// The request path; the last one wins.\n         RequestPath,\n         TimeoutMs,\n-        RunnerMode,\n         /// Everything after `--`, accepted and ignored.\n         Ignored,\n     }\n",
+      "observed": {
+        "build": {
+          "result": "compile_error",
+          "message": "error[E0599]: no variant, associated function, or constant named `RunnerMode` found for enum `RunArg` in the current scope; error: could not compile `controller` (build script) due to 4 previous errors",
+          "seconds": 0.2
+        },
+        "literals": {
+          "result": "ok",
+          "message": "ok: interface literals: 8 governed blocks",
+          "seconds": 0.2
+        },
+        "contract": {
+          "result": "ok",
+          "message": "ok: contract surface stamps current",
+          "seconds": 3.3,
+          "public_snapshot_sha256": "a985d8022c17730f2d8a0d2f40d1fe096b3d39e2a9872df4a6134f535f957e78"
+        }
+      },
+      "public_snapshot_changed": false
+    },
+    {
+      "id": "invalid_relationship",
+      "entry": "run.option.timeout_ms",
+      "mutation": "Put the listed values of the timeout option under the runner-mode option in the card specification.",
+      "patch": "diff --git a/controller/build_help/cards.rs b/controller/build_help/cards.rs\nindex 4f446bab..2456bb59 100644\n--- a/controller/build_help/cards.rs\n+++ b/controller/build_help/cards.rs\n@@ -72,7 +72,7 @@ pub fn specification(card: Option<Topic>) -> Vec<Node> {\n             Element::Command(Command::Run),\n             vec![node(\n                 Element::Option(RunArg::RunnerMode),\n-                vec![leaf(Element::AdmittedWords(RunArg::RunnerMode))],\n+                vec![leaf(Element::AdmittedWords(RunArg::TimeoutMs))],\n             )],\n         )],\n         Some(Topic::Example) => vec![node(\n",
+      "observed": {
+        "build": {
+          "result": "card_validation",
+          "message": "help cards: TimeoutMs lists no values",
+          "seconds": 0.5
+        },
+        "literals": {
+          "result": "ok",
+          "message": "ok: interface literals: 8 governed blocks",
+          "seconds": 0.2
+        },
+        "contract": {
+          "result": "ok",
+          "message": "ok: contract surface stamps current",
+          "seconds": 3.0,
+          "public_snapshot_sha256": "a985d8022c17730f2d8a0d2f40d1fe096b3d39e2a9872df4a6134f535f957e78"
+        }
+      },
+      "public_snapshot_changed": false
+    },
+    {
+      "id": "literal_beside_run_declaration",
+      "entry": "run.unknown_flag",
+      "mutation": "Compare an argument with the literal --help inside parse_arguments, beside the declaration.",
+      "patch": "diff --git a/controller/src/run_flow.rs b/controller/src/run_flow.rs\nindex 64ff67fe..03de2e31 100644\n--- a/controller/src/run_flow.rs\n+++ b/controller/src/run_flow.rs\n@@ -409,6 +409,9 @@ enum Arguments {\n }\n \n fn parse_arguments(args: &[OsString]) -> Arguments {\n+    if args.first().is_some_and(|first| first == \"--help\") {\n+        return Arguments::Error(None, String::new());\n+    }\n     let declaration = run_args::declaration();\n     let program = std::iter::once(OsString::from(declaration.get_name()));\n     let matches = match declaration.try_get_matches_from(program.chain(args.iter().cloned())) {\n",
+      "observed": {
+        "build": {
+          "result": "ok",
+          "message": "",
+          "seconds": 1.3
+        },
+        "literals": {
+          "result": "refused",
+          "message": "controller/src/run_flow.rs:412: fn parse_arguments: compared with a literal: \"--help\"; define the spelling in controller/src/interface/\nFAIL: interface literals: 8 governed blocks",
+          "seconds": 0.2
+        },
+        "contract": {
+          "result": "ok",
+          "message": "ok: contract surface stamps current",
+          "seconds": 2.9,
+          "public_snapshot_sha256": "a985d8022c17730f2d8a0d2f40d1fe096b3d39e2a9872df4a6134f535f957e78"
+        },
+        "cards": {
+          "base": "run\nexample\nresult\n",
+          "example": "example\n  initial-reads\n    open_read /etc/hosts\n    read_fresh /usr/share/dict/connectives\n  restricted-read\n    open_read /usr/share/dict/propernames\n",
+          "result": "result\n  normalized_outcome ok exit_code\n  bad_request false 1\n  tool_error false 2\n  missing_runner_client false 1\n  unsupported_runner_client false 1\n  malformed_runner_client false 1\n  runner_reply_truncated false 1\n  unsupported_runner_response false 1\n  malformed_runner_response false 1\n  xpc_error false 1\n  xpc_timeout false 1\n  xpc_acquisition_failed false 1\n  xpc_submission_refused false 1\n  xpc_protocol_error false 1\n  runner_client_error false 1\n  finished true 0\n  runner_response_unavailable false 1\n",
+          "run": "run\n  --runner-mode\n    standard\n    byoxpc\n"
+        },
+        "cases": {
+          "failing": [
+            "example.h_flag",
+            "example.help_flag",
+            "example.help_word",
+            "example.save_and_run",
+            "run.help_flag",
+            "run.path_then_help_flag",
+            "run.runner_mode_debuggable",
+            "run.runner_mode_invalid",
+            "run.runner_mode_machme",
+            "run.runner_mode_missing",
+            "run.timeout_equals",
+            "run.timeout_invalid",
+            "run.timeout_missing",
+            "run.timeout_takes_help_flag",
+            "top.bogus",
+            "top.h_flag",
+            "top.help_flag",
+            "top.no_arguments",
+            "top.result",
+            "top.uppercase_help"
+          ],
+          "agreement": "ok",
+          "agreement_message": "",
+          "ran": true,
+          "seconds": 0.9
+        },
+        "unit": {
+          "failing": [
+            "run_flow::tests::argument_errors_are_reported_before_any_runner_or_specimen_work"
+          ],
+          "ran": true,
+          "seconds": 2.6
+        },
+        "probes": [
+          {
+            "args": [
+              "run",
+              "--help"
+            ],
+            "status": 2,
+            "error": "",
+            "exit_code": 2,
+            "normalized_outcome": "tool_error",
+            "stderr": ""
+          }
+        ]
+      },
+      "cards_changed": [],
+      "cases_newly_failing": [
+        "run.help_flag"
+      ],
+      "cases_newly_passing": [],
+      "unit_newly_failing": [],
+      "public_snapshot_changed": false
+    },
+    {
+      "id": "restored_flag_help_arm",
+      "entry": "command.help",
+      "mutation": "Restore a top-level --help arm in cli::run that prints the base card.",
+      "patch": "diff --git a/controller/src/cli.rs b/controller/src/cli.rs\nindex 125303c4..68da47fe 100644\n--- a/controller/src/cli.rs\n+++ b/controller/src/cli.rs\n@@ -23,6 +23,9 @@ pub fn diagnose(reason: &str) {\n }\n \n pub fn run(argv: Vec<OsString>) -> i32 {\n+    if argv.first().is_some_and(|first| first == \"--help\") {\n+        return help::cmd_help(&[]);\n+    }\n     let Some(command) = argv.first().and_then(|first| Command::recognize(first)) else {\n         // clap renders the refusal from the declaration.\n         diagnose(&commands::refusal(commands::root(), &argv).unwrap_or_default());\n",
+      "observed": {
+        "build": {
+          "result": "ok",
+          "message": "",
+          "seconds": 0.6
+        },
+        "literals": {
+          "result": "refused",
+          "message": "controller/src/cli.rs:26: pub fn run: compared with a literal: \"--help\"; define the spelling in controller/src/interface/\nFAIL: interface literals: 8 governed blocks",
+          "seconds": 0.2
+        },
+        "contract": {
+          "result": "ok",
+          "message": "ok: contract surface stamps current",
+          "seconds": 2.9,
+          "public_snapshot_sha256": "a985d8022c17730f2d8a0d2f40d1fe096b3d39e2a9872df4a6134f535f957e78"
+        },
+        "cards": {
+          "base": "run\nexample\nresult\n",
+          "example": "example\n  initial-reads\n    open_read /etc/hosts\n    read_fresh /usr/share/dict/connectives\n  restricted-read\n    open_read /usr/share/dict/propernames\n",
+          "result": "result\n  normalized_outcome ok exit_code\n  bad_request false 1\n  tool_error false 2\n  missing_runner_client false 1\n  unsupported_runner_client false 1\n  malformed_runner_client false 1\n  runner_reply_truncated false 1\n  unsupported_runner_response false 1\n  malformed_runner_response false 1\n  xpc_error false 1\n  xpc_timeout false 1\n  xpc_acquisition_failed false 1\n  xpc_submission_refused false 1\n  xpc_protocol_error false 1\n  runner_client_error false 1\n  finished true 0\n  runner_response_unavailable false 1\n",
+          "run": "run\n  --runner-mode\n    standard\n    byoxpc\n"
+        },
+        "cases": {
+          "failing": [
+            "example.h_flag",
+            "example.help_flag",
+            "example.help_word",
+            "example.save_and_run",
+            "run.path_then_help_flag",
+            "run.runner_mode_debuggable",
+            "run.runner_mode_invalid",
+            "run.runner_mode_machme",
+            "run.runner_mode_missing",
+            "run.timeout_equals",
+            "run.timeout_invalid",
+            "run.timeout_missing",
+            "run.timeout_takes_help_flag",
+            "top.bogus",
+            "top.h_flag",
+            "top.help_flag",
+            "top.no_arguments",
+            "top.result",
+            "top.uppercase_help"
+          ],
+          "agreement": "ok",
+          "agreement_message": "",
+          "ran": true,
+          "seconds": 0.3
+        },
+        "unit": {
+          "failing": [
+            "run_flow::tests::argument_errors_are_reported_before_any_runner_or_specimen_work"
+          ],
+          "ran": true,
+          "seconds": 2.3
+        },
+        "probes": [
+          {
+            "args": [
+              "--help"
+            ],
+            "status": 0,
+            "stdout": "run\nexample\nresult\n",
+            "stderr": ""
+          }
+        ]
+      },
+      "cards_changed": [],
+      "cases_newly_failing": [],
+      "cases_newly_passing": [],
+      "unit_newly_failing": [],
+      "public_snapshot_changed": false
+    },
+    {
+      "id": "builtin_help_enabled",
+      "entry": "command.example",
+      "mutation": "Leave clap's built-in help flag enabled on the command declarations parsed on their own.",
+      "patch": "diff --git a/controller/src/interface/commands.rs b/controller/src/interface/commands.rs\nindex dc372b18..4f822eba 100644\n--- a/controller/src/interface/commands.rs\n+++ b/controller/src/interface/commands.rs\n@@ -59,7 +59,7 @@ impl Command {\n             Command::Version => clap::Command::new(\"version\").long_flag(\"version\"),\n         };\n         // A command parsed on its own does not inherit the root's setting.\n-        command.disable_help_flag(true)\n+        command\n     }\n \n     pub fn spelling(self) -> String {\n",
+      "observed": {
+        "build": {
+          "result": "card_validation",
+          "message": "help cards: help declares a help flag; run declares a help flag; example declares a help flag; test-input declares a help flag; runner declares a help flag; version declares a help flag",
+          "seconds": 0.8
+        },
+        "literals": {
+          "result": "ok",
+          "message": "ok: interface literals: 8 governed blocks",
+          "seconds": 0.2
+        },
+        "contract": {
+          "result": "ok",
+          "message": "ok: contract surface stamps current",
+          "seconds": 2.8,
+          "public_snapshot_sha256": "a985d8022c17730f2d8a0d2f40d1fe096b3d39e2a9872df4a6134f535f957e78"
+        }
+      },
+      "public_snapshot_changed": false
+    },
+    {
+      "id": "builtin_help_subcommand_enabled",
+      "entry": "command.help",
+      "mutation": "Leave clap's built-in help subcommand enabled on the root declaration.",
+      "patch": "diff --git a/controller/src/interface/commands.rs b/controller/src/interface/commands.rs\nindex dc372b18..92ef10c6 100644\n--- a/controller/src/interface/commands.rs\n+++ b/controller/src/interface/commands.rs\n@@ -92,7 +92,6 @@ impl Command {\n pub fn root() -> clap::Command {\n     clap::Command::new(\"policy-witness\")\n         .disable_help_flag(true)\n-        .disable_help_subcommand(true)\n         .disable_version_flag(true)\n         .subcommand_required(true)\n         .subcommands(Command::ALL.iter().map(|command| command.declaration()))\n",
+      "observed": {
+        "build": {
+          "result": "compile_error",
+          "message": "error: failed to run custom build command for `controller v0.1.0 (.tmp/help-clap/controller)`",
+          "seconds": 0.5
+        },
+        "literals": {
+          "result": "ok",
+          "message": "ok: interface literals: 8 governed blocks",
+          "seconds": 0.2
+        },
+        "contract": {
+          "result": "ok",
+          "message": "ok: contract surface stamps current",
+          "seconds": 3.5,
+          "public_snapshot_sha256": "a985d8022c17730f2d8a0d2f40d1fe096b3d39e2a9872df4a6134f535f957e78"
+        }
+      },
+      "public_snapshot_changed": false
+    },
+    {
+      "id": "flag_shaped_topic",
+      "entry": "topic.result",
+      "mutation": "Give the result topic the address --result.",
+      "patch": "diff --git a/controller/src/interface/commands.rs b/controller/src/interface/commands.rs\nindex dc372b18..d93b420d 100644\n--- a/controller/src/interface/commands.rs\n+++ b/controller/src/interface/commands.rs\n@@ -131,7 +131,7 @@ impl Topic {\n         match self {\n             Topic::Run => Address::Command(Command::Run),\n             Topic::Example => Address::Command(Command::Example),\n-            Topic::Result => Address::Own(\"result\"),\n+            Topic::Result => Address::Own(\"--result\"),\n         }\n     }\n \n",
+      "observed": {
+        "build": {
+          "result": "card_validation",
+          "message": "help cards: topic Result has an empty or flag-shaped address",
+          "seconds": 0.5
+        },
+        "literals": {
+          "result": "ok",
+          "message": "ok: interface literals: 8 governed blocks",
+          "seconds": 0.2
+        },
+        "contract": {
+          "result": "ok",
+          "message": "ok: contract surface stamps current",
+          "seconds": 3.4,
+          "public_snapshot_sha256": "a985d8022c17730f2d8a0d2f40d1fe096b3d39e2a9872df4a6134f535f957e78"
+        }
+      },
+      "public_snapshot_changed": false
+    }
+  ]
+}

@@ -1,6 +1,9 @@
 # Generate `policy-witness help` cards from the executable interface
 
-Status: proposed; implementation has not started.
+Status: sequence steps 1 and 2 are complete; implementation has not started.
+[RESULTS.md](records/plain-help/RESULTS.md) records E1–E4, and
+[DECISIONS.md](records/plain-help/DECISIONS.md) sets out the step 3 decisions
+that await the maintainer.
 
 ## Problem
 
