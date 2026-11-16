@@ -1957,3 +1957,584 @@ mutations are not production reachability evidence. The entries preserve these
 distinctions and earlier findings. Only this investigation record was changed;
 no implementation, contract, reader, test or generated-document fix accompanies
 it.
+
+## Additional findings: authority acquisition and lifetime
+
+This continuation starts from REQUEST, RESPONSE, WORKER, EXTENSIONS and
+ARCHITECTURE, including the authored owners in
+[14-extensions.surface.md](../docs/contract/14-extensions.surface.md),
+[33-actor_evidence.surface.md](../docs/contract/33-actor_evidence.surface.md)
+and [34-equipment.surface.md](../docs/contract/34-equipment.surface.md).
+The entries distinguish declared resources, worker publications, host
+observations, derived records and native file observations. Earlier entries
+remain intact; apparent relatives are recorded separately.
+
+### Authority investigation identity and reproduction conventions
+
+Source inspection used initially clean HEAD
+`57d2375a1aff0f9b674f4fe8c08071c6765a1cfd` on 2026-11-16. Line numbers below
+refer to that snapshot. The existing signed app still reports commit
+`8b5de2b2882d7cb2536d1b42d9109f4b0dfc2855`, version `0.3.7`, build `1482`,
+describe `v0.3.7-148-g8b5de2b2`, contract
+`development:bdefcb44cb8b799494b555f6ba992e5bbfb58eba8ef980cb805adf15c103fb18`.
+The comparison from that commit to HEAD changes records, retired tracing
+material and the preflight build-refusal script, not the product sources or
+readers examined here. This is source correspondence, not a new signed build.
+The machine reports macOS `26.7.1`, build `25G241`, arm64. The additional
+unentitled worker used here has SHA-256
+`ee2a42488009f46581358db3076ec35c7cd013af9e7d800113841db74433312c`.
+The other app executable hashes are recorded in the preceding investigation.
+
+Temporary material is under `/private/tmp/pw-authority-trace-3QC3qQ/` and has
+no retention guarantee. It includes `probe.py`, requests, raw envelopes,
+stderr/process captures, reader variants, `issue_tail.c`, and a copied Swift
+package with an investigative `main.swift`. No registered suite was executed
+or credited. Live CLI calls and the real-worker host exercise ran under
+`tests/lib/checkout_lock.sh` outside the automation sandbox, whose XPC
+restriction was established in the preceding investigation. The Python
+launcher was `tests/lib/python.sh`, with assertions enabled.
+
+The Swift exercise copied `runner/Sources` and `runner/Package.swift`
+unchanged into the temporary package and supplied only its own executable
+main. Its command was:
+
+```sh
+swift build --jobs 2 --package-path /private/tmp/pw-authority-trace-3QC3qQ/runner \
+  --scratch-path /private/tmp/pw-authority-trace-3QC3qQ/swift-build \
+  --product PWRunnerCoreTests
+```
+
+The first sandboxed build failed opening the compiler module cache with
+`Operation not permitted`; the same build outside the sandbox succeeded.
+The first custody exercise failed its setup precondition in the sandbox;
+the unchanged executable succeeded outside it. That assertion alone did not
+identify the rejected native setup call. An intermediate extension of the
+main refused the app request because SwiftPM's contract was `unbound`;
+setting `JSONDecoder.userInfo[.expectedContract]` to the app contract allowed
+the later exercise. These failures are harness observations, not native
+authority outcomes.
+
+The final Swift executable SHA-256 is
+`de9a40bd29a494a0308fba900bcf0eb87a4953c7fbde7bdb32095057cd16c246`.
+It was invoked as `tests/lib/checkout_lock.sh --
+/private/tmp/pw-authority-trace-3QC3qQ/swift-build/debug/PWRunnerCoreTests`.
+It used Apple Swift `6.4.2` (`swiftlang-6.4.2.1.9`) and the selected macOS
+`27.2` SDK. The C exercise used Apple clang `21.0.0`
+(`clang-2100.4.1.1`), `-Wall -Wextra -Werror
+-Wno-deprecated-declarations -O2 -std=c11 -lsandbox`; its executable SHA-256 is
+`65e01aa3e4047032b86974d6b6b88ea0ee86a034eb1f7e1579f259deb99f4283`.
+These are temporary investigative builds, not replacement app artifacts.
+
+### DT-59 — Self-transfer consumption can occur in the same visit
+
+**Statement examined.** [EXTENSIONS](../docs/EXTENSIONS.md), lines 79–81,
+says the recipient accepts while parked and consumes “only in a later visit
+of its own.” The authored
+[custody delivery rule](../docs/contract/14-extensions.surface.md), lines
+379–391, also describes self-transfer servicing inside the sender's wait,
+and requires settlement, commitment and acceptance. REQUEST's reference
+rules require prior production in action order, not a different visit.
+
+**Source and assertions.** [ActorPlan.swift](../runner/Sources/PWRunnerCore/ActorPlan.swift),
+lines 451–497, accumulates resources while walking actions and admits a
+self-transfer followed by consumption in the same phase.
+[pw_probe_runner.c](../controller/tools/pw_probe_runner/pw_probe_runner.c),
+lines 800–829 and 892–939, services inbound work inside the exchange wait
+and then permits consumption of settled bytes. In
+[ActorAuthorityTests.swift](../runner/Tests/PWRunnerCoreTests/ActorAuthorityTests.swift),
+lines 421–468, the self-transfer input deliberately puts `a_consume` in
+visit 2 after the transfer in visit 0. Its assertions establish that
+particular later-visit placement and parked B's lack of completed actions;
+they do not establish the word “only.”
+
+**Executed reproduction.** `same_visit/specimen.json` declared one
+unapplied, unentitled actor `A`, one phase `one`, and these actions in order:
+issue read authority for `/private/tmp/pw-authority-trace-3QC3qQ/target` as
+`t`; transfer `t` to `A` as `d`; consume `d` as `h`; `file/read_fresh` of the
+target; release `h`. Issue operands were `family:file`, `authority:read`;
+the paired read query was `file-read-data` with the identical path filter.
+The target contained the 27 bytes `authority lifetime witness\n`.
+`policy-witness run INPUT.json` returned exit 0, `finished`; events in the
+one phase were issue `returned/1`, transfer `delivered`, consume
+`returned/0`, release `returned/0`. The read returned those 27 bytes, device
+`16777233`, inode `277408216`, with successful stat and close. The Python
+consumer and lifecycle oracle returned `[]`; after return `kill(28752,0)`
+reported process absence.
+
+**History and scope.** `git blame` dates the later-visit prose to
+`49a14688` (2026-11-05); it is present in `v0.3.5`, before the 0.3.6 contract
+release. This run establishes admitted same-visit self-consumption, not
+that consuming changed this unapplied actor's access. DT-66 separately
+examines native access under an applied policy. This also extends DT-38's
+distinction between an exercised arrangement and a broader claim.
+
+### DT-60 — A mismatched raw setup association is flagged but its decision is still projected
+
+**Promise.** The authored equipment rule, lines 880–898 of
+[34-equipment.surface.md](../docs/contract/34-equipment.surface.md), and its
+[RESPONSE presentation](../docs/RESPONSE.md#contract-equipment-authority_scope-acquire)
+say to validate the raw actor/required association before projecting an
+observed decision and primary operation. Its support points to
+`decodeAuthoritySetup` and the independently published cleanup-cell test.
+
+**Executed constructed input.** The copied production decoder received a
+zeroed `PWShmLayout.regionBytes` allocation with valid evidence magic and
+ABI identity. Relative to `authoritySetupOffset`, the main set disposition
+at `+4` to `1` (ready), required at `+12` to `1`, actor at `+16` to `7`,
+and release-stored decision publication `1` at `+0`. No operation cell was
+published. It called `decodeAuthoritySetup(raw, actor:0, required:true)`.
+Decisive output was:
+
+```text
+publication=observed disposition=ready actor_index=0 required=true
+operations=0 errors=["setup_association_mismatch"]
+```
+
+Changing only raw actor to `0` and raw required to `0` produced the same
+projected decision and association error. The public association comes from
+the decoder's arguments; the mismatching raw value is not retained.
+
+**Source and downstream limits.** In
+[AuthoritySetupRuntime.swift](../runner/Sources/PWRunnerCore/AuthoritySetupRuntime.swift),
+line 66 inserts an error but does not gate lines 95–102, which set
+`publication` and `disposition` using the expected `required` argument.
+This does **not** establish activation of a mismatched worker:
+[ActorScheduler.swift](../runner/Sources/PWRunnerCore/ActorScheduler.swift),
+lines 284–288, returns setup failure when integrity errors exist, and
+[PWRunnerAuthoritySetup.swift](../runner/Sources/PWRunnerCore/PWRunnerAuthoritySetup.swift),
+lines 149–151, reports publication integrity. The experiment invokes the
+decoder, not that scheduler or final encoder. The worker's production
+header checks also reject an initially inconsistent actor association
+before setup (`pw_probe_runner.c`, lines 1363–1377).
+
+The cited [test](../runner/Tests/PWRunnerCoreTests/ActorAuthorityTests.swift),
+lines 155–178, supplies matching actor/required words, an independently
+published failing close cell, and then malformed flags. It asserts partial
+cell retention and `invalid_setup_cell`, not mismatched decision handling.
+The decoder behavior dates to `bc3abe2f` (2026-11-06) and exists in
+`v0.3.5`. Related to DT-47's support-scope concern, but about a different
+decoder and a directly executed constructed input.
+
+### DT-61 — Setup readiness can be decoded and assessed without its acquisition prerequisites
+
+**Relationship examined.** The
+[prepare-before-use rule](../docs/ARCHITECTURE.md#contract-extensions-custody-prepare)
+requires core-limit success and required mapping/validation before ready;
+the authored equipment condition, lines 912–917, requires observed ready
+to imply `required:true`. These are distinct from merely possessing the
+string `ready`.
+
+**Executed constructed decoder control.** Repeat DT-60's buffer with raw
+actor `0` and required `1`, matching the decoder arguments, but still no
+published operation cells. It returned:
+
+```text
+publication=observed disposition=ready actor_index=0 required=true
+operations=0 errors=[]
+ownership: descriptor=not_acquired mapping=not_acquired shared_erasure=not_present
+```
+
+The decoder checks an optional primary against a failed cell, but does not
+require ready's core-limit, mapping, close or header-binding cells. The C
+producer normally publishes those prerequisites first
+([pw_probe_runner.c](../controller/tools/pw_probe_runner/pw_probe_runner.c),
+lines 676–761). This constructed state is not evidence that its ordinary
+setup path skipped acquisition or that a release/acquire operation lost
+earlier publications.
+
+**Executed reader controls.** Starting from the real two-actor envelope in
+DT-66, independently make each of these changes to the decoded runner body:
+remove B's `core_limit` operation; replace that operation with
+`state:failed,native_rc:-1,errno:1` while retaining ready and no primary;
+set B's `required:false` while retaining ready; or empty
+`authority_setup.host.regions`. For each, direct
+`actor_evidence.validate_actor_evidence`,
+`extension_evidence.validate_actor_extensions` and
+`consumer._validate_reply` returned `[]`. `lifecycle_oracle.check_record`
+also returned `[]` on the modified envelope. The full consumer **did**
+reject each modified envelope with
+`host result differs from exact captured host reply bytes`; the captured
+wire reply was deliberately left unchanged. These results establish the
+body checks' scope, not acceptance of altered bytes through the whole
+capture path.
+
+**Source and test limits.** Python
+[actor_evidence.py](../tests/lib/actor_evidence.py), lines 39–159,
+checks present operation shapes and terminal-failure support. Swift
+[PWRunnerAuthoritySetup.swift](../runner/Sources/PWRunnerCore/PWRunnerAuthoritySetup.swift),
+lines 142–215, and Rust
+[porcelain_actor.rs](../controller/src/porcelain_actor.rs), lines 404–468,
+likewise check terminal applicability without enforcing ready's
+`required:true` relationship or its complete prerequisite prefix. These
+Swift/Rust observations are source inspection, not executed mutated-wire
+trials. The [actor evidence fixture](../tests/fixtures/contract/actor_evidence.json)
+includes wrong associations, wrong kinds, unpublished decisions and
+primary/cleanup confusion; those named assertions concern different
+relationships. Related to DT-53's distinction between consumer acceptance
+and evidence completeness, and separate from DT-60's explicit integrity
+error. No production reachability of the contradictory ready states is
+claimed.
+
+### DT-62 — Accepted host custody disappears from the reply when the issue slot is unpublished
+
+**Promise and tension.** The authored custody rule, lines 364–375 of
+[14-extensions.surface.md](../docs/contract/14-extensions.surface.md), says
+the native return and host custody acceptance are reported independently.
+The token-status definition at lines 824–834 instead makes missing issue
+publication unresolved. The latter is what the assembly preserves, even
+when the host has its own accepted-custody observation.
+
+**Executed public reproduction.** Starting from DT-59, retain only its issue
+action and add `_test_overrides:{"worker_kill_before_publish_slot":0}`.
+The unchanged signed app returned exit 1, `runner_failed`, worker signal 9
+and `reaped:true`. Its issue event had `call_boundary_observed:true`,
+`result_published:false`, `status:unresolved`, with native result and length
+absent. Token `t` was unresolved with no length. Its host custody setup scope
+reported successful allocation, `final_erase/performed` for 16,384 bytes and
+successful unmap, but no acceptance status or accepted length. The request
+and output are `interrupted-specimen.json` and `interrupted-run.json`.
+
+**Independent host-level observation.** The copied Swift package decoded
+that same request with the app contract, normalized it, translated it to
+the actual signed `pw-probe-runner-unentitled`, and invoked
+`ActorScheduler.run` with the translation's authority plan and a no-op
+collection hook. It then passed the outcome to `assembleActorReply` with
+one empty query plan, nil validator result and `not_needed` collection.
+Its output was:
+
+```text
+custody=[["accepted", "216", "true"]]
+events=[["unresolved", "false", "nil"]]
+token=unresolved length=nil quiescence=reaped
+```
+
+Here 216 is the host's accepted payload length and true is final erasure.
+The native worker was real; this supplementary driver invocation bypassed
+the public equipment-binding/live-inspection orchestration and did not
+encode/admit a full reply. The separate CLI run above traversed that public
+path. Neither run printed or retained bearer bytes.
+
+**Source and assertions.** The worker's test seam kills after the attempt
+function returns but before `completed` is stored (`pw_probe_runner.c`,
+lines 1090–1097). Issue returns after its custody acknowledgement wait.
+[AuthorityCustody.swift](../runner/Sources/PWRunnerCore/AuthorityCustody.swift),
+lines 455–501, retains accepted length independently;
+[ActorSession.swift](../runner/Sources/PWRunnerCore/ActorSession.swift),
+lines 642–651, correctly withholds unpublished slot payloads. But
+[ActorOrchestration.swift](../runner/Sources/PWRunnerCore/ActorOrchestration.swift),
+lines 462–474, chooses unresolved before consulting custody; no separate
+acceptance record is emitted. Delivery assembly at lines 476–487 does retain
+host observations without source publication.
+[ActorReplyTests.swift](../runner/Tests/PWRunnerCoreTests/ActorReplyTests.swift),
+lines 112–157, asserts unresolved issue and retained interrupted-transfer
+delivery in separate cases; the issue case does not assert retained host
+acceptance. This asymmetry is present in `v0.3.5`. It extends DT-47's
+publication/support question but concerns actual native custody and its
+loss during assembly, not an unused encoding result. It does not justify
+publishing an unobserved native return.
+
+### DT-63 — A final erased flag cannot establish erasure at the last declared transfer
+
+**Relationship examined.** The
+[retirement promise](../docs/ARCHITECTURE.md#contract-extensions-custody-erase)
+distinguishes last-use erasure from teardown. In
+[ActorAuthorityTests.swift](../runner/Tests/PWRunnerCoreTests/ActorAuthorityTests.swift),
+lines 467–468, the comment says custody was erased “at the token's last
+declared transfer,” but the assertion reads only final
+`outcome.custody.map { $0.erased } == [true]` after `scheduler.run`.
+
+**Source.** [ActorScheduler.swift](../runner/Sources/PWRunnerCore/ActorScheduler.swift),
+lines 183–193, calls `finish()` before constructing the outcome.
+[AuthorityCustody.swift](../runner/Sources/PWRunnerCore/AuthorityCustody.swift),
+lines 632–638, always finishes private buffers and sets every custody
+observation's `erased=true`. The separate last-transfer defer at lines
+514–523 really does erase in the inspected source, including a failed
+recipient lookup. The assertion does not distinguish those two sites.
+
+**Executed constructed counterexample to the assertion's meaning.** The
+Swift main created one token assigned to actor 0, issue slot 0, final
+transfer slot 1, one self-delivery and one inbound/outbound slot. It supplied
+a framed synthetic outbound payload `ABC\0`, length 3, committed it, and
+called `custody.service(active:0,phaseIndex:0)`. It never published the
+transfer request. Output before teardown was `accepted=true erased=false`;
+after `custody.finish()` it was `transfers=0 erased=true`. Thus the same
+final boolean is obtained without executing the declared last transfer.
+This exercise used actual host buffer allocation/service/cleanup with
+constructed bytes; it issued no native sandbox extension.
+
+The assertion and unconditional final flag date to `c686a05f`
+(2026-11-03). The inspected handoff mutation list in
+[actor_handoff_mutations.py](../tests/suites/runner_unit/actor_handoff_mutations.py)
+targets slot aliasing, premature outbound erasure, answers, inbound scans
+and termination gating; it does not remove last-transfer retirement.
+This is a support-scope finding related to DT-38 and DT-47, not evidence
+that production currently omits last-transfer erasure. Nor does the boolean
+alone constitute an independent scan of the cleared memory.
+
+### DT-64 — Rejected oversized native allocations are erased only through the inspected prefix
+
+**Statements examined.** ARCHITECTURE's issue rule says “Erase the native
+allocation after copying”; WORKER's supplied-extension section more
+narrowly says erase “to its inspected length.” The capability inventory
+also uses inspected allocation wording. The distinction matters when
+issuance returns a non-null payload outside the supported bound, before
+any custody copy occurs.
+
+**Source and executed constructed native return.** In
+[pw_probe_runner.c](../controller/tools/pw_probe_runner/pw_probe_runner.c),
+lines 858–865, `strnlen(token,16384)` caps the inspected length; the rejected
+branch erases that length and frees the allocation. The temporary C main
+included this unchanged source with its `main` renamed, assigned
+`extension_issue` to a replacement returning `malloc(16393)` containing
+16,392 `x` bytes plus NUL, and supplied one assigned outbound slot to an
+unapplied actor. `free` was intercepted solely to scan that known allocation
+immediately before the real free. Calling `attempt_extension_issue` gave:
+
+```text
+native_nonnull=1 length=0 custody=4 free_observed=1
+first_16384_zero=1 remaining_payload_nonzero=8
+```
+
+`custody=4` is `PW_CUSTODY_NOT_PUBLISHED`. The returned allocation was freed,
+but eight known nonzero payload bytes remained at that boundary. The
+command compiled `issue_tail.c` with the flags and identity above, then ran
+the resulting executable directly. It called no real native issue API and
+read no freed memory. This demonstrates the implementation's bounded
+clearing behavior, not that Apple's current issuer returns oversized
+payloads or that those bytes were subsequently recovered.
+
+**Assertions and history.** In
+[control.c](../tests/fixtures/extension_controls/control.c), lines 117–124,
+the issuer erasure observer scans only the `length` passed to the eraser.
+Its oversized mode (lines 160–164) constructs exactly 16,384 nonzero bytes
+followed by NUL, so it supplies no nonzero tail beyond that scan. The
+[boundary checker](../tests/suites/witness_contract/check_extension_boundaries.py),
+lines 326–333, checks returned nonnull, non-issued custody and unavailable
+dependent operations for that mode. The recipient-side observer separately
+scans full slot capacity; it does not establish issuer-allocation extent.
+The bounded issue implementation dates to `c686a05f` and predates 0.3.6.
+Related to DT-63's erasure-evidence scope, but this is a different storage
+owner and a directly observed nonzero tail. No layer's wording or clearing
+policy is selected for change here.
+
+### DT-65 — Body readers accept uncustodied issuance beside successful delivery of that token
+
+**Promise.** RESPONSE's authored token definition requires accepted host
+custody for `issued` and its absence for `issued_uncustodied`.
+[FAILURE-PROPAGATION-CONTRACT.md](../tests/FAILURE-PROPAGATION-CONTRACT.md),
+lines 280–285, additionally says the latter token's transfers read
+`custody_unavailable`. Delivered transfers require held custody, copying,
+equal bytes and recipient acknowledgement.
+
+**Executed constructed reader input.** Change only
+`resources.tokens[0].status` from `issued` to `issued_uncustodied` in the
+real DT-66 runner body. Keep its completed non-null issue, length, delivered
+transfer with `custody_status:held`, equal bytes and both acknowledgements,
+and successful consumption. Direct calls to
+`actor_evidence.validate_actor_evidence`,
+`extension_evidence.validate_actor_extensions` and
+`consumer._validate_reply` all returned `[]`; the lifecycle oracle returned
+`[]`. The full consumer rejected the edited envelope because its body
+differed from the unchanged captured host reply bytes. The saved variant
+is `issued_without_custody.json`; no complete-envelope admission is claimed.
+
+**Source.** Python [extension_evidence.py](../tests/lib/extension_evidence.py),
+lines 348–361, accepts either issuance status for a completed non-null
+event without joining token custody to its transfers. Swift
+[PWRunnerReply.swift](../runner/Sources/PWRunnerCore/PWRunnerReply.swift),
+lines 599–615, and Rust
+[porcelain_actor.rs](../controller/src/porcelain_actor.rs), lines 1549–1580,
+have the corresponding alternatives. Their delivered-transfer checks
+validate that transfer's fields separately. The Swift/Rust paths were read,
+not executed with a mutated wire fixture.
+
+Production assembly, in contrast, derives the status from
+`outcome.custody.status == accepted` when issue completion exists; the
+inspected host erases custody rather than accepting it a second time.
+The experiment therefore establishes an unchecked record relationship,
+not production of this contradictory combination. Related to DT-52 and
+DT-53's reader-scope findings, and to DT-62's missing independent acceptance
+record, but not merged with them: here the issue result is complete and
+the contradiction is between two retained claims.
+
+### DT-66 — Distinct handle declarations can share one native value and have different release boundaries
+
+**Relationship examined.** REQUEST permits repeated consumption of one
+delivery with distinct handle references and one release per reference.
+The [authored handle definition](../docs/contract/14-extensions.surface.md),
+lines 929–951, calls the returned value a candidate handle and says
+`raw_equal_handles` relates numbers, not reference identity. WORKER says
+handles persist separately from erased token bytes, with no automatic
+exit-time native release. These qualifications are necessary to read the
+apparently distinct resources and their `produced` status.
+
+**Executed lifetime exercise.** The input used an unapplied unentitled
+issuer A and applied selected worker B. B's exact policy was:
+
+```text
+(version 1) (allow default) (deny file-read-data) (deny file-write*) (allow file-read-data (extension "com.apple.app-sandbox.read"))
+```
+
+The global phases were B's baseline fresh read; A's read-class issue `t`
+and transfer to B as `d`; then B's phase with
+`after_termination:{"actor_id":"A"}` and actions
+`consume d→h1`, `consume d→h2`, fresh read `during`, release `h1`, fresh
+read `after_r1`, release `h2`, fresh read `after_r2`. Each read had a paired
+`file-read-data/path` query for the exact target. Commands and target bytes
+are as in DT-59; `repeat/specimen.json` and `repeat/run.json` retain them.
+
+The run returned `finished`. Both consumes returned native handle `1`;
+each resource listed the other in `raw_equal_handles`. Both releases
+returned `0`. Fresh-open results were baseline `-1/errno 1`, during
+successful, after first release successful, after second release
+`-1/errno 1`. Both successful reads returned the independently prepared
+27 bytes and matching device/inode, with successful stat/close. The target
+still contained the same bytes afterward. Issuer PID `28759` had an owned
+natural reap (`native_rc:28759`, raw status 0, no departure request), with
+capture ordinal 2 before satisfied gate ordinal 3. B was PID `28760`;
+both PIDs were absent to `kill(pid,0)` after the CLI returned. Consumer and
+lifecycle oracle returned `[]`.
+
+All four query outcomes were deny with `query_first`: the final phase's
+queries preceded its two consumes and releases, rather than describing
+each later action's authority state. Both handle resources still reported
+`status:produced,release_attempted:true` in the final reply. Those values
+record production and observed call boundaries, not present validity or
+access. The gate established source termination order; the later native
+consume/read supplied the separate evidence that the delivered token
+remained usable in this experiment.
+
+**Source, tests and limits.** The worker stores each candidate under its
+declared handle index, clears the inbound bytes after the final declared
+consume, and calls release with the stored number
+([pw_probe_runner.c](../controller/tools/pw_probe_runner/pw_probe_runner.c),
+lines 908–957). It does not invalidate that table entry after release;
+admission prevents a second release of the same logical reference.
+[ActorAuthorityTests.swift](../runner/Tests/PWRunnerCoreTests/ActorAuthorityTests.swift),
+lines 421–461, checks completed repeated consumes and release availability,
+not equality, native release results or access between releases. The
+ordinary lifecycle CLI test in
+[check_extensions.py](../tests/suites/witness_contract/check_extensions.py),
+lines 100–119, explicitly permits either post-release access result.
+This observation does not establish the private library's reference-count
+implementation, universal revocation behavior, or the cause of errno 1.
+Related to DT-59's phase placement and DT-63/64's token-memory lifetime;
+neither erased bytes nor numeric equality substitutes for these file
+observations. The per-reference table and repeated-consume test originate
+in `c686a05f`, before 0.3.6.
+
+### DT-67 — Two redelegation contrasts record credit without enforcing the documented negative result
+
+**Promise.** [witness_contract/README.md](../tests/suites/witness_contract/README.md),
+lines 793–798, describes four contrasts and says each must publish its
+remaining links and “must not be credited.” This sits beside the separate
+statement that kernel results are recorded rather than forced.
+
+**Inputs and assertions read.** In
+[check_extension_redelegation.py](../tests/suites/witness_contract/check_extension_redelegation.py),
+`contrast_specs` removes B's consume and cleanup actions, removes B's
+issuance allowance, removes C's consume and release, or removes C's
+extension read predicate. Lines 284–297 calculate `credited` for every
+contrast, but assert `not complete and not credited` only for the two
+omitted-consume cases. The weakened-issuance and omitted-predicate branches
+merely attach a comparison description and save the observations. A true
+credit result in either branch is not itself a failing assertion there.
+The common apparatus checks still require exact submitted policy hashes,
+distinct processes, setup, publication, phase order and reap.
+
+This is not a claim that `chain()` credits reads alone: lines 149–158
+explicitly require both non-null issues, issued custody, delivered/equal
+transfers, returned candidate results other than -1, known
+fresh bytes and failed baselines. Nor does the principal case require
+principal credit to pass: it separately requires a successful native
+calibration and prints the principal's actual credit/first-break result.
+The [authored executed support](../docs/contract/14-extensions.surface.md),
+lines 484–496, names a particular historical credited run; that stronger
+historical observation cannot be recovered from a suite pass alone.
+
+**History and limits.** The branch distinction is present from `c686a05f`
+(2026-11-03) and in `v0.3.5`. This entry is source/assertion inspection;
+neither negative native policy variant was newly executed and no unexpected
+native credit is alleged. Related to DT-11/12's execution-evidence scope
+and DT-38/47's assertion-scope findings, but a standalone comparison of
+these authority-dependency promises and these four actual test inputs.
+
+### DT-68 — Final worker ownership can say mapping held beside confirmed process termination
+
+**Relationship examined.** The authored equipment scope describes an
+“ownership state” and lists `not_acquired`, `held`, `released` and
+`unresolved` for mapping/descriptor/name. WORKER's resource account says
+the accepted worker authority mapping lasts through worker exit. These
+are different temporal scopes: a retained worker operation account is not
+necessarily a current resource inventory at CLI return.
+
+**Executed observation.** In DT-66's final decoded reply, both worker
+authority scopes reported
+`descriptor:released,mapping:held,shared_erasure:performed`; their host
+region scopes reported mapping release. Both workers were reported reaped
+and independently absent by the post-run PID probe. The worker scope does
+not convert its earlier successful mapping to `released` on host-observed
+reap. `produced` handles likewise remain historical, as DT-66 records.
+
+**Source and assertion scope.**
+[AuthoritySetupRuntime.swift](../runner/Sources/PWRunnerCore/AuthoritySetupRuntime.swift),
+lines 105–110, sets mapping held from successful slot 8. Only rejected
+mapping cleanup in slot 12 can replace that with released or unresolved.
+The normal C path holds the mapping and erases settled inbound bytes
+before `_exit`; it does not publish a successful normal unmap
+(`pw_probe_runner.c`, lines 579–596, 743–761).
+[ActorScheduler.swift](../runner/Sources/PWRunnerCore/ActorScheduler.swift),
+lines 558–591, collects that worker publication account and separately
+tears down host mappings after reap/quiescence handling. Python
+[actor_evidence.py](../tests/lib/actor_evidence.py), lines 100–114, requires
+a corresponding cleanup observation for a reported released mapping;
+it does not derive that state from reap. The quiescence test in
+[ActorAuthorityTests.swift](../runner/Tests/PWRunnerCoreTests/ActorAuthorityTests.swift),
+lines 180–205, constructs an independent host mapping and checks bytes
+under supplied quiescent/nonquiescent sets; it does not inspect a worker's
+mapping after termination.
+
+The observed field combination therefore cannot establish that a mapping
+remains accessible through the terminated worker, or that erasing a slot
+released its mapping. This entry records the temporal ambiguity of the
+general ownership wording and the concrete producer behavior, not a leak
+claim. It is distinct from DT-46's derived cleanup trigger, DT-63's erasure
+timing, and DT-66's native handle lifetime.
+
+### Authority coverage and remaining investigative limits
+
+The trace followed request normalization and ownership/index assignments;
+global authority-required selection; pre-launch host core-limit, region and
+custody allocation; worker symbol lookup, core-limit, mapping, descriptor
+closure and assignment snapshots before policy setup; static/live equipment
+bindings; issue allocation, outbound publication, host custody, transfer
+request/answer, parked/self acknowledgement and settlement; repeated
+consumption, per-reference release, normal-exit erasure and host teardown.
+It followed selected records into Swift assembly/integrity checks, Rust
+body admission and Python body/capture/lifecycle checks, including the
+different outcomes of direct body checks and whole-envelope validation.
+The native issue/transfer/consume/release calls and fresh file observations
+were exercised only in the named specimens. Setup and erasure controls
+used deliberately constructed states where identified.
+
+Several inspected relationships have narrower affirmative evidence: the
+live examples used separate fresh actors, setup preceded activation, real
+delivery was usable after the issuer's owned natural reap, repeated native
+consumption and release had independently observed fresh-read boundaries,
+and the interrupted issue withheld unpublished native fields. Host custody
+and memory erasure are separate from effective authority; stable target
+identity in these samples does not establish identity across all intervals.
+
+No registered battery, signing rebuild, BYOXPC installation, native
+allocation instrumenter or broad mutation selection was run. Static/live
+equipment failure controls, failed close/unmap, unresolved named-object
+recovery, symbol absence, cancellation races, release failure, escaped
+descendants, retained file descriptors across release and abnormal native
+library allocation remain source/test inspections or unexercised limits
+here. In particular, the oversized-return control does not characterize
+Apple's allocator or actual token maximum; the ready controls do not
+establish production-reachable skipped prerequisites; and the temporary
+driver's extra custody observation is not a signed public response field.
+Historical inspection establishes presence before 0.3.6, not execution of
+the older binaries. Only this record was changed; no repair, deduplication
+or choice of authoritative layer accompanies these entries.
