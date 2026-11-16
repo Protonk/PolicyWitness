@@ -3,7 +3,6 @@
 ```contract
 syntax: 1
 artifact: "Managing runners"
-part: "installation"
 goldens: ["tests/fixtures/contract/surfaces/installation.json"]
 checks: ["unit", "runner_byoxpc"]
 ```

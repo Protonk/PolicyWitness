@@ -4,7 +4,6 @@
 syntax: 1
 coverage: "public"
 artifact: "The contract identity"
-part: "identity"
 goldens: ["tests/fixtures/contract/surfaces/identity.json", "tests/fixtures/contract/envelope_shape.json"]
 checks: ["source_drift", "integration"]
 ```
@@ -327,7 +326,6 @@ limits: "Source reading only. This owner does not credit old-worker execution, e
 ## Shared definitions {definitions: subject}
 
 ```contract
-part: "definitions"
 ```
 
 ### PolicyWitness {policywitness: definition}
@@ -771,7 +769,6 @@ limits: "Source reading only; component signing, live peer association and a fre
 ## Version reporting {version: subject}
 
 ```contract
-part: "version"
 record: "VersionData"
 as: "version_data"
 ```

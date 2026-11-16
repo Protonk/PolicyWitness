@@ -3,7 +3,6 @@
 ```contract
 syntax: 1
 artifact: "Extension actions and authority custody"
-part: "input"
 goldens: ["tests/fixtures/contract/surfaces/extensions.json"]
 checks: ["failure_boundaries"]
 ```
@@ -512,7 +511,6 @@ limits: "Native examples are scoped to their recorded policies, equipment, targe
 ```contract
 record: "PWRunnerExtensionEvent"
 as: "event"
-part: "report"
 ```
 
 
@@ -630,7 +628,6 @@ pins: "A published issue native value projects to native_nonnull; the host custo
 ```contract
 record: "PWRunnerTransferRecord"
 as: "transfer"
-part: "report"
 ```
 
 The transfer table reports host servicing observations. A worker can time out before the host's answer; source acknowledgement preserves this difference.
@@ -774,7 +771,6 @@ pins: "Custody requires a completed source slot with the matching nonzero acknow
 ```contract
 record: "PWRunnerResourceTables"
 as: "resources"
-part: "report"
 ```
 
 The tables retain admitted resources whose producing action was not reached or remains unresolved. Declaration establishes the reference; the status supplies observed production.
@@ -807,7 +803,6 @@ pins: "The adjacent meanings follow the named request, producer and observation 
 ```contract
 record: "PWRunnerTokenRecord"
 as: "token"
-part: "report"
 ```
 
 
@@ -856,7 +851,6 @@ pins: "The adjacent meanings follow the named request, producer and observation 
 ```contract
 record: "PWRunnerDeliveryRecord"
 as: "delivery"
-part: "report"
 ```
 
 
@@ -913,7 +907,6 @@ pins: "The adjacent meanings follow the named request, producer and observation 
 ```contract
 record: "PWRunnerHandleRecord"
 as: "handle"
-part: "report"
 ```
 
 

@@ -3,7 +3,6 @@
 ```contract
 syntax: 1
 artifact: "Actor and phase evidence"
-part: "report"
 goldens: ["tests/fixtures/contract/surfaces/actor_evidence.json"]
 checks: ["runner_unit"]
 ```

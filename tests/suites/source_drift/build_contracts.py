@@ -331,7 +331,7 @@ class SurfaceStampTests(PublicBuildContractTests):
         # deleting meanings still required by a public record elsewhere.
         path = root / 'docs/contract/99-fixture_aux.surface.md'
         path.write_text('# Fixture-only surface {fixture_aux: surface}\n\n```contract\n'
-                        'syntax: 1\nartifact: "Fixture"\npart: "definitions"\n'
+                        'syntax: 1\nartifact: "Fixture"\n'
                         'goldens: ["tests/fixtures/contract/surfaces/fixture_aux.json"]\n'
                         'checks: ["unit"]\n```\n\n'
                         '## Meaning {meaning: definition}\n\nFixture-only meaning.\n')

@@ -3,7 +3,6 @@
 ```contract
 syntax: 1
 artifact: "Actors and phases"
-part: "input"
 goldens: ["tests/fixtures/contract/surfaces/actors.json"]
 checks: ["failure_boundaries"]
 ```

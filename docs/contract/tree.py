@@ -23,8 +23,6 @@ import markdown_reader
 import record_definitions
 
 SYNTAX = 1
-PARTS = ('identity', 'definitions', 'input', 'delivery', 'report',
-         'assessment', 'installation', 'version')
 RULE_KINDS = {'acts', 'reports', 'checks'}
 KINDS = {'surface', 'subject', 'definition', 'field', *RULE_KINDS,
          'condition', 'effect', 'outcome', 'gap', 'example', 'owner'}
@@ -51,8 +49,8 @@ CHILDREN = {
 }
 COMMON_FACTS = {*CONTEXT, 'uses', 'after', 'precedes', 'requires', 'each', 'retained_free', 'interface'}
 FACTS_BY_KIND = {
-    'surface': {'syntax', 'artifact', 'part', 'goldens', 'checks', 'coverage'},
-    'subject': {'record', 'as', 'at', 'part', 'coverage', 'open'},
+    'surface': {'syntax', 'artifact', 'goldens', 'checks', 'coverage'},
+    'subject': {'record', 'as', 'at', 'coverage', 'open'},
     'definition': {'defines', 'type', 'value', 'object'},
     'field': {'name', 'type', 'optional', 'json_null', 'projection', 'default',
               'vocabulary', 'listed', 'values', 'unknown', 'required_when', 'present_when'},
@@ -919,14 +917,12 @@ def _validate(tree):
             _strings(node, 'interface', facts['interface'])
             if len(set(facts['interface'])) != len(facts['interface']):
                 node.fail('interface identifiers must be distinct', 'interface')
-        if 'part' in facts and facts['part'] not in PARTS:
-            node.fail('unknown document part', 'part')
         if node.kind == 'surface':
             if facts.get('coverage', 'selected') not in {'selected', 'public'}:
                 node.fail('surface coverage must be selected or public', 'coverage')
             if type(facts.get('syntax')) is not int or facts['syntax'] != SYNTAX:
                 node.fail('unsupported source syntax', 'syntax')
-            for key in ('artifact', 'part'):
+            for key in ('artifact',):
                 _string(node, key, facts.get(key))
             for key in ('goldens', 'checks'):
                 _strings(node, key, facts.get(key), empty=not tree.strict)
@@ -1473,14 +1469,6 @@ to other workers, recipients or entry points.
 '''
 
 
-PART_TITLES = {
-    'identity': None, 'definitions': 'Definitions',
-    'input': 'Running a specimen: accepted input', 'delivery': 'Delivery to the host',
-    'report': "The host's report", 'assessment': "The controller's assessment and output",
-    'installation': 'Managing runners', 'version': 'Reporting the version',
-}
-
-
 def _views(tree):
     applicability, findings, gaps = [], [], []
     for node in tree.nodes:
@@ -1510,13 +1498,7 @@ def _views(tree):
 def render(tree, selected=None, *, appendix=True, title=True):
     """Render the contract with a marker for the entry point's surface table."""
     output = ['# PolicyWitness contract', ''] if title else []
-    roots = defaultdict(list)
     owners = []
-    for surface in tree.surfaces:
-        roots[surface.facts['part']].append(surface)
-        for node in surface.descendants():
-            if 'part' in node.facts:
-                roots[node.facts['part']].append(node)
 
     def heading(node, depth):
         output.extend(['<a id="' + _anchor(node) + '"></a>',
@@ -1584,7 +1566,7 @@ def render(tree, selected=None, *, appendix=True, title=True):
             for extra in member.children:
                 if extra not in nested: visit(extra, depth + 1)
         for child in node.children:
-            if child.kind == 'field' or child in compact or (selected is None and 'part' in child.facts) or (selected is not None and node.kind == 'surface' and child.kind == 'subject'):
+            if child.kind == 'field' or child in compact or (selected is not None and node.kind == 'surface' and child.kind == 'subject'):
                 continue
             visit(child, depth + 1)
 
@@ -1592,18 +1574,9 @@ def render(tree, selected=None, *, appendix=True, title=True):
         for node in selected:
             visit(node, 2 if node.kind == 'surface' else 3)
     else:
-        for part in PARTS:
-            if not roots[part]: continue
-            title = PART_TITLES[part]
-            same_title = (title and len(roots[part]) == 1
-                          and roots[part][0].title.casefold() == title.casefold())
-            if title and not same_title: output.extend(['## ' + title, ''])
-            for node in roots[part]: visit(node, 3 if title and not same_title else 2)
-            if part == 'identity':
-                output.extend(['<!-- CONTRACT SURFACE TABLE -->', '',
-                               'Field entries and rules use the [notation below](#contract-notation).', ''])
-        if not roots['identity']:
-            output[2:2] = ['<!-- CONTRACT SURFACE TABLE -->', '']
+        for surface in tree.surfaces:
+            visit(surface, 2)
+        output.extend(['<!-- CONTRACT SURFACE TABLE -->', ''])
     if not appendix:
         return '\n'.join(output).rstrip() + '\n'
     if selected is not None:

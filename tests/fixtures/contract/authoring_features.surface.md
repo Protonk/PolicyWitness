@@ -3,7 +3,6 @@
 ```contract
 syntax: 1
 artifact: "Private trials of current contract relationships"
-part: "assessment"
 goldens: ["tests/fixtures/contract/compiled_profile.json"]
 checks: ["source_drift"]
 who: "runner host"

@@ -20,7 +20,6 @@ def minimal_surface():
 ```contract
 syntax: 1
 artifact: "Constructed authoring control"
-part: "assessment"
 goldens: ["tests/fixtures/contract/compiled_profile.json"]
 checks: ["source_drift"]
 who: "controller"
@@ -143,7 +142,6 @@ def component_surface():
 ```contract
 syntax: 1
 artifact: "Constructed component definitions"
-part: "definitions"
 goldens: ["tests/fixtures/contract/compiled_profile.json"]
 checks: ["source_drift"]
 ```
@@ -481,6 +479,7 @@ test: present(sample.status)
             ('## Phase record {phase: subject}', '## Phase record {phase: field}', 'illegal'),
             ('syntax: 1', 'syntax: 1\nsyntax: 1', 'duplicate'),
             ('syntax: 1', 'unexpected: 1\nsyntax: 1', 'unknown'),
+            ('syntax: 1', 'syntax: 1\npart: "identity"', 'unknown'),
             ('syntax: 1', 'syntax: 2', 'unsupported source syntax'),
             ('## Fixture meanings {meanings: subject}', '## Fixture meanings {meanings: subject}\nProse before facts.\n```contract\nwho: "host"\n```', 'facts must precede'),
         ]
@@ -589,7 +588,6 @@ test: present(sample.status)
 ```contract
 syntax: 1
 artifact: "Shared model definition"
-part: "definitions"
 goldens: ["tests/fixtures/contract/compiled_profile.json"]
 checks: ["source_drift"]
 ```
@@ -1095,7 +1093,7 @@ effects: perform(ref("identity.procedures.refuse"), ref("demo.report"))
 
 
     def test_identity_opens_before_support_grades_and_derived_views(self):
-        body = minimal_surface().replace('part: "assessment"', 'part: "identity"', 1)
+        body = minimal_surface()
         rendered = self.model.render(self.load(body))
         self.assertTrue(rendered.startswith('# PolicyWitness contract\n\n'
             '<a id="contract-demo"></a>\n## Model control\n'))

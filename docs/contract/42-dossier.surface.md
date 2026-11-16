@@ -3,7 +3,6 @@
 ```contract
 syntax: 1
 artifact: "Specimen dossier"
-part: "assessment"
 goldens: ["tests/fixtures/contract/surfaces/dossier.json"]
 checks: ["unit", "witness_contract"]
 ```

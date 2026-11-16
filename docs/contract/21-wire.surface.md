@@ -3,7 +3,6 @@
 ```contract
 syntax: 1
 artifact: "Binary response primitives and validator record transport"
-part: "delivery"
 goldens: ["tests/fixtures/contract/surfaces/wire.json", "tests/fixtures/contract/response_shape.json"]
 checks: ["source_drift", "unit", "runner_unit"]
 ```

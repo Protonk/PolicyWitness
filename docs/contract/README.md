@@ -44,7 +44,6 @@ directly. Ordinary prose follows the fence.
 ```contract
 syntax: 1
 artifact: "Compiled-profile receipts"
-part: "report"
 goldens: ["tests/fixtures/contract/surfaces/profile.json"]
 checks: ["failure_boundaries"]
 ```
@@ -68,13 +67,12 @@ record absent from those imports, each field supplies `type`, and may
 supply `optional`, `json_null` and byte `projection`. Definitions, defaults,
 vocabularies and applicability remain in the same tree as their meanings.
 
-Root `part` places the surface in `identity`, `definitions`, `input`,
-`delivery`, `report`, `assessment`, `installation` or `version`. A subject
-may override `part`, allowing one identity surface to supply the opening
-identity, shared definitions and version operation. `goldens` names
-canonical shapes; `checks` names catalog suites. Strict validation requires
-populated surface contents, shapes and checks. Preview admits the empty
-staging skeleton.
+The [presentation map](presentation.json) places every surface introduction and
+whole subject directly beneath a surface. A subject's nested fields, rules,
+examples and owners travel together. The map is outside canonical public
+meaning; changing a destination alone changes no public payload. `goldens` names canonical shapes and `checks`
+names catalog suites. Strict validation requires populated contents, shapes
+and checks.
 
 ## Context and relationships
 

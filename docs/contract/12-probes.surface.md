@@ -3,7 +3,6 @@
 ```contract
 syntax: 1
 artifact: "Paired probes and attempted operations"
-part: "input"
 goldens: ["tests/fixtures/contract/surfaces/probes.json"]
 checks: ["failure_boundaries"]
 ```

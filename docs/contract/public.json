@@ -18,8 +18,7 @@
           {
             "context": {},
             "facts": {
-              "artifact": "The contract identity",
-              "part": "identity"
+              "artifact": "The contract identity"
             },
             "id": "identity",
             "kind": "surface",
@@ -120,9 +119,7 @@
           },
           {
             "context": {},
-            "facts": {
-              "part": "definitions"
-            },
+            "facts": {},
             "id": "identity.definitions",
             "kind": "subject",
             "prose": "",
@@ -760,7 +757,6 @@
             "context": {},
             "facts": {
               "as": "version_data",
-              "part": "version",
               "record": "VersionData"
             },
             "id": "identity.version",
@@ -1136,8 +1132,7 @@
           {
             "context": {},
             "facts": {
-              "artifact": "Saved specimens and runner selection",
-              "part": "input"
+              "artifact": "Saved specimens and runner selection"
             },
             "id": "request",
             "kind": "surface",
@@ -3544,8 +3539,7 @@
           {
             "context": {},
             "facts": {
-              "artifact": "Actor and phase evidence",
-              "part": "report"
+              "artifact": "Actor and phase evidence"
             },
             "id": "actor_evidence",
             "kind": "surface",
@@ -16552,8 +16546,7 @@
           {
             "context": {},
             "facts": {
-              "artifact": "Actors and phases",
-              "part": "input"
+              "artifact": "Actors and phases"
             },
             "id": "actors",
             "kind": "surface",
@@ -21975,8 +21968,7 @@
           {
             "context": {},
             "facts": {
-              "artifact": "Controller findings and assessments",
-              "part": "assessment"
+              "artifact": "Controller findings and assessments"
             },
             "id": "diagnostics",
             "kind": "surface",
@@ -22285,8 +22277,7 @@
           {
             "context": {},
             "facts": {
-              "artifact": "The controller envelope",
-              "part": "assessment"
+              "artifact": "The controller envelope"
             },
             "id": "envelope",
             "kind": "surface",
@@ -22925,8 +22916,7 @@
           {
             "context": {},
             "facts": {
-              "artifact": "Equipment and authority setup",
-              "part": "report"
+              "artifact": "Equipment and authority setup"
             },
             "id": "equipment",
             "kind": "surface",
@@ -24616,8 +24606,7 @@
           {
             "context": {},
             "facts": {
-              "artifact": "Extension actions and authority custody",
-              "part": "input"
+              "artifact": "Extension actions and authority custody"
             },
             "id": "extensions",
             "kind": "surface",
@@ -34564,8 +34553,7 @@
           {
             "context": {},
             "facts": {
-              "artifact": "The contract identity",
-              "part": "identity"
+              "artifact": "The contract identity"
             },
             "id": "identity",
             "kind": "surface",
@@ -34606,9 +34594,7 @@
           },
           {
             "context": {},
-            "facts": {
-              "part": "definitions"
-            },
+            "facts": {},
             "id": "identity.definitions",
             "kind": "subject",
             "prose": "",
@@ -34839,8 +34825,7 @@
           {
             "context": {},
             "facts": {
-              "artifact": "Process and operation observations",
-              "part": "report"
+              "artifact": "Process and operation observations"
             },
             "id": "lifecycle",
             "kind": "surface",
@@ -34970,8 +34955,7 @@
           {
             "context": {},
             "facts": {
-              "artifact": "Policy source, parameters and compilation",
-              "part": "input"
+              "artifact": "Policy source, parameters and compilation"
             },
             "id": "policy",
             "kind": "surface",
@@ -35320,8 +35304,7 @@
           {
             "context": {},
             "facts": {
-              "artifact": "Paired probes and attempted operations",
-              "part": "input"
+              "artifact": "Paired probes and attempted operations"
             },
             "id": "probes",
             "kind": "surface",
@@ -36549,8 +36532,7 @@
           {
             "context": {},
             "facts": {
-              "artifact": "Request refusals and retained evidence",
-              "part": "report"
+              "artifact": "Request refusals and retained evidence"
             },
             "id": "refusals",
             "kind": "surface",
@@ -37269,8 +37251,7 @@
           {
             "context": {},
             "facts": {
-              "artifact": "Policy source, parameters and compilation",
-              "part": "input"
+              "artifact": "Policy source, parameters and compilation"
             },
             "id": "policy",
             "kind": "surface",
@@ -37281,7 +37262,6 @@
             "context": {},
             "facts": {
               "as": "actor_check",
-              "part": "report",
               "record": "rust.ActorPolicyCheck"
             },
             "id": "policy.actor_check",
@@ -37432,7 +37412,6 @@
               "at": [
                 "helper_envelope.data"
               ],
-              "part": "report",
               "record": "rust.CheckData"
             },
             "id": "policy.check_data",
@@ -39181,7 +39160,6 @@
               "at": [
                 "helper_envelope.data.compile"
               ],
-              "part": "report",
               "record": "rust.CompileRecord"
             },
             "id": "policy.compile",
@@ -39436,7 +39414,6 @@
             "context": {},
             "facts": {
               "as": "fallback",
-              "part": "report",
               "record": "rust.PolicyCheckCapture"
             },
             "id": "policy.fallback",
@@ -41525,7 +41502,6 @@
             "context": {},
             "facts": {
               "as": "imports",
-              "part": "report",
               "record": "rust.ImportInventory"
             },
             "id": "policy.imports",
@@ -41892,8 +41868,7 @@
           {
             "context": {},
             "facts": {
-              "artifact": "Specimen dossier",
-              "part": "assessment"
+              "artifact": "Specimen dossier"
             },
             "id": "dossier",
             "kind": "surface",
@@ -42004,8 +41979,7 @@
           {
             "context": {},
             "facts": {
-              "artifact": "The contract identity",
-              "part": "identity"
+              "artifact": "The contract identity"
             },
             "id": "identity",
             "kind": "surface",
@@ -42014,9 +41988,7 @@
           },
           {
             "context": {},
-            "facts": {
-              "part": "definitions"
-            },
+            "facts": {},
             "id": "identity.definitions",
             "kind": "subject",
             "prose": "",
@@ -42078,8 +42050,7 @@
           {
             "context": {},
             "facts": {
-              "artifact": "Paired probes and attempted operations",
-              "part": "input"
+              "artifact": "Paired probes and attempted operations"
             },
             "id": "probes",
             "kind": "surface",
@@ -43309,8 +43280,7 @@
           {
             "context": {},
             "facts": {
-              "artifact": "Actor and phase evidence",
-              "part": "report"
+              "artifact": "Actor and phase evidence"
             },
             "id": "actor_evidence",
             "kind": "surface",
@@ -56317,8 +56287,7 @@
           {
             "context": {},
             "facts": {
-              "artifact": "Actors and phases",
-              "part": "input"
+              "artifact": "Actors and phases"
             },
             "id": "actors",
             "kind": "surface",
@@ -61740,8 +61709,7 @@
           {
             "context": {},
             "facts": {
-              "artifact": "Controller findings and assessments",
-              "part": "assessment"
+              "artifact": "Controller findings and assessments"
             },
             "id": "diagnostics",
             "kind": "surface",
@@ -62050,8 +62018,7 @@
           {
             "context": {},
             "facts": {
-              "artifact": "The controller envelope",
-              "part": "assessment"
+              "artifact": "The controller envelope"
             },
             "id": "envelope",
             "kind": "surface",
@@ -62690,8 +62657,7 @@
           {
             "context": {},
             "facts": {
-              "artifact": "Equipment and authority setup",
-              "part": "report"
+              "artifact": "Equipment and authority setup"
             },
             "id": "equipment",
             "kind": "surface",
@@ -64381,8 +64347,7 @@
           {
             "context": {},
             "facts": {
-              "artifact": "Extension actions and authority custody",
-              "part": "input"
+              "artifact": "Extension actions and authority custody"
             },
             "id": "extensions",
             "kind": "surface",
@@ -74329,8 +74294,7 @@
           {
             "context": {},
             "facts": {
-              "artifact": "The contract identity",
-              "part": "identity"
+              "artifact": "The contract identity"
             },
             "id": "identity",
             "kind": "surface",
@@ -74371,9 +74335,7 @@
           },
           {
             "context": {},
-            "facts": {
-              "part": "definitions"
-            },
+            "facts": {},
             "id": "identity.definitions",
             "kind": "subject",
             "prose": "",
@@ -74604,8 +74566,7 @@
           {
             "context": {},
             "facts": {
-              "artifact": "Process and operation observations",
-              "part": "report"
+              "artifact": "Process and operation observations"
             },
             "id": "lifecycle",
             "kind": "surface",
@@ -74735,8 +74696,7 @@
           {
             "context": {},
             "facts": {
-              "artifact": "Policy source, parameters and compilation",
-              "part": "input"
+              "artifact": "Policy source, parameters and compilation"
             },
             "id": "policy",
             "kind": "surface",
@@ -74979,8 +74939,7 @@
           {
             "context": {},
             "facts": {
-              "artifact": "Request refusals and retained evidence",
-              "part": "report"
+              "artifact": "Request refusals and retained evidence"
             },
             "id": "refusals",
             "kind": "surface",
@@ -75139,8 +75098,7 @@
           {
             "context": {},
             "facts": {
-              "artifact": "Saved specimens and runner selection",
-              "part": "input"
+              "artifact": "Saved specimens and runner selection"
             },
             "id": "request",
             "kind": "surface",
@@ -77281,8 +77239,7 @@
           {
             "context": {},
             "facts": {
-              "artifact": "Actors and phases",
-              "part": "input"
+              "artifact": "Actors and phases"
             },
             "id": "actors",
             "kind": "surface",
@@ -82706,8 +82663,7 @@
           {
             "context": {},
             "facts": {
-              "artifact": "Actor and phase evidence",
-              "part": "report"
+              "artifact": "Actor and phase evidence"
             },
             "id": "actor_evidence",
             "kind": "surface",
@@ -95714,8 +95670,7 @@
           {
             "context": {},
             "facts": {
-              "artifact": "Controller findings and assessments",
-              "part": "assessment"
+              "artifact": "Controller findings and assessments"
             },
             "id": "diagnostics",
             "kind": "surface",
@@ -96024,8 +95979,7 @@
           {
             "context": {},
             "facts": {
-              "artifact": "The controller envelope",
-              "part": "assessment"
+              "artifact": "The controller envelope"
             },
             "id": "envelope",
             "kind": "surface",
@@ -96664,8 +96618,7 @@
           {
             "context": {},
             "facts": {
-              "artifact": "Equipment and authority setup",
-              "part": "report"
+              "artifact": "Equipment and authority setup"
             },
             "id": "equipment",
             "kind": "surface",
@@ -98355,8 +98308,7 @@
           {
             "context": {},
             "facts": {
-              "artifact": "Extension actions and authority custody",
-              "part": "input"
+              "artifact": "Extension actions and authority custody"
             },
             "id": "extensions",
             "kind": "surface",
@@ -108303,8 +108255,7 @@
           {
             "context": {},
             "facts": {
-              "artifact": "The contract identity",
-              "part": "identity"
+              "artifact": "The contract identity"
             },
             "id": "identity",
             "kind": "surface",
@@ -108345,9 +108296,7 @@
           },
           {
             "context": {},
-            "facts": {
-              "part": "definitions"
-            },
+            "facts": {},
             "id": "identity.definitions",
             "kind": "subject",
             "prose": "",
@@ -108578,8 +108527,7 @@
           {
             "context": {},
             "facts": {
-              "artifact": "Process and operation observations",
-              "part": "report"
+              "artifact": "Process and operation observations"
             },
             "id": "lifecycle",
             "kind": "surface",
@@ -108709,8 +108657,7 @@
           {
             "context": {},
             "facts": {
-              "artifact": "Policy source, parameters and compilation",
-              "part": "input"
+              "artifact": "Policy source, parameters and compilation"
             },
             "id": "policy",
             "kind": "surface",
@@ -108953,8 +108900,7 @@
           {
             "context": {},
             "facts": {
-              "artifact": "Paired probes and attempted operations",
-              "part": "input"
+              "artifact": "Paired probes and attempted operations"
             },
             "id": "probes",
             "kind": "surface",
@@ -110182,8 +110128,7 @@
           {
             "context": {},
             "facts": {
-              "artifact": "Request refusals and retained evidence",
-              "part": "report"
+              "artifact": "Request refusals and retained evidence"
             },
             "id": "refusals",
             "kind": "surface",
@@ -110342,8 +110287,7 @@
           {
             "context": {},
             "facts": {
-              "artifact": "Saved specimens and runner selection",
-              "part": "input"
+              "artifact": "Saved specimens and runner selection"
             },
             "id": "request",
             "kind": "surface",
@@ -112484,8 +112428,7 @@
           {
             "context": {},
             "facts": {
-              "artifact": "Extension actions and authority custody",
-              "part": "input"
+              "artifact": "Extension actions and authority custody"
             },
             "id": "extensions",
             "kind": "surface",
@@ -112909,7 +112852,6 @@
             "context": {},
             "facts": {
               "as": "delivery",
-              "part": "report",
               "record": "PWRunnerDeliveryRecord"
             },
             "id": "extensions.delivery",
@@ -113047,7 +112989,6 @@
             "context": {},
             "facts": {
               "as": "event",
-              "part": "report",
               "record": "PWRunnerExtensionEvent"
             },
             "id": "extensions.event",
@@ -113589,7 +113530,6 @@
             "context": {},
             "facts": {
               "as": "handle",
-              "part": "report",
               "record": "PWRunnerHandleRecord"
             },
             "id": "extensions.handle",
@@ -123625,7 +123565,6 @@
             "context": {},
             "facts": {
               "as": "resources",
-              "part": "report",
               "record": "PWRunnerResourceTables"
             },
             "id": "extensions.resources",
@@ -123679,7 +123618,6 @@
             "context": {},
             "facts": {
               "as": "token",
-              "part": "report",
               "record": "PWRunnerTokenRecord"
             },
             "id": "extensions.token",
@@ -123789,7 +123727,6 @@
             "context": {},
             "facts": {
               "as": "transfer",
-              "part": "report",
               "record": "PWRunnerTransferRecord"
             },
             "id": "extensions.transfer",
@@ -125761,8 +125698,7 @@
           {
             "context": {},
             "facts": {
-              "artifact": "Actor and phase evidence",
-              "part": "report"
+              "artifact": "Actor and phase evidence"
             },
             "id": "actor_evidence",
             "kind": "surface",
@@ -138769,8 +138705,7 @@
           {
             "context": {},
             "facts": {
-              "artifact": "Actors and phases",
-              "part": "input"
+              "artifact": "Actors and phases"
             },
             "id": "actors",
             "kind": "surface",
@@ -144192,8 +144127,7 @@
           {
             "context": {},
             "facts": {
-              "artifact": "Controller findings and assessments",
-              "part": "assessment"
+              "artifact": "Controller findings and assessments"
             },
             "id": "diagnostics",
             "kind": "surface",
@@ -144502,8 +144436,7 @@
           {
             "context": {},
             "facts": {
-              "artifact": "The controller envelope",
-              "part": "assessment"
+              "artifact": "The controller envelope"
             },
             "id": "envelope",
             "kind": "surface",
@@ -145142,8 +145075,7 @@
           {
             "context": {},
             "facts": {
-              "artifact": "Equipment and authority setup",
-              "part": "report"
+              "artifact": "Equipment and authority setup"
             },
             "id": "equipment",
             "kind": "surface",
@@ -148204,8 +148136,7 @@
           {
             "context": {},
             "facts": {
-              "artifact": "The contract identity",
-              "part": "identity"
+              "artifact": "The contract identity"
             },
             "id": "identity",
             "kind": "surface",
@@ -148246,9 +148177,7 @@
           },
           {
             "context": {},
-            "facts": {
-              "part": "definitions"
-            },
+            "facts": {},
             "id": "identity.definitions",
             "kind": "subject",
             "prose": "",
@@ -148479,8 +148408,7 @@
           {
             "context": {},
             "facts": {
-              "artifact": "Process and operation observations",
-              "part": "report"
+              "artifact": "Process and operation observations"
             },
             "id": "lifecycle",
             "kind": "surface",
@@ -148794,8 +148722,7 @@
           {
             "context": {},
             "facts": {
-              "artifact": "Policy source, parameters and compilation",
-              "part": "input"
+              "artifact": "Policy source, parameters and compilation"
             },
             "id": "policy",
             "kind": "surface",
@@ -149038,8 +148965,7 @@
           {
             "context": {},
             "facts": {
-              "artifact": "Paired probes and attempted operations",
-              "part": "input"
+              "artifact": "Paired probes and attempted operations"
             },
             "id": "probes",
             "kind": "surface",
@@ -150267,8 +150193,7 @@
           {
             "context": {},
             "facts": {
-              "artifact": "Request refusals and retained evidence",
-              "part": "report"
+              "artifact": "Request refusals and retained evidence"
             },
             "id": "refusals",
             "kind": "surface",
@@ -150427,8 +150352,7 @@
           {
             "context": {},
             "facts": {
-              "artifact": "Saved specimens and runner selection",
-              "part": "input"
+              "artifact": "Saved specimens and runner selection"
             },
             "id": "request",
             "kind": "surface",
@@ -152570,8 +152494,7 @@
           {
             "context": {},
             "facts": {
-              "artifact": "Request refusals and retained evidence",
-              "part": "report"
+              "artifact": "Request refusals and retained evidence"
             },
             "id": "refusals",
             "kind": "surface",
@@ -153722,8 +153645,7 @@
           {
             "context": {},
             "facts": {
-              "artifact": "Actor and phase evidence",
-              "part": "report"
+              "artifact": "Actor and phase evidence"
             },
             "id": "actor_evidence",
             "kind": "surface",
@@ -166730,8 +166652,7 @@
           {
             "context": {},
             "facts": {
-              "artifact": "Actors and phases",
-              "part": "input"
+              "artifact": "Actors and phases"
             },
             "id": "actors",
             "kind": "surface",
@@ -172153,8 +172074,7 @@
           {
             "context": {},
             "facts": {
-              "artifact": "Controller findings and assessments",
-              "part": "assessment"
+              "artifact": "Controller findings and assessments"
             },
             "id": "diagnostics",
             "kind": "surface",
@@ -172463,8 +172383,7 @@
           {
             "context": {},
             "facts": {
-              "artifact": "The controller envelope",
-              "part": "assessment"
+              "artifact": "The controller envelope"
             },
             "id": "envelope",
             "kind": "surface",
@@ -173103,8 +173022,7 @@
           {
             "context": {},
             "facts": {
-              "artifact": "Equipment and authority setup",
-              "part": "report"
+              "artifact": "Equipment and authority setup"
             },
             "id": "equipment",
             "kind": "surface",
@@ -174794,8 +174712,7 @@
           {
             "context": {},
             "facts": {
-              "artifact": "Extension actions and authority custody",
-              "part": "input"
+              "artifact": "Extension actions and authority custody"
             },
             "id": "extensions",
             "kind": "surface",
@@ -184742,8 +184659,7 @@
           {
             "context": {},
             "facts": {
-              "artifact": "The contract identity",
-              "part": "identity"
+              "artifact": "The contract identity"
             },
             "id": "identity",
             "kind": "surface",
@@ -184784,9 +184700,7 @@
           },
           {
             "context": {},
-            "facts": {
-              "part": "definitions"
-            },
+            "facts": {},
             "id": "identity.definitions",
             "kind": "subject",
             "prose": "",
@@ -185017,8 +184931,7 @@
           {
             "context": {},
             "facts": {
-              "artifact": "Process and operation observations",
-              "part": "report"
+              "artifact": "Process and operation observations"
             },
             "id": "lifecycle",
             "kind": "surface",
@@ -185148,8 +185061,7 @@
           {
             "context": {},
             "facts": {
-              "artifact": "Policy source, parameters and compilation",
-              "part": "input"
+              "artifact": "Policy source, parameters and compilation"
             },
             "id": "policy",
             "kind": "surface",
@@ -185498,8 +185410,7 @@
           {
             "context": {},
             "facts": {
-              "artifact": "Paired probes and attempted operations",
-              "part": "input"
+              "artifact": "Paired probes and attempted operations"
             },
             "id": "probes",
             "kind": "surface",
@@ -186727,8 +186638,7 @@
           {
             "context": {},
             "facts": {
-              "artifact": "Saved specimens and runner selection",
-              "part": "input"
+              "artifact": "Saved specimens and runner selection"
             },
             "id": "request",
             "kind": "surface",
@@ -189146,8 +189056,7 @@
           {
             "context": {},
             "facts": {
-              "artifact": "Reservation, invocation and client capture",
-              "part": "delivery"
+              "artifact": "Reservation, invocation and client capture"
             },
             "id": "transport",
             "kind": "surface",
@@ -192952,8 +192861,7 @@
           {
             "context": {},
             "facts": {
-              "artifact": "The contract identity",
-              "part": "identity"
+              "artifact": "The contract identity"
             },
             "id": "identity",
             "kind": "surface",
@@ -192962,9 +192870,7 @@
           },
           {
             "context": {},
-            "facts": {
-              "part": "definitions"
-            },
+            "facts": {},
             "id": "identity.definitions",
             "kind": "subject",
             "prose": "",
@@ -193036,8 +192942,7 @@
           {
             "context": {},
             "facts": {
-              "artifact": "Binary response primitives and validator record transport",
-              "part": "delivery"
+              "artifact": "Binary response primitives and validator record transport"
             },
             "id": "wire",
             "kind": "surface",
@@ -194432,8 +194337,7 @@
           {
             "context": {},
             "facts": {
-              "artifact": "The contract identity",
-              "part": "identity"
+              "artifact": "The contract identity"
             },
             "id": "identity",
             "kind": "surface",
@@ -194442,9 +194346,7 @@
           },
           {
             "context": {},
-            "facts": {
-              "part": "definitions"
-            },
+            "facts": {},
             "id": "identity.definitions",
             "kind": "subject",
             "prose": "",
@@ -194520,8 +194422,7 @@
           {
             "context": {},
             "facts": {
-              "artifact": "Process and operation observations",
-              "part": "report"
+              "artifact": "Process and operation observations"
             },
             "id": "lifecycle",
             "kind": "surface",
@@ -197740,7 +197641,6 @@
               "entry": [
                 "xpc_execute"
               ],
-              "part": "report",
               "recipient": [
                 "controller",
                 "xpc_caller"
@@ -198119,7 +198019,6 @@
               "entry": [
                 "xpc_execute"
               ],
-              "part": "report",
               "recipient": [
                 "controller",
                 "xpc_caller"
@@ -200118,8 +200017,7 @@
           {
             "context": {},
             "facts": {
-              "artifact": "Actor and phase evidence",
-              "part": "report"
+              "artifact": "Actor and phase evidence"
             },
             "id": "actor_evidence",
             "kind": "surface",
@@ -213975,8 +213873,7 @@
           {
             "context": {},
             "facts": {
-              "artifact": "Actors and phases",
-              "part": "input"
+              "artifact": "Actors and phases"
             },
             "id": "actors",
             "kind": "surface",
@@ -219398,8 +219295,7 @@
           {
             "context": {},
             "facts": {
-              "artifact": "Controller findings and assessments",
-              "part": "assessment"
+              "artifact": "Controller findings and assessments"
             },
             "id": "diagnostics",
             "kind": "surface",
@@ -219721,8 +219617,7 @@
           {
             "context": {},
             "facts": {
-              "artifact": "The controller envelope",
-              "part": "assessment"
+              "artifact": "The controller envelope"
             },
             "id": "envelope",
             "kind": "surface",
@@ -220361,8 +220256,7 @@
           {
             "context": {},
             "facts": {
-              "artifact": "Equipment and authority setup",
-              "part": "report"
+              "artifact": "Equipment and authority setup"
             },
             "id": "equipment",
             "kind": "surface",
@@ -226803,8 +226697,7 @@
           {
             "context": {},
             "facts": {
-              "artifact": "Extension actions and authority custody",
-              "part": "input"
+              "artifact": "Extension actions and authority custody"
             },
             "id": "extensions",
             "kind": "surface",
@@ -226854,7 +226747,6 @@
             "context": {},
             "facts": {
               "as": "delivery",
-              "part": "report",
               "record": "PWRunnerDeliveryRecord"
             },
             "id": "extensions.delivery",
@@ -226992,7 +226884,6 @@
             "context": {},
             "facts": {
               "as": "event",
-              "part": "report",
               "record": "PWRunnerExtensionEvent"
             },
             "id": "extensions.event",
@@ -227510,7 +227401,6 @@
             "context": {},
             "facts": {
               "as": "handle",
-              "part": "report",
               "record": "PWRunnerHandleRecord"
             },
             "id": "extensions.handle",
@@ -237546,7 +237436,6 @@
             "context": {},
             "facts": {
               "as": "resources",
-              "part": "report",
               "record": "PWRunnerResourceTables"
             },
             "id": "extensions.resources",
@@ -237600,7 +237489,6 @@
             "context": {},
             "facts": {
               "as": "token",
-              "part": "report",
               "record": "PWRunnerTokenRecord"
             },
             "id": "extensions.token",
@@ -237710,7 +237598,6 @@
             "context": {},
             "facts": {
               "as": "transfer",
-              "part": "report",
               "record": "PWRunnerTransferRecord"
             },
             "id": "extensions.transfer",
@@ -239680,8 +239567,7 @@
           {
             "context": {},
             "facts": {
-              "artifact": "The contract identity",
-              "part": "identity"
+              "artifact": "The contract identity"
             },
             "id": "identity",
             "kind": "surface",
@@ -239752,9 +239638,7 @@
           },
           {
             "context": {},
-            "facts": {
-              "part": "definitions"
-            },
+            "facts": {},
             "id": "identity.definitions",
             "kind": "subject",
             "prose": "",
@@ -240062,8 +239946,7 @@
           {
             "context": {},
             "facts": {
-              "artifact": "Process and operation observations",
-              "part": "report"
+              "artifact": "Process and operation observations"
             },
             "id": "lifecycle",
             "kind": "surface",
@@ -253903,8 +253786,7 @@
           {
             "context": {},
             "facts": {
-              "artifact": "Policy source, parameters and compilation",
-              "part": "input"
+              "artifact": "Policy source, parameters and compilation"
             },
             "id": "policy",
             "kind": "surface",
@@ -254147,8 +254029,7 @@
           {
             "context": {},
             "facts": {
-              "artifact": "Paired probes and attempted operations",
-              "part": "input"
+              "artifact": "Paired probes and attempted operations"
             },
             "id": "probes",
             "kind": "surface",
@@ -255396,7 +255277,6 @@
                 "runner_verify",
                 "direct_xpc"
               ],
-              "part": "report",
               "recipient": [
                 "controller",
                 "xpc_caller",
@@ -258664,8 +258544,7 @@
           {
             "context": {},
             "facts": {
-              "artifact": "Request refusals and retained evidence",
-              "part": "report"
+              "artifact": "Request refusals and retained evidence"
             },
             "id": "refusals",
             "kind": "surface",
@@ -259122,8 +259001,7 @@
           {
             "context": {},
             "facts": {
-              "artifact": "Saved specimens and runner selection",
-              "part": "input"
+              "artifact": "Saved specimens and runner selection"
             },
             "id": "request",
             "kind": "surface",
@@ -261270,7 +261148,6 @@
               "entry": [
                 "xpc_execute"
               ],
-              "part": "report",
               "recipient": [
                 "controller",
                 "xpc_caller"
@@ -270055,7 +269932,6 @@
               "entry": [
                 "xpc_execute"
               ],
-              "part": "report",
               "recipient": [
                 "controller",
                 "xpc_caller"
@@ -293682,8 +293558,7 @@
           {
             "context": {},
             "facts": {
-              "artifact": "The contract identity",
-              "part": "identity"
+              "artifact": "The contract identity"
             },
             "id": "identity",
             "kind": "surface",
@@ -293692,9 +293567,7 @@
           },
           {
             "context": {},
-            "facts": {
-              "part": "definitions"
-            },
+            "facts": {},
             "id": "identity.definitions",
             "kind": "subject",
             "prose": "",
@@ -293723,8 +293596,7 @@
           {
             "context": {},
             "facts": {
-              "artifact": "Process and operation observations",
-              "part": "report"
+              "artifact": "Process and operation observations"
             },
             "id": "lifecycle",
             "kind": "surface",
@@ -294411,8 +294283,7 @@
           {
             "context": {},
             "facts": {
-              "artifact": "Paired probes and attempted operations",
-              "part": "input"
+              "artifact": "Paired probes and attempted operations"
             },
             "id": "probes",
             "kind": "surface",
@@ -294486,8 +294357,7 @@
           {
             "context": {},
             "facts": {
-              "artifact": "Process and operation observations",
-              "part": "report"
+              "artifact": "Process and operation observations"
             },
             "id": "lifecycle",
             "kind": "surface",
@@ -308329,8 +308199,7 @@
           {
             "context": {},
             "facts": {
-              "artifact": "The contract identity",
-              "part": "identity"
+              "artifact": "The contract identity"
             },
             "id": "identity",
             "kind": "surface",
@@ -308339,9 +308208,7 @@
           },
           {
             "context": {},
-            "facts": {
-              "part": "definitions"
-            },
+            "facts": {},
             "id": "identity.definitions",
             "kind": "subject",
             "prose": "",
@@ -308370,8 +308237,7 @@
           {
             "context": {},
             "facts": {
-              "artifact": "Paired probes and attempted operations",
-              "part": "input"
+              "artifact": "Paired probes and attempted operations"
             },
             "id": "probes",
             "kind": "surface",
@@ -308450,7 +308316,6 @@
               "entry": [
                 "xpc_execute"
               ],
-              "part": "report",
               "recipient": [
                 "controller",
                 "xpc_caller"
@@ -308810,8 +308675,7 @@
           {
             "context": {},
             "facts": {
-              "artifact": "Actor and phase evidence",
-              "part": "report"
+              "artifact": "Actor and phase evidence"
             },
             "id": "actor_evidence",
             "kind": "surface",
@@ -322687,8 +322551,7 @@
           {
             "context": {},
             "facts": {
-              "artifact": "Controller findings and assessments",
-              "part": "assessment"
+              "artifact": "Controller findings and assessments"
             },
             "id": "diagnostics",
             "kind": "surface",
@@ -323010,8 +322873,7 @@
           {
             "context": {},
             "facts": {
-              "artifact": "The controller envelope",
-              "part": "assessment"
+              "artifact": "The controller envelope"
             },
             "id": "envelope",
             "kind": "surface",
@@ -323650,8 +323512,7 @@
           {
             "context": {},
             "facts": {
-              "artifact": "Equipment and authority setup",
-              "part": "report"
+              "artifact": "Equipment and authority setup"
             },
             "id": "equipment",
             "kind": "surface",
@@ -324431,8 +324292,7 @@
           {
             "context": {},
             "facts": {
-              "artifact": "The contract identity",
-              "part": "identity"
+              "artifact": "The contract identity"
             },
             "id": "identity",
             "kind": "surface",
@@ -324503,9 +324363,7 @@
           },
           {
             "context": {},
-            "facts": {
-              "part": "definitions"
-            },
+            "facts": {},
             "id": "identity.definitions",
             "kind": "subject",
             "prose": "",
@@ -324619,8 +324477,7 @@
           {
             "context": {},
             "facts": {
-              "artifact": "Process and operation observations",
-              "part": "report"
+              "artifact": "Process and operation observations"
             },
             "id": "lifecycle",
             "kind": "surface",
@@ -337922,7 +337779,6 @@
                 "runner_verify",
                 "direct_xpc"
               ],
-              "part": "report",
               "recipient": [
                 "controller",
                 "xpc_caller",
@@ -341209,7 +341065,6 @@
               "entry": [
                 "xpc_execute"
               ],
-              "part": "report",
               "recipient": [
                 "controller",
                 "xpc_caller"
@@ -342078,7 +341933,6 @@
               "entry": [
                 "xpc_execute"
               ],
-              "part": "report",
               "recipient": [
                 "controller",
                 "xpc_caller"
@@ -342638,8 +342492,7 @@
           {
             "context": {},
             "facts": {
-              "artifact": "Equipment and authority setup",
-              "part": "report"
+              "artifact": "Equipment and authority setup"
             },
             "id": "equipment",
             "kind": "surface",
@@ -349295,8 +349148,7 @@
           {
             "context": {},
             "facts": {
-              "artifact": "The contract identity",
-              "part": "identity"
+              "artifact": "The contract identity"
             },
             "id": "identity",
             "kind": "surface",
@@ -349305,9 +349157,7 @@
           },
           {
             "context": {},
-            "facts": {
-              "part": "definitions"
-            },
+            "facts": {},
             "id": "identity.definitions",
             "kind": "subject",
             "prose": "",
@@ -349422,7 +349272,6 @@
                 "runner_verify",
                 "direct_xpc"
               ],
-              "part": "report",
               "recipient": [
                 "controller",
                 "xpc_caller",
@@ -352692,8 +352541,7 @@
           {
             "context": {},
             "facts": {
-              "artifact": "The contract identity",
-              "part": "identity"
+              "artifact": "The contract identity"
             },
             "id": "identity",
             "kind": "surface",
@@ -352702,9 +352550,7 @@
           },
           {
             "context": {},
-            "facts": {
-              "part": "definitions"
-            },
+            "facts": {},
             "id": "identity.definitions",
             "kind": "subject",
             "prose": "",
@@ -352746,8 +352592,7 @@
           {
             "context": {},
             "facts": {
-              "artifact": "The controller envelope",
-              "part": "assessment"
+              "artifact": "The controller envelope"
             },
             "id": "envelope",
             "kind": "surface",
@@ -354231,8 +354076,7 @@
           {
             "context": {},
             "facts": {
-              "artifact": "Actor and phase evidence",
-              "part": "report"
+              "artifact": "Actor and phase evidence"
             },
             "id": "actor_evidence",
             "kind": "surface",
@@ -368088,8 +367932,7 @@
           {
             "context": {},
             "facts": {
-              "artifact": "Actors and phases",
-              "part": "input"
+              "artifact": "Actors and phases"
             },
             "id": "actors",
             "kind": "surface",
@@ -373511,8 +373354,7 @@
           {
             "context": {},
             "facts": {
-              "artifact": "Controller findings and assessments",
-              "part": "assessment"
+              "artifact": "Controller findings and assessments"
             },
             "id": "diagnostics",
             "kind": "surface",
@@ -408595,8 +408437,7 @@
           {
             "context": {},
             "facts": {
-              "artifact": "Specimen dossier",
-              "part": "assessment"
+              "artifact": "Specimen dossier"
             },
             "id": "dossier",
             "kind": "surface",
@@ -411101,8 +410942,7 @@
           {
             "context": {},
             "facts": {
-              "artifact": "Equipment and authority setup",
-              "part": "report"
+              "artifact": "Equipment and authority setup"
             },
             "id": "equipment",
             "kind": "surface",
@@ -417543,8 +417383,7 @@
           {
             "context": {},
             "facts": {
-              "artifact": "Extension actions and authority custody",
-              "part": "input"
+              "artifact": "Extension actions and authority custody"
             },
             "id": "extensions",
             "kind": "surface",
@@ -417594,7 +417433,6 @@
             "context": {},
             "facts": {
               "as": "delivery",
-              "part": "report",
               "record": "PWRunnerDeliveryRecord"
             },
             "id": "extensions.delivery",
@@ -417732,7 +417570,6 @@
             "context": {},
             "facts": {
               "as": "event",
-              "part": "report",
               "record": "PWRunnerExtensionEvent"
             },
             "id": "extensions.event",
@@ -418250,7 +418087,6 @@
             "context": {},
             "facts": {
               "as": "handle",
-              "part": "report",
               "record": "PWRunnerHandleRecord"
             },
             "id": "extensions.handle",
@@ -428286,7 +428122,6 @@
             "context": {},
             "facts": {
               "as": "resources",
-              "part": "report",
               "record": "PWRunnerResourceTables"
             },
             "id": "extensions.resources",
@@ -428340,7 +428175,6 @@
             "context": {},
             "facts": {
               "as": "token",
-              "part": "report",
               "record": "PWRunnerTokenRecord"
             },
             "id": "extensions.token",
@@ -428450,7 +428284,6 @@
             "context": {},
             "facts": {
               "as": "transfer",
-              "part": "report",
               "record": "PWRunnerTransferRecord"
             },
             "id": "extensions.transfer",
@@ -430420,8 +430253,7 @@
           {
             "context": {},
             "facts": {
-              "artifact": "The contract identity",
-              "part": "identity"
+              "artifact": "The contract identity"
             },
             "id": "identity",
             "kind": "surface",
@@ -430522,9 +430354,7 @@
           },
           {
             "context": {},
-            "facts": {
-              "part": "definitions"
-            },
+            "facts": {},
             "id": "identity.definitions",
             "kind": "subject",
             "prose": "",
@@ -430842,8 +430672,7 @@
           {
             "context": {},
             "facts": {
-              "artifact": "Managing runners",
-              "part": "installation"
+              "artifact": "Managing runners"
             },
             "id": "installation",
             "kind": "surface",
@@ -431012,8 +430841,7 @@
           {
             "context": {},
             "facts": {
-              "artifact": "Process and operation observations",
-              "part": "report"
+              "artifact": "Process and operation observations"
             },
             "id": "lifecycle",
             "kind": "surface",
@@ -444853,8 +444681,7 @@
           {
             "context": {},
             "facts": {
-              "artifact": "Policy source, parameters and compilation",
-              "part": "input"
+              "artifact": "Policy source, parameters and compilation"
             },
             "id": "policy",
             "kind": "surface",
@@ -444865,7 +444692,6 @@
             "context": {},
             "facts": {
               "as": "actor_check",
-              "part": "report",
               "record": "rust.ActorPolicyCheck"
             },
             "id": "policy.actor_check",
@@ -444910,7 +444736,6 @@
               "at": [
                 "helper_envelope.data"
               ],
-              "part": "report",
               "record": "rust.CheckData"
             },
             "id": "policy.check_data",
@@ -446659,7 +446484,6 @@
               "at": [
                 "helper_envelope.data.compile"
               ],
-              "part": "report",
               "record": "rust.CompileRecord"
             },
             "id": "policy.compile",
@@ -446914,7 +446738,6 @@
             "context": {},
             "facts": {
               "as": "fallback",
-              "part": "report",
               "record": "rust.PolicyCheckCapture"
             },
             "id": "policy.fallback",
@@ -447191,7 +447014,6 @@
             "context": {},
             "facts": {
               "as": "imports",
-              "part": "report",
               "record": "rust.ImportInventory"
             },
             "id": "policy.imports",
@@ -447556,8 +447378,7 @@
           {
             "context": {},
             "facts": {
-              "artifact": "Paired probes and attempted operations",
-              "part": "input"
+              "artifact": "Paired probes and attempted operations"
             },
             "id": "probes",
             "kind": "surface",
@@ -448805,7 +448626,6 @@
                 "runner_verify",
                 "direct_xpc"
               ],
-              "part": "report",
               "recipient": [
                 "controller",
                 "xpc_caller",
@@ -452073,8 +451893,7 @@
           {
             "context": {},
             "facts": {
-              "artifact": "Request refusals and retained evidence",
-              "part": "report"
+              "artifact": "Request refusals and retained evidence"
             },
             "id": "refusals",
             "kind": "surface",
@@ -452585,7 +452404,6 @@
               "entry": [
                 "xpc_execute"
               ],
-              "part": "report",
               "recipient": [
                 "controller",
                 "xpc_caller"
@@ -454582,8 +454400,7 @@
           {
             "context": {},
             "facts": {
-              "artifact": "Saved specimens and runner selection",
-              "part": "input"
+              "artifact": "Saved specimens and runner selection"
             },
             "id": "request",
             "kind": "surface",
@@ -456730,7 +456547,6 @@
               "entry": [
                 "xpc_execute"
               ],
-              "part": "report",
               "recipient": [
                 "controller",
                 "xpc_caller"
@@ -465482,8 +465298,7 @@
           {
             "context": {},
             "facts": {
-              "artifact": "Reservation, invocation and client capture",
-              "part": "delivery"
+              "artifact": "Reservation, invocation and client capture"
             },
             "id": "transport",
             "kind": "surface",
@@ -466786,8 +466601,7 @@
           {
             "context": {},
             "facts": {
-              "artifact": "Controller findings and assessments",
-              "part": "assessment"
+              "artifact": "Controller findings and assessments"
             },
             "id": "diagnostics",
             "kind": "surface",
@@ -501872,8 +501686,7 @@
           {
             "context": {},
             "facts": {
-              "artifact": "Actor and phase evidence",
-              "part": "report"
+              "artifact": "Actor and phase evidence"
             },
             "id": "actor_evidence",
             "kind": "surface",
@@ -501908,8 +501721,7 @@
           {
             "context": {},
             "facts": {
-              "artifact": "The controller envelope",
-              "part": "assessment"
+              "artifact": "The controller envelope"
             },
             "id": "envelope",
             "kind": "surface",
@@ -502548,8 +502360,7 @@
           {
             "context": {},
             "facts": {
-              "artifact": "The contract identity",
-              "part": "identity"
+              "artifact": "The contract identity"
             },
             "id": "identity",
             "kind": "surface",
@@ -502620,9 +502431,7 @@
           },
           {
             "context": {},
-            "facts": {
-              "part": "definitions"
-            },
+            "facts": {},
             "id": "identity.definitions",
             "kind": "subject",
             "prose": "",
@@ -502720,7 +502529,6 @@
               "entry": [
                 "xpc_execute"
               ],
-              "part": "report",
               "recipient": [
                 "controller",
                 "xpc_caller"
@@ -503583,8 +503391,7 @@
           {
             "context": {},
             "facts": {
-              "artifact": "Specimen dossier",
-              "part": "assessment"
+              "artifact": "Specimen dossier"
             },
             "id": "dossier",
             "kind": "surface",
@@ -506242,8 +506049,7 @@
           {
             "context": {},
             "facts": {
-              "artifact": "The contract identity",
-              "part": "identity"
+              "artifact": "The contract identity"
             },
             "id": "identity",
             "kind": "surface",
@@ -506252,9 +506058,7 @@
           },
           {
             "context": {},
-            "facts": {
-              "part": "definitions"
-            },
+            "facts": {},
             "id": "identity.definitions",
             "kind": "subject",
             "prose": "",
@@ -506303,8 +506107,7 @@
           {
             "context": {},
             "facts": {
-              "artifact": "Managing runners",
-              "part": "installation"
+              "artifact": "Managing runners"
             },
             "id": "installation",
             "kind": "surface",
@@ -506486,8 +506289,7 @@
           {
             "context": {},
             "facts": {
-              "artifact": "Managing runners",
-              "part": "installation"
+              "artifact": "Managing runners"
             },
             "id": "installation",
             "kind": "surface",
@@ -511296,8 +511098,7 @@
           {
             "context": {},
             "facts": {
-              "artifact": "Actor and phase evidence",
-              "part": "report"
+              "artifact": "Actor and phase evidence"
             },
             "id": "actor_evidence",
             "kind": "surface",
@@ -525153,8 +524954,7 @@
           {
             "context": {},
             "facts": {
-              "artifact": "Actors and phases",
-              "part": "input"
+              "artifact": "Actors and phases"
             },
             "id": "actors",
             "kind": "surface",
@@ -530576,8 +530376,7 @@
           {
             "context": {},
             "facts": {
-              "artifact": "Controller findings and assessments",
-              "part": "assessment"
+              "artifact": "Controller findings and assessments"
             },
             "id": "diagnostics",
             "kind": "surface",
@@ -543503,8 +543302,7 @@
           {
             "context": {},
             "facts": {
-              "artifact": "The controller envelope",
-              "part": "assessment"
+              "artifact": "The controller envelope"
             },
             "id": "envelope",
             "kind": "surface",
@@ -544143,8 +543941,7 @@
           {
             "context": {},
             "facts": {
-              "artifact": "Equipment and authority setup",
-              "part": "report"
+              "artifact": "Equipment and authority setup"
             },
             "id": "equipment",
             "kind": "surface",
@@ -550585,8 +550382,7 @@
           {
             "context": {},
             "facts": {
-              "artifact": "Extension actions and authority custody",
-              "part": "input"
+              "artifact": "Extension actions and authority custody"
             },
             "id": "extensions",
             "kind": "surface",
@@ -550636,7 +550432,6 @@
             "context": {},
             "facts": {
               "as": "delivery",
-              "part": "report",
               "record": "PWRunnerDeliveryRecord"
             },
             "id": "extensions.delivery",
@@ -550774,7 +550569,6 @@
             "context": {},
             "facts": {
               "as": "event",
-              "part": "report",
               "record": "PWRunnerExtensionEvent"
             },
             "id": "extensions.event",
@@ -551292,7 +551086,6 @@
             "context": {},
             "facts": {
               "as": "handle",
-              "part": "report",
               "record": "PWRunnerHandleRecord"
             },
             "id": "extensions.handle",
@@ -561328,7 +561121,6 @@
             "context": {},
             "facts": {
               "as": "resources",
-              "part": "report",
               "record": "PWRunnerResourceTables"
             },
             "id": "extensions.resources",
@@ -561382,7 +561174,6 @@
             "context": {},
             "facts": {
               "as": "token",
-              "part": "report",
               "record": "PWRunnerTokenRecord"
             },
             "id": "extensions.token",
@@ -561492,7 +561283,6 @@
             "context": {},
             "facts": {
               "as": "transfer",
-              "part": "report",
               "record": "PWRunnerTransferRecord"
             },
             "id": "extensions.transfer",
@@ -563462,8 +563252,7 @@
           {
             "context": {},
             "facts": {
-              "artifact": "The contract identity",
-              "part": "identity"
+              "artifact": "The contract identity"
             },
             "id": "identity",
             "kind": "surface",
@@ -563534,9 +563323,7 @@
           },
           {
             "context": {},
-            "facts": {
-              "part": "definitions"
-            },
+            "facts": {},
             "id": "identity.definitions",
             "kind": "subject",
             "prose": "",
@@ -563854,8 +563641,7 @@
           {
             "context": {},
             "facts": {
-              "artifact": "Process and operation observations",
-              "part": "report"
+              "artifact": "Process and operation observations"
             },
             "id": "lifecycle",
             "kind": "surface",
@@ -577695,8 +577481,7 @@
           {
             "context": {},
             "facts": {
-              "artifact": "Policy source, parameters and compilation",
-              "part": "input"
+              "artifact": "Policy source, parameters and compilation"
             },
             "id": "policy",
             "kind": "surface",
@@ -577939,8 +577724,7 @@
           {
             "context": {},
             "facts": {
-              "artifact": "Paired probes and attempted operations",
-              "part": "input"
+              "artifact": "Paired probes and attempted operations"
             },
             "id": "probes",
             "kind": "surface",
@@ -579188,7 +578972,6 @@
                 "runner_verify",
                 "direct_xpc"
               ],
-              "part": "report",
               "recipient": [
                 "controller",
                 "xpc_caller",
@@ -582456,8 +582239,7 @@
           {
             "context": {},
             "facts": {
-              "artifact": "Request refusals and retained evidence",
-              "part": "report"
+              "artifact": "Request refusals and retained evidence"
             },
             "id": "refusals",
             "kind": "surface",
@@ -582933,7 +582715,6 @@
               "entry": [
                 "xpc_execute"
               ],
-              "part": "report",
               "recipient": [
                 "controller",
                 "xpc_caller"
@@ -584930,8 +584711,7 @@
           {
             "context": {},
             "facts": {
-              "artifact": "Saved specimens and runner selection",
-              "part": "input"
+              "artifact": "Saved specimens and runner selection"
             },
             "id": "request",
             "kind": "surface",
@@ -587078,7 +586858,6 @@
               "entry": [
                 "xpc_execute"
               ],
-              "part": "report",
               "recipient": [
                 "controller",
                 "xpc_caller"
@@ -595830,8 +595609,7 @@
           {
             "context": {},
             "facts": {
-              "artifact": "Reservation, invocation and client capture",
-              "part": "delivery"
+              "artifact": "Reservation, invocation and client capture"
             },
             "id": "transport",
             "kind": "surface",

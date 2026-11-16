@@ -3,7 +3,6 @@
 ```contract
 syntax: 1
 artifact: "Equipment and authority setup"
-part: "report"
 goldens: ["tests/fixtures/contract/surfaces/equipment.json"]
 checks: ["runner_unit", "runner_byoxpc"]
 ```

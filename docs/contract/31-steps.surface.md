@@ -3,7 +3,6 @@
 ```contract
 syntax: 1
 artifact: "Predictions, attempts and comparison"
-part: "report"
 goldens: ["tests/fixtures/contract/surfaces/steps.json", "tests/fixtures/comparison/matrix.json"]
 checks: ["runner_unit", "failure_boundaries", "witness_contract"]
 who: ["identity.definitions.host"]

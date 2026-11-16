@@ -3,7 +3,6 @@
 ```contract
 syntax: 1
 artifact: "Saved specimens and runner selection"
-part: "input"
 goldens: ["tests/fixtures/contract/surfaces/request.json", "tests/fixtures/request_contract/examples.json"]
 checks: ["failure_boundaries"]
 ```

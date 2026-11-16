@@ -949,3 +949,14 @@ removed. All six constructed history controls passed; the new presentation
 controls still need a clean execution. This run is local, gitignored evidence.
 Final integrated verification remains step 9. Next action: retire `part` with
 its exact-removal proof, then finish protocol consolidation and navigation.
+
+
+Step 3 complete: the dedicated retirement removes 32 authored `part` facts and
+the parser/renderer fact support. The
+[exact-removal proof](records/documentation-trace/part-retirement-proof.json)
+compares local and shared payload nodes to placement commit `2500d59e`: its 203
+serialized occurrences are the only payload differences. Shapes, stamp contents,
+free counts, guide bytes, interface artifacts and build identities remain equal.
+Current authoring controls now require `part` to be refused as unknown; released
+snapshot readers remain independent of authoring syntax. Next: the two named
+public-text corrections and final tour/navigation integration.

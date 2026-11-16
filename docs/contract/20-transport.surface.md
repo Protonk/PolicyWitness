@@ -3,7 +3,6 @@
 ```contract
 syntax: 1
 artifact: "Reservation, invocation and client capture"
-part: "delivery"
 goldens: ["tests/fixtures/contract/surfaces/transport.json"]
 checks: ["runner_byoxpc", "runner_unit", "unit"]
 ```

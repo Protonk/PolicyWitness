@@ -3,7 +3,6 @@
 ```contract
 syntax: 1
 artifact: "The controller envelope"
-part: "assessment"
 goldens: ["tests/fixtures/contract/surfaces/envelope.json"]
 checks: ["unit", "integration", "failure_boundaries"]
 ```

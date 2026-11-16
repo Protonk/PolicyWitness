@@ -50,7 +50,7 @@ def minimal_surfaces(root, *, checks=('fixture',)):
         path.unlink()
     (source_dir / '00-fixture.surface.md').write_text(
         '# Fixture contract {fixture: surface}\n\n```contract\n'
-        'syntax: 1\nartifact: "Fixture"\npart: "definitions"\n'
+        'syntax: 1\nartifact: "Fixture"\n'
         'goldens: ["tests/fixtures/contract/surfaces/fixture.json"]\n'
         f'checks: {json.dumps(list(checks))}\n```\n\n'
         '## Defined value {value: definition}\n\n'

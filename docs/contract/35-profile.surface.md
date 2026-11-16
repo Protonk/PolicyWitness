@@ -3,7 +3,6 @@
 ```contract
 syntax: 1
 artifact: "Compiled-profile receipts"
-part: "report"
 goldens: ["tests/fixtures/contract/surfaces/profile.json", "tests/fixtures/contract/compiled_profile.json"]
 checks: ["runner_unit", "unit", "failure_boundaries"]
 entry: ["cli_run", "runner_verify", "direct_xpc"]

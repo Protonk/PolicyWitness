@@ -3,7 +3,6 @@
 ```contract
 syntax: 1
 artifact: "The host report"
-part: "report"
 goldens: ["tests/fixtures/contract/surfaces/reply.json"]
 checks: ["runner_unit", "failure_boundaries"]
 who: ["identity.definitions.host"]

@@ -3,7 +3,6 @@
 ```contract
 syntax: 1
 artifact: "Process and operation observations"
-part: "report"
 goldens: ["tests/fixtures/contract/surfaces/lifecycle.json", "tests/fixtures/disposition/current/constructed_deadline.json"]
 checks: ["runner_unit"]
 ```

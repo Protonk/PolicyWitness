@@ -3,7 +3,6 @@
 ```contract
 syntax: 1
 artifact: "Controller findings and assessments"
-part: "assessment"
 goldens: ["tests/fixtures/contract/surfaces/diagnostics.json"]
 checks: ["unit", "failure_boundaries"]
 ```

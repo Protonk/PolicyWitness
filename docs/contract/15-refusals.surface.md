@@ -3,7 +3,6 @@
 ```contract
 syntax: 1
 artifact: "Request refusals and retained evidence"
-part: "report"
 goldens: ["tests/fixtures/contract/surfaces/refusals.json", "tests/fixtures/request_contract/examples.json"]
 checks: ["failure_boundaries"]
 ```

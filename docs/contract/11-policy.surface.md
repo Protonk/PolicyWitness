@@ -3,7 +3,6 @@
 ```contract
 syntax: 1
 artifact: "Policy source, parameters and compilation"
-part: "input"
 goldens: ["tests/fixtures/contract/surfaces/policy.json"]
 checks: ["failure_boundaries"]
 ```
@@ -345,7 +344,6 @@ pins: "The adjacent field meanings and operations follow the named implementatio
 ```contract
 record: "rust.CheckData"
 as: "check_data"
-part: "report"
 at: ["helper_envelope.data"]
 ```
 
@@ -484,7 +482,6 @@ pins: "Metadata retains decoded format and optional-map presence/count, includin
 ```contract
 record: "rust.CompileRecord"
 as: "compile"
-part: "report"
 at: ["helper_envelope.data.compile"]
 ```
 
@@ -545,7 +542,6 @@ limits: "Native wrapper branches read. Scripted native-result controls and platf
 ```contract
 record: "rust.ImportInventory"
 as: "imports"
-part: "report"
 ```
 
 Absolute import names are checked as supplied. Other names are sought first under `/System/Library/Sandbox/Profiles`, then `/usr/share/sandbox`, with the literal name unchanged. The resolver follows literal imports recursively; an unevaluable import argument, unreadable/nonregular file or invalid UTF-8 scan input records an incomplete inventory.
@@ -614,7 +610,6 @@ limits: "Full inventory traversal and hashing implementation read. Native search
 ```contract
 record: "rust.PolicyCheckCapture"
 as: "fallback"
-part: "report"
 ```
 
 
@@ -713,7 +708,6 @@ check: [{"path": "controller/src/policy_check.rs", "symbol": "supported_outcomes
 ```contract
 record: "rust.ActorPolicyCheck"
 as: "actor_check"
-part: "report"
 ```
 
 When fallback is eligible, the controller checks each actor carrying a policy object in request order, sending a separate policy-only request. A malformed mode remains a host-admission question; the controller collected these policy objects before host execution.
