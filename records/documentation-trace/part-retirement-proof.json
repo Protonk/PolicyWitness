@@ -1,9 +1,0 @@
-{
-  "base": "2500d59e",
-  "build_identity": "development:31d146ab9ec5baad7afe66cd7ac7d2c267edfabc7c33c0b838990d333c6ca15c",
-  "differences": [],
-  "guide_shapes_counts_stamps_interfaces_preserved": true,
-  "kind": "part",
-  "removed_part_occurrences": 203,
-  "worker_identity": "ee5a7e5c6f3e254ff843b1329b17b8b01b5f575e0b73455d6816492480881ea2"
-}

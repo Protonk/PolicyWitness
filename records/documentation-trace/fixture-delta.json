@@ -1,9 +1,0 @@
-{
-  "path": "tests/suites/preflight/opt_in/build_refusals.py",
-  "before_sha256": "b8d713aac16f01460c05346508af017edfe47c5fb908c848a1f27d84633f458b",
-  "after_sha256": "c0e3227a10d019ccb6c360e52cbf4a7a9391deee9088f86c71a03d9ee915281c",
-  "build_identity_input": false,
-  "worker_identity_input": false,
-  "current_source_commit": "8b5de2b2882d7cb2536d1b42d9109f4b0dfc2855",
-  "active_run_id": "20261116T004927Z_ed1d41ef"
-}
