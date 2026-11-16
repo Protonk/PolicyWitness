@@ -1364,3 +1364,596 @@ outputs have no retention guarantee. Producer and reachability observations
 scripts are stated with what was counted; heuristic scans are
 labeled as such. The entries carry no judgment about which layer should
 change, and no fix accompanies this record.
+
+## Additional findings: tracing the failure evidence contract
+
+This investigation read [FAILURE-PROPAGATION-CONTRACT.md](../tests/FAILURE-PROPAGATION-CONTRACT.md)
+in full and followed selected claims into the C publications, Swift drivers and
+assembly, Rust admission/projections, Python readers and test assertions. The
+statements were treated as claims to check, including where another document
+or a passing assertion describes something different. Entries below are
+independent observations, including overlaps with earlier entries; none resolves
+which layer should change.
+
+### Investigation identity and reproduction conventions
+
+Source inspection used clean HEAD
+`b8df8953fd9d9afc2a9679319a7bd8e6c852280e` on 2026-11-16. Source line numbers
+below refer to that snapshot. Manual CLI reproductions used the existing
+`dist/PolicyWitness.app`, on macOS 26.7.1 arm64. Its `--version` reported:
+
+```json
+{"commit":"8b5de2b2882d7cb2536d1b42d9109f4b0dfc2855",
+ "contract":"development:bdefcb44cb8b799494b555f6ba992e5bbfb58eba8ef980cb805adf15c103fb18",
+ "describe":"v0.3.7-148-g8b5de2b2","number":"1482","version":"0.3.7"}
+```
+
+`git diff --stat 8b5de2b2 HEAD` showed records, retirement of the tracing plan
+and its evidence, and a preflight build-refusal script change; no change to
+the product sources or the readers used here. This is a source comparison,
+not a fresh build or release acceptance. SHA-256 of the inspected executables:
+
+| App-relative executable | SHA-256 |
+| --- | --- |
+| `Contents/MacOS/policy-witness` | `4bcd308bc323516bfd4008eb7d125e6ffe3167b5b6f53d6a042f112b910b8d28` |
+| `Contents/XPCServices/PWRunner.xpc/Contents/MacOS/PWRunner` | `706d9a6c8138677a4a337a77e50d642da46056512bcf29c193cba1bba8745501` |
+| `Contents/XPCServices/PWRunner.xpc/Contents/MacOS/pw-probe-runner` | `d6d38f09fa99768a6b1279503e1fb0fa2465bf0b1ab9d8e2120b759620242116` |
+| `Contents/XPCServices/PWRunner.xpc/Contents/MacOS/sb_api_validator` | `ccbf98033321296e7e6e82145fa0f271a6e2161f9c66b56dbf0f9f2304c00890` |
+
+Temporary requests, fixture scripts, direct child output, envelopes and stderr
+are in `/private/tmp/pw-failure-trace-elssragi/`. They are local development
+observations, outside retained release evidence, and can disappear on cleanup.
+The inputs and decisive results below do not depend on keeping that directory.
+No registered suite was executed, and no suite pass is claimed. Python reader
+probes used `tests/lib/python.sh`, which selected Python 3.14.9 at
+`/opt/homebrew/Cellar/python@3.14/3.14.9/bin/python3.14`, with assertions enabled.
+
+The initial baseline command, inside the automation sandbox, ended with
+`xpc_acquisition_failed`; its capture recorded `NSCocoaErrorDomain` 4099 and
+lookup error 159, `Sandbox restriction`. The same command and input, retried
+outside that sandbox with the app unchanged, returned `finished`, exit 0.
+The first capture is `baseline.stdout.json`; the retry is
+`baseline.unsandboxed.json`. Subsequent live probes ran outside the automation
+sandbox. This supports an environmental explanation for that initial lookup
+failure only.
+
+Unless an entry specifies otherwise, the reproduction starts with this input
+(`CONTRACT` is the exact build contract above):
+
+```json
+{"contract":"CONTRACT","specimen_id":"baseline",
+ "policy":{"format":"sbpl","sbpl_source":"(version 1)(allow default)"},
+ "probe_plan":[{"step_id":"s",
+   "sandbox_check":{"operation":"file-read-data",
+                    "filter":{"kind":"path","value":"/etc/hosts"}},
+   "attempt":{"kind":"file","action":"open_read","target":"/etc/hosts"}}]}
+```
+
+Each invocation was equivalent to
+`dist/PolicyWitness.app/Contents/MacOS/policy-witness run INPUT.json`, capturing
+stdout, stderr and exit status separately. The baseline had one completed
+worker attempt, an associated native allow record, `query_first`, and valid
+disposition diagnostics. Controlled-validator probes add
+`_test_overrides.validator_executable_path` naming an executable Python script.
+For each stdin JSON line `p`, the script normally prints this JSON record,
+flushes, and exits after EOF:
+
+```python
+dict(kind="sb_api_validator_verdict", schema_version=1,
+     step_id=p["step_id"], operation=p["operation"],
+     filter_type=p["filter_type"], filter_value=p.get("filter_value"),
+     rc=0, errno=0, outcome="allow")
+```
+
+Each entry states its changes to that record. These scripts make no
+`sandbox_check` call. They establish handling of controlled transcripts through
+the real host, XPC client and controller, alongside a real worker attempt;
+they supply no native prediction evidence. Reader mutations described below
+are a third category: constructed JSON submitted directly to the named reader,
+not a reply emitted by the host.
+
+### DT-45 — The status-word failure promise is contradicted by the current producer and its tests
+
+**Promise.** The failure contract, lines 19–41 and its classification table,
+says parameter allocation, setting, the defensive NUL check and compilation
+can write `apply_rc=-1`. For a terminal status-word failure without a failure
+record, it requires retaining R and nonzero `apply_errno` in `error`, without
+calling either an observed library result. The coverage table still describes
+`reported_failure_hang` as preserving a published status-word failure.
+
+**Source and assertions inspected.** In
+[pw_probe_runner.c](../controller/tools/pw_probe_runner/pw_probe_runner.c),
+lines 1535–1589, those preparation/compile branches publish structured failure
+records and call `publish_done_and_exit`; they do not assign `apply_rc`.
+The actual application assigns it at lines 1641–1651. In
+[ActorSession.collectOutput](../runner/Sources/PWRunnerCore/ActorSession.swift),
+lines 639–643, an unapplied worker's `applyRC` comes only from an eligible
+native apply-failure record, otherwise zero; `done` does not authorize reading
+the scalar. [classify](../runner/Sources/PWRunnerCore/CWorkerDisposition.swift),
+lines 351–354, emits the same generic completed-without-application message
+regardless of the scalar.
+
+This is explicitly asserted, not merely untested. In
+[HostOutcomeClassifierTests.swift](../runner/Tests/PWRunnerCoreTests/HostOutcomeClassifierTests.swift),
+lines 233–247, constructed done/unapplied outputs with `applyRC=-1` and
+`applyErrno` 0, 1 or 4567 must have the same diagnostic as zero storage, with
+neither `status=-1` nor `apply_errno=`.
+[CWorkerLifecycleTests.swift](../runner/Tests/PWRunnerCoreTests/CWorkerLifecycleTests.swift),
+lines 414–435, sends the real driver the ABI fixture's
+`reported_failure_hang` publication and requires decoded `applyRC=0`,
+`applyErrno=0` and no failure record. The fixture writes the scalar; it does
+not call the native apply API.
+
+**History and limit.** `0670db1d` (2026-09-18) already contains the retention
+promise. `bc3abe2f` (2026-11-06), before the release-stamped contracts, changes
+the implementation and assertions to the present behavior. This entry is
+source/test inspection; those unit/fixture cases were not rerun here. It does
+not claim that an ordinary current worker produces a terminal scalar-only
+failure. Related to DT-15's second-contract concern, but a different rule with
+explicitly opposing assertions.
+
+### DT-46 — A claimed independent cleanup-trigger observation is derived during final collection
+
+The failure contract's “Raw host facts the record needs,” lines 359–378,
+calls `cleanup_trigger` a fact recorded at the exit-request store, “not
+conclusions reconstructed from a final status.”
+[RESPONSE's field statement](../docs/RESPONSE.md#contract-lifecycle-worker-cleanup_trigger)
+also places its recording when exit is requested. The cause table then uses
+this field as one witness in the host-cleanup chain.
+
+Source inspection finds a different recording point.
+[ActorSession.requestExit](../runner/Sources/PWRunnerCore/ActorSession.swift),
+lines 558–562, sets departure/request flags and performs the store, without
+saving a trigger. `collectOutput`, line 626, later computes
+`PWDisposition.triggerForStop[pollStopReason] ?? pollStopReason`.
+[ActorScheduler.swift](../runner/Sources/PWRunnerCore/ActorScheduler.swift),
+lines 549–563, supplies the stop reason before calling `requestExit`.
+Thus the two raw fields are projections of one stored reason on these paths;
+their agreement is not an independently captured second observation.
+
+The Rust test
+`typed_host_cleanup_cause_requires_all_independent_observations`
+([porcelain_admission.rs](../controller/src/porcelain_admission.rs), lines
+2660–2730) constructs both raw strings and their claims, then asserts cause
+selection and withholding when `reaped` changes. It establishes the projection
+conditions, not when the production trigger was captured. History search finds
+the derived expression already in `0ed4ae7a` (2026-09-27).
+
+No executed case here demonstrated an incorrect trigger value or incorrect
+signal attribution. The discrepancy is the described provenance of the value.
+Related to DT-30's trigger vocabulary and DT-43's resolution observations;
+neither earlier entry examined this recording point.
+
+### DT-47 — Two coverage rows credit encoded facts whose assertions inspect the pre-encoding object
+
+The failure contract's coverage table, lines 676–677, credits the late-done and
+post-apply-self-signal `CWorkerTests` with process facts through actual
+subprocess encoding. The actual cases still drive a real worker and make
+substantive assertions about acquired publications, reap, kill absence and
+classification.
+
+Their serialization assertions have a narrower scope. In
+[CWorkerTests.swift](../runner/Tests/PWRunnerCoreTests/CWorkerTests.swift),
+lines 417–425 and 463–470, `decoded` is assigned
+`buildWorkerSubprocess(out)`, then `data = try pwPorcelainEncode(decoded)` is
+unused. The assertions read `decoded`, not `data` or a reader's projection of
+it. A writer that returned successfully while dropping one of those fields
+would not be detected by these assertions alone.
+
+`git show 2d5080d7 -- runner/Tests/PWRunnerCoreTests/CWorkerTests.swift`
+shows the 2026-11-08 binary migration replacing an encode/decode round trip
+with these assignments. This is source/history inspection, not a mutation run.
+The separate constructed receipts in
+[ReplyFailureTests.swift](../runner/Tests/PWRunnerCoreTests/ReplyFailureTests.swift)
+and their independent readers provide other binary coverage; this entry makes
+no claim that the writer drops fields or that serialization is wholly untested.
+Related to DT-38's distinction between check scopes, with two specific changed
+assertion paths identified here.
+
+### DT-48 — A contradictory allow record can yield a clean `finished` run and an “allow” query column
+
+The failure contract says `finished` requires completed evidence collection
+(lines 15–18), describes allow/deny as classifications of native returns
+(lines 1229–1236), and separately requires coherent returns for `query_first`.
+The distinction matters: structural record acceptance and complete ID coverage
+do not establish a coherent answer label.
+
+**Executed controlled transcript.** The `incoherent` probe changes the normal
+fixture record to `outcome="allow", rc=-1, errno=13`. The CLI exited 0 with
+`finished`; the query retained `outcome: allow`, `rc: -1`, `native_rc: -1`,
+`errno: 13`, `result_source: validator`. Its attempt completed and its order
+was correctly `unestablished`. Controller disposition integrity was `valid`.
+Both `consumer.validate(envelope, CONTRACT)` and
+`lifecycle_oracle.check_record(envelope, CONTRACT)` returned `[]`.
+`consumer.query_column(step)` selects `allow` from those two source/outcome
+fields without testing the native return.
+
+**Trace and assertions.** [ValidatorClient.swift](../runner/Sources/PWRunnerCore/ValidatorClient.swift),
+lines 526–546, checks required types and fields, not label/return consistency.
+[classify](../runner/Sources/PWRunnerCore/CWorkerDisposition.swift), lines
+438–461, checks process/transport/association problems, not that consistency.
+The ordering gate in
+[PWRunnerStepEvidence.swift](../runner/Sources/PWRunnerCore/PWRunnerStepEvidence.swift),
+lines 5–8, does check it. The native validator's
+[emit_verdict](../controller/tools/sb_api_validator/sb_api_validator.c), lines
+403–426, would label this return pair `error`, not `allow`.
+[ValidatorEvidenceTests.swift](../runner/Tests/PWRunnerCoreTests/ValidatorEvidenceTests.swift),
+lines 154–163, explicitly constructs this allow/-1/13 combination and asserts
+acceptance and preservation. The checker control `incoherent_native`
+([checker_controls.py](../tests/suites/blackbox_e2e/checker_controls.py), line
+453) changes the native return under a surviving `query_first` claim, so its
+rejection does not establish rejection of this unestablished-order case.
+
+The structural acceptance pattern is already present in `6885cb42`
+(2026-09-18). The observed gap is between record coverage/labels and their
+native meaning, not loss of raw evidence or a false ordering claim. This
+fixture did not establish a contradictory native sandbox result.
+
+### DT-49 — A received diagnostic with null `native_rc` need not have the promised `rc=-1`
+
+The failure contract, lines 1111–1115, says a received diagnostic without a
+native return retains `native_rc=null` and `rc=-1`. In contrast,
+[RESPONSE's `rc` statement](../docs/RESPONSE.md#contract-steps-query-rc) says an
+associated record supplies its carried return, with -1 only when that return
+is omitted.
+
+**Executed controlled transcript.** The `diagnostic` probe changes the fixture
+record to `outcome="future_937", error="constructed diagnostic", rc=17,
+errno=5`. The raw phase record retained that unfamiliar outcome and the
+numbers. The step projected `outcome: error`, `result_source: validator`,
+`native_rc: null`, `rc: 17`, `errno: 5`, with no missing reason. It remained
+`finished`, exit 0, order unestablished. Both Python readers returned `[]`.
+
+[CWorkerStepResults.swift](../runner/Sources/PWRunnerCore/CWorkerStepResults.swift),
+lines 46–49 and 128–138, independently selects `native_rc` by the original
+outcome vocabulary and `rc` by `v.rc ?? -1`. The former excludes `future_937`;
+the latter preserves 17. The failure-boundaries diagnostic assertion
+([check.py](../tests/suites/failure_boundaries/check.py), lines 346–352) requires
+-1 for its fixture, whose diagnostic omits rc. It does not establish the
+unqualified null-native-rc rule. The carried-return expression predates the
+current contract; it is present in the June 2026 source layout.
+
+This is forwarding/interpretation of a constructed diagnostic, not an observed
+native return of 17. Related to DT-24's query-field discrepancies, but concerns
+the independent `rc`/`native_rc` selection and a different input.
+
+### DT-50 — Swift and the independent readers disagree on canonically equivalent validator step IDs
+
+The failure contract, lines 605–622 and 1018–1026, says every semantic reader
+checks phase ownership/association the same way and that only unique matching
+records enter the join. Its “exact” relationship spans different string
+equality rules.
+
+**Executed controlled transcript.** The `canonical` request uses step ID
+`s-\u00e9`. Its fixture returns that ID normalized to NFD,
+`s-e\u0301`, leaving the operation, path and allow/0/0 fields unchanged.
+The host retained the decomposed record ID and composed expected ID, reported
+`association_issues: []`, and emitted `query_first`. The CLI nevertheless
+reported `finished`, exit 0, while Rust diagnostics were
+`process_disposition: withheld`, `disposition_integrity: invalid`, with
+`phase_collection: validator association issues disagree with records` and
+`ordering: query_first lacks eligible prediction and complete ordering chain`.
+Python `consumer.validate` rejected both association and order; the lifecycle
+oracle reported the phase-collection discrepancy.
+
+**Trace and assertion scope.** Swift's grouping and equality in
+[validatorAssociationIssues](../runner/Sources/PWRunnerCore/PWRunnerPredictionEvidence.swift),
+lines 161–185, and `eligibleOrderedStep` use canonically equivalent Swift
+String equality. Python's
+[phase_evidence.py](../tests/lib/phase_evidence.py), `association_issues` and
+`ownership_problem`, groups literal strings; the Rust association/ordering
+checks in [porcelain_admission.rs](../controller/src/porcelain_admission.rs)
+also distinguish these spellings. The failure-boundaries controls read here
+use IDs `first`, `middle`, `last` and assert duplicate/unexpected/query-mismatch
+cases. They do not cover this equality boundary.
+
+Related to DT-25, which concerns submitted **target** equality; that reader
+has an explicit Unicode-normalization helper. This entry concerns **record
+identity**, where readers reach different conclusions. The transcript is
+steered; no claim is made that the shipped native validator rewrites an ID
+this way. The execution does show a single real host reply receiving opposed
+assessments without changing its successful summary.
+
+### DT-51 — An unapplied actor's real validator decode failure also disappears from the aggregate summary
+
+The failure contract, lines 1025–1026, says run-level framing/association gaps
+fail the run; lines 1043–1052 assign receiver JSON failures to
+`validator_decode_failure`. DT-23 previously reproduced an unapplied actor's
+failed validator **spawn** becoming `finished`, and left other validator
+failures as a source-level suspicion.
+
+**Executed reproduction.** This pass used one actor `A`, one phase `p`, and
+the baseline `s` action, with no top-level policy or probe plan. Actor sandbox
+mode was varied between `apply` (the baseline allow-default policy) and
+`unapplied`. The executable validator fixture consumed stdin to EOF, then
+printed `{not JSON}\n` and exited 0. Both runs carried a collected phase,
+a reaped validator, a JSON decode fault at byte 0 with `frame_bytes: 10`,
+`retained_bytes: 10`, `context_b64: "e25vdCBKU09OfQ=="`, and a completed `ok`
+worker attempt. Applied mode returned exit 1 / `validator_decode_failure`;
+unapplied mode returned exit 0 / `finished`, `ok: true`, null result error.
+Both full envelopes passed `consumer.validate` and the lifecycle oracle.
+Inputs/results are `actor_apply.*` and `actor_unapplied.*` in the common
+scratch directory.
+
+The source is the same asymmetry identified by DT-23:
+[classifyActor](../runner/Sources/PWRunnerCore/ActorOrchestration.swift), lines
+278–284, supplies a declared-setup view to worker classification; the phase
+call at lines 370–374 uses raw unapplied output and retains only outcomes
+beginning with `validator`. It stops at the worker's absent application before
+classifying the decoder result. The record/claim readers do not recompute the
+host's aggregate outcome from every retained validator fault.
+
+This standalone finding confirms another reached production boundary behind
+the earlier suspicion; it is not a second spawn test or evidence about every
+actor schedule. The native query was replaced by malformed fixture output;
+host JSON decoding and worker execution were real.
+
+### DT-52 — The independent consumer accepts a missing attempt errno key despite the presence promise
+
+The failure contract, lines 635–637 and 866–867, requires key presence for a
+null step errno. The baseline host actually supplies `attempt.errno: null`.
+The Python reader does not preserve that distinction when validating a saved
+reply.
+
+**Executed constructed control.** Copy the baseline's
+`data.runner_result`, delete only `steps[0].attempt.errno`, then call
+`consumer.validate(reply, CONTRACT)`. The result was `[]`. The unmodified
+bare reply also returned `[]`. Putting the mutated reply into a copy of the
+envelope and calling the lifecycle oracle likewise returned `[]`; that oracle
+does not validate the client-capture/JSON equality. This is a mutation of a
+saved reply, not a host omission or a claim that the intact capture matches it.
+
+[consumer.py](../tests/lib/consumer.py), lines 471–490, uses
+`attempt.get('errno') is not None`, which equates absence and null. Its shape
+goldens deliberately allow absent keys. In the checker controls, lines
+495–504, missing attempt rc and fractional attempt errno are rejected, but
+the deletion above is not one of those controls. The same optional-errno
+test is already present at `f7bcb493` (2026-10-02).
+
+A companion diagnostic-reply mutation deleting query errno also passed
+(its order was already unestablished), whereas deleting query errno from the
+ordered baseline was rejected for missing order evidence. Thus rejection in
+the latter case establishes an ordering dependency, not a general required-key
+check. No product serialization change is inferred from these reader controls.
+
+### DT-53 — Consumer acceptance does not establish completeness or truth of the lifecycle claim record
+
+The failure contract's nesting and witness rules, lines 380–430, require all
+seven run questions, matching claim values and resolved sufficient references.
+Its reader-responsibility section distinguishes the consumer from the lifecycle
+oracle, but `consumer.validate` alone supplies much less lifecycle validation
+than its general shape/semantic description might suggest.
+
+**Executed constructed controls.** Starting from the valid baseline bare
+reply, each of these independent edits still returned `[]` from
+`consumer.validate(reply, CONTRACT)`:
+
+- Delete `runner_subprocess.disposition.questions.final_status`.
+- Change only that claim's `value` from 0 to 17, leaving the raw reaped exit
+  code at 0.
+- Replace that required claim with null.
+
+The lifecycle oracle, given a copy of the baseline envelope with the respective
+reply substituted, rejected the first as `D8/malformed_record`,
+`record.questions lacks final_status`, and the second as `D1/wrong_answer`,
+expected exit code 0 but record says 17. These controls deliberately do not
+claim consistency with the original binary capture. The positive unmodified
+envelope passed both readers.
+
+**Scope traced.** [consumer._validate_worker](../tests/lib/consumer.py), lines
+749–801, requires the disposition object but does not run the claim oracle;
+`validate_shape`, lines 322–357, allows missing keys and null at any recorded
+path. [lifecycle_adapter.py](../tests/lib/lifecycle_adapter.py), lines 108–118,
+and [lifecycle_oracle.py](../tests/lib/lifecycle_oracle.py), `_compare_claim`,
+own the checks that rejected the mutations. Swift's
+[DispositionResolverTests.swift](../runner/Tests/PWRunnerCoreTests/DispositionResolverTests.swift),
+including “missing run question” at line 345, separately checks producer
+rejection. Those paths should not receive credit merely because the full
+consumer returned no errors. Related to DT-38's support-scope distinctions;
+separate from DT-52's errno rule, which neither Python reader rejected.
+
+### DT-54 — The validator collection-stop list omits a reached byte-limit stop
+
+The failure contract, lines 1126–1133, lists `stdout_collection_stop` as `eof`,
+`deadline`, `read_error` or `poll_error`. The current
+[RESPONSE field](../docs/RESPONSE.md#contract-lifecycle-validator-stdout_collection_stop)
+also lists `clock_error` and `byte_limit`; the guide's validator-storage limit
+describes the latter.
+
+**Executed controlled transcript.** The `bytecap` fixture writes the normal
+allow record, then 20,000 spaces and LF. With one query, the host retained the
+valid record, recorded `stdout_collection_stop: byte_limit`,
+`stdout_bytes_received: 20200`, and identical I/O/read diagnostics:
+`validator stdout exceeds bounded retention (16384 bytes); received 20200`.
+`decode_fault` was null, validator exit code was 0 with confirmed reap, and
+the envelope returned `validator_no_reply`, exit 1. The step retained
+`query_first`. Both Python readers accepted this envelope.
+
+[ValidatorClient.swift](../runner/Sources/PWRunnerCore/ValidatorClient.swift),
+lines 359–372, records the byte-limit branch before decoding and removes the
+cutoff fragment. Lines 278–281 separately produce `clock_error`, not exercised
+here. The byte-limit assignment appears in `66d41b5e` (2026-10-12), predating
+the release-stamped contract work. This is an incomplete vocabulary account,
+not lost partial prediction evidence or a decoder fault. Related to DT-30 and
+DT-44's vocabulary observations, with a different field/value and a live host
+boundary now reproduced.
+
+### DT-55 — Embedded NUL hides exec output and its truncation marker
+
+The failure contract, lines 1098–1103, promises bounded exec stream text “with
+truncation marker.” [The guide](../docs/PolicyWitness.md), line 147, suggests
+using a helper's bounded stdout/stderr to report native results and supporting
+effects. The stream representation has an additional, unmarked cutoff at NUL.
+
+**Executed native child output.** Replace the baseline action/query with
+`exec/spawn` and `process-exec*` on `/usr/bin/printf`. The exact argument arrays
+and observations were:
+
+| Args (JSON spelling) | Direct subprocess stdout | PW `attempt.stdout` |
+| --- | --- | --- |
+| `["HEAD%02048d", "0"]` | 2,052 bytes | 1,023 bytes ending `\n... [truncated]` |
+| `["HEAD\\000%02048d", "0"]` | 2,053 bytes, prefix hex `4845414400` | `HEAD`, four bytes, no marker |
+| `["HEAD\\000TAIL"]` | Nine bytes, hex `48454144005441494c` | `HEAD`, four bytes, no marker |
+
+Direct controls used Python `subprocess.run` on the same absolute executable
+and args and retained its raw stdout. PW runs all returned `finished`, exit 0,
+attempt rc 0, child exit code 0, observed leader exit plus both stream EOFs,
+no termination request, and successful reap. The NUL envelopes passed both
+Python readers. Files are `exec_plain.*`, `exec_nul.*`, `exec_small_nul.*`;
+`.direct.stdout` contains the independent child bytes. These controls establish
+the behavior of these commands on this build, not the full child transcript
+of every execution.
+
+**Trace/history/assertions.** [pw_worker_exec.h](../controller/tools/pw_probe_runner/pw_worker_exec.h),
+`drain_one` at lines 171–179, copies bytes including NUL. Lines 379–402 append
+an overflow marker by byte offset. [ActorSession.readString](../runner/Sources/PWRunnerCore/ActorSession.swift),
+lines 806–813, stops at the first NUL, so even a stored overflow marker later
+in the buffer cannot reach JSON. The exec implementation and this decoder
+behavior are already in `ae277d0c` (2026-05-31), at the then-current
+`runner/CWorker.swift` and worker entry source.
+[CWorkerTests.swift](../runner/Tests/PWRunnerCoreTests/CWorkerTests.swift), lines
+831–860, checks `/bin/echo` yields `hello world\n`, not NUL handling.
+[limits.json](../docs/limits.json), `exec_stream`, explicitly credits small
+output tests and source inspection for overflow. No claim is made that the
+existing test asserts preservation of binary child output.
+
+### DT-56 — Truncating valid UTF-8 can erase the whole exec stdout field
+
+This is related to DT-55's stream decoder but is a distinct input and failure:
+the child emits valid UTF-8 without embedded NUL. The failure contract's
+truncation-marker account and the same exec-stream limit apply.
+
+**Executed reproduction with adjacent control.** Use `exec/spawn` and a
+`process-exec*` path query for `/usr/bin/awk`, with one argument:
+
+```text
+BEGIN {printf "xx";for(i=0;i<2000;i++)printf "é"}
+```
+
+The independent direct invocation exited 0 and emitted 4,002 bytes, all valid
+UTF-8 (2,002 characters). The PW invocation also exited 0 / `finished`, with
+attempt rc 0, child exit 0, `leader_exit_and_eof`, both EOF flags true, no
+cleanup request and confirmed reap, but the `stdout` key was **absent**.
+Both Python readers returned `[]`. With only the prefix changed from `xx` to
+`x`, the direct output was 4,001 bytes and PW retained 1,023 bytes, 520
+characters, including the marker. These are `exec_utf8_split.*` and
+`exec_utf8.*`, respectively; direct raw outputs were retained separately.
+
+**Source explanation.** The C marker is 16 bytes, placed at byte 1007 in the
+1024-byte buffer on overflow. For the `xx` prefix, this cuts a two-byte `é` in
+half. `readString` in
+[ActorSession.swift](../runner/Sources/PWRunnerCore/ActorSession.swift), lines
+806–813, uses strict `String(data:encoding:.utf8) ?? ""`; its caller at lines
+704–705 converts the empty result to nil. It neither preserves a valid prefix
+nor reports that decoding discarded the buffer. The same historical marker
+and decoder mechanisms cited in DT-55 predate the failure contract itself.
+The inspected small-ASCII assertion and source-only overflow credit do not
+establish this boundary's behavior. This execution does not show loss of
+process/EOF/reap evidence; it shows loss of the retained textual channel,
+including its truncation indication.
+
+### DT-57 — An admitted empty ID with an excluded query succeeds, then fails the lifecycle oracle's ID rule
+
+DT-22 left the empty ordinary step ID with a planner-excluded query untested.
+This pass reached that branch. The request-side promise still permits one
+unique empty ordinary ID, and the failure contract says disposition entries
+join every declared action by identity (lines 187–192).
+
+**Executed production path.** Change the baseline step ID to `""`, and set
+both query path and attempt target to the nonexistent
+`/private/tmp/pw-failure-trace-elssragi/never-created`. No overrides are used.
+The result was exit 0 / `finished`, `query_not_requested`,
+`prediction_unavailable`, order unestablished, and a completed worker
+`open_failed` result with errno 2. The reply and disposition both retained the
+empty step ID, and controller disposition integrity was valid.
+`consumer.validate(envelope, CONTRACT)` returned `[]`, but
+`lifecycle_oracle.check_record` returned:
+
+```json
+{"rule":"D8","kind":"malformed_record","question":null,
+ "step_index":null,"detail":"steps[0] lacks a string step_id"}
+```
+
+The path remained absent. Input/output are `empty_excluded.*`.
+[lifecycle_adapter.py](../tests/lib/lifecycle_adapter.py), lines 132–133,
+rejects a falsey string in addition to nonstrings, while
+[PWRunnerReply.swift](../runner/Sources/PWRunnerCore/PWRunnerReply.swift), lines
+300–309, explicitly permits empty ordinary action IDs. The validator's
+nonempty-ID receiver gate is bypassed because this query is excluded; the
+native attempt and lifecycle publication still run. This confirms a different
+reader disagreement from DT-22's validator-frame refusal, and is independent
+of DT-50's Unicode-equivalent-ID fixture. It does not show that every empty-ID
+specimen fails or that the lifecycle oracle rejected a missing publication.
+
+### DT-58 — The failure contract's “final” minimal report has a further empty-byte fallback
+
+The failure contract's “Reply construction failure,” lines 106–114, says a
+second serialization failure produces a minimal `runner_reporting_failed`
+reply retaining identity and original summary with `evidence_retained: false`,
+and calls this the “final path.” The current
+[RESPONSE publication rule](../docs/RESPONSE.md#contract-reply-failure-publish)
+describes another branch: failure of the minimal writer returns empty bytes.
+
+**Source and assertions inspected.**
+[PWRunnerService.swift](../runner/Sources/PWRunnerCore/PWRunnerService.swift),
+lines 124–154, attempts ordinary and rich reporting, then evaluates
+`(try? minimal(result, finalDiagnostic)) ?? Data()`. Empty data carries neither
+the original summary nor a reporting-failure object. This does not substitute
+the literal JSON object `{}`, which the older wording forbids, but it also
+does not supply the promised final structured account.
+[ReplyFailureTests.swift](../runner/Tests/PWRunnerCoreTests/ReplyFailureTests.swift),
+lines 314–329, injects throwing rich and minimal closures, asserts two rich
+calls and one minimal call, and requires `data.isEmpty`. This is an explicit
+constructed boundary control, separate from the actual text-cap test at lines
+247–311, whose large attempt diagnostic permits the minimal writer to succeed.
+
+The empty-data branch appears in `8bdeec73` (2026-11-08). No encoder failure,
+empty reply or native specimen reaching this branch was executed in this
+investigation. Its production reachability remains unresolved here; source
+and the internal test nevertheless describe a branch absent from the failure
+contract's final-path account. Related to DT-15's differing statement owners
+and DT-47's serialization evidence scope, without asserting an actual loss in
+any live run examined above.
+
+## Coverage and limits of the failure-contract investigation
+
+**Ground covered.** The contract was read end to end. Detailed source traces
+covered worker progress/failure/readiness/receipt decoding and publication;
+status-word and worker/validator classification; final collection and child
+cleanup observations; ordinary and actor phase result assembly; validator
+framing, capacity, association and ordering eligibility; service reporting
+admission/degradation; Rust lifecycle/phase projections; Python shape,
+comparison, phase and lifecycle readers; and exec stream collection and final
+decoding. The record cites the assertions inspected, including constructed
+classifier and encoder inputs, ABI fixtures, real-worker driver cases and
+controlled-validator CLI cases. Selected historical revisions were examined
+to establish mechanisms or changes; no past battery was re-credited.
+
+The observed normal baseline preserved its query, completed slot and ordered
+comparison through the actual CLI. Controlled invalid/overlarge validator
+output retained independent worker results and, where applicable, earlier
+accepted records. The tested exec output losses left process observations
+intact. The Python oracle caught the two constructed claim-integrity faults
+that the consumer accepted. These are affirmative observations within their
+specific inputs, not a conclusion that all other promises hold.
+
+**Not established.** This was not exhaustive branch coverage of the 1,627-line
+contract or a security audit. Actor authority setup, custody/transfer,
+equipment inspection, natural-termination gates, compiled-profile capture,
+client reservation/replay and helper fallback received only the context
+inspection needed for these traces, not full independent revalidation. No
+new native-call substitutions, worker ABI fixtures, clock faults, cleanup
+kill/wait faults, mutation battery, signing/build pipeline, BYOXPC installation
+or kernel-denial experiment was run. The scalar-only failure and cleanup
+recording-point observations remain source/test inspections; no native
+specimen establishes an erroneous scalar-only diagnostic or cleanup cause.
+The unused encoded-byte assertions were inspected, not tested with a corrupt
+writer. Most historical transitions were not bisected or executed.
+
+Live observations apply to the named build, machine and specimens. Controlled
+validator outputs are not sandbox verdicts, direct child output controls do
+not observe the same individual child process as the PW run, and saved-JSON
+mutations are not production reachability evidence. The entries preserve these
+distinctions and earlier findings. Only this investigation record was changed;
+no implementation, contract, reader, test or generated-document fix accompanies
+it.
