@@ -1036,3 +1036,20 @@ missing rendered anchors, unknown canonical nodes and stale emitted links, and
 preserve literal historical paths. The history-required contract check also
 passes. Next: commit the final navigation/checker work, make the signed build,
 then run the integrated offline/native selection and default battery.
+
+The signed build from clean commit `8b5de2b2` passed (version 0.3.7, build 1482),
+including the precompile/presign identity checks, native output checks, signatures
+and standalone guide staging. The integrated 28-case selection in
+`tests/out/runs/documentation-trace-final-controls` passed with no skips,
+unrun cases, harness errors or system sleep; app bytes remained unchanged.
+Its runner core passed 606 tests and all 201 C/Swift layout values agreed.
+
+The default battery in `tests/out/runs/documentation-trace-default` completed
+all 233 cases: 232 passed; `preflight/release_publish_controls` failed because
+its inherited-history fixture still used the removed `runtime.OUTPUTS` API.
+The fixture now uses `runtime.STAMP_OUTPUTS`, preserving its original history
+carriers and assertions. The [exact delta](records/documentation-trace/fixture-delta.json)
+and [dependency/reuse review](records/documentation-trace/fixture-reuse-review.md)
+identify six replacement cases. The failed run remains failed evidence, with
+unchanged app bytes and no system sleep. Next: execute those six cases against
+the corrected fixture, finalize preservation and acceptance records, and hand off.

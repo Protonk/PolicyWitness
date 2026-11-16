@@ -1961,7 +1961,7 @@ def control_release_entrypoints_enforce_fresh_mode(co, variant):
         # rendering then records the removed surfaces at the fixture release.
         runtime = generate_contract_stamps.contract_module('runtime')
         inherited = {name: (repo / name).read_bytes() for name in
-                     (*runtime.OUTPUTS, runtime.history_v1.SNAPSHOT, runtime.BASELINE)}
+                     (*runtime.STAMP_OUTPUTS, runtime.history_v1.SNAPSHOT, runtime.BASELINE)}
         contract_fixture.minimal_surfaces(repo, checks=('preflight',))
         assert all((repo / name).read_bytes() == body for name, body in inherited.items()), \
             'changing fixture surfaces erased inherited release claims'
