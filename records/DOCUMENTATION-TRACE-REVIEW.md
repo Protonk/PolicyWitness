@@ -8380,3 +8380,198 @@ verdicts does not measure independent confirmation.
   passes and covers one required-authority configuration.
 - No Swift package, mutated app or registered battery was built or run. The
   only build was the unmodified controller test binary in an isolated target.
+
+## Additional investigation: interdependencies of import inventories and compiled-profile receipts
+
+The investigator supplied the following report in `.tmp/82-103-OBSV.md`.
+It is preserved here with only heading levels adjusted and source links
+rebased for this directory; citation labels retain the submitted line
+references. The executions and judgments below are the investigator's;
+the experiments were not rerun during incorporation. The source report
+and its named scratch artifacts are disposable local material.
+
+### The outcome
+
+The advance is modest. It's mostly a clearer account of how the five findings relate, plus one joint observation that hadn't been run before.
+
+1. **Nothing observes the compiler's file inputs, and the two identities that come close share only one key.** The controller's literal walk names files, but it isn't the compilation. The worker's receipt comes from the compiling process, but it names no files. The source digest is the only value they have in common, and I found no reader that compares the two.
+2. **Newly executed:** one ordinary `run` envelope can report the dossier as `complete` with no records beside a captured receipt whose checked fields are all correct. That receipt's bytes match a compilation that included the imported rule, and its applied policy refused the write that rule denies (R2/E2 below). The reverse case (R4/E4) reports `complete` with a record for a file whose rule was neither compiled nor enforced.
+3. **DT-103 limits only the bytecode parts of the import findings.** Each import finding also has evidence that doesn't depend on the private 24-byte layout, and E2/E4 add such evidence for the worker's own compilation.
+4. **DT-82 never appears beside a receipt in a `run` envelope.** In a run, the dossier keeps the signal the helper drops.
+
+I changed no tracked files and built nothing.
+
+---
+
+#### 1. The five findings, within their evidence
+
+|            | Where it arises                                                                                                                                                                                                                                                                                                   | What was observed                                                                                                                  | Evidence type                                                                       | Not observed                                                                |
+| ---------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------- | --------------------------------------------------------------------------- |
+| **DT-82**  | The helper's projection. The lexer flags the computed argument and the resolver sets `nonliteral_imports`; `ImportInventory` drops it (DT-81).                                                                                                                                                                    | The helper inventory for computed import C has the same shape as import-free A. The compiler incorporated the import.              | Bytecode C = B ≠ A (host-side probe through the 24-byte view); M2 marker diagnostic | File opens; dossier (source and unit test only)                             |
+| **DT-84**  | Lexer grammar. After the closing quote it requires `)` following only whitespace ([sbpl_lex.rs:192](../controller/src/sbpl_lex.rs)), and a miss returns `None` rather than `NonLiteral`.                                                                                                                         | L2 marker diagnostic from the helper's compile; empty inventory; the lexer probe reports `scan_complete: true`                     | Diagnostic only                                                                     | Dossier result (derived from source); worker compilation                    |
+| **DT-85**  | Lexer collects literal names in every position. This is designed and tested.                                                                                                                                                                                                                                      | Od's bytes equal A's. O1 compiles although evaluating the marker would fail. Its record is present.                                | Bytecode (Od) and compile success (O1)                                              | Whether the compiler opened the file                                        |
+| **DT-98**  | The receipt's identity covers the compile arguments: the C-string source ([pw_profile_capture.h:71](../controller/tools/pw_probe_runner/pw_profile_capture.h)) and the parameter snapshot. The host compares these with its supplied inputs ([CWorker.swift:706](../runner/Sources/PWRunnerCore/CWorker.swift)). | Across two separate runs the imported file changed: identity fields stayed equal, bytes differed, and the dossier closure changed. | Receipt fields                                                                      | A change within one run; the worker's file reads                            |
+| **DT-103** | The capture reads the object through a 24-byte view, and the same pointer goes to `sandbox_apply`.                                                                                                                                                                                                                | Decoded bytes match the reported length and digest; repeat runs give the same bytes; different policies give different bytes.      | Consistency and repeatability                                                       | Whether the layout is correct; how the bytes relate to what apply submitted |
+
+#### 2. What each identity in a run envelope covers
+
+| Field                                                       | Bytes covered                                                     | Computed by, when                                                                              | What it is checked against                                                                                                     |
+| ----------------------------------------------------------- | ----------------------------------------------------------------- | ---------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------ |
+| `specimen.policy.augmentation.applied_sha256`               | Selected source string                                            | Controller, before delivery ([run_flow.rs:609](../controller/src/run_flow.rs))                | Nothing found                                                                                                                  |
+| `specimen.policy.imports.{status, records, closure_sha256}` | Source plus each literal-walk file's bytes as read at that moment | Controller, before delivery (client call at [run_flow.rs:681](../controller/src/run_flow.rs)) | Nothing. The consumer checks shape only ([consumer.py:994](../tests/lib/consumer.py))                                         |
+| `runner_result.policy_sha256`                               | Request source as the host parsed it                              | Host                                                                                           | Nothing found against the dossier                                                                                              |
+| `compiled_profile.source_sha256` / `source_length`          | The C string passed to `sandbox_compile_string`                   | Worker, after compile and before apply                                                         | Host compares it with its supplied source. This is the only source association that is checked                                 |
+| `params_sha256` / `parameter_count`                         | The parameter snapshot given to `sandbox_set_param`               | Worker                                                                                         | Host recomputes independently                                                                                                  |
+| `bytecode_*`                                                | Bytes read through `view.bytecode` / `view.bytecode_length`       | Worker; host re-hashes                                                                         | Worker's own digest of the copied bytes                                                                                        |
+| Imported bytes the worker's compiler consumed               | —                                                                 | Nobody                                                                                         | —                                                                                                                              |
+| What `sandbox_apply` submitted                              | —                                                                 | Nobody                                                                                         | —                                                                                                                              |
+| Helper `import_inventory` and verdict                       | Its own walk, then its own compile; no bytes published            | `sbpl-check`                                                                                   | In a run, present only when fallback is eligible, which means a client `xpc_error` (DT-116). Then there's no admitted receipt. |
+
+The separation is documented:
+
+- The policy surface says each digest belongs to its own read, and that "final equal hashes do not establish read ownership or simultaneity" ([11-policy.surface.md:565–577](../docs/contract/11-policy.surface.md)).
+- The resolver header says neither walk "identifies what the worker's compiler read" ([sbpl_imports.rs:6](../controller/src/sbpl_imports.rs)).
+- A code comment says `complete` "does not mean compiler-complete" ([dossier.rs:117](../controller/src/dossier.rs)).
+
+The dossier walk always runs before delivery, so a window for a file to change exists by construction. Nothing exercised a change inside that window during one run, and DT-98's change between two runs doesn't show one.
+
+#### 3. The new executed contrast
+
+**Setup:**
+- **Build:** `dist/PolicyWitness.app`, commit `8b5de2b2`; `codesign --verify --deep --strict` passed.
+- **Correspondence:** HEAD is `263c06c8`. Since `8b5de2b2`, outside `records/`, only the deleted plan and one line of `build_refusals.py` changed.
+- **Machine:** macOS 26.7.1 (25G241).
+- **Execution:** direct `policy-witness run` probes under `tests/lib/checkout_lock.sh`, one run per case. These are not registered cases and have no sleep accounting.
+
+**R (`joint-1`).** `inc.sb` holds `(deny file-write* (literal "/private/var/empty/pw-import-control"))` (`c313d21c…`). The base is `(version 1)\n(allow default)\n`, with capture and an empty probe plan.
+
+| Case | Third line                                 | Dossier status / records / failure                                      | Closure covers source only? | Receipt bytes            |
+| ---- | ------------------------------------------ | ----------------------------------------------------------------------- | --------------------------- | ------------------------ |
+| R0   | none                                       | complete / 0 / null                                                     | yes                         | 492, `b2056ef2…97e0`     |
+| R1   | `(import "<D>/inc.sb")`                    | complete / 1 / null                                                     | no                          | 548, `f7dbbaca…8718`     |
+| R2   | `(import "<D>/inc.sb" ; note\n)`           | **complete / 0 / null**                                                 | yes                         | **548, `f7dbbaca…8718`** |
+| R3   | `(import (string-append "<D>" "/inc.sb"))` | incomplete / 0 / "a nonliteral (import ...) form could not be followed" | yes                         | 548, `f7dbbaca…8718`     |
+| R4   | `(if #f (import "<D>/inc.sb"))`            | **complete / 1 / null**                                                 | no                          | **492, `b2056ef2…97e0`** |
+
+All five runs exited 0 with `finished` and a captured receipt. In every case these held under independent checks:
+
+- The decoded length and SHA-256 match the receipt.
+- The source digest equals the request source and `policy_sha256`.
+- The source length matches.
+- The parameter digest is the zero-parameter value.
+- The worker PID and nonce match.
+
+**E (`joint-2`).** `inc.sb` denies `file-write*` on `<E>/target`. Each run has one step: a `file-write-create` query and a file create on the target, which was removed before each run.
+
+| Case                  | Dossier              | Receipt bytes        | Attempt                | Target after the run |
+| --------------------- | -------------------- | -------------------- | ---------------------- | -------------------- |
+| E2 (commented import) | complete / 0 records | 644, `8b16fceb…66a9` | `open_failed`, errno 1 | absent               |
+| E4 (untaken import)   | complete / 1 record  | 492, `b2056ef2…97e0` | ok                     | present              |
+| E1 (literal import)   | complete / 1 record  | 644, `8b16fceb…66a9` | `open_failed`, errno 1 | absent               |
+| E0 (no import)        | complete / 0 records | 492, `b2056ef2…97e0` | ok                     | present              |
+
+The query was `prediction_unavailable` in every case, because the target didn't exist when the query was planned. The enforcement evidence is therefore the attempt alone. Attributing the E1 and E2 refusals to the applied policy rests on the matched contrast: same path, parent, worker kind and build, with only the source text differing, and E0/E4 created the file. No kernel log or query observed the denial.
+
+**What this adds:**
+- DT-84's dossier consequence and its effect on the worker's compilation are now executed. Both were previously derived from source or observed only on the host side.
+- E2 and E4 show that the worker's applied policy included or excluded the imported rule, without relying on the 24-byte view. They don't show that the captured bytes are what apply consumed. They show only that enforcement and capture sort the four cases into the same two groups.
+- **Cross-observation:** R1–R3's bytes (548, `f7dbbaca…8718`) equal DT-98 run 1's bytes. DT-98 put `(allow default)` inside the imported file, at a different path, under a different source digest; the app build and OS were the same. So the bytes carry neither the import path nor the split between source and import, and the missing import identity can't be recovered from them. Put together with DT-98:
+  - Identity doesn't determine the bytes. That is the coverage limit.
+  - The bytes don't determine the identity. That is expected of compilation, not a defect.
+
+#### 4. How the findings relate
+
+**One finding supplies a premise for another**
+- **DT-103 → the bytecode parts of DT-82 and DT-85, and DT-98's interpretation.** DT-82's C = B ≠ A and DT-85's Od = A came from `bytecode_digest.c`, which reads through the same view in a host process. DT-103 itself calls that agreement under the same reading rather than an independent decoding.
+- **DT-103 is not a premise for the rest.** That covers M2 and L2 (diagnostics), O1 (compiles although evaluation would fail) and E2/E4 (enforcement). It also covers DT-98's field-level claim: equal identity fields beside different reported bytes is true however the view is read.
+- **DT-85 → reading DT-98's closure change.** In DT-98 the dossier closure changed along with the bytes, which looks like confirmation. R4 shows the closure can cover a file the compiler never evaluated, so that co-variation doesn't establish an association by itself.
+
+**Findings that share a mechanism**
+- **DT-84 and DT-85** share the lexer's grammar: what it counts as an import form, independent of position or evaluation. Both reach the helper and the dossier identically (R2, R4).
+- **DT-82 has a different mechanism.** The lexer handles computed arguments as designed and flags them; the loss is in the helper's projection. R3 shows the dossier keeps the flag.
+- **DT-98 and DT-103** share `pw_capture_profile`, but in different parts: argument digests versus the object view.
+
+**Different mechanisms leave the same question unanswered**
+- The question is: which file bytes did this compilation consume?
+  - The scanner answers which files a literal walk read. DT-82, DT-84 and DT-85 bound how far that can be from the compilation.
+  - The receipt answers which arguments went in and which bytes came out (DT-98).
+  - No component observes what the compiler opens.
+- DT-103 leaves a different, adjacent question: what application consumed.
+
+**Accurate statements whose combination invites a stronger inference**
+- A dossier `complete` plus a captured receipt with a matching source digest invites "compiled from this source, these parameters and these files."
+- R2 and R4 are executed counterexamples in which every field checks out.
+
+#### 5. Your four questions
+
+**1. If the literal inventory were complete, what would still be unknown about the worker's consumed inputs?** Assume "complete" means it matched the files the compiler evaluated. Still unknown:
+- **Same bytes?** The walk is a separate, earlier read by the controller, so whether the compiler read the same bytes is unobserved.
+- **Which directory?** For relative names, which search directory the compiler used. On this host, `BTLEServer.sb` exists in both directories. This contradicts the resolver comment's "no overlapping filenames," which it records as a macOS 14.8.3 observation. The two copies are byte-identical (`597f62bc…`), though, so no hash or bytecode contrast can expose the search order here.
+- **The receipt.** It would still carry no import identity, and joining it to the inventory would still go across processes through a key no reader checks.
+- **What application consumed** (DT-103).
+
+**2. Can every reported digest be accurate while their apparent association stays unestablished?** Yes, executed in both directions:
+- R2: every digest is accurate, and the compiled bytes include a file the closure omits.
+- R4: every digest is accurate, and the closure covers a file the bytes exclude.
+- DT-98 shows a consistent association that is still unchecked.
+
+**3. Which uncertainty is missing information, and which is the meaning assigned to available information?**
+- **Observed by no component:** the compiler's file reads; the layout and what apply submitted (DT-103). The form DT-84 misses isn't even known internally.
+- **Observed but dropped:** DT-82. The helper's projection drops the flag; the dossier keeps it.
+- **Meaning:**
+  - DT-85's records are accurate as reads; the error is reading them as imports.
+  - DT-87's guide sentence "a source with no imports is an empty list" assigns a meaning that R2 and R3 contradict.
+  - DT-98's phrases "consumed input bytes" and "identifies compiler output" claim more coverage than the receipt has.
+- **Judgment:** DT-84 is the only case where the dossier's own definition fails on a natural reading. `complete` "exhausted the literal closure without a reported problem" ([42-dossier.surface.md:229](../docs/contract/42-dossier.surface.md)), and R2's import has a string-literal argument. DT-82 (dossier says `incomplete`) and DT-85 (the walk did read those literal names) don't contradict that definition. Whether DT-84 does depends on whether "literal closure" means the compiler's syntax or the lexer's grammar.
+
+**4. Does each finding remain meaningful when the others are set aside?** Yes, all five do:
+- **DT-82** contradicts the subject statement whatever the compiler does. Its relevance to what was compiled is limited to the standalone helper and fallback captures, where the verdict comes from the helper's own compile and no bytes are published.
+- **DT-84** stands alone as a scanner miss that leaves `complete`.
+- **DT-85** alone is a bound that agrees with the statements. Its weight comes in combination.
+- **DT-98 and DT-103** don't depend on the inventory findings.
+
+#### 6. A possible narrower formulation
+
+> In an ordinary run envelope, no field observes the compiled bytes' file inputs. The dossier identifies a literal walk made before delivery. The receipt identifies the compile's arguments and output. The only shared term is the source digest, which no reader compares.
+
+**It clarifies:**
+- why DT-84 and DT-85 matter to receipt readers;
+- why completing the inventory wouldn't close DT-98;
+- that no component holds the compiled file inputs.
+
+**It risks hiding:**
+- that DT-84 is a scanner miss against the dossier's own definition, while DT-85 is designed and stated behavior;
+- that DT-82 is a helper-only projection gap that never meets a receipt;
+- that DT-98 concerns the receipt's own statements;
+- that DT-103 concerns layout and application, which is orthogonal to file inputs;
+- that the separation is deliberate and documented.
+
+#### 7. The arrangement (judgment, labeled)
+
+**Observation.** The two identities come from different processes at different times. They share only the source digest, and the inventory side disclaims any association in three places (section 2).
+
+**Judgment.** This isn't an unmet promise. The interpretive cost lies in where the disclaimers sit:
+- The disclaimers are on the inventory side. The receipt's source owner pins "consumed input bytes" ([35-profile.surface.md:394](../docs/contract/35-profile.surface.md)), and the guide says "identifies compiler output" ([PolicyWitness.md:746](../docs/PolicyWitness.md)). Neither points at the inventory's limits.
+- A reader asking what was compiled gets two partial identities side by side, and the one that names files is the less authoritative about compilation.
+- R2 is the concrete cost: nothing in the envelope signals the divergence.
+
+I found no stated reason for the receipt carrying no import identity beyond the statement that the inventory and the receipt have separate observation boundaries.
+
+#### 8. What should stay distinct
+
+- **Stages:** lexer grammar, helper projection, the walk's reads, compiler evaluation (seen only through diagnostics, bytes and enforcement), file opens (never observed), capture (bytes through the view) and application (enforcement contrast only).
+- **Compilations:** host-side ones (helper, `bytecode_digest.c`) versus the worker's.
+- **Changes over time:** a file change between runs (DT-98) versus the window within one run, which is established by source only.
+- **Equality:** equal bytes don't mean the same files were opened.
+
+#### Limits and files
+
+- Single runs per case, no file-access tracing, and the query was unavailable in E.
+- Run R4 shows its import wasn't evaluated, not that the file wasn't opened.
+- The scripts and outputs are below. The scratchpad isn't durable, so the decisive values are in the tables above.
+
+Files:
+- Script for R: `/private/tmp/claude-501/-Users-raccoon-Desktop-Security-PolicyWitness/8e36ddab-fa42-4f22-aaa7-9c8a136b8fe2/scratchpad/scripts/joint_import_receipt.py` (`f47f1f54…c7ca`)
+- Script for E: `/private/tmp/claude-501/-Users-raccoon-Desktop-Security-PolicyWitness/8e36ddab-fa42-4f22-aaa7-9c8a136b8fe2/scratchpad/scripts/joint_enforcement.py` (`f72fe9de…3593`)
+- Output for R: `/private/tmp/claude-501/-Users-raccoon-Desktop-Security-PolicyWitness/8e36ddab-fa42-4f22-aaa7-9c8a136b8fe2/scratchpad/joint-1`
+- Output for E: `/private/tmp/claude-501/-Users-raccoon-Desktop-Security-PolicyWitness/8e36ddab-fa42-4f22-aaa7-9c8a136b8fe2/scratchpad/joint-2`
