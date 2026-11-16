@@ -21687,7 +21687,7 @@
               "entry": [
                 "xpc_execute"
               ],
-              "free.effect": "Close the active phase's eligible prediction collection before releasing its actions; run those actions in declaration order. Begin the next phase's collection after the previous phase completes. In the actor form activate one actor at a time while other workers remain parked.",
+              "free.effect": "Close the active phase's eligible prediction collection before releasing its actions; run those actions in declaration order. In ordinary execution begin the next phase's collection only after the previous phase completes. In the actor form walk the declared schedule serially while it remains uncancelled and has execution allowance, activating one actor at a time while others remain parked. Skip unavailable actors or visits. After a failed active visit establish that actor's reap before any further activation; unresolved termination cancels the remaining schedule. Arrival or completion timeout cancels for exhausted execution allowance, and a wait error cancels for lost ownership. A failed evaluated termination dependency also cancels the remaining schedule. Other available actors may continue after the failed actor is reaped.",
               "recipient": [
                 "caller",
                 "report_reader"
@@ -61428,7 +61428,7 @@
               "entry": [
                 "xpc_execute"
               ],
-              "free.effect": "Close the active phase's eligible prediction collection before releasing its actions; run those actions in declaration order. Begin the next phase's collection after the previous phase completes. In the actor form activate one actor at a time while other workers remain parked.",
+              "free.effect": "Close the active phase's eligible prediction collection before releasing its actions; run those actions in declaration order. In ordinary execution begin the next phase's collection only after the previous phase completes. In the actor form walk the declared schedule serially while it remains uncancelled and has execution allowance, activating one actor at a time while others remain parked. Skip unavailable actors or visits. After a failed active visit establish that actor's reap before any further activation; unresolved termination cancels the remaining schedule. Arrival or completion timeout cancels for exhausted execution allowance, and a wait error cancels for lost ownership. A failed evaluated termination dependency also cancels the remaining schedule. Other available actors may continue after the failed actor is reaped.",
               "recipient": [
                 "caller",
                 "report_reader"
@@ -82380,7 +82380,7 @@
               "entry": [
                 "xpc_execute"
               ],
-              "free.effect": "Close the active phase's eligible prediction collection before releasing its actions; run those actions in declaration order. Begin the next phase's collection after the previous phase completes. In the actor form activate one actor at a time while other workers remain parked.",
+              "free.effect": "Close the active phase's eligible prediction collection before releasing its actions; run those actions in declaration order. In ordinary execution begin the next phase's collection only after the previous phase completes. In the actor form walk the declared schedule serially while it remains uncancelled and has execution allowance, activating one actor at a time while others remain parked. Skip unavailable actors or visits. After a failed active visit establish that actor's reap before any further activation; unresolved termination cancels the remaining schedule. Arrival or completion timeout cancels for exhausted execution allowance, and a wait error cancels for lost ownership. A failed evaluated termination dependency also cancels the remaining schedule. Other available actors may continue after the failed actor is reaped.",
               "recipient": [
                 "caller",
                 "report_reader"
@@ -143846,7 +143846,7 @@
               "entry": [
                 "xpc_execute"
               ],
-              "free.effect": "Close the active phase's eligible prediction collection before releasing its actions; run those actions in declaration order. Begin the next phase's collection after the previous phase completes. In the actor form activate one actor at a time while other workers remain parked.",
+              "free.effect": "Close the active phase's eligible prediction collection before releasing its actions; run those actions in declaration order. In ordinary execution begin the next phase's collection only after the previous phase completes. In the actor form walk the declared schedule serially while it remains uncancelled and has execution allowance, activating one actor at a time while others remain parked. Skip unavailable actors or visits. After a failed active visit establish that actor's reap before any further activation; unresolved termination cancels the remaining schedule. Arrival or completion timeout cancels for exhausted execution allowance, and a wait error cancels for lost ownership. A failed evaluated termination dependency also cancels the remaining schedule. Other available actors may continue after the failed actor is reaped.",
               "recipient": [
                 "caller",
                 "report_reader"
@@ -171793,7 +171793,7 @@
               "entry": [
                 "xpc_execute"
               ],
-              "free.effect": "Close the active phase's eligible prediction collection before releasing its actions; run those actions in declaration order. Begin the next phase's collection after the previous phase completes. In the actor form activate one actor at a time while other workers remain parked.",
+              "free.effect": "Close the active phase's eligible prediction collection before releasing its actions; run those actions in declaration order. In ordinary execution begin the next phase's collection only after the previous phase completes. In the actor form walk the declared schedule serially while it remains uncancelled and has execution allowance, activating one actor at a time while others remain parked. Skip unavailable actors or visits. After a failed active visit establish that actor's reap before any further activation; unresolved termination cancels the remaining schedule. Arrival or completion timeout cancels for exhausted execution allowance, and a wait error cancels for lost ownership. A failed evaluated termination dependency also cancels the remaining schedule. Other available actors may continue after the failed actor is reaped.",
               "recipient": [
                 "caller",
                 "report_reader"
@@ -219014,7 +219014,7 @@
               "entry": [
                 "xpc_execute"
               ],
-              "free.effect": "Close the active phase's eligible prediction collection before releasing its actions; run those actions in declaration order. Begin the next phase's collection after the previous phase completes. In the actor form activate one actor at a time while other workers remain parked.",
+              "free.effect": "Close the active phase's eligible prediction collection before releasing its actions; run those actions in declaration order. In ordinary execution begin the next phase's collection only after the previous phase completes. In the actor form walk the declared schedule serially while it remains uncancelled and has execution allowance, activating one actor at a time while others remain parked. Skip unavailable actors or visits. After a failed active visit establish that actor's reap before any further activation; unresolved termination cancels the remaining schedule. Arrival or completion timeout cancels for exhausted execution allowance, and a wait error cancels for lost ownership. A failed evaluated termination dependency also cancels the remaining schedule. Other available actors may continue after the failed actor is reaped.",
               "recipient": [
                 "caller",
                 "report_reader"
@@ -373073,7 +373073,7 @@
               "entry": [
                 "xpc_execute"
               ],
-              "free.effect": "Close the active phase's eligible prediction collection before releasing its actions; run those actions in declaration order. Begin the next phase's collection after the previous phase completes. In the actor form activate one actor at a time while other workers remain parked.",
+              "free.effect": "Close the active phase's eligible prediction collection before releasing its actions; run those actions in declaration order. In ordinary execution begin the next phase's collection only after the previous phase completes. In the actor form walk the declared schedule serially while it remains uncancelled and has execution allowance, activating one actor at a time while others remain parked. Skip unavailable actors or visits. After a failed active visit establish that actor's reap before any further activation; unresolved termination cancels the remaining schedule. Arrival or completion timeout cancels for exhausted execution allowance, and a wait error cancels for lost ownership. A failed evaluated termination dependency also cancels the remaining schedule. Other available actors may continue after the failed actor is reaped.",
               "recipient": [
                 "caller",
                 "report_reader"
@@ -530095,7 +530095,7 @@
               "entry": [
                 "xpc_execute"
               ],
-              "free.effect": "Close the active phase's eligible prediction collection before releasing its actions; run those actions in declaration order. Begin the next phase's collection after the previous phase completes. In the actor form activate one actor at a time while other workers remain parked.",
+              "free.effect": "Close the active phase's eligible prediction collection before releasing its actions; run those actions in declaration order. In ordinary execution begin the next phase's collection only after the previous phase completes. In the actor form walk the declared schedule serially while it remains uncancelled and has execution allowance, activating one actor at a time while others remain parked. Skip unavailable actors or visits. After a failed active visit establish that actor's reap before any further activation; unresolved termination cancels the remaining schedule. Arrival or completion timeout cancels for exhausted execution allowance, and a wait error cancels for lost ownership. A failed evaluated termination dependency also cancels the remaining schedule. Other available actors may continue after the failed actor is reaped.",
               "recipient": [
                 "caller",
                 "report_reader"

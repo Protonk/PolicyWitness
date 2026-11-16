@@ -960,3 +960,13 @@ free counts, guide bytes, interface artifacts and build identities remain equal.
 Current authoring controls now require `part` to be refused as unknown; released
 snapshot readers remain independent of authoring syntax. Next: the two named
 public-text corrections and final tour/navigation integration.
+
+Public correction: `actors.phase.order` now distinguishes ordinary completed-phase
+advance from serial actor scheduling after failed setup or a failed active visit.
+The cited scheduler branches and independently read assertions support the
+skip/reap/continue distinction; a new local check-read owner states its limits.
+The [actor correction proof](records/documentation-trace/actor-advancement-proof.json)
+confines every local/shared public difference to that rule's `free.effect`.
+Affected surfaces: `actors`, `request`, `envelope`, `extensions`, `installation`,
+`probes`, `refusals` and `reply` (the latter seven import the same public node).
+No runtime, shape or ordering-eligibility change.

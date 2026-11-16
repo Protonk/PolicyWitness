@@ -222,7 +222,7 @@ where: "phase scheduler"
 entry: ["xpc_execute"]
 recipient: ["caller", "report_reader"]
 report: ["runner_reply"]
-free.effect: Close the active phase's eligible prediction collection before releasing its actions; run those actions in declaration order. Begin the next phase's collection after the previous phase completes. In the actor form activate one actor at a time while other workers remain parked.
+free.effect: Close the active phase's eligible prediction collection before releasing its actions; run those actions in declaration order. In ordinary execution begin the next phase's collection only after the previous phase completes. In the actor form walk the declared schedule serially while it remains uncancelled and has execution allowance, activating one actor at a time while others remain parked. Skip unavailable actors or visits. After a failed active visit establish that actor's reap before any further activation; unresolved termination cancels the remaining schedule. Arrival or completion timeout cancels for exhausted execution allowance, and a wait error cancels for lost ownership. A failed evaluated termination dependency also cancels the remaining schedule. Other available actors may continue after the failed actor is reaped.
 uses: ["identity.definitions.phase", "identity.definitions.prediction"]
 retained_free: {"effect":{"kind":"native_protocol","reason":"Collector closure, release-store publication, action completion and parked actors form the live scheduling protocol."}}
 ```
@@ -236,6 +236,17 @@ grade: "source_read"
 source: {"path":"runner/Sources/PWRunnerCore/PWRunnerStepEvidence.swift","symbol":"eligibleOrderedStep"}
 pins: "The ordering claim requires a complete chain and a unique matching native prediction for the owned worker."
 limits: "The source owner describes eligibility. Integrated collection/release and mutation observations retain their own execution owners."
+```
+
+#### Schedule advancement support {schedule_support: owner}
+
+```contract
+grade: "check_read"
+source: [{"path":"runner/Sources/PWRunnerCore/CWorker.swift","symbol":"runCWorker"},{"path":"runner/Sources/PWRunnerCore/ActorScheduler.swift","symbol":"walkSchedule"}]
+check: {"path":"runner/Tests/PWRunnerCoreTests/ActorSchedulerTests.swift","symbol":"runActorSchedulerTests","form":"test"}
+pins: "The ordinary driver requires prior phase completion. The actor scheduler skips unavailable visits and gates continuation after a failed active visit on confirmed reap and cancellation conditions; checks distinguish failed setup and death before completion from continuing actors."
+context: "Read the two driver loops and the failed-setup and active-actor-death assertions, including retained absent completion and the next actor's independent process-absence observation."
+limits: "This check-read account credits assertion scope, not a newly executed trial. The collection/release eligibility and native mutation observations retain their separate owners."
 ```
 
 ### Support {support: owner}

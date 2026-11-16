@@ -1367,6 +1367,7 @@ Declarations own meaning; source and check citations supply the stated support. 
 | `runner/Sources/PWRunnerCore/ActorScheduler.swift: didSetUp` | source support | [Equipment and authority setup](RESPONSE.md#contract-equipment) |
 | `runner/Sources/PWRunnerCore/ActorScheduler.swift: if let plan = input.authority` | source support | [Custody protocol](ARCHITECTURE.md#contract-extensions-custody) |
 | `runner/Sources/PWRunnerCore/ActorScheduler.swift: observeTermination` | source support | [A timeout followed by cleanup](RESPONSE.md#contract-actor_evidence-gate-timeout_example) |
+| `runner/Sources/PWRunnerCore/ActorScheduler.swift: walkSchedule` | source support | [Collect, release and advance](REQUEST.md#contract-actors-phase-order) |
 | `runner/Sources/PWRunnerCore/ActorSession.swift: postApplyHangMs` | source support | [Execution overrides](REQUEST.md#contract-request-overrides) |
 | `runner/Sources/PWRunnerCore/ActorSession.swift: profileCapture: input.captureCompiledProfile` | source support | [Receipt](RESPONSE.md#contract-profile-receipt) |
 | `runner/Sources/PWRunnerCore/ActorSession.swift: readyBudgetMs` | source support | [Process and operation observations](RESPONSE.md#contract-lifecycle) |
@@ -1389,6 +1390,7 @@ Declarations own meaning; source and check citations supply the stated support. 
 | `runner/Sources/PWRunnerCore/CWorker.swift: decodeProfileCapture` | source support | [Receipt](RESPONSE.md#contract-profile-receipt) |
 | `runner/Sources/PWRunnerCore/CWorker.swift: decodeProfileCapture` | source support | [The host decides capture availability](RESPONSE.md#contract-profile-receipt-host) |
 | `runner/Sources/PWRunnerCore/CWorker.swift: decodeWorkerEvidence` | source support | [Process and operation observations](RESPONSE.md#contract-lifecycle) |
+| `runner/Sources/PWRunnerCore/CWorker.swift: runCWorker` | source support | [Collect, release and advance](REQUEST.md#contract-actors-phase-order) |
 | `runner/Sources/PWRunnerCore/CWorker.swift: workerIdentityMatches` | source support | [Other identities](#contract-identity-other) |
 | `runner/Sources/PWRunnerCore/CWorkerComparison.swift: buildOrdering` | source support | [Establish query order](RESPONSE.md#contract-steps-assessment-order) |
 | `runner/Sources/PWRunnerCore/CWorkerComparison.swift: comparisonEvidence` | source support | [Shared definitions](#contract-identity-definitions) |
@@ -1509,6 +1511,7 @@ Declarations own meaning; source and check citations supply the stated support. 
 | `runner/Tests/PWRunnerCoreTests/ActorReplyTests.swift: runActorReplyTests` | check support | [Setup deadline and later application](RESPONSE.md#contract-actor_evidence-application-late_application) |
 | `runner/Tests/PWRunnerCoreTests/ActorSchedulerTests.swift: runActorSchedulerTests` | check support | [Setup deadline and later application](RESPONSE.md#contract-actor_evidence-application-late_application) |
 | `runner/Tests/PWRunnerCoreTests/ActorSchedulerTests.swift: runActorSchedulerTests` | check support | [A timeout followed by cleanup](RESPONSE.md#contract-actor_evidence-gate-timeout_example) |
+| `runner/Tests/PWRunnerCoreTests/ActorSchedulerTests.swift: runActorSchedulerTests` | check support | [Collect, release and advance](REQUEST.md#contract-actors-phase-order) |
 | `runner/Tests/PWRunnerCoreTests/AttemptOutcomeMappingTests.swift: runAttemptOutcomeMappingTests` | check support | [Assemble the two channels](RESPONSE.md#contract-steps-assessment-assembly) |
 | `runner/Tests/PWRunnerCoreTests/ComparisonEvidenceTests.swift: runComparisonEvidenceTests` | check support | [Classify an observation](RESPONSE.md#contract-steps-assessment-observe) |
 | `runner/Tests/PWRunnerCoreTests/ComparisonEvidenceTests.swift: runComparisonEvidenceTests` | check support | [Submitted operation and target](RESPONSE.md#contract-steps-assessment-relations) |
@@ -2020,6 +2023,13 @@ Source: [PWRunnerActors.swift](../runner/Sources/PWRunnerCore/PWRunnerActors.swi
 [Local support](REQUEST.md#contract-actors-phase-order-disposition_support).
 
 Source: [PWRunnerStepEvidence.swift](../runner/Sources/PWRunnerCore/PWRunnerStepEvidence.swift): `eligibleOrderedStep`.
+
+<a id="contract-actors-phase-order-schedule_support-details"></a>
+### Collect, release and advance — Schedule advancement support
+
+[Local support](REQUEST.md#contract-actors-phase-order-schedule_support).
+
+Source: [CWorker.swift](../runner/Sources/PWRunnerCore/CWorker.swift): `runCWorker`; [ActorScheduler.swift](../runner/Sources/PWRunnerCore/ActorScheduler.swift): `walkSchedule`. Check: [ActorSchedulerTests.swift](../runner/Tests/PWRunnerCoreTests/ActorSchedulerTests.swift): `runActorSchedulerTests`.
 
 <a id="contract-actors-phase-support-details"></a>
 ### Phase declaration — Support
