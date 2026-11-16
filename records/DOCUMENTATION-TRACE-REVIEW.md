@@ -5651,3 +5651,2732 @@ Only this record was changed among tracked files. The registered run added
 development output under `tests/out/runs/wire-identity-trace/`. Scratch probes
 and the copied test binary are under the scratchpad. These entries contain no
 repair, deduplication or choice of authoritative layer.
+
+## Additional findings: transport failure and helper fallback
+
+### Transport investigation identity and evidence classes
+
+This pass traced transport failure for `policy-witness run`, from client
+capture through public result selection, and the independent `sbpl-check`
+fallback. It starts from DT-31, DT-32 and DT-42.
+
+**Snapshot and build.**
+- Source: `main` at `cc55288d` (2026-11-16), clean tree. `controller/`,
+  `runner/`, `docs/` and `tests/` are byte-identical to `4816b0e4`, the tree
+  DT-31, DT-32 and DT-42 cite, so their line numbers still apply.
+- Shipped app: `dist/PolicyWitness.app`, built from `8b5de2b2` (build 1482,
+  `development:bdefcb44…fb18`). Since that commit, those four directories
+  differ only in `tests/suites/preflight/opt_in/build_refusals.py`.
+- Platform: macOS 26.7.1, build 25G241 (`sw_vers`), Darwin 25.6.0, arm64.
+  XPC lookup worked from the investigating shell.
+
+**Cargo-built controller for controlled client runs.**
+- `policy-witness` and `sbpl-check` were built from HEAD with an isolated
+  `CARGO_TARGET_DIR` and `CARGO_BUILD_BUILD_DIR` under
+  `.tmp/contract-trio/transport/target`.
+- `PW_BUILD_CONTRACT` was set to the output of `docs/build_contract.py`,
+  as `build.sh` does. That output is `development:bdefcb44…fb18`, equal to the
+  app's. The built binary's `--version` reports that contract.
+- The scratch app `.tmp/contract-trio/transport/b/app/` holds this
+  controller and a scripted `pw-runner-client`.
+- Its `Contents/MacOS/sbpl-check` is a symlink to the shipped helper, which
+  ran in place. The shipped helper hashes to `1d447028…`, matching the app
+  manifest.
+
+**Evidence classes.** Every claim below carries one of these labels:
+
+| Label | Meaning |
+| --- | --- |
+| **N** | Native execution of shipped binaries: the shipped controller, client, host, worker and helper. |
+| **C** | Controlled client output. The Cargo-built controller read bytes written by a scripted client. The bytes were recorded from the shipped client and then used verbatim, edited by same-length substitution, truncated (B5a only), or constructed. The controller's own decoding, admission, selection and fallback all ran. |
+| **T** | Typed injection in Rust unit tests. A `RunnerClientRun` or `PWRunnerRunResult` is constructed directly, bypassing production decoding. |
+| **S** | Source inspection. |
+
+**What ran, and what did not.**
+- No case was run through `tests/run.sh`.
+- The orchestration tests discussed below were read, not executed. The claims
+  made about them concern what they construct and assert, not whether they
+  currently pass.
+
+**Artifacts.** All are under `.tmp/contract-trio/transport/` in the local
+checkout. That directory is gitignored, disposable and carries no retention
+guarantee. It contains:
+- `a/`: helper probes.
+- `d/`: shipped-controller runs.
+- `captures/`: raw native captures `r1` and `r2`.
+- `b/`: controlled cases, `summary.json`, and per-case envelopes under
+  `b/runs/`.
+- `c/`: the native host-loss run and its process log.
+- `tools/`: `pwire.py`, a wire reader and writer written independently of the
+  generated readers, and the case scripts.
+
+#### Native observations
+
+| ID | Command (shipped binaries) | Observed |
+| --- | --- | --- |
+| baseline | `policy-witness run --timeout-ms 3000`, ordinary request | `finished`/0. Capture accepted, `invoked`, `runner_reply`. `policy_check` key present and null. `actor_policy_checks` absent. |
+| d1 | Same request with `--timeout-ms 1` | `xpc_timeout`/1, `not_invoked`, 0 attempts, `acquisition_stop: overall_deadline`, error stage `acquisition`. Keys `runner_result`, `policy_check` and `runner_sandbox_diagnostics` present and null. `actor_policy_checks` absent. |
+| d2 | `_test_overrides.worker_post_apply_hang_ms: 4000`, `--timeout-ms 1500` | `xpc_timeout`/1, `invoked` (elapsed 29 ms), error stage `submission`. `policy_check` null. The control reported host PID 43112. Seen at the terminal, not saved: shortly after the run, `ps -o … -p 43112` printed no process. |
+| r1 | `pw-runner-client run --request -` with the built-in service name | Client exit 0, `runner_reply` with 2,575 host bytes. Ordinary request with `capture_compiled_profile`. Saved as `captures/r1.capture`. |
+| r2 | `pw-runner-client` with a nonexistent service name, `--timeout-ms 2000` | Client exit 1. 20 attempts, each `transport_error` with stage `acquisition` and reason `xpc_error`. Every attempt carries NSCocoaErrorDomain 4099 "…lookup with error 3 - No such process". Final stop `overall_deadline`, terminal `xpc_timeout`. Saved as `captures/r2.capture`. |
+| (c) | Single-actor request, exec `sleep 8`; this run's PWRunner host sent SIGKILL | `xpc_error`/1. See "Native host loss" below. |
+
+For d2, no worker PID was recorded during the run, so nothing is established
+about the worker after the client's timeout. A later check was seen at the
+terminal and not saved. At 14:43:16, 3 minutes 12 seconds after d2 started,
+`ps -axo pid=,ppid=,lstart=,command=` filtered by the pattern
+`PWRunner\.xpc/Contents/MacOS/(pw-probe-runner|PWRunner)` matched nothing.
+That pattern can match a host, whose argv[0] is its full path. It cannot
+match a worker: run (c) later showed that a worker's argv[0] is the bare name
+`pw-probe-runner`. So the check shows only that no PWRunner host with that
+path in its argv remained. It says nothing about workers.
+
+#### Controlled cases
+
+Every case ran the Cargo-built controller in the scratch app on one request
+file. Its scripted client wrote the named capture. Results are in
+`b/runs/<case>/envelope.json` and `b/summary.json`.
+
+| Case | Capture written by the scripted client | Request | Client exit |
+| --- | --- | --- | --- |
+| B1 | r1 verbatim | ordinary, augment `exec_baseline` | 0 |
+| B9 | r1 verbatim | same | 1 |
+| B8 | r1 verbatim | actor form | 0 |
+| B2, B3a, B3b, B3c | r1 with one same-length edit to the embedded host frame (DT-114) | ordinary | 0 |
+| B5a, B5b, B5c | r1 truncated by one byte; r1 with its capture contract replaced; r1 with `submission.state` edited | ordinary | 0 |
+| B6 | r2 verbatim | ordinary | 1 |
+| B4i, B4u, B4s | constructed `xpc_error` capture (DT-118) | ordinary | 1 |
+| B4ii | the same constructed capture | actor form | 1 |
+| B4iii | the same constructed capture | actor form with invalid parts (DT-117) | 1 |
+| B7 | constructed `xpc_error` capture; the client closed stdin unread | ordinary, about 200 KB | 1 |
+
+For B4u the helper was absent. For B4s it was replaced by a script that sends
+itself SIGKILL.
+
+Line citations to "Session" refer to
+[PWRunnerClientSession.swift](../runner/Clients/PWRunnerClient/PWRunnerClientSession.swift).
+Citations to `main.swift` refer to
+[the client entry point](../runner/Clients/PWRunnerClient/main.swift), at HEAD
+unless an earlier commit is named.
+
+### Transport answers to the three questions
+
+**1. Which states can reach execution admission and result selection.**
+- Every `run` envelope passes through the one selection relation.
+- Execution admission (`Disposition::Admitted`) is reached only when all of
+  these hold: request delivery succeeded; the current capture was accepted;
+  the capture records `invoked` and terminal `runner_reply`; the complete host
+  frame decoded under the current schema and contract; and the reply passed
+  geometry and compiled-profile admission.
+- So in the shipped command, execution admission always comes with
+  `submission: invoked` and a decoded host reply. The row for an admitted run
+  with no host reply (`runner_response_unavailable`) cannot be selected
+  (DT-113).
+- Every other combination ends in one of the refusal rows. A decoded host
+  projection appears beside a refusal in only one case: the decoded reply
+  fails geometry or compiled-profile admission (DT-114).
+
+**2. Which failed boundary decides the outcome.** Precedence runs in this
+order, each step evaluated only if all earlier ones passed:
+1. request delivery;
+2. client-capture retention, presence, decoding and semantics;
+3. for an accepted capture, exactly one of two alternatives:
+   - (a) with terminal `runner_reply`, the embedded host frame (truncation,
+     schema, contract, structure);
+   - (b) with any other terminal, that terminal itself.
+
+   An accepted capture has a host frame exactly when its terminal is
+   `runner_reply` (runner_client.rs 478–481). The two cannot co-occur, so
+   neither has precedence over the other. `failure()` happens to test (a)
+   first (623–634).
+4. for a decoded reply, host geometry and then compiled-profile labels.
+
+The earliest failed boundary selects outcome, error and exit. It also fixes
+what is retained: rejected capture bytes, typed capture, retained host bytes,
+or decoded projection. Fallback runs only for an accepted capture whose
+terminal is `xpc_error` (DT-116). A combined-fault control confirmed that
+delivery failure suppresses capture interpretation and fallback (B7). Other
+semantic integrity findings never change the outcome; they change only the
+diagnostics.
+
+**3. Fallback: what permits it, what it receives, what it establishes.**
+- It is permitted only for an accepted capture whose terminal is `xpc_error`
+  and whose request delivery succeeded. The client emits that terminal only
+  after it has invoked execution.
+- The ordinary-form check receives the held, pretty-printed, augment-resolved
+  request.
+- For an actor request the host would admit, that same whole-request call
+  always fails in the helper's decoder with exit 2. This was observed
+  natively (DT-117).
+- Each actor whose `sandbox.policy` is a JSON object gets its own policy-only
+  check, whatever its mode.
+- Each result establishes only that the helper's own process did, or did not,
+  compile those bytes. In the native host-loss run, the worker was observed
+  running its exec action while the envelope carried only fallback compile
+  results.
+
+### DT-113 — The admitted-without-host-reply row cannot be reached through either shipped caller
+
+**Settled (S, with callers checked).**
+
+The client-failure function returns no failure under exactly one condition. In
+[runner_client.rs](../controller/src/runner_client.rs),
+`parse_runner_client_output` (lines 667–794) and `RunnerClientRun::failure`
+(602–650) return `None` only when all of these hold:
+- there is no delivery error;
+- `transport_admission == "accepted"`;
+- there is no `runner_reply_error`;
+- the terminal is `runner_reply`.
+
+Under the same condition, the parser returns `Some(typed reply)`. Capture
+admission requires a host reply if and only if the terminal is `runner_reply`
+(478–481). An untruncated frame either decodes or sets `runner_reply_error`
+(744–778).
+
+The search for other constructors and callers:
+- `RunnerClientRun` derives only `Serialize` (line 25). Its fields
+  `OutputCapture` and `RequestDelivery` also derive only `Serialize` (utils.rs
+  lines 15 and 102). Neither `runner_client.rs` nor `runner_commands.rs`
+  mentions `Deserialize`.
+- `git grep RunnerClientRun -- controller` finds three struct literals:
+  - runner_client.rs line 678, in the parser;
+  - line 970, `test_client_run_bytes`, which is `#[cfg(test)]`;
+  - [run_flow.rs](../controller/src/run_flow.rs) line 4186, inside
+    `#[cfg(test)] mod tests` (lines 788 to the end of the file).
+- Its only containers are `ExecutionData` and `RunnerVerifyData`. Both derive
+  only `Serialize`.
+- `run_flow::admit_reply` has two callers: `run` (run_flow.rs 693) and
+  `cmd_runner_verify`
+  ([runner_commands.rs](../controller/src/runner_commands.rs) 612–626). Both
+  take their input from `run_pw_runner_client`.
+
+Consequences:
+- `select(&Disposition::Admitted { host_outcome: None, .. })` cannot occur in
+  `run`. That is the `AdmittedUnavailable` row of
+  [result.rs](../controller/src/interface/result.rs).
+- The no-worker assessment `execution_diagnostics(None)` cannot occur in
+  `run`.
+- Verify's `None` branch, which reports `runner_response_unavailable`
+  (`project_verify_typed_reply`, runner_commands.rs 531–545), cannot occur in
+  verify.
+
+Statements that describe the unreachable state:
+- RESPONSE lines 89, 252 and 300, and the verify rule at 3808, as DT-31
+  listed.
+- The shipped `policy-witness help result` card prints
+  `runner_response_unavailable false 1` (N).
+
+Only typed injections reach the label:
+- `each_result_class_agrees_in_fields_process_status_and_card` builds the
+  pair `(client_run(Some(&controlled_reply())), None)`.
+- `execution_envelopes_preserve_raw_evidence_and_emit_only_execution_fields`
+  calls `complete_execution` with no reply.
+  [CONTRACT](../docs/CONTRACT.md) line 965 credits the latter to Execution
+  diagnostics. The failure contract's row at line 687 describes it as
+  "Constructed replies cross production assembly". `complete_execution` is
+  production code; the assembler `execution_envelope` is a test helper
+  (run_flow.rs 793).
+
+**About DT-31's interface-join evidence.**
+`controller/interface/joins.json` lists `result.admitted_unavailable` under
+`entries_no_case_reaches`. The generator computes that list as entries no
+case in the corpus `controller/integration/interface_cases.json` reaches
+(`docs/generate_interface.py` 366). The interface README (117–128) describes
+the join as a derivation from each case's argument vector and result fields.
+For the companion list it says that it reports "a fact about the retained
+cases, not a claim that production inputs cannot reach the entry."
+
+The same list also holds `result.admission_refusal` and
+`result.admitted_other`. Both are reachable natively:
+- d1 selected the admission-refusal row (`xpc_timeout`/1).
+- `c/baseline0_bad_request_envelope.json`, the first actor-form baseline,
+  selected the admitted-other row. Its accepted, invoked capture carried a
+  host reply labelled `bad_request`, and the run ended `bad_request`/1.
+
+(The native ordinary baseline is `finished`/0, the admitted-finished row, not
+admitted-other.)
+
+So the list cannot tell an unreachable entry from a reachable one that the
+corpus does not cover. The unreachability claim rests on the caller trace
+above, not on the join.
+
+**History (S).** `runner_response_unavailable` was introduced in
+`2d5080d7` (2026-11-08). Before that, a missing reply fell through to
+`runner_output_not_json`. This pass did not establish whether the state was
+reachable at that time.
+
+### DT-114 — A foreign producer leaves only retained bytes; the typed-version branch exists only for injected replies
+
+**Settled for the shipped decoder (S); executed through binary decoding (C).**
+
+`decode_bound` ([porcelain.rs](../controller/src/porcelain.rs) 174–222) reads
+the host frame in this order:
+1. It checks the fingerprint, returning `UnsupportedSchema` on mismatch.
+2. It reads root record tag 1, `PWProducer`, and that record's tag 1,
+   `contract`.
+3. It compares that contract with the build contract and returns
+   `UnsupportedContract` on mismatch.
+4. Only then does it decode the whole frame.
+
+The generated reader maps tag 1 to `producer` and `PWProducer` tag 1 to
+`contract`. `RecordReader` rejects duplicated or out-of-order tags. So any
+`PWRunnerRunResult` produced from bytes carries the current contract.
+
+The branch `ReplyVersion::Unsupported` in `run_flow::admit_reply` (343–349)
+is therefore reachable only from typed injection. So is the
+`unsupported_runner_response` projection in verify.
+
+Controlled-client results (C, `b/runs/`; capture edits made by
+`tools/make_captures.py`):
+
+| Case | Host-frame change (same length) | Result | `runner_result` | `runner_reply_error` | Retained host bytes |
+| --- | --- | --- | --- | --- | --- |
+| B2 | producer contract → `development:fff…` | `unsupported_runner_response`/1, error "runner reply has foreign contract development:fff…" | present, null | that message | equal to the edited frame |
+| B3a | first fingerprint byte flipped | `unsupported_runner_response`/1 | present, null | "…unsupported porcelain schema…" | equal |
+| B3c | reply record id 55 → 56 | `malformed_runner_response`/1 | present, null | "…not a complete typed record: wrong record identity" | equal |
+| B3b | `compiled_profile.capture_stage` `before_apply` → `after__apply` | `malformed_runner_response`/1, error "compiled_profile context is inconsistent" | **decoded record present** | null | equal |
+
+In every case the capture was accepted and `submission` was `invoked`. The
+diagnostics key and the `policy_check` key were present and null, and
+`actor_policy_checks` was absent.
+
+So a decoded projection beside a refusal exists in production only for the
+semantic gate `admission_problem`
+([porcelain_admission.rs](../controller/src/porcelain_admission.rs)
+1308–1331), which checks geometry and then compiled-profile labels.
+
+**Statements that describe a decoded foreign record:**
+- [controller/README.md](../controller/README.md) 184–190: "…or a decoded
+  reply carrying another producer contract, produces
+  `unsupported_runner_response` … `data.runner_result` holds the decoded
+  record's projection when decoding succeeded".
+- Guide line 1409: "A decoded but refused producer/context can remain there".
+  The *context* half is accurate (B3b). The *producer* half is not.
+- 40-envelope `admit`: "then decoded host producer identity and host
+  capacity/profile-label admission". This lists producer identity as a
+  separate gate after decoding.
+
+**Error text differs by path.**
+- Production foreign-contract text (B2): "runner reply has foreign contract
+  X".
+- The typed path's text, which `delivery_failure_takes_precedence…` asserts:
+  "runner reply carries contract X; this controller reads only Y".
+
+**A foreign host is refused earlier (S, plus one N observation).**
+- In the shipped host, the control reply's contract
+  ([PWRunnerTransport.swift](../runner/Sources/PWRunnerCore/PWRunnerTransport.swift)
+  57) and the reply producer (`PWProducer.current`,
+  [PWRunnerAPI.swift](../runner/Sources/PWRunnerCore/PWRunnerAPI.swift)
+  175–177) both read `PWBuildContext.contract`.
+- Packaged builds generate that value as a single constant
+  (`docs/build_contract.py` 96–97).
+- The client refuses a control whose contract does not match its own as
+  `unsupported_protocol`, giving terminal `protocol_error`
+  ([PWRunnerClientSession.swift](../runner/Clients/PWRunnerClient/PWRunnerClientSession.swift)
+  205–216).
+- In r1 the client admitted a granted control, and the embedded frame
+  carried the current contract (N).
+- So a host from another build is refused during acquisition, as
+  `xpc_protocol_error`. The host-frame contract refusal can be reached only
+  when a host's control and frame identities disagree, or when bytes have been
+  altered, as in B2.
+- This connects to DT-105, which examined what the fingerprint covers. The
+  schema-then-contract order of the same `decode_bound` gate is what makes a
+  typed foreign reply impossible. B2 and B3a reach the same public label from
+  those two different checks; only `runner_reply_error` text separates them.
+
+### DT-115 — Tests and controls that build combinations production cannot produce
+
+These tests are T unless marked otherwise. Each item gives what the test
+constructs and how that differs from production. The costs are design
+judgment and are labelled as such.
+
+1. **`each_result_class_agrees_in_fields_process_status_and_card`** (run_flow.rs 3626–3869).
+   - The rows "capture missing", "capture unsupported" and "capture
+     malformed", and the three reply-refusal rows, return `Some(typed reply)`
+     beside the refusal. The comment reads: "The capture carries a decoded
+     `finished` reply beside the refusal."
+   - The refused branch passes `runner_result` into the envelope (line 715).
+     Those rendered envelopes therefore carry a decoded host record beside
+     `missing_runner_client` and similar refusals. Production cannot emit
+     that pairing.
+   - "Delivery failure beside a received finished reply" pairs a delivery
+     error with a typed reply. Production cannot do this: a delivery error is
+     checked first and stops all decoding (line 705).
+   - "Reply contract foreign" injects a typed foreign record, the DT-114 branch.
+   - "Admitted completion with no host reply" is the DT-113 pair.
+   - The test asserts outcome, `ok`, exit and card line, not data presence.
+     So the impossible pairings neither fail it nor are pinned by it.
+   - Cost (judgment): the test reaches every card line, including
+     `runner_response_unavailable`, by reaching unreachable states. A reader
+     who takes coverage as reachability would be misled.
+
+2. **`delivery_failure_takes_precedence_and_retains_the_client_frame_unread`** (1971–2037).
+   - It asserts `admit_reply(&intact, None)` is `Admitted`. Here `intact` is a
+     constructed capture with terminal `runner_reply`.
+   - It asserts that a typed foreign record is refused with the typed-path
+     message.
+   - Its envelope uses a hand-built `JsonResult::new(false, 2, …)` rather
+     than `select`.
+
+3. **`refused_reply_versions_request_no_fallback_compilation`** (3016–3110).
+   - The comment (3017–3024) begins: "Through production admission: a reply
+     under another response version is refused before anything reads it, so
+     no helper is requested and `policy_check` is null."
+   - Production code it exercises: `run` and everything it calls (`admit_reply`,
+     `fallback_policy_check`, `actor_fallback_checks`, `select`, rendering),
+     `evidence::load_manifest`, and `run_policy_check`. The helper is never
+     found beside the unit-test binary, so the fallback capture is
+     `unavailable`.
+   - Not production: the client dependency returns `client_run(..)`, whose
+     embedded host bytes are JSON. The typed reply comes from serde
+     `from_value`, which is test-only and skips `decode_bound`.
+   - In the narrow sense, the comment is accurate: the label matches
+     production, and nothing reads the reply before admission.
+   - The gap: the "previous" and "next" rows assert
+     `wire["data"]["runner_result"] == reply`, a retained typed record. For
+     the same host bytes, production reports `runner_result: null` (B2).
+   - The "string" and "missing" rows map fixture-reader failure to
+     `ReplyRefusal::Malformed` with a null projection. That matches
+     production.
+
+4. **Consumer `policy_check_controls`**
+   ([checker_controls.py](../tests/suites/blackbox_e2e/checker_controls.py)
+   39ff, through `envelope_skeleton` in
+   [blackbox.py](../tests/lib/blackbox.py) 54–112).
+   - These controls wrap helper captures in an envelope whose `runner_result`
+     has `normalized_outcome: "xpc_error"` and whose capture terminal is
+     `runner_reply`.
+   - Since `34496c0f` (2026-10-29), fallback in production has never
+     accompanied a host reply or a `runner_reply` terminal.
+   - History (S): the fixture form predates that change. `git log -S` finds it
+     back to `4e02cf51` (2026-10-03). At `29e3ead0` the client synthesized an
+     `xpc_error` *reply*, and fallback keyed on that reply's outcome (run_flow
+     line 380 at that commit).
+   - The consumer's helper-envelope admission does not depend on the outer
+     state. So the control still tests that admission, and the surrounding
+     envelope is a leftover from the earlier design.
+   - [ARCHITECTURE](../docs/ARCHITECTURE.md) row B9 credits these controls,
+     with `fallback_compilation_is_requested_only_for_an_admitted_xpc_error`,
+     for "associated with the selected policy/actor". Neither contains an
+     actor or checks association. The consumer has no `actor_policy_checks`
+     handling (`git grep` in `tests/lib/consumer.py`).
+
+5. **The field-complete shape fixture** (run_flow.rs 3940–4243). It combines
+   mutually exclusive fields, including both client stdout errors on an
+   accepted capture, but it says so ("Field-complete shape fixture"). It
+   feeds the shape golden only. It is listed here for completeness and is not
+   a finding.
+
+### DT-116 — Fallback eligibility coincides exactly with an invoked client `xpc_error`; the fallback calls on the admitted branch can never run
+
+**Settled (S), with N and C confirmation.**
+
+The admitted-branch fallback calls are dead code.
+- `fallback_eligible` (runner_client.rs 651–661) requires an accepted
+  capture, no delivery error and terminal `xpc_error`.
+- For any `RunnerClientRun`, however it was built, those conditions make
+  `failure()` return `Some(Refused(..))`.
+- So the calls on the `Admitted` branch (run_flow.rs 699–701) cannot run for
+  any value. Fallback runs only on the refused branch (715–724), with
+  `runner_result` and `runner_sandbox_diagnostics` null.
+
+`xpc_error` always means `invoked`.
+- `validate_capture` requires `invoked` for that terminal (516–529).
+- The Swift session emits it only from `connectionFailed` during the submitted
+  phase (Session 192–197).
+- With the shipped client, outcome `xpc_error`, fallback invoked, and
+  `submission: invoked` therefore always occur together.
+
+Fallback does not track whether execution may have happened.
+- A native invoked timeout (d2) has the same receipt uncertainty and gets no
+  fallback.
+- A lookup failure never yields fallback. Lookup errors are acquisition-stage
+  attempts, as r2 shows: the same NSCocoaErrorDomain error class as an
+  eligible `xpc_error`, but at the acquisition stage.
+- Conversely, `proxy_type_mismatch` during submission is an eligible
+  `xpc_error`, yet `proxy()` returned nil and nothing was sent. `invoked` was
+  recorded before the proxy was acquired (Session 248–252; session control
+  "proxy failure during submission…", `PWRunnerClientSessionTests/main.swift`
+  158–167).
+
+What `submission: invoked` establishes.
+- The client process records it in `reservationReply`, on its serial queue
+  (Session 223–252), after admitting a granted control and re-sampling the
+  clock, and before it calls `submit` (251–252).
+- It is the client's own report, checked by `validate_capture` 446–473.
+- It establishes that the client crossed its one execution-call boundary. It
+  does not establish that a message was sent or received, that the host
+  admitted the credential, or that anything executed.
+
+Rationale and history (S).
+- The fallback was introduced in `ba483826` (2026-06-11). That commit's
+  message says the host compile "now runs only on `xpc_error` (to tell a
+  never-compiled policy from one that compiled but blocked the XPC reply)".
+- The same commit put the rationale in two other places:
+  - the guide, then `PolicyWitness.md` at the repository root (line 110 at
+    that commit): "only to disambiguate an `xpc_error` (a policy that
+    compiled but then blocked the XPC reply vs. one that never compiled)";
+  - a module comment in `controller/src/run_flow.rs`: "only to disambiguate
+    an `xpc_error` (compiled-but-reply-blocked vs. never-compiled)".
+- Current documents disclaim that inference: the fallback "establishes
+  neither worker progress nor the cause of a lost reply" (README 224; guide
+  767–768).
+- No current statement gives another reason for restricting fallback to
+  `xpc_error`.
+- Cost (judgment): a present `policy_check` implies only
+  `submission: invoked`, which the capture already records. An absent one
+  says nothing about whether the specimen may have executed: d2 was invoked
+  and has none. So the field adds nothing about possible execution beyond the
+  submission state.
+
+Statements implying a pairing that cannot occur:
+- 11-policy line 392: the capture reports the attempt "alongside the
+  transport result and any retained worker evidence". No worker evidence is
+  ever present.
+- Guide 1515: "an independent fallback compiler result may also be present"
+  for `xpc_error`. With the shipped host it is always present (see DT-119 for
+  the host-label case).
+- README 232–234 says `execution_envelope` "assembles the dossier,
+  transport, acquisition history, independent fallback compilation and
+  execution diagnostics". ARCHITECTURE 462–466 says `execution_envelope`
+  "assembles the execution records". That function is a `#[cfg(test)]`
+  helper (run_flow.rs 793). In production, fallback and diagnostics never
+  coexist in one envelope.
+
+**ARCHITECTURE 467**: "The client's timeout ends the controller's wait and
+yields a synthetic `xpc_timeout` reply." This wording entered at `29e3ead0`
+(2026-10-05). At that time the client did synthesize a `PWRunnerRunResult`
+with `xpc_timeout` (`runner/Clients/PWRunnerClient/main.swift` 156–170 at that
+commit). `34496c0f` replaced
+that with the capture. The sentence describes the earlier design. d1 and d2
+show that `runner_result` is null on timeout (N).
+
+**Combined-fault control (C, B7).**
+- Inputs: the constructed `xpc_error` capture and a 200,241-byte request. The
+  scripted client closed stdin and then wrote the capture.
+- Result: `tool_error`/2, error "request delivery failed after 65536 bytes:
+  Broken pipe (os error 32)", `transport_admission: delivery_failed`,
+  `submission: unknown`, transport `Rejected` with bytes equal to the
+  capture, `policy_check` present and null, `actor_policy_checks` absent.
+- Two readings of the 40-envelope `admit` effect are ruled out:
+  - that an `xpc_error` terminal inside the capture can authorize fallback
+    beside a delivery refusal ("another refused boundary … Eligible
+    xpc_error can add independent fallback compilation");
+  - that the client's terminal takes precedence over delivery.
+- With the shipped client, this pairing is unlikely natively, because the
+  client reads stdin to EOF before connecting (main.swift 104–108).
+
+### DT-117 — DT-42 settled: the actor-form whole-request helper fails to decode, beside ordinary per-actor compilations
+
+**Native host loss (N, `c/`).**
+- Request: one applied actor `zeta`, whose policy is `(version 1) (allow
+  default)` with augment `exec_baseline`. Its one action runs `/bin/sh -c
+  "/bin/sleep 8; true" trio-transport-k8b2d4`.
+- Baselines without a kill:
+  - The single-actor request used for the kill, with `sleep 1`, finished/0
+    (`c/single_baseline_envelope.json`).
+  - A three-actor variant with `sleep 1` finished/0 in 1.1 seconds
+    (`c/baseline_envelope.json`).
+  - An earlier three-actor variant omitted `sandbox_check` and was refused by
+    the host as `bad_request`, reaching the admitted-other row
+    (`c/baseline0_bad_request_envelope.json`).
+
+Target identification (`kill_driver.py`, `kill_log.json`):
+- The process with the nonce (PID 71752) had parent W = 71750.
+  `proc_pidpath(W)` was the app's `pw-probe-runner`.
+- W's parent H = 71748 had `proc_pidpath` equal to the app's `PWRunner`.
+- H's only child was W.
+- H was absent from a process snapshot taken before the controller was
+  launched.
+- `launchctl print pid/71747` (the controller's `pw-runner-client`) listed
+  `71748 … com.policywitness.policy-witness.PWRunner` in that client's
+  per-process domain.
+- The service's Info.plist declares `ServiceType = Application`.
+
+SIGKILL was sent once, to 71748, 0.19 s after launch. The controller exited
+19 ms after the signal, 0.21 s after launch (`kill_log.json` event times). In
+that interval it ran both helper calls. Its envelope:
+- result `xpc_error`/1, error "connection to service named
+  com.policywitness.policy-witness.PWRunner";
+- capture accepted, `invoked` (elapsed 23 ms), `acquisition_stop: granted`;
+- error stage `submission`, reason `xpc_error`, NSCocoaErrorDomain 4097;
+- the control-reported host PID was 71748;
+- `runner_result` and `runner_sandbox_diagnostics` present and null.
+
+The fallback captures:
+- **`policy_check`**: `status: "tool_error"`, `tool_exit_code: 2`, envelope
+  null, stdout 0 bytes, stderr "failed to parse request.json: missing field
+  `policy` at line 44 column 1".
+- **`actor_policy_checks`**: `[{"actor_id": "zeta", "policy_check": {status:
+  "ok", tool_exit_code: 0, …}}]`. The helper's `policy_sha256` was
+  `7a3962a7…`. That equals the dossier's `applied_sha256` and the
+  independently computed SHA-256 of the source plus `"\n"` plus
+  `exec_baseline.sb`.
+
+Process aftermath:
+- Saved in `kill_log.json`: immediately after the controller exited, the
+  host was gone. W (now with parent 1), the `sh` child and its `sleep` were
+  still present, with the same PIDs, start times and commands.
+- Seen at the terminal, not saved: at 14:48:43 (`date`), 20 seconds after
+  start, `ps -o pid=,ppid=,lstart=,command= -p 71750,71752,71753` printed no
+  process and exited 1. So no process with any of those PIDs existed then. I
+  sent no cleanup signal. The only record of this check is the
+  investigation transcript.
+- An earlier attempt sent no signal: its identification predicate failed
+  because the worker's argv[0] is not a path. That run finished normally
+  (`kill_attempt0_no_signal_*`).
+- During the observed run, the worker ran the exec action. `kill_log.json`
+  records the nonce-carrying `sh` as W's child, before and after the signal.
+  The envelope holds no host evidence of that execution. Its only policy evidence is the dossier
+  and two helper results.
+
+**Controlled replay (C, B4).** A constructed `xpc_error` capture was used
+(DT-118 gives its derivation and acceptance). Each fallback call ran the shipped
+helper through the symlink.
+
+| Case | Request (held bytes) | `policy_check` | `actor_policy_checks` |
+| --- | --- | --- | --- |
+| B4i | ordinary with `exec_baseline` (1,794 B) | `ok`/0, helper hash `7a3962a7…` = spliced expectation | absent |
+| B4ii | actors: zeta (augmented), middle unapplied, alpha `(allow no-such-operation)` with params (2,556 B) | `tool_error`/2, stderr "…missing field `policy` at line 52 column 1" | `zeta ok/0` (hash `7a3962a7…`), `alpha compile_error/1` (hash `a8cf11b5…`) |
+| B4iii | actors plus non-null top-level `(deny default)`; modes `"future"` and `9`, `actor_id: 17`, scalar policy, unapplied with policy (1,002 B) | `ok`/0, hash `46f655c8…`: the top-level policy, which the host refuses as `exclusive_plan_forms` | `future ok`, `null ok`, `unapplied_with_policy ok` (`(deny default)` hash); the scalar policy is omitted |
+
+Helper-only probes (N, `a/`), shipped `sbpl-check --request -`:
+
+| Input | Exit | Output |
+| --- | --- | --- |
+| Actor held request, no top-level policy | 2 | stdout empty, "missing field `policy`" |
+| `"policy": null` | 2 | "invalid type: null, expected struct CheckPolicy" |
+| Non-null top-level policy | 0 | `ok` |
+| Per-actor objects | — | `ok`/0 and `compile_error`/1 |
+
+**What each invocation receives (S, confirmed by helper hashes).**
+
+*Whole-request call.*
+- It receives the held string from `serde_json::to_string_pretty` (run_flow
+  678), after augment resolution and selector stripping. That is the same
+  string the client receives.
+- `sbpl-check`'s `CheckRequest { policy }` has no `deny_unknown_fields`
+  ([sbpl-check.rs](../controller/src/bin/sbpl-check.rs) 48–58, 433–439). It
+  reads only `policy.format`, `policy.sbpl_source` and `policy.params`.
+- A host-admissible actor request has no top-level policy, because the host
+  refuses a non-null one
+  ([PWRunnerRequest.swift](../runner/Sources/PWRunnerCore/PWRunnerRequest.swift)
+  127–132: `exclusive_plan_forms` at path `["policy"]`; sibling refusals at
+  138 and 141).
+- So for every such request the whole-request result is a decode failure:
+  exit 2, empty stdout, `tool_error`
+  ([policy_check.rs](../controller/src/policy_check.rs) 84–93).
+- Controller admission has no form check: it checks only object, contract,
+  mode injection, selector, selection and augments (request_patch.rs 47–100;
+  run_flow 576–670). An actor request with a non-null top-level policy
+  therefore reaches the client, and on fallback its top-level policy is
+  compiled (B4iii).
+
+*Per-actor calls.*
+- `actor_policies` is collected after actor augment resolution and before
+  delivery (run_flow 616–643). It contains every actor whose
+  `sandbox.policy` is a JSON object, whatever its mode, so invalid and
+  `unapplied` modes are included.
+- Each call receives compact `{"policy": <object>}` (377–394).
+- The calls run sequentially after the whole-request call (716–724).
+
+*Association.*
+- `actor_id` is the declaration's string label, or null.
+- A check is tied to its actor only by that label and by its position among
+  policy-bearing actors. In B4iii the dossier lists four actors
+  (`future`, null, `scalar`, `unapplied_with_policy`) against three checks.
+  Only the null label at check index 1 depends on order.
+
+*Exit-code provenance (C).*
+- B4u, helper absent: `status: "unavailable"`, `tool_exit_code: 1`, stderr
+  "embedded tool not found in Contents/MacOS: \"sbpl-check\" …", stdout and
+  stderr byte counts null.
+- B4s, helper replaced by a script that reads stdin and then sends itself
+  SIGKILL: `status: "tool_error"`, `tool_exit_code: 1`, stderr empty, counts
+  0.
+- A helper killed by a signal is therefore recorded as exit 1 (`code()
+  .unwrap_or(1)`, policy_check.rs 78). That is indistinguishable from a helper
+  that printed nothing and exited 1.
+- The 11-policy `tool_exit_code` text ("Helper process exit code, or the
+  capture's fallback value when unavailable") omits the signal case.
+- A helper delivery failure returns `Err` and discards the helper's actual
+  output (policy_check.rs 69–73). This is source only; the helper reads
+  stdin to EOF first.
+
+**What the statements say.**
+- controller/README 5–8: "it checks the held whole request and each carried
+  actor policy object". For actor requests the whole request is not checked;
+  it fails to decode.
+- No statement says that `policy_check` is `tool_error` for every eligible
+  actor-form fallback:
+  - 40-envelope `policy_check` (RESPONSE 254);
+  - 11-policy `classify` (688) and `actor_check` (713);
+  - guide 861–864 and 1073–1075.
+- 11-policy `read` (236) does state, for `controller_helper_stdin`, that
+  decode errors exit 2 and are reported on stderr. So the helper side of the
+  outcome is documented, while the run-level consequence is not.
+- Guide 1074–1075: "These independent compile diagnostics can run before host
+  admission". In the native run, the fallback ran after the host had admitted
+  the request and the actor's worker had begun its action. The checks are
+  independent of host admission; they are not ordered before it. The
+  contract's wording, "Collection of these policy objects precedes host
+  admission", is accurate.
+- Cost (judgment): one actor-form envelope carries a `policy_check` with
+  status `tool_error` and exit 2 beside per-actor `ok` or `compile_error`
+  captures. No statement explains how they relate. A reader can mistake the
+  decode failure for a helper or controller fault.
+
+**What the tests credited for this establish.**
+- `actor_fallback_preserves_resolved_inputs_order_and_transport_evidence`
+  (run_flow 3237–3406) substitutes the helper. Call index 0, the whole
+  request, always returns `Err`. The test therefore asserts
+  `policy_check.status == "unavailable"`, where production gives
+  `tool_error`/2. It does establish the inputs: the held string first, then
+  the resolved policies in order, then the labels.
+- `actor_fallback_uses_held_policy_objects_before_host_mode_admission`
+  (3113–3234) returns `Err` for every call. It establishes collection
+  independent of mode, and the held bytes. It is credited in 42-dossier and
+  CONTROLLER 313–319.
+- ARCHITECTURE T12 (229) cites `fallback_compilation_…` and
+  `refused_reply_versions…`, which contain no actor input, for "independently
+  associated actor-policy diagnostics".
+- `failure_boundaries/fallback_helper`
+  ([check.py](../tests/suites/failure_boundaries/check.py) 415–438) runs the
+  shipped helper with a file path on a source over 4 MiB and asserts
+  `policy_too_large`. That establishes the helper's own admission, not the
+  controller's fallback path, stdin delivery or the actor form.
+
+### DT-118 — The constructed `xpc_error` capture, and what nothing binds
+
+**Derivation (S, C).**
+- B4 and B7 use `B4_constructed_xpc_error.capture`, 782 bytes. It keeps r1's
+  root fields 1–12 byte-for-byte: identity, clock, the granted attempt with
+  its admitted control, `acquisition_stop: granted`, and
+  `submission: invoked` at 31 ms.
+- It then adds terminal `xpc_error` (tag 13) and an error record (tag 14,
+  record 67). That record has stage `submission`, reason `xpc_error`, domain
+  NSCocoaErrorDomain, code 4097, the message "constructed: …" and two false
+  truncation flags.
+- This follows the Swift emission:
+  - `connectionFailed` sets stage `submission` in the `.submitted` phase and
+    completes `"xpc_error"` (Session 192–197);
+  - `complete` leaves `acquisition_stop`, attempts and submission as recorded
+    (276–283);
+  - `PWRunnerTransportError.init` records the NSError domain and code
+    (PWRunnerTransport.swift 105–116);
+  - no `runner_reply` is present.
+- The controller *accepted* it: `transport_admission: accepted`,
+  `submission: invoked`.
+- Its acceptance is part of the result. The native capture from (c) has the
+  same shape, with message "connection to service named …" and code 4097.
+
+**No binding between capture and request (C).**
+- B8 used r1's capture, from an ordinary request with
+  `specimen_id: trio-transport-r1`, under an actor-form request
+  (`trio-b-actor`).
+- Result: admitted `finished`/0. The dossier listed three actors, the reply
+  carried no `execution_form`, diagnostics were an ordinary `clean_exit`, and
+  the reply's `specimen_id` differed from the request's.
+- Nothing compares the capture or reply with the held request.
+- B9 shows that the client's exit code is recorded and not consulted: r1 with
+  scripted exit 1 was admitted as `finished`/0, with
+  `runner_client.exit_code: 1`.
+- With the shipped client, the binding holds by construction: one process
+  reads the held bytes from stdin and submits them. These results are not a
+  native fault. They show that the controller's admission does not itself
+  check that binding.
+
+### DT-119 — Smaller observations on labels, error precedence, notation and host bytes
+
+- **Refusal spellings shared with host labels.** AdmittedOther copies any
+  host label. A current-contract reply labelled `xpc_error` therefore
+  produces outcome `xpc_error`/1 with `runner_result` present and no
+  fallback. `refused_reply_versions…` asserts this (T). The shipped host
+  never emits that label (`git grep` finds `xpc_error` in no file under
+  `runner/Sources`). The guide's row for `xpc_error` (1515) describes only
+  the client capture.
+- **DT-32, error precedence (S).** `stdout_parse_error` is set only in the
+  decode-failure arm, which returns `Err` (runner_client.rs 724).
+  `stdout_capture_error` forces `Err("malformed")` (708–710). B5a and B5b set
+  `stdout_parse_error` with a refused capture; B5c refused on semantics with
+  no `stdout_parse_error` (C). The second and third precedence tiers in
+  40-envelope (RESPONSE 243) cannot follow execution admission. No test
+  passes those errors through `complete_execution`.
+- **DT-32, collection bound.** `git grep` for `reply_capacity` or
+  `reply_geometry` in `controller/` and `tests/` outside
+  `porcelain_admission.rs` finds nothing. No test carries an over-capacity
+  reply through `run`. The capacity gate shares `admission_problem` with the
+  label gate. B3b exercised that path through binary decoding for the label.
+  Capacity remains source-only for `run`.
+- **DT-32, label effect notation.** RESPONSE 2619 renders the label effect
+  as `withhold(envelope.data.runner_sandbox_diagnostics)`. 2866 and 2885 use
+  `set_value(…, null)`. The notation table defines `withhold` only as
+  "Withhold that target" (tree.py 1450). The surface golden
+  `tests/fixtures/contract/surfaces/envelope.json` records the field as
+  `json_null: true, omission: null`, meaning always present. The shape golden
+  `envelope_shape.json` is an allowlist and blind to presence (DT-111). B3b's
+  real envelope has the key present with null (C). The two statements differ
+  in notation only.
+- **Integrity findings do not select the outcome** (relayed by the
+  acceptance pass; verified, S). `select` never reads
+  `Disposition::Admitted.integrity_issues` (result.rs 202–237; only run_flow
+  730–742 computes it). This matches 40-envelope 189–194. Only geometry and
+  compiled-profile problems refuse admission. Every other semantic finding
+  changes diagnostics only.
+- **Host reporting fallback** (relayed; verified, S). `pwRunnerReportData`
+  ([PWRunnerService.swift](../runner/Sources/PWRunnerCore/PWRunnerService.swift)
+  123–155) always emits something:
+  - first the validated report;
+  - then a rich `runner_reporting_failed` reply;
+  - then a minimal reply;
+  - then, at line 154, empty `Data()`.
+
+  Every writer uses `PWProducer.current`. Whatever bytes result are sent
+  with `reply(true, data)` (339).
+
+  What happens to empty bytes is partly source and partly inference:
+  - **Client side (S, Swift client).** `submissionReply` does not check
+    length when `isResult` is true. It stores `PWRunnerReplyCapture(data)` and
+    completes `"runner_reply"`
+    ([PWRunnerClientSession.swift](../runner/Clients/PWRunnerClient/PWRunnerClientSession.swift)
+    260–262). For empty data, `PWRunnerReplyCapture.init` records
+    `bytes_received` 0, `bytes_retained` 0 and `truncated` false
+    ([PWRunnerTransport.swift](../runner/Sources/PWRunnerCore/PWRunnerTransport.swift)
+    163–168). `emit` exits 0 for terminal `runner_reply` (main.swift 30).
+  - **Controller side (S).** `validate_capture` tests whether a host reply is
+    present by the `Option`, not by length (runner_client.rs 478–481). Its
+    retention checks hold for zero (575–587). `decode_bound` refuses a frame
+    shorter than 36 bytes as `Malformed` (porcelain.rs 179–181), which yields
+    `malformed_runner_response` with a null projection. Through the real
+    parser, `arbitrary_rejected_host_bytes_survive_and_do_not_become_claims`
+    constructs a capture with empty host bytes and asserts that label.
+  - **Inference, not observed.** That NSXPC delivers a zero-length `Data`
+    argument to the client's reply block as an empty `Data`, rather than
+    failing. No path that reaches the empty writer was executed.
+
+  The rich and minimal replies would be admitted with the host label
+  `runner_reporting_failed`/1.
+
+  If the NSXPC inference above holds, the empty writer gives a native route
+  by which a shipped client delivers malformed host bytes. It is the only
+  such route I found in the host writers I traced. That is a judgment from
+  the trace, not the result of a search designed to rule out others. The
+  route was not exercised.
+- **Accepted-but-unproduced client vocabulary.** The client never emits
+  error reasons `interrupted` or `invalidated`
+  (`git grep` in `runner/Clients` and `runner/Sources` finds them only in the
+  host's own connection handlers). `validate_error` accepts both
+  (runner_client.rs 126–143).
+
+### Transport precedence and retention (question 2)
+
+The first failing row decides the outcome. Each cell is marked with its
+evidence class.
+
+| Boundary that failed first | Outcome / exit | `submission` | `runner_client.transport` | `runner_result` | Fallback | Evidence |
+| --- | --- | --- | --- | --- | --- | --- |
+| Client launch, deadline setup or tool resolution | `tool_error`/2 | — (`runner_client` null) | — | null | no | S |
+| Request delivery | `tool_error`/2 | unknown | rejected bytes, never decoded | null | no | C (B7) |
+| Retention loss (>272 MiB) | `malformed_runner_client`/1 | unknown | rejected prefix | null | no | unit test through the real parser (`retention_loss_precedes_decode_and_keeps_exact_prefix`) |
+| Empty stdout | `missing_runner_client`/1 | unknown | null | null | no | S |
+| Capture schema or contract | `unsupported_runner_client`/1 | unknown | rejected bytes | null | no | C (B5b) |
+| Capture frame malformed | `malformed_runner_client`/1 | unknown | rejected bytes | null | no | C (B5a, r1 truncated by one byte) |
+| Capture semantics | `malformed_runner_client`/1 | unknown | rejected bytes | null | no | C (B5c) |
+| Accepted; host reply truncated | `runner_reply_truncated`/1 | invoked | typed, prefix retained | null | no | S |
+| Accepted; host schema or contract | `unsupported_runner_response`/1 | invoked | typed, bytes retained | null | no | C (B2, B3a) |
+| Accepted; host bytes malformed or empty | `malformed_runner_response`/1 | invoked | typed, bytes retained | null | no | C (B3c), T |
+| Accepted; terminal not `runner_reply` | that refusal/1 | `not_invoked` or `invoked` | typed | null | only `xpc_error` | N (d1, d2, c), C (B6, B4) |
+| Decoded; geometry or profile labels | `malformed_runner_response`/1 | invoked | typed | **decoded, retained** | no | C (B3b) |
+| Admitted | host label; `finished`/0, otherwise 1 | invoked | typed | decoded | no | N (baseline), C (B1) |
+
+The four rows beginning "Accepted; host …" and "Accepted; terminal not
+`runner_reply`" are alternatives, not a sequence. The three host-frame rows
+apply only with terminal `runner_reply`; the terminal row applies only
+without it. Of the three host-frame rows, truncation is tested before
+decoding, and the fingerprint before the contract.
+
+For every row except the last, `runner_sandbox_diagnostics` is present and
+null. For rows with N or C evidence, the saved envelopes show it. For the
+S and unit-test rows, it follows from source: `tool_error` and
+`execution_only` both set it to `None` (run_flow.rs 154–164 and 715), and
+`RunData` has no skip rule. `actor_policy_checks` is omitted unless fallback ran for an
+actor request.
+
+### How DT-31, DT-32 and DT-42 relate
+
+The three findings share one mechanism (S). Client-capture admission
+(`failure()`) gates `complete_execution`, and fallback eligibility is a
+subset of the `failure()` refusals. Three consequences follow from that
+single gate:
+- execution admission always carries a decoded host reply (DT-31);
+- the client stdout errors never reach the post-admission precedence (DT-32);
+- a fallback capture never shares an envelope with a host report or with
+  execution diagnostics (DT-42 / DT-116).
+
+The same states survive in code and tests because injected constructors and
+JSON-decoded fixtures produce them (DT-115).
+
+DT-31's foreign-producer half and DT-42's actor-form branch are different
+boundaries:
+- the first concerns the order of `decode_bound`;
+- the second concerns the helper's decoder and the absence of a form check
+  in the controller.
+
+In the paths I traced, I found no further dependency they share. That is a
+judgment from this trace. It is not the result of a search designed to rule
+one out.
+
+### Transport coverage and remaining limits
+
+**Traced.**
+- The client parser, capture validation and `failure()`.
+- `admit_reply`, `complete_execution`, the fallback functions and `run`.
+- `select`, `policy_check.rs` and `sbpl-check.rs`.
+- Verify's use of the admission path.
+- The Swift session and entry point.
+- The host's control and report writers.
+- The stated contracts:
+  - 20-transport, 40-envelope, 41-diagnostics (admit and geometry), and the
+    11-policy helper and fallback sections;
+  - the corresponding passages in the controller README, guide, ARCHITECTURE
+    and CONTROLLER;
+  - the failure contract's transport paragraph.
+
+**Not done.**
+- No `tests/run.sh` case was run. Statements about tests rest on reading
+  their bodies.
+- A native truncated host reply (between 96,468,992 and 134,217,728 bytes), a
+  native empty reply and a native reply over the capacity bound were not
+  produced.
+- A native `xpc_error` for the ordinary form was not produced. B4i covers that
+  path with controlled output.
+- `runner verify` was traced only as a second caller.
+- Whether `runner_response_unavailable` was reachable before `34496c0f` is
+  open.
+
+**Limits of the evidence.**
+- The C cases establish how the controller handles bytes. They do not
+  establish native client or host behaviour.
+- The (c) run is one native observation, made with a forced host kill. It
+  establishes that the run-level outcome exists. It does not show how often
+  such failures occur.
+- The constructed capture's acceptance is an observation. Its resemblance to
+  the native (c) capture was compared by fields, not by bytes.
+- No change to code, tests or documentation accompanies this report.
+
+## Additional findings: observation ownership and time
+
+### Observation-time investigation identity and evidence classes
+
+This pass asks whose observation each returned field records and what time it
+describes. It starts from DT-46, DT-62, DT-63, DT-66 and DT-68. Those entries
+keep their own scope. The entries below extend them, qualify one history note in
+DT-46, and record new findings as DT-120 to DT-129. No layer is chosen to change
+and no repair is proposed.
+
+**Snapshot and build.**
+- Source inspection used clean `main` at `cc55288d033023ce2f18e8c02cd51a400ef2b530`
+  on 2026-11-16, with macOS 26.7.1 (25G241) on arm64. Line numbers below refer
+  to that snapshot.
+- The existing `dist/PolicyWitness.app` reports commit `8b5de2b2`, version
+  0.3.7, build 1482, and contract
+  `development:bdefcb44cb8b799494b555f6ba992e5bbfb58eba8ef980cb805adf15c103fb18`.
+- `git diff --stat 8b5de2b2 HEAD -- controller runner tests docs` shows only the
+  one-line change to `tests/suites/preflight/opt_in/build_refusals.py`.
+- The executable hashes match the failure-contract investigation's table:
+  - `policy-witness` `4bcd308b…`
+  - `PWRunner` `706d9a6c…`
+  - `pw-probe-runner` `d6d38f09…`
+  - `sb_api_validator` `ccbf9803…`
+  - `pw-probe-runner-unentitled` is `ee2a4248…`.
+- The app was neither rebuilt nor modified.
+
+**Kinds of evidence.** Four kinds appear below, and each claim names its kind.
+
+1. *Public CLI execution.* E1–E5, and two path-length checks (E7a/E7b) made
+   after the first validation, ran
+   `dist/PolicyWitness.app/Contents/MacOS/policy-witness run SPECIMEN`, capturing
+   stdout, stderr and exit status separately.
+   - The runs were made outside the automation sandbox from the start, because
+     earlier passes recorded XPC lookup error 159 inside it. No in-sandbox
+     attempt was made in this pass.
+   - Every capture has empty stderr.
+2. *Internal driver observation (E6).* This is not a public response. Its build
+   and execution:
+   - `runner/Sources` and `runner/Package.swift` were copied unchanged; `diff -r`
+     reported no difference before and after the build.
+   - The only addition is my own `Tests/PWRunnerCoreTests/main.swift` (SHA-256
+     `7d88c93f…`).
+   - Build command: `swift build --jobs 2 --package-path … --scratch-path …
+     --product PWRunnerCoreTests`, run outside the sandbox with Apple Swift 6.4.2
+     and the macOS 27.2 SDK. The executable SHA-256 is `2750ec0e…`.
+   - It ran against the signed app's `pw-probe-runner-unentitled` and
+     `pw-probe-runner`. Those executables were used in place and read only.
+   - It decodes the request with the app contract, normalizes and translates it
+     with the production `ActorTranslation`, and runs `ActorScheduler`.
+   - Its `ActorScheduleInput` (driver `main.swift` line 40) sets no `didSetUp`
+     hook, so equipment binding and live code inspection do not run. Validator
+     collection, reply validation and encoding are also absent.
+   - It reads host custody state from the collection hook (line 88) and again
+     after `run()` returns.
+   - It counts nonzero bytes only (lines 43–49); no token byte was printed or
+     written. It reaches the private custody buffer pointer through `Mirror`
+     (lines 51–56) without changing any access control.
+3. *Source and test inspection.* This covers the cited lines.
+4. *History inspection.* This uses `git log -S/-G` and `git show`.
+
+All live runs (E1–E5, E7a/E7b and E6) were invoked through
+`tests/lib/checkout_lock.sh`. That is recorded only in this pass's command
+history; the saved captures do not record it. No registered test case was
+executed, and no suite pass is claimed.
+
+**Artifacts and availability.**
+- Specimens, the specimen generator, the CLI runner, the summarizer, captures
+  and driver outputs are under `.tmp/contract-trio/observation-time/` in the
+  local checkout. That directory is gitignored, disposable and has no retention
+  guarantee. The E7a/E7b captures are `runs/c7_len45` and `runs/c7_len55` there.
+- The main target file is `/private/tmp/pw-trio-ot-xVGRMW/target`. The E7a/E7b
+  targets sit in sibling `pw-trio-ot-len45-*` and `pw-trio-ot-len55-*`
+  directories. On this machine `/private/tmp` does not survive a reboot.
+- Each target holds the 27 bytes `authority lifetime witness\n` (SHA-256
+  `7482bce4…`). The main target (device 16777233, inode 278532339) was unchanged
+  after E3.
+
+**Rebuilt specimens.**
+- E1 rebuilds DT-62's issue-only specimen and E3 rebuilds DT-66's two-actor
+  specimen from the record's descriptions; the original scratch is gone.
+- The target content and length match DT-59. The target path and inode differ
+  from DT-59/DT-66 (`/private/tmp/pw-authority-trace-3QC3qQ/target`, inode
+  277408216).
+- The original files' mode and the original step and phase identifiers are
+  unknown. The rebuilt identifiers are in the specimen files.
+- Actor A is unapplied with `equipment: "unentitled"`. B in E3 is applied with
+  the default selected equipment and DT-66's exact policy.
+- Token lengths varied with the target path's byte length in these runs.
+  - DT-62's driver printed an accepted length of 216, while E1a, E2 and E6 show
+    208.
+  - E7a and E7b reran E1a's specimen with target paths of 45 and 55 bytes. They
+    gave issue `token_length` 216 and 226.
+  - With E1a's 37-byte path giving 208, the published length equals 171 plus the
+    path's byte length in all three runs. The constant is not explained here.
+  - DT-62's path (`/private/tmp/pw-authority-trace-3QC3qQ/target`) is 45 bytes.
+  - This is a length correlation only; no token content was inspected.
+
+**Terms used here.**
+- *Native operation*: the private-library or system call itself.
+- *Publication*: a worker or host release store that makes a value eligible to
+  read (slot `completed`, call-boundary marker, setup cell, outbound
+  `committed`, host acknowledgement).
+- *Host observation*: a value the host records from its own call or read
+  (waitpid, kill, custody acceptance, transfer answer).
+- *Assembly decision*: a value computed while building the reply.
+- A *copy* repeats one stored value. A *derivation* maps it. An *independent
+  observation* comes from a different call or read.
+
+### DT-120 — `cleanup_trigger` is derived from the stored stop reason and has been fixed at final collection since `c686a05f`; one string fills seven reply values
+
+This entry adds to DT-46 and leaves its scope intact.
+
+**Producers and copies.** A single stored string, `ActorSession.pollStopReason`,
+produces all of these values:
+
+| Reply value | How it is obtained | Fixed at |
+| --- | --- | --- |
+| `poll_stop_reason` | copy (`ActorSession.swift` 742) | last assignment to `pollStopReason` |
+| `sentinel_wait.stop` (single-worker only) | copy taken when the polling loop ends ([CWorker.swift](../runner/Sources/PWRunnerCore/CWorker.swift) 1271) | loop exit, before `requestExit` at 1276 |
+| `cleanup_trigger` | `triggerForStop[pollStopReason] ?? pollStopReason` (`ActorSession.swift` 626) | `collectOutput`, after grace, termination and reap |
+| claim `stop_reason.answer` | copy of `poll_stop_reason` ([CWorkerDisposition.swift](../runner/Sources/PWRunnerCore/CWorkerDisposition.swift) 117–121) | resolution |
+| claim `cleanup_trigger.answer` | copy of `cleanup_trigger` (127) | resolution |
+| `normalized_outcome: runner_timeout` | selected when the stop-reason claim is `sentinel_deadline` (361–366) | classification |
+| diagnostics `stop_reason`, `termination_cause` | Rust `project` ([porcelain_admission.rs](../controller/src/porcelain_admission.rs) 1342–1419) | controller projection |
+
+The writers of `pollStopReason` are:
+- the initializer default `"sentinel_deadline"` (`ActorSession.swift` 70, then 411);
+- the single-worker polling loop (`CWorker.swift` 1191, 1192, 1204, 1205, 1221, 1232, 1235);
+- `ActorScheduler.stopActor` ([ActorScheduler.swift](../runner/Sources/PWRunnerCore/ActorScheduler.swift) 549);
+- `finish()` (562).
+
+Every one of them runs before the matching `requestExit`
+([ActorSession.swift](../runner/Sources/PWRunnerCore/ActorSession.swift)
+558–562). Nothing writes the field between that store and `collectOutput`, so
+the value mapped at collection is the value held at the store. That equality
+follows from how the code is structured; nothing captures the value at the
+store.
+
+**Exits that keep the default.**
+- The single-worker loop (`CWorker.swift` 1162–1270) has four exits that leave
+  `pollStopReason` untouched: 1247, 1253, 1259 and 1269. Each goes through
+  `expiredAfterResampling`, `expiredAfterWaiting(exit:)` or
+  `expiredAfterSleeping()`, and each returns true only when the allowance is
+  exhausted (`fallbackRemainingNs == 0`, lines 955–1027).
+- The breaks at 1193, 1206, 1238 and 1267 only leave a `switch`.
+- The protocol-violation branch (1188) continues the loop.
+- With an unusable clock, `elapsedNs()` returning nil changes only the cadence of
+  the periodic waitpid (1227). The loop still ends through an expiry exit, once
+  nominal charged sleeps exhaust the allowance.
+- So in the single-worker form the string `deadline_expiry` always means the
+  allowance was exhausted. It is never actively recorded: it is the default that
+  no other exit replaced. Under a clock fault that exhaustion was counted in
+  nominal sleeps, not measured; only `sentinel_wait.clock_fault` and the absent
+  `elapsed_ms` show this. That is the single-worker counterpart of DT-10.
+- The actor form never keeps the default. `stopActor` or `finish()` assigns every
+  spawned session.
+
+**History: two separate properties.**
+
+(i) *Recording time.* The derivation was introduced in `0ed4ae7a` (2026-09-27).
+At that point it sat immediately after the store. `git show
+0ed4ae7a:runner/Sources/PWRunnerCore/CWorker.swift`, lines 933–938:
+
+```swift
+    // ---- Request worker exit (a no-op if it already died on its own).
+    storeRelease(rawBase, offset: PWShmLayout.exitRequestedOffset, 1)
+    // The cleanup trigger is recorded here, at the store, as the reason polling
+    // stopped; it is a host fact for the disposition record, not reconstructed
+    // from a final exit code.
+    let cleanupTrigger = PWDisposition.triggerForStop[pollStopReason] ?? pollStopReason
+```
+
+`c686a05f` (2026-11-03), which introduced `ActorSession` and the actor form,
+deleted those lines and moved the same expression into `collectOutput`. So the
+value was fixed at the store from `0ed4ae7a` until `c686a05f`, and at final
+collection since then. Because no later write intervenes, the move changed when
+the value is fixed, not the value.
+
+(ii) *Independence from the stop reason.* The trigger has never been independent
+of the stop reason. Both placements derive it through `triggerForStop` from
+`pollStopReason`.
+
+What the documents claimed:
+- The failure contract's wording dates from `0b6e191e`, about an hour before
+  `0ed4ae7a` on the same day. In
+  [the contract](../tests/FAILURE-PROPAGATION-CONTRACT.md), lines 359–367, it
+  claims three things: the trigger is "recorded at the exit-request store"; the
+  raw facts are "not conclusions reconstructed from a final status"; and "today
+  it corresponds one-to-one with `poll_stop_reason`, and both are retained".
+- The first claim matched the code only between `0ed4ae7a` and `c686a05f`. The
+  second has always held. The third openly states that the trigger depends on
+  the stop reason.
+- RESPONSE's "Host fact recorded when it requests exit"
+  ([32-lifecycle.surface.md](../docs/contract/32-lifecycle.surface.md) line 92;
+  `docs/RESPONSE.md` 1633) was authored in `f6551bf9` (2026-11-10), after the
+  move.
+- Two code comments carry the same recording-point wording and were not changed
+  by the move:
+  - the doc comment on `CWorkerOutput.cleanupTrigger`
+    ([CWorker.swift](../runner/Sources/PWRunnerCore/CWorker.swift) 559–562,
+    "Direct host observations … why exit was requested (recorded at the
+    exit-request store)"), from `0ed4ae7a`;
+  - the comment on Python `TRIGGER_FOR_STOP`
+    ([lifecycle_contract.py](../tests/lib/lifecycle_contract.py) 105–106, "the
+    host records the trigger at the exit-request store"), from `0b6e191e`.
+- The actor cause surface's fallback paragraph
+  ([41-diagnostics.surface.md](../docs/contract/41-diagnostics.surface.md)
+  1014–1017; RESPONSE 3167) names "the request result, exhausted grace and owned
+  final status" as the independent observations in the chain. It does not include
+  the trigger.
+
+DT-46's "already in `0ed4ae7a`" is accurate for the expression. The placement at
+collection begins with `c686a05f`.
+
+**No reader treats the copies as corroboration.**
+- I found no statement or reader that treats any pair of these copies as
+  corroborating each other.
+- Rust (`porcelain_admission.rs` 463–475) and the Python oracle
+  ([lifecycle_oracle.py](../tests/lib/lifecycle_oracle.py) 139–145) each check a
+  claim only against its own raw field.
+- Python `TRIGGER_FOR_STOP` ([lifecycle_contract.py](../tests/lib/lifecycle_contract.py)
+  107) is used for a vocabulary self-check (752) and an export (801). The Swift
+  test at
+  [DispositionResolverTests.swift](../runner/Tests/PWRunnerCoreTests/DispositionResolverTests.swift)
+  527 compares that export with `PWDisposition.triggerForStop`. That detects
+  disagreement between the Swift and Python tables. It checks no reply value.
+- The Swift resolver fixture at line 44 builds its expected trigger with the
+  production map, so that fixture alone cannot detect a mapping change.
+- The cited Rust cause test (lines 2660–2730) builds matched pairs by hand.
+
+**What enters the cause label.** In `project`, `termination_cause` requires four
+things:
+- a supported `final_status` of `signal`, which comes from waitpid status
+  recorded at reap;
+- supported `grace_end: exhausted`, recorded when the grace loop ends;
+- `kill_request_and_result: requested`, recorded at the kill call, with `rc == 0`
+  and a signal equal to the final status;
+- a supported trigger, which only selects the label.
+
+`owned_reap` and its `departure_requested` are not inputs. In the ordinary form,
+where the map is deterministic, the derivation therefore changes only how the
+value's provenance is described. No cause selection changes.
+
+**Executed, public CLI, E4 (shortened-timeout control).**
+- Specimen: the ordinary baseline from the failure-contract investigation plus
+  `_test_overrides.worker_timeout_ms: 50` and `worker_post_apply_hang_ms: 3000`.
+- `worker_timeout_ms` is a supported override. The host floors it at 50 ms
+  (`timeoutMsForCWorker`, `CWorkerRequestPlanning.swift` 62–66) and passes it as
+  the same `HostWaitClock` budget, so the production loop runs with a smaller
+  allowance. This control does not test the 120,000 ms production duration.
+- Result: exit 1, `runner_timeout`.
+
+| Field | Value |
+| --- | --- |
+| `sentinel_wait` | `budget_ms` 50, `elapsed_ms` 53, `excluded_ms` 2, `clock_fault` false, `stop` `sentinel_deadline` |
+| `poll_stop_reason` and the stop claim | `sentinel_deadline` |
+| `cleanup_trigger` and its claim | `deadline_expiry` |
+| `exit_grace_wait` | 1001 ms, `exhausted` |
+| `termination_request` | `{signal:9, rc:0}` |
+| status | reaped with signal 9 |
+| diagnostics | `termination_cause: host_sentinel_deadline`, `stop_reason: sentinel_deadline` |
+
+Only the initializer assigns the string `sentinel_deadline`
+(`ActorSession.swift` 70 and 411; line 411 reassigns it when the policy
+transfer succeeded). Both assignments precede the polling loop, so the string's
+presence shows only that no loop exit replaced it, which means one of the expiry
+exits ended the loop. `elapsed_ms ≥ budget_ms` with a working clock shows the
+expiry was measured. One stored string reaches seven reply values plus the
+outcome.
+
+### DT-121 — In the actor form, scheduler stop reasons pass through the trigger unmapped, so a fully witnessed host kill projects `unknown` under the documented recognized-value rules
+
+- *Source.* Every actor stop reason comes from the scheduler. The full list:
+  `done`, `schedule_complete`, the visit failures, setup statuses, transfer
+  failures (`policy_write_error`/`policy_transfer_deadline`) and `wait_error`.
+  Only `done`, `wait_error` and the two transfer reasons appear in
+  `triggerForStop`. All other values pass through as the trigger.
+- `sentinel_deadline` cannot occur in the actor form, so the actor cause table's
+  "Deadline expiry" row cannot be reached. That row is at
+  [41-diagnostics.surface.md](../docs/contract/41-diagnostics.surface.md) 972
+  and `docs/RESPONSE.md` 3162.
+- *Executed, public CLI, E5.* One unapplied actor with one `read_fresh` and
+  `worker_post_apply_hang_ms: 3000`.
+  - The override applies in the actor form. `ActorTranslation` copies it into
+    every actor's input (`ActorOrchestration.swift` 186); `ActorSession` passes
+    it to the worker on its command line (335–338); the worker sleeps after its
+    visits and before `done` (`pw_probe_runner.c` 1675–1688).
+  - Result: exit 1, `runner_failed`. The phase completed and `done_observed` is
+    false.
+  - The full chain is present: `grace_end: exhausted` (1000 ms),
+    `termination_request {signal 9, rc 0}`, reaped signal 9, and
+    `owned_reap.departure_requested: true` at stage `after_termination`.
+  - The trigger and the stop reason are both `schedule_complete`. Diagnostics
+    give `process_disposition: signaled`, `termination_cause: unknown` and
+    `stop_reason: null`.
+- *Why `stop_reason` is null in the same reply.* This comes from a separate
+  projection rule with the same root.
+  - The actor diagnostics `stop_reason` is defined as "the actor worker's
+    supported stop reason from the recognized set listed for execution
+    diagnostics. Null when no supported recognized answer was projected"
+    ([41-diagnostics.surface.md](../docs/contract/41-diagnostics.surface.md)
+    803–806).
+  - Its first-match rule (932–943) projects the answer only when it is one of the
+    six ordinary values.
+  - So `schedule_complete` projects null. E1b's `died_before_completion` likewise
+    projects null, while E3's `done` projects `done`.
+  - The cause table (972–1011) is a different first-match rule over the trigger's
+    recognized values, ending in `unknown`.
+  - Both rules apply recognized sets drawn from the ordinary-worker vocabulary to
+    values the actor scheduler produces.
+- *Documented rules and what they leave unstated.* Both outcomes follow
+  documented rules.
+  - `poll_stop_reason` declares an open vocabulary: "an unfamiliar reason
+    establishes only that recorded reason, and gains no known timeout or cause
+    meaning" ([32-lifecycle.surface.md](../docs/contract/32-lifecycle.surface.md)
+    64–70).
+  - The cause rule's last case is "No eligible recognized cleanup cause".
+  - `cleanup_trigger` itself has no vocabulary block. Its field statement lists
+    six values (line 92) while actor replies carry others as `supported` claims.
+    DT-30 recorded that difference.
+  - What I did not find is any statement that the actor scheduler's own routine
+    reasons fall into the "unfamiliar" class. These include `schedule_complete`
+    for every actor not stopped earlier that has not published `done`.
+  - Nor did I find a statement that the actor form's deadline row cannot be
+    reached. "No stated rationale" is limited to those two points.
+- Related to DT-30 (vocabulary lists): this entry records the executed
+  consequence for cause and stop projection. Related to DT-10 for timeout labels.
+- *Limit.* The run shows only `schedule_complete`. `completion_timeout`,
+  `arrival_timeout` and `setup_timeout` with an exhausted grace were not executed.
+
+### DT-122 — Accepted custody has no public carrier when the issue slot is unpublished, while delivery observations survive an unpublished transfer slot
+
+This entry extends DT-62 to the public CLI.
+
+**Observers of the issue.**
+1. The worker's native `sandbox_extension_issue_file` return and errno are
+   written to its slot ([pw_probe_runner.c](../controller/tools/pw_probe_runner/pw_probe_runner.c)
+   851–856). The host may read them only after the slot `completed` publication
+   (store at 1096).
+2. The worker publishes the outbound slot (`committed`, 878).
+3. The host decides acceptance while servicing during the issuer's visit. It
+   records a `CustodyObservation` with status, length and phase, clears the
+   outbound token field, and acknowledges
+   ([AuthorityCustody.swift](../runner/Sources/PWRunnerCore/AuthorityCustody.swift)
+   456–501).
+4. The worker records its own view of that acknowledgement as
+   `ext_custody_status` (C 877–883). That value becomes readable only through the
+   same slot `completed` publication.
+5. The host custody setup scope holds mmap, `final_erase` and munmap only.
+
+**What reaches the reply.**
+- `CustodyObservation` is used only for the token status
+  (`ActorOrchestration.swift` 466–468), after the check that the slot completed,
+  and for `delivered_length` (486), only when the transfer acknowledgement was
+  `delivered`.
+- Its `status`, `length`, `rejectDetail`, `erased` and `phaseIndex` are never
+  encoded on their own.
+- The surface's statement that "The native return and host custody acceptance are
+  reported independently"
+  ([14-extensions.surface.md](../docs/contract/14-extensions.surface.md) 377,
+  authored in `f6551bf9`) describes what the host observes. It does not describe
+  what the reply reports.
+
+**Executed, public CLI, E1a against E1b.** The issue-only specimen was run without
+the seam (E1a) and with `worker_kill_before_publish_slot: 0` (E1b).
+
+| Field | E1a | E1b |
+| --- | --- | --- |
+| exit, outcome | 0, `finished` | 1, `runner_failed` |
+| issue event | `returned`, `native_nonnull` true, `token_length` 208 | `call_boundary_observed` true, `result_published` false, `unresolved`, native fields absent |
+| token record | `issued`, length 208 | `unresolved`, no length |
+| host custody scope `t` | mmap 16384, `final_erase` performed 16384, munmap 0; `{mapping: released, private_erasure: performed}` | identical |
+| worker scope | `{descriptor: released, mapping: held, shared_erasure: performed}`, cell 11 value 0 | `{…, mapping: held, shared_erasure: not_present}`, no cell 11 |
+| actor trigger | `completion`; reaped exit 0 during grace | `died_before_completion`; reaped signal 9 at stage `schedule`, `departure_requested` false |
+
+In E1b no public field distinguishes "the host accepted custody" from "no
+publication ever reached the host". DT-62's driver output shows that the host did
+accept in this configuration. That driver run is internal evidence and was not
+repeated here.
+
+**Executed, public CLI, E2: the asymmetry at the public boundary.**
+- Specimen: one actor that issues and then transfers to itself, with
+  `worker_kill_before_publish_slot: 1`. The seam kills the worker after the
+  transfer attempt returns and before its slot is published.
+- Result: exit 1, `runner_failed`.
+- The issue event is `returned` with length 208, and the token is `issued`.
+- The transfer event is `unresolved` and `result_published` is false.
+- `transfers[0]` reads `held`, `copied`, `equal`, recipient acknowledged,
+  `source_acknowledged: false`, `delivered`.
+- The delivery is `delivered` with `delivered_length` 208.
+- So the host's delivery observations survive an unpublished source slot, while
+  the host's acceptance does not survive an unpublished issue slot.
+- `ActorReplyTests` 135–156 asserts the transfer side only in-process, through
+  `assembleActorReply`. This run is the public-CLI observation.
+- `delivered_length` is the host's custody length. The host read it from the
+  worker-written outbound length word and checked it against the framing.
+  `token_length` comes from the worker's evidence slot. Both lengths were written
+  by the same worker through two channels. Their equality is a consistency check,
+  not two independent measurements.
+
+**Statement ambiguity.**
+- "The host custody record carries token acceptance" appears at
+  [14-extensions.surface.md](../docs/contract/14-extensions.surface.md) line 623
+  (the `pins` of the issue-projection source support) and is rendered at
+  `docs/RESPONSE.md` 2680.
+- Read as `authority_setup.host.custody`, it is false: that scope never contains
+  acceptance, and E1a and E1b give identical scopes.
+- Read as `resources.tokens[].status`, which the failure contract calls "Custody
+  status" (lines 272–281), it holds only when the issue slot was published.
+- Line 429 ("Host custody records describe the controlled publication, copying
+  and erasure protocol") does not settle which record is meant.
+
+### DT-123 — The worker's own observation of the custody answer is decoded and discarded
+
+- `ext_custody_status` reports what the worker saw:
+  `none/accepted/rejected/timeout/not_published/clock_fault`
+  ([pw_probe_runner_abi.h](../controller/tools/pw_probe_runner/pw_probe_runner_abi.h)
+  164–167).
+- `collectOutput` decodes it into `CWorkerExtensionPublication.custodyStatus`
+  (`ActorSession.swift` 690). In the E6 driver output (DT-124) this decoded value
+  is labelled `worker_custody_status`; it is the same field. This record calls it
+  `ext_custody_status` throughout.
+- I first searched `runner/Sources`, `controller/src`, `controller/tools` and
+  `tests/lib`. That covers assembly, the `PWRunnerReply` integrity checks, the
+  classifiers and the readers. The search found no other reference to the
+  decoded field; the other `custodyStatus` hits are the host's
+  `TransferObservation` string.
+- A later search of `tests/suites` and `tests/fixtures` found the raw C slot word
+  in three test places, none of which reads the decoded Swift field:
+  - [authority_binding.c](../tests/fixtures/extension_controls/authority_binding.c)
+    99 and 104, a constructed C control that drives `attempt_extension_issue` to
+    `PW_CUSTODY_TIMEOUT` and then `PW_CUSTODY_ACCEPTED`;
+  - the `early_erase` mutation anchor in
+    [actor_handoff_mutations.py](../tests/suites/runner_unit/actor_handoff_mutations.py)
+    140–141;
+  - the layout printer.
+- The `custodyNames` table at `ActorOrchestration.swift` 295 has no reader.
+- `git log -G'custodyStatus|custodyNames' -- runner/Sources` shows the decode and
+  the table were added in `c686a05f` and that no reader was ever added.
+  `deb67eff` touched only the transfer field. `bc3abe2f`'s `custodyNames` is a
+  different local in `PWRunnerAuthoritySetup.swift`.
+- Only [ActorAuthorityTests.swift](../runner/Tests/PWRunnerCoreTests/ActorAuthorityTests.swift)
+  305, 394 and 400 read it, in-process. E6 (DT-124) recorded value 1 (`accepted`)
+  for the issue slot.
+- Consequence: the token status is built from the host's acceptance record
+  combined with the worker's slot publication. The worker's view of whether it
+  received an answer, which is what a timeout or clock fault would change, is
+  retained only internally.
+- I did not execute an end-to-end timeout case. The C control above produces a
+  worker-side timeout status, but no test follows that word through the Swift
+  decode, assembly or reply. This entry concerns which fields exist; it is not a
+  demonstrated disagreement.
+
+### DT-124 — No public field reports last-use clearing; the internal final erased flag is the same whether or not the last declared transfer ran
+
+This entry extends DT-63.
+
+**Clearing sites.**
+
+| Site | Extent | When | Where it is visible |
+| --- | --- | --- | --- |
+| Host outbound clear | the outbound slot's token field | at acceptance (`AuthorityCustody.swift` 490) | internal |
+| Host private custody, issue-only last use | the custody buffer | at acceptance (482–485) | internal flag |
+| Host private custody, last transfer | the custody buffer | `defer` in `serviceTransfer` (514–521) | internal flag |
+| Host private custody, teardown | the custody buffer | `finish()` (633–639; `TokenCustody.finish` 311–322) | `final_erase` cell, `private_erasure: performed` |
+| Host shared region, teardown | every slot's token field | `finish()` after reap, for quiescent owners (225–242) | region `shared_clear` with byte count |
+| Worker inbound, last consume | that inbound slot's token field | C 936–939 | not published |
+| Worker exit sweep | settled inbound slots | `erase_authority` (C 579–590), first call published once as cell 11 | worker `terminal_owned_inbound_clear` value, `shared_erasure: performed` |
+
+The authored erase rule lists `report: runner_reply`
+([14-extensions.surface.md](../docs/contract/14-extensions.surface.md) 408–421).
+The reply contains only the teardown and exit rows. Neither last-use clearing
+appears in any public field.
+
+**Executed internal driver, E6 (not a public response).**
+- Request:
+  - A (unapplied, unentitled) issues `t` and transfers it to B as `d1`.
+  - B (unapplied, selected) runs `read_fresh`.
+  - A transfers `t` to B as `d2`, its last declared use.
+  - B consumes `d1` (last use) and releases `h1`.
+  - B runs `read_fresh`.
+- Native issue, consume and release are real calls in the signed workers.
+  Transfers are real host servicing.
+- Each collection-hook row below is taken after the scheduler observed the
+  active actor's arrival and before its release store (`ActorScheduler.swift`
+  405–415). The scheduler activates one actor at a time. That rests on its design
+  and source comment (4–17, 406–407), not on a traced path for each actor.
+- The other actor's state differs by row:
+  - Before a later visit it is parked in `wait_for_activation`
+    (`pw_probe_runner.c` 1148), which services inbound slots.
+  - After its final visit it runs its exit path or has exited (1673–1702). That
+    applies to A at V1's phase-3 and phase-4 rows.
+  - In V2, A is reaped from phase 1 on.
+- A's exit path erases only A's own settled inbound slots (none) and touches
+  neither host custody nor B's region (`erase_authority`, C 579–590). The
+  measured quantities therefore do not depend on A's state.
+- Each interval runs from one hook row to the next.
+- V1 runs unchanged.
+- V2 sets `killBeforePublishSlot = 1` on A's input only, in the driver. This is
+  the same `CWorkerInput` field, and the same worker argument
+  `--kill-before-publish-slot`, that the CLI override becomes. The CLI override,
+  however, applies to every actor; the driver confines it to A. A dies after
+  `send_d1` returns, so the last declared transfer is never serviced.
+
+| Collection point | V1: custody flag / buffer nonzero bytes | V2: custody flag / buffer nonzero bytes | B inbound `d1`, `d2` nonzero (V1) |
+| --- | --- | --- | --- |
+| phase 0, A arrives | no observation / 0 | no observation / 0 | 0, 0 |
+| phase 1, B arrives after `send_d1` | accepted, not erased / 208 | accepted, not erased / 208 | 208, 0 |
+| phase 2, A arrives | accepted, not erased / 208 | A unavailable; no hook | 208, 0 |
+| phase 3, B arrives after `send_d2` | **erased / 0** | accepted, not erased / 208 | 208, 208 |
+| phase 4, B arrives after `consume_d1` | erased / 0 | accepted, not erased / 208 | **0**, 208 |
+| after `run()` (teardown done) | `erased: true`, buffer unmapped | `erased: true`, buffer unmapped | regions unmapped |
+
+What this establishes:
+- In V1, with a real worker and real native token, the private custody buffer was
+  cleared inside the interval from A's phase-2 arrival to B's phase-3 arrival.
+  That is before teardown and consistent with the `serviceTransfer` defer.
+- In V2 it was still uncleared (208 nonzero bytes, flag not set) at the last
+  hook, B's phase-4 arrival. It was cleared and unmapped by the time `run()`
+  returned. That interval also contains B's last visit, B's exit and `finish()`.
+  Source attributes the clearing to `finish()` → `custody.finish()`, but the
+  capture does not isolate it.
+- The final internal `erased` flag is identical in both variants. The driver
+  produces no public reply; in the public CLI runs (E1a, E1b, E3) the custody
+  scope likewise shows only `final_erase` performed, the same in each.
+- In V1, B's `d1` inbound slot was zero at phase 4 while `d2` stayed nonzero.
+  This places the worker's last-consume erase before its exit sweep.
+- V2 also shows the worker's own published `ext_custody_status` (1, accepted)
+  and A's unpublished `send_d1` slot beside a delivered host transfer.
+- B exited 0 in both variants, and both PIDs were absent to `kill(pid,0)` after
+  the run.
+- B's `consume_d1` returned native 0 in both variants. B is unapplied here and
+  uses the selected worker. In E3, where B is applied, both consumes returned 1;
+  DT-59 recorded 0 for an unapplied, unentitled self-consumer. Both 0 and 1 are
+  candidate handles; only −1 means failure. The last-use erase runs whatever the
+  result (C 933–940), so the erasure observation does not depend on the value.
+  No claim about native handle numbering is made.
+- Limits: equipment binding, live inspection, validator collection and reply
+  encoding do not run in the driver. Each interval is bounded by collection
+  points, not exact instants.
+
+**Tests that read only the final state, and the observers.**
+- [ActorAuthorityTests.swift](../runner/Tests/PWRunnerCoreTests/ActorAuthorityTests.swift)
+  467–468 credits clearing at the last declared transfer but reads the
+  post-teardown flag. Line 307, in the calibration case, also reads that flag
+  after teardown, without a timing comment.
+- E6 V2 shows, with real workers, the relationship DT-63 showed with a
+  constructed input. When the last-transfer site never ran (the declared transfer
+  was never serviced), the final flag is the same as when it ran. The flag
+  therefore cannot tell the two sites apart.
+- V2 is not a case in which the line-468 assertion would fail for the input that
+  test runs (its self-transfer does execute). The point concerns what the
+  assertion's comment credits, not its verdict.
+- The footprint snapshot ([actor_snapshot.swift](../tests/fixtures/footprint/actor_snapshot.swift)
+  46–50, asserted in [footprint_workloads.py](../tests/lib/footprint_workloads.py)
+  118) reads `TokenCustody.erased` as false *before* the last transfer. It reads
+  flags only, not memory.
+- No existing observer covers the interval between the last transfer and
+  teardown on the host side.
+
+### DT-125 — The boundary observer of worker inbound clearing keeps only a cumulative result; a synthetic fixture counts erase calls
+
+This is the worker-side counterpart of DT-124, with a qualification.
+- [control.c](../tests/fixtures/extension_controls/control.c) 117–130 rewrites
+  one word, `worker_token_erased = clear && !failures`, on every erase call over
+  the observed inbound slot. Each call scans the full 16,384-byte field. It keeps
+  only a cumulative failure count, with no call site, count or interval.
+- [check_extension_boundaries.py](../tests/suites/witness_contract/check_extension_boundaries.py)
+  336–338 reads only those words.
+- The worker erases that slot at the last consume and again in the exit sweep. So
+  that observer would also pass if only the exit sweep ran.
+- However, [terminal_control.c](../tests/fixtures/extension_controls/terminal_control.c)
+  100–105 counts every erase call and checks the full buffer after each.
+  [check_terminal_erasure.py](../tests/suites/runner_c_worker_harness/check_terminal_erasure.py)
+  91 requires `erase_calls >= 3` for `consume`. In that fixture the three calls
+  are the last consume, the sweep after the visits, and `publish_done_and_exit`
+  (one settled slot of two). Without the last-use erase the count would be 2.
+- That guard is synthetic and count-based, not a timing observation. No mutation
+  was executed here.
+- E6 (DT-124, V1) supplies the timing observation internally. The host side has
+  no equivalent guard.
+
+### DT-126 — Two handle records and their release events are identical while access after each release differs
+
+This entry extends DT-66 with a rebuilt run.
+
+**Executed, public CLI, E3 (rebuild of DT-66).**
+- Result: exit 0, `finished`.
+- Both consumes returned native 1, and each handle lists the other in
+  `raw_equal_handles`. Both releases returned 0 with errno 0.
+- Fresh reads:
+  - `baseline`: open −1, errno 1;
+  - `during`: open 5, read 27;
+  - `after_r1`: read 27;
+  - `after_r2`: −1, errno 1.
+- Both successful reads returned the target bytes with device 16777233 and
+  inode 278532339.
+- All four queries were `deny` with `query_first`. The queries were collected at
+  B's arrival, before any of the phase's consumes or releases.
+- The gate was satisfied, with capture ordinals: A activation 1 < A owned reap 2
+  (natural, `termination_gate`) < gate 3. B's `b_use` activation timestamp is 3 µs
+  after A's reap timestamp.
+- Both PIDs (43783, 43784) were absent afterward.
+- This reproduces DT-66's pattern on the rebuilt specimen.
+
+**What each handle field records.**
+
+| Field | Producer | Observation time |
+| --- | --- | --- |
+| `status: produced` | consume slot publication | the consume |
+| `native_handle` | consume slot publication | the consume |
+| `raw_equal_handles` | assembly comparison of two consume slots' numbers | reply assembly |
+| `release_attempted` | the release slot's `call_boundary` marker | stored before `extension_release` (C 948–950); read at final collection even when the slot never completed (`ActorSession.swift` 652) |
+
+- 14-extensions line 948 defines `release_attempted` as "an observed native
+  call-boundary marker". So "attempted" means the worker reached the pre-call
+  store. It is not evidence of entry into, return from, or the effect of the
+  native call.
+- The worker never clears `handle_valid` after a release (C 943–957).
+- No handle field changes on release, on access loss, or on process exit.
+- Apart from references, step IDs and each listing the other in
+  `raw_equal_handles`, the two handle records are identical (`produced`, native
+  handle 1, `release_attempted: true`), and so are their release events
+  (`returned`, 0, errno 0). Yet access after `release_h1` succeeded and access
+  after `release_h2` failed.
+- Only the `read_fresh` observations, each a separate worker publication, carry
+  the access boundary. The handle records describe production and release-call
+  reachability, not present usability. After the reap, the process that held
+  these numbers no longer exists.
+
+### DT-127 — Worker ownership values are pre-exit publications reported beside host values recorded at teardown
+
+This entry extends DT-68.
+
+**Established observation time of each value.**
+- The worker scope is decoded from the worker's evidence region during
+  `collectOutput`, after reap (`ActorSession.swift` 489, 768).
+  - `descriptor` comes from cell 9 (setup).
+  - `mapping: held` comes from cell 8 `mmap` succeeded (setup).
+  - Only cell 12, `rejected_mapping_munmap`, could change `mapping` (setup
+    failure path).
+  - `shared_erasure: performed` comes from cell 11, published at the first exit
+    sweep before `done` or before an exit-request `_exit`
+    ([AuthoritySetupRuntime.swift](../runner/Sources/PWRunnerCore/AuthoritySetupRuntime.swift)
+    104–108; C 600–606, 820, 1673).
+- Host region and custody scopes are read after `custody.finish()`, which follows
+  every actor's stop and reap (`ActorScheduler.swift` 557–583, 184–193). Their
+  `released` values are host calls observed before assembly.
+
+**Executed observations.**
+- In E1a, E1b and E3 every worker scope reads `mapping: held` while the same
+  reply reports that actor reaped and the host region `mapping: released`.
+- This holds for a clean exit (E1a, E3), for a SIGKILL before publication (E1b,
+  where `shared_erasure` is `not_present`), and for a natural reap at the gate
+  (E3 A).
+- E5, with no authority plan, shows `not_required` and `not_acquired`.
+- [WORKER.md](../docs/WORKER.md) row a2 ("Mapping through worker exit") and
+  line 65 state the rationale: the worker keeps its mapping until exit and never
+  publishes a normal unmap. Exit itself is observed as the host's reap.
+
+**Judgment, kept apart from the established timing above.**
+- One field, `ownership`, documented as "Named ownership states" with no time
+  anchor ([34-equipment.surface.md](../docs/contract/34-equipment.surface.md)
+  line 870), carries two kinds of value:
+  - host values that record the outcome of the host's own last call on the
+    resource;
+  - worker values that describe the last state the worker published before it
+    exited.
+- For host values, "last call" means the munmap, close, unlink, `shared_clear`
+  or `final_erase` in `ActorAuthorityRegion.tearDown` or `TokenCustody.finish`.
+  `ActorScheduler.finish()` runs these before it builds the outcome, so they
+  happen before assembly.
+- PW makes no later call on these resources. The deinitializers that call
+  `tearDown`/`finish` again return at once (`tornDown`/`finished` guards,
+  `AuthorityCustody.swift` 226, 312, 634).
+- A host `released` value therefore stays accurate after the reply as far as PW
+  is concerned.
+- An `unresolved` value records a failed call. The resource then remains held
+  by the host process with no further PW action; what happens to it when that
+  process ends is outside these records.
+- `withheld_not_quiescent` records that the host did not erase. It says nothing
+  about the region object's later state.
+- WORKER.md explains the worker value, but the ownership definition does not
+  point to that explanation. A reader of the final JSON must join
+  `mapping: held` with `reaped`, the gate, or `collection_basis` to place it in
+  time.
+- The cost is interpretive: no reader or classifier uses worker `held`.
+  - Python [actor_evidence.py](../tests/lib/actor_evidence.py) 100–114 and Rust
+    `porcelain_actor.rs` 312–345 check that `released` is backed by a successful
+    cleanup operation and that `performed` is backed by a performed erasure cell
+    (`shared_clear`, `final_erase` or `terminal_owned_inbound_clear`).
+  - The `performed` check does not constrain the cell's value, which is why a
+    value of 0 passes (DT-128).
+  - I found no decision that depends on worker `held`.
+- This is not a leak claim. Process absence does not establish the disposition
+  of other resources.
+
+### DT-128 — Worker `shared_erasure: performed` does not show that bytes existed or were cleared then, and the same key covers different extents
+
+- Cell 11's public `value` counts bytes overwritten in settled inbound slots.
+- In E1a and in E3's A, which have no inbound slot, it is 0 with
+  `performed`.
+- In E3's B it is 16,384. B's only inbound slot had been cleared by its last
+  consume, according to source (C 936–939); E6 V1 (DT-124) observed exactly that
+  ordering in the driver (zero after the last consume, before the exit sweep).
+  The sweep value counts bytes overwritten, including bytes that were already
+  zero.
+- The host region's `shared_clear` under the same `shared_erasure` key covers
+  every slot: 16,384 for E1a's single outbound slot and 32,768 in E2.
+- `final_erase: performed` is likewise recorded whenever the custody buffer
+  exists, whether or not it ever held accepted bytes (`TokenCustody.finish`
+  311–322).
+- No statement gives `performed` a meaning that a value of 0 contradicts. RESPONSE
+  lists the states without an extent.
+
+### DT-129 — Smaller observations on a gate-reaped actor's trigger, stop-reason copies, transfer phases and test scope
+
+- *A combination that needs joining (E3, public CLI).*
+  - Actor A was reaped naturally at the termination gate:
+    `owned_reap.stage: termination_gate`, `departure_requested: false`, capture
+    ordinal 2.
+  - `finish()` then still assigned `done`, because it checks only
+    `doneObserved` (`ActorScheduler.swift` 562). A's record therefore shows
+    `exit_requested: true`, `cleanup_trigger: completion` and `grace_end:
+    not_entered`.
+  - Each value is accurate as recorded. "Exit was requested because of
+    completion" does not mean the request caused the departure;
+    `departure_requested: false` and the grace state establish that the reap came
+    first.
+  - The ordinary form has no `owned_reap`. There, `child_reaped` or `not_entered`
+    carry that ordering.
+- *Stop-reason copies taken before the store.* Copies taken before
+  `requestExit` exist in both forms, but only the single-worker copy is
+  published.
+  - Single-worker form: `sentinel_wait.stop` (`CWorker.swift` 1271) is published.
+  - Actor form: `stopActor` keeps an internal copy in
+    `ActorSessionRecord.stopReason` (`ActorScheduler.swift` 548) before it sets
+    `pollStopReason` and calls `requestExit`. `finish()` does not set this copy
+    for actors it stops (562).
+  - No production code reads it. `ActorSchedulerTests.swift` 572 and 607 do. It
+    never reaches the reply. (The E6 driver printed it as `stop_reason`.)
+- *Transfer phase.* For a transfer, the published `phase_id` is the declared
+  delivery phase (`ActorOrchestration.swift` 453). The host's servicing phase
+  (`TransferObservation.phaseIndex`) is internal.
+  - By source the two match: `service` is called only during the source actor's
+    active visit, with that visit's phase (`ActorScheduler.swift` 444).
+  - No run here printed the internal value.
+- *Test scope.* `ActorReplyTests` 112–133 asserts the interrupted issue's
+  `unresolved` token and event, and does not assert host acceptance (as DT-62
+  notes).
+  - That test does run the production equipment binding and live inspection
+    through `checkedActorSchedule` (27–35). It also runs Swift reply validation
+    and encoding (`admittedReplyData`, `ReplyFailureTests.swift` 110–113).
+  - It skips the XPC service entry, `runActors` orchestration and validator
+    collection. It sets the kill seam on actor 0 only.
+  - E1b (DT-122) is the public-CLI counterpart.
+
+### Observation-time cross-anchor account
+
+**Timeline of one executed reply (E3).** Each step names the observer.
+
+1. The host creates and maps the authority regions and custody before launch
+   (region and custody setup cells, host time).
+2. The worker publishes setup cells 8 and 9: mapping held, descriptor released.
+   They are read at final collection.
+3. B: activation (capture ordinal 1), validator query at arrival, release, then
+   `baseline` read published.
+4. A: activation, issue native return (slot), outbound commit. The host accepts
+   (internal record) and clears the outbound slot. The transfer is serviced and
+   delivered (host observation, later public). A's last-use defer clears
+   custody (internal; not public). A's slot is published. A's exit sweep (cell 11,
+   value 0) and `done`.
+5. Gate: A's natural reap is observed (capture ordinal 2, `departure_requested`
+   false). The gate closes (ordinal 3).
+6. B: `b_use` activation and query collection, which provides the `query_first`
+   outcomes for all four reads. Then two consumes, `during`, release h1,
+   `after_r1`, release h2, `after_r2`. According to source, the last consume
+   (`consume_h2`) clears B's inbound slot; this is not published and was not
+   observed in E3. Slot publications follow each action.
+7. B's exit sweep (cell 11, value 16,384) and `done`.
+8. `finish()`:
+   - A is already reaped, yet it gets the `done` stop reason, an exit-request
+     store and `grace_end: not_entered`.
+   - B gets an exit request and is reaped during grace (ordinal 3,
+     `departure_requested` true).
+   - `collectOutput` maps each trigger and decodes the worker scopes.
+   - `custody.finish()` erases custody (`final_erase`), sets the internal
+     `erased` flags, erases and unmaps the shared regions.
+9. Assembly computes token `issued` from the slot plus the host record,
+   `delivered_length` from the host record, and handle `produced` and
+   `raw_equal_handles`.
+
+The temporal claims that survive into the reply as explicit ordering are:
+- capture ordinals with `observed_ns` (activations, owned reaps, gates);
+- visit intervals and wait records with `elapsed_ms`;
+- `collection_basis`;
+- `owned_reap.departure_requested`.
+
+These carry no recorded time in the reply and keep only a final value: custody
+acceptance (and only through token status), the cleanup trigger, handle
+production and release, and the worker mapping. Last-use clearing on either side
+is not reported at all.
+
+**Answers to the three questions.**
+
+1. *Observers and derived values.*
+   - The worker observes native returns, call markers, fresh-read effects, setup
+     cells and its own custody and transfer answers.
+   - The host observes waitpid, kill, grace end, custody acceptance, transfer
+     servicing, region and custody setup and cleanup, gate ordinals and query
+     collection.
+   - Derived from one stored value: `cleanup_trigger`, the stop-reason claim,
+     `sentinel_wait.stop`, `runner_timeout` and the diagnostics stop and cause
+     (from `pollStopReason`, DT-120); token status (slot plus host record);
+     `raw_equal_handles` (two slots).
+2. *What survives, and what is withheld, overwritten, merged or internal.*
+   - Withheld: host acceptance when the issue slot is unpublished (DT-62,
+     DT-122).
+   - Also withheld: the worker's unpublished slot payload (native result, errno,
+     length, custody word). This follows the stated publication rule:
+     - `collectOutput` reads slot payloads only after the slot's `completed`
+       acquire (`ActorSession.swift` 645–655: "Read only confirmed slots");
+     - the `result_published` definition: "A false value withholds native
+       result fields even if a call boundary was observed"
+       ([14-extensions.surface.md](../docs/contract/14-extensions.surface.md)
+       line 544);
+     - the failure contract's `unresolved` row (no native return, errno or
+       unavailability decision is inferred, line 315) and its rule that "A call
+       whose return was not published remains unresolved even when an
+       independent test intervention knows that it returned"
+       ([FAILURE-PROPAGATION-CONTRACT.md](../tests/FAILURE-PROPAGATION-CONTRACT.md)
+       lines 317–319).
+   - Overwritten: the internal `erased` flag, by teardown (DT-124).
+   - Merged: last-use and teardown clearing, into teardown cells; host and worker
+     scopes under one `ownership` vocabulary (DT-127); trigger and stop reason
+     (DT-120).
+   - Internal only: `CustodyObservation` status, length, reject detail and phase;
+     worker `ext_custody_status` (DT-123); `TransferObservation.recipientRejectDetail`
+     and service phase; `TokenCustody` state.
+3. *Combinations that invite unsupported inference.*
+   - `exit_requested: true` with `cleanup_trigger: completion` for an actor reaped
+     earlier (E3 A, DT-129), read as a departure caused by the request.
+   - `issued` with `last_use_step_id` and `final_erase: performed`, read as
+     clearing at last use (DT-63, DT-124, DT-128).
+   - `produced`, `release_attempted: true` and release `0`, read as revocation
+     (DT-126).
+   - Worker `mapping: held` with reaped, read as a present mapping (DT-68,
+     DT-127).
+   - `shared_erasure: performed`, read as "token bytes cleared at exit" (DT-128).
+   - Equal `token_length` and `delivered_length`, read as two independent
+     measurements (DT-122).
+   - A full kill chain with `unknown`, read as missing evidence rather than an
+     unmapped trigger (DT-121).
+
+**How the findings bear on each other.**
+- *Tension between DT-62/DT-122 and DT-46/DT-120.* The record withholds an
+  independently observed host fact (acceptance) because a different publication
+  is missing, while it presents a derived value (trigger) as a fact recorded at
+  the store. The two are not symmetric:
+  - The trigger's documents acknowledge its one-to-one dependence on the stop
+    reason, and the cause fallback text does not count it among the independent
+    observations. The inaccuracy is the recording time, which has existed since
+    `c686a05f`.
+  - The acceptance case loses a host observation the statements say is "reported
+    independently".
+- *Shared mechanism between DT-63/DT-124 and DT-128.* Teardown and exit records
+  stand in for every clearing. The final flag (internal), the custody cell and the
+  worker's cell 11 all describe the last clearing, not the declared one. E6 V1/V2
+  show that the same final values arise either way.
+- *Different boundary between DT-66/DT-126 and DT-68/DT-127.* Both concern
+  historical values after reap. Handles are explicitly scoped by their
+  definitions ("candidate handle", "relates raw numbers"). Worker `held` is not.
+- *Historical labels.* They do not uniformly suggest the present tense:
+  - Host scope values record the host's last call on each resource, made before
+    assembly, with no later PW action (DT-127).
+  - The resource tables are explicitly "observed production"
+    ([14-extensions.surface.md](../docs/contract/14-extensions.surface.md)
+    line 776).
+  - The present-tense risk is concentrated where no time anchor is stated: worker
+    `ownership`, `performed`, and the cleanup-trigger recording wording.
+
+### Observation-time coverage and remaining limits
+
+- Executed:
+  - six public CLI specimens (E1a, E1b, E2, E3, E4, E5);
+  - two path-length checks (E7a, E7b);
+  - one internal driver with two variants (E6).
+- Not executed:
+  - the actor-form `completion_timeout`/`arrival_timeout`/`setup_timeout`
+    variants of DT-121;
+  - an end-to-end worker custody timeout or clock fault, for DT-123 (a
+    constructed C control exists; see DT-123);
+  - a clock-fault deadline;
+  - mutation of either last-use erase;
+  - any registered suite.
+- I did not rerun DT-62's internal acceptance print. The pass did not
+  characterize native release reference counting, revocation, or the cause of
+  errno 1.
+- E4 is a shortened-timeout control, not evidence about the production duration.
+- History findings rest on `git log -S/-G` and `git show` of the named commits.
+  No older binaries were executed.
+- This pass changed no tracked source, test or document. Its drafts, validation
+  memos and responses are kept under `records/contract-trio/observation-time/`.
+
+## Additional findings: what acceptance establishes
+
+This pass follows DT-48, DT-50, DT-53, DT-61 and DT-95 from their raw or
+constructed input to the outer `run` result. For each accepting boundary it
+records the proposition checked, the representation of the evidence it reads,
+and the consequence of a failure. The five findings concern different
+boundaries. The entries below explain how they relate and add six findings,
+DT-130 to DT-135. Earlier findings keep their scope; where this pass
+re-executes one, it says so. No implementation, test, contract or
+document was changed, and nothing here proposes a repair, an authoritative
+layer or a consolidation of findings.
+
+### Acceptance investigation identity and reproduction conventions
+
+**Snapshot.** Source inspection used clean HEAD
+`cc55288d033023ce2f18e8c02cd51a400ef2b530` on 2026-11-16. Line numbers below
+refer to that snapshot. The machine reports macOS 26.7.1, build 25G241, arm64.
+`dist/PolicyWitness.app` reports commit `8b5de2b2882d7cb2536d1b42d9109f4b0dfc2855`,
+version 0.3.7, build 1482, contract
+`development:bdefcb44cb8b799494b555f6ba992e5bbfb58eba8ef980cb805adf15c103fb18`.
+`git diff --stat 8b5de2b2 HEAD -- controller runner tests docs` shows only a
+one-line change to `tests/suites/preflight/opt_in/build_refusals.py`. The five
+app executables hashed identically before and after this pass's runs
+(`policy-witness` `4bcd308b…8d28`, `PWRunner` `706d9a6c…8501`, `pw-probe-runner`
+`d6d38f09…2116`, `pw-probe-runner-unentitled` `ee2a4248…312c`,
+`sb_api_validator` `ccbf9803…0890`). Nothing was rebuilt or re-signed. Python ran
+through `tests/lib/python.sh` (Python 3.14.9) with assertions enabled.
+
+**Evidence categories.** Each result below names one of these:
+
+- *Live*: `policy-witness run REQUEST` against the dist app, capturing stdout,
+  stderr, exit status and the exact host reply bytes retained by the admitted
+  client capture. Controlled-validator runs set
+  `_test_overrides.validator_executable_path` to a copy of one Python script
+  whose transcript mode is selected by file name. It reads each JSON query
+  line and prints one verdict record (two in `dup` mode). It makes no
+  `sandbox_check` call. These runs exercise the real host, worker, client and
+  controller with a steered validator transcript; they are not native
+  predictions.
+- *Seam*: the existing ignored Rust test
+  `run_flow::tests::reader_definition_corpus_cross_readers`
+  ([run_flow.rs](../controller/src/run_flow.rs) lines 1250–1510) and the
+  Python replay it launches
+  ([reader_corpus.py](../tests/suites/runner_unit/reader_corpus.py)), both
+  unmodified. Details and limits are below.
+- *Unit*: one existing Rust test run from the same binary (DT-95).
+- *Source*: reading at the snapshot, with no execution.
+- *Listing*: `tests/run.sh --all --list`, which listed 283 cases (232
+  default) without a lock refusal. No registered case was executed, and no
+  case pass is claimed.
+
+**Environment.** The first live run (`base`) was made inside the automation
+sandbox and returned `finished`, exit 0. Earlier passes saw lookup error 159
+there; this run did not. All live runs and the seam execution therefore ran
+inside the automation sandbox. No conclusion is drawn about the earlier
+refusals.
+
+**Live runs.** All used the request skeleton of the failure-contract
+investigation: SBPL `(version 1)(allow default)`, one step per query, a
+`file-read-data` path query, and a `file`/`open_read` attempt on the same path.
+`é` below is U+00E9 (NFC). Its NFD form is `e` followed by U+0301.
+
+| Run | Variation | Exit, outcome | Host frame SHA-256 (prefix), bytes |
+| --- | --- | --- | --- |
+| `base` | shipped validator, step `s`, `/etc/hosts` | 0, `finished` | `a5700b04ed25`, 3551 |
+| `base_fixture` | controlled coherent record `allow`/0/0 | 0, `finished` | `ea1d250747d6`, 3636 |
+| `incoherent` | controlled record `allow`, `rc` −1, `errno` 13 | 0, `finished` | `9001b5744b17`, 3642 |
+| `nfc_id` | step `s-é`; record ID byte-identical | 0, `finished` | `2de88839aa36`, 3648 |
+| `nfd_id` | step `s-é`; record ID in NFD | 0, `finished` | `3ca88d804093`, 3650 |
+| `nfc_value` | path `…/files/café.txt`; record value byte-identical | 0, `finished` | `3cbb136d21b1`, 4484 |
+| `nfd_value` | same path; record `filter_value` in NFD | 0, `finished` | `404e10fc643d`, 4489 |
+| `dup_id` | step `s-é`; two records, NFC and NFD IDs | 1, `validator_unavailable` | `ba4277a91350`, 4174 |
+| `both_ids` | two steps, `s-é` NFC and NFD | 1, `bad_request` | `551a7d270b9c`, 528 |
+| `capture` | `capture_compiled_profile`, nonce `ad881d6a…9ae8` | 0, `finished` | `2b6efe373bbb`, 4340 |
+| `actor` | issuer (unapplied, unentitled) issues and transfers a read extension; subject (applied) reads, consumes, reads | 0, `finished` | `7b729668604c`, 23352 |
+
+**Seam method.** The Rust test reads `reader-corpus/swift.json` under
+`$PW_POLICY_TRANSFER_REPLIES`. For each listed frame it:
+
+- decodes the frame with `porcelain::decode`;
+- runs `admit_reply`;
+- assembles the run envelope with `complete_execution(driver_execution(typed, &raw))`;
+- checks that the outer result follows the host label;
+- writes `rust.json`;
+- runs the Python replay. The replay records, per row:
+  - independent `porcelain.decode_bound` equality;
+  - `consumer.validate_fixture` on the bare reply and on the Rust-assembled envelope (binary bytes, so the JSON-fixture path is not taken);
+  - `actor_evidence`, `extension_evidence` and `lifecycle_oracle.check_record`.
+
+  It writes `python.json`.
+
+The test binary was built from the unmodified crate:
+`CARGO_TARGET_DIR=.tmp/contract-trio/acceptance/cargo-target cargo test
+--manifest-path controller/Cargo.toml --locked --offline --no-run`, with cargo
+and rustc 1.99.0. The resulting binary `policy_witness-bb8137965490ffba` has
+SHA-256 `b64ac21a…7fe97`. `controller/build.rs` writes only under `OUT_DIR`,
+and `git status` stayed clean.
+
+Seam limits that apply to every seam result below:
+
+- **Constructed contract binding.** Under `cfg(test)` the controller's
+  `BUILD_CONTRACT` is the constant `test:policy-witness`
+  ([json_contract.rs](../controller/src/json_contract.rs) lines 21–22). The
+  Python replay admits frames only under that identity. Every seam row,
+  including each baseline, is therefore a live frame with one constructed edit:
+  `producer.contract` changed to `test:policy-witness`. The builder decoded each
+  live frame and its rebound copy and required the difference to be exactly
+  that field. Each further edit was likewise verified to differ from its
+  rebound base only in the intended field (`corpus/edits.json`).
+- **No `reply_contract`.** The seam calls `complete_execution` directly. A
+  receipt-label failure therefore appears there as a `reply_admission`
+  integrity finding, whereas the production run path refuses the reply first.
+- **Placeholders.** The test panics unless rows named `ordinary`,
+  `actor-complete` and `preparation-0` exist. It also unconditionally reads
+  `../porcelain-replies/writer-cap-{minimal.pwp,receipt.json}`, and the replay
+  reads `../porcelain-replies/normal.pwp`. `ordinary` and `actor-complete` are
+  the rebound `base` and `actor` frames. `preparation-0` is a second copy of
+  the rebound `actor` frame. The writer-cap pair and `normal.pwp` are
+  constructed (`seam_placeholders.py`; `normal.pwp` copies `ordinary`). All of
+  these exist only so the seam can run. Their rows, and the seam's JSON-only
+  rows derived from them, are disregarded.
+- **Fidelity control.** For every unedited rebound row with a live envelope
+  (twelve rows: eleven distinct live frames, plus `preparation-0`), the
+  seam's `runner_result` (with `producer.contract` normalized),
+  `runner_sandbox_diagnostics`, and
+  `result.normalized_outcome`, `ok`, `exit_code` and `error` were identical to
+  the live CLI envelope's. No field disagreed. `porcelain.decode_bound` and the
+  Rust JSON agreed on all 25 rows.
+- **Expectation failures.** The test exited 101 by design, because I gave
+  every row `expected_semantic: true`. Its own failure list names exactly the
+  rows where Rust found issues (`f48-claimed-order`, `nfd-id`, `nfd-value`,
+  `dup-id`, `f95-producer-host`), plus placeholder mismatches. The replay's list
+  names the consumer findings tabulated below, plus placeholder and corpus
+  inventory mismatches. The test's check that "semantic findings changed outer
+  result/exit" (line 1352) raised nothing: for every row, result and exit
+  followed the host label.
+
+The Swift reporting validator and the Swift setup decoder were not run on any
+edited frame. Every Swift judgment about an edited frame below is source
+reading.
+
+**Availability.** Scripts, requests, envelopes, frames, the corpus,
+`rust.json`, `python.json`, `analysis.json`, the catalog listing and the reader
+map are under `.tmp/contract-trio/acceptance/` in this checkout. That directory
+is gitignored scratch with no retention guarantee. SHA-256 of the main
+artifacts:
+
+| Artifact | SHA-256 |
+| --- | --- |
+| `scripts/live_probe.py` | `388bd987…89ee` |
+| `scripts/validator_fixture.py` | `7e5b1a97…6489` |
+| `scripts/frame_edit.py` | `6b2bba47…9f69` |
+| `scripts/build_corpus.py` | `bb952dc2…6739` |
+| `scripts/seam_placeholders.py` | `548e9afd…6f49` |
+| `scripts/analyze_seam.py` | `c442d6d6…f916` |
+| `scripts/reader_case_map.py` | `e8517f42…22fb` |
+| `corpus/reader-corpus/rust.json` | `ed61060c…0226` |
+| `corpus/reader-corpus/python.json` | `83557186…b57d` |
+| `corpus/edits.json` | `2f0f2e3f…44eb` |
+| `reader-case-map.jsonl` | `0da5ed35…acbb` |
+
+The frame editor re-encoded three unrelated old frames byte-identically before
+use; those frames were a tool check only. The decisive values are reproduced
+here.
+
+### Acceptance boundary map: what each accepting boundary checks, and over which representation
+
+Rows are in pipeline order. "Result" means `result.normalized_outcome`,
+`result.ok` and the exit status.
+
+| Boundary | Representation read | Proposition checked | Failure consequence |
+| --- | --- | --- | --- |
+| Validator verdict production ([21-wire](../docs/contract/21-wire.surface.md) lines 172–185; `emit_verdict`, [sb_api_validator.c](../controller/tools/sb_api_validator/sb_api_validator.c) lines 365–410) | native `sandbox_check` return and errno | *Producer obligation*: rc 0 → `allow`; rc 1, errno 0 → `deny`; rc −1, EINVAL → `unsupported_operation`; otherwise `error` | none checked downstream (see DT-48) |
+| Host line admission ([ValidatorClient.swift](../runner/Sources/PWRunnerCore/ValidatorClient.swift) lines 461–548; 21-wire lines 187–201) | raw stdout bytes | LF framing, strict UTF-8, JSON object, kind/schema, field types, string bounds; allow/deny require IDs and integer rc/errno. Not label/return coherence. | stops at the first refused frame; `decode_fault`; host outcome `validator_decode_failure` |
+| Host association (`validatorAssociationIssues`, [PWRunnerPredictionEvidence.swift](../runner/Sources/PWRunnerCore/PWRunnerPredictionEvidence.swift) lines 157–187) | accepted verdict structs and the probes actually sent | unique group per expected ID; supplied metadata equal to the sent tuple, under Swift `String` equality (canonical equivalence) | issues are retained; host outcome `validator_unavailable` via `classify` ([CWorkerDisposition.swift](../runner/Sources/PWRunnerCore/CWorkerDisposition.swift) lines 432–455) |
+| Host order eligibility (`eligibleOrderedStep`, [PWRunnerStepEvidence.swift](../runner/Sources/PWRunnerCore/PWRunnerStepEvidence.swift) lines 4–24) | typed step query plus records | chain, setup, PID, coherent native return, unique canonical-equal record and tuple | sets `order`; nothing else |
+| Host shared-memory decoders | raw worker region bytes plus host arguments | setup: decision snapshot, raw actor/required association, cell validity, primary cell (`decodeAuthoritySetup`, [AuthoritySetupRuntime.swift](../runner/Sources/PWRunnerCore/AuthoritySetupRuntime.swift) lines 55–111); receipt: nine ordered capture conditions (`decodeProfileCapture`, [CWorker.swift](../runner/Sources/PWRunnerCore/CWorker.swift) lines 679–714) | `integrity_errors`; receipt `unavailable` with a reason |
+| Actor scheduler (`setupDisposition` and its caller, [ActorScheduler.swift](../runner/Sources/PWRunnerCore/ActorScheduler.swift) lines 257–288) | decoded setup scope plus the header words `actor_setup` and `authority_status` | no integrity errors; not terminal; applied/declared setup; then `actorSetup != 0 && (status >= 3 \|\| (authorityFD != nil && status != 1))` refuses. By source, every launched actor in a run with an authority plan has a descriptor, so for those actors the gate requires `status == 1` (MAPPED). | actor not activated (`setup_failed` and similar) |
+| Host reporting validation (`validateForReporting`, [PWRunnerReply.swift](../runner/Sources/PWRunnerCore/PWRunnerReply.swift) lines 241–378, called by `pwRunnerReportData`, [PWRunnerService.swift](../runner/Sources/PWRunnerCore/PWRunnerService.swift) lines 122–155) | assembled typed reply | claims vs basis, phase partition, collection/validator consistency, validator ownership (shared join), `query_first ⇒` eligibility (shared predicate), exec/fresh observations, actor and authority shapes, receipt status/labels | rich fallback: `runner_reporting_failed`, `rc` 1, comparisons removed; then minimal reply; then empty bytes |
+| Controller structural decode ([21-wire](../docs/contract/21-wire.surface.md) lines 72–86) | client and host frame bytes | grammar, fingerprint, required fields, kinds | client/host refusal; result exit 1 |
+| Controller `reply_contract` / `admission_problem` ([run_flow.rs](../controller/src/run_flow.rs) lines 99–107, 330–355; [porcelain_admission.rs](../controller/src/porcelain_admission.rs) lines 1308–1330) | typed reply | producer contract; collection geometry; each receipt's status and `producer`/`capture_stage` labels | `unsupported_runner_response` or `malformed_runner_response`; result exit 1; diagnostics null |
+| Controller semantic admission (`admit_reply` 1436–1505, `validate_lifecycle` 385ff, actor `setup` [porcelain_actor.rs](../controller/src/porcelain_actor.rs) 385–466) | typed reply (sees dependents the JSON projection can hide, DT-108) | phase partition; literal association recomputation; `query_first ⇒` eligible; lifecycle claims vs raw fields; actor/authority shapes; terminal setup ⇒ required ∧ primary | `process_disposition: withheld`, `disposition_integrity: invalid`, findings; **result unchanged** |
+| Result selection ([result.rs](../controller/src/interface/result.rs) lines 142–237) | admitted host label | `Admitted { integrity_issues }` is carried, but no row reads it; only exact `finished` gives true/0 ([40-envelope](../docs/contract/40-envelope.surface.md) lines 185–194) | n/a |
+| Python `porcelain.decode_bound` | frame bytes | same grammar, independently generated tables | decode error |
+| Python `consumer.validate` ([consumer.py](../tests/lib/consumer.py) lines 1085–1104) | envelope JSON, plus captured bytes decoded and compared for equality ([runner_client_capture.py](../tests/lib/runner_client_capture.py) lines 366–450) | shape allowlists; client admission; result consistent with admitted label; phases and literal association ([phase_evidence.py](../tests/lib/phase_evidence.py) lines 38–107); comparisons; `order ⇔ eligible` (lines 555–558); extension and actor evidence; receipt status/labels. Not lifecycle claims; not the values of Rust diagnostics. | test verdict only |
+| Lifecycle oracle ([lifecycle_oracle.py](../tests/lib/lifecycle_oracle.py) lines 531–700) | envelope JSON | every claim against the value it computes from its own raw field; projection form (an invalid record must be `withheld`); phase ownership via the consumer's own `ownership_problem`; extension evidence via the shared reader | test verdict only |
+| `actor_evidence`, `extension_evidence` | reply body JSON | operation shapes; terminal setup ⇒ required ∧ primary; custody relationships | test verdict only |
+
+Two features of this map matter for the anchors.
+
+- **Which layers can change the result.** Host receiver, classification and
+  reporting validation change the host label, and so the result. Controller
+  capture, frame and `reply_contract` checks refuse the reply. Once a decoded
+  reply passes the producer-contract gate, the receipt status/label check
+  (with collection geometry) is the only semantic-record check that changes
+  outcome and exit. Every other controller check only adds findings, by
+  documented design (40-envelope lines 185–194; 41-diagnostics lines 657–666).
+  A relationship that the host does not test, or tests under its own rule,
+  reaches only the layer that cannot change the result. This is the common
+  route for DT-48, DT-50, DT-53, DT-61 and DT-95.
+- **Same predicate, different inputs.** Swift reporting validation re-checks
+  association and order with the same functions the host used to produce them.
+  It supplies different inputs: the reply's own step tuples instead of the
+  sent probes (PWRunnerReply.swift lines 64–73), and the reply's projected
+  setup and PID instead of the live ones (lines 357–368). The stated rationale
+  is uniform phase ownership (PWRunnerReply.swift lines 51–57;
+  [FAILURE-PROPAGATION-CONTRACT.md](../tests/FAILURE-PROPAGATION-CONTRACT.md)
+  lines 605–622) and checking reported rather than live inputs
+  ([31-steps](../docs/contract/31-steps.surface.md) "Order association
+  source"). So the reporting check can detect a misattached or copied block,
+  expected IDs that differ from the reply's plan, records altered after
+  association, and an order claim whose reply-visible prerequisites fail. It
+  cannot disagree with the production rule itself. This describes its scope;
+  it is not a defect.
+
+### Acceptance anchor traces
+
+#### Acceptance trace of DT-48: label/return coherence is an emitter obligation, checked only inside order eligibility
+
+**Sequence.** The emitter rule (21-wire lines 172–185) assigns labels from the
+native pair. Host line admission (lines 187–201) states a type-and-presence
+check and does not test the pair. `classify` does not test it either.
+`buildSandboxCheckResult` copies `outcome`, `rc` (default −1) and `errno`, and
+sets `native_rc` from any allow/deny/error record (CWorkerStepResults.swift
+lines 44–49, 128–139). The coherence test exists only inside the order rule's
+"Native answer" condition (31-steps lines 613–617). Swift construction and
+reporting (PWRunnerStepEvidence.swift lines 5–9), Rust (porcelain_admission.rs
+lines 1204–1208) and Python (`eligible_order`, consumer.py lines 256–284)
+implement it only there.
+
+**Executed (live and seam).** The DT-48 result reproduces at this snapshot.
+The four combinations of coherence and order claim behave as follows. The two
+edited rows are seam frames with the constructed contract binding:
+
+| Row | Record | `order` | Result | Rust | Python consumer | Oracle |
+| --- | --- | --- | --- | --- | --- | --- |
+| `base_fixture` (live) | allow/0/0 | `query_first` | `finished`, 0 | `clean_exit`, `valid` | `[]` | `[]` |
+| `incoherent` (live) | allow/−1/13 | `unestablished` | `finished`, 0 | `clean_exit`, `valid` | `[]` | `[]` |
+| `f48-claimed-order` (seam: `incoherent` with order → `query_first`) | allow/−1/13 | `query_first` | `finished`, 0 | `withheld`, `invalid`: "query_first lacks eligible prediction and complete ordering chain" | "query_first lacks eligible record or ordering chain" | `[]` |
+| `f48-withheld-order` (seam: `base_fixture` with order → `unestablished`) | allow/0/0 | `unestablished` | `finished`, 0 | `clean_exit`, `valid`, no finding | "eligible record with complete chain requires query_first" | `[]` |
+
+On the live incoherent run, `consumer.query_column` returns `allow`. The
+public step carries `outcome: allow`, `rc` −1, `native_rc` −1, `errno` 13 and
+`result_source: validator`. The raw record and its `raw_line` are retained.
+
+**What this establishes.**
+- *Incoherent record with a claimed order.* The order-checking readers that
+  were run reject it: Rust with `withheld`/`invalid`, and the consumer. The
+  lifecycle oracle does not check `order` and returned `[]`. Swift reporting
+  was not run on this frame. By source it would reject the claim
+  (PWRunnerReply.swift lines 365–368), and the host does not produce it,
+  because construction computes `order` with the predicate that includes
+  coherence.
+- *Incoherent record without an order claim.* On the live run every
+  boundary accepted it: Swift host classification and reporting, Rust, the
+  consumer and the oracle. The label is then "the raw query answer" under
+  reading rule 1 (FAILURE-PROPAGATION-CONTRACT.md lines 1401–1411) and "the
+  associated answer" under the steps `outcome` meaning (31-steps line 69).
+
+The arrangement is deliberate delegation: the host's receiver statement
+assigns itself only types and presence, and the label rule belongs to the
+emitter. The cost is interpretive. The only reply value that reflects the
+incoherence is `order: unestablished`. That value is shared with a broken
+chain, failed setup, missing association and a PID mismatch, so a reader who
+wants to know *why* an answer is not credited must recompute coherence from
+`rc`, `native_rc` and `errno`.
+
+A search of `tests` (excluding `tests/out`) for `query_column` in `*.py` found
+three uses. The first is the consumer's own `select` helper (consumer.py line
+1142). The second is `runner_exec_dac/check_query_scope.py` line 166, which
+asserts `unavailable`. The third is `witness_contract/check_comparison_matrix.py`
+line 151, which compares the column with the matrix row's expected `query`
+beside all six comparison keys, including `order` (lines 148–152). A search for
+`select(` calls with a `query=` argument found one,
+`check_query_scope.py` line 190, which also requires `order='query_first'`.
+None of these relies on the label without the order or an expected row.
+
+DT-108's conditional-null rule does not arise in these rows: the host sets
+`result_source` on every built query, so `native_rc` stays visible.
+
+The last row is a separate result, DT-130.
+
+#### Acceptance trace of DT-50: one identity rule in Swift, another in Rust and Python
+
+**Sequence.**
+- *Swift.* Canonical equivalence governs: request duplicate refusal
+  ([ProbeRunner.swift](../runner/Sources/PWRunnerCore/ProbeRunner.swift) lines
+  112–117), association grouping and metadata equality, order matching,
+  lifecycle step joins (CWorkerStepResults.swift line 55) and every
+  reporting-validation `Set`.
+- *Rust.* `BTreeMap<&str>` grouping and `==` on bytes (porcelain_admission.rs
+  lines 1030–1091, `query_matches` at 776).
+- *Python.* Dictionaries and `==` (phase_evidence.py lines 38–67; consumer.py
+  lines 256–284).
+- *Statements.* Two rules write identity as an unqualified `==`: "Unique
+  association" (31-steps lines 619–630) and the cardinality conditions
+  ([32-lifecycle](../docs/contract/32-lifecycle.surface.md) lines 1168–1252).
+  The ownership paragraph that begins "Every semantic reader checks
+  ownership … the same way" (FAILURE-PROPAGATION-CONTRACT.md lines 605–622)
+  fixes a shared procedure and states no equality relation (quoted under
+  DT-135). Only two explicit equality definitions exist in the stated rules:
+  canonical for `same_submitted` (reading rule 4, line 1419; implemented in
+  Python as `same_submitted_string`, consumer.py line 176) and bytes for
+  path-form `same_as_input`.
+
+**Executed (live; seam rows match the live envelopes field for field).**
+
+| Run | Host association issues | Host outcome | Order | Rust findings | Consumer findings | Oracle |
+| --- | --- | --- | --- | --- | --- | --- |
+| `nfc_id` | `[]` | `finished` | `query_first` | none, `valid` | `[]` | `[]` |
+| `nfd_id` | `[]` | `finished` | `query_first` | association disagree; `query_first` lacks eligible…; `withheld`/`invalid` | `query_first` lacks eligible…; association disagree | D6 association disagree |
+| `nfc_value` | `[]` | `finished` | `query_first` | none | `[]` | `[]` |
+| `nfd_value` | `[]` | `finished` | `query_first` | the same two as `nfd_id` | the same two | D6 |
+| `dup_id` | `duplicate_id` `s-é` count 2 | `validator_unavailable`, exit 1 | `unestablished` (query synthetic) | association disagree | association disagree | D6 |
+| `both_ids` | n/a | `bad_request` `duplicate_step_id` at `probe_plan.1.step_id` (host refusal; no worker) | n/a | none | `[]` | `[]` |
+
+**What this establishes.**
+- DT-50 reproduces at this snapshot.
+- The split is not specific to step IDs: it applies equally to the record's
+  `filter_value` (DT-131).
+- In `dup_id`, the layer that changed the result was host classification,
+  under Swift's canonical grouping. Swift saw one group of two records, so it
+  associated neither and the step's query is synthetic. Rust and Python, which
+  group literally, recompute one associated NFC record and one `unexpected_id`
+  NFD record. They flag only the disagreement in the stored issue list. By
+  source inference, the literal issue list would also make `classify` report
+  `validator_unavailable`, but it would have associated the NFC record with
+  the step.
+- Python did not flag a withheld order in `dup_id`, although its order check
+  runs in both directions. Its eligibility test reads the step's own query,
+  and that query is synthetic.
+- `both_ids` shows that Swift also applies canonical identity at request
+  admission. That is a different boundary: the request, not the evidence
+  reply. Its consequence is that a reply can never carry two canonically
+  equivalent step IDs. The literal step/phase joins in Rust and Python
+  therefore agree with Swift on step identity only because Swift restricted
+  the input. Identities that enter through child output (validator records)
+  are where the readers diverge.
+- In `nfd_id` and `nfd_value` the reply carries host `association_issues: []`
+  and `query_first`, while Rust withholds the disposition. The result stays
+  true/0.
+- The number of readers that object overstates the number of independent
+  judgments. The oracle's D6 finding is the consumer's `ownership_problem`
+  ([lifecycle_oracle.py](../tests/lib/lifecycle_oracle.py) lines 556–560).
+  Swift's non-objection is its production join, re-applied by reporting.
+
+These transcripts are steered. No claim is made that the shipped validator
+rewrites IDs or values.
+
+#### Acceptance trace of DT-53: lifecycle claim checks belong to Rust and the oracle, not the general consumer
+
+**Sequence.**
+1. The host producer rejects a missing claim
+   ([DispositionResolverTests.swift](../runner/Tests/PWRunnerCoreTests/DispositionResolverTests.swift)
+   line 345 constructs that case). By source, such a record reaches the wire
+   only in a degraded reply.
+2. All seven run questions are optional in the binary schema
+   (`PWDispositionRunQuestions`, [porcelain.json](../docs/porcelain.json)), so
+   decoding accepts absence.
+3. Rust `validate_lifecycle` reports a missing claim as `malformed_record`
+   (porcelain_admission.rs line 204) and a value that differs from the raw
+   reaped status as "final_status contradicts reaped status" (lines 433–460).
+4. `project` withholds the disposition. Result selection ignores it.
+5. The general consumer neither checks claims nor reads the values of
+   `disposition_integrity` or `process_disposition`. It checks only the
+   `subject_path` references of issues (consumer.py lines 954–972).
+6. The oracle checks every claim against the value it computes from that
+   claim's own raw field, and checks that an invalid record is projected as
+   `withheld` (lifecycle_oracle.py lines 118–150, 665–676).
+7. Claim "truth" in both Rust and the oracle means agreement with the retained
+   raw field. Whether those raw fields are independent observations is
+   outside both checks. For example, DT-46 and DT-120 show that the raw
+   `cleanup_trigger` is derived from the stored stop reason.
+
+**Executed (seam; frames are `base` with the constructed contract binding and
+one further edit).**
+
+| Row | Result | Rust diagnostics | Consumer (bare and envelope) | Oracle |
+| --- | --- | --- | --- | --- |
+| `f53-final-status-absent` | `finished`, 0 | `withheld`, `invalid`: "final_status: missing claim" | `[]`, `[]` | D8 `malformed_record` "record.questions lacks final_status" |
+| `f53-final-status-17` | `finished`, 0 | `withheld`, `invalid`: "final_status contradicts reaped status" | `[]`, `[]` | D1 `wrong_answer` |
+
+DT-53's controls edited saved JSON, and the full consumer refused those
+envelopes because they differed from the retained bytes. Here the edit is in
+the frame and passes through the actual Rust decode and admission path, so
+captured bytes and JSON agree. The consumer then accepts an envelope that
+carries Rust's `withheld`/`invalid`. DT-53's third edit (a null claim) has no
+separate binary form; absence covers it.
+
+**Which callers run which readers.** Scope: the 283 listed cases; each case's
+command script and the `.sh`/`.py` files it names (resolving `${ROOT_DIR}` and
+`${SUITE_DIR}`). Reader calls were found by source-text patterns:
+`consumer.validate(`, `validate_fixture`, `from consumer import … validate`,
+`check_record`/`check_actor_records`/`check_fixture_record`,
+`witness_capture`. One false positive was removed: `shell_helpers` defines an
+unrelated local `check_record`. Source-drift cases that merely share a
+`run.sh` were excluded. The map is in
+`.tmp/contract-trio/acceptance/reader-case-map.jsonl`.
+
+- Thirteen default cases, plus two opt-in ones, run the oracle:
+  - through `witness_capture.capture`, which runs the consumer and then the
+    oracle ([witness_capture.py](../tests/lib/witness_capture.py) lines 13–26),
+    or by direct calls beside the consumer: `witness_contract/` `phases`,
+    `extensions`, `extension_directory`, `extension_policy_qualification`,
+    `extension_redelegation`, `extension_boundaries`, `actor_compositions`,
+    `actor_timing_qualification`, `worker_killed_before_slot_publication`;
+  - `witness_contract/worker_attempt_in_flight_at_deadline`, which calls the
+    oracle without the consumer and asserts `process_disposition` itself;
+  - `blackbox_e2e/checker_controls`, on constructed JSON envelopes;
+  - `source_drift/porcelain_codec`, offline;
+  - `runner_unit/pwrunner_core_unit_executable`, through the Rust corpus test,
+    on constructed Swift frames;
+  - opt-in: `witness_contract/actors_byoxpc`, `witness_contract/worker_wait_pilot`.
+- Thirty default cases are attributed, by checker file, to the consumer
+  without the oracle:
+  - `runner_validator_failure/*` (3 cases);
+  - `runner_outcome_validator_no_reply/validator_io_deadline_releases_worker`;
+  - `runner_exec_dac/execute_permission_controls_spawn`;
+  - four `runner_exec_lifecycle` cases;
+  - `sbpl_allowdeny_consistency/sbpl_allowdeny_v1`;
+  - twenty `witness_contract` cases, including the seven that use
+    `check_ordering.py`, `comparison_matrix`, `test_input` and
+    `max_targets_reply_survives`.
+- Two of those thirty are offline.
+  - `runner_validator_failure/transcript_controls` runs `check.py fixture`. Its
+    `check_fixture` (runner_validator_failure/check.py line 53) does not call
+    the consumer. The file calls the consumer only in its CLI mode (lines
+    107–114), so this case is attributed to the consumer by file only.
+  - `witness_contract/example_round_trip_controls` reads authored envelopes
+    "in place of the app's emission"; no process runs
+    (example_round_trip_controls.py lines 4–12). It tests the round-trip
+    checker on constructed envelopes, not a live run's diagnostics.
+- The catalog lists `app` among the requirements of each of the other
+  twenty-eight. Of those twenty-eight, two assert a Rust diagnostics value
+  that a withheld projection would change:
+  - `witness_contract/example_round_trip`: `disposition_integrity == valid` and
+    no issues (check_example_round_trip.py lines 1123, 1321);
+  - `witness_contract/worker_termination`: `process_disposition`, line 94.
+- Two more mention diagnostics, but their assertions would not detect a
+  withheld projection. `pre_apply_failure_reports_no_policy_verdict` admits
+  `termination_cause: unknown` (check_pre_apply_failure.py lines 67–80), and
+  `dossier_witness` asserts null diagnostics only on refusal paths.
+- This was a text search of each checker file for `runner_sandbox_diagnostics`,
+  `termination_cause`, `disposition_issues`, `process_disposition` and
+  `disposition_integrity`. An `ok` or exit assertion cannot substitute,
+  because Rust findings do not change the result.
+- Twelve opt-in cases are consumer-only (six `runner_byoxpc`, `guide_workflows`
+  and others).
+- `failure_boundaries/*` uses neither Python reader.
+
+For the other twenty-six live default cases attributed to the consumer without
+the oracle, a lifecycle-claim fault that only Rust and the oracle check would
+not fail the case. This is a
+statement of checked scope, not an observed miss: those cases were not run.
+
+#### Acceptance trace of DT-61: readiness, as checked by the decoder, the scheduler and the body readers
+
+**Sequence.**
+1. *C worker* (`prepare_authority`,
+   [pw_probe_runner.c](../controller/tools/pw_probe_runner/pw_probe_runner.c)
+   lines 676–752). It publishes each prerequisite cell and records a primary
+   failure if any step fails. At the decision point it writes, together: the
+   setup disposition, `primary_plus_one` and the header word
+   `authority_status` (`MAPPED` iff the region pointer was bound after header
+   validation). Then it release-stores `g_setup->published`. For required
+   setup, READY and MAPPED come from the same program path and coincide.
+2. *Host decoder.* It acquires the decision first and checks raw
+   actor/required against its arguments and ready ⇒ required against the
+   *argument* (line 98). It requires no prerequisite cell (DT-61's constructed
+   control).
+3. *Scheduler.* It requires a decoded decision that is free of integrity
+   errors and not terminal. For a required actor, the decoder's argument
+   check leaves `ready` as the only such decision. It then refuses when
+   `actorSetup != 0 && (authorityStatus >= 3 || (authorityFD != nil &&
+   authorityStatus != 1))` (ActorScheduler.swift lines 257–266).
+   - The status values ([pw_probe_runner_abi.h](../controller/tools/pw_probe_runner/pw_probe_runner_abi.h)
+     lines 161–162) are 0 none, 1 MAPPED, 2 DESCRIPTOR_MISSING, 3 REJECTED
+     and 4 LOCAL_FAILED.
+   - The current worker writes only 1, 4 or 2 (pw_probe_runner.c line 751):
+     MAPPED when the region was bound, LOCAL_FAILED when required and not
+     bound, DESCRIPTOR_MISSING when not required.
+   - The host reads 0 unless the decoder has observed the decision
+     (ActorSession.swift line 490).
+   - For a launched actor, `authorityFD` is nil exactly when the run has no
+     authority plan, which is also when `authorityRequired` is false
+     (ActorScheduler.swift lines 231–232). With a plan, `descriptor(for:)` is
+     nil only after a core-limit or region failure, or for an index outside
+     `regions` (AuthorityCustody.swift lines 407–410). When the core limit
+     succeeds, the custody builds one region for every actor index (lines
+     359–362), so only the two failures remain. Either failure sets
+     `setupFailure` (lines 390–398), and then the scheduler refuses every
+     actor's launch (ActorScheduler.swift lines 208–217).
+   - So, by source, every launched actor with required authority has a
+     descriptor, and the gate requires status 1. Without a plan, status 0 or
+     2 passes and 3 or more refuses.
+   - The scheduler reads no prerequisite cell.
+4. *Reply.* `authority_status` is not a wire field: `docs/porcelain.json` has
+   no such name. When the gate refuses, the word appears only inside the
+   classifier's error text, `shm setup: worker authority setup: status=…
+   detail=…` (ActorScheduler.swift line 264; CWorker.swift line 749). The
+   reply carries the decoded scope, with its decision and cells, and the
+   actor's `setup_status`.
+5. *Body readers.* Swift `authoritySetupIntegrityErrors`
+   (PWRunnerAuthoritySetup.swift lines 142–213), Rust `setup` (porcelain_actor.rs
+   lines 385–466) and Python `_setup` (actor_evidence.py lines 121–160) all check
+   terminal ⇒ required ∧ primary. None checks ready ⇒ required
+   ([34-equipment](../docs/contract/34-equipment.surface.md) lines 912–917) or
+   the prerequisite prefix that the producer rule assigns to host and worker
+   ([14-extensions](../docs/contract/14-extensions.surface.md) lines 349–360).
+   Rust `application` (porcelain_actor.rs lines 468–603) and Python
+   `_application` (actor_evidence.py lines 162–225) relate an actor's
+   application to its scope in one direction only. An `applied` actor must not
+   carry an observed `terminal_required_failure` scope, and the
+   `terminal_authority_setup_refusal` assessment requires one. No reader
+   relates a `ready` decision to its prerequisite cells or to `required`.
+
+**Executed (seam; the live `actor` frame with the constructed contract binding
+plus one edit to the subject's worker setup scope).** The live baseline: both
+workers `ready`, `required: true`, 12 cells including `core_limit` succeeded,
+`mmap` succeeded and `header_binding` accepted; subject `setup_status: applied`;
+query `before` deny / `after` allow, both `query_first`. The Swift host
+accepted the live run, and the Rust and Python readers returned no finding.
+
+| Row | Result | Rust | Consumer | `actor_evidence` / `extension_evidence` | Oracle |
+| --- | --- | --- | --- | --- | --- |
+| `f61-core-limit-absent` (cell 3 removed; `ready` kept) | `finished`, 0 | `per_actor`, `valid`; both actors `clean_exit`; no finding | `[]` | `[]` / `[]` | `[]` |
+| `f61-core-limit-failed` (cell 3 `failed`, `native_rc` −1, `errno` 1) | `finished`, 0 | the same | `[]` | `[]` / `[]` | `[]` |
+| `f61-not-required` (`required: false`; `ready` kept) | `finished`, 0 | the same | `[]` | `[]` / `[]` | `[]` |
+
+These confirm DT-61's JSON-body observations for Rust and Python on frames
+that pass through the actual Rust decode, admission and assembly path. **The
+Swift side remains source-only:** neither the Swift reporting validator nor the
+Swift decoder was run on these frames. DT-133 states the consequence.
+
+#### Acceptance trace of DT-95: the outcome-changing receipt check reads constants; the binding checks run once, in the host decoder
+
+**Checked by the host decoder** (CWorker.swift lines 679–714, in order):
+1. observed application with rc 0;
+2. `done`, exit 0, no signal;
+3. capture-completion publication;
+4. capture status 1;
+5. recorded PID equal to the host-owned worker PID;
+6. valid request nonce equal to the recorded nonce bytes;
+7. profile type 0 and 0 < length ≤ the buffer;
+8. SHA-256 of the copied bytes equal to the recorded digest;
+9. recorded source length and digest, and parameter count and digest, equal
+   to the host's supplied inputs.
+
+These nine conditions are source-read here. DT-101 found that the cited unit
+check asserts `unavailable` for eleven corruptions but asserts no reason. It
+also found that six of the nine reasons are named in no test, and that no case
+combines two failing conditions, so the first-failure order has source support
+only.
+
+The decoder then emits the request nonce string, the recomputed digest, the
+copied bytes, its own source length and parameter count, the recorded digests,
+and constant labels. Presence is decided by the host's capture flag
+([35-profile](../docs/contract/35-profile.surface.md) lines 114–125, `who: host`).
+
+**Delegated to "the host capture rule" (35-profile line 309) and re-checked by
+no recipient:**
+- presence ⇔ capture requested;
+- `request_nonce` = the request nonce;
+- `worker_pid` = `runner_subprocess.pid` or the actor launch PID;
+- decoded length of `bytecode_b64` = `bytecode_length` (stated condition, lines
+  87–91, no checker);
+- 0 < `bytecode_length` ≤ 1,048,576 (lines 73–79, no checker);
+- `bytecode_sha256` = SHA-256 of the bytes;
+- `source_sha256` = SHA-256 of the request source = `policy_sha256`;
+- `source_length` = request source length;
+- `params_sha256` and `parameter_count` match the request parameters;
+- `profile_type` = 0;
+- no `reason` on `captured`; a `reason` and no capture fields on `unavailable`.
+
+**Checked by recipients:** status ∈ {captured, unavailable}; captured ⇒
+`worker`/`before_apply`; unavailable ⇒ neither label. This is the same
+predicate in the host's `contextProblem`
+([PWRunnerProfileCapture.swift](../runner/Sources/PWRunnerCore/PWRunnerProfileCapture.swift)
+lines 31–44), Rust `admission_problem` and Python `_validate_capture`
+(consumer.py lines 575–588).
+
+**Executed.** Seam rows carry the constructed contract binding:
+
+| Row | Edit | Result | Rust | Consumer | Oracle |
+| --- | --- | --- | --- | --- | --- |
+| `capture` (live) | none | `finished`, 0 | `valid` | `[]` | `[]` |
+| `f95-receipt-unrequested` | `capture`'s receipt (worker PID 51003) inserted into `base`, whose request has no capture | `finished`, 0 | `valid`, no finding | `[]` | `[]` |
+| `f95-nonce` | `request_nonce` → 32 `f` | `finished`, 0 | `valid` | `[]` | `[]` |
+| `f95-byte` | one byte of 492 flipped; length and digest kept | `finished`, 0 | `valid` | `[]` | `[]` |
+| `f95-length-zero` | `bytecode_length` 0 | `finished`, 0 | `valid` | `[]` | `[]` |
+| `f95-producer-host` (label control) | `producer` → `host` | seam: `finished`, 0, `withheld`/`invalid` with `reply_admission` "compiled_profile context is inconsistent" | — | "compiled_profile requires worker/before_apply context" | `[]` |
+
+The production run path refuses the label control before semantic admission.
+To confirm that at this snapshot, the existing test
+`run_flow::tests::orchestration::compiled_profile_labels_determine_the_public_admission_outcome`
+was run from the same isolated binary, with `TMPDIR` set to scratch, and
+passed. It injects typed replies, deserialized from JSON, into the real `run`
+orchestration: label failures give `malformed_runner_response` and exit 1;
+the fixture's contradictory `captured` row gives `finished`. The seam row shows
+how the same check reads where `reply_contract` is bypassed. It is not the
+production outcome. The receipt edits confirm DT-95's saved-JSON and typed
+observations on frames read by Rust and Python. DT-134 states the cross-anchor
+consequence.
+
+### Acceptance agreement classification: deliberate division, restricted inputs or shared code, and questionable rules
+
+| Agreement | Basis | Classification | Concrete cost |
+| --- | --- | --- | --- |
+| Every boundary accepts an incoherent allow record without an order claim on the live run (DT-48) | Emitter obligation (21-wire 172–185); host receiver states types only; reading rule 1 names the label as the raw answer | Deliberate delegation to the native emitter, faithfully followed by the readers | With a steered or foreign validator, `allow` beside rc −1 is reported as the raw answer. The only signal, `order: unestablished`, has several causes. |
+| Swift objects to nothing in `nfd_id`; Rust and Python object (DT-50) | Swift association and reporting share one join; Python consumer and oracle share another | Shared code inside each language | Three objections from Rust, the consumer and the oracle are two independent judgments. Swift's silence is not an independent confirmation of its own association. |
+| Rust and Python agree with Swift on step-to-phase joins (DT-50) | Swift request admission refuses canonically equivalent IDs (`both_ids`) | Agreement through restricted inputs | Holds only for identities that pass request admission; validator-record identities fall outside it. |
+| The readers that were run (Rust, the consumer, `actor_evidence`, `extension_evidence`, the oracle) accept `ready` without prerequisites or with `required: false` (DT-61); Swift's body check, by source, also does | No recipient check is assigned. Ready ⇒ required is a condition of a `who: host` report (34-equipment 912–917), and the prefix is a host/worker act (14-extensions 349–360). In production the decoder projects `ready` only when its required argument is true, and copies that argument into `required`. The C worker writes READY only after every prerequisite. | **Shared assumption.** The readers agree because they rely on the producer: the decoder's projection rule and the C program order. It is not deliberate delegation: unlike DT-95, no statement delegates the check, and no rationale for leaving recipients out was found. It is not a questionable rule: the condition itself holds in production. | A final reply that breaks the condition is reported as valid by every reader run; see DT-133. |
+| The readers that were run accept receipts whose association is wrong (DT-95); Swift's `contextProblem`, by source, also does | Stated delegation (35-profile line 309) | Deliberate division of responsibility | A `captured` receipt in a `finished` envelope asserts association only through the host decoder; recipients cannot tell a correct receipt from a detached one. See DT-134. |
+| Three layers apply the same receipt-label predicate, and it alone changes the result (DT-95, DT-96) | The host writes `producer` and `capture_stage` as constants (DT-96) | Design judgment, labeled as such: a questionable allocation, faithfully implemented | The checks that decide the outcome read values that carry no observation, while the request-binding checks run once, before the reply. A refusal says the reply is malformed; acceptance says nothing about the receipt's binding. |
+| Lifecycle claims: Rust withholds, the oracle reports D1/D8, the consumer accepts (DT-53) | The reader-responsibility paragraph assigns claim checks to the oracle (FAILURE-PROPAGATION-CONTRACT.md lines 594–597) | Deliberate division across readers | Accepted by the consumer and invalid by Rust on the same envelope. Of the thirty default cases attributed to the consumer without the oracle, twenty-eight run the app. Twenty-six of those run no oracle and assert no Rust diagnostics value that a withheld projection would change (see DT-53). |
+
+### Acceptance results: differently named successes, and identical results that hide different checks
+
+- `finished`/`ok: true`/exit 0 establishes the host label. In this pass it
+  co-occurred with:
+  - Rust `withheld`/`invalid` (`nfd_id`, `nfd_value`, `f48-claimed-order`, the
+    `f53` rows);
+  - Python rejection with Rust `valid` (`f48-withheld-order`);
+  - acceptance, by every Rust and Python reader that was run, of setup and
+    receipt records that contradict their producer obligations or the request
+    (`f61` and `f95` rows). Swift was not run on these frames.
+- `disposition_integrity: valid` certifies the controller's checks
+  (41-diagnostics lines 50–60; FAILURE-PROPAGATION-CONTRACT.md line 586). It
+  does not certify withheld-order consistency (DT-130), ready-setup
+  prerequisites (DT-133) or receipt binding (DT-134).
+- `consumer.validate == []` certifies shape, capture equality, result
+  consistency and the consumer's semantic families. On the same envelope it
+  does not certify the lifecycle claims or the Rust verdict (DT-132).
+- `association_issues: []` in the reply is the host's join under canonical
+  equality. Rust's recomputation under byte equality can disagree on the same
+  frame (`nfd_id`, `nfd_value`).
+- Swift reporting acceptance means the stored result agrees with reply-visible
+  inputs under the production predicate. Rust acceptance means agreement under
+  an independently written predicate.
+- Two `unestablished` orders can mean an incoherent record (DT-48), a missing
+  association, a synthetic query after a Swift duplicate (`dup_id`), or a
+  broken chain. No field states which condition failed. A reader can tell
+  them apart only by recomputing the conditions from `result_source`, `rc`,
+  `native_rc`, `errno`, the phase ordering and the records.
+- `ready` from the decoder means a published decision consistent with the
+  host's expected-required argument. For an actor in a run with an authority
+  plan, scheduler activation means, by source, that the MAPPED word was
+  observed. The reply shows the first, and implies the second only through
+  `setup_status`.
+
+### DT-130 — Rust and Python accept different order propositions; a withheld order on an eligible record is valid for Rust and invalid for the consumer
+
+**Statements.** The producer obligation is an if-and-only-if. The host
+"Establish query order" rule (31-steps lines 573–596) sets `query_first` on
+success and `unestablished` on failure, and the record table says "only when
+… `unestablished` otherwise" (FAILURE-PROPAGATION-CONTRACT.md line 1226). The
+recipient statements differ. The controller's family is "the complete
+`query_first` chain" (41-diagnostics line 678), one direction. The consumer
+"validates … `order` against the raw channel fields and `ordering`" (line
+1378), with no direction stated. No statement assigns any recipient the check
+that an eligible record's order was not withheld.
+
+**Implementations.** Rust skips steps whose order is not `query_first`
+(porcelain_admission.rs line 1185). Swift reporting checks only claimed
+`query_first` (PWRunnerReply.swift lines 365–368; source). Python checks both
+directions (consumer.py lines 555–558), and its checker control
+`unestablished_despite_chain` (`checker_controls.py` line 457) pins that. That
+control feeds a JSON envelope whose "host bytes" are compact JSON text:
+`recapture_host_reply`, [blackbox.py](../tests/lib/blackbox.py) lines 16–31,
+read through `validate_fixture`. Rust never sees it.
+
+**Executed (seam, constructed contract binding).** `f48-withheld-order`: Rust
+`valid`, no finding; consumer "eligible record with complete chain requires
+query_first", on both the bare reply and the Rust envelope; oracle `[]`;
+result `finished`.
+
+**Scope and cost.** Each implementation stays within its own statement. This
+is a difference in checked proposition, not a broken statement. By source, the
+host computes `order` with the eligibility predicate, so it does not produce
+the state. A reader cannot treat Rust `valid` as covering under-credited order,
+and the Python checker control establishes nothing about Rust.
+
+### DT-131 — The canonical/literal split also governs validator filter values and the host's own failure outcome; request admission confines it to child-output identities
+
+**Executed (live).**
+- `nfd_value` repeats DT-50's pattern on `filter_value`. Swift associates and
+  emits `query_first`. Rust reports "association issues disagree" and "query_first
+  lacks eligible…", the consumer reports both, the oracle reports D6. Result
+  `finished`.
+- `dup_id`: Swift grouped the NFC and NFD records as one duplicate group,
+  withheld the step's validator answer (synthetic query, `unestablished`) and
+  classified the run `validator_unavailable`, exit 1, with error "duplicate_id:s-é".
+  Rust and Python recompute one associated record plus one unexpected record
+  and flag the disagreement.
+- `both_ids`: the host refused the request as `duplicate_step_id` at
+  `probe_plan.1.step_id`. The controller has no duplicate check of its own
+  (no `duplicate_step_id` in `controller/src`).
+
+**Statements.** Identity is an unqualified `==` (31-steps lines 619–630;
+32-lifecycle lines 1168–1252). The step ID is "unique across all actions"
+([12-probes](../docs/contract/12-probes.surface.md) line 23) without an
+equality relation. Explicit equality is defined only for `same_submitted`
+(canonical) and path forms (bytes). The comment on `validatorAssociationIssues`
+(PWRunnerPredictionEvidence.swift line 157), "shared with every reader that
+recomputes it", is accurate for the Swift readers, which share the code. As a
+statement of the rule every reader applies, it matches the ownership
+paragraph quoted under DT-135. The Rust and Python readers implement that rule
+independently. The implementations diverge because the rule does not state
+its string equality.
+
+**Cost.** The host's result-changing decision (`dup_id`) and its non-decision
+(`nfd_id`) apply the association procedure under canonical equality, while the
+independent readers apply the same procedure under byte equality. A reader
+of the public envelope sees a host outcome and a controller finding that
+disagree about how many records were associated. Steered transcripts; no
+native rewrite is claimed.
+
+### DT-132 — On a byte-consistent envelope, the general consumer accepts lifecycle-claim faults that Rust reports as withheld and invalid
+
+**Executed (seam, constructed contract binding).** A missing `final_status`
+claim, and a `final_status` value of 17 beside a raw exit code 0, each passed
+the actual Rust path to `withheld`/`invalid` with the matching finding, and
+`finished`/0. `consumer.validate` returned `[]` for the bare reply and for the
+complete envelope, whose captured bytes are the edited frame. The oracle
+reported D8 and D1.
+
+**Scope.** This extends DT-53 from saved-JSON edits to a frame read by the
+Rust and Python readers. The reader-responsibility paragraph
+(FAILURE-PROPAGATION-CONTRACT.md lines 594–597) describes the consumer's checks
+as shape, required-field and semantic checks, and assigns lifecycle claims to
+the oracle. I read that as deliberate division, so this is not an unmet
+consumer promise. The consequence is in the registry. Thirty default cases are
+attributed, by checker file, to the consumer without the oracle, and
+twenty-eight of them run the app. Two of those twenty-eight assert a Rust
+diagnostics value that a withheld projection would change. Lifecycle
+claim faults that only Rust and the oracle detect would pass the other
+twenty-six, by checked scope. No live omission was observed.
+
+### DT-133 — Required-authority activation is gated on a header word the reply does not retain; reply readers relate application only to a terminal setup scope, never `ready` to its prerequisites
+
+**Source.** The scheduler admits an actor's setup when four conditions hold
+(ActorScheduler.swift lines 257–288):
+- the decoded scope has no integrity errors;
+- the decision is not terminal;
+- `actor_setup` shows an applied or declared setup;
+- the gate `actorSetup != 0 && (status >= 3 || (authorityFD != nil && status
+  != 1))` does not refuse.
+
+For a launched actor under an authority plan, the descriptor is present by
+source (DT-61 trace, step 3), so the gate reduces to `status == 1` (MAPPED).
+MAPPED is written by the same C decision block as the disposition
+(pw_probe_runner.c lines 748–753), from the bound region pointer rather than
+the primary-failure variable. It is a second
+encoding of one decision, not an independent observation. It is absent from
+the wire schema and appears only inside the classifier's error text when the
+gate refuses.
+
+**Executed (seam, constructed contract binding).** A frame with `ready` and a
+missing or failed `core_limit` cell, or `required: false`, beside
+`setup_status: applied`, was `finished` with Rust `valid` per actor and `[]`
+from the consumer, `actor_evidence`, `extension_evidence` and the oracle.
+Swift reporting was not run on these frames. By source, it does not check
+these relationships.
+
+**What a final-reply reader cannot distinguish.** Rust and Python do require
+an applied actor's scope not to be terminal (DT-61 trace, step 5). No reader
+relates a `ready` scope to its cells or to `required`. From `ready`,
+`setup_status: applied` and a missing or failed prerequisite cell, a reader
+cannot tell whether the worker's MAPPED word was observed and a cell was lost
+before the reply, or whether the cells are accurate and the scheduler
+activated on a different fact. The C program order makes the two coincide in
+production. That shared assumption is the only thing joining the activation
+decision to the retained cells.
+
+### DT-134 — After producer admission, only geometry and the receipt's constant labels change the run result; the receipt's request binding is checked once, before the reply, and nowhere after
+
+**Map.** The acceptance boundary map lists every boundary that can change the
+result. After the controller holds a decoded reply under the expected producer
+contract,
+collection geometry and the receipt status/label check are the only
+semantic-record checks that refuse the reply. Every other relationship adds
+diagnostics or is unchecked. That includes the receipt's request association
+and its internal byte, length and digest relations.
+
+**Executed (seam, constructed contract binding; and unit).** A receipt
+inserted into a reply whose request did not ask for capture (carrying a
+different worker PID), a replaced nonce, a flipped bytecode byte and a zero
+length were each `finished` with Rust `valid` and consumer `[]`. The existing
+label test passed at this snapshot.
+
+**Cost (design judgment, labeled).** The outcome-changing check reads two
+values the host writes as constants (DT-96). The association checks run once,
+in `decodeProfileCapture`, and nothing in the reply lets a recipient
+distinguish a correct receipt from a detached one without the request. The
+live tests that do compare (contract.py lines 323–332, 430–435, 483–488) do so
+for their own outputs. The statement acknowledges the delegation, so this is
+not an unmet promise. The concern is that the only receipt check visible in
+the outcome is the one with the least evidential content.
+
+### DT-135 — Swift reporting re-checks association and order with the production predicate, and the oracle's phase finding is the consumer's; agreement counts overstate independent judgments
+
+**Source.** `validatorOwnershipProblem` recomputes issues with
+`validatorAssociationIssues` (PWRunnerReply.swift line 77), and the order
+check calls `eligibleOrderedStep` (line 365), the functions that produced the
+values. The oracle's D6 comes from `phase_evidence.ownership_problem`, the
+consumer's function (lifecycle_oracle.py lines 556–560). The oracle's
+extension check is the consumer's `validate_extensions` (line 591).
+
+**Executed.** In `nfd_id`, `nfd_value` and `dup_id`, three readers object:
+Rust, the consumer and the oracle. Only Rust and Python are independent
+implementations, and Swift's silence is its production rule restated.
+
+**Statement.** FAILURE-PROPAGATION-CONTRACT.md lines 605–614 read in full:
+
+> Every semantic reader checks ownership of a phase's validator subprocess the
+> same way. The block carries `phase_id` and `ordinal`, stamped by the host from
+> the collection it ran, and both must equal the containing phase's. Its
+> `expected_step_ids` must name exactly the phase's eligible query plan: the
+> phase's ordinary steps whose retained query decision is not
+> `query_not_requested`, read from the reply rather than by resolving paths again,
+> so a block beside a phase without eligible queries carries an empty plan. Step
+> order is the partition and step-order checks' question, not ownership's. Its
+> `association_issues` must be the
+> issues its retained `records` and that plan imply, recomputed by the reader.
+
+The paragraph continues to line 622. That remainder says a copied block fails
+validation, that unexpected, duplicate and null-ID records remain diagnostic
+evidence, and that PID uniqueness is not an invariant. It states no equality
+relation either. The paragraph promises one ownership procedure: the stamp
+comparison, the plan comparison, and recomputation of the issues the records
+and the plan imply. It does not state the equality relation that the
+recomputation uses.
+
+**Scope.** The rationale for sharing code is stated: uniform ownership checks,
+and reporting validated against reply-visible inputs (see the acceptance
+boundary map). That uniformity holds within each language. Across languages the readers apply
+the same procedure with different equality relations, so on canonical-variant
+inputs they compute different implied issues (DT-50, DT-131). I read "the same
+way" as fixing the procedure, not the equality. On that reading the
+disagreement is an unstated relation that the implementations bind
+differently, rather than a contradicted promise. Either way, counting reader
+verdicts does not measure independent confirmation.
+
+### Acceptance cross-references to earlier findings
+
+- **DT-23 and DT-51** (unapplied-actor validator failures become `finished`)
+  are another route by which a host classification decision, not a reader
+  judgment, sets the result. The `dup_id` run shows the converse: a Swift-only
+  rule changing the result.
+- **DT-24** (`missing_reason` and `pid` meanings) is a neighbor of the `dup_id`
+  step. That step carries `missing_reason: validator_no_verdict` and the error
+  "no validator verdict for this step", while its phase retains two records:
+  one byte-identical to the step ID and one canonically equal to it. The
+  reason fits its definition ("produced no associated record"), because no
+  record was uniquely associated. The error text does not distinguish an
+  ambiguous association from absent output.
+- **DT-25** found canonical target equality in Swift. Reading rule 4 adopts it
+  and Python implements it with NFC. DT-50 and DT-131 concern record identity,
+  where no rule states the relation and the readers diverge. The difference
+  between the two is that one has a stated equality and the other does not.
+- **DT-38 and DT-47** (support-scope findings) bear on DT-130. The Python
+  order control `unestablished_despite_chain` establishes the consumer's
+  behavior through a JSON fixture, a narrower path than the frame path
+  executed here, and says nothing about Rust.
+- **DT-101** bears on the DT-95 trace and DT-134 in two ways. Its finding
+  limits the "Checked by the host decoder" list: the unit check asserts
+  unavailability but no reasons, six of nine reasons occur in no test, and
+  no case combines two failures. Separately, the Rust receipt-label test
+  establishes the run outcome through typed injection, not frame decoding.
+- **DT-49** (a diagnostic's `rc` versus `native_rc`) is a sibling of DT-48:
+  both concern how the query projection forwards record values without
+  re-deriving them from the native pair. DT-49's input is a diagnostic record;
+  DT-48's is a prediction label.
+- **DT-52 and DT-53** (consumer tolerance) are extended by DT-132 to a
+  byte-consistent envelope. DT-52's missing-errno tolerance was not re-tested.
+- **DT-57** (empty ID rejected only by the oracle) is another oracle-only
+  judgment. Under DT-132's registry map, it is visible only in the cases that
+  run the oracle.
+- **DT-60** (a mismatched raw association still projected) concerns the same
+  decoder as DT-61 and DT-133, where the decoder's checks against its arguments
+  are its whole readiness check.
+- **DT-96 and DT-97** (constant labels; nonce never in the compiled bytes)
+  explain why the label check in DT-134 has little evidential content.
+- **DT-108** (conditional-null projection) did not arise in these rows,
+  because host-built queries always carry `result_source`. Rust's typed
+  checks and Python's projected checks saw identical values on every seam
+  row (`decode_bound` equality).
+
+### Acceptance coverage and remaining investigative limits
+
+- The Swift reporting validator, `decodeAuthoritySetup` and
+  `authoritySetupIntegrityErrors` were not run on any edited frame. Their
+  judgments of the f48, f61 and f95 edits are source reading.
+- Every seam row carries a constructed `producer.contract` edit. The seam
+  bypasses `reply_contract`. Its placeholder inputs (`preparation-0`, the
+  writer-cap pair and `normal.pwp`) produced rows that were disregarded.
+  Fidelity was checked only on the twelve unedited rebound rows.
+- All non-native validator transcripts are steered. No claim is made that the
+  shipped validator emits incoherent labels or rewrites Unicode spellings.
+- The reader map is a static text search over command scripts and the files
+  they name. It does not establish that each named check executes on every
+  invocation, and no registered case was run. Their current pass status is not
+  claimed.
+- The reduction of the scheduler gate to `status == 1` for every launched
+  required actor is source reading. No launch with a missing descriptor was
+  attempted.
+- The `actor` specimen is this pass's own. It was not coordinated with other
+  passes and covers one required-authority configuration.
+- No Swift package, mutated app or registered battery was built or run. The
+  only build was the unmodified controller test binary in an isolated target.
