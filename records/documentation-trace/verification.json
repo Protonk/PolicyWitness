@@ -1,0 +1,2794 @@
+{
+  "accepted_case_count": 237,
+  "accepted_cases": {
+    "blackbox_e2e/BBX-001": {
+      "reviewed_reuse_after_fixture_delta": true,
+      "run": "documentation-trace-default",
+      "status": "pass"
+    },
+    "blackbox_e2e/BBX-002": {
+      "reviewed_reuse_after_fixture_delta": true,
+      "run": "documentation-trace-default",
+      "status": "pass"
+    },
+    "blackbox_e2e/checker_controls": {
+      "reviewed_reuse_after_fixture_delta": true,
+      "run": "documentation-trace-default",
+      "status": "pass"
+    },
+    "blackbox_e2e/comparison_controls": {
+      "reviewed_reuse_after_fixture_delta": true,
+      "run": "documentation-trace-default",
+      "status": "pass"
+    },
+    "blackbox_e2e/native_comparison_controls": {
+      "reviewed_reuse_after_fixture_delta": true,
+      "run": "documentation-trace-default",
+      "status": "pass"
+    },
+    "blackbox_menagerie/core_mach_simple": {
+      "reviewed_reuse_after_fixture_delta": true,
+      "run": "documentation-trace-default",
+      "status": "pass"
+    },
+    "blackbox_menagerie/core_read_only": {
+      "reviewed_reuse_after_fixture_delta": true,
+      "run": "documentation-trace-default",
+      "status": "pass"
+    },
+    "blackbox_menagerie/core_strict_tmp": {
+      "reviewed_reuse_after_fixture_delta": true,
+      "run": "documentation-trace-default",
+      "status": "pass"
+    },
+    "blackbox_menagerie/opt_bucket5_subpath": {
+      "reviewed_reuse_after_fixture_delta": true,
+      "run": "documentation-trace-default",
+      "status": "pass"
+    },
+    "blackbox_menagerie/opt_metafilter_any": {
+      "reviewed_reuse_after_fixture_delta": true,
+      "run": "documentation-trace-default",
+      "status": "pass"
+    },
+    "blackbox_menagerie/opt_vfs_both_paths": {
+      "reviewed_reuse_after_fixture_delta": true,
+      "run": "documentation-trace-default",
+      "status": "pass"
+    },
+    "blackbox_menagerie/opt_vfs_private_tmp_only": {
+      "reviewed_reuse_after_fixture_delta": true,
+      "run": "documentation-trace-default",
+      "status": "pass"
+    },
+    "blackbox_menagerie/opt_vfs_tmp_only": {
+      "reviewed_reuse_after_fixture_delta": true,
+      "run": "documentation-trace-default",
+      "status": "pass"
+    },
+    "blackbox_menagerie/validation_controls": {
+      "reviewed_reuse_after_fixture_delta": true,
+      "run": "documentation-trace-default",
+      "status": "pass"
+    },
+    "dispatcher/accounting_controls": {
+      "reviewed_reuse_after_fixture_delta": true,
+      "run": "documentation-trace-default",
+      "status": "pass"
+    },
+    "dispatcher/artifact_controls": {
+      "reviewed_reuse_after_fixture_delta": true,
+      "run": "documentation-trace-default",
+      "status": "pass"
+    },
+    "dispatcher/cancellation_controls": {
+      "reviewed_reuse_after_fixture_delta": true,
+      "run": "documentation-trace-default",
+      "status": "pass"
+    },
+    "dispatcher/controls": {
+      "reviewed_reuse_after_fixture_delta": true,
+      "run": "documentation-trace-default",
+      "status": "pass"
+    },
+    "dispatcher/retention_controls": {
+      "reviewed_reuse_after_fixture_delta": true,
+      "run": "documentation-trace-default",
+      "status": "pass"
+    },
+    "dispatcher/selection_controls": {
+      "reviewed_reuse_after_fixture_delta": true,
+      "run": "documentation-trace-default",
+      "status": "pass"
+    },
+    "exec_fixture/controls": {
+      "reviewed_reuse_after_fixture_delta": true,
+      "run": "documentation-trace-default",
+      "status": "pass"
+    },
+    "failure_boundaries/admission": {
+      "reviewed_reuse_after_fixture_delta": true,
+      "run": "documentation-trace-default",
+      "status": "pass"
+    },
+    "failure_boundaries/fallback_helper": {
+      "reviewed_reuse_after_fixture_delta": true,
+      "run": "documentation-trace-default",
+      "status": "pass"
+    },
+    "failure_boundaries/validator_association": {
+      "reviewed_reuse_after_fixture_delta": true,
+      "run": "documentation-trace-default",
+      "status": "pass"
+    },
+    "failure_boundaries/validator_control_characters": {
+      "reviewed_reuse_after_fixture_delta": true,
+      "run": "documentation-trace-default",
+      "status": "pass"
+    },
+    "failure_boundaries/validator_frames": {
+      "reviewed_reuse_after_fixture_delta": true,
+      "run": "documentation-trace-default",
+      "status": "pass"
+    },
+    "failure_boundaries/validator_overlong_request": {
+      "reviewed_reuse_after_fixture_delta": true,
+      "run": "documentation-trace-default",
+      "status": "pass"
+    },
+    "failure_boundaries/validator_removed_target": {
+      "reviewed_reuse_after_fixture_delta": true,
+      "run": "documentation-trace-default",
+      "status": "pass"
+    },
+    "integration/cli.integration": {
+      "reviewed_reuse_after_fixture_delta": true,
+      "run": "documentation-trace-default",
+      "status": "pass"
+    },
+    "preflight/build_entry_controls": {
+      "reviewed_reuse_after_fixture_delta": false,
+      "run": "documentation-trace-fixture-recheck",
+      "status": "pass"
+    },
+    "preflight/build_provenance_controls": {
+      "reviewed_reuse_after_fixture_delta": false,
+      "run": "documentation-trace-fixture-recheck",
+      "status": "pass"
+    },
+    "preflight/byoxpc_verification_controls": {
+      "reviewed_reuse_after_fixture_delta": true,
+      "run": "documentation-trace-default",
+      "status": "pass"
+    },
+    "preflight/codesign.preflight": {
+      "reviewed_reuse_after_fixture_delta": true,
+      "run": "documentation-trace-default",
+      "status": "pass"
+    },
+    "preflight/native_policy_controls": {
+      "reviewed_reuse_after_fixture_delta": true,
+      "run": "documentation-trace-default",
+      "status": "pass"
+    },
+    "preflight/native_source_controls": {
+      "reviewed_reuse_after_fixture_delta": true,
+      "run": "documentation-trace-default",
+      "status": "pass"
+    },
+    "preflight/release_controls": {
+      "reviewed_reuse_after_fixture_delta": true,
+      "run": "documentation-trace-default",
+      "status": "pass"
+    },
+    "preflight/release_deadline_controls": {
+      "reviewed_reuse_after_fixture_delta": true,
+      "run": "documentation-trace-default",
+      "status": "pass"
+    },
+    "preflight/release_publish_controls": {
+      "reviewed_reuse_after_fixture_delta": false,
+      "run": "documentation-trace-fixture-recheck",
+      "status": "pass"
+    },
+    "preflight/release_rotation_controls": {
+      "reviewed_reuse_after_fixture_delta": true,
+      "run": "documentation-trace-default",
+      "status": "pass"
+    },
+    "run_capture/controls": {
+      "reviewed_reuse_after_fixture_delta": true,
+      "run": "documentation-trace-default",
+      "status": "pass"
+    },
+    "run_effects/aftermath_footprint": {
+      "reviewed_reuse_after_fixture_delta": true,
+      "run": "documentation-trace-default",
+      "status": "pass"
+    },
+    "run_effects/checker_controls": {
+      "reviewed_reuse_after_fixture_delta": true,
+      "run": "documentation-trace-default",
+      "status": "pass"
+    },
+    "run_effects/exec_helper_effect_is_real": {
+      "reviewed_reuse_after_fixture_delta": true,
+      "run": "documentation-trace-default",
+      "status": "pass"
+    },
+    "run_effects/file_actions_have_exact_effects": {
+      "reviewed_reuse_after_fixture_delta": true,
+      "run": "documentation-trace-default",
+      "status": "pass"
+    },
+    "run_effects/run_installs_nothing": {
+      "reviewed_reuse_after_fixture_delta": true,
+      "run": "documentation-trace-default",
+      "status": "pass"
+    },
+    "runner_abi_layout/c_swift_layout_agreement": {
+      "reviewed_reuse_after_fixture_delta": true,
+      "run": "documentation-trace-default",
+      "status": "pass"
+    },
+    "runner_apply_isolation_v2/deny_default_v2_worker_reply": {
+      "reviewed_reuse_after_fixture_delta": true,
+      "run": "documentation-trace-default",
+      "status": "pass"
+    },
+    "runner_apply_isolation_v3/deny_default_v3_worker_reply": {
+      "reviewed_reuse_after_fixture_delta": true,
+      "run": "documentation-trace-default",
+      "status": "pass"
+    },
+    "runner_c_worker_harness/abi_mismatch_refused": {
+      "reviewed_reuse_after_fixture_delta": true,
+      "run": "documentation-trace-default",
+      "status": "pass"
+    },
+    "runner_c_worker_harness/activation_cancel_while_parked": {
+      "reviewed_reuse_after_fixture_delta": true,
+      "run": "documentation-trace-default",
+      "status": "pass"
+    },
+    "runner_c_worker_harness/activation_cutoff_past": {
+      "reviewed_reuse_after_fixture_delta": true,
+      "run": "documentation-trace-default",
+      "status": "pass"
+    },
+    "runner_c_worker_harness/activation_greater_ordinal": {
+      "reviewed_reuse_after_fixture_delta": true,
+      "run": "documentation-trace-default",
+      "status": "pass"
+    },
+    "runner_c_worker_harness/activation_named_ordinal": {
+      "reviewed_reuse_after_fixture_delta": true,
+      "run": "documentation-trace-default",
+      "status": "pass"
+    },
+    "runner_c_worker_harness/activation_under_deny_default": {
+      "reviewed_reuse_after_fixture_delta": true,
+      "run": "documentation-trace-default",
+      "status": "pass"
+    },
+    "runner_c_worker_harness/activation_withheld_cutoff": {
+      "reviewed_reuse_after_fixture_delta": true,
+      "run": "documentation-trace-default",
+      "status": "pass"
+    },
+    "runner_c_worker_harness/actor_operations": {
+      "reviewed_reuse_after_fixture_delta": true,
+      "run": "documentation-trace-default",
+      "status": "pass"
+    },
+    "runner_c_worker_harness/arm_wait_controls": {
+      "reviewed_reuse_after_fixture_delta": true,
+      "run": "documentation-trace-default",
+      "status": "pass"
+    },
+    "runner_c_worker_harness/authority_binding": {
+      "reviewed_reuse_after_fixture_delta": true,
+      "run": "documentation-trace-default",
+      "status": "pass"
+    },
+    "runner_c_worker_harness/bare_deny_default": {
+      "reviewed_reuse_after_fixture_delta": true,
+      "run": "documentation-trace-default",
+      "status": "pass"
+    },
+    "runner_c_worker_harness/clock_arithmetic": {
+      "reviewed_reuse_after_fixture_delta": true,
+      "run": "documentation-trace-default",
+      "status": "pass"
+    },
+    "runner_c_worker_harness/compile_failure": {
+      "reviewed_reuse_after_fixture_delta": true,
+      "run": "documentation-trace-default",
+      "status": "pass"
+    },
+    "runner_c_worker_harness/create_allow": {
+      "reviewed_reuse_after_fixture_delta": true,
+      "run": "documentation-trace-default",
+      "status": "pass"
+    },
+    "runner_c_worker_harness/exec_attempt_budget_remainder": {
+      "reviewed_reuse_after_fixture_delta": true,
+      "run": "documentation-trace-default",
+      "status": "pass"
+    },
+    "runner_c_worker_harness/exec_attempt_budget_sequence": {
+      "reviewed_reuse_after_fixture_delta": true,
+      "run": "documentation-trace-default",
+      "status": "pass"
+    },
+    "runner_c_worker_harness/exec_control_states": {
+      "reviewed_reuse_after_fixture_delta": true,
+      "run": "documentation-trace-default",
+      "status": "pass"
+    },
+    "runner_c_worker_harness/exec_pipes_per_attempt": {
+      "reviewed_reuse_after_fixture_delta": true,
+      "run": "documentation-trace-default",
+      "status": "pass"
+    },
+    "runner_c_worker_harness/exec_setup_post_apply_denied": {
+      "reviewed_reuse_after_fixture_delta": true,
+      "run": "documentation-trace-default",
+      "status": "pass"
+    },
+    "runner_c_worker_harness/first_touch_after_apply": {
+      "reviewed_reuse_after_fixture_delta": true,
+      "run": "documentation-trace-default",
+      "status": "pass"
+    },
+    "runner_c_worker_harness/fresh_write": {
+      "reviewed_reuse_after_fixture_delta": true,
+      "run": "documentation-trace-default",
+      "status": "pass"
+    },
+    "runner_c_worker_harness/happy_default_allow": {
+      "reviewed_reuse_after_fixture_delta": true,
+      "run": "documentation-trace-default",
+      "status": "pass"
+    },
+    "runner_c_worker_harness/max_slots_deny_default": {
+      "reviewed_reuse_after_fixture_delta": true,
+      "run": "documentation-trace-default",
+      "status": "pass"
+    },
+    "runner_c_worker_harness/max_slots_proceed": {
+      "reviewed_reuse_after_fixture_delta": true,
+      "run": "documentation-trace-default",
+      "status": "pass"
+    },
+    "runner_c_worker_harness/native_pause_controls": {
+      "reviewed_reuse_after_fixture_delta": true,
+      "run": "documentation-trace-default",
+      "status": "pass"
+    },
+    "runner_c_worker_harness/param_count_overflow_refused": {
+      "reviewed_reuse_after_fixture_delta": true,
+      "run": "documentation-trace-default",
+      "status": "pass"
+    },
+    "runner_c_worker_harness/params_round_trip": {
+      "reviewed_reuse_after_fixture_delta": true,
+      "run": "documentation-trace-default",
+      "status": "pass"
+    },
+    "runner_c_worker_harness/policy_at_capacity": {
+      "reviewed_reuse_after_fixture_delta": true,
+      "run": "documentation-trace-default",
+      "status": "pass"
+    },
+    "runner_c_worker_harness/policy_capacity_plus_one_refused": {
+      "reviewed_reuse_after_fixture_delta": true,
+      "run": "documentation-trace-default",
+      "status": "pass"
+    },
+    "runner_c_worker_harness/policy_empty_expected": {
+      "reviewed_reuse_after_fixture_delta": true,
+      "run": "documentation-trace-default",
+      "status": "pass"
+    },
+    "runner_c_worker_harness/policy_empty_short_refused": {
+      "reviewed_reuse_after_fixture_delta": true,
+      "run": "documentation-trace-default",
+      "status": "pass"
+    },
+    "runner_c_worker_harness/policy_expectation_out_of_range_refused": {
+      "reviewed_reuse_after_fixture_delta": true,
+      "run": "documentation-trace-default",
+      "status": "pass"
+    },
+    "runner_c_worker_harness/policy_nul_refused": {
+      "reviewed_reuse_after_fixture_delta": true,
+      "run": "documentation-trace-default",
+      "status": "pass"
+    },
+    "runner_c_worker_harness/policy_overdelivered_refused": {
+      "reviewed_reuse_after_fixture_delta": true,
+      "run": "documentation-trace-default",
+      "status": "pass"
+    },
+    "runner_c_worker_harness/policy_overflow_refused": {
+      "reviewed_reuse_after_fixture_delta": true,
+      "run": "documentation-trace-default",
+      "status": "pass"
+    },
+    "runner_c_worker_harness/policy_truncated_prefix": {
+      "reviewed_reuse_after_fixture_delta": true,
+      "run": "documentation-trace-default",
+      "status": "pass"
+    },
+    "runner_c_worker_harness/policy_utf8_bytes": {
+      "reviewed_reuse_after_fixture_delta": true,
+      "run": "documentation-trace-default",
+      "status": "pass"
+    },
+    "runner_c_worker_harness/policy_whole_submission": {
+      "reviewed_reuse_after_fixture_delta": true,
+      "run": "documentation-trace-default",
+      "status": "pass"
+    },
+    "runner_c_worker_harness/policy_zero_expected_refused": {
+      "reviewed_reuse_after_fixture_delta": true,
+      "run": "documentation-trace-default",
+      "status": "pass"
+    },
+    "runner_c_worker_harness/prepared_unset_refused": {
+      "reviewed_reuse_after_fixture_delta": true,
+      "run": "documentation-trace-default",
+      "status": "pass"
+    },
+    "runner_c_worker_harness/proceed_before_applied": {
+      "reviewed_reuse_after_fixture_delta": true,
+      "run": "documentation-trace-default",
+      "status": "pass"
+    },
+    "runner_c_worker_harness/proceed_delayed_observed_quiescence": {
+      "reviewed_reuse_after_fixture_delta": true,
+      "run": "documentation-trace-default",
+      "status": "pass"
+    },
+    "runner_c_worker_harness/proceed_expiry_release_boundary": {
+      "reviewed_reuse_after_fixture_delta": true,
+      "run": "documentation-trace-default",
+      "status": "pass"
+    },
+    "runner_c_worker_harness/proceed_late_after_expiry": {
+      "reviewed_reuse_after_fixture_delta": true,
+      "run": "documentation-trace-default",
+      "status": "pass"
+    },
+    "runner_c_worker_harness/proceed_never_set": {
+      "reviewed_reuse_after_fixture_delta": true,
+      "run": "documentation-trace-default",
+      "status": "pass"
+    },
+    "runner_c_worker_harness/proceed_precedence": {
+      "reviewed_reuse_after_fixture_delta": true,
+      "run": "documentation-trace-default",
+      "status": "pass"
+    },
+    "runner_c_worker_harness/proceed_under_bare_deny_default": {
+      "reviewed_reuse_after_fixture_delta": true,
+      "run": "documentation-trace-default",
+      "status": "pass"
+    },
+    "runner_c_worker_harness/proceed_wait_budget_long": {
+      "reviewed_reuse_after_fixture_delta": true,
+      "run": "documentation-trace-default",
+      "status": "pass"
+    },
+    "runner_c_worker_harness/proceed_wait_budget_short": {
+      "reviewed_reuse_after_fixture_delta": true,
+      "run": "documentation-trace-default",
+      "status": "pass"
+    },
+    "runner_c_worker_harness/proceed_without_host_release": {
+      "reviewed_reuse_after_fixture_delta": true,
+      "run": "documentation-trace-default",
+      "status": "pass"
+    },
+    "runner_c_worker_harness/sigkill_fallback": {
+      "reviewed_reuse_after_fixture_delta": true,
+      "run": "documentation-trace-default",
+      "status": "pass"
+    },
+    "runner_c_worker_harness/step_count_overflow_refused": {
+      "reviewed_reuse_after_fixture_delta": true,
+      "run": "documentation-trace-default",
+      "status": "pass"
+    },
+    "runner_c_worker_harness/sysctl_read_capacity": {
+      "reviewed_reuse_after_fixture_delta": true,
+      "run": "documentation-trace-default",
+      "status": "pass"
+    },
+    "runner_c_worker_harness/terminal_erasure": {
+      "reviewed_reuse_after_fixture_delta": true,
+      "run": "documentation-trace-default",
+      "status": "pass"
+    },
+    "runner_c_worker_harness/terminal_exit_without_request": {
+      "reviewed_reuse_after_fixture_delta": true,
+      "run": "documentation-trace-default",
+      "status": "pass"
+    },
+    "runner_c_worker_harness/unapplied_actor_reads": {
+      "reviewed_reuse_after_fixture_delta": true,
+      "run": "documentation-trace-default",
+      "status": "pass"
+    },
+    "runner_c_worker_harness/unapplied_under_deny_default": {
+      "reviewed_reuse_after_fixture_delta": true,
+      "run": "documentation-trace-default",
+      "status": "pass"
+    },
+    "runner_c_worker_harness/unlink_allow": {
+      "reviewed_reuse_after_fixture_delta": true,
+      "run": "documentation-trace-default",
+      "status": "pass"
+    },
+    "runner_c_worker_harness/unlink_deny": {
+      "reviewed_reuse_after_fixture_delta": true,
+      "run": "documentation-trace-default",
+      "status": "pass"
+    },
+    "runner_exec_dac/execute_permission_controls_spawn": {
+      "reviewed_reuse_after_fixture_delta": true,
+      "run": "documentation-trace-default",
+      "status": "pass"
+    },
+    "runner_exec_inheritance/cli": {
+      "reviewed_reuse_after_fixture_delta": true,
+      "run": "documentation-trace-default",
+      "status": "pass"
+    },
+    "runner_exec_inheritance/contaminated_worker": {
+      "reviewed_reuse_after_fixture_delta": true,
+      "run": "documentation-trace-default",
+      "status": "pass"
+    },
+    "runner_exec_lifecycle/closed_streams_continue": {
+      "reviewed_reuse_after_fixture_delta": true,
+      "run": "documentation-trace-default",
+      "status": "pass"
+    },
+    "runner_exec_lifecycle/closed_streams_leader_exit": {
+      "reviewed_reuse_after_fixture_delta": true,
+      "run": "documentation-trace-default",
+      "status": "pass"
+    },
+    "runner_exec_lifecycle/leader_exit_descendant": {
+      "reviewed_reuse_after_fixture_delta": true,
+      "run": "documentation-trace-default",
+      "status": "pass"
+    },
+    "runner_exec_lifecycle/timeout_preserves_output_and_continues": {
+      "reviewed_reuse_after_fixture_delta": true,
+      "run": "documentation-trace-default",
+      "status": "pass"
+    },
+    "runner_exec_lifecycle/worker_dies_during_exec": {
+      "reviewed_reuse_after_fixture_delta": true,
+      "run": "documentation-trace-default",
+      "status": "pass"
+    },
+    "runner_filter_iokit_registry_entry_class/prediction_unavailable_attempt_observed": {
+      "reviewed_reuse_after_fixture_delta": true,
+      "run": "documentation-trace-default",
+      "status": "pass"
+    },
+    "runner_filter_iokit_user_client_class/prediction_unavailable_attempt_observed": {
+      "reviewed_reuse_after_fixture_delta": true,
+      "run": "documentation-trace-default",
+      "status": "pass"
+    },
+    "runner_filter_local_name/prediction_unavailable_attempt_observed": {
+      "reviewed_reuse_after_fixture_delta": true,
+      "run": "documentation-trace-default",
+      "status": "pass"
+    },
+    "runner_filter_sysctl_name/checker_controls": {
+      "reviewed_reuse_after_fixture_delta": true,
+      "run": "documentation-trace-default",
+      "status": "pass"
+    },
+    "runner_filter_sysctl_name/prediction_unavailable_attempt_observed": {
+      "reviewed_reuse_after_fixture_delta": true,
+      "run": "documentation-trace-default",
+      "status": "pass"
+    },
+    "runner_live_worker_identity/independent_worker_and_host_queries": {
+      "reviewed_reuse_after_fixture_delta": true,
+      "run": "documentation-trace-default",
+      "status": "pass"
+    },
+    "runner_mach_service_liveness/pwrunner_survives_mach_service_launch": {
+      "reviewed_reuse_after_fixture_delta": true,
+      "run": "documentation-trace-default",
+      "status": "pass"
+    },
+    "runner_outcome_bad_request/accepted_input_contract": {
+      "reviewed_reuse_after_fixture_delta": true,
+      "run": "documentation-trace-default",
+      "status": "pass"
+    },
+    "runner_outcome_bad_request/missing_required_filter_value": {
+      "reviewed_reuse_after_fixture_delta": true,
+      "run": "documentation-trace-default",
+      "status": "pass"
+    },
+    "runner_outcome_bad_request/swift_decode_failure": {
+      "reviewed_reuse_after_fixture_delta": true,
+      "run": "documentation-trace-default",
+      "status": "pass"
+    },
+    "runner_outcome_runner_timeout/host_kills_hung_worker": {
+      "reviewed_reuse_after_fixture_delta": true,
+      "run": "documentation-trace-default",
+      "status": "pass"
+    },
+    "runner_outcome_validator_no_reply/validator_io_deadline_releases_worker": {
+      "reviewed_reuse_after_fixture_delta": true,
+      "run": "documentation-trace-default",
+      "status": "pass"
+    },
+    "runner_outcome_worker_spawn_failed/posix_spawn_enoent_propagates_to_outcome": {
+      "reviewed_reuse_after_fixture_delta": true,
+      "run": "documentation-trace-default",
+      "status": "pass"
+    },
+    "runner_ready_byte_resilience/slow_compile_ready_byte_survives_sigpipe": {
+      "reviewed_reuse_after_fixture_delta": true,
+      "run": "documentation-trace-default",
+      "status": "pass"
+    },
+    "runner_specimen_isolation/overlapping_runs_keep_evidence_separate": {
+      "reviewed_reuse_after_fixture_delta": true,
+      "run": "documentation-trace-default",
+      "status": "pass"
+    },
+    "runner_unit/actor_handoff_mutations": {
+      "reviewed_reuse_after_fixture_delta": true,
+      "run": "documentation-trace-final-controls",
+      "status": "pass"
+    },
+    "runner_unit/build_receipt_controls": {
+      "reviewed_reuse_after_fixture_delta": true,
+      "run": "documentation-trace-default",
+      "status": "pass"
+    },
+    "runner_unit/client_session_controls": {
+      "reviewed_reuse_after_fixture_delta": true,
+      "run": "documentation-trace-default",
+      "status": "pass"
+    },
+    "runner_unit/exec_reader_mutations": {
+      "reviewed_reuse_after_fixture_delta": true,
+      "run": "documentation-trace-final-controls",
+      "status": "pass"
+    },
+    "runner_unit/host_setup_controls": {
+      "reviewed_reuse_after_fixture_delta": true,
+      "run": "documentation-trace-default",
+      "status": "pass"
+    },
+    "runner_unit/host_setup_oracle_sensitivity": {
+      "reviewed_reuse_after_fixture_delta": true,
+      "run": "documentation-trace-final-controls",
+      "status": "pass"
+    },
+    "runner_unit/launch_descriptor_controls": {
+      "reviewed_reuse_after_fixture_delta": true,
+      "run": "documentation-trace-default",
+      "status": "pass"
+    },
+    "runner_unit/pwrunner_core_unit_executable": {
+      "reviewed_reuse_after_fixture_delta": true,
+      "run": "documentation-trace-default",
+      "status": "pass"
+    },
+    "runner_unit/reaped_ack_mutation": {
+      "reviewed_reuse_after_fixture_delta": true,
+      "run": "documentation-trace-final-controls",
+      "status": "pass"
+    },
+    "runner_unit/service_admission_controls": {
+      "reviewed_reuse_after_fixture_delta": true,
+      "run": "documentation-trace-default",
+      "status": "pass"
+    },
+    "runner_unit/sleep_record_controls": {
+      "reviewed_reuse_after_fixture_delta": true,
+      "run": "documentation-trace-default",
+      "status": "pass"
+    },
+    "runner_use_c_worker/access_failure_classified": {
+      "reviewed_reuse_after_fixture_delta": true,
+      "run": "documentation-trace-default",
+      "status": "pass"
+    },
+    "runner_use_c_worker/bare_deny_default": {
+      "reviewed_reuse_after_fixture_delta": true,
+      "run": "documentation-trace-default",
+      "status": "pass"
+    },
+    "runner_use_c_worker/duplicate_step_id_rejected": {
+      "reviewed_reuse_after_fixture_delta": true,
+      "run": "documentation-trace-default",
+      "status": "pass"
+    },
+    "runner_use_c_worker/exec_attempt_args_and_stderr_round_trip": {
+      "reviewed_reuse_after_fixture_delta": true,
+      "run": "documentation-trace-default",
+      "status": "pass"
+    },
+    "runner_use_c_worker/exec_attempt_stdout_truncation_marker": {
+      "reviewed_reuse_after_fixture_delta": true,
+      "run": "documentation-trace-default",
+      "status": "pass"
+    },
+    "runner_use_c_worker/exec_attempt_with_baseline_succeeds": {
+      "reviewed_reuse_after_fixture_delta": true,
+      "run": "documentation-trace-default",
+      "status": "pass"
+    },
+    "runner_use_c_worker/exec_attempt_without_baseline_fails_cleanly": {
+      "reviewed_reuse_after_fixture_delta": true,
+      "run": "documentation-trace-default",
+      "status": "pass"
+    },
+    "runner_use_c_worker/happy_default_allow": {
+      "reviewed_reuse_after_fixture_delta": true,
+      "run": "documentation-trace-default",
+      "status": "pass"
+    },
+    "runner_use_c_worker/prediction_unavailable_pair": {
+      "reviewed_reuse_after_fixture_delta": true,
+      "run": "documentation-trace-default",
+      "status": "pass"
+    },
+    "runner_use_c_worker/sandbox_check_path_unresolved_prediction_unavailable": {
+      "reviewed_reuse_after_fixture_delta": true,
+      "run": "documentation-trace-default",
+      "status": "pass"
+    },
+    "runner_use_c_worker/sandbox_check_pid_matches_worker": {
+      "reviewed_reuse_after_fixture_delta": true,
+      "run": "documentation-trace-default",
+      "status": "pass"
+    },
+    "runner_use_c_worker/sandbox_check_unsupported_operation_diagnostic": {
+      "reviewed_reuse_after_fixture_delta": true,
+      "run": "documentation-trace-default",
+      "status": "pass"
+    },
+    "runner_use_c_worker/unsupported_attempt_rejected": {
+      "reviewed_reuse_after_fixture_delta": true,
+      "run": "documentation-trace-default",
+      "status": "pass"
+    },
+    "runner_use_c_worker/worker_timeout_ms_honored": {
+      "reviewed_reuse_after_fixture_delta": true,
+      "run": "documentation-trace-default",
+      "status": "pass"
+    },
+    "runner_validator_failure/transcript_controls": {
+      "reviewed_reuse_after_fixture_delta": true,
+      "run": "documentation-trace-default",
+      "status": "pass"
+    },
+    "runner_validator_failure/validator_decode_failure_reports_degraded": {
+      "reviewed_reuse_after_fixture_delta": true,
+      "run": "documentation-trace-default",
+      "status": "pass"
+    },
+    "runner_validator_failure/validator_killed_mid_stream": {
+      "reviewed_reuse_after_fixture_delta": true,
+      "run": "documentation-trace-default",
+      "status": "pass"
+    },
+    "runner_validator_failure/validator_unavailable_reports_degraded": {
+      "reviewed_reuse_after_fixture_delta": true,
+      "run": "documentation-trace-default",
+      "status": "pass"
+    },
+    "sbpl_allowdeny_consistency/sbpl_allowdeny_v1": {
+      "reviewed_reuse_after_fixture_delta": true,
+      "run": "documentation-trace-default",
+      "status": "pass"
+    },
+    "shell_helpers/byoxpc_setup": {
+      "reviewed_reuse_after_fixture_delta": true,
+      "run": "documentation-trace-default",
+      "status": "pass"
+    },
+    "shell_helpers/controls": {
+      "reviewed_reuse_after_fixture_delta": true,
+      "run": "documentation-trace-default",
+      "status": "pass"
+    },
+    "shell_helpers/finalizers": {
+      "reviewed_reuse_after_fixture_delta": true,
+      "run": "documentation-trace-default",
+      "status": "pass"
+    },
+    "shell_helpers/interpreter_boundary": {
+      "reviewed_reuse_after_fixture_delta": true,
+      "run": "documentation-trace-default",
+      "status": "pass"
+    },
+    "shell_helpers/mutation_prerequisites": {
+      "reviewed_reuse_after_fixture_delta": true,
+      "run": "documentation-trace-default",
+      "status": "pass"
+    },
+    "shell_helpers/python_startup": {
+      "reviewed_reuse_after_fixture_delta": true,
+      "run": "documentation-trace-default",
+      "status": "pass"
+    },
+    "shell_helpers/script_groups": {
+      "reviewed_reuse_after_fixture_delta": true,
+      "run": "documentation-trace-default",
+      "status": "pass"
+    },
+    "shell_helpers/worker_setup": {
+      "reviewed_reuse_after_fixture_delta": true,
+      "run": "documentation-trace-default",
+      "status": "pass"
+    },
+    "smoke/specimen_file_read_deny": {
+      "reviewed_reuse_after_fixture_delta": true,
+      "run": "documentation-trace-default",
+      "status": "pass"
+    },
+    "smoke/specimen_file_read_deny_standard": {
+      "reviewed_reuse_after_fixture_delta": true,
+      "run": "documentation-trace-default",
+      "status": "pass"
+    },
+    "source_drift/architecture_documentation": {
+      "reviewed_reuse_after_fixture_delta": true,
+      "run": "documentation-trace-default",
+      "status": "pass"
+    },
+    "source_drift/build_contracts": {
+      "reviewed_reuse_after_fixture_delta": true,
+      "run": "documentation-trace-default",
+      "status": "pass"
+    },
+    "source_drift/build_documentation": {
+      "reviewed_reuse_after_fixture_delta": false,
+      "run": "documentation-trace-fixture-recheck",
+      "status": "pass"
+    },
+    "source_drift/direct_python_start": {
+      "reviewed_reuse_after_fixture_delta": true,
+      "run": "documentation-trace-default",
+      "status": "pass"
+    },
+    "source_drift/footprint_documentation": {
+      "reviewed_reuse_after_fixture_delta": true,
+      "run": "documentation-trace-default",
+      "status": "pass"
+    },
+    "source_drift/generator_contract": {
+      "reviewed_reuse_after_fixture_delta": false,
+      "run": "documentation-trace-fixture-recheck",
+      "status": "pass"
+    },
+    "source_drift/interface_inventory": {
+      "reviewed_reuse_after_fixture_delta": true,
+      "run": "documentation-trace-default",
+      "status": "pass"
+    },
+    "source_drift/limits_documentation": {
+      "reviewed_reuse_after_fixture_delta": true,
+      "run": "documentation-trace-default",
+      "status": "pass"
+    },
+    "source_drift/markdown_reader": {
+      "reviewed_reuse_after_fixture_delta": false,
+      "run": "documentation-trace-fixture-recheck",
+      "status": "pass"
+    },
+    "source_drift/porcelain_codec": {
+      "reviewed_reuse_after_fixture_delta": true,
+      "run": "documentation-trace-default",
+      "status": "pass"
+    },
+    "source_drift/runner_source_manifests_agree": {
+      "reviewed_reuse_after_fixture_delta": true,
+      "run": "documentation-trace-default",
+      "status": "pass"
+    },
+    "unit/rust.byoxpc_reds": {
+      "reviewed_reuse_after_fixture_delta": true,
+      "run": "documentation-trace-default",
+      "status": "pass"
+    },
+    "unit/rust.disposition_reds": {
+      "reviewed_reuse_after_fixture_delta": true,
+      "run": "documentation-trace-default",
+      "status": "pass"
+    },
+    "unit/rust.fmt": {
+      "reviewed_reuse_after_fixture_delta": true,
+      "run": "documentation-trace-default",
+      "status": "pass"
+    },
+    "unit/rust.unit": {
+      "reviewed_reuse_after_fixture_delta": true,
+      "run": "documentation-trace-default",
+      "status": "pass"
+    },
+    "validator_batch_mode/batch_ndjson_roundtrip": {
+      "reviewed_reuse_after_fixture_delta": true,
+      "run": "documentation-trace-default",
+      "status": "pass"
+    },
+    "validator_batch_mode/predictions_do_not_report": {
+      "reviewed_reuse_after_fixture_delta": true,
+      "run": "documentation-trace-default",
+      "status": "pass"
+    },
+    "validator_bridge/protocol_controls": {
+      "reviewed_reuse_after_fixture_delta": true,
+      "run": "documentation-trace-default",
+      "status": "pass"
+    },
+    "witness_contract/actor_compositions": {
+      "reviewed_reuse_after_fixture_delta": true,
+      "run": "documentation-trace-default",
+      "status": "pass"
+    },
+    "witness_contract/actor_timing_qualification": {
+      "reviewed_reuse_after_fixture_delta": true,
+      "run": "documentation-trace-default",
+      "status": "pass"
+    },
+    "witness_contract/attempt_effects_wait_for_collection": {
+      "reviewed_reuse_after_fixture_delta": true,
+      "run": "documentation-trace-default",
+      "status": "pass"
+    },
+    "witness_contract/attempt_outcome_matrix_enforced": {
+      "reviewed_reuse_after_fixture_delta": true,
+      "run": "documentation-trace-default",
+      "status": "pass"
+    },
+    "witness_contract/bug_report_returns_verdicts": {
+      "reviewed_reuse_after_fixture_delta": true,
+      "run": "documentation-trace-default",
+      "status": "pass"
+    },
+    "witness_contract/comparison_matrix": {
+      "reviewed_reuse_after_fixture_delta": true,
+      "run": "documentation-trace-default",
+      "status": "pass"
+    },
+    "witness_contract/create_existing_file_preserves_contents": {
+      "reviewed_reuse_after_fixture_delta": true,
+      "run": "documentation-trace-default",
+      "status": "pass"
+    },
+    "witness_contract/debuggable_mode_rejected": {
+      "reviewed_reuse_after_fixture_delta": true,
+      "run": "documentation-trace-default",
+      "status": "pass"
+    },
+    "witness_contract/deny_default_ordered": {
+      "reviewed_reuse_after_fixture_delta": true,
+      "run": "documentation-trace-default",
+      "status": "pass"
+    },
+    "witness_contract/dossier_witness": {
+      "reviewed_reuse_after_fixture_delta": true,
+      "run": "documentation-trace-default",
+      "status": "pass"
+    },
+    "witness_contract/example_round_trip": {
+      "reviewed_reuse_after_fixture_delta": true,
+      "run": "documentation-trace-default",
+      "status": "pass"
+    },
+    "witness_contract/example_round_trip_controls": {
+      "reviewed_reuse_after_fixture_delta": true,
+      "run": "documentation-trace-default",
+      "status": "pass"
+    },
+    "witness_contract/extension_boundaries": {
+      "reviewed_reuse_after_fixture_delta": true,
+      "run": "documentation-trace-default",
+      "status": "pass"
+    },
+    "witness_contract/extension_combinations": {
+      "reviewed_reuse_after_fixture_delta": true,
+      "run": "documentation-trace-default",
+      "status": "pass"
+    },
+    "witness_contract/extension_directory": {
+      "reviewed_reuse_after_fixture_delta": true,
+      "run": "documentation-trace-default",
+      "status": "pass"
+    },
+    "witness_contract/extension_policy_qualification": {
+      "reviewed_reuse_after_fixture_delta": true,
+      "run": "documentation-trace-default",
+      "status": "pass"
+    },
+    "witness_contract/extension_redelegation": {
+      "reviewed_reuse_after_fixture_delta": true,
+      "run": "documentation-trace-default",
+      "status": "pass"
+    },
+    "witness_contract/extensions": {
+      "reviewed_reuse_after_fixture_delta": true,
+      "run": "documentation-trace-default",
+      "status": "pass"
+    },
+    "witness_contract/external_mutation_between_query_and_attempt": {
+      "reviewed_reuse_after_fixture_delta": true,
+      "run": "documentation-trace-default",
+      "status": "pass"
+    },
+    "witness_contract/footprint_observer_controls": {
+      "reviewed_reuse_after_fixture_delta": true,
+      "run": "documentation-trace-default",
+      "status": "pass"
+    },
+    "witness_contract/happy_path_baseline": {
+      "reviewed_reuse_after_fixture_delta": true,
+      "run": "documentation-trace-default",
+      "status": "pass"
+    },
+    "witness_contract/held_phase_footprint": {
+      "reviewed_reuse_after_fixture_delta": true,
+      "run": "documentation-trace-default",
+      "status": "pass"
+    },
+    "witness_contract/held_phase_footprint_controls": {
+      "reviewed_reuse_after_fixture_delta": true,
+      "run": "documentation-trace-default",
+      "status": "pass"
+    },
+    "witness_contract/instrumentation_field_rejected": {
+      "reviewed_reuse_after_fixture_delta": true,
+      "run": "documentation-trace-default",
+      "status": "pass"
+    },
+    "witness_contract/max_exec_steps_spawn": {
+      "reviewed_reuse_after_fixture_delta": true,
+      "run": "documentation-trace-default",
+      "status": "pass"
+    },
+    "witness_contract/max_steps_ordered": {
+      "reviewed_reuse_after_fixture_delta": true,
+      "run": "documentation-trace-default",
+      "status": "pass"
+    },
+    "witness_contract/max_targets_reply_survives": {
+      "reviewed_reuse_after_fixture_delta": true,
+      "run": "documentation-trace-default",
+      "status": "pass"
+    },
+    "witness_contract/phases": {
+      "reviewed_reuse_after_fixture_delta": true,
+      "run": "documentation-trace-default",
+      "status": "pass"
+    },
+    "witness_contract/pre_apply_failure_reports_no_policy_verdict": {
+      "reviewed_reuse_after_fixture_delta": true,
+      "run": "documentation-trace-default",
+      "status": "pass"
+    },
+    "witness_contract/prediction_target_is_independent_of_attempt_target": {
+      "reviewed_reuse_after_fixture_delta": true,
+      "run": "documentation-trace-default",
+      "status": "pass"
+    },
+    "witness_contract/queries_precede_attempts": {
+      "reviewed_reuse_after_fixture_delta": true,
+      "run": "documentation-trace-default",
+      "status": "pass"
+    },
+    "witness_contract/queries_use_a_pre_attempt_interval": {
+      "reviewed_reuse_after_fixture_delta": true,
+      "run": "documentation-trace-default",
+      "status": "pass"
+    },
+    "witness_contract/query_interval_is_not_a_snapshot": {
+      "reviewed_reuse_after_fixture_delta": true,
+      "run": "documentation-trace-default",
+      "status": "pass"
+    },
+    "witness_contract/response_footprint": {
+      "reviewed_reuse_after_fixture_delta": true,
+      "run": "documentation-trace-default",
+      "status": "pass"
+    },
+    "witness_contract/response_footprint_controls": {
+      "reviewed_reuse_after_fixture_delta": true,
+      "run": "documentation-trace-default",
+      "status": "pass"
+    },
+    "witness_contract/shm_sentinel_under_deny_default": {
+      "reviewed_reuse_after_fixture_delta": true,
+      "run": "documentation-trace-default",
+      "status": "pass"
+    },
+    "witness_contract/test_input": {
+      "reviewed_reuse_after_fixture_delta": true,
+      "run": "documentation-trace-default",
+      "status": "pass"
+    },
+    "witness_contract/test_input_controls": {
+      "reviewed_reuse_after_fixture_delta": true,
+      "run": "documentation-trace-default",
+      "status": "pass"
+    },
+    "witness_contract/unfamiliar_diagnostic_transport": {
+      "reviewed_reuse_after_fixture_delta": true,
+      "run": "documentation-trace-default",
+      "status": "pass"
+    },
+    "witness_contract/validator_spawn_failed_reports_degraded": {
+      "reviewed_reuse_after_fixture_delta": true,
+      "run": "documentation-trace-default",
+      "status": "pass"
+    },
+    "witness_contract/validator_subprocess_populated": {
+      "reviewed_reuse_after_fixture_delta": true,
+      "run": "documentation-trace-default",
+      "status": "pass"
+    },
+    "witness_contract/worker_attempt_in_flight_at_deadline": {
+      "reviewed_reuse_after_fixture_delta": true,
+      "run": "documentation-trace-default",
+      "status": "pass"
+    },
+    "witness_contract/worker_killed_before_slot_publication": {
+      "reviewed_reuse_after_fixture_delta": true,
+      "run": "documentation-trace-default",
+      "status": "pass"
+    },
+    "witness_contract/worker_post_apply_hang_seam": {
+      "reviewed_reuse_after_fixture_delta": true,
+      "run": "documentation-trace-default",
+      "status": "pass"
+    },
+    "witness_contract/worker_progress_and_failure": {
+      "reviewed_reuse_after_fixture_delta": true,
+      "run": "documentation-trace-default",
+      "status": "pass"
+    },
+    "witness_contract/worker_sparse_failure": {
+      "reviewed_reuse_after_fixture_delta": true,
+      "run": "documentation-trace-default",
+      "status": "pass"
+    },
+    "witness_contract/worker_termination": {
+      "reviewed_reuse_after_fixture_delta": true,
+      "run": "documentation-trace-default",
+      "status": "pass"
+    },
+    "witness_contract/worker_wait_cpu_controls": {
+      "reviewed_reuse_after_fixture_delta": true,
+      "run": "documentation-trace-default",
+      "status": "pass"
+    },
+    "witness_contract/worker_wait_pilot_controls": {
+      "reviewed_reuse_after_fixture_delta": true,
+      "run": "documentation-trace-default",
+      "status": "pass"
+    }
+  },
+  "accepted_source_commit": "2627356390835d47910eeb22c75ac6765b043e88",
+  "build": {
+    "configuration": {
+      "build_directories": {
+        "builddir": {
+          "replaced_by_fresh_mode": false,
+          "stamp": "validated",
+          "state": "reused"
+        },
+        "cargo_admission": {
+          "build_directory": "<home>/Desktop/Security/PolicyWitness/controller/target",
+          "layout_environment": {},
+          "target_directory": "<home>/Desktop/Security/PolicyWitness/controller/target"
+        },
+        "cargo_release": {
+          "replaced_by_fresh_mode": false,
+          "state": "reused"
+        },
+        "cargo_target_release": {
+          "replaced_by_fresh_mode": false,
+          "state": "reused"
+        },
+        "fresh_mode": {
+          "replacement": null,
+          "requested": false
+        }
+      },
+      "deployment_target": "26.0",
+      "knobs": {
+        "BUILD_XPC": "1",
+        "PW_FRESH_BUILD": "0",
+        "PW_INSPECTION": "1"
+      },
+      "meson_machines": {
+        "build": {
+          "cpu_family": "aarch64",
+          "system": "darwin"
+        },
+        "host": {
+          "cpu_family": "aarch64",
+          "system": "darwin"
+        },
+        "note": "Meson's host machine is the platform the native products are configured for; its build machine is where Meson reported compiling, a toolchain fact that is not constrained"
+      },
+      "meson_options": {
+        "status": "ok",
+        "values": {
+          "b_bitcode": false,
+          "b_coverage": false,
+          "b_lto": false,
+          "b_lundef": true,
+          "b_ndebug": "false",
+          "b_pgo": "off",
+          "b_pie": false,
+          "b_sanitize": [],
+          "b_staticpic": true,
+          "buildtype": "plain",
+          "c_args": [],
+          "c_link_args": [],
+          "c_std": "none",
+          "debug": false,
+          "inspection": true,
+          "optimization": "plain",
+          "strip": false,
+          "swift_args": [],
+          "swift_link_args": [],
+          "unity": "off",
+          "warning_level": "0",
+          "werror": false,
+          "xpc": true
+        }
+      },
+      "output_target": {
+        "architecture": "arm64",
+        "cargo_triple": "aarch64-apple-darwin",
+        "container": "thin",
+        "note": "the fixed target every shipped executable must satisfy, observed per output below; it describes the products, not the machine or processes that built them, and makes no claim about translation",
+        "platform": "1",
+        "system": "macos"
+      },
+      "requests": {
+        "CPATH": {
+          "state": "unset"
+        },
+        "DEVELOPER_DIR": {
+          "state": "unset"
+        },
+        "LC_CTYPE": {
+          "state": "set"
+        },
+        "LIBRARY_PATH": {
+          "state": "unset"
+        },
+        "MACOSX_DEPLOYMENT_TARGET": {
+          "state": "unset"
+        },
+        "MANPATH": {
+          "state": "set"
+        },
+        "SDKROOT": {
+          "state": "unset"
+        }
+      },
+      "rustflags": {
+        "flag_environment": {
+          "CARGO_BUILD_RUSTFLAGS": "unset",
+          "CARGO_ENCODED_RUSTFLAGS": "unset",
+          "RUSTFLAGS": "set"
+        },
+        "note": "effective flags are recorded per output from Cargo's fingerprint; they are additional compiler arguments, not the complete command",
+        "requested": {
+          "source": "script",
+          "tokens": [
+            "-C",
+            "debuginfo=2",
+            "-C",
+            "force-frame-pointers=yes",
+            "-C",
+            "opt-level=1"
+          ]
+        }
+      },
+      "sdkroot": "/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX27.2.sdk",
+      "toolchain_stamp": {
+        "projection": {
+          "extended_at": null,
+          "fields": {
+            "compilers.c.command": [
+              "cc"
+            ],
+            "compilers.c.identity": "Apple clang version 21.0.0 (clang-2100.4.1.1)",
+            "compilers.swift.command": [
+              "swiftc"
+            ],
+            "compilers.swift.identity": "Apple Swift version 6.4.2 (swiftlang-6.4.2.1.9 clang-2100.4.1.1)",
+            "developer_dir": "/Applications/Xcode.app/Contents/Developer",
+            "output.c_arch": [
+              "arm64"
+            ],
+            "output.cargo_triple": "aarch64-apple-darwin",
+            "output.cpu_family": "aarch64",
+            "output.link_arch": [
+              "arm64"
+            ],
+            "output.swift_target": [
+              "arm64-apple-macosx26.0"
+            ],
+            "output.system": "darwin",
+            "rustc.command": "/opt/homebrew/opt/rustup/bin/rustc",
+            "rustc.identity": "rustc 1.99.0 (b940084d7 2026-09-28)",
+            "rustc.wrappers": {},
+            "sdk.build": "26B118",
+            "sdk.path": "/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX27.2.sdk",
+            "sdk.version": "27.2"
+          },
+          "published_at": "2026-11-11T04:35:31Z",
+          "scope": {
+            "xpc": true
+          }
+        },
+        "scope_note": "the stamp covers the Meson configuration and the compatibility inputs observed at setup; it does not attest to how independently retained Cargo outputs were produced"
+      }
+    },
+    "identity": "development:bdefcb44cb8b799494b555f6ba992e5bbfb58eba8ef980cb805adf15c103fb18",
+    "identity_name": "Developer ID Application: Adam Hyland (42D369QV8E)",
+    "inventory": {
+      ".": {
+        "mode": 16877
+      },
+      "Contents": {
+        "mode": 16877
+      },
+      "Contents/Info.plist": {
+        "mode": 33188,
+        "sha256": "2939e011ae221c83145660b65f710b3dff968dcd5e3abc206ba1ab03b15a7893"
+      },
+      "Contents/MacOS": {
+        "mode": 16877
+      },
+      "Contents/MacOS/policy-witness": {
+        "mode": 33261,
+        "sha256": "4bcd308bc323516bfd4008eb7d125e6ffe3167b5b6f53d6a042f112b910b8d28"
+      },
+      "Contents/MacOS/pw-runner-client": {
+        "mode": 33261,
+        "sha256": "bda673b1b42d598e54fb507d2a9b71896b1b965175b67246b020d5eb0a076f56"
+      },
+      "Contents/MacOS/pw-runner-client.dSYM": {
+        "mode": 16877
+      },
+      "Contents/MacOS/pw-runner-client.dSYM/Contents": {
+        "mode": 16877
+      },
+      "Contents/MacOS/pw-runner-client.dSYM/Contents/Info.plist": {
+        "mode": 33188,
+        "sha256": "130d916d6b965b49742973b597b13ff41f395ab798b5a60e666d627e60f2d4bf"
+      },
+      "Contents/MacOS/pw-runner-client.dSYM/Contents/Resources": {
+        "mode": 16877
+      },
+      "Contents/MacOS/pw-runner-client.dSYM/Contents/Resources/DWARF": {
+        "mode": 16877
+      },
+      "Contents/MacOS/pw-runner-client.dSYM/Contents/Resources/DWARF/pw-runner-client": {
+        "mode": 33188,
+        "sha256": "f216b3368ea4a429a1b715d780a9fca0dd1b3d9e0ea457e3524290b98c3dcf98"
+      },
+      "Contents/MacOS/pw-runner-client.dSYM/Contents/Resources/Relocations": {
+        "mode": 16877
+      },
+      "Contents/MacOS/pw-runner-client.dSYM/Contents/Resources/Relocations/aarch64": {
+        "mode": 16877
+      },
+      "Contents/MacOS/pw-runner-client.dSYM/Contents/Resources/Relocations/aarch64/pw-runner-client.yml": {
+        "mode": 33188,
+        "sha256": "31077ac6f0afea258e1e9a81d187191caacdf480c9572bcf4912c8aab64055c1"
+      },
+      "Contents/MacOS/sbpl-check": {
+        "mode": 33261,
+        "sha256": "1d4470289c9f155e6ff7e19ea8da7f5e45c89bd9905bf64c425063d2405b8988"
+      },
+      "Contents/Resources": {
+        "mode": 16877
+      },
+      "Contents/Resources/Augments": {
+        "mode": 16877
+      },
+      "Contents/Resources/Augments/exec_baseline.sb": {
+        "mode": 33188,
+        "sha256": "25e448d6e9fae2f9cd491eb52878af948ee732eeb9fabadb15c0ddf6512b1761"
+      },
+      "Contents/Resources/Evidence": {
+        "mode": 16877
+      },
+      "Contents/Resources/Evidence/manifest.json": {
+        "mode": 33188,
+        "sha256": "94bb26a1d3678dda3aa06e35146fed5bdc0ae30cc88dc2cf77f70c56d63fd09b"
+      },
+      "Contents/Resources/Evidence/provenance.json": {
+        "mode": 33188,
+        "sha256": "6776d28aa6a66ce190ecdcd789c3ce2ca3203716d8b5ebe24f30bc2e268518fa"
+      },
+      "Contents/Resources/Evidence/symbols.json": {
+        "mode": 33188,
+        "sha256": "e0f237694492c7da63047eb1c4b05e4100d53b709e0a4bbdb7ff357645c2f1e4"
+      },
+      "Contents/XPCServices": {
+        "mode": 16877
+      },
+      "Contents/XPCServices/PWRunner.xpc": {
+        "mode": 16877
+      },
+      "Contents/XPCServices/PWRunner.xpc/Contents": {
+        "mode": 16877
+      },
+      "Contents/XPCServices/PWRunner.xpc/Contents/Info.plist": {
+        "mode": 33188,
+        "sha256": "8389dd6b3d4dd9aad2d0208e7926a1c2fd2017409be158a72d6e20956f1dd816"
+      },
+      "Contents/XPCServices/PWRunner.xpc/Contents/MacOS": {
+        "mode": 16877
+      },
+      "Contents/XPCServices/PWRunner.xpc/Contents/MacOS/PWRunner": {
+        "mode": 33261,
+        "sha256": "706d9a6c8138677a4a337a77e50d642da46056512bcf29c193cba1bba8745501"
+      },
+      "Contents/XPCServices/PWRunner.xpc/Contents/MacOS/PWRunner.dSYM": {
+        "mode": 16877
+      },
+      "Contents/XPCServices/PWRunner.xpc/Contents/MacOS/PWRunner.dSYM/Contents": {
+        "mode": 16877
+      },
+      "Contents/XPCServices/PWRunner.xpc/Contents/MacOS/PWRunner.dSYM/Contents/Info.plist": {
+        "mode": 33188,
+        "sha256": "c8ea5caefd882f6b7ef7d6402f0d686706b14326d5aa6e9d617c443dd86cbb56"
+      },
+      "Contents/XPCServices/PWRunner.xpc/Contents/MacOS/PWRunner.dSYM/Contents/Resources": {
+        "mode": 16877
+      },
+      "Contents/XPCServices/PWRunner.xpc/Contents/MacOS/PWRunner.dSYM/Contents/Resources/DWARF": {
+        "mode": 16877
+      },
+      "Contents/XPCServices/PWRunner.xpc/Contents/MacOS/PWRunner.dSYM/Contents/Resources/DWARF/PWRunner": {
+        "mode": 33188,
+        "sha256": "c9a97291b9c49fd1c4f0f2d71936954afdaf3ec94fbdb586a43203709db6d0a4"
+      },
+      "Contents/XPCServices/PWRunner.xpc/Contents/MacOS/PWRunner.dSYM/Contents/Resources/Relocations": {
+        "mode": 16877
+      },
+      "Contents/XPCServices/PWRunner.xpc/Contents/MacOS/PWRunner.dSYM/Contents/Resources/Relocations/aarch64": {
+        "mode": 16877
+      },
+      "Contents/XPCServices/PWRunner.xpc/Contents/MacOS/PWRunner.dSYM/Contents/Resources/Relocations/aarch64/PWRunner.yml": {
+        "mode": 33188,
+        "sha256": "6e7517a378eb87926ffe98f6eac624c38749d247e8b14d1298961ce3de69c508"
+      },
+      "Contents/XPCServices/PWRunner.xpc/Contents/MacOS/pw-probe-runner": {
+        "mode": 33261,
+        "sha256": "d6d38f09fa99768a6b1279503e1fb0fa2465bf0b1ab9d8e2120b759620242116"
+      },
+      "Contents/XPCServices/PWRunner.xpc/Contents/MacOS/pw-probe-runner-unentitled": {
+        "mode": 33261,
+        "sha256": "ee2a42488009f46581358db3076ec35c7cd013af9e7d800113841db74433312c"
+      },
+      "Contents/XPCServices/PWRunner.xpc/Contents/MacOS/sb_api_validator": {
+        "mode": 33261,
+        "sha256": "ccbf98033321296e7e6e82145fa0f271a6e2161f9c66b56dbf0f9f2304c00890"
+      },
+      "Contents/XPCServices/PWRunner.xpc/Contents/Resources": {
+        "mode": 16877
+      },
+      "Contents/XPCServices/PWRunner.xpc/Contents/Resources/worker-equipment.json": {
+        "mode": 33188,
+        "sha256": "4f7d73a7aee4d465cea45fb3adc8f099f69df5bbe0fa3b8d8dfac96108e74d14"
+      },
+      "Contents/XPCServices/PWRunner.xpc/Contents/_CodeSignature": {
+        "mode": 16877
+      },
+      "Contents/XPCServices/PWRunner.xpc/Contents/_CodeSignature/CodeResources": {
+        "mode": 33188,
+        "sha256": "22b1848324f17772384a6c4e04d93ae670fc00433ebe77c47eb3a64eb5a9fcd5"
+      },
+      "Contents/_CodeSignature": {
+        "mode": 16877
+      },
+      "Contents/_CodeSignature/CodeResources": {
+        "mode": 33188,
+        "sha256": "8f443805e210d0d91c5779011bdfb16641e97cb288e14ee7c01a99e3df7dfaf0"
+      }
+    },
+    "log_sha256": "e5ec2fa86bdd7b2702b24cbe01720953e9d1caf09e7ac52aec9b91db73c952e1",
+    "source": {
+      "build_number": "1482",
+      "commit": "8b5de2b2882d7cb2536d1b42d9109f4b0dfc2855",
+      "describe": "v0.3.7-148-g8b5de2b2",
+      "dirty": false,
+      "input_hashes": {
+        "Info.plist": "cfc9df909ed30c1c64d3b76c82709a0f8bd4ce9479b74292fb21bbe3f833972f",
+        "PolicyWitness.entitlements": "efdf90df351f2e7b1c88faa4c2a86224180ba23ae8633414a1adebfe8ffd6d9e",
+        "controller/Cargo.lock": "b5907f3f5ec267f302afb7a63903a5cf55dfaaa9760361e28b8416af7a33dc8e",
+        "meson.build": "2e0a93d6e8b6e2fb242ed3f1ca44d0d626286e9a6a4c02cf02a42f5e6988fabe",
+        "meson.options": "003f3cb8d5fcf994bec2d8fdc7ce34c973009dfea2615729f845aa2598ee9ae0",
+        "runner/Services/PWRunner/Entitlements.plist": "efdf90df351f2e7b1c88faa4c2a86224180ba23ae8633414a1adebfe8ffd6d9e"
+      },
+      "version": "0.3.7",
+      "worker_identity": "cc2502d5da48a2a36e0ef73de394536174e32c2b487a2a7b7981e17d83f21659"
+    },
+    "worker_identity": "cc2502d5da48a2a36e0ef73de394536174e32c2b487a2a7b7981e17d83f21659"
+  },
+  "default_case_count": 233,
+  "evidence_availability": "Development runs under tests/out/runs are local, gitignored, and eligible for normal retention cleanup. No release-evidence retention claim.",
+  "extra_selected_case_count": 4,
+  "replacement_case_count": 6,
+  "reuse_scope": "Reviewed exception only for runtime.OUTPUTS -> runtime.STAMP_OUTPUTS in the release-entrypoint fixture; see fixture-reuse-review.md. The failed original run remains failed.",
+  "runs": {
+    "documentation-trace-default": {
+      "artifact_integrity": {
+        "app": "/Users/raccoon/Desktop/Security/PolicyWitness/dist/PolicyWitness.app",
+        "harness_errors": [],
+        "report_dir": "artifact-integrity",
+        "unchanged": true,
+        "valid_before": true
+      },
+      "case_outcome_counts": {
+        "fail": 1,
+        "pass": 232
+      },
+      "commands": {
+        "blackbox_e2e/BBX-001": [
+          "bash",
+          "tests/suites/blackbox_e2e/bbx_001.sh"
+        ],
+        "blackbox_e2e/BBX-002": [
+          "bash",
+          "tests/suites/blackbox_e2e/bbx_002.sh"
+        ],
+        "blackbox_e2e/checker_controls": [
+          "bash",
+          "tests/suites/blackbox_e2e/checker_controls.sh"
+        ],
+        "blackbox_e2e/comparison_controls": [
+          "bash",
+          "tests/suites/blackbox_e2e/comparison_controls.sh"
+        ],
+        "blackbox_e2e/native_comparison_controls": [
+          "bash",
+          "tests/suites/blackbox_e2e/native_comparison_controls.sh"
+        ],
+        "blackbox_menagerie/core_mach_simple": [
+          "bash",
+          "tests/suites/blackbox_menagerie/run.sh"
+        ],
+        "blackbox_menagerie/core_read_only": [
+          "bash",
+          "tests/suites/blackbox_menagerie/run.sh"
+        ],
+        "blackbox_menagerie/core_strict_tmp": [
+          "bash",
+          "tests/suites/blackbox_menagerie/run.sh"
+        ],
+        "blackbox_menagerie/opt_bucket5_subpath": [
+          "bash",
+          "tests/suites/blackbox_menagerie/run.sh"
+        ],
+        "blackbox_menagerie/opt_metafilter_any": [
+          "bash",
+          "tests/suites/blackbox_menagerie/run.sh"
+        ],
+        "blackbox_menagerie/opt_vfs_both_paths": [
+          "bash",
+          "tests/suites/blackbox_menagerie/run.sh"
+        ],
+        "blackbox_menagerie/opt_vfs_private_tmp_only": [
+          "bash",
+          "tests/suites/blackbox_menagerie/run.sh"
+        ],
+        "blackbox_menagerie/opt_vfs_tmp_only": [
+          "bash",
+          "tests/suites/blackbox_menagerie/run.sh"
+        ],
+        "blackbox_menagerie/validation_controls": [
+          "bash",
+          "tests/suites/blackbox_menagerie/run.sh"
+        ],
+        "dispatcher/accounting_controls": [
+          "bash",
+          "tests/suites/dispatcher/run.sh"
+        ],
+        "dispatcher/artifact_controls": [
+          "bash",
+          "tests/suites/dispatcher/run.sh"
+        ],
+        "dispatcher/cancellation_controls": [
+          "bash",
+          "tests/suites/dispatcher/run.sh"
+        ],
+        "dispatcher/controls": [
+          "bash",
+          "tests/suites/dispatcher/run.sh"
+        ],
+        "dispatcher/retention_controls": [
+          "bash",
+          "tests/suites/dispatcher/run.sh"
+        ],
+        "dispatcher/selection_controls": [
+          "bash",
+          "tests/suites/dispatcher/run.sh"
+        ],
+        "exec_fixture/controls": [
+          "bash",
+          "tests/suites/exec_fixture/run.sh"
+        ],
+        "failure_boundaries/admission": [
+          "bash",
+          "tests/suites/failure_boundaries/run.sh"
+        ],
+        "failure_boundaries/fallback_helper": [
+          "bash",
+          "tests/suites/failure_boundaries/run.sh"
+        ],
+        "failure_boundaries/validator_association": [
+          "bash",
+          "tests/suites/failure_boundaries/run.sh"
+        ],
+        "failure_boundaries/validator_control_characters": [
+          "bash",
+          "tests/suites/failure_boundaries/run.sh"
+        ],
+        "failure_boundaries/validator_frames": [
+          "bash",
+          "tests/suites/failure_boundaries/run.sh"
+        ],
+        "failure_boundaries/validator_overlong_request": [
+          "bash",
+          "tests/suites/failure_boundaries/run.sh"
+        ],
+        "failure_boundaries/validator_removed_target": [
+          "bash",
+          "tests/suites/failure_boundaries/run.sh"
+        ],
+        "integration/cli.integration": [
+          "bash",
+          "tests/suites/integration/run.sh"
+        ],
+        "preflight/build_entry_controls": [
+          "bash",
+          "tests/suites/preflight/run.sh"
+        ],
+        "preflight/build_provenance_controls": [
+          "bash",
+          "tests/suites/preflight/run.sh"
+        ],
+        "preflight/byoxpc_verification_controls": [
+          "bash",
+          "tests/suites/preflight/run.sh"
+        ],
+        "preflight/codesign.preflight": [
+          "bash",
+          "tests/suites/preflight/run.sh"
+        ],
+        "preflight/native_policy_controls": [
+          "bash",
+          "tests/suites/preflight/run.sh"
+        ],
+        "preflight/native_source_controls": [
+          "bash",
+          "tests/suites/preflight/run.sh"
+        ],
+        "preflight/release_controls": [
+          "bash",
+          "tests/suites/preflight/run.sh"
+        ],
+        "preflight/release_deadline_controls": [
+          "bash",
+          "tests/suites/preflight/run.sh"
+        ],
+        "preflight/release_publish_controls": [
+          "bash",
+          "tests/suites/preflight/run.sh"
+        ],
+        "preflight/release_rotation_controls": [
+          "bash",
+          "tests/suites/preflight/run.sh"
+        ],
+        "run_capture/controls": [
+          "bash",
+          "tests/suites/run_capture/run.sh"
+        ],
+        "run_effects/aftermath_footprint": [
+          "bash",
+          "tests/suites/run_effects/aftermath_footprint.sh"
+        ],
+        "run_effects/checker_controls": [
+          "bash",
+          "tests/suites/run_effects/checker_controls.sh"
+        ],
+        "run_effects/exec_helper_effect_is_real": [
+          "bash",
+          "tests/suites/run_effects/exec_helper_effect_is_real.sh"
+        ],
+        "run_effects/file_actions_have_exact_effects": [
+          "bash",
+          "tests/suites/run_effects/file_actions_have_exact_effects.sh"
+        ],
+        "run_effects/run_installs_nothing": [
+          "bash",
+          "tests/suites/run_effects/run_installs_nothing.sh"
+        ],
+        "runner_abi_layout/c_swift_layout_agreement": [
+          "bash",
+          "tests/suites/runner_abi_layout/run.sh"
+        ],
+        "runner_apply_isolation_v2/deny_default_v2_worker_reply": [
+          "bash",
+          "tests/suites/runner_apply_isolation_v2/run.sh"
+        ],
+        "runner_apply_isolation_v3/deny_default_v3_worker_reply": [
+          "bash",
+          "tests/suites/runner_apply_isolation_v3/run.sh"
+        ],
+        "runner_c_worker_harness/abi_mismatch_refused": [
+          "bash",
+          "tests/suites/runner_c_worker_harness/run.sh"
+        ],
+        "runner_c_worker_harness/activation_cancel_while_parked": [
+          "bash",
+          "tests/suites/runner_c_worker_harness/run.sh"
+        ],
+        "runner_c_worker_harness/activation_cutoff_past": [
+          "bash",
+          "tests/suites/runner_c_worker_harness/run.sh"
+        ],
+        "runner_c_worker_harness/activation_greater_ordinal": [
+          "bash",
+          "tests/suites/runner_c_worker_harness/run.sh"
+        ],
+        "runner_c_worker_harness/activation_named_ordinal": [
+          "bash",
+          "tests/suites/runner_c_worker_harness/run.sh"
+        ],
+        "runner_c_worker_harness/activation_under_deny_default": [
+          "bash",
+          "tests/suites/runner_c_worker_harness/run.sh"
+        ],
+        "runner_c_worker_harness/activation_withheld_cutoff": [
+          "bash",
+          "tests/suites/runner_c_worker_harness/run.sh"
+        ],
+        "runner_c_worker_harness/actor_operations": [
+          "bash",
+          "tests/suites/runner_c_worker_harness/actor_operations.sh"
+        ],
+        "runner_c_worker_harness/arm_wait_controls": [
+          "bash",
+          "tests/suites/runner_c_worker_harness/arm_wait_controls.sh"
+        ],
+        "runner_c_worker_harness/authority_binding": [
+          "bash",
+          "tests/suites/runner_c_worker_harness/authority_binding.sh"
+        ],
+        "runner_c_worker_harness/bare_deny_default": [
+          "bash",
+          "tests/suites/runner_c_worker_harness/run.sh"
+        ],
+        "runner_c_worker_harness/clock_arithmetic": [
+          "bash",
+          "tests/suites/runner_c_worker_harness/run.sh"
+        ],
+        "runner_c_worker_harness/compile_failure": [
+          "bash",
+          "tests/suites/runner_c_worker_harness/run.sh"
+        ],
+        "runner_c_worker_harness/create_allow": [
+          "bash",
+          "tests/suites/runner_c_worker_harness/run.sh"
+        ],
+        "runner_c_worker_harness/exec_attempt_budget_remainder": [
+          "bash",
+          "tests/suites/runner_c_worker_harness/run.sh"
+        ],
+        "runner_c_worker_harness/exec_attempt_budget_sequence": [
+          "bash",
+          "tests/suites/runner_c_worker_harness/run.sh"
+        ],
+        "runner_c_worker_harness/exec_control_states": {
+          "engine": "pytest",
+          "items": {
+            "configuration": [
+              "--capture=fd",
+              "--import-mode=importlib",
+              "no external plugins",
+              "no cache"
+            ],
+            "family": "runner_c_worker_harness/exec_control_states",
+            "items": [
+              {
+                "id": "runner_c_worker_harness/exec_control_states::production",
+                "nodeid": "suites/runner_c_worker_harness/test_exec_control_states.py::test_production"
+              },
+              {
+                "id": "runner_c_worker_harness/exec_control_states::collection_from_final_reap",
+                "nodeid": "suites/runner_c_worker_harness/test_exec_control_states.py::test_mutation[collection_from_final_reap]"
+              },
+              {
+                "id": "runner_c_worker_harness/exec_control_states::esrch_as_success",
+                "nodeid": "suites/runner_c_worker_harness/test_exec_control_states.py::test_mutation[esrch_as_success]"
+              },
+              {
+                "id": "runner_c_worker_harness/exec_control_states::fallback_from_group",
+                "nodeid": "suites/runner_c_worker_harness/test_exec_control_states.py::test_mutation[fallback_from_group]"
+              },
+              {
+                "id": "runner_c_worker_harness/exec_control_states::status_after_pending_wait",
+                "nodeid": "suites/runner_c_worker_harness/test_exec_control_states.py::test_mutation[status_after_pending_wait]"
+              },
+              {
+                "id": "runner_c_worker_harness/exec_control_states::revents_as_native_errno",
+                "nodeid": "suites/runner_c_worker_harness/test_exec_control_states.py::test_mutation[revents_as_native_errno]"
+              },
+              {
+                "id": "runner_c_worker_harness/exec_control_states::local_deadline_as_native_errno",
+                "nodeid": "suites/runner_c_worker_harness/test_exec_control_states.py::test_mutation[local_deadline_as_native_errno]"
+              },
+              {
+                "id": "runner_c_worker_harness/exec_control_states::missing-pw_worker_timing.h",
+                "nodeid": "suites/runner_c_worker_harness/test_exec_control_states.py::test_include_closure[missing-pw_worker_timing.h]"
+              },
+              {
+                "id": "runner_c_worker_harness/exec_control_states::missing-pw_worker_exec.h",
+                "nodeid": "suites/runner_c_worker_harness/test_exec_control_states.py::test_include_closure[missing-pw_worker_exec.h]"
+              }
+            ],
+            "pytest": "9.0.2",
+            "python": "3.14.9 (main, Oct 21 2026, 06:02:15) [Clang 21.0.0 (clang-2100.3.34.2)]",
+            "schema_version": 1,
+            "sources": {
+              "tests/lib/pytest_engine.py": "93989d5057274e9e874a518e4db9af06300fb5a0f1d6531dd1eb6240ed4156d9",
+              "tests/lib/pytest_wire.py": "92d069d0615c0f5cdeb870e763a7487a39b1714bbb2a1444ffef6f99d21e3f2a",
+              "tests/pytest.ini": "1ac8381a6dcb015e80c5c5eb76fd1e897f65249da7c6f4f55b5052878e6e67e7",
+              "tests/requirements-pytest.lock": "5d1bfd2237fa434366c060c2463d82bf227069173626c244f9a14718c6ea3abc",
+              "tests/suites/runner_c_worker_harness/check_exec_evidence.py": "e0ed44d99690deff2d1c0414182faedab71f47b8de2fb439d8de5559b0c8eeb3",
+              "tests/suites/runner_c_worker_harness/exec_domain.py": "5f3f121761b851667c4747e2bf104c8f7f8e546268b85f76d93f3bd8c1d7085d",
+              "tests/suites/runner_c_worker_harness/test_exec_control_states.py": "d09d209976a7a8b37ec18f262f4707406038af13b23abd1284db0b7fdbdd07ab"
+            }
+          }
+        },
+        "runner_c_worker_harness/exec_pipes_per_attempt": [
+          "bash",
+          "tests/suites/runner_c_worker_harness/run.sh"
+        ],
+        "runner_c_worker_harness/exec_setup_post_apply_denied": [
+          "bash",
+          "tests/suites/runner_c_worker_harness/run.sh"
+        ],
+        "runner_c_worker_harness/first_touch_after_apply": [
+          "bash",
+          "tests/suites/runner_c_worker_harness/run.sh"
+        ],
+        "runner_c_worker_harness/fresh_write": [
+          "bash",
+          "tests/suites/runner_c_worker_harness/fresh_write.sh"
+        ],
+        "runner_c_worker_harness/happy_default_allow": [
+          "bash",
+          "tests/suites/runner_c_worker_harness/run.sh"
+        ],
+        "runner_c_worker_harness/max_slots_deny_default": [
+          "bash",
+          "tests/suites/runner_c_worker_harness/run.sh"
+        ],
+        "runner_c_worker_harness/max_slots_proceed": [
+          "bash",
+          "tests/suites/runner_c_worker_harness/run.sh"
+        ],
+        "runner_c_worker_harness/native_pause_controls": [
+          "bash",
+          "tests/suites/runner_c_worker_harness/native_pause_controls.sh"
+        ],
+        "runner_c_worker_harness/param_count_overflow_refused": [
+          "bash",
+          "tests/suites/runner_c_worker_harness/run.sh"
+        ],
+        "runner_c_worker_harness/params_round_trip": [
+          "bash",
+          "tests/suites/runner_c_worker_harness/run.sh"
+        ],
+        "runner_c_worker_harness/policy_at_capacity": [
+          "bash",
+          "tests/suites/runner_c_worker_harness/run.sh"
+        ],
+        "runner_c_worker_harness/policy_capacity_plus_one_refused": [
+          "bash",
+          "tests/suites/runner_c_worker_harness/run.sh"
+        ],
+        "runner_c_worker_harness/policy_empty_expected": [
+          "bash",
+          "tests/suites/runner_c_worker_harness/run.sh"
+        ],
+        "runner_c_worker_harness/policy_empty_short_refused": [
+          "bash",
+          "tests/suites/runner_c_worker_harness/run.sh"
+        ],
+        "runner_c_worker_harness/policy_expectation_out_of_range_refused": [
+          "bash",
+          "tests/suites/runner_c_worker_harness/run.sh"
+        ],
+        "runner_c_worker_harness/policy_nul_refused": [
+          "bash",
+          "tests/suites/runner_c_worker_harness/run.sh"
+        ],
+        "runner_c_worker_harness/policy_overdelivered_refused": [
+          "bash",
+          "tests/suites/runner_c_worker_harness/run.sh"
+        ],
+        "runner_c_worker_harness/policy_overflow_refused": [
+          "bash",
+          "tests/suites/runner_c_worker_harness/run.sh"
+        ],
+        "runner_c_worker_harness/policy_truncated_prefix": [
+          "bash",
+          "tests/suites/runner_c_worker_harness/run.sh"
+        ],
+        "runner_c_worker_harness/policy_utf8_bytes": [
+          "bash",
+          "tests/suites/runner_c_worker_harness/run.sh"
+        ],
+        "runner_c_worker_harness/policy_whole_submission": [
+          "bash",
+          "tests/suites/runner_c_worker_harness/run.sh"
+        ],
+        "runner_c_worker_harness/policy_zero_expected_refused": [
+          "bash",
+          "tests/suites/runner_c_worker_harness/run.sh"
+        ],
+        "runner_c_worker_harness/prepared_unset_refused": [
+          "bash",
+          "tests/suites/runner_c_worker_harness/run.sh"
+        ],
+        "runner_c_worker_harness/proceed_before_applied": [
+          "bash",
+          "tests/suites/runner_c_worker_harness/run.sh"
+        ],
+        "runner_c_worker_harness/proceed_delayed_observed_quiescence": [
+          "bash",
+          "tests/suites/runner_c_worker_harness/run.sh"
+        ],
+        "runner_c_worker_harness/proceed_expiry_release_boundary": [
+          "bash",
+          "tests/suites/runner_c_worker_harness/run.sh"
+        ],
+        "runner_c_worker_harness/proceed_late_after_expiry": [
+          "bash",
+          "tests/suites/runner_c_worker_harness/run.sh"
+        ],
+        "runner_c_worker_harness/proceed_never_set": [
+          "bash",
+          "tests/suites/runner_c_worker_harness/run.sh"
+        ],
+        "runner_c_worker_harness/proceed_precedence": [
+          "bash",
+          "tests/suites/runner_c_worker_harness/run.sh"
+        ],
+        "runner_c_worker_harness/proceed_under_bare_deny_default": [
+          "bash",
+          "tests/suites/runner_c_worker_harness/run.sh"
+        ],
+        "runner_c_worker_harness/proceed_wait_budget_long": [
+          "bash",
+          "tests/suites/runner_c_worker_harness/run.sh"
+        ],
+        "runner_c_worker_harness/proceed_wait_budget_short": [
+          "bash",
+          "tests/suites/runner_c_worker_harness/run.sh"
+        ],
+        "runner_c_worker_harness/proceed_without_host_release": [
+          "bash",
+          "tests/suites/runner_c_worker_harness/run.sh"
+        ],
+        "runner_c_worker_harness/sigkill_fallback": [
+          "bash",
+          "tests/suites/runner_c_worker_harness/run.sh"
+        ],
+        "runner_c_worker_harness/step_count_overflow_refused": [
+          "bash",
+          "tests/suites/runner_c_worker_harness/run.sh"
+        ],
+        "runner_c_worker_harness/sysctl_read_capacity": [
+          "bash",
+          "tests/suites/runner_c_worker_harness/run.sh"
+        ],
+        "runner_c_worker_harness/terminal_erasure": [
+          "bash",
+          "tests/suites/runner_c_worker_harness/run.sh"
+        ],
+        "runner_c_worker_harness/terminal_exit_without_request": [
+          "bash",
+          "tests/suites/runner_c_worker_harness/run.sh"
+        ],
+        "runner_c_worker_harness/unapplied_actor_reads": [
+          "bash",
+          "tests/suites/runner_c_worker_harness/run.sh"
+        ],
+        "runner_c_worker_harness/unapplied_under_deny_default": [
+          "bash",
+          "tests/suites/runner_c_worker_harness/run.sh"
+        ],
+        "runner_c_worker_harness/unlink_allow": [
+          "bash",
+          "tests/suites/runner_c_worker_harness/run.sh"
+        ],
+        "runner_c_worker_harness/unlink_deny": [
+          "bash",
+          "tests/suites/runner_c_worker_harness/run.sh"
+        ],
+        "runner_exec_dac/execute_permission_controls_spawn": [
+          "bash",
+          "tests/suites/runner_exec_dac/run.sh"
+        ],
+        "runner_exec_inheritance/cli": [
+          "bash",
+          "tests/suites/runner_exec_inheritance/run.sh"
+        ],
+        "runner_exec_inheritance/contaminated_worker": [
+          "bash",
+          "tests/suites/runner_exec_inheritance/run.sh"
+        ],
+        "runner_exec_lifecycle/closed_streams_continue": [
+          "bash",
+          "tests/suites/runner_exec_lifecycle/run.sh"
+        ],
+        "runner_exec_lifecycle/closed_streams_leader_exit": [
+          "bash",
+          "tests/suites/runner_exec_lifecycle/closed_streams_leader_exit.sh"
+        ],
+        "runner_exec_lifecycle/leader_exit_descendant": [
+          "bash",
+          "tests/suites/runner_exec_lifecycle/run.sh"
+        ],
+        "runner_exec_lifecycle/timeout_preserves_output_and_continues": [
+          "bash",
+          "tests/suites/runner_exec_lifecycle/run.sh"
+        ],
+        "runner_exec_lifecycle/worker_dies_during_exec": [
+          "bash",
+          "tests/suites/runner_exec_lifecycle/run.sh"
+        ],
+        "runner_filter_iokit_registry_entry_class/prediction_unavailable_attempt_observed": [
+          "bash",
+          "tests/suites/runner_filter_iokit_registry_entry_class/run.sh"
+        ],
+        "runner_filter_iokit_user_client_class/prediction_unavailable_attempt_observed": [
+          "bash",
+          "tests/suites/runner_filter_iokit_user_client_class/run.sh"
+        ],
+        "runner_filter_local_name/prediction_unavailable_attempt_observed": [
+          "bash",
+          "tests/suites/runner_filter_local_name/run.sh"
+        ],
+        "runner_filter_sysctl_name/checker_controls": [
+          "bash",
+          "tests/suites/runner_filter_sysctl_name/run.sh"
+        ],
+        "runner_filter_sysctl_name/prediction_unavailable_attempt_observed": [
+          "bash",
+          "tests/suites/runner_filter_sysctl_name/run.sh"
+        ],
+        "runner_live_worker_identity/independent_worker_and_host_queries": [
+          "bash",
+          "tests/suites/runner_live_worker_identity/run.sh"
+        ],
+        "runner_mach_service_liveness/pwrunner_survives_mach_service_launch": [
+          "bash",
+          "tests/suites/runner_mach_service_liveness/run.sh"
+        ],
+        "runner_outcome_bad_request/accepted_input_contract": [
+          "bash",
+          "tests/suites/runner_outcome_bad_request/run.sh"
+        ],
+        "runner_outcome_bad_request/missing_required_filter_value": [
+          "bash",
+          "tests/suites/runner_outcome_bad_request/run.sh"
+        ],
+        "runner_outcome_bad_request/swift_decode_failure": [
+          "bash",
+          "tests/suites/runner_outcome_bad_request/run.sh"
+        ],
+        "runner_outcome_runner_timeout/host_kills_hung_worker": [
+          "bash",
+          "tests/suites/runner_outcome_runner_timeout/run.sh"
+        ],
+        "runner_outcome_validator_no_reply/validator_io_deadline_releases_worker": [
+          "bash",
+          "tests/suites/runner_outcome_validator_no_reply/run.sh"
+        ],
+        "runner_outcome_worker_spawn_failed/posix_spawn_enoent_propagates_to_outcome": [
+          "bash",
+          "tests/suites/runner_outcome_worker_spawn_failed/run.sh"
+        ],
+        "runner_ready_byte_resilience/slow_compile_ready_byte_survives_sigpipe": [
+          "bash",
+          "tests/suites/runner_ready_byte_resilience/run.sh"
+        ],
+        "runner_specimen_isolation/overlapping_runs_keep_evidence_separate": [
+          "bash",
+          "tests/suites/runner_specimen_isolation/run.sh"
+        ],
+        "runner_unit/build_receipt_controls": [
+          "bash",
+          "tests/suites/runner_unit/build_receipt_controls.sh"
+        ],
+        "runner_unit/client_session_controls": [
+          "bash",
+          "tests/suites/runner_unit/client_session_controls.sh"
+        ],
+        "runner_unit/host_setup_controls": [
+          "bash",
+          "tests/suites/runner_unit/host_setup_controls.sh"
+        ],
+        "runner_unit/launch_descriptor_controls": [
+          "bash",
+          "tests/suites/runner_unit/launch_descriptor_controls.sh"
+        ],
+        "runner_unit/pwrunner_core_unit_executable": [
+          "bash",
+          "tests/suites/runner_unit/run.sh"
+        ],
+        "runner_unit/service_admission_controls": [
+          "bash",
+          "tests/suites/runner_unit/service_admission_controls.sh"
+        ],
+        "runner_unit/sleep_record_controls": [
+          "bash",
+          "tests/suites/runner_unit/sleep_record_controls.sh"
+        ],
+        "runner_use_c_worker/access_failure_classified": [
+          "bash",
+          "tests/suites/runner_use_c_worker/run.sh"
+        ],
+        "runner_use_c_worker/bare_deny_default": [
+          "bash",
+          "tests/suites/runner_use_c_worker/run.sh"
+        ],
+        "runner_use_c_worker/duplicate_step_id_rejected": [
+          "bash",
+          "tests/suites/runner_use_c_worker/run.sh"
+        ],
+        "runner_use_c_worker/exec_attempt_args_and_stderr_round_trip": [
+          "bash",
+          "tests/suites/runner_use_c_worker/run.sh"
+        ],
+        "runner_use_c_worker/exec_attempt_stdout_truncation_marker": [
+          "bash",
+          "tests/suites/runner_use_c_worker/run.sh"
+        ],
+        "runner_use_c_worker/exec_attempt_with_baseline_succeeds": [
+          "bash",
+          "tests/suites/runner_use_c_worker/run.sh"
+        ],
+        "runner_use_c_worker/exec_attempt_without_baseline_fails_cleanly": [
+          "bash",
+          "tests/suites/runner_use_c_worker/run.sh"
+        ],
+        "runner_use_c_worker/happy_default_allow": [
+          "bash",
+          "tests/suites/runner_use_c_worker/run.sh"
+        ],
+        "runner_use_c_worker/prediction_unavailable_pair": [
+          "bash",
+          "tests/suites/runner_use_c_worker/run.sh"
+        ],
+        "runner_use_c_worker/sandbox_check_path_unresolved_prediction_unavailable": [
+          "bash",
+          "tests/suites/runner_use_c_worker/run.sh"
+        ],
+        "runner_use_c_worker/sandbox_check_pid_matches_worker": [
+          "bash",
+          "tests/suites/runner_use_c_worker/run.sh"
+        ],
+        "runner_use_c_worker/sandbox_check_unsupported_operation_diagnostic": [
+          "bash",
+          "tests/suites/runner_use_c_worker/run.sh"
+        ],
+        "runner_use_c_worker/unsupported_attempt_rejected": [
+          "bash",
+          "tests/suites/runner_use_c_worker/run.sh"
+        ],
+        "runner_use_c_worker/worker_timeout_ms_honored": [
+          "bash",
+          "tests/suites/runner_use_c_worker/run.sh"
+        ],
+        "runner_validator_failure/transcript_controls": [
+          "bash",
+          "tests/suites/runner_validator_failure/run.sh"
+        ],
+        "runner_validator_failure/validator_decode_failure_reports_degraded": [
+          "bash",
+          "tests/suites/runner_validator_failure/run.sh"
+        ],
+        "runner_validator_failure/validator_killed_mid_stream": [
+          "bash",
+          "tests/suites/runner_validator_failure/signal.sh"
+        ],
+        "runner_validator_failure/validator_unavailable_reports_degraded": [
+          "bash",
+          "tests/suites/runner_validator_failure/run.sh"
+        ],
+        "sbpl_allowdeny_consistency/sbpl_allowdeny_v1": [
+          "bash",
+          "tests/suites/sbpl_allowdeny_consistency/sbpl_allowdeny_v1.sh"
+        ],
+        "shell_helpers/byoxpc_setup": [
+          "bash",
+          "tests/suites/shell_helpers/run.sh"
+        ],
+        "shell_helpers/controls": [
+          "bash",
+          "tests/suites/shell_helpers/run.sh"
+        ],
+        "shell_helpers/finalizers": [
+          "bash",
+          "tests/suites/shell_helpers/run.sh"
+        ],
+        "shell_helpers/interpreter_boundary": [
+          "bash",
+          "tests/suites/shell_helpers/run.sh"
+        ],
+        "shell_helpers/mutation_prerequisites": [
+          "bash",
+          "tests/suites/shell_helpers/run.sh"
+        ],
+        "shell_helpers/python_startup": [
+          "bash",
+          "tests/suites/shell_helpers/run.sh"
+        ],
+        "shell_helpers/script_groups": [
+          "bash",
+          "tests/suites/shell_helpers/run.sh"
+        ],
+        "shell_helpers/worker_setup": [
+          "bash",
+          "tests/suites/shell_helpers/run.sh"
+        ],
+        "smoke/specimen_file_read_deny": [
+          "bash",
+          "tests/suites/smoke/pw_specimen_smoke.sh"
+        ],
+        "smoke/specimen_file_read_deny_standard": [
+          "bash",
+          "tests/suites/smoke/pw_specimen_smoke_standard.sh"
+        ],
+        "source_drift/architecture_documentation": [
+          "bash",
+          "tests/suites/source_drift/run.sh"
+        ],
+        "source_drift/build_contracts": [
+          "bash",
+          "tests/suites/source_drift/run.sh"
+        ],
+        "source_drift/build_documentation": [
+          "bash",
+          "tests/suites/source_drift/run.sh"
+        ],
+        "source_drift/direct_python_start": [
+          "bash",
+          "tests/suites/source_drift/run.sh"
+        ],
+        "source_drift/footprint_documentation": [
+          "bash",
+          "tests/suites/source_drift/run.sh"
+        ],
+        "source_drift/generator_contract": [
+          "bash",
+          "tests/suites/source_drift/run.sh"
+        ],
+        "source_drift/interface_inventory": [
+          "bash",
+          "tests/suites/source_drift/run.sh"
+        ],
+        "source_drift/limits_documentation": [
+          "bash",
+          "tests/suites/source_drift/run.sh"
+        ],
+        "source_drift/markdown_reader": [
+          "bash",
+          "tests/suites/source_drift/run.sh"
+        ],
+        "source_drift/porcelain_codec": [
+          "bash",
+          "tests/suites/source_drift/run.sh"
+        ],
+        "source_drift/runner_source_manifests_agree": [
+          "bash",
+          "tests/suites/source_drift/run.sh"
+        ],
+        "unit/rust.byoxpc_reds": [
+          "bash",
+          "tests/suites/unit/byoxpc_reds.sh"
+        ],
+        "unit/rust.disposition_reds": [
+          "bash",
+          "tests/suites/unit/disposition_reds.sh"
+        ],
+        "unit/rust.fmt": [
+          "bash",
+          "tests/suites/unit/fmt.sh"
+        ],
+        "unit/rust.unit": [
+          "bash",
+          "tests/suites/unit/run.sh"
+        ],
+        "validator_batch_mode/batch_ndjson_roundtrip": [
+          "bash",
+          "tests/suites/validator_batch_mode/run.sh"
+        ],
+        "validator_batch_mode/predictions_do_not_report": [
+          "bash",
+          "tests/suites/validator_batch_mode/run.sh"
+        ],
+        "validator_bridge/protocol_controls": [
+          "bash",
+          "tests/suites/validator_bridge/run.sh"
+        ],
+        "witness_contract/actor_compositions": [
+          "bash",
+          "tests/suites/witness_contract/actor_compositions.sh"
+        ],
+        "witness_contract/actor_timing_qualification": [
+          "bash",
+          "tests/suites/witness_contract/actor_timing_qualification.sh"
+        ],
+        "witness_contract/attempt_effects_wait_for_collection": [
+          "bash",
+          "tests/suites/witness_contract/attempt_effects_wait_for_collection.sh"
+        ],
+        "witness_contract/attempt_outcome_matrix_enforced": [
+          "bash",
+          "tests/suites/witness_contract/attempt_outcome_matrix_enforced.sh"
+        ],
+        "witness_contract/bug_report_returns_verdicts": [
+          "bash",
+          "tests/suites/witness_contract/bug_report_returns_verdicts.sh"
+        ],
+        "witness_contract/comparison_matrix": [
+          "bash",
+          "tests/suites/witness_contract/comparison_matrix.sh"
+        ],
+        "witness_contract/create_existing_file_preserves_contents": [
+          "bash",
+          "tests/suites/witness_contract/create_existing_file_preserves_contents.sh"
+        ],
+        "witness_contract/debuggable_mode_rejected": [
+          "bash",
+          "tests/suites/witness_contract/debuggable_mode_rejected.sh"
+        ],
+        "witness_contract/deny_default_ordered": [
+          "bash",
+          "tests/suites/witness_contract/deny_default_ordered.sh"
+        ],
+        "witness_contract/dossier_witness": [
+          "bash",
+          "tests/suites/witness_contract/dossier_witness.sh"
+        ],
+        "witness_contract/example_round_trip": [
+          "bash",
+          "tests/suites/witness_contract/example_round_trip.sh"
+        ],
+        "witness_contract/example_round_trip_controls": [
+          "bash",
+          "tests/suites/witness_contract/example_round_trip_controls.sh"
+        ],
+        "witness_contract/extension_boundaries": [
+          "bash",
+          "tests/suites/witness_contract/extension_boundaries.sh"
+        ],
+        "witness_contract/extension_combinations": [
+          "bash",
+          "tests/suites/witness_contract/extension_combinations.sh"
+        ],
+        "witness_contract/extension_directory": [
+          "bash",
+          "tests/suites/witness_contract/extension_directory.sh"
+        ],
+        "witness_contract/extension_policy_qualification": [
+          "bash",
+          "tests/suites/witness_contract/extension_policy_qualification.sh"
+        ],
+        "witness_contract/extension_redelegation": [
+          "bash",
+          "tests/suites/witness_contract/extension_redelegation.sh"
+        ],
+        "witness_contract/extensions": [
+          "bash",
+          "tests/suites/witness_contract/extensions.sh"
+        ],
+        "witness_contract/external_mutation_between_query_and_attempt": [
+          "bash",
+          "tests/suites/witness_contract/external_mutation_between_query_and_attempt.sh"
+        ],
+        "witness_contract/footprint_observer_controls": [
+          "bash",
+          "tests/suites/witness_contract/footprint_observer_controls.sh"
+        ],
+        "witness_contract/happy_path_baseline": [
+          "bash",
+          "tests/suites/witness_contract/happy_path_baseline.sh"
+        ],
+        "witness_contract/held_phase_footprint": [
+          "bash",
+          "tests/suites/witness_contract/held_phase_footprint.sh"
+        ],
+        "witness_contract/held_phase_footprint_controls": [
+          "bash",
+          "tests/suites/witness_contract/held_phase_footprint_controls.sh"
+        ],
+        "witness_contract/instrumentation_field_rejected": [
+          "bash",
+          "tests/suites/witness_contract/instrumentation_field_rejected.sh"
+        ],
+        "witness_contract/max_exec_steps_spawn": [
+          "bash",
+          "tests/suites/witness_contract/max_exec_steps_spawn.sh"
+        ],
+        "witness_contract/max_steps_ordered": [
+          "bash",
+          "tests/suites/witness_contract/max_steps_ordered.sh"
+        ],
+        "witness_contract/max_targets_reply_survives": [
+          "bash",
+          "tests/suites/witness_contract/max_targets_reply_survives.sh"
+        ],
+        "witness_contract/phases": [
+          "bash",
+          "tests/suites/witness_contract/phases.sh"
+        ],
+        "witness_contract/pre_apply_failure_reports_no_policy_verdict": [
+          "bash",
+          "tests/suites/witness_contract/pre_apply_failure_reports_no_policy_verdict.sh"
+        ],
+        "witness_contract/prediction_target_is_independent_of_attempt_target": [
+          "bash",
+          "tests/suites/witness_contract/prediction_target_is_independent_of_attempt_target.sh"
+        ],
+        "witness_contract/queries_precede_attempts": [
+          "bash",
+          "tests/suites/witness_contract/queries_precede_attempts.sh"
+        ],
+        "witness_contract/queries_use_a_pre_attempt_interval": [
+          "bash",
+          "tests/suites/witness_contract/queries_use_a_pre_attempt_interval.sh"
+        ],
+        "witness_contract/query_interval_is_not_a_snapshot": [
+          "bash",
+          "tests/suites/witness_contract/query_interval_is_not_a_snapshot.sh"
+        ],
+        "witness_contract/response_footprint": [
+          "bash",
+          "tests/suites/witness_contract/response_footprint.sh"
+        ],
+        "witness_contract/response_footprint_controls": [
+          "bash",
+          "tests/suites/witness_contract/response_footprint_controls.sh"
+        ],
+        "witness_contract/shm_sentinel_under_deny_default": [
+          "bash",
+          "tests/suites/witness_contract/shm_sentinel_under_deny_default.sh"
+        ],
+        "witness_contract/test_input": [
+          "bash",
+          "tests/suites/witness_contract/test_input.sh"
+        ],
+        "witness_contract/test_input_controls": [
+          "bash",
+          "tests/suites/witness_contract/test_input_controls.sh"
+        ],
+        "witness_contract/unfamiliar_diagnostic_transport": [
+          "bash",
+          "tests/suites/witness_contract/unfamiliar_diagnostic_transport.sh"
+        ],
+        "witness_contract/validator_spawn_failed_reports_degraded": [
+          "bash",
+          "tests/suites/witness_contract/validator_spawn_failed_reports_degraded.sh"
+        ],
+        "witness_contract/validator_subprocess_populated": [
+          "bash",
+          "tests/suites/witness_contract/validator_subprocess_populated.sh"
+        ],
+        "witness_contract/worker_attempt_in_flight_at_deadline": [
+          "bash",
+          "tests/suites/witness_contract/worker_attempt_in_flight_at_deadline.sh"
+        ],
+        "witness_contract/worker_killed_before_slot_publication": [
+          "bash",
+          "tests/suites/witness_contract/worker_killed_before_slot_publication.sh"
+        ],
+        "witness_contract/worker_post_apply_hang_seam": [
+          "bash",
+          "tests/suites/witness_contract/worker_post_apply_hang_seam.sh"
+        ],
+        "witness_contract/worker_progress_and_failure": [
+          "bash",
+          "tests/suites/witness_contract/worker_progress_and_failure.sh"
+        ],
+        "witness_contract/worker_sparse_failure": [
+          "bash",
+          "tests/suites/witness_contract/worker_sparse_failure.sh"
+        ],
+        "witness_contract/worker_termination": [
+          "bash",
+          "tests/suites/witness_contract/worker_termination.sh"
+        ],
+        "witness_contract/worker_wait_cpu_controls": [
+          "bash",
+          "tests/suites/witness_contract/worker_wait_cpu_controls.sh"
+        ],
+        "witness_contract/worker_wait_pilot_controls": [
+          "bash",
+          "tests/suites/witness_contract/worker_wait_pilot_controls.sh"
+        ]
+      },
+      "completion": {
+        "completed": 233,
+        "selected": 233,
+        "skipped": 0,
+        "unrun": 0
+      },
+      "configuration": {
+        "app_dir": "/Users/raccoon/Desktop/Security/PolicyWitness/dist/PolicyWitness.app",
+        "out_dir": "/Users/raccoon/Desktop/Security/PolicyWitness/tests/out/runs/documentation-trace-default",
+        "pw_bin": "/Users/raccoon/Desktop/Security/PolicyWitness/dist/PolicyWitness.app/Contents/MacOS/policy-witness",
+        "python": {
+          "path": "/opt/homebrew/opt/python@3.14/bin/python3.14",
+          "realpath": "/opt/homebrew/Cellar/python@3.14/3.14.9/Frameworks/Python.framework/Versions/3.14/bin/python3.14",
+          "version": "3.14.9"
+        },
+        "quiet": false
+      },
+      "execution_contract_identity": "676e35de84a16d5481d4fff4f43407b00da4a5193c9cfcbb50dbb74881cb575a",
+      "harness_errors": [
+        {
+          "code": "suite_exit",
+          "invocation": 8,
+          "message": "case command exited with status 1",
+          "requested_suite": "preflight"
+        }
+      ],
+      "ok": false,
+      "path": "tests/out/runs/documentation-trace-default/run.json",
+      "run_id": "20261116T004927Z_ed1d41ef",
+      "sha256": "2b26317bef41a4c0d89a47e9c84c78d2f92610cf2e55d8546c96a216b75d11ba",
+      "source_commit": "8b5de2b2882d7cb2536d1b42d9109f4b0dfc2855",
+      "source_was_clean": true,
+      "system_sleep_ms": 0
+    },
+    "documentation-trace-final-controls": {
+      "artifact_integrity": {
+        "app": "/Users/raccoon/Desktop/Security/PolicyWitness/dist/PolicyWitness.app",
+        "harness_errors": [],
+        "report_dir": "artifact-integrity",
+        "unchanged": true,
+        "valid_before": true
+      },
+      "case_outcome_counts": {
+        "pass": 28
+      },
+      "commands": {
+        "preflight/build_entry_controls": [
+          "bash",
+          "tests/suites/preflight/run.sh"
+        ],
+        "runner_abi_layout/c_swift_layout_agreement": [
+          "bash",
+          "tests/suites/runner_abi_layout/run.sh"
+        ],
+        "runner_unit/actor_handoff_mutations": [
+          "bash",
+          "tests/suites/runner_unit/actor_handoff_mutations.sh"
+        ],
+        "runner_unit/build_receipt_controls": [
+          "bash",
+          "tests/suites/runner_unit/build_receipt_controls.sh"
+        ],
+        "runner_unit/client_session_controls": [
+          "bash",
+          "tests/suites/runner_unit/client_session_controls.sh"
+        ],
+        "runner_unit/exec_reader_mutations": [
+          "bash",
+          "tests/suites/runner_unit/opt_in/exec_reader_mutations.sh"
+        ],
+        "runner_unit/host_setup_controls": [
+          "bash",
+          "tests/suites/runner_unit/host_setup_controls.sh"
+        ],
+        "runner_unit/host_setup_oracle_sensitivity": [
+          "bash",
+          "tests/suites/runner_unit/host_setup_oracle_sensitivity.sh"
+        ],
+        "runner_unit/launch_descriptor_controls": [
+          "bash",
+          "tests/suites/runner_unit/launch_descriptor_controls.sh"
+        ],
+        "runner_unit/pwrunner_core_unit_executable": [
+          "bash",
+          "tests/suites/runner_unit/run.sh"
+        ],
+        "runner_unit/reaped_ack_mutation": [
+          "bash",
+          "tests/suites/runner_unit/opt_in/reaped_ack_mutation.sh"
+        ],
+        "runner_unit/service_admission_controls": [
+          "bash",
+          "tests/suites/runner_unit/service_admission_controls.sh"
+        ],
+        "runner_unit/sleep_record_controls": [
+          "bash",
+          "tests/suites/runner_unit/sleep_record_controls.sh"
+        ],
+        "source_drift/architecture_documentation": [
+          "bash",
+          "tests/suites/source_drift/run.sh"
+        ],
+        "source_drift/build_contracts": [
+          "bash",
+          "tests/suites/source_drift/run.sh"
+        ],
+        "source_drift/build_documentation": [
+          "bash",
+          "tests/suites/source_drift/run.sh"
+        ],
+        "source_drift/direct_python_start": [
+          "bash",
+          "tests/suites/source_drift/run.sh"
+        ],
+        "source_drift/footprint_documentation": [
+          "bash",
+          "tests/suites/source_drift/run.sh"
+        ],
+        "source_drift/generator_contract": [
+          "bash",
+          "tests/suites/source_drift/run.sh"
+        ],
+        "source_drift/interface_inventory": [
+          "bash",
+          "tests/suites/source_drift/run.sh"
+        ],
+        "source_drift/limits_documentation": [
+          "bash",
+          "tests/suites/source_drift/run.sh"
+        ],
+        "source_drift/markdown_reader": [
+          "bash",
+          "tests/suites/source_drift/run.sh"
+        ],
+        "source_drift/porcelain_codec": [
+          "bash",
+          "tests/suites/source_drift/run.sh"
+        ],
+        "source_drift/runner_source_manifests_agree": [
+          "bash",
+          "tests/suites/source_drift/run.sh"
+        ],
+        "unit/rust.byoxpc_reds": [
+          "bash",
+          "tests/suites/unit/byoxpc_reds.sh"
+        ],
+        "unit/rust.disposition_reds": [
+          "bash",
+          "tests/suites/unit/disposition_reds.sh"
+        ],
+        "unit/rust.fmt": [
+          "bash",
+          "tests/suites/unit/fmt.sh"
+        ],
+        "unit/rust.unit": [
+          "bash",
+          "tests/suites/unit/run.sh"
+        ]
+      },
+      "completion": {
+        "completed": 28,
+        "selected": 28,
+        "skipped": 0,
+        "unrun": 0
+      },
+      "configuration": {
+        "app_dir": "/Users/raccoon/Desktop/Security/PolicyWitness/dist/PolicyWitness.app",
+        "out_dir": "/Users/raccoon/Desktop/Security/PolicyWitness/tests/out/runs/documentation-trace-final-controls",
+        "pw_bin": "/Users/raccoon/Desktop/Security/PolicyWitness/dist/PolicyWitness.app/Contents/MacOS/policy-witness",
+        "python": {
+          "path": "/opt/homebrew/opt/python@3.14/bin/python3.14",
+          "realpath": "/opt/homebrew/Cellar/python@3.14/3.14.9/Frameworks/Python.framework/Versions/3.14/bin/python3.14",
+          "version": "3.14.9"
+        },
+        "quiet": false
+      },
+      "execution_contract_identity": "b7efdd1dcd0e3c52bd0c813800e7c52ef6b3f0c3017f20a2ada5401702623e59",
+      "harness_errors": [],
+      "ok": true,
+      "path": "tests/out/runs/documentation-trace-final-controls/run.json",
+      "run_id": "20261116T003408Z_848241b9",
+      "sha256": "9577a217fcfed7feb55089da97bde201b02f059b806068f84f19102405b41676",
+      "source_commit": "8b5de2b2882d7cb2536d1b42d9109f4b0dfc2855",
+      "source_was_clean": true,
+      "system_sleep_ms": 0
+    },
+    "documentation-trace-fixture-recheck": {
+      "artifact_integrity": null,
+      "case_outcome_counts": {
+        "pass": 6
+      },
+      "commands": {
+        "preflight/build_entry_controls": [
+          "bash",
+          "tests/suites/preflight/run.sh"
+        ],
+        "preflight/build_provenance_controls": [
+          "bash",
+          "tests/suites/preflight/run.sh"
+        ],
+        "preflight/release_publish_controls": [
+          "bash",
+          "tests/suites/preflight/run.sh"
+        ],
+        "source_drift/build_documentation": [
+          "bash",
+          "tests/suites/source_drift/run.sh"
+        ],
+        "source_drift/generator_contract": [
+          "bash",
+          "tests/suites/source_drift/run.sh"
+        ],
+        "source_drift/markdown_reader": [
+          "bash",
+          "tests/suites/source_drift/run.sh"
+        ]
+      },
+      "completion": {
+        "completed": 6,
+        "selected": 6,
+        "skipped": 0,
+        "unrun": 0
+      },
+      "configuration": {
+        "app_dir": "/Users/raccoon/Desktop/Security/PolicyWitness/dist/PolicyWitness.app",
+        "out_dir": "/Users/raccoon/Desktop/Security/PolicyWitness/tests/out/runs/documentation-trace-fixture-recheck",
+        "pw_bin": "/Users/raccoon/Desktop/Security/PolicyWitness/dist/PolicyWitness.app/Contents/MacOS/policy-witness",
+        "python": {
+          "path": "/opt/homebrew/opt/python@3.14/bin/python3.14",
+          "realpath": "/opt/homebrew/Cellar/python@3.14/3.14.9/Frameworks/Python.framework/Versions/3.14/bin/python3.14",
+          "version": "3.14.9"
+        },
+        "quiet": false
+      },
+      "execution_contract_identity": "722722714d74176a0d21804ef031fe1d09f3bacdfebc1a34e780104d77bb493a",
+      "harness_errors": [],
+      "ok": true,
+      "path": "tests/out/runs/documentation-trace-fixture-recheck/run.json",
+      "run_id": "20261116T011640Z_670555a8",
+      "sha256": "7375e332188b0c4286bee5fcf8a3043dda1ee1a0211ce4b31f2836b8f088df69",
+      "source_commit": "2627356390835d47910eeb22c75ac6765b043e88",
+      "source_was_clean": true,
+      "system_sleep_ms": 0
+    }
+  }
+}

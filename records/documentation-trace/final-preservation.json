@@ -1,0 +1,126 @@
+{
+  "accepted_source_commit": "2627356390835d47910eeb22c75ac6765b043e88",
+  "baseline": "2fcf9dbc9f08b1643426b4cf9b9b32e3782c86cc",
+  "build_identity": "development:bdefcb44cb8b799494b555f6ba992e5bbfb58eba8ef980cb805adf15c103fb18",
+  "final_fixture_delta_proof": {
+    "base": "8b5de2b2882d7cb2536d1b42d9109f4b0dfc2855",
+    "build_identity": "development:bdefcb44cb8b799494b555f6ba992e5bbfb58eba8ef980cb805adf15c103fb18",
+    "differences": [],
+    "guide_shapes_counts_stamps_interfaces_preserved": true,
+    "kind": "placement",
+    "removed_part_occurrences": 0,
+    "worker_identity": "cc2502d5da48a2a36e0ef73de394536174e32c2b487a2a7b7981e17d83f21659"
+  },
+  "free_text_counts_equal_baseline": true,
+  "guide_sha256": "1e886e4ab5ccaf9aa73fe9c7d6e47e87bcf37d3d3c8caf2e093f38bced97d64d",
+  "preserved_files_sha256": {
+    "controller/interface/cards.rs": "9a68c368ad2593729614385917af1f96b5fdcb2e9b19d66b88462d8da3cdf50a",
+    "controller/interface/inventory.json": "9bb9f3d28f1f4a29422298250930e591ccf314f2f1b056957147aa93ae161ab7",
+    "controller/interface/inventory.rs": "f5b4479099f579b73423327356185fbb29290c7e236a9e6bcc1abed0dd1c749b",
+    "controller/interface/joins.json": "ceb547e3517b998b1b0ec689acd6e9a27dd09932150f5efdfd2611ce0569d8cf",
+    "controller/interface/mutations.json": "9e6f0d25f91d9601f8136a19f44522ba0df8e9924126065253aea1b4fae1f01b",
+    "controller/interface/residue.json": "933506efd7aa1c787d73ce3a6697f964101e87fa5477eb5fec4e57c7a45b8011",
+    "docs/PolicyWitness.md": "1e886e4ab5ccaf9aa73fe9c7d6e47e87bcf37d3d3c8caf2e093f38bced97d64d",
+    "docs/contract/free_text.json": "89c3082c6d7ca64b305d4216dd14d495e481e6c7a7d61116faa5bf46f544ced4",
+    "docs/porcelain.json": "538b3cf552fa8fa3578287e39a56594592799ff6062d35e5bfc7242ea4b009c2",
+    "tests/fixtures/contract/abi_layout.txt": "c186932a1b8bf29bd032e69eb77b55c675fa89f899fcde1d87e2fd9c4460c896",
+    "tests/fixtures/contract/surfaces/actor_evidence.json": "cef8162fa0f9acd3271fa5532208b5f0566a517c347b38ae7368f84eb9d24db9",
+    "tests/fixtures/contract/surfaces/actors.json": "b7dc0407ed8e71788bde0b31e18bbeab3e7e64ad2a26f93bab6ce4470e22127a",
+    "tests/fixtures/contract/surfaces/diagnostics.json": "d560991e6cbb64a1af5012b6b502e07ae682afaf6e5f4bc9776705d3d8fdc5d6",
+    "tests/fixtures/contract/surfaces/dossier.json": "4ac779e9fe85f7a82ae58307cacec28d88e333ef2cc69933fdaf42504f5624d1",
+    "tests/fixtures/contract/surfaces/envelope.json": "0e1b7095d098788bb0c5eeec70a2d0bcbcab4f862e6948b0c46eaf11b19391c5",
+    "tests/fixtures/contract/surfaces/equipment.json": "4dc1b6cb2c3392654a53260781c7cb957b1768cee3e3748fc84d0cb420640fee",
+    "tests/fixtures/contract/surfaces/extensions.json": "c615a2c64bbff357f9a551be29f4bc2b54d5151f401e13e5ebf1c23401f54638",
+    "tests/fixtures/contract/surfaces/identity.json": "f4deba76ff83940644c2a317a9f79cd27e7d2d09e36ab90b62dae7653acdf24c",
+    "tests/fixtures/contract/surfaces/installation.json": "0ce562455a30fd2f968cd404b51016631027e970f983dc6815b60d436747dfdc",
+    "tests/fixtures/contract/surfaces/lifecycle.json": "1b75ed7fc56d55158dced236cd7240bab9354d5c254bbf3b2b0901e2f99b0bdb",
+    "tests/fixtures/contract/surfaces/policy.json": "a9d888f0a689ad81f1fdbc3b42b25bb77610c1a0251ff027f6af6e5097da7b1f",
+    "tests/fixtures/contract/surfaces/probes.json": "1b11527d2058bb266d80a77d7b683df2c730d06d905d92b1bc774e80e6b7f24b",
+    "tests/fixtures/contract/surfaces/profile.json": "92c2cdb9a759c31d51734e50be708444ae9cc2e5f34f555e3d16ed53f235a7e6",
+    "tests/fixtures/contract/surfaces/refusals.json": "73a99bdf116daf3a5ace2df2eeb3b8fced775840d078e6eadef2fc54a86a3955",
+    "tests/fixtures/contract/surfaces/reply.json": "beb6ae13fb4dfa092cdf3a186402f671ecfd4a7ae1a79e2a192dbc6f8bc991f3",
+    "tests/fixtures/contract/surfaces/request.json": "89ad9af22ec754cdbb19aaddf3118ec948de9977c4703bd874eb389026e01540",
+    "tests/fixtures/contract/surfaces/steps.json": "85206b06a7c02c0c9a050b0676e5a834126e5142b22eb2c16d9bcc3d986f3ec6",
+    "tests/fixtures/contract/surfaces/transport.json": "25df84797f920450ad207d58fb83e086de4f2a801098199ee9d813c4b330b7d9",
+    "tests/fixtures/contract/surfaces/wire.json": "c1656745120ba35d94fe72c2f6bab4a594dd00e3aa418fb0d7d13815b3a66d4c"
+  },
+  "public_differences": [
+    {
+      "group": "shared",
+      "keys": [
+        "facts"
+      ],
+      "node": "actors.phase.order",
+      "surface": "request"
+    },
+    {
+      "group": "shared",
+      "keys": [
+        "facts"
+      ],
+      "node": "actors.phase.order",
+      "surface": "probes"
+    },
+    {
+      "group": "nodes",
+      "keys": [
+        "facts"
+      ],
+      "node": "actors.phase.order",
+      "surface": "actors"
+    },
+    {
+      "group": "shared",
+      "keys": [
+        "facts"
+      ],
+      "node": "actors.phase.order",
+      "surface": "extensions"
+    },
+    {
+      "group": "shared",
+      "keys": [
+        "facts"
+      ],
+      "node": "actors.phase.order",
+      "surface": "refusals"
+    },
+    {
+      "group": "nodes",
+      "keys": [
+        "prose"
+      ],
+      "node": "wire.standalone",
+      "surface": "wire"
+    },
+    {
+      "group": "shared",
+      "keys": [
+        "facts"
+      ],
+      "node": "actors.phase.order",
+      "surface": "reply"
+    },
+    {
+      "group": "shared",
+      "keys": [
+        "facts"
+      ],
+      "node": "actors.phase.order",
+      "surface": "envelope"
+    },
+    {
+      "group": "shared",
+      "keys": [
+        "facts"
+      ],
+      "node": "actors.phase.order",
+      "surface": "installation"
+    }
+  ],
+  "removed_part_occurrences": 203,
+  "staged_guide_equal": true,
+  "stamp_tables_equal_baseline": true,
+  "verified_commit": "8b5de2b2882d7cb2536d1b42d9109f4b0dfc2855",
+  "worker_identity": "cc2502d5da48a2a36e0ef73de394536174e32c2b487a2a7b7981e17d83f21659"
+}

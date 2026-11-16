@@ -94,3 +94,14 @@ signed app. This statement rests on the exact diff and inspected call/input
 paths, not on app independence or file hashing as a universal dependency
 proof. Revisit this review if any additional file changes, another failure
 appears, the app inventory changes, or a case's source assumptions are unclear.
+
+## Final disposition
+
+The one-identifier repair was committed as `26273563`. All six named cases
+passed in run `20261116T011640Z_670555a8` from that clean commit, with no skips,
+unrun cases, harness errors or system sleep. The original run remains failed.
+The accepted ledger uses these six replacement credits, 227 unaffected default
+credits and four additional runner-case credits from the earlier selected run.
+The latter 231 credits are explicitly reviewed reuse for this exact delta.
+The final app file-mode/hash comparison matched the unchanged app inventory
+after both native runs; build and worker identities also remained unchanged.

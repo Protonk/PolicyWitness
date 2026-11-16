@@ -1,8 +1,8 @@
 # Request, response and public-commitment tracing
 
-Status: implementation and editorial review complete; final signed-build and
-integrated verification in progress. The execution notes at the end distinguish
-source readings, historical observations and newly executed checks.
+Status: complete. Implementation, editorial acceptance, signed build and required
+verification are recorded below, including the fixture repair and reviewed
+reuse of unaffected results from the completed default battery.
 
 ## Purpose, readers and authority to proceed
 
@@ -1053,3 +1053,25 @@ and [dependency/reuse review](records/documentation-trace/fixture-reuse-review.m
 identify six replacement cases. The failed run remains failed evidence, with
 unchanged app bytes and no system sleep. Next: execute those six cases against
 the corrected fixture, finalize preservation and acceptance records, and hand off.
+
+Steps 9–10 complete. All six replacement cases passed in
+`tests/out/runs/documentation-trace-fixture-recheck` at clean `26273563`, with
+no skipped/unrun cases, harness errors or system sleep. The
+[acceptance account](records/documentation-trace/verification.md) names the exact
+commands, sources, build, failures, corrections, evidence limits and reviewed
+reuse. Its [case ledger and app inventory](records/documentation-trace/verification.json)
+credit all 233 default cases plus four additional runner cases; the original
+failed default run is preserved, not relabeled. The
+[signed build transcript](records/documentation-trace/signed-build.log) records
+the one final native build. The
+[final preservation proof](records/documentation-trace/final-preservation.json)
+compares the guide, 29 preserved files, stamp tables and counts with the starting
+baseline and accounts for every public payload difference.
+
+The three reader answers, bounded traces, whole protocols, maintenance duties
+and guide outflow are complete. The remaining limitations are the deliberately
+partial trace associations and long references described in editorial acceptance;
+no unresolved meaning blocks this result. No required verification or equipment
+remains missing. Only these acceptance records and this plan's completion status
+follow the tested source commit. The work is ready for review; no release or
+publication was performed.
