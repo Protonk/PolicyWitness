@@ -999,3 +999,15 @@ a fixed point with the guide byte-identical. The extended build-entry controls
 cover stale RESPONSE and tour-list regions; their execution remains pending.
 Next: consolidate source citations and regenerate identity, then signed build and
 integrated verification.
+
+Step 8 complete. The [source-citation review](records/documentation-trace/source-citations.md)
+and [identity delta](records/documentation-trace/source-citation-identity.json)
+name the two authored comment edits and three regenerated identity copies. The
+public tree states the worker digest/handshake but not exact bootstrap offsets;
+the header now cites ARCHITECTURE's layout account for those. No app-printed
+document pointer needed editing. Guide and historical mutation citations remain.
+Build identity is now `development:bdefcb44cb8b799494b555f6ba992e5bbfb58eba8ef980cb805adf15c103fb18`;
+worker identity is `cc2502d5da48a2a36e0ef73de394536174e32c2b487a2a7b7981e17d83f21659`.
+Worker identity, porcelain and interface checks passed. Next: integrated source
+controls, signed build, offline/native suites and default battery against these
+final selected source bytes.

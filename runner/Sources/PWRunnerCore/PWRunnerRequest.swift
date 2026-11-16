@@ -48,7 +48,7 @@ struct PWRunnerRequestFailure: Error, CustomStringConvertible {
 }
 
 struct PWRunnerRunSpec: Codable {
-    // The request contract and its admission rules: docs/CONTRACT.md.
+    // Request declarations and admission: docs/REQUEST.md#contract-request-specimen.
     var contract: String
     var specimen_id: String
     var run_kind: String?

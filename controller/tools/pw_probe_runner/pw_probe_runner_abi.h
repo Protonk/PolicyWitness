@@ -40,13 +40,15 @@
  * checked before any layout-dependent work or policy input. The bootstrap
  * magic at offset 0 and 32 identity bytes at offset 64 are fixed. The magic
  * also makes ordinal-era workers refuse this header before using its layout.
- * See docs/CONTRACT.md and tests/FAILURE-PROPAGATION-CONTRACT.md.
+ * Digest and handshake: docs/CONTRACT.md#contract-identity-other-worker.
+ * Bootstrap layout: docs/ARCHITECTURE.md#boundaries and the ABI layout golden.
+ * Publication evidence: tests/FAILURE-PROPAGATION-CONTRACT.md.
  */
 #define PW_SHM_ABI_MAGIC 0x50574944u
 #define PW_SHM_ABI_IDENTITY_BYTES 32u
 /* BEGIN GENERATED WORKER IDENTITY (docs/generate_worker_identity.py) */
-#define PW_WORKER_ABI_IDENTITY_HEX "ee5a7e5c6f3e254ff843b1329b17b8b01b5f575e0b73455d6816492480881ea2"
-static const uint8_t PW_WORKER_ABI_IDENTITY[32] = {0xee, 0x5a, 0x7e, 0x5c, 0x6f, 0x3e, 0x25, 0x4f, 0xf8, 0x43, 0xb1, 0x32, 0x9b, 0x17, 0xb8, 0xb0, 0x1b, 0x5f, 0x57, 0x5e, 0x0b, 0x73, 0x45, 0x5d, 0x68, 0x16, 0x49, 0x24, 0x80, 0x88, 0x1e, 0xa2};
+#define PW_WORKER_ABI_IDENTITY_HEX "cc2502d5da48a2a36e0ef73de394536174e32c2b487a2a7b7981e17d83f21659"
+static const uint8_t PW_WORKER_ABI_IDENTITY[32] = {0xcc, 0x25, 0x02, 0xd5, 0xda, 0x48, 0xa2, 0xa3, 0x6e, 0x0e, 0xf7, 0x3d, 0xe3, 0x94, 0x53, 0x61, 0x74, 0xe3, 0x2c, 0x2b, 0x48, 0x7a, 0x2a, 0x7b, 0x79, 0x81, 0xe1, 0x7d, 0x83, 0xf2, 0x16, 0x59};
 /* END GENERATED WORKER IDENTITY */
 
 /* Bounded so the host reserves a region of known size. 256 slots ×

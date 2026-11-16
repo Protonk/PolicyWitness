@@ -1,0 +1,24 @@
+{
+  "baseline_commit": "2fcf9dbc9f08b1643426b4cf9b9b32e3782c86cc",
+  "before_source_commit": "7cbf168965f920b2634d4dc3659e125ac4cb19b2",
+  "build_after": "development:bdefcb44cb8b799494b555f6ba992e5bbfb58eba8ef980cb805adf15c103fb18",
+  "build_before": "development:31d146ab9ec5baad7afe66cd7ac7d2c267edfabc7c33c0b838990d333c6ca15c",
+  "changed_build_inputs": [
+    "controller/tools/pw_probe_runner/pw_probe_runner_abi.h",
+    "runner/Sources/PWRunnerCore/CWorker.swift",
+    "runner/Sources/PWRunnerCore/PWRunnerRequest.swift"
+  ],
+  "changed_worker_inputs": [
+    "controller/tools/pw_probe_runner/pw_probe_runner_abi.h",
+    "runner/Sources/PWRunnerCore/CWorker.swift",
+    "runner/Sources/PWRunnerCore/PWRunnerRequest.swift"
+  ],
+  "generated_identity_targets": [
+    "controller/tools/pw_probe_runner/pw_probe_runner_abi.h",
+    "runner/Sources/PWRunnerCore/CWorker.swift",
+    "tests/lib/contract.py"
+  ],
+  "public_payloads_equal_pre_source_commit": true,
+  "worker_after": "cc2502d5da48a2a36e0ef73de394536174e32c2b487a2a7b7981e17d83f21659",
+  "worker_before": "ee5a7e5c6f3e254ff843b1329b17b8b01b5f575e0b73455d6816492480881ea2"
+}
