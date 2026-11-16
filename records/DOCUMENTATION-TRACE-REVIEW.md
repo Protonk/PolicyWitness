@@ -4142,3 +4142,799 @@ the shipped-input survey in DT-94 come from source inspection. Historical
 inspection establishes when declarations and statements appeared, not how
 older builds behaved. Only this record was changed. These entries contain no
 repair, deduplication or choice of authoritative layer.
+
+## Additional findings: compiled-profile receipts for an ordinary `run` request
+
+This continuation follows one compiled-profile receipt through the ordinary
+(non-actor) request form. It covers the capture declaration, the worker's
+native production, the host's receipt assembly and controller admission for
+`run`. It starts from the
+[`capture_compiled_profile`](../docs/REQUEST.md#contract-policy-spec-capture_compiled_profile)
+and [`capture_nonce`](../docs/REQUEST.md#contract-policy-spec-capture_nonce)
+declarations (REQUEST lines 732–733), the
+[Compiled-profile receipts](../docs/RESPONSE.md#contract-profile) section
+(RESPONSE lines 2516–2638), and its authored owner,
+[35-profile.surface.md](../docs/contract/35-profile.surface.md). It also reads
+the receipt's restatements in ARCHITECTURE (lines 437–442, 569, 612 and 637),
+LIMITS (lines 191 and 364) and the
+[guide](../docs/PolicyWitness.md#compiled-object-receipt-opt-in) (lines
+718–757). Shared helpers were followed where they carry a receipt input or
+projection. Actor execution, BYOXPC and `runner verify` were excluded. Where a
+cited check uses an actor record or a loop shared with actors, the entry says
+so. The statements were treated as claims to examine. Close relatives in this
+record are DT-37 (the form of the run label-failure effect) and DT-81 to DT-87
+(import inventory, including a native bytecode probe). The new entries stand
+alone and cross-reference them.
+
+### Receipt investigation identity and reproduction conventions
+
+Source inspection used clean HEAD `eccd5de97fa68752432a6108a44bc102a9fb5d23`
+on 2026-11-16; line numbers below refer to that snapshot. File hashes:
+`runner/Sources/PWRunnerCore/CWorker.swift` `93138d53…f27e`,
+`controller/tools/pw_probe_runner/pw_profile_capture.h` `d598ae17…91b8`,
+`controller/src/porcelain_admission.rs` `19f071e8…230f`,
+`runner/Tests/PWRunnerCoreTests/CompiledProfileCaptureTests.swift`
+`4453ac78…11d0` and `docs/contract/35-profile.surface.md` `e059cd62…4013`.
+The machine reports macOS 26.7.1, build 25G241 (Darwin 25.6.0). Python ran
+through `tests/lib/python.sh` (Python 3.14.9) with `-I`.
+
+**Build used for live observations.** All live observations used
+`dist/PolicyWitness.app`. Its `policy-witness --version` reports commit
+`8b5de2b2882d7cb2536d1b42d9109f4b0dfc2855` and contract
+`development:bdefcb44cb8b799494b555f6ba992e5bbfb58eba8ef980cb805adf15c103fb18`.
+`codesign --verify --deep --strict` passed, and the team is `42D369QV8E`.
+`docs/build_contract.py` printed the same development identity for HEAD.
+`git diff --stat 8b5de2b2 HEAD` touches only `records/`, the retired plan and
+one line of `tests/suites/preflight/opt_in/build_refusals.py`. No runner,
+controller, worker or fixture source changed. Nothing was rebuilt.
+
+**Registered cases.** The pinned pytest target under `.tmp/pytest/` was
+absent, and `tests/run.sh --list` refused without it, so
+`tests/setup-pytest.sh` ran first. Then
+`PW_TEST_OUT_DIR=tests/out/runs/profile-receipt-trace tests/run.sh --case
+runner_outcome_bad_request/accepted_input_contract --case
+runner_unit/pwrunner_core_unit_executable --case unit/rust.unit` produced run
+`20261116T192345Z_79fbbaf4` against `dist/PolicyWitness.app`. All three cases
+passed, each with `system_sleep_ms` 0.
+
+- The Swift batch reported 606/606. Its log lists all 20 tests in the group
+  `Compiled-profile capture: bounded worker receipt` as `ok`.
+- The Rust log lists three receipt tests as `ok`:
+  `compiled_profile_labels_determine_the_public_admission_outcome`,
+  `compiled_profile_context_is_gated_after_the_response_version` and
+  `typed_profile_context_gate_includes_actor_captures_and_degradation`.
+
+This development output is in the gitignored `tests/out/runs/` and is
+disposable under the retention policy. The decisive values are reproduced
+below.
+
+**Direct probes.** The drivers are under `<scratchpad>/scripts`, where
+`<scratchpad>` is
+`/private/tmp/claude-501/-Users-raccoon-Desktop-Security-PolicyWitness/0a1dcc1e-63de-41a4-a483-053ae1a48be4/scratchpad`.
+Scratch material has no retention guarantee.
+
+- `receipt_probe.py` (SHA-256 `88fbe2dd…9c5f`) writes one ordinary request per
+  probe and runs `policy-witness run <request>`. It records stdout, stderr,
+  the exit status and whether the target exists. Each request has one step: a
+  `file-write-create` query and a `file`/`create` attempt on a fresh path.
+- `receipt_check.py` (`3d4695e3…97ac`) reads the saved envelopes. It decodes
+  `bytecode_b64` with `base64.b64decode(…, validate=True)` and recomputes the
+  length and SHA-256. It also hashes the request's `sbpl_source`. The
+  parameter digest is recomputed with a separate implementation of the
+  documented framing: `struct.pack('<I', …)` lengths, sorted pair digests and
+  a LE32 count prefix.
+- `receipt_mutations.py` (`b0def4a2…eada`) runs `consumer.validate` and
+  `consumer.admitted_reply` from `tests/lib/consumer.py`. It reads the saved
+  envelopes and edited copies of B's saved `runner_result`.
+- `receipt_repeat.py` (`cd736919…03de`), `receipt_import.py`
+  (`d08277c3…ab4e`) and `receipt_compile_fail.py` (`aa6b47a4…437b`) are
+  described in DT-97, DT-98 and DT-100.
+
+**Contrasts (executed).** Every probe used the dist app above.
+
+| Probe | Request | Exit, outcome and worker | Receipt |
+| --- | --- | --- | --- |
+| A | no capture fields; source `(version 1) (allow default)` | 0, `finished`; worker 7540 exit 0 | key absent from the JSON and from the retained host bytes |
+| B | as A, plus capture with nonce `179c2dcf…329d` | 0, `finished`; `sandboxed_after_apply: true`; worker 7545 exit 0 | `captured`; 492 bytes `b2056ef2…97e0`; source `c3f48dc8…74b3` (27 bytes); parameters `df3f6198…1119` (count 0); `request_nonce` = request; `worker_pid` 7545 |
+| B2 | capture; 96-byte source using `(param "ROOT")`; parameters `ROOT=/etc`, `Z=é` | 0, `finished`; worker 7549 exit 0 | `captured`; 524 bytes `a2b35cd2…d4b0`; source `ad8bc3d2…039a`; parameters `2a4f1d69…95fd` (count 2); `worker_pid` 7549 |
+| C | as B, plus `_test_overrides.worker_post_apply_kill_signal: 9` | 1, `runner_failed`; `sandboxed_after_apply: true`; worker 7554 `term_signal` 9, `done_observed: false`; target created | only `{status: unavailable, reason: worker_not_complete, worker_pid: 7554}` |
+
+B and B2 passed every independent comparison:
+
+- The decoded length equals `bytecode_length`, and the decoded SHA-256 equals
+  `bytecode_sha256`.
+- `source_sha256` equals the SHA-256 of the request source and the reply's
+  `policy_sha256`. For B2 it also equals the dossier's
+  `augmentation.original_sha256` and `applied_sha256`.
+- `source_length` equals the source byte count.
+- `params_sha256` equals the independent recomputation.
+- `request_nonce` equals the request's nonce, and `worker_pid` equals
+  `runner_subprocess.pid`.
+
+`consumer.validate` returned no errors for any of the four envelopes.
+`consumer.admitted_reply` decodes the receipt independently from the retained
+host bytes (`runner_client.transport.runner_reply.data_base64`). That receipt
+equaled the controller's JSON receipt in all four envelopes, including its
+absence in A. The registered case's `repair-cli-capture-2-enabled` and
+`repair-xpc-capture-2-enabled` receipts (worker PIDs 13039 and 13043) carried
+the same 492 bytes, `b2056ef2…97e0`, and passed the same length and digest
+check. Its `capture_worker_death` receipt was `{unavailable,
+worker_not_complete, worker_pid 13075}`.
+
+The controlled failure is the existing `worker_post_apply_kill_signal: 9`
+control. The registered case runs it too (contract.py lines 498–512). Among
+existing tests, it is the only ordinary-form live control that asserts an
+`unavailable` receipt. No other guard was forced live.
+
+Full digests:
+
+- B bytecode
+  `b2056ef25b6c4e72bcd45bb018452bde93d05afcbdb9813fee8698551cf397e0`
+- B2 bytecode
+  `a2b35cd2cc1ea2174fe04ed7e97889f387d3a42da3acf309841efd007f30d4b0`
+- B2 parameters
+  `2a4f1d69b5f51c89ed0f08aaae8f5996737877b49463a4f2baae736009c195fd`
+- zero parameters
+  `df3f619804a92fdb4057192dc43dd748ea778adc52bc498ce80524c014b81119`,
+  which is the SHA-256 of four zero bytes
+
+### DT-95 — The controller checks the status and two constant labels; a `captured` receipt that contradicts its request and its own fields is admitted as `finished`
+
+**Statements examined.** The labels rule (RESPONSE lines 2607–2620; surface
+lines 299–337) says: "After public producer admission and reply-capacity
+checks, the controller applies these conditions to every present receipt…. The
+retained nonce, bytecode, digests, lengths and counts remain the host's
+assertions; their production checks belong to the host capture rule." The
+`request_nonce` field (line 2540) adds that the label check has no
+request-nonce operand. Two receipt conditions are stated as requirements with
+no checking actor:
+
+- Captured byte extent: when captured, `bytecode_length` is present, greater
+  than 0 and at most 1,048,576 (line 2554; surface line 76).
+- Captured payload extent: the decoded length of `bytecode_b64` equals
+  `bytecode_length` (line 2560; surface line 91).
+
+Receipt presence (line 2567) is conditioned on "Capture was requested for this
+worker." The Successful receipt effect withholds `reason` (line 2602).
+
+**Source.** `admission_problem`
+([porcelain_admission.rs](../controller/src/porcelain_admission.rs) lines
+1308–1331) first runs the geometry check. It then examines the top-level
+receipt and each actor receipt. It requires `status` to be `captured` or
+`unavailable`. A captured receipt needs `producer == "worker"` and
+`capture_stage == "before_apply"`, and an unavailable receipt may carry
+neither label. `reply_contract` and `admit_reply`
+([run_flow.rs](../controller/src/run_flow.rs) lines 99–107 and 330–355) turn
+a problem into `malformed_runner_response`. The binary reader
+([porcelain_records.rs](../controller/src/porcelain_records.rs) lines 51–104)
+requires only `status` and `worker_pid` and accepts any subset of the other
+twelve fields.
+
+No controller code compares a receipt with:
+
+- the delivered request;
+- `runner_subprocess.pid`;
+- `policy_sha256`;
+- the dossier;
+- its own bytes.
+
+The independent consumer's `_validate_capture`
+([consumer.py](../tests/lib/consumer.py) lines 575–588) applies the same three
+conditions, and `admitted_reply` (lines 1027–1052) uses only those. The host's
+`contextProblem`
+([PWRunnerProfileCapture.swift](../runner/Sources/PWRunnerCore/PWRunnerProfileCapture.swift)
+lines 31–44) applies the same check before encoding.
+
+**Executed, constructed (the cited check).**
+`compiled_profile_labels_determine_the_public_admission_outcome` (run_flow.rs
+lines 2967–3013) sends the request built by `request_file` (lines
+2608–2623): `"policy": {"format": "sbpl", "sbpl_source": "(version 1)\n(allow
+default)\n"}`. The request has no capture fields. The `captured` row of
+[compiled_profile.json](../tests/fixtures/contract/compiled_profile.json)
+carries:
+
+- `request_nonce` `0123456789abcdef0123456789abcdef`;
+- `source_length` 24, although the request source is 28 bytes with SHA-256
+  `d130f968…765c`;
+- `source_sha256` and `params_sha256` each set to 64 `f` characters, with
+  `parameter_count` 0, whose framing digest is `df3f6198…1119`.
+
+Its bytes `ChQe` (`0a141e`) do match its `bytecode_sha256` `6951bbd9…2925`.
+For this row the test requires exit 0, `ok: true`, `finished` and present
+diagnostics, and it passed in run `20261116T192345Z_79fbbaf4`. The receipt was
+admitted although:
+
+- the request did not ask for capture;
+- the request could not carry a nonce, because a nonce without capture is
+  `inapplicable_field` (ProbeRunner.swift lines 64–70);
+- its source fields disagree with the request.
+
+`typed_profile_context_gate_includes_actor_captures_and_degradation`
+(porcelain_admission.rs lines 2732–2780) asserts that `admission_problem`
+returns none for a `captured` receipt with no nonce, type, length, bytes or
+digests. That receipt is on an actor record, but the loop is the same.
+
+**Executed, saved-reply mutations read by the independent consumer.** Each
+change below was applied separately to B's saved `runner_result`, and
+`consumer.validate` returned no errors for each:
+
+- different 492 bytes with the length and digest unchanged;
+- `bytecode_b64`, `bytecode_sha256` and `bytecode_length` removed;
+- `bytecode_length` set to 2,000,000 or to 0;
+- `request_nonce` replaced or removed;
+- `worker_pid` set to 1;
+- `profile_type` set to 7;
+- `reason` added to the captured receipt;
+- `source_sha256` zeroed;
+- B's receipt inserted into A's reply, which did not request capture;
+- an `unavailable` receipt carrying `bytecode_b64` and `bytecode_length`;
+- an `unavailable` receipt without `reason`.
+
+As controls, `status: "future"` and `producer: "host"` were rejected, with
+`invalid compiled_profile status` and `compiled_profile requires
+worker/before_apply context` respectively. These are edits of saved JSON read
+by the Python consumer, not controller executions. The controller's outcome
+for the same edits is inferred from the source and the two constructed tests
+above.
+
+**Where the receipt conditions are checked.** No reader checks the two extent
+conditions, or presence against the request. Specific live tests assert them
+on their own outputs:
+
+- [contract.py](../tests/suites/runner_outcome_bad_request/contract.py) lines
+  322–332 check the nonce, the PID against `runner_subprocess.pid`, the source
+  digest, the decoded length and digest, and zero parameters. Lines 430–435
+  and 483–488 check that the receipt is absent when capture was not requested.
+- [check_response_footprint.py](../tests/suites/witness_contract/check_response_footprint.py)
+  lines 235–241 check the decoded length and digest.
+- [guide_workflows.py](../tests/suites/witness_contract/opt_in/guide_workflows.py)
+  lines 461–470 check the receipt from the guide workflow.
+
+CONTRACT's checker index (CONTRACT line 2793) lists only `status`, `producer`
+and `capture_stage` under the labels rule. The two field conditions are
+credited only to the source-read owner over the Receipt subject (RESPONSE
+line 2636).
+
+**History.** At v0.3.5 the controller applied the same check (`git show
+v0.3.5:controller/src/porcelain_admission.rs`, lines 1299–1316). The v0.3.5
+guide said: "Readers require the nested receipt version and the exact
+producer/stage values for a captured receipt." Line 308 of the v0.3.5 tree's
+`RELEASE-STAMPED-CONTRACTS-PLAN.md` expected that, for a "detached
+compiled-profile receipt", a "wrong nonce, worker or hash binding still
+fails". Which reader that plan row meant was not established. No reader at
+v0.3.5 or HEAD makes those comparisons. Related: DT-96 and DT-101.
+
+### DT-96 — The host decoder writes `producer` and `capture_stage` as constants; no record observes who copied the bytes or when
+
+**Statements examined.** "`worker` on a captured receipt identifies the
+component that captured the bytes." "`before_apply` on a captured receipt
+identifies when the worker captured the bytes." (RESPONSE lines 2538–2539;
+surface lines 55 and 59.) The labels rule checks these two values. The guide
+(lines 739–741) says that the controller "requires the exact producer/stage
+labels for a captured receipt", and that "This label admission and the host's
+byte/input checks are separate boundaries."
+
+**Source.** The worker's capture record `pw_shm_capture_t`
+([pw_probe_runner_abi.h](../controller/tools/pw_probe_runner/pw_probe_runner_abi.h)
+lines 575–588) holds completion, status, type, length, PID, source length,
+parameter count, three digests and the nonce. It has no producer or stage
+field. On its single success path, `decodeProfileCapture`
+([CWorker.swift](../runner/Sources/PWRunnerCore/CWorker.swift) lines 712–716)
+writes the literals `producer: "worker", capture_stage: "before_apply"`.
+
+The stage is true because of the worker's straight-line order:
+
+1. compile (pw_probe_runner.c line 1574);
+2. capture (lines 1594–1601);
+3. an optional pre-ready sleep;
+4. the ready byte;
+5. `sandbox_apply` (line 1641).
+
+The worker's progress word records `PW_OP_CAPTURE` (6). It is one value that
+later operations overwrite (abi line 389). In probe C it read operation 9
+(attempt), stage 2, at collection.
+
+**Consequence for the check.** The controller's two label comparisons can
+detect only a reply whose producer writes different constants, such as one
+from a different build or one with altered bytes. They test no observation of
+the capturing process or of the order. Capture before application rests on a
+reading of the worker's source, together with the host's separate requirement
+that application succeeded afterwards (CWorker.swift line 685). The cited
+label test (DT-95) and the Swift label test (CompiledProfileCaptureTests.swift
+lines 37–54) change these constants after construction.
+
+**History.** The labels were added in `b6e6c313` (2026-10-16, "Name
+compiled-profile capture and expose its worker stage"). The original decoder
+in `660de67b` (2026-09-14, first tagged in v0.2.3) had neither label.
+Related: DT-95.
+
+### DT-97 — The capture nonce travels from the host's header to the host's comparison and enters no compiled byte or digest
+
+**Statements examined.**
+
+- REQUEST line 733: `capture_nonce` is "exactly 32 lowercase hexadecimal
+  characters encoding the caller's nonce."
+- RESPONSE line 2540: "The host returns the request's capture nonce after
+  comparing it with the worker's recorded bytes. A comparison with a
+  separately retained request nonce supplies a consumer's request
+  association."
+- The Nonce association guard (line 2593): "The recorded nonce bytes equal the
+  valid request nonce."
+- The source owner (line 2636) pins: "Fields bind the observed worker, nonce
+  and consumed input bytes."
+- ARCHITECTURE line 612 describes an "opt-in copy of the compiled object with
+  a nonce."
+- The guide asks for "a fresh per-application `capture_nonce`" (line 720) and
+  says that "Consumers must join the nonce and worker identity to their own
+  request" (lines 756–757).
+
+**Path (source).**
+
+1. The host admits the request string by format only. `policyMeaningFailure`
+   ([ProbeRunner.swift](../runner/Sources/PWRunnerCore/ProbeRunner.swift)
+   lines 64–70) calls `captureNonceBytes` (CWorker.swift lines 672–677),
+   which requires 32 UTF-8 bytes from `0-9a-f`.
+2. `CWorkerOrchestrator` passes the string as `captureNonce` (lines
+   124–125).
+3. `ActorSession` zeroes the per-worker mapping (line 133), then writes
+   `capture_requested` and the 16 decoded bytes into the header (lines
+   152–155).
+4. Before parameter setup, the worker copies the header bytes to a local
+   array (pw_probe_runner.c lines 1531–1532).
+5. `pw_capture_profile` copies them into the capture record
+   (pw_profile_capture.h line 64).
+6. The host decodes the request string again and compares the result with the
+   record (CWorker.swift lines 694–697).
+7. On success the host emits the request string, not the recorded bytes (line
+   713).
+
+The nonce is not passed to `sandbox_compile_string`, `sandbox_set_param` or
+any digest. Both operands of the comparison come from bytes the host wrote
+into one mapping. The comparison can detect a capture record that was not
+written from this mapping's header, such as a zeroed record. The record's PID
+is checked separately against the reaped worker (line 693).
+
+**Executed.** `receipt_repeat.py` ran B's and B2's policies three times each,
+with `probe_plan: []` and a fresh `secrets.token_hex(16)` nonce for every run.
+Every receipt was `captured`, and each `request_nonce` equaled its request's
+nonce. The six worker PIDs fell between 9386 and 9409.
+
+- Every B receipt had 492 bytes, `b2056ef2…97e0`.
+- Every B2 receipt had 524 bytes, `a2b35cd2…d4b0`.
+
+These are the same digests as in probes B and B2 and in the registered case,
+all of which used other nonces. The bytes and their digest therefore do not
+vary with the nonce. No receipt field combines the nonce with the bytes.
+`request_nonce` thus associates a receipt with a request only together with
+the reply in which the host placed it.
+
+**Freshness.** The refusal text is "capture_compiled_profile requires a fresh
+32-character lowercase hex capture_nonce" (CWorker.swift line 744;
+PWRunnerRequest.swift line 41). The host keeps no record of earlier nonces; it
+checks only length and alphabet (source reading). Reuse of a nonce was not
+executed.
+
+**Checks.**
+
+- The Swift fixture flips one bit of the recorded nonce and asserts
+  `unavailable`, without checking the reason (DT-101).
+- `capture.c` asserts that the copy equals its input (lines 29 and 57).
+- Live tests assert that `request_nonce` equals the request's nonce
+  (contract.py lines 326, 431 and 484).
+
+No test supplies a valid but different nonce. No test establishes what the
+association adds beyond the PID check and the per-worker mapping.
+
+**History.** The header copy, the record copy and the comparison are
+unchanged since `660de67b`. Related: DT-95 and DT-98.
+
+### DT-98 — The receipt's input identity covers source and parameters; a changed imported file changes the bytes and no identity field
+
+**Statements examined.**
+
+- The Consumed input guard (RESPONSE line 2599; surface line 263): "The
+  recorded source length and digest and parameter count and digest equal the
+  host's supplied inputs."
+- The source owner (line 2636): "Fields bind the observed worker, nonce and
+  consumed input bytes."
+- The guide (line 746): "The receipt identifies compiler output."
+- RESPONSE line 874: "Files named by imports can change between these
+  independent reads. A literal inventory describes the producer's walk; the
+  worker compiled-profile receipt has its own observation boundary."
+
+**Executed.** `receipt_import.py` used the 155-byte source `(version
+1)\n(import "<probe3>/inc.sb")\n`, with capture and no parameters. It ran
+twice and rewrote `inc.sb` between the runs:
+
+| Run | `inc.sb` contents | `source_sha256` and `source_length` | `params_sha256` | Bytecode | Dossier `imports.closure_sha256` |
+| --- | --- | --- | --- | --- | --- |
+| 0 | `(allow default)\n` (`f59a5f95…7bbf`) | `37dbde4d…0791`, 155 | `df3f6198…1119` | 492 bytes, `b2056ef2…97e0` | `238dfe52…e5bd` |
+| 1 | the same, plus `(deny file-write* (literal "/private/var/empty/pw-import-control"))` (`1b5fb7c6…38db`) | `37dbde4d…0791`, 155 | `df3f6198…1119` | 548 bytes, `f7dbbaca…8718` | `5553e2c6…51a2` |
+
+Both receipts were `captured`, and both runs finished with exit 0. Every
+identity field in the receipt was equal across the two runs, while the
+bytecode differed. Run 0's bytes equal those from probe B's inline source
+`(version 1) (allow default)`. The controller makes a separate read of the
+imported file for the dossier, and its closure digest changed with the file.
+No receipt field refers to it.
+
+**Limits.** The two compilations were separate runs, not two reads within one
+run. The worker's reads of imported files were not traced. The statements
+describe consumed source and parameters; none of them claims imported bytes.
+"Consumed input bytes" in the source owner and "identifies compiler output" in
+the guide are the passages a reader could take as complete identity. Related:
+DT-84 and DT-85 (inventory records are not the compiler's reads), and the
+import-inventory limits, where changes to imported files between reads and
+worker-side compilation were not exercised. See also DT-103.
+
+### DT-99 — Three worker capture failures share one host reason; the host's extent/type reason is reachable only through a record the shipped worker does not publish
+
+**Statements examined.** The host rule orders its guards and reasons (RESPONSE
+lines 2574–2602; surface lines 127–279). Capture status, "The recorded capture
+status was accepted," gives `worker_capture_refused`. The later Extent and
+type guard, "The profile type is zero and its raw byte count is positive and
+at most 1,048,576 bytes," gives `capture_extent_or_type_invalid`. LIMITS line
+191 says "Oversized or unsupported objects leave capture unavailable without
+preventing policy application." LIMITS line 364 says "Capture supports
+nonempty single-profile (type 0) objects."
+
+**Source.** The worker records one of four status values (abi lines 573–574;
+pw_profile_capture.h lines 64–86):
+
+- 1: captured;
+- 2: "unsupported layout/type/length";
+- 3: "unreadable object";
+- 4: "malformed consumed input".
+
+The worker publishes 1 only after all of these hold: type 0, a zero
+`reserved` word, a length that is nonzero and at most 1 MiB, a nonnull
+pointer and a complete payload read. The host maps any status other than 1 to
+`worker_capture_refused` (CWorker.swift line 692). It checks type and extent
+only afterwards (lines 698–701).
+
+With the shipped worker, an oversized, bundle-typed, empty or unreadable
+compiled object therefore yields `worker_capture_refused`. The only route to
+`capture_extent_or_type_invalid` is a record with status 1 and an invalid
+extent or type, which the worker's own checks prevent. The receipt has no
+field for the worker's status code, so a consumer cannot tell "unsupported"
+(the oversized and unsupported cases in LIMITS) from "unreadable". No
+statement mentions the `reserved == 0` requirement.
+
+Status 4 also appears unreachable. Before `sandbox_set_param`, the worker
+refuses any parameter that lacks a NUL within its fixed buffer
+(pw_probe_runner.c lines 1547–1554). Those buffers are 128 and 384 bytes (abi
+lines 112–113 and 566–567). The source length is bounded far below
+`UINT32_MAX`.
+
+**Checks.** `capture.c`
+([runner_abi_layout/capture.c](../tests/suites/runner_abi_layout/capture.c))
+calls the production `pw_capture_profile` on constructed memory. It asserts:
+
+- status 2 for 1 MiB + 1 and for type 1 (lines 36–42 and 71–76);
+- status 3 for invalid pointers (lines 77–81);
+- status 4 for an unterminated key (lines 82–84).
+
+The Swift tests reach `capture_extent_or_type_invalid` only with constructed
+status-1 records (DT-101). No test names `worker_capture_refused`; `git grep`
+over `tests`, `runner/Tests` and `controller/src` finds none. None of these
+cases was executed live.
+
+**History.** The status codes, the collapse into one reason and the guard
+order date from `660de67b` (v0.2.3). Apart from field types, the decoder at
+v0.3.5 is identical. The reason strings first appear in the documentation at
+v0.3.7 (`f6551bf9`). Related: DT-100 and DT-101.
+
+### DT-100 — The first-failure order starts with application and completion; a capture that never ran and one that completed and was withheld report the same three fields
+
+**Statements examined.** "`unavailable` states that a capture condition
+failed" (RESPONSE line 2535), and "The host names the first failing capture
+condition" (line 2536). The guide (lines 735–746) says:
+
+- "Missing capture, failed apply, worker death or capture corruption is
+  unavailable."
+- "An opt-in request alone does not establish that capture ran."
+- "An unavailable capture does not establish application failure."
+
+The Capture failure effect withholds eleven fields and retains
+`reply.normalized_outcome` (line 2601).
+
+**Source.** `decodeProfileCapture` checks application (`applied && applyRC ==
+0`, line 685) and worker completion (line 686) before it reads any capture
+word. `collectOutput` takes `applied` from the worker's published flag
+(ActorSession.swift lines 630–642). No classifier reads `profileCapture`. It
+is used only where it is constructed (ActorSession.swift lines 737–741) and in
+reply assembly (CWorkerOrchestrator.swift line 226).
+
+**Executed.**
+
+- **Compile failure.** This is an ordinary input, not a control
+  (`receipt_compile_fail.py`). The source `(version 1) (allow
+  no-such-operation)` was sent with capture requested. The run exited 1 with
+  `runner_failed` and `sandboxed_after_apply: false`. Worker 16870 exited 0
+  with `done_observed: true`. `worker_evidence.failure` showed operation 5
+  (compile) with `native_kind` 2, and `progress` showed operation 5, stage 2.
+  The worker exits at pw_probe_runner.c lines 1582–1589, before the capture
+  block at line 1594. The receipt was `{status: unavailable, reason:
+  successful_application_unconfirmed, worker_pid: 16870}`.
+- **Kill after application.** Probe C and the registered
+  `capture_worker_death` show `progress` operation 9, stage 2;
+  `readiness.rc` 0; `sandboxed_after_apply: true`; and `term_signal` 9. In
+  the worker's straight-line code, capture (operation 6) precedes readiness
+  (7) and application (8), so the capture function had returned before
+  application. The receipt was `{status: unavailable, reason:
+  worker_not_complete, worker_pid}`. The capture record's completion and
+  status words are not projected.
+
+In neither case does the receipt alone say whether capture was attempted. The
+reply's worker evidence does: a published compile failure in the first case
+and observed application in the second. Neither unavailable receipt changed
+the reply outcome. In both cases `runner_failed` came from the worker
+failure, whereas B, whose capture succeeded, finished. This agrees with
+`retain_assessments(reply.normalized_outcome)`. In probe C, the controller and
+the consumer admitted the receipt. The envelope kept the diagnostics, the
+completed `create` step and the created file.
+
+**Checks.** The registered case (contract.py lines 498–512) asserts:
+
+- `unavailable` with `worker_not_complete`;
+- no `producer`, `capture_stage` or `bytecode_b64`;
+- `sandboxed_after_apply`;
+- `term_signal` 9;
+- the created file.
+
+It does not assert the absence of the other eight withheld fields, although
+both observations here lacked them. No test requests capture for a policy
+that fails to compile. Related: DT-99.
+
+### DT-101 — The host-check support constructs every receipt premise; its corruption loop asserts unavailability but no reasons, and six of nine reasons occur in no test
+
+**Support examined.** The check-read owner (RESPONSE line 2604; surface lines
+281–290) pins: "The read checks construct worker bytes, corrupt each capture
+input and assert unavailability and withheld bytecode." Its limit says the
+fixture "establishes host checks; the native same-pointer capture is
+source-supported here." ARCHITECTURE line 637 cites the same check for
+"admitted only after successful application, completion, PID, nonce, input
+identity and payload integrity checks."
+
+**Fixture construction.**
+[CompiledProfileCaptureTests.swift](../runner/Tests/PWRunnerCoreTests/CompiledProfileCaptureTests.swift)
+lines 12–29 build one 144-byte header followed by a payload. They use literal
+offsets, not `PWShmLayout` constants; only the buffer size uses the
+constants. The header holds:
+
+- completion 1, status 1, length 3 and PID 4321;
+- the source length, a parameter count of 1 and the source digest;
+- a parameter digest for `TARGET=/a`, built from literal LE lengths;
+- the payload digest and the nonce `00 11 … ff`.
+
+The payload is `[10,20,30]`. `read` (lines 30–36) calls
+`decodeProfileCapture` directly with injected `applied`, `applyRC`, `done`,
+`exitCode` and `termSignal` values. No worker, compilation, capture code,
+mapping or reaping is involved. The test supplies every premise of the
+receipt, including the application and completion facts.
+
+**Assertions.**
+
+- The corruption loop (lines 67–76) flips bit 0 at 11 offsets. For each, it
+  asserts `status == "unavailable"`, `bytecode == nil` and
+  `bytecode_sha256 == nil`. By the source order, these 11 corruptions reach
+  seven different reasons:
+  - completion: `capture_not_complete`;
+  - status: `worker_capture_refused`;
+  - type: `capture_extent_or_type_invalid`;
+  - PID: `capture_worker_mismatch`;
+  - nonce: `capture_nonce_mismatch`;
+  - payload digest and payload: `capture_bytecode_digest_mismatch`;
+  - source length, parameter count, source digest and parameter digest:
+    `capture_consumed_input_mismatch`.
+
+  The loop asserts neither these reasons nor the absence of the other nine
+  withheld fields.
+- The extent loop (lines 77–83) asserts `capture_extent_or_type_invalid` for
+  lengths 0, 1,048,577 and `UInt32.max`, each with status 1 (DT-99).
+- Application and completion (lines 84–91): `successful_application_unconfirmed`
+  is asserted once, for `applied: false`. The `applyRC: -1`, `done: false` and
+  signal 9 cases assert only the status. A nonzero exit without a signal is not
+  exercised.
+- The label test (lines 37–54) and the round trip (lines 98–110) change the
+  constant labels after construction (DT-96).
+- Lines 111–119 call `runCWorker` with `/nonexistent` and four invalid nonces,
+  and require `.captureNonceInvalid`. This path reaches `ActorSession`'s check
+  before any mapping or spawn (ActorSession.swift lines 71–73).
+
+No case combines two failing conditions, so the first-failure order has
+source support only. `git grep` over `tests`, `runner/Tests` and
+`controller/src` finds no file naming any of six reasons:
+
+- `capture_not_complete`;
+- `worker_capture_refused`;
+- `capture_worker_mismatch`;
+- `capture_nonce_mismatch`;
+- `capture_bytecode_digest_mismatch`;
+- `capture_consumed_input_mismatch`.
+
+`capture_nonce_mismatch` is one of the three values RESPONSE displays.
+`worker_not_complete` is asserted live (DT-100).
+
+The other constructed receipts in the Swift tests are encoding fixtures. One
+of them, `value46` at ReplyFailureTests.swift line 88, is `captured`, has
+`reason: "constructed"`, and carries a digest that does not match its bytes.
+The host's reporting validation accepts it.
+
+The support's pin matches these assertions. The guard-specific reasons, the
+order and the eleven withheld fields named in the rule go beyond them.
+Related: DT-38 (assertion scopes combined in check-read support), DT-99 and
+DT-100.
+
+### DT-102 — No live test captures with parameters; C/Swift agreement on a nonempty parameter digest was observed once here
+
+**Statements examined.** The Captured input identity definition (RESPONSE
+lines 2562–2565; surface lines 110–112). The guide (lines 753–755) says: "The
+worker hashes its private copy of the strings passed to `sandbox_set_param`;
+the host independently recomputes the identity."
+
+**Checks.** Every live capture assertion about parameters uses none:
+contract.py line 332, check_actor_compositions.py lines 134–135
+(`params_sha256 == sha256(bytes(4))`) and guide_workflows.py line 470.
+`capture.c` lines 65–70 assert that the C digest is independent of order and
+sensitive to a changed value, but do not check its value. The Swift test
+checks the host's value against an independently framed digest for one pair
+(lines 21–24) and checks order independence (lines 92–97). No test compares
+the C value for a nonempty parameter set with the Swift value or with an
+independent value. A disagreement would appear live only as
+`capture_consumed_input_mismatch`, a reason no test names (DT-101).
+
+**Executed.** In B2 (`ROOT=/etc`, `Z=é`), the worker's `params_sha256` was
+`2a4f1d69…95fd`, equal to the recomputation by `receipt_check.py`. The receipt
+was `captured`, which by the guard order also means that the host's Swift
+recomputation agreed. This establishes agreement for one input with two
+parameters and one non-ASCII value, not agreement in general. Related:
+DT-101.
+
+### DT-103 — The bytes come through a private 24-byte view; available checks establish consistency and repeatability, not the object's layout or what application consumed
+
+**Statements examined.** `bytecode_b64`: "The bytes copied from the compiler
+object passed to `sandbox_apply`" (RESPONSE line 2544). The source owner's
+limit (line 2636): "Live capture behavior and platform private-layout
+compatibility require their native checks." `capture.c` lines 1–2:
+"Construct the private layout independently; live authored controls
+separately qualify that layout." The guide (lines 746–747): "None is a
+readback of the kernel's effective policy."
+
+**Source.** The worker reads the returned `profile` through
+`pw_compiler_profile_t`
+([pw_profile_capture.h](../controller/tools/pw_probe_runner/pw_profile_capture.h)
+lines 15–22): a `uint32_t` type, a `uint32_t` reserved word, a bytecode
+pointer and a `size_t` length. Only the 24-byte size is asserted statically.
+Each read uses `mach_vm_read_overwrite` (lines 53–58), so an invalid pointer
+is refused rather than dereferenced. The same `profile` pointer goes to
+`sandbox_apply` (pw_probe_runner.c lines 1574, 1598–1600 and 1641). Between
+capture and application there are only the optional pre-ready sleep, the
+ready-byte write and progress stores (lines 1603–1640).
+
+**Executed.** The decoded length and SHA-256 matched the receipt for every
+capture: B, B2, the two registered captures, the six repeats and the two
+import runs. Equal inputs gave equal bytes, and different policies gave
+different bytes. An imported `(allow default)` gave the same bytes as the
+inline form.
+
+The import-inventory investigation's "Native bytecode probe"
+(`bytecode_digest.c`) read 492 bytes, `b2056ef2…97e0`, for an allow-default
+source. It ran in a separate process but through the same 24-byte view. This
+is agreement across processes under the same layout reading, not an
+independent decoding.
+
+**What qualifies the layout.** The WORKER inventory rows s27, x5, W14, W38
+and W54 cite `max_targets_reply_survives` as their live control. That control
+requires `status == "captured"` and `bytecode_length > 0`
+(check_max_target_reply.py lines 253 and 378). Other live tests add the
+decoded length and digest check. Together these establish two facts on this
+macOS build. First, the four words read as type 0, reserved 0, a readable
+pointer and a length within the limit. Second, the copied bytes are
+deterministic.
+
+No check compares the bytes with a reference compilation, decodes them, or
+shows that `sandbox_apply` submits those bytes. The source owner's limit does
+not name the native checks it refers to. Related: DT-98.
+
+### DT-104 — Smaller observations on the receipt admission tests and statements
+
+- **Decode failures stand in for label failures in eight fixture rows.**
+  Eight of the 17 invalid rows in `compiled_profile.json` fail the test-only
+  serde reader before admission: `producer` false or 7, `capture_stage` false
+  or 7, and `status` null, false, 7 or absent. In
+  `compiled_profile_labels_determine_the_public_admission_outcome`,
+  `observe_client` (run_flow.rs lines 2658–2676) turns such a row into a
+  client `runner_reply_error` with `Malformed`. For those rows,
+  `runner_result` is null and the outcome is still
+  `malformed_runner_response`. Nine rows reach `admission_problem`.
+  `compiled_profile_context_is_gated_after_the_response_version` (line 1929)
+  counts a serde failure as not accepted. The cited run test never uses the
+  binary reader: it types replies from JSON through the `cfg(test)`
+  `Deserialize` derive. The support's context says "Constructed typed
+  replies."
+- **The run test cannot tell withhold from null.** DT-37 records that the
+  label-failure effect for `run` withholds the diagnostics, while the
+  context-refusal effect sets them to null. The run test checks
+  `wire["data"]["runner_sandbox_diagnostics"].is_null()`. `serde_json`
+  indexing returns `Null` for a missing key as well as for a JSON null, so the
+  test cannot distinguish the two forms.
+- **The credited run.** The run-label support names run
+  `20261110T195016Z_0d197151` at `5e51300d`. That run is not under
+  `tests/out/runs/` in this checkout. At HEAD the test body is byte-identical:
+  the MD5 of the extracted function is unchanged. `compiled_profile.json` and
+  `admission_problem` are also unchanged since `5e51300d`. The test passed in
+  `20261116T192345Z_79fbbaf4`.
+- **`reason` presence.** The host always supplies `reason` on `unavailable`
+  and never on `captured` (CWorker.swift lines 682–683 and 712). No reader
+  requires either; the mutations in DT-95 that added a reason to a captured
+  receipt and removed it from an unavailable one were accepted. The field's
+  type is `string?`.
+
+### Receipt coverage and remaining investigative limits
+
+The trace covered:
+
+- the declaration and the host's admission of it;
+- the path of the nonce, source and parameters from the request to the worker
+  header, the policy pipe and the parameter snapshot;
+- the worker's compile, capture and apply order, and its capture function;
+- the shared-memory record and the host decoder;
+- insertion of the receipt into the ordinary reply;
+- the controller's binary reader, admission and envelope path for `run`;
+- the independent consumer's receipt rules;
+- every test that names a receipt reason or asserts receipt bytes or
+  parameters.
+
+Affirmative observations within their tested scope:
+
+- When capture was not requested, the receipt key was absent from both the
+  JSON and the host bytes. The registered corpus asserts the same for its
+  non-capture examples through the CLI and XPC.
+- For the captured contrasts, each of the following agreed with the request
+  and the reply: the decoded length and digest, the source digest and length,
+  the independently computed parameter digest, the nonce and the worker PID.
+- The controller's JSON receipt equaled the receipt decoded independently
+  from the retained host bytes.
+- The kill-after-application control produced the documented `unavailable`
+  receipt with reason `worker_not_complete`, and every capture field was
+  withheld. Application, the attempt's result and its effect were reported
+  separately.
+- The three registered cases passed without system sleep.
+
+These observations do not establish:
+
+- that the bytes come from the compiler's object, beyond the private layout
+  reading;
+- how the bytes relate to what `sandbox_apply` submitted;
+- any kernel state (DT-103).
+
+Not exercised:
+
+- live `worker_capture_refused` or `capture_not_complete`;
+- live PID, nonce, digest or consumed-input failures; for ordinary inputs, the
+  shipped worker does not publish the records these need;
+- an oversized or non-type-0 compiled object;
+- a reused nonce;
+- augments with capture; the dossier's `applied_sha256` equaled
+  `source_sha256` only without augments;
+- the controller's response to edited receipts, which is inferred from source
+  and the two constructed Rust tests rather than run through
+  `policy-witness run`;
+- actor receipts, BYOXPC and `runner verify`.
+
+The saved-reply mutations exercised the Python consumer, not the controller.
+Historical inspection covered:
+
+- the origin of capture (`660de67b`);
+- the labels (`b6e6c313`);
+- the decoder, controller check and guide at v0.3.5;
+- the first documentation of the reasons (v0.3.7).
+
+It establishes when mechanisms and statements appeared, not how older
+binaries behaved.
+
+Only this record was changed among tracked files. The registered run added
+development output under `tests/out/runs/profile-receipt-trace/`, and the
+pinned pytest target was provisioned under `.tmp/pytest/`. These entries
+contain no repair, deduplication or choice of authoritative layer.
