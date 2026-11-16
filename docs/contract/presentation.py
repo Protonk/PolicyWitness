@@ -181,8 +181,10 @@ def render(root, tree):
                 if node.kind == 'subject' and homes[node.parent.id] != document:
                     for owner in node.parent.children:
                         if owner.kind == 'owner' and owner.facts.get('scope') == 'subtree':
-                            inherited.append('Inherited surface support: ' + model._link(owner) +
-                                             ' (original subtree scope).')
+                            notice = ('Inherited surface support: ' + model._link(owner) +
+                                      ' (original subtree scope).')
+                            if notice not in inherited:
+                                inherited.append(notice)
             body = '\n\n'.join([*inherited, body])
             body = rebase(body, document, homes)
             if document == CONTRACT:

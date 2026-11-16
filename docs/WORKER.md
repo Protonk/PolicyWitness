@@ -163,7 +163,7 @@ worker memory before apply. The host
 [`decodeProfileCapture`](../runner/Sources/PWRunnerCore/CWorker.swift) validates
 and copies the published receipt. Its relation to compiled bytes, application
 and effective permissions is defined by the
-[receipt contract](PolicyWitness.md#compiled-object-receipt-opt-in).
+[receipt contract](RESPONSE.md#contract-profile-receipt).
 
 <!-- BEGIN GENERATED CONTRACT commitments_apparatus -->
 Commitments explained here:
@@ -297,7 +297,7 @@ those actions determine what is observed:
 
 The [existing-file control](../tests/suites/witness_contract/README.md#create-on-an-existing-file)
 checks preserved bytes and object identity in its case. The
-[fresh-read contract](PolicyWitness.md#extension-and-fresh-read-output) defines
+[fresh-read contract](RESPONSE.md#contract-steps-fresh_read) defines
 which native observations and bounded bytes reach the reply.
 
 Exec setup is also inside the attempt, after apply.
@@ -373,7 +373,7 @@ The service validates its own seal, its sealed `Contents/Resources/worker-equipm
 
 Actor setup automatically records bounded apparatus observations before policy compilation/application: core-limit handling, authority mapping and framing, descriptor closure and each extension-symbol lookup. Missing extension symbols make the corresponding actions unavailable; required apparatus failure prevents application. Setup publication, application observation and final process disposition remain separate. Missing terminal publication leaves application uncertain rather than proving it did not happen.
 
-A phase may specify `after_termination: {"actor_id": "issuer"}` when that actor's last scheduled visit precedes it. Before activation or query collection, the host requires an owned natural reap after source final activation, including abnormal exit; final phase completion is not required. The gate does not kill its source and expiry stays closed after later cleanup. Missing source activation/reap timestamps prevent satisfaction; a missing timestamp after dependent activation was stored retains that activation and its satisfied gate. [CONTRACT](RESPONSE.md#contract-actor_evidence-gate) owns the capture-order, clock and reference rules.
+A phase may specify `after_termination: {"actor_id": "issuer"}` when that actor's last scheduled visit precedes it. Before activation or query collection, the host requires an owned natural reap after source final activation, including abnormal exit; final phase completion is not required. The gate does not kill its source and expiry stays closed after later cleanup. Missing source activation/reap timestamps prevent satisfaction; a missing timestamp after dependent activation was stored retains that activation and its satisfied gate. [RESPONSE](RESPONSE.md#contract-actor_evidence-gate) owns the capture-order, clock and reference rules.
 
 Fresh reads acquire a new descriptor at each requested action. Native consume/release observations are separate from those access effects; release success does not establish revocation.
 

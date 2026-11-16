@@ -90,6 +90,13 @@ subject ancestor. A surface owner keeps its original self/subtree scope when its
 descendants render elsewhere. Cross-document subjects link to inherited support,
 and support details in CONTRACT link back to their local statements.
 
+Within authored surfaces, a `#contract-…` link names a canonical node; the
+`CONTRACT.md#contract-…` and `./CONTRACT.md#contract-…` forms name the same
+node. Rendering resolves these links to the node's mapped document. The link
+checker verifies that the rendered destination actually contains the anchor.
+Other document paths retain their literal destinations, including historical
+copies, and links in generated documents are checked independently of the map.
+
 The separate `commitments` list names a tour document, region and subject/rule
 IDs. These associations say which commitments a section explains. They are
 reviewed navigation, not test coverage. Complete meanings stay in the surface

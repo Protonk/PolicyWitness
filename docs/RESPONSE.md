@@ -3611,12 +3611,6 @@ These direct commands inspect a PID or perform a native query. Their argument er
 <!-- BEGIN GENERATED CONTRACT validator -->
 Inherited surface support: [Implementation and evidence](ARCHITECTURE.md#contract-wire-support) (original subtree scope).
 
-Inherited surface support: [Implementation and evidence](ARCHITECTURE.md#contract-wire-support) (original subtree scope).
-
-Inherited surface support: [Implementation and evidence](ARCHITECTURE.md#contract-wire-support) (original subtree scope).
-
-Inherited surface support: [Implementation and evidence](ARCHITECTURE.md#contract-wire-support) (original subtree scope).
-
 <a id="contract-wire-standalone"></a>
 ### Direct validator commands
 

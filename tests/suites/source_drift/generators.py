@@ -176,9 +176,12 @@ def prose_inputs(root=ROOT):
     return sorted(found)
 
 
-def broken_links(paths):
+def broken_links(paths, root=ROOT):
     """Check local files, heading anchors and backticked-symbol link labels (G11)."""
     broken = []
+    root = Path(root).resolve()
+    contract_targets = None
+    contract_sources = set()
     for path in paths:
         documents = public_link_documents(path)
         if any(document.references for document in documents):
@@ -189,6 +192,33 @@ def broken_links(paths):
                 continue
             filename, separator, anchor = target.partition('#')
             destination = path.parent / filename if filename else path
+            if (separator and anchor.startswith('contract-') and
+                    filename in ('', 'CONTRACT.md', './CONTRACT.md') and
+                    path.parent.resolve() == root / 'docs/contract' and path.name.endswith('.surface.md')):
+                # Canonical links in authored meanings name nodes independently
+                # of presentation. Only parsed surface inputs get this route;
+                # emitted documents still have to name a real file/anchor.
+                if contract_targets is None:
+                    try:
+                        gen = module('contract_link_owner', root / 'docs/generate_contract_stamps.py')
+                        runtime = gen.contract_module('runtime')
+                        tree = runtime.model.load_tree(root)
+                        _, homes = runtime.presentation.load(root, tree)
+                        contract_sources = {(root / surface.source).resolve() for surface in tree.surfaces}
+                        contract_targets = {runtime.model._anchor(node): root / homes[node.id]
+                                            for node in tree.nodes}
+                        contract_targets.update({runtime.model._anchor(node) + '-details': root / runtime.CONTRACT
+                                                 for node in tree.nodes if node.kind == 'owner'})
+                        contract_targets.update({name: root / runtime.CONTRACT for name in
+                                                 ('contract-notation', 'contract-support-grades')})
+                    except (OSError, ValueError, KeyError) as error:
+                        broken.append(f'{path}: invalid contract link ownership: {error}')
+                        continue
+                if path.resolve() in contract_sources:
+                    if anchor not in contract_targets:
+                        broken.append(f'{path}: unknown contract anchor {target}')
+                        continue
+                    destination = contract_targets[anchor]
             if not destination.exists():
                 broken.append(f'{path}: missing file {target}')
                 continue
@@ -781,6 +811,49 @@ class GeneratorContractTests(receipts.TestCase):
         for content in ('<!-- [target](absent.md) -->', '`[target](absent.md)`', '<!--\n[target](absent.md)\n-->'):
             path.write_text(content)
             self.assertEqual(broken_links([path]), [], content)
+
+    def test_canonical_surface_links_resolve_owned_nodes_and_require_rendered_anchors(self):
+        root = self.checkout(('contract_stamps',))
+        source = root / 'docs/contract/21-wire.surface.md'
+        original = source.read_text()
+        canonical = '[validator query and reply line protocol](#contract-wire-validator)'
+        self.assertIn(canonical, original)
+        for filename in ('', 'CONTRACT.md', './CONTRACT.md'):
+            source.write_text(original.replace(canonical, f'[validator protocol]({filename}#contract-wire-validator)'))
+            self.assertEqual(broken_links([source], root), [], filename)
+        source.write_text(original)
+        # The statement belongs in ARCHITECTURE, independently of this test's
+        # use of the map to admit canonical authoring links.
+        destination = root / 'docs/ARCHITECTURE.md'
+        marker = '<a id="contract-wire-validator"></a>'
+        rendered = destination.read_text()
+        self.assertIn(marker, rendered)
+        destination.write_text(rendered.replace(marker, '', 1))
+        self.assertIn('missing heading #contract-wire-validator', '\n'.join(broken_links([source], root)))
+        destination.write_text(rendered)
+        source.write_text(original.replace(canonical, '[unknown](#contract-no_such_node)'))
+        self.assertIn('unknown contract anchor #contract-no_such_node', '\n'.join(broken_links([source], root)))
+        # A historical relative path is literal even when its basename and
+        # anchor match a known current commitment. Current routing cannot repair it.
+        historical = root / 'docs/history/v0.3.7/CONTRACT.md'
+        historical.parent.mkdir(parents=True)
+        historical.write_text('# Historical contract\n')
+        historical_target = '../history/v0.3.7/CONTRACT.md#contract-wire-validator'
+        source.write_text(original.replace(canonical, f'[historical protocol]({historical_target})'))
+        self.assertIn('missing heading ' + historical_target, '\n'.join(broken_links([source], root)))
+        historical.write_text('# Historical contract\n' + marker + '\n')
+        self.assertEqual(broken_links([source], root), [])
+        historical.unlink()
+        self.assertIn('missing file ' + historical_target, '\n'.join(broken_links([source], root)))
+        source.write_text(original)
+        # An emitted document with a stale local target cannot be rescued by
+        # the source map, even though that same canonical source link is valid.
+        response = root / 'docs/RESPONSE.md'
+        before = response.read_text()
+        target = '(ARCHITECTURE.md#contract-wire-validator)'
+        self.assertIn(target, before)
+        response.write_text(before.replace(target, '(#contract-wire-validator)', 1))
+        self.assertIn('missing heading #contract-wire-validator', '\n'.join(broken_links([response], root)))
 
     def test_line_level_prose_keeps_lines_and_reads_only_prose(self):
         span = '<!-- span limits.step_id.value -->11 seconds<!-- /span -->'

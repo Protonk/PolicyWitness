@@ -1,8 +1,8 @@
 # Request, response and public-commitment tracing
 
-Status: draft for implementation. No documentation relocation, tree change or
-generator change has been made. The preparation and execution notes at the end
-distinguish inspection from completed implementation and verification.
+Status: implementation and editorial review complete; final signed-build and
+integrated verification in progress. The execution notes at the end distinguish
+source readings, historical observations and newly executed checks.
 
 ## Purpose, readers and authority to proceed
 
@@ -1011,3 +1011,28 @@ worker identity is `cc2502d5da48a2a36e0ef73de394536174e32c2b487a2a7b7981e17d83f2
 Worker identity, porcelain and interface checks passed. Next: integrated source
 controls, signed build, offline/native suites and default battery against these
 final selected source bytes.
+
+Editorial acceptance is recorded in the
+[three reader answers and protocol rereading](records/documentation-trace/editorial-acceptance.md).
+The [guide rewrite outflow](records/GUIDE-REWRITE-OUTFLOW.md) records the stale
+developer-pointer description and bounded understatements without inventing a
+guide contradiction. No further protocol promotion or public correction was
+needed. Duplicate inherited-support notices and three stale authority/link labels
+were cleaned up; the [navigation proof](records/documentation-trace/final-navigation-proof.json)
+confirms unchanged payloads and final build identities.
+
+The integrated `source_drift` run at
+`tests/out/runs/documentation-trace-source-drift` passed 10 of 11 cases. Only
+`generator_contract` failed: its source-link checker treated the canonical
+`#contract-wire-validator` reference in an authored surface as a source-file
+heading. The rendered link and its destination were correct. A scoped checker
+adaptation with independent unknown/missing-target controls is being completed;
+final verification remains pending. The earlier failed placement run remains
+separate local evidence. No source input affecting native behavior changed.
+
+The corrected `source_drift/generator_contract` case passes in
+`tests/out/runs/documentation-trace-link-check`. Its controls independently reject
+missing rendered anchors, unknown canonical nodes and stale emitted links, and
+preserve literal historical paths. The history-required contract check also
+passes. Next: commit the final navigation/checker work, make the signed build,
+then run the integrated offline/native selection and default battery.

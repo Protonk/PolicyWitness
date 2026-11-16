@@ -16,7 +16,7 @@ updates:
   pointer as if it stated those offsets. Its publication-evidence pointer to the
   unchanged failure-propagation document remains.
 
-The five guide citations keep their frozen targets, including CWorker's attempt
+The existing guide citations keep their frozen targets, including CWorker's attempt
 kind comment. `unsupported request contract` is a runtime diagnostic about the
 identity gate, not a document-location description; no app-printed documentation
 pointer required editing. Historical mutation results retain their original
@@ -25,7 +25,9 @@ account still name their current owners.
 
 Only those two comments were authored in build inputs. Regeneration changed all
 three worker-identity copies: the ABI header, CWorker.swift and tests/lib/contract.py.
-The first two generated copies are also build inputs; tests/lib/contract.py is a
+The worker digest excludes generated region bodies: its causal changes are the
+two authored comments. The build digest additionally observes generated identity
+bytes. The first two generated copies are also build inputs; tests/lib/contract.py is a
 test reader. The adjacent JSON identity record contains exact before/after
 identities and selected-file deltas. Canonical public payloads, interface/card
 artifacts, porcelain schema/codec and ABI golden are unchanged by these edits.

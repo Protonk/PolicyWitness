@@ -1,0 +1,9 @@
+{
+  "base": "23bbb912034c7e533dbf8185e8cb56f9ca7f07d9",
+  "build_identity": "development:bdefcb44cb8b799494b555f6ba992e5bbfb58eba8ef980cb805adf15c103fb18",
+  "differences": [],
+  "guide_shapes_counts_stamps_interfaces_preserved": true,
+  "kind": "placement",
+  "removed_part_occurrences": 0,
+  "worker_identity": "cc2502d5da48a2a36e0ef73de394536174e32c2b487a2a7b7981e17d83f21659"
+}

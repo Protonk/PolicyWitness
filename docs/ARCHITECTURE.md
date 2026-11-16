@@ -62,12 +62,6 @@ its original scope.
 <!-- BEGIN GENERATED CONTRACT transport -->
 Inherited surface support: [Implementation and evidence](RESPONSE.md#contract-transport-support) (original subtree scope).
 
-Inherited surface support: [Implementation and evidence](RESPONSE.md#contract-transport-support) (original subtree scope).
-
-Inherited surface support: [Implementation and evidence](RESPONSE.md#contract-transport-support) (original subtree scope).
-
-Inherited surface support: [Implementation and evidence](RESPONSE.md#contract-transport-support) (original subtree scope).
-
 <a id="contract-transport-authorization"></a>
 ### Caller authorization
 
@@ -270,7 +264,7 @@ for launch, policy transfer, readiness, polling and cleanup.
 
 Actor setup automatically records bounded apparatus observations before policy compilation/application: core-limit handling, authority mapping and framing, descriptor closure and each extension-symbol lookup. Missing extension symbols make the corresponding actions unavailable; required apparatus failure prevents application. Setup publication, application observation and final process disposition remain separate. Missing terminal publication leaves application uncertain rather than proving it did not happen.
 
-A phase may specify `after_termination: {"actor_id": "issuer"}` when that actor's last scheduled visit precedes the phase. The gate requires an owned natural reap after the source's final activation, including a nonzero exit or signal, before dependent activation and query collection. It does not require final phase completion. It does not kill an actor to satisfy the dependency. A failed evaluated gate cancels the remaining schedule; cleanup and previously published facts retain their own meanings. A phase skipped because its dependent actor is unavailable does not evaluate its gate or independently cancel later phases. The source actor owns the native reap record. Source-scoped activation, reap and gate-close ordinals establish their capture order; optional timestamps preserve clock gaps instead of filling them. The gate carries an ordinal reference, not another copy of native wait facts. [CONTRACT](RESPONSE.md#contract-actor_evidence-gate) specifies eligibility and landing paths.
+A phase may specify `after_termination: {"actor_id": "issuer"}` when that actor's last scheduled visit precedes the phase. The gate requires an owned natural reap after the source's final activation, including a nonzero exit or signal, before dependent activation and query collection. It does not require final phase completion. It does not kill an actor to satisfy the dependency. A failed evaluated gate cancels the remaining schedule; cleanup and previously published facts retain their own meanings. A phase skipped because its dependent actor is unavailable does not evaluate its gate or independently cancel later phases. The source actor owns the native reap record. Source-scoped activation, reap and gate-close ordinals establish their capture order; optional timestamps preserve clock gaps instead of filling them. The gate carries an ordinal reference, not another copy of native wait facts. [RESPONSE](RESPONSE.md#contract-actor_evidence-gate) specifies eligibility and landing paths.
 
 The single-worker sequence is:
 
