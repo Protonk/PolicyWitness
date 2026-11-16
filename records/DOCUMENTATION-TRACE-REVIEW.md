@@ -341,7 +341,7 @@ identifier and, for five owners, a source identifier, neither of which can be
 opened or recomputed from this checkout. Limit: only this checkout was
 searched; other machines or backups were not.
 
-### DT-12 — Counts quoted in executed support differ from the present corpus
+### DT-12 — Historical execution counts accompany links to the current, larger corpus
 
 Two executed owners share one context sentence: "Swift judgments over 142
 typed frames were retained before encoding; exact-one Rust replay carried 143
@@ -386,9 +386,8 @@ separate owners." The support for
 execution or mutation-control run is credited."
 
 Source inspection: no owner in any surface cites
-`tests/suites/witness_contract/opt_in/mutations.sh`, the case
-`order_barrier_mutations`, or any other integrated ordering case. The strings
-`order_barrier` and `barrier` do not occur in CONTRACT. The root
+`tests/suites/witness_contract/opt_in/mutations.sh` or the case
+`order_barrier_mutations`. CONTRACT contains no reference to that case. The root
 [AGENTS.md](../AGENTS.md) line 37, [tests/AGENTS.md](../tests/AGENTS.md) line
 64 and [runner/AGENTS.md](../runner/AGENTS.md) line 17 each name that control
 as the one to rerun when the worker wait, release store or eligibility rule
@@ -400,13 +399,13 @@ In the other direction, the worker's wait is `wait_for_proceed` in
 [pw_probe_runner.c](../controller/tools/pw_probe_runner/pw_probe_runner.c),
 line 1205. The changed-item index has 26 rows for that file (CONTRACT lines
 1061–1086) and none for that function; the nine rows for `CWorker.swift`
-(lines 1386–1394) route only `runCWorker` to this commitment. A reviewer who
-starts in CONTRACT from a changed wait or release store therefore reaches no
-commitment, and a reader who starts from the commitment reaches eligibility
-source and two unit-test entry points. The "execution owners" the limits text
-points to are an unknown at that point of the path. This is an observation
-about the tracing route; it makes no claim about whether the barrier holds.
-Related: DT-06, DT-14, DT-17.
+(lines 1386–1394) route only `runCWorker` to this commitment. The index therefore
+offers broader file and driver associations, but no row for the worker wait
+itself. From the commitment, the cited support reaches eligibility and driver
+sources and unit-test entry points; it does not identify the integrated
+execution owners its limits text refers to. ARCHITECTURE supplies an indirect
+route to the mutation control. This observation concerns those missing direct
+associations, not whether the barrier holds. Related: DT-06, DT-14, DT-17.
 
 ### DT-14 — Surface-level check declarations are not shown and do not match what owners cite
 
@@ -448,7 +447,7 @@ partial; it makes no corresponding statement about check associations. Limit:
 whether `failure_boundaries` in fact exercises each of the eleven declaring
 surfaces was not examined. Related: DT-13, DT-15.
 
-### DT-15 — A second contract document is outside every CONTRACT path, and one restated row differs from the source
+### DT-15 — The failure evidence contract lacks direct links from the reading paths and differs on one row
 
 [tests/FAILURE-PROPAGATION-CONTRACT.md](../tests/FAILURE-PROPAGATION-CONTRACT.md)
 (1,627 lines, titled "Failure evidence contract") "specifies host
@@ -457,10 +456,10 @@ guidance sends readers to it: [tests/AGENTS.md](../tests/AGENTS.md) lines
 14–18 for evidence assertions and [runner/AGENTS.md](../runner/AGENTS.md)
 lines 26–28 as the document that "assigns claim ownership to the observations
 and readers". ARCHITECTURE links it five times and WORKER three. CONTRACT,
-REQUEST, RESPONSE, CONTROLLER and the user guide do not link it at all (source
-inspection by search). A reader who follows CONTRACT to a returned record is
-not told that a second document restates that record's rules and holds its
-ownership table.
+REQUEST, RESPONSE, CONTROLLER and the user guide have no direct link to it
+(source inspection by search). It remains reachable through ARCHITECTURE.
+The complete returned-record statements in RESPONSE do not link readers to
+this second account of their rules and test ownership.
 
 The comparison section defers to RESPONSE for definitions and calls its table
 "the working summary for test authors" (lines 1202–1207). Its
@@ -796,7 +795,7 @@ The field is declared open and illustrative, so no exhaustiveness claim is
 broken; the observation is that the displayed example for the controller
 record is a host-only code.
 
-### DT-28 — Exit-status statements do not cover two stdout conditions
+### DT-28 — Publication commands under a broken pipe and stdout closed at launch
 
 [Version command](../docs/RESPONSE.md#contract-identity-version-emit) (RESPONSE
 line 3500) says the command returns "process exit 0 after successful
@@ -811,10 +810,12 @@ were not repeated. No developer document mentions 101.
 of `example`, "Process exit 0 supplies the complete document", and line 229
 says of `test-input`, "Process exit 0 establishes complete publication".
 Reproduced: with stdout closed at launch (`>&-`), both commands exit 0. The
-cited controls close stderr at launch, not stdout. The caller in this case
-closed its own stdout, so the case is an edge of the claim.
+cited controls close stderr at launch, not stdout. This observation records
+the launch condition and exit status; the descriptor's state at the time of
+publication was not inspected. It does not establish a failed write reported
+as successful publication.
 
-### DT-29 — The helper's import inventory cannot show that a nonliteral import was not followed
+### DT-29 — The helper's import inventory has no explicit nonliteral-import incompleteness signal
 
 [Literal import inventory](../docs/RESPONSE.md#contract-policy-imports) (RESPONSE
 line 862) says "an unevaluable import argument, unreadable/nonregular file or
@@ -825,13 +826,17 @@ successful compile, and
 `import_inventory: {records: [], truncated: false, cycle: null, …}`. The same
 source with the literal `(import "bsd.sb")` returned three records. The
 record's fields are `records`, `truncated`, `cycle` and
-`policy_closure_sha256`; none distinguishes the first result from a source
-with no imports. A comment at
+`policy_closure_sha256`. The first three carry no indication that a nonliteral
+import was encountered. The hash identifies the submitted source bytes and
+collected records; it does not expose whether the scan encountered a
+nonliteral import. The helper's inventory construction
+([sbpl-check.rs](../controller/src/bin/sbpl-check.rs), lines 347–355) omits
+the resolver's `nonliteral_imports` flag. A comment at
 [sbpl_imports.rs](../controller/src/sbpl_imports.rs) lines 113–115 notes that
 the controller dossier, not the helper, reports `nonliteral_imports`. What the
 native compiler imported in the first run was not examined.
 
-### DT-30 — Listed values with no producer, and produced values that are not listed
+### DT-30 — Response vocabulary lists differ from the inspected producer assignments
 
 Source inspection, with one retained envelope:
 
@@ -875,15 +880,19 @@ None of these fields declares a closed vocabulary; each list is prose. The
 response pass also reported that `decode_fault.kind` is declared closed and
 exhaustive while no reader rejects another value; that was not re-verified.
 
-### DT-31 — Two controller result paths described in statements have no production route
+### DT-31 — Two documented result paths are not reached through the inspected client-admission path
 
-Source inspection of [runner_client.rs](../controller/src/runner_client.rs).
-An accepted capture must satisfy "terminal disagrees with host reply capture"
-(lines 478–481): a `runner_reply` terminal if and only if host bytes are
-present. For present bytes, lines 744–778 either return the typed reply or set
-`runner_reply_error`, which `failure()` (lines 623–650) turns into a refusal.
-The combination "admitted, no reply" is therefore not produced by
-`parse_runner_client_output`. Statements that describe it:
+Source inspection of [runner_client.rs](../controller/src/runner_client.rs)
+and [run_flow.rs](../controller/src/run_flow.rs). Client-capture admission
+requires a `runner_reply` terminal if and only if host bytes are present
+(`runner_client.rs` lines 478–481). An accepted capture can have another
+terminal and no host reply. `failure()` then selects a refusal for that
+terminal (lines 623–650), and `run_flow::admit_reply` applies it before
+execution admission (lines 330–342). For present host bytes, the parser either
+returns a typed reply or sets `runner_reply_error` (lines 744–778), which also
+produces a refusal. These inspected paths therefore do not produce an
+execution-admitted run with no host result. Statements that describe that
+state:
 `runner_response_unavailable` "Completion has no host result to supply an
 outcome" ([RESPONSE](../docs/RESPONSE.md#contract-envelope-data-select) line
 300), "An admitted execution with no host report can still produce the
@@ -894,8 +903,9 @@ that produces the label injects the pair directly.
 
 Second, [porcelain.rs](../controller/src/porcelain.rs) lines 218–219 return
 `UnsupportedContract` from frame decoding when the producer contract differs,
-before any typed body exists, so `runner_result` is null for a foreign
-producer. [controller/README.md](../controller/README.md) lines 185–190 says
+before any typed body exists, so `runner_result` is null on that path for a
+foreign producer. [controller/README.md](../controller/README.md) lines 185–190
+says
 "a decoded reply carrying another producer contract" yields the refusal and
 that `runner_result` "holds the decoded record's projection when decoding
 succeeded"; the guide (line 1409) says "A decoded but refused producer/context
@@ -1061,34 +1071,45 @@ executed. This is the wait-error counterpart of DT-10.
   reproduced `admission_refused` for a 128-byte filter kind and a 64-byte
   format. Those runs were not repeated.
 
-### DT-38 — Check-read support whose cited check does not assert the pinned claim
+### DT-38 — Check-read support combines different assertion scopes
 
 Check reading by the response pass, with the cited lines confirmed:
 
 - [Assemble the two channels](../docs/RESPONSE.md#contract-steps-assessment-assembly):
   pins "Completed, incomplete, absent and unsupported slots map to distinct
   provenance and outcomes". The cited
-  `AttemptOutcomeMappingTests.swift` contains no occurrence of
-  `result_source`, `missing_reason` or the cited source function
-  `buildStepResults`.
+  [AttemptOutcomeMappingTests.swift](../runner/Tests/PWRunnerCoreTests/AttemptOutcomeMappingTests.swift)
+  calls `buildAttemptResult` and checks outcome mapping for completed,
+  incomplete, missing and unsupported slots, plus preservation of an exec
+  child PID. It does not call `buildStepResults` or assert `result_source` or
+  `missing_reason`. The support also cites the assembly source; the provenance
+  part of the pin is not established by these test assertions.
 - [Submitted operation and target](../docs/RESPONSE.md#contract-steps-assessment-relations):
   pins "The scenario matrix checks mapped operations, submitted relations,
   order and limitation values". In
   [ComparisonEvidenceTests.swift](../runner/Tests/PWRunnerCoreTests/ComparisonEvidenceTests.swift)
   lines 73–83 the `order` argument is read from the fixture row and passed
-  through, and the lifecycle limitation is appended by the test helper before
-  comparison.
+  through, and the lifecycle limitation is appended by the test helper.
+  Lines 123–130 explicitly compare the resulting order and limitations with
+  fixture expectations. This supports the stated check of values; it does not
+  test how production derives order from native observations or whether the
+  production step builder appends the lifecycle limitation. The owner labels
+  the controls constructed and assigns live scenarios to separate cases.
 - [Publish a report or fallback](../docs/RESPONSE.md#contract-reply-failure-publish):
   pins "Independent minimal/empty paths are read in source", while the cited
-  `ReplyFailureTests.swift` has cases titled "independent minimal binary
-  report survives repeated rich writer failure" and "minimal emission failure
-  returns an undecodable empty receipt". Here the support understates its
-  check.
+  [ReplyFailureTests.swift](../runner/Tests/PWRunnerCoreTests/ReplyFailureTests.swift)
+  has cases titled "independent minimal binary report survives repeated rich
+  writer failure" and "minimal emission failure returns an undecodable empty
+  receipt". Their bodies assert the minimal frame against a constructed
+  expectation after two rich-writer failures, and empty output after a
+  controlled minimal-writer failure. The support names only source reading
+  for paths these checks also exercise; no execution of those checks is
+  credited by this review.
 
 The response pass also reported that the support for "A timeout followed by
 cleanup" pins "later source reap and unchanged timeout" while the cited test
 asserts one timeout value twice and does not order the reap; that was not
-re-verified. See also DT-22 and DT-32 for the same pattern, and DT-04.
+re-verified. Related assertion-scope observations: DT-04, DT-22 and DT-32.
 
 ### DT-39 — Hand-authored prose that differs from the statement or the source
 
@@ -1297,10 +1318,10 @@ Four sub-agent passes each traced one family against source and checks:
 request, policy, probes and refusals; actors, extensions, transport and wire;
 reply, steps, lifecycle and actor evidence; envelope, diagnostics, dossier,
 installation, equipment and profile. Each returned findings and a list of
-what it traced and found consistent. The primary review re-read the cited
-statement and source for every item recorded in DT-22 through DT-43 and
-repeated the reproductions it labels "reproduced". Items it did not re-verify
-are labeled where they appear or collected in DT-44.
+what it traced and found consistent. DT-22 through DT-43 distinguish the
+primary review's source checks and repeated reproductions from pass
+observations it did not re-verify. DT-44 collects further unverified pass
+observations.
 
 **Statements traced and found consistent** (by the passes, clause by clause,
 except as recorded above): request admission order, nulls for the decoders
@@ -1330,15 +1351,16 @@ allowance expiry were read in source and not exercised.
 **Evidence limits.** Reproductions used the app built from `8b5de2b2` on this
 machine (macOS 26, arm64) with XPC lookup available; each is one or a few
 specimens and is not a statement about every input. No build and no
-`tests/run.sh` case was run, so nothing here is a test result. Local runs
-under `tests/out/runs/` were read as retained output and are subject to
+`tests/run.sh` case was run; the manual reproductions supply observations,
+not new suite or battery results. Local runs under `tests/out/runs/` were
+read as retained output and are subject to
 pruning. Reproduction inputs and envelopes are under the session scratch
 directory
 `/private/tmp/claude-501/-Users-raccoon-Desktop-Security-PolicyWitness/1b7c19fb-c395-4c94-9f87-0906550f66e3/scratchpad/`
 (`main/`, `request-side/`, `protocols/`, `response-evidence/`,
-`controller-side/`), which a reboot or cleanup can remove; nothing there is
-retained evidence. Unreachability claims (DT-30, DT-31, DT-32) rest on reading
-the production paths named and could be wrong about a path not read. Counts
-produced by scripts are stated with what was counted; heuristic scans are
+`controller-side/`), which a reboot or cleanup can remove. These temporary
+outputs have no retention guarantee. Producer and reachability observations
+(DT-30, DT-31, DT-32) are limited to the inspected paths. Counts produced by
+scripts are stated with what was counted; heuristic scans are
 labeled as such. The entries carry no judgment about which layer should
 change, and no fix accompanies this record.
