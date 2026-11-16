@@ -6,21 +6,27 @@ fields, rules, conditions, effects, examples and support. Structured facts
 sit beside the prose in `contract` fences.
 
 `tree.py` parses the tree through the repository Markdown reader and derives
-the document, field entries, applicability, findings and known-gap views.
+the statement regions, field entries, applicability, findings and known-gap views.
 `record_definitions.py` imports existing field declarations for the authored
 meanings. The identity surface declares public coverage, requiring every
 imported record to have one authored subject and every field a meaning.
-`runtime.py` assembles the document, snapshot, shape goldens and stamp tables.
+`presentation.py` routes complete statements and builds navigation without
+changing public payloads. `runtime.py` assembles all destination regions, the
+snapshot, shape goldens and the separately inventoried stamp tables.
 `history_v0.py` reads earlier manifest/region release trees with their original
 digest framing; `history_v1.py` reads released canonical public snapshots.
 
 The entry point is [generate_contract_stamps.py](../generate_contract_stamps.py).
-It generates the [public contract](../CONTRACT.md), the guide's stamp table,
+It generates statement regions in [REQUEST](../REQUEST.md),
+[RESPONSE](../RESPONSE.md) and [ARCHITECTURE](../ARCHITECTURE.md), commitment lists
+in ARCHITECTURE, CONTROLLER, WORKER and BUILD, the [tracing account](../CONTRACT.md),
+the guide's stamp table,
 `public.json` and `free_text.json`. The latter records counts by relationship
 kind; generation permits reductions and refuses increases. Shape changes use
 `--refresh-shapes` and require review. Ordinary generation and explicit release
 preparation require the history claimed by the carried tables and snapshot.
-An ordinary check without tags verifies current content and table agreement,
+An ordinary check without tags verifies all current destinations and actual
+stamp-table agreement,
 and reports that historical stamp derivation remains unverified.
 
 [AGENTS.md](AGENTS.md) gives the authoring and verification rules.
@@ -73,6 +79,44 @@ examples and owners travel together. The map is outside canonical public
 meaning; changing a destination alone changes no public payload. `goldens` names canonical shapes and `checks`
 names catalog suites. Strict validation requires populated contents, shapes
 and checks.
+
+## Presentation and regeneration
+
+[presentation.json](presentation.json) maps documents to ordered region entries.
+Each entry has a `region` marker name and ordered `nodes`: every surface and every
+subject directly beneath a surface must occur exactly once. Surface entries
+carry introductions and direct owners; nested subjects travel with their direct
+subject ancestor. A surface owner keeps its original self/subtree scope when its
+descendants render elsewhere. Cross-document subjects link to inherited support,
+and support details in CONTRACT link back to their local statements.
+
+The separate `commitments` list names a tour document, region and subject/rule
+IDs. These associations say which commitments a section explains. They are
+reviewed navigation, not test coverage. Complete meanings stay in the surface
+tree, including applicability, ordered cases and evidence qualifications.
+[trace-introduction.md](trace-introduction.md) owns CONTRACT's reading guidance;
+its indexes derive from declarations, imports, interface associations and support
+citations already present in the tree. Unknown source relationships remain
+unknown.
+
+Run `tests/lib/python.sh docs/generate_contract_stamps.py` after changing an
+owning input. The generator replaces only declared contract regions beside
+REQUEST, RESPONSE and tour prose; CONTRACT is a whole-file output. Stamp tables
+occur only in CONTRACT and the guide. The generator validates all destinations
+before writing, and `--check` writes nothing. `--preview PATH` renders the current
+mapped presentation separately and refuses every generated output destination.
+The limits generator owns authored scalar spans; spans inside generated contract
+regions are copied values owned by this generator. Follow the ordinary
+limits/build/architecture regeneration with contract generation, then check all
+owners so that later generation has not left earlier outputs stale.
+
+A map-only move must preserve canonical public payloads, shapes, counts and
+stamp contents. A subject split, renamed identity, changed title or public prose
+is a public change; review local and imported/shared payload differences rather
+than relying on an unchanged displayed stamp. Update inbound links to the complete
+statement's home. The [generator controls](../../tests/suites/source_drift/README.md#generator-contracts)
+check coverage, region boundaries, links, history, freshness and representative
+scope preservation; they do not decide whether a statement is accurate or useful.
 
 ## Context and relationships
 

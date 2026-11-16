@@ -77,10 +77,9 @@ class BuildEntryTests(receipts.TestCase):
                                 env={**base, 'DIST_DIR': str(destination), **env}, capture_output=True, text=True, timeout=timeout)
         return result, destination
 
-    def stale_copy(self, root, rel):
+    def stale_copy(self, root, rel, marker):
         path = root / rel
         before = path.read_text()
-        marker = generator.contract_module('runtime').DOCUMENT_BEGIN
         self.assertIn(marker, before)
         after = before.replace(marker, marker + '\nStale generated output control.', 1)
         self.assertNotEqual(after, before)
@@ -412,16 +411,31 @@ class BuildEntryTests(receipts.TestCase):
         self.assertFalse(destination.exists())
 
     def test_build_refuses_stale_contract_stamps_copy_before_signing_or_creating_output(self):
-        root = self.checkout(extra=LIMITS_FILES)
-        self.stale_copy(root, 'docs/CONTRACT.md')
-        destination = root / 'dist'
-        result = self.run_command(['bash', str(root / 'build.sh')], cwd=root,
-                                env={**{k: v for k, v in os.environ.items() if k not in BUILD_ENV_EXCLUDED}, 'IDENTITY': '', 'DIST_DIR': str(destination)},
-                                capture_output=True, text=True, timeout=10)
-        self.assertEqual(result.returncode, 1, result.stdout + result.stderr)
-        self.assertIn('Checking limits documentation', result.stdout)
-        self.assertIn('stale generated contract: docs/CONTRACT.md', result.stderr)
-        self.assertFalse(destination.exists())
+        # Independent destinations exercise the whole-file account, a routed
+        # statement and a tour's commitment list through the same build gate.
+        for relative, marker in (
+                ('docs/CONTRACT.md', generator.contract_module('runtime').DOCUMENT_BEGIN),
+                ('docs/RESPONSE.md', '<!-- BEGIN GENERATED CONTRACT envelope -->'),
+                ('docs/CONTROLLER.md', '<!-- BEGIN GENERATED CONTRACT commitments_result -->')):
+            with self.subTest(destination=relative):
+                root = self.checkout(extra=LIMITS_FILES)
+                self.stale_copy(root, relative, marker)
+                before = {name: (root / name).read_bytes() for name in generator.input_paths(root)
+                          if (root / name).is_file()}
+                result, destination = self.build(root, {'IDENTITY': ''}, timeout=10)
+                self.assertEqual(result.returncode, 1, result.stdout + result.stderr)
+                self.assertIn('Checking limits documentation', result.stdout)
+                self.assertIn('Checking public contract stamps', result.stdout)
+                self.assertIn(f'contract stamps: stale generated contract: {relative}; '
+                              'run tests/lib/python.sh docs/generate_contract_stamps.py', result.stderr)
+                self.assertNotIn('Checking build documentation', result.stdout)
+                self.assertNotIn('Checking host/worker identity', result.stdout)
+                self.assertNotIn('Checking the signing identity', result.stdout)
+                self.assertNotIn('Building Rust', result.stdout)
+                self.assertEqual({name: (root / name).read_bytes() for name in before}, before)
+                self.assertFalse(destination.exists())
+                self.assertFalse((root / 'builddir').exists())
+                self.assertFalse((root / 'controller/target').exists())
 
     def test_build_refuses_stale_guide_before_signing_or_creating_output(self):
         """A stale copied guide stops the build at its first documentation check, before anything is created."""

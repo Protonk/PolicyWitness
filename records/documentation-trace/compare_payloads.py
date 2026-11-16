@@ -19,6 +19,7 @@ parser.add_argument('--kind', choices=('placement', 'part', 'public'), required=
 parser.add_argument('--node', action='append', default=[])
 parser.add_argument('--output', required=True)
 args = parser.parse_args()
+args.base = subprocess.check_output(['git', '-C', str(ROOT), 'rev-parse', args.base], text=True).strip()
 
 
 def old(name):

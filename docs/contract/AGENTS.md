@@ -35,3 +35,11 @@ authoring changes must leave release history readable.
 Run verification through `tests/run.sh`; follow [test guidance](../../tests/AGENTS.md)
 for selection, evidence and output ownership. Shared build/test execution uses
 one checkout lock.
+
+Place complete direct subjects through [presentation.json](presentation.json).
+Keep fields, cases, context and support with their subject. A map edit changes
+presentation; changing titles, prose, identities or tree structure changes public
+payloads. Review local and shared differences separately, preserving inherited
+applicability and support scope. Author tour commitment associations by reading
+the section against each statement; do not treat a source citation as coverage.
+Keep stamp-table locations separate from generated document/region ownership.

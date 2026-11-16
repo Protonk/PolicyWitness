@@ -2552,7 +2552,7 @@
           "label": "generate_contract_stamps.py",
           "kind": "generator",
           "facts": {
-            "Owns": "the readable contract, canonical public snapshot, shape views and surface stamps across retained release layouts"
+            "Owns": "routed statement regions, tour commitment lists, trace indexes, public snapshot and surface stamp tables"
           },
           "sources": [
             {
@@ -2650,7 +2650,7 @@
           "label": "docs/CONTRACT.md",
           "kind": "document",
           "facts": {
-            "Carries": "the generated public contract and derived surface history table"
+            "Carries": "identity derivation, definitions, trace indexes, graded support and surface history"
           },
           "sources": [
             {
@@ -3967,6 +3967,90 @@
               "form": "test"
             }
           ]
+        },
+        {
+          "id": "contract_placement",
+          "label": "docs/contract/presentation.json",
+          "kind": "manifest",
+          "facts": {
+            "Carries": "Explicit whole-subject destinations, ordering and tour commitment associations"
+          },
+          "sources": [
+            {
+              "path": "docs/contract/presentation.py",
+              "symbol": "load"
+            }
+          ],
+          "checks": [
+            {
+              "path": "tests/suites/source_drift/contract_tree_controls.py",
+              "symbol": "test_every_node_has_one_statement_home_and_support_links_keep_scope",
+              "form": "test"
+            }
+          ]
+        },
+        {
+          "id": "request_md",
+          "label": "docs/REQUEST.md",
+          "kind": "document",
+          "facts": {
+            "Carries": "Authored request teaching path and complete routed declarations and obligations"
+          },
+          "sources": [
+            {
+              "path": "docs/REQUEST.md",
+              "symbol": "BEGIN GENERATED CONTRACT request"
+            }
+          ],
+          "checks": [
+            {
+              "path": "tests/suites/source_drift/contract_tree_controls.py",
+              "symbol": "test_every_node_has_one_statement_home_and_support_links_keep_scope",
+              "form": "test"
+            }
+          ]
+        },
+        {
+          "id": "response_md",
+          "label": "docs/RESPONSE.md",
+          "kind": "document",
+          "facts": {
+            "Carries": "Authored envelope-first interpretation and complete returned-evidence statements"
+          },
+          "sources": [
+            {
+              "path": "docs/RESPONSE.md",
+              "symbol": "BEGIN GENERATED CONTRACT envelope"
+            }
+          ],
+          "checks": [
+            {
+              "path": "tests/suites/source_drift/contract_tree_controls.py",
+              "symbol": "test_every_node_has_one_statement_home_and_support_links_keep_scope",
+              "form": "test"
+            }
+          ]
+        },
+        {
+          "id": "controller_md",
+          "label": "docs/CONTROLLER.md",
+          "kind": "document",
+          "facts": {
+            "Carries": "Authored controller mechanism account and generated commitment links"
+          },
+          "sources": [
+            {
+              "path": "docs/CONTROLLER.md",
+              "symbol": "BEGIN GENERATED CONTRACT commitments_result"
+            }
+          ],
+          "checks": [
+            {
+              "path": "tests/suites/source_drift/contract_tree_controls.py",
+              "symbol": "test_every_node_has_one_statement_home_and_support_links_keep_scope",
+              "form": "test"
+            }
+          ]
         }
       ],
       "edges": [
@@ -3996,8 +4080,8 @@
           "from": "gen_contract",
           "to": "contract_md",
           "kind": "writes",
-          "label": "complete readable contract and surface history table",
-          "short": "contract",
+          "label": "identity, shared definitions, trace indexes, support and surface history",
+          "short": "trace and history",
           "sources": [
             {
               "path": "docs/contract/runtime.py",
@@ -5846,6 +5930,153 @@
               "form": "test"
             }
           ]
+        },
+        {
+          "id": "D92",
+          "from": "contract_placement",
+          "to": "gen_contract",
+          "kind": "reads",
+          "label": "explicit destinations and commitment lists",
+          "short": "placement",
+          "sources": [
+            {
+              "path": "docs/contract/presentation.py",
+              "symbol": "load"
+            }
+          ],
+          "checks": [
+            {
+              "path": "tests/suites/source_drift/contract_tree_controls.py",
+              "symbol": "test_every_node_has_one_statement_home_and_support_links_keep_scope",
+              "form": "test"
+            }
+          ]
+        },
+        {
+          "id": "D93",
+          "from": "gen_contract",
+          "to": "request_md",
+          "kind": "writes",
+          "label": "statement regions preserve authored request teaching",
+          "short": "request",
+          "sources": [
+            {
+              "path": "docs/contract/presentation.py",
+              "symbol": "render"
+            }
+          ],
+          "checks": [
+            {
+              "path": "tests/suites/source_drift/contract_tree_controls.py",
+              "symbol": "test_every_node_has_one_statement_home_and_support_links_keep_scope",
+              "form": "test"
+            }
+          ]
+        },
+        {
+          "id": "D94",
+          "from": "gen_contract",
+          "to": "response_md",
+          "kind": "writes",
+          "label": "statement regions preserve authored evidence interpretation",
+          "short": "response",
+          "sources": [
+            {
+              "path": "docs/contract/presentation.py",
+              "symbol": "render"
+            }
+          ],
+          "checks": [
+            {
+              "path": "tests/suites/source_drift/contract_tree_controls.py",
+              "symbol": "test_every_node_has_one_statement_home_and_support_links_keep_scope",
+              "form": "test"
+            }
+          ]
+        },
+        {
+          "id": "D95",
+          "from": "gen_contract",
+          "to": "architecture_md",
+          "kind": "writes",
+          "label": "complete protocols and commitment links in disjoint regions",
+          "short": "protocols",
+          "sources": [
+            {
+              "path": "docs/contract/presentation.py",
+              "symbol": "render"
+            }
+          ],
+          "checks": [
+            {
+              "path": "tests/suites/source_drift/contract_tree_controls.py",
+              "symbol": "test_every_node_has_one_statement_home_and_support_links_keep_scope",
+              "form": "test"
+            }
+          ]
+        },
+        {
+          "id": "D96",
+          "from": "gen_contract",
+          "to": "controller_md",
+          "kind": "writes",
+          "label": "section commitment lists",
+          "short": "commitments",
+          "sources": [
+            {
+              "path": "docs/contract/presentation.py",
+              "symbol": "render"
+            }
+          ],
+          "checks": [
+            {
+              "path": "tests/suites/source_drift/contract_tree_controls.py",
+              "symbol": "test_every_node_has_one_statement_home_and_support_links_keep_scope",
+              "form": "test"
+            }
+          ]
+        },
+        {
+          "id": "D97",
+          "from": "gen_contract",
+          "to": "worker_md",
+          "kind": "writes",
+          "label": "section commitment lists",
+          "short": "commitments",
+          "sources": [
+            {
+              "path": "docs/contract/presentation.py",
+              "symbol": "render"
+            }
+          ],
+          "checks": [
+            {
+              "path": "tests/suites/source_drift/contract_tree_controls.py",
+              "symbol": "test_every_node_has_one_statement_home_and_support_links_keep_scope",
+              "form": "test"
+            }
+          ]
+        },
+        {
+          "id": "D98",
+          "from": "gen_contract",
+          "to": "build_md",
+          "kind": "writes",
+          "label": "section commitment lists",
+          "short": "commitments",
+          "sources": [
+            {
+              "path": "docs/contract/presentation.py",
+              "symbol": "render"
+            }
+          ],
+          "checks": [
+            {
+              "path": "tests/suites/source_drift/contract_tree_controls.py",
+              "symbol": "test_every_node_has_one_statement_home_and_support_links_keep_scope",
+              "form": "test"
+            }
+          ]
         }
       ]
     },
@@ -7102,7 +7333,7 @@
           "from": "host",
           "to": "validator",
           "kind": "spawn",
-          "label": "eligible collection spawns the copy’s bundle-local validator by default; an explicit override takes precedence",
+          "label": "eligible collection spawns the copy\u2019s bundle-local validator by default; an explicit override takes precedence",
           "short": "spawn",
           "sources": [
             {

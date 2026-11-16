@@ -64,7 +64,7 @@ EXTENSIONS_NAME = "docs/EXTENSIONS.md"
 # The guide section that holds the copied coverage; the FAQ's bare link to the
 # coverage document is rebased onto it in the copy.
 COVERAGE_ANCHOR = "#sandbox-extensions"
-SPAN_DOCUMENTS = ("docs/LIMITS.md", "docs/ARCHITECTURE.md", "docs/PolicyWitness.md", "docs/REQUEST-GRAMMAR.md",
+SPAN_DOCUMENTS = ("docs/LIMITS.md", "docs/ARCHITECTURE.md", "docs/PolicyWitness.md", "docs/REQUEST.md",
                   "tests/FAILURE-PROPAGATION-CONTRACT.md", "controller/README.md", "runner/README.md", EXTENSIONS_NAME)
 GUIDE_NAME = "PolicyWitness.md"
 # What a run reads besides the files the manifest cites: this generator and its helpers, the manifest, the

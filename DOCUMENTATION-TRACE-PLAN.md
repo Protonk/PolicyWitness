@@ -137,7 +137,7 @@ plan only. Permanent documents must stand without those temporary records.
 
 ### Grounding already established
 
-- [REQUEST-GRAMMAR](docs/REQUEST-GRAMMAR.md) is an authored teaching sequence,
+- [REQUEST-GRAMMAR](docs/REQUEST.md) is an authored teaching sequence,
   including independent file effects, refusal expectations, phases, actors and
   controller/direct-XPC differences. It already describes itself as a developer
   guide. It is not the complete request definition.
@@ -977,3 +977,25 @@ the standalone response account. The
 [validator reference proof](records/documentation-trace/validator-reference-proof.json)
 confines the difference to that node's prose in the `wire` surface. Its flags,
 results, evidence scope and runtime behavior are unchanged.
+
+Steps 4–7 are integrated. REQUEST retains the teaching progression and replaces
+REQUEST-GRAMMAR; RESPONSE starts with the envelope and separates evidence
+families and other entry points. ARCHITECTURE receives the seven protocol
+subjects beside their mechanisms. Its overlapping reservation paragraph and
+five-step custody summary were replaced with orientation and the complete
+statements, retaining failure, quiescence and source/check qualifications. This
+consolidation removes a second account of the same protocol; no tree promotion
+was needed. All four tours have reviewed commitment lists. CONTRACT's indexes
+use existing declarations, imports, interface associations and graded support;
+no new behavioral connection was inferred from a filename.
+
+The architecture graph, build-read account, limits span destination, working
+guidance and current inbound links describe the resulting ownership. Historical
+observations and the frozen guide remain intact. The
+[integration placement proof](records/documentation-trace/integration-placement-proof.json)
+confirms unchanged payloads and preservation artifacts after the two named public
+corrections. Limits, architecture, build and contract generation/checking reach
+a fixed point with the guide byte-identical. The extended build-entry controls
+cover stale RESPONSE and tour-list regions; their execution remains pending.
+Next: consolidate source citations and regenerate identity, then signed build and
+integrated verification.

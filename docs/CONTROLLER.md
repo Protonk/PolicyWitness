@@ -7,7 +7,9 @@ belong to the host, worker and validator described in the
 [architecture tour](ARCHITECTURE.md) and [worker tour](WORKER.md).
 
 This tour follows consequential decisions and the information each needs. The
-[public contract](CONTRACT.md) owns field meanings and obligations; the
+[request](REQUEST.md) and [response](RESPONSE.md) accounts hold field meanings
+and obligations; [ARCHITECTURE](ARCHITECTURE.md) holds cross-process protocols,
+and [CONTRACT](CONTRACT.md) traces their owners and support; the
 [controller reference](../controller/README.md) owns CLI usage and the module
 map. Source and check citations below explain realization and assertion scope.
 Reading an assertion is not evidence that it executed, and a constructed
@@ -83,12 +85,12 @@ spans components: the controller holds the constant, the host owns full
 grammar admission, and both are inputs of one build identity. Emission
 observes no host decision; a later `run` does. The guarantee concerns
 admission, not the success of an attempted operation. The
-[emission rule](CONTRACT.md#contract-request-specimen-emit_example) and its
+[emission rule](REQUEST.md#contract-request-specimen-emit_example) and its
 extracted example preserve that separation. The documentation extractor reads
 the source constant; documentation does not supply runtime example content.
 
 `test-input` carries no admission guarantee. Its stamped developer
-[rule](CONTRACT.md#contract-request-specimen-emit_test_input) establishes
+[rule](REQUEST.md#contract-request-specimen-emit_test_input) establishes
 build-bound publication with positional target binding. Host capacity admission
 still judges the supplied target. The publisher prepares no fixtures and
 promises neither a query answer nor an effect. `run` prepares and delivers the
@@ -137,7 +139,7 @@ closure through separate filesystem reads; it is not a frozen filesystem image
 or proof of the native compiler's later imports. Dossier mismatches retain
 information without becoming selection refusals. Held source hashes identify
 decoded source strings, not the original JSON file bytes. The
-[dossier rules](CONTRACT.md#contract-dossier-collection) distinguish those scopes.
+[dossier rules](RESPONSE.md#contract-dossier-collection) distinguish those scopes.
 
 <!-- BEGIN GENERATED CONTRACT commitments_preparation -->
 Commitments explained here:
@@ -189,7 +191,7 @@ An admitted `invoked` record establishes selector invocation, not host receipt,
 grammar acceptance or an effect. A complete admitted capture is needed to use
 `not_invoked`; missing or rejected capture leaves submission unknown. The
 host-reported PID and instance are peer observations, not independent kernel
-generation identity. [Transport rules](CONTRACT.md#contract-transport-delivery)
+generation identity. [Transport rules](ARCHITECTURE.md#contract-transport-delivery)
 keep these distinctions separate from connection authorization.
 
 The controller owns the helper process and pipes through
@@ -221,8 +223,8 @@ wins even when output was captured. Unsupported or malformed bytes retain
 transport diagnostics but supply no semantic submission or host claims.
 Decoded records refused by a later gate can remain in the envelope while
 execution diagnostics are withheld. The
-[admission rules](CONTRACT.md#contract-envelope-data-admit),
-[wire contract](CONTRACT.md#contract-wire-frame-admit), and
+[admission rules](RESPONSE.md#contract-envelope-data-admit),
+[wire contract](ARCHITECTURE.md#contract-wire-frame-admit), and
 `run_flow::admit_reply` describe these distinct gates.
 
 After those gates, [porcelain_admission.rs](../controller/src/porcelain_admission.rs)
@@ -240,7 +242,7 @@ this run path nor converts permission-shaped errors into sandbox attribution.
 These readers take the carried reply, not the original request. Their joins
 establish relationships within that account. The host owns its assembly from
 the prepared request. The profile receipt's
-[label check](CONTRACT.md#contract-profile-receipt-labels), for example, checks
+[label check](RESPONSE.md#contract-profile-receipt-labels), for example, checks
 status/producer/stage context; it does not independently compare a requested
 nonce or revalidate captured bytecode. A consumer needs separately retained
 request operands to make such a comparison.
@@ -250,9 +252,9 @@ against its setup claims; `application` checks the count, permitted state/basis
 pair, supporting observations, source precedence and contradictory publications.
 An observed failed apply therefore differs from a successful applied flag,
 and a late applied flag need not repair a setup timeout. The
-[application contract](CONTRACT.md#contract-actor_evidence-application)
+[application contract](RESPONSE.md#contract-actor_evidence-application)
 keeps the production classification and recipient checks separate; its
-[reader support](CONTRACT.md#contract-actor_evidence-actor-reader_scope)
+[reader support](RESPONSE.md#contract-actor_evidence-actor-reader_scope)
 identifies constructed application-pair and ordinary/degraded controls without
 claiming that each constructed context occurred in a native run.
 
@@ -280,8 +282,8 @@ minimal evidence loss does not mean no effect occurred.
 The public contract retains these scoped actor projections and degraded-form
 checks. It does not promise stronger actor attribution or ordinary association
 certification. The definitions of
-[withholding scope](CONTRACT.md#contract-diagnostics-issue-subject-withholding_scope)
-and [degraded associations](CONTRACT.md#contract-reply-failure-associations)
+[withholding scope](RESPONSE.md#contract-diagnostics-issue-subject-withholding_scope)
+and [degraded associations](RESPONSE.md#contract-reply-failure-associations)
 keep those limits beside the preservation rules.
 
 <!-- BEGIN GENERATED CONTRACT commitments_admission -->
@@ -302,7 +304,7 @@ separately. For an admitted reply, exact `finished` selects true/0; other
 outcomes select false/1. Earlier admission and delivery failures follow their
 own refusal paths. An unsuccessful attempt can belong to a finished experiment;
 controller integrity findings can also coexist with that current
-[success mapping](CONTRACT.md#contract-envelope-data-success_findings).
+[success mapping](RESPONSE.md#contract-envelope-data-success_findings).
 `typed_completion_preserves_native_failure_beside_finished_summary`
 and `malformed_phase_claims_withhold_projection_and_preserve_raw_reply` are
 constructed controls of these separate operations, not observations that a
@@ -333,8 +335,8 @@ Reader agreement cannot be generalized to all possible inputs.
 
 Current `unconfirmed` also merges unresolved and inapplicable final status while
 retaining the host's raw distinction. The definitions of
-[vocabulary](CONTRACT.md#contract-diagnostics-execution-vocabulary-vocabulary_choice)
-and [classifier maintenance](CONTRACT.md#contract-diagnostics-execution-reader_evidence-classifier_generation)
+[vocabulary](RESPONSE.md#contract-diagnostics-execution-vocabulary-vocabulary_choice)
+and [classifier maintenance](RESPONSE.md#contract-diagnostics-execution-reader_evidence-classifier_generation)
 retain that vocabulary and separately authored semantic classifiers. Their
 agreement is checked within stated scopes; no generated shared classifier or
 universal equivalence is promised.
@@ -365,7 +367,7 @@ Runner commands have machine-state responsibilities distinct from executing a
 specimen. [runner_commands.rs](../controller/src/runner_commands.rs) dispatches
 these operations; [runner_manager.rs](../controller/src/runner_manager.rs) owns
 registry publication, signing/read-back and service/plist inspection. The
-[installation contract](CONTRACT.md#contract-installation-commands) defines the
+[installation contract](RESPONSE.md#contract-installation-commands) defines the
 command-specific meanings; the [external-runner guide](PolicyWitness.md#external-runners-byoxpc)
 provides the operating workflow.
 

@@ -60,7 +60,12 @@ Offline release controls also exercise the release procedure's decision points.
   lacks in every class, a stale identity, architecture, build-document,
   contract or guide copy, and the `make` entry with its header and build
   recipe; each asserts the banners that did and did not print and that no
-  output, build directory or lock was created. `native_policy_controls`
+  protected output or build directory was created (and no lock for refusals
+  before lock acquisition). The contract freshness control independently
+  corrupts CONTRACT, a RESPONSE statement region and a CONTROLLER commitment
+  list; each must name its stale destination and regenerating command before
+  signing-identity checks or compilation, while preserving source bytes.
+  `native_policy_controls`
   poisons every option `meson.build` asserts in a configured directory of the
   real checkout and requires the next compile's regeneration to refuse it by
   name before anything compiles; with one assertion removed from a declared
