@@ -3181,3 +3181,445 @@ list/status/verify/remove of an inaccessible registry were not executed.
 Historical inspection establishes when mechanisms and statements appeared,
 not how older binaries behaved. Only this record was changed. These entries
 contain no repair, deduplication or choice of authoritative layer.
+
+## Additional findings: `sbpl-check` import-inventory completeness
+
+This continuation asks what the helper's `import_inventory` reveals about
+whether its import scan was complete. It follows the shared lexer
+([sbpl_lex.rs](../controller/src/sbpl_lex.rs)), the resolver
+([sbpl_imports.rs](../controller/src/sbpl_imports.rs)) and the helper's
+projection ([sbpl-check.rs](../controller/src/bin/sbpl-check.rs)). It also
+examines the [Literal import inventory](../docs/RESPONSE.md#contract-policy-imports)
+statements and their authored source
+([11-policy.surface.md](../docs/contract/11-policy.surface.md) lines 540–604),
+the helper passage of the [user guide](../docs/PolicyWitness.md) (lines
+867–894) and the tests that exercise the scanner or the helper's output. The
+controller dossier was read only where it shares the resolver. The statements
+were treated as claims to check. DT-29 remains unchanged; DT-81 to DT-87
+extend it and stand alone.
+
+### Import-inventory investigation identity and reproduction conventions
+
+Source inspection used clean HEAD `1413c20eb5fe60a6e7696d43440d80993cdfeecd`
+on 2026-11-16; line numbers below refer to that snapshot. Executed helper
+observations used the existing signed app's
+`dist/PolicyWitness.app/Contents/MacOS/sbpl-check` in place (SHA-256
+`1d4470289c9f155e6ff7e19ea8da7f5e45c89bd9905bf64c425063d2405b8988`). Every
+helper envelope carried build commit
+`8b5de2b2882d7cb2536d1b42d9109f4b0dfc2855`, version `0.3.7`, build `1482`.
+`git diff 8b5de2b2 HEAD` is empty for the three scanner and helper sources,
+`digest.rs`, `host_facts.rs`, `json_contract.rs`, `dossier.rs`,
+`controller/integration/cli_contract.rs`, `Cargo.toml`, `Cargo.lock`,
+`docs/contract/11-policy.surface.md`, `docs/contract/42-dossier.surface.md`
+and `docs/RESPONSE.md`. This is source correspondence, not a new build. The
+machine reports macOS `26.7.1`, build `25G241`, arm64. No registered case
+was run, and nothing was built in the checkout.
+
+**Helper drivers.**
+`/private/tmp/claude-501/-Users-raccoon-Desktop-Security-PolicyWitness/1f71e0b5-7b7d-4892-80b4-1b0de6e79d07/scratchpad/scripts/inventory_trace.py`
+(SHA-256 `112531e053d22fde1e138378f6b255131ab717584ec3b8cf52927a0854e1da65`)
+was run as:
+
+```sh
+tests/lib/checkout_lock.sh -- tests/lib/python.sh -I \
+  <scratchpad>/scripts/inventory_trace.py \
+  "$PWD/dist/PolicyWitness.app/Contents/MacOS/sbpl-check" <scratchpad>/it-2
+```
+
+For each case it wrote
+`{"policy":{"format":"sbpl","sbpl_source":S},"probe_plan":[]}` to a file and
+ran `sbpl-check --request <file>` with only `PATH=/usr/bin:/bin` in the
+environment. `helper_over_files.py` (SHA-256 `4d2f1899…0708b`) does the same
+for named source files; it produced `<scratchpad>/bc-deny-helper` and
+`<scratchpad>/utf8-helper`. Afterward, one pass over all 20 envelopes
+recomputed `policy_sha256` as SHA-256 of the submitted source bytes. It also
+recomputed the documented closure framing from each envelope's own records,
+and checked the data and inventory key sets. The first driver additionally
+compared each recorded hash with a separate read of its `resolved_path`.
+Below, `<D>` is `<scratchpad>/it-2/files`, which held:
+
+| File | Bytes |
+| --- | --- |
+| `marker.sb` | `(allow pw-trace-marker-operation)\n` (SHA-256 `30c8c5e0…69df9`) |
+| `wrapper-bsd.sb` | `(import (string-append "bsd" ".sb"))\n` (`45444b5e…9b4a`) |
+| `wrapper-marker.sb` | `(import (string-append "<D>" "/marker.sb"))\n` |
+| `wrapper-literal-marker.sb` | `(import "<D>/marker.sb")\n` |
+
+`marker.sb` names no SBPL operation. When the compiler evaluates it,
+compilation fails with a diagnostic naming that file. The compile outcome
+therefore shows whether the compiler evaluated the file.
+
+**Lexer probe.** `lex_probe.rs` (SHA-256 `409a4457…cd22`) includes the
+checked-in `controller/src/sbpl_lex.rs` (SHA-256
+`5339d1237b65a8605e4fa3cd07e9e4478f25e77a26d134836272d9221441a978`) through
+`#[path]`, unmodified. It was compiled in the scratchpad with
+`rustc 1.99.0 --edition 2024 -O`. For each source and import file, it prints
+`import_scan`'s `scan_complete` and `refs`, the internal distinction the
+resolver turns into `nonliteral_imports`.
+
+**Native bytecode probe.** `bytecode_digest.c` (SHA-256 `a75d71e6…7f88`) was
+compiled with `/usr/bin/clang -O1 … -lsandbox`. It calls
+`sandbox_compile_string` with NULL parameters and reads the returned profile
+through the worker's 24-byte view: type, reserved, bytecode pointer and length
+([pw_profile_capture.h](../controller/tools/pw_probe_runner/pw_profile_capture.h)
+lines 15–22). Each read uses `mach_vm_read_overwrite`. The probe prints the
+bytecode length and SHA-256 and involves neither `sbpl-check` nor the
+scanner. Two consecutive runs printed identical lines.
+
+Every helper invocation exited 0 with `ok` or 1 with `compile_error`. Each
+wrote empty stderr, emitted exactly the seven `data` keys and four inventory
+keys, and published a `policy_sha256` equal to the source hash. Each
+recomputed closure equaled the published one, and each separate file read
+matched its recorded hash. Temporary material has no retention guarantee, so
+the decisive excerpts are reproduced in the entries.
+
+### DT-81 — `import_inventory` carries four of the scanner's distinctions; nonliteral forms, the bound name and the first problem are dropped
+
+**Statements examined.** The subject statement
+([RESPONSE](../docs/RESPONSE.md#contract-policy-imports) line 862; authored
+at [11-policy.surface.md](../docs/contract/11-policy.surface.md) line 547)
+says "an unevaluable import argument, unreadable/nonregular file or invalid
+UTF-8 scan input records an incomplete inventory." The helper's published
+inventory has four fields: `records`, `truncated`, `cycle` and
+`policy_closure_sha256` (lines 864–867).
+
+**Source inspection.** `ResolvedImports`
+([sbpl_imports.rs](../controller/src/sbpl_imports.rs) lines 117–132) carries
+six members. The helper's `ImportInventory` (sbpl-check.rs lines 86–92) is
+built at lines 346–355 from `records`, `truncated` and `cycle`, plus a closure
+computed over `records`. Lines 113–115 say that the helper reports `truncated`
+and that the controller dossier reports `exceeded` and `nonliteral_imports`.
+
+| Scanner condition | Internal record | What `import_inventory` shows |
+| --- | --- | --- |
+| Name not found | Error record and `failure` (lines 273–292) | Record with null path and `error: "not found in search path"` (executed: M3 in DT-82) |
+| Open/fstat failure or nonregular file | Record with the `read_regular_file` error and `failure` (lines 76–92, 233–237) | Record error |
+| Invalid UTF-8 import | Record keeps hash and size, has error `not valid UTF-8; its imports were not scanned`, and sets `failure` (lines 242–253) | Record error (executed: DT-87) |
+| Depth bound | `truncated`, `exceeded: "depth"`, a record with `depth limit exceeded (8)`, and `failure` (lines 219–230) | `truncated` and the record error |
+| Count bound | `truncated`, `exceeded: "count"`, no record, and `failure` (lines 155–163, 213–216, 277–280) | `truncated` only |
+| Cycle | `cycle` chain and `failure` (lines 196–206) | `cycle` |
+| Nonliteral form in submitted source | `nonliteral_imports` and `failure` (lines 313–317) | Nothing (DT-82) |
+| Nonliteral form in an imported file | `nonliteral_imports` and `failure`; the file's record error is unchanged (lines 259–265) | Nothing; that file's record has `error: null` (DT-83) |
+| First problem | `failure` | Dropped |
+| Which bound stopped the walk | `exceeded` | Dropped. A depth hit leaves an error record and a count hit leaves none. If both occur, their order is lost |
+
+The helper inventory has no field meaning "incomplete." A consumer can infer
+an unreadable, nonregular or invalid-UTF-8 input only from `records[].error`
+text. A nonliteral argument cannot be inferred. The lexer's own documentation
+([sbpl_lex.rs](../controller/src/sbpl_lex.rs) lines 13–18) says consumers
+treat empty `refs` with `scan_complete = false` as "not followed" rather than
+"no imports." No reader of the helper envelope can make that distinction. The
+guide's helper passage ([PolicyWitness.md](../docs/PolicyWitness.md) lines
+867–870) promises only that "Resolution errors, truncation and cycles stay in
+the inventory," which matches the projection.
+
+**History.** The helper has never published a nonliteral-import signal. The
+lexer was introduced in `b9c02792` (2026-05-19). Its import scan returned only
+a name set (`import_refs`, verified at `e0105092^`) until `ed0bd3da`
+(2026-10-01). That commit added the scan's completeness flag and the
+resolver's `nonliteral_imports`, `exceeded` and `failure`, with the comment
+assigning the latter two to the dossier. `7a0dcbac` (2026-10-03) grouped the
+helper's fields into the current four-field `import_inventory`; both commits
+are in v0.3.5. The sentence "records an incomplete inventory" first appears in
+`f6551bf9` (2026-11-10). That commit is in v0.3.7 but not v0.3.6, and v0.3.6's
+RESPONSE contains no `nonliteral`, `unevaluable` or `import_inventory` text.
+The projection therefore predates the 0.3.6+ contract changes, while the
+sentence it contradicts arrived with them. Related: DT-29, DT-82 and DT-83.
+
+### DT-82 — A computed import argument that the compiler follows yields the inventory of a policy with no imports
+
+**Executed constructed control.** The three required inputs share the base
+`(version 1)\n(deny default)\n` and differ only in the third line:
+
+| Case | Third line | Source SHA-256 = `policy_sha256` | Helper result | `records` | `truncated` / `cycle` | `policy_closure_sha256` | Lexer `scan_complete` / `refs` | Native bytecode |
+| --- | --- | --- | --- | --- | --- | --- | --- | --- |
+| A | none | `6906c7cd…1d5f` | `ok`, exit 0 | `[]` | false / null | `f6aa3063…8f6c` = SHA-256(A ‖ 0x1F) | true / `[]` | 456 bytes, `2cc1b84c…8b74` |
+| B | `(import "bsd.sb")` | `a5292b6e…5580` | `ok`, exit 0 | `bsd.sb`, `dyld-support.sb` and `system.sb` under `/System/Library/Sandbox/Profiles`, each with `error: null` | false / null | `7fddbed8…d84c` | true / `["bsd.sb"]` | 2420 bytes, `bb152ee6…0d9e` |
+| C | `(import (string-append "bsd" ".sb"))` | `91f3e8b7…a1fa` | `ok`, exit 0 | `[]` | false / null | `17601787…b6d1` = SHA-256(C ‖ 0x1F) | **false** / `[]` | 2420 bytes, `bb152ee6…0d9e` |
+
+B's record hashes were `f69ffbef…f8c8` (858 bytes), `06215a5d…bf1c` (2655
+bytes) and `1b2c4487…846f` (12024 bytes). The full bytecode digests were
+`2cc1b84cc42cf1e2d5fbed099a0c722dfcf6644b41f785a05abadae58b028b74` for A and
+`bb152ee600934e1e09091c10f3b4e80ff17f235f64748dff5d0b4342e1cf0d9e` for both B
+and C.
+
+C's native compilation produced bytecode identical to B's and different from
+A's. The compiler therefore incorporated the same imported rules through the
+computed argument as through the literal one. The scanner recorded this
+distinction internally (`scan_complete: false`). The helper's inventory for C
+nevertheless matched A field for field except for the closure hash. That
+difference does not encode the scan state. Each of A's and C's closures is
+SHA-256 of its own source followed by 0x1F, with no path/hash line; they
+differ only because the third source line differs. B's closure covers three
+path/hash lines and was recomputed from its records and from independent
+reads of the three files. Compilation succeeded for A, B and C, so the result
+says nothing about imports.
+
+Marker controls on the base `(version 1)\n(allow default)\n` show that the
+compiler opens a computed path:
+
+- M2, `(import (string-append "<D>" "/marker.sb"))`: `compile_error`, "unbound
+  variable: pw-trace-marker-operation at <D>/marker.sb, line 1, column 8";
+  `records: []`, `truncated: false`, `cycle: null`. The literal form M1,
+  `(import "<D>/marker.sb")`, produced the same diagnostic and one
+  `marker.sb` record.
+- M4, `(import (string-append "<D>" "/absent.sb"))`: `compile_error`, "unable
+  to open <D>/absent.sb: No such file or directory"; `records: []`. The
+  literal form M3 produced the same diagnostic and the record
+  `{"name":"<D>/absent.sb","resolved_path":null,…,"error":"not found in search path"}`.
+
+The allow-default versions of A, B and C in `it-2` produced the same
+inventory shapes. All three compiled to identical 492-byte bytecode
+(`b2056ef2…97e0`), so an allow-everything base cannot reveal imported rules
+in a bytecode comparison.
+
+**What each field establishes for C.** `records: []` means that no literal
+name was collected, not that nothing was imported. `truncated: false` means
+that no bound was reached, and `cycle: null` means that the walked files
+formed no cycle. The closure identifies the source and an empty set of read
+files. No field, alone or with the others, distinguishes C from A. This
+extends DT-29, which left native imports unexamined. Related: DT-81, DT-83 and
+DT-86.
+
+### DT-83 — A nonliteral import inside an imported file leaves that file's record error-free
+
+**Source inspection.** When an imported file is not valid UTF-8, the resolver
+writes `not valid UTF-8; its imports were not scanned` into that file's record
+([sbpl_imports.rs](../controller/src/sbpl_imports.rs) lines 242–253). When a
+nonliteral form makes the file's own scan incomplete (lines 259–265), it sets
+only `nonliteral_imports` and `failure`. The file's record keeps
+`error: null`, along with its hash, size and mtime. The
+[records statement](../docs/RESPONSE.md#contract-policy-imports-records)
+(line 864) says each resolved file's held bytes are "both hashed and scanned."
+The record shows that a scan happened, but not whether it was complete.
+
+**Executed constructed control.**
+
+- Nd is `(version 1)\n(deny default)\n(import "<D>/wrapper-bsd.sb")\n`. The
+  helper returned `ok` with one record, `wrapper-bsd.sb` (`45444b5e…9b4a`,
+  `error: null`), `truncated: false`, `cycle: null` and closure
+  `1966a6c6…5a87`. The native bytecode was 2420 bytes, `bb152ee6…0d9e`,
+  identical to B in DT-82. The compiler followed the nested computed import
+  of `bsd.sb`.
+- N2 imports `wrapper-marker.sb` literally on the allow-default base. It
+  produced a `compile_error` naming `<D>/marker.sb`; its only record is
+  `wrapper-marker.sb`, with `error: null`. N3 imports
+  `wrapper-literal-marker.sb`, produced the same diagnostic and recorded both
+  files.
+- The lexer probe reports `scan_complete: false` for `wrapper-bsd.sb` and
+  `wrapper-marker.sb`. It reports `true` for the top-level Nd, N1 and N2
+  sources.
+
+The per-record errors are therefore not a complete account of files whose
+imports went unscanned: the invalid-UTF-8 case is marked, but the
+computed-argument case is not. No test exercises lines 259–265. The
+[sbpl_imports.rs](../controller/src/sbpl_imports.rs) tests contain no
+nonliteral form, and the helper's constructed variants fix
+`nonliteral_imports: false` ([sbpl-check.rs](../controller/src/bin/sbpl-check.rs)
+line 992). From source, the dossier would report `incomplete` with failure
+`import "<name>": a nonliteral (import ...) form could not be followed`; this
+was not executed. The nested branch was added in `ed0bd3da`. Related: DT-29,
+DT-81 and DT-82.
+
+### DT-84 — A literal import that the compiler follows can escape the scanner with no incompleteness signal
+
+**Executed constructed control.** L2 adds the third line
+`(import "<D>/marker.sb" ; note\n)` to the allow-default base. Native
+compilation failed with "unbound variable: pw-trace-marker-operation at
+<D>/marker.sb, line 1, column 8," so the compiler read and evaluated
+`marker.sb`. The helper reported `records: []`, `truncated: false`,
+`cycle: null` and a closure equal to SHA-256(source ‖ 0x1F) (`05cdf968…` in
+`it-2`). The lexer probe gave `scan_complete: true` and `refs: []`. Unlike
+DT-29 and DT-82, this miss also reaches the internal record: the resolver's
+`nonliteral_imports` would be false.
+
+**Source inspection.** In `try_match_form`
+([sbpl_lex.rs](../controller/src/sbpl_lex.rs) lines 82–106), an argument
+beginning with `"` goes to `try_match_keyword_form`. After the closing quote,
+that function skips only space, tab, CR and LF (lines 191 and 204–206), then
+requires `)` (lines 192–194). A `;` comment there produces `None`, and
+`try_match_form` returns `None` at line 105 rather than `NonLiteral`. The
+outer scan advances one byte (line 62), skips the string and records neither
+a name nor incompleteness. The dossier rule (`dossier.rs` lines 159–171)
+would give the same source `status: "complete"` with no records; that
+consequence is derived from source and was not executed. The
+[dossier status](../docs/RESPONSE.md#contract-dossier-imports-status) (line
+3341) defines `complete` as having "exhausted the literal closure without a
+reported problem." Source reading also shows that a comment between `import`
+and its argument would reach the `NonLiteral` path and be flagged. The `)`
+rule has existed since the lexer's introduction in `b9c02792` (2026-05-19).
+
+**Bounding controls.** L1, `(IMPORT "<D>/marker.sb")`, failed natively with
+"unbound variable: IMPORT at <input string>, line 3, column 2." Scanner and
+compiler agree that this is not an import form. O2,
+`#| (import "<D>/marker.sb") |#`, failed with "undefined sharp expression,"
+so block comments are not accepted syntax here. Other spellings the reader may
+accept, such as other whitespace bytes, were not tested natively. Related:
+DT-81, DT-82 and DT-85.
+
+### DT-85 — Inventory records include imports the compiler did not evaluate
+
+**Executed constructed control.** Od is
+`(version 1)\n(deny default)\n(if #f (import "bsd.sb"))\n`. The helper
+returned `ok` with the same three Profiles records and hashes as B in DT-82,
+each with `error: null`, and closure `47eb6312…055c`. The native bytecode was
+456 bytes, `2cc1b84c…8b74`: identical to A and different from B. O1 places
+`(if #f (import "<D>/marker.sb"))` on the allow-default base. It compiled
+`ok`, although M1 shows that evaluating `marker.sb` fails, and its inventory
+still contains one `marker.sb` record (`30c8c5e0…`, `error: null`). The lexer
+collects literal names in every position;
+[sbpl_lex.rs](../controller/src/sbpl_lex.rs) lines 233–238 assert that both
+branches of an `if` are collected.
+
+Together with DT-82 to DT-84, this shows that the records are neither a
+subset nor a superset of the files the compiler incorporated. These controls
+establish that the untaken import was not evaluated; whether the compiler
+opened the file was not observed. The
+[policy section](../docs/RESPONSE.md#read-policy-observations) (line 854) and
+the reads statement (line 874) say that inventories describe their own reads,
+which agrees with this result.
+[Literal import evidence scope](../docs/RESPONSE.md#contract-policy-imports-native_import_agreement)
+(line 879) says "Native compilation examples establish their selected literal
+imports." The record does not identify those examples or say whether
+"selected" covers conditional evaluation. Od's closure covers bytes from three
+files that did not contribute to the compiled profile. As a result, Od and A
+compile identically but have different closures. No statement found here
+claims that records are compiler reads; this entry bounds what a record
+establishes. Related: DT-82 and DT-84.
+
+### DT-86 — The tests establish projection, traversal and hashing under constructed inputs, not scan completeness
+
+The subtree [support](../docs/RESPONSE.md#contract-policy-imports-support)
+(line 885) is `source_read`. It cites `resolve_imports`, `read_regular_file`,
+`compute_closure_hash` and the helper's `ImportInventory`, which has no
+completeness carrier, and it cites no check. The tests read here establish the
+following:
+
+- `sbpl_check_records_import_provenance_for_system_sb`
+  ([cli_contract.rs](../controller/integration/cli_contract.rs) lines
+  1468–1557) asserts at lines 1513–1516 that `policy_sha256 !=
+  policy_closure_sha256`, with the message "closure hash should differ from
+  policy_sha256 when imports were resolved." `compute_closure_hash` appends
+  0x1F unconditionally (sbpl_imports.rs lines 346–349 and 353), so the two
+  hashes always differ. In executed case A, which has no imports,
+  `policy_sha256` is `6906c7cd…` and the closure is `f6aa3063…`. The two
+  hashes differed in all 20 helper envelopes produced here. The unit test
+  `closure_hash_differs_from_policy_sha_when_imports_resolved`
+  (sbpl_imports.rs lines 447–453) has the same property. The test's other
+  assertions require at least one record, a `system.sb` record with the
+  Profiles path and a 64-character hash, `truncated: false`, `cycle: null`
+  and a successful compile. It does not compare the hash with file bytes,
+  recompute the closure or check transitively imported records. The
+  independent recomputation here matched in every case, so the behavior
+  holds, but this test does not establish it.
+- `sbpl_check_verdicts_follow_the_native_compiler` (lines 619–810) runs 14
+  import-free sources. It asserts empty records, `truncated: false`,
+  `cycle: null` and a 64-character closure for each (lines 787–795). The
+  "nonliteral parameter name" case (lines 702–708) computes a `param` name.
+  The matrix contains no import form, literal or computed.
+- `inventory_findings_survive_in_their_group_and_never_change_the_verdict`
+  ([sbpl-check.rs](../controller/src/bin/sbpl-check.rs) lines 1013–1072)
+  replaces the walk with constructed `ResolvedImports` values (lines
+  987–1011). Its "errors" variant sets `failure`, its "truncated" variant
+  sets `exceeded: "depth"`, and every variant has
+  `nonliteral_imports: false`. The test asserts `records`, `truncated`,
+  `cycle`, a closure computed by the same `compute_closure_hash`, and the
+  verdict's independence from those fields. It does not assert whether
+  `failure` or `exceeded` is present or absent. It establishes the three-field
+  projection and verdict independence, not traversal.
+- `absent_null_and_empty_params_compile_without_setup_calls` (lines 765–822)
+  runs the real resolver over an import-free source. It compares the closure
+  with `compute_closure_hash(source, &[])`, the function the producer calls,
+  so it does not check the framing independently. The closure-hash unit tests
+  (sbpl_imports.rs lines 392–453) use constructed records to check stability,
+  sensitivity, order invariance and exclusion of unresolved records.
+- The resolver tests (sbpl_imports.rs lines 495–725) establish cycle, diamond,
+  count and depth traversal; read errors including invalid UTF-8 and a
+  directory; and FIFO handling. None contains a nonliteral form or asserts
+  `nonliteral_imports`. The lexer tests flag an identifier argument
+  (sbpl_lex.rs lines 347–374). They contain no computed-expression argument
+  and no comment inside a form.
+- `import_scan_statuses_never_report_an_unscanned_closure_as_complete`
+  ([dossier.rs](../controller/src/dossier.rs) lines 1426–1467) is the only
+  executed check that the resolver's nonliteral flag reaches a published
+  field. That field is the dossier's `status`, not the helper's inventory.
+- `fallback_helper`
+  ([check.py](../tests/suites/failure_boundaries/check.py) lines 415–439)
+  covers only the refusal path: null groups and absent retired names.
+  [checker_controls.py](../tests/suites/blackbox_e2e/checker_controls.py)
+  lines 39–52 construct a helper envelope with an empty inventory to test the
+  consumer's admission of the capture.
+
+No test sends the helper a computed import argument and examines the
+resulting envelope. No test compares inventory records with what the
+compiler read. These conclusions come from source and test reading; DT-82 to
+DT-85 hold the executed contrasts. Related: DT-29.
+
+### DT-87 — Smaller observations on inventory hashes and wording
+
+- An error record can contribute a closure line. U1 adds
+  `(import "<scratchpad>/utf8/bad-utf8.sb")` to the allow-default base. The
+  imported file contains `(version 1)\n(allow default)\n\xff\n` (30 bytes,
+  SHA-256 `390ca7ba…fcd4`). The helper produced one record with that hash and
+  `error: "not valid UTF-8; its imports were not scanned"`. The closure,
+  `617a6312…b359`, equals SHA-256(source ‖ 0x1F ‖ "<path> 390ca7ba…"), not
+  the empty-inventory framing. Native compilation failed with a diagnostic
+  located in that file. The
+  [closure statement](../docs/RESPONSE.md#contract-policy-imports-policy_closure_sha256)
+  (line 867) says that "each successfully hashed resolved path" contributes
+  and that "Failed imports remain error records and contribute no path/hash
+  line." The executed record meets the first clause yet is an error record
+  under the second. `compute_closure_hash` (sbpl_imports.rs lines 354–360)
+  selects lines by the presence of a path and hash, not by the absence of an
+  error. Executed constructed control.
+- The guide (PolicyWitness.md lines 878–879) says "A performed walk over a
+  source with no imports is an empty list, distinct from the null of a
+  refusal." Executed cases C, M2, M4 and L2 contained imports that the
+  compiler followed, and each also produced an empty list.
+  [`import_inventory`](../docs/RESPONSE.md#contract-policy-check_data-import_inventory)
+  (line 3534) says "an empty records list is a performed walk with no import
+  records," which describes records only.
+- The guide's closure description (lines 889–893), "sha256 of the source plus
+  the sorted `resolved_path + " " + sha256`," omits the 0x1F separator stated
+  in RESPONSE. Its statement that "Unresolved imports are excluded" also omits
+  read failures and depth-limit records, which are excluded too. The separator
+  framing matched all 20 executed closures. Source and executed.
+
+### Import-inventory coverage and remaining investigative limits
+
+The trace covered:
+
+- the lexer's import matcher;
+- the resolver's traversal and its error, bound, cycle and nonliteral
+  branches;
+- the helper's path from admission to inventory, including its envelope
+  fields and closure framing;
+- the RESPONSE subject and its authored source;
+- the helper passage of the guide;
+- the dossier's use of the resolver flags;
+- every test in the tree that names `import_inventory`, the nonliteral flag or
+  the helper.
+
+History was traced for the lexer, the resolver flags, the helper's field
+grouping and the subject statement. The executed evidence consists of 14
+allow-default helper cases, 5 deny-default helper cases, 1 invalid-UTF-8 case,
+lexer-probe output for every source and import file, and two identical native
+bytecode runs.
+
+Native import behavior was observed through compile diagnostics naming files
+and through identical compiled bytecode, not through file-access tracing.
+Identical bytecode shows equal compiled output, not which path was opened.
+Untaken imports were shown to be unevaluated, not unopened. The dossier
+consequences in DT-83 and DT-84 come from source and were not executed
+through `policy-witness run`. The investigation did not exercise:
+
+- search-order collisions;
+- the count and depth bounds;
+- unreadable and FIFO imports;
+- changes to imported files between reads;
+- other reader-accepted spellings;
+- worker-side compilation.
+
+Historical inspection establishes when mechanisms and statements appeared,
+not how older binaries behaved. Only this record was changed. These entries
+contain no repair, deduplication or choice of authoritative layer.
