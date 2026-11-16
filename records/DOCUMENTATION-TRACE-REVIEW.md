@@ -4938,3 +4938,716 @@ Only this record was changed among tracked files. The registered run added
 development output under `tests/out/runs/profile-receipt-trace/`, and the
 pinned pytest target was provisioned under `.tmp/pytest/`. These entries
 contain no repair, deduplication or choice of authoritative layer.
+
+## Additional findings: wire identity and public JSON projection
+
+This continuation examines two mechanisms: the wire-schema fingerprint
+(`wire.frame.identity`) and the public JSON projection
+(`wire.frame.projection`). It follows their immediate producers, readers and
+checks:
+
+- the authored schema [porcelain.json](../docs/porcelain.json) and its
+  generator [generate_porcelain.py](../docs/generate_porcelain.py);
+- the Swift writer ([PWPorcelain.swift](../runner/Sources/PWRunnerCore/PWPorcelain.swift)
+  and the generated `PWPorcelainRecords.swift`);
+- the Rust reader ([porcelain.rs](../controller/src/porcelain.rs) and the
+  generated `porcelain_records.rs`);
+- the Python reader ([porcelain.py](../tests/lib/porcelain.py) and the
+  generated `porcelain_schema.py`);
+- the checks cited for them.
+
+The statements read were:
+
+- [21-wire.surface.md](../docs/contract/21-wire.surface.md) lines 33, 53, 61,
+  97–103 and 105–111, and its support owner (lines 13–23);
+- ARCHITECTURE lines 699, 733–735 and 743–750, and rows 611, 942–943 and
+  D78–D80 (lines 1027–1029);
+- CONTRACT's "Wire-schema fingerprint" (lines 190–197);
+- RESPONSE definitions of the path forms (lines 1049–1051 and 1061–1063),
+  the conditional-null fields (lines 961–962, 2235–2236 and 2324–2325), the
+  claim value variant (lines 1894 and 1899–1907) and the validator record
+  (lines 978–989).
+
+The public build contract and semantic admission were read only where they
+bound the fingerprint's role or consumed projected values. Transport, actor
+execution and BYOXPC were excluded. The leads were DT-18, DT-31, DT-47,
+DT-52–53 and DT-95–104; the entries below cross-reference them where they add
+evidence.
+
+### Wire-identity investigation identity and reproduction conventions
+
+Source inspection used clean HEAD `b377cb8a7c7182051e8ff320c4741e26316704f4`
+on 2026-11-16. Line numbers below refer to that snapshot. File hashes:
+
+- `docs/porcelain.json` `538b3cf5…09c2`;
+- `docs/generate_porcelain.py` `0f0c1470…ab86`;
+- `tests/lib/porcelain.py` `c1bc3bcf…ebdb`;
+- `tests/lib/porcelain_schema.py` `7cb5a0df…f6f7`;
+- `controller/src/porcelain.rs` `70b7648c…2cb1`;
+- `controller/src/porcelain_records.rs` `f9e67dbe…409f`;
+- `runner/Sources/PWRunnerCore/PWPorcelain.swift` `b8e6d4ee…ec6c`;
+- `docs/contract/21-wire.surface.md` `02333ece…45b9`;
+- `tests/suites/source_drift/porcelain_codec.py` `55cd8440…44f5`;
+- `tests/suites/runner_unit/porcelain_replies.py` `f5491ef3…4614`.
+
+The schema, generator and readers last changed in `897be512`
+(2026-11-11), an ancestor of the app's commit. The machine reports macOS
+26.7.1, build 25G241. Python ran through `tests/lib/python.sh` (Python 3.14.9)
+with `-I`.
+
+**Build.** `dist/PolicyWitness.app` reports commit
+`8b5de2b2882d7cb2536d1b42d9109f4b0dfc2855` and contract
+`development:bdefcb44cb8b799494b555f6ba992e5bbfb58eba8ef980cb805adf15c103fb18`.
+`docs/build_contract.py` printed the same identity for HEAD.
+`codesign --verify --deep --strict` passed, and the team is `42D369QV8E`.
+Outside `records/`, `git diff 8b5de2b2 HEAD` touches only the retired plan and
+one line of `tests/suites/preflight/opt_in/build_refusals.py`. Nothing was
+rebuilt.
+
+**Registered run.** `PW_TEST_OUT_DIR=tests/out/runs/wire-identity-trace
+tests/run.sh --case source_drift/porcelain_codec --case unit/rust.unit --case
+runner_unit/pwrunner_core_unit_executable` produced run
+`20261116T213728Z_d05f0e15`. All three cases passed, each with
+`system_sleep_ms` 0.
+
+- The Swift batch reported 606/606.
+- The Rust log lists every `porcelain::tests` control as `ok`, including the
+  four the wire support owner cites and
+  `byte_projections_spell_bytes_only_at_presentation`.
+- `reader_definition_corpus_cross_readers` passed.
+
+This output is disposable development output under the retention policy. The
+decisive values are reproduced below. The Swift-emitted frames used by the
+probes are the 261 `.pwp` files under that run's
+`suites/runner_unit/pwrunner_core_unit_executable/artifacts/`.
+
+**Direct probes.** Drivers are under `<scratchpad>/scripts`, where
+`<scratchpad>` is
+`/private/tmp/claude-501/-Users-raccoon-Desktop-Security-PolicyWitness/084cf250-b2e9-4675-b565-8bc3e3b83e81/scratchpad`.
+Scratch material has no retention guarantee.
+
+- `wiretlv.py` (`a69b4cb5…7e33`) is a separate TLV parser and writer written
+  from the ARCHITECTURE frame grammar. It does not use `tests/lib/porcelain.py`.
+  It re-encoded all 261 Swift frames byte-identically.
+- `identity_probe.py` (`210f96a9…b781`) recomputes the fingerprint with its
+  own canonical JSON writer and its own type-descriptor construction. It then
+  applies one-property mutations to the schema in memory. For each it records:
+  - whether `validate()` refuses;
+  - whether the fingerprint changes;
+  - whether the generated Swift, Rust and Python text changes apart from the
+    fingerprint line;
+  - whether any Swift source region changes;
+  - whether the 260 reply-rooted Swift frames decode and project differently
+    under the mutated Python tables, with the header ignored.
+
+  The 261st frame, `porcelain-disposition/unknown-progress.pwp`, has a
+  `PWRunnerSubprocess` root.
+- `generator_cli_probe.py` (`6cd89feb…7f3f`) runs the actual generator command
+  in disposable copies made with `fixture_inputs.copy_declared`, and diffs the
+  three outputs.
+- `build_probe_frames.py` (`922b5089…9f0d`) and `build_probe_frames_2.py`
+  (`7eb10f53…0d21`) build 40 probe frames by editing Swift-emitted corpus
+  frames. Each edit changes one property; the nine Swift path-state frames
+  were added unedited. The drivers add each probe frame as a case row to a
+  scratch copy of the reader corpus.
+- Rust projections came from a copy of the current controller test binary
+  (`controller/target/debug/deps/policy_witness-bb8137965490ffba`,
+  `ce8d8051…91be`, copied under `tests/lib/checkout_lock.sh`). It ran
+  `run_flow::tests::reader_definition_corpus_cross_readers` with
+  `PW_POLICY_TRANSFER_REPLIES` pointing at the scratch corpus. That test:
+  - decodes each frame with `porcelain::decode`;
+  - serializes the typed record;
+  - runs `admit_reply`;
+  - assembles the `run` envelope;
+  - writes `rust.json`;
+  - then runs the Python replay.
+
+  The test exits 101 here by design. Every reported problem names a probe row:
+  10 Rust and 38 Python problems. The 153 original rows reported none.
+- `analyze_probe.py` (`b39ef223…4525`) compares the Rust JSON with
+  `porcelain.decode_bound(…, 'reply', 'test:policy-witness')`. It records key
+  presence explicitly, with absent spelled `<absent>`. It also runs
+  `consumer.validate_fixture` and `lifecycle_oracle.check_record`.
+- `golden_probe.py` (`3fbfd0ac…d283`) recomputes the reply shape from the 64
+  `porcelain-shapes` frames under mutated tables, using the production
+  `collect_shape`, and compares it with `response_shape.json`.
+- `precedence_probe.py` (`28cf5e6b…1577`) is described in DT-110.
+
+One live `policy-witness run` used the dist app; see DT-109.
+
+**Independent recomputation (executed).** The fingerprint is SHA-256 of
+compact, sorted-key JSON. The recomputation built that JSON with its own
+writer and its own descriptors: `text`, `i64`, `i32`, `bytes`,
+`{"record": id}`, `{"variant": name}` and `{"optional"|"list"|"map": …}`.
+The result, `80013e5b…e224`, equaled:
+
+- `wire_identity`'s output;
+- `SCHEMA_FINGERPRINT`;
+- the Swift `fingerprint` array;
+- the Rust `FINGERPRINT` array;
+- the header bytes of all 261 Swift frames.
+
+The identity JSON is 48,563 bytes. The descriptor spellings are not in any
+statement. The surface says "type descriptor" without defining one, so the
+recomputation is independent code but not an independent specification.
+
+### DT-105 — The fingerprint changes for names, ordering and presentation rules that producers do not consume, and every frame it refuses also fails the exact contract check
+
+**Statements examined.**
+
+- Surface line 103 and ARCHITECTURE line 745: the fingerprint covers "records
+  in schema order with ID, name and fields; each field's tag, public name,
+  type descriptor, null rule and any byte projection; path-form and
+  conditional-null rules; root names mapped to record IDs; and declared
+  variant cases." "Changes to a field's name, tag, type, optionality,
+  null/projection rule or a newly added optional field change the fingerprint
+  and require exact receiver agreement."
+- The generator's comment (generate_porcelain.py lines 276–277): "Source
+  locations, defaults and prose … do not change what a received record means
+  and must not force wire churn."
+- CONTRACT lines 192–197: "A matching fingerprint establishes the selected
+  wire-schema match; the public producer identity is then checked
+  separately."
+
+**Executed (one-property schema mutations).** Every recomputed fingerprint
+matched production. The "frames" column counts how many of the 260
+reply-rooted Swift frames project differently under the mutated tables.
+
+| Change | Fingerprint | Generated text changed apart from the fingerprint | Frames projecting differently | Statement |
+| --- | --- | --- | --- | --- |
+| Last tag of `CompiledProfileCapture` 15→16 | changed | Swift writer, Rust, Python | 49 (all refused) | covered |
+| `parameter_count` `Int?`→`String?` | changed | Swift region, Rust, Python | 49 (refused) | covered |
+| `reason` `String?`→`String` | changed | Swift region, Rust, Python | 10 (refused) | covered |
+| Added optional field (tag 16) | changed | all three, Swift region | **0** | covered |
+| `worker_pid` `Int`→`Int64` | unchanged | Swift region only | 0 | silent |
+| `PWExecWaitObservation.rc` `Int32`→`Int64` | changed | Swift region, Rust, Python | 0 | descriptor |
+| Added variant case 3 (`String`) | changed | Rust, Python | 0 | covered |
+| Public name `reason`→`reason_text` | changed | Swift tag constant, Rust, Python | 40 (none refused) | covered |
+| `reason` `json_null` false→true | changed | Rust, Python | 10 | covered |
+| `source_sha256` hex→base64 | changed | Rust, Python | 49 | covered |
+| `PWRunnerPathDiagnostics` path-form order reversed | changed | Rust, Python | 1 | covered |
+| `conditional_null` removed from `PWRunnerSandboxCheckResult` | changed | Rust, Python | **0** | covered |
+| Storage name `bytecode`→`bytecode_data` | unchanged | Swift writer and region, Rust field name | 0 | — |
+| Doc comment; default of `PWRunnerEquipmentExecution.reason`; `mutable`; local-only field type; unknown field key | unchanged | Swift region at most | 0 | provenance |
+| Source path (fingerprint only; outputs need the region in the new file) | unchanged | — | — | provenance |
+| `records` list reversed | changed | Swift, Rust, Python (declaration order) | 0 | covered |
+| Record rename `PWRunnerTerminationRequest`→`PWRunnerKillRequest` (fingerprint only; outputs need renamed regions) | changed | — | — | covered |
+| Variant case `Integer`→`Number` | changed | Rust enum case | 0 | covered |
+| Root key `reply`→`response` | changed | Rust and Python constant names | 0 | covered |
+
+The insensitivities agree with the statement: provenance, storage names, and
+`Int`/`Int64` in a field, which have the same wire kind and range. Each
+statement-covered change moved the fingerprint.
+
+**What the receiver needs.** The Swift writer consumes only record IDs, field
+tags, stored types and optionality. The generated `porcelainWrite` bodies hold
+no public name other than a tag constant's identifier, no null rule, no
+projection, no path form and no conditional rule. A producer from an older
+schema therefore writes the same bytes after:
+
+- a rename;
+- a null-rule flip;
+- a projection change;
+- a path-form or conditional-null edit;
+- a record reorder or rename;
+- a variant-case rename;
+- a root-key rename.
+
+The receiver projects those bytes with its own rules. After an added optional
+field, every one of the 260 old frames decodes and projects identically, yet
+the new fingerprint refuses them all. The same holds for a removed
+conditional-null rule, which also changed no frame.
+
+**Relation to the public contract (source).** The fingerprint constants live
+in `controller/src/porcelain_records.rs` and
+`runner/Sources/PWRunnerCore/PWPorcelainRecords.swift`. Both are inputs to the
+development contract digest (CONTRACT lines 80–86), and release identity
+requires tag-equal bytes. Any fingerprint change therefore changes the public
+contract. After the fingerprint, both `decode_bound` implementations require
+the exact contract: porcelain.rs lines 174–221 and porcelain.py lines
+158–186. The controller passes `BUILD_CONTRACT` for both the client capture
+and the host reply (runner_client.rs lines 715 and 752–756). In the
+controller, the fingerprint check therefore refuses no frame that the contract
+check would admit.
+
+Its distinct effects are three:
+
+1. A different refusal message. Both refusals map to
+   `unsupported_runner_response` (runner_client.rs lines 627–629).
+2. A refusal before the producer context is decoded.
+3. It is the only identity check for unbound readers. These include
+   `porcelain.decode`, used by most Python replay helpers, and
+   `porcelain::decode`, used by the Rust corpus test.
+
+**Cost.** A schema mismatch reports "runner reply frame names an unsupported
+porcelain schema; this controller reads only the schema it was built with"
+(lines 760–765). It does not name the foreign producer, although the contract
+string sits at a fixed position the controller could read. A contract mismatch
+reports "runner reply has foreign contract {value}". Most build differences
+that reach a receiver change the schema too. The guide's recovery row (line
+2977) asks the operator to compare the runner's contract with `--version`
+from elsewhere.
+
+The statement that presentation edits "require exact receiver agreement"
+treats a receiver-local rendering choice as a producer/receiver protocol
+change.
+
+**Judgment (tentative).** The arrangement looks needlessly broad rather than
+wrong. The exact-contract rule already forces lockstep builds, so the cost is
+small in operation. The cost lies in interpretation and maintenance: the
+identity mixes protocol structure with presentation and generator-local
+names. An identity over binary structure alone would say what a receiver must
+share with the producer: IDs, tags, kinds, ranges, optionality, and variant
+tags with their payload types. Presentation rules could then be versioned
+with the receiver. Alternatively, reading the producer context before refusing
+would make the schema refusal name the producer. Related: DT-31, the contract
+path that leaves `runner_result` null, and DT-106.
+
+### DT-106 — Inert null flags and verbatim variants make the fingerprint more sensitive than the projection, and the statement's provenance boundary has an exception
+
+**Inert null flags (executed and source).** Three implementations interpret
+`json_null`, and each ignores it on path-form and conditional-null fields:
+
+- The Rust generator checks the path-form and conditional-null branches before
+  the `json_null` branch (generate_porcelain.py lines 235–245).
+- The Python reader applies `json_null` first (porcelain.py lines 90–91).
+  Path-form handling (lines 93–101) and conditional handling (lines 102–106)
+  then overwrite the result in every case.
+- The documentation generator forces `json_null=True` for both kinds
+  (record_definitions.py lines 377–381).
+
+The authored flags differ: `native_rc` and `team_id` carry `json_null: true`,
+and every path form carries `false`. Flipping `native_rc`, `team_id` or
+`realpath_resolved` changed the fingerprint. The generator command in a
+disposable copy changed exactly two lines in each of the Swift and Rust
+outputs, both of them the fingerprint constant, and four lines of the Python
+tables. Projection of the 260 frames was unchanged. The same holds for
+`json_null: true` on a required field (`CompiledProfileCapture.status`):
+`validate()` accepts it, and only the fingerprint changes.
+
+**Variants are fingerprinted verbatim.** `wire_identity` passes
+`schema['variants']` through unchanged (line 298). Field types, by contrast,
+go through `descriptor`. As a result:
+
+- `Int`→`Int64` on a field leaves the fingerprint unchanged, but the same
+  change in a variant case's `type` changes it. Rust and Python output were
+  unchanged apart from the fingerprint.
+- A `doc` key added to a variant case changes the fingerprint; an unknown key
+  on a field does not. `validate()` accepts both. Surface line 103 says
+  "descriptive text remain[s] source provenance."
+- Case names are not on the wire or in public JSON. They name Rust enum cases,
+  RESPONSE's "Alternative" column (lines 1904–1907) and `is_variant(…,
+  "Integer")` in authored conditions (RESPONSE lines 1651–1652). They do
+  change the fingerprint.
+
+**Checks.** The fingerprint tests in
+[porcelain_codec.py](../tests/suites/source_drift/porcelain_codec.py) are:
+
+- a doc-comment control (lines 470–489);
+- five structural mutations (lines 491–539): add, drop, renumber, kind change
+  and an added record.
+
+None mutates a public name, a null rule, a projection, a path-form or
+conditional rule, a default, a source path, record order, a variant or a root.
+ARCHITECTURE row 942 cites the comment control for "typed record fields, tags,
+primitive kinds and public presentation rules". Row D78 cites the structural
+test for "record schema and presentation rules". Before this probe, the
+presentation half of surface line 103 had only source-read support.
+
+### DT-107 — The Swift variant writer is hand-written, so the frame's fingerprint asserts variant tags the producer does not derive; the untagged projection depends on distinct JSON types
+
+**Source.** `swift()` (generate_porcelain.py lines 154–171) emits record
+writers only. `PWDispositionValue` and its writer are hand-written:
+PWRunnerDisposition.swift lines 48–52 and PWPorcelain.swift lines 115–126,
+with literal case tags 1 and 2. The Rust enum and reader (lines 183–190) and
+the Python `VARIANTS` table come from the schema.
+
+**Executed.** Swapping the two case tags in a disposable copy and running the
+generator succeeded:
+
+- The Swift output changed only in the fingerprint array.
+- Rust swapped the enum order.
+- Python's `VARIANTS` became `{1: {'record': 63}, 2: 'i64'}`.
+
+`--check` compares generated text only, so the build accepts the result. A
+Swift build from that tree would stamp the new fingerprint while writing the
+old tags. Under the swapped tables, 153 of the 260 Swift frames were refused,
+namely every frame with a disposition claim value. The registered checks would
+catch this at test time, not at build time. Three of them would fail:
+
+- the Rust test with literal tags (porcelain.rs lines 553–595);
+- the Python variant control (porcelain_codec.py lines 125–129), which reads
+  the real `VARIANTS`;
+- the runner_unit corpus replay.
+
+The case payload types are also hand-written in Swift: `integer(Int)` and
+`request(PWRunnerTerminationRequest)`.
+
+**Projection.** Surface line 61 says "Public JSON serializes the selected value
+directly." The Rust enum is `#[serde(untagged)]`, and Python returns the bare
+value. The case is recoverable from JSON only because the two cases have
+different JSON types: a number and an object. `validate()` accepts a variant
+with two `Int` cases; in-memory control: case 3 `Signal(i64)` was accepted and
+rendered. Such a variant's cases would be indistinguishable in JSON.
+
+**Executed, frame-level variant edits.** These are one-property edits of
+`ordering-ordinary`; Rust and Python JSON were identical.
+
+| Edit | Rust `admit_reply` | Envelope `disposition_integrity` | `consumer.validate_fixture` | Lifecycle oracle |
+| --- | --- | --- | --- | --- |
+| `final_status` value set to the Request variant | no issue | `invalid` | "value is object, not number" | D1 |
+| `final_status` value set to Integer 17 beside `exit_code` 0 | no issue | `invalid` | none | D1 |
+| `final_status` value removed | no issue | `invalid` | none | D1 |
+| `final_status` claim removed | no issue | `invalid` | none | D8 |
+
+The last three repeat DT-53's JSON-level results on actual binary frames and
+add the Rust view: semantic admission does not refuse them, and the
+diagnostics mark the disposition invalid. The run outcome stayed
+`validator_unavailable` in all four.
+
+### DT-108 — The conditional-null projection discards a carried dependent; a contradicting value disappears, and nothing in the stated chain refuses it
+
+**Statements examined.** Surface line 111: "Conditional-null fields are carried
+only when their guard has a value." RESPONSE line 962 gives `native_rc` as
+"present when result_source has a value; may be null" and adds "Synthetic
+results carry explicit null when result_source is present." RESPONSE line
+2236 gives the equivalent rule for `team_id`.
+
+**Source.** On the wire, the dependent and the guard are independent optional
+tags. Structural admission accepts any combination. Projection then drops the
+dependent whenever the guard is absent: generated `serialize` (for example
+porcelain_records.rs line 3523) and porcelain.py lines 102–104. No reader
+compares the two before projection.
+
+Rust semantic admission reads typed values, so it can see a dependent the JSON
+omits. The Python readers read the projection. The shipped host sets
+`result_source` on every built query (CWorkerStepResults.swift lines 46–48).
+In the 260 Swift frames the guard-absent state never occurs. Removing the rule
+changed no frame (DT-105) and no shape-golden document (DT-111).
+
+**Executed.** Each probe is a one-property edit. Rust and Python JSON were
+identical for every probe, including key presence.
+
+| Base | Edit | `result_source` / `native_rc` in JSON | Rust `admit_reply` | Python general reader |
+| --- | --- | --- | --- | --- |
+| `ordering-ordinary` (query_first) | none | `validator` / `0` | admitted | no finding |
+| same | `native_rc` removed | `validator` / `null` | "query_first lacks eligible prediction…" | matching finding |
+| same | `result_source` removed, `native_rc` 0 kept | absent / absent | same issue | same finding |
+| same | both removed | absent / absent | same issue | same finding |
+| same | `native_rc` 7 beside `rc` 0 | `validator` / `7` | same issue | same finding |
+| same | `result_source` removed, `native_rc` 7 | absent / absent | same issue | same finding |
+| `ordinary` (synthetic, no ordering claim) | none | `synthetic` / `null` | admitted | no finding |
+| same | `result_source` removed, `native_rc` 5 | absent / absent | **admitted** | **no finding** |
+| same | `result_source` removed | absent / absent | admitted | no finding |
+| same | `native_rc` 5 with `synthetic` | `synthetic` / `5` | **admitted** | **no finding** |
+
+On the query_first base, three different wire states project to the same JSON
+and draw the same issue. That issue comes from the ordering rule's
+`result_source == "validator"` requirement (porcelain_admission.rs lines
+1204–1208), not from a presence check. On the synthetic base, a carried
+`native_rc` of 5 with no guard reaches the envelope invisibly. Only the
+retained host bytes show it. A synthetic result with a non-null `native_rc`
+contradicts RESPONSE line 962, and every reader accepts it. In each case the
+lifecycle oracle returned no finding, and the outcome was unchanged
+(`validator_unavailable` or `worker_spawn_failed`).
+
+The `team_id` probes on `preparation-0`:
+
+- `identifier` removed with `team_id` kept: both keys were absent from the
+  JSON. Rust admission refused with "equipment bound observations", because a
+  bound binding needs an identifier. The Python general, actor and extension
+  readers returned no finding. That is a semantic-reader difference outside
+  this pass, recorded as a lead.
+- `team_id` removed: projected `team_id: null`, admitted by all readers.
+
+**Judgment (tentative).** The rule turns an internally inconsistent record into
+a consistent-looking public one. A carried value is lost from the JSON, and
+nothing in the stated chain says so. The shipped producer never builds the
+guard-absent state, so the rule's only effect is on states the producer does
+not produce. A stated presence relation would more naturally be refused at
+structural or semantic admission, or projected visibly. Related: DT-52 and
+DT-53 (consumer tolerance), and DT-110.
+
+### DT-109 — Path-form compaction preserves information and both readers agree, but its size rationale no longer applies: the wire and the envelope carry every path
+
+**Affirmative (executed).** Swift's nine path-state frames combine
+equal/NFD-different/absent for both forms of both records, with input
+`/café`. The Rust and Python projections were identical. Each form was
+in exactly one state:
+
+- listed in `same_as_input` with its key absent;
+- present as a different string;
+- explicit `null`.
+
+The NFD spelling `/café` stayed a separate string. These frames had been
+replayed only by Python (porcelain_replies.py lines 65–82). In the passing
+corpus, the cross-reader comparison never contained the null state, while the
+equal and different states occurred 264 and 248 times.
+
+**Rationale.** Commit `085bffc7` (2026-09-26, response schema 9) introduced
+`same_as_input` because a maximum JSON reply exceeded the then 1 MiB
+retention cap. JSON was then the transport. Today the host writes every
+resolved form onto the binary wire whether or not it equals the input
+(`enrichPathDiagnostics`, PWRunnerService.swift lines 422–447). Only the
+projection compacts.
+
+**Executed (live).** One `policy-witness run` with a `file-read-data` query
+and an `open_read` attempt on `/private/etc/hosts` exited 0 with `finished`:
+
+- query: `same_as_input: ["realpath_resolved"]`, with a different
+  `firmlink_resolved`;
+- attempt: `same_as_input: ["realpath_resolved", "parent_realpath_resolved"]`.
+
+The retained host frame is 3,663 bytes and contains the path 11 times.
+Its Python projection equaled `data.runner_result`. The 19,809-byte
+envelope carries that frame as `runner_client.transport.runner_reply.data_base64`,
+24.7% of the envelope, alongside the compacted projection. Compaction saved
+three path strings in the JSON. The binary frame and its base64 copy in the
+envelope still carry them.
+
+**Cost.** Consumers decode a three-state encoding:
+
+- the guide spends about 40 lines on it (PolicyWitness.md lines 2700–2740);
+- `consumer.py` carries a dedicated exclusivity checker (lines 105–136);
+- the Rust test path needs a `#[cfg(test)] same_as_input` field to represent
+  the compacted state through JSON deserialization (generated lines
+  2890–2892 and 2929–2930).
+
+In that test path, `reply_fixtures.rs` lines 28–37 build typed records whose
+path forms are `None` while being listed as equal to the input. Production
+typed records cannot have that state. The override also accepts a listing for
+a form that carries a different value, and then silently drops the value.
+No controller code reads these typed fields today.
+
+**Judgment (tentative).** The compaction is lossless and consistently
+implemented. Its stated benefit no longer applies at either the wire or the
+envelope, while the interpretive cost remains. Emitting each form as a string
+or null would keep the byte-identity distinction: a consumer can compare with
+`input`.
+
+### DT-110 — Rust and Python apply the presentation rules in different orders; a schema that `validate()` accepts makes them disagree
+
+**Source.** The orders differ:
+
+- Generated Rust (generate_porcelain.py lines 227–247) handles each field by
+  the first matching branch: path form, conditional null, optional without
+  `json_null`, otherwise always.
+- Python (porcelain.py lines 86–106) applies `json_null` to all fields, then
+  path forms, then conditional rules. It reads the guard from the
+  already-projected result.
+
+`validate()` (lines 105–111) checks that conditional fields are optional and
+path forms are optional text. It does not prevent a guard from being a path
+form, or a dependent from being one.
+
+**Executed (constructed schema).** `PWRunnerPathDiagnostics` was given
+`conditional_null: {"observer": "realpath_resolved"}`. `validate()` accepted
+it. The generated Rust line is `if self.realpath_resolved.is_some() {
+map.serialize_entry("observer", …) }`. On the Swift frame `0-0`, the realpath
+is present on the wire and equal to the input. Python deleted it as
+same-as-input, read the guard as `None` and dropped `observer`; the Rust branch
+would keep it. On `1-0` (different) and `2-0` (absent), the two agree. The
+Rust side is generated code read, not compiled for this schema.
+
+The current schema has no such combination, so the agreement observed in DT-109
+and DT-108 is partly accidental: it depends on authored data that neither
+`validate()` nor any test constrains. The Python projection control
+(porcelain_codec.py lines 157–181) exercises each rule alone.
+
+### DT-111 — What the projection checks establish: shared flags, a shape golden blind to presence and spelling, and a subset comparison that hides one disagreement
+
+**Shared definitions versus separate traversal.** The binary traversal is
+implemented separately in Rust (generated readers over porcelain.rs) and in
+Python (`Reader`). The projection logic is also implemented twice: generated
+Rust and hand-written Python. Every field rule is shared, however:
+
+- names, `json_null`, projections, path forms and conditional rules come from
+  `porcelain.json`;
+- RESPONSE's presence phrases derive from the same flags
+  (record_definitions.py lines 494–509; DT-18).
+
+The cross-reader corpus compares complete dicts, so key presence counts
+(reader_corpus.py lines 56–61). It cannot detect a mistaken flag, because both
+readers apply it.
+
+**The shape golden does not encode presence or byte spelling (executed).** The
+golden is `response_shape.json`, checked at porcelain_replies.py lines
+109–125. It was recomputed from the 64 shape frames under mutated tables:
+
+| Mutation | Shape documents changed | Golden changes |
+| --- | --- | --- |
+| `CompiledProfileCapture.reason` `json_null`→true | 7 | no |
+| `PWRunnerSandboxCheckResult.pid` `json_null`→false | 2 | no |
+| `ValidatorVerdict.error` `json_null`→true | 22 | no |
+| `source_sha256` hex→base64 | 30 | no |
+| `PWRunnerSandboxCheckResult` conditional rule removed | 0 | no |
+| `PWRunnerPathDiagnostics` path forms removed | 23 | yes |
+
+Two specific assertions would catch particular flips:
+
+- the `pid` flip, by `null_pid` (porcelain_replies.py lines 292–294);
+- the base64 change, by live digest comparisons such as contract.py lines
+  322–332.
+
+The general readers accept missing and null alike (DT-52 and DT-53). A wrong
+omit/null rule on most other fields would pass every registered check.
+
+**A subset comparison hides a fixture/statement disagreement (executed).**
+`require_subset` (porcelain_replies.py lines 24–37, applied at line 291)
+treats an authored `null` as satisfied by an absent key, and ignores extra
+keys. Comparing `tests/fixtures/contract/normal_reply.json` with the decoded
+`normal.pwp` found one authored null that the projection omits:
+`phases[0].validator_subprocess.records[1].error` (fixture line 387). It also
+found one projected key absent from the fixture:
+`request_failure.expected_contract`, set by ReplyFailureTests.swift line 90.
+
+RESPONSE line 988 says the validator record's `error` is "omitted when
+absent", and the schema has `json_null: false`. The projection follows the
+statement; the authored fixture states the other form. The comparison cannot
+see the difference.
+
+**Comparisons before or around encoding.** DT-47's two `CWorkerTests`
+assertions still read the pre-encoding object (lines 417–425). `run_flow.rs`
+has 15 `serde_json::from_value` sites that type replies from JSON through the
+`cfg(test)` `Deserialize` derive. Some read authored fixtures; others re-type
+the projected `data.runner_result` of an envelope. The derive maps `null` and
+absence to the same `None` (DT-104). Outside porcelain.rs's own primitive
+tests, the controller decodes binary frames only in the `run_flow.rs`
+corpus/driver replays and `runner_client.rs`.
+
+**What a plausible incorrect implementation could still pass.** The following
+would pass all registered checks:
+
+- a wrong `json_null` on any field without a dedicated assertion;
+- a guard/dependent pair that hides a carried value (DT-108);
+- a hex/base64 swap on a digest that no live comparison reads;
+- a schema combining path forms with conditional rules (DT-110).
+
+A projection that renders bytes as uppercase hex would fail the Rust spelling
+test (porcelain.rs lines 764–776) and the Python control (porcelain_codec.py
+lines 72–76).
+
+### DT-112 — Smaller observations on identity and projection
+
+- **Digest width is unchecked for most hex fields (executed).** Root
+  `policy_sha256` set to 0 bytes, 1 byte (`ab`) or 32 zero bytes was projected
+  as `""`, `"ab"` or 64 zeros. Rust admission and every Python reader accepted
+  all three. RESPONSE line 387 calls the field the "SHA-256 … as lowercase
+  hexadecimal". Commit `0cdba835` says that, after digests became bytes, "both
+  readers check a length". The inspected readers check 32 or 20 bytes only for
+  the four equipment-binding digests (porcelain_actor.rs lines 1860–1863);
+  other digest fields were not each traced. The same commit's parent checked
+  no `policy_sha256` length either.
+- **Empty and zero values survive (executed).** These pairs were distinct in
+  both readers:
+  - empty text (`error: ""`) and `null`;
+  - empty bytes (`""` in hex and in base64) and an absent key;
+  - `pid: 0` and `pid: null`;
+  - `sandboxed_after_apply: false` and an absent key.
+
+  Base64 spellings for 0 to 4 bytes (`""`, `/w==`, `/wA=`, `++++`,
+  `////AA==`) and hex agreed between Rust's hand-written encoders and
+  Python's.
+- **Validator `null` and absence merge before encoding (source).** The native
+  validator writes `"error": null` for a native-call record (surface line
+  225). The host's admitted
+  record has optional fields, "absent or null" (line 202), and the projection
+  omits them. Only `raw_line` keeps the native spelling.
+- **A local-only field occupies a wire tag.**
+  `PWRunnerAttemptResult.execObservationDecodeProblem` holds tag 9, which no
+  frame carries. `validate()` requires local-only tags to keep the ascending
+  order.
+- **Public names name Swift identifiers.** A public-name rename changes the
+  Swift writer's tag-constant names (the "Swift writer" column for the rename
+  row in DT-105), although the bytes written are identical.
+
+### Wire-identity coverage and remaining investigative limits
+
+The trace covered:
+
+- `wire_identity` and the generator outputs;
+- the Swift record writer and the hand-written variant writer;
+- both frame decoders and both bound readers;
+- generated Rust serialization and the Python projection;
+- the documentation generator's presence derivation;
+- the controller's two frame-refusal paths;
+- the checks cited by the wire surface and ARCHITECTURE rows 611, 942 and
+  D78–D80;
+- the porcelain replay helpers.
+
+**Answers to the starting questions.**
+
+1. *What changes the fingerprint, and does that boundary match what receivers
+   need to distinguish?* Each property the statement names changes it:
+   - structure: tags, descriptors, optionality, added fields, records and
+     variant cases;
+   - presentation: public names, null flags, projections, path-form and
+     conditional rules;
+   - local names and ordering: record names and order, variant case names
+     and types, root keys.
+
+   It does not change for storage names, defaults, comments, source paths,
+   `mutable`, local-only fields or `Int`/`Int64` on a field. The boundary is
+   wider than what a receiver needs from a producer. Producers consume only
+   IDs, tags, kinds and optionality. Several fingerprinted properties are
+   inert or invisible on the wire and in JSON (DT-105, DT-106). Operationally
+   the exact public-contract check already subsumes it in the controller.
+   The fingerprint's own role is a labeled early refusal, and identity for
+   unbound test readers.
+2. *Which distinctions survive from a producer's value to public JSON?* These
+   survive:
+   - present versus absent, as omission or `null` per field;
+   - zero, false and empty text or bytes against absence;
+   - exact UTF-8, including NFC and NFD;
+   - byte values, as hex or base64;
+   - variant cases, only because their JSON types differ.
+
+   Path forms are compacted losslessly. Lost or merged are a conditional
+   dependent carried without its guard (DT-108); the validator's native `null`
+   against absence, merged by the host before encoding (DT-112); and the
+   variant case tag (DT-107). Digest width is carried but checked for few
+   fields (DT-112).
+3. *What do the tests establish, and could every implementation agree on an
+   undesirable rule?* The tests establish three things: structural refusals
+   on constructed bytes; byte-identical cross-reader projection of the Swift
+   corpus; and fingerprint sensitivity to comments and five structural edits.
+   Every field rule has one source, shared by Rust, Python and RESPONSE. The
+   shape golden and the general consumers are insensitive to presence and
+   spelling. All layers can therefore agree on an undesirable rule, and do so
+   today for the conditional-null suppression (DT-108) and the compaction
+   (DT-109). The DT-110 precedence divergence shows agreement that holds
+   because of the current schema data.
+
+**Affirmative results within tested scope.**
+
+- The independent fingerprint recomputation equaled every generated constant
+  and every Swift frame header.
+- The independent codec re-encoded all 261 Swift frames byte-identically.
+- For all 40 probe frames and all 153 corpus rows, Rust and Python JSON were
+  equal, including key presence.
+- The nine path states, including the NFD contrast, followed the documented
+  three states in both readers.
+- The live envelope's projection equaled an independent projection of its
+  retained host bytes.
+- The registered cases passed without system sleep.
+
+**Not exercised.**
+
+- A compiled Rust or Swift build from a mutated schema; generated text was
+  compared instead.
+- The controller's live `run` path with edited frames. Rust projections came
+  from the unit-test binary's corpus test, which uses unbound
+  `porcelain::decode` and the same generated serializer.
+- A foreign-schema or foreign-contract frame through the live controller.
+- Client-capture-root projections, except where existing tests cover them.
+- Actor-form records beyond the equipment-binding probes.
+
+The `team_id` reader difference in DT-108 is an unresolved lead. Whether an
+identity over binary structure alone would serve the Python and Rust test
+readers equally well was not established. Neither was whether any external
+consumer relies on `same_as_input`.
+
+Only this record was changed among tracked files. The registered run added
+development output under `tests/out/runs/wire-identity-trace/`. Scratch probes
+and the copied test binary are under the scratchpad. These entries contain no
+repair, deduplication or choice of authoritative layer.
