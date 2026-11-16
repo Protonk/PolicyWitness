@@ -3623,3 +3623,522 @@ through `policy-witness run`. The investigation did not exercise:
 Historical inspection establishes when mechanisms and statements appeared,
 not how older binaries behaved. Only this record was changed. These entries
 contain no repair, deduplication or choice of authoritative layer.
+
+## Additional findings: development build identity coverage
+
+This continuation asks which paths and bytes the `development:<sha256>` form
+of `build.contract` covers. It follows the generator
+([build_contract.py](../docs/build_contract.py)) and the walker it shares with
+worker identity ([source_identity.py](../docs/source_identity.py)). It examines
+the [Release and development forms](../docs/CONTRACT.md#contract-identity-public-forms),
+[Selected build inputs](../docs/CONTRACT.md#contract-identity-public-inputs) and
+[Build derivation](../docs/CONTRACT.md#contract-identity-public-derive)
+statements, their authored source
+([00-identity.surface.md](../docs/contract/00-identity.surface.md) lines
+35–108), and the four checks the derivation support cites in
+[build_contracts.py](../tests/suites/source_drift/build_contracts.py). Other
+helpers were read only where they explain selection or hashing. Release-tag
+selection, signing, worker identity and surface stamps were excluded. Where
+the shared walker is exercised only through worker identity, the entries say
+so and do not evaluate those checks. The statements were treated as claims to
+check. DT-08 remains unchanged; DT-91 extends it with executed controls and
+stands alone.
+
+### Development-identity investigation identity and reproduction conventions
+
+Source inspection used clean HEAD `458fcbb2c6a6f8caabd2b84dd2d317d83c8eafed`
+on 2026-11-16; line numbers below refer to that snapshot. File hashes:
+`docs/build_contract.py` `ce4a4ef2…d2c2`, `docs/source_identity.py`
+`41412b7c…9946`, `tests/suites/source_drift/build_contracts.py`
+`d3cc66b4…a0e5`. Every Python command ran through `tests/lib/python.sh`, the
+pinned interpreter build.sh uses (Python 3.14.9, started with `-B -S`). Git was
+2.54.0 (Apple Git-157); the machine reports macOS `26.7.1`, build `25G241`.
+Nothing was built, no registered case was run, and the working checkout was
+only read. Its `git status` was clean before and after.
+
+**Disposable checkout.** `git clone --no-hardlinks --no-tags <checkout>
+<scratchpad>/clone`, where `<scratchpad>` is
+`/private/tmp/claude-501/-Users-raccoon-Desktop-Security-PolicyWitness/cc77ea91-900e-4bb1-b90b-f9633a3b29b8/scratchpad`.
+No tag points at HEAD in the checkout, and the clone has no tags, so the
+release form was unreachable there. Every successful control printed a
+`development:` value.
+
+**Drivers.** All are under `<scratchpad>/scripts`; temporary material has no
+retention guarantee, so the decisive values are reproduced below.
+
+- `devid_trace.py` (SHA-256 `f1a96499…8c33`) imports `build_contract` from a
+  named `docs/` directory. It records `build_contract.inputs(root)` (the
+  selected inventory), each selected file's SHA-256 and
+  `build_contract.identity(root)`. It also recomputes the documented framing
+  independently:
+
+  ```python
+  h = hashlib.sha256(b'PolicyWitness public build contract' + b'\x00')
+  for p in sorted(paths):
+      for part in (p.encode('utf-8'), (root / p).read_bytes()):
+          h.update(len(part).to_bytes(8, 'big', signed=False)); h.update(part)
+  ```
+
+- `devid_controls.py` (SHA-256 `b28a3d6a…ebba`) ran as
+  `tests/lib/python.sh -I <scratchpad>/scripts/devid_controls.py
+  <scratchpad>/clone <scratchpad>/run-final`. For each control it applies one
+  change to the clone. It then runs the clone's own generator as build.sh lines
+  252 and 682 do (`$PW_PYTHON -B -S docs/build_contract.py`, no arguments, with
+  the clone as the working directory). It runs the trace driver against the
+  clone's `docs/` and records `git status --porcelain --ignored
+  --untracked-files=all`. Restoration resets directory and file modes,
+  removes FIFOs explicitly, empties `.git/info/exclude`, then runs
+  `git reset --hard 458fcbb2` and `git clean -fdx`. The driver requires the
+  restored digest and Git status to equal the baseline. Two baseline
+  observations agreed, and all 25 controls restored. In an earlier run, the
+  FIFO from C3d remained because Git neither lists nor cleans FIFOs. The
+  restore check reported it for every later control, and explicit FIFO
+  removal was added before the final run.
+- `devid_copy.py` (`37529ef3…f579`) copies only the selected files with
+  `shutil.copy2`, as `fixture_inputs.copy_declared` does.
+- `devid_order.py` (`f9b1105b…6132`) and `devid_history.py`
+  (`41a131bb…fb28`) are described in DT-92 and DT-91.
+
+For every successful control, the generator's printed value equaled
+`identity()` from the trace and the independent recomputation.
+
+**Baselines (executed).** The working checkout, the clone, the 118-file
+inventory copy and a `git archive HEAD` extraction (1112 files) each selected
+the same 118 paths. Each produced
+`development:bdefcb44cb8b799494b555f6ba992e5bbfb58eba8ef980cb805adf15c103fb18`,
+which is also the identity recorded above for the `8b5de2b2` app. The
+inventory has 41 paths under `runner/Sources`, 40 under `controller/src`, 11
+under `controller/tools`, 3 under `runner/Services`, 2 under
+`controller/interface`, 2 under `runner/Clients`, 1 under `runner/augments`,
+and 18 explicit files outside those roots. Every selected path in the checkout
+is tracked. Eight tracked files under the roots are not selected:
+`controller/interface/{README.md,inventory.json,joins.json,mutations.json,residue.json}`,
+`controller/src/test_inputs/README.md`,
+`controller/tools/sb_api_validator/build.sh` and `runner/augments/README.md`.
+The only ignored file under a root,
+`controller/tools/sb_api_validator/sb_api_validator`, has no suffix. All 118
+paths are ASCII.
+
+**Controls.** Each row starts from the clean clone. The expectation column
+reads only the [Selected build inputs](../docs/CONTRACT.md#contract-identity-public-inputs)
+statement (CONTRACT lines 80–96): the seven suffixes, the six named roots, the
+explicit files, and refusal of "missing declared inputs, symlinks under the
+selected roots and nonregular source objects." `ctrl` stands for the 32 bytes
+`// development identity control\n` (SHA-256 `33d45db3…0279`). Git status uses
+the porcelain codes; "none" means empty output.
+
+| ID | Change | Documented expectation | Actual inventory | Generator result | Git |
+| --- | --- | --- | --- | --- | --- |
+| C1a | `runner/augments/exec_baseline.sb`: first `posix_spawn` → `POSIX_spawn` (`25e448d6…1761` → `96f5a1af…a436`) | selected; changes | 118; that file changed | `5ed92493…85f1` | ` M` |
+| C1b | `controller/src/main.rs`: mode 0755, mtime 1000000000; bytes unchanged | paths and bytes only; unchanged | 118; no change | `bdefcb44…fb18` (baseline) | ` M` |
+| C1c | rename `runner/Clients/PWRunnerClient/PWRunnerClientSession.swift` → `PWRunnerClientSessionRenamed.swift`; bytes unchanged | path is hashed; changes | 118; one removed, one added | `2715b735…4892` | ` D`, `??` |
+| C2a | add `controller/src/zz_identity_control.rs` = `ctrl`, untracked | `.rs` under a named root; included | 119; added | `ebb85798…4a0e` | `??` |
+| C2b | as C2a, listed in the clone's `.git/info/exclude` | not stated | 119; added | `ebb85798…4a0e` | `!!` |
+| C2c | as C2a, committed (clone HEAD `3d93fd08`, no tag) | not stated | 119; added | `ebb85798…4a0e` | none |
+| C2d | `ctrl` at `runner/Sources/PWRunnerCore/.build/zz_identity_control.swift`, ignored by the tracked `runner/.gitignore` rule `.build/` | `.swift` under a named root; included | 119; added | `48bc4d12…d4a5` | `!!` |
+| C2e | `runner/augments/nested/zz_identity_control.sb` = `(version 1)\n` (`edd74546…bfc7`) | "discovered under"; included | 119; added | `8114e7fe…a4d5` | `??` |
+| C2f | `ctrl` as `controller/src/zz_identity_control.RS`, `…rs.orig`, `…rs~` and `controller/src/.rs` | suffix not listed; excluded | 118; no change | baseline | four `??` |
+| C3a | `controller/interface/cards.rs`: first `help` → `HELP` (`9a68c368…f50a` → `5ca8a9a8…545e`) | root not named; unchanged | 118; that file changed | `062f3438…db57` | ` M` |
+| C3b | `controller/interface/inventory.json`: first `help` → `HELP` (`9bb9f3d2…1ab7` → `d23eefea…6f01`) | unchanged | 118; no change | baseline | ` M` |
+| C3c | `controller/src/test_inputs/README.md`: first `read.json` → `READ.json` | `.md` not listed; unchanged | 118; no change | baseline | ` M` |
+| C3d | FIFO `controller/src/zz_identity_control.fifo` | "nonregular source objects refuse"; its suffix is not selected | none | exit 1, `build contract: nonregular identity source: controller/src/zz_identity_control.fifo` | none |
+| C3e | symlink `controller/src/zz_identity_control.md` → `../README.md` | symlink under a selected root; refuse | none | exit 1, `build contract: symlink under identity sources: controller/src/zz_identity_control.md` | `??` |
+| C3f | FIFO `controller/integration/zz_identity_control.fifo` | outside the roots; unchanged | 118; no change | baseline | none |
+| M1 | delete `controller/src/test_inputs/read.json` | missing declared input; refuse | none | exit 1, `build contract: missing identity source: controller/src/test_inputs/read.json` | ` D` |
+| M2 | delete `runner/augments/exec_baseline.sb`, the root's only `.sb` | root still exists; not stated | none | exit 1, `build contract: missing protocol sources: runner/augments` | ` D` |
+| M3 | delete `runner/Clients/PWRunnerClient/main.swift` | not a declared path; not stated | 117; removed | `bc257d64…1aad` | ` D` |
+| M4 | `controller/src/interface` mode 0000 | not stated | 113; five removed | exit 0, `60c8813b…5210` | none |
+| M4b | `controller/src/interface/mod.rs`: first `mod ` → `MOD ` (`a7e9934b…e409` → `03fb3b9d…10d6`), then the directory mode 0000 | not stated | 113; the same five removed | exit 0, `60c8813b…5210` (= M4) | none |
+| M5 | `controller/src/main.rs` mode 0000 | not stated | 118 listed | exit 1, `build contract: [Errno 13] Permission denied: '<clone>/controller/src/main.rs'` | ` M` |
+| T1 | `controller/src/porcelain.rs`: `fn value(kind: u8` → `fn VALUE(kind: u8`, inside `#[cfg(test)] mod tests` (lines 447–450) (`70b7648c…2cb1` → `514fc59b…84a0`) | `.rs` under a named root; included | 118; that file changed | `e318ef5b…439c` | ` M` |
+| T2 | `tests/fixtures/contract/ordinary_phase_reply.json`: first `"` → space (`a54f4235…077e` → `23d2d848…c5c3`) | outside; unchanged | 118; no change | baseline | ` M` |
+| T3 | `tests/lib/signer_check.py`: first `import` → `IMPORT` (`83846e9b…f8b5` → `bbc5cb21…aabc`) | named helper; included | 118; that file changed | `0cc4a482…0a0e` | ` M` |
+| T4 | `runner/Tests/PWRunnerCoreTests/TestKit.swift`: first `import` → `IMPORT` (`9be1c908…94fa` → `501e845e…cba7`) | outside the roots; unchanged | 118; no change | baseline | ` M` |
+
+Full digests: C1a `5ed92493d53d2d2ec8fa9b0b26af8742ff9b262869ee0f8f301d643e767f85f1`,
+C1c `2715b7355e42b46b983542999cb4e596054a660ba90109ba2b0963de0c734892`,
+C2a–C2c `ebb8579813a122d0b6a12aec1bb5ff63e34e0f85bb14dbec006b0fdca9064a0e`,
+C2d `48bc4d12445417d970422a3c6e966ea0701bcced42b5952200360338d801d4a5`,
+C2e `8114e7feb67d9a9dfaaf2e1f2a15286d50ced45a0478504c0272f3194be0a4d5`,
+C3a `062f34380a313fded747bbd69d252ad5af9f4e24d07330c697b5e637f105db57`,
+M3 `bc257d64f82dba805d4742e4717b596f0437f65a9400e70da59cf9332b971aad`,
+M4 and M4b `60c8813b979c88e1915604ceaa171de05811fa8090a1b53745080ffcfe735210`,
+T1 `e318ef5bc56fba1aa90c32a12da4e07f9f265483b4a3c5203a6538607c28439c`,
+T3 `0cc4a4828ebab33f5acc82af00cc71c1713afc813bfbaad6b27d65fe005a0e0a`.
+
+The three requested contrasts are C1a (bytes of an existing selected file),
+C2a (an addition that is eligible under the documented rules) and C3b/C3c (a
+file outside the stated selection). The other rows separate path, metadata,
+Git status, object kind, readability and test-code effects.
+
+### DT-88 — The selected inventory is whatever is on disk under the roots; Git tracking and ignore status do not enter it
+
+**Statements examined.** "`development:<sha256>` identifies the selected
+source paths and bytes in other source trees" (CONTRACT line 68; authored at
+surface line 48); files "discovered under" the named roots (line 80; surface
+line 63); and "Discovery uses the same inventory in a checkout and a source
+copy" (line 92; surface line 75). The generator's comment (build_contract.py
+lines 21–23) says the declaration "is independent of Git and applies equally
+to source copies."
+
+**Source inspection.** `source_paths` (source_identity.py lines 17–28)
+walks each root with `Path.rglob('*')`. It keeps regular files whose final
+suffix (`path.suffix`, compared case-sensitively) is in `SUFFIXES`, and adds
+the explicit `FILES` regardless of suffix (line 7). The walk includes hidden
+files and directories. No Git command takes part in selection or hashing. Git
+is consulted only after the digest is computed, for the release decision
+(build_contract.py lines 82–90).
+
+**Executed.** C2a, C2b and C2c place the same path and bytes in an untracked,
+an ignored and a committed state. The three inventories and digests are
+identical. C2d puts an eligible file in a directory that the tracked
+`runner/.gitignore` ignores. The file enters the inventory, and Git reports it
+only when ignored files are requested. C2f shows that the suffix rule uses the
+final suffix exactly: `.RS`, `.rs.orig`, `.rs~` and a file named `.rs` are
+excluded. C3d (DT-90) shows that an object Git does not list at all can still
+determine the result.
+
+**What "the same inventory" covers.** At clean HEAD, the checkout, a clone,
+an inventory copy and a `git archive` extraction gave the same 118 paths and
+digest. During C2b and C2d, the clone's HEAD was still `458fcbb2`. An archive
+of that commit therefore contains neither added file and corresponds to the
+baseline digest. The clone instead produced `ebb85798…` or `48bc4d12…`. A
+development identity thus identifies the files present in the working tree,
+not a commit, and the same rule can select different sets in a checkout and a
+source copy of one commit. The statements do not say whether untracked or
+ignored files are selected. The check named
+`test_source_copies_ignore_artifacts_and_release_checks_actual_bytes`
+(build_contracts.py lines 181–198) excludes its two artifacts by suffix:
+neither name has one (line 185). Its first assertion (line 187) runs before a
+repository exists. Its `.gitignore` (line 188) prepares the later release
+step. No cited check adds an eligible untracked or ignored file.
+
+**History.** The walk, suffix rule and Git independence are unchanged since
+`cbf5f298` (2026-11-09, v0.3.6). `source_identity.py` has only that commit.
+The v0.3.6 CONTRACT said "The source scope uses declared language/resource
+suffixes and explicit build helpers equally in Git checkouts and source
+copies." Before v0.3.6, the public identity was a set of generated contract
+versions (`git show v0.3.5:build.sh` line 226, "Checking contract versions"),
+not a source digest. Related: DT-89, DT-90 and DT-94.
+
+### DT-89 — An unreadable directory under a selected root is omitted without refusal, so different bytes can share one development identity
+
+**Statements examined.** "Missing declared inputs, symlinks under the selected
+roots and nonregular source objects refuse derivation" (CONTRACT lines 92–94;
+surface lines 75–77), and the development form's identification of "the
+selected source paths and bytes" (line 68).
+
+**Executed.** In M4, `controller/src/interface` (five selected `.rs` files)
+had mode 0000. The generator exited 0 with `development:60c8813b…5210` and no
+diagnostic, and the inventory had 113 paths. In M4b, one of those files,
+`mod.rs`, changed bytes before the directory became unreadable. The generator
+printed the same `60c8813b…5210`. The working trees in M4 and M4b differed in
+a file under a named root and selected by suffix, yet received one identity.
+For contrast, M5 made one selected file unreadable. That file remained in the
+inventory, and reading it failed with exit 1 and the raw errno text. M3
+deleted a tracked file the walk would have selected. The inventory shrank to
+117 and the digest changed without refusal.
+
+In a separate run in the M4 state, `git status --porcelain --ignored
+--untracked-files=all` exited 0 with empty standard output. Standard error
+listed `controller/src/interface/<name>: Permission denied` for all five files
+and `warning: could not open directory 'controller/src/interface/': Permission
+denied`. The generator emitted nothing comparable.
+
+**Source inspection.** The walker checks existence only for roots and
+declared files (source_identity.py lines 15–16). It refuses a root with no
+selected file (lines 26–27), but has no check for directories it could not
+list. The skipped directory was observed with the pinned Python 3.14.9;
+pathlib's handling of listing errors was not traced in Python's source.
+
+**Limits.** The investigation did not establish whether a packaged build
+could compile with such a directory. The Rust modules in this example would be
+unreadable to the compiler too. The same derivation also supplies Meson's
+`--swift-stdout` context and the fixture inventories built from
+`build_contract.inputs(ROOT)` (DT-93). Those paths were not executed in this
+state. Related: DT-88 and DT-90.
+
+### DT-90 — Refusal depends on object kind for every entry under a root, and only declared paths and empty roots count as missing
+
+**Statement examined.** The same refusal sentence (CONTRACT lines 92–94).
+
+**Source inspection.** Symlinks are refused for any path component between
+the repository root and a root or declared file (source_identity.py lines
+8–14), and for every walked entry (lines 20–21). Any walked entry that is
+neither a regular file nor a directory is refused (lines 24–25). Both checks
+apply before the suffix filter can exclude an entry, because line 22 tests the
+suffix only for regular files. Missing-input refusals come only from the
+existence check for roots and declared files (lines 15–16), from a root with no
+selected file (lines 26–27), and from a declared path that is not a regular
+file (lines 29–31).
+
+**Executed.** C3d placed a FIFO named `.fifo` in `controller/src` and was
+refused. The same FIFO in `controller/integration`, outside the roots (C3f),
+changed nothing. The statement's "nonregular source objects" therefore
+describes a refusal that also covers objects whose suffix is not a source
+suffix. Git listed neither FIFO, even with ignored and untracked files
+requested. A checkout whose status is empty can therefore fail derivation, and
+`git clean -fdx` does not remove the cause. C3e's symlink named `.md` was
+refused, matching "symlinks under the selected roots."
+
+For missing inputs, M1 removed a declared file and was refused. M2 left
+`runner/augments` present but removed its only `.sb`; the message
+`missing protocol sources: runner/augments` uses vocabulary from the walker
+shared with worker identity (docstring, line 1), although that root has no
+protocol role. M3 removed a tracked, discoverable file and was not refused.
+M4 (DT-89) was not refused. M5 was refused by an `OSError` while reading, not
+by the walker's checks.
+
+**Checks.** No public-contract check exercises a missing declared input, an
+empty root, a nonregular object, an unreadable file or an unreadable
+directory. The messages `missing identity source`, `missing protocol sources`
+and `nonregular identity source` occur in the tree only in
+`source_identity.py`. Symlink refusal is checked by replacing `main.rs` with a
+symlink and matching `ValueError` on `symlink` (build_contracts.py lines
+255–259). The worker identity's
+`test_symlinks_under_identity_sources_are_refused` (lines 128–143) runs the
+shared walker with worker roots; it is outside this remit. Related: DT-88,
+DT-89 and DT-93.
+
+### DT-91 — Executed: a change under `controller/interface` changes the development identity although the inputs statement omits that root
+
+This entry extends DT-08 with executed contrasts and history.
+
+**Statement and source.** The inputs statement names six discovery roots
+(CONTRACT lines 80–82; surface lines 63–65). `DIRECTORIES` names seven
+(build_contract.py lines 15–16). The baseline inventory contains
+`controller/interface/cards.rs` and `controller/interface/inventory.rs`.
+
+**Executed.** C3a changed four bytes in `cards.rs`. Under the statement this
+file is outside the selection and the identity should not change. The
+inventory included it, and the digest changed to `062f3438…db57`. C3b changed
+`controller/interface/inventory.json`, which is outside both selections; the
+digest stayed at the baseline.
+
+**Why these files reach shipped bytes (source inspection).**
+[build.rs](../controller/build.rs) lines 24–27 compile `interface/cards.rs`
+and `interface/inventory.rs`. Lines 72–80 render the help cards into
+`OUT_DIR`, and [help.rs](../controller/src/help.rs) lines 11–14 embed them
+with `include_str!`. Under the documented list, a help-card edit would
+therefore be a shipped change that the stated selection does not cover. Under
+the code, the identity covers it. `inventory.json` is read at build.rs lines
+69 and 87–97, where a stale copy stops the build. C3b is thus an edit the
+build refuses while the identity ignores it. That is a generated-output
+freshness check, not a selection rule (DT-93).
+
+**History.** `devid_history.py` ran over every commit in `f6551bf9^..HEAD`
+that touched `build_contract.py` or `00-identity.surface.md`. For each commit,
+it parsed `DIRECTORIES`, `FILES` and `SUFFIXES` with `ast`, then compared them
+with the backticked names in the paragraph beginning "The development digest
+includes" (helper names relative to `tests/lib`):
+
+| Commit | Date | In code but not in the statement |
+| --- | --- | --- |
+| `f6551bf9`, `eac1482e`, `5c1c63dc`, `d18d4925`, `8435e5d3` | 2026-11-10 to 11 | none |
+| `d04a3819` | 2026-11-13 | `FILES`: `controller/src/lessons/create.json`, `controller/src/lessons/capture_typo.json` |
+| `ba3a9043` | 2026-11-14 | none; the lesson files were replaced by `controller/src/test_inputs/read.json`, which the statement gained in the same commit |
+| `b16f32d0` | 2026-11-15 | `DIRECTORIES`: `controller/interface` |
+| `33806e55` | 2026-11-15 | `DIRECTORIES`: `controller/interface` |
+
+The statement never named an input missing from the code, and the suffixes
+always agreed. The explicit list first appeared in `f6551bf9`, which is in
+v0.3.7 but not v0.3.6, and code and statement agreed at v0.3.7. `b16f32d0`
+created `controller/interface` and added it to `DIRECTORIES`. Its edits to the
+identity surface concern only version dispatch. Neither divergence occurs in
+a tagged release. `b16f32d0` precedes `2fcf9dbc`, consistent with DT-08's
+statement that the omission predates the documentation-trace reorganization.
+
+**Checks.** No check compares the statement's list with the code. Every test
+that uses `build_contract.inputs` copies whatever the code selects into a
+fixture: build_contracts.py line 215, generators.py lines 982 and 1021,
+check_release_publish.py lines 61 and 264, build_refusals.py line 1944 and
+fixture_inputs.py line 97. Such fixtures cannot reveal a difference between
+the code and the documented list. Related: DT-08 and DT-93.
+
+### DT-92 — The digest framing matches the statement; the statement leaves the path order and the metadata scope to the code
+
+**Statement examined.** The statement defines the digest as SHA-256 with
+domain prefix `PolicyWitness public build contract`, followed by a NUL byte.
+"For each sorted repository-relative path, the generator appends the UTF-8
+path and file bytes, each preceded by its unsigned eight-byte big-endian
+length" (CONTRACT lines 68–72; surface lines 48–52).
+
+**Executed.** The independent recomputation equaled the generator for all
+four baselines and all 20 successful controls. C1c renamed a file without
+changing its bytes and changed the digest, so path names are hashed. C1b
+changed mode and mtime only and did not change the digest. Git reported
+` M` for the mode change. Both results agree with "paths and bytes."
+
+**Order.** The generator sorts Python strings by code point
+(source_identity.py line 32), which for UTF-8 is also byte order.
+`devid_order.py` recomputed the baseline under alternative orders. Code-point,
+UTF-8 byte and per-path-component orders all produce `bdefcb44…` for this
+inventory. Case-folded order moves 109 of 118 positions: the generator begins
+with `Info.plist`, while case-folded order begins with `build.sh`. That order
+gives `10ce11c4…`. The statement says "sorted" without naming the order.
+Unicode normalization of non-ASCII names was not exercised because every
+current path is ASCII.
+
+**Determinism.** The checkout, the clone, the inventory copy and the archive
+have different absolute roots and gave one digest. Two consecutive baselines
+in the clone also agreed.
+
+**Checks.** No test asserts the domain prefix, length encoding, order, an
+expected digest value or an independently recomputed digest. The prefix string
+occurs only at build_contract.py line 75. The cited checks compare outputs of
+`identity()` with one another (DT-93). Related: DT-93.
+
+### DT-93 — The cited checks establish byte sensitivity for four files, two suffix exclusions and symlink refusal, using fixtures built by the code under test
+
+The [derivation support](../docs/CONTRACT.md#contract-identity-public-derive-support)
+(CONTRACT line 109; surface lines 99–108) pins "Selected-source mutations
+change the digest." The Selected build inputs definition has no support block
+of its own; it is used by the Build derivation statement. Reading the four
+cited checks gives the following:
+
+- **Fixture construction.** `checkout()` (build_contracts.py lines 209–217)
+  copies `build_contract.inputs(ROOT)` with `fixture_inputs.copy_declared`
+  (fixture_inputs.py lines 105–130). That is the inventory selected by the code
+  under test from the developer's checkout, and only that inventory. Unselected
+  files under the roots, such as `inventory.json` or the READMEs, are absent
+  unless a test writes them.
+- **Selection.** `test_source_copies_ignore_artifacts_and_release_checks_actual_bytes`
+  writes two unsuffixed names and asserts an unchanged identity (lines
+  185–187). `test_build_identity_tracks_shipped_inputs_and_requires_an_annotated_clean_release`
+  asserts that a root-level `notes.md`, both uncommitted and committed, leaves
+  the development digest unchanged (lines 241–244), and that a symlinked
+  `main.rs` is refused (lines 255–259). No cited check adds an eligible file,
+  renames or deletes a selected file, touches `controller/interface`, places a
+  nonregular object, or makes a path unreadable.
+- **Byte sensitivity.** Lines 246–254 append `\n` to four files and require
+  each digest to differ from the previous one. The second name,
+  `runner/augments/mach-register.sb`, does not exist. `git log --all --
+  runner/augments/mach-register.sb` is empty, so it never existed in this
+  repository's history. The loop silently substitutes
+  `next((root / 'runner/augments').glob('*.sb'))` (lines 249–250), which is
+  `exec_baseline.sb` at HEAD. The literal dates from `cbf5f298`.
+- **Determinism.** The same test requires the loose digest to survive
+  `git init`, a commit and a lightweight tag (lines 232–237), and a
+  documentation-only commit (line 244), in one directory. No public-contract
+  check compares digests across locations. The worker identity has such a
+  check, outside this remit.
+- **Framing.** No check covers framing (DT-92).
+- **Swift context.** `test_swift_context_refuses_a_different_compilation_identity`
+  (lines 200–207) asserts only exit statuses for three `PW_BUILD_CONTRACT`
+  values. It does not concern selection.
+- **Pre-sign guard.** `test_presign_contract_guard_refuses_changed_sources`
+  (lines 271–291) executes the build.sh fragment and requires refusal after
+  `main.rs` gains a line. Source inspection shows the guard compares two
+  whole-tree derivations (build.sh lines 252 and 682–686). An edit that is
+  present during compilation and reverted before line 682 leaves the values
+  equal. The CONTRACT sentence "The pre-sign comparison refuses a
+  selected-source change during compilation" (lines 105–106) covers changes that
+  persist until the second derivation. This was not executed.
+- **Generated-output freshness is separate.** C3b's `inventory.json` edit
+  leaves the digest unchanged, while build.rs refuses a stale copy. Generated
+  sources under the roots are selected, but the generator inputs outside
+  them, such as `docs/porcelain.json`, are not. Their agreement belongs to the
+  build's generator checks (BUILD line 145), not to identity.
+- **Compiler consumption.** No check compares compiler-consumed files with
+  this inventory. `closure_problems` in
+  [native_sources.py](../tests/lib/native_sources.py) (lines 184–215) compares
+  Ninja's dependency log with `identity_inputs` (lines 152–156), which loads
+  the worker identity generator's `source_paths`, not `build_contract.inputs`.
+
+These tests establish byte sensitivity for four selected files, two suffix
+exclusions, one documentation exclusion, symlink refusal and Git-state
+stability. They do not establish discovery of additions, path sensitivity,
+the refusal set, Git independence, agreement between the statement's list and
+the code, or the framing. Related: DT-38, DT-88 to DT-92.
+
+### DT-94 — Selection follows roots and suffixes, not compiler use; test code is partly selected
+
+**Statements examined.** REQUEST line 326 says "A shipped-source edit changes
+the development identity, including an optional addition or an implementation
+fix." Its v0.3.6 ancestor was "Every shipped-source change changes a
+development contract." The v0.3.6 CONTRACT (`cbf5f298`) also said "Ordinary
+documentation and test edits do not change that digest"; `f6551bf9` removed
+that sentence. The generator comment (build_contract.py lines 22–23) says
+"New source files in these languages and bundled resources are discovered;
+executables, editor/OS files and documentation are not compiler inputs."
+BUILD line 147 describes the check stage as reading "shipped sources and build
+inputs through docs/build_contract.py."
+
+**Executed.** These changes altered the digest without altering a shipped
+input:
+
+- T1 edited a `#[cfg(test)]` module.
+- T3 edited a named `tests/lib` helper.
+- C2a added a `.rs` file named by no `mod` declaration.
+- C2e added a nested `.sb`. build.sh lines 597–603 copy only the top-level
+  `runner/augments/*.sb` into the bundle.
+
+T2 changed a fixture embedded by `include_str!` in the test-only
+`reply_fixtures` module (main.rs lines 27–28; reply_fixtures.rs lines
+245–248). T4 changed a Swift unit-test source. Neither changed the digest. The
+inventory therefore includes some test code, unreferenced files and unbundled
+resources, while excluding data that test code compiles in. Source inspection
+also shows that `controller/tools/sb_api_validator/debug.ent` is selected by
+suffix. Its only user is the manual helper `controller/tools/sb_api_validator/build.sh`
+line 6, whose output BUILD line 1028 describes as git-ignored and for direct
+local use.
+
+**History.** At v0.3.6, `FILES` already named `tests/build_equipment.py`,
+`tests/build-evidence.py` and five `tests/lib` helpers, and 25 files under
+`controller/src` contained `#[cfg(test)]` (`git grep -l` at v0.3.6). The
+v0.3.6 sentence about test edits therefore did not describe that release's
+selection. T1 and T3 exercise the same unchanged rule at HEAD. The current
+statements make no claim about test edits.
+
+**Shipped inputs outside the selection (source inspection; none found).**
+The production `include_str!` targets are `test_inputs/read.json`, which is in
+`FILES`, and the `OUT_DIR` help cards rendered from `controller/interface`.
+The other `include_str!` sites are in `#[cfg(test)]` code, including
+utils.rs line 233, `porcelain.rs`'s test module from line 448, `sbpl-check.rs`'s
+test module from line 449 and the `reply_fixtures` module. The bundle copies
+`Info.plist`, PWRunner's `Info.plist` and `Entitlements.plist`, the top-level
+augments and compiled outputs, all of which are selected. Every file name
+quoted in `meson.build` is selected except the generated
+`PWBuildContext.swift`. Measured against the documented list rather than the
+code, `controller/interface/cards.rs` is the exception (DT-91). This was not a
+build-closure audit. Cargo registry sources, the SDK, toolchains and the
+environment are outside the selection by statement. Related: DT-88 and DT-91.
+
+### Development-identity coverage and remaining investigative limits
+
+The trace covered:
+
+- the generator's selection declarations and digest construction;
+- the shared walker's existence, symlink, nonregular, empty-root and suffix
+  rules;
+- the forms, inputs and derivation statements and their authored source;
+- REQUEST's contract-change sentence and the v0.3.6 predecessors;
+- the four cited checks, with their fixture construction;
+- every test that calls `build_contract.inputs`;
+- build.sh's two derivation calls and the build.rs and help.rs path for help
+  cards.
+
+History covered every commit since the explicit list appeared, the origin of
+the walker and of the v0.3.6 statement, and the v0.3.5 mechanism that preceded
+it. The development digest has no predecessor before v0.3.6, so no earlier
+discrepancy exists for this form. The executed evidence consists of 25
+controls in a disposable clone and four baseline derivations. It also includes
+a reordering recomputation, a historical code/statement comparison and one Git
+observation in the M4 state.
+
+The investigation did not exercise:
+
+- non-ASCII or normalization-differing path names;
+- case-only name collisions;
+- a directory symlink at a root;
+- the release form or the release byte check, which were excluded;
+- `--swift-stdout`;
+- Meson's invocation;
+- a build in any changed state.
+
+DT-89's unreadable-directory behavior was observed with one Python version;
+its effect on a build was not established. The pre-sign window in DT-93 and
+the shipped-input survey in DT-94 come from source inspection. Historical
+inspection establishes when declarations and statements appeared, not how
+older builds behaved. Only this record was changed. These entries contain no
+repair, deduplication or choice of authoritative layer.
