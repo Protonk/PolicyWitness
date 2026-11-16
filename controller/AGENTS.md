@@ -5,9 +5,12 @@ and external-runner registry. These rules supplement the [root guidance](../AGEN
 
 ## Find the relevant contract
 
-- Use the [public contract](../docs/CONTRACT.md) for accepted requests, producer admission and field meanings,
-  the [request grammar](../docs/REQUEST-GRAMMAR.md) for admission, and the
-  [user guide](../docs/PolicyWitness.md) for preparation, execution and recovery.
+- Use [REQUEST](../docs/REQUEST.md) for declarations and admission,
+  [RESPONSE](../docs/RESPONSE.md) for producer admission and returned field
+  meanings, [ARCHITECTURE](../docs/ARCHITECTURE.md) for cross-process protocols,
+  and [CONTRACT](../docs/CONTRACT.md) to trace a commitment to its statement and
+  support. The [user guide](../docs/PolicyWitness.md) covers preparation,
+  execution and recovery.
 - For native helpers under `tools/`, runner behavior or test seams, also read
   [runner/AGENTS.md](../runner/AGENTS.md) and the [runner reference](../runner/README.md).
 - For test selection, evidence and cleanup, follow [tests/AGENTS.md](../tests/AGENTS.md).

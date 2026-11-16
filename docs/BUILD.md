@@ -84,6 +84,13 @@ refuses; make's own launch as a developer-tool shim and its SDK check have
 already run by then, translated with it. An invalid `SDKROOT` on the make
 command line is refused at parse time, before the script starts.
 
+<!-- BEGIN GENERATED CONTRACT commitments_identity -->
+Commitments explained here:
+
+- [Build derivation](CONTRACT.md#contract-identity-public-derive) (`identity.public.derive`).
+- [Other identities](CONTRACT.md#contract-identity-other) (`identity.other`).
+<!-- END GENERATED CONTRACT commitments_identity -->
+
 ## One build in time
 
 What the order establishes. The admission, the lock and the documentation and
@@ -1020,6 +1027,13 @@ The standalone validator build script,
 compiles the validator beside its source and signs the result ad hoc with
 `debug.ent`. That git-ignored output is for direct local use.
 
+<!-- BEGIN GENERATED CONTRACT commitments_signing -->
+Commitments explained here:
+
+- [Sealed equipment inventory file](RESPONSE.md#contract-equipment-manifest) (`equipment.manifest`).
+- [Static worker binding](RESPONSE.md#contract-equipment-binding) (`equipment.binding`).
+<!-- END GENERATED CONTRACT commitments_signing -->
+
 ## The evidence the build embeds
 
 After the nested signatures and before the app seal,
@@ -1079,6 +1093,14 @@ either.
 To record a native build receipt or compare native builds, use the test
 equipment described under
 [comparing native builds](../tests/README.md#comparing-native-builds).
+
+<!-- BEGIN GENERATED CONTRACT commitments_evidence -->
+Commitments explained here:
+
+- [Build identification](RESPONSE.md#contract-identity-build) (`identity.build`).
+- [Observed service inventory](RESPONSE.md#contract-equipment-inventory) (`equipment.inventory`).
+- [Sealed equipment inventory file](RESPONSE.md#contract-equipment-manifest) (`equipment.manifest`).
+<!-- END GENERATED CONTRACT commitments_evidence -->
 
 ## How the build verifies itself
 
@@ -1199,6 +1221,13 @@ record states this limit beside its hashes, and separate checks refuse a
 record that disagrees with the manifest or the bytes, wrong load-command
 metadata and any change after evidence capture or sealing. Reproducibility
 and compiler correctness are outside what the record establishes.
+
+<!-- BEGIN GENERATED CONTRACT commitments_verification -->
+Commitments explained here:
+
+- [Build derivation](CONTRACT.md#contract-identity-public-derive) (`identity.public.derive`).
+- [Deriving the history table](CONTRACT.md#contract-identity-surfaces-derive) (`identity.surfaces.derive`).
+<!-- END GENERATED CONTRACT commitments_verification -->
 
 ## Known gaps
 

@@ -30,7 +30,9 @@ Related docs:
 - Build and signing: [docs/BUILD.md](../docs/BUILD.md)
 - Release and notarization: [docs/SIGNING.md](../docs/SIGNING.md)
 - Limits inventory and checks: [docs/LIMITS.md](../docs/LIMITS.md)
-- Executable request-contract guide: [docs/REQUEST-GRAMMAR.md](../docs/REQUEST-GRAMMAR.md)
+- Requests and executable teaching cases: [docs/REQUEST.md](../docs/REQUEST.md)
+- Returned evidence and interpretation: [docs/RESPONSE.md](../docs/RESPONSE.md)
+- Commitments and support tracing: [docs/CONTRACT.md](../docs/CONTRACT.md)
 
 ## How to run
 

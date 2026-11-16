@@ -88,7 +88,7 @@ after it is exit 2 with a line on stderr. Every envelope also carries
 `version`, `number`, `describe` and `commit` as provenance. The app and service
 plists advertise the same identity as `PWContract`. A plain Cargo build is
 `unbound` and refuses public requests and packaged peers.
-The [build-stamp contract](../docs/CONTRACT.md#contract-identity-build) defines these fields.
+The [build-stamp contract](../docs/RESPONSE.md#contract-identity-build) defines these fields.
 
 `example` takes no argument and prints the specimen defined in
 [example.rs](src/example.rs) with this binary's identity as `contract`,
@@ -99,7 +99,7 @@ build guarantees that its own `run` admits it; emission performs no admission.
 An argument, an empty or `unbound` identity, a gate refusal or a failed write
 or flush is exit 2, and the caller discards stdout. The reason goes to stderr
 when it is writable and never changes the status. The
-[example rule](../docs/CONTRACT.md#contract-request-specimen-emit_example)
+[example rule](../docs/REQUEST.md#contract-request-specimen-emit_example)
 states the public promise.
 
 `test-input read` publishes one build-bound developer read input with this
@@ -110,7 +110,7 @@ The command reads no external file, prepares no fixtures and launches no process
 Exit 0 means complete JSON publication with one newline and a successful flush;
 it reports neither admission nor an effect. Usage, target, unbound or empty
 identity, rendering and write/flush failures exit 2; discard stdout and read
-stderr when available. The [publication rule](../docs/CONTRACT.md#contract-request-specimen-emit_test_input)
+stderr when available. The [publication rule](../docs/REQUEST.md#contract-request-specimen-emit_test_input)
 defines these promises. Ordinary `run` owns admission and execution; fixture
 preparation, expected results and independent observations belong to the harness.
 

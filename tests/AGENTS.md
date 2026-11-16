@@ -12,7 +12,10 @@ map and output contracts. These instructions govern test work alongside the
   [runner/AGENTS.md](../runner/AGENTS.md).
 - For evidence assertions, use the
   [comparison ownership table](FAILURE-PROPAGATION-CONTRACT.md#comparison-record)
-  and the [wire contract](../docs/CONTRACT.md).
+  and [RESPONSE](../docs/RESPONSE.md). [REQUEST](../docs/REQUEST.md) owns the
+  declaration reading path; [ARCHITECTURE](../docs/ARCHITECTURE.md) states the
+  cross-process protocols, including wire framing. Use
+  [CONTRACT](../docs/CONTRACT.md) to find a commitment's statement and support.
 - For change-specific verification and investigative controls, consult
   [Verification for changes and investigations](CHANGE-VERIFICATION.md).
 - For release acceptance and interrupted release cleanup, follow the

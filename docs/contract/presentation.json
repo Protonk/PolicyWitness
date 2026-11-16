@@ -1,0 +1,554 @@
+{
+  "documents": {
+    "docs/CONTRACT.md": [
+      {
+        "region": "identity",
+        "nodes": [
+          "identity",
+          "identity.public",
+          "identity.surfaces",
+          "identity.other",
+          "identity.definitions"
+        ]
+      }
+    ],
+    "docs/REQUEST.md": [
+      {
+        "region": "request",
+        "nodes": [
+          "request",
+          "request.specimen",
+          "request.options",
+          "request.selector",
+          "request.overrides"
+        ]
+      },
+      {
+        "region": "policy",
+        "nodes": [
+          "policy",
+          "policy.spec",
+          "policy.augments"
+        ]
+      },
+      {
+        "region": "helper",
+        "nodes": [
+          "policy.helper_request",
+          "policy.helper_policy"
+        ]
+      },
+      {
+        "region": "probes",
+        "nodes": [
+          "probes",
+          "probes.step",
+          "probes.query",
+          "probes.filter",
+          "probes.attempt"
+        ]
+      },
+      {
+        "region": "actors",
+        "nodes": [
+          "actors",
+          "actors.actor",
+          "actors.sandbox",
+          "actors.phase",
+          "actors.after_termination",
+          "actors.action"
+        ]
+      },
+      {
+        "region": "extensions",
+        "nodes": [
+          "extensions",
+          "extensions.action",
+          "extensions.operation",
+          "extensions.examples"
+        ]
+      }
+    ],
+    "docs/RESPONSE.md": [
+      {
+        "region": "envelope",
+        "nodes": [
+          "envelope",
+          "envelope.run",
+          "envelope.result",
+          "envelope.data"
+        ]
+      },
+      {
+        "region": "identity",
+        "nodes": [
+          "identity.build",
+          "identity.producer"
+        ]
+      },
+      {
+        "region": "reply",
+        "nodes": [
+          "reply",
+          "reply.record",
+          "reply.failure"
+        ]
+      },
+      {
+        "region": "refusals",
+        "nodes": [
+          "refusals",
+          "refusals.request",
+          "refusals.controller",
+          "refusals.projection",
+          "refusals.admission",
+          "refusals.examples",
+          "refusals.later"
+        ]
+      },
+      {
+        "region": "transport",
+        "nodes": [
+          "transport",
+          "transport.capture",
+          "transport.acquisition",
+          "transport.control_observation",
+          "transport.invocation",
+          "transport.retained_reply",
+          "transport.error",
+          "transport.client",
+          "transport.request_delivery",
+          "transport.transport_value",
+          "transport.rejected"
+        ]
+      },
+      {
+        "region": "policy",
+        "nodes": [
+          "policy.imports",
+          "policy.fallback",
+          "policy.actor_check"
+        ]
+      },
+      {
+        "region": "steps",
+        "nodes": [
+          "steps",
+          "steps.step",
+          "steps.query",
+          "steps.verdict",
+          "steps.attempt",
+          "steps.comparison",
+          "steps.ordering",
+          "steps.query_paths",
+          "steps.attempt_paths",
+          "steps.identity",
+          "steps.stat",
+          "steps.fresh_read",
+          "steps.fresh_write",
+          "steps.assessment"
+        ]
+      },
+      {
+        "region": "actor_evidence",
+        "nodes": [
+          "actor_evidence",
+          "actor_evidence.actor",
+          "actor_evidence.launch",
+          "actor_evidence.application",
+          "actor_evidence.phase",
+          "actor_evidence.activation",
+          "actor_evidence.timing",
+          "actor_evidence.schedule",
+          "actor_evidence.gate",
+          "actor_evidence.owned_endings"
+        ]
+      },
+      {
+        "region": "lifecycle",
+        "nodes": [
+          "lifecycle",
+          "lifecycle.worker",
+          "lifecycle.host_wait",
+          "lifecycle.termination",
+          "lifecycle.wait_error",
+          "lifecycle.transfer_timeout",
+          "lifecycle.transfer_error",
+          "lifecycle.worker_evidence",
+          "lifecycle.progress",
+          "lifecycle.failure",
+          "lifecycle.readiness",
+          "lifecycle.diagnostic",
+          "lifecycle.policy_read",
+          "lifecycle.disposition",
+          "lifecycle.claim",
+          "lifecycle.claim_value",
+          "lifecycle.issue",
+          "lifecycle.run_questions",
+          "lifecycle.step",
+          "lifecycle.step_questions",
+          "lifecycle.attempt",
+          "lifecycle.owned_reap",
+          "lifecycle.reap_reference",
+          "lifecycle.spawn_failure",
+          "lifecycle.validator",
+          "lifecycle.decode_fault",
+          "lifecycle.association_issue",
+          "lifecycle.exec",
+          "lifecycle.exec_collection",
+          "lifecycle.exec_stream",
+          "lifecycle.exec_cleanup",
+          "lifecycle.exec_signal",
+          "lifecycle.exec_reap",
+          "lifecycle.exec_wait"
+        ]
+      },
+      {
+        "region": "equipment",
+        "nodes": [
+          "equipment",
+          "equipment.inventory",
+          "equipment.manifest",
+          "equipment.manifest_worker",
+          "equipment.binding",
+          "equipment.entitlements",
+          "equipment.error",
+          "equipment.actor",
+          "equipment.execution",
+          "equipment.native_observation",
+          "equipment.preparation_failure",
+          "equipment.authority_setup",
+          "equipment.authority_host",
+          "equipment.authority_scope",
+          "equipment.authority_operation",
+          "equipment.cleanup_reference"
+        ]
+      },
+      {
+        "region": "profile",
+        "nodes": [
+          "profile",
+          "profile.receipt"
+        ]
+      },
+      {
+        "region": "extensions",
+        "nodes": [
+          "extensions.event",
+          "extensions.transfer",
+          "extensions.resources",
+          "extensions.token",
+          "extensions.delivery",
+          "extensions.handle"
+        ]
+      },
+      {
+        "region": "diagnostics",
+        "nodes": [
+          "diagnostics",
+          "diagnostics.execution",
+          "diagnostics.actor",
+          "diagnostics.issue"
+        ]
+      },
+      {
+        "region": "dossier",
+        "nodes": [
+          "dossier",
+          "dossier.collection",
+          "dossier.specimen",
+          "dossier.actor",
+          "dossier.policy",
+          "dossier.augmentation",
+          "dossier.imports",
+          "dossier.import_record",
+          "dossier.host",
+          "dossier.app",
+          "dossier.binaries",
+          "dossier.binary",
+          "dossier.runner",
+          "dossier.verification",
+          "dossier.mismatch"
+        ]
+      },
+      {
+        "region": "version",
+        "nodes": [
+          "identity.version"
+        ]
+      },
+      {
+        "region": "helper",
+        "nodes": [
+          "policy.check_data",
+          "policy.compile",
+          "envelope.helper"
+        ]
+      },
+      {
+        "region": "validator",
+        "nodes": [
+          "wire.standalone",
+          "wire.standalone_status",
+          "wire.standalone_result",
+          "wire.standalone_error"
+        ]
+      },
+      {
+        "region": "installation",
+        "nodes": [
+          "installation",
+          "installation.commands",
+          "installation.registry",
+          "installation.runner",
+          "installation.ownership",
+          "installation.signature",
+          "installation.entitlements",
+          "installation.pending_cleanup",
+          "installation.cleanup",
+          "installation.install",
+          "installation.verify",
+          "installation.validate",
+          "installation.failure",
+          "installation.not_found",
+          "installation.service",
+          "installation.plist",
+          "installation.reconcile",
+          "installation.reconcile_record",
+          "installation.candidate",
+          "installation.inspection_error",
+          "installation.cleanup_observation",
+          "installation.cleanup_wait"
+        ]
+      }
+    ],
+    "docs/ARCHITECTURE.md": [
+      {
+        "region": "extensions",
+        "nodes": [
+          "extensions.custody"
+        ]
+      },
+      {
+        "region": "transport",
+        "nodes": [
+          "transport.authorization",
+          "transport.delivery",
+          "transport.reservation",
+          "transport.control"
+        ]
+      },
+      {
+        "region": "wire",
+        "nodes": [
+          "wire",
+          "wire.frame",
+          "wire.validator"
+        ]
+      }
+    ]
+  },
+  "commitments": [
+    {
+      "document": "docs/CONTROLLER.md",
+      "region": "commitments_authority",
+      "nodes": [
+        "request.specimen.admission",
+        "steps.assessment.order"
+      ]
+    },
+    {
+      "document": "docs/CONTROLLER.md",
+      "region": "commitments_preparation",
+      "nodes": [
+        "request.specimen.emit_example",
+        "request.specimen.emit_test_input",
+        "request.options.precedence",
+        "policy.augments.resolve",
+        "dossier.collection"
+      ]
+    },
+    {
+      "document": "docs/CONTROLLER.md",
+      "region": "commitments_selection",
+      "nodes": [
+        "request.selector",
+        "equipment.binding"
+      ]
+    },
+    {
+      "document": "docs/CONTROLLER.md",
+      "region": "commitments_invocation",
+      "nodes": [
+        "transport.delivery",
+        "transport.invocation"
+      ]
+    },
+    {
+      "document": "docs/CONTROLLER.md",
+      "region": "commitments_admission",
+      "nodes": [
+        "envelope.data.admit",
+        "wire.frame.admit",
+        "steps.assessment.fresh",
+        "actor_evidence.application",
+        "diagnostics.actor",
+        "reply.failure"
+      ]
+    },
+    {
+      "document": "docs/CONTROLLER.md",
+      "region": "commitments_result",
+      "nodes": [
+        "envelope.data.select",
+        "policy.fallback",
+        "request.specimen.emit_example",
+        "request.specimen.emit_test_input"
+      ]
+    },
+    {
+      "document": "docs/CONTROLLER.md",
+      "region": "commitments_equipment",
+      "nodes": [
+        "installation.commands",
+        "installation.ownership",
+        "installation.pending_cleanup"
+      ]
+    },
+    {
+      "document": "docs/CONTROLLER.md",
+      "region": "commitments_resources",
+      "nodes": [
+        "transport.request_delivery",
+        "transport.delivery.deadline",
+        "installation.registry"
+      ]
+    },
+    {
+      "document": "docs/WORKER.md",
+      "region": "commitments_capabilities",
+      "nodes": [
+        "actors.actor.fresh",
+        "actors.phase.order",
+        "extensions.custody"
+      ]
+    },
+    {
+      "document": "docs/WORKER.md",
+      "region": "commitments_observations",
+      "nodes": [
+        "steps.assessment.assembly",
+        "steps.assessment.observe"
+      ]
+    },
+    {
+      "document": "docs/WORKER.md",
+      "region": "commitments_apparatus",
+      "nodes": [
+        "lifecycle.worker_evidence",
+        "policy.spec.parameters",
+        "profile.receipt"
+      ]
+    },
+    {
+      "document": "docs/WORKER.md",
+      "region": "commitments_authority",
+      "nodes": [
+        "actors.actor.fresh",
+        "actors.sandbox",
+        "actor_evidence.launch",
+        "extensions.custody.prepare"
+      ]
+    },
+    {
+      "document": "docs/WORKER.md",
+      "region": "commitments_acquisitions",
+      "nodes": [
+        "probes.attempt",
+        "steps.fresh_read",
+        "steps.fresh_write",
+        "steps.assessment.fresh",
+        "steps.assessment.fresh_read_aggregate",
+        "steps.assessment.fresh_write_aggregate",
+        "lifecycle.exec"
+      ]
+    },
+    {
+      "document": "docs/WORKER.md",
+      "region": "commitments_extensions",
+      "nodes": [
+        "equipment.binding.bind",
+        "equipment.execution.inspect",
+        "equipment.authority_scope.acquire",
+        "actor_evidence.gate.evaluate",
+        "extensions.custody"
+      ]
+    },
+    {
+      "document": "docs/WORKER.md",
+      "region": "commitments_publication",
+      "nodes": [
+        "steps.assessment.assembly",
+        "steps.assessment.fresh",
+        "actors.phase.order",
+        "steps.assessment.order",
+        "lifecycle.worker_evidence",
+        "extensions.custody.erase"
+      ]
+    },
+    {
+      "document": "docs/WORKER.md",
+      "region": "commitments_changes",
+      "nodes": [
+        "actors.actor.fresh",
+        "actors.phase.order",
+        "steps.assessment.fresh",
+        "extensions.custody.prepare"
+      ]
+    },
+    {
+      "document": "docs/BUILD.md",
+      "region": "commitments_identity",
+      "nodes": [
+        "identity.public.derive",
+        "identity.other"
+      ]
+    },
+    {
+      "document": "docs/BUILD.md",
+      "region": "commitments_signing",
+      "nodes": [
+        "equipment.manifest",
+        "equipment.binding"
+      ]
+    },
+    {
+      "document": "docs/BUILD.md",
+      "region": "commitments_evidence",
+      "nodes": [
+        "identity.build",
+        "equipment.inventory",
+        "equipment.manifest"
+      ]
+    },
+    {
+      "document": "docs/BUILD.md",
+      "region": "commitments_verification",
+      "nodes": [
+        "identity.public.derive",
+        "identity.surfaces.derive"
+      ]
+    },
+    {
+      "document": "docs/ARCHITECTURE.md",
+      "region": "commitments_ordering",
+      "nodes": [
+        "actors.actor.fresh",
+        "actors.phase.order",
+        "actors.after_termination.gate",
+        "actor_evidence.gate.evaluate",
+        "steps.assessment.order"
+      ]
+    }
+  ]
+}

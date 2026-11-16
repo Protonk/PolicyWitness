@@ -19,10 +19,13 @@ root guidance. Retain partial native observations and independent cleanup
 facts; a summary or requested signal must not replace an observed effect.
 
 For request or evidence changes, update affected admission, producers, transport,
-independent readers, fixtures and documentation together. Follow the
-[public contract](../docs/CONTRACT.md) and
-[evidence contract](../tests/FAILURE-PROPAGATION-CONTRACT.md) for producer admission and
-claim ownership. Edit generator inputs and regenerate through the
+independent readers, fixtures and documentation together. Follow
+[REQUEST](../docs/REQUEST.md) for declarations, [RESPONSE](../docs/RESPONSE.md)
+for producer admission and returned meanings, and
+[ARCHITECTURE](../docs/ARCHITECTURE.md) for cross-process protocols.
+[CONTRACT](../docs/CONTRACT.md) traces commitments and support; the
+[evidence contract](../tests/FAILURE-PROPAGATION-CONTRACT.md) assigns claim
+ownership to the observations and readers. Edit generator inputs and regenerate through the
 [owning tools](../tests/suites/source_drift/README.md#generator-contracts).
 Native source additions/moves require the Meson target; identity/layout changes
 also require worker-identity regeneration, C/Swift agreement and layout-golden

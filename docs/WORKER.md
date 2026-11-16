@@ -79,6 +79,14 @@ phase; the worker receives the release ordinal, while predictions stay outside
 it. The [ordering account](ARCHITECTURE.md#one-run-in-time) explains that hold
 and the evidence needed to establish it.
 
+<!-- BEGIN GENERATED CONTRACT commitments_capabilities -->
+Commitments explained here:
+
+- [Fresh process and retained policy](REQUEST.md#contract-actors-actor-fresh) (`actors.actor.fresh`).
+- [Collect, release and advance](REQUEST.md#contract-actors-phase-order) (`actors.phase.order`).
+- [Custody protocol](ARCHITECTURE.md#contract-extensions-custody) (`extensions.custody`).
+<!-- END GENERATED CONTRACT commitments_capabilities -->
+
 ## What the worker can establish
 
 The worker performs admitted actions and publishes native observations. Its
@@ -110,6 +118,13 @@ explains the publication boundary and its create-then-kill control.
 Other omissions are measurement gaps: a live signal-mask observation and a
 complete initial Mach-right census are absent from the launch evidence, not
 unknowable.
+
+<!-- BEGIN GENERATED CONTRACT commitments_observations -->
+Commitments explained here:
+
+- [Assemble the two channels](RESPONSE.md#contract-steps-assessment-assembly) (`steps.assessment.assembly`).
+- [Classify an observation](RESPONSE.md#contract-steps-assessment-observe) (`steps.assessment.observe`).
+<!-- END GENERATED CONTRACT commitments_observations -->
 
 ## Reporting apparatus
 
@@ -149,6 +164,14 @@ worker memory before apply. The host
 and copies the published receipt. Its relation to compiled bytes, application
 and effective permissions is defined by the
 [receipt contract](PolicyWitness.md#compiled-object-receipt-opt-in).
+
+<!-- BEGIN GENERATED CONTRACT commitments_apparatus -->
+Commitments explained here:
+
+- [Worker publication snapshot](RESPONSE.md#contract-lifecycle-worker_evidence) (`lifecycle.worker_evidence`).
+- [Prepare native compiler input](REQUEST.md#contract-policy-spec-parameters) (`policy.spec.parameters`).
+- [Receipt](RESPONSE.md#contract-profile-receipt) (`profile.receipt`).
+<!-- END GENERATED CONTRACT commitments_apparatus -->
 
 ## Starting authority and ambient context
 
@@ -250,6 +273,15 @@ Mach-right census and private runtime state remain unobserved; native inheritanc
 and loader behavior remain part of the instrument's received substrate, without
 a complete isolation or effective-authority census.
 
+<!-- BEGIN GENERATED CONTRACT commitments_authority -->
+Commitments explained here:
+
+- [Fresh process and retained policy](REQUEST.md#contract-actors-actor-fresh) (`actors.actor.fresh`).
+- [Actor sandbox declaration](REQUEST.md#contract-actors-sandbox) (`actors.sandbox`).
+- [Actor launch context](RESPONSE.md#contract-actor_evidence-launch) (`actor_evidence.launch`).
+- [Prepare before use](ARCHITECTURE.md#contract-extensions-custody-prepare) (`extensions.custody.prepare`).
+<!-- END GENERATED CONTRACT commitments_authority -->
+
 ## Acquisitions inside attempts
 
 File targets are opened inside their requested actions. The distinctions among
@@ -321,6 +353,18 @@ returned sysctl value. The inventory includes that buffer among local working
 storage. Unlink and access calls acquire no PW-owned target handle at their
 call sites.
 
+<!-- BEGIN GENERATED CONTRACT commitments_acquisitions -->
+Commitments explained here:
+
+- [Attempt request](REQUEST.md#contract-probes-attempt) (`probes.attempt`).
+- [Fresh-descriptor read](RESPONSE.md#contract-steps-fresh_read) (`steps.fresh_read`).
+- [Fresh-descriptor write or creation](RESPONSE.md#contract-steps-fresh_write) (`steps.fresh_write`).
+- [Observe fresh descriptors](RESPONSE.md#contract-steps-assessment-fresh) (`steps.assessment.fresh`).
+- [Project the fresh-read aggregate](RESPONSE.md#contract-steps-assessment-fresh_read_aggregate) (`steps.assessment.fresh_read_aggregate`).
+- [Project the fresh-write aggregate](RESPONSE.md#contract-steps-assessment-fresh_write_aggregate) (`steps.assessment.fresh_write_aggregate`).
+- [Spawned-command observation](RESPONSE.md#contract-lifecycle-exec) (`lifecycle.exec`).
+<!-- END GENERATED CONTRACT commitments_acquisitions -->
+
 ## Supplied extension authority
 
 Each actor chooses `equipment: "selected"` (the default) or `"unentitled"`, independently of `sandbox.mode`. Both are signed copies of the same compiled worker. The selected copy carries the runner's supplied entitlements; the unentitled copy has an empty entitlement dictionary. Neither name establishes effective authority: an unapplied actor can inherit restrictions, and signing entitlements are associated code metadata. Optional actor `required_entitlements` require boolean `true` in that actor's selected equipment and live signing readback. The controller's `runner.required_entitlements` remains a separate preflight on the selected runner worker.
@@ -373,6 +417,16 @@ Known gap: private extension calls may allocate or retain internal state that PW
 cannot inspect. Erasure observations cover PW-owned transient buffers; successful
 native results and phase progress do not establish kernel extension state,
 stable identity, effective permissions or access revocation.
+
+<!-- BEGIN GENERATED CONTRACT commitments_extensions -->
+Commitments explained here:
+
+- [Binding before launch](RESPONSE.md#contract-equipment-binding-bind) (`equipment.binding.bind`).
+- [Associating the owned process](RESPONSE.md#contract-equipment-execution-inspect) (`equipment.execution.inspect`).
+- [Acquiring setup decisions and operations](RESPONSE.md#contract-equipment-authority_scope-acquire) (`equipment.authority_scope.acquire`).
+- [Evaluating and applying the dependency](RESPONSE.md#contract-actor_evidence-gate-evaluate) (`actor_evidence.gate.evaluate`).
+- [Custody protocol](ARCHITECTURE.md#contract-extensions-custody) (`extensions.custody`).
+<!-- END GENERATED CONTRACT commitments_extensions -->
 
 ## Native observations and publications
 
@@ -427,6 +481,17 @@ and [ordering evidence states](../tests/FAILURE-PROPAGATION-CONTRACT.md#ordering
 define eligibility for `query_first` and what an acknowledged release
 establishes after abnormal exit.
 
+<!-- BEGIN GENERATED CONTRACT commitments_publication -->
+Commitments explained here:
+
+- [Assemble the two channels](RESPONSE.md#contract-steps-assessment-assembly) (`steps.assessment.assembly`).
+- [Observe fresh descriptors](RESPONSE.md#contract-steps-assessment-fresh) (`steps.assessment.fresh`).
+- [Collect, release and advance](REQUEST.md#contract-actors-phase-order) (`actors.phase.order`).
+- [Establish query order](RESPONSE.md#contract-steps-assessment-order) (`steps.assessment.order`).
+- [Worker publication snapshot](RESPONSE.md#contract-lifecycle-worker_evidence) (`lifecycle.worker_evidence`).
+- [Erase at declared last use and teardown](ARCHITECTURE.md#contract-extensions-custody-erase) (`extensions.custody.erase`).
+<!-- END GENERATED CONTRACT commitments_publication -->
+
 ## Changes that change what a run establishes
 
 A proposed improvement can move authority or an observation across a boundary.
@@ -445,6 +510,15 @@ Removing the collection hold would also let worker effects change what
 supposedly prior queries observe. The
 [ordering controls](../tests/suites/witness_contract/README.md#predictions-before-attempts)
 observe both the hold and its limited snapshot meaning.
+
+<!-- BEGIN GENERATED CONTRACT commitments_changes -->
+Commitments explained here:
+
+- [Fresh process and retained policy](REQUEST.md#contract-actors-actor-fresh) (`actors.actor.fresh`).
+- [Collect, release and advance](REQUEST.md#contract-actors-phase-order) (`actors.phase.order`).
+- [Observe fresh descriptors](RESPONSE.md#contract-steps-assessment-fresh) (`steps.assessment.fresh`).
+- [Prepare before use](ARCHITECTURE.md#contract-extensions-custody-prepare) (`extensions.custody.prepare`).
+<!-- END GENERATED CONTRACT commitments_changes -->
 
 ## Detailed capability inventory
 

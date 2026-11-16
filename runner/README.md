@@ -163,12 +163,12 @@ for the boundary assessment. That assessment can report an observed apply
 failure, and its unapplied branch follows the declaration even without launch.
 The [guide's reading path](../docs/PolicyWitness.md#reading-actor-setup-and-application)
 walks through these contrasts; the
-[contract classification](../docs/CONTRACT.md#contract-actor_evidence-application-classify)
+[contract classification](../docs/RESPONSE.md#contract-actor_evidence-application-classify)
 owns the complete source precedence, with the
-[late-publication support](../docs/CONTRACT.md#contract-actor_evidence-application-late_application)
+[late-publication support](../docs/RESPONSE.md#contract-actor_evidence-application-late_application)
 qualified by its shortened setup allowance and delayed worker control.
 
-A phase's `after_termination` dependency requires an owned natural reap after the source's final activation, before dependent activation and query collection. Abnormal natural exit can satisfy it without final phase completion. Source clock uncertainty prevents satisfaction, while clock loss after dependent activation was stored cannot erase that activation. The gate never requests termination to satisfy itself. [The wire contract](../docs/CONTRACT.md#contract-actor_evidence-gate) defines source association, clock eligibility and retained evidence.
+A phase's `after_termination` dependency requires an owned natural reap after the source's final activation, before dependent activation and query collection. Abnormal natural exit can satisfy it without final phase completion. Source clock uncertainty prevents satisfaction, while clock loss after dependent activation was stored cannot erase that activation. The gate never requests termination to satisfy itself. [The gate statement](../docs/RESPONSE.md#contract-actor_evidence-gate) defines source association, clock eligibility and retained evidence.
 
 Every validator query uses `SANDBOX_CHECK_NO_REPORT`, so predictions produce no
 denial records. `comparison.order=query_first` requires eligible native records,
@@ -207,9 +207,9 @@ Extension actions are actor-only and use issue, transfer, consume and release wi
 
 The controller resolves `policy.augments` and removes selection fields before
 delivery. Direct XPC requests containing nonempty unresolved augments or
-controller selection fields are refused. The [request grammar](../docs/REQUEST-GRAMMAR.md)
-and [accepted input contract](../docs/CONTRACT.md#contract-request)
-own the full rules; [augments/](augments/README.md) describes the shipped policy
+controller selection fields are refused. [REQUEST](../docs/REQUEST.md) teaches
+the admitted forms and presents their [complete statements](../docs/REQUEST.md#contract-request);
+[augments/](augments/README.md) describes the shipped policy
 fragment.
 
 The optional `compiled_profile` receipt captures the worker's compiler output

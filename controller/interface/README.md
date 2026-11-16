@@ -107,6 +107,13 @@ presence conjunct can support the fallback test; negated or disjunctive
 mentions of presence cannot. The complete applicability expression remains
 uncompared.
 
+Follow [selector precedence](../../docs/REQUEST.md#contract-request-options-precedence)
+from a run-option change and
+[result selection](../../docs/RESPONSE.md#contract-envelope-data-select) from a
+result-row change. [CONTRACT](../../docs/CONTRACT.md) indexes these associations
+alongside source and check support. The complete statement retains the
+applicability and free conditions that the join leaves uncompared.
+
 **Cases.** `joins.json` associates each case of the
 [case corpus](../integration/interface_cases.json) with the entries it
 reaches. The association is derived from the case's argument vector, a

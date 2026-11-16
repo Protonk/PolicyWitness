@@ -108,7 +108,13 @@ for the affected workflow.
   aligned. Protocol or build-input changes require worker-identity regeneration;
   layout changes also require C/Swift agreement and review of the layout golden.
 - For request or evidence changes, update affected admission, transport, readers,
-  fixtures and documentation together. Keep [the public contract](docs/CONTRACT.md) definitions, examples and shape goldens current; its [authored tree](docs/contract/README.md) defines the stamped surfaces.
+  fixtures and documentation together. Author public meanings and examples in
+  [the surface tree](docs/contract/README.md), and keep shape goldens current.
+  [REQUEST](docs/REQUEST.md), [RESPONSE](docs/RESPONSE.md) and the protocols in
+  [ARCHITECTURE](docs/ARCHITECTURE.md) present their complete statements;
+  [CONTRACT](docs/CONTRACT.md) indexes commitments and their support. Edit
+  [the presentation map](docs/contract/presentation.json) for placement and tour
+  commitment lists, then regenerate through the contract entry point.
 - For process, channel or boundary changes, update [docs/architecture.json](docs/architecture.json)
   and regenerate the architecture account. Citation checks establish that sources
   and checks exist; review whether they support the behavior being described.

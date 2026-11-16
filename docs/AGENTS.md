@@ -4,6 +4,37 @@ Read the [repository documentation index](../README.md#documentation) for the
 documents and their audiences. These rules supplement the
 [root guidance](../AGENTS.md#documentation).
 
+## Editing developer statements and reading paths
+
+Author public meanings, conditions, examples and support in the
+[contract surface tree](contract/README.md). [REQUEST](REQUEST.md) presents
+declarations and admission, [RESPONSE](RESPONSE.md) presents returned evidence,
+and [ARCHITECTURE](ARCHITECTURE.md) states the named cross-process protocols.
+[CONTRACT](CONTRACT.md) retains identity, shared definitions, notation, history,
+support details and trace indexes. The rendered location does not determine
+whether a statement is public.
+
+Edit [presentation.json](contract/presentation.json) to route whole subjects
+and associate tour sections with commitments. Placement metadata supplies no
+second public meaning or coverage claim. Keep inherited conditions, first-match
+order and owner scope with the statement; a subject that needs separate homes
+requires an authored-tree change before it can be routed separately.
+
+Run `tests/lib/python.sh docs/generate_contract_stamps.py` after changing the
+tree or map. Edit teaching prose outside generated regions; the generator owns
+the statement and commitment-list regions, trace views, snapshot and free-text
+counts. Stamp tables occur only in CONTRACT and the user guide. Use
+`--check --require-history` when verifying historical derivation with annotated
+release tags; a history-free check validates current outputs and table agreement
+without establishing their historical derivation. Follow
+[test guidance](../tests/AGENTS.md) for the integrated verification selected by
+the changed boundary.
+
+Scalar limit spans inside generated contract regions are rendered copies.
+Change their authored surface inputs through the limits generator, then
+regenerate the contract. The shared span reader excludes generated regions
+from its authored-span pass, preserving each generator's ownership.
+
 ## Editing limits and shared guide content
 
 Edit [limits.json](limits.json) for limit records, then run

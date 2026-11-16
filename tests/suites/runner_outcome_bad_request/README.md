@@ -16,7 +16,7 @@ produce the independent file effect used by the accepted-input controls.
   sources fail explicitly without creating the file. Direct XPC controls prove
   the service independently checks versions and rejects unresolved controller
   options. Raw inputs, replies and stderr are retained per subcase.
-  The [developer guide](../../../docs/REQUEST-GRAMMAR.md) uses the shared
+  The [developer guide](../../../docs/REQUEST.md) uses the shared
   [example corpus](../../fixtures/request_contract/examples.json), also read by
   Swift unit tests. The create/capture-typo input bodies resolve explicit paths
   to corpus-owned JSON under `tests/fixtures/request_contract/`; expected

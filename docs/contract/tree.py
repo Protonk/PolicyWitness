@@ -1507,9 +1507,9 @@ def _views(tree):
     return applicability, findings, gaps
 
 
-def render(tree):
+def render(tree, selected=None, *, appendix=True, title=True):
     """Render the contract with a marker for the entry point's surface table."""
-    output = ['# PolicyWitness contract', '']
+    output = ['# PolicyWitness contract', ''] if title else []
     roots = defaultdict(list)
     owners = []
     for surface in tree.surfaces:
@@ -1584,22 +1584,30 @@ def render(tree):
             for extra in member.children:
                 if extra not in nested: visit(extra, depth + 1)
         for child in node.children:
-            if child.kind == 'field' or child in compact or 'part' in child.facts:
+            if child.kind == 'field' or child in compact or (selected is None and 'part' in child.facts) or (selected is not None and node.kind == 'surface' and child.kind == 'subject'):
                 continue
             visit(child, depth + 1)
 
-    for part in PARTS:
-        if not roots[part]: continue
-        title = PART_TITLES[part]
-        same_title = (title and len(roots[part]) == 1
-                      and roots[part][0].title.casefold() == title.casefold())
-        if title and not same_title: output.extend(['## ' + title, ''])
-        for node in roots[part]: visit(node, 3 if title and not same_title else 2)
-        if part == 'identity':
-            output.extend(['<!-- CONTRACT SURFACE TABLE -->', '',
-                           'Field entries and rules use the [notation below](#contract-notation).', ''])
-    if not roots['identity']:
-        output[2:2] = ['<!-- CONTRACT SURFACE TABLE -->', '']
+    if selected is not None:
+        for node in selected:
+            visit(node, 2 if node.kind == 'surface' else 3)
+    else:
+        for part in PARTS:
+            if not roots[part]: continue
+            title = PART_TITLES[part]
+            same_title = (title and len(roots[part]) == 1
+                          and roots[part][0].title.casefold() == title.casefold())
+            if title and not same_title: output.extend(['## ' + title, ''])
+            for node in roots[part]: visit(node, 3 if title and not same_title else 2)
+            if part == 'identity':
+                output.extend(['<!-- CONTRACT SURFACE TABLE -->', '',
+                               'Field entries and rules use the [notation below](#contract-notation).', ''])
+        if not roots['identity']:
+            output[2:2] = ['<!-- CONTRACT SURFACE TABLE -->', '']
+    if not appendix:
+        return '\n'.join(output).rstrip() + '\n'
+    if selected is not None:
+        owners = [node for node in tree.nodes if node.kind == 'owner']
     output.extend([NOTATION, '', '## Evidence support', '', '<a id="contract-support-grades"></a>',
                    '**Support grades.** ' + ' '.join('**' + key.replace('_', ' ') + ':** ' + text
                                                      for key, text in SUPPORT_GRADES.items()), ''])

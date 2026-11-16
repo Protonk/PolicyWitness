@@ -3,11 +3,13 @@ import json
 from pathlib import Path
 import tempfile
 import sys
+from unittest import mock
 
 ROOT = Path(__file__).resolve().parents[3]
 sys.path.insert(0, str(ROOT / 'docs'))
 sys.path.insert(0, str(ROOT / 'tests/lib'))
 import generate_contract_stamps
+import contract_fixture
 import fixture_inputs
 import receipts
 
@@ -1255,6 +1257,171 @@ effects: perform(ref("identity.procedures.refuse"), ref("demo.report"))
 
 
 
+class ContractPresentationTests(receipts.TestCase):
+    def setUp(self):
+        super().setUp()
+        self.model = generate_contract_stamps.contract_module('tree')
+        self.presentation = generate_contract_stamps.contract_module('runtime').presentation
+        self.track_inputs(ROOT, generate_contract_stamps.input_paths(ROOT))
+        self.track_inputs(ROOT, ['tests/suites/source_drift/contract_tree_controls.py'])
+
+    def test_rebase_changes_local_links_and_reference_destinations_only(self):
+        original = '''[Direct](#contract-demo) and `[Example](#contract-demo)`.
+[Angle](<CONTRACT.md#contract-demo> "title") and [Reference][rule].
+[Bare reference][bare] and [Continued reference][continued].
+[Same document](#contract-local) and [Details](#contract-demo-details).
+[Historical](https://example.invalid/v0.3.7/CONTRACT.md#contract-demo).
+[Historical removed](https://example.invalid/v0.3.7/CONTRACT.md#contract-retired).
+[Relative historical](../v0.3.7/CONTRACT.md#contract-demo).
+
+`A multiline example
+[Example](#contract-demo)` and [Live](./CONTRACT.md#contract-demo).
+
+[rule]: <#contract-demo> "reference title"
+[bare]: CONTRACT.md#contract-demo
+[continued]:
+  <#contract-demo> "continued title"
+
+```markdown
+[Fenced](#contract-demo)
+[rule]: <#contract-demo>
+```
+'''
+        expected = original.replace('[Direct](#contract-demo)', '[Direct](RESPONSE.md#contract-demo)')
+        expected = expected.replace('[Angle](<CONTRACT.md#contract-demo>', '[Angle](<RESPONSE.md#contract-demo>')
+        expected = expected.replace('[Details](#contract-demo-details)', '[Details](CONTRACT.md#contract-demo-details)')
+        expected = expected.replace('[Live](./CONTRACT.md#contract-demo)', '[Live](RESPONSE.md#contract-demo)')
+        expected = expected.replace('[rule]: <#contract-demo> "reference title"',
+                                    '[rule]: <RESPONSE.md#contract-demo> "reference title"')
+        expected = expected.replace('[bare]: CONTRACT.md#contract-demo', '[bare]: RESPONSE.md#contract-demo')
+        expected = expected.replace('  <#contract-demo> "continued title"',
+                                    '  <RESPONSE.md#contract-demo> "continued title"')
+        self.assertEqual(self.presentation.rebase(original, 'docs/REQUEST.md', {
+            'demo': 'docs/RESPONSE.md', 'local': 'docs/REQUEST.md',
+        }), expected)
+        with self.assertRaisesRegex(ValueError, 'unknown contract link'):
+            self.presentation.rebase('[Missing](CONTRACT.md#contract-retired)', 'docs/REQUEST.md', {})
+
+    def test_assembly_requires_exactly_one_stamp_table_position(self):
+        runtime = generate_contract_stamps.contract_module('runtime')
+        tree = self.model.load_tree(ROOT)
+        marker = '<!-- CONTRACT SURFACE TABLE -->'
+        for count in (0, 2):
+            with self.subTest(positions=count), mock.patch.object(
+                    self.presentation, 'render', return_value={runtime.CONTRACT: marker * count}):
+                with self.assertRaisesRegex(ValueError, 'expected one surface table position'):
+                    runtime.assemble(tree, '\nStamp rows.\n')
+        with mock.patch.object(self.presentation, 'render', return_value={runtime.CONTRACT: marker}):
+            result = runtime.assemble(tree, '\nStamp rows.\n')[runtime.CONTRACT]
+        self.assertEqual(result.count(runtime.BEGIN), 1)
+        self.assertIn(runtime.BEGIN + '\nStamp rows.\n' + runtime.END, result)
+
+    def test_every_node_has_one_statement_home_and_support_links_keep_scope(self):
+        tree = self.model.load_tree(ROOT)
+        _, homes = self.presentation.load(ROOT, tree)
+        rendered = self.presentation.render(ROOT, tree)
+        # These expectations are authored independently of the routing map.
+        for ident, destination in {
+            'request.specimen': 'docs/REQUEST.md',
+            'request.options.precedence': 'docs/REQUEST.md',
+            'reply.record': 'docs/RESPONSE.md',
+            'envelope.data.select.finished': 'docs/RESPONSE.md',
+            'transport.delivery': 'docs/ARCHITECTURE.md',
+            'transport.support': 'docs/RESPONSE.md',
+            'wire.standalone': 'docs/RESPONSE.md',
+            'wire.support': 'docs/ARCHITECTURE.md',
+            'identity.definitions': 'docs/CONTRACT.md',
+        }.items():
+            self.assertEqual(homes[ident], destination, ident)
+        self.assertEqual(set(homes), set(tree.index))
+        for node in tree.nodes:
+            marker = '<a id="' + self.model._anchor(node) + '"></a>'
+            with self.subTest(node=node.id):
+                self.assertEqual(sum(text.count(marker) for text in rendered.values()), 1)
+                self.assertIn(marker, rendered[homes[node.id]])
+        architecture, response, contract = (rendered['docs/' + name + '.md']
+                                             for name in ('ARCHITECTURE', 'RESPONSE', 'CONTRACT'))
+        self.assertIn('Inherited surface support: [Implementation and evidence](RESPONSE.md#contract-transport-support) (original subtree scope).', architecture)
+        self.assertIn('for [Delivery to the host](#contract-transport) and its descendants.', response)
+        self.assertIn('[Evidence details](CONTRACT.md#contract-transport-support-details)', response)
+        self.assertIn('[Local support](RESPONSE.md#contract-transport-support)', contract)
+        # A compact field signature and a compact consequence link cross homes.
+        self.assertIn('RESPONSE.md#contract-identity-build-contract', rendered['docs/REQUEST.md'])
+        self.assertIn('RESPONSE.md#contract-refusals-request-consequence', rendered['docs/REQUEST.md'])
+
+    def test_routed_statements_retain_applicability_order_and_evidence_limits(self):
+        rendered = self.presentation.render(ROOT, self.model.load_tree(ROOT))
+        required = {
+            'docs/ARCHITECTURE.md': [
+                'A grant was admitted and a fresh continuous-clock sample is before the original deadline.',
+                'Make one execution invocation and preserve its observation through later error, timeout or refusal; never replay the specimen.',
+                'Entry: cli run, runner verify. Recipient: runner host. Reports: client capture.',
+            ],
+            'docs/RESPONSE.md': [
+                'Applies when present(`envelope.data.runner_result`). Client capture and host reply admission have succeeded.',
+                'Select the first matching case in the listed order.',
+                'retain_records(`envelope.data.runner_result`)',
+                'Live XPC, signed foreign-host nonreceipt and large native replies require separate execution evidence.',
+            ],
+            'docs/REQUEST.md': [
+                'Binding `a`: entry in `specimen.actors`. For each `a`.',
+                'absent(`specimen.actors`) and present(`specimen.probe_plan`)',
+            ],
+        }
+
+        def scoped_claims(values):
+            for name, phrases in required.items():
+                for phrase in phrases:
+                    self.assertIn(phrase, values[name])
+            response = values['docs/RESPONSE.md']
+            self.assertLess(response.index('<a id="contract-envelope-data-select-finished">'),
+                            response.index('<a id="contract-envelope-data-select-other">'))
+
+        scoped_claims(rendered)
+        for name, phrases in required.items():
+            for phrase in phrases:
+                with self.subTest(loss=phrase):
+                    changed = dict(rendered)
+                    changed[name] = changed[name].replace(phrase, '')
+                    with self.assertRaises(AssertionError):
+                        scoped_claims(changed)
+        changed = dict(rendered)
+        changed['docs/RESPONSE.md'] = changed['docs/RESPONSE.md'].replace(
+            'contract-envelope-data-select-finished', 'temporary-case').replace(
+            'contract-envelope-data-select-other', 'contract-envelope-data-select-finished').replace(
+            'temporary-case', 'contract-envelope-data-select-other')
+        with self.assertRaises(AssertionError):
+            scoped_claims(changed)
+
+    def test_map_move_changes_statement_and_links_without_changing_public_payloads(self):
+        directory = tempfile.TemporaryDirectory(prefix='pw-contract-map-')
+        self.addCleanup(directory.cleanup)
+        root = Path(directory.name)
+        fixture_inputs.copy_declared(ROOT, root, generate_contract_stamps.input_paths(ROOT))
+        self.track_inputs(root)
+        before_tree = self.model.load_tree(root)
+        before = {surface.id: self.model.public_payload(before_tree, surface.id) for surface in before_tree.surfaces}
+        path = root / self.presentation.MAP
+        data = json.loads(path.read_text())
+        for entry in data['documents']['docs/ARCHITECTURE.md']:
+            if 'transport.delivery' in entry['nodes']:
+                entry['nodes'].remove('transport.delivery')
+                break
+        else:
+            self.fail('the independent control must find the protocol in ARCHITECTURE')
+        data['documents']['docs/REQUEST.md'][0]['nodes'].append('transport.delivery')
+        path.write_text(json.dumps(data))
+        after_tree = self.model.load_tree(root)
+        self.assertEqual(before, {surface.id: self.model.public_payload(after_tree, surface.id)
+                                  for surface in after_tree.surfaces})
+        rendered = self.presentation.render(root, after_tree)
+        marker = '<a id="contract-transport-delivery"></a>'
+        self.assertIn(marker, rendered['docs/REQUEST.md'])
+        self.assertNotIn(marker, rendered['docs/ARCHITECTURE.md'])
+        self.assertIn('REQUEST.md#contract-transport-delivery', rendered['docs/CONTRACT.md'])
+        self.assertIn('RESPONSE.md#contract-transport-support', rendered['docs/REQUEST.md'])
+
+
 class ContractHistoryTests(receipts.TestCase):
     def setUp(self):
         super().setUp()
@@ -1304,6 +1471,13 @@ class ContractHistoryTests(receipts.TestCase):
         body = minimal_surface().replace('tests/fixtures/contract/compiled_profile.json',
                                          'tests/fixtures/contract/surfaces/demo.json')
         (root / 'docs/contract/control.surface.md').write_text(body)
+        contract_fixture.presentation(root, {
+            'docs/CONTRACT.md': [dict(region='meanings', nodes=['demo', 'demo.meanings'])],
+            'docs/REQUEST.md': [dict(region='producer', nodes=['demo.producer'])],
+            'docs/RESPONSE.md': [dict(region='report', nodes=['demo.report'])],
+            'docs/ARCHITECTURE.md': [dict(region='phase', nodes=['demo.phase'])],
+        }, commitments=[dict(document='docs/CONTROLLER.md', region='interpretation',
+                             nodes=['demo.report.read_status'])])
         (root / self.runtime.BASELINE).write_text(self.runtime.canonical(dict(condition=0, dependency=0, effect=1, when=0)))
         self.evidence.capture_tracked('legacy release with current authored tree')
         return root
@@ -1344,7 +1518,8 @@ class ContractHistoryTests(receipts.TestCase):
     def test_history_free_check_preserves_tables_and_release_regeneration_refuses(self):
         root = self.released()
         self.git(root, 'tag', '-d', 'v0.3.6', 'v0.3.7')
-        paths = (*self.runtime.OUTPUTS, 'docs/contract/public.json', self.runtime.BASELINE)
+        paths = (*self.runtime.STAMP_OUTPUTS, *self.runtime.presentation.destinations(root),
+                 'docs/contract/public.json', self.runtime.BASELINE)
         before = {name: (root / name).read_bytes() for name in paths}
         self.assertFalse(self.runtime.check(root))
         with self.assertRaisesRegex(ValueError, 'history unavailable'):
@@ -1353,7 +1528,7 @@ class ContractHistoryTests(receipts.TestCase):
             with self.subTest(release=release), self.assertRaisesRegex(ValueError, 'history unavailable'):
                 self.runtime.render(root, release)
         self.assertEqual(before, {name: (root / name).read_bytes() for name in paths})
-        path = root / 'docs/CONTRACT.md'
+        path = root / 'docs/ARCHITECTURE.md'
         path.write_text(path.read_text().replace('The phase\'s declared identifier.', 'Stale rendered meaning.'))
         with self.assertRaisesRegex(ValueError, 'stale generated contract'):
             self.runtime.check(root)

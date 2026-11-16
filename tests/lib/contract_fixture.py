@@ -16,6 +16,25 @@ def write_outputs(root, values):
         path.write_text(after)
 
 
+def presentation(root, documents, *, commitments=()):
+    """Give a constructed tree explicit destinations supplied by its caller."""
+    root = Path(root)
+    data = dict(documents=documents, commitments=list(commitments))
+    (root / 'docs/contract/presentation.json').write_text(json.dumps(data, indent=2) + '\n')
+    (root / 'docs/contract/trace-introduction.md').write_text('# Constructed contract\n')
+    regions = {name: [entry['region'] for entry in entries] for name, entries in documents.items()}
+    for entry in commitments:
+        regions.setdefault(entry['document'], []).append(entry['region'])
+    for name, entries in regions.items():
+        if name == 'docs/CONTRACT.md':
+            continue
+        path = root / name
+        path.parent.mkdir(parents=True, exist_ok=True)
+        path.write_text('# Constructed presentation\n\n' + '\n\n'.join(
+            f'<!-- BEGIN GENERATED CONTRACT {region} -->\n<!-- END GENERATED CONTRACT {region} -->'
+            for region in entries) + '\n')
+
+
 def minimal_surfaces(root, *, checks=('fixture',)):
     """Replace authored surfaces in a disposable fixture, retaining release claims.
 
@@ -39,6 +58,7 @@ def minimal_surfaces(root, *, checks=('fixture',)):
     shape = root / 'tests/fixtures/contract/surfaces/fixture.json'
     shape.parent.mkdir(parents=True, exist_ok=True)
     shape.write_text(json.dumps({'records': {}}, indent=2, sort_keys=True) + '\n')
+    presentation(root, {'docs/CONTRACT.md': [dict(region='fixture', nodes=['fixture'])]})
 
 
 def fresh_authoring(root, generator, *, minimal=False):
@@ -57,9 +77,9 @@ def fresh_authoring(root, generator, *, minimal=False):
     model = generator.contract_module('tree')
     if minimal:
         minimal_surfaces(root)
-    (root / runtime.OUTPUTS[0]).unlink(missing_ok=True)
+    (root / runtime.CONTRACT).unlink(missing_ok=True)
     (root / runtime.history_v1.SNAPSHOT).unlink(missing_ok=True)
-    guide = root / runtime.OUTPUTS[1]
+    guide = root / runtime.GUIDE
     before = guide.read_text() if guide.exists() else runtime.BEGIN + '\n' + runtime.END + '\n'
     guide.parent.mkdir(parents=True, exist_ok=True)
     guide.write_text(runtime._replace_table(before, str(guide), '\n'))

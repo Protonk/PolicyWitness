@@ -665,7 +665,13 @@ read-only checking, idempotence and output ownership. Surface shape goldens are
 recollected with `docs/generate_contract_stamps.py --refresh-shapes` and reviewed.
 The early build-refusal controls, including stale stamp tables, the native
 builder check and the make entry, are `preflight/build_entry_controls`.
-See [docs/CONTRACT.md](../../../docs/CONTRACT.md).
+The [surface tree](../../../docs/contract/README.md) owns public meaning;
+[REQUEST](../../../docs/REQUEST.md), [RESPONSE](../../../docs/RESPONSE.md) and
+the named [ARCHITECTURE protocols](../../../docs/ARCHITECTURE.md) present complete
+statements. [CONTRACT](../../../docs/CONTRACT.md) retains identity, history,
+shared definitions and the trace indexes. The contract generator owns explicit
+regions in these documents and commitment lists in the implementation tours;
+their surrounding authored prose remains separately maintained.
 
 The authoring controls exercise legal node nesting, field joins, typed
 references, applicability narrowing, explicit check order, effect scope,
@@ -676,7 +682,7 @@ omitted fields and serialization exceptions, field-local obligations, expression
 grouping and complete operands. The reading key defines the compact forms;
 first-match order, narrowed contexts and subordinate scopes retain their controls.
 Support rendering controls keep grades, assertions, contexts and limits local
-while moving citations and execution provenance into reciprocal appendix entries.
+while rendering citations and execution provenance in reciprocal CONTRACT entries.
 They cover each grade, self and subtree scope, multiple owners of a claim and
 compact table rows; the authored tree supplies an exact-once route check for
 every owner. Supporting metadata remains outside the public payload.

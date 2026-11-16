@@ -17,9 +17,12 @@ import history_v0
 import history_v1
 import interface_join
 import tree as model
+import presentation
 from generate_porcelain import wire_identity
 
-OUTPUTS = ('docs/CONTRACT.md', 'docs/PolicyWitness.md')
+CONTRACT = presentation.CONTRACT
+GUIDE = presentation.GUIDE
+STAMP_OUTPUTS = (CONTRACT, GUIDE)
 BEGIN = '<!-- BEGIN GENERATED CONTRACT STAMPS -->'
 END = '<!-- END GENERATED CONTRACT STAMPS -->'
 DOCUMENT_BEGIN = '<!-- BEGIN GENERATED PUBLIC CONTRACT -->'
@@ -110,7 +113,7 @@ def history(root, tags=None):
 
 def _claimed_history(root):
     claimed = set()
-    for name in OUTPUTS:
+    for name in STAMP_OUTPUTS:
         path = root / name
         if path.exists():
             claimed.update(re.findall(r'\| (v[0-9]+\.[0-9]+\.[0-9]+) \|', table(path.read_text(), name)))
@@ -230,18 +233,14 @@ def stamp_table(state):
 
 
 def assemble(tree, body):
-    rendered = model.render(tree).rstrip()
-    # Stamp identity follows the authored identity opening; the renderer owns
-    # all public prose and derived views, and the orchestrator owns this table.
+    """Render all destinations in memory before the entry point writes any."""
+    values = presentation.render(tree.root, tree)
     marker = '<!-- CONTRACT SURFACE TABLE -->'
-    stamp = BEGIN + body + END
-    if marker in rendered:
-        if rendered.count(marker) != 1:
-            raise ValueError('duplicate surface table position')
-        rendered = rendered.replace(marker, stamp)
-    else:
-        rendered += '\n\n## Surface history\n\n' + stamp
-    return DOCUMENT_BEGIN + '\n' + rendered + '\n' + DOCUMENT_END + '\n'
+    if values[CONTRACT].count(marker) != 1:
+        raise ValueError(f'{CONTRACT}: expected one surface table position')
+    rendered = values[CONTRACT].replace(marker, BEGIN + body + END)
+    values[CONTRACT] = DOCUMENT_BEGIN + '\n' + rendered.rstrip() + '\n' + DOCUMENT_END + '\n'
+    return values
 
 
 def render(root, release=None, refresh_shapes=False, tree=None):
@@ -257,8 +256,8 @@ def render(root, release=None, refresh_shapes=False, tree=None):
     if release and release not in selected:
         selected.append(release)
     snapshot = dict(format=history_v1.FORMAT, history=selected, surfaces=current_rows(tree))
-    values = {OUTPUTS[0]: assemble(tree, body),
-              OUTPUTS[1]: _replace_table(read(root, OUTPUTS[1]), OUTPUTS[1], body),
+    values = {**assemble(tree, body),
+              GUIDE: _replace_table(read(root, GUIDE), GUIDE, body),
               history_v1.SNAPSHOT: canonical(snapshot), BASELINE: canonical(tree.free_counts)}
     if refresh_shapes:
         values.update(shapes)
@@ -277,12 +276,12 @@ def check(root, require_history=False):
     else:
         if require_history:
             raise ValueError('release history unavailable; fetch annotated release tags for full verification')
-        tables = [table(read(root, name), name) for name in OUTPUTS]
+        tables = [table(read(root, name), name) for name in STAMP_OUTPUTS]
         if len(set(tables)) != 1:
             raise ValueError('stale contract stamps: tables disagree')
         snapshot = history_v1.snapshot(lambda name: read(root, name))
         expected = dict(format=history_v1.FORMAT, history=snapshot['history'], surfaces=current_rows(tree))
-        values = [(OUTPUTS[0], read(root, OUTPUTS[0]), assemble(tree, tables[0])),
+        values = [(name, read(root, name), text) for name, text in assemble(tree, tables[0]).items()] + [
                   (history_v1.SNAPSHOT, read(root, history_v1.SNAPSHOT), canonical(expected)),
                   (BASELINE, read(root, BASELINE), canonical(tree.free_counts))]
     stale = [name for name, before, after in values if before != after]

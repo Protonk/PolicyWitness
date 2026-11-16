@@ -10,7 +10,6 @@ import sys
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 
 ROOT = Path(__file__).resolve().parents[1]
-OUTPUTS = ('docs/CONTRACT.md', 'docs/PolicyWitness.md')
 BEGIN = '<!-- BEGIN GENERATED CONTRACT STAMPS -->'
 END = '<!-- END GENERATED CONTRACT STAMPS -->'
 
@@ -67,7 +66,7 @@ def tree_input_paths(root):
 # The entry point remains stable for builds and fixture discovery. Historical
 # representations have independent readers under docs/contract/.
 _backend = contract_module('runtime')
-OUTPUTS = _backend.OUTPUTS
+STAMP_OUTPUTS = _backend.STAMP_OUTPUTS
 BEGIN, END = _backend.BEGIN, _backend.END
 DOCUMENT_BEGIN, DOCUMENT_END = _backend.DOCUMENT_BEGIN, _backend.DOCUMENT_END
 BASELINE = _backend.BASELINE
@@ -77,7 +76,8 @@ check_shapes, collected_shapes = _backend.check_shapes, _backend.collected_shape
 
 
 def input_paths(root):
-    return sorted({*tree_input_paths(root), *OUTPUTS,
+    return sorted({*tree_input_paths(root), *STAMP_OUTPUTS,
+                   *_backend.presentation.destinations(root),
                    'docs/generate_contract_stamps.py', 'docs/generate_porcelain.py',
                    'docs/limits.json', 'tests/catalog.json', 'docs/porcelain.json',
                    'controller/src/runner_select.rs'})
@@ -104,11 +104,14 @@ def main():
                 raise ValueError('draft tree modes cannot change or check release stamps')
             model = contract_module('tree')
             tree = model.load_tree(ROOT, strict=args.tree_check)
-            body = model.render(tree)
+            rendered = _backend.presentation.render(ROOT, tree)
+            body = '\n\n'.join('<!-- Preview: ' + name + ' -->\n' + text for name, text in rendered.items())
             if args.preview:
                 output = Path(args.preview).resolve()
-                if output == (ROOT / 'docs/CONTRACT.md').resolve():
-                    raise ValueError('preview must leave the current public contract intact')
+                protected = {*_backend.presentation.destinations(ROOT), *_backend.STAMP_OUTPUTS,
+                             _backend.history_v1.SNAPSHOT, BASELINE, *collected_shapes(ROOT)}
+                if output in {(ROOT / name).resolve() for name in protected}:
+                    raise ValueError('preview must leave every generated contract destination intact')
                 output.write_text(body)
             print(json.dumps(model.statistics(tree, body), indent=2, sort_keys=True))
             return

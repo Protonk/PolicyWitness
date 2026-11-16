@@ -16,7 +16,10 @@ deterministic, and checked into the repo so tests are hermetic.
   harvest (`abi_layout.txt`, checked by `runner_abi_layout`). The two shape
   goldens are the allowlists `tests/lib/consumer.py` validates documents
   against. A failing comparison writes a candidate into the case artifacts;
-  replace the golden after review, and update its normative definition and example. See `docs/CONTRACT.md`.
+  replace the golden after review, and update its authored definition and example
+  in the [surface tree](../../docs/contract/README.md). [RESPONSE](../../docs/RESPONSE.md)
+  presents returned field meanings; [CONTRACT](../../docs/CONTRACT.md) traces
+  their implementation and support.
   `normal_reply.json` is the authored expected observation subset for the independent
   binary reply projection control; its producer context is supplied explicitly by the test. Shape checks separately own explicit null versus omitted fields.
   `compiled_profile.json` supplies independent valid and invalid nested receipt

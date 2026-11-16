@@ -930,6 +930,22 @@ Independent source reviews are recorded in the
 [interface/example trace](records/documentation-trace/interface-example-review.md)
 and [controlled-read trace](records/documentation-trace/controlled-read-review.md).
 These are source readings and historical-evidence reviews, not newly executed
-native observations. Step 2 is in progress: explicit map, partial region
-ownership, destination-aware links and fixture controls. Next action: prove the
-placement change before retiring `part`.
+native observations. The [protocol review](records/documentation-trace/protocol-review.md)
+recommends no promotion: ARCHITECTURE can retain its complete ordering account
+and link the complete returned-evidence rule. It identifies a source-established
+actor advancement wording correction and a cross-document positional reference;
+these will be separate public changes after `part` retirement.
+
+Step 2's rendering path is implemented. The explicit map covers every surface
+and all 180 whole-subject units; authored teaching paths and tour lists are in
+place. [Placement proof](records/documentation-trace/placement-proof.json), made
+with the [comparison script](records/documentation-trace/compare_payloads.py),
+confirms unchanged public payloads, shapes, counts, stamps, guide, interface
+artifacts and build/worker identities. History-backed generator checking passes.
+The initial `source_drift/build_contracts` execution at
+`tests/out/runs/documentation-trace-placement` failed because a tour list named a
+definition where the map admits subjects or rules. That invalid entry was
+removed. All six constructed history controls passed; the new presentation
+controls still need a clean execution. This run is local, gitignored evidence.
+Final integrated verification remains step 9. Next action: retire `part` with
+its exact-removal proof, then finish protocol consolidation and navigation.

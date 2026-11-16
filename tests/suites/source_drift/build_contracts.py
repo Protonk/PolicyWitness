@@ -336,6 +336,10 @@ class SurfaceStampTests(PublicBuildContractTests):
                         'checks: ["unit"]\n```\n\n'
                         '## Meaning {meaning: definition}\n\nFixture-only meaning.\n')
         (root / 'tests/fixtures/contract/surfaces/fixture_aux.json').write_text('{"records": {}}\n')
+        map_path = root / 'docs/contract/presentation.json'
+        presentation = json.loads(map_path.read_text())
+        presentation['documents']['docs/CONTRACT.md'].append(dict(region='fixture_aux', nodes=['fixture_aux']))
+        map_path.write_text(json.dumps(presentation))
         contract_fixture.fresh_authoring(root, stamps)
         self.git(root, 'init')
         return root
@@ -378,6 +382,11 @@ class SurfaceStampTests(PublicBuildContractTests):
         self.assertEqual(values['fixture_aux']['stamp'], 'unreleased')
         self.assertEqual(values['profile']['stamp'], 'v9.0.0')
         (root / 'docs/contract/99-fixture_aux.surface.md').unlink()
+        map_path = root / 'docs/contract/presentation.json'
+        presentation = json.loads(map_path.read_text())
+        presentation['documents']['docs/CONTRACT.md'] = [
+            entry for entry in presentation['documents']['docs/CONTRACT.md'] if entry['region'] != 'fixture_aux']
+        map_path.write_text(json.dumps(presentation))
         pending = stamps.stamps(root, 'v9.0.1')
         self.assertEqual(pending['fixture_aux']['stamp'], 'v9.0.1')
         self.assertTrue(pending['fixture_aux']['removed'])
@@ -846,7 +855,7 @@ class RetainedContractReaderTests(ContractReaderControls):
                         reader.surface_hash(read, row)
 
 
-from contract_tree_controls import ContractHistoryTests, ContractTreeTests  # noqa: E402
+from contract_tree_controls import ContractHistoryTests, ContractPresentationTests, ContractTreeTests  # noqa: E402
 
 
 if __name__ == '__main__':

@@ -405,6 +405,16 @@ controller assembly and the independent consumer. The worker harness pins the
 refusal, the receipt and both directions of the comparison without the host.
 The deadline does not bound final reap or cancel an earlier client timeout.
 
+<!-- BEGIN GENERATED CONTRACT commitments_ordering -->
+Commitments explained here:
+
+- [Fresh process and retained policy](REQUEST.md#contract-actors-actor-fresh) (`actors.actor.fresh`).
+- [Collect, release and advance](REQUEST.md#contract-actors-phase-order) (`actors.phase.order`).
+- [Validate and evaluate the dependency](REQUEST.md#contract-actors-after_termination-gate) (`actors.after_termination.gate`).
+- [Evaluating and applying the dependency](RESPONSE.md#contract-actor_evidence-gate-evaluate) (`actor_evidence.gate.evaluate`).
+- [Establish query order](RESPONSE.md#contract-steps-assessment-order) (`steps.assessment.order`).
+<!-- END GENERATED CONTRACT commitments_ordering -->
+
 ## Evidence channels and ownership
 
 The channels that reach the envelope are tabulated below. Each native result has one writer. The
@@ -908,3 +918,270 @@ only points there, in document order.
 - [Why these processes exist](#why-these-processes-exist):
   a completed specimen can lose its reply, with no result retrieval or safe
   execution replay.
+
+<!-- BEGIN GENERATED CONTRACT extensions -->
+<a id="contract-extensions-custody"></a>
+### Custody protocol
+
+Authority payloads occupy bounded native storage assigned to the admitted resource plan. Public records expose references, lengths, framing, status and observations. Token bytes stay in the native custody channels.
+
+<a id="contract-extensions-custody-prepare"></a>
+#### Prepare before use
+
+[Runner host](CONTRACT.md#contract-identity-definitions-host), [Worker](CONTRACT.md#contract-identity-definitions-worker) acts at host custody preparation before launch and actor setup before application or unapplied declaration. Entry: xpc execute. Recipient: caller, report reader. Reports: runner reply. Applies when present(`request.actors`). Uses [Authority setup account](RESPONSE.md#contract-equipment-authority_setup). When the admitted resource plan contains a token or delivery, the host attempts to disable core dumps; after that succeeds, it prepares one authority region for every actor and a bounded custody buffer for each token. Failure of this host custody preparation prevents every actor launch. Each actor worker reaching authority setup looks up extension symbols and attempts its own core-dump limit. Required setup publishes ready after mapping and validating its assigned region; a primary failure publishes terminal_required_failure and ends the worker before policy setup. Unneeded authority selects not_required without mapping, including when the core-limit attempt failed. These worker setup operations precede application or the actor's unapplied declaration. A reached extension action reports unavailability for missing required apparatus or symbols.
+
+<a id="contract-extensions-custody-issue"></a>
+#### Issue and transfer payload ownership
+
+[Worker](CONTRACT.md#contract-identity-definitions-worker), [Runner host](CONTRACT.md#contract-identity-definitions-host) acts at outbound token publication by the issuing worker. Entry: actor worker. Recipient: caller, report reader. Reports: runner reply. Publish a one-shot bounded token only when native issuance returned a non-null payload with length from one through <!-- span limits.extension_token_payload.value_unit -->16,383 bytes<!-- /span -->. Erase the native allocation after copying. Keep the published outbound slot immutable until the host validates, copies or rejects it, erases its payload and acknowledges it.
+
+The slot owns one declared issue. A worker timeout or exit leaves its published bytes available for the host's later copy and erasure. Another issue uses another slot. The native return and host custody acceptance are reported independently.
+
+<a id="contract-extensions-custody-deliver"></a>
+#### Acknowledge, compare and settle delivery
+
+[Runner host](CONTRACT.md#contract-identity-definitions-host), [Worker](CONTRACT.md#contract-identity-definitions-worker) acts at explicit transfer exchange with the named recipient worker. Entry: actor worker. Recipient: caller, report reader. Reports: runner reply. Require a valid transfer request and held host custody, copy into the assigned recipient slot, obtain recipient framing acknowledgement and compare its complete length and bytes with custody. Set delivered and publish settlement only after accepted acknowledgement and equal bytes. On failure publish the corresponding acknowledgement and withdraw the delivery.
+
+A parked recipient validates framing. A self-transfer also services inbound work while waiting. Consumption requires settled, committed and accepted delivery. Each exchange is bounded by <!-- span limits.actor_exchange_allowance.value_unit -->5,000 milliseconds<!-- /span --> and the remaining actor budget; timeout and clock observations retain their own boundary.
+
+<a id="contract-extensions-custody-source_answer"></a>
+#### Observe the source answer
+
+[Runner host](CONTRACT.md#contract-identity-definitions-host) acts at reply assembly after transfer. Entry: xpc execute. Recipient: caller, report reader. Reports: runner reply. Applies when present(`request.actors`). Set source_acknowledged only when the source action completed and its published transfer status matches the host's nonzero acknowledgement. Preserve late host answers independently of an unpublished or differently completed source action.
+
+<a id="contract-extensions-custody-erase"></a>
+#### Erase at declared last use and teardown
+
+[Runner host](CONTRACT.md#contract-identity-definitions-host), [Worker](CONTRACT.md#contract-identity-definitions-worker) acts at resource retirement. Entry: xpc execute. Recipient: caller, report reader. Reports: runner reply. Applies when present(`request.actors`). Erase host-private custody at the last declared transfer (or after issue when never transferred) and at teardown. Erase worker-owned inbound payloads after their last declared consume and at normal exit once host settlement transfers ownership. At host teardown erase shared regions only for actors whose termination is established; otherwise detach the host mapping.
+
+A last transfer retires custody even when the recipient is unavailable. Payload erasure is a memory-lifetime action; a native release request and the later access observation are separate operations.
+
+<a id="contract-extensions-custody-native_library"></a>
+#### Native extension evidence scope
+
+Native extension issuance, consumption and release observations are scoped to the concrete policy, entitlements, resource, token bytes and macOS build. Host custody records describe the controlled publication, copying and erasure protocol. A release return records that native call; subsequent access is established by the corresponding access observation.
+
+<a id="contract-extensions-custody-native_library-disposition_support"></a>
+**Support: [source read](CONTRACT.md#contract-support-grades) for [Native extension evidence scope](#contract-extensions-custody-native_library).** Host transfer observations record custody, copying, recipient acknowledgement and equality separately. Evidence limit: Private-library allocation and opaque token behavior retain the scope of their native observations. [Evidence details](CONTRACT.md#contract-extensions-custody-native_library-disposition_support-details).
+
+<a id="contract-extensions-custody-support"></a>
+**Support: [source read](CONTRACT.md#contract-support-grades) for [Custody protocol](#contract-extensions-custody) and its descendants.** The adjacent meanings follow the named request, producer and observation branches. Evidence limit: Conditional host/worker setup, host custody service and worker issue/transfer/consume/release have source-read support here. Collected setup-account meanings are owned by the equipment surface. Native private-library behavior remains environment-specific evidence. [Evidence details](CONTRACT.md#contract-extensions-custody-support-details).
+<!-- END GENERATED CONTRACT extensions -->
+
+<!-- BEGIN GENERATED CONTRACT transport -->
+Inherited surface support: [Implementation and evidence](RESPONSE.md#contract-transport-support) (original subtree scope).
+
+Inherited surface support: [Implementation and evidence](RESPONSE.md#contract-transport-support) (original subtree scope).
+
+Inherited surface support: [Implementation and evidence](RESPONSE.md#contract-transport-support) (original subtree scope).
+
+Inherited surface support: [Implementation and evidence](RESPONSE.md#contract-transport-support) (original subtree scope).
+
+<a id="contract-transport-authorization"></a>
+### Caller authorization
+
+<a id="contract-transport-authorization-connection"></a>
+#### Admit a connection
+
+[Runner host](CONTRACT.md#contract-identity-definitions-host) checks at NSXPCListener connection acceptance before exporting reservation methods. Entry: cli run, runner verify, direct xpc. Recipient: xpc caller. Reports: connection acceptance. The host reads PWRunnerRequireSignedCaller from its Info.plist as a Boolean; absence or an unavailable Boolean value selects false. When true, obtain caller signing information using the connection PID and the host's own signing information; require both Team IDs to be present and equal. If a nonempty identifier allowlist is configured, also require the caller signing identifier to occur in it. Reject the connection before exporting reservation methods when these checks fail.
+
+`PWRunnerAllowedIdentifiers` is a string array whose members are trimmed and empty members removed. An unavailable or empty resulting list leaves the identifier unrestricted within the Team ID check. The shipped template enables the signed-caller check and lists `pw-runner-client` and `com.policywitness.policy-witness`. An ad-hoc host has no Team ID and fails the enabled check. With the Boolean false, the listener accepts local connections without these signing comparisons; reservation and specimen admission still follow. These signing comparisons and public contract equality are separate checks.
+
+<a id="contract-transport-authorization-support"></a>
+**Support: [source read](CONTRACT.md#contract-support-grades) for [Caller authorization](#contract-transport-authorization) and its descendants.** The listener applies configured signing-information comparisons before exporting a service; source defaults and shipped settings are distinct. Context: Read Security lookup, Team ID and identifier comparisons, option decoding, listener call order and shipped template. Evidence limit: Source reading. The external-auth wrapper was read, but its delegated setup assertions and a signed refusal matrix are not credited by this owner. [Evidence details](CONTRACT.md#contract-transport-authorization-support-details).
+
+<a id="contract-transport-delivery"></a>
+### Reservation and execution
+
+<a id="contract-transport-delivery-acquire"></a>
+#### Acquire an unused host
+
+[Runner client](CONTRACT.md#contract-identity-definitions-client), [Runner host](CONTRACT.md#contract-identity-definitions-host) acts at reserveRunner control RPC. Entry: cli run, runner verify, direct xpc. Recipient: runner host, runner client. Reports: client capture, control reply. Uses [Exact admission identity](CONTRACT.md#contract-identity-public-contract). The client has a positive remaining overall allowance and has already begun fewer than <!-- span limits.reservation_attempts.value -->256<!-- /span --> acquisition attempts. Send only the reservation control; the host may grant its one unused slot to that connection. Occupied or transport-lost acquisition may reconnect within the original allowance.
+
+The requested lease is at most <!-- span limits.reservation_lease.value_unit -->5,000 milliseconds<!-- /span --> and at most the remaining overall allowance. Each reservation RPC waits at most <!-- span limits.reservation_rpc_wait.value_unit -->5,000 milliseconds<!-- /span -->; retries wait up to <!-- span limits.reservation_retry_delay.value_unit -->100 milliseconds<!-- /span -->, shortened by the remaining allowance. Every attempt uses a new UUID. A host shares its one slot across authenticated connections. Grant, execution, expiry and abandonment advance that slot toward retirement; expiry or disconnect does not make it reusable.
+
+<a id="contract-transport-delivery-admit_control"></a>
+#### Admit the control
+
+[Runner client](CONTRACT.md#contract-identity-definitions-client) checks at reservation and submission-control reply admission. Entry: cli run, runner verify. Recipient: runner client. Reports: client capture. Uses [Exact admission identity](CONTRACT.md#contract-identity-public-contract), [Host control reply](#contract-transport-control). Control bytes arrive before a terminal client decision. Bound the control to <!-- span limits.reservation_control_bytes.value_unit -->65,536 bytes<!-- /span -->, compare the contract before decoding descendants, validate host-instance and credential UUID syntax, and associate the callback with the active phase and attempt. Acquisition accepts granted or occupied and checks the echoed attempt and requested lease; submission accepts reservation_refused. On refusal retain control byte count and SHA-256, withhold decoded fields and end with protocol_error.
+
+Both reservation requests and admitted control replies reject unknown keys after identity admission. Optional control fields accept JSON null as absence. Reservation acceptance establishes control admission and ownership of a slot. Peer PID and host-instance strings are assertions supplied by that peer.
+
+| Item | Requirement or consequence |
+| --- | --- |
+| <a id="contract-transport-delivery-admit_control-identity"></a>Typed control identity | Requires (`control.host_pid` > `0` and `control.host_pid` ≤ `2147483647` and utf8_length(`control.host_instance`) = `36`). |
+| <a id="contract-transport-delivery-admit_control-status"></a>Admitted status forms | Requires `control.status` ∈ [`"granted"`, `"occupied"`, `"reservation_refused"`]. |
+| <a id="contract-transport-delivery-admit_control-grant"></a>Granted reservation fields | Requires implies(`control.status` = `"granted"`, (present(`control.attempt_id`) and absent(`control.reason`) and present(`control.reservation_id`) and utf8_length(`control.reservation_id`) = `36` and present(`control.lease_ms`) and `control.lease_ms` > `0` and `control.lease_ms` ≤ `5,000 milliseconds` (`reservation_lease`) )). |
+| <a id="contract-transport-delivery-admit_control-occupied"></a>Occupied reservation fields | Requires implies(`control.status` = `"occupied"`, (present(`control.attempt_id`) and absent(`control.reason`) and absent(`control.reservation_id`) and absent(`control.lease_ms`))). |
+| <a id="contract-transport-delivery-admit_control-refusal"></a>Submission refusal fields | Requires implies(`control.status` = `"reservation_refused"`, (absent(`control.attempt_id`) and absent(`control.reservation_id`) and absent(`control.lease_ms`) and `control.reason` ∈ [`"wrong"`, `"expired"`, `"absent"`, `"consumed"`, `"clock_error"`])). |
+
+<a id="contract-transport-delivery-invoke"></a>
+#### Invoke execution once
+
+[Runner client](CONTRACT.md#contract-identity-definitions-client) acts at runReservedSpecimen invocation on the granting connection. Entry: cli run, runner verify. Recipient: runner host. Reports: client capture. set_value(`capture.submission.state`, `"invoked"`). A grant was admitted and a fresh continuous-clock sample is before the original deadline. Record the sampled invocation elapsed time before acquiring/calling the execution proxy. Make one execution invocation and preserve its observation through later error, timeout or refusal; never replay the specimen.
+
+The host checks the connection-bound credential before interpreting the specimen. A transport error after invocation leaves receipt and execution uncertain until independent observations resolve them.
+
+<a id="contract-transport-delivery-deadline"></a>
+#### Apply the original allowance
+
+[Controller](CONTRACT.md#contract-identity-definitions-controller), [Runner client](CONTRACT.md#contract-identity-definitions-client) acts at client launch, input delivery, acquisition and execution wait. Entry: cli run, runner verify. Recipient: cli caller. Reports: client capture, run envelope, runner verify. The controller invokes its runner client with timeout_ms clamped to at least one millisecond. Create an absolute mach_continuous_time deadline before tool resolution and process spawn and pass it to the client. The client ends on expiry and ignores later callbacks; granting a reservation never resets the deadline.
+
+Continuous time includes machine sleep. Client clock failure ends with `local_error` and `clock_error`, preserves valid earlier readings and any positive invocation, and leaves the final reading absent. The controller drains complete stdout and stderr and waits for the client process; that collection has no independent receiver deadline. Client allowance expiry ends its wait. Host cleanup and worker termination follow their own owners and observations.
+
+<a id="contract-transport-delivery-uncertain"></a>
+#### Uncertain invocation example
+
+A capture can contain `acquisition_stop: "granted"`, `submission: {"state":"invoked"}` and `terminal: "xpc_error"` while `runner_reply` is absent. The client crossed its execution-call boundary once; the reply was unavailable. Retrying the specimen would be a new caller decision with possible repeated effects.
+
+<a id="contract-transport-delivery-live_evidence"></a>
+#### Transport evidence scope
+
+Controlled client connections establish the observed control-identity refusal and once-only submission behavior. Signed reservation and single-use observations concern their selected service and binaries. A foreign signed host’s receiving boundary, unbound-peer branches and native request/reply faults require their own observations. Native outcomes between the <!-- span limits.client_reply_retention.value_unit -->96,468,992 bytes<!-- /span --> client-retention cap and <!-- span limits.porcelain_frame_bytes.value_unit -->134,217,728 bytes<!-- /span --> frame limit remain unobserved in this account.
+
+<a id="contract-transport-delivery-live_evidence-disposition_support"></a>
+**Support: [source read](CONTRACT.md#contract-support-grades) for [Transport evidence scope](#contract-transport-delivery-live_evidence).** Control admission and submission phase changes preserve the once-only client boundary. Evidence limit: A substituted foreign control is a controlled receive observation. Native cap-interval behavior and a complete native fault matrix remain outside that observation. [Evidence details](CONTRACT.md#contract-transport-delivery-live_evidence-disposition_support-details).
+
+<a id="contract-transport-reservation"></a>
+### Reservation request
+
+Record `reservation`: `PWRunnerReservationRequest`.
+
+- <a id="contract-transport-reservation-contract"></a>**`contract`** (string; as defined below): The client’s exact public identity. The host compares it before decoding the rest of this control.
+- <a id="contract-transport-reservation-attempt_id"></a>**`attempt_id`** (string; as defined below): UUID naming one acquisition attempt, echoed by granted or occupied control responses.
+- <a id="contract-transport-reservation-lease_ms"></a>**`lease_ms`** (integer; as defined below): Positive requested reservation lifetime in milliseconds; the host caps an accepted lease at 5,000.
+
+<a id="contract-transport-control"></a>
+### Host control reply
+
+Record `control`: `PWRunnerControlReply`.
+
+- <a id="contract-transport-control-contract"></a>**`contract`** (string): The host’s compiled public identity, checked by the client before reading the control body.
+- <a id="contract-transport-control-status"></a>**`status`** (string): The host reports `granted`, `occupied`, `invalid_request`, `unsupported_protocol` or `reservation_refused` at the corresponding boundary.
+- <a id="contract-transport-control-attempt_id"></a>**`attempt_id`** (string?): Acquisition attempt echoed when available; submission-refusal replies omit it.
+- <a id="contract-transport-control-host_pid"></a>**`host_pid`** (integer): Host-reported process identifier. A client-admitted control requires a positive value representable as signed 32-bit.
+- <a id="contract-transport-control-host_instance"></a>**`host_instance`** (string): Host-generated UUID for its admission owner, reported by that host.
+- <a id="contract-transport-control-reservation_id"></a>**`reservation_id`** (string?): Single-use UUID credential returned by a grant and supplied only on the granting connection’s execution call. Capture projection omits this credential.
+- <a id="contract-transport-control-lease_ms"></a>**`lease_ms`** (integer?): Lifetime granted in milliseconds. A client accepts a positive value no greater than the requested lease.
+- <a id="contract-transport-control-reason"></a>**`reason`** (string?): Control refusal diagnostic. Submission refusals use `wrong`, `expired`, `absent`, `consumed` or `clock_error`; invalid/unsupported acquisition controls have their own reason.
+<!-- END GENERATED CONTRACT transport -->
+
+<!-- BEGIN GENERATED CONTRACT wire -->
+<a id="contract-wire"></a>
+## Response encoding
+
+The host reply and client capture use typed binary frames. The controller projects admitted typed records into public JSON. Saved specimens and reservation controls use their own JSON decoders; validator query records use the separate line protocol below.
+
+<a id="contract-wire-support"></a>
+**Support: [check read](CONTRACT.md#contract-support-grades) for [Response encoding](#contract-wire) and its descendants.** The schema owns record identities/tags/types and public projections. Swift writes declared values; Rust and Python independently read their structure. The named controls reject authored scalar/record faults and preserve byte projections. Context: Read the cited producer/receiver declarations and branches; check citations identify the assertions read. Evidence limit: Shared generated tables establish agreement with the declared schema; native malformed-container and host frame-cap coverage remain separate evidence work. [Evidence details](CONTRACT.md#contract-wire-support-details).
+
+<a id="contract-wire-frame"></a>
+### Frame grammar
+
+<a id="contract-wire-frame-headers"></a>
+#### Frame and value headers
+
+A frame is the four ASCII bytes `PWP1`, 32 raw bytes of the schema SHA-256 fingerprint, then exactly one root value. A value is a one-byte kind, a four-byte unsigned little-endian payload length, and exactly that many payload bytes. Every multi-byte integer in the frame grammar is little-endian. Root, record and field identities are those of the declared wire schema retained with the wire surface’s canonical shape.
+
+<a id="contract-wire-frame-primitives"></a>
+#### Primitive payloads
+
+| Kind | Payload and interpretation |
+| --- | --- |
+| 1 · boolean | Exactly one byte: 0 means false and 1 means true. |
+| 2 · signed integer | Exactly eight bytes, two’s-complement signed 64-bit. The declared destination type also constrains its representable range. |
+| 3 · unsigned integer | Exactly eight bytes, unsigned 64-bit. The declared destination type also constrains its representable range. |
+| 4 · text | Strict UTF-8 bytes of the string; payload length supplies its extent. |
+| 5 · bytes | Uninterpreted octets. The owning field supplies their public JSON spelling. |
+| 6 · record | Unsigned two-byte record ID, then repeated unsigned two-byte field tag and complete value pairs. Tags are nonzero and strictly increasing. |
+| 7 · list | Unsigned four-byte element count, followed by that many complete values of the schema’s element type. |
+| 8 · ordered string map | Unsigned four-byte entry count, followed by text-key/value pairs. Keys are unique and strictly increasing by their UTF-8 bytes; values have the declared homogeneous type. |
+| 9 · declared variant | Unsigned two-byte case tag, followed by exactly one complete value of that case’s declared type. |
+
+Optional record fields are omitted from the binary record when the producer has no value. A reader requires each nonoptional field and constructs optional absence from missing tags. JSON omission and null are projection choices owned by the field definition.
+
+<a id="contract-wire-frame-variants"></a>
+#### Text enums and typed variants
+
+Outcome, state and reason vocabularies travel as text values. Each field's named recipient checks and assessments determine the consequence of a familiar or unfamiliar value. Record references retain their declared record type; equipment references use unsigned indices into their named tables. The declared PWDispositionValue variant has case tag 1 carrying a signed integer and case tag 2 carrying PWRunnerTerminationRequest. Public JSON serializes the selected value directly.
+
+<a id="contract-wire-frame-reader"></a>
+#### Retained-byte reader
+
+The Python retained-byte reader admits captured porcelain frames against the
+declared wire schema and projects their fields for the repository's evidence
+readers. The received bytes remain with their capture owner.
+
+<a id="contract-wire-frame-admit"></a>
+#### Exact structural admission
+
+[Controller](CONTRACT.md#contract-identity-definitions-controller), [Retained-byte reader](#contract-wire-frame-reader) checks at one complete client-capture or host-reply frame. Entry: client stdout, host reply, retained frame. Recipient: controller, report reader. Reports: run envelope. Uses [Exact admission identity](CONTRACT.md#contract-identity-public-contract), [Wire-schema fingerprint](CONTRACT.md#contract-identity-other-wire). A complete frame has been retained for the requested root kind. Check frame extent/magic and exact fingerprint, then the expected root and producer identity before descendants. Refuse wrong kinds, unknown records/tags/cases, missing required fields, invalid UTF-8, out-of-range integers, impossible lengths/counts, duplicate or out-of-order fields/keys and trailing bytes.
+
+A complete header naming another fingerprint yields unsupported schema before payload interpretation. A short fingerprint is malformed. The bound reader compares the client’s contract or host producer contract with the caller’s expected public identity; `unbound` cannot supply a positive identity admission. Successful structural decoding establishes the declared typed shape. Native-operation, lifecycle, phase, actor, equipment and custody consistency have separately named semantic readers.
+
+<a id="contract-wire-frame-budgets"></a>
+#### Receiver and writer budgets
+
+The frame cap is <!-- span limits.porcelain_frame_bytes.value_unit -->134,217,728 bytes<!-- /span --> and the nesting limit is <!-- span limits.porcelain_nesting.value -->32<!-- /span --> values; the public schema is nonrecursive. Rust shares one <!-- span limits.porcelain_decoded_storage_bytes.value_unit -->134,217,728 bytes<!-- /span --> logical decoded-storage budget across collection slots, strings and byte arrays within each frame; slot charges use the compiled destination type’s size. Capture and embedded host reply are separate frames and separate budgets. Swift bounds encoded values and record growth so a produced frame fits its frame cap. The client retains at most <!-- span limits.client_reply_retention.value_unit -->96,468,992 bytes<!-- /span --> of a host reply. The controller collects client output before applying its <!-- span limits.controller_output.value_unit -->285,212,672 bytes<!-- /span --> per-stream retention cap. These quantities describe distinct allocation, encoding and retention operations; complete-output collection can use more memory than a retained prefix.
+
+<a id="contract-wire-frame-identity"></a>
+#### Exact wire identity
+
+The fingerprint is SHA-256 of the compact, object-key-sorted JSON wire identity emitted by `wire_identity`: schema version; records in schema order with ID, name and fields; each field’s tag, public name, type descriptor, null rule and any byte projection; path-form and conditional-null rules; root names mapped to record IDs; and declared variant cases. Local-only fields are omitted. Source paths, mutable/default annotations and descriptive text remain source provenance. Changes to a field’s name, tag, type, optionality, null/projection rule or a newly added optional field change the fingerprint and require exact receiver agreement.
+
+<a id="contract-wire-frame-projection"></a>
+#### Public JSON projection
+
+Bytecode, retained host frames and rejected validator context become standard base64. Digests, code-directory hashes, worker identity and fresh-read bytes become lowercase hexadecimal. Path-form fields equal to their input bytes are omitted and listed in `same_as_input`; unavailable forms remain null. Conditional-null fields are carried only when their guard has a value. Other optional fields follow their declared omit/null rule. The generated Rust serializers and independent Python projection apply these rules after typed byte admission.
+
+<a id="contract-wire-frame-disposition_support"></a>
+**Support: [check read](CONTRACT.md#contract-support-grades) for [Frame grammar](#contract-wire-frame).** Actual decoder and writer boundaries own structural refusal and fallback. Context: Static review of the cited producer and assertion branches. Evidence limit: The huge diagnostic is constructed; writer refusal and its retained minimal frame are distinct from native production or XPC cap-interval observation. [Evidence details](CONTRACT.md#contract-wire-frame-disposition_support-details).
+
+<a id="contract-wire-frame-rust_execution"></a>
+**Support: [executed](CONTRACT.md#contract-support-grades) for [Frame grammar](#contract-wire-frame).** Literal frames exercise duplicate/descending map keys, impossible or mixed lists, generated byte kind, variant tag/payload/body and actual nested depths 32 and 33. Context: The completed unit/rust.unit case passed with zero recorded system sleep; all five named controls passed in cargo-test-bins.log. Evidence limit: The depth control uses a recursive test wrapper over the production list reader; the public schema is nonrecursive. These are structural decoder controls over constructed bytes. [Evidence details](CONTRACT.md#contract-wire-frame-rust_execution-details).
+
+<a id="contract-wire-frame-writer_execution"></a>
+**Support: [executed](CONTRACT.md#contract-support-grades) for [Frame grammar](#contract-wire-frame).** A constructed 134217729-byte attempt diagnostic reaches the actual text guard twice. The independent minimal writer emits 621 bytes with evidence_retained false, empty steps/phases and preserved scalar identity and original summary; Rust and Python read the retained frame. Context: The whole fresh runner-unit case passed with zero recorded system sleep. writer-cap-receipt.json and writer-cap-minimal.pwp join the actual Swift failures to the exact-one Rust and completed Python corpus replay. Evidence limit: The diagnostic is constructed. The observation covers the production writer and fallback; native production of that diagnostic and XPC behavior between retention and frame limits retain separate evidence scopes. [Evidence details](CONTRACT.md#contract-wire-frame-writer_execution-details).
+
+<a id="contract-wire-validator"></a>
+### Validator query and reply lines
+
+Uses [Accepted validator record](RESPONSE.md#contract-steps-verdict), [Validator subprocess](RESPONSE.md#contract-lifecycle-validator), [Rejected validator frame](RESPONSE.md#contract-lifecycle-decode_fault), [Validator query association](RESPONSE.md#contract-lifecycle-association_issue).
+
+<a id="contract-wire-validator-query"></a>
+#### Query production and native boundary
+
+[Runner host](CONTRACT.md#contract-identity-definitions-host), [Validator](CONTRACT.md#contract-identity-definitions-validator) acts at validator --batch PID stdin and sandbox check call. Entry: eligible phase query. Recipient: validator. Reports: validator records. The host has planned an eligible query against the active worker PID. Write one JSON object per line with string step_id, operation and filter_type, and string filter_value for a non-NONE filter. The helper parses that line and calls sandbox_check with SANDBOX_CHECK_NO_REPORT only after grammar and filter admission.
+
+The batch parser accepts a flat object with exactly the recognized key names; each supplied value is a string. NONE requires filter_value absent; other types require it present. Trailing content, raw NUL, invalid UTF-8, invalid escapes, U+0000 and unpaired surrogates are refused. Standard JSON escapes and paired Unicode surrogate escapes decode to their UTF-8 characters. Physical lines exceeding <!-- span limits.validator_query_payload.value -->65,534<!-- /span --> payload bytes are drained and yield one parse_error diagnostic. Blank lines are skipped. A repeated recognized key currently replaces the earlier parsed value.
+
+<a id="contract-wire-validator-emit"></a>
+#### Verdict production
+
+[Validator](CONTRACT.md#contract-identity-definitions-validator) reports at batch stdout after each nonblank input line. Entry: validator batch. Recipient: runner host. Reports: validator records. The helper parsed a physical input line or performed its requested native call. Emit a newline-terminated object with kind sb_api_validator_verdict, integer schema_version 1, step_id and outcome. Native-call records carry operation, filter_type, filter_type_id, filter_value, rc, errno and error; parse/filter refusals carry recovered-or-null step_id and error without inventing native results.
+
+Before each native call the helper clears errno. Native rc 0 is `allow`; rc 1 with errno 0 is `deny`; rc -1 with EINVAL is `unsupported_operation`; other pairs are `error`. Parse errors use `parse_error`; an unsupported filter uses `bad_filter`. Per-line failures continue to the next line, and clean batch EOF returns zero even when individual records report failures.
+
+<a id="contract-wire-validator-read"></a>
+#### Host line admission
+
+[Runner host](CONTRACT.md#contract-identity-definitions-host) checks at validator stdout framing and decoded-record construction. Entry: validator stdout. Recipient: runner host. Reports: validator records, runner reply. Uses [Validator subprocess](RESPONSE.md#contract-lifecycle-validator). The host has received a validator output prefix within its stream allowance. Split on LF, ignore empty frames and decode a final nonempty fragment. Admit strict UTF-8 JSON objects under per-frame, record-count, primitive-type and string-byte checks. Stop at the first refused frame while preserving earlier complete records and bounded rejection context.
+
+Every admitted object has exact kind, integer schema_version 1, a present string-or-null step_id and nonempty string outcome. Known optional strings and integer fields may be absent or null; Boolean, fractional, string-valued and overflowing numbers cannot supply native integers. Allow/deny require nonempty step_id, operation and filter_type plus integer rc and errno. Every other outcome requires string error. Extra JSON fields and unfamiliar diagnostic outcomes survive in the accepted raw line. Frame size is at most <!-- span limits.validator_reply_frame.value_unit -->8,192 bytes<!-- /span -->; string limits are <!-- span limits.validator_reply_step_id.value_unit -->63 UTF-8 bytes<!-- /span --> for step_id, <!-- span limits.validator_reply_filter_type.value_unit -->63 UTF-8 bytes<!-- /span --> for filter_type, <!-- span limits.validator_reply_outcome.value_unit -->63 UTF-8 bytes<!-- /span --> for outcome, <!-- span limits.validator_reply_operation.value_unit -->127 UTF-8 bytes<!-- /span --> for operation, <!-- span limits.validator_reply_filter_value.value_unit -->1,023 UTF-8 bytes<!-- /span --> for filter_value and <!-- span limits.validator_reply_error.value_unit -->511 UTF-8 bytes<!-- /span --> for error. Rejected context retains at most <!-- span limits.validator_fault_context.value_unit -->256 bytes<!-- /span -->. The validator subprocess account defines this phase collector's total stream and record allowances and subsequent unique-step association.
+
+<a id="contract-wire-validator-duplicate_keys"></a>
+#### Repeated native query keys
+
+The native batch parser accepts repeated recognized string keys and keeps the last parsed value for each key. Host query serialization emits each key once. Direct-arrival batch queries retain their own parsing rule at this native boundary.
+
+<a id="contract-wire-validator-duplicate_keys-disposition_support"></a>
+**Support: [check read](CONTRACT.md#contract-support-grades) for [Repeated native query keys](#contract-wire-validator-duplicate_keys).** The native batch parser supplies the accepted query values. Context: Static review of the cited producer and assertion branches. Evidence limit: Both member orders are retained in raw query text and checked against independently selected final strings. [Evidence details](CONTRACT.md#contract-wire-validator-duplicate_keys-disposition_support-details).
+
+<a id="contract-wire-validator-example"></a>
+#### Native prediction example
+
+For a query with step_id `read`, operation `file-read-data`, filter_type `PATH` and a concrete path, a native return rc 1/errno 0 produces outcome `deny` and error null. That record describes the native prediction for the queried worker and target at the query boundary. The separate attempt observation supplies the operation’s observed effect.
+
+<a id="contract-wire-validator-support"></a>
+**Support: [check read](CONTRACT.md#contract-support-grades) for [Validator query and reply lines](#contract-wire-validator) and its descendants.** Constructed byte controls retain valid prefixes and raw native values, refuse invalid UTF-8/numeric types/overflow/oversized fields, and withhold guessed joins for duplicate or unknown IDs. Context: Read C query parser and batch emission, Swift framing/type validation, and the named Swift control body. Evidence limit: Check reading only. The numeric example follows the emitter branch; an observed deny prediction for a particular current host/path requires its own native run. Duplicate query-key behavior is source-read. [Evidence details](CONTRACT.md#contract-wire-validator-support-details).
+<!-- END GENERATED CONTRACT wire -->

@@ -54,6 +54,13 @@ flowchart TD
     compile --> publish
 ```
 
+<!-- BEGIN GENERATED CONTRACT commitments_authority -->
+Commitments explained here:
+
+- [Admission order and effects](REQUEST.md#contract-request-specimen-admission) (`request.specimen.admission`).
+- [Establish query order](RESPONSE.md#contract-steps-assessment-order) (`steps.assessment.order`).
+<!-- END GENERATED CONTRACT commitments_authority -->
+
 ## Originating and preparing work
 
 `example` and `test-input` originate requests the build defines. In
@@ -132,6 +139,16 @@ information without becoming selection refusals. Held source hashes identify
 decoded source strings, not the original JSON file bytes. The
 [dossier rules](CONTRACT.md#contract-dossier-collection) distinguish those scopes.
 
+<!-- BEGIN GENERATED CONTRACT commitments_preparation -->
+Commitments explained here:
+
+- [Emit the example specimen](REQUEST.md#contract-request-specimen-emit_example) (`request.specimen.emit_example`).
+- [Publish a developer read input](REQUEST.md#contract-request-specimen-emit_test_input) (`request.specimen.emit_test_input`).
+- [Selector precedence](REQUEST.md#contract-request-options-precedence) (`request.options.precedence`).
+- [Resolve and append](REQUEST.md#contract-policy-augments-resolve) (`policy.augments.resolve`).
+- [Collection boundaries](RESPONSE.md#contract-dossier-collection) (`dossier.collection`).
+<!-- END GENERATED CONTRACT commitments_preparation -->
+
 ## Selecting and directing the apparatus
 
 Built-in selection uses the manifest's fixed service entry. External selection
@@ -150,6 +167,13 @@ those controlled routes, not absence of every possible operating-system read.
 Direct XPC callers still face host admission; they cannot delegate unresolved
 controller options to it. Standalone `sbpl-check` has its own helper admission
 and performs compilation without running the specimen.
+
+<!-- BEGIN GENERATED CONTRACT commitments_selection -->
+Commitments explained here:
+
+- [Nested runner selector](REQUEST.md#contract-request-selector) (`request.selector`).
+- [Static worker binding](RESPONSE.md#contract-equipment-binding) (`equipment.binding`).
+<!-- END GENERATED CONTRACT commitments_selection -->
 
 ## Invocation and uncertainty
 
@@ -180,6 +204,13 @@ Known gap: after submission, effects can occur without a usable reply or
 public envelope. There is no durable per-run result retrieval or safe replay
 protocol. The client's once-only state machine bounds its own submission;
 it cannot make a later caller's retry safe or undo an earlier effect.
+
+<!-- BEGIN GENERATED CONTRACT commitments_invocation -->
+Commitments explained here:
+
+- [Reservation and execution](ARCHITECTURE.md#contract-transport-delivery) (`transport.delivery`).
+- [Submission observation](RESPONSE.md#contract-transport-invocation) (`transport.invocation`).
+<!-- END GENERATED CONTRACT commitments_invocation -->
 
 ## Receiving and evaluating evidence
 
@@ -253,6 +284,17 @@ certification. The definitions of
 and [degraded associations](CONTRACT.md#contract-reply-failure-associations)
 keep those limits beside the preservation rules.
 
+<!-- BEGIN GENERATED CONTRACT commitments_admission -->
+Commitments explained here:
+
+- [Boundary precedence](RESPONSE.md#contract-envelope-data-admit) (`envelope.data.admit`).
+- [Exact structural admission](ARCHITECTURE.md#contract-wire-frame-admit) (`wire.frame.admit`).
+- [Observe fresh descriptors](RESPONSE.md#contract-steps-assessment-fresh) (`steps.assessment.fresh`).
+- [Application assessment](RESPONSE.md#contract-actor_evidence-application) (`actor_evidence.application`).
+- [One actor's diagnostics](RESPONSE.md#contract-diagnostics-actor) (`diagnostics.actor`).
+- [Reporting failure](RESPONSE.md#contract-reply-failure) (`reply.failure`).
+<!-- END GENERATED CONTRACT commitments_admission -->
+
 ## Selecting a result and publishing it
 
 `run_flow::complete_execution` computes diagnostics and selects the outer result
@@ -308,6 +350,15 @@ case with injected writers. No publication path establishes downstream receipt
 or durable storage. Interrupted output can follow effects; stderr is a human
 diagnostic, not a replacement protocol.
 
+<!-- BEGIN GENERATED CONTRACT commitments_result -->
+Commitments explained here:
+
+- [Select the public result](RESPONSE.md#contract-envelope-data-select) (`envelope.data.select`).
+- [Fallback helper capture](RESPONSE.md#contract-policy-fallback) (`policy.fallback`).
+- [Emit the example specimen](REQUEST.md#contract-request-specimen-emit_example) (`request.specimen.emit_example`).
+- [Publish a developer read input](REQUEST.md#contract-request-specimen-emit_test_input) (`request.specimen.emit_test_input`).
+<!-- END GENERATED CONTRACT commitments_result -->
+
 ## Equipment administration and recovery
 
 Runner commands have machine-state responsibilities distinct from executing a
@@ -344,6 +395,14 @@ which can denote host or worker according to that report's lifecycle; it is not
 an unconditional worker identity receipt. Successful verification is scoped to
 this apply-only exchange, not all future operations or authority conditions.
 
+<!-- BEGIN GENERATED CONTRACT commitments_equipment -->
+Commitments explained here:
+
+- [Command boundaries](RESPONSE.md#contract-installation-commands) (`installation.commands`).
+- [Recorded cleanup ownership](RESPONSE.md#contract-installation-ownership) (`installation.ownership`).
+- [Retained cleanup transaction](RESPONSE.md#contract-installation-pending_cleanup) (`installation.pending_cleanup`).
+<!-- END GENERATED CONTRACT commitments_equipment -->
+
 ## Resources and lifetimes
 
 | Held resource or observation | Owner and lifetime | What holding it does not establish |
@@ -362,6 +421,14 @@ therefore bound retained reports, not peak allocation. Multiple eligible actor
 fallbacks can accumulate reports before host actor-capacity admission. Exact
 capacities and their consequences belong to [LIMITS](LIMITS.md); storage and
 native resource teardown belong to [FOOTPRINT](FOOTPRINT.md).
+
+<!-- BEGIN GENERATED CONTRACT commitments_resources -->
+Commitments explained here:
+
+- [Request stdin delivery](RESPONSE.md#contract-transport-request_delivery) (`transport.request_delivery`).
+- [Apply the original allowance](ARCHITECTURE.md#contract-transport-delivery-deadline) (`transport.delivery.deadline`).
+- [Runner registry](RESPONSE.md#contract-installation-registry) (`installation.registry`).
+<!-- END GENERATED CONTRACT commitments_resources -->
 
 ## Changes that alter what can be promised
 

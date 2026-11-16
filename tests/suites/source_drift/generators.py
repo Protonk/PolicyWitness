@@ -63,9 +63,9 @@ def region_ownership(root, name):
         return {}, set(gen.OUTPUTS)
     if name == 'contract_stamps':
         runtime = gen.contract_module('runtime')
-        return {'docs/PolicyWitness.md': [(gen.BEGIN, gen.END)]}, {
-            'docs/CONTRACT.md', runtime.history_v1.SNAPSHOT, runtime.BASELINE,
-            *runtime.collected_shapes(root)}
+        regions, whole = runtime.presentation.ownership(root)
+        return regions, whole | {runtime.history_v1.SNAPSHOT, runtime.BASELINE,
+                                 *runtime.collected_shapes(root)}
     if name == 'worker_identity':
         regions = {}
         for p in gen.TARGETS:
@@ -141,7 +141,10 @@ def scanned_documents(root=ROOT):
         if name == 'contract_stamps':
             # Prose discovery must still observe a newly authored or malformed
             # surface before the contract model can collect its output shapes.
-            paths.update(root / path for path in ('docs/CONTRACT.md', 'docs/PolicyWitness.md'))
+            gen = module('scan_contract_outputs', root / 'docs/generate_contract_stamps.py')
+            runtime = gen.contract_module('runtime')
+            paths.update(root / path for path in {*runtime.STAMP_OUTPUTS,
+                                                 *runtime.presentation.destinations(root)})
             continue
         regions, _ = region_ownership(root, name)
         paths.update(root / name for name in regions if name.endswith('.md'))
@@ -951,7 +954,7 @@ class GeneratorContractTests(receipts.TestCase):
         def generated():
             snapshot = json.loads((root / 'docs/contract/public.json').read_text())
             request = next(row for row in snapshot['surfaces'] if row['id'] == 'request')
-            return (root / 'docs/CONTRACT.md').read_text(), request['public'], build_contract.identity(root)
+            return (root / 'docs/REQUEST.md').read_text(), request['public'], build_contract.identity(root)
 
         self.assertEqual(self.command(root, 'contract_stamps', '--check').returncode, 0)
         before = generated()
@@ -961,7 +964,9 @@ class GeneratorContractTests(receipts.TestCase):
         taken = self.snapshot(root)
         result = self.command(root, 'contract_stamps', '--check')
         self.assertEqual(result.returncode, 1, result.stdout)
-        self.assertIn('stale generated contract: docs/CONTRACT.md, docs/contract/public.json', result.stderr)
+        self.assertIn('stale generated contract:', result.stderr)
+        self.assertIn('docs/REQUEST.md', result.stderr)
+        self.assertIn('docs/contract/public.json', result.stderr)
         self.assertEqual(self.snapshot(root), taken, 'refusal changed checkout')
         result = self.command(root, 'contract_stamps')
         self.assertEqual(result.returncode, 0, result.stderr)
@@ -980,6 +985,95 @@ class GeneratorContractTests(receipts.TestCase):
             self.assertEqual(result.returncode, 1, result.stdout)
             self.assertIn("controller/src/example_document.rs: EXAMPLE_DOCUMENT carries the forbidden member 'contract'", result.stderr)
             self.assertEqual(self.snapshot(root), taken, 'refusal changed checkout')
+
+    def test_contract_map_refusals_validate_every_destination_before_writing(self):
+        root = self.checkout(('contract_stamps',))
+        gen = module('map_contract', root / 'docs/generate_contract_stamps.py')
+        contract_fixture.fresh_authoring(root, gen)
+        path = root / 'docs/contract/presentation.json'
+        original = path.read_text()
+
+        def duplicate(data):
+            data['documents']['docs/REQUEST.md'][0]['nodes'].append('request.specimen')
+
+        def unknown(data):
+            data['documents']['docs/REQUEST.md'][0]['nodes'].append('request.unknown_control')
+
+        def omitted(data):
+            for entry in data['documents']['docs/REQUEST.md']:
+                if 'request.specimen' in entry['nodes']:
+                    entry['nodes'].remove('request.specimen')
+
+        def missing_region(data):
+            data['documents']['docs/RESPONSE.md'][-1]['region'] = 'missing_control_region'
+
+        for mutate, message in ((duplicate, 'duplicate routing unit'), (unknown, 'unknown or duplicate routing unit'),
+                                (omitted, 'unrouted units'), (missing_region, 'ordered contract region')):
+            with self.subTest(mutation=mutate.__name__):
+                data = json.loads(original)
+                mutate(data)
+                path.write_text(json.dumps(data))
+                before = self.snapshot(root)
+                for args in (('--check',), ()):
+                    result = self.command(root, 'contract_stamps', *args)
+                    self.assertNotEqual(result.returncode, 0, result.stdout)
+                    self.assertIn(message, result.stderr)
+                    self.assertEqual(self.snapshot(root), before, 'malformed late destination partly rewrote outputs')
+        path.write_text(original)
+
+    def test_history_free_contract_check_covers_every_document_and_preview_protects_them(self):
+        root = self.checkout(('contract_stamps',))
+        gen = module('all_outputs_contract', root / 'docs/generate_contract_stamps.py')
+        contract_fixture.fresh_authoring(root, gen)
+        self.assertFalse((root / '.git').exists())
+        expected = {'docs/CONTRACT.md', 'docs/REQUEST.md', 'docs/RESPONSE.md', 'docs/ARCHITECTURE.md',
+                    'docs/CONTROLLER.md', 'docs/WORKER.md', 'docs/BUILD.md', 'docs/PolicyWitness.md'}
+        regions, whole = region_ownership(root, 'contract_stamps')
+        self.assertTrue(expected <= set(regions) | whole)
+        result = self.command(root, 'contract_stamps', '--check')
+        self.assertEqual(result.returncode, 0, result.stderr)
+        self.assertIn('stamp derivation not checked', result.stdout)
+        for name in sorted(expected):
+            with self.subTest(destination=name):
+                path = root / name
+                original = path.read_text()
+                if name in regions:
+                    opening = regions[name][0][0]
+                    changed = original.replace(opening, opening + '\nStale owned bytes.', 1)
+                else:
+                    changed = original + '\nStale owned bytes.\n'
+                self.assertNotEqual(changed, original)
+                path.write_text(changed)
+                before = self.snapshot(root)
+                result = self.command(root, 'contract_stamps', '--check')
+                self.assertNotEqual(result.returncode, 0)
+                self.assertEqual(self.snapshot(root), before, 'history-free check wrote files')
+                path.write_text(original)
+                before = self.snapshot(root)
+                result = self.command(root, 'contract_stamps', '--preview', str(path))
+                self.assertNotEqual(result.returncode, 0)
+                self.assertIn('every generated contract destination intact', result.stderr)
+                self.assertEqual(self.snapshot(root), before, 'preview overwrote an owned destination')
+
+    def test_limits_updates_authored_spans_but_leaves_contract_region_copies_untouched(self):
+        root = self.checkout(('limits', 'contract_stamps'))
+        path = root / 'docs/REQUEST.md'
+        opening = '<!-- span limits.step_id.value -->'
+        copied = ('<!-- BEGIN GENERATED CONTRACT span_control -->\n'
+                  'Copied limit ' + opening + 'copied stale bytes<!-- /span -->.\n'
+                  '<!-- END GENERATED CONTRACT span_control -->')
+        authored = 'Authored limit ' + opening + 'authored stale bytes<!-- /span -->.'
+        path.write_text(path.read_text() + '\n' + copied + '\n\n' + authored + '\n')
+        before = self.snapshot(root)
+        result = self.command(root, 'limits', '--check')
+        self.assertNotEqual(result.returncode, 0)
+        self.assertIn('stale span limits.step_id.value', result.stderr)
+        self.assertEqual(self.snapshot(root), before)
+        result = self.command(root, 'limits')
+        self.assertEqual(result.returncode, 0, result.stderr)
+        self.assertIn(copied, path.read_text())
+        self.assertNotIn('authored stale bytes', path.read_text())
+        self.assertEqual(self.command(root, 'limits', '--check').returncode, 0)
 
     def test_whole_file_staging_is_owned_and_idempotent(self):
         root = self.checkout()
@@ -1080,6 +1174,10 @@ class GeneratorContractTests(receipts.TestCase):
                           'runner/Sources/PWRunnerCore/PWPorcelainRecords.swift',
                           'controller/src/porcelain_records.rs', 'tests/lib/porcelain_schema.py'],
             'contract_stamps': ['docs/generate_contract_stamps.py', 'docs/CONTRACT.md', 'docs/PolicyWitness.md',
+                                'docs/REQUEST.md', 'docs/RESPONSE.md', 'docs/ARCHITECTURE.md',
+                                'docs/CONTROLLER.md', 'docs/WORKER.md', 'docs/BUILD.md',
+                                'docs/contract/presentation.py', 'docs/contract/presentation.json',
+                                'docs/contract/trace-introduction.md',
                                 'docs/contract/00-identity.surface.md', 'docs/contract/tree.py',
                                 'docs/contract/runtime.py', 'docs/contract/record_definitions.py',
                                 'docs/contract/history_v0.py', 'docs/contract/history_v1.py',
@@ -1152,7 +1250,7 @@ class GeneratorContractTests(receipts.TestCase):
                     self.assertIn('generator_common', loaded)
                 if name == 'contract_stamps':
                     self.assertLessEqual({'runtime.py', 'tree.py', 'history_v0.py', 'history_v1.py',
-                                          'record_definitions.py'},
+                                          'record_definitions.py', 'presentation.py'},
                                          {Path(path).name for path in loaded.values()})
         (root / 'docs/contract/history_v0.py').unlink()
         result = self.command(root, 'contract_stamps', '--check')

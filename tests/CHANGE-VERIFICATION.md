@@ -246,6 +246,14 @@ public command, or the explicit `PW_TEST_OUT_DIR`.
   changed or failed.
 - **Artifacts:** the cases' ordinary logs under `<run>/suites/`.
 
+Use [CONTRACT](../docs/CONTRACT.md) to locate the public commitments implicated
+by the changed definition or projection. The complete statements in
+[REQUEST](../docs/REQUEST.md) and [RESPONSE](../docs/RESPONSE.md) retain conditions
+and meaning beyond the interface join's comparisons. A changed spelling, a
+changed result/exit assignment, a stale private renderer copy and a renamed
+support identifier require different review conclusions; card agreement alone
+does not decide among them.
+
 ### signed artifact controls
 
 - **Case:** `preflight/signed_artifact_controls`
