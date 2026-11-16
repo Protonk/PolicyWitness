@@ -970,3 +970,10 @@ confines every local/shared public difference to that rule's `free.effect`.
 Affected surfaces: `actors`, `request`, `envelope`, `extensions`, `installation`,
 `probes`, `refusals` and `reply` (the latter seven import the same public node).
 No runtime, shape or ordering-eligibility change.
+
+Public wording correction: `wire.standalone` names its batch line protocol with
+a routed link because the complete protocol is now in ARCHITECTURE, not above
+the standalone response account. The
+[validator reference proof](records/documentation-trace/validator-reference-proof.json)
+confines the difference to that node's prose in the `wire` surface. Its flags,
+results, evidence scope and runtime behavior are unchanged.

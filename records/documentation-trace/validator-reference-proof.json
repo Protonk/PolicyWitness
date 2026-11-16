@@ -1,0 +1,31 @@
+{
+  "base": "HEAD",
+  "build_identity": "development:31d146ab9ec5baad7afe66cd7ac7d2c267edfabc7c33c0b838990d333c6ca15c",
+  "differences": [
+    {
+      "after": {
+        "context": {},
+        "facts": {},
+        "id": "wire.standalone",
+        "kind": "subject",
+        "prose": "Each shipped service contains `Contents/MacOS/sb_api_validator`. Direct invocation accepts `[--json] PID [operation filter_type [filter_value]]`; `--batch PID` selects the [validator query and reply line protocol](#contract-wire-validator). The leading flags select distinct modes and are not combined.",
+        "title": "Direct validator commands"
+      },
+      "before": {
+        "context": {},
+        "facts": {},
+        "id": "wire.standalone",
+        "kind": "subject",
+        "prose": "Each shipped service contains `Contents/MacOS/sb_api_validator`. Direct invocation accepts `[--json] PID [operation filter_type [filter_value]]`; `--batch PID` selects the line protocol above. The leading flags select distinct modes and are not combined.",
+        "title": "Direct validator commands"
+      },
+      "group": "nodes",
+      "node": "wire.standalone",
+      "surface": "wire"
+    }
+  ],
+  "guide_shapes_counts_stamps_interfaces_preserved": true,
+  "kind": "public",
+  "removed_part_occurrences": 0,
+  "worker_identity": "ee5a7e5c6f3e254ff843b1329b17b8b01b5f575e0b73455d6816492480881ea2"
+}

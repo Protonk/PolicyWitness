@@ -3620,7 +3620,7 @@ Inherited surface support: [Implementation and evidence](ARCHITECTURE.md#contrac
 <a id="contract-wire-standalone"></a>
 ### Direct validator commands
 
-Each shipped service contains `Contents/MacOS/sb_api_validator`. Direct invocation accepts `[--json] PID [operation filter_type [filter_value]]`; `--batch PID` selects the line protocol above. The leading flags select distinct modes and are not combined.
+Each shipped service contains `Contents/MacOS/sb_api_validator`. Direct invocation accepts `[--json] PID [operation filter_type [filter_value]]`; `--batch PID` selects the [validator query and reply line protocol](ARCHITECTURE.md#contract-wire-validator). The leading flags select distinct modes and are not combined.
 
 <a id="contract-wire-standalone-status"></a>
 #### Parse and report a PID

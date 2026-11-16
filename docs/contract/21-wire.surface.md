@@ -238,7 +238,7 @@ limits: "Check reading only. The numeric example follows the emitter branch; an 
 
 ## Direct validator commands {standalone: subject}
 
-Each shipped service contains `Contents/MacOS/sb_api_validator`. Direct invocation accepts `[--json] PID [operation filter_type [filter_value]]`; `--batch PID` selects the line protocol above. The leading flags select distinct modes and are not combined.
+Each shipped service contains `Contents/MacOS/sb_api_validator`. Direct invocation accepts `[--json] PID [operation filter_type [filter_value]]`; `--batch PID` selects the [validator query and reply line protocol](#contract-wire-validator). The leading flags select distinct modes and are not combined.
 
 ### Parse and report a PID {status: acts}
 
