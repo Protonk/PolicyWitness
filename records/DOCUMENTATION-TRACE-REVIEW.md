@@ -2538,3 +2538,646 @@ driver's extra custody observation is not a signed public response field.
 Historical inspection establishes presence before 0.3.6, not execution of
 the older binaries. Only this record was changed; no repair, deduplication
 or choice of authoritative layer accompanies these entries.
+
+## Additional findings: `runner reconcile`
+
+This continuation examines one command, `policy-witness runner reconcile`:
+the registry and machine state it reads, how its observations become
+classifications, any state it changes, its returned fields and exit status,
+and the assertions offered for those meanings. It starts at
+`cmd_runner_reconcile` and follows the shared registry loader, location
+check, service and plist inspectors and ownership classifiers. Installation
+and removal code was read only where reconcile shares a record or classifier.
+The promises examined are in
+[controller/README.md](../controller/README.md) lines 340–345, the authored
+[installation surface](../docs/contract/50-installation.surface.md) and its
+RESPONSE presentation, [limits.json](../docs/limits.json) and its renderings,
+[ARCHITECTURE](../docs/ARCHITECTURE.md), and the
+[user guide](../docs/PolicyWitness.md). They were treated as claims to
+check. Earlier entries, including DT-34 and DT-35, remain unchanged;
+relatives are recorded separately below.
+
+### Reconcile investigation identity and reproduction conventions
+
+Source inspection used clean HEAD `87422530b7c739740bd1325c16c72be698fa32d5`
+on 2026-11-16; line numbers below refer to that snapshot. Executed
+observations used the existing signed app's
+`dist/PolicyWitness.app/Contents/MacOS/policy-witness` in place (SHA-256
+`4bcd308bc323516bfd4008eb7d125e6ffe3167b5b6f53d6a042f112b910b8d28`), which
+reports commit `8b5de2b2882d7cb2536d1b42d9109f4b0dfc2855`, version `0.3.7`,
+build `1482`. `git diff 8b5de2b2 HEAD` is empty for `controller/`,
+`docs/contract/50-installation.surface.md`, `docs/limits.json`,
+`docs/LIMITS.md`, `docs/PolicyWitness.md` and `tests/suites/runner_byoxpc/`.
+This is source correspondence, not a new build. The machine reports macOS
+`26.7.1`, build `25G241`, arm64, uid 501. No registered case was run, and no
+service was installed, bootstrapped, booted out or removed.
+
+**Constructed controls.** The driver
+`/private/tmp/claude-501/-Users-raccoon-Desktop-Security-PolicyWitness/814e589d-80a6-4084-9828-4122fc530e4c/scratchpad/scripts/reconcile_trace.py`
+(SHA-256 `33f8698a9d719704679bf0fc73e718c951803108486b6c4827a83e613e83276f`)
+was run as:
+
+```sh
+tests/lib/checkout_lock.sh -- tests/lib/python.sh -I \
+  <scratchpad>/scripts/reconcile_trace.py \
+  "$PWD/dist/PolicyWitness.app/Contents/MacOS/policy-witness" <scratchpad>/rt-1
+```
+
+It created a fresh root, `<scratchpad>/rt-1`, and supplied
+`HOME=<root>/home` and `PW_RUNNER_REGISTRY=<root>/reg/runners.json` only to
+the child. The real registry and LaunchAgents directory were therefore not
+read by these controls. The real `/Library/LaunchDaemons` was scanned and
+added no candidate or inspection error. Every label was
+`com.policywitness.trace.reconcile.5d0b9c86a914.<state>` and was never
+bootstrapped; the only launchd contact was the product's own
+`launchctl print gui/501/<label>`. Each recorded runner was user scope,
+`kind: byoxpc`, with bundle `<root>/bundles/<state>/PWRunner.xpc`,
+executable `<bundle>/Contents/MacOS/PWRunner` and recorded ownership
+`gui/501`, uid 501. Unless noted, its plist path was
+`<root>/home/Library/LaunchAgents/<label>.plist` and the recorded hash was
+that of the written bytes. A "matching" plist has the label, the arguments
+`[<executable>, "--mach-service", <label>]`, `MachServices {<label>: true}`,
+`EnvironmentVariables.XPC_SERVICE_PATH = <bundle>`, `RunAtLoad` and
+`ThrottleInterval 1`.
+
+| State | Collection | Recorded plist path holds |
+| --- | --- | --- |
+| `match` | `runners` | matching plist |
+| `absent` | `pending_cleanup`, with `cleanup_started_at_unix_ms: 2` and one retained observation | nothing |
+| `unreadable` | `runners` | matching plist, mode 000 |
+| `unconvertible` | `runners` | bytes `not a plist\n` |
+| `symlink` | `runners` | symlink to a matching plist outside LaunchAgents |
+| `xpcpath` | `runners` | matching except `XPC_SERVICE_PATH=/caller/supplied` |
+| `foreignlabel` | `pending_cleanup` | matching except `Label=unrelated.owner.5d0b9c86a914` |
+| `uidmismatch` | `runners` | matching plist; recorded uid 502 and domain `gui/502` |
+| `symlinkparent` | `runners` | matching plist; recorded path spelled through `/tmp`, a symlink to `private/tmp` |
+
+The same LaunchAgents directory also held unrecorded files: `orphan`
+(its own label, `ProgramArguments ["/unowned/PWRunner"]`), `shadow` (label
+of the recorded `match` runner, `["/elsewhere/PWRunner"]`), `locked`
+(orphan-like, mode 000), `link` (symlink to an orphan-like plist) and
+`org.example.trace.5d0b9c86a914.plist` (`ProgramArguments ["/usr/bin/true"]`
+plus a `<data>` value).
+
+The run exited 0 with empty stderr; the envelope had
+`kind: "runner_reconcile"`, `result.ok: true`, `exit_code: 0`,
+`normalized_outcome: "ok"`. Rows:
+
+| State | Service presence / ownership | Plist presence / ownership | Also a candidate |
+| --- | --- | --- | --- |
+| `match` | absent / ambiguous | present / owned | no |
+| `absent` | absent / ambiguous | absent / ambiguous | no |
+| `unreadable` | absent / ambiguous | unknown (`regular: true`, `owner_uid: 501`, `Permission denied (os error 13)`) / unknown | yes, `unknown` |
+| `unconvertible` | absent / ambiguous | present (hash, `config: null`, `plutil failed: …`) / unknown | yes, `unknown` |
+| `symlink` | absent / ambiguous | present (`regular: false`, `plist is not a regular file`) / unowned | yes, `unknown` |
+| `xpcpath` | absent / ambiguous | present / unowned | no |
+| `foreignlabel` | absent / ambiguous | present / unowned | yes, `unowned` |
+| `uidmismatch` | `{"presence":"unknown"}` | `{"presence":"unknown"}`; row `ownership: "unknown"` | no |
+| `symlinkparent` | `{"presence":"unknown"}` | `{"presence":"unknown"}`; row `ownership: "unknown"` | no |
+
+Unrecorded candidates were `orphan` (`unowned`, service `absent`), `locked`
+and `link` (`unknown`, null label and service). Neither `shadow` nor the
+`org.example` file was a candidate. There were six inspection errors
+(`org.example`, `unconvertible`, `unreadable`, `symlink`, `link`, `locked`),
+each with `presence: "unknown"`. The registry SHA-256
+`f29a6e090b73b80cdb693c4019a9ccf0c1f1b920a1a72abaa1e77bce055ad650` was the
+same before and after, and no `runners.json.lock` appeared. An lstat
+inventory of every fixture path (mode, inode, size, mtime, ctime, and hash or
+link target) was identical before and after. Output SHA-256:
+`b84da49eca8ea540b201230add7cf5bca561deb9f712770c663b8501db6fd99d`.
+
+The same unchanged fixture was then run twice under
+`tests/lib/checkout_lock.sh -- /usr/bin/env HOME=… PW_RUNNER_REGISTRY=…
+/usr/bin/sandbox-exec -p '(version 1)(allow default)(deny process-exec
+(literal "<tool>"))' <pw> runner reconcile`, once with `<tool>` set to
+`/bin/launchctl` (output SHA-256 `355aa89d…65f9`) and once with
+`/usr/bin/id` (`10b6ee6d…19bc7`). Both runs exited 0 with `ok`, and the
+registry hash did not change. These are constructed environmental failures,
+not observations of a restrictive harness. The registry-path variants are
+described in DT-74.
+
+**Read-only live observation.** `runner reconcile` was run once with this
+user's real environment. The registry at
+`~/Library/Application Support/PolicyWitness/runners.json` contained
+`{"schema_version":1,"runners":[],"pending_cleanup":[]}`, and
+`/Library/LaunchDaemons` held one file, `net.mullvad.daemon.plist`. The run
+exited 0 with `ok`, 0 records, 0 candidates and 0 inspection errors (output
+SHA-256 `d0de9c51…6b33`). `stat` of the registry and lock (inode, mtime,
+ctime, mode) and a listing of their directory were unchanged.
+
+**Retained development run.** `tests/out/runs/plain-help-byoxpc-b16f32d0`
+(run ID `20261115T184049Z_7d0a72b1`) passed `runner_byoxpc/registry_recovery`
+and `runner_byoxpc/runner_install` against an app reporting commit
+`b16f32d044efe9df49014a45f1d1de541c0c0462`, build `1469`.
+`git diff b16f32d0 HEAD` is empty for `controller/src`,
+`tests/suites/runner_byoxpc` and `tests/fixtures/byoxpc`. Its reconcile
+outputs are `registry_recovery/artifacts/{234,254,258,259,279,294}-command/stdout`.
+These are live launchd observations from real installations; the run is
+pruneable development evidence with no retention guarantee. Temporary
+material for the constructed controls also has no retention guarantee, so the
+decisive excerpts are reproduced in the entries.
+
+### DT-69 — A later reconcile is said to continue recovery; it leaves even a cleanup-complete record in place
+
+**Statement examined.** The `runner_remove_teardown_wait` effect in
+[limits.json](../docs/limits.json) line 1441 is rendered at
+[LIMITS](../docs/LIMITS.md) line 145 and in the guide at line 1142: "A
+service still listed at expiry retains its cleanup record with a warning; a
+later `runner remove` or `runner reconcile` continues recovery." Against it
+stand [controller/README.md](../controller/README.md) lines 340–345
+("Reconcile is report-only … makes no machine changes"), the authored
+reconcile rule
+([50-installation.surface.md](../docs/contract/50-installation.surface.md)
+line 172, "Leave installation resources and registry records as observed")
+and the retained cleanup example (line 220). The example assigns continuation
+to repeated removal and inspection to reconcile.
+
+**Executed constructed control.** The `absent` pending-cleanup record had no
+plist and a never-bootstrapped label. Its row was:
+
+```json
+{"launchd_domain":"gui/501","plist":{"config":null,"error":null,"owner_uid":null,"presence":"absent","regular":false,"sha256":null},"plist_ownership":"ambiguous","recorded_state":"pending_cleanup","service":{"error":null,"executable_path":null,"presence":"absent"},"service_ownership":"ambiguous"}
+```
+
+Both resources were observed absent, the state in which removal retires a
+record. The registry bytes were nonetheless unchanged and the record stayed
+in `pending_cleanup`. The retained live run contains the limits row's own
+situation. After `remove --skip-bootout`, artifact `294-command` reports the
+record as `pending_cleanup`, service `present`/`owned` and plist
+`absent`/`ambiguous`. The test's following `runner remove`, not reconcile,
+booted the service out and retired the record
+([registry_recovery.py](../tests/suites/runner_byoxpc/opt_in/registry_recovery.py)
+lines 446–466).
+
+**Source.** `cmd_runner_reconcile`
+([runner_commands.rs](../controller/src/runner_commands.rs) lines 751–870)
+calls `load_registry_or_default`, `record_location`, `inspect_service`,
+`inspect_plist`, the two classifiers, `launchctl_target`, `read_dir` and
+`print_envelope`. It contains no lock, save, bootout or unlink. Its children
+are `launchctl print`, `/usr/bin/id -u` and `plutil -convert json -o - -`,
+fed on stdin (`plutil_json_from_bytes`,
+[runner_manager.rs](../controller/src/runner_manager.rs) lines 784–805).
+
+**History.** Reconcile has had this report-only form since its introduction
+in `92891a50` (2026-09-26). The "continues recovery" wording entered with
+`cefed899` (2026-10-02) and is present from `v0.3.0` through `v0.3.7`. The
+`v0.3.5` guide carries both it and "Reconcile never removes anything."
+
+**Related.** DT-34's third bullet records the contradiction from source
+inspection. This entry adds the executed cleanup-complete state; DT-70
+concerns how that state is labeled.
+
+### DT-70 — Observed absence and an unattributable present service share the `ambiguous` ownership label
+
+**Statement examined.** README line 341 lists reconcile ownership as
+"`owned`, `unowned`, `ambiguous`, `unknown`"; the `service_ownership` field
+(surface line 946, [RESPONSE](../docs/RESPONSE.md) line 4135) is an "Owned,
+unowned, ambiguous or unknown classification". The classifier statements do
+give the mapping: absent becomes `ambiguous` (surface lines 207 and 777–781),
+and so does present without a usable executable (lines 795–799).
+
+**Observation.** In the constructed control, every never-bootstrapped label
+produced service `absent`/`ambiguous`, and the `absent` row's missing plist
+produced plist `absent`/`ambiguous` (DT-69 excerpt). For services, the same
+label also covers `present` with zero or several `program = ` lines:
+`classify_service_output` keeps a path only for exactly one such line
+(runner_manager.rs lines 1236–1243), and `service_ownership` maps a missing
+path to `ambiguous` (line 1426). Ownership values therefore do not separate
+observed absence from a service that launchd lists but that could not be
+attributed. A caller must read `presence` alongside them. No ownership value
+marks the both-absent combination that `cleanup_complete` (line 1432)
+requires for retirement.
+
+**Evidence scope.** Absence was executed. The present-without-program branch
+is source-read plus `service_absence_requires_specific_observation_not_any_nonzero_exit`
+(runner_manager.rs lines 2488–2525), which supplies an empty synthetic
+stdout. No real `launchctl print` output with zero or several `program = `
+lines was observed.
+
+**History.** Both mappings date to `92891a50`; the authored classifier
+statements date to `f6551bf9` (2026-11-10, first released in `v0.3.7`).
+
+**Related.** DT-69, DT-75.
+
+### DT-71 — Reconcile output cannot confirm absence of a retired or unrecorded service
+
+**Statement examined.** Guide lines 3206–3208: "After list/reconcile confirm
+retirement and service/plist absence, the staging bundle can be removed".
+Guide line 3005: "Inspect `runners`, `pending_cleanup` and reconcile's
+observed service/plist state. Resolve ownership of an existing service before
+reusing its label or bundle path."
+
+**Source.** Reconcile issues `launchctl print` only for a recorded row whose
+location resolves (runner_commands.rs lines 775–781) and for a candidate plist
+whose label could be parsed (lines 856–860). Candidate discovery enumerates
+plist files in `/Library/LaunchDaemons` and `$HOME/Library/LaunchAgents`
+(lines 791–846). It never lists launchd services. After removal retires a
+record, reconcile inspects that label only if a recognizable plist file
+remains.
+
+**Executed observations.** The read-only live run against this user's empty
+registry returned `records: []`, `candidates: []`, `inspection_errors: []`
+and exit 0. It contains no service observation. This is what reconcile reports
+for a retired service whose plist is gone, and it is identical to the report
+for a service that was never installed. In the constructed registry variants
+of DT-74, the services appear only as plist-file candidates: the 12
+candidates come from the scanned files, and each `service` observation is the
+lookup of a parsed label. A loaded `com.policywitness.*` service with neither
+a record nor a plist file in the scanned directories was not constructed,
+because that would require a launchd installation. That it would be missing
+from the output is established by source inspection.
+
+**Assertions.** In
+[guide_workflows.py](../tests/suites/witness_contract/opt_in/guide_workflows.py)
+lines 566–586, the post-removal reconcile envelope is checked only for `kind`
+and build contract (`envelope`, lines 356–362, without an exit argument).
+Service and plist absence are established by the test's own
+`launchctl print` (`session.service_present`) and `os.path.lexists`.
+
+**History.** The guide sentence is from `897be512` (2026-11-11, after
+`v0.3.7`). Candidate discovery has been plist-only since `92891a50`.
+
+**Related.** DT-73 and DT-75 record present resources that reconcile output
+does not observe.
+
+### DT-72 — A recorded plist path can also be reported as an unregistered candidate
+
+**Statement examined.** README lines 342–343 say reconcile "scans … for
+unrecorded `com.policywitness.*` labels or `PWRunner` executables". The
+`candidates` field (surface line 871) holds "Recognizable unregistered
+launchd plist candidates", and the candidate rule (line 176) says
+"Registered label/scope pairs are suppressed from candidates." Guide lines
+3214–3221 give administrative cleanup steps for "an unregistered candidate
+reported by reconcile".
+
+**Source.** Suppression compares only a candidate's parsed `Label` and the
+scanned directory's scope with recorded `service_name` and `scope`
+(runner_commands.rs lines 848–852). It does not compare the candidate path
+with any record's resolved plist path. A plist without a readable label
+becomes a candidate by filename prefix (lines 837–844), and its `None` label
+never matches a record.
+
+**Executed observations.** In the constructed control, four recorded plist
+paths were also reported with `recorded_state: "unregistered"`:
+`unreadable`, `unconvertible` and `symlink` as `ownership: "unknown"`, and
+`foreignlabel` as `ownership: "unowned"` with
+`service_name: "unrelated.owner.5d0b9c86a914"` and service `absent`. The
+retained live run shows the same for a real installation. In artifact
+`234-command`, the `pending_cleanup` row for
+`com.policywitness.test.registry.sf59a79ee8e23f27dde9dd138` has
+`plist_ownership: "unowned"`. The run's only candidate has
+`service_name: "unrelated.owner"` and `ownership: "unowned"`, with the same
+`plist_path` and plist SHA-256 as that row. Its executable is the recorded
+bundle's `Contents/MacOS/PWRunner` (stdout SHA-256
+`496d2adc7eace07cd5a4b433a1a6b14a84147aafbf4df67b192509ac081c1a77`).
+
+**Assertions.** The test that produced artifact 234 (`registry_recovery.py`
+lines 299–301) selects the record row and asserts `recorded_state` and
+`plist_ownership`. It does not inspect that report's `candidates`.
+
+**History.** Label/scope suppression dates to `92891a50`, the README wording
+to `625c9051` (2026-10-11), and the authored rule to `f6551bf9`.
+
+**Related.** DT-73 is the opposite consequence of the same rule.
+
+### DT-73 — An unregistered plist carrying a registered label is reported nowhere
+
+**Statement examined.** The candidate rule (surface line 176) and the
+reconcile effect (line 172): "report recognizable unregistered plist
+candidates plus inspection errors."
+
+**Executed constructed control.**
+`com.policywitness.trace.reconcile.5d0b9c86a914.shadow.plist` was an
+unrecorded file in the scanned LaunchAgents directory. Its `Label` was the
+recorded `match` service and its `ProgramArguments` were
+`["/elsewhere/PWRunner"]`. The string `shadow` does not occur in the main
+constructed output. It appears only in the DT-74 variants, where no records
+were loaded.
+The file was suppressed from candidates by label, the `match` row inspected
+only its recorded path, and the file produced no inspection error. The
+present, readable plists at the `uidmismatch` and `symlinkparent` recorded
+paths were also suppressed as candidates, while their rows held only location
+placeholders (DT-75). Neither file's observation appears anywhere.
+
+**Scope.** Launchd's handling of two plists claiming one label was not
+examined. If the extra plist were the loaded one, the recorded row's service
+observation would report its different executable as `unowned`
+(`service_ownership`, runner_manager.rs lines 1419–1429); this is
+source-inspected.
+
+**History.** Since `92891a50`.
+
+**Related.** DT-72, DT-71, DT-75.
+
+### DT-74 — An inaccessible registry is read as an absent one
+
+**Statement examined.** The read rule (surface line 34; RESPONSE line 3780)
+says: "The registry is readable with schema_version 1, or its path is absent.
+… An absent file yields schema_version 1 with empty runners and
+pending_cleanup." Line 39 says "Unsupported registry schemas and malformed
+known fields refuse loading." The `retained_free` note on line 36 treats
+"Registry absence, unreadability and decoded schema version" as separate
+outcomes and observes that "an empty decoded registry cannot distinguish an
+absent file."
+
+**Source.** `load_registry` (runner_manager.rs lines 540–557) returns the
+empty registry when `path.exists()` is false (line 541). Rust's
+`Path::exists` returns false whenever metadata cannot be read, including
+permission denial on an ancestor and a dangling symlink. Only a regular file
+that exists but cannot be read reaches the failing `read_to_string`.
+
+**Executed constructed controls.** A copy of the fixture registry (seven
+runners, two cleanup entries) was placed at three paths; a fourth path named
+an absent directory. Each was supplied through `PW_RUNNER_REGISTRY`:
+
+| `PW_RUNNER_REGISTRY` under `<root>/registries/` | Exit | Output |
+| --- | --- | --- |
+| `locked/runners.json`, parent mode 000 | 0 | `ok`, `records: []`, 12 candidates, 6 inspection errors; `registry_path` names the supplied path |
+| `dangling.json`, symlink to a missing file | 0 | same |
+| `never/runners.json`, parent absent | 0 | same; `never/` still absent afterward |
+| `unreadable.json`, mode 000 | 2 | no stdout; stderr `failed to read …/registries/unreadable.json: Permission denied (os error 13)` |
+
+All three exit-0 outputs are identical apart from `registry_path`. In the
+first two cases, the unreadable registry held seven runners and two cleanup
+entries. With no records loaded, every fixture plist in the scanned
+LaunchAgents directory became an `unregistered` candidate. This included the
+plists at the recorded paths of `match`, `xpcpath`, `foreignlabel`,
+`uidmismatch` and `symlinkparent`, reported as `ownership: "unowned"` with
+service `absent`. The plists at the recorded paths of `unreadable`,
+`unconvertible` and `symlink` were reported as `unknown`. Nothing in these
+outputs indicates that the registry could not be read. The guide's
+administrative cleanup steps for unregistered candidates (lines 3214–3221)
+would then apply to installations that the unreadable registry still owns.
+
+**Scope.** Only reconcile was executed. `runner list` uses the same
+`load_registry_or_default` (runner_commands.rs line 456), and status, verify
+and remove reach the same `load_registry`; their consequences were not
+exercised.
+
+**History.** The `exists()` check is present in the first commit containing
+the loader, `4ca7ff81` (2026-01-13), and in every release tag. The authored
+rule dates to `f6551bf9`; the retained note to `5c1c63dc` (2026-11-11, after
+`v0.3.7`).
+
+**Related.** DT-72 (recorded plists reported as candidates through another
+route), DT-71, DT-35 (exit 2 without an envelope for the unreadable-file
+case).
+
+### DT-75 — Location refusal reports uninspected resources as unknown and merges identity contradiction with environmental failure
+
+**Statement examined.** The reconcile record fields (surface lines 911, 919
+and 964; RESPONSE lines 4131–4138) say `service` and `plist` hold the "Full
+… Observation after valid location resolution; otherwise only
+{"presence":"unknown"}", and that `ownership` is "unknown on location
+error". The ownership check's condition (surface line 201) is: "The recorded
+service name, user/scope/domain and paths pass location checks." The service
+`presence` field (line 740) defines `unknown` as a `launchctl print` outcome,
+and `error` (line 748) is the "Inspection diagnostic for unknown presence".
+
+**Executed constructed observations.** Three conditions produced the same
+row form: `ownership: "unknown"`, with service and plist both
+`{"presence":"unknown"}` and no observation inside either:
+
+- `uidmismatch`, recorded installer uid 502 and domain `gui/502`:
+  `error: "recorded cleanup ownership is inconsistent with this user, scope or paths"`.
+  A matching readable plist was present at the recorded path.
+- `symlinkparent`, the same directory named through `/tmp`:
+  `error: "recorded plist parent is a symlink"`. A matching readable plist
+  was present.
+- With exec of `/usr/bin/id` denied by `sandbox-exec`, all nine rows had
+  `error: "failed to run id -u: Operation not permitted (os error 1)"`. These
+  included `match` and `absent`, whose plist states the unconfined run had
+  observed. Candidate `service` values became null.
+
+By contrast, denying exec of `/bin/launchctl` preserved every plist
+observation and classification. In each resolved row it gave
+`service.presence: "unknown"`, `service_ownership: "unknown"` and
+`service.error: "Operation not permitted (os error 1)"`.
+
+`unknown` thus has three sources: an inspection that failed and carries its
+error inside the observation; a resource not inspected because the recorded
+identity contradicts the current user or path; and a resource not inspected
+because the environment prevented location. Only the free-text row `error`
+separates the last two. A recorded identity that contradicts the current
+user or path is not reported as a mismatch (`unowned`).
+
+**Source.** In `record_location` (runner_manager.rs lines 1322–1378),
+`launchctl_target`, which runs `id -u`, precedes the ownership checks. The uid
+comparison is at line 1339 and the symlinked-ancestor refusal at lines
+1360–1366. The placeholder row is built at runner_commands.rs lines 784–787.
+
+**Assertions.** No reconcile assertion covering a location error was found.
+The classify note (surface line 770) says such a row "has no typed ownership
+association".
+
+**History.** The location checks and placeholder date to `92891a50`; the
+field statements to `f6551bf9`.
+
+**Related.** DT-73 (the suppressed present plists), DT-70.
+
+### DT-76 — Executed plist classifications outside the statement's cases
+
+**Statement examined.** Surface lines 202 and 207 (RESPONSE line 3856)
+derive plist ownership from "a regular file with matching Label, complete
+ProgramArguments, MachServices and XPC_SERVICE_PATH". They classify absent
+resources `ambiguous` and say "Unknown presence produces unknown ownership."
+The candidate `ownership` field (line 1050) is `unknown` "when config is
+unavailable".
+
+**Executed constructed observations.**
+
+- `symlink`: the recorded path is a symlink to a matching plist, observed as
+  `presence: "present"`, `regular: false`,
+  `error: "plist is not a regular file"`, with `plist_ownership: "unowned"`.
+  The same path reported as a candidate (DT-72) and the unrecorded `link`
+  symlink both have `ownership: "unknown"`. One kind of object is therefore
+  `unowned` on the recorded path and `unknown` as a candidate.
+- `unconvertible`: `presence: "present"`, `regular: true`, a SHA-256,
+  `config: null`,
+  `error: "plutil failed: <stdin>: Property List error: Unexpected character n at line 1 …"`,
+  and `plist_ownership: "unknown"`. Here `unknown` ownership accompanies
+  `present` presence.
+- `xpcpath`: identity fields and the recorded hash match except
+  `XPC_SERVICE_PATH=/caller/supplied`, giving `plist_ownership: "unowned"`.
+  This agrees with the statement and executes the classification half of
+  DT-34's first bullet. Installation's `--env` handling and the effect on
+  removal were not exercised.
+- `unreadable`: `presence: "unknown"` alongside `regular: true` and
+  `owner_uid: 501` from successful metadata, then
+  `Permission denied (os error 13)` on read. This matches the presence
+  definition (surface line 818).
+
+**Source.** `plist_ownership` (runner_manager.rs lines 1387–1392);
+`inspect_plist` (line 1315); candidate ownership (runner_commands.rs
+line 863).
+
+**Related.** DT-34's second bullet records the first two branches from source
+inspection only.
+
+### DT-77 — Inspection errors report `unknown` presence for present plists and include non-candidates
+
+**Statement examined.** The `inspection_errors` field (surface line 879)
+holds "Directory, path or plist inspection failures encountered during
+candidate discovery", with presence "unknown for each inspection error"
+(line 1074). The plist presence definition (line 818) is `present` for
+"observed metadata, including invalid content".
+
+**Executed constructed observation.** All six inspection errors had
+`presence: "unknown"`. Four concern files observed as present: the
+`unconvertible`, `symlink` and `link` paths, which also appear as candidates
+with `plist.presence: "present"`, and
+`org.example.trace.5d0b9c86a914.plist`. That last file is a valid property
+list with `Label`, `ProgramArguments ["/usr/bin/true"]` and a `<data>` value.
+Its error was `plutil failed: <stdin>: Invalid object in plist for JSON
+format`, and it is not a candidate. The other two errors (`unreadable` and
+`locked`) are read failures, which the plist observation also reports as
+`unknown`.
+
+**Source.** runner_commands.rs lines 824–828 append an inspection error for
+every `*.plist` in both directories whose observation carries an error. This
+happens before the candidate filter, with a fixed `"presence":"unknown"`.
+`plutil -convert json` exited 1 with the same message for a separately piped
+property list containing `<data>`.
+
+**Live and assertions.** The read-only live run had one file in
+`/Library/LaunchDaemons` and no inspection errors. `registry_recovery.py`
+lines 336–343 assert an inspection error with `presence: "unknown"` only for
+a mode-000 candidate, which is a read failure.
+
+**History.** Since `92891a50`.
+
+**Related.** DT-76.
+
+### DT-78 — The ARCHITECTURE reconcile row describes listing and owned-looking resources, and cites a check that asserts only `ok`
+
+**Statement examined.** [ARCHITECTURE](../docs/ARCHITECTURE.md) line 1127
+(from [architecture.json](../docs/architecture.json) line 6791) says
+reconcile "reports launchd services and plists that look owned, changing
+nothing". Lines 1158–1159 (architecture.json lines 7463 and 7484) give X24,
+"inspect_service lists candidate services without changes", and X25,
+"inspect_plist lists candidate plists without changes". All three cite
+`runner_install` in `tests/suites/runner_byoxpc/run.sh` as their check.
+
+**Source.** `inspect_service` runs `launchctl print <domain>/<label>` for one
+supplied label and lists nothing (runner_manager.rs lines 1259–1276).
+Candidate services are only labels parsed from plist files. Reconcile reports
+every recorded row regardless of ownership. Candidate ownership is only
+`unknown`, `ambiguous` or `unowned` (runner_commands.rs line 863), so no
+candidate is reported as owned.
+
+**Assertions.** `runner_install` reaches reconcile only through
+`session.install` ([session.py](../tests/fixtures/byoxpc/session.py)
+line 234). There, `envelope` (lines 28–32) requires exit 0 through
+`caller_auth/bundle.py` `command` (lines 44–45) and `result.ok is True`, then
+returns `data` without examining it. The session scopes `PW_RUNNER_REGISTRY`
+to a per-service path under `test-sessions/` that does not yet exist
+(`session_invoke`, lines 101–111), so this call reads an absent registry. The
+retained `runner_install/artifacts/reconcile-before` output has 0 records,
+0 candidates and 0 inspection errors. The substantive reconcile assertions
+are in the opt-in `registry_recovery` case, which these rows do not cite.
+
+**History.** The row and edges entered with `e2115cf3` (2026-10-06) and are
+present from `v0.3.0` onward.
+
+**Related.** DT-79.
+
+### DT-79 — The reconcile rule's check-read support cites no reconcile assertion; executed assertions are opt-in and joint
+
+**Statement examined.** RESPONSE line 3769 grades the subtree support for
+"Managing runners and its descendants", which includes
+[Reconcile observations](../docs/RESPONSE.md#contract-installation-commands-reconcile),
+as **check read**. Its evidence limit says live launchd needs "separately
+recorded execution evidence". The dynamic support (line 3772) is source read
+for field shapes. The surface's fenced block (line 7) declares
+`checks: ["unit", "runner_byoxpc"]`.
+
+**Observation.** The six checks cited by the subtree owner (surface line 18)
+are `install_failure_boundaries_preserve_observed_pending_state`,
+`legacy_metadata_survives_unrelated_writes_and_pending_cleanup`,
+`historical_flattened_cleanup_remains_readable_and_rewrites_with_nested_runner`,
+`registry_save_refuses_duplicate_known_metadata_before_publication`,
+`atomic_registry_replace_preserves_old_open_readers_and_failed_write` and
+`bootout_waits_out_launchd_teardown_within_the_budget`. They exercise
+install, save and removal paths with supplied observations. None calls
+`cmd_runner_reconcile`, `record_location`, `inspect_service`, `inspect_plist`
+or `load_registry` on an absent or inaccessible path. The classifier unit
+tests (`service_absence_requires_specific_observation_not_any_nonzero_exit`
+and `plist_and_service_evidence_independently_gate_cleanup_retirement`) are
+not cited for the reconcile rule.
+
+The executed reconcile assertions are in opt-in `registry_recovery.py`:
+
+- lines 299–301: a pending-cleanup foreign label gives `plist_ownership: "unowned"` (DT-72);
+- lines 314–321: reconcile exits 0 while the lock is held; registry and plist
+  bytes are compared after list, status, reconcile and a `verify` attempt
+  that exits 1 (the service was installed with `--skip-bootstrap`);
+- lines 333–343: an unregistered candidate is `unowned`, and a mode-000 file
+  yields an inspection error;
+- lines 429–435: a legacy record is `installed` and owned/owned, with the
+  compatibility snapshot compared after refused `run` and `verify` (exit 2),
+  list, status and reconcile together;
+- lines 450–453: after `--skip-bootout`, the record is `pending_cleanup` with
+  service present and plist absent.
+
+Every no-change assertion includes reconcile together with other commands.
+The README's "Reconcile creates no registry or lock" (line 344) has no
+assertion; in that test the lock already exists from earlier installations.
+The constructed control executed this claim (no lock, no created directory),
+but it is not a registered case. The retained run cited above passed both
+cases.
+
+**Related.** DT-14 (surface-level check declarations versus owner
+citations), DT-38 (check-read scope), DT-78.
+
+### DT-80 — Smaller observations on reconcile output
+
+- Pending-cleanup rows report only the nested runner. The `absent` fixture
+  entry carried `cleanup_started_at_unix_ms: 2` and the retained observation
+  `{"phase":"before","fixture":"retained observation"}`. Neither the key
+  `cleanup_started_at_unix_ms`, the key `observations`, nor that value occurs
+  in the reconcile output, because runner_commands.rs line 772 maps each
+  cleanup entry to `&r.runner`. The `records` field says "Recorded runners and
+  retained cleanup entries" (surface line 863), and README line 317 says
+  cleanup "retains this identity and before/after observations"; `runner list`
+  exposes them. Executed constructed.
+- Candidate recognition depends on a `com.policywitness.` label, a `PWRunner`
+  executable filename, or that filename prefix on an unparsed plist
+  (runner_commands.rs lines 837–844). Installation accepts any
+  `CFBundleIdentifier` as the service name and any `CFBundleExecutable`
+  (lines 251–255). A lost record for a differently named service is
+  therefore not recognizable. The statements present this as a heuristic
+  ("Recognizable", "can identify"), and the guide's recipe uses
+  `com.policywitness.guide.…` (line 3035). Source inspection only.
+- Reconcile reads the registry once and without a lock, then performs
+  launchctl and filesystem reads for each row. The output carries only the
+  envelope's `generated_at_unix_ms`. A concurrent modifier can therefore
+  produce rows that pair an earlier registry state with later resource
+  observations. Lock-free reading is documented (surface line 39). Source
+  inspection; not exercised.
+- The `launchctl print`, `id -u` and `plutil` children it starts have no
+  time bound, and [LIMITS](../docs/LIMITS.md) has no reconcile entry. Source
+  inspection; not exercised.
+
+### Reconcile coverage and remaining investigative limits
+
+The trace covered the dispatch (`cmd_runner`, `runner reconcile accepts no
+arguments`), registry path selection and loading, record location, service
+and plist inspection, both ownership classifiers, candidate discovery and
+classification, inspection-error assembly, the envelope and exit status, and
+the CLI's mapping of an `Err` to stderr and exit 2. Reconcile writes nothing.
+Its effects are child processes (`launchctl print`, `id -u`, `plutil`) and
+reads of the registry, plist files and two launchd directories. The executed
+evidence is the constructed fixture run, two constructed environmental-denial
+runs, four registry-path variants, one read-only live run and the retained
+2026-11-15 development run.
+
+Live present-service evidence (`present`/`owned` and present beside an absent
+plist) comes only from the retained artifacts `279-command` and
+`294-command`. The constructed controls observed no present service.
+Present-without-program, system-scope records, legacy records without
+ownership, `HOME` unset, a broken stdout (DT-28), concurrent modification,
+launchd's handling of duplicate labels, and the reconcile consequences for
+list/status/verify/remove of an inaccessible registry were not executed.
+Historical inspection establishes when mechanisms and statements appeared,
+not how older binaries behaved. Only this record was changed. These entries
+contain no repair, deduplication or choice of authoritative layer.
