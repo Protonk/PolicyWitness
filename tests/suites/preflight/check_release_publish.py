@@ -64,7 +64,15 @@ def make_repo(work):
     fixture_inputs.copy_declared(ROOT, repo, sorted(set(build_contract.inputs(ROOT)) |
                                                    set(generate_contract_stamps.input_paths(ROOT)) | set(generate_limits.input_paths(ROOT))))
     (repo / 'tests').mkdir(exist_ok=True)
-    (repo / 'tests/catalog.json').write_text(json.dumps(dict(suites=dict(fixture=dict(command=['bash', 'tests/suites/fixture/run.sh'], cases=['0','1','2'])))))
+    # Keep every citation's defining suite/case. This constructed release has
+    # its own three-case battery, so original cases are not default-selected.
+    catalog = json.loads((repo / 'tests/catalog.json').read_text())
+    for group in catalog['suites'].values():
+        group['default'] = False
+        group['cases'] = [dict(id=entry, default=False) if isinstance(entry, str)
+                          else dict(entry, default=False) for entry in group.get('cases', [])]
+    catalog['suites']['fixture'] = dict(command=['bash', 'tests/suites/fixture/run.sh'], cases=['0', '1', '2'])
+    (repo / 'tests/catalog.json').write_text(json.dumps(catalog))
     # This fixture authors its own first release, not a development candidate.
     # Its publication state is independent of the repository's frozen guide.
     boundary = repo / 'docs/publication.py'
