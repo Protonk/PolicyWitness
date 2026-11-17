@@ -81,15 +81,17 @@ public meaning. Classify it by what it does, not by where it appears:
 
 | Change | Handling |
 | --- | --- |
-| Alters what the app does or prints: behavior, the envelope, exit status, or the text of `help`, `example` and `test-input` | Judge it and do not make it; it goes to the [collection for the maintainer](#judgments-for-the-maintainer). The exception is behavior corrected to match a meaning that is already settled. |
-| Adds or strengthens a statement a user could rely on, in any projection | Do not make it. |
+| Alters what the app does or prints: behavior, the envelope, exit status, or the text of `help`, `example` and `test-input` | Judge it and do not make it; it goes to the [collection for the maintainer](#judgments-for-the-maintainer). Exceptions are behavior corrected to match a meaning that is already settled and the bounded test-seam migration below. |
+| Implements the [bounded test-seam migration](#bounded-test-seam-migration) | Make the selected command, admission, experiment-output and caller changes under that thread's scope and verification. This is an authorized observable change, not a correction presumed to preserve current admission. |
+| Adds or strengthens a statement a user could rely on, in any projection | Do not make it, except for the developer-command definitions, help and support statements necessary to specify the selected seam migration. The guide freeze still applies. |
 | Corrects, narrows or removes a description in the contract documents or surfaces | Make it when it describes established behavior, state its practical consequence, and collect it. An edit that chooses between consequential readings is a judgment for the maintainer instead. |
 | Corrects a mechanism account, citation, test description or support claim | Proceed when it describes established behavior. |
 | Relinquishes or narrows test authority | Make it as the overhaul plan authorizes, and collect it. |
 | Alters explanatory content copied into the guide, or supplies replacement workflows or instructions for reinterpreting frozen passages | Outside the freeze boundary. The second would create a shadow user guide. |
 
-Reductions proceed and are collected. Growth and observable change wait.
-Everything made under this table can be undone before the next release. Two
+Reductions proceed and are collected. Outside the bounded seam migration,
+growth and observable change wait. Everything made under this table can be
+undone before the next release. Two
 existing checks enforce part of it: contract generation permits reductions in
 free-text relationships and refuses increases, and release preflight refuses
 added or rewritten prose sites.
@@ -118,11 +120,13 @@ unimplemented promise can still be a promise; mention in the guide does not
 make every implied interpretation a commitment. Likewise, evidence that a
 current rule is faithfully implemented does not settle whether to retain it.
 
-If truthful publication of the chosen remedy requires revising the frozen
-guide, that remedy is unavailable. Lifting the freeze for a passage is not an
-available answer: record the present behavior as retained, with its stated
-cost. Additional architecture intended to vindicate existing prose needs its
-own substantive justification.
+Outside the authorized seam migration, if truthful publication of the chosen
+remedy requires revising the frozen guide, that remedy is unavailable. Lifting
+the freeze for a passage is not an available answer: record the present behavior
+as retained, with its stated cost. The seam migration changes its selected
+developer interface while recording the cost of any frozen account it leaves
+inaccurate; it does not amend that account. Additional architecture intended to
+vindicate existing prose needs its own substantive justification.
 
 ## Units of assessment and relationships
 
@@ -424,14 +428,15 @@ the passages, tests and decisions assessed here. This section owns the order in
 which shared work settles and the selection of its broad verification; the
 companions refer to it instead of restating it.
 
-It rests on source and catalog inspection at `a9de3ccf`. Nothing was executed
-for it. The durations below are approximate figures from earlier development
+The sequencing rests on source and catalog inspection at `a9de3ccf`; the seam
+migration also uses inspection at `ebc18543`. Nothing was executed for these
+readings. The durations below are approximate figures from earlier development
 runs on the maintainer's machine, not retained evidence; `run.json` records
 the actual ones.
 
 ### Shared threads
 
-Five threads need more than one plan. Elsewhere each plan proceeds alone.
+Six threads need more than one plan. Elsewhere each plan proceeds alone.
 
 | Thread | This plan | Acceptance plan | Overhaul plan |
 | --- | --- | --- | --- |
@@ -440,6 +445,7 @@ Five threads need more than one plan. Elsewhere each plan proceeds alone.
 | Association and reader responsibilities | DT-53/132 with the identity-relation findings | Association-equality rehearsal | Consumer and oracle callers and their credited coverage |
 | Exec descendant lifetime | Commitment assessment the overhaul requests | None planned | Survivor conversion and the aftermath dependency |
 | Authority erasure timing | DT-63/124/125 | None planned | Credited last-use claim and any observation before teardown |
+| Executable test seams | Selected admission changes, scope and transition costs | Change or remove one migrated seam; compare maintained decisions | Command implementation, caller migration and preservation of experimental evidence |
 
 Take a shared thread in this order:
 
@@ -453,8 +459,9 @@ Take a shared thread in this order:
 3. **Change once.** The overhaul applies the authorized test response. Permitted
    account corrections land with it, so each destination is edited one time.
    An arrangement change the rehearsal justified lands with them when it stays
-   within developer-facing accounts and moves no ownership. Otherwise it goes
-   to the collection for the maintainer.
+   within developer-facing accounts and moves no ownership. The seam migration
+   additionally carries the implementation and ownership changes authorized
+   below. Other changes go to the collection for the maintainer.
 
 A disposition recorded before its rehearsal can correct a passage that the
 arrangement judgment then moves or removes. A test response chosen before the
@@ -466,23 +473,90 @@ test response first and exercise it against the existing behavior. A test and
 a product changed in one step cannot show that the revised test still
 distinguishes the old behavior from the new.
 
+For the seam migration, establish the existing experiment's observations and
+checks before changing its entry point. The new command and its callers may
+then land together, with old/new evidence compared. Keep any change to judgment
+or enforcement separate from that interface migration.
+
 The exec-descendant commitment is not the subject of a DT entry. Assess it with
 the [same method](#judge-the-product-before-selecting-the-available-remedy),
 and early: the overhaul's acceptance argument depends on that conversion.
 Handle other commitment questions the overhaul hands in the same way. They do
 not join the DT coverage map.
 
+### Bounded test-seam migration
+
+Move a selected set of executable test seams into an explicit experimental
+execution route under `test-input`, completing that work before final integrated
+verification. This is part of the combined implementation, not a recommendation
+to develop in the closing outflow. This plan owns selection and admission
+decisions; the [overhaul](TEST-OUTCOME-OVERHAUL-PLAN.md#migrating-executable-test-seams)
+owns implementation, caller migration and experimental equivalence. The
+[acceptance companion](TRACE-ACCEPTANCE-PLAN.md#rehearsing-a-migrated-test-seam)
+examines whether the arrangement reduces independently maintained decisions.
+
+Begin by accounting for the ten fields in the existing
+[override reference](../runner/README.md#test-seam-_test_overrides): three
+component substitutions and seven timing/fault controls. Trace each to its
+admission, effective intervention, callers and retained evidence. Select the
+coherent subset to migrate before implementation; give fields left outside it
+a present treatment and reason. This is a bounded inventory of the existing
+seam, not an audit of every test hook or a mandate to move all ten.
+
+Use `validator_executable_path` and the paired `worker_pre_ready_hang_ms` /
+`worker_timeout_ms` as the initial design contrasts. They exercise replacement
+equipment and intervention in shipped components. Confirm or revise that subset
+from its actual callers; do not satisfy the work with a new unused command.
+Record the selection here once, with the overhaul's case/evidence mapping
+linked from it. No separate finding inventory or permanent seam registry is
+needed.
+
+Settle the boundary early. Current `test-input read` publishes a request and
+launches nothing. Flags that merely publish `_test_overrides` do not remove the
+ordinary execution seam. The intended change is explicit experimental
+execution, with selected controls supplied separately from the ordinary request
+and unavailable through ordinary `run`. Preserve `read` as publication-only and
+reuse existing execution machinery. The exact subcommand and flag design must
+account for controller and host admission, internal transport, early refusals,
+and the released-app battery before coding begins.
+
+The authorization covers only that selected route, retirement of its old
+ordinary-request entry points, the evidence needed to identify experiments,
+and the corresponding definitions, help, tests and developer accounts. It does
+not authorize new fault mechanisms, fabricated outcomes, weaker cleanup or a
+separate test-only build as a substitute for testing the released executable.
+Controls left outside the subset keep their explicit disposition; the migration
+must not accidentally remove their coverage.
+
+The frozen guide already names override paths and deadline controls. Identify
+which descriptions the selected migration leaves inaccurate and record their
+reader consequence as a transition cost. Do not preserve the old admission path
+solely to vindicate those passages. Do not change the guide or shared explanatory
+inputs copied into it, or create a replacement guide. Determine how the necessary
+developer definitions fit the owning generators and release checks during design;
+this authorization is not a waiver of freshness checks or unrelated growth guards.
+
+Investigate and specify the migration from the start. Supply any shared reporting
+requirements to the overhaul's capability stage before the instrument checkpoint.
+Land the executable and caller changes after that checkpoint, on an identified
+rebuilt app, with their routed evidence. Complete the selected migration before
+the final integrated run. The closing records receive its implemented boundary,
+accepted costs and specifically retained limitations; they do not initiate another
+engineering investigation.
+
 ### What proceeds independently
 
 - From the start, with no result needed from another plan: this plan's
   coverage map and assessments; the rehearsals; the overhaul's reporting
-  comparison, its capability and the cohort equivalence mapping.
+  comparison, its capability and the cohort equivalence mapping; the bounded
+  seam inventory and design.
 - A conversion or correction on a shared thread waits for that thread's
   disposition. Conversions and pure-computation cohort items also wait for the
   reporting capability.
 - A product change that restores an already-settled meaning waits for its own
-  disposition, and for the instrument checkpoint while one is open. Any other
-  change to what the app does or prints is not made in this work.
+  disposition, and for the instrument checkpoint while one is open. The selected
+  seam migration lands after that checkpoint and its own scope decision. Other
+  changes to what the app does or prints are not made in this work.
 - A remedy that adds controls to a population being migrated to pytest lands
   after that cohort's equivalence is established, so the mapping does not
   follow a moving population.
@@ -541,15 +615,17 @@ inputs, and an unchanged digest shows that nothing held has moved.
 
 For the capability, take a default battery immediately before it lands, land
 it with no conversion in it, and run the default battery again against the
-same app. Case statuses must equal the baseline. Product work that is ready
-sooner lands before the baseline is taken.
+same app. Case statuses must equal the baseline. Other authorized product work
+that is ready sooner lands before the baseline is taken; the seam migration
+lands after this checkpoint as specified above.
 
 The hold ends there. Conversions and cohorts then proceed alongside product
 changes. The two migrated families need no app, and each conversion changes
 one named case whose expected difference is stated in advance and checked by
 running it. A change to the shared reading path that turns up later needs its
 own before-and-after battery on an unchanged app, so finish in the capability
-whatever the cohorts will need from the engine.
+whatever the cohorts and selected seam reporting will need from the engine.
+The seam's executable changes are outside this unchanged-app comparison.
 
 Read a completed battery with the revised release battery validator as a
 direct investigation that credits no case: once at the checkpoint, and again
@@ -634,10 +710,11 @@ defect whose reader impact must be judged explicitly.
 The management pass is complete when every observation has a traceable present
 assessment, follow-up qualifications are represented, selected changes have
 usable proposals, and the [reserved material](#material-reserved-beyond-this-work)
-is recorded. No
-observation is complete merely because it has a family, a future task or an
-instruction to revisit the guide. Completion requires accountable judgments,
-not a target number of defects or future obligations.
+is recorded. The combined work also requires completion of the selected seam
+migration under the overhaul's verification, not merely its assignment to a
+closing record. No observation is complete merely because it has a family, a
+future task or an instruction to revisit the guide. Completion requires
+accountable judgments, not a target number of defects or future obligations.
 
 Before accepting the synthesis, check it in both directions: every original
 observation has a disposition, and every proposed change rests on identified
@@ -688,19 +765,14 @@ instrument seam: a run through them is an experiment on PolicyWitness, not an
 observation by it. For external runners, an intact copy of the app's service
 is the supported use, and supplying one is a candidate responsibility.
 
-This activity owns the question of what to do with all ten override fields.
-Three name an executable and replace a component. Seven are timing and fault
-controls that put the shipped components into a condition an ordinary request
-cannot force. Account for each field. The preferred outcome to examine is
-moving them out of the ordinary request into sub-commands of `test-input`,
-which today publishes a request and launches nothing. The account needs to
-cover what the battery that uses these fields against the released app would
-require, and whether a run through the seam stays recognizable in its output.
-
-Return a recommendation. It does not authorize the change: what a request
-admits is part of what the app does. Until it is made, assessments
-treat a state that only a substituted executable can produce as the shipped
-component's obligation, not a caller's.
+The [bounded seam migration](#bounded-test-seam-migration) resolves the selected
+interface and engineering work before this collection. Read its established
+boundary and retained limitations here. Experimental operators' duties belong
+to developer and test guidance; include an outflow entry only when there is a
+consequence for an ordinary user's action or conclusion. A state that only a
+substituted executable can produce does not become an ordinary caller's duty
+merely because the experiment can produce it. Keep the shipped component's
+obligations distinct from the experiment's evidence.
 
 ### Sources
 
@@ -765,7 +837,7 @@ sake.
 
 | Reserved for | Material | Until |
 | --- | --- | --- |
-| The guide rewrite | The [user-responsibility outflow](#user-responsibility-outflow), with its override recommendation, and the judgments for the maintainer | The rewrite has read them |
+| The guide rewrite | The [user-responsibility outflow](#user-responsibility-outflow) and the judgments for the maintainer, including the completed seam migration's boundary and retained costs | The rewrite has read them |
 | The versioned release | The release account | The release is cut |
 | After the release | Nothing in `records/` | |
 
@@ -779,20 +851,24 @@ rewrite, as statements that can be traced to code, tests and documents. Record
 the collection in `records/MAINTAINER-JUDGMENT-OUTFLOW.md`, drafted and
 finalized with the user-responsibility outflow.
 
-Collect five kinds of judgment. Three have already been acted on, in ways
-that are developer-facing and can be undone:
+Collect the following judgments. These have already been acted on and can be
+undone before release:
 
 - a consequence left with a user: refer to the outflow's entry;
 - a description corrected, narrowed or removed in the contract documents,
   with its practical consequence;
-- test authority relinquished or narrowed, with its reason.
+- test authority relinquished or narrowed, with its reason;
+- the authorized seam migration's admission changes, experimental boundary and
+  retained costs, including any inaccurate frozen account.
 
 Two have not been acted on:
 
 - a remedy judged preferable but unavailable, because it alters what the app
-  does or prints, adds a promise or requires revising the guide, with the
-  cost of the behavior retained in its place;
-- a documentation arrangement that would move ownership.
+  does or prints outside the seam authorization, adds an unauthorized promise
+  or requires revising the guide, with the cost of the behavior retained in its
+  place;
+- a documentation arrangement that would move ownership outside the seam
+  authorization.
 
 For each, give the distinction at stake, why it matters, what would change,
 and its anchors. Anchor by symbol, catalog case and statement identifier at a
@@ -811,9 +887,10 @@ traces supply it for their threads.
 
 Record briefly what a release after this work will meet because of it: the
 changes a reader of test results or release evidence encounters, such as
-outcome semantics, the evidence-format boundary and the converted cases, and
-anything the release procedure must do differently. It supplies the release
-notes.
+outcome semantics, the evidence-format boundary, the converted cases and the
+new experimental execution route with its retired ordinary-request controls.
+Include anything the release procedure must do differently. It supplies the
+release notes.
 
 ### What outlasts the release
 

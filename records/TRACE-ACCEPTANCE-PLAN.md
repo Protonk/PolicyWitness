@@ -237,7 +237,8 @@ corrections land. The comparison and the later correction then describe the
 same passages. An arrangement change that a rehearsal justifies travels with
 the thread's other account edits under the management plan's handoff, when it
 stays within developer-facing accounts and moves no ownership. It is not a
-separate later pass over the same documents. One that would move ownership,
+separate later pass over the same documents. Outside the management plan's
+explicitly authorized seam migration below, one that would move ownership,
 alter what the app does or prints, or add a promise is not adopted here; it
 goes to the management plan's
 [collection for the maintainer](TRACE-MANAGEMENT-PLAN.md#judgments-for-the-maintainer).
@@ -258,6 +259,46 @@ stays with the rehearsal.
 None of this adds a gate. A thread proceeds without a rehearsal that was not
 planned for it, and an inconclusive rehearsal still creates no obligation to
 complete it.
+
+## Rehearsing a migrated test seam
+
+The management plan brings a
+[bounded executable seam migration](TRACE-MANAGEMENT-PLAN.md#bounded-test-seam-migration)
+into the combined implementation; the
+[overhaul owns its implementation and experimental equivalence](TEST-OUTCOME-OVERHAUL-PLAN.md#migrating-executable-test-seams).
+Use that thread to examine whether moving controls out of ordinary requests
+also reduces maintained decisions. A more explicit entry point may be useful
+even if it adds maintenance duties; the account should distinguish those gains
+and costs.
+
+Choose one selected seam and rehearse changing or removing its intervention,
+holding the underlying ordinary experiment fixed. For example, if validator
+substitution is selected, suppose it is later retired while ordinary validator
+execution remains. Trace the change once through the current arrangement and
+again through the proposed command arrangement: admission, command definitions
+and help, host/internal transport, native inputs, retained evidence, test callers,
+independent assertions and developer accounts. Use the overhaul's caller mapping
+instead of rebuilding it here. Rehearse before editing those accounts, then
+update the comparison against the implemented arrangement.
+
+Which locations independently decide whether the control is available, what it
+means, or what its presence establishes? Which merely transmit the selected
+value or render its owning definition? Which need separate reasoning because
+they observe different boundaries? Include ordinary/experimental admission,
+unreached interventions and unselected controls in that account. A command that
+still forwards an ordinary request with all the old activation rules may have
+added a second explanation without retiring a decision. Conversely, one internal
+representation serving both routes need not be a duplicate public meaning.
+
+Compare the actual duties removed with those introduced in flags, adapters,
+provenance and reporting. Preserve independent oracles; generating every
+expectation from command definitions does not establish economy. Include the
+cost of frozen guide passages made inaccurate by the authorized migration,
+separately from structural change costs. This rehearsal neither authorizes the
+further hypothetical change nor turns the migration into a new numerical
+acceptance gate. Its result is an accountable judgment about where maintenance
+work went, handed back during implementation rather than reserved as a closing
+engineering question.
 
 ## Interpreting the evidence
 

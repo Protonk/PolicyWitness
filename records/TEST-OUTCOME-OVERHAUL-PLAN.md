@@ -33,7 +33,7 @@ The three companion plans have distinct responsibilities:
 | --- | --- |
 | [TRACE-MANAGEMENT-PLAN.md](TRACE-MANAGEMENT-PLAN.md) | Owns assessment and disposition of trace findings, product judgments, compatibility decisions and the guide freeze. This overhaul consumes selected decisions and returns evidence about their implementation. |
 | [TRACE-ACCEPTANCE-PLAN.md](TRACE-ACCEPTANCE-PLAN.md) | Supplies the reasoning for evaluating independently maintained judgments and change costs. Its change rehearsals inform the assessment here; they are not another completion gate. |
-| This plan | Owns the proposed test-authority and reporting capability, selected assertion and wording corrections, two bounded pytest migration cohorts, and verification of preservation and relinquishment. |
+| This plan | Owns the proposed test-authority and reporting capability, selected assertion and wording corrections, two bounded pytest migration cohorts, executable test-seam implementation and caller migration, and verification of preservation and relinquishment. |
 
 The management plan's
 [combined sequence](TRACE-MANAGEMENT-PLAN.md#working-the-three-plans-together)
@@ -53,8 +53,11 @@ This is an implementation proposal, not an implementation or a fresh acceptance
 run. It does not require reviewing every test before useful changes proceed.
 Build, release, provenance, ownership and cleanup controls remain adversarial.
 Their rejection duties are not candidates for relaxation to make reporting
-uniform. Product redesigns used below are investigations, not authorized product
-changes.
+uniform. Product redesigns used below remain investigations except for the
+management plan's explicitly authorized
+[bounded test-seam migration](TRACE-MANAGEMENT-PLAN.md#bounded-test-seam-migration).
+That interface change does not itself relinquish test authority or satisfy
+either pytest cohort.
 
 ## Investigation basis
 
@@ -64,6 +67,11 @@ finalization, dispatcher reconciliation, pytest collection and reporting,
 portable release evidence, selected Python checkers, Rust and Swift wrappers,
 and the observation cases discussed below. No catalog case, build, native
 experiment or release procedure was executed for this plan.
+
+The seam design additionally uses source inspection at `ebc18543`, tracing
+`test-input read`, command definitions, ordinary run dispatch, runner override
+decoding, representative callers and verification routing. It supplies a
+starting boundary, not evidence that a new execution route already works.
 
 The earlier [test-work survey](tests/TEST-WORK-SURVEY-REPORT.md) describes
 `31b81951c9c8c4124089aa4dd342b2b63c0a86de`. Its 235 cases and Python group
@@ -477,6 +485,109 @@ guidance and authored contract support where the selected claim reaches them.
 Use the owning generators and inspect their destinations for the freeze. These
 edits are part of behavioral remediation, not later editorial cleanup.
 
+## Migrating executable test seams
+
+The management plan owns the selected subset, admission decision and transition
+costs. This plan owns making that decision work in the executable and its test
+callers, within the combined implementation. Account for all ten current
+override fields there; implement the selected coherent subset here. Begin with
+the contrasting validator replacement and pre-ready hang/worker-timeout paths
+identified there, confirming their caller coverage before coding.
+
+### Specify the route and callers before coding
+
+Map each selected control from its old request form to its effective
+intervention, catalog callers and retained evidence. Include combinations,
+ordinary and actor requests where applicable, invalid or inert values, and
+cases where execution fails before reaching the intervention. A field appearing
+in JSON does not establish that the intended component used it. This bounded
+mapping supports migration equivalence; it is not another finding inventory.
+
+Use a distinct experimental execution subcommand under `test-input` as the
+starting design, with the selected controls supplied separately from the
+ordinary request. Preserve `test-input read` as a publication-only command.
+Adding flags that merely emit today's `_test_overrides` would centralize input
+construction but would not complete the migration out of ordinary execution.
+Settle the exact command and flag shape before implementation.
+
+Trace the route through [CLI dispatch](../controller/src/cli.rs),
+[test input handling](../controller/src/test_input.rs),
+[run orchestration](../controller/src/run_flow.rs), host admission and native
+request planning. Reuse execution machinery instead of maintaining a second
+runner. Specify where experimental intent is admitted and how it reaches the
+component that acts on it. Account for lower-level clients as well as the CLI;
+a renamed JSON field or a controller-only filter may leave the old activation
+path available. This interface separation is not a claim of authentication or
+protection against a caller that deliberately invokes experimental execution.
+
+Use the [interface authoring guidance](../controller/interface/README.md) for
+definitions and generated help. Identify affected developer accounts, shared
+projections and release prose checks during design. The management plan's narrow
+authorization permits the necessary developer-command statements, but not a
+guide amendment or an unrelated expansion of promises. Resolve the permitted
+publication path before coding; do not defer it to release acceptance or bypass
+generator freshness checks.
+
+### Preserve the experiment and identify the intervention
+
+Exercise the route in the normally built and released app. A special test-only
+binary, external replacement driver or fabricated result cannot substitute for
+that coverage. Keep fixture construction, expected effects and resource cleanup
+with the existing harness; the executable supplies the selected intervention
+through the new entry point.
+
+Retain the actual command, ordinary input, supplied controls, source/app identity
+and raw output, including timing and exit evidence where the experiment uses
+them. Establish how an experimental invocation remains recognizable in its
+retained command/output account, including an early refusal or transport failure.
+Reuse existing override echoes and equipment provenance when they suffice;
+introduce only the additional indication needed where they do not. Distinguish
+an intervention requested from one observed to have taken effect, and preserve
+safe path handling. Historical runs retain their original commands and meanings.
+
+Capture the existing positive and rejected experiments before changing entry
+points. Compare them with the migrated callers on the identified rebuilt app:
+which component ran, which intervention occurred, what evidence survived, and
+which independent checks still rejected faults. Preserve failure contrasts,
+identity checks, command accounting and cleanup duties. A zero exit from each
+command is insufficient experimental equivalence.
+
+Move every caller in the selected scope and retire the selected ordinary-request
+activation paths. Temporary dual entry points may support the comparison but
+must be gone before the migration is credited. An internal representation may
+remain useful without remaining admissible as an ordinary request. Specify the
+treatment of unselected controls and mixed old/new inputs explicitly, so removing
+one field neither silently ignores a promised intervention nor accidentally
+removes unrelated coverage. Keep any assertion or outcome-authority changes
+separately attributable from these interface changes.
+
+### Place verification within the combined sequence
+
+Do the inventory and route design early enough to supply any shared evidence
+reading requirements to the reporting capability stage. The executable and
+caller changes land after the management plan's unchanged-app instrument
+checkpoint, with a rebuilt app and their own routed verification. They may
+proceed alongside conversions and cohort migration where the callers are
+disjoint; overlapping work first needs an established experiment baseline.
+
+Start from the developer-command route in
+[change verification](../tests/CHANGE-VERIFICATION.md): unit, integration and
+source-drift checks, plus `witness_contract/test_input_controls` and
+`witness_contract/test_input`. Add the actual admission and native-boundary
+routes affected, and every mapped experimental caller. Confirm the catalog
+selection before executing; the publication-only controls cannot establish
+experimental execution. Show that the new route reaches each selected
+intervention and that ordinary requests can no longer activate it, while `read`
+still launches nothing and retains its publication/refusal behavior. Include
+combined controls, invalid values, unreached interventions, early refusals,
+equipment identity and cleanup where the selected path uses them.
+
+Complete this work before final integrated verification. The released-app
+battery must exercise migrated callers through the new route, including when
+run against the extracted release app. The closing outflows receive the
+implemented boundary, its evidence and retained costs. They do not receive an
+undeveloped recommendation for another seam investigation.
+
 ## Bounded pytest adoption
 
 ### Suitability decision and selected cohorts
@@ -600,11 +711,12 @@ improvement.
 
 | Stage | Bounded work and handoff |
 | --- | --- |
-| 1. Fix the scope and authority decisions | Confirm the two cohort boundaries and current selected callers; obtain the survivor conversion's commitment assessment from the management plan; map the selected survey reporting gaps and trace claims. Record the old propositions, retained controls and intended reductions. Settle the small reporting comparison before expanding infrastructure. |
+| 1. Fix the scope and authority decisions | Confirm the two cohort boundaries and current selected callers; obtain the survivor conversion's commitment assessment from the management plan; map the selected survey reporting gaps and trace claims. Settle the seam subset, route, caller mapping and shared evidence requirements. Record the old propositions, retained controls and intended reductions. Settle the small reporting comparison before expanding infrastructure. |
 | 2. Establish reporting and enforcement capability | Change the existing shell/dispatcher and pytest boundaries only as needed, with mixed-outcome controls. Update dependency interpretation for affected cases, release validation and producer-bound evidence readers in the same stage. A new non-gating result cannot ship while release or summary code silently converts it to a pass. |
 | 3. Exercise real conversions and scope repairs | Convert the survivor observation, retirement completion and pilot comparison reporting; repair selected assertion-to-unrun paths. Implement the management-approved DT-53/132 and DT-63/124/125 assertion/wording/support corrections with their contrasts. Keep transport and receipt product decisions bounded by their assessment and freeze. |
 | 4. Complete both pytest cohorts | Establish migration equivalence and then any separately justified outcome revisions. Retire the replaced orchestration. This can proceed alongside stage 3 after stage 2 supports the necessary receipts, pure items and real commands. |
-| 5. Assess preservation, reduction and maintenance cost | Verify the combined default and selected opt-in behavior, release evidence handling and old-format semantics. Rehearse changed product behavior through the revised tests and accounts. State what authority actually disappeared and what evidence or controls remain, with any residual costs. |
+| 5. Complete the selected seam migration | After the instrument checkpoint, implement the experimental route and migrate its callers, establish experimental equivalence and retire selected ordinary-request activation paths. This can proceed alongside stages 3 and 4 where independent; preserve attributable baselines when callers overlap. Complete its routed checks on the rebuilt app before final integrated verification. |
+| 6. Assess preservation, reduction and maintenance cost | Verify the combined default and selected opt-in behavior, release evidence handling and old-format semantics. Rehearse changed product behavior through the revised tests and accounts. State what authority actually disappeared and what evidence or controls remain, with any residual costs. |
 
 Land stage 2 with no conversion in it, so the capability alone can be shown to
 leave existing results as they were. Each conversion then lands separately,
@@ -614,11 +726,12 @@ not change a build-contract input, provided it leaves alone the five
 management plan's instrument checkpoint depends on that: it compares the
 capability alone with a baseline battery of the same app.
 
-The hold on product changes ends at that checkpoint, and stages 3 and 4 then
-proceed alongside them. Finish in stage 2 every change to the shared reading
-path that the conversions and cohorts will need, including pure-item and
-receipt support. One that turns up later needs its own before-and-after
-battery on an unchanged app.
+The hold on authorized product changes ends at that checkpoint, and stages 3,
+4 and 5 then proceed. Finish in stage 2 every change to the shared reading path
+that the conversions, cohorts and selected seam evidence will need, including
+pure-item and receipt support. One that turns up later needs its own
+before-and-after battery on an unchanged app. The seam command and admission
+changes belong after this comparison, not in stage 2.
 
 Implementation owners are existing boundaries, not new organizational layers:
 `test_cli.py` and the catalog for selection; `testlib.sh`, `case.sh` and
@@ -626,9 +739,12 @@ Implementation owners are existing boundaries, not new organizational layers:
 `pytest_family.py` for subordinate item evidence; `receipts.py` for existing
 control evidence; `execution_contract.py`, `release_accept.py` and
 `release_runs.py` for release obligations; each selected suite for its
-observations, assertions and descriptions. Touch ownership/retention machinery
-only where the selected reporting change requires it, preserving its refusal
-rules. Reconfirm these call paths before editing if the baseline has moved.
+observations, assertions and descriptions. The seam work uses controller
+interface definitions and run orchestration, then the affected runner admission
+and request-planning boundaries; it does not create another test dispatcher.
+Touch ownership/retention machinery only where the selected reporting change
+requires it, preserving its refusal rules. Reconfirm these call paths before
+editing if the baseline has moved.
 
 ## Discriminating verification
 
@@ -644,6 +760,8 @@ raw evidence, terminal output, reports and aggregate decisions together.
 | Enforced judgment still authoritative | Intentionally change a retained expected public fact or remove a required independent effect. Require its designated assertion failure and blocking result, not merely a later crash or missing report. Include a valid neighboring case that still runs. |
 | Mixed failure | Combine an unfavorable advisory result with failed teardown, missing command settlement or artifact mutation. The advisory judgment stays non-gating, but the run and release remain rejected for the independent fault. |
 | Cohort equivalence | Compare accepted and rejected scenario coverage before and after migration, including historical missing-record forms, arithmetic/formula controls, disk round trips, stager refusals, vendor tampering and fresh-process import contamination. An extra pytest item is not extra coverage. |
+| Experimental route preserves the instrument | Compare selected old and new callers at identified app revisions, including positive, rejected and unreached interventions. Retain independent effects, equipment identity, failure contrasts, command evidence and cleanup. Keep this equivalence distinct from any simultaneous assertion revision. |
+| Experimental and ordinary admission differ deliberately | Activate each selected control through the new route; show that the old ordinary-request form no longer activates it. Cover mixed and invalid inputs and lower-level admission, with a valid ordinary neighboring request. Preserve publication-only `read`, and identify experimental intent even when execution stops before applying the control. |
 | Aggregation and dependencies | Use a mixed selection with pure items, commanded items and legacy cases. Verify exact selection accounting, scope of each count, absence of an informational passing assertion, declared prerequisite failures, continuation after failures and the affected dependency's actual requirement. |
 | Authority cannot disappear from results | Remove or relabel an expected judgment, drop a family reference, alter declared authority or supply contradictory terminal evidence. Independently captured expectations must reject the account rather than accept an apparently cleaner run. |
 | Historical and portable evidence | Reread supported old evidence under its original semantics and new evidence under its captured contract. Keep old failures and unsupported-format refusals. Remove required new artifacts from a portable bundle and require rejection by verification/publication/retention readers. |
@@ -705,8 +823,10 @@ uses for comparison.
 
 Acceptance needs a reasoned account of both what remains dependable and what
 stopped constraining the architecture. Reporting capability, two completed
-migrations and accurate wording are necessary parts of this proposal; none
-alone establishes the intended overhaul.
+pytest cohorts, the selected executable seam migration and accurate wording
+are necessary parts of this proposal; none alone establishes the intended
+overhaul. Moving a seam does not itself count as relinquishing a product
+expectation.
 
 Identify at least one previously enforced product expectation that no longer
 blocks an otherwise valid alternative. Explain why removing its authority is
@@ -717,10 +837,13 @@ correct migration that relinquishes no questionable enforcement is incomplete.
 
 For preservation, account for the cohorts' observations, independently authored
 oracles, rejection contrasts, command evidence and cleanup, together with the
-continued adversarial build/release/provenance controls. For reduction, name the
-old survival requirement or other justified obligation removed, any duplicate
-test orchestration retired, and any misleading coverage claim corrected.
-Distinguish retirement of an assertion from retirement of useful evidence.
+selected seams' experimental equivalence and continued adversarial
+build/release/provenance controls. For reduction, name the old survival
+requirement or other justified obligation removed, any duplicate test
+orchestration retired, and any misleading coverage claim corrected. Account
+separately for the ordinary-request entry points retired and the command,
+adapter or documentation duties added in their place. Distinguish retirement
+of an assertion from retirement of useful evidence.
 
 For each judgment relinquished or narrowed, state what PolicyWitness no longer
 establishes on a user's behalf, and what a user who needs that conclusion must
@@ -735,8 +858,9 @@ The maintainer reviews it there; it is not sought before the conversion.
 
 Apply the acceptance companion's change-sensitivity reasoning locally. Rehearse
 the descendant ending at completion, actor fallback disappearing, and a receipt
-or identity premise changing. Where the acceptance plan rehearses the same
-change, make the two one trace under one statement of the hypothetical. Trace
+or identity premise changing, together with the selected seam rehearsal. Where
+the acceptance plan rehearses the same change, make the two one trace under one
+statement of the hypothetical. Trace
 which remaining expectations need a substantive decision, which observations
 simply report different facts, which public commitments still constrain the
 change, and which descriptions require review. Include hidden adapters, dependency rules and source/provenance
@@ -753,8 +877,9 @@ statuses. Nor does an inconclusive rehearsal create a permanent reconciliation
 obligation among the three plans.
 
 Complete this bounded overhaul when the selected capability and conversions
-are verified, both cohorts are genuinely migrated, selected trace remediations
-have their assessment-owned dispositions and accurate test accounts, and the
+are verified, both cohorts are genuinely migrated, the selected seam migration
+is implemented and verified, selected trace remediations have their
+assessment-owned dispositions and accurate test accounts, and the
 preservation/reduction argument holds. Remaining trace findings stay with the
 management plan. Further migration or product redesign requires its own useful
 scope, rather than following automatically from this work.
