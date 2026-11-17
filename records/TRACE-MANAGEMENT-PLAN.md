@@ -99,12 +99,22 @@ unimplemented promise can still be a promise; mention in the guide does not
 make every implied interpretation a commitment. Likewise, evidence that a
 current rule is faithfully implemented does not settle whether to retain it.
 
-Changes to public meanings remain possible within their agreed scope, but may
-not silently contradict a retained commitment. If truthful publication of the
-chosen remedy requires revising the frozen guide, that remedy is unavailable
-under the freeze. Decide whether to retain the present behavior and its stated
-cost or reconsider the freeze before implementing it. Additional architecture
-intended to vindicate existing prose needs its own substantive justification.
+Treat this work as a developer-facing change that a radical rewrite of the
+guide will follow. Its results are tests, test authority, internal accounts,
+developer documentation, and behavior corrected to match a meaning that is
+already settled. Do not shape the work around the guide's eventual structure
+or content.
+
+A change to a public meaning needs the maintainer's explicit decision. The
+maintainer's judgments are collected at the end of this work, not sought
+during it, so such a change is not made here. Complete the judgment and place
+it in the [collection for the maintainer](#judgments-for-the-maintainer).
+
+If truthful publication of the chosen remedy requires revising the frozen
+guide, that remedy is unavailable. Lifting the freeze for a passage is not an
+available answer: record the present behavior as retained, with its stated
+cost. Additional architecture intended to vindicate existing prose needs its
+own substantive justification.
 
 ## Units of assessment and relationships
 
@@ -244,9 +254,10 @@ completed assessment through assignment to future documentation work.
 
 Evaluate candidate remedies on their merits, then select the treatment
 available within the guide freeze and existing commitments. Responses include
-changing behavior or public meaning within that boundary, correcting a test or
-its coverage claim, improving the reading path, or retaining the arrangement
-with an explicit rationale. More than one response may be necessary. Narrower
+correcting behavior to match a settled meaning, correcting a test or its
+coverage claim, improving the reading path, or retaining the arrangement with
+an explicit rationale. A change to a public meaning is judged here and left to
+the maintainer. More than one response may be necessary. Narrower
 prose is sufficient only when the narrower promise is justified and its
 practical consequence has been assessed; it cannot silently withdraw a
 commitment or substitute for a frozen guide amendment.
@@ -254,8 +265,8 @@ commitment or substitute for a frozen guide amendment.
 When the preferred remedy is unavailable, complete the present product
 judgment. State the remaining defect or limitation and whether its consequences
 are accepted. “Update the guide later” is neither that judgment nor a chosen
-remedy. If the cost is unacceptable, identify the conflict with the freeze as
-the decision to resolve.
+remedy. If the cost seems unacceptable, say so in the judgment. That is a
+matter for the maintainer, and the closing collection carries it.
 
 Group changes when they share a decision and verification boundary. Keep
 separate changes for separate mechanisms even when their symptoms resemble
@@ -431,8 +442,10 @@ Take a shared thread in this order:
    rehearsal is evidence for it and not a gate: a thread without a planned
    rehearsal does not wait for one.
 3. **Change once.** The overhaul applies the authorized test response. Permitted
-   account corrections, and any arrangement change the rehearsal justified,
-   land with it, so each destination is edited one time.
+   account corrections land with it, so each destination is edited one time.
+   An arrangement change the rehearsal justified lands with them when it stays
+   within developer-facing accounts and moves no ownership. Otherwise it goes
+   to the collection for the maintainer.
 
 A disposition recorded before its rehearsal can correct a passage that the
 arrangement judgment then moves or removes. A test response chosen before the
@@ -458,8 +471,9 @@ not join the DT coverage map.
 - A conversion or correction on a shared thread waits for that thread's
   disposition. Conversions and pure-computation cohort items also wait for the
   reporting capability.
-- A product or public-meaning change waits for its own disposition, and for
-  the instrument checkpoint while one is open.
+- A product change that restores an already-settled meaning waits for its own
+  disposition, and for the instrument checkpoint while one is open. A change
+  to a public meaning is not made in this work.
 - A remedy that adds controls to a population being migrated to pytest lands
   after that cohort's equivalence is established, so the mapping does not
   follow a moving population.
@@ -479,6 +493,11 @@ roughly thirty to forty minutes. `preflight/build_refusal_controls`, with its
 fresh builds, real acceptance and nested battery, takes about two hours. Each
 holds the checkout lock, and tracked files stay unedited while it runs; a
 second worktree is the existing way to keep working.
+
+Settle at the start how many executors will work in this checkout at once.
+With more than one, run the broad selections from a worktree pinned to a
+commit, and name quiet windows for the live worker-wait pilot, which a
+concurrent build or battery disturbs. With one, neither is needed.
 
 Run the routed selection with each change, at the commit that carries it. Run
 the default battery at the boundaries below. Keep one reason per commit; one
@@ -580,12 +599,20 @@ In the last case, name the affected cases and costs. Assessment completed and
 defect repaired are different states. A known defect can remain without an
 automatic promise to repair it when the guide changes.
 
-If the residual cost is unacceptable, the required decision concerns the freeze
-or the chosen product behavior. Mark that decision pending until it is made;
-assigning a future documentation task cannot substitute for it. An unresolved
-evidence question can instead receive a completed, bounded judgment when the
-present uncertainty and its consequences are explicitly accepted. Do not claim
-the underlying behavior was established in that case.
+If the residual cost seems unacceptable, say so. The decision about the
+product's behavior is the maintainer's, and the
+[closing collection](#judgments-for-the-maintainer) carries it. The assessment
+is complete once the judgment, the cost and that referral are recorded;
+assigning a future documentation task cannot substitute for the judgment.
+
+A disposition that accepts a limitation lasts only where an owner states it.
+When a developer-facing owner exists, a test account or a support record,
+state the limit there beside the claim it limits. When the only truthful home
+is a public statement or the guide, the limit belongs to that collection.
+
+An unresolved evidence question can receive a completed, bounded judgment when
+the present uncertainty and its consequences are explicitly accepted. Do not
+claim the underlying behavior was established in that case.
 
 Record which original claims were resolved, narrowed, withdrawn or deliberately
 retained, what evidence supports each disposition, and what remains defective
@@ -597,7 +624,8 @@ defect whose reader impact must be judged explicitly.
 
 The management pass is complete when every observation has a traceable present
 assessment, follow-up qualifications are represented, selected changes have
-usable proposals, and the user-responsibility outflow is recorded. No
+usable proposals, and the [reserved material](#material-reserved-beyond-this-work)
+is recorded. No
 observation is complete merely because it has a family, a future task or an
 instruction to revisit the guide. Completion requires accountable judgments,
 not a target number of defects or future obligations.
@@ -699,9 +727,9 @@ Write one entry per responsibility, not per finding:
 A responsibility is **established** when the evidence supports the condition
 within stated limits and a completed disposition leaves it with the user. It
 is **unsettled** when the condition rests on an observation that was not
-traced or reproduced, when it lasts only until a pending product or freeze
-decision, or when it arises only under a hypothetical arrangement. For a
-pending decision, name it and what each outcome does to the responsibility.
+traced or reproduced, when it lasts only until a product decision that is the
+maintainer's to make, or when it arises only under a hypothetical arrangement.
+For such a decision, name it and what each outcome does to the responsibility.
 Do not promote an unsettled candidate because listing it as an obligation
 seems the cautious choice.
 
@@ -720,3 +748,66 @@ are recorded. It depends on judgments, not on the final runs. Finalize it
 after the [final integrated verification](#three-boundaries-for-broad-runs):
 restate an entry, or move it to unsettled, when that run did not bear out the
 change or observation it rests on.
+
+## Material reserved beyond this work
+
+The work ends with material for two later events and nothing kept for its own
+sake.
+
+| Reserved for | Material | Until |
+| --- | --- | --- |
+| The guide rewrite | The [user-responsibility outflow](#user-responsibility-outflow), with its override recommendation, and the judgments for the maintainer | The rewrite has read them |
+| The versioned release | The release account | The release is cut |
+| After the release | Nothing in `records/` | |
+
+None of it concerns the guide's structure, passages or wording.
+
+### Judgments for the maintainer
+
+The maintainer's judgments are collected here at the end of the work, not
+sought during it. The maintainer intends to express them during the guide
+rewrite, as statements that can be traced to code, tests and documents. Record
+the collection in `records/MAINTAINER-JUDGMENT-OUTFLOW.md`, drafted and
+finalized with the user-responsibility outflow.
+
+Collect four kinds of judgment:
+
+- a consequence left with a user: refer to the outflow's entry;
+- a remedy judged preferable but unavailable, because it changes a public
+  meaning or requires revising the guide, with the cost of the behavior
+  retained in its place;
+- test authority relinquished or narrowed, with its reason;
+- a documentation arrangement that would move ownership.
+
+The first and third have already been acted on, in ways that are
+developer-facing and can be undone. The second and fourth have not been acted
+on.
+
+For each, give the distinction at stake, why it matters, what would change,
+and its anchors. Anchor by symbol, catalog case and statement identifier at a
+stated revision, not by line number, so that a later statement can still be
+traced after the files have moved.
+
+### Release account
+
+Record briefly what a release after this work will meet because of it: the
+changes a reader of test results or release evidence encounters, such as
+outcome semantics, the evidence-format boundary and the converted cases, and
+anything the release procedure must do differently. It supplies the release
+notes.
+
+### What outlasts the release
+
+Nothing from this work needs to remain in `records/` after the release. The
+plans, assessments, rehearsals and reserved material have each been read by
+then, and git history keeps them.
+
+What should last is placed in permanent owners while the work is under way,
+because the judgment behind it is no longer at hand afterward:
+
+- an accepted limit, beside the claim it limits, as
+  [completion](#completion-and-disposition) requires;
+- the reason a test observes a behavior instead of requiring it, in the
+  suite's own account and in the commit that changed it;
+- a verification rule that proved its worth in execution, in the test working
+  guidance.

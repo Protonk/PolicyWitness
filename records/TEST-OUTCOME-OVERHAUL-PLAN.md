@@ -728,7 +728,10 @@ then do or avoid. Hand those statements, with the conversion and evidence they
 rest on, to the management plan's
 [user-responsibility outflow](TRACE-MANAGEMENT-PLAN.md#user-responsibility-outflow).
 A withdrawn test requirement that changes nothing a user may rely on
-contributes no entry.
+contributes no entry. Each relinquished or narrowed judgment also goes, with
+its reason, to that plan's
+[collection for the maintainer](TRACE-MANAGEMENT-PLAN.md#judgments-for-the-maintainer).
+The maintainer reviews it there; it is not sought before the conversion.
 
 Apply the acceptance companion's change-sensitivity reasoning locally. Rehearse
 the descendant ending at completion, actor fallback disappearing, and a receipt
