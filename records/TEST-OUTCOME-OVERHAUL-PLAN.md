@@ -357,6 +357,19 @@ ruling on the `leader_exit_and_eof`/`not_requested` relation supports: while the
 relation stands, a product that ends the descendant and reports it is still
 refused at controller admission, and the account says so.
 
+For selected conversions and pytest migrations, preserve marginal-value
+observations from the mutation controls and negative contrasts already examined:
+where a test supplies a distinct rejection of an incorrect behavior, where another
+retained test rejects that same behavior, where apparently independent tests share evidence,
+expectations or interpretation machinery, and where meaningful additional detection
+cannot be established. Distinguish independent observations from independently
+authored assertions over the same observations. Overlapping names, fixtures or
+results do not establish redundancy; several failures on one mutation do not
+establish independent rejection. Keep these notes in existing working records and
+run evidence under management's [observational limits](TRACE-MANAGEMENT-PLAN.md#verification-sequence),
+particularly when enforcement is withdrawn or orchestration retired. No new mutation
+campaign, complete test inventory or numerical redundancy measure is required.
+
 Complete both pytest cohorts, selected conversions and corrections, reporting
 capability and all selected seam callers. Account for preserved observations and
 rejection coverage, removed enforcement/orchestration, corrected claims and added

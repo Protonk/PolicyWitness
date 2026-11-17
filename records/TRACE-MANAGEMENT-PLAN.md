@@ -224,6 +224,27 @@ fresh owned output and the checkout lock. Run routed checks at the carrying
 commit. With concurrent executors, run broad selections in a worktree pinned to
 a commit and reserve quiet windows for the live worker-wait pilot.
 
+Before tests execute for a consequential change, retain the intended verification
+selection and rationale in the existing commit or working assessment. If later
+broader testing finds a consequential failure outside that selection, record the
+failure and establishing evidence, its established or suspected relationship to
+the change, whether existing guidance or known dependencies could have predicted
+it, and whether it is a product regression, test-infrastructure failure,
+environmental problem or unresolved cause. Note broader runs with no unexpected
+failures without claiming the selection was sufficient.
+
+These notes, the cost observations below and the overhaul's marginal-value notes
+support an out-of-band assessment of the testing regime, potentially including a
+later bounded counterfactual experiment. Use existing commits, working assessments,
+run identifiers, receipts and retained evidence; no new registry, summary document
+or permanent format. They add no implementation requirements, acceptance/completion
+conditions or stage dependencies, and require no extra testing or investigation.
+Missing cost detail does not block implementation; unexplained surprises remain
+findings; uncertain marginal value requires neither retirement nor preservation.
+The observations authorize no additional test retirement, reduced verification,
+default-membership changes or relaxed guarantees. Guide rewriting and decisions
+about unsupported user behavior remain outside this exercise.
+
 | Changed boundary | Evidence when it lands |
 | --- | --- |
 | Reporting/release readers | Overhaul controls, then the instrument checkpoint. |
@@ -233,6 +254,17 @@ a commit and reserve quiet windows for the live worker-wait pilot.
 | Documentation | Owning generation and `source_drift`. Check [build-contract inputs](../docs/build_contract.py): Rust test edits under `controller/src` require rebuilding; `runner/Tests` and most of `tests/` do not. |
 
 ### Three boundaries for broad runs
+
+At the instrument checkpoint and final integrated verification, retain what
+existing timing, command, dependency and execution receipts establish about build
+and signing, fixture construction/preparation, experiment/observation duration,
+evidence interpretation/reporting, cleanup, serial dependencies, repeated
+preparation and substantial waiting. Where evidence permits, distinguish the cost
+of executing a case from the additional cost of selecting it with its dependencies,
+and costs intrinsic to the observation from supporting apparatus and verification
+organization. Mark measured intervals, inferred costs and unknown time separately;
+total wall-clock duration does not establish a complete decomposition. Add no
+profiling, instrumentation or extra batteries for this account.
 
 **Instrument checkpoint.** Complete development/build publication support, then
 run the default battery immediately before reporting capability lands. Land
