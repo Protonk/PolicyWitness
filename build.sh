@@ -268,6 +268,7 @@ stamp_info_plist() {
   /usr/libexec/PlistBuddy -c "Add :PWBuildDescribe string ${PW_BUILD_DESCRIBE}" "${plist}"
   /usr/libexec/PlistBuddy -c "Add :PWBuildCommit string ${PW_BUILD_COMMIT}" "${plist}"
   /usr/libexec/PlistBuddy -c "Add :PWContract string ${PW_BUILD_CONTRACT}" "${plist}"
+  /usr/libexec/PlistBuddy -c "Add :PWPublicationBoundary integer 1" "${plist}"
 }
 
 # The supported macOS: Info.plist declares it, meson.build pins the native
@@ -565,10 +566,10 @@ for document in README.md AGENTS.md; do
   fi
 done
 # From here on a refusal leaves only what this build got to: the previous app,
-# ZIP and guide at the output path are removed together, and nothing is
-# preserved.
+# ZIP at the output path are removed. The frozen guide remains unchanged;
+# publication.json states that this build does not stage a current manual.
 rm -rf "${APP_BUNDLE}"
-rm -f "${ZIP_NAME}" "${GUIDE_NAME}"
+rm -f "${ZIP_NAME}"
 mkdir -p "${APP_BUNDLE}/Contents/MacOS" "${APP_BUNDLE}/Contents/Resources"
 
 cp "${INFO_PLIST_TEMPLATE}" "${APP_BUNDLE}/Contents/Info.plist"
@@ -774,9 +775,9 @@ echo "==> Checking every executable's signer"
 
 # ---- Package ---------------------------------------------------------------
 
-echo "==> Staging checked user guide"
+echo "==> Recording development publication boundary"
 "${PW_PYTHON}" -B -S "${ROOT_DIR}/docs/generate_limits.py" \
-  --stage-guide "${GUIDE_NAME}"
+  --stage-development "${DIST_DIR}/publication.json" --build-contract "${PW_BUILD_CONTRACT}"
 
 # The sealed bundle's code is checked against the output target once more, as
 # packaged; nothing thins or repairs it.
@@ -790,7 +791,7 @@ cat <<EOF
 DONE:
   - ${APP_BUNDLE}
   - ${ZIP_NAME}
-  - ${GUIDE_NAME}
+  - ${DIST_DIR}/publication.json (publication withheld; guide remains frozen)
 
 Next (see docs/SIGNING.md; make notarize builds again, fresh):
   make notarize NOTARY_KEYCHAIN_PROFILE=entitlement-jail IDENTITY='Developer ID Application: ...'

@@ -17,6 +17,7 @@ import shutil
 
 from artifact import digest
 import release_runs
+import publication_freshness
 import retention
 import run_ownership
 
@@ -51,6 +52,9 @@ def publish_locked(archive_dir, *, notes, remote, root):
     record = json.loads(record_path.read_text())
     release_runs.verify_release(archive_dir)
     version, tag = record['version'], record['tag']
+    freshness = publication_freshness.require(root, tag, record['source_commit'])
+    if digest(archive_dir / record['guide']) != freshness['guide_sha256']:
+        raise ValueError('archived guide differs from the freshly verified tagged source')
     assets = [record['archive'], 'SHA256SUMS', record['guide']]
     sums = {}
     for line in (archive_dir / 'SHA256SUMS').read_text().splitlines():
@@ -107,6 +111,7 @@ def publish_locked(archive_dir, *, notes, remote, root):
     if notes != archived_notes:
         shutil.copy2(notes, archived_notes)
     (archive_dir / 'evidence/github-release.json').write_text(view if view.endswith('\n') else view + '\n')
+    record['publication'] = freshness
     record['origin'] = dict(kind='github_release', release_url=meta['url'],
                             asset_url=by_name[record['archive']]['url'])
     receipt = dict(original_path=f'gh release view {tag} --json {VIEW_FIELDS}',

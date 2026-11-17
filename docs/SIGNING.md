@@ -189,6 +189,17 @@ rebuilt never supplies them.
 
 ## Release procedure
 
+Development artifacts carry publication-withheld evidence and preserve the
+guide bytes at `3d3f8e65`. Release preflight, acceptance, archival and publication
+require strict guide and contract freshness from source at the corresponding
+annotated tag, including source permission to publish. An active guide freeze
+refuses even when its bytes still match the current projections. They compare
+the actual source files with tagged blobs before
+running the owning generators; a tag or a relabeled artifact cannot establish
+freshness. Use the tagged checkout for those operations. Portable historical
+archive inspection and retention continue to read the producing contracts.
+
+
 Run commands from the repository root, outside an automation sandbox. First
 transcribe the preceding release's footprint receipts as described below,
 render and review the pending surface stamps, then include them with the

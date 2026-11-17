@@ -16,6 +16,7 @@ import subprocess
 import sys
 
 import retention
+import publication_freshness
 
 ROOT = Path(__file__).resolve().parents[2]
 RELEASE_TAG = re.compile(r'v\d+\.\d+\.\d+')
@@ -227,6 +228,10 @@ def inspect(root, *, remote='origin', dist='dist'):
             problems.append('contract surfaces remain unreleased')
     except (ValueError, OSError) as error:
         problems.append(f'contract stamps: {error}')
+    try:
+        stamp['publication'] = publication_freshness.require(root, tag, stamp['head'])
+    except (ValueError, OSError, subprocess.TimeoutExpired) as error:
+        problems.append(str(error))
     try:
         distribution = retention.distribution(root, dist)
         archive = distribution / 'archive' / tag

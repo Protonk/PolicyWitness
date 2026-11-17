@@ -20,6 +20,7 @@ import artifact
 import release_archive
 import release_evidence
 import release_preflight
+import publication_freshness
 import release_publish
 import retention
 import run_ownership
@@ -54,14 +55,20 @@ def make_repo(work):
     subprocess.run(['git', 'init', '-q', '--bare', str(remote)], check=True)
     git(repo, 'init', '-q', '-b', 'main')
     (repo / 'README.md').write_text('fixture\n')
+    (repo / '.gitignore').write_bytes((ROOT / '.gitignore').read_bytes())
     sys.path.insert(0, str(ROOT / 'docs'))
     import build_contract
     import fixture_inputs
     import generate_contract_stamps
+    import generate_limits
     fixture_inputs.copy_declared(ROOT, repo, sorted(set(build_contract.inputs(ROOT)) |
-                                                   set(generate_contract_stamps.input_paths(ROOT))))
+                                                   set(generate_contract_stamps.input_paths(ROOT)) | set(generate_limits.input_paths(ROOT))))
     (repo / 'tests').mkdir(exist_ok=True)
     (repo / 'tests/catalog.json').write_text(json.dumps(dict(suites=dict(fixture=dict(command=['bash', 'tests/suites/fixture/run.sh'], cases=['0','1','2'])))))
+    # This fixture authors its own first release, not a development candidate.
+    # Its publication state is independent of the repository's frozen guide.
+    boundary = repo / 'docs/publication.py'
+    boundary.write_text(boundary.read_text().replace('WITHHELD = True', 'WITHHELD = False', 1))
     contract_fixture.fresh_authoring(repo, generate_contract_stamps, minimal=True)
     git(repo, 'add', '.')
     git(repo, 'commit', '-q', '-m', 'initial')
@@ -252,6 +259,71 @@ def check_contract_free_text_baseline(out):
     (work / 'reports.json').write_text(json.dumps(reports, indent=2, sort_keys=True) + '\n')
 
 
+def check_publication_freshness(out):
+    work = out / 'publication-freshness'
+    work.mkdir()
+    repo = make_repo(work)
+    git(repo, 'tag', '-a', 'v7.0.0', '-m', 'constructed current release')
+    current = publication_freshness.require(repo, 'v7.0.0')
+    assert current['status'] == 'current' and len(current['commands']) == 3, current
+    # Index hints cannot conceal differing source bytes from the tagged check.
+    owner = repo / 'docs/QUESTIONS.md'
+    before = owner.read_bytes()
+    git(repo, 'update-index', '--assume-unchanged', 'docs/QUESTIONS.md')
+    owner.write_bytes(before + b'\nchanged source bytes\n')
+    try:
+        publication_freshness.require(repo, 'v7.0.0')
+    except ValueError as error:
+        assert 'tagged bytes' in str(error), error
+    else:
+        raise AssertionError('index hint concealed changed source bytes')
+    owner.write_bytes(before)
+    git(repo, 'update-index', '--no-assume-unchanged', 'docs/QUESTIONS.md')
+    extra = repo / 'docs/contract/untracked.surface.md'
+    extra.write_text('untracked source must not participate in publication discovery\n')
+    try:
+        publication_freshness.require(repo, 'v7.0.0')
+    except ValueError as error:
+        assert 'untracked files' in str(error), error
+    else:
+        raise AssertionError('untracked source entered tagged freshness verification')
+    extra.unlink()
+    # A clean annotated tag and an absent boundary receipt grant no freshness.
+    # Change the actual owner, retain the stale guide, and tag without generation.
+    text = owner.read_text()
+    changed = text.replace('A useful experiment identifies its target', 'A changed experiment identifies its target', 1)
+    assert changed != text
+    owner.write_text(changed)
+    git(repo, 'add', '.')
+    git(repo, 'commit', '-qm', 'development owner with frozen publication copy')
+    subprocess.run([*GIT, '-C', str(repo), 'tag', '-a', 'v7.0.1', '-m', 'relabeled development'], check=True)
+    try:
+        publication_freshness.require(repo, 'v7.0.1')
+    except ValueError as error:
+        assert 'stale PolicyWitness.md' in str(error), error
+    else:
+        raise AssertionError('tagged development divergence became publication ready')
+    stamp, problems = release_preflight.inspect(repo)
+    expect_problem(problems, 'stale PolicyWitness.md')
+    # Restore current copies without regenerating a guide, then activate a source
+    # freeze. Fresh projections alone must not make that development tag publishable.
+    owner.write_bytes(before)
+    boundary = repo / 'docs/publication.py'
+    boundary.write_text(boundary.read_text().replace('WITHHELD = False', 'WITHHELD = True', 1))
+    git(repo, 'add', '.')
+    git(repo, 'commit', '-qm', 'active development publication boundary')
+    subprocess.run([*GIT, '-C', str(repo), 'tag', '-a', 'v7.0.2', '-m', 'tagged development'], check=True)
+    try:
+        publication_freshness.require(repo, 'v7.0.2')
+    except ValueError as error:
+        assert 'guide freeze is active' in str(error), error
+        active_refusal = str(error)
+    else:
+        raise AssertionError('active development boundary became publication ready')
+    (work / 'active-freeze.txt').write_text(active_refusal + '\n')
+    (work / 'freshness.json').write_text(json.dumps(dict(current=current, refused=problems), indent=2) + '\n')
+
+
 def check_branch_names(out):
     """Compare real build stamps and release decisions at one source/path under new refs."""
     work = out / 'branch-names'
@@ -262,6 +334,8 @@ def check_branch_names(out):
     import fixture_inputs
     fixture_inputs.copy_declared(ROOT, repo,
         build_contract.inputs(ROOT))
+    boundary = repo / 'docs/publication.py'
+    boundary.write_text(boundary.read_text().replace('WITHHELD = True', 'WITHHELD = False', 1))
     git(repo, 'add', '.')
     git(repo, 'commit', '--amend', '--no-edit')
     git(repo, 'branch', 'master')
@@ -380,7 +454,7 @@ def make_dist(repo, *, version='0.9.0', commit=None, describe=None, attempt=True
             zipped.writestr('PolicyWitness.app/' + relative, data)
         if record:
             zipped.writestr('PolicyWitness.app/Contents/Resources/Evidence/provenance.json', json.dumps(provenance))
-    (dist / 'PolicyWitness.md').write_text(f'# guide {version}\n')
+    (dist / 'PolicyWitness.md').write_bytes((repo / 'docs/PolicyWitness.md').read_bytes())
     # The working app is build B by now: a later build whose record must never reach the archive of A's accepted ZIP.
     working = dist / 'PolicyWitness.app/Contents/Resources/Evidence'
     working.mkdir(parents=True, exist_ok=True)
@@ -883,6 +957,7 @@ def main(out):
     check_release_entrypoints(out)
     check_preflight(out)
     check_contract_free_text_baseline(out)
+    check_publication_freshness(out)
     check_branch_names(out)
     check_archive_layout(out)
     repo, dest, notes = check_archive(out)

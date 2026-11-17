@@ -805,3 +805,10 @@ These controls establish schema and stale-output admission without compiling a
 native artifact.
 
 The retained log is `suites/source_drift/porcelain_codec/artifacts/porcelain.log`.
+
+Development publication controls check the guide's complete `3d3f8e65` byte
+identity while technical limits, spans, contract projections and stamps stay
+current. Constructed owner divergence must pass development checks and fail
+strict publication freshness. Changed frozen bytes, stale technical outputs and
+missing or inconsistent signed boundary records are rejected. Strict generator
+fixtures exercise copying and staging separately from the frozen repository guide.

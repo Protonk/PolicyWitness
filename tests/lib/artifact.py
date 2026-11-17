@@ -258,6 +258,14 @@ def inspect(app):
             except (OSError, ValueError) as exc:
                 error('manifest_entry', relative, str(exc))
         required = set(EXECUTABLES[1:]) | {SYMBOLS, PROVENANCE}
+        if 'PWPublicationBoundary' in app_info or 'Contents/Resources/Evidence/publication.json' in seen:
+            sys.path.insert(0, str(Path(__file__).resolve().parents[2] / 'docs'))
+            import publication
+            if type(app_info.get('PWPublicationBoundary')) is not int or app_info['PWPublicationBoundary'] != 1:
+                raise ValueError('unsupported publication boundary')
+            required.add(publication.RECORD)
+            report['publication'] = publication.validate(
+                json.loads(contained(publication.RECORD).read_bytes()), app_info.get('PWContract'))
         # Every shipped augment must be inventoried too; the fixed executable
         # list above remains mandatory even if the manifest omits a helper.
         required.update(str(p.relative_to(app)) for p in (app / 'Contents/Resources/Augments').glob('*.sb'))

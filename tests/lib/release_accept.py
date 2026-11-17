@@ -17,6 +17,7 @@ from pytest_support import read, contained
 
 import artifact
 import release_evidence
+import publication_freshness
 from release_commands import command, save
 
 ROOT = Path(__file__).resolve().parents[2]
@@ -115,6 +116,7 @@ def accept(archive, out, *, invoke=command, inspect=artifact.inspect):
         if info.get('PWContract') != expected_contract or version.get('build', {}).get('contract') != expected_contract:
             raise ValueError('released archive does not report ' + expected_contract)
         report['contract'] = expected_contract
+        report['publication'] = publication_freshness.require(ROOT, expected_contract.removeprefix('release:'), info.get('PWBuildCommit'))
         invoke(out / 'staple-validation', ['/usr/bin/xcrun', 'stapler', 'validate', '-v', app], timeout=60)
         invoke(out / 'gatekeeper', ['/usr/sbin/spctl', '-a', '-vv', '--type', 'execute', app], timeout=60)
         # The ZIP is the sole app selection. Ignore inherited PW settings rather

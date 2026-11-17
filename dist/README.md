@@ -4,7 +4,8 @@
 | --- | --- |
 | `PolicyWitness.app` | Current signed local build, carrying its evidence manifest, symbols file and provenance record under `Contents/Resources/Evidence/`. |
 | `PolicyWitness.zip` | ZIP from that build; release acceptance is recorded separately. |
-| `PolicyWitness.md` | Standalone user guide from the same build. |
+| `PolicyWitness.md` | Frozen standalone user guide when present; development builds preserve its bytes. |
+| `publication.json` | Development publication-withheld receipt, binding the build contract and frozen guide revision. |
 | `evidence/` | Dated release attempts, each with an index and named command receipts. An archived attempt is moved into its release archive and leaves an `<attempt>.archived` pointer. |
 | `archive/v<version>/` | One of the four newest complete local releases, created by `tests/lib/release_archive.py`. |
 

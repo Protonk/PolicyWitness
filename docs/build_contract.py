@@ -17,7 +17,7 @@ DIRECTORIES = ('controller/src', 'controller/tools', 'controller/interface', 'ru
 FILES = ('build.sh', 'meson.build', 'meson.options', 'runner/Package.swift',
          'controller/Cargo.toml', 'controller/Cargo.lock', 'controller/build.rs',
          'Info.plist', 'PolicyWitness.entitlements', 'docs/build_contract.py',
-         'docs/source_identity.py', 'tests/build_equipment.py', 'tests/build-evidence.py')
+         'docs/source_identity.py', 'docs/publication.py', 'tests/build_equipment.py', 'tests/build-evidence.py')
 # This declaration is independent of Git and applies equally to source copies.
 # New source files in these languages and bundled resources are discovered;
 # executables, editor/OS files and documentation are not compiler inputs.

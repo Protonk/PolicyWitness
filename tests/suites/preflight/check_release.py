@@ -1,6 +1,7 @@
 """Bounded release controls using actual archives and independent tool receipts."""
 from contextlib import redirect_stdout, redirect_stderr
 import importlib.util
+import hashlib
 import json
 import os
 from pathlib import Path
@@ -15,6 +16,7 @@ sys.path.insert(0, str(ROOT / 'tests/lib'))
 import artifact
 import execution_contract
 import release_evidence
+import publication_freshness
 from release_accept import accept
 sys.path.insert(0, str(ROOT / 'tests/fixtures/dispatcher'))
 from fixture_bundle import bundle, fingerprint
@@ -128,7 +130,7 @@ def check(out):
         assert (record['state'] == 'accepted') is (mode == 'accepted')
         completed.append('notary_' + mode)
 
-    for mode in ('valid', 'development_contract', 'foreign_binary_contract', 'missing_helper', 'stale_manifest', 'missing_staple',
+    for mode in ('valid', 'missing_publication', 'wrong_publication_identity', 'development_contract', 'foreign_binary_contract', 'missing_helper', 'stale_manifest', 'missing_staple',
                  'xpc_failure', 'skipped', 'unrun', 'selected', 'all', 'timeout', 'wrong_runner', 'mutated_app', 'corrupt_zip'):
         work = out / ('archive_' + mode)
         work.mkdir()
@@ -137,7 +139,21 @@ def check(out):
         info_path = source / 'Contents/Info.plist'
         info = plistlib.loads(info_path.read_bytes())
         info.update(CFBundleShortVersionString='0.9.0', PWContract='development:fixture' if mode == 'development_contract' else 'release:v0.9.0')
+        info['PWPublicationBoundary'] = 1
         info_path.write_bytes(plistlib.dumps(info))
+        sys.path.insert(0, str(ROOT / 'docs'))
+        import publication
+        boundary = publication.record(ROOT, info['PWContract'])
+        if mode == 'wrong_publication_identity':
+            boundary['build_contract'] = 'development:foreign'
+        publication.write(source / publication.RECORD, boundary)
+        manifest_path = source / artifact.MANIFEST
+        manifest = json.loads(manifest_path.read_bytes())
+        manifest['entries'].append(dict(id='evidence.publication', kind='evidence', rel_path=publication.RECORD,
+                                       sha256=hashlib.sha256((source / publication.RECORD).read_bytes()).hexdigest()))
+        manifest_path.write_text(json.dumps(manifest))
+        if mode == 'missing_publication':
+            (source / publication.RECORD).unlink()
         if mode == 'missing_helper':
             (source / 'Contents/MacOS/pw-runner-client').unlink()
         if mode == 'stale_manifest':
@@ -171,7 +187,10 @@ def check(out):
             with redirect_stdout(stdout), redirect_stderr(stderr), patch.dict(os.environ, {
                     'PW_APP_DIR': str(source), 'PW_BIN': str(source / 'Contents/MacOS/policy-witness'),
                     'PW_TEST_RUNNER_MODE': 'byoxpc'}):
-                with patch.object(execution_contract, 'defaults', return_value=tools.contract):
+                # Source freshness has real tagged-source controls in release_publish_controls.
+                # This command fixture isolates extraction, app admission and battery behavior.
+                with patch.object(execution_contract, 'defaults', return_value=tools.contract), \
+                        patch.object(publication_freshness, 'require', return_value=dict(status='constructed current source')):
                     result = accept(archive, work, invoke=tools, inspect=inspect)
         record = json.loads((work / 'acceptance.json').read_text())
         assert result == (0 if mode == 'valid' else 1), (mode, record)

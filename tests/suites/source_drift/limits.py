@@ -27,6 +27,7 @@ class LimitsDocumentationTests(receipts.TestCase):
         self.manifest = json.loads((ROOT / 'docs/limits.json').read_text())
         self.document = (ROOT / 'docs/LIMITS.md').read_text()
         self.guide = (ROOT / 'docs/PolicyWitness.md').read_text()
+        generator.publication.frozen_guide(ROOT)
         self.questions = (ROOT / 'docs/QUESTIONS.md').read_text()
         self.contract = (ROOT / generator.CONTRACT_NAME).read_text()
 
@@ -43,7 +44,7 @@ class LimitsDocumentationTests(receipts.TestCase):
         if root == ROOT:
             self.track_inputs(root, fixture_inputs.generator_inputs(root, 'limits'))
         start = time.perf_counter()
-        result = self.run_command([sys.executable, '-B', '-S', str(root / 'docs/generate_limits.py'), *args],
+        result = self.run_command([sys.executable, '-B', '-S', str(root / 'docs/generate_limits.py'), *([] if root == ROOT else ['--publication']), *args],
                                 cwd=root, capture_output=True, text=True, timeout=10)
         print(f'command: {" ".join(args)} rc={result.returncode} {time.perf_counter() - start:.3f} s')
         return result
@@ -669,6 +670,100 @@ An authored source still has <!-- span limits.step_id.value -->STALE_PUBLIC<!-- 
         rendered = generator.update_document(before, limits)
         self.assertTrue(rendered.startswith('handwritten introduction\n'))
         self.assertTrue(rendered.endswith('\nhandwritten end\n'))
+
+
+class DevelopmentPublicationTests(receipts.TestCase):
+    checkout = LimitsDocumentationTests.checkout
+
+    def command(self, root, *args):
+        return self.run_command([sys.executable, '-B', '-S', str(root / 'docs/generate_limits.py'), *args],
+                                cwd=root, capture_output=True, text=True, timeout=15)
+
+    def test_current_owners_can_diverge_while_frozen_guide_and_strict_publication_are_checked(self):
+        root = self.checkout()
+        guide = root / 'docs/PolicyWitness.md'
+        frozen = guide.read_bytes()
+        owner = root / 'docs/QUESTIONS.md'
+        before = owner.read_text()
+        after = before.replace('A useful experiment identifies its target', 'A controlled experiment identifies its target', 1)
+        self.assertNotEqual(before, after)
+        owner.write_text(after)
+        for args in ((), ('--check',)):
+            result = self.command(root, *args)
+            self.assertEqual(result.returncode, 0, result.stderr)
+            self.assertIn('publication withheld', result.stdout)
+            self.assertEqual(guide.read_bytes(), frozen)
+        result = self.command(root, '--check', '--publication')
+        self.assertNotEqual(result.returncode, 0)
+        self.assertIn('stale PolicyWitness.md', result.stderr)
+        self.assertEqual(guide.read_bytes(), frozen)
+        target = root / 'manual.md'
+        result = self.command(root, '--stage-guide', str(target))
+        self.assertNotEqual(result.returncode, 0)
+        self.assertIn('publication withheld', result.stderr)
+        self.assertFalse(target.exists())
+
+    def test_development_refuses_changed_frozen_bytes_and_stale_current_owner(self):
+        for name, old, new, diagnostic in (
+            ('docs/PolicyWitness.md', '262,143', '262,144', 'frozen guide differs'),
+            ('docs/LIMITS.md', '262,143', '262,144', 'stale LIMITS.md'),
+        ):
+            with self.subTest(name=name):
+                root = self.checkout()
+                path = root / name
+                before = path.read_text()
+                self.assertIn(old, before)
+                path.write_text(before.replace(old, new, 1))
+                snapshot = {p: p.read_bytes() for p in root.rglob('*') if p.is_file()}
+                result = self.command(root, '--check')
+                self.assertNotEqual(result.returncode, 0)
+                self.assertIn(diagnostic, result.stderr)
+                self.assertEqual(snapshot, {p: p.read_bytes() for p in snapshot})
+
+    def test_development_staging_preserves_and_checks_existing_distributed_guide(self):
+        import build_contract
+        import publication
+        self.track_inputs(ROOT, sorted(set(generator.input_paths(ROOT)) | set(build_contract.inputs(ROOT))))
+        identity = build_contract.identity(ROOT)
+        with tempfile.TemporaryDirectory(prefix='pw-development-publication-') as directory:
+            out = Path(directory)
+            guide = out / 'PolicyWitness.md'
+            original = publication.frozen_guide(ROOT)
+            guide.write_bytes(original)
+            receipt = out / 'publication.json'
+            args = ('--stage-development', str(receipt), '--build-contract', identity)
+            result = self.command(ROOT, *args)
+            self.assertEqual(result.returncode, 0, result.stderr)
+            publication.validate(json.loads(receipt.read_bytes()), identity)
+            self.assertEqual(guide.read_bytes(), original)
+            saved = receipt.read_bytes()
+            guide.write_bytes(original + b'\nchanged distributed bytes\n')
+            result = self.command(ROOT, *args)
+            self.assertNotEqual(result.returncode, 0)
+            self.assertIn('distributed frozen guide differs', result.stderr)
+            self.assertEqual(receipt.read_bytes(), saved)
+            guide.write_bytes(original)
+            result = self.command(ROOT, '--stage-development', str(receipt), '--build-contract', 'development:foreign')
+            self.assertNotEqual(result.returncode, 0)
+            self.assertIn('wrong build identity', result.stderr)
+            self.assertEqual(receipt.read_bytes(), saved)
+
+    def test_signed_boundary_requires_exact_identity_and_complete_evidence(self):
+        import publication
+        expected = publication.record(ROOT, 'development:control')
+        self.assertEqual(publication.validate(expected, 'development:control'), expected)
+        for label, change in (
+            ('missing guide', lambda x: x.pop('guide')),
+            ('relabeled', lambda x: x.update(status='current')),
+            ('wrong source', lambda x: x['guide'].update(revision='0' * 40)),
+            ('wrong bytes', lambda x: x['guide'].update(sha256='0' * 64)),
+            ('wrong identity', lambda x: x.update(build_contract='development:other')),
+        ):
+            with self.subTest(label=label):
+                value = copy.deepcopy(expected)
+                change(value)
+                with self.assertRaisesRegex(ValueError, 'inconsistent publication boundary'):
+                    publication.validate(value, 'development:control')
 
 
 if __name__ == '__main__':

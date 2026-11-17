@@ -20,13 +20,14 @@ The entry point is [generate_contract_stamps.py](../generate_contract_stamps.py)
 It generates statement regions in [REQUEST](../REQUEST.md),
 [RESPONSE](../RESPONSE.md) and [ARCHITECTURE](../ARCHITECTURE.md), commitment lists
 in ARCHITECTURE, CONTROLLER, WORKER and BUILD, the [tracing account](../CONTRACT.md),
-the guide's stamp table,
+the guide's stamp table in strict publication mode,
 `public.json` and `free_text.json`. The latter records counts by relationship
 kind; generation permits reductions and refuses increases. Shape changes use
 `--refresh-shapes` and require review. Ordinary generation and explicit release
 preparation require the history claimed by the carried tables and snapshot.
-An ordinary check without tags verifies all current destinations and actual
-stamp-table agreement,
+Development checks verify current technical destinations and the guide
+bytes frozen at `3d3f8e65`. Strict `--publication` checks without tags verify
+all current destinations and actual stamp-table agreement,
 and reports that historical stamp derivation remains unverified.
 
 [AGENTS.md](AGENTS.md) gives the authoring and verification rules.

@@ -292,9 +292,37 @@ class PublicBuildContractTests(receipts.TestCase):
 
 
 class SurfaceStampTests(PublicBuildContractTests):
+    def test_development_projection_keeps_frozen_guide_and_checks_current_owners(self):
+        import generate_contract_stamps as stamps
+        import contract_fixture
+        import publication
+        directory = tempfile.TemporaryDirectory(prefix='pw-publication-stamps-')
+        self.addCleanup(directory.cleanup)
+        root = Path(directory.name)
+        fixture_inputs.copy_declared(ROOT, root, stamps.input_paths(ROOT))
+        contract_fixture.seed_release_history(root, ROOT, stamps)
+        frozen = publication.frozen_guide(root)
+        owner = root / 'docs/contract/35-profile.surface.md'
+        before = owner.read_text()
+        after = before.replace('optional capture of the worker', 'optional byte capture of the worker', 1)
+        self.assertNotEqual(before, after)
+        owner.write_text(after)
+        self.track_inputs(root, stamps.input_paths(root))
+        with self.assertRaisesRegex(ValueError, 'stale generated contract'):
+            stamps.check(root, publication=False)
+        contract_fixture.write_outputs(root, stamps.render(root, publication=False))
+        self.assertEqual(publication.frozen_guide(root), frozen)
+        self.assertTrue(stamps.check(root, publication=False))
+        with self.assertRaisesRegex(ValueError, 'PolicyWitness.md'):
+            stamps.check(root, publication=True)
+        technical = root / 'docs/RESPONSE.md'
+        technical.write_text(technical.read_text().replace('optional byte capture', 'stale capture', 1))
+        with self.assertRaisesRegex(ValueError, 'stale generated contract'):
+            stamps.check(root, publication=False)
+
     def test_current_tree_has_complete_stamp_derivation(self):
         import generate_contract_stamps as stamps
-        self.assertTrue(stamps.check(ROOT, require_history=True))
+        self.assertTrue(stamps.check(ROOT, require_history=True, publication=False))
 
     def test_stamped_source_copy_and_no_tags_clone_validate_without_erasing_stamps(self):
         import generate_contract_stamps as stamps

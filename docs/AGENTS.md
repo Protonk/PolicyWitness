@@ -23,7 +23,8 @@ requires an authored-tree change before it can be routed separately.
 Run `tests/lib/python.sh docs/generate_contract_stamps.py` after changing the
 tree or map. Edit teaching prose outside generated regions; the generator owns
 the statement and commitment-list regions, trace views, snapshot and free-text
-counts. Stamp tables occur only in CONTRACT and the user guide. Use
+counts. Stamp tables occur only in CONTRACT and the user guide. Development generation
+updates CONTRACT while checking the guide against its frozen `3d3f8e65` bytes. Use
 `--check --require-history` when verifying historical derivation with annotated
 release tags; a history-free check validates current outputs and table agreement
 without establishing their historical derivation. Follow
@@ -40,8 +41,9 @@ from its authored-span pass, preserving each generator's ownership.
 Edit [limits.json](limits.json) for limit records, then run
 `tests/lib/python.sh docs/generate_limits.py` from the repository root. Edit shared limit
 explanations in [LIMITS.md](LIMITS.md) and shared questions in
-[QUESTIONS.md](QUESTIONS.md); the generator copies both into
-[PolicyWitness.md](PolicyWitness.md). Write links in shared questions as
+[QUESTIONS.md](QUESTIONS.md); the generator derives their guide projection for validation. The development
+boundary keeps [PolicyWitness.md](PolicyWitness.md) byte-unchanged at
+`3d3f8e65`, including copied regions, scalar spans and stamps. Write links in shared questions as
 `PolicyWitness.md#anchor` so the copied guide can resolve them internally.
 The extension coverage region in [EXTENSIONS.md](EXTENSIONS.md) is also copied
 into the guide. Keep the topic introduction inside the shared markers so it
@@ -74,9 +76,12 @@ describe manifest validation, copying, staging and prose checks. For changes to
 limits themselves, follow the
 [verification guidance](../tests/AGENTS.md#verify-a-limit-change).
 
-When staging the standalone guide, run
-`tests/lib/python.sh docs/generate_limits.py --stage-guide dist/PolicyWitness.md`
-after regeneration; staging checks freshness and does not regenerate sources.
+Development builds record publication withheld and preserve any frozen guide
+copy. `--publication` selects strict guide freshness; staging with
+`--publication --stage-guide PATH` checks it without regenerating sources.
+Do not use publication generation to refresh the frozen repository guide.
+Strict release acceptance, archival and publication require the checkout at
+the corresponding annotated tag and compare actual source bytes with its blobs.
 Review the copied sections as part of the guide, including their introductions,
 heading levels and links. Run `tests/run.sh --suite source_drift` for the
 documentation checks. If an edit removes a mutation control's prose target,

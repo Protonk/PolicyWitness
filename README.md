@@ -91,8 +91,9 @@ make build IDENTITY='Developer ID Application: YOUR NAME (TEAMID)'
 ```
 
 The build writes `dist/PolicyWitness.app`, a ZIP ready for notarization at
-`dist/PolicyWitness.zip`, and the standalone user guide at
-`dist/PolicyWitness.md`. It reuses `builddir/` and `controller/target/`
+`dist/PolicyWitness.zip`, and a publication-withheld receipt at
+`dist/publication.json`. The guide is frozen at `3d3f8e65`; development builds
+preserve any existing `dist/PolicyWitness.md` without staging it as current. It reuses `builddir/` and `controller/target/`
 under the toolchain and output target recorded when they were set up;
 `PW_FRESH_BUILD=1` replaces their build state before compiling, and a changed compiler or SDK is refused
 until then. A build holds the checkout's test lock, so a build and a test

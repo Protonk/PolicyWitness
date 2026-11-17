@@ -32,6 +32,7 @@ import build_provenance
 import retention
 import run_ownership
 import release_runs
+import publication_freshness
 import signer_check
 
 ROOT = Path(__file__).resolve().parents[2]
@@ -185,6 +186,9 @@ def archive_locked(attempt, *, dist, root, notes):
             problems.append(f"ZIP was built from {info.get('PWBuildCommit')}, but {tag} names {commit}")
         if info.get('PWBuildDescribe') != tag:
             problems.append(f"ZIP was built at {info.get('PWBuildDescribe')!r}, not exactly at {tag}")
+    freshness = publication_freshness.require(root, tag, info.get('PWBuildCommit'))
+    if guide.is_file() and digest(guide) != freshness['guide_sha256']:
+        problems.append('staged guide differs from the freshly verified tagged source')
     retention.require_new_release(root, tag)
     dest = dist / 'archive' / tag
     if dest.exists():
@@ -227,7 +231,7 @@ def archive_locked(attempt, *, dist, root, notes):
     receipts += [dict(original_path=str(relative_attempt / item), archived_path=f'evidence/{item}')
                  for item in ('acceptance.json', 'release.json')]
     archived = dict(
-        schema_version=2, execution_contract=accepted['execution_contract'], version=version, build_number=str(info.get('CFBundleVersion')), tag=tag,
+        schema_version=2, publication=freshness, execution_contract=accepted['execution_contract'], version=version, build_number=str(info.get('CFBundleVersion')), tag=tag,
         source_commit=commit, origin=None, archive=name, sha256=final_hash, guide='PolicyWitness.md',
         notarization_submission_id=notarization.get('submission_id'),
         submitted_sha256=record.get('submitted_sha256'),

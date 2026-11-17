@@ -78,7 +78,7 @@ check_shapes, collected_shapes = _backend.check_shapes, _backend.collected_shape
 def input_paths(root):
     return sorted({*tree_input_paths(root), *STAMP_OUTPUTS,
                    *_backend.presentation.destinations(root),
-                   'docs/generate_contract_stamps.py', 'docs/generate_porcelain.py',
+                   'docs/publication.py', 'docs/generate_contract_stamps.py', 'docs/generate_porcelain.py',
                    'docs/limits.json', 'tests/catalog.json', 'docs/porcelain.json',
                    'controller/src/runner_select.rs'})
 
@@ -87,6 +87,7 @@ def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument('--check', action='store_true')
     parser.add_argument('--release')
+    parser.add_argument('--publication', action='store_true', help='derive current guide stamps for publication')
     parser.add_argument('--require-history', action='store_true', help='refuse incomplete stamp verification')
     parser.add_argument('--refresh-shapes', action='store_true', help='recollect surface shape goldens for review')
     parser.add_argument('--preview', metavar='PATH', help='render the draft tree separately from the public contract')
@@ -118,13 +119,13 @@ def main():
         if args.check and args.refresh_shapes:
             raise ValueError('--check cannot refresh goldens')
         if args.check:
-            complete = check(ROOT, args.require_history)
+            complete = check(ROOT, args.require_history, publication=args.publication)
             print('ok: contract surface stamps current' if complete else
                   'ok: contract inputs current; stamp derivation not checked (release history unavailable)')
             return
         if args.require_history and not release_tags(ROOT):
             raise ValueError('release history unavailable; fetch annotated release tags')
-        results = render(ROOT, args.release, refresh_shapes=args.refresh_shapes)
+        results = render(ROOT, args.release, refresh_shapes=args.refresh_shapes, publication=args.publication)
         stale = [name for name, before, after in results if before != after]
         if args.check and stale:
             raise ValueError('stale contract stamps: ' + ', '.join(stale) + '; run tests/lib/python.sh docs/generate_contract_stamps.py')
@@ -133,7 +134,7 @@ def main():
                 if before != after:
                     (ROOT / name).parent.mkdir(parents=True, exist_ok=True)
                     (ROOT / name).write_text(after)
-        print('ok: contract surface stamps current')
+        print('ok: contract surface stamps current' + ('' if args.publication else '; publication withheld'))
     except (ValueError, OSError, KeyError) as error:
         parser.exit(1, f'contract stamps: {error}\n')
 

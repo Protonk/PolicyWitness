@@ -28,6 +28,7 @@ sys.path.insert(0, str(Path(__file__).resolve().parent))
 from generator_common import citation, cited_paths, require_test, format_value, render_spans, span_problems
 import markdown_reader
 import repository_tree
+import publication
 
 ROOT = Path(__file__).resolve().parents[1]
 START = "<!-- BEGIN GENERATED LIMITS -->"
@@ -70,7 +71,7 @@ GUIDE_NAME = "PolicyWitness.md"
 # What a run reads besides the files the manifest cites: this generator and its helpers, the manifest, the
 # documents it renders or copies, the questions, the coverage document and the matrix. The reader's files are
 # added by input_paths.
-INPUTS = ("docs/generate_limits.py", "docs/generator_common.py", "tests/catalog.json", "docs/limits.json",
+INPUTS = ("docs/publication.py", "docs/generate_limits.py", "docs/generator_common.py", "tests/catalog.json", "docs/limits.json",
           "docs/repository_tree.py", "docs/LIMITS.md", "docs/PolicyWitness.md", "docs/QUESTIONS.md", *SPAN_DOCUMENTS)
 CONTRACT_NAME = "tests/FAILURE-PROPAGATION-CONTRACT.md"
 MATRIX_NAME = "tests/fixtures/comparison/matrix.json"
@@ -494,6 +495,11 @@ def main():
     mode.add_argument("--check", action="store_true", help="check the documents; do not write")
     mode.add_argument("--stage-guide", type=Path, metavar="PATH",
                       help="check the documents, then copy the guide to PATH")
+    mode.add_argument("--stage-development", type=Path, metavar="PATH",
+                      help="check current owners and frozen guide; write a publication-withheld receipt")
+    parser.add_argument("--publication", action="store_true",
+                        help="require current guide copies and spans as well as technical owners")
+    parser.add_argument("--build-contract", help="derived identity for a development staging receipt")
     args = parser.parse_args()
     path = ROOT / "docs/LIMITS.md"
     guide_path = ROOT / "docs/PolicyWitness.md"
@@ -501,6 +507,10 @@ def main():
     extensions_path = ROOT / EXTENSIONS_NAME
     contract_path = ROOT / CONTRACT_NAME
     try:
+        if not args.publication:
+            publication.frozen_guide(ROOT)
+        if args.stage_guide is not None and not args.publication:
+            raise ValueError('publication withheld: --stage-guide requires strict --publication checking')
         limits = load_limits(ROOT / "docs/limits.json")
         rows = load_matrix(ROOT / MATRIX_NAME)
         before = path.read_text()
@@ -532,8 +542,10 @@ def main():
         # still appear in the stale copied text, but never in the new sources.
         guide_after = render_spans(guide_after, "limits", span_values(limits), "docs/PolicyWitness.md")
         validate_guide(guide_after, limits)
+        if not args.publication:
+            guide_after = guide_before
         question_count = sum(heading.level == 3 for heading in markdown_reader.parse(shared_questions(questions)).headings)
-        if args.check or args.stage_guide is not None:
+        if args.check or args.stage_guide is not None or args.stage_development is not None:
             stale = [name for name, old, new in [
                 ("LIMITS.md", before, after), (CONTRACT_NAME, contract_before, contract_after),
                 ("PolicyWitness.md", guide_before, guide_after)]
@@ -546,6 +558,15 @@ def main():
                                    for problem in span_problems(text, "limits", span_values(limits), name))
                 raise ValueError(f"stale {', '.join(stale)}; " + (f"{detail}; " if detail else "")
                                  + "run tests/lib/python.sh docs/generate_limits.py")
+            if args.stage_development is not None:
+                import build_contract
+                actual = build_contract.identity(ROOT)
+                if args.build_contract != actual:
+                    raise ValueError('development publication boundary has the wrong build identity')
+                distributed = args.stage_development.parent / 'PolicyWitness.md'
+                if distributed.exists() and distributed.read_bytes() != guide_bytes:
+                    raise ValueError('distributed frozen guide differs from ' + publication.REVISION)
+                publication.write(args.stage_development, publication.record(ROOT, actual))
             if args.stage_guide is not None:
                 if not args.stage_guide.is_file() or args.stage_guide.read_bytes() != guide_bytes:
                     args.stage_guide.write_bytes(guide_bytes)
@@ -561,6 +582,7 @@ def main():
                     (ROOT / name).write_text(new)
         print(f"ok: {len(limits)} limits, {question_count} questions, {len(rows)} matrix rows; " +
               (f"guide staged at {args.stage_guide}" if args.stage_guide is not None else
+               "documents current; publication withheld" if not args.publication else
                "documents current" if args.check else "LIMITS.md and the matrix table generated; guide copies updated"))
         return 0
     except (ValueError, OSError, TypeError, KeyError) as error:

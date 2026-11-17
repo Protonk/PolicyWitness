@@ -511,3 +511,11 @@ Run:
 ./tests/run.sh --case preflight/release_publish_controls
 ./tests/run.sh --case preflight/release_rotation_controls
 ```
+
+Release freshness controls compare tagged source bytes independently of Git's
+index hints, then run strict limits and contract generators. A constructed current
+release passes; a clean annotated development tag with a stale guide fails.
+Acceptance's command fixtures isolate that source gate with an explicit stand-in;
+they establish extraction and battery behavior, not source freshness. New archive
+and publication operations require that same gate and compare the delivered guide
+with the source-bound digest. Historical archive inspection is unchanged.

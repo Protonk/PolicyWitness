@@ -18,6 +18,7 @@ import history_v1
 import interface_join
 import tree as model
 import presentation
+import publication as publication_boundary
 from generate_porcelain import wire_identity
 
 CONTRACT = presentation.CONTRACT
@@ -243,7 +244,11 @@ def assemble(tree, body):
     return values
 
 
-def render(root, release=None, refresh_shapes=False, tree=None):
+def render(root, release=None, refresh_shapes=False, tree=None, *, publication=True):
+    if not publication:
+        publication_boundary.frozen_guide(root)
+        if release:
+            raise ValueError('release preparation requires strict publication mode')
     tree = tree or model.load_tree(root)
     interface_join.check(root, tree)
     tags = release_tags(root)
@@ -257,7 +262,7 @@ def render(root, release=None, refresh_shapes=False, tree=None):
         selected.append(release)
     snapshot = dict(format=history_v1.FORMAT, history=selected, surfaces=current_rows(tree))
     values = {**assemble(tree, body),
-              GUIDE: _replace_table(read(root, GUIDE), GUIDE, body),
+              GUIDE: _replace_table(read(root, GUIDE), GUIDE, body) if publication else read(root, GUIDE),
               history_v1.SNAPSHOT: canonical(snapshot), BASELINE: canonical(tree.free_counts)}
     if refresh_shapes:
         values.update(shapes)
@@ -265,18 +270,20 @@ def render(root, release=None, refresh_shapes=False, tree=None):
             for name, value in values.items()]
 
 
-def check(root, require_history=False):
+def check(root, require_history=False, *, publication=True):
+    if not publication:
+        publication_boundary.frozen_guide(root)
     tree = model.load_tree(root)
     interface_join.check(root, tree)
     check_shapes(root, tree=tree)
     check_ratchet(root, tree)
     tags = release_tags(root)
     if tags:
-        values = render(root, tree=tree)
+        values = render(root, tree=tree, publication=publication)
     else:
         if require_history:
             raise ValueError('release history unavailable; fetch annotated release tags for full verification')
-        tables = [table(read(root, name), name) for name in STAMP_OUTPUTS]
+        tables = [table(read(root, name), name) for name in (STAMP_OUTPUTS if publication else (CONTRACT,))]
         if len(set(tables)) != 1:
             raise ValueError('stale contract stamps: tables disagree')
         snapshot = history_v1.snapshot(lambda name: read(root, name))

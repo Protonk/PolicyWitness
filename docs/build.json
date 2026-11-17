@@ -1018,7 +1018,7 @@
         "partial"
       ],
       "reads": "Info.plist, the three Rust outputs, runner/augments/, dist/README.md and dist/AGENTS.md, all admitted before the first check",
-      "writes": "the two documents under DIST_DIR; removes the previous app, ZIP and guide; the stamped Info.plist, the three Rust executables and the augments under the new app",
+      "writes": "the two documents under DIST_DIR; removes the previous app and ZIP; preserves the frozen guide; the stamped Info.plist, the three Rust executables and the augments under the new app",
       "refusals": [],
       "sources": [
         {
@@ -1267,7 +1267,7 @@
         "partial"
       ],
       "reads": "the signed bytes, entitlements and exported symbols of the helpers, services and augments; the build session; every shipped output's load commands, container, architecture names and signature display; the caller's requests and Cargo's effective deployment target and SDK, from the build session",
-      "writes": "Contents/Resources/Evidence/manifest.json, symbols.json and provenance.json, the manifest listing the other two; the record only after it passes its own validation",
+      "writes": "Contents/Resources/Evidence/manifest.json, symbols.json, provenance.json and publication.json; the manifest lists the other records; publication is withheld with the frozen guide revision and derived build contract",
       "refusals": [
         "evidence_failed",
         "provenance_required_unknown",
@@ -1391,21 +1391,21 @@
     {
       "id": "guide",
       "banners": [
-        "Staging checked user guide"
+        "Recording development publication boundary"
       ],
       "variants": [
         "full",
         "partial"
       ],
       "reads": "docs/PolicyWitness.md and its inputs",
-      "writes": "PolicyWitness.md under DIST_DIR",
+      "writes": "publication.json under DIST_DIR; publication withheld, frozen guide unchanged",
       "refusals": [
         "stale_guide"
       ],
       "sources": [
         {
           "path": "build.sh",
-          "symbol": "Staging checked user guide"
+          "symbol": "Recording development publication boundary"
         }
       ],
       "checks": [
@@ -4066,7 +4066,7 @@
       "sources": [
         {
           "path": "build.sh",
-          "symbol": "--stage-guide"
+          "symbol": "--stage-development"
         },
         {
           "path": "docs/generate_limits.py",
@@ -5514,7 +5514,7 @@
     },
     {
       "id": "inv_guide",
-      "command": "docs/generate_limits.py --stage-guide",
+      "command": "docs/generate_limits.py --stage-development",
       "step": "guide",
       "variants": [
         "full",
@@ -5523,7 +5523,7 @@
       "sources": [
         {
           "path": "build.sh",
-          "symbol": "--stage-guide"
+          "symbol": "--stage-development"
         }
       ],
       "checks": [
@@ -5753,13 +5753,13 @@
       "id": "dist",
       "path": "dist/ (DIST_DIR)",
       "facts": {
-        "Trusted as": "the output directory; the previous app, ZIP and guide are preserved by every refusal before assembly, including fresh mode's cache replacement, and are removed one after another at assembly with nothing preserved",
-        "Refused when": "never; a failure between the removals leaves a mixture, a refusal before the seal leaves an unsealed partial app, and a later failure can leave a sealed app; inspection checks the app, not completion of guide staging or ZIP creation"
+        "Trusted as": "the output directory; the previous app and ZIP are preserved by every refusal before assembly, including fresh mode's cache replacement, and are removed at assembly; the frozen guide remains unchanged",
+        "Refused when": "never; a failure between the removals leaves a mixture, a refusal before the seal leaves an unsealed partial app, and a later failure can leave a sealed app; inspection checks the app, not completion of boundary receipt staging or ZIP creation"
       },
       "sources": [
         {
           "path": "build.sh",
-          "symbol": "rm -f \"${ZIP_NAME}\" \"${GUIDE_NAME}\""
+          "symbol": "rm -f \"${ZIP_NAME}\""
         }
       ],
       "checks": [

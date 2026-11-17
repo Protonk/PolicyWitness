@@ -45,6 +45,8 @@ sys.path.insert(0, str(Path(__file__).resolve().parent))
 import build_provenance  # noqa: E402
 import signer_check  # noqa: E402
 import build_equipment  # noqa: E402
+sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "docs"))
+import publication  # noqa: E402
 
 
 def sha256_file(path: Path) -> str:
@@ -520,6 +522,20 @@ def main() -> int:
             "sha256": sha256_file(provenance_path),
         }
     )
+
+    # The boundary is part of the signed inventory. A substitution preserves the
+    # baseline record; it cannot claim fresh publication from replacement bytes.
+    info = plistlib.loads((app_bundle / "Contents/Info.plist").read_bytes())
+    if info.get("PWPublicationBoundary") == 1:
+        if args.build_session:
+            boundary = publication.record(Path(args.root), info.get("PWContract"))
+        else:
+            boundary = json.loads((Path(args.substitution_of) / publication.RECORD).read_bytes())
+        publication.validate(boundary, info.get("PWContract"))
+        boundary_path = app_bundle / publication.RECORD
+        publication.write(boundary_path, boundary)
+        entries.append(dict(id="evidence.publication", kind="evidence",
+                            rel_path=publication.RECORD, sha256=sha256_file(boundary_path)))
 
     manifest = {
         "schema_version": 1,

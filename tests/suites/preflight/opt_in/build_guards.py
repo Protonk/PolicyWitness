@@ -392,7 +392,7 @@ def test_build_guards(out, identity):
                             assert config['codesign']['target'] in signed, (signed, config['codesign']['target'])
                         if fault != 'none':
                             assert "Checking every executable's signer" in stdout, stdout
-                            for banner in ('Staging checked user guide', 'Creating zip'):
+                            for banner in ('Recording development publication boundary', 'Creating zip'):
                                 assert banner not in stdout, stdout
                             assert not (dist / 'PolicyWitness.zip').exists()
                             assert not (dist / 'PolicyWitness.md').exists()
