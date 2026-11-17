@@ -27,11 +27,14 @@ draft replacement passages or publish substitute user guidance.
 The regions' owners remain current technical accounts: `docs/LIMITS.md`,
 `docs/QUESTIONS.md`, `docs/EXTENSIONS.md`, the shared statuses and reading rules
 in `tests/FAILURE-PROPAGATION-CONTRACT.md`, and the comparison matrix rows.
-Generated content inside an owner region follows its machine definition.
-Change authored prose there only where a selected change makes a statement
-false, and only to state the resulting behavior. The seam migration reaches
-this at once: the limits table inside `SHARED LIMITS` names selected
-`_test_overrides` members and their refusal fields.
+Regenerate their tables and spans from current definitions. Where a selected
+change makes an authored statement false, correct or remove that claim in its
+owner, including the scope and qualifications needed to state the resulting
+behavior. Apply the same restriction to authored prose in generator inputs,
+including `docs/limits.json` and matrix descriptions. Do not add workflows,
+examples or reorganized explanations to these shared regions. The seam migration
+requires correcting the limits table's override and refusal names at their
+definitions while leaving the guide's copy frozen.
 
 ### Handling changes during the transition
 
@@ -189,14 +192,18 @@ legacy override block. Internal representations may be reused; they must not
 leave an ordinary activation bypass. Flag spelling remains an implementation
 choice. This is interface separation, not a new authentication claim.
 
-One default live control needs both sides of that boundary: the combined
-oversize pairs in `failure_boundaries/check.py` include `worker_executable_path`
-with `validator_executable_path` in one request. Neither route can carry that
-pair afterwards. Retire it from the live control to the direct-orchestrator
-pairs in `QueryAdmissionTests.swift`, which already exercise it, and narrow the
-live case's credited claim. Its other pairs follow their fields' routes. Source
-reading at `de4c6308` found no other live request combining a selected control
-with an unselected substitution.
+Of the ten combined oversize pairs in
+[failure_boundaries/check.py](../tests/suites/failure_boundaries/check.py), only
+`worker_executable_path` with `validator_executable_path` crosses this boundary.
+Neither route can carry that pair afterwards. Retire that live pair, retaining
+its bounded/sanitized refusal checks in the existing direct-orchestrator pairs
+in [QueryAdmissionTests.swift](../runner/Tests/PWRunnerCoreTests/QueryAdmissionTests.swift).
+Do not credit those checks as CLI/XPC coverage for the retired combination;
+narrow the live case's claim. Its other nine pairs follow their fields' routes.
+Source inspection at `4c92ea68` of live request construction, wrappers and
+fixtures found no other combination of a selected control with an unselected
+substitution. Mixed constructed unit inputs and reply fixtures are not live
+submissions; this is source evidence, not executed migration equivalence.
 
 Keep `test-input read` publication-only. Preserve the ordinary sentinel effect
 of `worker_timeout_ms` and the separate actor execution allowance; actor

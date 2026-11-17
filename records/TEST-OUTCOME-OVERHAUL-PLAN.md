@@ -293,7 +293,7 @@ Caller map from `3d3f8e65`; confirm intervening changes before editing:
 | Actor applicability | `check_actor_compositions.py`, particularly paired `timeout_applicability_specimens`. |
 | Launch/ready/reservation | `runner_exec_inheritance/launch_inventory.py`, `runner_ready_byte_resilience/run.sh`, BYOXPC `single_use.py` and `bad_neighbor_claims.py`, including direct-client submissions. |
 | Validator faults/deadlines | `runner_validator_failure/check.py` and `runner_validator_failure/check_signal.py`, `runner_outcome_validator_no_reply/check.py`, `check_phases.py` and its BYOXPC caller. |
-| Ordering/comparison | `check_ordering.py`, its shell/mutation callers, and `check_comparison_matrix.py`. Preserve independent matrix/frozen guide inputs; separate controls in the invocation adapter. |
+| Ordering/comparison | `check_ordering.py`, its shell/mutation callers, and `check_comparison_matrix.py`. Keep matrix expectations independent of observed output; separate controls in the invocation adapter. |
 | Identity/strings/paths | `check_dossier.py` and BYOXPC caller, `check_diagnostic_transport.py`, `check_path_queries_integrated.py`, `failure_boundaries/check.py`. Distinct worker substitutions stay outside; management retires the one combined worker/validator oversize pair in `failure_boundaries/check.py` to its unit control. |
 | Held workloads | [footprint_workloads.py](../tests/lib/footprint_workloads.py)::HeldWorkload for `check_held_phase_footprint.py` and `check_aftermath_footprint.py`, actor hosts and constructed CPU controls. |
 | Request/evidence | `runner_outcome_bad_request/contract.py` live self-signal case; current request examples, shape/generator controls and evidence readers. Preserve historical fixtures' semantics. |
