@@ -19,9 +19,19 @@ before reusing local or gitignored evidence; source inspection is not execution.
 
 ## Guide freeze and public commitments
 
-Leave `docs/PolicyWitness.md`, its distributed copies, stamp table and shared
-explanatory source regions unchanged against `3d3f8e65`. Do not collect guide
-errata, draft replacement passages or publish substitute user guidance.
+Leave `docs/PolicyWitness.md`, its distributed copies and its stamp table
+byte-unchanged against `3d3f8e65`. That includes the guide's copies of the
+shared explanatory regions and its limit spans. Do not collect guide errata,
+draft replacement passages or publish substitute user guidance.
+
+The regions' owners remain current technical accounts: `docs/LIMITS.md`,
+`docs/QUESTIONS.md`, `docs/EXTENSIONS.md`, the shared statuses and reading rules
+in `tests/FAILURE-PROPAGATION-CONTRACT.md`, and the comparison matrix rows.
+Generated content inside an owner region follows its machine definition.
+Change authored prose there only where a selected change makes a statement
+false, and only to state the resulting behavior. The seam migration reaches
+this at once: the limits table inside `SHARED LIMITS` names selected
+`_test_overrides` members and their refusal fields.
 
 ### Handling changes during the transition
 
@@ -66,17 +76,20 @@ after establishing that cohort's migration equivalence.
 
 Address the coupling in `build.sh`, `docs/generate_limits.py` and
 `docs/contract/runtime.py`: builds check generated copies and stage the guide;
-current limits/shared content and contract stamps propagate into it.
+current limits/shared content and contract stamps propagate into it. Default
+`source_drift` cases repeat the comparison of the guide with its live owners.
 `docs/build_contract.py` distinguishes development and release identities but
-does not itself establish publication freshness.
+does not itself establish publication freshness: a clean annotated tag alone
+yields `release:<tag>`.
 
 Before the checkpoint baseline, implement the required development/build support:
 
-- Preserve frozen guide/shared-region bytes while checking current machine
-  definitions, technical projections, interface inventory and build identities
-  against the development product. Separate a frozen publication projection from
-  its current technical definition where necessary; do not hand-edit generated
-  copies or maintain a second normative explanation.
+- Preserve frozen guide bytes while checking current machine definitions,
+  technical projections, owner regions, interface inventory and build identities
+  against the development product. Check the guide's region copies, limit spans
+  and stamp table against their `3d3f8e65` bytes, and each owner against its
+  current definition. Do not hand-edit generated copies or maintain a second
+  normative explanation.
 - Record publication withheld in development artifacts and verification receipts.
   Do not stage the frozen guide as a freshly verified current manual. Use the
   existing generation/build owners and a bounded revision/region distinction.
@@ -84,14 +97,19 @@ Before the checkpoint baseline, implement the required development/build support
   identities and missing or inconsistent boundary evidence. If a free-text or
   prose guard blocks an authorized change, revise that specific development rule
   with positive and negative controls; do not disable the guard generally.
-- Keep strict publication freshness in release preflight, publication and archive
-  admission. They must reject development artifacts/receipts even after attempted
-  relabeling or tagging. Preserve signing, source/app agreement, provenance,
-  cleanup and historical archive rules.
+- Strict publication freshness is enforced today only by `make release`'s
+  preflight in `tests/lib/release_preflight.py`. Acceptance, archive and
+  publication check identity, tag and hashes but run no freshness check. Extend
+  strict freshness so no route from a tagged commit to an accepted, archived or
+  published release omits it. Refusal rests on freshness established from source
+  at the tagged commit, never on a recorded identity or the absence of a
+  publication-withheld record, so a tagged or relabeled development candidate
+  is refused. Preserve signing, source/app agreement, provenance, cleanup and
+  historical archive rules.
 
-Reporting-reader support lands in the overhaul's capability stage. Exercise
-intentional divergence beside the listed faults through routed controls before
-final integrated verification.
+Reporting-reader support lands in the overhaul's capability stage. Land routed
+controls exercising intentional divergence beside the listed faults with this
+support, before the first divergent change.
 
 ## Assess and dispose of findings
 
@@ -140,7 +158,7 @@ together where affected, using owning generators and the publication boundary.
 | Readers: DT-53/132 and identity relations | Identify selected callers omitting the lifecycle oracle or equivalent assertions and correct credited coverage. Pair with the association rehearsal and overhaul reader contrasts; do not presume a unified validator. |
 | Erasure: DT-63/124/125 | Separate host and worker coverage and last-use clearing from final teardown. Use the overhaul's assertion repair and any justified pre-teardown observation. |
 | Import/receipts: DT-82/84/85/98/103 and related findings | Distinguish dropped scanner information, missed literal imports, unevaluated forms, receipt input coverage and inference about application. [Source association holds by construction](DOCUMENTATION-TRACE-REVIEW.md#passages-in-the-appended-account-that-need-narrower-wording); compiler-file inputs lack that observation. A source-digest comparison cannot supply it. Decide the instrument's limit separately from scanner repairs. Pair receipt decisions with the capture rehearsal and label-admission checks. |
-| Descendant lifetime | Assess remaining truthful-evidence and effect obligations for the overhaul's survivor conversion. This has no DT identifier and does not join the DT coverage map. |
+| Descendant lifetime | Assess remaining truthful-evidence and effect obligations for the overhaul's survivor conversion. Rule by name on the relation that makes `leader_exit_and_eof` valid only with `not_requested`: the [lifecycle surface](../docs/contract/32-lifecycle.surface.md), [controller admission](../controller/src/porcelain_native.rs), the [Swift evidence reader](../runner/Sources/PWRunnerCore/PWRunnerAttemptEvidence.swift) and the [consumer](../tests/lib/consumer.py) enforce it, and the worker signals the group only after a deadline, observation error or local fault. Retained, it is a truthful-evidence commitment: a product that ends the descendant at ordinary completion must change that relation and its readers together, and the reduction account says so. This has no DT identifier and does not join the DT coverage map. |
 | DT-55/56 | Decide exec-output representation; preserve embedded-NUL and split-UTF-8 contrasts, retained content and loss indicators. |
 | DT-74 | Distinguish absent registry from failed inspection using absent path, inaccessible ancestor and unreadable-file contrasts. |
 | DT-89 | Contrast readable and unreadable selected source directories; omission must not masquerade as complete discovery. |
@@ -159,8 +177,9 @@ Move these eight controls to `test-input run REQUEST` with explicit control flag
 
 Use the overhaul's [caller map](TEST-OUTCOME-OVERHAUL-PLAN.md#selected-seam-callers).
 Migrate selected invocations, not entire catalog families. Leave
-`worker_executable_path` and `actor_equipment_executable_paths` on their existing
-ordinary-only paths, preserving their coverage and reference account.
+`worker_executable_path` and `actor_equipment_executable_paths` in the
+`_test_overrides` block of an ordinary submission, each on its existing request
+form, preserving their coverage and reference account.
 
 Reuse run orchestration. Carry explicit experimental mode outside the ordinary
 request through client transport and host admission. Ordinary submissions reject
@@ -169,6 +188,15 @@ submissions take controls only through explicit arguments and reject a nonempty
 legacy override block. Internal representations may be reused; they must not
 leave an ordinary activation bypass. Flag spelling remains an implementation
 choice. This is interface separation, not a new authentication claim.
+
+One default live control needs both sides of that boundary: the combined
+oversize pairs in `failure_boundaries/check.py` include `worker_executable_path`
+with `validator_executable_path` in one request. Neither route can carry that
+pair afterwards. Retire it from the live control to the direct-orchestrator
+pairs in `QueryAdmissionTests.swift`, which already exercise it, and narrow the
+live case's credited claim. Its other pairs follow their fields' routes. Source
+reading at `de4c6308` found no other live request combining a selected control
+with an unselected substitution.
 
 Keep `test-input read` publication-only. Preserve the ordinary sentinel effect
 of `worker_timeout_ms` and the separate actor execution allowance; actor
@@ -207,14 +235,20 @@ revisions; verify the unchanged build-contract digest.
 
 Replay identical retained reports, events, family/control receipts, command
 accounts and captured selection/authority context through old and new
-`suite_run.reconcile`, `account`, `finish`, dependency and battery-validation
-paths in isolated outputs. Independently specified counts, decisions and failure
-reasons must agree for unchanged authority. Separate new informational/advisory
-fixtures have explicit expected deltas or old-reader unsupported-form refusals.
-Include corruption, omission, contradictory authority and incomplete accounting
-beside valid unfavorable judgments. Reuse existing controls; any feeding adapter
-must not invent evidence. Normalize only incidental output locations, never
-identities, evidence, authority or failure distinctions.
+`suite_run.reconcile`, `account`, `finish` and battery-validation paths in
+isolated outputs. Replay inputs are raw records: case reports, event, phase and
+operation streams, the `plan.json` selection and recorded command exits. Derived
+fields in a retained `run.json` or `dispatch.json` are comparison targets, never
+inputs. The dependency gate is inline in `suite_run.execute`; exercise it
+through dispatcher fixture runs instead.
+
+Independently specified counts, decisions and failure reasons must agree for
+unchanged authority. Separate new informational/advisory fixtures have explicit
+expected deltas or old-reader unsupported-form refusals. Include corruption,
+omission, contradictory authority and incomplete accounting beside valid
+unfavorable judgments. Reuse existing controls; any feeding adapter must not
+invent evidence. Normalize only incidental output locations, never identities,
+evidence, authority or failure distinctions.
 
 Explain live differences from observations and replay before crediting the
 checkpoint. An explained failed obligation remains a failure. Prefer replay and

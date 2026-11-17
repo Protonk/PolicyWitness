@@ -75,6 +75,13 @@ acceptable. Separate product judgments from validity and cleanup checks within
 mixed cases. Informational work must not be implemented as skip, `xfail` or an
 ignored assertion. Untouched cases keep their enforcement.
 
+A dependent requires its predecessor's valid completion and satisfied enforced
+judgments, not a favorable non-gating result. An invalid, incomplete or
+unsettled predecessor blocks it, as an enforced failure does now. An unfavorable
+advisory judgment or a completed informational observation does not. The gate
+is inline in `suite_run.execute` and admits only `pass`; verify the revised
+rule through dispatcher fixture runs.
+
 Advisory evidence uses ordinary engineering judgment: it may justify investigation,
 a product change, new enforcement or no action. Add no advisory-specific escalation
 process. Independent obligations remain enforceable, including when advisory
@@ -93,9 +100,9 @@ and ownership machinery; no universal cross-language result protocol is required
 
 | Owner | Required work |
 | --- | --- |
-| `test_cli.py`, catalog, `testlib.sh`, `case.sh`, `suite_run.py` | Preserve selection, lifecycle events, reports, interpreter identity, command settlement and independent harness errors. Repair selected bare-assertion paths in smoke, apply-isolation-v2 and witness-baseline scripts so an assertion does not merely disappear into an unrun case; do not classify arbitrary exceptions as product verdicts. |
+| `test_cli.py`, catalog, `testlib.sh`, `case.sh`, `suite_run.py` | Preserve selection, lifecycle events, reports, interpreter identity, command settlement and independent harness errors. After the checkpoint, since these edits change default cases, repair selected bare-assertion paths in smoke, apply-isolation-v2 and witness-baseline scripts so an assertion does not merely disappear into an unrun case; do not classify arbitrary exceptions as product verdicts. |
 | `pytest_engine.py`, `pytest_family.py`, `receipts.py` | Preserve setup/call/teardown and complete command/input accounting. A successful observation phase is not a passing product assertion. Do not blanket-catch `AssertionError`; unexpected exceptions still fail. Reuse input/blob recording and remove replaced unittest scheduling/status duties. |
-| `execution_contract.py`, `release_accept.py`, `release_runs.py` | Replace all-parent/all-item-pass assumptions and the requirement for a native command on every item. Revise dispatcher and candidate/release validation together, using independently captured selection/authority expectations. Keep producer-bound historical interpretation. |
+| `execution_contract.py`, `release_accept.py`, `release_archive.py`, `release_runs.py` | Replace all-parent/all-item-pass assumptions and the requirement for a native command on every item. Revise dispatcher and candidate/release validation together, using independently captured selection/authority expectations. Keep producer-bound historical interpretation. |
 | Cargo and Swift TestKit wrappers | Keep batch exit, failure-count, log and summary checks. Correct selected assertions in those runners; an individual observation cannot be made non-gating by relabeling its parent or ignoring execution. |
 
 Pytest owns internal discovery, fixtures and phases; PolicyWitness owns public
@@ -146,7 +153,7 @@ Extend independent fixtures in dispatcher, shell-helper and preflight controls:
 | Missing receipt, changed identity, omitted member or corrupt operation reference | Acceptance fails for validity/accounting while earlier valid observations remain readable. |
 | Incorrect enforced fact or missing independent effect | Designated blocking assertion failure, not just a crash/missing report; a valid neighbor still runs. |
 | Advisory unfavorable plus failed teardown, command settlement or artifact mutation | Advisory remains non-gating; the independent fault rejects acceptance. |
-| Pure, commanded and legacy cases together | Exact counts, prerequisite behavior, continuation and dependency interpretation; no informational passing assertion. |
+| Pure, commanded and legacy cases together | Exact counts, prerequisite behavior and continuation; no informational passing assertion. A dependent runs after a valid advisory-unfavorable or informational predecessor and is blocked after an invalid or incomplete one. |
 | Deleted/relabelled judgment, dropped family reference, contradictory authority or terminal account | Independently captured expectations reject the altered account. |
 | Historical/portable evidence | Original semantics preserved; removing required artifacts causes verification/publication/retention refusal. |
 
@@ -217,6 +224,12 @@ reject the prior-exit history and the new observation complete; missing exit
 evidence, changed identity and failed required observations still reject. Keep
 process/effect observations ahead of JSON interpretation and cleanup.
 
+The control ends the descendant from outside the product, so the returned exec
+account still reports `not_requested` after `leader_exit_and_eof`. It
+establishes the instrument's sensitivity to a prior exit, not acceptance of a
+product that ends the descendant itself. The checker's own fixed no-request
+expectation follows management's ruling on that relation.
+
 Remove both `closed_streams_leader_exit` and `worker_dies_during_exec` from
 `run_effects/aftermath_footprint` dependencies. Aftermath's shell, checker and
 `HeldWorkload` build their own fixtures, register exits and write local receipts;
@@ -224,7 +237,9 @@ they consume neither predecessor's artifacts nor verdict. Retain observer/checke
 prerequisites. Keep the worker-death case's independent checks and default
 selection; abnormal worker death is outside this authority conversion.
 
-Make the converted survivor explicitly default-selected. Run aftermath without
+Make the converted survivor explicitly default-selected and remove it from the
+catalog's `opt_in.include`, which the dispatcher selection controls tie to
+non-default membership. Run aftermath without
 either lifecycle predecessor, then mixed selections with the informational
 survivor. Follow valid prior-exit evidence through checker, dependency admission,
 dispatcher and aggregate battery acceptance; absence of survival must not fail.
@@ -279,7 +294,7 @@ Caller map from `3d3f8e65`; confirm intervening changes before editing:
 | Launch/ready/reservation | `runner_exec_inheritance/launch_inventory.py`, `runner_ready_byte_resilience/run.sh`, BYOXPC `single_use.py` and `bad_neighbor_claims.py`, including direct-client submissions. |
 | Validator faults/deadlines | `runner_validator_failure/check.py` and `runner_validator_failure/check_signal.py`, `runner_outcome_validator_no_reply/check.py`, `check_phases.py` and its BYOXPC caller. |
 | Ordering/comparison | `check_ordering.py`, its shell/mutation callers, and `check_comparison_matrix.py`. Preserve independent matrix/frozen guide inputs; separate controls in the invocation adapter. |
-| Identity/strings/paths | `check_dossier.py` and BYOXPC caller, `check_diagnostic_transport.py`, `check_path_queries_integrated.py`, `failure_boundaries/check.py`. Distinct worker substitutions stay outside. |
+| Identity/strings/paths | `check_dossier.py` and BYOXPC caller, `check_diagnostic_transport.py`, `check_path_queries_integrated.py`, `failure_boundaries/check.py`. Distinct worker substitutions stay outside; management retires the one combined worker/validator oversize pair in `failure_boundaries/check.py` to its unit control. |
 | Held workloads | [footprint_workloads.py](../tests/lib/footprint_workloads.py)::HeldWorkload for `check_held_phase_footprint.py` and `check_aftermath_footprint.py`, actor hosts and constructed CPU controls. |
 | Request/evidence | `runner_outcome_bad_request/contract.py` live self-signal case; current request examples, shape/generator controls and evidence readers. Preserve historical fixtures' semantics. |
 | Internal/lower-level | Swift `RequestContractTests`, `QueryAdmissionTests`, `ServiceAdmissionTests`, `PhaseProtocolTests`, `OrderingTests`, and controller dossier tests. Preserve direct framing, sanitization and driver checks; constructed `ReplyFailureTests` records do not establish ordinary admission. |
@@ -337,7 +352,10 @@ obligation and demonstrate its disappearance through fixtures, dependencies,
 dispatcher and the outermost relevant acceptance boundary. Retain independent
 oracles and validity/build/release/provenance controls. The survivor conversion
 must accept otherwise valid prior-exit behavior; seam migration alone does not
-satisfy enforcement reduction.
+satisfy enforcement reduction. Claim that reduction at the scope management's
+ruling on the `leader_exit_and_eof`/`not_requested` relation supports: while the
+relation stands, a product that ends the descendant and reports it is still
+refused at controller admission, and the account says so.
 
 Complete both pytest cohorts, selected conversions and corrections, reporting
 capability and all selected seam callers. Account for preserved observations and
