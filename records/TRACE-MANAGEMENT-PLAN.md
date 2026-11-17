@@ -402,9 +402,7 @@ changed claim.
 [TEST-OUTCOME-OVERHAUL-PLAN.md](TEST-OUTCOME-OVERHAUL-PLAN.md) reach some of
 the passages, tests and decisions assessed here. This section owns the order in
 which shared work settles and the selection of its broad verification; the
-companions refer to it instead of restating it. It is a recommended
-arrangement. The decisions it leaves open are listed at its end, and the text
-before them follows the recommended alternative for each.
+companions refer to it instead of restating it.
 
 It rests on source and catalog inspection at `a9de3ccf`. Nothing was executed
 for it. The durations below are approximate figures from earlier development
@@ -460,7 +458,8 @@ not join the DT coverage map.
 - A conversion or correction on a shared thread waits for that thread's
   disposition. Conversions and pure-computation cohort items also wait for the
   reporting capability.
-- A product or public-meaning change waits for its own disposition only.
+- A product or public-meaning change waits for its own disposition, and for
+  the instrument checkpoint while one is open.
 - A remedy that adds controls to a population being migrated to pytest lands
   after that cohort's equivalence is established, so the mapping does not
   follow a moving population.
@@ -504,17 +503,31 @@ and most of `tests/` are outside those inputs.
 
 ### Three boundaries for broad runs
 
-**Instrument checkpoint.** The overhaul changes how results are read. Product
-remediation changes what is read. Separate the two once. Take a default battery
-immediately before the reporting capability lands. Change no build-contract
-input until the harness-side work is complete: the capability, the conversions
-whose dispositions are settled, both cohorts, and test corrections outside
-`controller/src`. State the expected differences from the baseline case by
-case. Then run the default battery and the converted opt-in cases against the
-same app. Any other difference belongs to the harness. Read that run with the
-revised release battery validator as a direct investigation that credits no
-case; this is the least expensive place for that reader to meet real output.
-Product work that is ready sooner lands before the baseline is taken.
+**Instrument checkpoint.** The overhaul's reporting capability changes the
+path every result passes through. A defect in it can touch any case and cannot
+be located by running one. Product remediation changes what is read. Keep the
+two apart with one rule: a change to the shared reading path and a change to a
+build-contract input never fall between the same two default batteries.
+[The build contract](../docs/build_contract.py) prints one digest over those
+inputs, and an unchanged digest shows that nothing held has moved.
+
+For the capability, take a default battery immediately before it lands, land
+it with no conversion in it, and run the default battery again against the
+same app. Case statuses must equal the baseline. Product work that is ready
+sooner lands before the baseline is taken.
+
+The hold ends there. Conversions and cohorts then proceed alongside product
+changes. The two migrated families need no app, and each conversion changes
+one named case whose expected difference is stated in advance and checked by
+running it. A change to the shared reading path that turns up later needs its
+own before-and-after battery on an unchanged app, so finish in the capability
+whatever the cohorts will need from the engine.
+
+Read a completed battery with the revised release battery validator as a
+direct investigation that credits no case: once at the checkpoint, and again
+at the first battery that contains a converted case and the migrated
+families. These are the least expensive places for that reader to meet real
+output.
 
 **Signed-app checkpoints.** After that, group product changes whose routed
 selections do not overlap, and run one default battery for the group instead
@@ -534,8 +547,9 @@ actual release follows the [release procedure](../docs/SIGNING.md#release-proced
 and remains a maintainer action.
 
 Deferring that case to the end is sound because every unit reaches it with
-its own evidence: the harness against an unchanged app, each product change
-through its routed selection, each group through a default battery.
+its own evidence: the reading path against an unchanged app, each conversion
+and product change through its own case or routed selection, each group
+through a default battery.
 
 No tagged release falls inside this work. The next release is intended after
 the guide rewrite. Two consequences follow. The release-battery sequence in the
@@ -546,12 +560,6 @@ run reads their identities for retention protection and pruning verifies them
 in full. At the instrument checkpoint, run the read-only prune preview against
 them. A revised reader that no longer accepts a retained archive is then found
 before it obstructs execution or cleanup.
-
-### Integration decisions still open
-
-| Decision | Alternatives | Recommendation |
-| --- | --- | --- |
-| Whether product changes wait behind the instrument checkpoint | Hold build-contract inputs unchanged between the baseline and the checkpoint. Or interleave product and harness changes, relying on routed selections. | Hold them. Interleaving saves waiting, but leaves the final run unable to separate a reading defect from a product defect without repeating batteries. |
 
 ## Completion and disposition
 

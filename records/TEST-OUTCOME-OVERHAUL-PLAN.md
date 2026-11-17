@@ -608,13 +608,17 @@ improvement.
 
 Land stage 2 with no conversion in it, so the capability alone can be shown to
 leave existing results as they were. Each conversion then lands separately,
-naming its old assertion and the reason for its new authority. Stages 2
-through 4 need not change a build-contract input, apart from the run-flow
-corrections noted above, provided they leave alone the five `tests/lib`
-helpers that list names, `checkout_lock.py` among them. They can then finish
-against one unchanged signed app. The management plan's instrument checkpoint
-depends on that: it compares the harness-side work with a baseline battery of
-the same app before any product change follows.
+naming its old assertion and the reason for its new authority. Stage 2 need
+not change a build-contract input, provided it leaves alone the five
+`tests/lib` helpers that list names, `checkout_lock.py` among them. The
+management plan's instrument checkpoint depends on that: it compares the
+capability alone with a baseline battery of the same app.
+
+The hold on product changes ends at that checkpoint, and stages 3 and 4 then
+proceed alongside them. Finish in stage 2 every change to the shared reading
+path that the conversions and cohorts will need, including pure-item and
+receipt support. One that turns up later needs its own before-and-after
+battery on an unchanged app.
 
 Implementation owners are existing boundaries, not new organizational layers:
 `test_cli.py` and the catalog for selection; `testlib.sh`, `case.sh` and
@@ -672,8 +676,9 @@ Changes to the worker wait, release store or eligibility rule still require
 `witness_contract/order_barrier_mutations`; measuring or migrating a reader does
 not itself establish such a product change. Run source-drift checks for changed
 registrations, documentation/support or generated inputs. Run the default
-battery against the identified candidate app, with the relevant opt-ins, at
-the instrument checkpoint and again in the final integrated verification.
+battery against the unchanged app at the instrument checkpoint, each converted
+or migrated case when it lands, and the default battery with the relevant
+opt-ins in the final integrated verification.
 Use the release controls to establish acceptance semantics; any actual archive
 acceptance must follow the existing release procedure and is not publication.
 
@@ -684,9 +689,11 @@ routes to the opt-in `preflight/build_refusal_controls`. The constructed
 release controls establish the revised semantics. That case's release-battery
 sequence is the one catalog path in which real acceptance reads a real
 battery, including the migrated families and the converted survivor case. Run
-it once, in the final integrated verification, and not after each stage. At
-the instrument checkpoint, reading the completed battery with the revised
-release battery validator is a direct investigation that credits no case.
+it once, in the final integrated verification, and not after each stage.
+Before then, reading a completed battery with the revised release battery
+validator is a direct investigation that credits no case. Do it at the
+instrument checkpoint, and again at the first battery that contains a
+converted case and the migrated families.
 
 Do not count an environment-refused native run as a product result. Preserve
 source/app identity, evidence availability and applicability when comparing
