@@ -155,7 +155,7 @@
         },
         {
           "id": "limits_documentation",
-          "description": "Limits inventory, copied questions and guide agree; standalone, staging, stale-input and link controls pass"
+          "description": "Current limits and matrix outputs agree; frozen guide identity and strict projection, staging, stale-input and link controls pass"
         },
         {
           "id": "build_contracts",

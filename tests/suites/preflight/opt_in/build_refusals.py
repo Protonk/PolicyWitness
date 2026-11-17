@@ -1940,9 +1940,10 @@ def control_release_entrypoints_enforce_fresh_mode(co, variant):
         sys.path.insert(0, str(ROOT / 'docs'))
         import build_contract
         import generate_contract_stamps
+        import generate_limits
         import fixture_inputs
         fixture_inputs.copy_declared(ROOT, repo, sorted(set(build_contract.inputs(ROOT)) |
-                                                       set(generate_contract_stamps.input_paths(ROOT))))
+                                                       set(generate_contract_stamps.input_paths(ROOT)) | set(generate_limits.input_paths(ROOT))))
         # Preflight runs in a separate interpreter in this fixture. Its release
         # and retention helpers must come from the copied tree as well.
         fixture_inputs.copy_declared(ROOT, repo, fixture_inputs.expand(ROOT, (
@@ -1952,6 +1953,10 @@ def control_release_entrypoints_enforce_fresh_mode(co, variant):
             target = repo / name
             target.parent.mkdir(parents=True, exist_ok=True)
             shutil.copy2(ROOT / name, target)
+        # A constructed release source owns its publication permission. This
+        # entrypoint fixture does not claim a development candidate is releasable.
+        boundary = repo / 'docs/publication.py'
+        boundary.write_text(boundary.read_text().replace('WITHHELD = True', 'WITHHELD = False', 1))
         marker = repo / 'build-invocation.json'
         script = repo / 'build.sh'
         script.write_text('#!/usr/bin/env bash\nprintf \'{"PW_FRESH_BUILD": "%s", "IDENTITY": "%s"}\' "${PW_FRESH_BUILD-unset}" "${IDENTITY:-}" > build-invocation.json\nexit 97\n')

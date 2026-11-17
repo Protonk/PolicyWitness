@@ -2697,7 +2697,7 @@
           "label": "docs/PolicyWitness.md",
           "kind": "document",
           "facts": {
-            "Carries": "copied limits, questions, reading rules and extension statuses and coverage; the surface history table; the only document that ships"
+            "Carries": "frozen copied limits, questions, reading rules and extension statuses and coverage; the frozen surface history table; the standalone publication manual"
           },
           "sources": [
             {
@@ -2717,7 +2717,7 @@
             },
             {
               "path": "build.sh",
-              "symbol": "--stage-guide",
+              "symbol": "--stage-development",
               "form": "control"
             }
           ]
@@ -3509,7 +3509,7 @@
           "label": "build.sh",
           "kind": "check",
           "facts": {
-            "Guards": "checks the generated copies, selects the SDK, refuses a build directory configured for another checkout, compiles the native executables through Meson, checks the configured source lists against the tree and every output's minimum version, assembles and signs the bundle, checks every executable's signer and stages the guide"
+            "Guards": "checks the generated copies, selects the SDK, refuses a build directory configured for another checkout, compiles the native executables through Meson, checks the configured source lists against the tree and every output's minimum version, assembles and signs the bundle, checks every executable's signer and records publication withheld"
           },
           "sources": [
             {
@@ -3538,7 +3538,7 @@
             },
             {
               "path": "build.sh",
-              "symbol": "--stage-guide"
+              "symbol": "--stage-development"
             }
           ],
           "checks": [
@@ -4106,7 +4106,7 @@
           "from": "gen_contract",
           "to": "guide",
           "kind": "writes",
-          "label": "derived surface stamp table",
+          "label": "strict publication derives the stamp table; development preserves frozen guide bytes",
           "short": "stamps",
           "sources": [
             {
@@ -4267,7 +4267,7 @@
           "from": "gen_limits",
           "to": "guide",
           "kind": "writes",
-          "label": "copied limits, questions, reading rules and extension statuses; staged copy at build",
+          "label": "strict publication copies limits, questions, reading rules and extension statuses; development preserves frozen bytes",
           "short": "copies; staged at build",
           "sources": [
             {
@@ -4276,7 +4276,7 @@
             },
             {
               "path": "build.sh",
-              "symbol": "--stage-guide"
+              "symbol": "--stage-development"
             },
             {
               "path": "docs/generate_limits.py",
@@ -4769,12 +4769,12 @@
           "from": "build",
           "to": "gen_limits",
           "kind": "checks",
-          "label": "--check before compiling; --stage-guide into dist",
+          "label": "--check current owners and frozen guide before compiling; --stage-development records publication withheld",
           "short": "--check; stage",
           "sources": [
             {
               "path": "build.sh",
-              "symbol": "--stage-guide"
+              "symbol": "--stage-development"
             }
           ],
           "checks": [

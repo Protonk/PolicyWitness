@@ -47,6 +47,7 @@ def fixture(out, name):
     work.mkdir()
     repo = make_repo(work)
     (repo / 'outside').write_bytes(b'outside evidence')
+    git(repo, 'add', 'outside')  # Its existing target belongs to the constructed tagged source.
     old, previous = make_release(repo, '0.9.0')
     new, current = make_release(repo, '0.9.1')
     return repo, old, previous, new, current

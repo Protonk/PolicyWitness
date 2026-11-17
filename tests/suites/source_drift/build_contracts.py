@@ -296,15 +296,15 @@ class SurfaceStampTests(PublicBuildContractTests):
         import generate_contract_stamps as stamps
         import contract_fixture
         import publication
-        directory = tempfile.TemporaryDirectory(prefix='pw-publication-stamps-')
-        self.addCleanup(directory.cleanup)
-        root = Path(directory.name)
-        fixture_inputs.copy_declared(ROOT, root, stamps.input_paths(ROOT))
-        contract_fixture.seed_release_history(root, ROOT, stamps)
+        # Current projections need no historical derivation claim. The existing
+        # fresh-authoring fixture retains its own independently constructed tree.
+        root = self.stamp_checkout()
+        (root / publication.GUIDE).write_bytes(publication.frozen_guide(ROOT))
         frozen = publication.frozen_guide(root)
         owner = root / 'docs/contract/35-profile.surface.md'
         before = owner.read_text()
         after = before.replace('optional capture of the worker', 'optional byte capture of the worker', 1)
+        after = after.replace('artifact: "Compiled-profile receipts"', 'artifact: "Compiled-profile capture receipts"', 1)
         self.assertNotEqual(before, after)
         owner.write_text(after)
         self.track_inputs(root, stamps.input_paths(root))
@@ -312,11 +312,14 @@ class SurfaceStampTests(PublicBuildContractTests):
             stamps.check(root, publication=False)
         contract_fixture.write_outputs(root, stamps.render(root, publication=False))
         self.assertEqual(publication.frozen_guide(root), frozen)
-        self.assertTrue(stamps.check(root, publication=False))
-        with self.assertRaisesRegex(ValueError, 'PolicyWitness.md'):
+        self.assertFalse(stamps.check(root, publication=False))  # No release history is credited.
+        with self.assertRaisesRegex(ValueError, 'tables disagree'):
             stamps.check(root, publication=True)
         technical = root / 'docs/RESPONSE.md'
-        technical.write_text(technical.read_text().replace('optional byte capture', 'stale capture', 1))
+        before = technical.read_text()
+        changed = before.replace('optional byte capture', 'stale capture', 1)
+        self.assertNotEqual(before, changed)
+        technical.write_text(changed)
         with self.assertRaisesRegex(ValueError, 'stale generated contract'):
             stamps.check(root, publication=False)
 

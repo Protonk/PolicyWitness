@@ -222,7 +222,7 @@ free-text relationship counts also compare by kind with the preceding
 release; removing that baseline or increasing any kind refuses release.
 
 ```sh
-tests/lib/python.sh docs/generate_contract_stamps.py --release v0.3.8
+tests/lib/python.sh docs/generate_contract_stamps.py --publication --release v0.3.8
 git status --short
 git diff
 # After checking that the tree contains only the intended release change:

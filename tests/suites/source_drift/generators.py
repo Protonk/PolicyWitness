@@ -407,7 +407,8 @@ class GeneratorContractTests(receipts.TestCase):
         if root == ROOT:
             self.track_inputs(root, fixture_inputs.generator_inputs(root, name))
         start = time.perf_counter()
-        result = self.run_command([sys.executable, '-B', '-S', str(root / f'docs/generate_{name}.py'), *args],
+        result = self.run_command([sys.executable, '-B', '-S', str(root / f'docs/generate_{name}.py'),
+                                 *(['--publication'] if root != ROOT and name in ('limits', 'contract_stamps') else []), *args],
                                 cwd=root, capture_output=True, text=True, timeout=60)
         print(f'command: generate_{name} {" ".join(args)} rc={result.returncode} {time.perf_counter() - start:.3f} s')
         return result
@@ -979,7 +980,11 @@ class GeneratorContractTests(receipts.TestCase):
                     return result.stdout
                 import generate_contract_stamps as stamps
                 import build_contract
-                fixture_inputs.copy_declared(ROOT, root, sorted(set(stamps.input_paths(ROOT)) | set(build_contract.inputs(ROOT))))
+                import generate_limits
+                fixture_inputs.copy_declared(ROOT, root, sorted(set(stamps.input_paths(ROOT)) |
+                    set(build_contract.inputs(ROOT)) | set(generate_limits.input_paths(ROOT))))
+                boundary = root / 'docs/publication.py'
+                boundary.write_text(boundary.read_text().replace('WITHHELD = True', 'WITHHELD = False', 1))
                 contract_fixture.fresh_authoring(root, stamps)
                 def commit(rows, tag):
                     path = root / BASELINE_NAME

@@ -26,16 +26,27 @@ class LimitsDocumentationTests(receipts.TestCase):
     def setUp(self):
         self.manifest = json.loads((ROOT / 'docs/limits.json').read_text())
         self.document = (ROOT / 'docs/LIMITS.md').read_text()
-        self.guide = (ROOT / 'docs/PolicyWitness.md').read_text()
-        generator.publication.frozen_guide(ROOT)
+        frozen = generator.publication.frozen_guide(ROOT).decode('utf-8')
         self.questions = (ROOT / 'docs/QUESTIONS.md').read_text()
         self.contract = (ROOT / generator.CONTRACT_NAME).read_text()
+        # Strict copying controls use a constructed current projection. Their
+        # independent row/heading/link oracles scrutinize that output; they do
+        # not claim that the frozen repository manual is current.
+        guide = generator.update_guide(frozen, self.document)
+        guide = generator.update_guide_questions(guide, self.questions)
+        guide = generator.update_guide_rules(guide, self.contract)
+        guide = generator.update_guide_scenarios(guide, generator.load_matrix(ROOT / generator.MATRIX_NAME))
+        guide = generator.update_guide_extension_statuses(guide, self.contract)
+        guide = generator.update_guide_extension_coverage(guide, (ROOT / generator.EXTENSIONS_NAME).read_text())
+        self.guide = generator.render_spans(guide, 'limits', generator.span_values(self.manifest['limits']), 'strict guide fixture')
 
-    def checkout(self):
+    def checkout(self, *, publication=True):
         directory = tempfile.TemporaryDirectory(prefix='pw-guide-')
         self.addCleanup(directory.cleanup)
         root = Path(directory.name)
         copied = fixture_inputs.copy_declared(ROOT, root, fixture_inputs.generator_inputs(ROOT, 'limits'))
+        if publication:
+            (root / 'docs/PolicyWitness.md').write_text(self.guide)
         print(f'fixture: {copied.files} files, {copied.bytes} bytes, {copied.seconds:.3f} s')
         self.track_inputs(root)
         return root
@@ -337,7 +348,7 @@ An authored source still has <!-- span limits.step_id.value -->STALE_PUBLIC<!-- 
                     generator.load_matrix(path)
 
     def test_shared_prose_and_all_rows_are_copied_without_repository_metadata(self):
-        # Compare the actual document regions independently of update_guide.
+        # Compare the generated fixture regions independently of update_guide.
         shared = self.document.split(generator.SHARED_START)[1].split(generator.SHARED_END)[0].strip()
         copied = self.guide.split(generator.GUIDE_START)[1].split(generator.GUIDE_END)[0].strip()
         expected = '\n'.join('#' + line if line.startswith('## ') else line
@@ -673,7 +684,8 @@ An authored source still has <!-- span limits.step_id.value -->STALE_PUBLIC<!-- 
 
 
 class DevelopmentPublicationTests(receipts.TestCase):
-    checkout = LimitsDocumentationTests.checkout
+    def checkout(self):
+        return LimitsDocumentationTests.checkout(self, publication=False)
 
     def command(self, root, *args):
         return self.run_command([sys.executable, '-B', '-S', str(root / 'docs/generate_limits.py'), *args],
