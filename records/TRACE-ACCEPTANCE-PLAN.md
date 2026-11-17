@@ -237,9 +237,13 @@ corrections land. The comparison and the later correction then describe the
 same passages. An arrangement change that a rehearsal justifies travels with
 the thread's other account edits under the management plan's handoff, when it
 stays within developer-facing accounts and moves no ownership. It is not a
-separate later pass over the same documents. One that would move ownership or
-change a public meaning is not adopted here; it goes to the management plan's
+separate later pass over the same documents. One that would move ownership,
+alter what the app does or prints, or add a promise is not adopted here; it
+goes to the management plan's
 [collection for the maintainer](TRACE-MANAGEMENT-PLAN.md#judgments-for-the-maintainer).
+That collection also records, for each matter, which presentations are
+rendered from one owner and which are separately authored. A rehearsal's
+relationship map supplies this for its thread.
 
 **Hand caller obligations to the outflow.** While tracing the current
 arrangement, note each condition a caller must meet, or scope a caller must

@@ -64,21 +64,40 @@ establish that the guide is correct or that behavior it describes is desirable.
 An assessment may conclude that the guide is wrong without amending it. Keep
 that judgment distinct from authorization to change the product's commitments.
 
-Elsewhere, classify an edit by what it does rather than where it appears:
+### Handling changes during the transition
 
-| Proposed edit | Boundary during the freeze |
+Treat this work as a developer-facing change that a radical rewrite of the
+guide will follow. Do not shape it around the guide's eventual structure or
+content. The maintainer's judgments are collected at the end of the work, not
+sought during it.
+
+What counts as a public commitment is itself changing. It was the app's bytes
+and the guide. The app now also speaks for itself through `help`, `example`
+and `test-input`, and the contract documents carry a detailed description
+that was never settled as commitments and is meant to shrink. The definition
+is constructed after this work, from the user-responsibility outflow and the
+collected judgments. Until then, do not gate a change on whether it touches a
+public meaning. Classify it by what it does, not by where it appears:
+
+| Change | Handling |
 | --- | --- |
-| Correct a mechanism account, citation, test description or support claim | Proceed when it describes established behavior without changing caller obligations or guarantees, and does not alter content copied into the guide. |
-| Clarify a public statement | Establish whether the edit expresses an already-settled meaning or chooses between consequential interpretations. The latter is a substantive decision. |
-| Change what callers may submit, must do, or may conclude from output | Treat it as a public-meaning change requiring an explicit compatibility decision, regardless of the file that owns it. |
-| Supply replacement workflows or instructions for reinterpreting frozen guide passages | This would create a shadow user guide and is outside the freeze boundary. |
+| Alters what the app does or prints: behavior, the envelope, exit status, or the text of `help`, `example` and `test-input` | Judge it and do not make it; it goes to the [collection for the maintainer](#judgments-for-the-maintainer). The exception is behavior corrected to match a meaning that is already settled. |
+| Adds or strengthens a statement a user could rely on, in any projection | Do not make it. |
+| Corrects, narrows or removes a description in the contract documents or surfaces | Make it when it describes established behavior, state its practical consequence, and collect it. An edit that chooses between consequential readings is a judgment for the maintainer instead. |
+| Corrects a mechanism account, citation, test description or support claim | Proceed when it describes established behavior. |
+| Relinquishes or narrows test authority | Make it as the overhaul plan authorizes, and collect it. |
+| Alters explanatory content copied into the guide, or supplies replacement workflows or instructions for reinterpreting frozen passages | Outside the freeze boundary. The second would create a shadow user guide. |
 
-REQUEST, RESPONSE and the authored surfaces already carry public meanings.
-They cannot provide an indirect route for amending the guide. Ask whether an
-edit changes a caller's required behavior or justified conclusion. If it does,
-documentation accuracy alone does not justify the change. Where the evidence
-and guide disagree, retain the disagreement in the assessment instead of
-silently publishing a replacement normative interpretation elsewhere.
+Reductions proceed and are collected. Growth and observable change wait.
+Everything made under this table can be undone before the next release. Two
+existing checks enforce part of it: contract generation permits reductions in
+free-text relationships and refuses increases, and release preflight refuses
+added or rewritten prose sites.
+
+The contract documents cannot provide an indirect route for amending the
+guide. Where the evidence and guide disagree, retain the disagreement in the
+assessment instead of silently publishing a replacement normative
+interpretation elsewhere.
 
 ### Judge the product before selecting the available remedy
 
@@ -98,17 +117,6 @@ Use the passages and their context to justify the classification. An
 unimplemented promise can still be a promise; mention in the guide does not
 make every implied interpretation a commitment. Likewise, evidence that a
 current rule is faithfully implemented does not settle whether to retain it.
-
-Treat this work as a developer-facing change that a radical rewrite of the
-guide will follow. Its results are tests, test authority, internal accounts,
-developer documentation, and behavior corrected to match a meaning that is
-already settled. Do not shape the work around the guide's eventual structure
-or content.
-
-A change to a public meaning needs the maintainer's explicit decision. The
-maintainer's judgments are collected at the end of this work, not sought
-during it, so such a change is not made here. Complete the judgment and place
-it in the [collection for the maintainer](#judgments-for-the-maintainer).
 
 If truthful publication of the chosen remedy requires revising the frozen
 guide, that remedy is unavailable. Lifting the freeze for a passage is not an
@@ -256,8 +264,9 @@ Evaluate candidate remedies on their merits, then select the treatment
 available within the guide freeze and existing commitments. Responses include
 correcting behavior to match a settled meaning, correcting a test or its
 coverage claim, improving the reading path, or retaining the arrangement with
-an explicit rationale. A change to a public meaning is judged here and left to
-the maintainer. More than one response may be necessary. Narrower
+an explicit rationale. A change to what the app does or prints is judged here
+and left to the maintainer, as the
+[transition handling](#handling-changes-during-the-transition) sets out. More than one response may be necessary. Narrower
 prose is sufficient only when the narrower promise is justified and its
 practical consequence has been assessed; it cannot silently withdraw a
 commitment or substitute for a frozen guide amendment.
@@ -472,8 +481,8 @@ not join the DT coverage map.
   disposition. Conversions and pure-computation cohort items also wait for the
   reporting capability.
 - A product change that restores an already-settled meaning waits for its own
-  disposition, and for the instrument checkpoint while one is open. A change
-  to a public meaning is not made in this work.
+  disposition, and for the instrument checkpoint while one is open. Any other
+  change to what the app does or prints is not made in this work.
 - A remedy that adds controls to a population being migrated to pytest lands
   after that cohort's equivalence is established, so the mapping does not
   follow a moving population.
@@ -689,7 +698,7 @@ cover what the battery that uses these fields against the released app would
 require, and whether a run through the seam stays recognizable in its output.
 
 Return a recommendation. It does not authorize the change: what a request
-admits is a public meaning under the freeze. Until it is made, assessments
+admits is part of what the app does. Until it is made, assessments
 treat a state that only a substituted executable can produce as the shipped
 component's obligation, not a caller's.
 
@@ -770,23 +779,33 @@ rewrite, as statements that can be traced to code, tests and documents. Record
 the collection in `records/MAINTAINER-JUDGMENT-OUTFLOW.md`, drafted and
 finalized with the user-responsibility outflow.
 
-Collect four kinds of judgment:
+Collect five kinds of judgment. Three have already been acted on, in ways
+that are developer-facing and can be undone:
 
 - a consequence left with a user: refer to the outflow's entry;
-- a remedy judged preferable but unavailable, because it changes a public
-  meaning or requires revising the guide, with the cost of the behavior
-  retained in its place;
-- test authority relinquished or narrowed, with its reason;
-- a documentation arrangement that would move ownership.
+- a description corrected, narrowed or removed in the contract documents,
+  with its practical consequence;
+- test authority relinquished or narrowed, with its reason.
 
-The first and third have already been acted on, in ways that are
-developer-facing and can be undone. The second and fourth have not been acted
-on.
+Two have not been acted on:
+
+- a remedy judged preferable but unavailable, because it alters what the app
+  does or prints, adds a promise or requires revising the guide, with the
+  cost of the behavior retained in its place;
+- a documentation arrangement that would move ownership.
 
 For each, give the distinction at stake, why it matters, what would change,
 and its anchors. Anchor by symbol, catalog case and statement identifier at a
 stated revision, not by line number, so that a later statement can still be
 traced after the files have moved.
+
+Also name the projections that carry the matter today: the app does it, the
+app says it through `help`, `example` or `test-input`, or a contract statement
+says it. Leave the guide out. For each projection, say whether it is derived
+from one definition or separately authored. A contradiction can arise only
+between separately authored projections, so this record is what a later
+choice of commitments and their projections is built from. The rehearsal
+traces supply it for their threads.
 
 ### Release account
 
