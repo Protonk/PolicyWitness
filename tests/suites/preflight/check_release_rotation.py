@@ -264,6 +264,8 @@ def blockers_and_handoff(out):
         assert any('active acceptance' in r['reason'] for r in retention.prune(repo)['blocked'])
     assert 'tests/out/release-acceptance/active' in retention.prune(repo, apply=True)['removed']
     # Interrupted after acceptance, before archive: derive protection from existing receipts.
+    # Stamp preparation must amend a new commit, preserving prior release ancestry.
+    git(repo, 'commit', '-q', '--allow-empty', '-m', 'prepare fixture 0.9.2')
     git(repo, 'tag', '-a', 'v0.9.2', '-m', 'next')
     dist, attempt = make_dist(repo, version='0.9.2')
     handoff = repo / 'tests/out/release-acceptance/run-0-9-2'

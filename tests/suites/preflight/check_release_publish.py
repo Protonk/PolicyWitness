@@ -389,9 +389,11 @@ def check_branch_names(out):
             elif state == 'tagged':
                 assert problems == [] and describe == 'v0.9.1'
             else:
-                expect_problem(problems, 'uncommitted changes')
-                expect_problem(problems, 'scoped sources must equal the tagged bytes')
-                assert len(problems) == 2 and describe == 'v0.9.1-dirty'
+                assert problems == [
+                    'working tree has uncommitted changes or untracked files',
+                    'build contract is not release:v0.9.1; scoped sources must equal the tagged bytes',
+                    'publication source has uncommitted changes or untracked files'], problems
+                assert describe == 'v0.9.1-dirty', describe
             observation = dict(build_stamp=build_stamp, preflight=stamp, problems=problems)
             if original is None:
                 original = observation
@@ -719,6 +721,10 @@ def check_archive(out):
                                     notes=None if mutate is not None else scenario / 'absent.md')
         except ValueError as exc:
             assert needle in str(exc), (name, exc)
+            if name == 'wrong_commit':
+                assert 'publication source commit differs' in str(exc), exc
+            if name == 'lightweight_tag':
+                assert 'publication requires an annotated release tag' in str(exc), exc
         else:
             raise AssertionError(f'{name}: archive was allowed')
         assert sorted(str(p.relative_to(dist2)) for p in dist2.rglob('*')) == before, name
@@ -865,11 +871,12 @@ def check_publish(out, repo, dest, notes):
         try:
             release_publish.publish(dest, root=repo)
         except ValueError as exc:
-            assert 'does not name the archived commit' in str(exc), exc
+            assert 'publication source commit differs from the tagged app or archive' in str(exc), exc
         else:
             raise AssertionError('mismatched tag was published')
-    assert all(c[0] == 'git' and c[3] == 'rev-parse' for c in github.calls[calls_before:])
+    assert len(github.calls) == calls_before, 'source refusal reached publication commands'
     git(repo, 'update-ref', 'refs/tags/v0.9.0', original_tag)
+    git(repo, 'checkout', '--detach', 'v0.9.0')
 
     # Mismatched digests or bytes stop before origin is recorded.
     for mode, needle in (('digest_mismatch', 'GitHub digest'), ('corrupt_download', 'downloaded bytes differ')):
@@ -877,6 +884,11 @@ def check_publish(out, repo, dest, notes):
         copy = copy / 'dist/archive/v0.9.0'
         shutil.copytree(dest, copy)
         shutil.copytree(repo / '.git', copy.parents[2] / '.git')
+        # These controls reach remote-asset verification, so the copied source
+        # must establish the tagged freshness required before that boundary.
+        import fixture_inputs
+        fixture_inputs.copy_declared(repo, copy.parents[2],
+                                     [name for name in git(repo, 'ls-files', '-z').split('\0') if name])
         unpublished = json.loads((copy / 'release.json').read_text())
         unpublished['origin'] = None
         (copy / 'release.json').write_text(json.dumps(unpublished, indent=2) + '\n')

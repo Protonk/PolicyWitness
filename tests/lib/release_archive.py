@@ -186,8 +186,12 @@ def archive_locked(attempt, *, dist, root, notes):
             problems.append(f"ZIP was built from {info.get('PWBuildCommit')}, but {tag} names {commit}")
         if info.get('PWBuildDescribe') != tag:
             problems.append(f"ZIP was built at {info.get('PWBuildDescribe')!r}, not exactly at {tag}")
-    freshness = publication_freshness.require(root, tag, info.get('PWBuildCommit'))
-    if guide.is_file() and digest(guide) != freshness['guide_sha256']:
+    freshness = None
+    try:
+        freshness = publication_freshness.require(root, tag, info.get('PWBuildCommit'))
+    except ValueError as exc:
+        problems.append(str(exc))
+    if freshness is not None and guide.is_file() and digest(guide) != freshness['guide_sha256']:
         problems.append('staged guide differs from the freshly verified tagged source')
     retention.require_new_release(root, tag)
     dest = dist / 'archive' / tag
