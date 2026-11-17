@@ -44,8 +44,67 @@ when its size or execution boundaries make that useful.
 
 Under the [record rules](AGENTS.md), links into investigation records belong
 in their associated plans. Put resulting statements of current behavior in
-their existing documentation owners, without links back to this investigation
-from permanent documentation, source, tests or indexes.
+their existing documentation owners within the freeze boundary below, without
+links back to this investigation from permanent documentation, source, tests
+or indexes.
+
+## Guide freeze and public commitments
+
+The freeze covers the explanatory content of `docs/PolicyWitness.md` and its
+distributed copies, including generated or shared content copied into them.
+Changing an owning input and postponing regeneration still crosses that
+boundary. The narrow exception is generator-required identity and stamp-table
+updates that record another authorized change without revising explanatory
+content or silently changing a public meaning. Review those outputs explicitly;
+do not bypass freshness checks or hand-edit generated copies to preserve the
+appearance of a freeze.
+
+The freeze constrains publication and the remedies available now. It does not
+establish that the guide is correct or that behavior it describes is desirable.
+An assessment may conclude that the guide is wrong without amending it. Keep
+that judgment distinct from authorization to change the product's commitments.
+
+Elsewhere, classify an edit by what it does rather than where it appears:
+
+| Proposed edit | Boundary during the freeze |
+| --- | --- |
+| Correct a mechanism account, citation, test description or support claim | Proceed when it describes established behavior without changing caller obligations or guarantees, and does not alter content copied into the guide. |
+| Clarify a public statement | Establish whether the edit expresses an already-settled meaning or chooses between consequential interpretations. The latter is a substantive decision. |
+| Change what callers may submit, must do, or may conclude from output | Treat it as a public-meaning change requiring an explicit compatibility decision, regardless of the file that owns it. |
+| Supply replacement workflows or instructions for reinterpreting frozen guide passages | This would create a shadow user guide and is outside the freeze boundary. |
+
+REQUEST, RESPONSE and the authored surfaces already carry public meanings.
+They cannot provide an indirect route for amending the guide. Ask whether an
+edit changes a caller's required behavior or justified conclusion. If it does,
+documentation accuracy alone does not justify the change. Where the evidence
+and guide disagree, retain the disagreement in the assessment instead of
+silently publishing a replacement normative interpretation elsewhere.
+
+### Judge the product before selecting the available remedy
+
+For each affected statement, first establish the behavior and evidential
+meaning worth choosing on their merits. Then assess the existing user reliance
+that choice would disrupt. Apply this locally to candidate changes; a complete
+new inventory of guide commitments is not a prerequisite.
+
+| Kind of statement | Consequence for the decision |
+| --- | --- |
+| Explicit commitment | Concrete conditions promise behavior or meaning. Removing it can break compatibility even if it was a poor choice. |
+| Consequential ambiguity | Reasonable readings produce different expectations. Choosing one requires a decision rather than an editorial clarification. |
+| Unsupported inference | A stronger conclusion exceeds what the stated observations establish. The product need not acquire machinery solely to make that inference true. |
+| Inaccurate mechanism account | The prose describes an internal operation incorrectly. Correcting the account need not preserve that mechanism, unless it also expresses a user commitment. |
+
+Use the passages and their context to justify the classification. An
+unimplemented promise can still be a promise; mention in the guide does not
+make every implied interpretation a commitment. Likewise, evidence that a
+current rule is faithfully implemented does not settle whether to retain it.
+
+Changes to public meanings remain possible within their agreed scope, but may
+not silently contradict a retained commitment. If truthful publication of the
+chosen remedy requires revising the frozen guide, that remedy is unavailable
+under the freeze. Decide whether to retain the present behavior and its stated
+cost or reconsider the freeze before implementing it. Additional architecture
+intended to vindicate existing prose needs its own substantive justification.
 
 ## Units of assessment and relationships
 
@@ -66,7 +125,9 @@ Each working assessment should answer these questions:
 | What supports it? | DT references and follow-ups; inspected snapshot and build; native, controlled, constructed, source-read or historical evidence; artifact availability. |
 | What remains problematic? | The practical consequence for behavior, evidence, interpretation, verification or maintenance after qualifications are applied. |
 | What decision is needed? | Candidate implementation, specification or test changes; deliberate retention; or the particular uncertainty preventing a decision. |
-| What would settle it? | A discriminating check, source trace, reader exercise or explicit design decision, and the condition for reopening it. |
+| What does the freeze constrain? | The affected passage, actual commitment or inference, available corrections, and any remedy that requires a guide change. |
+| What is the present disposition? | What is established, what is acceptable or defective, the treatment chosen now, and the consequences accepted or found unacceptable. |
+| What would settle a remaining uncertainty? | The discriminating evidence or decision needed, without automatically creating a future work obligation. |
 
 Keep evidence, interpretation and work status separate. A constructed frame can
 establish a reader gap without establishing that the shipped producer emits
@@ -100,8 +161,9 @@ These examples seed the relationship map:
 
 These families are starting navigation, not a complete allocation or a set of
 preselected changes. Cross-reference a finding into more than one family when
-it answers different questions. Keep an explicit unallocated queue so an
-unusual or isolated finding is not excluded by the taxonomy.
+it answers different questions. Mark temporarily unallocated observations so
+an unusual or isolated finding is not excluded by the taxonomy. Assignment is
+an intermediate coverage step; it is not a completed disposition.
 
 | Family | Representative findings | Organizing question |
 | --- | --- | --- |
@@ -127,10 +189,10 @@ are incomplete” would lose the distinctions needed to repair them.
 ### 1. Establish coverage without filtering on severity
 
 Inventory every numbered entry, compound subfinding and unnumbered follow-up.
-Give each an assessment destination or an explicit unallocated status. Include
-qualifications, affirmative observations and unresolved leads. DT-44's reported
-but unverified items need their own treatment; absence of a new reproduction
-does not turn them into resolved items.
+Give each an assessment destination, keeping any temporary allocation gaps
+visible. Include qualifications, affirmative observations and unresolved leads.
+DT-44's reported but unverified items need their own treatment; absence of a new
+reproduction does not turn them into resolved items.
 
 Record links between earlier and later accounts before shortening their
 conclusions. Keep the question that motivated an entry available even when its
@@ -171,16 +233,29 @@ the question a new check must settle before running it.
 
 Prefer a small contrast that distinguishes competing explanations. Avoid a
 fresh broad audit simply to replace the review with a uniform report. When an
-uncertainty cannot yet be settled, retain the competing accounts and specify
-what evidence or decision would move the work forward.
+uncertainty cannot yet be settled, retain the competing accounts and judge what
+the evidence presently supports, what it leaves unknown, and whether accepting
+that uncertainty is justified. Identify further evidence only when it would
+change the decision; its absence need not generate a task. A decision that
+cannot responsibly be made remains pending, rather than being counted as a
+completed assessment through assignment to future documentation work.
 
 ### 4. Choose and verify a bounded response
 
-Consider changing behavior, changing a public meaning, correcting a test or its
-coverage claim, improving the reading path, or retaining the arrangement with
-an explicit rationale. More than one response may be necessary. Narrower prose
-is sufficient only when the narrower promise is the intended one and its
-practical consequence has been assessed.
+Evaluate candidate remedies on their merits, then select the treatment
+available within the guide freeze and existing commitments. Responses include
+changing behavior or public meaning within that boundary, correcting a test or
+its coverage claim, improving the reading path, or retaining the arrangement
+with an explicit rationale. More than one response may be necessary. Narrower
+prose is sufficient only when the narrower promise is justified and its
+practical consequence has been assessed; it cannot silently withdraw a
+commitment or substitute for a frozen guide amendment.
+
+When the preferred remedy is unavailable, complete the present product
+judgment. State the remaining defect or limitation and whether its consequences
+are accepted. “Update the guide later” is neither that judgment nor a chosen
+remedy. If the cost is unacceptable, identify the conflict with the freeze as
+the decision to resolve.
 
 Group changes when they share a decision and verification boundary. Keep
 separate changes for separate mechanisms even when their symptoms resemble
@@ -208,6 +283,15 @@ infer that every defensive branch should be removed. Establish whether its
 purpose is defensive handling, component testing, or an advertised public
 possibility, and evaluate the tests on that basis.
 
+Separate availability of fallback output from its explanatory power.
+Independent compilation does not establish worker progress or explain a lost
+reply; do not expand transport machinery merely to support that inference.
+Removing an invocation or changing the presence or status of `policy_check`
+can nevertheless alter an observable commitment. Assess that compatibility
+question and the actor-form whole-request failure independently. The pilot's
+disposition must judge their present utility and cost, even if a preferred
+change cannot be published during the freeze.
+
 ### Test and specification challenge
 
 Use DT-53/132 and DT-63/124/125 to check that the method preserves findings
@@ -223,6 +307,9 @@ For DT-63/124/125, observed clearing and source order can support the behavior
 while a final-state assertion still fails to establish its claimed timing.
 Assess host and worker controls separately. The remedy may be a discriminating
 observation or a corrected support claim, with no change to erasure behavior.
+If the behavior is sufficiently supported and the test's credited scope is
+corrected, that narrower assessment can finish without a guide rewrite or an
+automatic obligation to add implementation work.
 
 ### Import and receipt distinctions
 
@@ -242,6 +329,14 @@ Preserve the distinction between documented separation, unverified association,
 observed divergence and signaled incompleteness. Fixing a scanner miss would
 not identify the file bytes consumed by a separate compilation.
 
+Judge whether the lack of compiler-file observations is an accepted limit of
+the instrument, and whether its public account overstates the evidence.
+Preserving the receipt does not require making the literal inventory identify
+those inputs. Conversely, accepting that limit does not dispose of the scanner
+miss or the helper's dropped incompleteness signal. A retained documentation
+defect must state the mistaken inference readers remain exposed to; an internal
+assessment does not repair that user-facing defect.
+
 ### Early remediation candidates
 
 These are bounded starting points for assessment, not predetermined solutions
@@ -253,7 +348,7 @@ or a final priority order:
 | DT-74 | Distinguish an absent registry from failure to inspect its path. | Contrast absent path, inaccessible ancestor and unreadable file; inspect the resulting classification and candidate report. |
 | DT-89 | Decide how failed source-directory enumeration affects identity derivation. | Contrast readable and unreadable directories containing selected files; check that omission cannot silently masquerade as complete discovery. |
 | DT-23/51 | Decide how declared-unapplied actor classification handles validator failures. | Exercise spawn and decode failures beside their applied counterparts, retaining independent worker observations. |
-| DT-09, DT-26, DT-54, DT-58, DT-69, DT-91 | Correct specific accounts after confirming intended behavior and current ownership. | Read the corrected statement through its actual destinations and check that its support establishes the stated scope. |
+| DT-09, DT-26, DT-54, DT-58, DT-69, DT-91 | Assess specific inaccuracies and correct accounts within the freeze boundary; give remaining inaccuracies a present disposition. | Check ownership, generated destinations and user commitments, then verify that corrected support establishes the stated scope. |
 
 Broader questions about integrity findings and exit status, receipt validation,
 or wire projection need their own decisions. The current separation of result
@@ -264,7 +359,8 @@ of the desired public meaning and affected consumers.
 
 A remediation proposal should carry the bounded problem, relevant competing
 interpretations, chosen behavior or meaning, affected owners and readers,
-verification, and explicit exclusions. Explain why the chosen layer changes;
+verification, and explicit exclusions. Include the freeze's effect on the
+selected remedy and any residual cost. Explain why the chosen layer changes;
 existing agreement with that layer is insufficient justification by itself.
 Public-meaning and interface decisions follow
 [CONTRIBUTING](../CONTRIBUTING.md#improving-documentation-in-four-passes).
@@ -291,31 +387,54 @@ before crediting them. Preserve decisive observations and provenance in the
 assessment, without adding retention exceptions or treating missing artifacts
 as either proof or disproof of the recorded result.
 
-For documentation and contract changes, edit the owning inputs and regenerate
-through the [documented generators](../docs/AGENTS.md). Update affected
-admission, transport, readers, fixtures and public meanings together when the
-decision crosses those boundaries. Mechanical freshness establishes agreement
-of copies; review and selected behavioral checks establish the changed claim.
+For permitted documentation and contract changes, edit the owning inputs and
+regenerate through the [documented generators](../docs/AGENTS.md). Inspect all
+destinations for guide content changes, including copies from shared inputs;
+separate any allowed identity/stamp updates from explanatory changes. Update
+affected admission, transport, readers, fixtures and public meanings together
+when the decision crosses those boundaries. Mechanical freshness establishes
+agreement of copies; review and selected behavioral checks establish the
+changed claim.
 
 ## Completion and disposition
 
-The management pass is complete when every observation has a traceable
-assessment, follow-up qualifications are represented, and the selected first
-changes have usable proposals. Remaining questions can be explicitly deferred
-with their consequence and next discriminating step. Completion does not
-require converting every finding into a defect or resolving every design
-question at once.
+Complete each assessment with a present-tense judgment:
 
-Close an individual problem only at its stated scope. Record which original
-claims were resolved, narrowed, withdrawn or intentionally retained, what
-evidence supports that disposition, and what remains open elsewhere. A
-correction to one passage does not close every concern in its family. An
-implementation that meets its current specification does not by itself close a
-challenge to that specification or to the tests credited for it.
+> We establish X within these limits. We judge Y acceptable or defective
+> because Z. We choose this present treatment. It leaves this consequence,
+> which we accept or find unacceptable under the freeze.
+
+The judgment may conclude that an alleged defect is not established and a
+narrower problem is resolved; that behavior is an accepted limitation with no
+additional work warranted; or that a known defect remains deliberately retained.
+In the last case, name the affected cases and costs. Assessment completed and
+defect repaired are different states. A known defect can remain without an
+automatic promise to repair it when the guide changes.
+
+If the residual cost is unacceptable, the required decision concerns the freeze
+or the chosen product behavior. Mark that decision pending until it is made;
+assigning a future documentation task cannot substitute for it. An unresolved
+evidence question can instead receive a completed, bounded judgment when the
+present uncertainty and its consequences are explicitly accepted. Do not claim
+the underlying behavior was established in that case.
+
+Record which original claims were resolved, narrowed, withdrawn or deliberately
+retained, what evidence supports each disposition, and what remains defective
+elsewhere. A correction to one passage does not close every concern in its
+family. An implementation that meets its current specification does not by
+itself close a challenge to that specification or its credited tests. Correcting
+internal accounts while freezing misleading guide prose leaves a documentation
+defect whose reader impact must be judged explicitly.
+
+The management pass is complete when every observation has a traceable present
+assessment, follow-up qualifications are represented, and selected changes have
+usable proposals. No observation is complete merely because it has a family,
+a future task or an instruction to revisit the guide. Completion requires
+accountable judgments, not a target number of defects or future obligations.
 
 Before accepting the synthesis, check it in both directions: every original
-observation still has a place, and every proposed change rests on identified
-claims and decisions. Explicitly inspect the unallocated and deferred items,
-including observations that seem harmless from one perspective. The outcome
-should make careful remediation possible while retaining the review's capacity
-to expose mistaken tests, specifications and assumptions.
+observation has a disposition, and every proposed change rests on identified
+claims and decisions. Resolve temporary allocation gaps and inspect cases that
+seem harmless from one perspective. Further work follows from a chosen product
+objective or new evidence; the accounting exercise creates no standing backlog
+or requirements for the eventual guide rewrite.
