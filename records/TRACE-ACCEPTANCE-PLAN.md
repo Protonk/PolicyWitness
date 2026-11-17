@@ -216,6 +216,42 @@ preserving separately justified equalities. The initial trace review's reader
 disagreement is a reason to investigate that premise, not proof that every
 identity relation should become identical.
 
+## Pairing rehearsals with the companion plans
+
+The three initial counterfactuals are shared threads in the management plan's
+[combined sequence](TRACE-MANAGEMENT-PLAN.md#working-the-three-plans-together),
+which owns their order and verification. Three consequences follow for the
+rehearsals themselves.
+
+**Make one trace per hypothetical.** The management assessment compares the
+same statements, producers and readers, and the overhaul
+[rehearses the same changes](TEST-OUTCOME-OVERHAUL-PLAN.md#acceptance-argument-preservation-and-reduction)
+through the tests that enforce them. Use one statement of the hypothetical for
+all three, including its output-field treatment. Extend the trace through the
+enforcing tests and their credited claims instead of leaving them to a second
+reading.
+
+**Rehearse before the thread's accounts change.** Record the inspected
+revision and trace the current arrangement before that thread's permitted
+corrections land. The comparison and the later correction then describe the
+same passages. An arrangement change that a rehearsal justifies travels with
+the thread's other account edits under the management plan's handoff. It is not
+a separate later pass over the same documents.
+
+**Hand caller obligations to the outflow.** While tracing the current
+arrangement, note each condition a caller must meet, or scope a caller must
+respect, for a stated conclusion to hold. Note in particular those a reader has
+to reconstruct from several accounts. They are inputs to the management plan's
+[user-responsibility outflow](TRACE-MANAGEMENT-PLAN.md#user-responsibility-outflow).
+An obligation that exists only under the hypothetical belongs to the
+comparison and establishes nothing about the product. What reaches the outflow
+is the obligation and its evidence; a rehearsal's account of guide dependencies
+stays with the rehearsal.
+
+None of this adds a gate. A thread proceeds without a rehearsal that was not
+planned for it, and an inconclusive rehearsal still creates no obligation to
+complete it.
+
 ## Interpreting the evidence
 
 The comparison needs an account of where work went. These distinctions help

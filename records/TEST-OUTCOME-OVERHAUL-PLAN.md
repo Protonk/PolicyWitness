@@ -35,6 +35,12 @@ The three companion plans have distinct responsibilities:
 | [TRACE-ACCEPTANCE-PLAN.md](TRACE-ACCEPTANCE-PLAN.md) | Supplies the reasoning for evaluating independently maintained judgments and change costs. Its change rehearsals inform the assessment here; they are not another completion gate. |
 | This plan | Owns the proposed test-authority and reporting capability, selected assertion and wording corrections, two bounded pytest migration cohorts, and verification of preservation and relinquishment. |
 
+The management plan's
+[combined sequence](TRACE-MANAGEMENT-PLAN.md#working-the-three-plans-together)
+owns the order in which work shared by the three plans settles and the
+boundaries at which broad runs happen. The stages and verification below state
+this plan's own obligations within that sequence.
+
 The [guide freeze](TRACE-MANAGEMENT-PLAN.md#guide-freeze-and-public-commitments)
 remains binding, including shared and generated explanatory content. A new test
 classification cannot withdraw a public commitment, resolve a consequential
@@ -300,6 +306,18 @@ fixed expectations such as the no-request record so they do not indirectly
 reintroduce the removed architectural requirement; any public-meaning issue
 goes through the management plan before changing that expectation.
 
+The commitment assessment for this conversion belongs to the management plan,
+which takes it early although no trace finding has it as its subject. Give it
+the passages that describe descendant lifetime as well as the test. Generated
+accounts cite this case as support. FOOTPRINT rows fa5 and fa6 cite the
+checker through [footprint.json](../docs/footprint.json) and describe its
+`main` as an assertion of the survivor observation. A WORKER resource row
+credits the case
+with establishing same-group survival, and [COVERAGE](../tests/COVERAGE.md)
+describes it. Those support descriptions change with the conversion. Correct
+them through their owners in the same change, and inspect the generated
+destinations for the freeze.
+
 The revised instrument should distinguish these plausible arrangements:
 
 | Arrangement under examination | What the instrument retains without preferring it |
@@ -423,6 +441,13 @@ and `actor_fallback_preserves_resolved_inputs_order_and_transport_evidence`,
 exercise helper invocations and independently authored expected inputs.
 Before relaxing them, distinguish byte/input preservation and honest attribution
 from the decision to invoke the helper at all.
+
+These Rust tests live in `controller/src`, which is a
+[build-contract input](../docs/build_contract.py). Correcting only a test's
+name, message or comment there changes the development contract, and the app
+must be rebuilt for the tree and the app to agree. Hold such edits until after
+the management plan's instrument checkpoint and land them with their thread.
+Swift tests under `runner/Tests` are outside those inputs.
 
 Rehearse removing automatic actor fallback while retaining ordinary and
 standalone compilation. A useful observation would retain the submitted form,
@@ -575,11 +600,21 @@ improvement.
 
 | Stage | Bounded work and handoff |
 | --- | --- |
-| 1. Fix the scope and authority decisions | Confirm the two cohort boundaries and current selected callers; establish the survivor conversion's commitment assessment; map the selected survey reporting gaps and trace claims. Record the old propositions, retained controls and intended reductions. Settle the small reporting comparison before expanding infrastructure. |
+| 1. Fix the scope and authority decisions | Confirm the two cohort boundaries and current selected callers; obtain the survivor conversion's commitment assessment from the management plan; map the selected survey reporting gaps and trace claims. Record the old propositions, retained controls and intended reductions. Settle the small reporting comparison before expanding infrastructure. |
 | 2. Establish reporting and enforcement capability | Change the existing shell/dispatcher and pytest boundaries only as needed, with mixed-outcome controls. Update dependency interpretation for affected cases, release validation and producer-bound evidence readers in the same stage. A new non-gating result cannot ship while release or summary code silently converts it to a pass. |
 | 3. Exercise real conversions and scope repairs | Convert the survivor observation, retirement completion and pilot comparison reporting; repair selected assertion-to-unrun paths. Implement the management-approved DT-53/132 and DT-63/124/125 assertion/wording/support corrections with their contrasts. Keep transport and receipt product decisions bounded by their assessment and freeze. |
 | 4. Complete both pytest cohorts | Establish migration equivalence and then any separately justified outcome revisions. Retire the replaced orchestration. This can proceed alongside stage 3 after stage 2 supports the necessary receipts, pure items and real commands. |
 | 5. Assess preservation, reduction and maintenance cost | Verify the combined default and selected opt-in behavior, release evidence handling and old-format semantics. Rehearse changed product behavior through the revised tests and accounts. State what authority actually disappeared and what evidence or controls remain, with any residual costs. |
+
+Land stage 2 with no conversion in it, so the capability alone can be shown to
+leave existing results as they were. Each conversion then lands separately,
+naming its old assertion and the reason for its new authority. Stages 2
+through 4 need not change a build-contract input, apart from the run-flow
+corrections noted above, provided they leave alone the five `tests/lib`
+helpers that list names, `checkout_lock.py` among them. They can then finish
+against one unchanged signed app. The management plan's instrument checkpoint
+depends on that: it compares the harness-side work with a baseline battery of
+the same app before any product change follows.
 
 Implementation owners are existing boundaries, not new organizational layers:
 `test_cli.py` and the catalog for selection; `testlib.sh`, `case.sh` and
@@ -636,10 +671,22 @@ integrated reader paths rather than only the Python aggregation controls.
 Changes to the worker wait, release store or eligibility rule still require
 `witness_contract/order_barrier_mutations`; measuring or migrating a reader does
 not itself establish such a product change. Run source-drift checks for changed
-registrations, documentation/support or generated inputs. Finish with the
-default battery against the identified candidate app and the relevant opt-ins.
+registrations, documentation/support or generated inputs. Run the default
+battery against the identified candidate app, with the relevant opt-ins, at
+the instrument checkpoint and again in the final integrated verification.
 Use the release controls to establish acceptance semantics; any actual archive
 acceptance must follow the existing release procedure and is not publication.
+
+Revising `release_accept.py`, `execution_contract.py` or `release_runs.py`
+changes release-acceptance orchestration, which
+[change verification](../tests/CHANGE-VERIFICATION.md#build-refusal-controls)
+routes to the opt-in `preflight/build_refusal_controls`. The constructed
+release controls establish the revised semantics. That case's release-battery
+sequence is the one catalog path in which real acceptance reads a real
+battery, including the migrated families and the converted survivor case. Run
+it once, in the final integrated verification, and not after each stage. At
+the instrument checkpoint, reading the completed battery with the revised
+release battery validator is a direct investigation that credits no case.
 
 Do not count an environment-refused native run as a product result. Preserve
 source/app identity, evidence availability and applicability when comparing
@@ -668,12 +715,21 @@ old survival requirement or other justified obligation removed, any duplicate
 test orchestration retired, and any misleading coverage claim corrected.
 Distinguish retirement of an assertion from retirement of useful evidence.
 
+For each judgment relinquished or narrowed, state what PolicyWitness no longer
+establishes on a user's behalf, and what a user who needs that conclusion must
+then do or avoid. Hand those statements, with the conversion and evidence they
+rest on, to the management plan's
+[user-responsibility outflow](TRACE-MANAGEMENT-PLAN.md#user-responsibility-outflow).
+A withdrawn test requirement that changes nothing a user may rely on
+contributes no entry.
+
 Apply the acceptance companion's change-sensitivity reasoning locally. Rehearse
 the descendant ending at completion, actor fallback disappearing, and a receipt
-or identity premise changing. Trace which remaining expectations need a
-substantive decision, which observations simply report different facts, which
-public commitments still constrain the change, and which descriptions require
-review. Include hidden adapters, dependency rules and source/provenance
+or identity premise changing. Where the acceptance plan rehearses the same
+change, make the two one trace under one statement of the hypothetical. Trace
+which remaining expectations need a substantive decision, which observations
+simply report different facts, which public commitments still constrain the
+change, and which descriptions require review. Include hidden adapters, dependency rules and source/provenance
 declarations in the cost. Keeping independent scrutiny may properly retain
 several checks of a rule; copying the implementation's answer into every oracle
 is not economy.

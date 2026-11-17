@@ -396,6 +396,160 @@ when the decision crosses those boundaries. Mechanical freshness establishes
 agreement of copies; review and selected behavioral checks establish the
 changed claim.
 
+## Working the three plans together
+
+[TRACE-ACCEPTANCE-PLAN.md](TRACE-ACCEPTANCE-PLAN.md) and
+[TEST-OUTCOME-OVERHAUL-PLAN.md](TEST-OUTCOME-OVERHAUL-PLAN.md) reach some of
+the passages, tests and decisions assessed here. This section owns the order in
+which shared work settles and the selection of its broad verification; the
+companions refer to it instead of restating it. It is a recommended
+arrangement. The decisions it leaves open are listed at its end, and the text
+before them follows the recommended alternative for each.
+
+It rests on source and catalog inspection at `a9de3ccf`. Nothing was executed
+for it. The durations below are approximate figures from earlier development
+runs on the maintainer's machine, not retained evidence; `run.json` records
+the actual ones.
+
+### Shared threads
+
+Five threads need more than one plan. Elsewhere each plan proceeds alone.
+
+| Thread | This plan | Acceptance plan | Overhaul plan |
+| --- | --- | --- | --- |
+| Actor fallback and transport result paths | Transport pilot | Fallback-compilation rehearsal | Run-flow fallback tests and the fallback-removal observation |
+| Compiled-profile receipts | Import and receipt distinctions | Rehearsal of a capture reported despite unsuccessful application | Label-admission test and its credited claim |
+| Association and reader responsibilities | DT-53/132 with the identity-relation findings | Association-equality rehearsal | Consumer and oracle callers and their credited coverage |
+| Exec descendant lifetime | Commitment assessment the overhaul requests | None planned | Survivor conversion and the aftermath dependency |
+| Authority erasure timing | DT-63/124/125 | None planned | Credited last-use claim and any observation before teardown |
+
+Take a shared thread in this order:
+
+1. **Read once.** Where a rehearsal is planned, make its trace and this plan's
+   comparison of perspectives one reading. Both inspect the same statements,
+   producers, readers and assertions. Include the tests that enforce the
+   rehearsed subject, so the overhaul's local rehearsal is not a second pass.
+2. **Decide once.** Record the disposition here, with the freeze's effect. The
+   rehearsal is evidence for it and not a gate: a thread without a planned
+   rehearsal does not wait for one.
+3. **Change once.** The overhaul applies the authorized test response. Permitted
+   account corrections, and any arrangement change the rehearsal justified,
+   land with it, so each destination is edited one time.
+
+A disposition recorded before its rehearsal can correct a passage that the
+arrangement judgment then moves or removes. A test response chosen before the
+disposition selects authority after seeing the result, which the overhaul
+rules out.
+
+Where a thread produces both a test response and a product change, land the
+test response first and exercise it against the existing behavior. A test and
+a product changed in one step cannot show that the revised test still
+distinguishes the old behavior from the new.
+
+The exec-descendant commitment is not the subject of a DT entry. Assess it with
+the [same method](#judge-the-product-before-selecting-the-available-remedy),
+and early: the overhaul's acceptance argument depends on that conversion.
+Handle other commitment questions the overhaul hands in the same way. They do
+not join the DT coverage map.
+
+### What proceeds independently
+
+- From the start, with no result needed from another plan: this plan's
+  coverage map and assessments; the rehearsals; the overhaul's reporting
+  comparison, its capability and the cohort equivalence mapping.
+- A conversion or correction on a shared thread waits for that thread's
+  disposition. Conversions and pure-computation cohort items also wait for the
+  reporting capability.
+- A product or public-meaning change waits for its own disposition only.
+- A remedy that adds controls to a population being migrated to pytest lands
+  after that cohort's equivalence is established, so the mapping does not
+  follow a moving population.
+
+### Selecting verification by consequence
+
+Use the existing routes. [Change verification](../tests/CHANGE-VERIFICATION.md)
+maps a changed boundary to its selections, and `tests/run.sh --list` shows a
+selection's prerequisites and dependencies. No further classification is
+needed. What the combined work adds is a judgment about where breadth belongs.
+
+An incremental signed build takes a few minutes and one case can be selected
+alone. A product failure found late can therefore be located by rebuilding at
+an intermediate commit and running that case. Breadth is the expensive part:
+the default battery, 233 cases of which 165 need the app or worker, takes
+roughly thirty to forty minutes. `preflight/build_refusal_controls`, with its
+fresh builds, real acceptance and nested battery, takes about two hours. Each
+holds the checkout lock, and tracked files stay unedited while it runs; a
+second worktree is the existing way to keep working.
+
+Run the routed selection with each change, at the commit that carries it. Run
+the default battery at the boundaries below. Keep one reason per commit; one
+verification run may cover several commits.
+
+Four kinds of change cannot rely on late localization. Give them their broader
+evidence when they land:
+
+| Change | Why it cannot wait | Evidence when it lands |
+| --- | --- | --- |
+| Outcome reporting and release readers, the overhaul's second stage | Every later result is read through them. | The constructed controls the overhaul names, then the instrument checkpoint below. |
+| Runner installation, registry, reconciliation or cleanup (DT-34/35, DT-69–80) | A failed removal leaves launchd services and registry records that obstruct later selections and pruning. | The applicable `runner_byoxpc` opt-ins in a logged-in GUI session, with owned resources verified absent before other work continues. |
+| Worker wait, release store, query eligibility or observers | The mutation anchors are exact; two accumulated changes make a failed anchor ambiguous. | `witness_contract/order_barrier_mutations` with each change. |
+| Wire, layout, schema or identity derivation (DT-105–112, DT-88–94, DT-08/91) | Generated identities, goldens and every later build depend on them. | Regenerate through the owner; run `source_drift`, `runner_abi_layout` and the default build controls; rebuild before the next change. |
+
+A document-only change needs its generator and `source_drift`, and no app.
+Check [the build contract inputs](../docs/build_contract.py) before assuming a
+change is document-only or test-only. `controller/src` holds the Rust unit
+tests, so correcting a test's message there changes the development contract,
+and the app must be rebuilt for the tree and the app to agree. `runner/Tests`
+and most of `tests/` are outside those inputs.
+
+### Three boundaries for broad runs
+
+**Instrument checkpoint.** The overhaul changes how results are read. Product
+remediation changes what is read. Separate the two once. Take a default battery
+immediately before the reporting capability lands. Change no build-contract
+input until the harness-side work is complete: the capability, the conversions
+whose dispositions are settled, both cohorts, and test corrections outside
+`controller/src`. State the expected differences from the baseline case by
+case. Then run the default battery and the converted opt-in cases against the
+same app. Any other difference belongs to the harness. Read that run with the
+revised release battery validator as a direct investigation that credits no
+case; this is the least expensive place for that reader to meet real output.
+Product work that is ready sooner lands before the baseline is taken.
+
+**Signed-app checkpoints.** After that, group product changes whose routed
+selections do not overlap, and run one default battery for the group instead
+of one per change. Locate a failure outside every routed selection with an
+intermediate build.
+
+**Final integrated verification.** Run it once, when the selected changes from
+all three plans are in. Order it by cost, so an inexpensive failure does not
+consume the long run: `source_drift` and the offline controls, a build, the
+default battery with the relevant opt-ins, then
+`preflight/build_refusal_controls`. That last case is change-triggered here.
+The overhaul revises release-acceptance orchestration, and the case's
+release-battery sequence is the one catalog path in which real acceptance
+reads a real battery. Its per-control records and nested output keep a failure
+attributable to a build refusal, the acceptance reader or a battery case. An
+actual release follows the [release procedure](../docs/SIGNING.md#release-procedure)
+and remains a maintainer action.
+
+Deferring that case to the end is sound because every unit reaches it with
+its own evidence: the harness against an unchanged app, each product change
+through its routed selection, each group through a default battery. One
+condition brings real acceptance forward. A tagged release cut while the work
+continues runs the release chain, whose acceptance reads a real battery with
+whatever reader the tree then holds. Place such a release at the instrument
+checkpoint, so the first archive under the revised evidence semantics carries
+no product change.
+
+### Integration decisions still open
+
+| Decision | Alternatives | Recommendation |
+| --- | --- | --- |
+| Whether product changes wait behind the instrument checkpoint | Hold build-contract inputs unchanged between the baseline and the checkpoint. Or interleave product and harness changes, relying on routed selections. | Hold them. Interleaving saves waiting, but leaves the final run unable to separate a reading defect from a product defect without repeating batteries. |
+| Whether a release falls inside the work | No release until the final verification. Or a checkpoint release at the instrument checkpoint. Or a release between product changes. | Either of the first two. Avoid the third: it spends the full chain on an intermediate product state and mixes the evidence-format boundary with product change. |
+| Who counts as a user for the [outflow](#user-responsibility-outflow) | Only people who use the shipped producer and read its output. Or also people who supply their own producer or reader. | Undecided here. Record candidates that exist only under the second reading as unsettled until it is decided. |
+
 ## Completion and disposition
 
 Complete each assessment with a present-tense judgment:
@@ -403,6 +557,10 @@ Complete each assessment with a present-tense judgment:
 > We establish X within these limits. We judge Y acceptable or defective
 > because Z. We choose this present treatment. It leaves this consequence,
 > which we accept or find unacceptable under the freeze.
+
+When the accepted consequence falls on a user, say so in the judgment: what
+they must do, avoid, arrange, check or refrain from concluding. The
+[closing collection](#user-responsibility-outflow) reads these statements.
 
 The judgment may conclude that an alleged defect is not established and a
 narrower problem is resolved; that behavior is an accepted limitation with no
@@ -427,10 +585,11 @@ internal accounts while freezing misleading guide prose leaves a documentation
 defect whose reader impact must be judged explicitly.
 
 The management pass is complete when every observation has a traceable present
-assessment, follow-up qualifications are represented, and selected changes have
-usable proposals. No observation is complete merely because it has a family,
-a future task or an instruction to revisit the guide. Completion requires
-accountable judgments, not a target number of defects or future obligations.
+assessment, follow-up qualifications are represented, selected changes have
+usable proposals, and the user-responsibility outflow is recorded. No
+observation is complete merely because it has a family, a future task or an
+instruction to revisit the guide. Completion requires accountable judgments,
+not a target number of defects or future obligations.
 
 Before accepting the synthesis, check it in both directions: every original
 observation has a disposition, and every proposed change rests on identified
@@ -438,3 +597,94 @@ claims and decisions. Resolve temporary allocation gaps and inspect cases that
 seem harmless from one perspective. Further work follows from a chosen product
 objective or new evidence; the accounting exercise creates no standing backlog
 or requirements for the eventual guide rewrite.
+
+## User-responsibility outflow
+
+Near the end of the combined work, collect the responsibilities that the three
+plans' judgments leave with users, considered together. Record them in
+`records/USER-RESPONSIBILITY-OUTFLOW.md`, following the existing outflow
+records: a date, the source revision and a status line. This plan owns the
+activity because a responsibility follows from the dispositions, compatibility
+decisions and freeze it owns. The companions contribute what their own work
+established.
+
+### What belongs
+
+An entry is a consequential condition under which someone who submits
+requests, reads results, or installs and operates runners must do more than
+follow the declared schemas. They must act, refrain, arrange their
+environment, run a particular command or check, keep a conclusion within a
+stated scope, or take responsibility for something PolicyWitness does not
+establish for them.
+
+Test each candidate by naming the action or restraint and what goes wrong for
+that user without it. A candidate that supplies neither is one of these, and
+stays in its assessment without being listed:
+
+- **Implementation assumption.** The product's own producer, reader or
+  maintainer upholds the condition. The user can neither meet nor violate it.
+- **Optional practice.** It helps, but nothing false or harmful follows from
+  omitting it.
+- **Limitation without a user consequence.** It narrows what the instrument
+  observes without changing an action or conclusion open to the user. A
+  limitation becomes an entry when a user must restrict a conclusion because
+  of it.
+
+Duties of people building, testing or releasing PolicyWitness belong to the
+working guidance, not here.
+
+### Sources
+
+Use the accumulated judgments of all three plans, including dispositions that
+changed no code or test:
+
+- This plan's completed assessments, particularly accepted limitations,
+  deliberately retained defects and checks delegated to another party.
+- The rehearsal assessments, for obligations the current arrangement places on
+  a caller that surfaced only by reconstruction across documents. An
+  obligation that exists only in a rehearsed hypothetical establishes nothing.
+- The overhaul's preservation and reduction account, for what stops being
+  established on a user's behalf when enforcement is withdrawn or a credited
+  claim is narrowed.
+
+Read them together. One responsibility can rest on several findings. Some
+appear only in combination: an accepted limitation here and a relinquished
+assertion there can bear on the same conclusion.
+
+### Entries
+
+Write one entry per responsibility, not per finding:
+
+- the condition and the responsibility, stated for the role that carries it;
+- the consequence of not meeting it;
+- what in the product's own output indicates that the condition applies, or
+  that nothing does;
+- its standing, established or unsettled, with the reason;
+- its provenance: the assessments, rehearsal or conversion it rests on, and
+  their evidence class. Give enough to show why it belongs without restating
+  the findings.
+
+A responsibility is **established** when the evidence supports the condition
+within stated limits and a completed disposition leaves it with the user. It
+is **unsettled** when the condition rests on an observation that was not
+traced or reproduced, when it lasts only until a pending product or freeze
+decision, or when it arises only under a hypothetical arrangement or an
+undecided user role. For a pending decision, name it and what each outcome
+does to the responsibility. Do not promote an unsettled candidate because
+listing it as an obligation seems the cautious choice.
+
+### Guide freeze
+
+The outflow states what users are responsible for. It does not compare those
+responsibilities with guide passages, record where the guide omits or
+misstates one, propose wording, or carry requirements to the guide rewrite.
+Include or exclude a responsibility on the product's behavior and the
+dispositions alone.
+
+### Timing
+
+Draft it once the last disposition, rehearsal assessment and reduction account
+are recorded. It depends on judgments, not on the final runs. Finalize it
+after the [final integrated verification](#three-boundaries-for-broad-runs):
+restate an entry, or move it to unsettled, when that run did not bear out the
+change or observation it rests on.
