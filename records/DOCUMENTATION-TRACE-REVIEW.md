@@ -8575,3 +8575,185 @@ Files:
 - Script for E: `/private/tmp/claude-501/-Users-raccoon-Desktop-Security-PolicyWitness/8e36ddab-fa42-4f22-aaa7-9c8a136b8fe2/scratchpad/scripts/joint_enforcement.py` (`f72fe9de…3593`)
 - Output for R: `/private/tmp/claude-501/-Users-raccoon-Desktop-Security-PolicyWitness/8e36ddab-fa42-4f22-aaa7-9c8a136b8fe2/scratchpad/joint-1`
 - Output for E: `/private/tmp/claude-501/-Users-raccoon-Desktop-Security-PolicyWitness/8e36ddab-fa42-4f22-aaa7-9c8a136b8fe2/scratchpad/joint-2`
+
+## Follow-up investigation: boundaries of the shared import and receipt interpretation
+
+The investigator supplied the following report in
+`.tmp/SHARED-INTERP-FOLLOW-UP.md`. It is preserved here with only heading
+levels adjusted and source links rebased; links to the preceding investigation
+use its section anchor, and citation labels retain the submitted line
+references. This follow-up qualifies that investigation; the earlier text
+remains intact. The executions and judgments below are the investigator's;
+the experiments were not rerun during incorporation. The source report
+and its named scratch artifacts are disposable local material.
+
+### Follow-up: where the shared interpretation holds
+
+**Outcome: a modest clarification plus one small new contrast.**
+
+- **The interpretation holds as a description of a documented separation.** No field links the dossier's file records to the compiled bytes, in all five cases.
+- **Divergence is narrower than the earlier account implied.** It was observed only through the DT-84 and DT-85 mechanisms, and only by comparing with runs whose composition I knew. No single envelope shows it.
+- **Several passages in the appended account need narrower wording.** I list them at the end.
+- **The new contrast was one small run series.** I changed no tracked files and built nothing.
+
+#### 1. The cases compared
+
+**The source association is already established.** In every run these three digests were equal:
+- `augmentation.applied_sha256`
+- `runner_result.policy_sha256`
+- `compiled_profile.source_sha256`
+
+That equality holds by construction:
+- The dossier is built from the resolved request value ([run_flow.rs:609](../controller/src/run_flow.rs)).
+- The same value is serialized once into the string delivered to the runner (`:678`, `:681`).
+- The host checks the worker's digest against what it received ([CWorker.swift:706](../runner/Sources/PWRunnerCore/CWorker.swift)).
+
+So the earlier phrase "which no reader compares" pointed at the wrong weak spot. A missing comparison there would only confirm what the code already guarantees. One test also joins the receipt to the request source ([check_actor_compositions.py:132](../tests/suites/witness_contract/check_actor_compositions.py)). The association that remains unestablished is between the dossier's records and the compiled file inputs, and no field covers it.
+
+**What the envelope leaves out.** It carries `specimen.request_path` and the digests, but not the source text. To see the import forms, or to recompute the closure hash, a reader needs the retained request. They can confirm it's the right file by checking it against `original_sha256`.
+
+| Case                              | From the envelope alone                                                                                                       | Adding the request and prepared files                                                                                                                                                                       | Divergence                                                                                                                                                          |
+| --------------------------------- | ----------------------------------------------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| R0/E0 (no import)                 | `complete`, no records; 492 bytes                                                                                             | No import form; E0 created the file                                                                                                                                                                         | Nothing to associate                                                                                                                                                |
+| R1/E1 (literal import)            | `complete`, one record: path, hash `c313d21c…`, size, mtime, all from the walk before delivery. Nothing links it to the bytes | `inc.sb` was written once before the runs and its hash matches. Bytes differ from R0 and equal DT-98 run 1, which evaluates the same rules in the same order. E1 refused the target and created the sibling | **Not observed.** Possible by construction: the walk is a separate, earlier read of a file on a writable volume. Unsignaled, because nothing is known to be missing |
+| R3 (computed import)              | `incomplete`, no records, "a nonliteral (import ...) form could not be followed"                                              | `string-append` evaluates by hand to `inc.sb`; bytes equal R1                                                                                                                                               | **Signaled** by the dossier, then confirmed by contrast                                                                                                             |
+| R2/E2 (comment inside the import) | Same status, records and failure as R0                                                                                        | The import form is visible in the source; bytes equal R1; E2 refused                                                                                                                                        | **Observed only by contrast** with R0/R1/E0; not signaled                                                                                                           |
+| R4/E4 (untaken import)            | Same status and records as R1                                                                                                 | `(if #f …)` is visible; bytes equal R0; E4 created the file                                                                                                                                                 | **Observed by contrast**, between the record and the compiled content. Compiler reads are not observed                                                              |
+
+**What's left when no scanner miss is involved (R1, R3).** Two facts remain: the receipt names no files, and the walk is a separate, earlier read. Both are documented ([11-policy.surface.md:565–577](../docs/contract/11-policy.surface.md), [sbpl_imports.rs:6](../controller/src/sbpl_imports.rs), [dossier.rs:117](../controller/src/dossier.rs)). Together they leave an unverified association. No run with an ordinary literal import showed divergence. The two ways such a source could diverge weren't exercised:
+- a file change within one run;
+- which directory a relative name resolves to.
+
+Section 4 bounds both.
+
+**The guide's own route for consumers.** It says consumers "compare actual decoded bytecode with any independently retained expected object" ([PolicyWitness.md:756–758](../docs/PolicyWitness.md)). My contrasts caught R2 and R4 only because I knew what the baselines contained (R0 has no import, R1 has a literal one) independently of the inventory. An expected object made by compiling the same source on the same host would match R2's bytes and wouldn't reveal the missed import. That last point is reasoning; I didn't run it.
+
+**Where the formulation needs narrowing.**
+- Its first three sentences hold in every case.
+- The fourth should say the source association holds by construction.
+- Any claim that the separation leaves divergence unsignaled should name DT-84 and DT-85 as the only observed sources.
+
+#### 2. The two directions of the identity argument
+
+**Identity doesn't determine the bytes (DT-98).**
+- **Equal across both runs:**
+  - `source_sha256` `37dbde4d…0791`
+  - `source_length` 155
+  - `params_sha256` `df3f6198…1119`
+  - `parameter_count` 0
+  - `profile_type` 0
+
+  `worker_pid` and `request_nonce` identify the run, not the inputs.
+- **Fixed:** the build, the OS, the source text including the absolute import path, and the absence of parameters.
+- **Changed:** the imported file's content, rewritten between two separate runs.
+- **Result:** the bytes went from 492 `b2056ef2…97e0` to 548 `f7dbbaca…8718`, and the dossier closure changed.
+- **Supported:** for a source with an import, these fields don't determine the bytes; the imported content matters too. This rests on one absolute import, changed between runs. It says nothing about a change within one run.
+
+**Bytes don't determine the identity.**
+- **Four arrangements produced 548 `f7dbbaca…8718`:**
+  - R1, R2 and R3: the source holds `(version 1)` and `(allow default)` and imports `joint-1/inc.sb`, which holds only the deny rule. There are three spellings, with three different source digests.
+  - DT-98 run 1: the source is `(version 1)` plus an import of `<probe3>/inc.sb`, which holds both `(allow default)` and the deny rule.
+- **What all four share:** the same rules, evaluated in the same order: `(version 1)`, `(allow default)`, `(deny file-write* (literal "/private/var/empty/pw-import-control"))`.
+- **What differs:** the source text, digest and length; the import directory; the spelling; and which file holds `(allow default)`.
+- **The same pattern at 492 `b2056ef2…97e0`:** R0, R4, E0 and E4 in both E series, and DT-98 run 0.
+- **Supported:** on this build and OS, arrangements that evaluate the same rules in the same order gave identical bytes, as read through the capture view. For these arrangements the bytes carry nothing about the import path, spelling or split, so the import identity can't be recovered from them.
+
+**Not supported: that compiled bytes never carry import-path information.** The new run is a counter-observation:
+- The `joint-2` and `joint-3` series differ only in that directory name. The name appears in the import argument and in the imported rule's literal path.
+- Their 644-byte outputs differ: `8b16fceb…66a9` versus `0861b817…dbd7`.
+- R1 = DT-98 run 1 shows that changing the import directory (and the split) left the bytes unchanged when the rule literal stayed the same. So the change is attributable to the one-character change in the rule's literal, which is a path inside the import's own directory.
+
+The bytes therefore carry path text that rules supply. One more observation I don't rely on: the R1 and E literals differ in length by 96 (36 versus 132), exactly the difference between 548 and 644. I didn't decode anything. Other ways location could enter the bytes are untested. All the equalities here are of what the private 24-byte view reads (DT-103).
+
+#### 3. How strong the application inference is
+
+**The new contrast (`joint-3`)** repeats the E series with a second step that creates `other`, a sibling in the same directory that no rule names. Runs alternated between deny and allow in the order E2, E4, E1, E0.
+
+| Case | Bytes               | Create `target`        | Create `other` | After the run (target / other) |
+| ---- | ------------------- | ---------------------- | -------------- | ------------------------------ |
+| E2   | 644 `0861b817…dbd7` | `open_failed`, errno 1 | ok             | absent / present               |
+| E4   | 492 `b2056ef2…97e0` | ok                     | ok             | present / present              |
+| E1   | 644 `0861b817…dbd7` | `open_failed`, errno 1 | ok             | absent / present               |
+| E0   | 492 `b2056ef2…97e0` | ok                     | ok             | present / present              |
+
+In every run:
+- exit 0, `finished`, `sandboxed_after_apply: true`;
+- receipt captured, and the length, digest, source and nonce checks all held.
+
+The queries were again `prediction_unavailable`. The product's comparison reads `permission_failure`, `operation_relation: unresolved`, `order: unestablished`, and it makes no claim about cause. The attribution below is mine.
+
+**What the matched observations support, across the two series:**
+- After application, the worker's policy refused to create exactly the path named by `inc.sb`'s rule. In the same run it allowed creating a sibling in the same directory. This happened only in the runs whose bytes match an evaluated import (E1, E2).
+- The refusal follows compiler evaluation, not the dossier. E4 recorded the file but allowed the write; E2 recorded nothing but refused it. So the controller's walk didn't cause the difference.
+- Several things were held fixed: the build, the worker kind, the parent directory, the step shape, and removing the targets before each run.
+- Alternating the order rules out drifting conditions.
+- The sibling rules out a refusal of all creation in the directory, or a broken worker.
+
+**Conclusion:** the imported rule's effect, a refusal confined to its literal path, was in force in E1 and E2 and absent in E4. The contrast supplies that; the lack of a kernel log doesn't take it away.
+
+**What it doesn't support:**
+- **How the compiler got the file.** The rule could only have come from `inc.sb`, since nothing else names that path. But how and when the compiler obtained it, and which version of the file, is unobserved.
+- **Which bytes application consumed.** Capture and enforcement sort the cases the same way, and between `joint-2` and `joint-3` both followed the changed literal. That is co-variation, not evidence that apply submitted the captured bytes (DT-103). The guide itself says none of this is "a readback of the kernel's effective policy" ([PolicyWitness.md:746–748](../docs/PolicyWitness.md)).
+- **The mechanism in kernel terms:** there's no log and no query result.
+- **Breadth:** one operation, one deny form, one pair of paths, and one run per case in each series.
+
+#### 4. Scope across time and paths
+
+**`BTLEServer.sb`.** The resolver comment is explicitly scoped: "Verified empirically on macOS 14.8.3 build 23J220". It says the search order "could not be confirmed by collision on this host (no overlapping filenames)" ([sbpl_imports.rs:15–24](../controller/src/sbpl_imports.rs)).
+
+On this host (26.7.1, 25G241), `BTLEServer.sb` is the only name present in both directories, which hold 59 and 511 entries. But the two paths are a single file, on the sealed system snapshot:
+- same device (16777233) and inode (1152921500312489006);
+- link count 2;
+- 3398 bytes.
+
+What follows:
+- **A changed condition, not a contradiction.** Nothing here observed 14.8.3. My earlier "contradicts" ([review:8509](#additional-investigation-interdependencies-of-import-inventories-and-compiled-profile-receipts)) was too strong, and "byte-identical" understated a hard link.
+- **The comment's conclusion still holds here.** One file under two names offers no real collision, so no hash, bytecode or enforcement contrast can reveal the search order. Only a trace of which directory entry the compiler looked up could. Its consequence would be limited to the path string: the dossier's `resolved_path` names the Profiles entry either way.
+- **The contract already carries this limit.** It calls the directory order "a platform convention" ([11-policy.surface.md:585](../docs/contract/11-policy.surface.md)) and says the search-order observations are "inherited from the source comments, not reproduced here" (`:603`).
+- **Related narrowing, inferred from the mount (I didn't test writes).** Both search directories are on the read-only snapshot, so files found there can't change between the walk and the compile within one boot. The window within a run ([review:8436](#additional-investigation-interdependencies-of-import-inventories-and-compiled-profile-receipts), `:8508`) matters for imports outside that snapshot, such as the writable-volume absolute paths used in every run here.
+
+**"DT-82 never appears beside a receipt."** What I examined:
+- **Callers.** The single-policy fallback ([run_flow.rs:360](../controller/src/run_flow.rs)) and the actor-form fallback (`:374`), each called on the admitted branch (`:699–701`) and the refused branch (`:715–724`).
+- **Eligibility.** [runner_client.rs:651–661](../controller/src/runner_client.rs) requires terminal `xpc_error`. DT-116 established that this always leads to the refused branch with a null `runner_result`.
+- **Fields.** `data.policy_check…import_inventory` and `data.actor_policy_checks[]`.
+
+Within that scope, the statement holds for both forms. I didn't examine external (BYOXPC) runners separately; they share the client record.
+
+Outside that scope:
+- **The guide's direct workflow.** It documents running `sbpl-check --request` on the same saved request a run uses ([PolicyWitness.md:768–772](../docs/PolicyWitness.md)). That puts the helper's projection beside a receipt in the reader's hands, though not in one envelope. For a computed import, the helper shows the no-import shape while the receipt's bytes include the import.
+- **A fallback envelope.** It also contains the dossier, so DT-82 does sit beside an inventory there, and the two would disagree for a computed import. This comes from reading the source; I didn't execute it.
+
+#### Passages in the appended account that need narrower wording
+
+| Review line | As written                                        | Narrower reading supported                                                                                                                                           |
+| ----------- | ------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| 8397, 8535  | Source digest shared, "which no reader compares"  | The source join holds by construction. Nothing joins records to compiled inputs                                                                                      |
+| 8398, 8556  | R2 as the concrete cost                           | Holds. Observed divergence comes only from DT-84/DT-85; ordinary literal imports give an unverified association                                                      |
+| 8477        | E2/E4 show the imported rule included or excluded | Supported, and now shown to be confined to the rule's path. It's still a matched-contrast inference and says nothing about which bytes apply consumed                |
+| 8478        | Bytes carry neither the import path nor the split | True only for arrangements that evaluate the same rules in the same order. Bytes do carry rule-supplied paths                                                        |
+| 8436, 8508  | Separate, earlier read                            | Matters for imports outside the sealed system snapshot                                                                                                               |
+| 8509        | Contradicts the 14.8.3 comment                    | A changed condition. One file under two names, and the comment's conclusion still holds                                                                              |
+| 8400, 8528  | DT-82 never appears beside a receipt              | Holds for `run` envelopes in the examined callers. The guide's direct workflow pairs them outside an envelope, and a fallback envelope puts DT-82 beside the dossier |
+
+#### Distinctions that still matter
+
+- **Four statuses:**
+  - documented separation, which is always present;
+  - unverified association, whenever there are imports;
+  - observed divergence, only for DT-84 and DT-85 and only by contrast;
+  - signaled incompleteness, as in R3.
+- **Source join versus file join:** the source join holds by construction; for the file join no field exists.
+- **"Same rules, same order, same bytes"** versus "bytes never carry path information".
+- **Three different claims:** a rule's effect on one path (supported); file opens (unobserved); which bytes application consumed (unobserved).
+- **Changed OS conditions versus contradiction**, and one file under two names versus two files.
+- **Appearing together in one envelope** versus a reader putting two outputs side by side.
+
+#### Evidence for the new contrast
+
+- **Run conditions:** build `8b5de2b2` with `codesign --verify --deep --strict` passing; macOS 26.7.1 (25G241); run under the checkout lock.
+- **Limits:** one run per case; these are not registered cases.
+- **Reuse:** the `joint-1` and `joint-2` outputs were reused unchanged.
+- **New `inc.sb`:** `e2a3448b…`.
+- **Files** (the scratchpad isn't durable, so the decisive values are in the tables above):
+  - Script (`2bd4427e…832b`): `/private/tmp/claude-501/-Users-raccoon-Desktop-Security-PolicyWitness/8e36ddab-fa42-4f22-aaa7-9c8a136b8fe2/scratchpad/scripts/joint_enforcement_paths.py`
+  - Output: `/private/tmp/claude-501/-Users-raccoon-Desktop-Security-PolicyWitness/8e36ddab-fa42-4f22-aaa7-9c8a136b8fe2/scratchpad/joint-3`
