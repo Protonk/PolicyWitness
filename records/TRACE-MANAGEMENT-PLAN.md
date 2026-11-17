@@ -382,3 +382,153 @@ verified selected remedies or reasoned retention, the overhaul's conversions,
 cohorts and seam migration, and the final outflows. Check both directions:
 each original observation has a disposition and each change has identified
 claims and decisions behind it. Unaccepted unresolved decisions remain pending.
+
+## Instrument preparation assessment — 2026-11-17
+
+Status: source mapping and bounded decisions before the instrument checkpoint;
+not completion of the trace review. The inspected implementation is `887b485f`.
+`git diff --name-only 3d3f8e65 887b485f -- controller runner tests docs` is empty,
+so the plans' source references remain applicable at this starting point. No
+registered case, live experiment, migration or product change is credited by
+this preparation. The original review remains intact. The shared rehearsals
+are recorded in the acceptance plan, and the scenario/equipment requirements
+in the overhaul plan; they are the same four threads, not additional findings.
+
+Initial environment inventory: one primary worktree, clean `887b485f`, about
+160 GiB available. `tests/out` uses 1.2 GiB, all in the newest protected release
+acceptance; four protected archives (`v0.3.4`–`v0.3.7`) use 836 MiB. Total
+`dist` is 877 MiB, `.tmp` 720 MiB (713 MiB in `contract-trio`), Rust cache
+3.2 GiB, `runner/.build` 270 MiB and `builddir` 56 MiB. The scratch root is
+`/private/tmp/pw-trace-checkpoint`. The coordinator's read-only prune preview
+there, `prune-initial.json`, has no blockers, targets or unmanaged output.
+The sandboxed preview's signature/provenance mismatch disappeared when the
+same bytes were checked outside the automation sandbox. Likewise `security`
+listed no signing identities inside the sandbox and listed
+`Developer ID Application: Adam Hyland (42D369QV8E)` outside. These observations
+support those environmental diagnoses only; no artifacts were removed.
+
+Verification intent, recorded before the consequential executions: publication
+`source_drift` and affected build/preflight controls, then a signed build and
+pinned default baseline. Reporting follows with dispatcher and shell-helper
+controls including `dispatcher/pytest_controls`, preflight release, publication,
+rotation and deadline controls, and the existing exec family. Raw deterministic
+replay and the same-app default pair establish the instrument checkpoint;
+read the completed battery with the revised validator and preview pruning.
+The boundary rationale is generation/publication admission first, then shared
+result interpretation, command/phase accounting and release rereading. There
+are no conversion, cohort or seam executable changes in this selection.
+
+### Evidence availability and reuse limits
+
+Checked paths on 2026-11-17, before implementation:
+
+| Evidence | Availability and permissible use |
+| --- | --- |
+| `.tmp/contract-trio/transport/` | Present, including controlled-client app and target directories. Original record distinguishes native, controlled-client, typed and source evidence. Retained capture bytes can inform discriminating inputs; their presence is not a current case pass. |
+| `.tmp/contract-trio/observation-time/` | Present. The original `/private/tmp/pw-trio-ot-xVGRMW/target` is absent. Captures can establish what the prior observation recorded; live target identity cannot be reconstructed from current files. |
+| `.tmp/contract-trio/acceptance/` | Present, including `reader-case-map.jsonl` and Cargo output. Original rebound frames and placeholder limitations still apply; the old failing seam run is not successful battery evidence. |
+| `/private/tmp/pw-failure-trace-elssragi/`, `/private/tmp/pw-authority-trace-3QC3qQ/` | Absent. Use the review's retained descriptions and source reading; rerun an applicable discriminating control before making a new executed claim. |
+| Three joint import/receipt outputs under the review's named Claude scratchpad | Absent. `.tmp/82-103-OBSV.md` and `.tmp/SHARED-INTERP-FOLLOW-UP.md` remain, as do their incorporated statements in the review. These are accounts of earlier observations, not raw observations available for replay. |
+
+All `.tmp` material above is gitignored local development evidence with no
+retention guarantee. Availability was checked, not its complete provenance or
+hash correspondence. No present directory is adopted as release evidence, and
+no original report is rewritten. The app used by those investigations was the
+`8b5de2b2` build described there; the checkpoint must identify its own candidate.
+
+### Finding coverage map
+
+This map allocates every DT identifier for subsequent disposition. A row is a
+reading/decision boundary, not a claim that its entries have one defect or one
+remedy. Compound subfindings and each entry's qualifications remain separate
+obligations at their original anchors. Except for the bounded decisions below,
+product dispositions are pending; the instrument checkpoint does not close them.
+
+| Original entries | Boundary to assess; qualifications to preserve |
+| --- | --- |
+| DT-01–04 | Contract generation: nested regions, moved destinations, link bytes and condition scope are four different preservation properties. Successful regeneration alone establishes none of their semantic adequacy. |
+| DT-05–08 | Authored/imported ownership, changed-item lookup, example provenance and development-input inventory; DT-08 joins DT-91 without dropping its original account. |
+| DT-09–10 | Optional log collection and unavailable-clock timeout semantics; separate operator account from observed cancellation. |
+| DT-11–14 | Executed evidence availability, historical counts, barrier support and declared check links; unavailable execution remains unavailable. |
+| DT-15–21 | Reading routes, commitment placement, changed-file coverage, presence rules, field ownership, known-gap navigation and distinct-rule link labels. DT-18's undefined phrase and 28 missing presence rules need separate dispositions. |
+| DT-22/57 | Empty ordinary step identity: eligible and excluded queries exercise different outcomes. Do not infer request refusal from an oracle failure. |
+| DT-23/51 | Declared-unapplied actor classification with failed validator spawn and failed decode, each beside applied counterparts. |
+| DT-24/30 | Query meanings and response vocabulary; distinguish emitted values, defensive branches and admitted input domains. |
+| DT-25/50/131 | Submitted-target canonical equality, validator identifier/metadata association and literal reader equality; only the association proposition participates in the shared equality rehearsal. |
+| DT-26–28 | Augment/selector refusal names and publication under broken/closed stdout. Codes, CLI behavior and output completion remain separate. |
+| DT-29/81–87 | Import scanner, resolver and helper projection: nonliteral signal, missed literal, unevaluated forms, hash scope and claimed coverage. Join to receipt assessment only at the shared source/file-input question. |
+| DT-31/32/42/113–119 | Transport reachability, error precedence, retained bytes, helper selection and held-input provenance; one fallback trace and rehearsal. Typed constructions are not evidence that the shipped caller reaches those states. |
+| DT-33–35 | Dossier first-problem/null cases and install ownership/signing/command result forms; do not merge installation evidence with transport fallback. |
+| DT-36/43 | Gate reap before ownership-loss classification and lifecycle rendering/resolution. |
+| DT-37–41 | Each smaller statement/source difference, support scope, prose account, index spelling and tour commitment list remains individually pending at its original subfinding. |
+| DT-44 | Thirteen unverified leads remain explicit below; confirmed statement existence does not verify the reported producer. |
+| DT-45/47/49/52 | Status-word promise, pre-encoding versus encoded checks, diagnostic null native return and errno-key presence are distinct producer/reader obligations. |
+| DT-46/120/121/129 | Cleanup-trigger derivation/time and actor stop-reason mapping, with gate-reaped actor and transfer-phase qualifications. DT-120 narrows DT-46's history claim. |
+| DT-48/130 | Native label/return coherence versus order eligibility, and implication versus equivalence in order readers. A valid unfavorable operation is not invalid evidence. |
+| DT-53/132/135 | Lifecycle-claim coverage, byte-consistent envelope readers and shared predicates; do not count repeated use of one predicate as independent judgment. |
+| DT-54/58 | Collection byte-limit stop and empty-byte fallback beyond the minimal report. |
+| DT-55/56 | Exec retained output: embedded NUL and split UTF-8 independently exercise loss and truncation indications. |
+| DT-59–61/133 | Self-transfer visit timing, raw setup association, decoder prerequisites and scheduler authority gate; preserve private header versus public record distinctions. |
+| DT-62/65/122/123 | Host custody acceptance, publication gating, delivery relationships and discarded worker custody observation; host and worker observers are separate. |
+| DT-63/64/124/125/128 | Host last-use/final teardown, oversized native erasure prefix, worker cumulative observer and terminal byte extent. Call counts, flags, scanned bytes and time cannot substitute for one another. |
+| DT-66/126 | Equal raw handles and per-release access effects; native return equality does not establish revocation. |
+| DT-67 | Redelegation contrasts' assertion authority versus credited negative effects. |
+| DT-68/127 | Pre-exit worker resource publications beside host teardown observations; a historical `held` value does not establish present ownership. |
+| DT-69–73/75–80 | Reconcile recovery, present/absent/ambiguous classification, candidate discovery and credited coverage; split each listed smaller observation. |
+| DT-74 | Absent registry versus failed inspection: absent path, inaccessible ancestor and unreadable file must remain distinguishable. |
+| DT-88–94 | Source inventory, traversal refusal, selected suffixes/roots, framing, metadata and support. DT-89's unreadable directory is a completeness question independent of its digest algorithm. |
+| DT-95–104/134 | Receipt host binding, publication/application/completion guards, constant labels, input coverage and capture-view limit; one capture rehearsal. Source binding, compiler-file inputs and application input remain distinct. |
+| DT-105–112 | Wire fingerprint, variant production, conditional-null projection, path compaction, reader rule order and shape/support coverage; qualify identity sensitivity independently of actual admission discrimination. |
+| Both unnumbered import/receipt investigations | Retain both the first synthesis and follow-up narrowing: source join by construction; file join unobserved; divergence observed only by selected contrasts; effects, file opens and bytes applied are different claims. |
+
+DT-44's thirteen leads are allocated separately: host-wait stop vocabulary;
+schedule cancellation/setup-timeout vocabulary; ordinary wait progress index;
+absent versus incomplete `not_reached` slot; EOF beside collection deadline;
+actor schedule versus worker allowance; `actor_unavailable` wording;
+capacity-refusal policy format; arrival/completion sampling points;
+validation metadata persistence; defensive unsupported vocabulary; adjacent
+readiness/count statements; and reporting-failure family applicability. All
+remain unverified leads at this preparation boundary. In particular, the EOF
+lead still needs its closing-stdout/held-stdin fixture if reachability affects
+the disposition; absence of that execution is not a failure of the checkpoint.
+
+### Bounded shared assessments for capability design
+
+**Descendant lifetime (no DT identifier).** Retain the named
+`leader_exit_and_eof`/`not_requested` relation as a truthful-evidence commitment.
+Source inspection of `pw_worker_exec.h` shows the group signal is attempted only
+after deadline, observation error or local fault; the lifecycle surface,
+`porcelain_native.rs`, `PWRunnerAttemptEvidence.swift` and `consumer.py` check
+the relation. The existing survivor checker additionally requires a live child
+with its original generation/group and ping, before interpreting JSON. That
+survival requirement may be withdrawn without withdrawing the truthful account
+of the product's calls. The future informational observation must classify
+either that live generation or its independently registered prior exit, retaining
+later file effects and separate settlement. A missing ping by itself is not
+an observed exit. A product that itself kills the descendant at ordinary
+completion is still refused by the retained relation; accepting that product
+would require a coordinated product/reader change beyond this conversion.
+This decision is based on inspected call conditions and explicit existing
+meaning, not a new live descendant experiment.
+
+**Import and receipt association.** Retain the distinction between held-source
+association and compiler-file-input association. `run_flow.rs` constructs the
+dossier from the resolved value and serializes it once for delivery;
+`decodeProfileCapture` checks the worker source/parameter digests against host
+inputs. An added dossier/receipt source-digest comparison would not establish
+which imported bytes the compiler read. The scanner defects, dropped helper
+signal and private capture-view limit remain separate pending product decisions.
+No new compiler-file observer or authenticity claim is introduced by reporting.
+
+**Reader and erasure claims.** The reporting foundation must allow a checker
+to fail an enforced truth/validity obligation while carrying an unfavorable
+advisory comparison. It must not silently promote `consumer.validate` to the
+lifecycle oracle, or final `erased` flags to last-use observation. The selected
+assertion/account repairs remain after the checkpoint, with their existing
+independent reader/byte-observer contrasts. No additional observer is justified
+merely to make the reporting layer uniform.
+
+The acceptance rehearsals identify implementation/account dependencies without
+selecting their hypothetical product changes. Therefore actor fallback removal,
+capture after failed application and byte-exact Swift association remain pending
+product decisions. Their shared accounts have not been changed during preparation.

@@ -380,3 +380,121 @@ Put each test's present authority and reason in its suite account and changing
 commit. Supply resulting user duties and consequential otherwise-unrecoverable
 reasons to management's outflows under its retention rule. Do not create a
 permanent withdrawn-enforcement registry.
+
+## Capability preparation — 2026-11-17
+
+Inspected revision: `887b485f`; source-only baseline, before reporting changes.
+The two cohort files are byte-identical to the planning snapshot. SHA-256:
+`markdown.py` is `3ca0606d53648f7f437d198bd316ab87aae9c485e1fc6990e225eb3d27673f6f`;
+`worker_wait_pilot_controls.py` is
+`85feaa1c661c0714ac5767c8811072f11c16872ffc88996cc39b59881b3b3c0e`.
+No migration equivalence is claimed by this inspection. At the pause both
+cohorts must still execute their original paths; the reporting capability must
+support their later migration without requiring another shared-reader change.
+
+### Cohort scenario and evidence map
+
+The Markdown baseline has eight classes and 38 `test_` methods. Preserve the
+original `Class.test_method` identities when assigning stable pytest identities;
+split parameterized subcases retain both the method and the concrete input.
+The table identifies the full population, including multi-assertion methods.
+Its expected parse structures and diagnostics are hand-authored, not obtained
+by running the reader to generate expected values.
+
+| Original class (methods) | Observations and independent expectations; setup/cleanup |
+| --- | --- |
+| `BlockTests` (7) | Same-marker/length fences including comment openers and nested shorter markers; backtick info refusal; list fences; paragraph continuation versus indented code; nested/continued list prose and link bounds; no first paragraph when an item starts with another block; leading code/strong/link. Literal structures, source line bounds and absent links remain exact. Pure in-memory items. |
+| `CommentTests` (5) | Block/inline comments versus prose, three double-hyphen refusal inputs, unmatched opener, escaped/entity/code openers, line-start comment paragraph termination. Preserve exact refusal text and hidden heading/link cases; pure items. |
+| `LinkTests` (6) | Wrapped labels versus blank-line separation; images/escapes/code/autolinks including route-looking hidden content; decoded destinations; ordered inline pieces; image inside link; reference definitions and undefined references. Exact tuple/piece order is enforced; pure items. |
+| `HeadingTests` (6) | ATX/setext and excluded contexts; section end at equal/higher level (four subcases), absent and duplicate section; multiline anchor; underscore/duplicate/Unicode slugs; explicit ID/name anchors including multiline/entity forms; excluded anchor examples in fence/code/comment/escape/script. Pure items. |
+| `TableTests` (2) | Inline escaped pipe/link/cell line bounds, and table-like content hidden in comments/fences. Pure items. |
+| `LineTests` (1) | Exact paragraph lines and five offset-to-line results. Pure item. |
+| `VendorTests` (5) | Wheel RECORD digests and file inventory; simultaneous changed/added/missing file names; rewritten RECORD rejection; Git-discovered Python import rule; three constructed importer files. Temporary declared reader trees are registered before mutation, captured before cleanup, then removed. `git ls-files '*.py'` is a real recorded command in the repository cwd. |
+| `ImportGuardTests` (6) | Fresh-process vendored load; missing vendor beside installed stand-in; already imported foreign parser; already imported linkifier; wrong parser version; installed linkifier never imported (independent marker absence). Copy only declared inputs, retain stand-in bytes and environment, run real fresh Python with `-B -S -P`, then capture/remove temporary trees and marker parent. |
+
+`receipts.TestCase` currently records initial inputs, subtest before/after
+snapshots, command argv/cwd/selected environment, output, duration and return
+or exception, then captures inputs before cleanup. The new fixture adapter
+must preserve those duties while retiring unittest discovery/result/subtest
+scheduling. Unexpected exceptions and fixture cleanup failures remain failures.
+The existing records count direct subprocess calls, not every descendant;
+pytest migration must not silently make a stronger command-count claim.
+
+The pilot baseline is a sequential `main`, not unittest discovery. Preserve
+the identities in `accepted`, `rejected[].control`, each `fault(name, expected,
+...)`, and each named rule-control return value. The table covers every region
+of `main` and every delegated control group; no helper wrapper is itself the
+intended pytest unit.
+
+| Original scenarios/functions | Observation, oracle and equipment |
+| --- | --- |
+| Layout/stages and ordinary/actor/neighbor bundles | Hand-packed offsets/stages; O1 intervals/endpoints/uncertainties/pass counts, A2 per-visit waits/exchanges/custody and scan values, neighbor acceptance. Independent integer arithmetic stays separate from reader formulas. Pure inputs. |
+| Historical records | O1/A2 without pass/store/stamp/sleep records; O1/A2 without sleep pairs alone. Accept available facts, retain unknown labels and conservative bounds, and compare unchanged intervals only where actually established. Pure inputs. |
+| First-positive, done and inversion cases | Register-only single/multi-wait attribution, event-pair attribution, unattributed arrival, first-positive done, absent done register, actor subject done, 20 µs release inversion. Preserve each endpoint/uncertainty/attribution assertion and absence assertion. Pure inputs. |
+| Calibration/role limits | No calibration, unbounded alignment, missing endpoint term and role-unknown scan flag. These are valid unavailable measurements, not invented zero durations. Pure inputs. |
+| Grace, final-wait and resampling controls | Four ordinary grace outcomes, actor-specific exit intervals/stops, group sums; truncated wait pairs, settle sleep classification, outcome association/reversal; final wait absent/malformed/applicability and teardown intervals; resampling absent/empty/malformed cases and distinct startup points. Preserve every named return label and malformed-input subcase. Pure inputs. |
+| Replaced formulas and actor-blind variants | `old_uncertainty_formula`, actor-blind intervals/stops, ignored spread, float scan comparison and ignored scan floor must be rejected by hand-authored expectations. Temporarily replaced reader functions must be restored even on failure; these mutations establish reader sensitivity, not production performance. |
+| Order and sleep rule groups | Appended old samples accepted only where program ordering allows; fresh backward/origin faults refused. Sleep truncation past 64 pairs, complete/register-only attribution, no-sleep/unattributed distinction and tiny negative formatting retain exact expectations. Pure inputs. |
+| Initial disk round trip | Five ordinary/overlapped/unattributed/actor/neighbor bundles, schedule, constructed identity and clock-pair records go through loader, decomposition/summary JSON and Markdown. Expect four accepted, one excluded, separate groups and exact literal explanatory fragments. Keep actual file inputs/outputs. |
+| Calibration disk contrasts | Tampered calibration remains not-established while trial facts survive; endpoint outlier remains established but not credited. Preserve the separate concepts and refusal reasons, not only the final Boolean. Temporary copied trees are removed after observation. |
+| Main fault table | All 56 named `fault(...)` entries, including two combined faults, carry their independent expected problem-code sets. Preserve rejected/incomplete/excluded distinctions, unchanged accepted baseline and all asserted codes, not merely nonzero process exit. Pure constructed records until loader-specific variants below. |
+| Missing-file loader variants | `missing_stamps`, `missing_started`, `combined_missing_stamps_and_sleep`: expected incomplete status and both faults in the combined input. Keep actual deleted-path input snapshots. |
+| Pooling controls | Reject pooling neighbor/instrumented, regime, cell, power source, low-power mode and host flavour; valid split low-power groups each retain one accepted observation. Pure rows. |
+| `comparison_controls` / `response_repair_controls` | All named paired-series improvement/worsening/withholding, spread, uncertainty, direction, response bound/gate, unmatched/excluded/condition-changed, identical and uncalibrated variants. The correctness of these advisory-value computations stays enforced; an unfavorable product conclusion is not a failing reader control. |
+| `scan_controls` and identical scans | Exact lower-ratio arithmetic including floats rounded equal; floor conditions, absent passes, required pair coverage, inbound count/ack mismatch, zero-visit sums and Markdown. Both full-scan and below-floor identical-scan variants remain. |
+| `comparison_round_trip` | Six on-disk trials yield separate baseline/candidate groups, two pairs, excluded/unpaired records, exact combined uncertainty and literal Markdown/no-verdict content. Preserve input and output blobs before removal. |
+| `stager_identity_controls` | Missing/malformed/duplicated tree constant, equipment mismatch, worker identity mismatch, and agreeing identities reaching the source record. Real `ditto` and stand-in worker `--version` occur before the intentionally raised `Reached`; no signing or native sandbox evidence. Restore patched stager functions in `finally`, retain controlled bytes and command receipts before deleting fixture trees. |
+
+The current pilot shell message says constructed reader sensitivity, and its
+`controls.json` explicitly disclaims live stamps/timings. Preserve this scope.
+The future pytest suite must split meaningful input groups and outcomes while
+keeping the stager's real command boundaries and all named faults; collecting
+one `main` item would leave its internal completion opaque. No fixture path or
+resource lifetime is changed to consolidate storage during preparation.
+
+### Required shared capability from these baselines
+
+- Collection admits explicit module/source dependencies rather than assuming
+  `exec_domain.py` and `check_exec_evidence.py`; `pytest.ini` must not limit
+  discovery to the exec filename. Collection remains free of experiments and
+  acquisition. Whole-family public selection stays with the dispatcher.
+- Pure items record source/input and setup/call/teardown evidence plus an
+  explicitly empty operation set. Passing execution means the declared
+  observation completed; it supplies no invented count of product assertions.
+- Commanded items preserve argv, cwd, controlled environment, raw stdout/stderr,
+  exits, settlement and complete operation references. The existing
+  `Equipment.command` interface has no cwd/environment parameters, so Markdown
+  Git/fresh-process controls require that capability before migration.
+- Reuse `receipts.Control`'s input/blob capture independently of its unittest
+  scheduler. Fixture teardown snapshots precede deletion; a shared finalizer
+  records its true family/session scope even if pytest reports it on one item.
+- The exec family's baseline and integrity display rules remain with that
+  domain. Generic family display must not assume every family has an exec
+  baseline artifact, nor hide a non-gating judgment in quiet mode.
+- Bind promised observations and judgment authority in the pre-evaluation
+  selection/collection evidence. Phase success, failed expectation and failed
+  apparatus/cleanup need separate carriers; unexpected exceptions cannot be
+  reinterpreted wholesale as product judgments.
+
+### Seam evidence design supplied to reporting
+
+The pre-migration callers and eight controls in this plan remain unchanged.
+Source diff from `3d3f8e65` to the inspected revision is empty. A future
+invocation adapter can retain ordinary request bytes and explicit controls as
+two input blobs, plus exact command argv, requested experimental mode, app/source
+identity, output bytes and status/timing. The report must retain experimental
+intent even if CLI admission, client transport or host setup prevents activation.
+Only raw intervention observations and applicable echoes establish what ran.
+
+Keep valid ordinary neighbors and unselected worker substitutions independent;
+an ordinary override containing a selected key must fail even when its value
+would be inert. Experimental legacy-block refusal and each native-domain
+rejection require distinct scenario identities. The ordinary worker timeout
+floor and actor execution allowance remain separate expectations. None of
+these requirements needs an executable seam migration before the checkpoint.
+
+Execution equivalence for the two cohorts and old/new seam experiments remains
+pending until their authorized post-checkpoint stage. These source maps select
+what must be retained; they do not invent old execution receipts. The existing
+native exec family and independent dispatcher/preflight controls establish
+generic capability without counting the unperformed migrations as complete.
