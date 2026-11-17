@@ -50,56 +50,87 @@ or indexes.
 
 ## Guide freeze and public commitments
 
-The freeze covers the explanatory content of `docs/PolicyWitness.md` and its
-distributed copies, including generated or shared content copied into them.
-Changing an owning input and postponing regeneration still crosses that
-boundary. The narrow exception is generator-required identity and stamp-table
-updates that record another authorized change without revising explanatory
-content or silently changing a public meaning. Review those outputs explicitly;
-do not bypass freshness checks or hand-edit generated copies to preserve the
-appearance of a freeze.
+The freeze is an editorial prohibition. Leave `docs/PolicyWitness.md`, its
+distributed copies and the explanatory source regions copied into it unchanged.
+Do not collect guide errata, propose replacement passages or publish substitute
+user guidance elsewhere. The work prepares a corrected product and its technical
+accounts; it does not progressively repair the old guide.
 
-The freeze constrains publication and the remedies available now. It does not
-establish that the guide is correct or that behavior it describes is desirable.
-An assessment may conclude that the guide is wrong without amending it. Keep
-that judgment distinct from authorization to change the product's commitments.
+The guide is not an oracle for permissible architecture. Within the selected
+subjects, justified changes to signed components, contracts, interfaces,
+representations and behavior are authorized even when development intentionally
+diverges from the guide. A historical description does not justify retaining
+otherwise unnecessary machinery. No tagged release or publication occurs here;
+development verification must not claim that the frozen publication is current.
 
 ### Handling changes during the transition
 
-Treat this work as a developer-facing change that a radical rewrite of the
-guide will follow. Do not shape it around the guide's eventual structure or
-content. The maintainer's judgments are collected at the end of the work, not
-sought during it.
+Assess remedies on technical merit, evidentiary consequences, product
+responsibilities and maintenance cost before choosing their implementation
+layer. The implementing agent decides within the trace subjects, selected
+conversions, two pytest cohorts and seam boundary in these plans. That includes
+changing a public meaning deliberately, moving a technical owner, or retaining
+an arrangement when its benefits warrant the cost. It does not authorize an
+unbounded redesign or every imagined simplification.
 
-What counts as a public commitment is itself changing. It was the app's bytes
-and the guide. The app now also speaks for itself through `help`, `example`
-and `test-input`, and the contract documents carry a detailed description
-that was never settled as commitments and is meant to shrink. The definition
-is constructed after this work, from the user-responsibility outflow and the
-collected judgments. Until then, do not gate a change on whether it touches a
-public meaning. Classify it by what it does, not by where it appears:
+Signed-app rebuilds and verification costs govern sequencing, not desirability.
+Do not prefer a test-only repair, prose workaround or indirect mechanism merely
+to avoid changing the executable or contract. Correct the relevant technical
+accounts with the behavior; retain independently justified tests. Withdrawing
+test authority alone does not repair a product defect or withdraw a commitment.
+Make the product decision and its consequences explicit in the assessment.
 
-| Change | Handling |
-| --- | --- |
-| Alters what the app does or prints: behavior, the envelope, exit status, or the text of `help`, `example` and `test-input` | Judge it and do not make it; it goes to the [collection for the maintainer](#judgments-for-the-maintainer). Exceptions are behavior corrected to match a meaning that is already settled and the bounded test-seam migration below. |
-| Implements the [bounded test-seam migration](#bounded-test-seam-migration) | Make the selected command, admission, experiment-output and caller changes under that thread's scope and verification. This is an authorized observable change, not a correction presumed to preserve current admission. |
-| Adds or strengthens a statement a user could rely on, in any projection | Do not make it, except for the developer-command definitions, help and support statements necessary to specify the selected seam migration. The guide freeze still applies. |
-| Corrects, narrows or removes a description in the contract documents or surfaces | Make it when it describes established behavior, state its practical consequence, and collect it. An edit that chooses between consequential readings is a judgment for the maintainer instead. |
-| Corrects a mechanism account, citation, test description or support claim | Proceed when it describes established behavior. |
-| Relinquishes or narrows test authority | Make it as the overhaul plan authorizes, and collect it. |
-| Alters explanatory content copied into the guide, or supplies replacement workflows or instructions for reinterpreting frozen passages | Outside the freeze boundary. The second would create a shadow user guide. |
+Difficulty, severity or invasiveness does not presumptively require human
+approval. Seek input only for authority or information genuinely missing from
+the authorized work. Closing outflows transfer consequential understanding of
+the resulting product; they are not a queue of otherwise authorized remedies
+deferred by implementation layer. Neither the old guide's organization nor a
+future guide author's preferences determine these decisions.
 
-Reductions proceed and are collected. Outside the bounded seam migration,
-growth and observable change wait. Everything made under this table can be
-undone before the next release. Two
-existing checks enforce part of it: contract generation permits reductions in
-free-text relationships and refuses increases, and release preflight refuses
-added or rewritten prose sites.
+### Development and publication checks
 
-The contract documents cannot provide an indirect route for amending the
-guide. Where the evidence and guide disagree, retain the disagreement in the
-assessment instead of silently publishing a replacement normative
-interpretation elsewhere.
+Source inspection at `3d3f8e65` found a concrete coupling to address before
+affected product changes: `build.sh` runs the limits and contract generators in
+check mode and stages the guide; `generate_limits.py` renders current scalar
+spans and shared copies into it; `docs/contract/runtime.py` compares its stamp
+table with the current contract. `docs/build_contract.py` already distinguishes
+development digests from release identities, but that identity alone does not
+separate publication freshness. Release preflight also enforces free-text and
+prose baselines. These checks are not reasons to choose an inferior remedy.
+
+Establish an explicit, bounded development/publication distinction in these
+existing owners before the instrument checkpoint if needed by the selected
+work. Preserve the frozen guide and shared explanatory regions against
+`3d3f8e65` and their exact bytes. Keep current machine definitions,
+technical contract projections, interface inventory and build identities
+checked against the actual development product. Where a generated technical
+owner also supplies frozen publication content, separate that publication
+projection from the current definition instead of editing its frozen prose or
+maintaining a second normative explanation. Do not write replacement guide
+content. No manual edits to generated copies or unexplained stale-file allowance
+are acceptable.
+
+The development path may explicitly report that publication is withheld; it
+must still reject accidental drift, altered frozen content, stale technical
+outputs, wrong identities and inconsistent evidence. It must not stage the
+frozen guide as a freshly verified current manual. A development artifact and
+its verification receipt must carry that publication limitation. Use a small
+revision/region boundary in the existing generation/build machinery if required,
+not an errata inventory. If a free-text or prose guard blocks a justified change,
+revise its specific development rule with positive and negative controls;
+blanket disabling or accepting arbitrary growth is not authorized.
+
+Release preflight, publication and archive admission must reject a development
+publication boundary even if the code is clean and signed, or a release tag is
+manufactured. Strict publication freshness remains required for a future
+release. Test deliberate divergence beside stale technical outputs, changed
+frozen bytes, missing boundary evidence and attempted release promotion. Keep
+signing, app/source agreement, provenance, cleanup and historical archive rules
+intact. This distinction is implementation work within the current scope, not
+permission to claim release readiness. Its build-input changes land before the
+unchanged-app comparison, while reporting-reader changes land in the capability
+stage; the final verification below exercises both sides without another broad
+battery.
 
 ### Judge the product before selecting the available remedy
 
@@ -120,13 +151,12 @@ unimplemented promise can still be a promise; mention in the guide does not
 make every implied interpretation a commitment. Likewise, evidence that a
 current rule is faithfully implemented does not settle whether to retain it.
 
-Outside the authorized seam migration, if truthful publication of the chosen
-remedy requires revising the frozen guide, that remedy is unavailable. Lifting
-the freeze for a passage is not an available answer: record the present behavior
-as retained, with its stated cost. The seam migration changes its selected
-developer interface while recording the cost of any frozen account it leaves
-inaccurate; it does not amend that account. Additional architecture intended to
-vindicate existing prose needs its own substantive justification.
+Implement a justified remedy within scope even when the frozen guide would no
+longer describe it. State the resulting product's responsibility in its current
+technical owner and verify it. Apply the development/publication distinction
+above; do not collect stale guide passages or preserve architecture to vindicate
+them. A genuine compatibility cost belongs in the product judgment, independently
+of the editorial freeze.
 
 ## Units of assessment and relationships
 
@@ -147,7 +177,7 @@ Each working assessment should answer these questions:
 | What supports it? | DT references and follow-ups; inspected snapshot and build; native, controlled, constructed, source-read or historical evidence; artifact availability. |
 | What remains problematic? | The practical consequence for behavior, evidence, interpretation, verification or maintenance after qualifications are applied. |
 | What decision is needed? | Candidate implementation, specification or test changes; deliberate retention; or the particular uncertainty preventing a decision. |
-| What does the freeze constrain? | The affected passage, actual commitment or inference, available corrections, and any remedy that requires a guide change. |
+| What does the freeze constrain? | Publication of the guide and its explanatory inputs; the development checks needed to preserve them while verifying the changed product. |
 | What is the present disposition? | What is established, what is acceptable or defective, the treatment chosen now, and the consequences accepted or found unacceptable. |
 | What would settle a remaining uncertainty? | The discriminating evidence or decision needed, without automatically creating a future work obligation. |
 
@@ -264,22 +294,20 @@ completed assessment through assignment to future documentation work.
 
 ### 4. Choose and verify a bounded response
 
-Evaluate candidate remedies on their merits, then select the treatment
-available within the guide freeze and existing commitments. Responses include
-correcting behavior to match a settled meaning, correcting a test or its
-coverage claim, improving the reading path, or retaining the arrangement with
-an explicit rationale. A change to what the app does or prints is judged here
-and left to the maintainer, as the
-[transition handling](#handling-changes-during-the-transition) sets out. More than one response may be necessary. Narrower
-prose is sufficient only when the narrower promise is justified and its
-practical consequence has been assessed; it cannot silently withdraw a
-commitment or substitute for a frozen guide amendment.
+Evaluate candidate remedies on their merits, then implement the justified
+response within the selected subject. Responses include changed product
+behavior or commitments, corrected assertions and coverage claims, better
+reading paths, and deliberate retention. More than one may be necessary. The
+[transition authority](#handling-changes-during-the-transition) applies equally
+to signed components, contracts, interfaces and tests. Neither a small patch
+nor a reduction is presumptively better.
 
-When the preferred remedy is unavailable, complete the present product
-judgment. State the remaining defect or limitation and whether its consequences
-are accepted. “Update the guide later” is neither that judgment nor a chosen
-remedy. If the cost seems unacceptable, say so in the judgment. That is a
-matter for the maintainer, and the closing collection carries it.
+When a remedy cannot responsibly be completed within scope, judge the present
+product: what remains defective or limited, what evidence is missing and whether
+accepting that consequence is justified. Name a real authority, information or
+scope limit if one prevents action; cost or guide divergence alone is not one.
+A referral or future documentation task does not complete an unresolved product
+decision. Narrowing a test claim cannot conceal a continuing product violation.
 
 Group changes when they share a decision and verification boundary. Keep
 separate changes for separate mechanisms even when their symptoms resemble
@@ -313,8 +341,8 @@ reply; do not expand transport machinery merely to support that inference.
 Removing an invocation or changing the presence or status of `policy_check`
 can nevertheless alter an observable commitment. Assess that compatibility
 question and the actor-form whole-request failure independently. The pilot's
-disposition must judge their present utility and cost, even if a preferred
-change cannot be published during the freeze.
+disposition must judge their present utility and cost and implement any selected
+remedy. Publishing a release remains outside this work.
 
 ### Test and specification challenge
 
@@ -383,11 +411,13 @@ of the desired public meaning and affected consumers.
 
 A remediation proposal should carry the bounded problem, relevant competing
 interpretations, chosen behavior or meaning, affected owners and readers,
-verification, and explicit exclusions. Include the freeze's effect on the
-selected remedy and any residual cost. Explain why the chosen layer changes;
+verification, and explicit exclusions. Include any development/publication
+boundary needed and the resulting product's residual cost. Explain why the
+chosen layer changes;
 existing agreement with that layer is insufficient justification by itself.
 Public-meaning and interface decisions follow
-[CONTRIBUTING](../CONTRIBUTING.md#improving-documentation-in-four-passes).
+[CONTRIBUTING](../CONTRIBUTING.md#improving-documentation-in-four-passes), with
+the authority granted in this plan; a separate human approval is not presumed.
 
 For each proposed check, state the plausible incorrect behavior that could
 previously pass and how the new observation distinguishes it. Match the tested
@@ -413,8 +443,8 @@ as either proof or disproof of the recorded result.
 
 For permitted documentation and contract changes, edit the owning inputs and
 regenerate through the [documented generators](../docs/AGENTS.md). Inspect all
-destinations for guide content changes, including copies from shared inputs;
-separate any allowed identity/stamp updates from explanatory changes. Update
+destinations under the development/publication split; leave the frozen guide,
+including its stamp table, and shared explanatory regions unchanged. Update
 affected admission, transport, readers, fixtures and public meanings together
 when the decision crosses those boundaries. Mechanical freshness establishes
 agreement of copies; review and selected behavioral checks establish the
@@ -428,9 +458,10 @@ the passages, tests and decisions assessed here. This section owns the order in
 which shared work settles and the selection of its broad verification; the
 companions refer to it instead of restating it.
 
-The sequencing rests on source and catalog inspection at `a9de3ccf`; the seam
-migration also uses inspection at `ebc18543`. Nothing was executed for these
-readings. The durations below are approximate figures from earlier development
+The sequencing rests on source and catalog inspection at `a9de3ccf`; the seam,
+dependency and development/publication decisions were checked at `3d3f8e65`.
+No catalog case, build or native experiment was executed for these readings.
+The durations below are approximate figures from earlier development
 runs on the maintainer's machine, not retained evidence; `run.json` records
 the actual ones.
 
@@ -443,7 +474,7 @@ Six threads need more than one plan. Elsewhere each plan proceeds alone.
 | Actor fallback and transport result paths | Transport pilot | Fallback-compilation rehearsal | Run-flow fallback tests and the fallback-removal observation |
 | Compiled-profile receipts | Import and receipt distinctions | Rehearsal of a capture reported despite unsuccessful application | Label-admission test and its credited claim |
 | Association and reader responsibilities | DT-53/132 with the identity-relation findings | Association-equality rehearsal | Consumer and oracle callers and their credited coverage |
-| Exec descendant lifetime | Commitment assessment the overhaul requests | None planned | Survivor conversion and the aftermath dependency |
+| Exec descendant lifetime | Remaining evidence and effect obligations | None planned | Survivor conversion and removal of inherited aftermath dependencies |
 | Authority erasure timing | DT-63/124/125 | None planned | Credited last-use claim and any observation before teardown |
 | Executable test seams | Selected admission changes, scope and transition costs | Change or remove one migrated seam; compare maintained decisions | Command implementation, caller migration and preservation of experimental evidence |
 
@@ -453,15 +484,16 @@ Take a shared thread in this order:
    comparison of perspectives one reading. Both inspect the same statements,
    producers, readers and assertions. Include the tests that enforce the
    rehearsed subject, so the overhaul's local rehearsal is not a second pass.
-2. **Decide once.** Record the disposition here, with the freeze's effect. The
-   rehearsal is evidence for it and not a gate: a thread without a planned
+2. **Decide once.** Record the product disposition here, including any
+   development/publication boundary. The rehearsal is evidence for it and not
+   a gate: a thread without a planned
    rehearsal does not wait for one.
-3. **Change once.** The overhaul applies the authorized test response. Permitted
-   account corrections land with it, so each destination is edited one time.
-   An arrangement change the rehearsal justified lands with them when it stays
-   within developer-facing accounts and moves no ownership. The seam migration
-   additionally carries the implementation and ownership changes authorized
-   below. Other changes go to the collection for the maintainer.
+3. **Change once.** Implement the selected product, contract and test response
+   through its actual owners. The overhaul owns its test changes; justified
+   arrangement changes travel with the affected accounts. Preserve separate
+   evidence for changed authority and changed behavior. Do not reserve an
+   authorized remedy for the closing collection because of its implementation
+   layer.
 
 A disposition recorded before its rehearsal can correct a passage that the
 arrangement judgment then moves or removes. A test response chosen before the
@@ -478,9 +510,10 @@ checks before changing its entry point. The new command and its callers may
 then land together, with old/new evidence compared. Keep any change to judgment
 or enforcement separate from that interface migration.
 
-The exec-descendant commitment is not the subject of a DT entry. Assess it with
-the [same method](#judge-the-product-before-selecting-the-available-remedy),
-and early: the overhaul's acceptance argument depends on that conversion.
+The exec-descendant conversion is not the subject of a DT entry. Assess its
+remaining evidence and effect obligations with the
+[same method](#judge-the-product-before-selecting-the-available-remedy), early
+enough to support the selected removal of the survival requirement.
 Handle other commitment questions the overhaul hands in the same way. They do
 not join the DT coverage map.
 
@@ -495,48 +528,68 @@ owns implementation, caller migration and experimental equivalence. The
 [acceptance companion](TRACE-ACCEPTANCE-PLAN.md#rehearsing-a-migrated-test-seam)
 examines whether the arrangement reduces independently maintained decisions.
 
-Begin by accounting for the ten fields in the existing
-[override reference](../runner/README.md#test-seam-_test_overrides): three
-component substitutions and seven timing/fault controls. Trace each to its
-admission, effective intervention, callers and retained evidence. Select the
-coherent subset to migrate before implementation; give fields left outside it
-a present treatment and reason. This is a bounded inventory of the existing
-seam, not an audit of every test hook or a mandate to move all ten.
+The selection is settled by caller combinations inspected at `3d3f8e65`,
+using the [ten-field reference](../runner/README.md#test-seam-_test_overrides)
+and the overhaul's [caller mapping](TEST-OUTCOME-OVERHAUL-PLAN.md#selected-seam-callers).
+Migrate eight controls in two coherent groups:
 
-Use `validator_executable_path` and the paired `worker_pre_ready_hang_ms` /
-`worker_timeout_ms` as the initial design contrasts. They exercise replacement
-equipment and intervention in shipped components. Confirm or revise that subset
-from its actual callers; do not satisfy the work with a new unused command.
-Record the selection here once, with the overhaul's case/evidence mapping
-linked from it. No separate finding inventory or permanent seam registry is
-needed.
+- Worker interventions: `worker_timeout_ms`, `worker_pre_ready_hang_ms`,
+  `worker_post_apply_hang_ms`, `worker_post_apply_kill_signal`, and
+  `worker_kill_before_publish_slot`.
+- Validator interventions: `validator_executable_path`,
+  `validator_io_timeout_ms`, and `validator_total_timeout_ms`.
 
-Settle the boundary early. Current `test-input read` publishes a request and
-launches nothing. Flags that merely publish `_test_overrides` do not remove the
-ordinary execution seam. The intended change is explicit experimental
-execution, with selected controls supplied separately from the ordinary request
-and unavailable through ordinary `run`. Preserve `read` as publication-only and
-reuse existing execution machinery. The exact subcommand and flag design must
-account for controller and host admission, internal transport, early refusals,
-and the released-app battery before coding begins.
+The narrower initial three-field selection would split existing experiments.
+Pre-ready hang uses the worker timeout; timeout and attempt-in-flight cases pair
+it with post-apply hang; kill-before-publication also uses it. Post-apply hang
+pairs with self-signalling in sparse-failure and termination experiments.
+Validator replacement pairs with its I/O deadline in no-reply/comparison cases
+and with the aggregate allowance in phase cases. Moving these combinations
+avoids maintaining two activation routes within one experiment.
+
+Leave `worker_executable_path` and `actor_equipment_executable_paths` on their
+existing admission paths. Their live substitution experiments do not need a
+selected control in the same invocation. Sharing a checker or catalog family
+with a selected invocation does not pull them into scope. This accounts for all ten
+fields without requiring whole-family migration. Preserve their coverage and
+explain the two remaining ordinary-request controls in the owning reference.
+
+Preserve the existing semantic distinctions: `worker_timeout_ms` changes the
+ordinary sentinel but does not change actor execution's separate allowance;
+actor delay and kill controls still reach actor worker inputs. The paired
+ordinary/actor controls in `timeout_applicability_specimens` establish that
+contrast. Migration is an interface change, not permission to homogenize it.
+
+Use `test-input run REQUEST` with explicit flags for the eight selected
+controls, reusing ordinary run selection/orchestration and keeping `test-input
+read` publication-only. Use one explicit experimental execution mode carried
+outside the ordinary request through client transport and host admission.
+Exact flag spelling is an interface-definition detail, not an open scope
+question. Do not infer experimental intent merely from an override field.
+
+Ordinary `run` and lower-level ordinary submissions reject any selected legacy
+key, including inert values, before activating it. The experimental route takes
+controls only through its explicit control arguments and rejects a request
+also carrying a nonempty legacy override block. The two unselected substitutions
+remain ordinary-only for this bounded migration; no existing selected experiment
+requires combining them. Reuse internal driver representations where useful,
+without leaving an ordinary activation bypass. This distinguishes interfaces;
+it is not a new authentication claim.
 
 The authorization covers only that selected route, retirement of its old
 ordinary-request entry points, the evidence needed to identify experiments,
 and the corresponding definitions, help, tests and developer accounts. It does
 not authorize new fault mechanisms, fabricated outcomes, weaker cleanup or a
-separate test-only build as a substitute for testing the released executable.
+separate test-only build as a substitute for testing the normal executable.
 Controls left outside the subset keep their explicit disposition; the migration
 must not accidentally remove their coverage.
 
-The frozen guide already names override paths and deadline controls. Identify
-which descriptions the selected migration leaves inaccurate and record their
-reader consequence as a transition cost. Do not preserve the old admission path
-solely to vindicate those passages. Do not change the guide or shared explanatory
-inputs copied into it, or create a replacement guide. Determine how the necessary
-developer definitions fit the owning generators and release checks during design;
-this authorization is not a waiver of freshness checks or unrelated growth guards.
+Apply the editorial freeze and development/publication checks above. Correct
+the developer command, admission and evidence accounts through their current
+owners without collecting guide errata. The selected migration does not depend
+on making the old guide agree.
 
-Investigate and specify the migration from the start. Supply any shared reporting
+Use the settled scope and callers from the start. Supply any shared reporting
 requirements to the overhaul's capability stage before the instrument checkpoint.
 Land the executable and caller changes after that checkpoint, on an identified
 rebuilt app, with their routed evidence. Complete the selected migration before
@@ -548,15 +601,15 @@ engineering investigation.
 
 - From the start, with no result needed from another plan: this plan's
   coverage map and assessments; the rehearsals; the overhaul's reporting
-  comparison, its capability and the cohort equivalence mapping; the bounded
-  seam inventory and design.
+  comparison, its capability and the cohort equivalence mapping; the selected
+  seam mapping and command design; the development/publication split.
 - A conversion or correction on a shared thread waits for that thread's
   disposition. Conversions and pure-computation cohort items also wait for the
   reporting capability.
-- A product change that restores an already-settled meaning waits for its own
-  disposition, and for the instrument checkpoint while one is open. The selected
-  seam migration lands after that checkpoint and its own scope decision. Other
-  changes to what the app does or prints are not made in this work.
+- A selected product change waits for its substantive disposition and for any
+  open instrument checkpoint. Necessary development/build check support lands
+  before its baseline; seam and other behavioral changes land afterward unless
+  already included in that baseline. Implementation layer creates no deferral.
 - A remedy that adds controls to a population being migrated to pytest lands
   after that cohort's equivalence is established, so the mapping does not
   follow a moving population.
@@ -613,19 +666,39 @@ build-contract input never fall between the same two default batteries.
 [The build contract](../docs/build_contract.py) prints one digest over those
 inputs, and an unchanged digest shows that nothing held has moved.
 
-For the capability, take a default battery immediately before it lands, land
-it with no conversion in it, and run the default battery again against the
-same app. Case statuses must equal the baseline. Other authorized product work
-that is ready sooner lands before the baseline is taken; the seam migration
-lands after this checkpoint as specified above.
+Complete any required development/build publication split first, then take
+a default battery immediately before the reporting capability lands. Land the
+capability with no conversions or build-contract changes and run the default
+battery again against the same app. Identify the old and new reporting revisions
+and retain both batteries' raw inputs.
 
-The hold ends there. Conversions and cohorts then proceed alongside product
-changes. The two migrated families need no app, and each conversion changes
-one named case whose expected difference is stated in advance and checked by
-running it. A change to the shared reading path that turns up later needs its
-own before-and-after battery on an unchanged app, so finish in the capability
-whatever the cohorts and selected seam reporting will need from the engine.
-The seam's executable changes are outside this unchanged-app comparison.
+Supplement these two live runs with deterministic replay: give the old and new
+reporting interpretations identical retained case reports, events, family/control
+receipts, command accounts and selection/authority expectations. Exercise the
+actual reconciliation, dependency and aggregation functions and the battery
+validator in isolated scratch outputs. For unchanged authority, independently
+specified counts, decisions and failure reasons must agree. Use separately
+constructed informational/advisory fixtures with explicit expected differences;
+the old reader's refusal of an unsupported new form is not a regression. Include
+corruption, omission, contradictory authority and incomplete accounting beside
+valid unfavorable judgments. Reuse the overhaul's controls rather than adding
+a parallel replay framework or a new result schema just for this comparison.
+
+A live status difference must be explained from the observations and replay.
+Unexplained differences prevent crediting the checkpoint. A changed observation
+is not automatically a reporting regression, and an explained failed required
+check remains a failure requiring its appropriate resolution. Prefer replay and
+affected-case verification to another broad battery. Replays are identified
+investigations, not replacement live executions or reinterpretations of archived
+releases; original evidence and producer semantics remain untouched.
+
+After the checkpoint, conversions, cohorts and product changes proceed with
+their own routed evidence. Finish shared reading support for those changes,
+including seam evidence, in the capability stage. A later shared-reader change
+needs the same deterministic comparison; add a new unchanged-app live pair only
+when it affects live collection or has an integration uncertainty replay and
+existing runs cannot resolve, stating that reason. Do not mix its verification
+with a simultaneous build-contract change.
 
 Read a completed battery with the revised release battery validator as a
 direct investigation that credits no case: once at the checkpoint, and again
@@ -638,32 +711,44 @@ selections do not overlap, and run one default battery for the group instead
 of one per change. Locate a failure outside every routed selection with an
 intermediate build.
 
-**Final integrated verification.** Run it once, when the selected changes from
-all three plans are in. Order it by cost, so an inexpensive failure does not
-consume the long run: `source_drift` and the offline controls, a build, the
-default battery with the relevant opt-ins, then
-`preflight/build_refusal_controls`. That last case is change-triggered here.
-The overhaul revises release-acceptance orchestration, and the case's
-release-battery sequence is the one catalog path in which real acceptance
-reads a real battery. Its per-control records and nested output keep a failure
-attributable to a build refusal, the acceptance reader or a battery case. An
-actual release follows the [release procedure](../docs/SIGNING.md#release-procedure)
-and remains a maintainer action.
+**Final integrated verification.** Run once when the selected changes from all
+three plans are in: source-drift and offline controls, a current signed build,
+the default battery plus relevant opt-ins, then
+`preflight/build_refusal_controls`. Its existing long acceptance experiment is
+adapted, not supplemented with another broad battery. The publication split may
+require building before an app-bound drift selection; respect admission and use
+only offline checks before the build.
 
-Deferring that case to the end is sound because every unit reaches it with
-its own evidence: the reading path against an unchanged app, each conversion
-and product change through its own case or routed selection, each group
-through a default battery.
+The current `control_release_battery` creates an annotated rehearsal tag,
+regenerates guide stamps and runs real acceptance on the ZIP in a copied tree.
+That is not an adequate positive control for intentional publication divergence.
+Use its one live nested battery on an extracted, normally built development
+candidate through the same extraction, artifact, command-accounting and battery
+validation machinery. Record development identity and publication withheld;
+that receipt cannot be admitted as release acceptance. Preserve app/signature,
+source identity, provenance and cleanup checks. The existing Apple-response
+stand-ins remain identified controls, not notarization evidence.
 
-No tagged release falls inside this work. The next release is intended after
-the guide rewrite. Two consequences follow. The release-battery sequence in the
-final verification is the only real acceptance the revised release reader
-meets before that release, so read its nested output closely. And the retained
-archives keep their earlier evidence format throughout, while every executing
-run reads their identities for retention protection and pruning verifies them
-in full. At the instrument checkpoint, run the read-only prune preview against
-them. A revised reader that no longer accepts a retained archive is then found
-before it obstructs execution or cleanup.
+In the same case, strict release preflight/acceptance must reject the development
+publication boundary, including attempted relabeling/tagging, before an expensive
+battery or publication. Retain separate constructed positive and negative
+controls for genuine release identity and strict publication freshness. Do not
+rewrite the frozen guide in a fixture to manufacture a positive release result
+for the changed product, or weaken real release acceptance to accept development
+receipts. The overhaul owns the shared reporting/acceptance-reader changes;
+this plan owns the development/publication distinction. These parts land before
+the final run, with routed controls, not as a late release investigation.
+
+Thus the long case establishes candidate execution and evidence interpretation
+plus actual refusal of publication, not release readiness. Read its nested
+output closely and credit those scopes separately. The future tagged release
+requires the [release procedure](../docs/SIGNING.md#release-procedure) after the
+guide rewrite and full publication checks. No release is cut here.
+
+Retained archives keep their original evidence formats and producing contracts.
+At the instrument checkpoint, run the read-only prune preview against them;
+replay must not change their identities, outcomes or retention eligibility.
+Retain interrupted resource and evidence ownership throughout.
 
 ## Completion and disposition
 
@@ -671,7 +756,7 @@ Complete each assessment with a present-tense judgment:
 
 > We establish X within these limits. We judge Y acceptable or defective
 > because Z. We choose this present treatment. It leaves this consequence,
-> which we accept or find unacceptable under the freeze.
+> which we accept or find unacceptable for the resulting product.
 
 When the accepted consequence falls on a user, say so in the judgment: what
 they must do, avoid, arrange, check or refrain from concluding. The
@@ -684,16 +769,15 @@ In the last case, name the affected cases and costs. Assessment completed and
 defect repaired are different states. A known defect can remain without an
 automatic promise to repair it when the guide changes.
 
-If the residual cost seems unacceptable, say so. The decision about the
-product's behavior is the maintainer's, and the
-[closing collection](#judgments-for-the-maintainer) carries it. The assessment
-is complete once the judgment, the cost and that referral are recorded;
-assigning a future documentation task cannot substitute for the judgment.
+If a residual cost is unacceptable, select a justified remedy within scope or
+state the specific missing authority, information or evidence that prevents a
+responsible decision. A referral alone does not close that decision. Do not
+route it to the maintainer merely because it changes signed code or a contract.
 
-A disposition that accepts a limitation lasts only where an owner states it.
-When a developer-facing owner exists, a test account or a support record,
-state the limit there beside the claim it limits. When the only truthful home
-is a public statement or the guide, the limit belongs to that collection.
+State an accepted limit beside the claim it qualifies in the current technical
+owner, including contract and test accounts where appropriate. Leave frozen
+publication material untouched; it does not prohibit a truthful technical
+statement about the resulting product.
 
 An unresolved evidence question can receive a completed, bounded judgment when
 the present uncertainty and its consequences are explicitly accepted. Do not
@@ -704,16 +788,17 @@ retained, what evidence supports each disposition, and what remains defective
 elsewhere. A correction to one passage does not close every concern in its
 family. An implementation that meets its current specification does not by
 itself close a challenge to that specification or its credited tests. Correcting
-internal accounts while freezing misleading guide prose leaves a documentation
-defect whose reader impact must be judged explicitly.
+technical accounts does not make the frozen publication current. Establish the
+development/publication boundary without creating a guide-errata collection.
 
 The management pass is complete when every observation has a traceable present
 assessment, follow-up qualifications are represented, selected changes have
-usable proposals, and the [reserved material](#material-reserved-beyond-this-work)
-is recorded. The combined work also requires completion of the selected seam
-migration under the overhaul's verification, not merely its assignment to a
-closing record. No observation is complete merely because it has a family, a
-future task or an instruction to revisit the guide. Completion requires
+implemented and verified remedies or reasoned present retention decisions, and
+the consequential [reserved material](#material-reserved-beyond-this-work) is
+recorded. The combined work also requires the overhaul's conversions, cohorts
+and selected seam migration, not merely their assignment to a closing record.
+No observation is complete merely because it has a family, a future task or an
+instruction to revisit the guide. Completion requires
 accountable judgments, not a target number of defects or future obligations.
 
 Before accepting the synthesis, check it in both directions: every original
@@ -729,8 +814,8 @@ Near the end of the combined work, collect the responsibilities that the three
 plans' judgments leave with users, considered together. Record them in
 `records/USER-RESPONSIBILITY-OUTFLOW.md`, following the existing outflow
 records: a date, the source revision and a status line. This plan owns the
-activity because a responsibility follows from the dispositions, compatibility
-decisions and freeze it owns. The companions contribute what their own work
+activity because a responsibility follows from the product dispositions and
+compatibility decisions it owns. The companions contribute what their own work
 established.
 
 ### What belongs
@@ -801,16 +886,16 @@ Write one entry per responsibility, not per finding:
 - what in the product's own output indicates that the condition applies, or
   that nothing does;
 - its standing, established or unsettled, with the reason;
-- its provenance: the assessments, rehearsal or conversion it rests on, and
-  their evidence class. Give enough to show why it belongs without restating
-  the findings.
+- support from the resulting behavior and evidence, with its scope and class.
+  Refer to a decisive experiment where necessary, not a history of the finding
+  or why an older arrangement differed.
 
 A responsibility is **established** when the evidence supports the condition
 within stated limits and a completed disposition leaves it with the user. It
 is **unsettled** when the condition rests on an observation that was not
-traced or reproduced, when it lasts only until a product decision that is the
-maintainer's to make, or when it arises only under a hypothetical arrangement.
-For such a decision, name it and what each outcome does to the responsibility.
+traced or reproduced, or a product decision genuinely lacks required authority
+or information. An obligation existing only in a hypothetical is excluded.
+For a pending decision, name what is missing and its consequence.
 Do not promote an unsettled candidate because listing it as an obligation
 seems the cautious choice.
 
@@ -832,56 +917,45 @@ change or observation it rests on.
 
 ## Material reserved beyond this work
 
-The work ends with material for two later events and nothing kept for its own
-sake.
+Keep the user-responsibility and maintainer-judgment outflows as temporary
+handoffs about the resulting product. Git retains findings, plans, commits and
+abandoned alternatives; do not build another comprehensive development history.
+The guide author need not reconstruct the old guide's organization or defend
+the new product against it.
 
-| Reserved for | Material | Until |
-| --- | --- | --- |
-| The guide rewrite | The [user-responsibility outflow](#user-responsibility-outflow) and the judgments for the maintainer, including the completed seam migration's boundary and retained costs | The rewrite has read them |
-| The versioned release | The release account | The release is cut |
-| After the release | Nothing in `records/` | |
-
-None of it concerns the guide's structure, passages or wording.
+Before retaining a historical statement beyond Git, name the consequential
+mistake a competent future maintainer could make without it. If there is no
+convincing answer, omit it. Useful exceptions include decisive experiments or
+evidence limits that cannot be reconstructed, deliberate non-obligations that
+might look like missing checks, consequential design reasons not reasonably
+discoverable in code, and failed experiments establishing a durable limit on
+observation or inference. Prefer present-tense limits and reasons in their
+natural permanent owners. Preserve necessary experimental evidence through
+existing ownership/retention mechanisms, not a new archive policy.
 
 ### Judgments for the maintainer
 
-The maintainer's judgments are collected here at the end of the work, not
-sought during it. The maintainer intends to express them during the guide
-rewrite, as statements that can be traced to code, tests and documents. Record
-the collection in `records/MAINTAINER-JUDGMENT-OUTFLOW.md`, drafted and
-finalized with the user-responsibility outflow.
+Draft `records/MAINTAINER-JUDGMENT-OUTFLOW.md` with the user-responsibility
+outflow and finalize both from verified results. Collect only consequential
+choices, reasons and genuinely unresolved matters needed to transfer
+understanding to the resulting product and its accounts. It is not an approval
+queue or a mandatory entry for every change. Reference user duties in their
+outflow rather than repeating them.
 
-Collect the following judgments. These have already been acted on and can be
-undone before release:
+For each necessary entry, state the present responsibility or limitation, its
+reason and evidence, its current owner, and any authority or information still
+missing. Use revision, symbol, case or statement identifiers where needed.
+Transfer lasting understanding to that owner during the work. Reasons for a
+test's non-enforcement belong in its suite account and changing commit; shared
+observation/judgment/enforcement principles belong in test working guidance.
+Do not create a permanent registry of withdrawn assertions or dispositions.
 
-- a consequence left with a user: refer to the outflow's entry;
-- a description corrected, narrowed or removed in the contract documents,
-  with its practical consequence;
-- test authority relinquished or narrowed, with its reason;
-- the authorized seam migration's admission changes, experimental boundary and
-  retained costs, including any inaccurate frozen account.
-
-Two have not been acted on:
-
-- a remedy judged preferable but unavailable, because it alters what the app
-  does or prints outside the seam authorization, adds an unauthorized promise
-  or requires revising the guide, with the cost of the behavior retained in its
-  place;
-- a documentation arrangement that would move ownership outside the seam
-  authorization.
-
-For each, give the distinction at stake, why it matters, what would change,
-and its anchors. Anchor by symbol, catalog case and statement identifier at a
-stated revision, not by line number, so that a later statement can still be
-traced after the files have moved.
-
-Also name the projections that carry the matter today: the app does it, the
-app says it through `help`, `example` or `test-input`, or a contract statement
-says it. Leave the guide out. For each projection, say whether it is derived
-from one definition or separately authored. A contradiction can arise only
-between separately authored projections, so this record is what a later
-choice of commitments and their projections is built from. The rehearsal
-traces supply it for their threads.
+Where multiple suites depend on a proposition, use the acceptance plan to
+establish whether there is one shared premise or distinct scoped obligations.
+Preserve that distinction without duplicating normative choices or centralizing
+away the observation boundaries. The future maintainer must understand present
+authority without consulting this investigation. The temporary outflows are
+consumed by the subsequent guide/release work and then retired.
 
 ### Release account
 
@@ -894,16 +968,8 @@ release notes.
 
 ### What outlasts the release
 
-Nothing from this work needs to remain in `records/` after the release. The
-plans, assessments, rehearsals and reserved material have each been read by
-then, and git history keeps them.
-
-What should last is placed in permanent owners while the work is under way,
-because the judgment behind it is no longer at hand afterward:
-
-- an accepted limit, beside the claim it limits, as
-  [completion](#completion-and-disposition) requires;
-- the reason a test observes a behavior instead of requiring it, in the
-  suite's own account and in the commit that changed it;
-- a verification rule that proved its worth in execution, in the test working
-  guidance.
+No routine dependency on `records/` should remain after the release. Retire the
+plans and temporary handoffs once consumed; Git preserves them. Lasting product
+limits, deliberate non-obligations, consequential reasons and useful verification
+rules live in their current contract, suite or working-guidance owners. Additional
+historical explanation must meet the consequential-mistake test above.

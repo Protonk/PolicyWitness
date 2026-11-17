@@ -188,9 +188,11 @@ admission distinguishable. Those responsibilities may warrant several accounts
 even if their shared premises have one owner.
 
 Compare the repeated successful-application requirement in the surface,
-architecture prose, architecture data and guide with the distinct reasoning
-each audience needs. The rehearsal should reveal whether repetition maintains
-the same rule again or makes a necessary consequence understandable. It also
+architecture prose and architecture data with the distinct reasoning each
+technical audience needs. The frozen guide is outside the editorial comparison;
+its wording does not settle which receipt behavior is desirable. The rehearsal
+should reveal whether repetition maintains the same rule again or makes a
+necessary consequence understandable. It also
 tests whether changing receipt meaning leaves an obsolete inference elsewhere
 despite mechanically fresh generated documents.
 
@@ -234,17 +236,20 @@ reading.
 **Rehearse before the thread's accounts change.** Record the inspected
 revision and trace the current arrangement before that thread's permitted
 corrections land. The comparison and the later correction then describe the
-same passages. An arrangement change that a rehearsal justifies travels with
-the thread's other account edits under the management plan's handoff, when it
-stays within developer-facing accounts and moves no ownership. It is not a
-separate later pass over the same documents. Outside the management plan's
-explicitly authorized seam migration below, one that would move ownership,
-alter what the app does or prints, or add a promise is not adopted here; it
-goes to the management plan's
-[collection for the maintainer](TRACE-MANAGEMENT-PLAN.md#judgments-for-the-maintainer).
-That collection also records, for each matter, which presentations are
-rendered from one owner and which are separately authored. A rehearsal's
-relationship map supplies this for its thread.
+same passages. A justified arrangement change travels with the thread's
+product and account edits through the management plan's
+[implementation authority](TRACE-MANAGEMENT-PLAN.md#handling-changes-during-the-transition).
+Ownership moves and observable product changes are evaluated on their merits,
+not automatically deferred. A rehearsal supplies evidence; the product decision
+still needs its substantive justification. Do not prefer an indirect account
+repair merely because it avoids signed-app verification.
+
+Name the independently maintained decision claimed to disappear and follow
+it beyond the edited passage into definitions, generators, manual accounts,
+tests and readers. A shorter document does not establish reduction if those
+locations still choose the same rule independently. Retain independent test
+scrutiny and genuinely distinct premises. This is part of the argument for
+economy, not a new checklist or numerical acceptance threshold.
 
 **Hand caller obligations to the outflow.** While tracing the current
 arrangement, note each condition a caller must meet, or scope a caller must
@@ -253,8 +258,8 @@ to reconstruct from several accounts. They are inputs to the management plan's
 [user-responsibility outflow](TRACE-MANAGEMENT-PLAN.md#user-responsibility-outflow).
 An obligation that exists only under the hypothetical belongs to the
 comparison and establishes nothing about the product. What reaches the outflow
-is the obligation and its evidence; a rehearsal's account of guide dependencies
-stays with the rehearsal.
+is the resulting obligation and its evidence. Do not carry guide comparisons,
+errata or histories of discarded alternatives into that collection.
 
 None of this adds a gate. A thread proceeds without a rehearsal that was not
 planned for it, and an inconclusive rehearsal still creates no obligation to
@@ -271,10 +276,8 @@ also reduces maintained decisions. A more explicit entry point may be useful
 even if it adds maintenance duties; the account should distinguish those gains
 and costs.
 
-Choose one selected seam and rehearse changing or removing its intervention,
-holding the underlying ordinary experiment fixed. For example, if validator
-substitution is selected, suppose it is later retired while ordinary validator
-execution remains. Trace the change once through the current arrangement and
+Rehearse retiring validator substitution while holding ordinary validator
+execution fixed. Trace the change once through the current arrangement and
 again through the proposed command arrangement: admission, command definitions
 and help, host/internal transport, native inputs, retained evidence, test callers,
 independent assertions and developer accounts. Use the overhaul's caller mapping
@@ -292,12 +295,14 @@ representation serving both routes need not be a duplicate public meaning.
 
 Compare the actual duties removed with those introduced in flags, adapters,
 provenance and reporting. Preserve independent oracles; generating every
-expectation from command definitions does not establish economy. Include the
-cost of frozen guide passages made inaccurate by the authorized migration,
-separately from structural change costs. This rehearsal neither authorizes the
-further hypothetical change nor turns the migration into a new numerical
-acceptance gate. Its result is an accountable judgment about where maintenance
-work went, handed back during implementation rather than reserved as a closing
+expectation from command definitions does not establish economy. Compare the
+settled coherent eight-control scope with the narrower field migration's mixed
+activation paths, including the preserved ordinary/actor timeout distinction.
+Include the cost of the development/publication separation without collecting
+frozen-guide discrepancies. This rehearsal neither selects the further
+hypothetical change nor turns the migration into a numerical acceptance gate.
+Its result is an accountable judgment about where maintenance work went,
+handed back during implementation rather than reserved as a closing
 engineering question.
 
 ## Interpreting the evidence
@@ -381,13 +386,25 @@ narrow an earlier conclusion. The useful result is an accountable present
 judgment about maintenance and reading costs, including accepted tradeoffs.
 Completion and disposition of trace findings remain with the management plan.
 
-The [guide freeze](TRACE-MANAGEMENT-PLAN.md#guide-freeze-and-public-commitments)
-remains a publication and remediation constraint. Rehearsals can identify guide
-dependencies and the cost of leaving them frozen without amending the guide,
-its shared inputs or its commitments. Record those costs separately from an
-arrangement's structural economy; an unavailable edit is still an affected
-dependency. A preferable hypothetical arrangement does not authorize adoption
-or create a standing obligation for a future guide rewrite.
+The [editorial freeze](TRACE-MANAGEMENT-PLAN.md#guide-freeze-and-public-commitments)
+prevents guide edits, edits to its explanatory source regions, errata collection
+and substitute guidance. It does not restrict architecture within the selected
+subjects. Evaluate the resulting technical arrangement and its intentional
+publication boundary, not its faithfulness to historical guide wording. A
+rehearsal does not itself authorize its hypothetical; a justified management
+assessment may select implementation under the existing scope.
+
+Apply the management plan's
+[retention rule](TRACE-MANAGEMENT-PLAN.md#material-reserved-beyond-this-work)
+to the comparison. Preserve additional reasons only when their absence could
+cause a consequential future mistake that current code and Git do not adequately
+prevent. Put present authority reasons with the owning suite or technical
+boundary; put shared testing principles in working guidance. Where several
+suites appear to need one rationale, first distinguish a genuinely shared
+premise from different observation scopes. Neither duplicated normative choices
+nor a centralized registry of relinquished enforcement is an economical answer.
+The temporary outflow transfers necessary understanding rather than becoming a
+permanent reading dependency.
 
 Keep investigation material under the [record guidance](AGENTS.md), with links
 to the actual owners and evidence. Credit source reading, drafted alternatives

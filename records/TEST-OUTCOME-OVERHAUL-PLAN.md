@@ -41,23 +41,21 @@ owns the order in which work shared by the three plans settles and the
 boundaries at which broad runs happen. The stages and verification below state
 this plan's own obligations within that sequence.
 
-The [guide freeze](TRACE-MANAGEMENT-PLAN.md#guide-freeze-and-public-commitments)
-remains binding, including shared and generated explanatory content. A new test
-classification cannot withdraw a public commitment, resolve a consequential
-ambiguity by fiat, or publish a replacement interpretation elsewhere. A known
-violation remains a defect even if a particular test ceases to gate changes.
-Any permitted acceptance of that cost needs the management plan's substantive
-present-tense disposition, not just a green run.
+The management plan's
+[editorial freeze and implementation authority](TRACE-MANAGEMENT-PLAN.md#guide-freeze-and-public-commitments)
+apply here. Leave the guide and its explanatory inputs untouched. Within the
+selected subjects, the implementing agent may change signed components,
+contracts, representations and product behavior on their merits. A changed
+test classification alone cannot repair a defect or withdraw a commitment;
+the substantive product decision belongs to management. Describe and verify
+the resulting technical responsibilities without creating substitute guidance.
 
-This is an implementation proposal, not an implementation or a fresh acceptance
-run. It does not require reviewing every test before useful changes proceed.
-Build, release, provenance, ownership and cleanup controls remain adversarial.
-Their rejection duties are not candidates for relaxation to make reporting
-uniform. Product redesigns used below remain investigations except for the
-management plan's explicitly authorized
-[bounded test-seam migration](TRACE-MANAGEMENT-PLAN.md#bounded-test-seam-migration).
-That interface change does not itself relinquish test authority or satisfy
-either pytest cohort.
+This is a planning handoff, not implementation or a fresh acceptance run. Build,
+release, provenance, ownership and cleanup obligations remain independently
+enforced. The management plan owns the development/publication distinction;
+this plan supplies the necessary reporting and acceptance-reader support.
+Seam migration and justified product changes are distinct from relinquishing
+test authority and cannot substitute for either pytest cohort.
 
 ## Investigation basis
 
@@ -68,10 +66,11 @@ portable release evidence, selected Python checkers, Rust and Swift wrappers,
 and the observation cases discussed below. No catalog case, build, native
 experiment or release procedure was executed for this plan.
 
-The seam design additionally uses source inspection at `ebc18543`, tracing
+The settled seam and dependency decisions use source inspection at `3d3f8e65`, tracing
 `test-input read`, command definitions, ordinary run dispatch, runner override
-decoding, representative callers and verification routing. It supplies a
-starting boundary, not evidence that a new execution route already works.
+decoding, caller combinations, aftermath fixture ownership, generation/build
+checks and release-battery routing. No native case was executed; the source
+traces settle scope and handoff decisions, not runtime equivalence.
 
 The earlier [test-work survey](tests/TEST-WORK-SURVEY-REPORT.md) describes
 `31b81951c9c8c4124089aa4dd342b2b63c0a86de`. Its 235 cases and Python group
@@ -199,6 +198,17 @@ but assess whether this test supplies independent scrutiny before treating it
 as redundant. Neither duplication nor a long history automatically settles
 whether to keep its authority.
 
+Advisory status means only that this judgment does not automatically block
+acceptance. Its evidence may justify investigation, a product correction, a new
+enforced requirement or no change. Use ordinary substantive engineering judgment
+within the authorized scope; do not add advisory-specific escalation, triage or
+disposition machinery. Apparent severity or invasiveness does not presumptively
+require human review. Ask only when authority or information is genuinely missing.
+A separately enforced obligation remains enforceable when an advisory observation
+supplies evidence of its violation. Any subsequent enforcement decision applies
+to subsequent declared evaluations; preserve the original run and its producing
+semantics rather than retroactively changing its status.
+
 ## Choose the smallest reporting mechanism through a bounded comparison
 
 Before implementing the adapter, compare two concrete arrangements using the
@@ -268,14 +278,33 @@ unchanged. Revise them together with the dispatcher, supported by independently
 captured source/selection expectations. Evidence validity must not be inferred
 solely from a new result's claim to be informational.
 
-Dependency admission also currently asks whether a predecessor passed. For each
-converted dependency, establish what its dependent actually needs: completed
-evidence, a usable fixture, or a particular enforced proposition. Do not turn
-all dependencies into completion-only checks. In particular,
-`run_effects/aftermath_footprint` selects the nominally opt-in exec survivor case
-as a dependency, bringing it into the default battery. Trace that relationship
-and its own assertions so the withdrawn survival requirement is not silently
-reimposed elsewhere or retained solely to satisfy dependency machinery.
+Dependency admission currently asks whether a predecessor passed. For a
+converted dependency, distinguish needed evidence or equipment from the
+predecessor's entire judgment. The aftermath edge is settled by source reading:
+[aftermath_footprint.sh](../tests/suites/run_effects/aftermath_footprint.sh) builds
+its own bridge, helper and observer; `check_aftermath_footprint.py::main` creates
+its own `ActorHostFixture`, and `observe_case` starts its own
+[HeldWorkload](../tests/lib/footprint_workloads.py), registers generation-qualified
+exit observers and writes local receipts. No survivor artifacts, fixture or
+verdict are consumed. Its timeout-worker observations concern its own invoked
+client-timeout experiment, not a descendant surviving normal exec completion.
+
+Remove `runner_exec_lifecycle/closed_streams_leader_exit` from the aftermath
+case's `depends_on`; do not replace it with a completion-only dependency.
+The same trace establishes no dependency on `worker_dies_during_exec`, so remove
+that inherited lifecycle edge too without changing that case's independent
+checks or default selection. Retain the observer/checker control prerequisites.
+Make the converted survivor observation explicitly default-selected: this keeps
+its evidence in the default and extracted-app batteries without using aftermath
+to force a favorable survival judgment. Update the catalog and suite accounts
+with these changes.
+
+Verify selection and execution of aftermath without either lifecycle predecessor,
+then mixed selections with the informational survivor. A valid prior-exit
+history must complete through checker, dependency admission, dispatcher and
+battery acceptance; missing observations and unsettled cleanup still fail.
+The worker-death case concerns abnormal worker termination and remains a
+separately justified check, not a replacement normal-completion survival rule.
 
 Keep the producer-bound approach to archives in
 [release_runs.py](../tests/lib/release_runs.py) and the
@@ -294,7 +323,7 @@ of any advisory verdict.
 
 ### Relinquish the required same-group survivor
 
-The primary enforcement-reduction candidate is
+The selected primary enforcement reduction is
 `runner_exec_lifecycle/closed_streams_leader_exit`. Its
 [checker](../tests/suites/runner_exec_lifecycle/check_closed_streams_leader_exit.py)
 observes initial peer identities and process groups, closes both streams, exits
@@ -305,7 +334,7 @@ credits a surviving descendant. An implementation that stops that descendant
 can therefore fail the case even though the suite describes survival as a
 current observation limit, not a desired containment rule.
 
-Propose a verdict-free account of the descendant's post-completion lifetime.
+Convert to a verdict-free account of the descendant's post-completion lifetime.
 Keep independently registered exit events, generation identity, stream-close
 acknowledgments, the later file effect, raw CLI output and separate test cleanup.
 Retain justified checks of truthful public evidence and promised later effects
@@ -314,7 +343,7 @@ fixed expectations such as the no-request record so they do not indirectly
 reintroduce the removed architectural requirement; any public-meaning issue
 goes through the management plan before changing that expectation.
 
-The commitment assessment for this conversion belongs to the management plan,
+The assessment of remaining obligations belongs to the management plan,
 which takes it early although no trace finding has it as its subject. Give it
 the passages that describe descendant lifetime as well as the test. Generated
 accounts cite this case as support. FOOTPRINT rows fa5 and fa6 cite the
@@ -349,12 +378,13 @@ while a missing exit record, changed identity or failed required observation
 still prevents acceptance. Keep process/effect observations ahead of JSON
 interpretation and cleanup as in the current case.
 
-This conversion must remove actual blocking authority, including at dependency
-and default-battery aggregation boundaries. If commitment assessment rules it
-out, explicitly reconsider the candidate and justify another real reduction;
-do not declare the overhaul complete from reporting changes alone. The adjacent
-`worker_dies_during_exec` also requires live helpers after worker death, but is
-outside the initial conversion unless the first investigation needs it.
+This conversion must remove actual blocking authority, including at dependency,
+default-battery and acceptance boundaries. The selected lifetime proposition is
+observational; management assesses the remaining truthful-evidence and effect
+obligations, rather than reopening survival solely because old prose or tests
+required it. The adjacent `worker_dies_during_exec` concerns abnormal worker
+death and remains outside this authority conversion. Verify that no alternate
+fixture or summary reconstructs the normal-completion survival requirement.
 
 ### Surface existing observational and advisory work honestly
 
@@ -462,9 +492,9 @@ standalone compilation. A useful observation would retain the submitted form,
 admitted transport result, actual helper-call sequence and input bytes, captures,
 field presence and relevant side effects. It could show invocations disappearing
 without requiring either call count. Preserve any independent input-provenance
-and transport controls still justified when calls occur. Inspect existing public
-commitments and the freeze before approving such a conversion or product change;
-this is a rehearsal, not the mandatory initial reduction.
+and transport controls still justified when calls occur. Assess current product responsibilities and compatibility before selecting the
+change under management's authority. The rehearsal informs that decision; it
+does not make this the mandatory initial enforcement reduction.
 
 For receipts, DT-95–104 and DT-134 distinguish host qualification, constant-label
 admission and downstream inference. The run-flow test
@@ -487,46 +517,74 @@ edits are part of behavioral remediation, not later editorial cleanup.
 
 ## Migrating executable test seams
 
-The management plan owns the selected subset, admission decision and transition
-costs. This plan owns making that decision work in the executable and its test
-callers, within the combined implementation. Account for all ten current
-override fields there; implement the selected coherent subset here. Begin with
-the contrasting validator replacement and pre-ready hang/worker-timeout paths
-identified there, confirming their caller coverage before coding.
+The management plan owns the
+[settled eight-control boundary](TRACE-MANAGEMENT-PLAN.md#bounded-test-seam-migration),
+ordinary/experimental admission and product responsibilities. This plan owns
+implementation, caller migration and experimental equivalence. The selection
+follows actual co-use rather than whole catalog families; no new inventory or
+scope-selection phase is required.
 
-### Specify the route and callers before coding
+### Selected seam callers
 
-Map each selected control from its old request form to its effective
-intervention, catalog callers and retained evidence. Include combinations,
-ordinary and actor requests where applicable, invalid or inert values, and
-cases where execution fails before reaching the intervention. A field appearing
-in JSON does not establish that the intended component used it. This bounded
-mapping supports migration equivalence; it is not another finding inventory.
+At `3d3f8e65`, the following source paths supply the selected controls. Migrate
+the selected invocations and their command/evidence handling, not every scenario
+in the containing file. Shell wrappers and BYOXPC variants that invoke the same
+checker follow that caller. Confirm these references have not changed before
+editing, without reopening the settled scope absent new co-use evidence.
 
-Use a distinct experimental execution subcommand under `test-input` as the
-starting design, with the selected controls supplied separately from the
-ordinary request. Preserve `test-input read` as a publication-only command.
-Adding flags that merely emit today's `_test_overrides` would centralize input
-construction but would not complete the migration out of ordinary execution.
-Settle the exact command and flag shape before implementation.
+| Experimental use | Caller and combination supporting selection |
+| --- | --- |
+| Pre-ready and native-argument refusal | [check_pre_apply_failure.py](../tests/suites/witness_contract/check_pre_apply_failure.py): pre-ready hang plus worker timeout; invalid post/pre delay, self-signal and slot controls. Its separate missing-worker substitution stays outside. |
+| Worker deadline, in-flight attempt and grace | [runner timeout checker](../tests/suites/runner_outcome_runner_timeout/check.py), also called by `runner_use_c_worker/worker_timeout_ms_honored`; [check_attempt_in_flight.py](../tests/suites/witness_contract/check_attempt_in_flight.py): worker timeout alone or with post-apply hang. |
+| Publication and termination | [check_killed_before_publication.py](../tests/suites/witness_contract/check_killed_before_publication.py): slot kill plus worker timeout; `check_worker_sparse.py` and `check_worker_termination.py`: post-apply hang plus self-signal. `check_extension_directory.py` uses slot kill, including its `actors_byoxpc` caller. |
+| Actor applicability | [check_actor_compositions.py](../tests/suites/witness_contract/check_actor_compositions.py): post-apply delay and paired ordinary/actor timeout applicability. Keep the actor execution allowance independent. |
+| Launch, ready-byte and reservation observations | `runner_exec_inheritance/launch_inventory.py`, `runner_ready_byte_resilience/run.sh`, and BYOXPC `single_use.py` / `bad_neighbor_claims.py`: pre-ready or post-apply delay. Direct-client requests in these callers must use explicit experimental admission too. |
+| Validator faults and collection deadlines | `runner_validator_failure/check.py` and `check_signal.py`; [validator no-reply checker](../tests/suites/runner_outcome_validator_no_reply/check.py): replacement plus I/O deadline; [check_phases.py](../tests/suites/witness_contract/check_phases.py): replacement plus total deadline, including `actors_byoxpc`. |
+| Ordering and comparison | [check_ordering.py](../tests/suites/witness_contract/check_ordering.py), its shell callers and mutation controls; `check_comparison_matrix.py`: replacement with I/O deadline for the stub and worker timeout for the FIFO experiment. Preserve the independently authored matrix, including frozen guide inputs; the invocation adapter separates its control values from the ordinary request. |
+| Identity, strings and path queries | `check_dossier.py` and its BYOXPC caller, `check_diagnostic_transport.py`, `check_path_queries_integrated.py`, and `failure_boundaries/check.py`: selected validator substitution and its admission/failure contrasts. Their distinct worker substitutions stay outside. |
+| Held-workload instruments | [footprint_workloads.py](../tests/lib/footprint_workloads.py)::HeldWorkload supplies validator replacement to `check_held_phase_footprint.py` and `check_aftermath_footprint.py`, including disposable actor hosts. Adapt the shared command path and its constructed CPU controls together. |
+| Request and evidence controls | `runner_outcome_bad_request/contract.py` has a live self-signal invocation; request examples, current shape/generator controls and evidence readers carry the affected admission/echo claims. Update current claims and controls; keep historical response fixtures under their original semantics. |
+| Internal and lower-level controls | `runner/Tests/PWRunnerCoreTests/{RequestContractTests,QueryAdmissionTests,ServiceAdmissionTests,PhaseProtocolTests,OrderingTests}.swift` and controller dossier tests exercise decoding, bounded refusals, service admission or direct orchestration. Update current boundary expectations and experimental context while retaining independent framing, sanitization and driver checks. Constructed full-shape records in `ReplyFailureTests.swift` do not establish ordinary admission. |
 
-Trace the route through [CLI dispatch](../controller/src/cli.rs),
-[test input handling](../controller/src/test_input.rs),
-[run orchestration](../controller/src/run_flow.rs), host admission and native
-request planning. Reuse execution machinery instead of maintaining a second
-runner. Specify where experimental intent is admitted and how it reaches the
-component that acts on it. Account for lower-level clients as well as the CLI;
-a renamed JSON field or a controller-only filter may leave the old activation
-path available. This interface separation is not a claim of authentication or
-protection against a caller that deliberately invokes experimental execution.
+The worker controls form one co-use group through timeout, delay, signal and
+slot publication; the validator group links replacement with both deadlines.
+The initial three fields alone would split these experiments across interfaces.
+No inspected live CLI/client invocation combines a selected control with
+`worker_executable_path` or `actor_equipment_executable_paths`; separate rows in
+one checker do not make such a combination. Constructed decoder/reply records
+and direct internal admission tests do contain mixed fields. Preserve their
+independent checks through internal construction or revised boundary controls,
+without treating those records as evidence that a mixed public execution route
+is needed. The eight-field selection is the smallest coherent closure of the
+initial live uses, not a mandate to migrate all seams.
 
-Use the [interface authoring guidance](../controller/interface/README.md) for
-definitions and generated help. Identify affected developer accounts, shared
-projections and release prose checks during design. The management plan's narrow
-authorization permits the necessary developer-command statements, but not a
-guide amendment or an unrelated expansion of promises. Resolve the permitted
-publication path before coding; do not defer it to release acceptance or bypass
-generator freshness checks.
+### Specify the route and admission
+
+Implement the management plan's `test-input run REQUEST` boundary and eight
+explicit control flags. Preserve `test-input read` as publication-only. Trace
+[CLI dispatch](../controller/src/cli.rs), [test input handling](../controller/src/test_input.rs),
+[run orchestration](../controller/src/run_flow.rs), client transport, host
+admission and native planning. Reuse orchestration and pass explicit experimental
+intent outside the ordinary request. Ordinary submissions reject selected legacy
+keys even through the lower-level client/host; experimental submissions reject
+mixed legacy controls. Internal tests may still construct driver inputs directly,
+but that does not demonstrate public admission.
+
+Retain absent/default, invalid and unreached control contrasts. Preserve the
+accepted numeric domain and the boundary that rejects an out-of-range native
+argument; flag parsing must not silently replace that experiment with a CLI
+usage refusal. Keep malformed CLI syntax as its own control. In particular,
+ordinary `timeoutMsForCWorker` floors the supplied timeout while
+`ActorOrchestration` uses `PWActorLimits.executionMs`; delay/signal/slot controls
+reach both worker forms. Keep `timeout_applicability_specimens`' independently
+expected difference. Requested control presence is not proof of intervention.
+
+Use the [interface definitions](../controller/interface/README.md) and existing
+technical owners for command/help and evidence accounts. The management plan's
+[development/publication checks](TRACE-MANAGEMENT-PLAN.md#development-and-publication-checks)
+handle generator coupling without a guide amendment or substitute user guide.
+Do not add a second dispatcher, a result-fabrication mechanism or a test-only
+binary in place of exercising the normally built app.
 
 ### Preserve the experiment and identify the intervention
 
@@ -552,19 +610,18 @@ which independent checks still rejected faults. Preserve failure contrasts,
 identity checks, command accounting and cleanup duties. A zero exit from each
 command is insufficient experimental equivalence.
 
-Move every caller in the selected scope and retire the selected ordinary-request
-activation paths. Temporary dual entry points may support the comparison but
+Move every selected invocation in the caller mapping and retire the selected
+ordinary-request activation paths. Temporary dual entry points may support the comparison but
 must be gone before the migration is credited. An internal representation may
 remain useful without remaining admissible as an ordinary request. Specify the
-treatment of unselected controls and mixed old/new inputs explicitly, so removing
-one field neither silently ignores a promised intervention nor accidentally
-removes unrelated coverage. Keep any assertion or outcome-authority changes
+settled rejection of mixed old/new inputs, so removing a field neither silently
+ignores a promised intervention nor accidentally removes unrelated coverage. Keep any assertion or outcome-authority changes
 separately attributable from these interface changes.
 
 ### Place verification within the combined sequence
 
-Do the inventory and route design early enough to supply any shared evidence
-reading requirements to the reporting capability stage. The executable and
+Use the settled caller mapping to supply shared evidence reading requirements
+to the reporting capability stage. The executable and
 caller changes land after the management plan's unchanged-app instrument
 checkpoint, with a rebuilt app and their own routed verification. They may
 proceed alongside conversions and cohort migration where the callers are
@@ -582,9 +639,10 @@ still launches nothing and retains its publication/refusal behavior. Include
 combined controls, invalid values, unreached interventions, early refusals,
 equipment identity and cleanup where the selected path uses them.
 
-Complete this work before final integrated verification. The released-app
-battery must exercise migrated callers through the new route, including when
-run against the extracted release app. The closing outflows receive the
+Complete this work before final integrated verification. The default and
+selected opt-in batteries must exercise migrated callers through the new route,
+including the extracted development candidate in the adapted acceptance control.
+Future release batteries inherit those callers under strict release admission. The closing outflows receive the
 implemented boundary, its evidence and retained costs. They do not receive an
 undeveloped recommendation for another seam investigation.
 
@@ -711,9 +769,9 @@ improvement.
 
 | Stage | Bounded work and handoff |
 | --- | --- |
-| 1. Fix the scope and authority decisions | Confirm the two cohort boundaries and current selected callers; obtain the survivor conversion's commitment assessment from the management plan; map the selected survey reporting gaps and trace claims. Settle the seam subset, route, caller mapping and shared evidence requirements. Record the old propositions, retained controls and intended reductions. Settle the small reporting comparison before expanding infrastructure. |
-| 2. Establish reporting and enforcement capability | Change the existing shell/dispatcher and pytest boundaries only as needed, with mixed-outcome controls. Update dependency interpretation for affected cases, release validation and producer-bound evidence readers in the same stage. A new non-gating result cannot ship while release or summary code silently converts it to a pass. |
-| 3. Exercise real conversions and scope repairs | Convert the survivor observation, retirement completion and pilot comparison reporting; repair selected assertion-to-unrun paths. Implement the management-approved DT-53/132 and DT-63/124/125 assertion/wording/support corrections with their contrasts. Keep transport and receipt product decisions bounded by their assessment and freeze. |
+| 1. Prepare the selected work | Confirm the two cohort boundaries and mapped callers against intervening changes; assess the survivor instrument's remaining product obligations and selected trace claims. Use the settled seam scope and dependency removal. Identify shared evidence requirements and old propositions/controls. Settle the small reporting comparison. Complete necessary development/build publication support before taking the unchanged-app baseline. |
+| 2. Establish reporting and enforcement capability | Change shell/dispatcher and pytest boundaries with mixed-outcome controls. Update dependency interpretation, candidate/release evidence validation and producer-bound readers together. Supply deterministic replay through existing reconciliation and aggregate functions. Complete the management plan's live/replay checkpoint before conversions or further build-contract changes. |
+| 3. Exercise real conversions and scope repairs | Convert the survivor, retirement and pilot reporting; remove inherited aftermath lifecycle dependencies and select the survivor directly by default. Repair assertion-to-unrun paths and assessment-selected DT-53/132 and DT-63/124/125 claims with their contrasts. Product remedies in transport/receipt threads follow management's substantive decisions, with no implementation-layer presumption. |
 | 4. Complete both pytest cohorts | Establish migration equivalence and then any separately justified outcome revisions. Retire the replaced orchestration. This can proceed alongside stage 3 after stage 2 supports the necessary receipts, pure items and real commands. |
 | 5. Complete the selected seam migration | After the instrument checkpoint, implement the experimental route and migrate its callers, establish experimental equivalence and retire selected ordinary-request activation paths. This can proceed alongside stages 3 and 4 where independent; preserve attributable baselines when callers overlap. Complete its routed checks on the rebuilt app before final integrated verification. |
 | 6. Assess preservation, reduction and maintenance cost | Verify the combined default and selected opt-in behavior, release evidence handling and old-format semantics. Rehearse changed product behavior through the revised tests and accounts. State what authority actually disappeared and what evidence or controls remain, with any residual costs. |
@@ -729,9 +787,10 @@ capability alone with a baseline battery of the same app.
 The hold on authorized product changes ends at that checkpoint, and stages 3,
 4 and 5 then proceed. Finish in stage 2 every change to the shared reading path
 that the conversions, cohorts and selected seam evidence will need, including
-pure-item and receipt support. One that turns up later needs its own
-before-and-after battery on an unchanged app. The seam command and admission
-changes belong after this comparison, not in stage 2.
+pure-item, receipt and development-candidate support. A later reader change
+follows management's deterministic-replay-first rule, with a further live pair
+only for an identified integration uncertainty. Seam command/admission changes
+belong after this comparison, not in stage 2.
 
 Implementation owners are existing boundaries, not new organizational layers:
 `test_cli.py` and the catalog for selection; `testlib.sh`, `case.sh` and
@@ -754,16 +813,18 @@ raw evidence, terminal output, reports and aggregate decisions together.
 
 | Contrast | Evidence required |
 | --- | --- |
+| Deterministic reporting comparison | Replay identical retained inputs through the old and new `suite_run.reconcile`, `account`, `finish` and battery-validation paths, with matching captured context and isolated outputs. Independently expected unchanged decisions must agree; new informational/advisory fixtures have explicit expected deltas or an old-format refusal. Corrupt, omit and contradict evidence and authority; invalid accounting must remain consequential. No archived release is relabeled. |
 | Valid but unfavorable advisory judgment | Feed a complete pilot comparison with an unfavorable independent expected conclusion. It appears in the case, terminal and run account; the run remains eligible when all required controls hold. Exercise both ordinary dispatch and the release validator. |
 | Same observation missing or invalid | Remove a required receipt, change its identity, omit a scheduled member or corrupt an operation reference. Acceptance fails with the evidence/accounting reason, while valid earlier observations and any evaluated verdict remain readable. |
-| Verdict-free lifetime observation | Exercise both survivor and independently observed prior-exit histories, then the live/disposable contrast described above. Neither history is required as product behavior; missing observation and uncertain cleanup remain consequential. Show the exact old assertion that rejected the alternative. |
+| Verdict-free lifetime observation | Exercise both survivor and independently observed prior-exit histories, then the live/disposable contrast. Follow the valid prior-exit account through checker, direct default selection, aftermath's removed dependency, dispatcher and aggregate battery acceptance. It must not fail for absence of survival; missing observation and uncertain cleanup still fail. Show the old assertion and every transitive requirement removed. |
 | Enforced judgment still authoritative | Intentionally change a retained expected public fact or remove a required independent effect. Require its designated assertion failure and blocking result, not merely a later crash or missing report. Include a valid neighboring case that still runs. |
 | Mixed failure | Combine an unfavorable advisory result with failed teardown, missing command settlement or artifact mutation. The advisory judgment stays non-gating, but the run and release remain rejected for the independent fault. |
 | Cohort equivalence | Compare accepted and rejected scenario coverage before and after migration, including historical missing-record forms, arithmetic/formula controls, disk round trips, stager refusals, vendor tampering and fresh-process import contamination. An extra pytest item is not extra coverage. |
 | Experimental route preserves the instrument | Compare selected old and new callers at identified app revisions, including positive, rejected and unreached interventions. Retain independent effects, equipment identity, failure contrasts, command evidence and cleanup. Keep this equivalence distinct from any simultaneous assertion revision. |
-| Experimental and ordinary admission differ deliberately | Activate each selected control through the new route; show that the old ordinary-request form no longer activates it. Cover mixed and invalid inputs and lower-level admission, with a valid ordinary neighboring request. Preserve publication-only `read`, and identify experimental intent even when execution stops before applying the control. |
+| Experimental and ordinary admission differ deliberately | For each of the eight controls, observe the intended intervention through the new route and rejection of its old ordinary-request key, including inert values, direct client/host submissions and mixed controls. Show a valid ordinary neighbor and unchanged remaining substitutions. Preserve ordinary/actor semantic contrasts, publication-only `read` and recognizable experimental intent before a control is reached. |
 | Aggregation and dependencies | Use a mixed selection with pure items, commanded items and legacy cases. Verify exact selection accounting, scope of each count, absence of an informational passing assertion, declared prerequisite failures, continuation after failures and the affected dependency's actual requirement. |
 | Authority cannot disappear from results | Remove or relabel an expected judgment, drop a family reference, alter declared authority or supply contradictory terminal evidence. Independently captured expectations must reject the account rather than accept an apparently cleaner run. |
+| Development is not publication | A signed, source-matching development candidate with the explicit publication boundary can run and supply valid evidence. Altered frozen bytes, stale technical outputs and missing boundary evidence fail. Strict release/publication readers reject its artifact and candidate receipt, including attempted promotion; constructed current-release controls still pass. |
 | Historical and portable evidence | Reread supported old evidence under its original semantics and new evidence under its captured contract. Keep old failures and unsupported-format refusals. Remove required new artifacts from a portable bundle and require rejection by verification/publication/retention readers. |
 | Literal claims | Trigger each changed assertion and completion path. Compare its actual message, catalog name/description and coverage statement to the proposition and authority exercised. A successful formatter or grep cannot establish that semantic correspondence. |
 
@@ -797,21 +858,26 @@ registrations, documentation/support or generated inputs. Run the default
 battery against the unchanged app at the instrument checkpoint, each converted
 or migrated case when it lands, and the default battery with the relevant
 opt-ins in the final integrated verification.
-Use the release controls to establish acceptance semantics; any actual archive
-acceptance must follow the existing release procedure and is not publication.
+Use the release controls to establish strict acceptance semantics and the
+separate development-candidate evidence path. The management plan owns their
+[final integrated use](TRACE-MANAGEMENT-PLAN.md#three-boundaries-for-broad-runs).
+Changes to `release_accept.py`, `execution_contract.py` or `release_runs.py` route
+to `preflight/build_refusal_controls`; run that long case once at the end, with
+its existing live battery adapted to an extracted development candidate and
+strict publication-refusal contrasts. Do not manufacture release readiness by
+retagging the changed product or refreshing frozen guide content in its copy.
 
-Revising `release_accept.py`, `execution_contract.py` or `release_runs.py`
-changes release-acceptance orchestration, which
-[change verification](../tests/CHANGE-VERIFICATION.md#build-refusal-controls)
-routes to the opt-in `preflight/build_refusal_controls`. The constructed
-release controls establish the revised semantics. That case's release-battery
-sequence is the one catalog path in which real acceptance reads a real
-battery, including the migrated families and the converted survivor case. Run
-it once, in the final integrated verification, and not after each stage.
-Before then, reading a completed battery with the revised release battery
-validator is a direct investigation that credits no case. Do it at the
-instrument checkpoint, and again at the first battery that contains a
-converted case and the migrated families.
+Before then, read completed real battery evidence with the revised validator
+at the instrument checkpoint and at the first battery containing the converted
+cases and migrated cohorts. These direct investigations credit no case. The
+checkpoint also replays identical retained inputs through old and new reporting
+interpretations, using the same selected context rather than changing source
+expectations to obtain agreement. Normalize only identified incidental output
+locations when comparing; do not normalize away evidence, identities, authority
+or failure distinctions. If an adapter is needed to feed an existing function,
+keep it in the controls and demonstrate that it does not invent missing evidence.
+Old artifacts stay producer-bound. New-outcome fixtures are separately identified
+controls, not rewrites of those artifacts.
 
 Do not count an environment-refused native run as a product result. Preserve
 source/app identity, evidence availability and applicability when comparing
@@ -831,9 +897,14 @@ expectation.
 Identify at least one previously enforced product expectation that no longer
 blocks an otherwise valid alternative. Explain why removing its authority is
 justified, how observation still distinguishes the alternatives, and how invalid
-evidence and required controls remain consequential. Show this at the relevant
-aggregate and release boundaries, not just inside a test function. A mechanically
+evidence and required controls remain consequential. Show this at the outermost
+relevant acceptance boundary, including the candidate battery and
+strict release-reader controls, not just inside a test function. A mechanically
 correct migration that relinquishes no questionable enforcement is incomplete.
+For every selected authority reduction or retired activation path, identify the
+old obligation and its full path through callers, fixtures, dependencies and
+aggregation. Demonstrate its disappearance there while justified independent
+scrutiny remains. A label change or a new CLI entry point alone is insufficient.
 
 For preservation, account for the cohorts' observations, independently authored
 oracles, rejection contrasts, command evidence and cleanup, together with the
@@ -845,23 +916,27 @@ separately for the ordinary-request entry points retired and the command,
 adapter or documentation duties added in their place. Distinguish retirement
 of an assertion from retirement of useful evidence.
 
-For each judgment relinquished or narrowed, state what PolicyWitness no longer
-establishes on a user's behalf, and what a user who needs that conclusion must
-then do or avoid. Hand those statements, with the conversion and evidence they
-rest on, to the management plan's
-[user-responsibility outflow](TRACE-MANAGEMENT-PLAN.md#user-responsibility-outflow).
-A withdrawn test requirement that changes nothing a user may rely on
-contributes no entry. Each relinquished or narrowed judgment also goes, with
-its reason, to that plan's
-[collection for the maintainer](TRACE-MANAGEMENT-PLAN.md#judgments-for-the-maintainer).
-The maintainer reviews it there; it is not sought before the conversion.
+For each relinquished judgment, explain the test's present observational scope
+and reason in its suite account and changing commit. Keep shared testing
+principles in working guidance and particular product decisions local. Do not
+create a registry of withdrawn enforcement. When a real user responsibility
+remains, give the management plan's
+[user-responsibility outflow](TRACE-MANAGEMENT-PLAN.md#user-responsibility-outflow)
+the present duty, evidence and limits. A withdrawn test requirement that changes
+nothing a user may rely on contributes no entry.
+
+The [maintainer outflow](TRACE-MANAGEMENT-PLAN.md#judgments-for-the-maintainer)
+collects only consequential reasons or unresolved matters not adequately
+recoverable from the product and Git, under management's retention rule. It is
+neither mandatory history for every conversion nor a separate approval process.
+A maintainer must understand the test's current authority from its current owner.
 
 Apply the acceptance companion's change-sensitivity reasoning locally. Rehearse
 the descendant ending at completion, actor fallback disappearing, and a receipt
 or identity premise changing, together with the selected seam rehearsal. Where
 the acceptance plan rehearses the same change, make the two one trace under one
-statement of the hypothetical. Trace
-which remaining expectations need a substantive decision, which observations
+statement of the hypothetical. Trace which remaining expectations need a
+substantive decision, which observations
 simply report different facts, which public commitments still constrain the
 change, and which descriptions require review. Include hidden adapters, dependency rules and source/provenance
 declarations in the cost. Keeping independent scrutiny may properly retain
