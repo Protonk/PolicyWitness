@@ -552,7 +552,6 @@ before it obstructs execution or cleanup.
 | Decision | Alternatives | Recommendation |
 | --- | --- | --- |
 | Whether product changes wait behind the instrument checkpoint | Hold build-contract inputs unchanged between the baseline and the checkpoint. Or interleave product and harness changes, relying on routed selections. | Hold them. Interleaving saves waiting, but leaves the final run unable to separate a reading defect from a product defect without repeating batteries. |
-| Whether a run with a substituted executable is a supported use, for the [outflow](#user-responsibility-outflow) | Supported: the caller carries the obligations of the validator, worker or host they supplied. Or an instrument seam: the output means only what the substituted executable chose to report, and the caller's obligation is to recognize such a run. The routes are the three executable-path overrides and an external runner bundle that is not an intact copy of the app's service. | Awaiting decision. Until then, record candidates that arise only with a substituted executable as unsettled. |
 
 ## Completion and disposition
 
@@ -637,6 +636,27 @@ stays in its assessment without being listed:
 Duties of people building, testing or releasing PolicyWitness belong to the
 working guidance, not here.
 
+### Execution overrides
+
+Someone using `_test_overrides` is not a user in this sense. The fields are an
+instrument seam: a run through them is an experiment on PolicyWitness, not an
+observation by it. For external runners, an intact copy of the app's service
+is the supported use, and supplying one is a candidate responsibility.
+
+This activity owns the question of what to do with all ten override fields.
+Three name an executable and replace a component. Seven are timing and fault
+controls that put the shipped components into a condition an ordinary request
+cannot force. Account for each field. The preferred outcome to examine is
+moving them out of the ordinary request into sub-commands of `test-input`,
+which today publishes a request and launches nothing. The account needs to
+cover what the battery that uses these fields against the released app would
+require, and whether a run through the seam stays recognizable in its output.
+
+Return a recommendation. It does not authorize the change: what a request
+admits is a public meaning under the freeze. Until it is made, assessments
+treat a state that only a substituted executable can produce as the shipped
+component's obligation, not a caller's.
+
 ### Sources
 
 Use the accumulated judgments of all three plans, including dispositions that
@@ -672,10 +692,10 @@ A responsibility is **established** when the evidence supports the condition
 within stated limits and a completed disposition leaves it with the user. It
 is **unsettled** when the condition rests on an observation that was not
 traced or reproduced, when it lasts only until a pending product or freeze
-decision, or when it arises only under a hypothetical arrangement or an
-undecided user role. For a pending decision, name it and what each outcome
-does to the responsibility. Do not promote an unsettled candidate because
-listing it as an obligation seems the cautious choice.
+decision, or when it arises only under a hypothetical arrangement. For a
+pending decision, name it and what each outcome does to the responsibility.
+Do not promote an unsettled candidate because listing it as an obligation
+seems the cautious choice.
 
 ### Guide freeze
 
