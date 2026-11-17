@@ -535,20 +535,24 @@ and remains a maintainer action.
 
 Deferring that case to the end is sound because every unit reaches it with
 its own evidence: the harness against an unchanged app, each product change
-through its routed selection, each group through a default battery. One
-condition brings real acceptance forward. A tagged release cut while the work
-continues runs the release chain, whose acceptance reads a real battery with
-whatever reader the tree then holds. Place such a release at the instrument
-checkpoint, so the first archive under the revised evidence semantics carries
-no product change.
+through its routed selection, each group through a default battery.
+
+No tagged release falls inside this work. The next release is intended after
+the guide rewrite. Two consequences follow. The release-battery sequence in the
+final verification is the only real acceptance the revised release reader
+meets before that release, so read its nested output closely. And the retained
+archives keep their earlier evidence format throughout, while every executing
+run reads their identities for retention protection and pruning verifies them
+in full. At the instrument checkpoint, run the read-only prune preview against
+them. A revised reader that no longer accepts a retained archive is then found
+before it obstructs execution or cleanup.
 
 ### Integration decisions still open
 
 | Decision | Alternatives | Recommendation |
 | --- | --- | --- |
 | Whether product changes wait behind the instrument checkpoint | Hold build-contract inputs unchanged between the baseline and the checkpoint. Or interleave product and harness changes, relying on routed selections. | Hold them. Interleaving saves waiting, but leaves the final run unable to separate a reading defect from a product defect without repeating batteries. |
-| Whether a release falls inside the work | No release until the final verification. Or a checkpoint release at the instrument checkpoint. Or a release between product changes. | Either of the first two. Avoid the third: it spends the full chain on an intermediate product state and mixes the evidence-format boundary with product change. |
-| Who counts as a user for the [outflow](#user-responsibility-outflow) | Only people who use the shipped producer and read its output. Or also people who supply their own producer or reader. | Undecided here. Record candidates that exist only under the second reading as unsettled until it is decided. |
+| Whether a run with a substituted executable is a supported use, for the [outflow](#user-responsibility-outflow) | Supported: the caller carries the obligations of the validator, worker or host they supplied. Or an instrument seam: the output means only what the substituted executable chose to report, and the caller's obligation is to recognize such a run. The routes are the three executable-path overrides and an external runner bundle that is not an intact copy of the app's service. | Awaiting decision. Until then, record candidates that arise only with a substituted executable as unsettled. |
 
 ## Completion and disposition
 
