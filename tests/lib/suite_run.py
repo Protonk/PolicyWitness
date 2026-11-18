@@ -14,6 +14,8 @@ import subprocess
 import sys
 import time
 import artifact
+import outcomes
+from pytest_support import value_digest
 
 # Blocks idle sleep until the dispatcher exits; lid close and requested sleep
 # still happen, so every invocation also records how long the system slept.
@@ -51,7 +53,7 @@ def reconcile(invocation, out, run_id, previous_events, previous_reports, seen_c
     else:
         problem(invocation, 'events_rewritten', 'suite removed or rewrote earlier events')
         appended = current_events
-    starts, ends = {}, {}
+    starts, ends, terminal_accounts = {}, {}, {}
     for number, line in enumerate(appended.splitlines(), 1):
         try:
             event = json.loads(line)
@@ -60,17 +62,20 @@ def reconcile(invocation, out, run_id, previous_events, previous_reports, seen_c
             key = identity(event.get('suite'), event.get('test_id'))
             if key is None:
                 raise ValueError('invalid case identity')
+            if any('outcome_contract' in c and (c['report_suite'], c['test_id']) == key for c in invocation['cases']):
+                event = outcomes.decode(line)
             step = event.get('step')
             if step == 'test_start':
                 if event.get('status') != 'start':
                     raise ValueError('invalid start status')
                 starts[key] = starts.get(key, 0) + 1
             elif step == 'test_end':
-                if event.get('status') not in ('pass', 'fail', 'skip'):
+                if event.get('status') not in ('pass', 'fail', 'skip', 'complete'):
                     raise ValueError('invalid terminal status')
                 if starts.get(key, 0) != 1:
                     problem(invocation, 'case_order', f'{key}: test_end without one preceding test_start')
                 ends.setdefault(key, []).append(event['status'])
+                terminal_accounts.setdefault(key, []).append(event.get('outcome_account_sha256'))
         except ValueError as exc:
             problem(invocation, 'invalid_event', f'invalid event at invocation line {number}: {exc}')
 
@@ -113,11 +118,13 @@ def reconcile(invocation, out, run_id, previous_events, previous_reports, seen_c
             continue
         try:
             report = json.loads(raw)
+            if any('outcome_contract' in c and (c['report_suite'], c['test_id']) == key for c in invocation['cases']):
+                report = outcomes.decode(raw)
             if not isinstance(report, dict):
                 raise ValueError('report is not an object')
             if identity(report.get('suite'), report.get('test_id')) != key:
                 raise ValueError('report identity disagrees with its path')
-            if report.get('status') not in ('pass', 'fail', 'skip'):
+            if report.get('status') not in ('pass', 'fail', 'skip', 'complete'):
                 raise ValueError('invalid report status')
         except ValueError as exc:
             problem(invocation, 'invalid_report', f'invalid {relative}: {exc}', **details)
@@ -130,8 +137,26 @@ def reconcile(invocation, out, run_id, previous_events, previous_reports, seen_c
         if interpreter is not None and declared != interpreter:
             problem(invocation, 'interpreter_mismatch',
                     f'{relative}: report declares interpreter {declared!r}; this run resolved {interpreter!r}', **details)
-        invocation['reports'].append(report)
         case_dir = out / Path(relative).parent
+        selected = [c for c in invocation['cases'] if (c['report_suite'], c['test_id']) == key]
+        spec = selected[0].get('outcome_contract') if len(selected) == 1 else None
+        if spec is not None:
+            from outcomes_shell import verify
+            assessment = verify(case_dir, spec, report.get('outcome_account'))
+            if 'outcome_account' not in report or report.get('assessment') != assessment:
+                problem(invocation, 'outcome_terminal', f'{relative}: terminal projection contradicts retained evidence', **details)
+            report['assessment'] = assessment
+            expected_status = 'complete' if assessment['accepted'] else 'fail'
+            if report.get('schema_version') != 2 or report['status'] != expected_status:
+                problem(invocation, 'outcome_terminal', f'{relative}: terminal status contradicts observation account', **details)
+            if terminal_accounts.get(key) != [value_digest(report.get('outcome_account'))]:
+                problem(invocation, 'outcome_terminal', f'{relative}: terminal event contradicts observation account', **details)
+            if not assessment['valid']:
+                problem(invocation, 'invalid_observation', f'{relative}: ' + '; '.join(assessment['errors']), **details)
+        elif report['status'] == 'complete' or report.get('schema_version') == 2 or 'outcome_account' in report or 'assessment' in report:
+            problem(invocation, 'unexpected_observation', f'{relative}: observation authority was not selected', **details)
+            continue
+        invocation['reports'].append(report)
         # Inspect directory entries without traversing symlinks, including a
         # symlink at the case root. Scratch itself must be absent after finish.
         if os.path.lexists(case_dir / 'scratch'):
@@ -215,7 +240,10 @@ def counts(reports):
 
 
 def finish(out, run_id, started, invocations, plan, integrity=None, idle_sleep_assertion=None):
-    reports = [report for item in invocations for report in item['reports']]
+    all_reports = [report for item in invocations for report in item['reports']]
+    observation_keys = {(c['report_suite'], c['test_id']) for c in plan['cases'] if 'outcome_contract' in c}
+    observation_reports = [r for r in all_reports if (r['suite'], r['test_id']) in observation_keys]
+    reports = [r for r in all_reports if (r['suite'], r['test_id']) not in observation_keys]
     errors = [error for item in invocations for error in item['harness_errors']]
     if integrity:
         errors.extend(integrity['harness_errors'])
@@ -242,7 +270,7 @@ def finish(out, run_id, started, invocations, plan, integrity=None, idle_sleep_a
     run = {
         'schema_version': 1, 'terminal': True, 'run_id': run_id, 'started_at_unix_ms': started,
         'finished_at_unix_ms': finished, 'duration_ms': finished - started,
-        'ok': not errors and totals['fail'] == 0 and all(c['status'] in ('pass', 'skip') for c in case_results),
+        'ok': not errors and totals['fail'] == 0 and all(c['status'] in ('pass', 'skip', 'complete') for c in case_results),
         'execution_contract': plan.get('execution_contract'),
         'counts_scope': 'legacy reports only',
         'case_outcome_counts': dict(Counter(c['status'] or c['state'] for c in case_results)),
@@ -255,6 +283,10 @@ def finish(out, run_id, started, invocations, plan, integrity=None, idle_sleep_a
         'artifact_integrity': integrity,
         'idle_sleep_assertion': idle_sleep_assertion,
     }
+    from execution_contract import PROFILE
+    if (plan.get('execution_contract') or {}).get('profile') == PROFILE:
+        run['observation_reports'] = observation_reports
+        run['outcomes'] = outcome_summary(case_results, invocations)
     run['completion'] = {state: sum(c['state'] == state for c in run['case_results'])
                          for state in ('completed', 'skipped', 'unrun')}
     run['completion']['selected'] = len(plan['cases'])
@@ -273,6 +305,7 @@ def finish(out, run_id, started, invocations, plan, integrity=None, idle_sleep_a
                   file=sys.stderr)
         elif item.get('system_sleep_error'):
             print(f"SLEEP: [{item['requested_suite']}] system sleep unknown: {item['system_sleep_error']}", file=sys.stderr)
+    display_outcomes(out, case_results, invocations)
     print(f'Test run summary: {out / "run.json"}', flush=True)
     return 0 if run['ok'] else 1
 
@@ -344,7 +377,7 @@ def account(item):
         family = item.get('family')
         complete = bool(family and family['accounting_state'] == 'complete')
         item['case_results'] = [dict(id=case['id'], context=case['context'], engine='pytest',
-            state='completed' if complete else 'unrun', status=('pass' if family['ok'] else 'fail') if complete else None,
+            state='completed' if complete else 'unrun', status=(('complete' if any('outcome_contract' in i for i in family['items']) else 'pass') if family['ok'] else 'fail') if complete else None,
             execution_state=family['execution_state'] if family else 'not_started',
             accounting_state=family['accounting_state'] if family else 'unavailable',
             family_report='suites/' + case['id'] + '/family.json' if family else None,
@@ -383,7 +416,8 @@ def account(item):
             problem(item, 'unrun_case', f'selected case has no readable terminal report: {case["id"]}')
         item['case_results'].append({'id': case['id'], 'context': case['context'],
                                      'state': state, 'status': status, 'reason': reason,
-                                     'system_sleep_ms': item.get('system_sleep_ms')})
+                                     'system_sleep_ms': item.get('system_sleep_ms'),
+                                     **({'assessment': report['assessment']} if report and 'outcome_contract' in case and 'assessment' in report else {})})
 
 
 def run_standard_command(command, root, env, scope):
@@ -479,7 +513,7 @@ def execute(root, out, run_id, started, plan, config, scope, collectors=None):
             if observed:
                 item['equipment'] = observed
             dependencies = {dep for c in group for dep in c['depends_on'] if dep not in group_ids}
-            failed_deps = sorted(dep for dep in dependencies if outcomes.get(dep) != 'pass')
+            failed_deps = sorted(dep for dep in dependencies if outcomes.get(dep) not in ('pass', 'complete'))
             ownership_hold = None
             if not interrupted:
                 from pytest_resources import guard
@@ -500,7 +534,9 @@ def execute(root, out, run_id, started, plan, config, scope, collectors=None):
                 print('==> [selection] ' + ', '.join(c['id'] for c in group), flush=True)
                 item.update(state='running', started_at_unix_ms=time.time_ns() // 1_000_000)
                 save(journal, {'run_id': run_id, 'invocations': invocations})
-                child_env = {**env, 'PW_TEST_CASES': '\n'.join(c['test_id'] for c in group)}
+                child_env = {**env, 'PW_TEST_CASES': '\n'.join(c['test_id'] for c in group),
+                    'PW_TEST_OUTCOME_CONTRACTS': json.dumps({c['report_suite'] + '/' + c['test_id']: c['outcome_contract']
+                        for c in group if 'outcome_contract' in c})}
                 command = group[0].get('command')
                 clocks_before = sleep_clocks()
                 try:
@@ -579,3 +615,32 @@ def execute(root, out, run_id, started, plan, config, scope, collectors=None):
 def integrity_error(integrity, code, message, **details):
     integrity['harness_errors'].append(dict(invocation=None, requested_suite='dispatcher',
                                            code=code, message=message, **details))
+
+
+
+def assessments(case_results, invocations):
+    for case in case_results:
+        if 'assessment' in case:
+            yield 'parent', case['id'], case['assessment']
+    for invocation in invocations:
+        for item in (invocation.get('family') or {}).get('items', []):
+            if 'assessment' in item:
+                yield 'nested', item['id'], item['assessment']
+
+
+def outcome_summary(case_results, invocations):
+    # Never sum parents and nested items or manufacture legacy assertion counts.
+    return outcomes.summarize(assessments(case_results, invocations))
+
+
+def display_outcomes(out, case_results, invocations):
+    for scope, name, assessment in assessments(case_results, invocations):
+        owner = name.split('::', 1)[0]
+        evidence = out / 'suites' / owner
+        for judgment in assessment['advisory_judgments']:
+            if judgment['result'] == 'unfavorable':
+                print(f"ADVISORY: [{name}] {judgment['id']}: {judgment['detail']}; {evidence}", flush=True)
+        for judgment in assessment['blocking_judgments']:
+            print(f"JUDGMENT FAIL: [{name}] {judgment['id']}: {judgment['detail']}; {evidence}", flush=True)
+        for reason in assessment['errors']:
+            print(f"OBSERVATION FAIL: [{name}] {reason}; {evidence}", flush=True)

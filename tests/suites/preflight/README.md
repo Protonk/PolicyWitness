@@ -356,6 +356,19 @@ Offline release controls also exercise the release procedure's decision points.
   Evidence controls exercise custom distribution paths, shared named steps,
   archive identity, refusal of repeated submissions/commands, preservation of
   failed receipts, and links to the separate archive-acceptance output.
+  Candidate controls share extraction and battery validation while requiring
+  the actual development build contract, consistent app source commits and
+  signed publication-boundary evidence. Their separate app and reporting
+  revisions establish scoped source agreement without requiring equal commits.
+  Missing or inconsistent identity/boundary evidence, failed or timed-out
+  execution, wrong runner provenance and changed app bytes refuse candidate
+  verification. The same development ZIP refuses through ordinary release
+  admission before a battery. These constructed controls make no Apple calls
+  or live candidate-execution claim. New candidate, missing-kind and unsupported
+  receipts cannot attach to a release attempt; archival and portable-release
+  controls retain that rejection through release verification and pruning.
+  A schema-3 downgrade with the kind deleted still refuses when explicit
+  development, withheld-publication or candidate-assessment evidence remains.
 - `release_deadline_controls` runs the actual release command CLI against a
   parent/child fixture that flushes partial stdout and stderr, then waits on a
   test-owned socket. Each process configured to ignore SIGINT must survive a

@@ -2,6 +2,9 @@
 import pytest
 from exec_domain import FAMILY, MUTATIONS, OWNERS, Observation
 
+PW_SOURCE_FILES = ('tests/suites/runner_c_worker_harness/exec_domain.py',
+                   'tests/suites/runner_c_worker_harness/check_exec_evidence.py')
+
 
 @pytest.fixture(scope='session')
 def observation(pw_equipment):

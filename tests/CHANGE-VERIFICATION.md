@@ -1025,6 +1025,24 @@ retention/cancellation and preflight build-refusal/release-reader controls.
 Never infer a completed run from passing item reports without complete accounting
 and justified terminal command ownership.
 
+## Observation and reporting readers
+
+For shared observation/accounting or candidate-reader changes, select
+`--suite dispatcher --suite shell_helpers` (including
+`dispatcher/pytest_controls`), `preflight/release_controls`,
+`preflight/release_publish_controls` and `preflight/release_rotation_controls`.
+Command-supervision changes also require `preflight/release_deadline_controls`.
+Keep the existing live exec family check for engine changes.
+
+`tests/lib/reporting_replay.py` is a read-only investigation over completed
+retained runs, with a tracked reader snapshot and isolated outputs. It replays
+raw reports/events, phases, operation accounts and recorded command exits through
+reconciliation, accounting, finalization and battery validation. Derived run,
+dispatch and family judgments are comparison targets. It refuses histories
+whose required intermediate records cannot be reconstructed. The dispatcher
+fixtures establish dependency behavior separately. Replay does not supply new
+execution, signature, cleanup or product observations.
+
 ## Release contract admission
 
 Run `runner_outcome_bad_request/same_shape_contract` for the source-identity

@@ -19,6 +19,7 @@ import zipfile
 
 import artifact
 import build_provenance
+from release_evidence import require_release_acceptance
 import run_ownership as ownership
 
 BUNDLE = 'evidence/test-runs'
@@ -121,9 +122,17 @@ def verify_bundle(destination, *, expected_contract):
     if manifest.get('execution_contract') != expected_contract:
         raise ValueError('portable evidence requires the independently expected producer contract')
     with tarfile.open(destination / 'runs.tar.gz', 'r:gz') as zipped:
+        def load_bytes(name):
+            stream = zipped.extractfile('acceptance/tests/' + str(ownership.relative_path(name)))
+            if stream is None:
+                raise ValueError('portable evidence requires file bytes: ' + name)
+            return stream.read()
         def load(name):
-            return json.loads(zipped.extractfile('acceptance/tests/' + str(ownership.relative_path(name))).read())
-        errors = execution_contract.problems(load('run.json'), expected_contract, load)
+            if expected_contract['profile'] == execution_contract.PROFILE:
+                from outcomes import decode
+                return decode(load_bytes(name))
+            return json.loads(load_bytes(name))
+        errors = execution_contract.problems(load('run.json'), expected_contract, load, load_bytes)
     if errors:
         raise ValueError('; '.join(errors))
     return manifest
@@ -236,6 +245,7 @@ def verify_release(archive):
     if manifest['tag'] != tag or manifest['source_commit'] != record['source_commit']:
         raise ValueError('test evidence belongs to a different release')
     accepted = ownership.read_object(archive / BUNDLE / 'acceptance.json')
+    require_release_acceptance(accepted)
     if (record['acceptance']['path'] != BUNDLE + '/acceptance.json'
             or accepted.get('ok') is not True or accepted.get('sha256_before') != record['sha256']
             or accepted.get('sha256_after') != record['sha256']):

@@ -91,7 +91,7 @@ class Controls:
     def contract(self):
         family = 'fixture/family'
         selected = [dict(id=family, engine='pytest')]
-        contract = dict(profile=execution_contract.PROFILE, source={'fixture':'independent expected producer'}, selected=selected, required_families=[family])
+        contract = dict(profile=execution_contract.LEGACY_PROFILE, source={'fixture':'independent expected producer'}, selected=selected, required_families=[family])
         contract['identity'] = value_digest(contract)
         selection = dict(items=[dict(id=family+'::one')])
         account = dict(manifest_digest=value_digest(selection), items=[dict(id=family+'::one', outcome='passed', phases={p:dict(outcome='passed',operations=['op']) for p in ('setup','call','teardown')})],
@@ -196,8 +196,9 @@ if __name__ == '__main__':
     integration.all()
     import pytest_availability
     import pytest_receipts
+    import pytest_outcomes
     failed = []
-    for group in (pytest_receipts, pytest_availability):
+    for group in (pytest_receipts, pytest_availability, pytest_outcomes):
         try:
             group.exercise(control, integration)
         except AssertionError as exc:

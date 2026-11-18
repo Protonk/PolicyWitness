@@ -616,6 +616,30 @@ def check_archive(out):
     attempt_name = session.name
 
     assert release_archive.find_latest(dist) == session
+    acceptance_path = Path(json.loads((session / 'acceptance.json').read_text())['path'])
+    original_acceptance = acceptance_path.read_bytes()
+    accepted = json.loads(original_acceptance)
+    downgraded_candidate = dict(accepted, schema_version=3, contract='development:' + 'a' * 64,
+        publication=dict(status='withheld', build_contract='development:' + 'a' * 64),
+        apple_assessment=dict(status='not_performed', reason='development_candidate'),
+        source=dict(app_commit='a' * 40, reporting_commit='b' * 40,
+                    build_contract='development:' + 'a' * 64, agreement_scope='build_contract_inputs'))
+    downgraded_candidate.pop('kind', None)
+    acceptance_variants = (dict(accepted, schema_version=4, kind='development_candidate'),
+                           dict(accepted, schema_version=4), downgraded_candidate,
+                           dict(accepted, schema_version=5, kind='release_acceptance'))
+    run_ownership.atomic_json(work / 'acceptance-kind-controls.json', acceptance_variants)
+    for variant in acceptance_variants:
+        acceptance_path.write_text(json.dumps(variant))
+        before = artifact.inventory(dist)
+        try:
+            release_archive.archive(session, dist=dist, root=repo, notes=notes)
+        except ValueError as exc:
+            assert 'not release acceptance' in str(exc) or 'unsupported acceptance' in str(exc), exc
+        else:
+            raise AssertionError('candidate or unsupported receipt authorized archival')
+        assert artifact.inventory(dist) == before
+    acceptance_path.write_text(json.dumps(dict(accepted, schema_version=4, kind='release_acceptance')))
     dest = release_archive.archive(session, dist=dist, root=repo, notes=notes)
     assert dest == dist / 'archive/v0.9.0'
     expected = {'PolicyWitness-0.9.0.zip', 'PolicyWitness.md', 'SHA256SUMS', 'release.json', 'evidence'}

@@ -41,6 +41,11 @@ def catalog(root):
             case.setdefault('skip_reasons', [])
             case.setdefault('depends_on', [])
             case.setdefault('report_suite', suite)
+            if 'outcome_contract' in case:
+                from outcomes import validate_spec
+                validate_spec(case['outcome_contract'])
+                if case.get('engine') == 'pytest' or 'commands' in case['outcome_contract']:
+                    raise ValueError('shell observation contracts do not declare nested command ledgers: ' + key)
             if not isinstance(case['report_suite'], str) or not re.fullmatch(r'[a-z][a-z0-9_]*', case['report_suite']):
                 raise ValueError(f'invalid report_suite: {key}')
             report_path = (case['report_suite'], leaf)

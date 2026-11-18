@@ -144,6 +144,12 @@ deterministic, and checked into the repo so tests are hermetic.
 - If a fixture implies a new contract, update the relevant suite README and
   the suite-coverage table in `tests/README.md`.
 
+The `dispatcher` fixtures include `pilot_unfavorable.py`, which constructs ten
+ordinary worker-wait trial bundles, calibration and five matched pairs for an
+independently expected valid but unfavorable improvement judgment. The dispatcher
+observation controls retain the raw bundles and reader conclusion; these are
+constructed reader inputs and supply no live timing claim.
+
 The `dispatcher` fixtures include `repository.py` (copies the public runner and
 writes a caller-supplied catalog), `selection.sh`/`selection.py` (independent
 execution receipts and controlled evidence), `controller_stub.c` (a runnable

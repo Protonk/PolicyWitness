@@ -637,12 +637,62 @@ client sources to control reservation, execution-reply, capture-publication and
 unsupported-response boundaries, with independent effects and process-exit evidence. Its controlled
 results do not replace ordinary BYOXPC acceptance; see the owning suite account.
 
+## Declared observations and judgments
+
+An explicit experiment fixes its promised observations and judgment authority
+before execution. A shell case declares `outcome_contract` in the catalog;
+a pytest item declares `pw_contract` during collection. Enforced unfavorable
+judgments block acceptance. Advisory unfavorable judgments remain visible but
+do not themselves block acceptance. Observations with no judgment are
+informational completions, with no passing product assertion. Execution,
+identity, evidence validity, artifact integrity and cleanup remain required.
+
+Shell cases use `test_observe`, `test_judge`, `test_observation_failure` and
+`test_complete`. Their `outcomes.jsonl` journal and snapshot retain partial
+observations after later failure. The schema 2 terminal report and event bind
+that account; the dispatcher rereads it and the referenced artifact bytes.
+Pytest attaches the same account to setup/call/teardown records. Neither path
+converts arbitrary exceptions or `AssertionError` into a product judgment.
+
+A valid explicit completion has parent status `complete`; an enforced
+unfavorable judgment or invalid experiment has status `fail`. Dependencies
+admit `pass` and valid `complete`, including informational and unfavorable
+advisory predecessors. Harness errors still prevent dependency execution.
+Quiet output names unfavorable advisory judgments, blocking judgments and
+observation failures with evidence paths.
+
+`pw-family-evidence-2` fixes explicit authority and family membership in the
+producer contract before evaluation. Candidate and portable readers require
+the raw journals, phases, operation references, input blobs and ownership,
+then recompute the account and compare terminal projections. Missing,
+relabelled or contradictory authority refuses acceptance. The producing
+`pw-family-evidence-1` contract retains its original all-pass native-item
+interpretation; unsupported contracts are refused.
+
+For version 2, `run.json.observation_reports` holds explicit shell reports;
+legacy `reports` and `counts` exclude them and pytest families.
+`case_outcome_counts` covers all parents, while `outcomes` keeps parent and
+nested observation/judgment counts separate. Informational completion adds
+no passing judgment. `invalid_accounts` counts invalid observation accounts;
+phase, command, cleanup and harness failures also remain in their own reports.
+`completion.completed` includes completed failures, not just favorable results.
+Version 1 runs omit these new projections. Retained runs are interpreted under
+their producing contract; later authority decisions do not rewrite them.
+
 ## Pytest exec family
 
 `runner_c_worker_harness/exec_control_states` is one public family containing nine
 pytest items. Public selection remains whole-family. Pytest owns item discovery,
 variants, fixtures and setup/call/teardown reporting; PolicyWitness owns artifact
 admission, checkout locks, durable accounting, command supervision and retention.
+The engine also supports pure items with an explicit `pw_commands('none')`
+declaration and commanded items with `pw_commands('recorded')`. These retain
+ordinary pytest assertions. Explicit observation items declare the same command
+scope in `pw_contract`. Pure items retain phase and input evidence with an empty
+operation set; they acquire no dummy command owner. `pw_inputs` captures declared
+files and directories through the shared input/blob recorder. Fixtures capture
+needed bytes before their cleanup, without claiming that snapshots prove use.
+Modules declare additional source dependencies in `PW_SOURCE_FILES`.
 Other families use their catalog commands. `tests/setup-pytest.sh` explicitly
 installs the exact wheels in `tests/requirements-pytest.lock` into an isolated,
 verified `.tmp/pytest` target; collection never downloads packages. External
@@ -664,7 +714,8 @@ includes incomplete families; the explicit accompanying states distinguish them.
 The durable registry is `tests/out/pytest-owners/<run-id>/<operation-id>/record.json`,
 outside disposable run directories. It registers each real compiler/native
 command before launch, including argv, working directory and a digest of its
-filtered environment (inherited values are not published). The owner verifies
+controlled environment. Receipts retain the existing allowlisted environment
+fields; other values are not published. The owner verifies
 that context before launch. An independent command owner holds the actual checkout
 lock descriptor, captures stdout/stderr, watches engine/supervisor exit and
 settles the command's process group. Fixture cleanup removes ordinary Python

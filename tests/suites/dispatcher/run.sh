@@ -20,6 +20,8 @@ test_begin dispatcher controls
 test_step reconcile "compare real dispatcher exits and summaries against controlled suite evidence"
 test_check_python "${PW_TEST_ARTIFACTS}/assertions.log" "dispatcher controls failed" \
   "${ROOT_DIR}/tests/suites/dispatcher/check.py" "${PW_TEST_ARTIFACTS}"
+test_check_python "${PW_TEST_ARTIFACTS}/outcomes.log" "observation authority controls failed" \
+  "${ROOT_DIR}/tests/suites/dispatcher/check_outcomes.py" "${PW_TEST_ARTIFACTS}/outcomes"
 test_pass "requested suite exits, case reports, and lifecycle evidence determine one result"
 fi
 

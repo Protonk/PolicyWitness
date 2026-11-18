@@ -32,6 +32,7 @@ import build_provenance
 import retention
 import run_ownership
 import release_runs
+from release_evidence import require_release_acceptance
 import publication_freshness
 import signer_check
 
@@ -200,6 +201,7 @@ def archive_locked(attempt, *, dist, root, notes):
     try:
         acceptance_run = run_ownership.bounded_path(root, Path(acceptance['path']).parent)
         accepted = run_ownership.read_object(acceptance_run / 'acceptance.json')
+        require_release_acceptance(accepted)
         acceptance_owner = run_ownership.describe(acceptance_run)
         if (accepted.get('ok') is not True or accepted.get('sha256_before') != final_hash
                 or accepted.get('sha256_after') != final_hash

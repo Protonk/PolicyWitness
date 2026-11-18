@@ -124,6 +124,11 @@ event = {
     "data": data,
 }
 
+if event['step'] == 'test_end' and os.path.isfile(os.path.join(os.environ.get('PW_TEST_DIR', ''), 'outcome-contract.json')):
+    import sys
+    sys.path.insert(0, os.environ['PW_CONTRACT_TEST_LIB'])
+    from pytest_support import read, value_digest
+    event['outcome_account_sha256'] = value_digest(read(os.path.join(os.environ['PW_TEST_DIR'], 'outcomes.json')))
 print(json.dumps(event, sort_keys=True))
 PY
 }
@@ -166,6 +171,9 @@ test_begin() {
   export PW_TEST_SCRATCH
 
   mkdir -p "${PW_TEST_ARTIFACTS}"
+  if [[ -n "${PW_TEST_OUTCOME_CONTRACTS:-}" && "${PW_TEST_OUTCOME_CONTRACTS}" != "{}" ]]; then
+    _test_outcome init || exit 1
+  fi
 
   test_log "start"
   local event_line
@@ -229,6 +237,16 @@ report = {
                     "version": os.environ.get("PW_PYTHON_VERSION")},
     "notes": [],
 }
+if os.path.isfile(os.path.join(os.environ.get('PW_TEST_DIR', ''), 'outcome-contract.json')):
+    import sys
+    sys.path.insert(0, os.environ['PW_CONTRACT_TEST_LIB'])
+    from pathlib import Path
+    from outcomes_shell import verify
+    from pytest_support import read
+    directory = Path(os.environ['PW_TEST_DIR'])
+    report['schema_version'] = 2
+    report['outcome_account'] = read(directory / 'outcomes.json')
+    report['assessment'] = verify(directory, read(directory / 'outcome-contract.json'), report['outcome_account'])
 if report['status'] == 'skip' and os.environ.get('PW_TEST_SKIP_REASON'):
     report['skip_reason'] = os.environ['PW_TEST_SKIP_REASON']
 
@@ -247,6 +265,15 @@ _test_finish() {
   local status="$1"
   local message="$2"
   local data_json="$3"
+  if [[ -f "${PW_TEST_DIR:-}/outcome-contract.json" ]]; then
+    if [[ "$status" == fail ]]; then
+      _test_outcome failure execution "$message" || true
+    elif [[ "$status" != complete ]]; then
+      _test_outcome failure validity "explicit observations require test_complete" || true
+    fi
+    status="$(_test_outcome status)" || status=fail
+  fi
+  _PW_TEST_FINISHED_STATUS="$status"
   if [[ -n "${_PW_TEST_BEGUN_DIR}" && "${PW_TEST_DIR:-}" == "${_PW_TEST_BEGUN_DIR}" ]]; then
     # Preserve terminal reporting even when cleanup fails; reconciliation
     # independently rejects any remaining scratch. Never trust an override.
@@ -270,13 +297,19 @@ _test_finish() {
 test_pass() {
   local message="${1:-ok}"
   _test_finish "pass" "${message}" "${2:-}"
-  test_log "pass: ${message}"
+  test_log "${_PW_TEST_FINISHED_STATUS}: ${message}"
+  [[ "${_PW_TEST_FINISHED_STATUS}" == pass ]]
 }
 
 test_pass_note() {
   local message="${1:-ok}"
   _test_finish "pass" "${message}" "${2:-}"
-  test_log_force "${message}"
+  if [[ "${_PW_TEST_FINISHED_STATUS}" == pass ]]; then
+    test_log_force "${message}"
+  else
+    test_log_force "${_PW_TEST_FINISHED_STATUS}: ${message}"
+  fi
+  [[ "${_PW_TEST_FINISHED_STATUS}" == pass ]]
 }
 
 test_fail() {
@@ -289,7 +322,8 @@ test_fail() {
 test_skip() {
   local message="${1:-skipped}"
   PW_TEST_SKIP_REASON="${3:-}" _test_finish "skip" "${message}" "${2:-}"
-  test_log "skip: ${message}"
+  test_log "${_PW_TEST_FINISHED_STATUS}: ${message}"
+  [[ "${_PW_TEST_FINISHED_STATUS}" == skip ]]
 }
 
 skip_missing_pw_app() {
@@ -445,4 +479,24 @@ if kind != expected:
     print(f"expected runner_kind={expected!r} (got {kind!r})")
     raise SystemExit(1)
 PY
+}
+
+
+# These helpers publish facts and explicit judgments. They never turn a shell
+# failure or an arbitrary checker exception into a product judgment.
+_test_outcome() {
+  "${PW_PYTHON}" -B -S -P "${PW_CONTRACT_TEST_LIB}/outcomes_shell.py" "$@"
+}
+
+test_observe() { _test_outcome observe "$@"; }
+test_judge() { _test_outcome judge "$@"; }
+test_observation_failure() { _test_outcome failure "$@"; }
+
+test_complete() {
+  if [[ ! -f "${PW_TEST_DIR}/outcome-contract.json" ]]; then
+    test_fail "test_complete requires a selected observation contract"
+  fi
+  _test_finish complete "${1:-observations completed}" "${2:-}"
+  test_log "${_PW_TEST_FINISHED_STATUS}: ${1:-observations completed}"
+  [[ "${_PW_TEST_FINISHED_STATUS}" == complete ]]
 }

@@ -550,8 +550,23 @@ and summarizes the battery.
 With `--evidence-dir`, a small `acceptance.json` pointer in the release attempt
 records that report's location, result and final hash; test evidence stays under
 `tests/out/release-acceptance/` and follows the existing retention rules.
-Only distribute the ZIP matching a successful report. The assessment applies
-to the local macOS environment and Gatekeeper state at acceptance time.
+Only distribute the ZIP matching a successful release acceptance report. The
+assessment applies to the local macOS environment and Gatekeeper state at
+acceptance time.
+
+The internal development-candidate verifier shares extraction, artifact
+inspection, command accounting, default-battery validation and cleanup. It
+requires a development build contract matching the current source inputs,
+consistent app source commits and signed publication-withheld evidence. Its
+receipt records the app and reporting revisions separately: reporting code
+may change while build inputs remain identical. It performs no staple or
+Gatekeeper assessment and supplies no Apple acceptance claim. Schema 4
+receipts identify `development_candidate` or `release_acceptance` explicitly;
+candidate receipts cannot support a release attempt, archive or publication.
+Explicit development or withheld evidence remains a refusal when a report
+claims a historical schema. Absent historical fields acquire no new meaning.
+Historical schema 3 receipts retain their original release meaning. The public
+`accept-release.sh` entrypoint always requires release acceptance.
 
 ## Preserved release archives
 

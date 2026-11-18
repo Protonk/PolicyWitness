@@ -214,7 +214,24 @@ binding and quarantine recovery have integrated controls in
 [output contract](../../README.md#retention-ownership-and-execution-locking)
 describes the common policy and its ownership rules.
 
-`pytest_controls` is an opt-in control of the exec-family integration. Its external
+`controls` also exercises declared shell observations through real dispatcher
+fixtures: enforced favorable/unfavorable judgments, unfavorable advisory results,
+informational completion, missing or mutated evidence, changed authority,
+contradictory terminal projections, command failure and cleanup failure. Each
+has an independent neighbor and a dependent with an independently specified
+eligibility result. A constructed worker-wait pilot retains ten ordinary raw
+trial bundles and five valid equal pairs: its unfavorable improvement judgment
+is advisory, while validity and reader correctness remain enforced. It supplies
+no live timing claim.
+
+`accounting_controls` includes deterministic raw replay controls. Poisoned
+derived summaries must not affect interpretation of independently authored
+reports, events, phases and command exits. Missing reports, contradictory
+terminals, corrupt operation references and changed artifacts remain failures.
+Missing ownership and altered reader snapshots are input refusals. Replay does
+not execute inline dependency gates or renew resource/provenance observations.
+
+`pytest_controls` is an opt-in control of the family engine integration. Its external
 native peer, kernel exit observations and lock inode checks are independent of
 candidate summary interpretation. Deliberately unresolved fixture records are
 retained inside its artifacts and are never mistaken for live checkout ownership.
@@ -229,3 +246,12 @@ baseline failure naming the ledger error. Availability controls move the package
 target between plan collection and the prerequisite check in each direction; the
 run must still finish with a named `not_started/unavailable` family, a running
 legacy sentinel and a free checkout.
+
+Pure, commanded and ordinary enforced items also run through the same engine
+beside legacy cases and a second family. Independent expectations cover source
+and input evidence, exact counts, complete command references and ownership,
+artifact mutation, missing/relabelled judgments, invalid phases and teardown
+failures. Terminal-only and phase-attached account proposals are compared with
+the same required observations and authorities; the attached journal retains
+the valid prefix when terminal publication is lost. Candidate and portable
+readers recheck required accounts and reject deleted summaries or references.

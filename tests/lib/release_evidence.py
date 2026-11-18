@@ -39,9 +39,36 @@ def check_archive(out, archive):
     return record
 
 
+def require_release_acceptance(report):
+    """New receipt kinds are explicit; historical absent-kind receipts retain their meaning."""
+    if not isinstance(report, dict):
+        raise ValueError('invalid acceptance receipt')
+    schema = report.get('schema_version')
+    if schema is not None and (type(schema) is not int or schema not in (1, 2, 3, 4)):
+        raise ValueError('unsupported acceptance receipt version')
+    kind = report.get('kind')
+    if (schema == 4 and kind != 'release_acceptance') or kind not in (None, 'release_acceptance'):
+        raise ValueError('receipt is not release acceptance')
+    # Historical absence retains its meaning; explicit candidate evidence does
+    # not become release evidence by changing its version or deleting its kind.
+    publication = report.get('publication')
+    publication = publication if isinstance(publication, dict) else {}
+    apple = report.get('apple_assessment')
+    apple = apple if isinstance(apple, dict) else {}
+    source = report.get('source')
+    source = source if isinstance(source, dict) else {}
+    contracts = (report.get('contract'), publication.get('build_contract'), source.get('build_contract'))
+    if (any(isinstance(value, str) and value.startswith('development:') for value in contracts)
+            or publication.get('status') == 'withheld'
+            or apple.get('status') == 'not_performed' or apple.get('reason') == 'development_candidate'
+            or source.get('agreement_scope') == 'build_contract_inputs'):
+        raise ValueError('receipt is not release acceptance: explicit development candidate evidence')
+
+
 def record_acceptance(out, acceptance):
     acceptance = Path(acceptance).resolve()
     report = json.loads(acceptance.read_text())
+    require_release_acceptance(report)
     check_archive(out, report['archive'])
     pointer = dict(path=str(acceptance), ok=report['ok'], sha256=report.get('sha256_after'))
     (Path(out) / 'acceptance.json').write_text(json.dumps(pointer, indent=2) + '\n')

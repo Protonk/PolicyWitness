@@ -116,6 +116,8 @@ def main():
                 for path in guard_paths:
                     if path.exists():
                         shutil.rmtree(path)
+    from check_observation_finalizers import check
+    check(out / 'observations')
     (out / 'controls.json').write_text(json.dumps(inventory, indent=2) + '\n')
     print(f'{len(inventory)} finalizer controls passed')
 

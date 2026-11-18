@@ -15,6 +15,7 @@ ROOT = Path(__file__).resolve().parents[3]
 sys.path.insert(0, str(ROOT / 'tests/lib'))
 import suite_run
 from suite_run import account, finish, system_sleep
+from check_reporting_replay import check_replay
 
 
 def check_accounting(out):
@@ -171,6 +172,6 @@ def check_sleep(out):
 if __name__ == '__main__':
     out = Path(sys.argv[1]).resolve()
     out.mkdir(parents=True, exist_ok=True)
-    inventory = check_accounting(out) + check_sleep(out)
+    inventory = check_accounting(out) + check_sleep(out) + check_replay(out, ROOT)
     (out / 'controls.json').write_text(json.dumps(inventory, indent=2) + '\n')
     print(f'{len(inventory)} accounting controls passed')

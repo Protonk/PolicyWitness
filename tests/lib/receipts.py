@@ -326,3 +326,42 @@ def timed_main(module, case, name, mode='unittest'):
     if file:
         file.finish(result.wasSuccessful())
     return 0 if result.wasSuccessful() else 1
+
+
+class InputRecorder:
+    """Input/blob capture for a pytest item, without unittest scheduling or verdicts.
+
+    The index is a durable prefix; references() returns immutable snapshots and
+    their blobs, so later captures cannot change earlier phase evidence.
+    Commands stay with pytest's supervised Equipment.command boundary.
+    """
+    def __init__(self, path, item):
+        self.path = Path(path)
+        self.item = item
+        self.record = dict(id='item', inputs=[], launches=[])
+        self.control = Control(self, self.record)
+        self.write()
+
+    def write(self):
+        self.path.parent.mkdir(parents=True, exist_ok=True)
+        self.path.write_text(json.dumps(dict(schema_version=1, item=self.item,
+                                             inputs=self.record['inputs']), indent=2) + '\n')
+
+    def capture(self, root, paths=None, label='inputs'):
+        return self.control.capture(root, paths, label)
+
+    def track(self, root, paths=None):
+        return self.control.track(root, paths)
+
+    def capture_tracked(self, label):
+        return self.control.capture_tracked(label)
+
+    def references(self, owner):
+        from outcomes import file_reference
+        paths = set()
+        for relative in self.record['inputs']:
+            path = self.path.parent / relative
+            paths.add(path)
+            snapshot = json.loads(path.read_bytes())
+            paths.update(self.path.parent / row['blob'] for row in snapshot['entries'].values() if 'blob' in row)
+        return [file_reference(path.relative_to(owner).as_posix(), path.read_bytes()) for path in sorted(paths)]

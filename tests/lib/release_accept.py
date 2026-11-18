@@ -3,6 +3,7 @@ import argparse
 import json
 import os
 import plistlib
+import re
 from pathlib import Path, PurePosixPath
 import shutil
 import stat
@@ -13,6 +14,7 @@ import uuid
 import retention
 import run_ownership
 import execution_contract
+import outcomes
 from pytest_support import read, contained
 
 import artifact
@@ -32,9 +34,12 @@ PROVENANCE_ENVELOPES = ('smoke/specimen_file_read_deny/artifacts/policy_witness.
 
 
 def battery_summary(run):
-    return dict(run_id=run.get('run_id'), completion=run.get('completion'),
-                started_at_unix_ms=run.get('started_at_unix_ms'), finished_at_unix_ms=run.get('finished_at_unix_ms'),
-                duration_ms=run.get('duration_ms'))
+    summary = dict(run_id=run.get('run_id'), completion=run.get('completion'),
+                   started_at_unix_ms=run.get('started_at_unix_ms'), finished_at_unix_ms=run.get('finished_at_unix_ms'),
+                   duration_ms=run.get('duration_ms'))
+    if 'outcomes' in run:
+        summary['outcomes'] = run['outcomes']
+    return summary
 
 
 def battery_problems(run, app, *, expected=None, evidence=None):
@@ -57,11 +62,24 @@ def battery_problems(run, app, *, expected=None, evidence=None):
     integrity = run.get('artifact_integrity') or {}
     if integrity.get('valid_before') is not True or integrity.get('unchanged') is not True:
         problems.append('an invalid or changed app')
-    if any(c.get('status') != 'pass' for c in run.get('case_results') or []):
+    # Completion is allowed only under independently captured new authority;
+    # the required raw account is checked below. Legacy all-pass rules remain.
+    completed_cases = set()
+    if expected and expected.get('profile') == execution_contract.PROFILE:
+        completed_cases = {row['id'] for row in expected['selected'] if 'outcome_contract' in row}
+        completed_cases.update(name for name, selection in expected['family_selections'].items()
+                               if selection and any('outcome_contract' in item for item in selection['items']))
+    if any(c.get('status') != 'pass' and not (c.get('status') == 'complete' and c.get('id') in completed_cases)
+           for c in run.get('case_results') or []):
         problems.append('a case that did not pass')
     if expected is not None:
         try:
-            problems += execution_contract.problems(run, expected, lambda name: read(contained(evidence, evidence / name)))
+            def load_bytes(name):
+                return contained(evidence, evidence / name).read_bytes()
+            def load_json(name):
+                return (outcomes.decode(load_bytes(name)) if expected.get('profile') == execution_contract.PROFILE
+                        else read(contained(evidence, evidence / name)))
+            problems += execution_contract.problems(run, expected, load_json, load_bytes)
         except (OSError, ValueError, KeyError, TypeError) as exc:
             problems.append('required family evidence: ' + str(exc))
     return problems
@@ -84,9 +102,42 @@ def archive_layout(archive):
             raise ValueError('archive has no PolicyWitness.app/Contents/Info.plist')
 
 
-def accept(archive, out, *, invoke=command, inspect=artifact.inspect):
+def development_source(app, info, version, inspection):
+    """Bind a private candidate run to actual build inputs and both source revisions."""
+    sys.path.insert(0, str(ROOT / 'docs'))
+    import build_contract
+    import publication
+    contract = build_contract.identity(ROOT)
+    if not contract.startswith('development:'):
+        raise ValueError('candidate verification requires development source identity')
+    if info.get('PWContract') != contract or version.get('build', {}).get('contract') != contract:
+        raise ValueError('candidate app and current source build contracts differ')
+    if type(info.get('PWPublicationBoundary')) is not int or info['PWPublicationBoundary'] != 1:
+        raise ValueError('candidate requires signed publication boundary evidence')
+    boundary = publication.validate(inspection.get('publication'), contract)
+    publication.frozen_guide(ROOT)
+    commit = info.get('PWBuildCommit')
+    provenance = json.loads((app / artifact.PROVENANCE).read_bytes())
+    if (not isinstance(commit, str) or not re.fullmatch(r'(?:[0-9a-f]{40}|[0-9a-f]{64})', commit)
+            or version.get('build', {}).get('commit') != commit
+            or provenance.get('source', {}).get('commit') != commit):
+        raise ValueError('candidate app source commits differ or are unavailable')
+    reporter = build_contract.git(ROOT, 'rev-parse', 'HEAD')
+    status = build_contract.git(ROOT, 'status', '--porcelain', '--untracked-files=all')
+    if not reporter or status is None:
+        raise ValueError('candidate reporting source is unavailable')
+    # Reporting may have changed since the app was built. The equality claim is
+    # limited to the actual build-contract inputs, not the entire checkout.
+    return contract, boundary, dict(app_commit=commit, reporting_commit=reporter,
+        reporting_dirty=bool(status), build_contract=contract,
+        agreement_scope='build_contract_inputs')
+
+
+def accept(archive, out, *, invoke=command, inspect=artifact.inspect, mode='release'):
+    if mode not in ('release', 'development-candidate'):
+        raise ValueError('unknown archive verification mode')
     run_ownership.replacement_allowed(ROOT, out / 'tests', retention.protected_paths(ROOT))
-    report = dict(schema_version=3, execution_contract=execution_contract.defaults(ROOT), archive=str(archive), ok=False, errors=[],
+    report = dict(schema_version=4, kind='release_acceptance' if mode == 'release' else 'development_candidate', execution_contract=execution_contract.defaults(ROOT), archive=str(archive), ok=False, errors=[],
                   battery=dict(timeout_seconds=BATTERY_TIMEOUT_SECONDS))
     if (out / 'owner.json').exists():
         report['run_id'] = run_ownership.valid_owner(out)['run_id']
@@ -112,13 +163,19 @@ def accept(archive, out, *, invoke=command, inspect=artifact.inspect):
         info = plistlib.loads((app / 'Contents/Info.plist').read_bytes())
         invoke(out / 'version', [app / 'Contents/MacOS/policy-witness', '--version'], timeout=30)
         version = json.loads((out / 'version/stdout').read_text())
-        expected_contract = 'release:v' + info['CFBundleShortVersionString']
-        if info.get('PWContract') != expected_contract or version.get('build', {}).get('contract') != expected_contract:
-            raise ValueError('released archive does not report ' + expected_contract)
-        report['contract'] = expected_contract
-        report['publication'] = publication_freshness.require(ROOT, expected_contract.removeprefix('release:'), info.get('PWBuildCommit'))
-        invoke(out / 'staple-validation', ['/usr/bin/xcrun', 'stapler', 'validate', '-v', app], timeout=60)
-        invoke(out / 'gatekeeper', ['/usr/sbin/spctl', '-a', '-vv', '--type', 'execute', app], timeout=60)
+        if mode == 'development-candidate':
+            report['contract'], report['publication'], report['source'] = development_source(app, info, version, inspection)
+            report['apple_assessment'] = dict(status='not_performed', reason='development_candidate')
+        else:
+            expected_contract = 'release:v' + info['CFBundleShortVersionString']
+            if info.get('PWContract') != expected_contract or version.get('build', {}).get('contract') != expected_contract:
+                raise ValueError('released archive does not report ' + expected_contract)
+            report['contract'] = expected_contract
+            report['publication'] = publication_freshness.require(ROOT, expected_contract.removeprefix('release:'), info.get('PWBuildCommit'))
+            if (inspection.get('publication') or {}).get('status') == 'withheld':
+                raise ValueError('publication withheld by signed artifact boundary')
+            invoke(out / 'staple-validation', ['/usr/bin/xcrun', 'stapler', 'validate', '-v', app], timeout=60)
+            invoke(out / 'gatekeeper', ['/usr/sbin/spctl', '-a', '-vv', '--type', 'execute', app], timeout=60)
         # The ZIP is the sole app selection. Ignore inherited PW settings rather
         # than letting a usable local build or BYOXPC configuration replace it.
         env = {k: v for k, v in os.environ.items() if not k.startswith('PW_')}
@@ -177,7 +234,8 @@ def accept(archive, out, *, invoke=command, inspect=artifact.inspect):
                 report['errors'].append(f'extraction cleanup failed: {exc}')
         report['ok'] = completed and not report['errors']
         save(out / 'acceptance.json', report)
-    print(f'Release acceptance: {out / "acceptance.json"}', flush=True)
+    label = 'Release acceptance' if mode == 'release' else 'Development candidate verification'
+    print(f'{label}: {out / "acceptance.json"}', flush=True)
     for error in report['errors']:
         print(f'STOP: {error}', file=sys.stderr)
     return 0 if report['ok'] else 1

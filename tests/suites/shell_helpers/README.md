@@ -154,7 +154,9 @@ and the case report. Each public function owns its default message, console
 output, and return/exit behavior. Ordinary pass/skip logging respects quiet
 mode; `test_pass_note` always prints. `test_fail` writes its diagnostic to
 stderr and exits 1 even when the caller has disabled errexit. Pass and skip
-return success so callers can continue with another case.
+return success so callers can continue with another case. Explicit observation
+cases instead finalize with `test_complete`; using a legacy successful finalizer
+for them records a validity failure and returns failure.
 Quiet mode means `PW_TEST_QUIET=1`; unset, empty, and `0` retain ordinary messages
 in direct scripts as well as through the public command.
 
@@ -222,3 +224,12 @@ uncertain installation without recovery identity, ad-hoc signing with auth keys
 removed, recovery after original output deletion, repeated cleanup, and interrupted
 staging deletion after verified machine cleanup. Durable state remains with the
 bundle; fake-command receipts distinguish each reached boundary.
+
+
+The finalizer controls also inspect explicit informational, advisory and enforced
+accounts independently of the dispatcher. They compare journal/snapshot bytes,
+terminal account digests, preserved observations after a later failure, process
+status and literal message handling. An unfavorable enforced judgment returns
+failure; informational and unfavorable advisory completion return success when
+the experiment is valid. Legacy finalizers cannot silently drop a selected
+observation obligation.

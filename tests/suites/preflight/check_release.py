@@ -18,6 +18,7 @@ import execution_contract
 import release_evidence
 import publication_freshness
 from release_accept import accept
+from check_candidate import check_candidate
 sys.path.insert(0, str(ROOT / 'tests/fixtures/dispatcher'))
 from fixture_bundle import bundle, fingerprint
 sys.path.insert(0, str(ROOT / 'tests/fixtures/release'))
@@ -130,7 +131,7 @@ def check(out):
         assert (record['state'] == 'accepted') is (mode == 'accepted')
         completed.append('notary_' + mode)
 
-    for mode in ('valid', 'missing_publication', 'wrong_publication_identity', 'development_contract', 'foreign_binary_contract', 'missing_helper', 'stale_manifest', 'missing_staple',
+    for mode in ('valid', 'missing_publication', 'wrong_publication_identity', 'publication_withheld', 'development_contract', 'foreign_binary_contract', 'missing_helper', 'stale_manifest', 'missing_staple',
                  'xpc_failure', 'skipped', 'unrun', 'selected', 'all', 'timeout', 'wrong_runner', 'mutated_app', 'corrupt_zip'):
         work = out / ('archive_' + mode)
         work.mkdir()
@@ -139,19 +140,22 @@ def check(out):
         info_path = source / 'Contents/Info.plist'
         info = plistlib.loads(info_path.read_bytes())
         info.update(CFBundleShortVersionString='0.9.0', PWContract='development:fixture' if mode == 'development_contract' else 'release:v0.9.0')
-        info['PWPublicationBoundary'] = 1
+        boundary_expected = mode in ('missing_publication', 'wrong_publication_identity', 'publication_withheld')
+        if boundary_expected:
+            info['PWPublicationBoundary'] = 1
         info_path.write_bytes(plistlib.dumps(info))
         sys.path.insert(0, str(ROOT / 'docs'))
         import publication
-        boundary = publication.record(ROOT, info['PWContract'])
-        if mode == 'wrong_publication_identity':
-            boundary['build_contract'] = 'development:foreign'
-        publication.write(source / publication.RECORD, boundary)
-        manifest_path = source / artifact.MANIFEST
-        manifest = json.loads(manifest_path.read_bytes())
-        manifest['entries'].append(dict(id='evidence.publication', kind='evidence', rel_path=publication.RECORD,
-                                       sha256=hashlib.sha256((source / publication.RECORD).read_bytes()).hexdigest()))
-        manifest_path.write_text(json.dumps(manifest))
+        if boundary_expected:
+            boundary = publication.record(ROOT, info['PWContract'])
+            if mode == 'wrong_publication_identity':
+                boundary['build_contract'] = 'development:foreign'
+            publication.write(source / publication.RECORD, boundary)
+            manifest_path = source / artifact.MANIFEST
+            manifest = json.loads(manifest_path.read_bytes())
+            manifest['entries'].append(dict(id='evidence.publication', kind='evidence', rel_path=publication.RECORD,
+                                           sha256=hashlib.sha256((source / publication.RECORD).read_bytes()).hexdigest()))
+            manifest_path.write_text(json.dumps(manifest))
         if mode == 'missing_publication':
             (source / publication.RECORD).unlink()
         if mode == 'missing_helper':
@@ -204,6 +208,8 @@ def check(out):
             assert any('a selection other than the default battery' in e for e in record['errors']), record['errors']
         if mode in ('development_contract', 'foreign_binary_contract'):
             assert any('does not report release:v0.9.0' in error for error in record['errors']), record
+        if mode == 'publication_withheld':
+            assert any('publication withheld by signed artifact boundary' in error for error in record['errors']), record
         if mode == 'unrun':
             assert any('skipped or unrun cases' in e for e in record['errors']), record['errors']
         if mode == 'timeout':
@@ -220,6 +226,7 @@ def check(out):
         if mode == 'mutated_app':
             assert set(json.loads((work / 'changes.json').read_text())) == {'Contents/Info.plist'}
         completed.append('archive_' + mode)
+    completed += check_candidate(out)
     (out / 'controls.json').write_text(json.dumps(completed, indent=2) + '\n')
     print(f'{len(completed)} release controls passed')
 

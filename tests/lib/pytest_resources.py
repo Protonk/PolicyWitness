@@ -119,13 +119,23 @@ def command_environment():
     return environment
 
 
-def command_context(root, environment):
+def command_context(root, environment, *, explicit=False):
     # Record identity, not inherited values that may contain credentials.
-    return dict(cwd=str(root), environment_sha256=value_digest(environment),
-                environment_policy='exclude PYTEST/PYTHON/PW_CHECKOUT; PYTHONCOERCECLOCALE=0')
+    context = dict(cwd=str(root), environment_sha256=value_digest(environment),
+                   environment_policy=('explicit caller context; registered test settings only' if explicit else
+                                       'exclude PYTEST/PYTHON/PW_CHECKOUT; PYTHONCOERCECLOCALE=0'))
+    if explicit:
+        from receipts import ENVIRONMENT
+        context['test_environment'] = {key:value for key,value in environment.items() if key in ENVIRONMENT}
+    return context
 
 
-def reserve(root, out, run_id, family, item, command, artifacts, timeout, scope, engine_pid):
+def reserve(root, out, run_id, family, item, command, artifacts, timeout, scope, engine_pid, *, cwd=None, env=None):
+    explicit = cwd is not None or env is not None
+    directory = str(Path(cwd).absolute()) if cwd is not None else str(root)
+    environment = command_environment() if env is None else dict(env)
+    if any(not isinstance(k, str) or not isinstance(v, str) or '\0' in k + v or '=' in k for k, v in environment.items()):
+        raise ValueError('invalid explicit command environment')
     op = uuid.uuid4().hex
     folder = base(root) / run_id / op
     folder.mkdir(parents=True)
@@ -133,8 +143,10 @@ def reserve(root, out, run_id, family, item, command, artifacts, timeout, scope,
                   item=item, operation_id=op, state='reserved', token=uuid.uuid4().hex,
                   nonce=scope.nonce, lock_identity=list(scope.identity), engine_pid=engine_pid,
                   controller_pid=os.getpid(), argv=list(map(str, command)), artifacts=str(artifacts),
-                  timeout=timeout, context=command_context(root, command_environment()),
+                  timeout=timeout, context=command_context(directory, environment, explicit=True) if explicit else command_context(root, environment),
                   socket_dir='/private/tmp/pwpx-' + uuid.uuid4().hex)
+    if explicit:
+        record['explicit_context'] = True
     write(folder / 'record.json', record)
     return folder / 'record.json'
 
@@ -171,11 +183,22 @@ def close_record(path):
     return transition(path, 'closed', cleanup_basis='settled_group_and_revoked_authority')
 
 
-def snapshot(root, run_id):
-    records = [validate(root, p) for p in record_paths(root, run_id)]
+def snapshot(root, run_id, *, family=None):
+    paths = record_paths(root, run_id)
+    records = [validate(root, path) for path in paths]
     problems = [r for r in inspect(root, run_id) if r['blocking'] != 'closed']
-    return dict(schema_version=1, run_id=run_id, commands=records,
-                closed=not problems, problems=problems)
+    if family is not None:
+        other_paths = {str(path) for path, record in zip(paths, records)
+                       if isinstance(record.get('family'), str) and record['family'] and record['family'] != family}
+        records = [record for path, record in zip(paths, records) if str(path) not in other_paths]
+        # Unattributed problems remain consequential. A separate global guard
+        # continues to protect the checkout across every family's operations.
+        problems = [row for row in problems if row['path'] not in other_paths]
+    result = dict(schema_version=1, run_id=run_id, commands=records,
+                  closed=not problems, problems=problems)
+    if family is not None:
+        result['family'] = family
+    return result
 
 
 def recover(root, run_id, *, apply=False):
@@ -253,8 +276,8 @@ def retire_closed(root):
 
 class Command:
     """The supervisor's handle to one separately owned command; never runs a test item."""
-    def __init__(self, root, out, run_id, family, item, argv, artifacts, timeout, scope, engine_pid):
-        self.path = reserve(root, out, run_id, family, item, argv, artifacts, timeout, scope, engine_pid)
+    def __init__(self, root, out, run_id, family, item, argv, artifacts, timeout, scope, engine_pid, *, cwd=None, env=None):
+        self.path = reserve(root, out, run_id, family, item, argv, artifacts, timeout, scope, engine_pid, cwd=cwd, env=env)
         self.gate, child = socket.socketpair()
         transition(self.path, 'owner_launch_authorized')
         self.logs = [(self.path.parent / name).open('wb') for name in ('owner.stdout', 'owner.stderr')]
@@ -270,6 +293,10 @@ class Command:
                 raise ValueError('command owner did not become ready')
             transition(self.path, 'command_release_authorized')
             self.gate.sendall(b'g')
+            if cwd is not None or env is not None:
+                from pytest_wire import send
+                send(self.gate, dict(kind='context', cwd=str(Path(cwd).absolute()) if cwd is not None else str(root),
+                                     environment=command_environment() if env is None else dict(env)))
         except BaseException as exc:
             child.close()
             self.gate.close()

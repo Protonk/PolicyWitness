@@ -12,6 +12,7 @@ import time
 import checkout_lock
 from pytest_resources import command_context, command_environment, settle_unlaunched, transition
 from pytest_support import read, write
+from pytest_wire import receive
 
 
 def main(path, gate_fd, lock_fd):
@@ -59,11 +60,22 @@ def own(path, gate_fd, lock_fd, launch):
         artifact = Path(record['artifacts'])
         artifact.mkdir(parents=True, exist_ok=True)
         environment = command_environment()
-        if record['context'] != command_context(record['root'], environment):
+        command_directory = record['root']
+        if record.get('explicit_context'):
+            gate.settimeout(5)
+            context = receive(gate)
+            gate.settimeout(None)
+            if context.get('kind') != 'context':
+                raise ValueError('explicit command context missing')
+            command_directory, environment = context['cwd'], context['environment']
+            observed_context = command_context(command_directory, environment, explicit=True)
+        else:
+            observed_context = command_context(command_directory, environment)
+        if record['context'] != observed_context:
             raise ValueError('command execution context differs from registered intent')
         started = time.monotonic()
         with (artifact / 'stdout').open('wb') as stdout, (artifact / 'stderr').open('wb') as stderr:
-            command = subprocess.Popen(record['argv'], cwd=record['root'], env=environment,
+            command = subprocess.Popen(record['argv'], cwd=command_directory, env=environment,
                                        stdin=subprocess.DEVNULL, stdout=stdout, stderr=stderr,
                                        pass_fds=(lock_fd,), start_new_session=True)
             launch['command'] = command

@@ -498,3 +498,41 @@ pending until their authorized post-checkpoint stage. These source maps select
 what must be retained; they do not invent old execution receipts. The existing
 native exec family and independent dispatcher/preflight controls establish
 generic capability without counting the unperformed migrations as complete.
+
+## Reporting mechanism candidate
+
+The implemented candidate attaches a required observation/judgment account to
+pytest phases and to a durable shell journal, with bound terminal projections.
+Selection or collection fixes promises, propositions and enforced/advisory
+authority before evaluation. Informational completions are observations without
+a product judgment. Execution, validity, command settlement and cleanup remain
+independent obligations. Arbitrary exceptions are never converted into judgments.
+
+The bounded comparison control gives an extended terminal-account alternative
+the same authority binding, phase/completion facts, evidence and cleanup
+obligations. Complete representations are expected to make the same decisions;
+the phase journal retains an observed prefix before terminal loss, while a
+terminal alternative needs its own required journal for that recovery. The
+control includes missing observations, contradictory authority, cleanup/phase
+failure and artifact rereading. This choice remains provisional until those
+controls execute; it is not justified by comparing against status labels alone.
+
+`pw-family-evidence-2` is opt-in for explicit outcome contracts and declared
+pure/commanded pytest items. Existing unmarked exec items and ordinary shell
+cases keep their producing version-1 interpretation. Version-2 readers require
+raw journals, phases, input blobs, operation references and ownership, recompute
+their accounts and compare terminal/run projections against independently
+captured expectations. Parent and nested counts remain separate. A missing
+entire shell terminal leaves its journal readable but the parent unrun, with no
+fabricated terminal assessment or completion credit.
+
+The candidate also supplies pure ordinary-assertion items, controlled command
+working directories/environments, module-declared source inputs and reusable
+input/blob recording without unittest scheduling. No cohort is migrated here.
+Private extracted-development-candidate acceptance shares artifact, command,
+battery and cleanup machinery; schema-4 receipt kinds and known development
+markers prevent release credit. The app's declared build-input agreement and
+the reporter's revision are recorded separately, so reporting-only changes do
+not require rebuilding the comparison app. Historical absent-kind receipts
+retain their producing meaning. Actual extracted live-candidate execution
+remains in the specified final build-refusal control after this checkpoint.

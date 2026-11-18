@@ -146,6 +146,42 @@ def battery_contract(out):
     archive, acceptance = make_release(repo, '0.9.0')
     battery = acceptance / 'tests'
     record, manifest = release_runs.verify_release(archive)
+    acceptance_path = acceptance / 'acceptance.json'
+    original_acceptance = acceptance_path.read_bytes()
+    original_record = (archive / 'release.json').read_bytes()
+    accepted = json.loads(original_acceptance)
+    downgraded_candidate = dict(accepted, schema_version=3, contract='development:' + 'a' * 64,
+        publication=dict(status='withheld', build_contract='development:' + 'a' * 64),
+        apple_assessment=dict(status='not_performed', reason='development_candidate'),
+        source=dict(app_commit='a' * 40, reporting_commit='b' * 40,
+                    build_contract='development:' + 'a' * 64, agreement_scope='build_contract_inputs'))
+    downgraded_candidate.pop('kind', None)
+    runs = {role: (repo / 'tests/out' / value['retained']['path'], value['retained'])
+            for role, value in manifest['runs'].items()}
+    acceptance_variants = (dict(accepted, schema_version=4, kind='release_acceptance'),
+                           dict(accepted, schema_version=4, kind='development_candidate'),
+                           dict(accepted, schema_version=4), downgraded_candidate,
+                           dict(accepted, schema_version=5, kind='release_acceptance'))
+    run_ownership.atomic_json(work / 'acceptance-kind-controls.json', acceptance_variants)
+    for variant in acceptance_variants:
+        acceptance_path.write_text(json.dumps(variant))
+        shutil.rmtree(archive / release_runs.BUNDLE)
+        with run_ownership.checkout_lock(repo):
+            reference = release_runs.pack(archive / release_runs.BUNDLE, tag=record['tag'],
+                source=record['source_commit'], runs=runs, battery=('acceptance', 'tests/run.json'),
+                expected_contract=record['execution_contract'])
+        record['test_evidence'] = reference
+        run_ownership.atomic_json(archive / 'release.json', record)
+        if variant.get('kind') == 'release_acceptance' and variant['schema_version'] == 4:
+            assert release_runs.verify_release(archive)[0]['tag'] == 'v0.9.0'
+            continue
+        diagnostic = 'unsupported acceptance' if variant['schema_version'] == 5 else 'not release acceptance'
+        reject(lambda: release_runs.verify_release(archive), diagnostic)
+        before = artifact.inventory(archive)
+        reject(lambda: retention.prune(repo), diagnostic)
+        assert artifact.inventory(archive) == before
+    acceptance_path.write_bytes(original_acceptance)
+    (archive / 'release.json').write_bytes(original_record)
     run = run_ownership.read_object(battery / 'run.json')
     run['plan']['selection']['mode'] = 'all'
     run_ownership.atomic_json(battery / 'run.json', run)

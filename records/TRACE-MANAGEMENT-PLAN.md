@@ -532,3 +532,59 @@ The acceptance rehearsals identify implementation/account dependencies without
 selecting their hypothetical product changes. Therefore actor fallback removal,
 capture after failed application and byte-exact Swift association remain pending
 product decisions. Their shared accounts have not been changed during preparation.
+
+## Instrument implementation and verification
+
+Development/publication support is carried by `bba8bca3`, with generator and
+fixture corrections in `f141748e`, `98ef966c` and `2f4d76e4`. The signed build at
+`2f4d76e4` uses the declared input identity
+`development:b55acb20d6a00395f6a422eafef1a4c18fd64e5140b71a1331cbe3b76744719e`.
+Its seven executables and two seals passed Developer ID chain, hardened-runtime,
+team and secure-timestamp checks. Source and distributed guide bytes retain
+SHA-256 `1e886e4ab5ccaf9aa73fe9c7d6e47e87bcf37d3d3c8caf2e093f38bced97d64d`.
+
+The following are local managed development observations, subject to ordinary
+retention, not retained release acceptance. Each directory is under
+`tests/out/runs/` and includes its terminal `run.json`, attached `console.txt`
+and supplemental `selected-plan.json`; `plan.json` is the actual execution plan.
+
+| Directory / run ID | Result and scope |
+| --- | --- |
+| `trace-publication-controls` / `20261117T225742Z_635dac19` | At `bba8bca3`, 8 pass / 8 fail, 688424 ms. Provenance and release acceptance controls passed; stale stage citations, missing transitive generator inputs and fixture assumptions failed. |
+| `trace-publication-fixes` / `20261117T231313Z_27553dd7` | At `f141748e`, all 11 source-drift cases and build-entry controls passed; release publication/rotation failed because synthetic catalogs omitted required citations. 762421 ms. |
+| `trace-publication-release-fixes` / `20261117T232644Z_d901d5f5` | At `98ef966c`, both selected controls failed at later fixture assumptions: exact diagnostic counts and deleted release ancestry. 167745 ms. |
+| `trace-publication-release-contracts` / `20261117T233143Z_4702cf5a` | At `2f4d76e4`, publication and rotation both passed, including independent freshness and identity refusals. 255556 ms. |
+| `trace-instrument-before` / `20261117T233807Z_b25fa0ec` | At `2f4d76e4`, default battery passed: 233 completed parents, 232 legacy reports, nine exec-family items, no harness errors, app inventory unchanged. 1888317 ms. |
+
+The failed controls establish implementation/fixture defects, not environmental
+refusals; their original reports remain failures. Their dependencies were within
+the preselected generator/publication routes. The default baseline produced no
+unexpected failure. Initial restrictive-harness prune/signing discovery failures
+passed on the same bytes when the exact read-only operations ran unsandboxed.
+Subsequent signing and test execution used that documented environment.
+
+Reporting implementation now begins from this completed baseline. Before its
+controls execute, the intended selection is `--suite dispatcher --suite
+shell_helpers`, including `dispatcher/pytest_controls`, plus
+`preflight/release_controls`, `preflight/release_publish_controls`,
+`preflight/release_rotation_controls`, `preflight/release_deadline_controls` and
+`runner_c_worker_harness/exec_control_states`. These cover shared accounting,
+authority, command ownership, candidate/portable rereading and the existing
+native sequence. The post-capability default battery supplies its source-drift
+and full live integration check. Deterministic replay uses both reader commits
+over both raw default datasets and common independently specified fixtures.
+No conversion, cohort migration or executable seam change belongs between them.
+
+Observed durations above are dispatcher wall time, not a full cost decomposition.
+Individual construction/command/cleanup receipts retain their measured intervals;
+unrecorded decomposition remains unknown. Repeated strict generation in fixture
+source trees is supporting verification work. No profiling or extra battery was
+added for this account.
+
+At the baseline boundary, managed output occupies about 6.9 GiB, including the
+2.7 GiB baseline. Main caches remain about 3.2 GiB Rust, 270 MiB SwiftPM and
+56 MiB Meson; `.tmp` remains about 720 MiB. The identifiable investigation root
+is under 3 MiB. Volume free space is about 149 GiB. Inspection of relevant
+scratch/cache directories and swap did not attribute the remaining volume-level
+growth to these repository outputs. Unrelated temporary content was not removed.
+No pruning, evidence relocation or additional worktree has been introduced.
