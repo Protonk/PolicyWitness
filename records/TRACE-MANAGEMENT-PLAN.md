@@ -728,3 +728,203 @@ authority, phase/input and supervised-command support. The later integrated stag
 still owns the adapted live extracted-candidate/build-refusal control and signed-app
 verification after product/build-input changes. No additional broad verification
 is required merely to expand this pause report.
+
+## Integrated implementation — 2026-11-17
+
+Status: in progress. This section records the stage after the instrument
+checkpoint: dispositions for every claim, the selected remedies, the two
+cohort migrations, the seam migration, final integrated verification and the
+outflows. Entries below are added as work lands; a subsection that says
+"pending" has no credited result.
+
+### Starting state and environment
+
+The checkout was clean on `main` at `837296af`, eleven commits ahead of the
+remote, with one worktree and no stash. The signed app in `dist/` is the
+`2f4d76e4` build; `policy-witness --version` and `dist/publication.json` both
+report
+`development:b55acb20d6a00395f6a422eafef1a4c18fd64e5140b71a1331cbe3b76744719e`
+with publication withheld and guide SHA-256 `1e886e4a…d64d`.
+`git diff --stat 3d3f8e65 837296af -- controller runner docs build.sh` shows
+only the publication-boundary changes of `bba8bca3`–`2f4d76e4` and generated
+worker-identity constants in product source. The eleven checkpoint runs under
+`tests/out/runs/` were present and untouched.
+
+Inventory at startup: about 26 GiB under `tests/out`, 720 MiB `.tmp`, 877 MiB
+`dist`, 3.2 GiB Rust cache, 270 MiB SwiftPM, 56 MiB Meson; 123 GiB free;
+2 GiB swap allocated with about 1 GiB used. `/private/tmp/pw-trace-checkpoint`
+was absent, as recorded. This stage's one scratch root is
+`.tmp/trace-integration/` (gitignored, no retention guarantee). One detached
+verification worktree existed during the Markdown cohort's seeded-fault
+rounds; its runs were pruned with its own tooling and it was removed. No
+pruning has been applied in the primary checkout and no pin was added.
+
+### Assessment method
+
+Twelve read-only passes at `837296af` assessed every claim in the review, one
+pass per group of shared subjects: 1,036 claim rows, counting each DT entry,
+lettered subfinding, qualification, DT-44 lead and the two unnumbered
+import/receipt investigations. Each pass re-read current source, recorded what
+it executed on the `2f4d76e4` app or on retained local runs, and recorded which
+of the review's executed evidence is no longer available. No pass modified a
+tracked file, built, or ran a registered case. Their per-claim records are in
+[trace-assessments/](trace-assessments/README.md). A pass's recommendation is
+an input; the decisions are recorded here and govern where the two differ.
+
+Across all passes no product claim in the review had stopped holding. The
+passes narrowed or corrected individual review statements; those corrections
+are recorded with their rows below. Most of the review's own executed evidence
+(its scratch directories, one retained run and the `8b5de2b2` and build-1482
+apps) is no longer available, so executed claims rest on the review's record,
+on re-execution where a pass could do it without `run`, and on source reading,
+as each row says.
+
+### Selected remedies
+
+These are the product and tool behavior changes selected from the
+assessments. Each lands with its checks, its regenerated outputs and the
+technical accounts that state the changed behavior. Guide divergence is
+accepted; `docs/PolicyWitness.md` stays byte-frozen.
+
+| Id | Findings | Decision |
+| --- | --- | --- |
+| R1 | DT-55/56 | Exec stream text becomes the decoding of every retained byte (NUL as U+0000, invalid sequences as U+FFFD), cut on a scalar boundary before the truncation marker. The per-stream observation gains bytes received, bytes retained, truncated and an exactness indication. Accepted limit: bytes that are not UTF-8 are flagged, not recoverable. |
+| R2 | DT-74 | `load_registry` treats only an absent path as an empty registry. Any other inspection failure, and a registry symlink whose target is missing, refuses, naming the path and the OS error. Reconcile stays report-only. |
+| R3 | DT-89, with DT-88/90–94 and the DT-08 statement | Development-identity derivation refuses an unlistable directory or uninspectable entry under a selected root instead of omitting it, and the inputs statement names what is actually selected. The identity of the unchanged tree changes with this edit. |
+| R4 | DT-23/51 | A declared-unapplied actor's phases are classified through the declared-setup view, so a failed validator spawn, decode or read gives the applied actor's outcome and exit 1. The prefix filter that also drops a validator pipe or serialization failure for applied actors is decided in the same edit. The independent consumer gains the necessary condition for `finished`. |
+| R5 | DT-22/57 | The validator receiver accepts an allow/deny record whose `step_id` is an empty string and joins it to the unique empty-ID step. Request admission is unchanged. The lifecycle adapter rejects only a non-string. |
+| R6 | DT-28 | Envelope publishers use a checked write: an unwritable stdout is exit 2 with one stderr line, not a panic with status 101. |
+| R7 | DT-34 | `runner install` refuses an `--env XPC_SERVICE_PATH` value that differs from the bundle path, before any machine change. |
+| R8 | DT-108, DT-110 | A reply frame that carries a conditional dependent without its guard is a malformed reply, refused by both readers with the bytes retained. Generator-side schema validation refuses the rule combinations that would let the readers disagree. |
+| R9 | DT-50/131, with DT-25 | Swift validator association and `query_first` eligibility compare identifiers and query metadata as UTF-8 bytes, as the Rust and Python readers do. Request-name uniqueness and submitted-target equality stay canonical and are stated as such. |
+| R10 | DT-42/117 | `policy_check` is null for a request with an `actors` array. Per-actor compile captures are unchanged. |
+| R11 | DT-113/116 | The fallback calls on the admitted-reply branch, which cannot run for any value, are deleted; statements say a fallback capture never shares an envelope with a host reply. |
+| R12 | DT-29/81–85 | `import_inventory` gains a required boolean for import forms seen and not followed. The scanner follows literal spellings with comments or other whitespace and reports the rest as unfollowed. A scanned file containing an unfollowed form gets a record error with its hash kept. |
+| R13 | DT-121 | The host maps the actor scheduler's `schedule_complete`, `ended_before_arrival` and `ended_before_completion` stop reasons to `completion`, so a witnessed host kill no longer projects `unknown`. |
+| R14 | DT-01/02 | Contract generation refuses nested generated regions and contract regions in unmapped documents. |
+
+Considered and not selected; each is retained with its limit stated in the
+owning technical account:
+
+- Capture despite failed application. The rehearsal's premise is corrected:
+  after a returned apply failure the worker publishes `done` and exits 0, so
+  the completion guard already holds and the application guard alone withholds
+  the copy. No observation of a real apply failure exists, so the value of the
+  change to a user is unevidenced. `captured` keeps implying observed
+  application.
+- Controller comparison of receipt fields with the request (DT-95/134). The
+  labels rule is stated as comparing nothing else. A comparison would
+  establish consistency between the product's own processes, not authenticity.
+- Removal of all actor automatic compilation. R10 removes only the call that
+  cannot succeed; per-actor captures remain because the envelope publishes no
+  resolved policy text a user could compile by hand.
+- Clearing an over-length native extension return beyond the inspected prefix
+  (DT-64). The Issue rule is narrowed to the inspected length. Whether the
+  native issuer can return more than 16,383 bytes is unknown; observed tokens
+  are 208–226 bytes.
+- A pre-teardown observer for host last-use clearing (DT-63/124/125). No
+  public statement credits a check or run for it; the one crediting test
+  comment is narrowed.
+- A public carrier for accepted host custody under an unpublished issue slot
+  (DT-62/122). The "reported independently" sentence is withdrawn.
+- Path-form compaction, the hand-written Swift variant writer and fingerprint
+  breadth (DT-105–107/109).
+- A new cause label for actor allowance-expiry kills (DT-121 remainder). They
+  stay `unknown`; no executed actor-timeout observation exists.
+
+Three corrections outside the review land with these threads because their
+statements are false in a current technical owner: the `docs/limits.json` row
+that says larger native extension results report `token_oversized`, which
+nothing emits; stale status-word comments and failure-contract lines beside
+DT-45/47; and a suite README that credits a check that does not exist.
+
+### Order of work and verification intent
+
+Implementation is serial in the one checkout: one writer at a time edits
+tracked files, builds or runs tests. Read-only passes ran beside it.
+`records/` is outside every drift scan (`docs/repository_tree.py` prunes it).
+
+1. Cohorts: Markdown reader, then worker-wait pilot controls.
+2. Seam: an invocation adapter on the old route and the old experiment on the
+   `2f4d76e4` app; then the command, transport and host admission; then the
+   callers on the new route, the comparison and the old route's retirement.
+3. Host changes in `runner/Sources`: R4, R5, R9, R13.
+4. Controller changes: R2, R6, R7; then R10, R11 with the selected `run_flow.rs`
+   test corrections; then R12.
+5. Exec stream R1; wire R8; identity tool R3.
+6. Remaining account corrections, R14 and test-side repairs.
+7. Conversions: survivor and aftermath dependencies, retirement, pilot,
+   bare-assertion paths.
+8. The adapted build-refusal control; one default battery for the grouped
+   signed-app changes, reread with the revised validator, and a prune preview;
+   final integrated verification; outflows.
+
+Each product thread writes or revises its checks first, runs them against the
+app as it stands and keeps that run as the pre-change observation, then
+edits, regenerates, rebuilds and runs its routed selection. A pre-change
+failure that is exactly the behavior being changed is an expected rejection,
+recorded as such; it is not a regression and it is not promoted afterwards.
+
+Intended selections, recorded before the executions: for each thread the
+routes `tests/CHANGE-VERIFICATION.md` names for its boundary and the cases its
+assessment worklist lists; `witness_contract/order_barrier_mutations` for the
+seam (its ordering callers) and for R5 and R9, which widen or change the
+query-eligibility inputs; `source_drift`, `runner_abi_layout`, default build
+controls and a rebuild for R1 and R8 (wire, layout, schema) and for R3
+(identity derivation); the applicable `runner_byoxpc` opt-ins for the seam's
+BYOXPC callers and for R2 and R7 where Rust-level controls with a redirected
+registry do not suffice. The boundary rationale is: request admission and
+transport first (seam), then host classification, controller admission and
+publication, evidence representation, and identity derivation last because it
+changes every later build's contract value.
+
+### Dispositions by coverage-map row
+
+Every claim has a disposition. [DISPOSITIONS.md](trace-assessments/DISPOSITIONS.md)
+records, for each row below, what is established and by which evidence
+class, the remaining defect or uncertainty, the treatment of each claim
+identifier, the discriminating check, the consequence accepted and the
+assessment file holding the per-claim record. It ends with the statements
+edited for more than one row and a completeness check: 1,036 claims, none
+unplaced. This table is the index and the decision at row level. "Accounts"
+means corrections in the owning technical statement; "repair" means an
+assertion, control or credited-claim correction; "retained" means reasoned
+retention with the limit stated in the named owner.
+
+| Row | Claims | Decision |
+| --- | --- | --- |
+| DT-01–04 | 10 | R14 refuses nested regions and regions in unmapped documents. Repair: anchor counts across documents on disk; scope phrases must lie inside their own rule. Retained: rebasing's two unsupported link spellings, stated in the contract authoring account. |
+| DT-05–08 | 9 | Accounts: the ownership label, the changed-item lookup's stated scope, the example excerpt's provenance. The DT-08 inputs statement is the single edit made under R3. |
+| DT-09–10 | 7 | Accounts: optional log collection is corrected in the account that disagrees with the code; `execution_allowance_exhausted` is stated as also selected when the clock cannot supply the remaining allowance, with the clock-fault and elapsed fields named. |
+| DT-11–14 | 18 | Accounts: the executed support grade gains its availability and current-file limits; historical counts are labelled as such. Unavailable execution stays unavailable; what the two reviewed-inputs digests covered is unrecorded and stays unknown. |
+| DT-15–21 | 27 | Accounts: the failure contract's one wrong row; presence rules written into each field meaning and the notation's undefined phrase defined; known-gap scope stated; BUILD's commitment associations pruned. Retained: the frozen guide's description of CONTRACT; shared link labels. Per-field admission behavior was derived from decoder storage only and is not exercised. |
+| DT-22/57 | 9 | R5. Repair: the lifecycle adapter's identifier rule; an actor-form empty-identifier refusal control; a live empty/non-empty pair. |
+| DT-23/51 | 9 | R4, with the consumer's necessary condition for `finished`. The actor ladder is stated for both modes. |
+| DT-24/30 | 10 | Accounts: emitted values, defensive branches and admitted domains are separated in each vocabulary statement; `cleanup_trigger` wording follows R13. |
+| DT-25/50/131 | 24 | R9. Accounts: target equality and identifier uniqueness are stated as canonical equivalence. Worker-slot joins follow the byte rule only where one side is child-supplied. |
+| DT-26–28 | 11 | R6. Accounts: `invalid_value`, `conflicting_selector` with its third condition, and the controller's code list. |
+| DT-29/81–87 | 68 | R12. Accounts: the closure statement, and the evidence scope: the inventory is a text scan, neither necessary nor sufficient for compiler evaluation, and no field joins import records to compiler inputs. Retained: records for unevaluated forms; no compiler-read observer. The followed set is established only for macOS 26.7.1 and the helper's host-side compiler. |
+| DT-31/32/42/113–119 | 104 | R10 and R11. Accounts: `result.error` precedence, the unreachable reply-less row, null projection for a refused foreign producer, the labels-rule effect as explicit null with exit 1, and limits on what eligibility and a helper exit status establish. Repair: the four `run_flow.rs` tests that read call counts as provenance, and a held-input control for the ordinary form. Retained: defensive unreachable branches other than R11's, stated as unreachable through the shipped client. The lost-reply gap stays a tour gap. |
+| DT-33–35 | 10 | R7. Accounts: dossier first-problem order and null cases, plist ownership branches, the `ok` label and stderr-only refusal form of runner commands. |
+| DT-36/43 | 6 | Accounts: a wait error cancels for lost ownership only after the reap is confirmed; lifecycle rendering details. |
+| DT-37–41 | 34 | Accounts in eight surfaces, the presentation map and two `docs/EXTENSIONS.md` sentences, each matched to unchanged behavior. Retained: two inaccurate sentences that exist only in the frozen guide. |
+| DT-44 | 22 | Each of the thirteen leads is verified by reading: confirmed ones are corrected in their owners, two are partly refuted and three are not contradictions. Actor schedule-allowance expiry is stated as `runner_failed`. The EOF lead is decided without the closing-stdout fixture because reachability does not change the disposition. |
+| DT-45/47/49/52 | 28 | Accounts: the failure contract withdraws the status-word retention promise the producer stopped keeping in v0.3.5, takes RESPONSE's meaning for a diagnostic's carried return, and credits encoded facts only where an assertion reads encoded bytes. Repair: a carried-return control; the consumer's errno-key presence, which the blackbox reader already enforces. |
+| DT-46/120/121/129 | 22 | R13. Accounts: the trigger is derived from the stop reason at final collection and is not a second observation. Repair: the oracle checks the derivation. Retained: timeout, violation, withheld-release and failed-setup stops keep an `unknown` cause. |
+| DT-48/130 | 22 | Accounts: the order rule is an equivalence owed by the producer, with each reader's direction named; label/return coherence is checked only as an eligibility condition. Retained: host admission of allow/deny labels by type. |
+| DT-53/132/135 | 41 | Repair: the lifecycle oracle is invoked in the one caller whose lifecycle credit lacked it; the three reader contrasts are retained in the corpus with per-reader expectations; three independence statements are narrowed. Accounts: the failure contract says the consumer does not check lifecycle claims. No reader is added. About 49 default live cases reach the consumer without the oracle. |
+| DT-54/58 | 7 | Accounts: the collection-stop list gains the byte-limit stop and the empty-byte fallback is stated, without crediting the three stop reasons that no assertion exercises. |
+| DT-55/56 | 13 | R1. |
+| DT-59–61/133 | 15 | Accounts: a self-transfer can be consumed in the same visit (owner of the shared extension region); the equipment rule no longer says validation precedes projection. Repair: the consumer relates `ready` to its prerequisites; a CLI control for same-visit consumption. |
+| DT-62/65/122/123 | 25 | Accounts: the "reported independently" sentence is withdrawn and the missing carrier is stated as a limit. Repair: the consumer relates held custody to the token's status. Retained: the worker's discarded custody observation. |
+| DT-63/64/124/125/128 | 44 | Accounts: the Issue rule is narrowed to the inspected length; last-use clearing is stated as having no reply field and no registered host check; `performed` means the operation ran. Repair: the test comment that credited last-use clearing; one issuer-erase assertion. The `token_oversized` limits row is corrected. |
+| DT-66/126 | 14 | Retained unchanged: existing definitions already state that equal native handle values do not establish revocation. |
+| DT-67 | 5 | Repair: the suite account is narrowed to two structural assertions and two recorded credits. |
+| DT-68/127 | 16 | Accounts: `ownership` gains its time anchor, the last published operation per scope and not an inventory at reply time. |
+| DT-69–73/75–80 | 67 | Accounts: only `runner remove` continues a retained cleanup; a report with no row is not service absence; candidate suppression is by label and scope; placeholders mean not inspected. Repair: reconcile's check-read credit is re-scoped. Reconcile stays report-only. |
+| DT-74 | 9 | R2. |
+| DT-88–94 | 53 | R3. Accounts: seven roots and twenty files, on-disk discovery regardless of Git, a declared superset not derived from compiler use, order and metadata scope, and the pre-sign comparison's limit. Repair: independent-oracle controls with a literal tree and pinned digest. |
+| DT-95–104/134 | 85 | Accounts: what label admission establishes, host-written constants, withheld copy versus failed capture, the one reason covering three worker failures, input identity excluding imported files, the assumed-layout limit of the captured bytes, and nonce association. Repair: the selected Rust label test's claims; Swift, C and Python support corrections. |
+| DT-105–112 | 58 | R8. Accounts: the fingerprint is not a compatibility test; compaction applies to public JSON only. Repair: presentation mutations in the fingerprint test, an exact normal-fixture comparison, an identifier requirement in the Python actor reader. |
+| Both unnumbered investigations | 134 | Both the first synthesis and the follow-up narrowing are kept: source association holds by construction; file association is unobserved; divergence is observed only by selected contrasts; effects, file opens and applied bytes are different claims. One linked limit sentence in the policy and profile surfaces serves both sides, without restricting it to `import` forms. |
+

@@ -27,7 +27,7 @@ changed call paths before editing, and verify availability of local trace eviden
 | Cohort | Full migration scope |
 | --- | --- |
 | `witness_contract/worker_wait_pilot_controls` | All scenarios in [worker_wait_pilot_controls.py](../tests/suites/witness_contract/worker_wait_pilot_controls.py): ordinary/actor/neighbor receipts, decoding and interval arithmetic, historical missing records, grace/scan analysis, faulty formulas, exclusions/pooling, comparisons, disk/Markdown round trips and stager identity controls. |
-| `source_drift/markdown_reader` | The complete [markdown.py](../tests/suites/source_drift/markdown.py) population: block/comment/link/heading/table/line interpretation, vendor bytes/import rules and fresh-process guards. Baseline: eight test classes, 38 methods and subcases. |
+| `source_drift/markdown_reader` | The complete population of the former `tests/suites/source_drift/markdown.py`, now [test_markdown_reader.py](../tests/suites/source_drift/test_markdown_reader.py): block/comment/link/heading/table/line interpretation, vendor bytes/import rules and fresh-process guards. Baseline: eight test classes, 38 methods and subcases. |
 
 The first exercises outcome distinctions; the second tests fixture isolation,
 parameterized diagnostics and cleanup beyond outcome work. Keep live exec,
@@ -573,3 +573,185 @@ while receipt kinds and known development markers prevent release credit. Their
 controls establish interpretation; no extracted live-candidate acceptance is
 claimed at this checkpoint. That execution remains in the specified later
 build-refusal control.
+
+## Cohort migration: Markdown reader — 2026-11-17
+
+Status: migrated, compared and retired. `5ab8e530` adds the pytest family and
+moves every reference; `116cae5a` deletes the unittest script, which stayed
+unreferenced for one commit as the old side of the comparison. No shared
+engine or reader file changed. Authority is unchanged: every assertion remains
+an enforced pytest assertion.
+
+[test_markdown_reader.py](../tests/suites/source_drift/test_markdown_reader.py)
+has 38 functions with the former method names, collected as 66 items. A
+`pw_id` is `Class.test_method`, with a label where the function runs once per
+input. Seven items declare recorded commands (the Git listing and six fresh
+Python processes); 59 are pure with an empty operation set.
+
+| Class | Methods | Old subtests | Items |
+| --- | --- | --- | --- |
+| `BlockTests` | 7 | 0 | 15 |
+| `CommentTests` | 5 | 3 | 8 |
+| `LinkTests` | 6 | 0 | 15 |
+| `HeadingTests` | 6 | 4 | 14 |
+| `TableTests` | 2 | 0 | 2 |
+| `LineTests` | 1 | 0 | 1 |
+| `VendorTests` | 5 | 0 | 5 |
+| `ImportGuardTests` | 6 | 0 | 6 |
+
+Local managed development runs under `tests/out/runs/`, gitignored and subject
+to ordinary retention:
+
+| Directory / run ID | Result and scope |
+| --- | --- |
+| `trace-cohort-markdown-old` / `20261118T030245Z_257f17cd` | Old path at `837296af`: pass. |
+| `trace-cohort-markdown-new` / `20261118T033600Z_2644243b` | New family with the migration staged; module bytes equal `5ab8e530`: 66 of 66 items pass. Owns the equivalence investigation. |
+| `trace-cohort-markdown-final` / `20261118T033944Z_a2571423` | `--suite source_drift` at `116cae5a`: 11 of 11 pass, no system sleep. |
+
+The equivalence investigation is
+`trace-cohort-markdown-new/investigations/cohort-equivalence/`; it credits no
+case. Its `comparison/summary.json` records: no identity unmapped in either
+direction; all 218 outermost constant expressions of the old methods present
+in the same-named functions; all old tests and subtests and all new items
+passing on the same inputs; seven commands against seven, the six Python
+commands equal in argv, working directory, selected environment, return code
+and output after temporary-name replacement, and the Git listing differing
+only by the new module's own path; every old tracked tree equal in paths,
+modes and content at registration, before the command and before cleanup. The
+same comparison against the checkpoint battery's retained old-path record
+agrees. Not compared: inherited environment outside the registered settings,
+command descendants, durations, and blob bytes of the seeded rounds.
+`CORRECTION.txt` records that the disposable checkout differed from the
+migration commit by three prose edits in two READMEs that the case does not
+read.
+
+Seeded faults ran in one detached worktree with expectations written first;
+`rejection.json` records the results. The worktree's ten runs were pruned with
+its own tooling and the worktree removed. Four faults in one round (a pure
+expectation, a removed version check, a Git-listed importer, a temporary-tree
+cleanup failure) were rejected under corresponding identities on both paths;
+the cleanup failure fails only the owning item's teardown. One changed
+vendored byte fails the same three `VendorTests` on both paths. A reader that
+refuses import ends the old script before any test with no receipts; in the
+family, collection succeeds, 63 items fail setup and three pass.
+
+Duties retired: unittest discovery, result and subtest scheduling; the
+launcher block and `markdown.log`; `markdown-receipts.json` and its shared
+blob store. Duties added: a lazy session reader fixture, so collection imports
+neither the reader nor the fixture copier; a temporary-directory owner that
+captures registered trees before removal and fails teardown on a capture or
+removal failure; reader-tree and stand-in factories; a command adapter with
+one artifact directory per command; and the identity labels.
+
+Marginal-value observations, recorded without a redundancy claim: the three
+vendor-byte items reject the same live-byte change, because two of them copy
+the live tree and compare whole lists; all but three items share the
+in-process reader import; and the fence, hidden-heading and route shapes
+repeat planner scenarios that `source_drift/runner_source_manifests_agree`
+also exercises. These are independently authored assertions over shared
+evidence, not independent observations.
+
+Observed consequences of the existing capability, none requiring a shared
+reader change:
+
+- Any plan selecting this family is captured under `pw-family-evidence-2`,
+  including the default battery, where it sits beside the schema-1 exec family.
+- `run.json.counts` excludes the family, so the suite's legacy total reads 10
+  while `case_outcome_counts` reads 11.
+- A recorded-command item that fails before launching its command leaves the
+  family unrun with incomplete accounting, not failed, because its observed
+  commands differ from its declared scope. Both READMEs state this. It still
+  blocks acceptance.
+- A collection error refuses the whole selection (by code reading); the lazy
+  reader import exists for that reason.
+- Case evidence grows from about 0.8 MB to 11.2 MB, from per-item blob stores
+  and ten collected sources per item.
+- `--suite source_drift` now needs the pinned pytest packages.
+
+## Seam migration, first stage: adapter and old experiment — 2026-11-17
+
+Status: the old experiment is captured; no entry point has changed. `b4e6fee1`
+is test-only: 33 files under `tests/`, no product source, no rebuild.
+
+[seam_invocation.py](../tests/lib/seam_invocation.py) is the one invocation
+adapter for submissions that use a selected control. A caller gives it the
+ordinary request without the selected controls, the controls as a separate
+mapping and any `run` arguments. In this stage its one route merges the
+controls into the delivered request's `_test_overrides` and submits with
+`policy-witness run`, or with `pw-runner-client run` for the direct-client
+callers. It serves Python callers (`SeamCapture`, `Submission`) and shell
+callers (a file entry point) from one implementation. For each invocation it
+writes, under the case's `artifacts/seam-invocations/<scenario>/`, an
+`invocation.json` before launch (scenario identity, exact argv, requested
+route `legacy_request_block`, app path and reported build contract, then exit
+status and monotonic start and end), the ordinary request, the controls, the
+delivered bytes and raw stdout and stderr. It interprets nothing:
+expectations, independent effects and cleanup stay with each caller, and no
+caller's assertion, expected value, message or cleanup changed.
+
+Callers moved, with the number of captured invocations: the thirteen
+`witness_contract` checkers in the caller map (29, plus 6 through BYOXPC and
+mutation callers); `failure_boundaries/check.py` (18);
+`runner_outcome_runner_timeout` and its `runner_use_c_worker` caller (3);
+`runner_validator_failure` (3); `runner_outcome_validator_no_reply` (1);
+`runner_outcome_bad_request/contract.py` (1);
+`runner_exec_inheritance/launch_inventory.py` (2); BYOXPC `single_use.py` (1)
+and `bad_neighbor_claims.py` (4, direct client over stdin);
+`runner_ready_byte_resilience/run.sh` (1); and `HeldWorkload` (35), which
+also brought in the opt-in `witness_contract/worker_wait_cost` as a caller
+found from code. `run_capture/controls` gained adapter controls against a
+stand-in executable.
+
+Left off the adapter, deliberately:
+
+- The one combined pair of `worker_executable_path` with
+  `validator_executable_path` in `failure_boundaries/check.py` (`admission()`,
+  combination index 9). Management retires it with the route change.
+- The request-corpus example `fractional_override`
+  (`worker_timeout_ms: 1.5`), submitted by the corpus loop through the CLI and
+  the direct client with a corpus-owned `type_mismatch` expectation. Decision
+  for the route change: it stays an ordinary submission and its expectation
+  becomes the ordinary refusal of a selected key; a fractional value on the
+  experimental route gets its own controls (a CLI usage refusal for the flag,
+  a refused controls object at the client).
+- Scenarios that use only `worker_executable_path` or
+  `actor_equipment_executable_paths`.
+
+Direct constructions that carry a selected control and are not live
+submissions remain in `RequestContractTests`, `QueryAdmissionTests`,
+`ServiceAdmissionTests`, `PhaseProtocolTests`, `OrderingTests`,
+`ReplyFailureTests`, `ReplyMaximumTests` and two `controller/src/dossier.rs`
+tests.
+
+The old experiment, as local managed development runs under `tests/out/runs/`
+(gitignored, ordinary retention), all against the `2f4d76e4` app with contract
+`development:b55acb20…744719e`, all complete, none overlapping system sleep:
+
+| Directory / run ID | Cases | Result | Invocations |
+| --- | --- | --- | --- |
+| `trace-seam-old-default` / `20261118T042533Z_ef7ca37a` | 48: 29 mapped callers, 13 cases that execute changed shared code, 6 dependencies | pass | 85 |
+| `trace-seam-old-optin` / `20261118T042932Z_9c0aa679` | 3 | pass | 5 |
+| `trace-seam-old-mutations` / `20261118T043020Z_9cacea3c` | 1 (`witness_contract/order_barrier_mutations`) | pass | 3 |
+| `trace-seam-old-byoxpc` / `20261118T043136Z_0ca6cee0` | 4 | pass | 8 |
+| `trace-seam-old-waitcost` / `20261118T043513Z_5ca12329` | 2 | pass | 3 |
+| `trace-seam-old-drift` / `20261118T043557Z_5a1835a4` | 19 (`source_drift`, `shell_helpers`) | pass | none |
+
+`trace-seam-old-waitcost/investigations/seam-old/index.json` indexes the
+experiment: 104 invocations in 36 cases, every case and scenario pair unique,
+all eight controls present. The reply echoed the supplied controls in 96;
+six were admission refusals with no echo; two had no host reply. Ten stand-in
+control records are listed apart. The four BYOXPC sessions installed in scope
+`gui/501` were each removed with `cleanup_retained: false`, and service,
+plist, staging, bundle and private registry were verified absent; the default
+registry was empty before and after. One development run during the work
+failed on a wrong constant in a new control and stays a failure; its
+replacement passed.
+
+Not run in this stage: `worker_wait_cost`'s activation role and its other
+candidates, and the live `worker_wait_pilot`, which imports changed modules
+and makes no adapter call. `dossier_witness_byoxpc` passes without an adapter
+invocation because its BYOXPC path never reaches the override scenario. For
+the route change: `check_extension_provenance.py` derives its expected
+validator from the delivered request and must read the controls instead, and
+`HeldWorkload` scenario identities derive from their artifact directory path.
+
