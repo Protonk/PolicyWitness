@@ -1001,8 +1001,8 @@ source sizes and retain their separate host and child observations.
 
 `ValidatorClient.swift` owns the record acceptance rules, stated beside its
 byte-frame decoder. `PWRunnerPredictionEvidence.swift` owns the typed reporting fields. A complete
-allow/deny record requires native integer rc/errno, nonempty step ID/operation/
-filter type, kind, schema and outcome. Diagnostic outcomes require string error,
+allow/deny record requires native integer rc/errno, a string step ID, which may
+be empty, nonempty operation/filter type, kind, schema and outcome. Diagnostic outcomes require string error,
 but can omit native results; unfamiliar outcomes and extra raw JSON fields are
 preserved. Booleans, strings and fractional values cannot stand in for integers.
 Parsing never turns a missing native result into a prediction.

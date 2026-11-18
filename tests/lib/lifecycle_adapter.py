@@ -129,7 +129,7 @@ def read_lifecycle(envelope, expected_contract):
                     'attempt_support': entry.get('attempt_support'), 'questions': {}}
             if type(item['index']) is not int or item['index'] != position:
                 malformed.append(f'steps[{position}] carries index {item["index"]!r}')
-            if not isinstance(item['step_id'], str) or not item['step_id']:
+            if not isinstance(item['step_id'], str):
                 malformed.append(f'steps[{position}] lacks a string step_id')
             if item['slot'] not in C.SLOT_STATES:
                 malformed.append(f'steps[{position}] slot {item["slot"]!r} unrecognized')

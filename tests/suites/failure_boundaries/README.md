@@ -27,6 +27,23 @@ contents independently establish completed attempts. Rejected bytes are checked
 against bounded host context; only valid preceding records may supply predictions.
 `validator_association` tests duplicate/unexpected IDs and mismatched operation/filter type/value through the same route.
 
+`validator_empty_step_id` holds the receiver's rule for an allow or deny
+record's `step_id`: any string, including the empty one. Two requests that
+differ only in `step_id`, `"s"` and `""`, read `/etc/hosts` under an
+allow-default policy with the shipped validator. Both must exit 0 `finished`
+with one accepted `allow` record carrying that identifier, no association
+issue, `native_rc` 0, a completed attempt and `query_first`; the consumer and
+the lifecycle oracle must accept both envelopes. Two transcripts answer the
+three-write plan `first`, `middle`, `last` with a third allow whose `step_id` is
+null or empty. Null is a `structure` decode fault with two accepted records and
+`validator_decode_failure`. The empty string is an accepted third record that
+no step names: `missing_id` for `last`, `unexpected_id` for the empty
+identifier and `validator_unavailable`, with no decode fault. In both, all
+three files change and the first two predictions keep `query_first`. A request
+with two empty identifiers is refused as `duplicate_step_id` with no child.
+All five rows run and their problems are reported together in `rows.json` and
+the assertion log.
+
 `validator_overlong_request` submits an operation of 65536 bytes between two
 valid path-filter queries. Query admission refuses it before any process work:
 the record names `sandbox_check.operation` on the middle step, the reply carries

@@ -12,6 +12,8 @@ import tempfile
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[2] / 'lib'))
 import build_context
+import consumer
+from lifecycle_oracle import check_record
 from porcelain import decode as decode_porcelain
 from run_capture import RunCapture
 from runner_client_capture import host_reply, validate_capture
@@ -437,6 +439,128 @@ def validator(pw, out, mode):
             print('PASS validator', case, 'retained records', len(process['records']), flush=True)
 
 
+def empty_step_id(pw, out):
+    """An ordinary plan's unique empty step ID is an identifier like any other.
+
+    Two live requests differ only in `step_id`: both finish with the shipped
+    validator's record associated and `query_first`. Two transcripts answer a
+    plan that names neither identifier with a third allow whose `step_id` is
+    null or empty: null stays a structure fault, the empty string is an
+    unexpected ID. Two empty identifiers are refused at admission as
+    duplicates. Every row runs and its problems are reported together.
+    """
+    contract = build_context.candidate_contract()
+    failures = {}
+
+    def row(name, body):
+        problems = []
+
+        def check(label, actual, wanted):
+            if actual != wanted:
+                problems.append(f'{label}: observed {actual!r}, expected {wanted!r}')
+        body(check)
+        print('PASS' if not problems else 'FAIL', 'empty step ID', name, flush=True)
+        for problem in problems:
+            print('    ' + problem, flush=True)
+        if problems:
+            failures[name] = problems
+
+    def live(step_id, name):
+        def body(check):
+            request = specimen()
+            request['probe_plan'][0]['step_id'] = step_id
+            with RunCapture(pw, out / name, request, cli_args=[]) as capture:
+                rc = capture.wait(timeout=40)
+                envelope = capture.load_json()
+            runner = envelope['data']['runner_result']
+            check('CLI exit status', rc, 0)
+            check('result', (envelope['result']['normalized_outcome'], envelope['result']['ok']), ('finished', True))
+            check('reply summary', (runner['normalized_outcome'], runner['rc'], runner.get('error')), ('finished', 0, None))
+            check('consumer.validate', consumer.validate(envelope, contract), [])
+            check('lifecycle oracle', check_record(envelope, contract), [])
+            process = runner['phases'][0].get('validator_subprocess') or {}
+            check('validator ending', (process.get('reaped'), process.get('exit_code')), (True, 0))
+            check('expected IDs', process.get('expected_step_ids'), [step_id])
+            check('accepted records', [(r.get('step_id'), r['outcome'], r.get('rc'), r.get('errno')) for r in process.get('records') or []],
+                  [(step_id, 'allow', 0, 0)])
+            check('association issues and fault', (process.get('association_issues'), process.get('decode_fault')), ([], None))
+            step = runner['steps'][0]
+            query, attempt = step['sandbox_check'], step['attempt']
+            check('step and disposition identifier',
+                  (step['step_id'], runner['runner_subprocess']['disposition']['steps'][0]['step_id']), (step_id, step_id))
+            check('query', (query['result_source'], query['outcome'], query.get('native_rc')), ('validator', 'allow', 0))
+            check('attempt', (attempt['result_source'], attempt['outcome'], attempt['rc']), ('worker', 'ok', 0))
+            check('order', step['comparison']['order'], 'query_first')
+        row(name, body)
+
+    def transcript(case):
+        def body(check):
+            case_out = out / case
+            case_out.mkdir(parents=True)
+            names = ['first', 'middle', 'last']
+            with tempfile.TemporaryDirectory(prefix='pw-validator-boundary-', dir='/private/tmp') as temp:
+                paths = [Path(temp) / name for name in names]
+                for path in paths: path.write_bytes(b'before')
+                request = specimen()
+                request['probe_plan'] = [{'step_id': name, 'sandbox_check': {'operation': 'file-write-data',
+                    'filter': {'kind': 'path', 'value': str(path)}},
+                    'attempt': {'kind': 'file', 'action': 'open_write', 'target': str(path)}}
+                    for name, path in zip(names, paths)]
+                fixture = Path(__file__).resolve().parents[2] / 'fixtures' / 'validator'
+                executable = case_out / 'validator.py'
+                shutil.copyfile(fixture / 'validator.py', executable); executable.chmod(0o755)
+                shutil.copyfile(fixture / f'{case}.json', executable.with_suffix('.case.json'))
+                controls = {'validator_executable_path': str(executable.resolve())}
+                rc, runner = run(pw, case_out, request, controls, f'validator_empty_step_id.{case}')
+                check('completed file effects', [path.read_bytes() != b'before' for path in paths], [True, True, True])
+            emitted = (case_out / 'validator.emitted.ndjson').read_bytes()
+            tail = emitted.splitlines()[-1]
+            check('transcript tail step_id', json.loads(tail)['step_id'], None if case == 'null_step_id' else '')
+            check('reply test_overrides', runner.get('test_overrides'), controls)
+            process = runner['phases'][0].get('validator_subprocess') or {}
+            check('validator ending', (process.get('reaped'), process.get('exit_code'), process.get('stdout_bytes_received')),
+                  (True, 0, len(emitted)))
+            steps = runner['steps']
+            check('step identifiers', [s['step_id'] for s in steps], names)
+            check('attempts', [(s['attempt']['result_source'], s['attempt']['rc']) for s in steps], [('worker', 0)] * 3)
+            check('queries', [(s['sandbox_check']['result_source'], s['sandbox_check'].get('native_rc'), s['comparison']['order']) for s in steps],
+                  [('validator', 0, 'query_first')] * 2 + [('synthetic', None, 'unestablished')])
+            records = process.get('records') or []
+            fault = process.get('decode_fault')
+            if case == 'null_step_id':
+                check('summary', (rc, runner['normalized_outcome']), (1, 'validator_decode_failure'))
+                check('decode fault', fault and (fault['origin'], fault['kind'], fault['frame_bytes']), ('runner_host', 'structure', len(tail)))
+                check('decode fault context', fault and base64.b64decode(fault['context_b64']), tail[:256])
+                check('accepted records', [r.get('step_id') for r in records], names[:2])
+            else:
+                check('summary', (rc, runner['normalized_outcome']), (1, 'validator_unavailable'))
+                check('decode fault', fault, None)
+                check('accepted records', [r.get('step_id') for r in records], names[:2] + [''])
+                check('association issues', process.get('association_issues'),
+                      [{'origin': 'runner_host', 'kind': 'missing_id', 'step_id': 'last', 'count': 0},
+                       {'origin': 'runner_host', 'kind': 'unexpected_id', 'step_id': '', 'count': 1}])
+        row(case, body)
+
+    def duplicate_empty(check):
+        request = specimen()
+        request['probe_plan'] = [copy.deepcopy(request['probe_plan'][0]) for _ in range(2)]
+        for step in request['probe_plan']: step['step_id'] = ''
+        rc, runner = run(pw, out / 'duplicate_empty', request)
+        check('summary', (rc, runner['normalized_outcome']), (1, 'bad_request'))
+        check('request failure', runner.get('request_failure'), {'code': 'duplicate_step_id', 'path': ['probe_plan', '1', 'step_id']})
+        check('no execution', (runner['steps'], runner.get('runner_subprocess'), runner.get('phases')), ([], None, []))
+
+    live('s', 'live_nonempty')
+    live('', 'live_empty')
+    transcript('null_step_id')
+    transcript('empty_step_id')
+    row('duplicate_empty', duplicate_empty)
+    (out / 'rows.json').write_text(json.dumps(dict(
+        rows=['live_nonempty', 'live_empty', 'null_step_id', 'empty_step_id', 'duplicate_empty'], failures=failures), indent=2) + '\n')
+    assert not failures, sorted(failures)
+    print('PASS empty ordinary step ID: associated live, unexpected in a plan that does not name it; null stays a structure fault')
+
+
 def query_planning(pw, out):
     # Mixed and all-excluded plans prove that host decisions survive creation
     # even when no validator process exists to remember submitted IDs.
@@ -496,6 +620,7 @@ if __name__ == '__main__':
     out = Path(directory).resolve()
     if mode == 'admission': admission(pw, out)
     elif mode == 'fallback_helper': fallback_helper(pw, out)
+    elif mode == 'validator_empty_step_id': empty_step_id(pw, out)
     else:
         validator(pw, out, mode)
         if mode == 'validator_removed_target': query_planning(pw, out)

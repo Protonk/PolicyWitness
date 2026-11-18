@@ -56,6 +56,8 @@ as corrupt. Byte output is written and retained without text replacement.
 Responses may override returned query fields with `fields` or remove them with
 `omit`, independently of the recorded incoming probes. Wrong-query controls
 cover operation, filter type, filter value and missing required filter value.
+`null_step_id.json` and `empty_step_id.json` return the third allow with a null
+or an empty `step_id`.
 The unfamiliar diagnostic omits query metadata and native results.
 
 `signal_after_one.json` emits one allow record, flushes it, and terminates the

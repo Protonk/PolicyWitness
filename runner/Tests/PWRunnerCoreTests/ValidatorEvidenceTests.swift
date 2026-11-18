@@ -201,6 +201,50 @@ func runValidatorEvidenceTests(_ tk: TestKit) {
             try expectEqual(join.byStep.count, 0)
             try expectEqual(Set(join.issues.map { $0.kind }), Set(["duplicate_id", "missing_id", "unexpected_id", "unassociated"]))
         }
+        for outcome in ["allow", "deny"] {
+            tk.run("\(outcome) accepts an empty string step_id; null, absent and non-string forms stay structure faults") {
+                func decoded(_ change: (inout [String: Any]) -> Void) throws -> ValidatorDecodedFrames {
+                    var obj = try JSONSerialization.jsonObject(with: Data(validValidatorLine.utf8)) as! [String: Any]
+                    obj["outcome"] = outcome
+                    change(&obj)
+                    return decodeValidatorFrames(try JSONSerialization.data(withJSONObject: obj))
+                }
+                let empty = try decoded { $0["step_id"] = "" }
+                try expectNil(empty.fault?.message)
+                try expectEqual(empty.verdicts.map { $0.stepId }, [""])
+                for (name, change, message): (String, (inout [String: Any]) -> Void, String) in [
+                    ("null", { $0["step_id"] = NSNull() }, "\(outcome) requires step_id"),
+                    ("number", { $0["step_id"] = 7 }, "invalid string field step_id"),
+                    ("absent", { $0.removeValue(forKey: "step_id") }, "missing step_id (string or null required)"),
+                    ("empty operation", { $0["operation"] = "" }, "\(outcome) requires operation"),
+                    ("empty filter_type", { $0["filter_type"] = "" }, "\(outcome) requires filter_type"),
+                ] {
+                    let refused = try decoded(change)
+                    try expectEqual(refused.fault?.kind, "structure", name)
+                    try expectEqual(refused.fault?.message, message, name)
+                    try expectEqual(refused.verdicts.count, 0, name)
+                }
+            }
+        }
+        tk.run("an empty-ID record joins the one empty-ID step and is unexpected in a plan that does not name it") {
+            var record = decodeValidatorFrames(Data(validValidatorLine.utf8)).verdicts[0]
+            record.stepId = ""
+            func plan(_ id: String) -> [ValidatorProbe] { [ValidatorProbe(stepId: id, operation: "file-read-data", filterType: "PATH")] }
+            func issues(_ join: (byStep: [String: ValidatorVerdict], issues: [PWValidatorAssociationIssue])) -> [String] {
+                join.issues.map { "\($0.kind):\($0.step_id ?? "null"):\($0.count)" }
+            }
+            let named = associateValidatorVerdicts([record], expected: plan(""))
+            try expectEqual(named.byStep[""]?.outcome, "allow")
+            try expectEqual(issues(named), [])
+            let other = associateValidatorVerdicts([record], expected: plan("s"))
+            try expectEqual(other.byStep.count, 0)
+            try expectEqual(issues(other), ["missing_id:s:0", "unexpected_id::1"])
+            // A null identifier is no identifier: it never joins the empty-ID step.
+            record.stepId = nil
+            let unassociated = associateValidatorVerdicts([record], expected: plan(""))
+            try expectEqual(unassociated.byStep.count, 0)
+            try expectEqual(issues(unassociated), ["missing_id::0", "unassociated:null:1"])
+        }
     }
     tk.group("validator driver lifecycle and competing observations") {
         for mode in ["clean", "nonzero", "signal", "hang"] {

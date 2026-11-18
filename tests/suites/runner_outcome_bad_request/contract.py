@@ -389,6 +389,76 @@ def refusal_workflows(pw, client, service, out, effect, base, cli):
 
 
 
+def actor_empty_step_id(pw, client, service, out, directory):
+    """An actor-form request with one empty action identifier is refused before any actor launches.
+
+    The empty identifier follows an action that would create a file, so a
+    launch would leave the file behind. The same request with a nonempty
+    identifier runs and creates it.
+    """
+    contract = build_context.candidate_contract()
+    effect = Path(directory) / 'actor-empty-step'
+    failure = dict(code='empty_step_id', path=['phases', '0', 'actions', '1', 'step_id'])
+
+    def specimen(step_id):
+        return dict(contract=contract, specimen_id='actor-empty-step',
+            actors=[dict(actor_id='subject', sandbox=dict(mode='unapplied'))],
+            phases=[dict(phase_id='main', actor_id='subject', actions=[
+                dict(step_id='effect',
+                     sandbox_check=dict(operation='file-write-create', filter=dict(kind='path', value=str(effect))),
+                     attempt=dict(kind='file', action='create', target=str(effect))),
+                dict(step_id=step_id,
+                     sandbox_check=dict(operation='file-read-data', filter=dict(kind='path', value='/etc/hosts')),
+                     attempt=dict(kind='file', action='open_read', target='/etc/hosts'))])])
+
+    def refused(reply, created):
+        assert reply['normalized_outcome'] == 'bad_request' and reply['request_failure'] == failure, reply
+        assert reply['steps'] == [] and reply.get('phases') == [] and reply.get('runner_subprocess') is None, reply
+        assert not any(isinstance(actor, dict) and (actor.get('launch') is not None or actor.get('subprocess') is not None)
+                       for actor in reply.get('actors') or []), reply
+        assert not created, 'a refused actor request created its first action\'s file'
+
+    case = out / 'actor-empty-step-cli'
+    with RunCapture(pw, case, specimen(''), cli_args=[]) as run:
+        rc = run.wait(timeout=30)
+        created = effect.exists()
+        (case / 'effect.json').write_text(json.dumps(dict(created=created)) + '\n')
+        envelope = run.load_json()
+    assert rc == 1 and envelope['result']['normalized_outcome'] == 'bad_request' and envelope['result']['ok'] is False, envelope
+    assert envelope['data']['request_failure'] == failure, envelope
+    assert envelope['data']['runner_client'] is not None, envelope
+    refused(envelope['data']['runner_result'], created)
+
+    case = out / 'actor-empty-step-xpc'
+    case.mkdir()
+    request = case / 'specimen.json'
+    request.write_text(json.dumps(specimen('')) + '\n')
+    with (case / 'capture.pwp').open('wb') as stdout, (case / 'stderr').open('wb') as stderr:
+        result = subprocess.run([str(client), 'run', '--timeout-ms', '10000', service, str(request)],
+                                stdout=stdout, stderr=stderr, timeout=20)
+    created = effect.exists()
+    (case / 'effect.json').write_text(json.dumps(dict(created=created)) + '\n')
+    assert result.returncode == 0, result.returncode
+    reply = host_reply(decode_porcelain((case / 'capture.pwp').read_bytes(), 'capture'), contract)
+    (case / 'reply.json').write_text(json.dumps(reply, indent=2) + '\n')
+    assert reply['producer']['contract'] == contract, reply
+    refused(reply, created)
+
+    case = out / 'actor-nonempty-step-cli'
+    with RunCapture(pw, case, specimen('read'), cli_args=[]) as run:
+        rc = run.wait(timeout=30)
+        created = effect.is_file() and effect.read_bytes() == b''
+        (case / 'effect.json').write_text(json.dumps(dict(created=created)) + '\n')
+        envelope = run.load_json()
+    reply = envelope['data']['runner_result']
+    assert rc == 0 and reply['normalized_outcome'] == 'finished' and envelope['data'].get('request_failure') is None, envelope
+    assert created, 'the nonempty neighbour did not run its first action'
+    actor, = reply['actors']
+    assert actor['setup_status'] == 'unapplied_declared' and actor['launch']['pid'] == actor['subprocess']['pid'], actor
+    assert [step['step_id'] for step in reply['steps']] == ['effect', 'read'], reply['steps']
+    effect.unlink()
+
+
 def main():
     pw, out = Path(sys.argv[1]), Path(sys.argv[2])
     app = pw.parents[2]
@@ -565,6 +635,7 @@ def main():
                 assert reply.get('runner_subprocess') is None and reply['steps'] == [], reply
                 assert not effect.exists(), name
         duplicate_entries(pw, client, service, out, directory)
+        actor_empty_step_id(pw, client, service, out, directory)
     print('current requests execute; invalid versions, unknown fields and malformed intent refuse before attempts')
 
 

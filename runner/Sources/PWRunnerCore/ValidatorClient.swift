@@ -463,8 +463,8 @@ func serializeProbes(_ probes: [ValidatorProbe]) throws -> Data {
 /// All records require kind=sb_api_validator_verdict, integer schema_version=1,
 /// present string-or-null step_id and nonempty string outcome. Known optional
 /// fields must have their declared type or null (Bool is not an integer).
-/// Allow/deny require nonempty step_id, operation, filter_type and integer rc,
-/// errno. Diagnostic outcomes require string error, but may omit native results.
+/// Allow/deny require string step_id, nonempty operation, filter_type and integer
+/// rc, errno. Diagnostic outcomes require string error, but may omit native results.
 /// Unfamiliar diagnostic outcomes and extra JSON fields are retained. Rejected
 /// bytes are context only, never accepted evidence. See the routing inventory.
 struct ValidatorDecodedFrames {
@@ -535,7 +535,8 @@ private func validatorStructureError(_ obj: [String: Any]) -> String? {
         if let value = obj[key], !(value is NSNull), validatorInteger(value) == nil { return "invalid integer field \(key)" }
     }
     if outcome == "allow" || outcome == "deny" {
-        for key in ["step_id", "operation", "filter_type"] {
+        guard obj["step_id"] is String else { return "\(outcome) requires step_id" }
+        for key in ["operation", "filter_type"] {
             guard let value = obj[key] as? String, !value.isEmpty else { return "\(outcome) requires \(key)" }
         }
         for key in ["rc", "errno"] {

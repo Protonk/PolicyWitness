@@ -1638,10 +1638,12 @@ Declarations own meaning; source and check citations supply the stated support. 
 | `tests/lib/lifecycle_oracle.py: check_actor_records` | source support | [Reader judgments](RESPONSE.md#contract-diagnostics-execution-reader_evidence) |
 | `tests/lib/porcelain.py: class Reader` | source support | [Response encoding](ARCHITECTURE.md#contract-wire) |
 | `tests/suites/blackbox_e2e/checker_controls.py: diagnostic_subject_controls` | check support | [Finding association and effect](RESPONSE.md#contract-diagnostics-issue-subject) |
+| `tests/suites/failure_boundaries/check.py: empty_step_id` | check support | [Form-specific action identifiers](REQUEST.md#contract-actors-action-empty_id) |
 | `tests/suites/runner_byoxpc/opt_in/registry_recovery.py: historical-after-remove` | source support | [kind](RESPONSE.md#contract-installation-runner-kind) |
 | `tests/suites/runner_byoxpc/opt_in/registry_recovery.py: live-pending-verify` | source support | [Pending verification](RESPONSE.md#contract-installation-commands-pending_verify) |
 | `tests/suites/runner_byoxpc/opt_in/registry_recovery.sh: registry_recovery` | check support | [Pending verification](RESPONSE.md#contract-installation-commands-pending_verify) |
 | `tests/suites/runner_byoxpc/opt_in/registry_recovery.sh: registry_recovery` | check support | [kind](RESPONSE.md#contract-installation-runner-kind) |
+| `tests/suites/runner_outcome_bad_request/contract.py: actor_empty_step_id` | check support | [Form-specific action identifiers](REQUEST.md#contract-actors-action-empty_id) |
 | `tests/suites/runner_outcome_bad_request/contract.py: composite_parameters` | check support | [Parameter example observations](REQUEST.md#contract-policy-spec-parameter_evidence) |
 | `tests/suites/runner_outcome_bad_request/contract.py: duplicate_entries` | check support | [Repeated members at each entry](REQUEST.md#contract-request-specimen-duplicate_keys) |
 | `tests/suites/runner_outcome_bad_request/contract.py: main` | check support | [Ordinary refusal of the experimental controls](REQUEST.md#contract-request-overrides-ordinary_refusal) |
@@ -2124,7 +2126,7 @@ Source: [ActorPlan.swift](../runner/Sources/PWRunnerCore/ActorPlan.swift): `norm
 
 [Local support](REQUEST.md#contract-actors-action-empty_id-disposition_support).
 
-Source: [ActorPlan.swift](../runner/Sources/PWRunnerCore/ActorPlan.swift): `normalizeActorPlan`; [ProbeRunner.swift](../runner/Sources/PWRunnerCore/ProbeRunner.swift): `requestMeaningFailure`. Check: [ReaderCorpusTests.swift](../runner/Tests/PWRunnerCoreTests/ReaderCorpusTests.swift): `runReaderCorpusTests`.
+Source: [ActorPlan.swift](../runner/Sources/PWRunnerCore/ActorPlan.swift): `normalizeActorPlan`; [ProbeRunner.swift](../runner/Sources/PWRunnerCore/ProbeRunner.swift): `requestMeaningFailure`. Check: [check.py](../tests/suites/failure_boundaries/check.py): `empty_step_id`; [contract.py](../tests/suites/runner_outcome_bad_request/contract.py): `actor_empty_step_id`; [ReaderCorpusTests.swift](../runner/Tests/PWRunnerCoreTests/ReaderCorpusTests.swift): `runReaderCorpusTests`.
 
 <a id="contract-actors-action-support-details"></a>
 ### Phase action variants — Support

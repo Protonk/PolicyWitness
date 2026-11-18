@@ -320,6 +320,35 @@ def expected_fixture_controls(out):
         assert findings, f'{name}: accepted'
         assert any(f['rule'] == rule for f in findings), (name, rule, findings)
         records.append({'control': name, 'rejected': True, 'rule': rule, 'findings': findings})
+    # Ordinary admission allows one empty step ID, so the record's identifier is
+    # any string. The first step is renamed everywhere it is carried; a value of
+    # another type in the record stays a malformed record.
+    def renamed(value, old, new):
+        if isinstance(value, dict):
+            return {key: renamed(item, old, new) for key, item in value.items()}
+        if isinstance(value, list):
+            return [renamed(item, old, new) for item in value]
+        if isinstance(value, str):
+            return new if value == old else value.replace(f'"step_id":"{old}"', f'"step_id":"{new}"')
+        return value
+
+    first = steps(expected)[0]['step_id']
+    assert first and steps(expected)[1]['step_id'] not in ('', first), steps(expected)
+    empty = recapture_host_reply(renamed(expected, first, ''))
+    (out / 'empty_step_id.json').write_text(json.dumps(empty, indent=2) + '\n')
+    assert steps(empty)[0]['step_id'] == '' and empty['data']['runner_result']['steps'][0]['step_id'] == ''
+    findings = O.check_fixture_record(empty)
+    assert findings == [], findings
+    assert validate(empty) == [], validate(empty)
+    records.append({'control': 'empty_step_id', 'rejected': False})
+    for name, value in (('number', 7), ('null', None), ('array', [''])):
+        mutated = copy.deepcopy(empty)
+        steps(mutated)[0]['step_id'] = value
+        (out / f'step_id_{name}.json').write_text(json.dumps(mutated, indent=2) + '\n')
+        findings = O.check_fixture_record(mutated)
+        assert [(f['rule'], f['kind'], f['detail']) for f in findings] == \
+            [('D8', 'malformed_record', 'steps[0] lacks a string step_id')], (name, findings)
+        records.append({'control': 'step_id_' + name, 'rejected': True, 'rule': 'D8', 'findings': findings})
     assert not O.check_fixture_record(expected), 'baseline changed under mutation'
     (out / 'expected-fixture-controls.json').write_text(json.dumps(records, indent=2) + '\n')
     print('disposition expected-fixture controls: ok', flush=True)

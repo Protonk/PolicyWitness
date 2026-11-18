@@ -136,6 +136,10 @@ baseline (missing disposition record, request removed while the cause is kept,
 exit code beside signal without a conflict,
 supported cause replaced by unknown, identical unresolved or swapped step
 answers, with or without differing debug indices), each with its expected rule.
+The same model with its first step renamed to the empty string everywhere it is
+carried is accepted by the oracle and the consumer, because ordinary admission
+allows one empty step ID; a number, a null or an array as the record's
+`step_id` is the single D8 `malformed_record` finding.
 The consumer library reports an envelope of another version as `unsupported`
 and requires the record beside every worker subprocess.
 

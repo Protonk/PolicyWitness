@@ -2580,6 +2580,10 @@
           "description": "Duplicate and unexpected IDs cannot hide missing predictions or trap the join"
         },
         {
+          "id": "validator_empty_step_id",
+          "description": "An ordinary plan's unique empty step ID is associated like any other; an empty-ID record in a plan that does not name it is unexpected, and a null ID stays a structure fault"
+        },
+        {
           "id": "validator_overlong_request",
           "description": "An overlong query is refused at admission before any attempt; the largest admitted probe line stays inside the native validator cap"
         },

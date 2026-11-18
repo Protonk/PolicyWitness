@@ -420,10 +420,10 @@ Ordinary-form action identifiers may be empty. Actor-form action identifiers mus
 ```contract
 grade: "check_read"
 source: [{"path":"runner/Sources/PWRunnerCore/ActorPlan.swift","symbol":"normalizeActorPlan"},{"path":"runner/Sources/PWRunnerCore/ProbeRunner.swift","symbol":"requestMeaningFailure"}]
-pins: "Actor normalization rejects an empty action step_id before constructing its slot map; ordinary meaning admission tests uniqueness without a nonempty condition."
-context: "Static review of the cited producer and assertion branches."
-check: [{"path":"runner/Tests/PWRunnerCoreTests/ReaderCorpusTests.swift","symbol":"runReaderCorpusTests","form":"test"}]
-limits: "The corpus emits separate ordinary-empty and actor-empty declaration neighbours through reporting admission; it is constructed reader evidence."
+pins: "Actor normalization rejects an empty action step_id before constructing its slot map; ordinary meaning admission tests uniqueness without a nonempty condition. A signed-CLI ordinary request whose one step_id is empty finishes with its validator record associated and query_first, as its neighbour with a nonempty identifier does, and two empty identifiers are refused as duplicates. An actor-form request with one empty action step_id is refused with empty_step_id at that action's path through the CLI and direct XPC, with no actor launch and no file from its preceding action; its neighbour with a nonempty identifier runs. The reader corpus supports only the reply readers' acceptance of an ordinary empty identifier and refusal of an actor one."
+context: "Read the cited admission branches, the signed-CLI and direct-XPC controls and the corpus rows."
+check: [{"path":"tests/suites/failure_boundaries/check.py","symbol":"empty_step_id","form":"test"},{"path":"tests/suites/runner_outcome_bad_request/contract.py","symbol":"actor_empty_step_id","form":"test"},{"path":"runner/Tests/PWRunnerCoreTests/ReaderCorpusTests.swift","symbol":"runReaderCorpusTests","form":"test"}]
+limits: "Check reading; no run is credited. The ordinary pair submits one read of an existing file under an allow-default policy. The corpus emits separate ordinary-empty and actor-empty declaration neighbours through reporting admission; it is constructed reader evidence and establishes nothing about request admission."
 ```
 
 ### Support {support: owner}

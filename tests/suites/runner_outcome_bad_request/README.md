@@ -33,6 +33,11 @@ produce the independent file effect used by the accepted-input controls.
   through both entrypoints, reject the retired capture spelling and previous
   request version, and preserve successful application beside unavailable
   capture when the worker dies before normal completion.
+  An actor-form request whose second action has an empty `step_id` is refused
+  with `empty_step_id` at `phases.0.actions.1.step_id` through the CLI and
+  direct XPC: no actor record carries a launch or subprocess, and the file
+  its first action would create is absent. The same request with a nonempty
+  identifier launches the actor and creates the file.
 
 The first two specimens are constructed in `run.sh`; the contract controls
 are in `contract.py`. Every runner refusal asserts an absent subprocess and
