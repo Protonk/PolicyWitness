@@ -1287,3 +1287,40 @@ Observed consequences and open points:
   The survivor's distinct observation is leader exit with a same-group
   descendant. The dispatcher's `pilot_advisory` control and the live pilot
   share the reader but not the conclusion code.
+
+### Follow-up repairs — 2026-11-18
+
+Three points the conversions thread reported were repaired before the product
+threads, each in its own commit, with no build-input change.
+
+| Commit | Repair | Run of record |
+| --- | --- | --- |
+| `8a7596b5` | The pilot driver's advisory conclusion has a permanent constructed control: `tests/fixtures/dispatcher/pilot_conclusion.py`, run in its own process inside `dispatcher/controls`, ten rows with literal expectations (favorable, worsening, no candidate compared, dry run, spread not met, a withheld verdict, an uncovered cell and the reader's real equal-pair output). | `follow-dispatcher-01` / `20261118T175125Z_5925a41b`, 15 pass with `dispatcher/pytest_controls`. |
+| `6bab97ee` | The survivor checker's "CLI exit event missing" refusal was an assertion before any sample existed and could not be reached by a classifier input. It is now a classifier refusal with two constructed rows (sixteen in all); the checker still samples and retains the descendant. | `follow-lifecycle-01` / `20261118T174948Z_4d177e6a`, 4 pass and 1 complete. |
+| `7b8f1f46` | The retirement summary published an always-zero `host_ok` beside outcomes labelled `host_finished`. The always-present key is now `host_finished`; nothing else read the old key. | `follow-retirement-01` / `20261118T175016Z_29b52e15`, complete, twelve finished hosts in each gap; runner list and reconcile empty before and after. |
+
+The conclusion control is not in the pilot controls family, whose count stays
+232: importing the driver inserts the live case's directories into the module
+path and loads about twenty-five modules, which the family would have to
+declare as sources. A seeded fault in a worktree (the driver reporting
+favorable when no candidate was compared) failed `dispatcher/controls` on the
+`no_candidate_compared` row. A worktree control that stops the CLI failed the
+survivor case with the new message and settled its cleanup.
+
+`follow-drift-01` / `20261118T175652Z_823ae4d3`: `source_drift`, 11 pass. It
+is also the first drift run that reads `tests/PYTEST-EVIDENCE-PLAN.md`, a plan
+written at the maintainer's request for the storage and reading cost of
+pytest family evidence; no diagnostic names it.
+
+Because `6bab97ee` changed the checker's classification code, the survivor's
+three disposable live controls were repeated in a worktree at `7b8f1f46`, with
+one patch anchor re-fitted to the moved line and no tracked change:
+
+| Control | Run ID | Result |
+| --- | --- | --- |
+| Descendant ended from outside the product | `20261118T181002Z_a854ac82` | Completes as `exited_before_cleanup` (exit event 16.3 ms before CLI completion); the reply reports `leader_exit_and_eof` with `not_requested`; both enforced judgments favorable; a dependent ran; dispatcher exit 0; battery validation against an independently captured contract reports no problem. |
+| Stopped descendant | `20261118T181006Z_3ab52e9a` | Fails unresolved ("a missing ping is not an observed exit"); dependent blocked; battery validation reports problems. |
+| Lost cleanup observer | `20261118T181013Z_3f30757d` | Fails with staging retained; dependent blocked; battery validation reports problems. |
+
+The outcomes equal those at `4cb2f91b`. The worktree and its runs are removed;
+the receipts are summarized in gitignored scratch.
