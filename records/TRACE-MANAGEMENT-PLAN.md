@@ -1103,6 +1103,13 @@ worktree, no writer in the checkout; the signed app in `dist/` is
 `host1-*` and three `r14-*` directories. The guide, its copies and both publication records are
 byte-unchanged at the freeze. No release was made.
 
+Resumed the same day at `98d01611`: the second half of HOST is in progress
+with one writer, and the machine's user expects to put it to sleep during
+that work. If this note is read with uncommitted changes under
+`runner/Sources`, `docs/` or `tests/`, they are that thread's unverified
+work; its notes are in the scratch directory `host-2/`. Nothing unverified
+is committed, and a run that overlapped sleep is repeated, not credited.
+
 Done in this stage: the Markdown and pilot cohorts; the seam migration; the
 limits texts under the freeze; the four conversions with their follow-ups;
 R4 and R5; R14, taken out of the accounts thread after the pause was first
