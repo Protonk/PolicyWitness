@@ -208,6 +208,7 @@ def run_seam(directory, pw, app, work, identity, attempts, persist):
         direct('ordinary.' + key + '.client', checker.request_for(key, identity, target, checker.ordinary_block(key, state)))
     for name, (block, key) in checker.ORDINARY_BLOCKS.items():
         capture('ordinary.' + name, checker.request_for(key, identity, target, block))
+    capture('ordinary.actor_form', checker.request_for('actor_form', identity, target, checker.ORDINARY_ACTOR[0]))
     # The two substitutions the request block keeps are ordinary submissions: no selected control, no adapter.
     for name, block in checker.UNSELECTED.items():
         capture('unselected.' + name, checker.request_for(name, identity, target, block))

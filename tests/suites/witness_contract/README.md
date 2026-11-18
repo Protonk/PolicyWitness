@@ -282,10 +282,12 @@ not forward or would read as absent (null for the three deadlines and the
 validator path, zero for the pre-ready delay and the signal, a negative delay
 and slot), and through `pw-runner-client run` without a controls object. Two
 more blocks hold a control beside the worker substitution and two controls
-together. Every one must be refused with `inapplicable_field` at
-`_test_overrides` and the control's name, the first in the host's order when
-there are two, with no worker record, no echo and an unchanged target; the
-controller's envelope carries the same refusal.
+together, and one puts `validator_total_timeout_ms` alone in the block of the
+one-actor form of the same read, through plain `run`. Every one must be
+refused with `inapplicable_field` at `_test_overrides` and the control's name,
+the first in the host's order when there are two, with no worker record, no
+echo and an unchanged target; the controller's envelope carries the same
+refusal, and the actor-form reply holds no actor record.
 
 The two substitutions that stay in a request's block are submitted with plain
 `run`, without the adapter. `worker_executable_path` naming an absent file
@@ -303,7 +305,8 @@ the same profile cannot launch its client.
 
 These rows establish the route for the values submitted. They do not vary an
 external runner or every refusal at the client, and the actor form appears
-only in the equipment substitution: `actor_compositions` owns the contrast
+only in the equipment substitution and in one refused block, with one control
+and one entry: `actor_compositions` owns the contrast
 between the ordinary allowance and the actor execution allowance under the
 same controls. A lower bound on a wait duration shows the delay occurred; the two
 duration thresholds for the neighbour are test choices, not product limits.
@@ -318,7 +321,9 @@ changed during the submission; each control's observation at and just inside
 its bound or with the neighbouring cause; each refusal reported at another
 boundary; each request-block refusal located at the whole block, followed by
 a worker, echoed, made through the experimental call or answered as a host
-that still admitted the block would answer; and each `read` row. Every row the checker reports must be failed
+that still admitted the block would answer; the actor-form block followed by
+a launched actor, delivered in the ordinary form or refused at the equipment
+member; and each `read` row. Every row the checker reports must be failed
 by some control.
 
 `tests/lib/file_observation.py` shares only the same-descriptor sampler, sample

@@ -82,6 +82,8 @@ assert set(ORDINARY_INERT) == set(FLAGS)
 # the first of the controls in the host's own order.
 ORDINARY_BLOCKS = dict(mixed=(dict(worker_executable_path=MISSING_WORKER, worker_timeout_ms=5000), 'worker_timeout_ms'),
                        combined=(dict(validator_total_timeout_ms=1, worker_post_apply_hang_ms=2000), 'worker_post_apply_hang_ms'))
+# The actor form decodes the same block: one control in a one-actor request's block, through plain `run`.
+ORDINARY_ACTOR = (dict(validator_total_timeout_ms=1), 'validator_total_timeout_ms')
 # The two substitutions an ordinary request's block keeps, each on its own request form.
 UNSELECTED = dict(worker=dict(worker_executable_path=MISSING_WORKER),
                   actor_equipment=dict(actor_equipment_executable_paths=dict(selected=MISSING_EQUIPMENT)))
@@ -115,7 +117,7 @@ def request_for(name, identity, target, block=None):
     document = two_reads(identity, target) if name == 'validator_io_timeout_ms' else expected_document(identity, target)
     if name == 'early_refusal':
         document['misspelled_intent'] = True
-    if name == 'actor_equipment':
+    if name in ('actor_equipment', 'actor_form'):
         document = actor_form(document)
     if block is not None:
         document['_test_overrides'] = block
@@ -440,11 +442,14 @@ def evaluate(state):
 
     # A control in an ordinary request's block: refused at its member through plain `run` and through
     # the runner client's ordinary call, before any worker, with a value that would act and with an inert one.
-    def ordinary_rows(label, block, key, *, client=False):
+    def ordinary_rows(label, block, key, *, client=False, request=None):
         record = mapping(scenarios.get(label))
-        refusal, wanted = ordinary_refusal(key), request_for(key, identity, target, block)
+        refusal, wanted = ordinary_refusal(key), request_for(request or key, identity, target, block)
         argv = record.get('argv') if isinstance(record.get('argv'), list) else []
         ordinary = argv[1:2] == ['run'] and '--experimental-controls' not in argv and record.get('delivered_document') == wanted
+        if request == 'actor_form':
+            # The delivered request is the actor form, and the reply holds no actor record.
+            ordinary = ordinary and isinstance(wanted.get('actors'), list) and not mapping(record.get('reply')).get('actors')
         if client:
             received = client_received(record, identity)
             r.check(label + '.capture', received, 'an admitted client capture carrying one host reply')
@@ -463,6 +468,7 @@ def evaluate(state):
         ordinary_rows('ordinary.' + key + '.client', ordinary_block(key, state), key, client=True)
     for name, (block, key) in ORDINARY_BLOCKS.items():
         ordinary_rows('ordinary.' + name, block, key)
+    ordinary_rows('ordinary.actor_form', *ORDINARY_ACTOR, request='actor_form')
 
     # The two substitutions an ordinary request's block still carries, through plain `run`.
     record = mapping(scenarios.get('unselected.worker'))

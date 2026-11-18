@@ -31,9 +31,9 @@ DEPENDENT = dict(neighbour=('baseline',), zero_controls=('echo', 'neighbour'),
                     'client.fractional': ('refusal',)},
                  **{'unselected.' + name: ('substitution',) for name in checker.UNSELECTED},
                  **{'ordinary.' + key + '.' + form: ('refusal',) for key in checker.FLAGS for form in ('cli', 'inert', 'client')},
-                 **{'ordinary.' + name: ('refusal',) for name in checker.ORDINARY_BLOCKS})
+                 **{'ordinary.' + name: ('refusal',) for name in (*checker.ORDINARY_BLOCKS, 'actor_form')})
 ORDINARY_RUNS = [*('ordinary.' + key + '.' + form for key in checker.FLAGS for form in ('cli', 'inert')),
-                 *('ordinary.' + name for name in checker.ORDINARY_BLOCKS)]
+                 *('ordinary.' + name for name in checker.ORDINARY_BLOCKS), 'ordinary.actor_form']
 ORDINARY_CLIENT = ['ordinary.' + key + '.client' for key in checker.FLAGS]
 NATIVE = ['native_range.' + key for key in checker.NATIVE_RANGE]
 
@@ -263,6 +263,9 @@ def build():
     for name, (block, key) in checker.ORDINARY_BLOCKS.items():
         scenarios['ordinary.' + name] = refused_run('ordinary.' + name, checker.request_for(key, IDENTITY, TARGET, block),
                                                     checker.ordinary_refusal(key))
+    block, key = checker.ORDINARY_ACTOR
+    scenarios['ordinary.actor_form'] = refused_run('ordinary.actor_form', checker.request_for('actor_form', IDENTITY, TARGET, block),
+                                                   checker.ordinary_refusal(key))
     denied = envelope(2, 'tool_error', runner_client=None)
     denied['result']['error'] = 'failed to run pw-runner-client: failed to launch "' + CLIENT + '": Operation not permitted (os error 1)'
     scenarios['denied_run'] = dict(argv=[*denial, 'test-input', 'run', '/constructed/denied-run.json'], exit=2, stderr='',
@@ -442,6 +445,15 @@ def controls():
     yield 'ordinary.validator_executable_path.cli:type_refusal', lambda s: scenario(
         s, 'ordinary.validator_executable_path.cli')['reply']['request_failure'].update(code='type_mismatch'), \
         failed('ordinary.validator_executable_path.cli.refusal')
+    # The actor-form block: the refusal precedes every actor, and the request delivered is the actor form.
+    yield 'ordinary.actor_form:actor_launched', lambda s: scenario(s, 'ordinary.actor_form')['reply'].update(
+        actors=[dict(actor_id='subject', setup_status='applied', launch=dict(pid=WORKER_PID), subprocess=worker())]), \
+        failed('ordinary.actor_form.refusal')
+    yield 'ordinary.actor_form:ordinary_form', lambda s: scenario(s, 'ordinary.actor_form').update(
+        delivered_document=checker.request_for('validator_total_timeout_ms', IDENTITY, TARGET, dict(checker.ORDINARY_ACTOR[0]))), \
+        failed('ordinary.actor_form.refusal')
+    yield 'ordinary.actor_form:equipment_member', lambda s: scenario(s, 'ordinary.actor_form')['reply']['request_failure'].update(
+        path=['_test_overrides', 'actor_equipment_executable_paths']), failed('ordinary.actor_form.refusal')
 
     # The client's own submission.
     for label in ORDINARY_CLIENT:
