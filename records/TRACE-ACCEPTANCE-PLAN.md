@@ -275,3 +275,91 @@ CLI/XPC coverage. This exception is already management's decision, not a new
 retirement inferred from rehearsal. After executable migration, compare this
 source prediction with actual flags, adapter, receipts and retired paths;
 that implemented-arrangement comparison is intentionally pending at the pause.
+
+## Implemented arrangements — 2026-11-17
+
+Status: comparisons of the preparation rehearsals with what the integrated
+stage implemented. Each subsection names its revision. Observed results are
+separated from predictions; a rehearsal whose hypothesis was not selected
+stays a hypothesis.
+
+### Validator-substitution seam, as implemented
+
+Compared at `eeb76c1b`. The rehearsal's hypothesis, retiring validator
+substitution, is still a hypothesis: the migration kept all eight controls.
+What can be compared is the predicted arrangement with the implemented one,
+and what retiring one control would now touch.
+
+Observed. The old and new routes were run on the same 104 scenarios; 103 are
+equal in component execution, intervention, independent effects, fault
+rejection, identity, command accounting and cleanup, and one changed route
+(below). The evidence is local development output named in the overhaul plan.
+
+Where availability is decided, as implemented:
+
+- `Control` in `controller/src/interface/run_args.rs` decides a control's
+  flag, JSON key and value rule.
+- The host's `PWRunnerTestOverrides.experimentalControls` list decides both
+  admission of a member in the controls object and refusal of that member in
+  an ordinary request's block. The prediction named two host conditions
+  (experimental admission, old-key refusal); they are one list read twice.
+
+What only transmits: the controller's controls object and submission
+arguments, the client's experimental submission, the XPC entry point
+`runReservedExperiment`, the host's submission decoding and the service's
+validator-path selection. None decides when substitution is allowed.
+
+What retiring validator substitution would now touch, from source reading:
+one `Control` row; one member of the host list and of the record, after which
+the old key in an ordinary block is refused as an unknown member, a different
+code from today's `inapplicable_field`; the dossier's validator-control
+selection; one row of the experimental table in `runner/README.md`, which the
+drift rule compares with the host list; the control's rows in
+`witness_contract/test_input` and their rejecting controls; and the callers
+in the overhaul's caller map that use a substituted transcript. No help card
+names a control, so the predicted help edit does not exist. The contract
+rules `request.overrides.experimental`, `request.overrides.test_input_run`
+and `request.overrides.ordinary_refusal` state the mechanism without listing
+the control's meaning and would need review, not necessarily an edit.
+
+Decisions removed by the migration: the eight keys' separate type and domain
+outcomes on an ordinary submission (one presence rule replaces them: the
+corpus example with a fractional value is now refused for presence, not for
+type), and the caller-written override dictionaries (callers give the adapter
+an ordinary request and a controls mapping).
+
+Decisions retained: each control's native rejection boundary; the ordinary
+worker-timeout floor against the actor execution allowance; the reading of
+the echo as supplied intent, never activation (the activation rows read the
+intervention itself); the two unselected worker substitutions.
+
+Work the prediction did not name, displaced or added:
+
+- Value domains differ by route. A command-line argument cannot carry a NUL,
+  so one admission scenario travels through the client's controls object and
+  the adapter refuses a NUL for the controller; a fractional value is a usage
+  refusal for the flag and a `type_mismatch` at the client. One invalid value
+  now has route-specific expectations that are maintained separately.
+- The controller's `run` had its own reading of the request's validator key
+  for the dossier. It was a second, unlisted reader of the old key and was
+  retired with the route.
+- A Swift admission test submitted an encoded override through the ordinary
+  call; it was a live submission, not a direct construction, and moved to the
+  experimental call.
+- The client capture does not record which XPC call was made. A reader
+  identifies an experimental submission from the client's argument vector and
+  from the reply's echo, which is reader inference the old arrangement did
+  not need.
+- The limits manifest names the controls in eight texts copied into the
+  guide. Correcting the owner while the guide is frozen is the first real
+  divergence between them, and it was blocked by controls that presumed a
+  copy of the checkout is publication-fresh. The correction therefore carries
+  a revision of those controls. This is publication-boundary maintenance the
+  rehearsal predicted in kind but not in place.
+
+Judgment. The migration removed one family of independently maintained
+decisions (ordinary-route activation semantics per key) and concentrated
+availability in two declarations. It added a route-dependent value domain,
+an adapter, per-control refusal rows and three contract rules. Independent
+review is still needed for each control's native boundary and for every
+caller's own expectation. No saving is claimed beyond the decisions named.
