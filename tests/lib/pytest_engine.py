@@ -179,7 +179,8 @@ class Journal:
             raise ValueError('pw_inputs requires collected command scope or outcome specification')
         recorder = self.inputs[self.current]
         yield recorder
-        recorder.capture_tracked('before fixture cleanup')
+        # Other fixtures own their cleanup order and any capture needed before it.
+        recorder.capture_tracked('input recorder finalization')
 
     def pytest_runtest_logstart(self, nodeid, location):
         self.current = next(i['id'] for i in self.manifest_items if i['nodeid'] == nodeid)

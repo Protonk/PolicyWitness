@@ -145,6 +145,11 @@ if fault == 'null':
         parents = {c['id']:c for c in run['case_results']}
         assert parents['fixture/neighbor']['status'] == 'pass', (name, parents)
         assert parents['fixture/dependent']['status'] == ('pass' if accepted else None), (name, parents)
+        assert (evidence / 'suites/fixture/neighbor/artifacts/executed').read_text().strip() == 'neighbor'
+        dependency_effect = evidence / 'suites/fixture/dependent/artifacts/executed'
+        assert dependency_effect.exists() is accepted, (name, dependency_effect)
+        if accepted:
+            assert dependency_effect.read_text().strip() == 'dependent'
         if accepted:
             assert parents['fixture/subject']['status'] == 'complete', (name, parents)
             assert run['counts'] == dict(**{'pass':2, 'fail':0, 'skip':0}, total=2), (name, run['counts'])

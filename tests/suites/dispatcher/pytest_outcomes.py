@@ -113,7 +113,15 @@ def test_pure(pw_equipment, pw_inputs):
     sentinel = root / 'tests/suites/sentinel/run.sh'
     sentinel.parent.mkdir(parents=True)
     sentinel.write_text('#!/bin/bash\nset -euo pipefail\nsource tests/lib/case.sh\ntest_begin sentinel later\nprintf observed > "$PW_TEST_ARTIFACTS/external-start"\ntest_pass "independent later case completed"\n')
+    sentinel.chmod(0o755)
     return root
+
+
+def neighbor(result, out, name):
+    require(result['case_results'][-1]['id'] == 'sentinel/later'
+            and result['case_results'][-1]['status'] == 'pass', name + ': independent neighbor did not run')
+    require((out / 'suites/sentinel/later/artifacts/external-start').read_bytes() == b'observed',
+            name + ': independent neighbor marker absent or changed')
 
 
 def run(control, integration, name, source=SOURCE, expected=0, *, second_family=False):
@@ -122,7 +130,7 @@ def run(control, integration, name, source=SOURCE, expected=0, *, second_family=
     write(root.parent / 'expected-producer.json', independently_expected)
     out, result = integration.run(root, expected=expected, environment={'PW_TEST_QUIET':'1'})
     family = read(out / 'suites' / FAMILY / 'family.json')
-    require(result['case_results'][-1]['status'] == 'pass', name + ': independent neighbor did not run')
+    neighbor(result, out, name)
     require(read(out / 'suites' / FAMILY / 'ownership.json')['closed'], name + ': ownership unsettled')
     return root, out, result, family, independently_expected
 
@@ -213,7 +221,8 @@ def exercise(control, integration):
     require(items[1]['assessment']['counts']['advisory'] == dict(favorable=0, unfavorable=1), 'advisory judgment count')
     require([row['assessment']['counts']['informational'] for row in items] == [0,0,1,1], 'informational completions counted as judgments')
     require([bool({op for phase in row['phases'].values() for op in phase['operations']}) for row in items] == [False,False,False,True], 'pure/commanded scopes differ')
-    require(not problems(result, expected, out), 'battery reader refused valid mixed outcome family')
+    errors = problems(result, expected, out)
+    require(not errors, 'battery reader refused valid mixed outcome family: ' + repr(errors))
     terminal = (root.parent / 'run-invocation/stdout').read_text()
     require('ADVISORY comparison: unfavorable' in terminal and 'Family report:' in terminal, 'quiet display concealed unfavorable advisory')
     ownership = read(out / 'suites' / FAMILY / 'ownership.json')
@@ -230,8 +239,8 @@ def exercise(control, integration):
     app = Path('/controlled/extracted/PolicyWitness.app')
     candidate['configuration']['app_dir'] = str(app)
     candidate['artifact_integrity'] = dict(valid_before=True, unchanged=True)
-    require(not release_accept.battery_problems(candidate, app, expected=expected, evidence=out),
-            'candidate battery refused valid non-gating judgment')
+    errors = release_accept.battery_problems(candidate, app, expected=expected, evidence=out)
+    require(not errors, 'candidate battery refused valid non-gating judgment: ' + repr(errors))
     acceptance = root.parent / 'portable-source'
     shutil.copytree(out, acceptance / 'tests')
     write(acceptance / 'acceptance.json', dict(schema_version=3, ok=True, execution_contract=expected))
@@ -258,7 +267,8 @@ def exercise(control, integration):
     second = read(pair_out / 'suites/observations/pure/ownership.json')
     require(len(first['commands']) == 1 and second['commands'] == [] and first['closed'] and second['closed'],
             'family ownership includes another family command or conceals unresolved work')
-    require(not problems(pair_result, pair_expected, pair_out), 'two-family ownership refused by candidate reader')
+    errors = problems(pair_result, pair_expected, pair_out)
+    require(not errors, 'two-family ownership refused by candidate reader: ' + repr(errors))
     require(pair_result['outcomes']['nested']['experiments'] == 4 and pair_result['outcomes']['nested']['informational'] == 2,
             'two-family nested scope double counts parent completion')
     control.note('commanded then pure families have distinct ownership accounts within one run', output=str(pair_out))
@@ -273,7 +283,7 @@ def exercise(control, integration):
     require(pure_failed['items'][0]['phases']['call']['outcome'] == 'failed'
             and 'independently expected pure value' in pure_failed['items'][0]['phases']['call']['diagnostic'],
             'incorrect pure enforced fact was not its designated assertion failure')
-    require(pure_result['case_results'][-1]['status'] == 'pass', 'pure enforced failure suppressed valid neighbor')
+    neighbor(pure_result, pure_out, 'pure enforced failure')
     control.note('pure ordinary assertions preserve enforced pass/failure authority without invented judgment counts', output=str(pure_out))
     for mode, scope, expected_exit in (('commanded-enforced','recorded',0), ('pure-acquired-command','none',1)):
         scoped_root = fixture(control, mode, second_family=True)
@@ -287,7 +297,7 @@ def exercise(control, integration):
         owned = read(scoped_out / 'suites/observations/pure/ownership.json')
         require(len(owned['commands']) == 1 and owned['closed'], 'ordinary commanded item lost complete own command account')
         require(bool(problems(scoped_result, scoped_expected, scoped_out)) == bool(expected_exit), 'command scope admission differs at battery reader')
-        require(scoped_result['case_results'][-1]['status'] == 'pass', 'command scope fault suppressed neighbor')
+        neighbor(scoped_result, scoped_out, mode)
         if expected_exit:
             require(any('declared none/recorded' in error for error in scoped['errors']), 'undeclared command has no designated validity failure')
         else:

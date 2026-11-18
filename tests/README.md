@@ -690,8 +690,10 @@ declaration and commanded items with `pw_commands('recorded')`. These retain
 ordinary pytest assertions. Explicit observation items declare the same command
 scope in `pw_contract`. Pure items retain phase and input evidence with an empty
 operation set; they acquire no dummy command owner. `pw_inputs` captures declared
-files and directories through the shared input/blob recorder. Fixtures capture
-needed bytes before their cleanup, without claiming that snapshots prove use.
+files and directories at phase boundaries and its own finalization through the
+shared input/blob recorder. Fixtures explicitly capture needed bytes before
+their own cleanup; the recorder does not order other fixture finalizers or
+claim that snapshots prove use.
 Modules declare additional source dependencies in `PW_SOURCE_FILES`.
 Other families use their catalog commands. `tests/setup-pytest.sh` explicitly
 installs the exact wheels in `tests/requirements-pytest.lock` into an isolated,
