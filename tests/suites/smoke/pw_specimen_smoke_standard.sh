@@ -37,18 +37,36 @@ if [[ "${RC}" -ne 0 ]]; then
   test_fail "policy-witness run failed (rc=${RC})" "{\"stdout\":\"${RUN_STDOUT}\",\"stderr\":\"${RUN_STDERR}\"}"
 fi
 
-"${PW_PYTHON}" -B -S -P - "${RUN_STDOUT}" <<'PY'
+ASSERT_LOG="${PW_TEST_ARTIFACTS}/assertions.log"
+ASSERT_RC=0
+"${PW_PYTHON}" -B -S -P - "${RUN_STDOUT}" >"${ASSERT_LOG}" 2>&1 <<'PY' || ASSERT_RC=$?
 import json
 import sys
 from pathlib import Path
 
+# A failed expectation about the envelope is this case's reported failure: it
+# prints the expectation and exits 3. Any other exit is not a product verdict.
+def refuse(message):
+    print(message, file=sys.stderr)
+    raise SystemExit(3)
+
 env = json.loads(Path(sys.argv[1]).read_text(encoding="utf-8"))
-assert env.get("kind") == "run"
-assert env.get("result", {}).get("ok") is True
+if env.get("kind") != "run":
+    refuse(f"expected kind=run (got {env.get('kind')!r})")
+if env.get("result", {}).get("ok") is not True:
+    refuse(f"expected top-level ok=true (got {env.get('result')!r})")
 
 runner_kind = (((env.get("data") or {}).get("specimen") or {}).get("runner_provenance") or {}).get("runner_kind")
 if runner_kind != "standard":
-    raise SystemExit(f"expected runner_kind='standard' (got {runner_kind!r})")
+    refuse(f"expected runner_kind='standard' (got {runner_kind!r})")
 PY
+if [[ "${ASSERT_RC}" -eq 3 ]]; then
+  cat "${ASSERT_LOG}" >&2 || true
+  test_fail "run envelope expectation failed: $(head -n 1 "${ASSERT_LOG}") (log: ${ASSERT_LOG})" "{\"stdout\":\"${RUN_STDOUT}\",\"stderr\":\"${RUN_STDERR}\",\"assertions\":\"${ASSERT_LOG}\"}"
+elif [[ "${ASSERT_RC}" -ne 0 ]]; then
+  # An unexpected error in the block ends the script without a terminal report.
+  cat "${ASSERT_LOG}" >&2 || true
+  exit "${ASSERT_RC}"
+fi
 
 test_pass "run smoke ok (standard default)" "{}"

@@ -21,6 +21,10 @@ and invoked by the BYOXPC runner suite.
 ## Success criteria
 
 - Specimen smoke scripts exit 0 and produce `result.ok=true`.
+- A failed envelope expectation in a specimen script ends its case `fail` with
+  the expectation and `artifacts/assertions.log` named in the report. Any other
+  error in that assertion block ends the script without a terminal report,
+  which the dispatcher records as an unrun case and harness errors.
 - Caller-auth success requires both positive file effects and bounded negative
   responses with marker bytes preserved through fixture process cleanup.
   Rejected clients retain client-capture acquisition errors until the bounded

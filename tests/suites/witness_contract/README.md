@@ -986,7 +986,10 @@ process cleanup and container absence are established.
   against re-introduction of removed request fields (`instrumentation`) and
   runner modes (`runner.mode=debuggable`).
 - `happy_path_baseline.sh` is the regression sentinel — it must pass
-  in every run. If it fails, stop and investigate before continuing.
+  in every run. If it fails, stop and investigate before continuing. A failed
+  envelope expectation ends it `fail`, naming the expectation and
+  `artifacts/assertions.log`; any other error in its assertion block ends the
+  script without a terminal report, which the dispatcher records as unrun.
 - Tests are stateless: named for what they assert, not for any
   plan-row number.
 

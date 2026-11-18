@@ -22,6 +22,11 @@ exercise populated attempt slots.
   `partial_steps == false`.
 - `runner_result.pid == runner_subprocess.pid`.
 
+A criterion that does not hold ends the case `fail` with the expectation and
+`artifacts/assertions.log` named in the report. Any other error in the
+assertion block ends the script without a terminal report, which the
+dispatcher records as an unrun case and harness errors.
+
 ## Fixtures
 
 - Specimen generated inline by `run.sh`.

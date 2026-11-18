@@ -53,45 +53,63 @@ if [[ "${RC}" -ne 0 ]]; then
   test_fail "policy-witness run failed (rc=${RC})" "{\"stdout\":\"${RUN_STDOUT}\",\"stderr\":\"${RUN_STDERR}\"}"
 fi
 
-"${PW_PYTHON}" -B -S -P - "${RUN_STDOUT}" "${ROOT_DIR}/tests/lib" <<'PY'
+ASSERT_LOG="${PW_TEST_ARTIFACTS}/assertions.log"
+ASSERT_RC=0
+"${PW_PYTHON}" -B -S -P - "${RUN_STDOUT}" "${ROOT_DIR}/tests/lib" >"${ASSERT_LOG}" 2>&1 <<'PY' || ASSERT_RC=$?
 import json
 import sys
 from pathlib import Path
 
 sys.path.insert(0, sys.argv[2])
-from document_versions import require_supported
+from document_versions import version_errors
 from build_context import candidate_contract
 
+# A failed expectation about the envelope is this case's reported failure: it
+# prints the expectation and exits 3. Any other exit is not a product verdict.
+def refuse(message):
+    print(message, file=sys.stderr)
+    raise SystemExit(3)
+
 env = json.loads(Path(sys.argv[1]).read_text(encoding="utf-8"))
-require_supported(env, candidate_contract())
+unsupported = version_errors(env, candidate_contract())
+if unsupported:
+    refuse(unsupported[0])
 if env.get("kind") != "run":
-    raise SystemExit(f"expected kind=run (got {env.get('kind')!r})")
+    refuse(f"expected kind=run (got {env.get('kind')!r})")
 if env.get("result", {}).get("ok") is not True:
-    raise SystemExit(f"expected top-level ok=true (got {env.get('result')!r})")
+    refuse(f"expected top-level ok=true (got {env.get('result')!r})")
 
 runner = env.get("data", {}).get("runner_result") or {}
 if runner.get("normalized_outcome") != "finished":
-    raise SystemExit(f"expected runner normalized_outcome=finished (got {runner.get('normalized_outcome')!r})")
+    refuse(f"expected runner normalized_outcome=finished (got {runner.get('normalized_outcome')!r})")
 # The point of this suite is the apply/isolation, so witness it: the worker
 # must report it actually self-applied the (deny default) policy, not merely
 # reply cleanly. Without this, a no-op / short-circuited sandbox_apply would
 # pass green.
 if runner.get("sandboxed_after_apply") is not True:
-    raise SystemExit(
+    refuse(
         "expected sandboxed_after_apply=true — worker must witness it applied the "
         f"policy, not just reply (got {runner.get('sandboxed_after_apply')!r})"
     )
 sub = runner.get("runner_subprocess") or {}
 if not sub:
-    raise SystemExit("missing runner_subprocess")
+    refuse("missing runner_subprocess")
 if runner.get("pid") != sub.get("pid"):
-    raise SystemExit(f"runner pid should name worker pid (runner={runner.get('pid')!r}, sub={sub.get('pid')!r})")
+    refuse(f"runner pid should name worker pid (runner={runner.get('pid')!r}, sub={sub.get('pid')!r})")
 if sub.get("exit_code") != 0 or sub.get("term_signal") is not None:
-    raise SystemExit(f"expected clean worker exit (got {sub!r})")
+    refuse(f"expected clean worker exit (got {sub!r})")
 if sub.get("partial_steps") is not False:
-    raise SystemExit(f"expected partial_steps=false (got {sub.get('partial_steps')!r})")
+    refuse(f"expected partial_steps=false (got {sub.get('partial_steps')!r})")
 if runner.get("steps") != []:
-    raise SystemExit(f"expected empty steps (got {runner.get('steps')!r})")
+    refuse(f"expected empty steps (got {runner.get('steps')!r})")
 PY
+if [[ "${ASSERT_RC}" -eq 3 ]]; then
+  cat "${ASSERT_LOG}" >&2 || true
+  test_fail "run envelope expectation failed: $(head -n 1 "${ASSERT_LOG}") (log: ${ASSERT_LOG})" "{\"stdout\":\"${RUN_STDOUT}\",\"stderr\":\"${RUN_STDERR}\",\"assertions\":\"${ASSERT_LOG}\"}"
+elif [[ "${ASSERT_RC}" -ne 0 ]]; then
+  # An unexpected error in the block ends the script without a terminal report.
+  cat "${ASSERT_LOG}" >&2 || true
+  exit "${ASSERT_RC}"
+fi
 
 test_pass "v2 deny-default worker replied through unsandboxed host" "{}"
