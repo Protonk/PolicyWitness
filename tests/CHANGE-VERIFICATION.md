@@ -929,8 +929,10 @@ most, including its sensitivity control, and needs its own announced window.
 - **Purpose:** Observe 48 ordinary allow-default empty-plan requests through the
   public CLI, twelve at each minimum inter-call gap of 0, 10, 30 and 60
   milliseconds. Record each outcome separately; there is no required success
-  ratio, retry or inferred cause. A pass means completed observation, not BYOXPC
-  reliability acceptance.
+  ratio, retry or inferred cause. The case ends `complete` with one
+  informational observation and no judgment: a completed observation, not BYOXPC
+  reliability acceptance. An incomplete sequence, an invalid envelope, a missing
+  direct exit, a watchdog or logging failure, or unverified removal ends it `fail`.
 - **When to run:** Investigating request/retirement timing or comparing the same
   observation against selected baseline and candidate apps via `PW_APP_DIR`.
 - **Equipment:** Signed app, matching Developer ID, GUI launchd session and

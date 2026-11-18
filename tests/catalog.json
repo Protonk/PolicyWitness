@@ -2257,7 +2257,7 @@
         },
         {
           "id": "retirement_observations",
-          "description": "Complete a bounded 48-request retirement observation with preserved outcomes and process/log evidence; passing does not establish BYOXPC reliability",
+          "description": "Record a bounded 48-request retirement observation without a verdict, with preserved outcomes and process/log evidence; completion does not establish BYOXPC reliability",
           "default": false,
           "requires": [
             "app",
@@ -2267,7 +2267,17 @@
           "command": [
             "bash",
             "tests/suites/runner_byoxpc/opt_in/retirement_observations.sh"
-          ]
+          ],
+          "outcome_contract": {
+            "schema_version": 1,
+            "observations": [
+              {
+                "id": "request_sequence",
+                "promise": "Retain the 48 ordinary empty-plan requests at their declared gaps with each raw capture, host outcomes and client transport terminals counted separately per gap, envelope validation, sampled host and worker generations with direct exit observations, the unified-log capture record, source and app identities, and the summary."
+              }
+            ],
+            "judgments": []
+          }
         },
         {
           "id": "reservation_controls",

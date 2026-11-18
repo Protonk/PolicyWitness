@@ -139,9 +139,18 @@ interpretation. A transport failure need not contain a host result.
 the selected app's provenance/inventory and case sources, generation samples and
 direct exit receipts, the narrowly filtered unified-log stream, and a summary
 even after an exception. Log attachment is asynchronous; no initial delay or
-complete-event-coverage claim is made. A pass means the observation completed
-with valid accounting and verified removal of the one owned session. It does
-not establish BYOXPC reliability. Select a baseline or candidate with `PW_APP_DIR`
+complete-event-coverage claim is made.
+
+The case declares one informational observation, `request_sequence`, in the
+catalog (`outcome_contract`) and no judgment, because no outcome has an
+expected value. It ends `complete`, which contributes no passing product
+assertion: the observation completed with valid accounting and the one owned
+session's removal was verified. It does not establish BYOXPC reliability. The
+48-request sequence, declared gaps, valid envelopes, direct exits, the capture
+watchdog, logging and service removal remain required, and a failure of any of
+them ends the case `fail`; the observation is published before session
+cleanup, so it stays readable when cleanup fails. Select a baseline or
+candidate with `PW_APP_DIR`
 and use separate output directories to run the identical case against each app.
 
 `bad_neighbor_claims` is the coexistence acceptance control. Schedule A spaces

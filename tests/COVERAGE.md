@@ -311,7 +311,8 @@ and durable cleanup.
 `runner_byoxpc/retirement_observations` separately records 48 ordinary empty-plan
 requests at predeclared gaps, public envelopes, sampled host/worker generations,
 direct observed exits and Unified Logging. It separates host outcomes from
-client transport terminals without interpreting cause. Passing establishes
+client transport terminals without interpreting cause. It reports one
+informational observation with no judgment: `complete` establishes
 complete observational accounting and owned cleanup, not BYOXPC reliability.
 `runner_byoxpc/reservation_controls` uses instrumented host/client copies to
 exercise credential binding, expiry, abandonment, safe acquisition retry and

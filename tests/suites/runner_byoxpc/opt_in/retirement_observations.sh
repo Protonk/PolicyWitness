@@ -20,7 +20,17 @@ export PW_RUNNER_REGISTRY="$("${PW_PYTHON}" -B -S -P -c 'import json,sys; print(
 test_step observe "capture 48 ordinary empty-plan requests at fixed gaps, generations and direct exit observations"
 test_check_python "${PW_TEST_ARTIFACTS}/observations.log" "retirement experiment incomplete" \
   "${ROOT_DIR}/tests/suites/runner_byoxpc/opt_in/retirement_observations.py" "$PW_BIN" "$PW_TEST_ARTIFACTS"
+# The outcomes carry no expected value: publish the completed sequence as an
+# observation before cleanup, so a later cleanup failure leaves it readable.
+RETIREMENT="${PW_TEST_ARTIFACTS}/retirement"
+test_observe request_sequence "$("${PW_PYTHON}" -B -S -P -c 'import json, sys
+summary = json.load(open(sys.argv[1]))
+print(json.dumps(dict(requests=len(summary["requests"]), complete=summary["complete"],
+                      outcomes_by_gap_ms=summary["outcomes_by_gap_ms"], verdict=None,
+                      meaning=summary["meaning"], interpretation=summary["interpretation"]), sort_keys=True))' "${RETIREMENT}/summary.json")" \
+  "${RETIREMENT}/plan.json" "${RETIREMENT}/summary.json" "${RETIREMENT}/receipts.json" \
+  "${RETIREMENT}/processes.json" "${RETIREMENT}/unified-log-capture.json" "${RETIREMENT}/identity.json"
 test_check_python "${PW_TEST_ARTIFACTS}/cleanup.log" "BYOXPC cleanup failed" \
   "$SESSION_TOOL" cleanup "$PW_BIN" "${PW_TEST_ARTIFACTS}/session.json"
 trap - EXIT
-test_pass "observational experiment completed and service removal verified; outcomes do not establish BYOXPC reliability"
+test_complete "48-request observation recorded without a verdict and service removal verified; outcomes do not establish BYOXPC reliability"

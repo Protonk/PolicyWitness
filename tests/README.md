@@ -594,7 +594,8 @@ BYOXPC sessions use durable private registries. The opt-in
 `runner_byoxpc/default_location` case alone exercises the shared default registry;
 `bad_neighbor_claims` and `single_use` establish re-acquisition under contention.
 `retirement_observations` records a fixed ordinary-request sequence and sampled
-generation exits; its pass means completed observation, not reliable acquisition.
+generation exits as an informational observation; its `complete` status means
+completed observation, not reliable acquisition.
 
 ## Comparing native builds
 
