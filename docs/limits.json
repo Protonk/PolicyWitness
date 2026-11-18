@@ -608,7 +608,7 @@
       "value": 1023,
       "unit": "UTF-8 bytes",
       "refusal_field": "`_test_overrides.worker_executable_path`, `_test_overrides.validator_executable_path` or `_test_overrides.actor_equipment_executable_paths.{role}`",
-      "counting": "Each executable override path. Every path that fails byte or NUL admission is omitted from a refusal echo, even when another field is refused first. Actor equipment overrides are keyed by selected or unentitled role.",
+      "counting": "Each executable override path: `worker_executable_path` and each `actor_equipment_executable_paths` role in a request's `_test_overrides` block, and the test control `--validator-executable-path` of `policy-witness test-input run`. Every path that fails byte or NUL admission is omitted from a refusal echo, even when another field is refused first. Actor equipment overrides are keyed by selected or unentitled role.",
       "effect": "Excess returns `bad_request` with `admission_failure`.",
       "control": "Fixed.",
       "sources": [
@@ -791,7 +791,7 @@
       "unit": "milliseconds",
       "counting": "Elapsed monotonic publication wait for ordinary execution, starting after the readiness wait and excluding synchronous validator collection. Actor execution uses actor_execution_allowance instead.",
       "effect": "Expiry can yield `runner_timeout` with partial evidence and reported cleanup results.",
-      "control": "Fixed; `_test_overrides.worker_timeout_ms` replaces the ordinary default with a floor of 50 ms and no ceiling. It does not change the actor schedule allowance.",
+      "control": "Flag `--worker-timeout-ms` of `policy-witness test-input run`, a test control, replaces the ordinary default with a floor of 50 ms and no ceiling. It does not change the actor schedule allowance. `policy-witness run` has no flag for this value.",
       "sources": [
         {
           "path": "runner/Sources/PWRunnerCore/CWorkerRequestPlanning.swift",
@@ -826,7 +826,7 @@
       "title": "Ordinary worker timeout override floor",
       "value": 50,
       "unit": "milliseconds",
-      "counting": "Minimum ordinary worker publication-wait allowance selected by `_test_overrides.worker_timeout_ms`; zero and negative overrides select this floor.",
+      "counting": "Minimum ordinary worker publication-wait allowance selected by the test control `--worker-timeout-ms` of `policy-witness test-input run`; zero and negative overrides select this floor.",
       "effect": "An override below this value is clamped before the ordinary worker input is built. Actor scheduling uses its own fixed allowance.",
       "control": "Fixed; a larger supplied override is used without a ceiling.",
       "sources": [
@@ -929,7 +929,7 @@
       "unit": "milliseconds",
       "counting": "One aggregate allowance for validator planning and synchronous collection across all actor phases. This is the actor counterpart of phase_collection_wait, not an additional pool.",
       "effect": "Exhaustion marks later phases `budget_exhausted`; earlier collections are retained.",
-      "control": "Fixed; `_test_overrides.validator_total_timeout_ms` can reduce it to at least 1 millisecond.",
+      "control": "Flag `--validator-total-timeout-ms` of `policy-witness test-input run`, a test control, can reduce it to at least 1 millisecond. `policy-witness run` has no flag for this value.",
       "sources": [
         {
           "path": "runner/Sources/PWRunnerCore/PWRunnerActors.swift",
@@ -1192,7 +1192,7 @@
       "title": "Validator I/O test override floor",
       "value": 50,
       "unit": "milliseconds",
-      "counting": "Minimum proposed `_test_overrides.validator_io_timeout_ms`.",
+      "counting": "Minimum deadline proposed from the test control `--validator-io-timeout-ms` of `policy-witness test-input run`.",
       "effect": "Smaller supplied values propose 50 ms; the reply mirrors the supplied value. The remaining aggregate collection allowance caps the effective deadline, including below this floor.",
       "control": "Fixed.",
       "sources": [
@@ -1219,7 +1219,7 @@
       "unit": "milliseconds",
       "counting": "Default elapsed monotonic deadline for one phase’s query delivery and verdict collection, capped by the remaining aggregate collection allowance.",
       "effect": "Received verdicts survive an I/O timeout; cleanup results remain reported.",
-      "control": "Fixed; `_test_overrides.validator_io_timeout_ms` changes the proposed deadline, floored at 50 ms without a ceiling. The aggregate remainder can cap the effective deadline below that floor.",
+      "control": "Flag `--validator-io-timeout-ms` of `policy-witness test-input run`, a test control, changes the proposed deadline, floored at 50 ms without a ceiling. The aggregate remainder can cap the effective deadline below that floor. `policy-witness run` has no flag for this value.",
       "sources": [
         {
           "path": "runner/Sources/PWRunnerCore/ValidatorClient.swift",
@@ -2115,7 +2115,7 @@
       "unit": "milliseconds",
       "counting": "Cumulative monotonic planning and collection time across ordinary phases. Actor form uses the single actor_collection_allowance pool. Remaining allowance caps each validator I/O deadline; cleanup and scheduling can overrun it.",
       "effect": "After exhaustion, subsequent predictions are unavailable; the worker can still execute released attempts.",
-      "control": "Fixed; `_test_overrides.validator_total_timeout_ms` can reduce it to at least 1 millisecond.",
+      "control": "Flag `--validator-total-timeout-ms` of `policy-witness test-input run`, a test control, can reduce it to at least 1 millisecond. `policy-witness run` has no flag for this value.",
       "sources": [
         {
           "path": "runner/Sources/PWRunnerCore/CWorkerRequestPlanning.swift",
@@ -3850,7 +3850,7 @@
       "title": "Worker fixture delay ceiling",
       "value": 60000,
       "unit": "milliseconds",
-      "counting": "Each --pre-ready-hang-ms or --post-apply-hang-ms worker argument forwarded from a positive request override.",
+      "counting": "Each --pre-ready-hang-ms or --post-apply-hang-ms worker argument forwarded from a positive `--worker-pre-ready-hang-ms` or `--worker-post-apply-hang-ms` test control of `policy-witness test-input run`.",
       "effect": "The worker argument parser refuses a larger forwarded value before worker setup; zero disables that fixture delay.",
       "control": "Fixed.",
       "sources": [
