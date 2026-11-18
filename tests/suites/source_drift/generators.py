@@ -403,12 +403,14 @@ class GeneratorContractTests(receipts.TestCase):
         self.track_inputs(root)
         return root
 
-    def command(self, root, name, *args):
+    def command(self, root, name, *args, development=False):
+        """A fixture's limits and contract generators run strictly unless the control asks for development mode."""
         if root == ROOT:
             self.track_inputs(root, fixture_inputs.generator_inputs(root, name))
         start = time.perf_counter()
+        strict = root != ROOT and not development and name in ('limits', 'contract_stamps')
         result = self.run_command([sys.executable, '-B', '-S', str(root / f'docs/generate_{name}.py'),
-                                 *(['--publication'] if root != ROOT and name in ('limits', 'contract_stamps') else []), *args],
+                                 *(['--publication'] if strict else []), *args],
                                 cwd=root, capture_output=True, text=True, timeout=60)
         print(f'command: generate_{name} {" ".join(args)} rc={result.returncode} {time.perf_counter() - start:.3f} s')
         return result
@@ -985,6 +987,8 @@ class GeneratorContractTests(receipts.TestCase):
                     set(build_contract.inputs(ROOT)) | set(generate_limits.input_paths(ROOT))))
                 boundary = root / 'docs/publication.py'
                 boundary.write_text(boundary.read_text().replace('WITHHELD = True', 'WITHHELD = False', 1))
+                # A constructed release source, not the checkout: the fixture owns its guide regions.
+                contract_fixture.fresh_guide_regions(root, run=self.run_command)
                 contract_fixture.fresh_authoring(root, stamps)
                 def commit(rows, tag):
                     path = root / BASELINE_NAME
@@ -1011,6 +1015,7 @@ class GeneratorContractTests(receipts.TestCase):
                 if previous is None:
                     self.assertEqual(stamp['prose_baseline']['status'], 'previous release predates baseline')
                 if refused:
+                    self.assertEqual(len(problems), 1, problems)
                     self.assertIn('baseline grew', problems[0])
                     with patch.object(release, 'ROOT', root), redirect_stderr(io.StringIO()) as err, redirect_stdout(io.StringIO()):
                         self.assertEqual(release.main(['--remote', str(root)]), 1)
@@ -1154,16 +1159,49 @@ class GeneratorContractTests(receipts.TestCase):
         self.assertEqual(self.command(root, 'limits', '--check').returncode, 0)
 
     def test_whole_file_staging_is_owned_and_idempotent(self):
+        """A constructed release source, not the checkout: the fixture owns its guide regions before it stages."""
         root = self.checkout()
         destination = root / 'staged-guide.md'
+        guide = root / 'docs/PolicyWitness.md'
+        copied = guide.read_bytes()
+        # A corrected owner as development generation leaves it: the manifest text is rendered into
+        # LIMITS.md and the copied guide keeps its bytes. Strict staging refuses that source.
+        manifest = root / 'docs/limits.json'
+        data = json.loads(manifest.read_text())
+        data['limits'][0]['counting'] += ' Staging control.'
+        manifest.write_text(json.dumps(data))
+        result = self.command(root, 'limits', development=True)
+        self.assertEqual(result.returncode, 0, result.stderr)
+        self.assertIn('publication withheld', result.stdout)
+        self.assertIn('Staging control.', (root / 'docs/LIMITS.md').read_text())
+        self.assertEqual(guide.read_bytes(), copied)
+        before = self.snapshot(root)
+        result = self.command(root, 'limits', '--stage-guide', str(destination))
+        self.assertEqual(result.returncode, 1, result.stdout)
+        self.assertEqual(result.stderr, 'limits: stale PolicyWitness.md; run tests/lib/python.sh docs/generate_limits.py\n')
+        self.assertEqual(self.snapshot(root), before, 'refused staging wrote a file')
+        contract_fixture.fresh_guide_regions(root, run=self.run_command)
+        self.assertIn('Staging control.', guide.read_text())
         before = self.snapshot(root)
         result = self.command(root, 'limits', '--stage-guide', str(destination))
         self.assertEqual(result.returncode, 0, result.stderr)
-        self.assertEqual(destination.read_bytes(), (root / 'docs/PolicyWitness.md').read_bytes())
+        self.assertEqual(destination.read_bytes(), guide.read_bytes())
         self.assertEqual(changed_outside(before, self.snapshot(root), {}, {'staged-guide.md'}), [])
         timestamp = destination.stat().st_mtime_ns
         self.assertEqual(self.command(root, 'limits', '--stage-guide', str(destination)).returncode, 0)
         self.assertEqual(destination.stat().st_mtime_ns, timestamp)
+
+    def test_guide_regions_are_regenerated_only_inside_a_fixture(self):
+        """The fixture helper starts no generator for the checkout, or for a script that resolves outside its fixture."""
+        root = self.checkout(('limits',))
+        script = root / 'docs/generate_limits.py'
+        script.unlink()
+        script.symlink_to(ROOT / 'docs/generate_limits.py')
+        started = []
+        for label, target in (('checkout', ROOT), ('generator outside the fixture', root)):
+            with self.subTest(target=label), self.assertRaisesRegex(ValueError, 'only inside a disposable fixture'):
+                contract_fixture.fresh_guide_regions(target, run=lambda *args, **kwargs: started.append(args))
+        self.assertEqual(started, [])
 
     def test_architecture_render_failure_leaves_every_copy_untouched(self):
         root = self.checkout()

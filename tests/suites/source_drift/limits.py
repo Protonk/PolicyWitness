@@ -26,7 +26,7 @@ class LimitsDocumentationTests(receipts.TestCase):
     def setUp(self):
         self.manifest = json.loads((ROOT / 'docs/limits.json').read_text())
         self.document = (ROOT / 'docs/LIMITS.md').read_text()
-        frozen = generator.publication.frozen_guide(ROOT).decode('utf-8')
+        self.frozen = frozen = generator.publication.frozen_guide(ROOT).decode('utf-8')
         self.questions = (ROOT / 'docs/QUESTIONS.md').read_text()
         self.contract = (ROOT / generator.CONTRACT_NAME).read_text()
         # Strict copying controls use a constructed current projection. Their
@@ -78,6 +78,24 @@ class LimitsDocumentationTests(receipts.TestCase):
         self.assertEqual(self.guide, generator.update_guide_extension_statuses(self.guide, self.contract))
         result = self.command(ROOT, '--check')
         self.assertEqual(result.returncode, 0, result.stderr)
+
+    def test_checkout_strict_check_refuses_exactly_when_an_owner_left_the_frozen_guide(self):
+        """Read-only on the checkout: development checking passes whatever the owners hold, and strict
+        checking refuses when, and only when, the constructed current projection differs from the frozen guide."""
+        names = fixture_inputs.generator_inputs(ROOT, 'limits')
+        before = {name: (ROOT / name).read_bytes() for name in names}
+        result = self.command(ROOT, '--check')
+        self.assertEqual(result.returncode, 0, result.stderr)
+        self.assertIn('publication withheld', result.stdout)
+        result = self.command(ROOT, '--check', '--publication')
+        if self.guide == self.frozen:
+            self.assertEqual(result.returncode, 0, result.stderr)
+            self.assertNotIn('publication withheld', result.stdout)
+        else:
+            self.assertEqual(result.returncode, 1, result.stdout)
+            self.assertEqual(result.stderr, 'limits: stale PolicyWitness.md; run tests/lib/python.sh docs/generate_limits.py\n')
+        print('checkout owners ' + ('equal' if self.guide == self.frozen else 'differ from') + ' the frozen guide copies')
+        self.assertEqual({name: (ROOT / name).read_bytes() for name in names}, before)
 
     def test_contract_sources_render_public_spans_and_leave_support_and_examples(self):
         root = self.checkout()
@@ -714,6 +732,16 @@ class DevelopmentPublicationTests(receipts.TestCase):
         self.assertNotEqual(result.returncode, 0)
         self.assertIn('publication withheld', result.stderr)
         self.assertFalse(target.exists())
+        # The fixture owns its guide regions once it regenerates them: strict checking then passes, and
+        # the same source is no longer the frozen development one.
+        result = self.command(root, '--publication')
+        self.assertEqual(result.returncode, 0, result.stderr)
+        self.assertIn('A controlled experiment identifies its target', guide.read_text())
+        result = self.command(root, '--check', '--publication')
+        self.assertEqual(result.returncode, 0, result.stderr)
+        result = self.command(root, '--check')
+        self.assertNotEqual(result.returncode, 0)
+        self.assertIn('frozen guide differs', result.stderr)
 
     def test_development_refuses_changed_frozen_bytes_and_stale_current_owner(self):
         for name, old, new, diagnostic in (

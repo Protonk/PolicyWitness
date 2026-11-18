@@ -74,9 +74,11 @@ def make_repo(work):
     catalog['suites']['fixture'] = dict(command=['bash', 'tests/suites/fixture/run.sh'], cases=['0', '1', '2'])
     (repo / 'tests/catalog.json').write_text(json.dumps(catalog))
     # This fixture authors its own first release, not a development candidate.
-    # Its publication state is independent of the repository's frozen guide.
+    # Its publication state is independent of the repository's frozen guide:
+    # a constructed release source, not the checkout, owns its guide regions.
     boundary = repo / 'docs/publication.py'
     boundary.write_text(boundary.read_text().replace('WITHHELD = True', 'WITHHELD = False', 1))
+    contract_fixture.fresh_guide_regions(repo)
     contract_fixture.fresh_authoring(repo, generate_contract_stamps, minimal=True)
     git(repo, 'add', '.')
     git(repo, 'commit', '-q', '-m', 'initial')
@@ -305,31 +307,61 @@ def check_publication_freshness(out):
     git(repo, 'add', '.')
     git(repo, 'commit', '-qm', 'development owner with frozen publication copy')
     subprocess.run([*GIT, '-C', str(repo), 'tag', '-a', 'v7.0.1', '-m', 'relabeled development'], check=True)
+    stale = 'publication freshness: docs/generate_limits.py: limits: stale PolicyWitness.md; ' \
+            'run tests/lib/python.sh docs/generate_limits.py'
     try:
         publication_freshness.require(repo, 'v7.0.1')
     except ValueError as error:
-        assert 'stale PolicyWitness.md' in str(error), error
+        assert str(error) == stale, error
     else:
         raise AssertionError('tagged development divergence became publication ready')
     stamp, problems = release_preflight.inspect(repo)
-    expect_problem(problems, 'stale PolicyWitness.md')
+    expect_problem(problems, stale)
+    # The limits manifest is an owner as well. Correct one row's text, let the
+    # fixture's generator carry it into LIMITS.md, and keep the guide copy made
+    # before the correction: the divergence development generation leaves, here
+    # in a source whose boundary says WITHHELD = False.
+    owner.write_bytes(before)
+    manifest, tables, guide = (repo / name for name in ('docs/limits.json', 'docs/LIMITS.md', 'docs/PolicyWitness.md'))
+    fresh = manifest.read_bytes(), tables.read_bytes(), guide.read_bytes()
+    data = json.loads(fresh[0])
+    data['limits'][0]['counting'] += ' Corrected in its owner.'
+    manifest.write_text(json.dumps(data, indent=2) + '\n')
+    contract_fixture.fresh_guide_regions(repo)
+    assert b'Corrected in its owner.' in tables.read_bytes() and b'Corrected in its owner.' in guide.read_bytes()
+    guide.write_bytes(fresh[2])
+    assert 'WITHHELD = False' in (repo / 'docs/publication.py').read_text()
+    git(repo, 'add', '.')
+    git(repo, 'commit', '-qm', 'corrected limits owner with the earlier guide copy')
+    assert git(repo, 'diff', '--name-only', 'v7.0.0', 'HEAD').split() == ['docs/LIMITS.md', 'docs/limits.json']
+    subprocess.run([*GIT, '-C', str(repo), 'tag', '-a', 'v7.0.2', '-m', 'relabeled development'], check=True)
+    try:
+        publication_freshness.require(repo, 'v7.0.2')
+    except ValueError as error:
+        assert str(error) == stale, error
+    else:
+        raise AssertionError('a tagged limits correction with a stale guide copy became publication ready')
+    _, limits_problems = release_preflight.inspect(repo)
+    expect_problem(limits_problems, stale)
     # Restore current copies without regenerating a guide, then activate a source
     # freeze. Fresh projections alone must not make that development tag publishable.
-    owner.write_bytes(before)
+    manifest.write_bytes(fresh[0])
+    tables.write_bytes(fresh[1])
     boundary = repo / 'docs/publication.py'
     boundary.write_text(boundary.read_text().replace('WITHHELD = False', 'WITHHELD = True', 1))
     git(repo, 'add', '.')
     git(repo, 'commit', '-qm', 'active development publication boundary')
-    subprocess.run([*GIT, '-C', str(repo), 'tag', '-a', 'v7.0.2', '-m', 'tagged development'], check=True)
+    subprocess.run([*GIT, '-C', str(repo), 'tag', '-a', 'v7.0.3', '-m', 'tagged development'], check=True)
     try:
-        publication_freshness.require(repo, 'v7.0.2')
+        publication_freshness.require(repo, 'v7.0.3')
     except ValueError as error:
         assert 'guide freeze is active' in str(error), error
         active_refusal = str(error)
     else:
         raise AssertionError('active development boundary became publication ready')
     (work / 'active-freeze.txt').write_text(active_refusal + '\n')
-    (work / 'freshness.json').write_text(json.dumps(dict(current=current, refused=problems), indent=2) + '\n')
+    (work / 'freshness.json').write_text(json.dumps(
+        dict(current=current, refused=problems, refused_limits_owner=limits_problems), indent=2) + '\n')
 
 
 def check_branch_names(out):

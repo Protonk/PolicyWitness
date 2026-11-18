@@ -1953,10 +1953,12 @@ def control_release_entrypoints_enforce_fresh_mode(co, variant):
             target = repo / name
             target.parent.mkdir(parents=True, exist_ok=True)
             shutil.copy2(ROOT / name, target)
-        # A constructed release source owns its publication permission. This
-        # entrypoint fixture does not claim a development candidate is releasable.
+        # A constructed release source, not the checkout, owns its publication
+        # permission and its guide regions. This entrypoint fixture does not
+        # claim a development candidate is releasable.
         boundary = repo / 'docs/publication.py'
         boundary.write_text(boundary.read_text().replace('WITHHELD = True', 'WITHHELD = False', 1))
+        contract_fixture.fresh_guide_regions(repo)
         marker = repo / 'build-invocation.json'
         script = repo / 'build.sh'
         script.write_text('#!/usr/bin/env bash\nprintf \'{"PW_FRESH_BUILD": "%s", "IDENTITY": "%s"}\' "${PW_FRESH_BUILD-unset}" "${IDENTITY:-}" > build-invocation.json\nexit 97\n')

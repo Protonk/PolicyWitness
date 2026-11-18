@@ -486,8 +486,12 @@ files outside declared regions and whole-file outputs. Deliberate outside
 writes, unresolved placeholders, invalid definitions, malformed markers,
 stale spans, broken links, unlisted prose and release growth must be detected.
 Refused commands must leave the checkout unchanged. Guide staging is tested
-as a whole-file output, including idempotence; SVG rendering failure is checked
-before any output publication.
+as a whole-file output, including idempotence, in a fixture that owns its guide
+regions. Development generation first carries a manifest correction into the
+fixture's limits tables beside the copied guide; strict staging refuses that
+source with the stale-guide message and its regenerating command and writes
+nothing. Once the fixture regenerates its copies, staging writes only its
+destination. SVG rendering failure is checked before any output publication.
 
 ### Markdown reader
 
@@ -850,6 +854,21 @@ The retained log is `suites/source_drift/porcelain_codec/artifacts/porcelain.log
 Development publication controls check the guide's complete `3d3f8e65` byte
 identity while technical limits, spans, contract projections and stamps stay
 current. Constructed owner divergence must pass development checks and fail
-strict publication freshness. Changed frozen bytes, stale technical outputs and
-missing or inconsistent signed boundary records are rejected. Strict generator
-fixtures exercise copying and staging separately from the frozen repository guide.
+strict publication freshness; the same fixture passes strict checking once it
+regenerates its guide copies, and development checking then refuses it as no
+longer frozen. On the checkout both checks run read-only: the development
+check passes, and the strict check refuses when, and only when, the current
+projection of the owners differs from the frozen guide. Changed frozen bytes,
+stale technical outputs and missing or inconsistent signed boundary records
+are rejected. Strict generator fixtures exercise copying and staging
+separately from the frozen repository guide.
+
+No control presumes that a copy of the checkout is publication-fresh. A
+control that needs a fresh source is a constructed release source that owns
+its guide regions: before it is committed, tagged or staged, its fixture
+regenerates its limits tables and guide copies with its own generator through
+[`fresh_guide_regions`](../../lib/contract_fixture.py). That helper starts no
+generator for the checkout or for a script that resolves outside the fixture,
+and a control holds it to both refusals. The release-baseline subcases use
+such a source, so the grown and rewritten baselines are each the only refusal
+and the others report none.

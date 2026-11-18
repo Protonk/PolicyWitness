@@ -384,9 +384,15 @@ Offline release controls also exercise the release procedure's decision points.
 
 - `release_publish_controls` exercises the three release tools against a real
   temporary repository with a bare `origin`, fixture ZIPs, attempts and run
-  records. It also runs the make release/notarize entrypoints through a copied
-  preflight and a controlled build that stops before submission, checking fresh
-  mode, conflicting caller settings and the fixture's complete runtime inputs.
+  records. That repository is a constructed release source, not the checkout:
+  it sets its own publication boundary and, before its first commit,
+  regenerates its limits tables and guide copies from its own owners with
+  [`fresh_guide_regions`](../../lib/contract_fixture.py), so its freshness does
+  not depend on the checkout's frozen guide. It also runs the make
+  release/notarize entrypoints through a copied preflight and a controlled
+  build that stops before submission, checking fresh mode, conflicting caller
+  settings and the fixture's complete runtime inputs; that fixture regenerates
+  its guide regions the same way before its tag.
   The full build-refusal case runs the same entrypoint control within its sequence.
   Its ZIP members are real linker-signed Mach-O stand-ins whose
   load commands and signature facts the independent fixture writer records.
@@ -425,7 +431,8 @@ Offline release controls also exercise the release procedure's decision points.
   and dirty-tree decisions and stamps must agree across names; a retained
   comparison receipt distinguishes the source state from the branch label.
 - `release_rotation_controls` creates successive releases in real fixture
-  repositories and independently inspects stored files and symlink targets.
+  repositories, built as the publish controls build theirs, and independently
+  inspects stored files and symlink targets.
   Detached current-format evidence verifies after its working output is gone
   and the checkout catalog changes; the packed acceptance owner must match its
   recorded identity. Unsupported bundle formats and corrupt stored bytes refuse
@@ -527,7 +534,11 @@ Run:
 
 Release freshness controls compare tagged source bytes independently of Git's
 index hints, then run strict limits and contract generators. A constructed current
-release passes; a clean annotated development tag with a stale guide fails.
+release passes. A clean annotated tag whose guide copy is older than an owner
+fails through the limits check with the stale-guide message, although the
+fixture's boundary is not withheld: once for a changed question, and once for
+a corrected limits manifest row whose tables were regenerated beside the
+earlier guide copy.
 Acceptance's command fixtures isolate that source gate with an explicit stand-in;
 they establish extraction and battery behavior, not source freshness. New archive
 and publication operations require that same gate and compare the delivered guide

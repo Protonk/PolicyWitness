@@ -1,12 +1,17 @@
-"""Prepare contract authoring and history in disposable test repositories.
+"""Prepare contract authoring, history and guide regions in disposable test repositories.
 
 Fresh authoring fixtures begin before their first release. Rehearsals copied
 from a released checkout instead import that checkout's actual release trees;
 they never erase inherited history claims to make a release render succeed.
+A constructed release source also owns its guide regions: it regenerates them
+from its own owners instead of presuming the copied guide equals them.
 """
 import json
 from pathlib import Path
 import subprocess
+import sys
+
+CHECKOUT = Path(__file__).resolve().parents[2]
 
 
 def write_outputs(root, values):
@@ -86,6 +91,26 @@ def fresh_authoring(root, generator, *, minimal=False):
     tree = model.load_tree(root)
     (root / runtime.BASELINE).write_text(runtime.canonical(tree.free_counts))
     write_outputs(root, runtime.render(root, refresh_shapes=True, tree=tree))
+
+
+def fresh_guide_regions(root, *, run=subprocess.run):
+    """Regenerate a constructed release source's limits tables and guide copies from its own owners.
+
+    The fixture's own docs/generate_limits.py runs in strict write mode before
+    the fixture is committed, tagged or staged. The generator writes beside its
+    own resolved location, so a script that resolves outside the fixture, or a
+    fixture that is this checkout, is refused before anything runs. Callers
+    that record their launches pass their own `run`.
+    """
+    root = Path(root).resolve()
+    script = root / 'docs/generate_limits.py'
+    if root == CHECKOUT or script.resolve() != script:
+        raise ValueError('guide regions are regenerated only inside a disposable fixture: ' + str(script.resolve()))
+    result = run([sys.executable, '-B', '-S', str(script), '--publication'],
+                 cwd=root, capture_output=True, text=True, timeout=60)
+    if result.returncode:
+        raise ValueError('constructed release source: ' + (result.stderr.strip() or result.stdout.strip()))
+    return result
 
 
 def seed_release_history(root, source, generator):
