@@ -1021,3 +1021,102 @@ recorded conclusions stand as written accounts, and repeating a comparison
 means rebuilding the commits named beside it. Evidence produced from here on,
 ending with final integrated verification, is what the closing outflows rest
 on; no further apply is intended in this stage.
+
+**HOST thread, first half (R4, R5).** `feeeaf7b` and `2cc7e32f`, tests first
+in each case.
+
+- R4 (DT-23/51). A declared-unapplied actor's phases are classified through
+  the same view as the actor, so a failed validator spawn, decode, read or
+  association gives the applied actor's outcome and exit 1. The `validator`
+  prefix filter is removed and discards nothing: a failed validator pipe or
+  query serialization selects `runner_failed` in both modes, as in the
+  ordinary form. A placeholder output that was dead code is removed. One text
+  changes with unchanged outcome: an unapplied actor with an exhausted budget
+  reports "validator not invoked; expected N query results". The independent
+  consumer holds the necessary condition for `finished` without reproducing
+  the classifier. Before the product edit, on the old app (`host1-r4-pre`,
+  `20261118T190137Z_76b60f89`), both unapplied rows of the new five-specimen
+  control gave exit 0, `finished` and `ok: true`, and seven new unit rows
+  failed; that is the behavior being changed.
+- R5 (DT-22/57). An allow or deny record with `step_id: ""` is accepted and
+  joins the one empty-identifier step; where no step has that identifier it
+  is retained as an unexpected identifier and the run ends
+  `validator_unavailable`. Null, absent and non-string values stay structure
+  faults, `operation` and `filter_type` stay nonempty, request admission is
+  unchanged and the lifecycle adapter rejects only a non-string. Before the
+  edit, on the R4 build (`host1-r5-pre`, `20261118T191214Z_63a065d3`), the
+  live empty row exited 1 with a decode failure.
+- Build contract: `development:081353c9…948ab695` before;
+  `development:72ed55e3…dd80afcb` for the intermediate R4-only build;
+  `development:378493f6…01542300` in `dist/` and by derivation at `2cc7e32f`.
+  The app's `build.commit` reads `77639e82` with a dirty description because
+  it was built before the commits; the bytes of the build inputs are those
+  committed.
+- Runs of record on the final app, none with recorded sleep:
+  `host1-post-routed` (`20261118T191732Z_fa224366`, 92 cases, default members
+  of the eight routed suites), `host1-post-witness`
+  (`20261118T192138Z_34440819`, 52), `host1-post-order-barrier`
+  (`20261118T192651Z_5a1cf31d`: baseline accepted, worker and host bypasses
+  rejected, no anchor moved), `host1-post-source-drift`
+  (`20261118T192820Z_2e017b4a`, 11) and, run by the coordinator afterwards,
+  the four `runner_unit` opt-in mutation controls that anchor in files this
+  half edited (`host1-post-unit-mutations`, `20261118T194139Z_541f237d`, 4).
+  All pass. The remaining opt-in members of those suites
+  (`same_shape_contract`, `native_clock`, `native_pause`, `arm_wait`) were
+  not run: none concerns the changed behavior.
+- Two failures in the pre-change runs were outside the changed behavior and
+  are not product defects: an existing checker control placed a spawn failure
+  on a `finished` baseline, a premise the consumer's new condition refuses
+  (its summary now reads `validator_spawn_failed`, expectations unchanged),
+  and a defect in a new check's passing neighbour, fixed before the runs of
+  record.
+- Corrections to the assessment's reading of source: the placeholder output
+  never reached the validator section; the actor specimens use `open_write`
+  to obtain an independent file effect.
+- No default battery has run on a build containing R4 or R5. It is owed once,
+  for the whole product group.
+
+### Pause — 2026-11-18
+
+Work stopped at a quiet point at the maintainer's request. State: `main` at
+the commit that adds this note, tree clean, nothing pushed, no extra
+worktree, no writer in the checkout; the signed app in `dist/` is
+`development:378493f6…01542300`. `tests/out/runs` holds only the nine
+`host1-*` directories. The guide, its copies and both publication records are
+byte-unchanged at the freeze. No release was made.
+
+Done in this stage: the Markdown and pilot cohorts; the seam migration; the
+limits texts under the freeze; the four conversions with their follow-ups;
+R4 and R5.
+
+Remaining, in this order, one writer at a time, each product thread
+tests-first with its own rebuild and routed verification:
+
+1. HOST, second half: R9, R13, the two Swift comments that name
+   `_test_overrides.worker_timeout_ms`, the five host-thread
+   comment-in-build-input worklist entries and the optional `custodyNames`
+   removal. `witness_contract/order_barrier_mutations` is required again, and
+   the four `runner_unit` opt-in mutation controls.
+2. CONTROLLER-A (R2, R6, R7), CONTROLLER-B (R10, R11 and the selected
+   `run_flow.rs` test corrections), CONTROLLER-C (R12), EXEC (R1), WIRE (R8,
+   after EXEC), IDENT (R3).
+3. One default battery for the product group; reread it with the revised
+   battery validator; a read-only prune preview. No apply.
+4. The accounts thread in three parts with R14, and the build-refusal case's
+   nested battery adapted to a development candidate.
+5. Final integrated verification: offline and drift controls, a rebuild so
+   the app's commit stamp is clean, the default battery with relevant
+   opt-ins, then `preflight/build_refusal_controls` once, crediting candidate
+   execution separately from publication refusal.
+6. The acceptance plan's remaining comparisons (fallback, association); the
+   user-responsibility and maintainer-judgment outflows and the release
+   account against final evidence; removal of disposable scratch.
+
+Working material for those steps is gitignored scratch under
+`.tmp/trace-integration/`: the common and per-thread briefs, the rulings, the
+accounts worklist and addenda, the candidate-battery brief and the two
+outflow drafts. The assessments and the disposition record are tracked under
+`trace-assessments/`. If the scratch is lost, the rulings table in "Selected
+remedies" above and the disposition record are sufficient to rewrite the
+briefs. [PYTEST-EVIDENCE-PLAN.md](../tests/PYTEST-EVIDENCE-PLAN.md) is later
+work and is not part of the remaining order.

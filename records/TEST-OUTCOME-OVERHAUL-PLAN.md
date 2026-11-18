@@ -304,6 +304,11 @@ other suite-relative names are under `tests/suites/`. Mixed internal records
 may remain through direct construction or revised controls without creating a
 mixed public execution route.
 
+Callers added after the migration, each submitting a validator substitution
+through the adapter: `runner_validator_failure/check_actor.py` (scenarios
+`actor_validator_failure.{apply,unapplied}-{spawn,decode}`, with rulings R4)
+and `failure_boundaries/check.py` (`validator_empty_step_id.*`, with R5).
+
 ### Implement and verify
 
 Reuse CLI/run orchestration, client transport, host admission and native planning.
