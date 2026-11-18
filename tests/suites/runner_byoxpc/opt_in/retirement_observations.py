@@ -272,7 +272,8 @@ def main(pw, directory):
         save(out / 'unified-log-capture.json', log_record)
         # Preserve every result, including malformed/nonzero captures. Neither
         # an outcome nor a nonzero CLI status causes a retry or removes evidence.
-        counts = {str(gap): dict(host_ok=0, client_xpc_error=0, client_xpc_timeout=0) for gap in GAPS_MS}
+        # Keys are host_<normalized outcome> or client_<transport terminal>; these three are always present.
+        counts = {str(gap): dict(host_finished=0, client_xpc_error=0, client_xpc_timeout=0) for gap in GAPS_MS}
         for capture, record in zip(captures, records):
             try:
                 if record['state'] != 'exited':

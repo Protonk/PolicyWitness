@@ -131,9 +131,11 @@ ESRCH or an observed different start time establishes the earlier generation's
 absence. Unseen samples and missed short-lived processes do not establish exit.
 A bounded post-sequence observation retains direct exits for every seen
 generation before session cleanup. Missing exits, invalid envelopes, interrupted
-logging or watchdog intervention make the experiment incomplete. Host outcomes and client transport terminals are counted separately, including
-`finished`, `xpc_error` and `xpc_timeout`, without a required success ratio or causal
-interpretation. A transport failure need not contain a host result.
+logging or watchdog intervention make the experiment incomplete. Host outcomes and client transport terminals are counted separately per gap
+under `host_<outcome>` and `client_<terminal>` keys: `host_finished`,
+`client_xpc_error` and `client_xpc_timeout` are always present, and any other
+outcome adds its own key. No success ratio is required and no cause is
+inferred. A transport failure need not contain a host result.
 
 `retirement/` retains every request and raw capture, per-request observations,
 the selected app's provenance/inventory and case sources, generation samples and
