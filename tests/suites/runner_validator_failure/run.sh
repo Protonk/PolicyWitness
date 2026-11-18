@@ -23,4 +23,7 @@ done
 if test_selected validator_killed_mid_stream; then
   if ! bash "${SUITE_DIR}/signal.sh"; then failures=1; fi
 fi
+if test_selected actor_collection_failure_reports_degraded; then
+  if ! bash "${SUITE_DIR}/actor.sh"; then failures=1; fi
+fi
 exit "${failures}"

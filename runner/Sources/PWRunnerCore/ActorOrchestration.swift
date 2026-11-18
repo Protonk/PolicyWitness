@@ -265,6 +265,18 @@ enum PWRunnerPreparationFailureError: Error { case inconsistentAssignment }
 
 // MARK: - Classification
 
+/// The output the classifier judges for one actor, in the actor's own summary
+/// and in each of its phases. Declared setup replaces the apply prerequisite
+/// for a declared-unapplied actor; the reply's own fields keep applied unset
+/// for that actor.
+func classifierView(_ output: CWorkerOutput, applies: Bool) -> CWorkerOutput {
+    guard !applies && output.actorSetup == 2 else { return output }
+    var view = output
+    view.applied = true
+    view.applyRC = 0
+    return view
+}
+
 /// One actor's summary from its own record: launch, setup, publication and
 /// disposition. The legacy classifier judges an apply actor's output; an
 /// unapplied actor's declared setup stands in for application.
@@ -275,16 +287,9 @@ func classifyActor(_ record: ActorSessionRecord, applies: Bool) -> ClassifiedRun
     guard let output = record.output else {
         return ClassifiedRun(outcome: NormalizedOutcome.runnerFailed, rc: 1, error: "actor never launched: \(record.setupStatus.rawValue)")
     }
-    if !applies && output.actorSetup == 2 {
-        // Declared setup replaces the apply prerequisite for the classifier's
-        // view; the reply's own fields keep applied unset for this actor.
-        var view = output
-        view.applied = true
-        view.applyRC = 0
-        return classify(workerResult: .success(view), validatorResult: nil, expectedVerdictCount: 0)
-    }
-    let classified = classify(workerResult: .success(output), validatorResult: nil, expectedVerdictCount: 0)
-    if classified.rc != 0 || record.setupStatus.usable { return classified }
+    let declared = !applies && output.actorSetup == 2
+    let classified = classify(workerResult: .success(classifierView(output, applies: applies)), validatorResult: nil, expectedVerdictCount: 0)
+    if declared || classified.rc != 0 || record.setupStatus.usable { return classified }
     return ClassifiedRun(outcome: NormalizedOutcome.runnerFailed, rc: 1, error: "actor setup ended: \(record.setupStatus.rawValue)")
 }
 
@@ -367,11 +372,13 @@ func assembleActorReply(parsed: PWRunnerRunSpec, plan: ActorPlan, translation: A
                 activation_eligible: gate.activationEligible, capture_ordinal: gate.captureOrdinal)
         }
         phaseResults.append(result)
-        if runOutcome.rc == 0 {
-            let validatorRun = classify(workerResult: .success(output ?? CWorkerOutput(workerPid: 0, readyByteReceived: false, applied: true, applyRC: 0, applyErrno: 0, done: true, slots: [])),
+        // Every actor passed its own classification above, so the same view
+        // repeats that judgment here and only this phase's collection can fail.
+        if runOutcome.rc == 0, let output {
+            let phaseRun = classify(workerResult: .success(classifierView(output, applies: actor.applies)),
                 validatorResult: validatorResults[phase.index],
                 expectedVerdictCount: queryPlans[phase.index].compactMap { $0.probe }.count, disposition: dispositions[actorIndex])
-            if validatorRun.rc != 0 && validatorRun.outcome.hasPrefix("validator") { runOutcome = validatorRun }
+            if phaseRun.rc != 0 { runOutcome = phaseRun }
             if runOutcome.rc == 0 && ["budget_exhausted", "clock_unavailable"].contains(collectionStatuses[phase.index]) {
                 runOutcome = ClassifiedRun(outcome: NormalizedOutcome.validatorUnavailable, rc: 1,
                     error: "phase collection unavailable: " + collectionStatuses[phase.index])

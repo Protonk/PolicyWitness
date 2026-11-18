@@ -870,6 +870,65 @@ def result_consistency_controls(artifacts, current):
     print(f'result consistency controls: {len(records)} ok', flush=True)
 
 
+def finished_collection_controls(artifacts, current):
+    """A `finished` reply carries no phase with a failed spawn, a decode fault or a validator I/O error.
+
+    Each fault is authored on the accepted baseline and names its complete
+    diagnostic list. The same evidence under the failed outcome is accepted:
+    the rule reads the summary beside the phase and classifies nothing.
+    """
+    records = []
+    fault = dict(origin='runner_host', kind='json', message='constructed decode fault', byte_offset=0,
+                 frame_bytes=10, retained_bytes=10, context_b64='e25vdCBKU09OfQ==', context_truncated=False)
+
+    def decode(runner):
+        runner['phases'][0]['validator_subprocess']['decode_fault'] = copy.deepcopy(fault)
+
+    def io(runner):
+        runner['phases'][0]['validator_subprocess']['io_error'] = 'read(verdicts): constructed'
+
+    def both(runner):
+        decode(runner); io(runner)
+
+    def spawn(runner):
+        phase = runner['phases'][0]
+        del phase['validator_subprocess']
+        phase['ordering']['validator_disposition'] = 'not_spawned'
+        phase['validator_spawn_failure'] = dict(origin='runner_host', operation='posix_spawn',
+            executable_path='/nonexistent/validator', return_code=2, diagnostic='No such file or directory')
+        for step in runner['steps']:
+            step['sandbox_check'].update(result_source='synthetic', native_rc=None, errno=None, outcome='error',
+                                         missing_reason='validator_not_invoked')
+            step['comparison']['order'] = 'unestablished'
+
+    rows = [('decode_fault', decode, 'validator_decode_failure', ['validator_subprocess.decode_fault']),
+            ('io_error', io, 'validator_no_reply', ['validator_subprocess.io_error']),
+            ('decode_fault_and_io_error', both, 'validator_no_reply',
+             ['validator_subprocess.decode_fault', 'validator_subprocess.io_error']),
+            ('spawn_failure', spawn, 'validator_spawn_failed', ['validator_spawn_failure'])]
+    assert validate(current) == [], validate(current)
+    records.append({'control': 'finished_without_collection_fault', 'errors': []})
+    for name, change, outcome, faults in rows:
+        finished = copy.deepcopy(current)
+        change(finished['data']['runner_result'])
+        recapture_host_reply(finished)
+        (artifacts / f'finished_{name}.json').write_text(json.dumps(finished, indent=2) + '\n')
+        errors = validate(finished)
+        wanted = [f'finished reply carries phase "main" {fault}' for fault in faults]
+        assert sorted(errors) == sorted(wanted), (name, errors, wanted)
+        records.append({'control': 'finished_' + name, 'errors': errors})
+        degraded = copy.deepcopy(finished)
+        degraded['data']['runner_result'].update(normalized_outcome=outcome, rc=1, error='constructed failure')
+        degraded['result'].update(normalized_outcome=outcome, ok=False, exit_code=1, error='constructed failure')
+        recapture_host_reply(degraded)
+        (artifacts / f'{outcome}_{name}.json').write_text(json.dumps(degraded, indent=2) + '\n')
+        errors = validate(degraded)
+        assert errors == [], (name, outcome, errors)
+        records.append({'control': f'{outcome}_{name}', 'errors': []})
+    (artifacts / 'finished-collection-controls.json').write_text(json.dumps(records, indent=2) + '\n')
+    print(f'finished collection controls: {len(records)} ok', flush=True)
+
+
 def client_output_control(artifacts):
     """A missing service produces client observations with no host RunResult."""
     app = Path(os.environ.get('PW_APP_DIR') or (ROOT / 'dist/PolicyWitness.app'))
@@ -1009,6 +1068,7 @@ def main():
         check('retired_run_outcome_' + label, retired, (diagnostic,))
     consumer_controls(artifacts, baseline)
     result_consistency_controls(artifacts, baseline)
+    finished_collection_controls(artifacts, baseline)
     exec_observation_controls(artifacts)
     mutation_order_controls(artifacts, baseline)
     client_output_control(artifacts)

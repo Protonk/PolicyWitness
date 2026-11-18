@@ -87,8 +87,102 @@ private func retainActorReply(_ reply: PWRunnerRunResult, _ name: String) throws
         .appendingPathComponent("actor-review-\(name).pwp"))
 }
 
+/// One actor, one phase and one read through the scheduler with the shipped
+/// worker and an empty collection hook; each row supplies its own validator
+/// result at assembly.
+private func singleActorSchedule(mode: String, effect: String) throws
+    -> (PWRunnerRunSpec, ActorPlan, ActorTranslation, ActorScheduleOutcome, ActorEquipmentPreparation) {
+    let sandbox = mode == "apply"
+        ? "{\"mode\": \"apply\", \"policy\": {\"format\": \"sbpl\", \"sbpl_source\": \"(version 1)(allow default)\"}}"
+        : "{\"mode\": \"unapplied\"}"
+    let text = """
+    {"contract": "\(testRequestContract)", "specimen_id": "actor-collection-\(mode)",
+     "actors": [{"actor_id": "subject", "sandbox": \(sandbox)}],
+     "phases": [{"phase_id": "main", "actor_id": "subject", "actions": [{"step_id": "read", "sandbox_check": {"operation": "file-read-data", "filter": {"kind": "path", "value": "\(effect)"}}, "attempt": {"kind": "file", "action": "read_fresh", "target": "\(effect)"}}]}]}
+    """
+    let parsed = try testDecodeJSON(PWRunnerRunSpec.self, from: Data(text.utf8))
+    guard case .success(let plan) = normalizeActorPlan(parsed) else { throw TestFailure(message: "request refused") }
+    let translation = try ActorTranslation(plan: plan, parsed: parsed,
+        workerExecutablePaths: Array(repeating: equipment("pw-probe-runner"), count: plan.actors.count))
+    let input = ActorScheduleInput(actors: translation.inputs, applies: plan.actors.map { $0.applies },
+        schedule: translation.schedule, authority: translation.authority)
+    let (outcome, bound) = try checkedActorSchedule(input, plan: plan)
+    return (parsed, plan, translation, outcome, bound)
+}
+
+private struct ActorCollectionRow {
+    let name: String
+    let status: String
+    let result: ([ValidatorProbe]) -> ValidatorClientResult?
+    let outcome: String
+    let error: String?
+}
+
+private func actorCollectionRows() -> [ActorCollectionRow] {
+    let fault = PWValidatorDecodeFault(kind: "json", message: "constructed", byte_offset: 0, frame_bytes: 10,
+        retained_bytes: 10, context: Data("{not JSON}".utf8), context_truncated: false)
+    func ended(_ probes: [ValidatorProbe], verdicts: [ValidatorVerdict] = [], ioError: String? = nil,
+               decodeFault: PWValidatorDecodeFault? = nil) -> ValidatorOutput {
+        ValidatorOutput(validatorPid: 4242, verdicts: verdicts, exitCode: 0, reaped: true, waitErrors: [],
+            ioError: ioError, decodeFault: decodeFault, expectedProbes: probes, readError: ioError, stdoutCollectionStop: "eof")
+    }
+    return [
+        ActorCollectionRow(name: "clean collection", status: "collected", result: { probes in
+            .success(ended(probes, verdicts: probes.map {
+                ValidatorVerdict(stepId: $0.stepId, operation: $0.operation, filterType: $0.filterType, filterTypeId: 1,
+                    filterValue: $0.filterValue, rc: 0, errnoVal: 0, outcome: "allow", error: nil, rawLine: "constructed")
+            }))
+        }, outcome: NormalizedOutcome.finished, error: nil),
+        ActorCollectionRow(name: "failed spawn", status: "collected", result: { _ in
+            .failure(error: .spawnFailed(PWRunnerSpawnFailure(executable_path: "/nonexistent/validator",
+                return_code: ENOENT, diagnostic: "No such file or directory")), partial: nil)
+        }, outcome: NormalizedOutcome.validatorSpawnFailed, error: nil),
+        ActorCollectionRow(name: "decode fault", status: "collected", result: { probes in
+            .failure(error: .verdictDecodeFailed(fault), partial: ended(probes, decodeFault: fault))
+        }, outcome: NormalizedOutcome.validatorDecodeFailure, error: nil),
+        ActorCollectionRow(name: "read failure", status: "collected", result: { probes in
+            .failure(error: .verdictReadFailed("constructed"), partial: ended(probes, ioError: "read(verdicts): constructed"))
+        }, outcome: NormalizedOutcome.validatorNoReply, error: nil),
+        ActorCollectionRow(name: "pipe failure", status: "collected", result: { _ in
+            .failure(error: .pipeFailed("stdin: constructed"), partial: nil)
+        }, outcome: NormalizedOutcome.runnerFailed, error: "pipe: stdin: constructed"),
+        ActorCollectionRow(name: "probe serialization failure", status: "collected", result: { _ in
+            .failure(error: .probeSerializationFailed("constructed"), partial: nil)
+        }, outcome: NormalizedOutcome.runnerFailed, error: "serialize probes: constructed"),
+        ActorCollectionRow(name: "exhausted collection budget", status: "budget_exhausted", result: { _ in nil },
+            outcome: NormalizedOutcome.validatorUnavailable, error: nil),
+    ]
+}
+
 func runActorReplyTests(_ tk: TestKit) {
     let workerPresent = FileManager.default.isExecutableFile(atPath: equipment("pw-probe-runner"))
+    tk.group("actor reply: a phase collection result selects the aggregate in both sandbox modes") {
+        for mode in ["apply", "unapplied"] {
+            for row in actorCollectionRows() {
+                tk.run("\(mode) actor, \(row.name): \(row.outcome)") {
+                    guard workerPresent else { throw TestFailure(message: "required equipment: pw-probe-runner missing; run make build") }
+                    let (parsed, plan, translation, outcome, bound) = try singleActorSchedule(mode: mode, effect: freshEffect())
+                    let queryPlans = plan.phases.map { planValidatorQueries($0.actions.compactMap { $0.probe }) }
+                    let probes = queryPlans[0].compactMap { $0.probe }
+                    try expectEqual(probes.map { $0.stepId }, ["read"])
+                    var reply = assembleActorReply(parsed: parsed, plan: plan, translation: translation, outcome: outcome,
+                        queryPlans: queryPlans, validatorResults: [row.result(probes)], collectionStatuses: [row.status], bundleId: "test")
+                    attachObservedEquipment(&reply, bound, outcome)
+                    // The worker's own evidence is the same in every row.
+                    try expectEqual(reply.actors?.map { $0.setup_status }, [mode == "apply" ? "applied" : "unapplied_declared"])
+                    try expectEqual(reply.actors?[0].subprocess?.exit_code, 0)
+                    try expectEqual(reply.steps.map { $0.attempt.result_source }, ["worker"])
+                    try expectEqual(reply.phases.map { $0.collection_status }, [row.status])
+                    try expectEqual(reply.normalized_outcome, row.outcome, reply.error ?? "")
+                    try expectEqual(reply.rc, row.outcome == NormalizedOutcome.finished ? 0 : 1)
+                    if let error = row.error { try expectEqual(reply.error, error) }
+                    try expectEqual(reply.steps[0].comparison?.order,
+                        row.outcome == NormalizedOutcome.finished ? "query_first" : "unestablished")
+                    _ = try admittedReplyData(reply)
+                }
+            }
+        }
+    }
     tk.group("actor reply: the principal request through the production orchestrator") {
         tk.run("authority setup failure refuses launch and remains an apparatus failure in the encoded reply") {
             // Occupy the exact authority name with a test-owned empty object.

@@ -602,6 +602,13 @@ return code and diagnostic are missing. The binary record cannot omit those
 fields, and Rust admission rejects one whose call identity is invalid. Reader controls pin both responsibilities, including
 wrong-type rejection, optional absence and unchanged degraded evidence.
 
+The consumer also holds one necessary condition of the summary: a `finished`
+reply carries no phase with a `validator_spawn_failure`, a
+`validator_subprocess.decode_fault` or a `validator_subprocess.io_error`. It
+does not derive which outcome such a phase selects; that is the host
+classifier's. Swift reporting admission and Rust reply admission do not relate
+the summary to phase collection faults.
+
 Every semantic reader checks ownership of a phase's validator subprocess the
 same way. The block carries `phase_id` and `ordinal`, stamped by the host from
 the collection it ran, and both must equal the containing phase's. Its
@@ -1542,7 +1549,7 @@ Lifecycle limitations in the table come from the step's summary.
 | M01–M07 (combined extension faults) | `witness_contract/extension_combinations` (live CLI); `runner_unit` `ComparisonEvidenceTests` (constructed comparisons) | Independent native observer records, target bytes and descriptor checks; row-specific placement, raw, comparison and cleanup assertions |
 | M08 (combined ordinary-phase faults) | `runner_unit` `PhaseProtocolTests` (production driver), `ComparisonEvidenceTests` (constructed comparison), and Rust assembly/Python consumer and lifecycle-oracle replay | Failed termination call, unconfirmed host reap, surviving validator's late EPIPE, distinct phase-local PIDs/record IDs, independently prepared fresh-read bytes and separate test cleanup |
 | Producer invariants and the shape golden | `runner_unit`: `ContractShapeTests`, `EnvelopeInvariantTests`, `OrderingTests`, `ComparisonEvidenceTests`, `ReplyFailureTests`, `DispositionResolverTests` | Constructed results; mutations must be rejected by reporting admission |
-| Consumer invariants | `blackbox_e2e/checker_controls` (consumer controls, client-output control, mutation-order controls); every live blackbox, menagerie, filter and witness case through `tests/lib/consumer.py` | Mutated envelopes retained beside their rejection |
+| Consumer invariants | `blackbox_e2e/checker_controls` (consumer controls, finished-collection controls, client-output control, mutation-order controls); every live blackbox, menagerie, filter and witness case through `tests/lib/consumer.py` | Mutated envelopes retained beside their rejection |
 | Controller invariants (producer gate, outcomes, delivery precedence, projections) | `unit/rust.unit` (`run_flow`, `runner_client`, `dossier` tests); `integration/cli.integration` | Constructed replies with foreign or malformed producer assertions; live refusals |
 | Dossier (`data.specimen`) | `witness_contract/dossier_witness`; opt-in `dossier_witness_byoxpc`; `unit/rust.unit` `dossier` tests | Independently read request bytes, hashes, imports, host sysctls and manifest entries |
 | Host invariance | `source_drift` (source rule with controls); `preflight` and `dispatcher/artifact_controls` (binary `nm -u` with a sandbox-importing control host) | Compiled control binaries |

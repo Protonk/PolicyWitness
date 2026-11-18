@@ -50,6 +50,8 @@ fixture executable and compares the retained emitted bytes with host evidence.
 The unfamiliar diagnostic includes an extra numeric code in raw JSON. These
 transcripts test the real receiver; they do not classify normal validator output
 as corrupt. Byte output is written and retained without text replacement.
+`malformed_only.json` expects one probe and returns only
+`invalid-verdict:<step ID>`; `runner_validator_failure` uses it for actor phases.
 
 Responses may override returned query fields with `fields` or remove them with
 `omit`, independently of the recorded incoming probes. Wrong-query controls

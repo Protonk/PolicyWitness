@@ -88,7 +88,8 @@ same step, malformed evidence channels, duplicate IDs, and reordered steps.
 The hand-reviewed `contract/phase_collection.json` cases append an empty phase
 to the ordinary current model, leaving its action evidence untouched.
 The consumer and lifecycle oracle must accept compatible failed collections
-and reject contradictory status, process, spawn and reap evidence.
+and reject contradictory status, process, spawn and reap evidence. A row that
+records a failed spawn carries the `validator_spawn_failed` summary.
 Combined failures must report each independent problem, so changing a skip
 to an early failure is insufficient. These controls exercise the checker CLI
 without importing its implementation or any production code.
@@ -190,6 +191,14 @@ and duplicate messages fail. Sensitivity controls pass an authored diagnostic
 list through the same control path, add an unrelated message, remove a required
 message, duplicate one, and restore the list. Their receipts retain each
 expected/actual list and the exact missing/unexpected differences.
+
+The consumer also holds one necessary condition of `finished`: no phase carries
+a `validator_spawn_failure`, a `validator_subprocess.decode_fault` or a
+`validator_subprocess.io_error`. It does not derive which outcome such a phase
+selects. `checker_controls` adds a decode fault, an I/O error, both, and a
+failed spawn to the finished model and requires exactly one diagnostic per
+phase and fault; the same evidence under `validator_decode_failure`,
+`validator_no_reply` or `validator_spawn_failed` is accepted.
 A reply retained after a compiled-profile refusal, an absent
 reply, a rejected capture, a failed delivery and a host-byte diagnostic each
 produce no result diagnostic whatever the result says, and a foreign producer

@@ -468,3 +468,10 @@ replies run through the Rust and independent Python readers with mutations
 of nonnull results, resource statuses, handles and transfer acknowledgements.
 Source acknowledgement controls distinguish completed matching publications
 from withdrawal, timeout and duplicate request samples.
+
+Actor collection controls run one applied and one declared-unapplied actor
+through the scheduler with the shipped worker and supply the phase's validator
+result at reply assembly: a clean collection, a failed spawn, a decode fault, a
+read failure, a failed validator pipe, a failed query serialization and an
+exhausted allowance. Both modes must select the same summary, and every
+assembled reply must pass reporting admission. No validator runs in these rows.

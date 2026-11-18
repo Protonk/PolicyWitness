@@ -717,6 +717,17 @@
           "requires": [
             "app"
           ]
+        },
+        {
+          "id": "actor_collection_failure_reports_degraded",
+          "description": "A failed validator spawn or undecodable reply in an actor's phase selects the failed summary for an applied and a declared-unapplied actor; completed writes and phase evidence survive",
+          "command": [
+            "bash",
+            "tests/suites/runner_validator_failure/actor.sh"
+          ],
+          "requires": [
+            "app"
+          ]
         }
       ]
     },

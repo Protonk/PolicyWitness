@@ -1,5 +1,5 @@
 """Generated worker ABI identity. Public identities come from candidate plists."""
 
 # BEGIN GENERATED WORKER IDENTITY (docs/generate_worker_identity.py)
-WORKER_IDENTITY = "6caa00e42eb420ef1c769bafbb03e378fb6135ccd1a49fea01aeb9ff7b2b7874"
+WORKER_IDENTITY = "22f3a7d95c2222134252b902f6aa2f6b21d16c20eef14581d044bc01d3c41ec2"
 # END GENERATED WORKER IDENTITY

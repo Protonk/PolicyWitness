@@ -414,7 +414,14 @@ recipient boundaries.
 Ordinary classification examines worker failure, publication and supervision
 before validator collection. If the worker side remains successful, the first
 unsuccessful phase collection selects the summary; all collection records
-remain. Actor orchestration reports each actor and selects an aggregate outcome.
+remain. Actor orchestration reports each actor and selects the aggregate in a
+fixed order. The first actor, in actor order, whose launch, setup, publication
+or supervision record fails selects the summary; a declared-unapplied actor's
+declared setup stands in for application in that judgment. Otherwise the first
+unsuccessful phase collection, in schedule order, selects it under the ordinary
+rule for that collection's validator result and allowance, whatever the owning
+actor's sandbox mode. Otherwise a cancelled schedule selects `runner_failed`.
+All actor and collection records remain.
 
 <a id="contract-reply-record-outcomes"></a>
 #### Host outcomes
@@ -434,7 +441,7 @@ remain. Actor orchestration reports each actor and selects an aggregate outcome.
 | `runner_reporting_failed` | The host failed to validate or encode its assembled report and entered reporting fallback. |
 
 <a id="contract-reply-record-classification"></a>
-**Support: [check read](CONTRACT.md#contract-support-grades) for [Execution record](#contract-reply-record) and its descendants.** Constructed worker/validator outputs select aggregate outcomes; published native failure and unobserved application retain separate meanings. Assembly source establishes field locations and PID selection. Context: Read classifier branches, ordinary/actor assembly, source hashing and classifier controls. Evidence limit: Check reading. PID placement and the actor aggregate ladder have source support here, without new integrated execution credit. [Evidence details](CONTRACT.md#contract-reply-record-classification-details).
+**Support: [check read](CONTRACT.md#contract-support-grades) for [Execution record](#contract-reply-record) and its descendants.** Constructed worker/validator outputs select aggregate outcomes; published native failure and unobserved application retain separate meanings. Actor replies assembled from a real one-actor schedule with a supplied collection result select the same summary for an applied and a declared-unapplied actor: finished for a clean collection, the validator outcome for a failed spawn, decode or read, runner_failed for a failed validator pipe or query serialization, and validator_unavailable for an exhausted allowance. Signed-CLI actor specimens with a nonexistent validator and with an undecodable reply exit 1 with the failed summary in both modes beside an independently observed write. Assembly source establishes field locations and PID selection. Context: Read classifier branches, ordinary/actor assembly, source hashing, the classifier controls, the assembled-reply rows and the CLI specimens. Evidence limit: Check reading. PID placement, actor-order precedence and cancellation have source support here. The assembled-reply rows supply the validator result at assembly, so no validator ran; the CLI specimens cover one actor, one phase, a failed spawn and one JSON decode fault. No run is credited. [Evidence details](CONTRACT.md#contract-reply-record-classification-details).
 
 <a id="contract-reply-failure"></a>
 ### Reporting failure

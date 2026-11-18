@@ -203023,7 +203023,7 @@
             },
             "id": "reply.record.assemble",
             "kind": "reports",
-            "prose": "Ordinary classification examines worker failure, publication and supervision\nbefore validator collection. If the worker side remains successful, the first\nunsuccessful phase collection selects the summary; all collection records\nremain. Actor orchestration reports each actor and selects an aggregate outcome.",
+            "prose": "Ordinary classification examines worker failure, publication and supervision\nbefore validator collection. If the worker side remains successful, the first\nunsuccessful phase collection selects the summary; all collection records\nremain. Actor orchestration reports each actor and selects the aggregate in a\nfixed order. The first actor, in actor order, whose launch, setup, publication\nor supervision record fails selects the summary; a declared-unapplied actor's\ndeclared setup stands in for application in that judgment. Otherwise the first\nunsuccessful phase collection, in schedule order, selects it under the ordinary\nrule for that collection's validator result and allowance, whatever the owning\nactor's sandbox mode. Otherwise a cancelled schedule selects `runner_failed`.\nAll actor and collection records remain.",
             "title": "Assemble execution evidence"
           },
           {
@@ -459203,7 +459203,7 @@
             },
             "id": "reply.record.assemble",
             "kind": "reports",
-            "prose": "Ordinary classification examines worker failure, publication and supervision\nbefore validator collection. If the worker side remains successful, the first\nunsuccessful phase collection selects the summary; all collection records\nremain. Actor orchestration reports each actor and selects an aggregate outcome.",
+            "prose": "Ordinary classification examines worker failure, publication and supervision\nbefore validator collection. If the worker side remains successful, the first\nunsuccessful phase collection selects the summary; all collection records\nremain. Actor orchestration reports each actor and selects the aggregate in a\nfixed order. The first actor, in actor order, whose launch, setup, publication\nor supervision record fails selects the summary; a declared-unapplied actor's\ndeclared setup stands in for application in that judgment. Otherwise the first\nunsuccessful phase collection, in schedule order, selects it under the ordinary\nrule for that collection's validator result and allowance, whatever the owning\nactor's sandbox mode. Otherwise a cancelled schedule selects `runner_failed`.\nAll actor and collection records remain.",
             "title": "Assemble execution evidence"
           },
           {
@@ -590656,7 +590656,7 @@
             },
             "id": "reply.record.assemble",
             "kind": "reports",
-            "prose": "Ordinary classification examines worker failure, publication and supervision\nbefore validator collection. If the worker side remains successful, the first\nunsuccessful phase collection selects the summary; all collection records\nremain. Actor orchestration reports each actor and selects an aggregate outcome.",
+            "prose": "Ordinary classification examines worker failure, publication and supervision\nbefore validator collection. If the worker side remains successful, the first\nunsuccessful phase collection selects the summary; all collection records\nremain. Actor orchestration reports each actor and selects the aggregate in a\nfixed order. The first actor, in actor order, whose launch, setup, publication\nor supervision record fails selects the summary; a declared-unapplied actor's\ndeclared setup stands in for application in that judgment. Otherwise the first\nunsuccessful phase collection, in schedule order, selects it under the ordinary\nrule for that collection's validator result and allowance, whatever the owning\nactor's sandbox mode. Otherwise a cancelled schedule selects `runner_failed`.\nAll actor and collection records remain.",
             "title": "Assemble execution evidence"
           },
           {

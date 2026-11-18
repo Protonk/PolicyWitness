@@ -86,6 +86,11 @@ def run_extension_controls(run):
         if case['spawn_failure']:
             phase['validator_spawn_failure'] = dict(origin='runner_host', operation='posix_spawn',
                 executable_path='/controlled/validator', return_code=2, diagnostic='controlled spawn failure')
+            # A reply that records a failed spawn is not finished; only the
+            # collection evidence varies between these rows.
+            reply.update(normalized_outcome='validator_spawn_failed', rc=1, error='controlled spawn failure')
+            document['result'].update(normalized_outcome='validator_spawn_failed', ok=False, exit_code=1,
+                                      error='controlled spawn failure')
         reply['phases'].append(phase)
         diagnostic = None if case['accepted'] else 'phase collection status contradicts validator evidence'
         run('phase_collection_' + case['name'], document, rejected_by=diagnostic)

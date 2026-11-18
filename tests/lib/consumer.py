@@ -10,6 +10,9 @@ wrappers; admitted helper envelopes are checked against the current shape.
 An envelope whose own evidence admits its runner reply must report that
 reply's outcome, with success and exit 0 exactly for `finished` and exit 1
 otherwise; an absent, rejected or refused reply supplies no such mapping.
+A `finished` reply carries no phase with a validator spawn failure, a decode
+fault or a validator I/O error; which outcome such a phase selects is the
+producer's classification and is not read here.
 Evidence is then selected by field. No policy, specimen, errno rule, file or
 production implementation is an input, and nothing here asserts agreement or
 disagreement between the prediction and the attempt. Scenario expectations
@@ -644,6 +647,7 @@ def _validate_reply(runner):
         return errors
     if not failed_reporting:
         errors.extend(_validate_phases(runner))
+        errors.extend(_finished_collection_errors(runner))
         errors.extend(validate_extensions(runner))
     if actor_form(runner):
         errors.extend(_validate_actors(runner, failed_reporting, steps_value))
@@ -868,6 +872,26 @@ def _validate_phases(runner):
             [x for x in actions if x in step_ids] != step_ids or [x for x in actions if x in event_ids] != event_ids or \
             any(not _step_phase(runner, action) for action in steps + events):
         errors.append('phase actions do not partition the ordered steps')
+    return errors
+
+
+def _finished_collection_errors(runner):
+    """A necessary condition of `finished`: no phase's collection failed to
+    spawn, to decode or in validator I/O. One error per phase and fault."""
+    if runner.get('normalized_outcome') != 'finished':
+        return []
+    errors = []
+    phases = runner.get('phases')
+    for phase in phases if isinstance(phases, list) else []:
+        if not isinstance(phase, dict):
+            continue
+        validator = phase.get('validator_subprocess')
+        validator = validator if isinstance(validator, dict) else {}
+        for name, value in (('validator_spawn_failure', phase.get('validator_spawn_failure')),
+                            ('validator_subprocess.decode_fault', validator.get('decode_fault')),
+                            ('validator_subprocess.io_error', validator.get('io_error'))):
+            if value is not None:
+                errors.append(f'finished reply carries phase {json.dumps(phase.get("phase_id"))} {name}')
     return errors
 
 

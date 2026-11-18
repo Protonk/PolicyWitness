@@ -8,7 +8,8 @@ tests/run.sh --suite runner_validator_failure
 ```
 
 This baseline suite needs the built app and Python 3, and must run outside an
-automation sandbox. Missing prerequisites fail. It has four cases:
+automation sandbox. Missing prerequisites fail. It has five cases; the signal
+and actor cases are described after the first three:
 
 - `transcript_controls`: directly check the shared validator fixture's input
   receipt, reversed reply order, distinct verdicts, EOF/malformed tails and a real signal.
@@ -60,3 +61,21 @@ and close collection before releasing all three writes. Every file must change
 independently before the envelope is decoded. The exact degraded outcome is
 `validator_unavailable`; the signal diagnostic and executable override survive.
 SIGKILL makes the fixture independent of inherited signal masks/dispositions.
+
+`actor_collection_failure_reports_degraded` submits five actor-form requests:
+one actor, one phase and one `open_write` of a freshly seeded file. The actor's
+sandbox mode is `apply` (allow-default) or `unapplied`, and the validator is a
+nonexistent path or the `malformed_only` transcript, whose whole reply is one
+line that is not JSON. Each of the four must exit 1 with `result.ok=false` and
+`validator_spawn_failed` or `validator_decode_failure`, in both modes, with the
+actor's `setup_status` `applied` or `unapplied_declared`, a clean worker exit,
+a completed attempt, `order: unestablished`, the spawn failure record or the
+decode fault at byte 0 with the transcript's bytes as context, and the file
+changed before the envelope is decoded. The fifth, an unapplied actor with the
+shipped validator, must exit 0 `finished` with an associated `allow` record and
+`query_first`. The consumer and lifecycle oracle must accept every envelope;
+the consumer rejects `finished` beside a phase's spawn failure, decode fault or
+validator I/O error. All five rows run and their problems are reported
+together in `rows.json` and the assertion log. The validator's read, write,
+pipe and serialization failures are not submitted here; `runner_unit`
+`ActorReplyTests` supplies them to reply assembly.

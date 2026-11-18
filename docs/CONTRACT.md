@@ -1545,6 +1545,7 @@ Declarations own meaning; source and check citations supply the stated support. 
 | `runner/Tests/PWRunnerCoreTests/ActorEquipmentTests.swift: runActorEquipmentTests` | check support | [Static worker binding](RESPONSE.md#contract-equipment-binding) |
 | `runner/Tests/PWRunnerCoreTests/ActorEquipmentTests.swift: runActorEquipmentTests` | check support | [Live-inspection evidence limit](RESPONSE.md#contract-equipment-execution-live_evidence) |
 | `runner/Tests/PWRunnerCoreTests/ActorReplyTests.swift: runActorReplyTests` | check support | [Setup deadline and later application](RESPONSE.md#contract-actor_evidence-application-late_application) |
+| `runner/Tests/PWRunnerCoreTests/ActorReplyTests.swift: runActorReplyTests` | check support | [Execution record](RESPONSE.md#contract-reply-record) |
 | `runner/Tests/PWRunnerCoreTests/ActorSchedulerTests.swift: runActorSchedulerTests` | check support | [Setup deadline and later application](RESPONSE.md#contract-actor_evidence-application-late_application) |
 | `runner/Tests/PWRunnerCoreTests/ActorSchedulerTests.swift: runActorSchedulerTests` | check support | [A timeout followed by cleanup](RESPONSE.md#contract-actor_evidence-gate-timeout_example) |
 | `runner/Tests/PWRunnerCoreTests/ActorSchedulerTests.swift: runActorSchedulerTests` | check support | [Collect, release and advance](REQUEST.md#contract-actors-phase-order) |
@@ -1649,6 +1650,7 @@ Declarations own meaning; source and check citations supply the stated support. 
 | `tests/suites/runner_unit/reader_corpus.py: replay` | check support | [Reader applicability](RESPONSE.md#contract-actor_evidence-actor-reader_scope) |
 | `tests/suites/runner_unit/reader_corpus.py: replay` | check support | [Reader judgments](RESPONSE.md#contract-diagnostics-execution-reader_evidence) |
 | `tests/suites/runner_unit/reader_corpus.py: replay` | check support | [Frame grammar](ARCHITECTURE.md#contract-wire-frame) |
+| `tests/suites/runner_validator_failure/check_actor.py: collection_row` | check support | [Execution record](RESPONSE.md#contract-reply-record) |
 | `tests/suites/source_drift/build_contracts.py: test_build_identity_tracks_shipped_inputs_and_requires_an_annotated_clean_release` | check support | [Build derivation](#contract-identity-public-derive) |
 | `tests/suites/source_drift/build_contracts.py: test_pending_release_reproduces_after_tagging_and_tracks_removal` | check support | [Deriving the history table](#contract-identity-surfaces-derive) |
 | `tests/suites/source_drift/build_contracts.py: test_presign_contract_guard_refuses_changed_sources` | check support | [Build derivation](#contract-identity-public-derive) |
@@ -2402,7 +2404,7 @@ Source: [sb_api_validator.c](../controller/tools/sb_api_validator/sb_api_validat
 
 [Local support](RESPONSE.md#contract-reply-record-classification).
 
-Source: [CWorkerDisposition.swift](../runner/Sources/PWRunnerCore/CWorkerDisposition.swift): `func classify(`; [CWorkerOrchestrator.swift](../runner/Sources/PWRunnerCore/CWorkerOrchestrator.swift): `let topPid: Int`; [ActorOrchestration.swift](../runner/Sources/PWRunnerCore/ActorOrchestration.swift): `var reply = PWRunnerRunResult`; [SandboxApply.swift](../runner/Sources/PWRunnerCore/SandboxApply.swift): `computePolicyHash`. Check: [HostOutcomeClassifierTests.swift](../runner/Tests/PWRunnerCoreTests/HostOutcomeClassifierTests.swift): `runHostOutcomeClassifierTests`.
+Source: [CWorkerDisposition.swift](../runner/Sources/PWRunnerCore/CWorkerDisposition.swift): `func classify(`; [CWorkerOrchestrator.swift](../runner/Sources/PWRunnerCore/CWorkerOrchestrator.swift): `let topPid: Int`; [ActorOrchestration.swift](../runner/Sources/PWRunnerCore/ActorOrchestration.swift): `var reply = PWRunnerRunResult`; [SandboxApply.swift](../runner/Sources/PWRunnerCore/SandboxApply.swift): `computePolicyHash`. Check: [HostOutcomeClassifierTests.swift](../runner/Tests/PWRunnerCoreTests/HostOutcomeClassifierTests.swift): `runHostOutcomeClassifierTests`; [ActorReplyTests.swift](../runner/Tests/PWRunnerCoreTests/ActorReplyTests.swift): `runActorReplyTests`; [check_actor.py](../tests/suites/runner_validator_failure/check_actor.py): `collection_row`.
 
 <a id="contract-reply-failure-publish-support-details"></a>
 ### Publish a report or fallback — Fallback support
