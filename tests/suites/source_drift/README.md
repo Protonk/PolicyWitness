@@ -364,7 +364,15 @@ compiled-value and behavioral checks establish implementation agreement.
 - **G1. One owner, nothing outside.** Every region (including an authored
   scalar span) and whole-file output has exactly one generator, which changes no byte outside them. A document holds
   each marker pair once, in order; a broken pair stops the generator before
-  any write.
+  any write. Contract generation and its check also refuse, with the fixture
+  unchanged, one declared region nested inside another, naming the document
+  and both regions, and a contract region marker in a Markdown document
+  directly under `docs/` that the presentation map does not name. The
+  moved-destination control renames a destination in the map and copies the
+  document to the new name: the document the map stopped naming is refused
+  while it keeps its regions, and the move is accepted once they are removed.
+  The scan reads markers, so it does not report a statement left in such a
+  document without them.
 - **G2. Idempotence.** A second run immediately after a first writes nothing.
 - **G3. Check mode before signing.** Every generator has `--check`, which
   writes nothing and exits nonzero on any stale copy, and the build runs

@@ -1104,6 +1104,67 @@ class GeneratorContractTests(receipts.TestCase):
                     self.assertEqual(self.snapshot(root), before, 'malformed late destination partly rewrote outputs')
         path.write_text(original)
 
+        # Document mutations: a destination's own markers, and a document the map stopped naming.
+        request, moved = root / 'docs/REQUEST.md', root / 'docs/REQUEST-MOVED.md'
+        baseline = fixture_inputs.snapshot(root)
+
+        def restore():
+            for name in set(fixture_inputs.snapshot(root)) - set(baseline):
+                (root / name).unlink()
+            for name, body in baseline.items():
+                if (root / name).read_bytes() != body:
+                    (root / name).write_bytes(body)
+
+        def nested():
+            """The policy region begins ahead of the request region, so the request region lies inside it."""
+            text = request.read_text()
+            inner, outer = ('<!-- BEGIN GENERATED CONTRACT request -->\n', '<!-- BEGIN GENERATED CONTRACT policy -->\n')
+            self.assertEqual((text.count(inner), text.count(outer)), (1, 1))
+            self.assertLess(text.index(inner), text.index(outer))
+            request.write_text(text.replace(outer, '').replace(inner, outer + inner))
+
+        def moved_destination(keep_regions=True):
+            """The map names a copy of REQUEST under a new key; the document it stopped naming stays on disk."""
+            data = json.loads(original)
+            data['documents'] = {moved.relative_to(root).as_posix() if name == 'docs/REQUEST.md' else name: entries
+                                 for name, entries in data['documents'].items()}
+            path.write_text(json.dumps(data))
+            text = request.read_text()
+            moved.write_text(text)
+            if not keep_regions:
+                authored = re.sub(r'<!-- BEGIN GENERATED CONTRACT ([a-z][a-z0-9_]*) -->.*?<!-- END GENERATED CONTRACT \1 -->\n?',
+                                  '', text, flags=re.DOTALL)
+                self.assertNotIn('GENERATED CONTRACT', authored)
+                request.write_text(authored)
+
+        for mutate, message in (
+                (nested, 'docs/REQUEST.md: contract region request begins inside contract region policy'),
+                (moved_destination, 'docs/REQUEST.md: contract region markers in a document the presentation map '
+                                    'does not name: actors, extensions, helper, policy, probes, request')):
+            with self.subTest(mutation=mutate.__name__):
+                try:
+                    mutate()
+                    before = self.snapshot(root)
+                    for args in ((), ('--check',)):
+                        result = self.command(root, 'contract_stamps', *args)
+                        self.assertNotEqual(result.returncode, 0, result.stdout)
+                        self.assertIn(message, result.stderr)
+                        self.assertEqual(self.snapshot(root), before, 'refused destination document changed the checkout')
+                finally:
+                    restore()
+        with self.subTest(mutation='moved_destination without the old regions'):
+            try:
+                moved_destination(keep_regions=False)
+                authored = request.read_bytes()
+                result = self.command(root, 'contract_stamps')
+                self.assertEqual(result.returncode, 0, result.stderr)
+                self.assertEqual(request.read_bytes(), authored, 'generation wrote a document the map does not name')
+                self.assertIn('<a id="contract-request-specimen">', moved.read_text())
+                result = self.command(root, 'contract_stamps', '--check')
+                self.assertEqual(result.returncode, 0, result.stderr)
+            finally:
+                restore()
+
     def test_history_free_contract_check_covers_every_document_and_preview_protects_them(self):
         root = self.checkout(('contract_stamps',))
         gen = module('all_outputs_contract', root / 'docs/generate_contract_stamps.py')

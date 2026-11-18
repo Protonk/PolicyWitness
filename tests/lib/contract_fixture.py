@@ -8,6 +8,7 @@ from its own owners instead of presuming the copied guide equals them.
 """
 import json
 from pathlib import Path
+import re
 import subprocess
 import sys
 
@@ -22,7 +23,11 @@ def write_outputs(root, values):
 
 
 def presentation(root, documents, *, commitments=()):
-    """Give a constructed tree explicit destinations supplied by its caller."""
+    """Give a constructed tree explicit destinations supplied by its caller.
+
+    A copied document the constructed map does not name loses its contract
+    regions: generation refuses a region marker outside its map.
+    """
     root = Path(root)
     data = dict(documents=documents, commitments=list(commitments))
     (root / 'docs/contract/presentation.json').write_text(json.dumps(data, indent=2) + '\n')
@@ -38,6 +43,13 @@ def presentation(root, documents, *, commitments=()):
         path.write_text('# Constructed presentation\n\n' + '\n\n'.join(
             f'<!-- BEGIN GENERATED CONTRACT {region} -->\n<!-- END GENERATED CONTRACT {region} -->'
             for region in entries) + '\n')
+    for path in sorted((root / 'docs').glob('*.md')):
+        if path.relative_to(root).as_posix() not in regions:
+            text = path.read_text()
+            authored = re.sub(r'<!-- BEGIN GENERATED CONTRACT ([a-z][a-z0-9_]*) -->.*?<!-- END GENERATED CONTRACT \1 -->\n?',
+                              '', text, flags=re.DOTALL)
+            if authored != text:
+                path.write_text(authored)
 
 
 def minimal_surfaces(root, *, checks=('fixture',)):

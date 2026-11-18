@@ -79,6 +79,11 @@ def destinations(root):
     return {*data['documents'], *(e['document'] for e in data['commitments'])}
 
 
+def documents(root):
+    """Markdown documents directly under docs/, which render reads for region markers outside the map."""
+    return sorted(path.relative_to(root).as_posix() for path in (root / 'docs').glob('*.md'))
+
+
 def rebase(text, document, homes):
     anchors = {'contract-' + ident.replace('.', '-'): home for ident, home in homes.items()}
     anchors.update({'contract-' + ident.replace('.', '-') + '-details': CONTRACT for ident in homes})
@@ -170,6 +175,21 @@ def render(root, tree):
         ends = re.findall(r'<!-- END GENERATED CONTRACT ([a-z][a-z0-9_]*) -->', text)
         if set(begins) != regions or set(ends) != regions or len(begins) != len(regions) or len(ends) != len(regions):
             raise ValueError(f'{document}: expected one ordered contract region for each declared entry; orphaned or missing region')
+        # Replacing an enclosing region would erase the markers of the region inside it.
+        opened = None
+        for kind, region in re.findall(r'<!-- (BEGIN|END) GENERATED CONTRACT ([a-z][a-z0-9_]*) -->', text):
+            if kind == 'BEGIN' and opened:
+                raise ValueError(f'{document}: contract region {region} begins inside contract region {opened}; '
+                                 'declared regions must not overlap')
+            if kind == 'END' and region != opened:
+                raise ValueError(f'{document}: expected one ordered contract region {region}')
+            opened = region if kind == 'BEGIN' else None
+    for document in documents(root):
+        if document not in expected and document not in data['documents']:
+            found = re.findall(r'<!-- (?:BEGIN|END) GENERATED CONTRACT ([a-z][a-z0-9_]*) -->', (root / document).read_text())
+            if found:
+                raise ValueError(f'{document}: contract region markers in a document the presentation map does not name: ' +
+                                 ', '.join(sorted(set(found))))
     values = {}
     for document, entries in data['documents'].items():
         text = (root / document).read_text() if document != CONTRACT else (root / INTRO).read_text().rstrip() + '\n\n'

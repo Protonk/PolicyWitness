@@ -77,7 +77,7 @@ check_shapes, collected_shapes = _backend.check_shapes, _backend.collected_shape
 
 def input_paths(root):
     return sorted({*tree_input_paths(root), *STAMP_OUTPUTS,
-                   *_backend.presentation.destinations(root),
+                   *_backend.presentation.destinations(root), *_backend.presentation.documents(root),
                    'docs/publication.py', 'docs/generate_contract_stamps.py', 'docs/generate_porcelain.py',
                    'docs/limits.json', 'tests/catalog.json', 'docs/porcelain.json',
                    'controller/src/runner_select.rs'})
