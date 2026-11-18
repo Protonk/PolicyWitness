@@ -18,7 +18,8 @@ def construct(root, out):
     if out.exists():
         raise ValueError('constructed pilot output must be fresh')
     sys.path.insert(0, str(root / 'tests/suites/witness_contract'))
-    import worker_wait_pilot_controls as fixtures
+    import worker_wait_pilot_constructed as fixtures
+    import worker_wait_clock_pair as clock_pair
     import worker_wait_pilot_reader as reader
 
     # Equal baseline and candidate timestamps imply zero differences in all
@@ -41,7 +42,7 @@ def construct(root, out):
         required={'baseline/O1/rapid': 5, 'candidate/O1/rapid': 5},
         comparison=dict(apps=['baseline', 'candidate'], pairs_required=5,
                         pairing_rule='constructed: same cell, regime and repetition index')))
-    fixtures.write_calibration(out)
+    fixtures.write_calibration(clock_pair, out)
     decomposition, summary = reader.read_artifacts(out)
     rows, pairs = decomposition['rows'], summary['pairs']
     assert (summary['instrument_gate'] or {}).get('credited') is True

@@ -780,6 +780,8 @@ most, including its sensitivity control, and needs its own announced window.
 - **Location:** `tests/suites/witness_contract/opt_in/worker_wait_pilot.sh`,
   `check_worker_wait_pilot.py` and `worker_wait_pilot_reader.py`, with the
   stamp worker, host patch set and clock-pair control in `tests/fixtures/worker_wait/`.
+  The default controls are the pytest family `test_worker_wait_pilot_controls.py`,
+  with their constructed receipts in `worker_wait_pilot_constructed.py`.
 - **Purpose:** Decompose ordinary and actor held phases on the production
   planning and validator path into worker publication, host detection,
   planning, validator, closure, release and acknowledgement intervals, and
@@ -1035,6 +1037,9 @@ Command-supervision changes also require `preflight/release_deadline_controls`.
 Keep the existing live exec family check for engine changes. Changes to
 declared command scopes, explicit command context or input capture also need
 `source_drift/markdown_reader`, whose items use them without native equipment.
+Changes to the default command context, to the capture of trees an item owns
+or to what a session fixture's teardown may publish also need
+`witness_contract/worker_wait_pilot_controls`.
 
 `tests/lib/reporting_replay.py` is a read-only investigation over completed
 retained runs, with a tracked reader snapshot and isolated outputs. It replays

@@ -376,7 +376,7 @@ evidence checks pass, including when those cases run through BYOXPC.
 | `runner_exec_lifecycle` | Baseline + opt-in | CLI exec deadlines stop observed helper trees, preserve output and allow later effects; early EOF, surviving descendants and worker death are covered, including an opt-in combined EOF/leader-exit observation that the default battery also selects as an aftermath dependency. | App, XPC, clang and Python. | [Suite](suites/runner_exec_lifecycle/README.md) |
 | `runner_exec_inheritance` | Baseline + opt-in | Children report isolated environments/descriptors and usable streams; controlled resources and opt-in mutations establish leak detection; opt-in production launch inventory records accessible worker state and observer boundaries; a closed-worker-stderr probe characterizes child delivery. | App/XPC for CLI and launch inventory; clang/Python for worker and mutation controls. | [Suite](suites/runner_exec_inheritance/README.md) |
 | `opt_in` | Opt-in | Selection of all non-default catalog cases. | Varies by case. | [Selection](#how-to-run) |
-| `witness_contract` | Baseline + opt-in | Per-phase ordering and fresh planning, native extension lifecycle/interruption, combined faults and token confinement, bounded collection, independent query/attempt effects, comparison limits, partial evidence, diagnostics and dossier; the controlled read publisher's replacement generations, content boundaries, crossed operands, returning actors and distinction table; the app's emitted phased example and exact flat/actor derivatives through `run`, with independent native expectations and constructed ownership/association controls; repeated held-worker CPU and fresh-controller response-memory observations; opt-in staged-guide request/repair/runner workflows, barrier mutations, BYOXPC dossier, independent native path-query observations and a paced worker-wait timestamp pilot and gated actual-worker CPU comparisons. Default footprint, mechanism-neutral held-CPU and pilot-reader controls validate scalar and stamp receipts and native observer sensitivity. | App/XPC and toolchains for live cases; Developer ID signing for the held footprint; signing/GUI for applicable opt-ins; offline cases vary. | [Suite](suites/witness_contract/README.md) |
+| `witness_contract` | Baseline + opt-in | Per-phase ordering and fresh planning, native extension lifecycle/interruption, combined faults and token confinement, bounded collection, independent query/attempt effects, comparison limits, partial evidence, diagnostics and dossier; the controlled read publisher's replacement generations, content boundaries, crossed operands, returning actors and distinction table; the app's emitted phased example and exact flat/actor derivatives through `run`, with independent native expectations and constructed ownership/association controls; repeated held-worker CPU and fresh-controller response-memory observations; opt-in staged-guide request/repair/runner workflows, barrier mutations, BYOXPC dossier, independent native path-query observations and a paced worker-wait timestamp pilot and gated actual-worker CPU comparisons. Default footprint, mechanism-neutral held-CPU and pilot-reader controls validate scalar and stamp receipts and native observer sensitivity. | App/XPC and toolchains for live cases; Developer ID signing for the held footprint; signing/GUI for applicable opt-ins; the pinned pytest packages for the pilot-reader family; offline cases vary. | [Suite](suites/witness_contract/README.md) |
 
 ## Shared test infrastructure
 
@@ -741,15 +741,17 @@ their producing contract; later authority decisions do not rewrite them.
 
 ## Pytest families
 
-Two cases are pytest families, each one public case containing pytest items.
+Three cases are pytest families, each one public case containing pytest items.
 `runner_c_worker_harness/exec_control_states` has nine items that compile and
 run native controls. `source_drift/markdown_reader` holds the
-[Markdown reader controls](suites/source_drift/README.md#markdown-reader); its
-items are pure or run a recorded command, and it needs no native equipment.
+[Markdown reader controls](suites/source_drift/README.md#markdown-reader) and
+`witness_contract/worker_wait_pilot_controls` the
+[worker-wait pilot reader controls](suites/witness_contract/README.md#worker-wait-pilot-controls);
+their items are pure or run a recorded command, and they need no native equipment.
 Public selection remains whole-family. Pytest owns item discovery,
 variants, fixtures and setup/call/teardown reporting; PolicyWitness owns artifact
 admission, checkout locks, durable accounting, command supervision and retention.
-The Markdown reader items declare their command scope: `pw_commands('none')`
+The items of those two families declare their command scope: `pw_commands('none')`
 for a pure item and `pw_commands('recorded')` for one that runs commands. These retain
 ordinary pytest assertions. Explicit observation items declare the same command
 scope in `pw_contract`. Pure items retain phase and input evidence with an empty
@@ -790,7 +792,7 @@ that context before launch. An independent command owner holds the actual checko
 lock descriptor, captures stdout/stderr, watches engine/supervisor exit and
 settles the command's process group. Fixture cleanup removes ordinary Python
 state; it does not establish exit or authorize deletion of external resources.
-Neither family launches processes that intentionally escape that group.
+No family launches processes that intentionally escape that group.
 
 If no command process comes to exist — a spawn error, the owner's refusal of an
 unauthorized release or changed context, a lost release gate, or a failure to

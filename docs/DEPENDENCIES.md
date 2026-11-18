@@ -108,8 +108,9 @@ this account alongside its owning case.
   and the describe string and commit read `unknown`. A release refuses
   anything but a clean checkout at an annotated tag.
 
-The default battery's two pytest families,
-`runner_c_worker_harness/exec_control_states` and `source_drift/markdown_reader`,
+The default battery's three pytest families,
+`runner_c_worker_harness/exec_control_states`, `source_drift/markdown_reader`
+and `witness_contract/worker_wait_pilot_controls`,
 additionally need pytest 9.0.2 and its exact
 locked dependencies. Run `tests/setup-pytest.sh` explicitly; it verifies wheel
 SHA-256 values from `tests/requirements-pytest.lock` and installs into an

@@ -630,7 +630,42 @@ staged bundles and any action taken) and `pilot.json`.
 The case is opt-in because it builds and signs disposable hosts and its
 timings are sensitive to competing load, so it needs a quiet window.
 
-The default `worker_wait_pilot_controls` constructs complete ordinary, actor
+### Worker wait pilot controls
+
+The default `worker_wait_pilot_controls` case is a
+[pytest family](../../README.md#pytest-families) in
+[test_worker_wait_pilot_controls.py](test_worker_wait_pilot_controls.py).
+[worker_wait_pilot_constructed.py](worker_wait_pilot_constructed.py) builds its
+receipts, and the dispatcher's constructed comparison takes its bundles from the
+same module. Each item's identity is `<Group>.<function>`, followed by a label
+where the function runs once per input, so each constructed fault, order rule,
+pooled key, missing file and malformed minimal export reports its own result.
+Expected values are literals written from the constructed microsecond times;
+none is computed by the reader. Collection imports neither the reader, the
+clock pair nor the stager and creates nothing. An item that replaces a reader
+or stager function does so through a fixture that restores the original at
+teardown and checks that it returned. A disk scenario writes its tree into a
+temporary directory of its own, registers it before the loader reads it and
+captures it before removal. Three stager items run real commands at the
+engine's supervised boundary, the `ditto` copy and the stand-in worker's
+`--version`, five commands in all; the stager's own receipt directory is each
+command's artifact directory, and the constructed inputs and staged copies stay
+under `artifacts/stager/<identity>/`. Every other item declares no commands.
+The family needs the pinned test packages that `tests/setup-pytest.sh`
+provisions.
+
+The family publishes `artifacts/controls.json` after its last item: the
+`accepted` names, the `rejected` controls with the status and codes each
+reported, `not_established` for every declared name with an item that did not
+record it, and `items`, which maps each item identity to the names it declares
+and, for a refused control, the status and codes it recorded. A name is listed
+as accepted or rejected only when every item declaring it recorded it, so a
+failing item moves its names to `not_established`. The account's scope is
+constructed reader sensitivity; it credits no live stamp or timing. Beside it,
+`summary.txt` lists item and phase outcomes, `family.json` is the family
+report and `artifacts/inputs/` holds each item's input snapshots.
+
+The controls construct complete ordinary, actor
 and neighbor receipts, with worker events in program order and the clock
 pair's own constructed calibration receipt, and checks decoded values,
 intervals and uncertainty arithmetic. It then rejects a wrong page magic or version, capture-refused and
@@ -643,8 +678,8 @@ inversion that widens the alignment term, a host pid mismatch between the
 start marker and the export, an arrival with no negative sample, pooling across
 cells, power sources, low power mode and flavours, a calibration receipt whose
 endpoint-bracket outlier exceeds the gate, the per-wait pass events and
-pre-store host stamps, and a copy of the reader with the earlier uncertainty
-formula, which must fail. Combined faults keep every code. Constructed
+pre-store host stamps, and the reader with its uncertainty arithmetic replaced
+by the earlier formula, which must fail. Combined faults keep every code. Constructed
 comparison rows must give an improvement verdict when the candidate's arrival
 and held total are shorter beyond uncertainty and spread in every pair, none
 when one pair is within uncertainty, an instrument but no spread improvement
@@ -664,7 +699,7 @@ does not follow its pair (moved, another key or another raw) and a grace
 finished before it begins. A candidate-shaped A2 receipt gives each actor its
 own exit request, reaping sample, grace program points and stop code, with one
 notified and one timed-out exit wait; each actor's three intervals and stop
-code must come from its own events, and copies of the reader that match those
+code must come from its own events, and the reader with lookups that match those
 events without the actor, or only the stop without it, must fail. Constructed whole-request values check the
 direction counts, and constructed counts the paired grace differences.
 Constructed A2 receipts with inbound scan counters must give
@@ -676,8 +711,8 @@ two scans below their floors, each with the lower ratio on the side with fewer
 passes), separate a ratio that rounds to the baseline's as a float, refuse a
 pair whose subject `inbound_count` differs and a pair whose candidate page
 lacks one slot's acknowledgement, and sum and take medians of the counters
-per actor in a group; copies of the reader that compare the ratios as floats
-or credit a lower ratio without the floor conditions must fail. A comparison's receipts go through the loader and writers with
+per actor in a group; the reader with a float ratio comparison, or with a lower
+ratio credited without the floor conditions, must fail. A comparison's receipts go through the loader and writers with
 separate app groups. The stager, given a constructed candidate app and source
 tree and stopped before any copy is signed, refuses an equipment identity or a
 stamp worker identity that differs from the tree's declared one.

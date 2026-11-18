@@ -237,8 +237,10 @@ verified, following the [external-runner workflow](../AGENTS.md#external-runner-
 Scratch follows [.tmp/AGENTS.md](../.tmp/AGENTS.md); never move evidence there
 to evade retention.
 
-For `runner_c_worker_harness/exec_control_states`, pytest owns internal item
-registration. Use the public whole-family selector, not direct pytest or `-k`.
-Keep the complete native sequence and independent rejection expectations intact.
-An ownership refusal names the run ID for `--recover-ownership`; inspect it before
-`--apply`. Never use historical PIDs alone as cleanup authority.
+For a [pytest family](README.md#pytest-families), a catalog case with
+`"engine": "pytest"`, pytest owns internal item registration. Use the public
+whole-family selector, not direct pytest or `-k`. For
+`runner_c_worker_harness/exec_control_states`, keep the complete native sequence
+and independent rejection expectations intact. An ownership refusal names the
+run ID for `--recover-ownership`; inspect it before `--apply`. Never use
+historical PIDs alone as cleanup authority.
