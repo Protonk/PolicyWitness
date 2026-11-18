@@ -4,10 +4,6 @@ import hashlib
 import json
 import os
 from pathlib import Path
-import sys
-
-# The shell starts with -P; admit only this helper's own module directory.
-sys.path.insert(0, str(Path(__file__).resolve().parent))
 import outcomes
 from pytest_support import append, contained, read, write
 

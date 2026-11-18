@@ -487,7 +487,7 @@ PY
 _test_outcome() {
   local action="$1"
   shift
-  "${PW_PYTHON}" -B -S -P "${PW_CONTRACT_TEST_LIB}/outcomes_shell.py" "$action" -- "$@"
+  "${PW_PYTHON}" -B -S "${PW_CONTRACT_TEST_LIB}/outcomes_shell.py" "$action" -- "$@"
 }
 
 test_observe() { _test_outcome observe "$@"; }
