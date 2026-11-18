@@ -35,6 +35,9 @@ EXITED = 'exited_before_cleanup'
 # Only the sample taken after this checker releases the fixture can report this.
 RELEASED = 'exited_after_fixture_release'
 SAMPLE_WINDOW_SECONDS = 2.0
+CLI_WAIT_SECONDS = 25
+CLI_EXIT_MISSING = (f'CLI exit event missing {CLI_WAIT_SECONDS} seconds after the leader exited; '
+                    'there is no completion to sample the descendant after')
 
 
 class Unresolved(Exception):
@@ -143,6 +146,8 @@ def classify_lifetime(sample):
         raise InvalidObservation('sample names no registered generation and group')
     registered = stamp('exit_watch_registered_ns')
     triggered = stamp('completion_triggered_ns')
+    if sample.get('cli_completed_ns') is None:
+        raise Unresolved(CLI_EXIT_MISSING)
     completed = stamp('cli_completed_ns')
     released = stamp('fixture_released_ns', required=False)
     exited = stamp('exit_observed_ns', required=False)
@@ -195,6 +200,8 @@ def classifier_controls():
         ('exit_after_fixture_release', sample(fixture_released_ns=400, exit_observed_ns=410, ping=None, snapshot=None), RELEASED),
         ('missing_exit_evidence_and_ping', sample(ping=no_ping, snapshot=dict(error='constructed: no such process')), Unresolved),
         ('missing_pid_without_exit_event', sample(snapshot=dict(error='constructed: no such process')), Unresolved),
+        ('cli_exit_event_missing', sample(cli_completed_ns=None), Unresolved),
+        ('cli_exit_event_missing_with_descendant_exit', sample(cli_completed_ns=None, exit_observed_ns=250, ping=None, snapshot=None), Unresolved),
         ('no_exit_event_after_release', sample(fixture_released_ns=400), Unresolved),
         ('changed_identity', sample(snapshot=dict(identity=dict(generation, start_usec=18), group=4241)), InvalidObservation),
         ('changed_group', sample(snapshot=dict(identity=dict(generation), group=4242)), InvalidObservation),
@@ -436,9 +443,9 @@ def main():
         observations.update(stage='leader_exit_observed', completion_triggered_ns=triggered,
                             leader_exit_observed_ns=leader_exit)
         write_json(out / 'observations.json', observations)
-        completed = stamps.wait_for(run.pid, 25)
-        assert completed is not None, 'CLI exit event missing 25 seconds after the leader exited'
-        rc = run.wait(timeout=5)
+        completed = stamps.wait_for(run.pid, CLI_WAIT_SECONDS)
+        # Without the CLI's exit event the descendant is still sampled and retained; the classifier refuses that sample.
+        rc = run.wait(timeout=5) if completed is not None else None
         timing = dict(completion_triggered_ns=triggered, cli_completed_ns=completed, fixture_released_ns=None)
         sample = sample_descendant(control, stamps, helper, processes['C'], groups['P'], timing)
         after = target.read_bytes()

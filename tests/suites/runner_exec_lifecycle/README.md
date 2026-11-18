@@ -84,7 +84,10 @@ unacknowledged ping or a missing PID is never read as an exit: the checker
 then waits a bounded time for the registered event, and a sample no event
 settles leaves the observation incomplete, which fails the case. A changed
 identity or group, or a watch registered after completion was triggered, also
-fails it. Each exit stamp is when the event was observed; it carries no status
+fails it. When the CLI's exit event has not arrived 25 seconds after the
+leader exited, there is no completion to sample after: the descendant is
+still sampled and retained, and the classifier refuses that sample with
+"CLI exit event missing". Each exit stamp is when the event was observed; it carries no status
 for a process that is not the checker's child, so an exit alone does not
 identify its cause. `classifier-controls.json` retains constructed samples for
 both histories and for each refusal, run through the same classifier before
