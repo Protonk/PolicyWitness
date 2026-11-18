@@ -1076,18 +1076,37 @@ in each case.
 - No default battery has run on a build containing R4 or R5. It is owed once,
   for the whole product group.
 
+**R14 (DT-01.a, DT-02.a).** `fc4586fc`: contract generation refuses a
+declared region that begins inside another, and refuses region markers in a
+Markdown document directly under `docs/` that the presentation map does not
+name, in both cases before any write. The controls came first: on the
+unchanged generator (`r14-pre`, `20261118T212353Z_c410eb27`) the case failed
+on exactly the two new mutations, which generation accepted. No generated
+file changed, and the guide is byte-identical; its stamp markers do not match
+the region pattern. The constructed-map fixture helper now removes contract
+regions from documents its map does not name, because the new scan refused
+fixtures that copied the checkout's destinations beside a smaller map. Runs
+of record, without recorded sleep: `r14-post-drift`
+(`20261118T213406Z_0a2e8a68`, 11 pass) and `r14-post-preflight`
+(`20261118T212902Z_6bb1c9b7`, the publish and rotation controls, 2 pass). No
+build input changed. Owed to the accounts thread: the build account's list of
+what the contract check reads, and an authoring rule for removing regions
+when a document leaves the map. `preflight/build_refusal_controls`, which
+uses the changed helper, has not run since.
+
 ### Pause — 2026-11-18
 
 Work stopped at a quiet point at the maintainer's request. State: `main` at
-the commit that adds this note, tree clean, nothing pushed, no extra
+the commit that last changed this note, tree clean, nothing pushed, no extra
 worktree, no writer in the checkout; the signed app in `dist/` is
 `development:378493f6…01542300`. `tests/out/runs` holds only the nine
-`host1-*` directories. The guide, its copies and both publication records are
+`host1-*` and three `r14-*` directories. The guide, its copies and both publication records are
 byte-unchanged at the freeze. No release was made.
 
 Done in this stage: the Markdown and pilot cohorts; the seam migration; the
 limits texts under the freeze; the four conversions with their follow-ups;
-R4 and R5.
+R4 and R5; R14, taken out of the accounts thread after the pause was first
+written.
 
 Remaining, in this order, one writer at a time, each product thread
 tests-first with its own rebuild and routed verification:
@@ -1102,7 +1121,8 @@ tests-first with its own rebuild and routed verification:
    after EXEC), IDENT (R3).
 3. One default battery for the product group; reread it with the revised
    battery validator; a read-only prune preview. No apply.
-4. The accounts thread in three parts with R14, and the build-refusal case's
+4. The accounts thread in three parts (R14 is done; its two owed account
+   corrections are in the scratch addenda), and the build-refusal case's
    nested battery adapted to a development candidate.
 5. Final integrated verification: offline and drift controls, a rebuild so
    the app's commit stamp is clean, the default battery with relevant
