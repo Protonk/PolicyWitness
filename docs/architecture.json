@@ -3699,17 +3699,17 @@
           ],
           "checks": [
             {
-              "path": "tests/suites/source_drift/run.sh",
+              "path": "tests/suites/source_drift/test_markdown_reader.py",
               "symbol": "markdown_reader",
               "form": "test"
             },
             {
-              "path": "tests/suites/source_drift/markdown.py",
+              "path": "tests/suites/source_drift/test_markdown_reader.py",
               "symbol": "test_vendored_files_are_the_wheels_bytes",
               "form": "test"
             },
             {
-              "path": "tests/suites/source_drift/markdown.py",
+              "path": "tests/suites/source_drift/test_markdown_reader.py",
               "symbol": "test_only_the_reader_imports_the_parser",
               "form": "test"
             }
@@ -5430,7 +5430,7 @@
           ],
           "checks": [
             {
-              "path": "tests/suites/source_drift/markdown.py",
+              "path": "tests/suites/source_drift/test_markdown_reader.py",
               "symbol": "test_anchors_keep_underscores_and_number_duplicates",
               "form": "test"
             }

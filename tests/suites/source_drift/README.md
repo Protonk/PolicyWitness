@@ -296,7 +296,7 @@ inline-example, image, code-label, code-label-example, wrapped, split,
 indented-continuation, indented-example, indented-after-heading and
 list-continuation) for one target (`runner/AGENTS.md`), and the refused
 inline comment. The other documents' and targets' repetitions of those shapes
-are literal expectations in [markdown.py](markdown.py): fences and headings,
+are literal expectations in [test_markdown_reader.py](test_markdown_reader.py): fences and headings,
 comments, indentation with links, list continuation with a link, section
 bounds after peer and parent headings, code labels, images and the refusal.
 
@@ -494,7 +494,8 @@ literal text. The reader refuses an inline comment containing `--`: CommonMark
 0.30, which the pinned parser implements, reads such a comment as text, while
 GitHub hides it.
 
-The `markdown_reader` case in [markdown.py](markdown.py) holds the reader to
+The `markdown_reader` case is a [pytest family](../../README.md#pytest-families)
+in [test_markdown_reader.py](test_markdown_reader.py). It holds the reader to
 hand-written expectations for fences, indented code, list content, comments,
 links and images, headings and sections, anchors, tables and line ranges. It
 reads explicit anchor elements only from CommonMark HTML tokens, leaving code
@@ -503,6 +504,24 @@ the duplicate suffixes computed for headings. It
 runs the import guard against stand-in packages and a changed version,
 compares every vendored file with its wheel's `RECORD` digest and refuses an
 import of either package anywhere else.
+
+Each item's identity is `<Group>.<function>`, followed by a label where the
+function runs once per input, so each input reports its own result. The
+expected structures are literals in the module; none is computed by the
+reader. Items that only read text or files declare no commands. Seven items
+run a real command at the engine's supervised boundary: `git ls-files '*.py'`
+in the repository for the import rule, and six fresh `python -B -S -P -c`
+processes for the import guard, each with its `PYTHONPATH` set by the item.
+That is the number of commands the items ask for, not of the processes those
+commands start. Collection imports neither the reader nor the fixture copier
+and creates nothing. A temporary reader tree or stand-in package belongs to
+the item that makes it: the item registers the tree before changing it, and
+its fixture captures the tree again before removing it. A failed capture or
+removal fails that item's teardown. When the reader itself cannot be imported,
+the items that need it fail in setup. The six import-guard items then end
+without the command they declare, so the family is reported unrun with
+incomplete accounting, not failed; `summary.txt` carries each item's setup
+diagnostic.
 
 ## Success criteria
 
@@ -581,12 +600,13 @@ public command, or the explicit `PW_TEST_OUT_DIR`.
 - `<run>/suites/source_drift/build_documentation/artifacts/build-rules.log`, `build-rules-results.json` and `build.log`
 - `<run>/suites/source_drift/<case>/artifacts/<module>-receipts.json` for each unittest module
 - `<run>/suites/source_drift/generator_contract/artifacts/generators.log`
-- `<run>/suites/source_drift/markdown_reader/artifacts/markdown.log`
+- `<run>/suites/source_drift/markdown_reader/family.json`, `summary.txt`, `selection.json`, `phases.jsonl`, `operations.jsonl`, `ownership.json` and `pytest.txt`
+- `<run>/suites/source_drift/markdown_reader/artifacts/inputs/` for each item's input snapshots and `artifacts/commands/<identity>/launch-NNN/` for each command's `command.json`, `stdout` and `stderr`
 
 ### Receipts
 
-Every case writes receipts through [receipts.py](../../lib/receipts.py),
-schema version 2. The file contains `schema_version`, `case`, `mode`, `ok`,
+Every case except the `markdown_reader` family writes receipts through
+[receipts.py](../../lib/receipts.py), schema version 2. The file contains `schema_version`, `case`, `mode`, `ok`,
 `complete` and `controls`. `complete` stays false while execution is in progress
 or after an abort. A finished suite with failing assertions is complete and
 has `ok: false`.
@@ -630,6 +650,16 @@ The generator-contract case exercises the receipt boundary with failing and
 passing subtests, test and cleanup errors, changed/deleted/symlink inputs,
 captured output, nonzero commands, a timeout and a failed launch.
 
+The `markdown_reader` family writes no receipts file. The engine records each
+item's setup, call and teardown outcome and diagnostic in `phases.jsonl`, and
+each command's working directory, selected environment settings, return code
+and settlement in `operations.jsonl`, with its argv in the command's
+`command.json`.
+Each item's snapshots use the snapshot format above under
+`artifacts/inputs/<NNNN>-evidence/`, with blobs kept per item: the collected
+sources, then each registered tree as registered, before each command, after
+each phase in which it exists and before its fixture removes it.
+
 ## Run
 
 ```
@@ -637,7 +667,10 @@ captured output, nonzero commands, a timeout and a failed launch.
 ```
 
 No build required; the manifest reader needs Meson on `PATH` for
-`runner_source_manifests_agree`, which the catalog declares as equipment. The `limits_documentation` case checks
+`runner_source_manifests_agree`, which the catalog declares as equipment. The
+`markdown_reader` family needs the pinned test packages that
+`tests/setup-pytest.sh` provisions; the dispatcher adds that requirement to
+every pytest family. The `limits_documentation` case checks
 [docs/limits.json](../../../docs/limits.json), generated tables (the limits
 tables and the failure contract's scenario matrix rendered from
 `tests/fixtures/comparison/matrix.json`), the user guide's copied limits,

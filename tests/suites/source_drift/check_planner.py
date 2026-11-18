@@ -348,7 +348,7 @@ def meson_scenarios(repo):
 
 # The reader shapes the guidance rule still exercises at the rule layer: every body shape for one level-2 and
 # one level-3 document, every route shape for one target. The other documents' and targets' repetitions are
-# literal expectations in markdown.py.
+# literal expectations in test_markdown_reader.py.
 BODY_SHAPES = ('fenced-body', 'comment-body', 'indented-body', 'fenced-section', 'comment-section', 'body-after-peer',
                'body-after-parent', 'short-fence-close', 'fake-heading-before-real')
 ROUTE_SHAPES = ('fenced', 'comment', 'inline-example', 'image', 'code-label', 'code-label-example', 'wrapped-label',

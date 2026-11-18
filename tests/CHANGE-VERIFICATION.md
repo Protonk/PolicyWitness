@@ -1032,7 +1032,9 @@ For shared observation/accounting or candidate-reader changes, select
 `dispatcher/pytest_controls`), `preflight/release_controls`,
 `preflight/release_publish_controls` and `preflight/release_rotation_controls`.
 Command-supervision changes also require `preflight/release_deadline_controls`.
-Keep the existing live exec family check for engine changes.
+Keep the existing live exec family check for engine changes. Changes to
+declared command scopes, explicit command context or input capture also need
+`source_drift/markdown_reader`, whose items use them without native equipment.
 
 `tests/lib/reporting_replay.py` is a read-only investigation over completed
 retained runs, with a tracked reader snapshot and isolated outputs. It replays

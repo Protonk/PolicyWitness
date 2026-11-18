@@ -175,7 +175,9 @@
         },
         {
           "id": "markdown_reader",
-          "description": "Markdown reader controls, vendored parser bytes and the parser import boundary"
+          "description": "Markdown reader controls, vendored parser bytes and the parser import boundary",
+          "engine": "pytest",
+          "module": "tests/suites/source_drift/test_markdown_reader.py"
         },
         {
           "id": "direct_python_start",

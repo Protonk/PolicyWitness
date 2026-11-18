@@ -336,7 +336,7 @@ evidence checks pass, including when those cases run through BYOXPC.
 | Suite | Tier | Coverage and limits | Equipment overview | Reference |
 | --- | --- | --- | --- | --- |
 | `preflight` | Baseline + opt-in | Bundle signatures, layout, evidence hashes and the provenance record against the bytes; offline controls over the lock, stamp, fresh-mode, Cargo-judgment, SDK, signature-display and record readers; default offline build-entry, native-policy and native-source controls that drive the unchanged build script and Meson in disposable checkouts; release acceptance, publication and cleanup controls; opt-in build guard, refusal and toolchain-switch controls that drive the unchanged build script, and a translated-build refusal control that needs Rosetta. Inspection is read-only; mutations use copies. | App for inspection; clang for the offline helper controls; Meson, clang and Swift for the native policy controls and Meson and clang for the native source controls; signing identity and toolchains for opt-ins, Rosetta alone for the translated-build control; offline release controls vary. | [Suite](suites/preflight/README.md) |
-| `source_drift` | Baseline | Source manifests, direct Python ancestry, test registry, documentation contracts, generated copies, independent porcelain binary reading and their rejection controls. Mechanical agreement does not establish runtime behavior. | Python; Meson for the source manifest check. | [Suite](suites/source_drift/README.md) |
+| `source_drift` | Baseline | Source manifests, direct Python ancestry, test registry, documentation contracts, generated copies, independent porcelain binary reading and their rejection controls. Mechanical agreement does not establish runtime behavior. | Python; Meson for the source manifest check; the pinned pytest packages for the Markdown reader family. | [Suite](suites/source_drift/README.md) |
 | `shell_helpers` | Baseline | Case setup, command/result logging, wrapper sequencing, prerequisite failures, the interpreter boundary at a case and its child, and cleanup ownership through independent controls. | Python and shell; codesign for a prerequisite control. | [Suite](suites/shell_helpers/README.md) |
 | `dispatcher` | Baseline | Selection, execution, reports, cancellation, artifact integrity, retention and locking determine one accounted result. | Python, clang and macOS process/socket observation; no app. | [Suite](suites/dispatcher/README.md) |
 | `unit` | Baseline | Rust controller/helper contracts, orchestration calls, envelope shape and formatting. Constructed inputs cover interpretation and refusal branches. | Cargo and rustfmt. | [Suite](suites/unit/README.md) |
@@ -692,28 +692,36 @@ cleanup and harness failures remain in their own reports.
 Version 1 runs omit these new projections. Retained runs are interpreted under
 their producing contract; later authority decisions do not rewrite them.
 
-## Pytest exec family
+## Pytest families
 
-`runner_c_worker_harness/exec_control_states` is one public family containing nine
-pytest items. Public selection remains whole-family. Pytest owns item discovery,
+Two cases are pytest families, each one public case containing pytest items.
+`runner_c_worker_harness/exec_control_states` has nine items that compile and
+run native controls. `source_drift/markdown_reader` holds the
+[Markdown reader controls](suites/source_drift/README.md#markdown-reader); its
+items are pure or run a recorded command, and it needs no native equipment.
+Public selection remains whole-family. Pytest owns item discovery,
 variants, fixtures and setup/call/teardown reporting; PolicyWitness owns artifact
 admission, checkout locks, durable accounting, command supervision and retention.
-The engine also supports pure items with an explicit `pw_commands('none')`
-declaration and commanded items with `pw_commands('recorded')`. These retain
+The Markdown reader items declare their command scope: `pw_commands('none')`
+for a pure item and `pw_commands('recorded')` for one that runs commands. These retain
 ordinary pytest assertions. Explicit observation items declare the same command
 scope in `pw_contract`. Pure items retain phase and input evidence with an empty
-operation set; they acquire no dummy command owner. `pw_inputs` captures declared
+operation set; they acquire no dummy command owner. A commanded item can name
+its command's working directory and complete environment. Observed commands
+must match the declaration: a recorded item that ends without a command, or a
+pure item that runs one, leaves the family's accounting incomplete and its
+case unrun, with the phase evidence retained. `pw_inputs` captures declared
 files and directories at phase boundaries and its own finalization through the
 shared input/blob recorder. Fixtures explicitly capture needed bytes before
 their own cleanup; the recorder does not order other fixture finalizers or
 claim that snapshots prove use.
 Modules declare additional source dependencies in `PW_SOURCE_FILES`.
-Other families use their catalog commands. `tests/setup-pytest.sh` explicitly
+Other cases use their catalog commands. `tests/setup-pytest.sh` explicitly
 installs the exact wheels in `tests/requirements-pytest.lock` into an isolated,
 verified `.tmp/pytest` target; collection never downloads packages. External
 pytest plugins and ambient pytest/Python settings are excluded.
 
-`--list` collects the family without acquiring native equipment or replacing
+`--list` collects each selected family without acquiring equipment or replacing
 output. In execution, that same collected engine waits until ordinary admission
 allows it to proceed. Missing packages leave the family `not_started/unavailable`.
 Availability is decided when the plan is collected: packages provisioned later
@@ -727,7 +735,7 @@ includes incomplete families; the explicit accompanying states distinguish them.
 ### Command ownership recovery
 
 The durable registry is `tests/out/pytest-owners/<run-id>/<operation-id>/record.json`,
-outside disposable run directories. It registers each real compiler/native
+outside disposable run directories. It registers each real
 command before launch, including argv, working directory and a digest of its
 controlled environment. Receipts retain the existing allowlisted environment
 fields; other values are not published. The owner verifies
@@ -735,7 +743,7 @@ that context before launch. An independent command owner holds the actual checko
 lock descriptor, captures stdout/stderr, watches engine/supervisor exit and
 settles the command's process group. Fixture cleanup removes ordinary Python
 state; it does not establish exit or authorize deletion of external resources.
-This family does not launch processes that intentionally escape that group.
+Neither family launches processes that intentionally escape that group.
 
 If no command process comes to exist — a spawn error, the owner's refusal of an
 unauthorized release or changed context, a lost release gate, or a failure to
