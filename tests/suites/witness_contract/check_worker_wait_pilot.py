@@ -693,6 +693,53 @@ def announce(message):
     print(f'worker-wait pilot: {message}', flush=True)
 
 
+# The proposition a comparison is read against. Its evaluation is advisory: it never gates the case.
+IMPROVEMENT = ('in every compared cell and regime, each held-total interval improves beyond instrument uncertainty '
+               'and beyond spread in every required matched pair')
+
+
+def improvement_conclusion(pairs, cells, regimes, dry_run):
+    """Whether the reader's matched-pair verdicts establish the improvement proposition.
+
+    Raw counts and timings stay in summary.json and decomposition.json. No comparison, a dry run,
+    a withheld verdict or a cell and regime without held-total pairs leaves the proposition unestablished."""
+    series = []
+    for entry in (pairs or {}).get('entries', []):
+        for name, value in sorted(entry['components'].items()):
+            if name.endswith('.held_total'):
+                series.append({'cell': entry['cell'], 'regime': entry['regime'], 'component': name,
+                               'pairs': len(value['pairs']), 'pairs_required': entry['pairs_required'],
+                               reader.IMPROVES: value[reader.IMPROVES], reader.IMPROVES_SPREAD: value[reader.IMPROVES_SPREAD],
+                               reader.WORSENS: value[reader.WORSENS], 'withheld': value.get('withheld')})
+    every = [value for entry in (pairs or {}).get('entries', []) for value in entry['components'].values()]
+    verdicts = {name: dict(yes=sum(v[name] is True for v in every), no=sum(v[name] is False for v in every),
+                           withheld=sum(v[name] is None for v in every))
+                for name in (reader.IMPROVES, reader.IMPROVES_SPREAD, reader.WORSENS, reader.WORSENS_SPREAD, reader.WORSENS_SPREAD_EVERY)}
+    improved = [s for s in series if s[reader.IMPROVES] is True and s[reader.IMPROVES_SPREAD] is True]
+    worsened = [s for s in series if s[reader.WORSENS] is True]
+    uncovered = sorted({f'{cell}/{regime}' for cell in cells for regime in regimes}
+                       - {f"{s['cell']}/{s['regime']}" for s in series})
+    if pairs is None:
+        reason = 'this run compared no candidate'
+    elif dry_run:
+        reason = 'a dry run establishes mechanics only and earns no measurement credit'
+    elif uncovered:
+        reason = f'no held-total pairs for {uncovered}'
+    elif len(improved) != len(series):
+        reason = (f'{len(improved)} of {len(series)} held-total series improve in every required pair; '
+                  f'{len(worsened)} worsen beyond instrument uncertainty')
+    else:
+        reason = None
+    return dict(version=1, proposition=IMPROVEMENT, authority='advisory', comparison=pairs is not None, dry_run=dry_run,
+                judgment='favorable' if reason is None else 'unfavorable',
+                detail=(f'all {len(series)} held-total series improve beyond uncertainty and spread in every required pair'
+                        if reason is None else 'improvement not established: ' + reason),
+                series=series, improved=len(improved), worsened=len(worsened), uncovered=uncovered,
+                groups=len((pairs or {}).get('entries', [])), component_series=len(every), component_verdicts=verdicts,
+                unpaired=len((pairs or {}).get('unpaired', [])),
+                raw_measurements=['summary.json', 'decomposition.json', 'summary.md'])
+
+
 def main(argv=None):
     args = parse(sys.argv[1:] if argv is None else argv)
     if args.window_gate:
@@ -862,11 +909,15 @@ def main(argv=None):
     assert not blocking, blocking
     assert len(rows) == len(entries), 'a scheduled entry has no receipt'
     assert not incomplete, f'incomplete pilot coverage: {incomplete}'
+    # Written only after every requirement above holds; the case publishes it as an advisory judgment.
+    conclusion = improvement_conclusion(pairs, args.cells, args.regimes, args.dry_run)
+    save(artifacts / 'conclusion.json', conclusion)
     print(f"worker-wait pilot: {summary['counts']['accepted']} accepted, {len(retained['excluded'])} excluded and "
           f"{len(retained['skipped'])} skipped trials; {len(covered)} app/cell/regime keys covered; "
           f"calibration {summary['calibration_status']}"
           + (f"; {paired['pairs']} matched pairs in {paired['entries']} cell and regime groups, {paired['unpaired']} unpaired trials" if paired else '')
-          + ('; dry run' if args.dry_run else ''))
+          + ('; dry run' if args.dry_run else '')
+          + f"; advisory improvement judgment {conclusion['judgment']}: {conclusion['detail']}")
 
 
 if __name__ == '__main__':

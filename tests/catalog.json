@@ -2186,7 +2186,7 @@
         },
         {
           "id": "worker_wait_pilot",
-          "description": "Paced trials through staged stamped and neighbor apps, or baseline and candidate apps as matched pairs, on the production validator path, with continuous-clock host and worker stamps, per-trial conditions and a timeline decomposition",
+          "description": "Paced trials through staged stamped and neighbor apps, or baseline and candidate apps as matched pairs, on the production validator path, with continuous-clock host and worker stamps, per-trial conditions and a timeline decomposition; raw counts and timings carry no verdict and matched-pair improvement is an advisory judgment",
           "command": [
             "bash",
             "tests/suites/witness_contract/opt_in/worker_wait_pilot.sh"
@@ -2203,7 +2203,30 @@
             "runner_abi_layout/c_swift_layout_agreement",
             "witness_contract/footprint_observer_controls",
             "witness_contract/worker_wait_pilot_controls"
-          ]
+          ],
+          "outcome_contract": {
+            "schema_version": 1,
+            "observations": [
+              {
+                "id": "paced_trials",
+                "promise": "Retain the declared schedule and window, each scheduled trial's receipt with its stamps, conditions, pacing and exclusions, the clock-pair calibration, staged executable identity before and after, the decomposition and summary with their raw counts and timings, and the final staged-process cleanup."
+              },
+              {
+                "id": "matched_pair_comparison",
+                "promise": "Retain the reader's matched-pair analysis of a baseline and a candidate with each held-total series' verdicts, or the record that the run compared no candidate or was a dry run."
+              }
+            ],
+            "judgments": [
+              {
+                "id": "candidate_improvement",
+                "authority": "advisory",
+                "proposition": "In every compared cell and regime, each held-total interval improves beyond instrument uncertainty and beyond spread in every required matched pair.",
+                "observations": [
+                  "matched_pair_comparison"
+                ]
+              }
+            ]
+          }
         },
         {
           "id": "worker_wait_cost",

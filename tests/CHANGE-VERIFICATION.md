@@ -832,7 +832,7 @@ most, including its sensitivity control, and needs its own announced window.
   excluded `warm/` executions, per-trial `RunCapture` files with `trial.json`,
   `conditions.json`, `started.json`, `stamps.json`, `exported.json` when
   present, `host-exit.json` and `validation.json`, then `decomposition.json`,
-  `summary.json`, `summary.md`, `cleanup.json` and `pilot.json`. The staged
+  `summary.json`, `summary.md`, `cleanup.json`, `pilot.json` and `conclusion.json`. The staged
   apps stay in `staging/` unless the run is a dry run. A comparison adds
   `worker-build-candidate/`, `host-baseline/` and `host-candidate/` receipts,
   each `staging.json` with its source tree's commit and status, the
@@ -840,10 +840,16 @@ most, including its sensitivity control, and needs its own announced window.
   `summary.json` and in `summary.md`.
 - **Gating:** Not a default acceptance control. A missing identity fails before
   any build. A failed, incomplete or refused trial fails the case; excluded and
-  skipped trials stay diagnostic, and the case passes only when every app, cell
+  skipped trials stay diagnostic, and the case completes only when every app, cell
   and regime keeps at least five accepted trials in one homogeneous group and
   the calibration receipt is accepted, so fewer accepted trials is an
-  incomplete pilot. A dry run establishes mechanics only. In a comparison an
+  incomplete pilot. Changed staged executables or a staged process that remains
+  also fail it. The case ends `complete`: raw counts and timings are an
+  informational observation, and the matched-pair improvement conclusion is the
+  advisory judgment `candidate_improvement`, so a worsening or an unestablished
+  improvement is displayed and does not fail the case. A run that compares no
+  candidate records the judgment as unfavorable for that reason. A dry run
+  establishes mechanics only and earns no measurement credit. In a comparison an
   improvement verdict needs all five declared pairs, and a dry run's fewer
   pairs withhold it. Each verdict is given against the instrument uncertainty
   and, separately, against the trial spread of the side it is judged from;

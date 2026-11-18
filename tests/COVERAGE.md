@@ -89,7 +89,11 @@ closure, release and acknowledgement intervals. Those intervals describe the
 stamped disposable flavour, not production executables; their combined
 uncertainty is established only with a clock-pair calibration receipt. Its
 comparison mode stages a baseline and a candidate, each from its own source
-tree, and reports matched-pair differences and verdicts. Default
+tree, and reports matched-pair differences and verdicts. Its raw counts and
+timings are an informational observation and the held-total improvement
+conclusion an advisory judgment that never fails the case, while receipts,
+calibration, coverage, exclusions, executable identity and cleanup stay
+required. Default
 `witness_contract/worker_wait_pilot_controls` accepts constructed stamp
 receipts before rejecting corrupted pages, clock-order violations, missing
 files, condition exclusions, pooled aggregates, unpaired or inconsistent host

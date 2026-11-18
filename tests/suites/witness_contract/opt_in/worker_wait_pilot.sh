@@ -51,4 +51,34 @@ test_check_python "${PW_TEST_ARTIFACTS}/assert.log" "worker wait pilot failed" \
   "${PW_APP_DIR}" "${PW_TEST_ARTIFACTS}" "${SIGNING_IDENTITY}" \
   --worker-build "${WORKER_BUILD}" --observer "${PW_TEST_ARTIFACTS}/observer-bin" \
   ${PILOT_ARGS[@]+"${PILOT_ARGS[@]}"} ${COMPARE_ARGS[@]+"${COMPARE_ARGS[@]}"}
-test_pass "declared coverage met with stamps, conditions, pacing and exclusions retained; see summary.md"
+# Raw counts and timings are published without a verdict. The matched-pair
+# improvement conclusion is a separate observation with an advisory judgment.
+pilot_value() {
+  "${PW_PYTHON}" -B -S -P -c 'import json, sys
+artifacts, what = sys.argv[1:]
+pilot = json.load(open(artifacts + "/pilot.json"))
+conclusion = json.load(open(artifacts + "/conclusion.json"))
+values = dict(
+    trials=dict(mode=pilot["mode"], dry_run=pilot["dry_run"], measurement_credit=not pilot["dry_run"], verdict=None,
+                counts=pilot["counts"], coverage_keys=len(pilot["coverage"]), incomplete=pilot["incomplete"],
+                excluded=len(pilot["excluded"]), skipped=len(pilot["skipped"]), calibration=pilot["calibration"],
+                cleanup_settled=pilot["cleanup_settled"], staging_retained=pilot["staging_retained"]),
+    comparison={key: conclusion[key] for key in ("comparison", "dry_run", "proposition", "improved", "worsened",
+                                                  "uncovered", "unpaired", "groups", "component_series",
+                                                  "component_verdicts", "series")},
+    judgment=conclusion["judgment"], detail=conclusion["detail"])
+value = values[what]
+print(value if isinstance(value, str) else json.dumps(value, sort_keys=True))' "${PW_TEST_ARTIFACTS}" "$1"
+}
+TRIAL_EVIDENCE=()
+for name in conditions-start.json schedule.json window.json staged-identity-before.json staged-identity-after.json \
+    clock-pair/calibration.json decomposition.json summary.json summary.md cleanup.json pilot.json; do
+  if [[ -f "${PW_TEST_ARTIFACTS}/${name}" ]]; then
+    TRIAL_EVIDENCE+=("${PW_TEST_ARTIFACTS}/${name}")
+  fi
+done
+test_observe paced_trials "$(pilot_value trials)" "${TRIAL_EVIDENCE[@]}"
+test_observe matched_pair_comparison "$(pilot_value comparison)" \
+  "${PW_TEST_ARTIFACTS}/conclusion.json" "${PW_TEST_ARTIFACTS}/summary.json" "${PW_TEST_ARTIFACTS}/schedule.json"
+test_judge candidate_improvement "$(pilot_value judgment)" "$(pilot_value detail)"
+test_complete "declared coverage met with stamps, conditions, pacing and exclusions retained; matched-pair improvement is advisory ($(pilot_value judgment)); see summary.md"

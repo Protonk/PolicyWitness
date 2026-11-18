@@ -523,10 +523,22 @@ stamp cost, plus the receipt's alignment bound across processes; values at or
 below it are marked below the instrument floor. Groups are keyed by app, cell,
 regime, power source, low power mode and host flavour. A trial whose exit-watch
 registration overlapped a held interval is excluded as `observer_overlap`. The
-case passes when no trial failed, was incomplete or was refused, every
+case completes when no trial failed, was incomplete or was refused, every
 scheduled entry has a receipt, each app, cell and regime has at least five
-accepted trials in one group, and the calibration receipt is accepted; fewer
-accepted trials is an incomplete pilot.
+accepted trials in one group, the calibration receipt is accepted, the staged
+executables are unchanged and no staged process remains; fewer
+accepted trials is an incomplete pilot and any of these failures ends the case
+`fail`. It declares its observations and judgment in the catalog
+(`outcome_contract`) and ends `complete`, not `pass`. `paced_trials` publishes
+the raw counts and timings with no verdict. `matched_pair_comparison` holds
+the evaluated improvement, written to `conclusion.json`, and the advisory
+judgment `candidate_improvement` reads it: favorable only when every compared
+cell and regime has held-total pairs and each held-total series improves
+beyond instrument uncertainty and beyond spread in every required pair. A
+worsening, a withheld verdict, a run that compared no candidate and a dry run
+are all recorded as unfavorable with the reason; an unfavorable advisory
+judgment is displayed and never fails the case, and a dry run earns no
+measurement credit.
 `PW_WORKER_WAIT_PILOT_ARGS` passes driver options such as `--dry-run`,
 `--cells`, `--repetitions`, `--regimes`, `--window-seconds` and
 `--clock-pair-trials`; `--host-flavour inspection|optimized` changes only the
@@ -626,7 +638,7 @@ directories `trials/<app>/<cell>/<regime>/<index>/` with `RunCapture` files,
 `stamps.json`, `exported.json` when the host wrote its export marker,
 `host-exit.json` and `validation.json` (with the envelope's millisecond fields
 for both apps), the reader outputs, `cleanup.json` (processes found under the
-staged bundles and any action taken) and `pilot.json`.
+staged bundles and any action taken), `pilot.json` and `conclusion.json`.
 The case is opt-in because it builds and signs disposable hosts and its
 timings are sensitive to competing load, so it needs a quiet window.
 
