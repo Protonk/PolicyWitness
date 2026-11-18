@@ -499,40 +499,77 @@ what must be retained; they do not invent old execution receipts. The existing
 native exec family and independent dispatcher/preflight controls establish
 generic capability without counting the unperformed migrations as complete.
 
-## Reporting mechanism candidate
+## Reporting mechanism selected; instrument verification
 
-The implemented candidate attaches a required observation/judgment account to
-pytest phases and to a durable shell journal, with bound terminal projections.
-Selection or collection fixes promises, propositions and enforced/advisory
-authority before evaluation. Informational completions are observations without
-a product judgment. Execution, validity, command settlement and cleanup remain
-independent obligations. Arbitrary exceptions are never converted into judgments.
+The selected design attaches a required observation/judgment account to pytest
+phases and a durable shell journal, with checked terminal projections. Selection
+or collection fixes promises, propositions and enforced/advisory authority before
+evaluation. Informational completions carry observations without inventing passing
+product assertions. Execution, validity, command settlement and cleanup remain
+independent requirements.
 
-The bounded comparison control gives an extended terminal-account alternative
-the same authority binding, phase/completion facts, evidence and cleanup
-obligations. Complete representations are expected to make the same decisions;
-the phase journal retains an observed prefix before terminal loss, while a
-terminal alternative needs its own required journal for that recovery. The
-control includes missing observations, contradictory authority, cleanup/phase
-failure and artifact rereading. This choice remains provisional until those
-controls execute; it is not justified by comparing against status labels alone.
+The [11-contrast mechanism comparison](../tests/out/runs/trace-reporting-compatibility/suites/dispatcher/pytest_controls/artifacts/outcome-mechanism-comparison.json)
+gives a test-local extended terminal-account alternative the same authority,
+evidence, phase and cleanup obligations. Both complete representations produced
+the independently specified decisions on ten contrasts, including unfavorable
+judgments, missing observations, contradictory authority, failed phases/cleanup
+and damaged or missing evidence. The interruption contrast retains an observed
+prefix in the chosen journal without crediting completion; the terminal alternative
+needs an additional required journal to preserve that prefix. These controls
+establish the choice. Optional annotations, status labels alone and blanket
+conversion of exceptions into product judgments were rejected.
+The material cost is explicit declarations, durable account/projection duplication
+and byte-level rereading; existing lifecycle machinery supplies ordering and
+completion instead of adding another test scheduler.
 
-`pw-family-evidence-2` is opt-in for explicit outcome contracts and declared
-pure/commanded pytest items. Existing unmarked exec items and ordinary shell
-cases keep their producing version-1 interpretation. Version-2 readers require
-raw journals, phases, input blobs, operation references and ownership, recompute
-their accounts and compare terminal/run projections against independently
-captured expectations. Parent and nested counts remain separate. A missing
-entire shell terminal leaves its journal readable but the parent unrun, with no
-fabricated terminal assessment or completion credit.
+`pw-family-evidence-2` activates new meanings only through the captured outer
+producer contract and independently fixed declarations. Version 1 keeps its
+original pass/fail/skip and passed/native-item interpretation, including opaque
+extension fields and schema metadata its reader ignored. Nested labels cannot
+upgrade authority. Ordinary pure or commanded pytest assertions remain enforced
+through `pw_commands`; they need no authority conversion. Parent and nested counts
+stay separate. Readable judgments can survive an independent validity, execution
+or cleanup failure, so counts never establish eligibility. A missing entire shell
+terminal leaves its journal readable but the parent unrun, without a fabricated
+assessment or completion credit.
 
-The candidate also supplies pure ordinary-assertion items, controlled command
-working directories/environments, module-declared source inputs and reusable
-input/blob recording without unittest scheduling. No cohort is migrated here.
-Private extracted-development-candidate acceptance shares artifact, command,
-battery and cleanup machinery; schema-4 receipt kinds and known development
-markers prevent release credit. The app's declared build-input agreement and
-the reporter's revision are recorded separately, so reporting-only changes do
-not require rebuilding the comparison app. Historical absent-kind receipts
-retain their producing meaning. Actual extracted live-candidate execution
-remains in the specified final build-refusal control after this checkpoint.
+At `5577a4eb`, the [eight-case focused verification](../tests/out/runs/trace-reporting-compatibility/run.json)
+(`20261118T010714Z_cc968f17`) passed, including compatibility/replay controls,
+actual version-2 fixtures, candidate/portable rereading and the unchanged native
+exec family. The [baseline default](../tests/out/runs/trace-instrument-before/run.json)
+at `2f4d76e4` and [corrected default](../tests/out/runs/trace-instrument-after-corrected/run.json)
+at `5577a4eb` each completed 233 parents, 232 legacy reports and nine exec items
+against the same signed app and declared build contract. The earlier
+[post-capability run](../tests/out/runs/trace-instrument-after/run.json) remains a
+failure: its sole failed obligation was the Python file-start convention, corrected
+in `bd954397` without relaxing the guard. These failures were implementation
+defects. Management retains the detailed run and artifact account.
+
+The final [deterministic comparison](../tests/out/runs/trace-reporting-compatibility/investigations/reporting-checkpoint/comparison/checkpoint-replay.json)
+passed 455 checks across 65 reader commands. Old and new readers agreed on full
+semantics for all 13 version-1 constructed comparisons and both live datasets.
+Two version-1 inputs with missing ownership or unstarted history produced the
+expected apparatus refusals;
+eight version-2 fixtures produced the independently expected new decisions and
+old-reader unsupported-profile refusals. Original evidence bytes remained unchanged.
+The [completed-battery reread](../tests/out/runs/trace-reporting-compatibility/investigations/reporting-checkpoint/completed-battery-reread.json)
+accepted both original completed runs and confirmed four identical app inventories,
+the unchanged development build contract and identical frozen, source and distributed
+guide bytes. Replay establishes interpretation, not renewed execution, signing,
+resource-absence or release-acceptance credit. Together with the live and focused
+controls, this establishes the reporting instrument checkpoint. All `tests/out`
+links here are gitignored evidence available in this local checkout.
+
+The shared capability now supports the prepared cohorts and seam evidence:
+module-declared source inputs, reusable input/blob recording, explicitly empty
+pure-item operation sets, supervised commands with controlled working directories
+and environments, and required raw-evidence rereading. Input-recorder finalization
+does not order other fixtures' cleanup; each migration must retain its own inputs
+before deletion. Selected case conversions, both pytest cohort migrations and
+executable test-seam migration remain unperformed. Their equivalence, authority
+reductions and product decisions still require the planned subsequent work.
+Private development-candidate and release readers share verified evidence machinery,
+while receipt kinds and known development markers prevent release credit. Their
+controls establish interpretation; no extracted live-candidate acceptance is
+claimed at this checkpoint. That execution remains in the specified later
+build-refusal control.

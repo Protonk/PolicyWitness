@@ -563,17 +563,13 @@ unexpected failure. Initial restrictive-harness prune/signing discovery failures
 passed on the same bytes when the exact read-only operations ran unsandboxed.
 Subsequent signing and test execution used that documented environment.
 
-Reporting implementation now begins from this completed baseline. Before its
-controls execute, the intended selection is `--suite dispatcher --suite
-shell_helpers`, including `dispatcher/pytest_controls`, plus
-`preflight/release_controls`, `preflight/release_publish_controls`,
-`preflight/release_rotation_controls`, `preflight/release_deadline_controls` and
-`runner_c_worker_harness/exec_control_states`. These cover shared accounting,
-authority, command ownership, candidate/portable rereading and the existing
-native sequence. The post-capability default battery supplies its source-drift
-and full live integration check. Deterministic replay uses both reader commits
-over both raw default datasets and common independently specified fixtures.
-No conversion, cohort migration or executable seam change belongs between them.
+Reporting followed the planned dispatcher/shell-helper selection, including
+`dispatcher/pytest_controls`, plus release, publication, rotation, deadline and
+existing exec-family controls. Those owners cover shared accounting, authority,
+command ownership, candidate/portable rereading and the existing native sequence.
+The completed checkpoint and the reasons for affected-case replacements are
+recorded below. No conversion, cohort migration or executable seam change was
+included.
 
 Observed durations above are dispatcher wall time, not a full cost decomposition.
 Individual construction/command/cleanup receipts retain their measured intervals;
@@ -588,3 +584,147 @@ is under 3 MiB. Volume free space is about 149 GiB. Inspection of relevant
 scratch/cache directories and swap did not attribute the remaining volume-level
 growth to these repository outputs. Unrelated temporary content was not removed.
 No pruning, evidence relocation or additional worktree has been introduced.
+
+### Reporting implementation and checkpoint disposition
+
+Reporting capability is implemented in `c1744aae`, with import/fixture and
+literal-argument corrections in `28496e25` and `7f47ed00`. `bd954397` restores
+the existing Python file-start convention without weakening its guard.
+`5577a4eb` binds new meanings to the captured outer producer contract throughout
+reconciliation, family accounting, summaries, display and candidate/release
+validation. Opaque legacy fields retain their producing meaning, including in
+mixed version-2 runs. These commits change the shared instrument and its controls;
+they do not convert selected cases, migrate either cohort or change the executable
+test seam. The original native exec sequence remains intact.
+
+Additional managed development runs, with the same local-only availability and
+ordinary retention limits as the table above:
+
+| Directory / run ID | Result and scope |
+| --- | --- |
+| `trace-reporting-controls` / `20261118T001532Z_e5fb5e5e` | At `c1744aae`, 11 parent passes / 9 failures, all 20 accounted; 404407 ms. All four preflight cases, accounting replay and the nine-item native family passed. Isolated helper import and copied-fixture dependency defects failed the other routes. |
+| `trace-reporting-import-fixes` / `20261118T002331Z_48c07455` | At `28496e25`, 14 passes / one failure, 256664 ms. Shell and dispatcher controls passed; the new pytest sentinel lacked its executable bit. |
+| `trace-reporting-fixture-fixes` / `20261118T003012Z_1172d7c1` | At `7f47ed00`, dispatcher and pytest controls both passed, 136238 ms, including actual dependent/neighbor effects. |
+| `trace-instrument-after` / `20261118T003402Z_e6c29e40` | At `7f47ed00`, 232 parent passes / one failure, all 233 completed; 1883865 ms. `source_drift/direct_python_start` rejected `-P` on the new file entry point. The failed report and diagnostic remain unchanged. |
+| `trace-reporting-compatibility` / `20261118T010714Z_cc968f17` | At `5577a4eb`, all eight selected parents passed, including nine exec-family items; 198593 ms. Covers the startup guard, finalizers, interpreter boundary, dispatcher/accounting/pytest controls and candidate acceptance. |
+| `trace-instrument-after-corrected` / `20261118T011154Z_5cfcec0a` | At `5577a4eb`, default battery passed: 233 parents, 232 legacy reports and nine exec-family items; no harness errors; 1978348 ms. |
+
+The replacement default is necessary verification of the corrected live reporter
+startup path, not additional coverage for this account. The initial post-capability
+failure is not reclassified. The original independent success expectations remain
+at `trace-instrument-before/checkpoint-expected-counts.json`; they were not relaxed
+to fit that failure. Both successful defaults have the same selected authority,
+prerequisites, command declarations and nested population. No conversion or build
+input changed between them, and no app rebuild intervened. Their original producer
+contexts and distinct source identities remain intact.
+
+The instrument checkpoint is established. Under
+`trace-reporting-compatibility/investigations/reporting-checkpoint/`,
+`comparison/checkpoint-replay.json` records 455 passing checks and 65 commands:
+13 unchanged-authority constructed histories agree through both readers, two
+incomplete-history/ownership inputs receive their specified apparatus refusals,
+eight version-2 histories produce the expected new decisions and old-reader
+unsupported-contract refusals, and both live datasets agree under both readers.
+The readers are the immutable Python source slices for
+`2f4d76e49e5b6b4dff25307b2f0e36ffbe10e1e6` and
+`5577a4ebc81fd48959ae5bfaba18af22a0ed4f1b`. Apparatus, independent expectations,
+raw fixtures, commands, comparisons and outputs remain together. Raw command
+observations and captured plans drive interpretation; derived judgments are only
+comparison targets. Reader finish time is new; experimental command times,
+identities, evidence and authority are not normalized.
+
+`completed-battery-reread.json` records the revised validator's acceptance of both
+original completed batteries, unchanged referenced bytes, identical four app
+inventories, unchanged build-contract identity and source/distributed guide bytes
+equal to `3d3f8e65`. This is interpretation, not renewed native execution, signing,
+current resource absence or release acceptance. The replay investigation adds no
+case credit to its eight-case owning run.
+
+Decisive controls can be inspected without treating a successful parser as an
+independent product observer. All paths below are relative to `tests/out/runs/`:
+
+- `trace-instrument-before/suites/source_drift/limits_documentation/artifacts/limits-receipts.json`
+  controls 000–002 establish permitted owner divergence, frozen-guide/stale-owner
+  refusals and staging identity checks.
+  `trace-instrument-before/suites/source_drift/build_contracts/artifacts/build-contracts-receipts.json`
+  control 079 exercises contract projection and strict publication separately.
+- `trace-instrument-after-corrected/suites/preflight/release_controls/artifacts/`
+  retains missing/inconsistent publication-boundary inspections, the withheld
+  archive refusal, `candidate_valid/acceptance.json` and its refused pointer
+  downgrade controls. These candidate command/signature responses are constructed;
+  they are not a normally built extracted candidate's live battery.
+- The same run's `suites/preflight/release_publish_controls/artifacts/publication-freshness/freshness.json`
+  and `active-freeze.txt` exercise actual tagged-source freshness and relabeling
+  refusal. `archive/acceptance-kind-controls.json`, and the rotation case's
+  `artifacts/battery-contract/acceptance-kind-controls.json`, exercise archive and
+  portable-release kind boundaries beside historical and valid-release neighbors.
+- `trace-reporting-compatibility/suites/dispatcher/controls/artifacts/outcomes/controls.json`
+  retains independent shell outcomes, actual dependency/neighbor effects and the
+  real pilot reader over constructed raw trials. The pytest case's
+  `artifacts/outcome-mechanism-comparison.json` records all eleven mechanism
+  contrasts; its mixed runs and legacy-family reread retain exact parent/nested
+  scopes, pure/commanded behavior and historical-extension boundaries.
+
+The publication receipt extraction is retained as
+`investigations/reporting-checkpoint/publication-verification-final.txt` in the
+compatibility run. Its references to earlier passing cases inside a failed run
+remain scoped to those cases and their revisions; the successful corrected default
+also executes the publication owners with the final implementation.
+
+### Cost, retained state and next work
+
+The successful live batteries took 1888317 and 1978348 ms; their recorded invocation
+intervals sum to 1883932 and 1970235 ms. Both record zero system sleep. The largest
+post-capability intervals are build-contract controls (251143 ms), generator
+controls (214187 ms), publication controls (212134 ms), extension boundaries
+(92646 ms) and held-phase footprint (87886 ms). The largest increases are in
+publication and acceptance controls (25599 and 20362 ms); these are measured
+interval differences, not a causal or performance conclusion. Replay command
+intervals sum to 352.155 s, including copying, hashing and interpretation.
+
+The build console records compatible-cache reuse and 9.73 s of Cargo compilation;
+it does not isolate full build, native compilation, signing or packaging duration.
+Fixture receipts separately time bounded generation and rejection operations;
+candidate fixture battery values are authored responses, not measured execution.
+Construction, interpretation, cleanup and waiting cannot be fully separated from
+these receipts. No profiling or extra battery was added to obtain cost detail.
+
+One primary implementation checkout remains on `main`; no second worktree or
+temporary implementation checkout was created. Initial inspection found about
+160 GiB free and 1.2 GiB of managed output. At this boundary `du` reports about
+25.5 GiB under `tests/out`, including 10.9 GiB of replay outputs. Free space is
+about 131 GiB before the final preview and 129 GiB at the final check. Replay uses
+APFS clones; these directory totals are not
+an additive measure of unique physical allocation. The existing Rust, SwiftPM
+and Meson caches remain near 3.2 GiB, 270 MiB and 56 MiB; `.tmp` remains about
+720 MiB and `dist` about 877 MiB. They remain available for the next build stage.
+The prior `.tmp/contract-trio` evidence and its availability limitations are
+unchanged. Final system-swap inspection reports 2 GiB allocated and about 1.54 GiB
+used, compared with zero at the earlier inspection. No particular run is assigned
+that growth. Inspected temporary/compiler caches and swap do not fully explain
+the volume-level change; the remaining allocation is unattributed. Unrelated
+contents were not removed.
+
+The compatibility investigation's `prune-checkpoint.json` is the read-only
+preview: all eleven development runs are eligible, with no blockers, failures,
+missing acceptance or unmanaged output. It retains archives `v0.3.4`–`v0.3.7`
+and `tests/out/release-acceptance/run-9e17e41c6b99440c8359cf2163b7cfa1`. Applying
+the uniform sweep would also remove the checkpoint evidence, so it was not
+applied. There are no new pins, keep lists or protected copies, and no resource
+cleanup obligation was reported by the preview. These development observations
+remain gitignored and subject to ordinary retention; they are not release evidence.
+The single disposable scratch root `/private/tmp/pw-trace-checkpoint` is removed
+after retaining the decisive apparatus, readers, expectations, transcripts and
+receipts in the owned runs. No managed evidence is manually removed.
+
+Work stops here. The selected product/test remedies, both pytest cohort migrations
+and executable seam migration remain pending. The prepared source maps and shared
+rehearsals identify their owners but establish no execution equivalence. Each
+cohort must compare its original and migrated paths; the seam still needs its old
+experiment captured before entry-point changes. Retain the named truthful
+`leader_exit_and_eof`/`not_requested` relation for the survivor conversion. Other
+product dispositions remain as allocated above. Reporting now supplies the required
+authority, phase/input and supervised-command support. The later integrated stage
+still owns the adapted live extracted-candidate/build-refusal control and signed-app
+verification after product/build-input changes. No additional broad verification
+is required merely to expand this pause report.
