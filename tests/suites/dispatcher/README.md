@@ -224,6 +224,20 @@ trial bundles and five valid equal pairs: its unfavorable improvement judgment
 is advisory, while validity and reader correctness remain enforced. It supplies
 no live timing claim.
 
+The same script then runs `tests/fixtures/dispatcher/pilot_conclusion.py` in a
+process of its own. It gives the live pilot driver's `improvement_conclusion`
+the reader output that constructed comparison retained and authored verdict
+records, and requires the judgment and facts each row states: favorable when
+every held-total series improves beyond uncertainty and spread, whatever other
+components do; unfavorable for a worsening, an improvement short of spread, a
+withheld verdict, a cell without held-total pairs, a run that compared no
+candidate and a dry run, which earns no measurement credit. The expectations
+are literals in the rows. The driver's import adds the live case's directories
+to the search path and loads its capture, seam, gate and footprint helpers,
+which is why these controls run here in a separate process and not as items
+of the pilot-controls family. `outcomes/pilot_conclusion/` retains the command,
+its output and `receipt/controls.json`.
+
 `accounting_controls` includes deterministic raw replay controls. Poisoned
 derived summaries must not affect interpretation of independently authored
 reports, events, phases and command exits. Missing reports, contradictory

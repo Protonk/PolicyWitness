@@ -148,7 +148,11 @@ The `dispatcher` fixtures include `pilot_unfavorable.py`, which constructs ten
 ordinary worker-wait trial bundles, calibration and five matched pairs for an
 independently expected valid but unfavorable improvement judgment. The dispatcher
 observation controls retain the raw bundles and reader conclusion; these are
-constructed reader inputs and supply no live timing claim.
+constructed reader inputs and supply no live timing claim. `pilot_conclusion.py`
+holds the constructed controls for the live pilot driver's advisory
+conclusion: rows of matched-pair records, each with its literal expected
+judgment and facts, read by the driver's `improvement_conclusion` in a process
+of its own.
 
 The `dispatcher` fixtures include `repository.py` (copies the public runner and
 writes a caller-supplied catalog), `selection.sh`/`selection.py` (independent

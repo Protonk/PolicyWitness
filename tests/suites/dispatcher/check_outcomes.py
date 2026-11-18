@@ -174,8 +174,20 @@ if fault == 'null':
         (work / 'battery-errors.json').write_text(json.dumps(errors))
         assert bool(errors) is (not accepted), (name, errors)
         completed.append(dict(name=name, accepted=accepted, authority=authority, measurement=measurement, fault=fault))
+    # The live pilot's driver evaluates its advisory conclusion with its own code. Run that code on the
+    # reader output the pilot_advisory scenario retained and on authored verdicts, in a process of its own.
+    summary = out / 'pilot_advisory/repository/tests/out/runs/default/suites/fixture/subject/artifacts/pilot/summary.json'
+    conclusion = out / 'pilot_conclusion'
+    argv = [sys.executable, '-B', '-S', '-P', str(ROOT / 'tests/fixtures/dispatcher/pilot_conclusion.py'),
+            str(ROOT), str(summary), str(conclusion / 'receipt')]
+    conclusion.mkdir()
+    result = subprocess.run(argv, capture_output=True, timeout=60)
+    (conclusion / 'stdout').write_bytes(result.stdout)
+    (conclusion / 'stderr').write_bytes(result.stderr)
+    (conclusion / 'command.json').write_text(json.dumps(dict(argv=argv, returncode=result.returncode)))
+    assert result.returncode == 0, ('pilot conclusion controls failed', result.stderr.decode(errors='replace')[-2000:])
     (out / 'controls.json').write_text(json.dumps(completed, indent=2))
-    print(f'{len(completed)} explicit observation controls passed')
+    print(f'{len(completed)} explicit observation controls passed; ' + result.stdout.decode().strip())
 
 
 if __name__ == '__main__':

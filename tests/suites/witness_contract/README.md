@@ -538,7 +538,9 @@ beyond instrument uncertainty and beyond spread in every required pair. A
 worsening, a withheld verdict, a run that compared no candidate and a dry run
 are all recorded as unfavorable with the reason; an unfavorable advisory
 judgment is displayed and never fails the case, and a dry run earns no
-measurement credit.
+measurement credit. The default `dispatcher/controls` case runs the driver's
+conclusion code on constructed matched-pair records with literal expectations
+([dispatcher account](../dispatcher/README.md)).
 `PW_WORKER_WAIT_PILOT_ARGS` passes driver options such as `--dry-run`,
 `--cells`, `--repetitions`, `--regimes`, `--window-seconds` and
 `--clock-pair-trials`; `--host-flavour inspection|optimized` changes only the
