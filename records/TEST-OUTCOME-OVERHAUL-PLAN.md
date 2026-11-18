@@ -26,7 +26,7 @@ changed call paths before editing, and verify availability of local trace eviden
 
 | Cohort | Full migration scope |
 | --- | --- |
-| `witness_contract/worker_wait_pilot_controls` | All scenarios in [worker_wait_pilot_controls.py](../tests/suites/witness_contract/worker_wait_pilot_controls.py): ordinary/actor/neighbor receipts, decoding and interval arithmetic, historical missing records, grace/scan analysis, faulty formulas, exclusions/pooling, comparisons, disk/Markdown round trips and stager identity controls. |
+| `witness_contract/worker_wait_pilot_controls` | All scenarios of the former `tests/suites/witness_contract/worker_wait_pilot_controls.py`, now [test_worker_wait_pilot_controls.py](../tests/suites/witness_contract/test_worker_wait_pilot_controls.py): ordinary/actor/neighbor receipts, decoding and interval arithmetic, historical missing records, grace/scan analysis, faulty formulas, exclusions/pooling, comparisons, disk/Markdown round trips and stager identity controls. |
 | `source_drift/markdown_reader` | The complete population of the former `tests/suites/source_drift/markdown.py`, now [test_markdown_reader.py](../tests/suites/source_drift/test_markdown_reader.py): block/comment/link/heading/table/line interpretation, vendor bytes/import rules and fresh-process guards. Baseline: eight test classes, 38 methods and subcases. |
 
 The first exercises outcome distinctions; the second tests fixture isolation,
@@ -667,6 +667,154 @@ reader change:
 - Case evidence grows from about 0.8 MB to 11.2 MB, from per-item blob stores
   and ten collected sources per item.
 - `--suite source_drift` now needs the pinned pytest packages.
+
+## Cohort migration: worker-wait pilot controls — 2026-11-18
+
+Status: migrated, compared and retired. `1acf8884` adds the pytest family and
+moves every reference; `95d05b71` deletes the sequential script and its
+launcher, which stayed unreferenced for one commit as the old side of the
+comparison. No shared engine or reader file changed. Authority is unchanged:
+every assertion remains an enforced pytest assertion, and the reader's
+correctness stays enforced whatever authority the live pilot's product
+comparison is given.
+
+[test_worker_wait_pilot_controls.py](../tests/suites/witness_contract/test_worker_wait_pilot_controls.py)
+collects 232 items. The constructed-input builders moved to
+[worker_wait_pilot_constructed.py](../tests/suites/witness_contract/worker_wait_pilot_constructed.py),
+which imports neither the reader nor the clock-pair module;
+`tests/fixtures/dispatcher/pilot_unfavorable.py` imports the builders from
+there. Three items declare recorded commands (five commands: the stager's
+`ditto` and stand-in `--version` calls); 229 are pure with an empty operation
+set.
+
+| Group | Items |
+| --- | --- |
+| Layout | 2 |
+| Receipts | 3 |
+| Historical | 4 |
+| FirstCheck (first positive, done, inversion) | 8 |
+| Limits (calibration) | 4 |
+| Grace | 18 |
+| FinalWait | 10 |
+| Resampling | 14 |
+| ReplacedReader (old formula 3, actor-blind 2, spread 4, float 1, floor 2) | 12 |
+| OrderRules | 5 |
+| SleepRules | 17 |
+| DiskRoundTrip | 8 |
+| CalibrationContrasts | 2 |
+| Faults | 56 |
+| MissingFiles | 3 |
+| Pooling | 7 |
+| Comparison | 15 |
+| ResponseRepair | 16 |
+| Scan | 17 |
+| ComparisonRoundTrip | 3 |
+| Stager (5 pure, 3 commanded) | 8 |
+
+A session fixture publishes `controls.json` with the same 71 accepted names and
+76 rejected controls the script recorded, a `not_established` list and a map
+from each item to the names it establishes. An item records its names as its
+last statement, so the names of a failing item land in `not_established`. The
+old script wrote no `controls.json` when any scenario failed.
+
+The stager's two commands are routed, not replaced: the stager launches both
+through one module-level `command`, and a fixture substitutes an adapter that
+calls the dispatcher's recorded-command equipment with the stager's own receipt
+directory as the artifact directory. The commands, arguments and controlled
+environment are those the stager chose. `bundle.command` itself therefore no
+longer runs in this case.
+
+Local managed development runs under `tests/out/runs/`, gitignored and subject
+to ordinary retention; no system sleep was recorded in any of them:
+
+| Directory / run ID | Result and scope |
+| --- | --- |
+| `trace-cohort-pilot-old` / `20261118T153831Z_a80523e9` | Old path at `41d256af`: pass. |
+| `trace-cohort-pilot-new` / `20261118T161117Z_9d22dca0` | New family with the migration staged: 232 of 232 items pass. Owns the equivalence investigation. |
+| `trace-cohort-pilot-final` / `20261118T161510Z_89280c94` | The family at `95d05b71`: 232 of 232, the same thirteen source digests. |
+| `trace-cohort-pilot-final-drift` / `20261118T161537Z_7e5d962c` | `source_drift` and `shell_helpers` at `95d05b71`: 19 of 19 pass. |
+| `trace-cohort-pilot-final-dispatcher` / `20261118T162737Z_74536936` | `dispatcher/controls` and `dispatcher/pytest_controls` at `95d05b71`: 2 of 2 pass. |
+
+Four `trace-cohort-pilot-dev-*` directories are development passes on the way
+and credit nothing. The live `witness_contract/worker_wait_pilot` case lists
+the family as a dependency; the pilot was not run in this thread, so admission
+through that dependency is established by the listing only.
+
+The equivalence investigation is
+`trace-cohort-pilot-new/investigations/cohort-equivalence/`; it credits no
+case. Its `comparison/summary.json` reads `ok` with no unexplained difference:
+
+- **Identity.** Every accepted name, rejected control, fault name and rule
+  label maps to items; thirteen items carry no old name and cite the old
+  assertion lines they hold; nothing is unmapped in either direction. Two old
+  entries shared a name across a rule control and a fault, so names are keyed
+  per group.
+- **Literals.** Of the 4189 outermost literal expressions of the old script
+  outside docstrings, 4164 occur as written and 14 are regrouped into
+  parameter rows with every constant present. Eleven are absent and each is
+  accounted for: messages of removed wrapper loops, the closing print,
+  `__main__`, one directory name and one raise message.
+- **Assertions.** Of the old script's 376 assert statements, 342 are identical
+  in the new modules and 34 are restated as parameter rows.
+- **Facts.** The published scope, names, statuses and code sets agree; list
+  order differs.
+- **Commands.** Five against five with equal argv, exit status and output. The
+  old side came from an in-process probe of the unchanged script, because the
+  old run deletes its own receipts.
+- **Trees.** Every constructed tree is equal before cleanup. The old copies of
+  the tampered and missing-file trees also held three stale output files that
+  the family's per-item trees do not.
+
+Not compared: command environment, working directory and standard input;
+command descendants; durations; blob bytes of the seeded rounds; the
+restoration check under a failing item; and single-item isolation, for which
+no public selector exists.
+
+Seeded faults ran in one detached worktree with expectations written first;
+`rejection.json` records the results, all as expected. The worktree was
+removed with `git worktree remove` and its ten runs went with it.
+
+| Fault | Old path | Family |
+| --- | --- | --- |
+| A magic check removed from the reader | Stops at `bad_magic` | Fails `bad_magic` and `combined_magic_and_pacing` |
+| The 2 ms boundary comparison made strict | Stops in the boundary loop | Fails one exactly-2-ms item |
+| The loader misses the clock-pair build record | Fails on the build fragment | Fails one item on the same fragment |
+| The stager skips its equipment check | Reports `reached` | One commanded item reports `reached`; accounting complete |
+
+Duties retired: the sequential `main`, accepted/rejected accumulation, five
+try/finally restoration wrappers, manual `rmtree`, the launcher and
+`assert.log`. Duties added: identity and account decorators with the
+`account`/`established` pair; lazy reader, clock-pair and stager fixtures; a
+checked `replace` fixture that owns restoration; tree fixtures; the command
+adapter; and the family's source-file list.
+
+Departures from the scenario map, each a recorded choice: the pooling rows are
+evaluated in memory, where the map called them pure rows over staged files; a
+mutation control now requires every check concerned with its fault to fail,
+which is stricter than the script's first failure; stager artifacts land under
+`artifacts/stager/<identity>/`.
+
+Marginal-value observations, recorded without a redundancy claim: the
+old-formula, spread and floor mutations are each rejected by several checks
+over one fault; eight round-trip items read identical trees again; every pair
+item reruns the every-pair worsening check; 224 items share one reader
+import; and the first seeded fault showed two fault rows rejecting one defect.
+These are independently authored assertions over shared evidence, not
+independent observations.
+
+Observed consequences of the existing capability, none requiring a shared
+reader change:
+
+- Case evidence grows from about 0.75 MB to 133 MB. About 115 MB is 232
+  per-item copies of the family's thirteen collected sources. One family-level
+  blob store in the engine would remove most of it; that is a change to the
+  shared engine and is left as a maintainer judgment, with the default
+  battery's size stated in the release account.
+- `run.json.counts` excludes the family, as for the Markdown cohort.
+- The default `witness_contract` selection and the live pilot now need the
+  pinned pytest packages.
+- No fixture can see an item's outcome, so the published account depends on
+  each item recording its names explicitly and on the session's failure count.
 
 ## Seam migration, first stage: adapter and old experiment — 2026-11-17
 
