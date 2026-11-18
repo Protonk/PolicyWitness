@@ -985,3 +985,39 @@ interrupted run `trace-limits-controls-drift` (`20261118T081036Z_ee6e56a3`,
 9 of 11 cases unrun) and a probe run that overlapped sleep are environmental
 and are not runs of record; the selections were repeated. No product or test
 defect is attributed to the interruption.
+
+**Cohort and conversions.** The worker-wait pilot controls are a pytest family
+(`1acf8884`, `95d05b71`) and the four selected conversions are landed with
+their follow-up repairs (`4cb2f91b`, `47b455f1`, `9bcefb24`, `79aa7dde`,
+`8a7596b5`, `6bab97ee`, `7b8f1f46`). The overhaul plan carries each account.
+None changes a build input; the app is still `development:081353c9…948ab695`.
+The default selection is 233 cases and now contains the survivor case.
+
+**Evidence cost of pytest families.** The pilot family's case evidence is
+about 133 MB where the script's was under 1 MB, because each item keeps its
+own copy of the family's collected sources. A read-only investigation at
+`147fc10f` also found a cost that no path in this stage reaches: validating
+such a family from a release archive reads members of a gzip tar out of
+order, which by a sampled projection adds about half an hour per
+verification of one archive. At the maintainer's request the direction is a
+plan beside the tests, [PYTEST-EVIDENCE-PLAN.md](../tests/PYTEST-EVIDENCE-PLAN.md)
+(`ccba056d`): a one-pass archive reader, one blob store per family, and a
+question about what per-item source capture establishes. No shared engine or
+reader file changed in this stage for it. Until the reader change lands, the
+next release whose battery holds these families meets that cost at archive,
+publish and each later prune; this belongs in the release account.
+
+**Retention applied, 2026-11-18.** The maintainer asked whether a selective
+sweep exists; the retention tool has none by design, and authorized the
+uniform one. At `4994bc3b`, with no writer in the checkout, the preview
+reported no blocker, nothing unmanaged, four archives kept (`v0.3.4` to
+`v0.3.7`), the newest release's acceptance directory protected and 88 runs
+eligible (about 51 GiB). `make prune APPLY=1` then removed those 88 with no
+failure in about 28 minutes and left no retention journal. Every development
+run named earlier in these three plans, including the instrument checkpoint
+batteries, the replay comparison and the seam and cohort comparison
+directories, is therefore no longer on disk: their identifiers, results and
+recorded conclusions stand as written accounts, and repeating a comparison
+means rebuilding the commits named beside it. Evidence produced from here on,
+ending with final integrated verification, is what the closing outflows rest
+on; no further apply is intended in this stage.
