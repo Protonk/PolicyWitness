@@ -269,18 +269,27 @@ rules belong to the [output reference](../docs/PolicyWitness.md#output-envelope)
 
 ## Test seam: `_test_overrides`
 
-The optional request block changes inputs at production boundaries; the real
-drivers and classifier determine the result. Supplied controls are mirrored in
-`test_overrides` when available, subject to refusal sanitization. An echo does
-not establish that a boundary was reached or that its requested effect occurred.
-An empty or default-valued control can be inert. Early replies can omit the
-echo, so a missing echo cannot establish that no controls were submitted;
-retain the request for that fact.
+Ten controls change inputs at production boundaries; the real drivers and
+classifier determine the result. Two are members of a request's optional
+`_test_overrides` block. Eight are the controls of an experimental submission:
+they travel beside the request, and a request block that holds one is refused.
+Supplied controls are mirrored in `test_overrides` when available, subject to
+refusal sanitization. An echo does not establish that a boundary was reached or
+that its requested effect occurred. An empty or default-valued control can be
+inert. Early replies can omit the echo, so a missing echo cannot establish that
+no controls were submitted; retain the request and the controls for that fact.
+
+### Request block members
 
 | Key | Request type | Default and effective behavior |
 | --- | --- | --- |
 | `worker_executable_path` | string | Ordinary requests only: substitutes the worker spawn path. A nonexistent path can exercise `worker_spawn_failed`. |
 | `actor_equipment_executable_paths` | closed object | Actor requests only: nonempty `selected`/`unentitled` map of absolute signed fixture paths. Both packaged roles are still verified first. Overrides retain actual identity and `test_override` provenance; valid ad-hoc fixtures are allowed but receive no packaged build/signing credit. Missing or invalid code refuses before launch; an ABI mismatch remains worker setup evidence. |
+
+### Controls of an experimental submission
+
+| Control | Type | Default and effective behavior |
+| --- | --- | --- |
 | `worker_timeout_ms` | integer milliseconds | <!-- span limits.worker_sentinel_wait.value_unit -->120,000 milliseconds<!-- /span -->; changes the host sentinel allowance, leaving the worker's exec budget unchanged. |
 | `validator_io_timeout_ms` | integer milliseconds | <!-- span limits.validator_io_wait.value_unit -->30,000 milliseconds<!-- /span -->; sets the proposed per-phase I/O deadline, capped by the remaining aggregate collection allowance. |
 | `validator_total_timeout_ms` | integer milliseconds | Reduces the aggregate collection allowance, clamped to 1–<!-- span limits.phase_collection_wait.value_unit -->30,000 milliseconds<!-- /span --> across all phases. Later collections can become unavailable while attempts still run. |
@@ -300,14 +309,9 @@ intended seam. Failed signal delivery or a nonfatal/ignored signal can return
 and allow `done` publication; requesting a signal proves neither termination
 nor policy cause.
 
-Eight of the controls can also be supplied outside the request:
-`worker_timeout_ms`, `worker_pre_ready_hang_ms`, `worker_post_apply_hang_ms`,
-`worker_post_apply_kill_signal`, `worker_kill_before_publish_slot`,
-`validator_executable_path`, `validator_io_timeout_ms` and
-`validator_total_timeout_ms`. `pw-runner-client run --experimental-controls
-<JSON object>` delivers the object beside the unchanged request through
-`runReservedExperiment`, and `policy-witness test-input run` builds that object
-from its control flags.
+`pw-runner-client run --experimental-controls <JSON object>` delivers the
+controls object beside the unchanged request through `runReservedExperiment`,
+and `policy-witness test-input run` builds that object from its control flags.
 [`decodeExperimentalSubmission`](Sources/PWRunnerCore/PWRunnerService.swift)
 decodes the request, then the controls with the block's own decoder restricted
 to those eight members, and puts the result where the block would be.
@@ -315,16 +319,24 @@ Admission, the orchestrators, the echo and refusal sanitization then read one
 record whichever call supplied it. The request of an experimental submission
 may carry an absent, null or empty block; a block with any member, a null
 member included, is refused with `inapplicable_field` at `_test_overrides`. A
-refused controls member is located under `_test_overrides` too, and a member of
-the block that is not one of the eight is `inapplicable_field` there. With no
-member the echo is an empty object. Both calls carry the eight controls: a
-request block submitted through `runReservedSpecimen` still admits every key
-in the table. The [admission rule](../docs/REQUEST.md#contract-request-overrides-experimental)
-is the public statement.
+refused controls member is located under `_test_overrides` too, and a request
+block member in the controls object is `inapplicable_field` there. With no
+member the echo is an empty object.
 
-This is the single override-key reference. The
-[drift check](../tests/suites/source_drift/README.md) compares its keys with
-`PWRunnerTestOverrides`; it does not verify the table's semantics. Working rules
+A request submitted through `runReservedSpecimen` admits only the two request
+block members. The record's decoder refuses a block that holds any of the
+eight controls with `inapplicable_field` at `_test_overrides` followed by the
+control's name. Presence decides, so a null, zero, negative or mistyped value
+is refused too, before any member's value is read and before any worker or
+validator starts. With several present the refusal names the first in the
+order of `PWRunnerTestOverrides.experimentalControls`. The public statements
+are the [experimental admission rule](../docs/REQUEST.md#contract-request-overrides-experimental)
+and the [ordinary refusal](../docs/REQUEST.md#contract-request-overrides-ordinary_refusal).
+
+These two tables are the single reference for the record's members. The
+[drift check](../tests/suites/source_drift/README.md) compares the first with
+the members of `PWRunnerTestOverrides` outside `experimentalControls` and the
+second with that list; it does not verify the tables' semantics. Working rules
 and assertions are in [AGENTS.md](AGENTS.md#testing-normalized_outcome-failure-paths-via-_test_overrides).
 
 ## External runner services

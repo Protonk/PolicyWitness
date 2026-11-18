@@ -1158,7 +1158,7 @@
   {
     "id": "fractional_override",
     "phase": "structure",
-    "lesson": "Fractional integers are field type errors, including test-seam inputs.",
+    "lesson": "A test control in an ordinary request block is refused at its member before its value is read; a fractional value changes nothing.",
     "request": {
       "specimen_id": "request-grammar",
       "policy": {
@@ -1188,14 +1188,14 @@
     },
     "expected": {
       "cli": {
-        "code": "type_mismatch",
+        "code": "inapplicable_field",
         "path": [
           "_test_overrides",
           "worker_timeout_ms"
         ]
       },
       "xpc": {
-        "code": "type_mismatch",
+        "code": "inapplicable_field",
         "path": [
           "_test_overrides",
           "worker_timeout_ms"

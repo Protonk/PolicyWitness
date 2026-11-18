@@ -34,9 +34,11 @@ The check has two halves:
      g. The C and Swift C-worker attempt-kind enums agree by raw value
         and name.
      h. Every stored property of PWRunnerTestOverrides in PWRunnerRequest.swift
-        has a row in the `_test_overrides` table in runner/README.md, and
-        every row names a property. That table is the only documented
-        key list; runner/AGENTS.md points at it rather than carrying one.
+        has a row in one of the two test-seam tables in runner/README.md,
+        every row names a property, the request-block table holds the
+        properties outside `experimentalControls` and the controls table
+        holds that list. Those tables are the only documented key lists;
+        runner/AGENTS.md points at them rather than carrying one.
      i. AGENTS.md, runner/AGENTS.md, tests/AGENTS.md and docs/BUILD.md each
         have a nonempty "Sandboxed automation harnesses" section. The root
         section links to the other three diagnostic sections. Wording is
@@ -915,10 +917,11 @@ def check_host_invariance(tree: repository_tree.Tree) -> list[Problem]:
 # ---------------------------------------------------------------------------
 # `_test_overrides` key table agreement.
 #
-# runner/README.md's test-seam table is the only documented list of override
-# keys; runner/AGENTS.md points at it instead of carrying a copy. Lock the
-# table to the Codable struct so a key added to one cannot ship without the
-# other.
+# runner/README.md's two test-seam tables are the only documented lists of
+# the record's members; runner/AGENTS.md points at them instead of carrying a
+# copy. Lock them to the Codable struct and to its `experimentalControls`
+# list, so a member added to one cannot ship without the other and neither
+# table can list a member that travels the other way.
 # ---------------------------------------------------------------------------
 
 def _test_override_fields(text: str, name: str) -> set[str]:
@@ -941,19 +944,54 @@ def parse_test_override_fields(tree: repository_tree.Tree) -> set[str]:
     return tree.parsed(PWRUNNER_REQUEST, _test_override_fields)
 
 
-def parse_readme_test_override_rows(tree: repository_tree.Tree) -> set[str]:
-    """Return the keys tabulated in runner/README.md's
-    "Test seam: `_test_overrides`" section, so other tables in the README
-    can't leak in."""
+def _experimental_controls(text: str, name: str) -> set[str]:
+    match = re.search(r'static let experimentalControls\s*:\s*\[CodingKeys\]\s*=\s*\[(.*?)\]', text, re.DOTALL)
+    if match is None:
+        raise InputFailure("controls.missing", "could not locate PWRunnerTestOverrides.experimentalControls in "
+                           "runner/Sources/PWRunnerCore/PWRunnerRequest.swift", name)
+    names = set(re.findall(r'\.([a-z_][a-z0-9_]*)', match.group(1)))
+    if not names:
+        raise InputFailure("controls.empty", "PWRunnerTestOverrides.experimentalControls names no member", name)
+    return names
+
+
+TEST_SEAM_TABLES = ("Request block members", "Controls of an experimental submission")
+
+
+def parse_readme_test_override_rows(tree: repository_tree.Tree) -> tuple[set[str], set[str]]:
+    """Return the keys tabulated under the two subsections of runner/README.md's
+    "Test seam: `_test_overrides`" section: the request block's members, then
+    the experimental controls. Other tables in the README can't leak in."""
     document, section = required_section(tree, RUNNER_README, "Test seam: _test_overrides")
-    return {name for cells in section_rows(document, section)
-            if (name := code_cell(cells[0], r"[a-z_][a-z0-9_]*"))}
+    found = []
+    for heading in TEST_SEAM_TABLES:
+        part = document.section(heading, 3)
+        if part is None or not section.holds(part.lines):
+            raise InputFailure("section.missing", f"{RUNNER_README} is missing the ### {heading!r} section under its "
+                               "test-seam section", RUNNER_README)
+        found.append({name for cells in section_rows(document, part)
+                      if (name := code_cell(cells[0], r"[a-z_][a-z0-9_]*"))})
+    return found[0], found[1]
 
 
 def check_test_overrides_table_agreement(tree: repository_tree.Tree) -> list[Problem]:
     problems: list[Problem] = []
     fields = parse_test_override_fields(tree)
-    rows = parse_readme_test_override_rows(tree)
+    controls = tree.parsed(PWRUNNER_REQUEST, _experimental_controls)
+    members, tabulated = parse_readme_test_override_rows(tree)
+    rows = members | tabulated
+    for name in sorted(controls - fields):
+        problems.append(problem("test_overrides.unknown_control",
+                                f"  test_overrides: experimentalControls names {name!r} but PWRunnerTestOverrides "
+                                f"has no such property", PWRUNNER_REQUEST))
+    for name in sorted(members & controls):
+        problems.append(problem("test_overrides.wrong_table",
+                                f"  test_overrides: runner/README.md lists the experimental control {name!r} "
+                                f"among the request block members", RUNNER_README))
+    for name in sorted((tabulated & fields) - controls):
+        problems.append(problem("test_overrides.wrong_table",
+                                f"  test_overrides: runner/README.md lists the request block member {name!r} "
+                                f"among the experimental controls", RUNNER_README))
     for name in sorted(fields - rows):
         problems.append(problem("test_overrides.missing_row",
                                 f"  test_overrides: PWRunnerTestOverrides.{name} has no row in "

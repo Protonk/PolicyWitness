@@ -1343,7 +1343,7 @@ C/S/O are `collection_closed_before_proceed`, `proceed_set` and
 | Worker failure | `PW_FAILURE_PROCEED_TIMEOUT` = 8; local timing refusal `PW_FAILURE_TIME_INVALID` = 14 with a `PW_TIME_REASON_*` detail | `pw_probe_runner_abi.h` |
 | Worker budget | `PW_PROCEED_WAIT_MS_DEFAULT`, limit id `worker_proceed_wait` | `pw_probe_runner.c`, `docs/limits.json` |
 | Worker argv seam | `--proceed-wait-ms` | C harness only; no request override |
-| Request overrides | `validator_io_timeout_ms`, `validator_total_timeout_ms` | `PWRunnerTestOverrides` |
+| Test controls | `validator_io_timeout_ms`, `validator_total_timeout_ms` | `PWRunnerTestOverrides`, supplied with `test-input run` |
 | Per-phase evidence | `phases[].ordering` | reply |
 | Per-step evidence | `comparison.order` | reply |
 | Host reply failure | `runner_reporting_failed`, `reporting_failure` | reply; comparisons absent |

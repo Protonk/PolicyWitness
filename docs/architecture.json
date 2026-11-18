@@ -839,7 +839,7 @@
           "from": "host",
           "to": "validator",
           "kind": "spawn",
-          "label": "fresh posix_spawn --batch <pid> per eligible phase; bundle-local default or explicit override; bounded NDJSON",
+          "label": "fresh posix_spawn --batch <pid> per eligible phase; bundle-local default or the validator path control of an experimental submission; bounded NDJSON",
           "short": "fresh collection per phase",
           "sources": [
             {
@@ -2876,7 +2876,7 @@
           "label": "runner/README.md",
           "kind": "document",
           "facts": {
-            "Carries": "the test-seam table and the version sentence"
+            "Carries": "the two test-seam tables and the version sentence"
           },
           "sources": [
             {
@@ -4566,7 +4566,7 @@
           "from": "request_swift",
           "to": "runner_readme",
           "kind": "copies",
-          "label": "test-seam table from PWRunnerTestOverrides",
+          "label": "test-seam tables from PWRunnerTestOverrides and its experimentalControls",
           "short": "seam table",
           "sources": [
             {
@@ -7365,7 +7365,7 @@
           "from": "host",
           "to": "validator",
           "kind": "spawn",
-          "label": "eligible collection spawns the copy\u2019s bundle-local validator by default; an explicit override takes precedence",
+          "label": "eligible collection spawns the copy\u2019s bundle-local validator by default; the validator path control of an experimental submission takes precedence",
           "short": "spawn",
           "sources": [
             {

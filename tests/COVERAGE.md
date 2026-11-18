@@ -172,7 +172,10 @@ is never reached, the ordinary allowance floor, a request refused before its
 control could act, malformed command lines, a worker argument refusal for each
 ranged control, a request block refused on that route through the controller
 and the runner client, a fractional control refused at the client, and the
-worker and actor-equipment substitutions through plain `run`. See the [owning account](suites/witness_contract/README.md#controlled-read-input)
+worker and actor-equipment substitutions through plain `run`. Each control is
+also written into an ordinary request's block, with an acting and an inert
+value through plain `run` and through the runner client's ordinary call, and
+must be refused at its own member before any worker. See the [owning account](suites/witness_contract/README.md#controlled-read-input)
 for scope and blind spots.
 
 The default `witness_contract/example_round_trip` executes the app's emitted

@@ -451,11 +451,11 @@ empty control mapping and a request that carries its own block as given,
 because what the product does with them is the caller's experiment. It refuses
 an unselected key, a reused scenario and, for the controller, a value holding
 a NUL, which no command-line argument can carry; the client's controls object
-can. A refusal precedes any write or launch. One submission carries a selected
-key outside the adapter, as a request block: the request corpus's
-`fractional_override` example, whose `worker_timeout_ms` is a type refusal
-submitted by `runner_outcome_bad_request/accepted_input_contract` with the
-rest of the corpus.
+can. A refusal precedes any write or launch. The host refuses a control in an
+ordinary request's block, and two cases submit such blocks by hand to show it:
+the request corpus's `fractional_override` example, submitted by
+`runner_outcome_bad_request/accepted_input_contract` with the rest of the
+corpus, and the `ordinary.*` submissions of `witness_contract/test_input`.
 
 Each invocation keeps `artifacts/seam-invocations/<scenario>/` with
 `invocation.json`, `ordinary-request.json`, `controls.json`,

@@ -2,8 +2,9 @@
 """Submit the published read input with `test-input run` and retain what each submission showed.
 
 Every submission that carries controls goes through the seam invocation adapter,
-so its command, controls and delivered request are recorded before launch. The checker in check_test_input_seam.py owns the plan
-and every expectation; this driver only prepares, launches, samples and records.
+so its command, controls and delivered request are recorded before launch. The
+checker in check_test_input_seam.py owns the plan and every expectation; this
+driver only prepares, launches, samples and records.
 """
 import json
 from pathlib import Path
@@ -124,21 +125,31 @@ def run_seam(directory, pw, app, work, identity, attempts, persist):
             read_envelope(record, run.stdout_path.read_text())
         owned(name, launch)
 
-    def direct(name, document, controls):
-        """One runner-client submission, with its capture decoded by the independent reader."""
+    def direct(name, document, controls=None):
+        """One runner-client submission, with its capture decoded by the independent reader: through the
+        adapter when `controls` is a mapping, the client's ordinary call otherwise."""
         def launch(record):
             dest = directory / name
             dest.mkdir()
             request = dest / 'specimen.json'
-            submission = Submission(client, 'test_input.' + name, document, controls,
-                                    run_args=['--timeout-ms', '20000', service, request], request_path=request)
-            result = submission.run(timeout=WAIT_SECONDS)
+            if controls is None:
+                request.write_text(publication.encode(document))
+                argv = [str(client), 'run', '--timeout-ms', '20000', service, str(request)]
+                (dest / 'command.json').write_text(publication.encode(argv))
+                result = subprocess.run(argv, capture_output=True, timeout=WAIT_SECONDS)
+                (dest / 'stderr').write_bytes(result.stderr)
+                record.update(argv=argv, delivered_document=json.loads(request.read_text()))
+            else:
+                submission = Submission(client, 'test_input.' + name, document, controls,
+                                        run_args=['--timeout-ms', '20000', service, request], request_path=request)
+                result = submission.run(timeout=WAIT_SECONDS)
+                record.update(argv=submission.argv,
+                              invocation=json.loads((submission.seam / 'invocation.json').read_text()),
+                              ordinary=(submission.seam / 'ordinary-request.json').read_text(),
+                              delivered=(submission.seam / 'delivered-request.json').read_text())
             (dest / 'capture.pwp').write_bytes(result.stdout)
-            record.update(argv=submission.argv, exit=result.returncode, stderr=result.stderr.decode('utf-8', 'replace'),
-                          stdout_bytes=len(result.stdout),
-                          invocation=json.loads((submission.seam / 'invocation.json').read_text()),
-                          ordinary=(submission.seam / 'ordinary-request.json').read_text(),
-                          delivered=(submission.seam / 'delivered-request.json').read_text())
+            record.update(exit=result.returncode, stderr=result.stderr.decode('utf-8', 'replace'),
+                          stdout_bytes=len(result.stdout))
             try:
                 record['capture'] = decoded = decode_porcelain(result.stdout, 'capture')
                 record['capture_errors'] = validate_capture(decoded, identity)
@@ -188,6 +199,15 @@ def run_seam(directory, pw, app, work, identity, attempts, persist):
     direct('client.activation', document, checker.CLIENT_CONTROLS)
     direct('legacy_block.client', checker.request_for('client', identity, target, checker.LEGACY_BLOCKS['client'][0]), {})
     direct('client.fractional', document, checker.CLIENT_FRACTIONAL)
+    # A control in an ordinary request's block is the submission the host refuses. These requests are
+    # written by hand, because the adapter never puts a control in a request.
+    for key in checker.FLAGS:
+        capture('ordinary.' + key + '.cli', checker.request_for(key, identity, target, checker.ordinary_block(key, state)))
+        capture('ordinary.' + key + '.inert',
+                checker.request_for(key, identity, target, checker.ordinary_block(key, state, inert=True)))
+        direct('ordinary.' + key + '.client', checker.request_for(key, identity, target, checker.ordinary_block(key, state)))
+    for name, (block, key) in checker.ORDINARY_BLOCKS.items():
+        capture('ordinary.' + name, checker.request_for(key, identity, target, block))
     # The two substitutions the request block keeps are ordinary submissions: no selected control, no adapter.
     for name, block in checker.UNSELECTED.items():
         capture('unselected.' + name, checker.request_for(name, identity, target, block))

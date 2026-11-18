@@ -29,7 +29,12 @@ DEPENDENT = dict(neighbour=('baseline',), zero_controls=('echo', 'neighbour'),
                  **{'legacy_block.' + name: ('refusal',) for name in ('cli', 'inert', 'mixed', 'client')},
                  **{'legacy_block.empty': ('admitted',), 'client.activation': ('intervention',),
                     'client.fractional': ('refusal',)},
-                 **{'unselected.' + name: ('substitution',) for name in checker.UNSELECTED})
+                 **{'unselected.' + name: ('substitution',) for name in checker.UNSELECTED},
+                 **{'ordinary.' + key + '.' + form: ('refusal',) for key in checker.FLAGS for form in ('cli', 'inert', 'client')},
+                 **{'ordinary.' + name: ('refusal',) for name in checker.ORDINARY_BLOCKS})
+ORDINARY_RUNS = [*('ordinary.' + key + '.' + form for key in checker.FLAGS for form in ('cli', 'inert')),
+                 *('ordinary.' + name for name in checker.ORDINARY_BLOCKS)]
+ORDINARY_CLIENT = ['ordinary.' + key + '.client' for key in checker.FLAGS]
 NATIVE = ['native_range.' + key for key in checker.NATIVE_RANGE]
 
 
@@ -148,6 +153,21 @@ def ordinary(name, document, exit_code, outcome, host, **data):
                 consumer_errors=[], reply=host, before=sample(), after=sample())
 
 
+def refused_run(name, document, failure):
+    """The record of a plain `run` the host refused."""
+    record = ordinary(name, document, 1, 'bad_request', refusal_reply(failure))
+    record['envelope']['data']['request_failure'] = dict(failure)
+    return record
+
+
+def refused_client(name, document, failure):
+    """The record of the runner client's ordinary call the host refused."""
+    return dict(argv=[CLIENT, 'run', '--timeout-ms', '20000', 'service', '/constructed/' + name + '/specimen.json'], exit=0,
+                stderr='', delivered_document=document, capture_errors=[], reply=refusal_reply(failure),
+                capture=dict(contract=IDENTITY, terminal='runner_reply', submission=dict(state='invoked')),
+                before=sample(), after=sample())
+
+
 def usage_record(name, command, arguments, error):
     path = '/constructed/usage.' + name + '.json'
     refused = envelope(2, 'tool_error', runner_client=None)
@@ -232,6 +252,17 @@ def build():
                 steps=[], phases=[phase(collection_status='not_reached', validator_subprocess=None)])
     scenarios['unselected.actor_equipment'] = ordinary(
         'unselected.actor_equipment', checker.request_for('actor_equipment', IDENTITY, TARGET, block), 1, 'runner_failed', host)
+    for key in checker.FLAGS:
+        failure = checker.ordinary_refusal(key)
+        for form in ('cli', 'inert'):
+            block = checker.ordinary_block(key, state, inert=form == 'inert')
+            scenarios['ordinary.' + key + '.' + form] = refused_run(
+                'ordinary.' + key + '.' + form, checker.request_for(key, IDENTITY, TARGET, block), failure)
+        scenarios['ordinary.' + key + '.client'] = refused_client(
+            'ordinary.' + key + '.client', checker.request_for(key, IDENTITY, TARGET, checker.ordinary_block(key, state)), failure)
+    for name, (block, key) in checker.ORDINARY_BLOCKS.items():
+        scenarios['ordinary.' + name] = refused_run('ordinary.' + name, checker.request_for(key, IDENTITY, TARGET, block),
+                                                    checker.ordinary_refusal(key))
     denied = envelope(2, 'tool_error', runner_client=None)
     denied['result']['error'] = 'failed to run pw-runner-client: failed to launch "' + CLIENT + '": Operation not permitted (os error 1)'
     scenarios['denied_run'] = dict(argv=[*denial, 'test-input', 'run', '/constructed/denied-run.json'], exit=2, stderr='',
@@ -261,7 +292,7 @@ def controls():
         yield label + ':controls_in_request', lambda s, label=label: scenario(s, label).update(
             delivered=publication.encode(dict(json.loads(scenario(s, label)['delivered']),
                                               _test_overrides=dict(worker_timeout_ms=1)))), failed(label + '.submission')
-    for label in ['neighbour', *unselected, *cli]:
+    for label in ['neighbour', *unselected, *ORDINARY_RUNS, *cli]:
         yield label + ':observed_exit', lambda s, label=label: scenario(s, label).update(exit=3), failed(label + '.status')
         yield label + ':other_build', lambda s, label=label: scenario(s, label)['envelope']['build'].update(
             contract='development:' + '5' * 64), failed(label + '.build', label + '.consumer') | unread(label)
@@ -384,8 +415,40 @@ def controls():
     yield 'legacy_block.empty:no_echo', lambda s: scenario(s, 'legacy_block.empty')['reply'].pop('test_overrides'), \
         failed('legacy_block.empty.admitted')
 
+    # A control in an ordinary request's block: refused at its own member, before any launch.
+    for label in ORDINARY_RUNS + ORDINARY_CLIENT:
+        yield label + ':whole_block', lambda s, label=label: scenario(s, label)['reply']['request_failure'].update(
+            path=['_test_overrides']), failed(label + '.refusal')
+        yield label + ':worker_launched', lambda s, label=label: scenario(s, label)['reply'].update(
+            runner_subprocess=worker()), failed(label + '.refusal')
+        yield label + ':block_echoed', lambda s, label=label: scenario(s, label)['reply'].update(
+            test_overrides=dict(scenario(s, label)['delivered_document']['_test_overrides'])), failed(label + '.refusal')
+        yield label + ':experimental_call', lambda s, label=label: scenario(s, label)['argv'].insert(
+            2, '--experimental-controls'), failed(label + '.refusal')
+    for label in ORDINARY_RUNS:
+        yield label + ':envelope_without_refusal', lambda s, label=label: scenario(s, label)['envelope']['data'].update(
+            request_failure=None), failed(label + '.refusal')
+
+        def admitted(s, label=label):
+            # What a host that still read the block would return: the control echoed and a worker run.
+            record = scenario(s, label)
+            host = reply(test_overrides=dict(record['delivered_document']['_test_overrides']))
+            record.update(exit=0, reply=host, envelope=envelope(0, 'finished', host))
+        yield label + ':still_admitted', admitted, failed(label + '.status', label + '.refusal')
+    yield 'ordinary.mixed:worker_member', lambda s: scenario(s, 'ordinary.mixed')['reply']['request_failure'].update(
+        path=['_test_overrides', 'worker_executable_path']), failed('ordinary.mixed.refusal')
+    yield 'ordinary.combined:other_control', lambda s: scenario(s, 'ordinary.combined')['reply']['request_failure'].update(
+        path=['_test_overrides', 'validator_total_timeout_ms']), failed('ordinary.combined.refusal')
+    yield 'ordinary.validator_executable_path.cli:type_refusal', lambda s: scenario(
+        s, 'ordinary.validator_executable_path.cli')['reply']['request_failure'].update(code='type_mismatch'), \
+        failed('ordinary.validator_executable_path.cli.refusal')
+
     # The client's own submission.
-    for label in ('client.activation', 'legacy_block.client', 'client.fractional'):
+    for label in ORDINARY_CLIENT:
+        yield label + ':still_admitted', lambda s, label=label: scenario(s, label).update(
+            reply=reply(test_overrides=dict(scenario(s, label)['delivered_document']['_test_overrides']))), \
+            failed(label + '.refusal')
+    for label in ('client.activation', 'legacy_block.client', 'client.fractional', *ORDINARY_CLIENT):
         yield label + ':no_reply', lambda s, label=label: scenario(s, label)['capture'].update(terminal='xpc_error'), \
             failed(label + '.capture') | unread(label)
         yield label + ':capture_refused', lambda s, label=label: scenario(s, label).update(

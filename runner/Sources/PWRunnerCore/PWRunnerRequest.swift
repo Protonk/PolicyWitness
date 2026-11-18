@@ -222,8 +222,9 @@ struct PWRunnerPhase: Codable {
 // adjacent AGENTS.md gives the assertion recipe and rules for new controls.
 //
 // The same record is decoded from three inputs. An ordinary submission's
-// request block is the default. `PWRunnerOverrideSource` names the two inputs
-// of an experimental submission, whose rules are stated at its cases.
+// request block is the default and admits only the members outside
+// `experimentalControls`. `PWRunnerOverrideSource` names the two inputs of an
+// experimental submission, whose rules are stated at its cases.
 struct PWRunnerTestOverrides: Codable {
     // BEGIN GENERATED PORCELAIN PWRunnerTestOverrides
     var worker_executable_path: String?
@@ -280,7 +281,10 @@ struct PWRunnerTestOverrides: Codable {
             if let key = CodingKeys.allCases.first(where: { c.contains($0) && !Self.experimentalControls.contains($0) }) {
                 throw PWRunnerRequestFailure(code: "inapplicable_field", path: location + [key.stringValue])
             }
-        case nil: break
+        case nil:
+            if let key = Self.experimentalControls.first(where: { c.contains($0) }) {
+                throw PWRunnerRequestFailure(code: "inapplicable_field", path: location + [key.stringValue])
+            }
         }
         func optionalInteger(_ key: CodingKeys) throws -> Int? {
             do { return try c.decodeIfPresent(Int.self, forKey: key) }
@@ -314,7 +318,8 @@ struct PWRunnerTestOverrides: Codable {
 }
 
 /// The input of an experimental submission a `PWRunnerTestOverrides` value is
-/// decoded from. An ordinary submission's request block has no source value.
+/// decoded from. An ordinary submission's request block has no source value;
+/// a member of `experimentalControls` there refuses the request.
 enum PWRunnerOverrideSource {
     /// The request's own `_test_overrides` block. Any member refuses the
     /// request; an empty block is admitted.
@@ -325,7 +330,9 @@ enum PWRunnerOverrideSource {
 }
 
 extension PWRunnerTestOverrides {
-    /// The members an experimental submission's controls object may carry.
+    /// The members an experimental submission's controls object may carry,
+    /// and the members no request block may: an ordinary submission's block
+    /// holding one, with any value, is refused at the first in this order.
     static let experimentalControls: [CodingKeys] = [
         .worker_timeout_ms, .worker_pre_ready_hang_ms, .worker_post_apply_hang_ms,
         .worker_post_apply_kill_signal, .worker_kill_before_publish_slot,

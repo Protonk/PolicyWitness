@@ -869,8 +869,9 @@ Declarations own meaning; source and check citations supply the stated support. 
 | `controller/src/dossier.rs: compare` | source support | [Classify the retained digest pair](RESPONSE.md#contract-dossier-binary-classify) |
 | `controller/src/dossier.rs: fn compare` | source support | [Held input and file observation scope](RESPONSE.md#contract-dossier-collection-native_gap) |
 | `controller/src/dossier.rs: import_scan_statuses_never_report_an_unscanned_closure_as_complete` | check support | [Specimen dossier](RESPONSE.md#contract-dossier) |
+| `controller/src/dossier.rs: pub fn observe(` | source support | [Ordinary refusal of the experimental controls](REQUEST.md#contract-request-overrides-ordinary_refusal) |
 | `controller/src/dossier.rs: pub fn observe_with_validator_control` | source support | [Run with test controls](REQUEST.md#contract-request-overrides-test_input_run) |
-| `controller/src/dossier.rs: validator_control_follows_the_request_key_rules_and_names_the_flag` | check support | [Run with test controls](REQUEST.md#contract-request-overrides-test_input_run) |
+| `controller/src/dossier.rs: validator_control_follows_the_worker_key_rules_and_names_the_flag` | check support | [Run with test controls](REQUEST.md#contract-request-overrides-test_input_run) |
 | `controller/src/evidence.rs: verify_manifest` | source support | [Specimen dossier](RESPONSE.md#contract-dossier) |
 | `controller/src/example.rs: fn emit` | source support | [Emit the example specimen](REQUEST.md#contract-request-specimen-emit_example) |
 | `controller/src/example.rs: only_complete_output_with_a_successful_flush_succeeds` | check support | [Emit the example specimen](REQUEST.md#contract-request-specimen-emit_example) |
@@ -994,6 +995,7 @@ Declarations own meaning; source and check citations supply the stated support. 
 | `controller/src/run_flow.rs: reader_definition_corpus_cross_readers` | check support | [Frame grammar](ARCHITECTURE.md#contract-wire-frame) |
 | `controller/src/run_flow.rs: reply_contract` | source support | [Execution diagnostics](RESPONSE.md#contract-diagnostics-execution) |
 | `controller/src/run_flow.rs: strip_runner_selector` | source support | [Controller selection options](REQUEST.md#contract-request-options) |
+| `controller/src/run_flow.rs: test_input_run_delivers_the_held_request_unchanged_and_the_controls_beside_it` | check support | [Ordinary refusal of the experimental controls](REQUEST.md#contract-request-overrides-ordinary_refusal) |
 | `controller/src/run_flow.rs: test_input_run_delivers_the_held_request_unchanged_and_the_controls_beside_it` | check support | [Run with test controls](REQUEST.md#contract-request-overrides-test_input_run) |
 | `controller/src/run_flow.rs: test_input_run_usage_refusals_invoke_no_client_and_read_no_app_root` | check support | [Run with test controls](REQUEST.md#contract-request-overrides-test_input_run) |
 | `controller/src/run_flow.rs: typed_completion_preserves_native_failure_beside_finished_summary` | check support | [The controller envelope](RESPONSE.md#contract-envelope) |
@@ -1488,6 +1490,7 @@ Declarations own meaning; source and check citations supply the stated support. 
 | `runner/Sources/PWRunnerCore/PWRunnerReply.swift: validateForReporting` | source support | [Establish query order](RESPONSE.md#contract-steps-assessment-order) |
 | `runner/Sources/PWRunnerCore/PWRunnerRequest.swift: PWRunnerAdmissionFailure` | source support | [Capacity refusal](RESPONSE.md#contract-refusals-admission) |
 | `runner/Sources/PWRunnerCore/PWRunnerRequest.swift: PWRunnerOverrideSource` | source support | [Experimental submission](REQUEST.md#contract-request-overrides-experimental) |
+| `runner/Sources/PWRunnerCore/PWRunnerRequest.swift: PWRunnerOverrideSource` | source support | [Ordinary refusal of the experimental controls](REQUEST.md#contract-request-overrides-ordinary_refusal) |
 | `runner/Sources/PWRunnerCore/PWRunnerRequest.swift: PWRunnerPhase` | source support | [Phase declaration](REQUEST.md#contract-actors-phase) |
 | `runner/Sources/PWRunnerCore/PWRunnerRequest.swift: PWRunnerPhaseAction` | source support | [Phase action variants](REQUEST.md#contract-actors-action) |
 | `runner/Sources/PWRunnerCore/PWRunnerRequest.swift: PWRunnerPolicySpec` | source support | [Worker policy input](REQUEST.md#contract-policy-spec) |
@@ -1497,6 +1500,7 @@ Declarations own meaning; source and check citations supply the stated support. 
 | `runner/Sources/PWRunnerCore/PWRunnerRequest.swift: PWRunnerRunSpec` | source support | [Specimen](REQUEST.md#contract-request-specimen) |
 | `runner/Sources/PWRunnerCore/PWRunnerRequest.swift: PWRunnerSandboxFilter` | source support | [Sandbox filter](REQUEST.md#contract-probes-filter) |
 | `runner/Sources/PWRunnerCore/PWRunnerRequest.swift: PWRunnerTestOverrides` | source support | [Execution overrides](REQUEST.md#contract-request-overrides) |
+| `runner/Sources/PWRunnerCore/PWRunnerRequest.swift: experimentalControls` | source support | [Ordinary refusal of the experimental controls](REQUEST.md#contract-request-overrides-ordinary_refusal) |
 | `runner/Sources/PWRunnerCore/PWRunnerReservation.swift: PWRunnerAdmission` | source support | [Delivery to the host](RESPONSE.md#contract-transport) |
 | `runner/Sources/PWRunnerCore/PWRunnerService.swift: PWRunnerService` | source support | [Shared definitions](#contract-identity-definitions) |
 | `runner/Sources/PWRunnerCore/PWRunnerService.swift: authorizedCaller` | source support | [Caller authorization](ARCHITECTURE.md#contract-transport-authorization) |
@@ -1509,6 +1513,7 @@ Declarations own meaning; source and check citations supply the stated support. 
 | `runner/Sources/PWRunnerCore/PWRunnerService.swift: requestDecodeFailure` | source support | [Runner request refusal](RESPONSE.md#contract-refusals-request) |
 | `runner/Sources/PWRunnerCore/PWRunnerService.swift: reserveRunner` | source support | [Delivery to the host](RESPONSE.md#contract-transport) |
 | `runner/Sources/PWRunnerCore/PWRunnerService.swift: runSubmission` | source support | [Experimental submission](REQUEST.md#contract-request-overrides-experimental) |
+| `runner/Sources/PWRunnerCore/PWRunnerService.swift: runSubmission` | source support | [Ordinary refusal of the experimental controls](REQUEST.md#contract-request-overrides-ordinary_refusal) |
 | `runner/Sources/PWRunnerCore/PWRunnerService.swift: shouldAcceptNewConnection` | source support | [Caller authorization](ARCHITECTURE.md#contract-transport-authorization) |
 | `runner/Sources/PWRunnerCore/PWRunnerStepEvidence.swift: PWRunnerStepResult` | source support | [Predictions, attempts and comparison](RESPONSE.md#contract-steps) |
 | `runner/Sources/PWRunnerCore/PWRunnerStepEvidence.swift: eligibleOrderedStep` | source support | [Collect, release and advance](REQUEST.md#contract-actors-phase-order) |
@@ -1548,6 +1553,7 @@ Declarations own meaning; source and check citations supply the stated support. 
 | `runner/Tests/PWRunnerCoreTests/ComparisonEvidenceTests.swift: runComparisonEvidenceTests` | check support | [Submitted operation and target](RESPONSE.md#contract-steps-assessment-relations) |
 | `runner/Tests/PWRunnerCoreTests/CompiledProfileCaptureTests.swift: runCompiledProfileCaptureTests` | check support | [The host decides capture availability](RESPONSE.md#contract-profile-receipt-host) |
 | `runner/Tests/PWRunnerCoreTests/ExperimentalSubmissionTests.swift: runExperimentalSubmissionTests` | check support | [Experimental submission](REQUEST.md#contract-request-overrides-experimental) |
+| `runner/Tests/PWRunnerCoreTests/ExperimentalSubmissionTests.swift: runExperimentalSubmissionTests` | check support | [Ordinary refusal of the experimental controls](REQUEST.md#contract-request-overrides-ordinary_refusal) |
 | `runner/Tests/PWRunnerCoreTests/FreshWriteEvidenceTests.swift: runFreshWriteEvidenceTests` | check support | [Observe fresh descriptors](RESPONSE.md#contract-steps-assessment-fresh) |
 | `runner/Tests/PWRunnerCoreTests/HostOutcomeClassifierTests.swift: runHostOutcomeClassifierTests` | check support | [Execution record](RESPONSE.md#contract-reply-record) |
 | `runner/Tests/PWRunnerCoreTests/LimitsContractTests.swift: runLimitsContractTests` | check support | [worker_timeout_ms](REQUEST.md#contract-request-overrides-worker_timeout_ms) |
@@ -1560,6 +1566,7 @@ Declarations own meaning; source and check citations supply the stated support. 
 | `runner/Tests/PWRunnerCoreTests/RequestContractTests.swift: runRequestContractTests` | check support | [Capacity refusal](RESPONSE.md#contract-refusals-admission) |
 | `runner/Tests/PWRunnerCoreTests/RequestContractTests.swift: runRequestContractTests` | check support | [Refusal and unavailable-prediction examples](RESPONSE.md#contract-refusals-examples) |
 | `runner/Tests/PWRunnerCoreTests/RequestContractTests.swift: runRequestContractTests` | check support | [Runner request refusal](RESPONSE.md#contract-refusals-request) |
+| `runner/Tests/PWRunnerCoreTests/RequestContractTests.swift: runRequestContractTests` | check support | [Ordinary refusal of the experimental controls](REQUEST.md#contract-request-overrides-ordinary_refusal) |
 | `runner/Tests/PWRunnerCoreTests/RequestContractTests.swift: runRequestContractTests` | check support | [Specimen](REQUEST.md#contract-request-specimen) |
 | `runner/Tests/PWRunnerCoreTests/ReservationAdmissionTests.swift: runReservationAdmissionTests` | check support | [Delivery to the host](RESPONSE.md#contract-transport) |
 | `runner/Tests/PWRunnerCoreTests/ValidatorEvidenceTests.swift: runValidatorEvidenceTests` | check support | [Validator query and reply lines](ARCHITECTURE.md#contract-wire-validator) |
@@ -1636,6 +1643,7 @@ Declarations own meaning; source and check citations supply the stated support. 
 | `tests/suites/runner_byoxpc/opt_in/registry_recovery.sh: registry_recovery` | check support | [kind](RESPONSE.md#contract-installation-runner-kind) |
 | `tests/suites/runner_outcome_bad_request/contract.py: composite_parameters` | check support | [Parameter example observations](REQUEST.md#contract-policy-spec-parameter_evidence) |
 | `tests/suites/runner_outcome_bad_request/contract.py: duplicate_entries` | check support | [Repeated members at each entry](REQUEST.md#contract-request-specimen-duplicate_keys) |
+| `tests/suites/runner_outcome_bad_request/contract.py: main` | check support | [Ordinary refusal of the experimental controls](REQUEST.md#contract-request-overrides-ordinary_refusal) |
 | `tests/suites/runner_outcome_bad_request/contract.py: refusal_workflows` | check support | [Refusal correction workflows](RESPONSE.md#contract-refusals-examples-workflow) |
 | `tests/suites/runner_outcome_bad_request/contract.py: refusal_workflows` | check support | [Branch-local refusal precedence](RESPONSE.md#contract-refusals-request-compound_order) |
 | `tests/suites/runner_unit/reader_corpus.py: replay` | check support | [Reader applicability](RESPONSE.md#contract-actor_evidence-actor-reader_scope) |
@@ -1662,6 +1670,7 @@ Declarations own meaning; source and check citations supply the stated support. 
 | `tests/suites/witness_contract/check_extensions.py: run_targets` | check support | [Extension experiments](REQUEST.md#contract-extensions-examples) |
 | `tests/suites/witness_contract/check_pre_apply_failure.py: main` | check support | [Execution overrides](REQUEST.md#contract-request-overrides) |
 | `tests/suites/witness_contract/check_test_input_seam.py: evaluate` | check support | [Experimental submission](REQUEST.md#contract-request-overrides-experimental) |
+| `tests/suites/witness_contract/check_test_input_seam.py: evaluate` | check support | [Ordinary refusal of the experimental controls](REQUEST.md#contract-request-overrides-ordinary_refusal) |
 | `tests/suites/witness_contract/check_test_input_seam.py: evaluate` | check support | [Run with test controls](REQUEST.md#contract-request-overrides-test_input_run) |
 | `tests/suites/witness_contract/example_round_trip.sh: example_round_trip` | check support | [Emit the example specimen](REQUEST.md#contract-request-specimen-emit_example) |
 | `tests/suites/witness_contract/example_round_trip.sh: example_round_trip` | check support | [Emitted example](REQUEST.md#contract-request-specimen-example) |
@@ -1884,12 +1893,19 @@ Source: [ActorOrchestration.swift](../runner/Sources/PWRunnerCore/ActorOrchestra
 
 Source: [PWRunnerAPI.swift](../runner/Sources/PWRunnerCore/PWRunnerAPI.swift): `runReservedExperiment`; [PWRunnerService.swift](../runner/Sources/PWRunnerCore/PWRunnerService.swift): `decodeExperimentalSubmission`, `runSubmission`; [PWRunnerRequest.swift](../runner/Sources/PWRunnerCore/PWRunnerRequest.swift): `PWRunnerOverrideSource`; [CWorkerRequestPlanning.swift](../runner/Sources/PWRunnerCore/CWorkerRequestPlanning.swift): `overridePathAdmissions`; [PWRunnerClientSession.swift](../runner/Clients/PWRunnerClient/PWRunnerClientSession.swift): `submitExperiment`. Check: [ExperimentalSubmissionTests.swift](../runner/Tests/PWRunnerCoreTests/ExperimentalSubmissionTests.swift): `runExperimentalSubmissionTests`; [main.swift](../runner/Tests/PWRunnerClientSessionTests/main.swift): `runClientSessionControls`; [check_test_input_seam.py](../tests/suites/witness_contract/check_test_input_seam.py): `evaluate`.
 
+<a id="contract-request-overrides-ordinary_refusal-support-details"></a>
+### Ordinary refusal of the experimental controls — Ordinary refusal support
+
+[Local support](REQUEST.md#contract-request-overrides-ordinary_refusal-support).
+
+Source: [PWRunnerRequest.swift](../runner/Sources/PWRunnerCore/PWRunnerRequest.swift): `experimentalControls`, `PWRunnerOverrideSource`; [PWRunnerService.swift](../runner/Sources/PWRunnerCore/PWRunnerService.swift): `runSubmission`; [dossier.rs](../controller/src/dossier.rs): `pub fn observe(`. Check: [ExperimentalSubmissionTests.swift](../runner/Tests/PWRunnerCoreTests/ExperimentalSubmissionTests.swift): `runExperimentalSubmissionTests`; [RequestContractTests.swift](../runner/Tests/PWRunnerCoreTests/RequestContractTests.swift): `runRequestContractTests`; [run_flow.rs](../controller/src/run_flow.rs): `test_input_run_delivers_the_held_request_unchanged_and_the_controls_beside_it`; [check_test_input_seam.py](../tests/suites/witness_contract/check_test_input_seam.py): `evaluate`; [contract.py](../tests/suites/runner_outcome_bad_request/contract.py): `main`.
+
 <a id="contract-request-overrides-test_input_run-support-details"></a>
 ### Run with test controls — Command support
 
 [Local support](REQUEST.md#contract-request-overrides-test_input_run-support).
 
-Source: [run_args.rs](../controller/src/interface/run_args.rs): `pub fn classify`; [commands.rs](../controller/src/interface/commands.rs): `pub fn select_form`; [test_input.rs](../controller/src/test_input.rs): `pub fn cmd_test_input`; [run_flow.rs](../controller/src/run_flow.rs): `fn parse_arguments`, `fn controls_object`; [runner_client.rs](../controller/src/runner_client.rs): `fn submission_arguments`; [dossier.rs](../controller/src/dossier.rs): `pub fn observe_with_validator_control`. Check: [run_flow.rs](../controller/src/run_flow.rs): `control_spellings_are_their_keys_and_only_test_input_run_admits_them`, `integer_controls_pass_every_signed_64_bit_decimal_through_unchanged`, `malformed_control_syntax_is_refused_before_any_run_work`, `test_input_run_delivers_the_held_request_unchanged_and_the_controls_beside_it`, `test_input_run_usage_refusals_invoke_no_client_and_read_no_app_root`; [runner_client.rs](../controller/src/runner_client.rs): `only_an_experimental_submission_names_a_controls_object`; [dossier.rs](../controller/src/dossier.rs): `validator_control_follows_the_request_key_rules_and_names_the_flag`; [cli_contract.rs](../controller/integration/cli_contract.rs): `interface_cases_hold_on_the_signed_controller`; [check_test_input_seam.py](../tests/suites/witness_contract/check_test_input_seam.py): `evaluate`.
+Source: [run_args.rs](../controller/src/interface/run_args.rs): `pub fn classify`; [commands.rs](../controller/src/interface/commands.rs): `pub fn select_form`; [test_input.rs](../controller/src/test_input.rs): `pub fn cmd_test_input`; [run_flow.rs](../controller/src/run_flow.rs): `fn parse_arguments`, `fn controls_object`; [runner_client.rs](../controller/src/runner_client.rs): `fn submission_arguments`; [dossier.rs](../controller/src/dossier.rs): `pub fn observe_with_validator_control`. Check: [run_flow.rs](../controller/src/run_flow.rs): `control_spellings_are_their_keys_and_only_test_input_run_admits_them`, `integer_controls_pass_every_signed_64_bit_decimal_through_unchanged`, `malformed_control_syntax_is_refused_before_any_run_work`, `test_input_run_delivers_the_held_request_unchanged_and_the_controls_beside_it`, `test_input_run_usage_refusals_invoke_no_client_and_read_no_app_root`; [runner_client.rs](../controller/src/runner_client.rs): `only_an_experimental_submission_names_a_controls_object`; [dossier.rs](../controller/src/dossier.rs): `validator_control_follows_the_worker_key_rules_and_names_the_flag`; [cli_contract.rs](../controller/integration/cli_contract.rs): `interface_cases_hold_on_the_signed_controller`; [check_test_input_seam.py](../tests/suites/witness_contract/check_test_input_seam.py): `evaluate`.
 
 <a id="contract-request-overrides-disposition_support-details"></a>
 ### Execution overrides — Fixture-value support

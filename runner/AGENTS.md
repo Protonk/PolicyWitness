@@ -94,8 +94,8 @@ real production boundary. Never add an override that fabricates a result such
 as `force_normalized_outcome`; use a classifier unit test when the boundary
 cannot be exercised.
 
-For an override-driven CLI specimen, assert the expected outcome, supporting
-native/transport evidence and the applicable override echo. The
+For a specimen steered by a control, assert the expected outcome, supporting
+native/transport evidence and the applicable echo. The
 [pre-application witness](../tests/suites/witness_contract/README.md#failure-before-published-application)
 documents its bounded outcome alternatives. Diagnostics should identify the
 real failed boundary without requiring exact English wording.
@@ -105,23 +105,30 @@ Check structural fields for that boundary. No observed worker means no
 have no steps, while a spawn failure with a nonempty plan retains synthetic
 step records. Verify withheld and retained evidence independently.
 
-**Adding a new override.**
+**Adding a new control.**
 
 1. Update the optional property, initializer, `CodingKeys` and decoding in
    [`PWRunnerTestOverrides`](Sources/PWRunnerCore/PWRunnerRequest.swift) together,
-   preserving accepted requests and meanings.
-2. Update [the key table](README.md#test-seam-_test_overrides). Source drift
-   verifies property/table agreement, not admission or behavior.
-3. Pass the control through the request to the real boundary, preserving
+   preserving accepted requests and meanings. Decide where it travels. A
+   member of `experimentalControls` is supplied beside the request and refused
+   in a request block; add its flag to the
+   [`Control`](../controller/src/interface/run_args.rs) table and regenerate
+   the interface inventory. Any other member is request data, admitted in
+   every ordinary request's block.
+2. Update the table for its set in [the reference](README.md#test-seam-_test_overrides).
+   Source drift verifies that each table holds its set, not admission or behavior.
+3. Pass the control through the decoded record to the real boundary, preserving
    default behavior when absent. Launchd does not preserve the invoking shell's
    environment.
 4. Retain the supplied control on applicable reply paths and preserve bounded
    refusal sanitization; invalid paths must not be echoed to satisfy a test.
 5. Add an integrated case in an appropriate suite and update the
    [catalog](../tests/catalog.json), owning suite description and affected
-   [outcome coverage](../tests/COVERAGE.md).
+   [outcome coverage](../tests/COVERAGE.md). Submit an experimental control
+   through the [seam invocation adapter](../tests/README.md#seam-invocations),
+   and add its request-block refusal to `witness_contract/test_input`.
 
-**Reading override evidence.** A non-null `test_overrides` object records
+**Reading control evidence.** A non-null `test_overrides` object records
 supplied controls, not proof they changed execution. Empty/default controls can
 be inert; an earlier failure can prevent the selected boundary from running.
 Admission refusals may omit unsafe echoed values. Use the actual observations

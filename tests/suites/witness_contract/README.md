@@ -275,6 +275,18 @@ applied, a request block the host refused, and a controls object whose
 `worker_timeout_ms` is 1.5, refused with `type_mismatch` at
 `_test_overrides.worker_timeout_ms`.
 
+Each of the eight controls is also written by hand into an ordinary request's
+`_test_overrides` block and submitted three ways: through plain `run` with
+the value its activation used, through plain `run` with a value the host would
+not forward or would read as absent (null for the three deadlines and the
+validator path, zero for the pre-ready delay and the signal, a negative delay
+and slot), and through `pw-runner-client run` without a controls object. Two
+more blocks hold a control beside the worker substitution and two controls
+together. Every one must be refused with `inapplicable_field` at
+`_test_overrides` and the control's name, the first in the host's order when
+there are two, with no worker record, no echo and an unchanged target; the
+controller's envelope carries the same refusal.
+
 The two substitutions that stay in a request's block are submitted with plain
 `run`, without the adapter. `worker_executable_path` naming an absent file
 ends in `worker_spawn_failed` with no worker record, a `posix_spawn`
@@ -304,7 +316,9 @@ moved into its request, another exit, another build, a refused consumer
 reading, a missing echo, the echo beside an ordinary reply, and a target
 changed during the submission; each control's observation at and just inside
 its bound or with the neighbouring cause; each refusal reported at another
-boundary; and each `read` row. Every row the checker reports must be failed
+boundary; each request-block refusal located at the whole block, followed by
+a worker, echoed, made through the experimental call or answered as a host
+that still admitted the block would answer; and each `read` row. Every row the checker reports must be failed
 by some control.
 
 `tests/lib/file_observation.py` shares only the same-descriptor sampler, sample
@@ -1228,8 +1242,8 @@ any step. Missing attempts use the outcome
 `no_completed_result`, meaning no completed result, without saying whether the
 operation started.
 
-This is the one override-driven case exempt from the exact-outcome assertion in
-the `_test_overrides` recipe in [runner guidance](../../../runner/AGENTS.md).
+This is the one case steered by a control that is exempt from the exact-outcome
+assertion in the recipe of the [runner guidance](../../../runner/AGENTS.md).
 It checks that `normalized_outcome` excludes `finished` and `bad_policy`, and the
 spellings `sandbox_apply_failed` and `runner_sandbox_denied` that no constant
 defines, rather than pinning one replacement outcome, so it protects the

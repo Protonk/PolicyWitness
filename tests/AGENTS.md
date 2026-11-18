@@ -50,11 +50,18 @@ overlap sleep.
 
 ### Choose the most integrated test that can establish the behavior
 
-Use the public CLI or an existing `_test_overrides` boundary when the behavior
-is reachable there. Use runner unit tests for internal helper branches or
+Use the public CLI, an existing test control or a `_test_overrides` request
+member when the behavior is reachable there. Use runner unit tests for internal helper branches or
 observations an ordinary specimen cannot reliably produce. Keep behavior
 requiring XPC, launchd or the kernel sandbox in the corresponding live suites.
 Constructed inputs establish interpretation separately from live observations.
+
+A submission that uses one of the eight experimental controls goes through the
+[seam invocation adapter](README.md#seam-invocations), which submits it with
+`test-input run` or the runner client's controls object. Never write such a
+control into a request's `_test_overrides` block by hand: the host refuses it.
+The only hand-written blocks that hold one are the refusal controls of
+`witness_contract/test_input` and the request corpus's `fractional_override`.
 
 Select checks for the changed boundary and its readers. For admission or
 validator receiver changes, run `failure_boundaries` with `runner_unit`,

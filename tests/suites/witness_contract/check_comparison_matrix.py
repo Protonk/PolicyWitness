@@ -8,7 +8,7 @@ the mode-000 files, direct spawns of the helper copies, direct lookups of the
 mach names, and file bytes compared before and after each run. Nothing here
 derives an expectation from the reply.
 
-Specimen B is steered through `_test_overrides.validator_executable_path`
+Specimen B is steered through the `validator_executable_path` test control
 (stub_validator.py beside the fixture), which the fixture's `test_overrides`
 supplies as selected controls to the seam invocation adapter, and ends in
 validator_no_reply; its

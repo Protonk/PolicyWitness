@@ -3111,8 +3111,8 @@ else:
             assert!(wire["data"]["specimen"]["binaries"]["worker"].is_null());
 
             // A request that carries its own block is delivered as written: the
-            // host owns that refusal. Its validator key is not this route's
-            // validator selection.
+            // host owns that refusal. Its validator key selects no validator
+            // for the dossier, here or through `run`.
             let mut blocked: Value = serde_json::from_slice(&fs::read(&request).unwrap()).unwrap();
             blocked["_test_overrides"] =
                 json!({"validator_executable_path": validator.to_str().unwrap()});
@@ -3125,11 +3125,12 @@ else:
             let (wire, _) = envelope_of(&observed.output);
             assert!(wire["data"]["specimen"]["binaries"]["validator"].is_null());
             let ordinary = observe(&app, None, &[path]);
-            let (wire, _) = envelope_of(&ordinary.output);
             assert_eq!(
-                wire["data"]["specimen"]["binaries"]["validator"]["path"],
-                validator.to_str().unwrap()
+                serde_json::from_str::<Value>(&ordinary.calls[0].request).unwrap(),
+                blocked
             );
+            let (wire, _) = envelope_of(&ordinary.output);
+            assert!(wire["data"]["specimen"]["binaries"]["validator"].is_null());
             fs::remove_dir_all(root).unwrap();
         }
 

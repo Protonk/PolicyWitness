@@ -539,7 +539,7 @@ Overall actor-run lifetime allowance, <!-- span limits.actor_lifetime_cutoff.val
 
 ### collection_budget_ms {collection_budget_ms: field}
 
-Recorded production maximum for aggregate query collection across actor phases: <!-- span limits.actor_collection_allowance.value_unit -->30,000 milliseconds<!-- /span -->. The host reports this maximum even when `_test_overrides.validator_total_timeout_ms` reduces the allowance used for collection.
+Recorded production maximum for aggregate query collection across actor phases: <!-- span limits.actor_collection_allowance.value_unit -->30,000 milliseconds<!-- /span -->. The host reports this maximum even when the `validator_total_timeout_ms` test control reduces the allowance used for collection.
 
 ### cancelled {cancelled: field}
 

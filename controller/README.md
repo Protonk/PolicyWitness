@@ -133,8 +133,9 @@ the next argument as UTF-8 text. A control without a value, a value of another
 form, a repeated control and an unknown flag are refused as `run`'s argument
 errors are, with a `tool_error` envelope and no client invocation. `run` admits
 none of the controls. The dossier's validator record reads
-`--validator-executable-path` where `run` reads the request's
-`_test_overrides.validator_executable_path`. The
+`--validator-executable-path`; `run` selects no validator, and no command
+reads a request's `_test_overrides.validator_executable_path`, which the host
+refuses. The
 [command rule](../docs/REQUEST.md#contract-request-overrides-test_input_run)
 and the host's [admission rule](../docs/REQUEST.md#contract-request-overrides-experimental)
 state both sides.

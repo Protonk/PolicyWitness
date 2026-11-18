@@ -72,6 +72,16 @@ LEGACY_BLOCKS = dict(cli=(dict(worker_timeout_ms=5000), {}), inert=(dict(worker_
 CLIENT_CONTROLS = dict(worker_timeout_ms=7000)
 CLIENT_FRACTIONAL = dict(worker_timeout_ms=1.5)
 CLIENT_FRACTIONAL_REFUSAL = dict(code='type_mismatch', path=['_test_overrides', 'worker_timeout_ms'])
+# A control in an ordinary request's block is refused at its member whatever value it holds. Beside
+# each control's acting value stands one the host would not forward or would read as absent.
+ORDINARY_INERT = dict(worker_timeout_ms=None, worker_pre_ready_hang_ms=0, worker_post_apply_hang_ms=-1,
+                      worker_post_apply_kill_signal=0, worker_kill_before_publish_slot=-1,
+                      validator_executable_path=None, validator_io_timeout_ms=None, validator_total_timeout_ms=None)
+assert set(ORDINARY_INERT) == set(FLAGS)
+# A control beside the worker substitution, and two controls: the block and the member the host names,
+# the first of the controls in the host's own order.
+ORDINARY_BLOCKS = dict(mixed=(dict(worker_executable_path=MISSING_WORKER, worker_timeout_ms=5000), 'worker_timeout_ms'),
+                       combined=(dict(validator_total_timeout_ms=1, worker_post_apply_hang_ms=2000), 'worker_post_apply_hang_ms'))
 # The two substitutions an ordinary request's block keeps, each on its own request form.
 UNSELECTED = dict(worker=dict(worker_executable_path=MISSING_WORKER),
                   actor_equipment=dict(actor_equipment_executable_paths=dict(selected=MISSING_EQUIPMENT)))
@@ -119,6 +129,15 @@ def controls_for(name, state):
     return controls
 
 
+def ordinary_block(key, state, *, inert=False):
+    """The one-member block naming a control: its acting value, or the inert one."""
+    return {key: ORDINARY_INERT[key] if inert else controls_for(key, state)[key]}
+
+
+def ordinary_refusal(key):
+    return dict(code='inapplicable_field', path=['_test_overrides', key])
+
+
 def flag_arguments(controls):
     return [item for key, value in controls.items() for item in (FLAGS[key], str(value))]
 
@@ -152,6 +171,14 @@ def refused_before_launch(reply, failure):
     return isinstance(reply, dict) and reply.get('normalized_outcome') == 'bad_request' and \
         reply.get('request_failure') == failure and reply.get('steps') == [] and \
         reply.get('runner_subprocess') is None and not reply.get('phases') and reply.get('test_overrides') is None
+
+
+def client_received(record, identity):
+    """An admitted client capture of the inspected build carrying one host reply."""
+    capture = mapping(record.get('capture'))
+    return exact(record.get('exit'), 0) and record.get('capture_errors') == [] and capture.get('contract') == identity and \
+        capture.get('terminal') == 'runner_reply' and get(capture, 'submission', 'state') == 'invoked' and \
+        isinstance(record.get('reply'), dict) and get(record.get('reply'), 'producer', 'contract') == identity
 
 
 def worker_signaled(worker, *, partial):
@@ -399,10 +426,7 @@ def evaluate(state):
         record = mapping(scenarios.get(name))
         r.check(name + '.submission', submitted(record, 'client', request_for(name, identity, target, block), controls),
                 'the client receives the request and one controls object')
-        capture = mapping(record.get('capture'))
-        received = exact(record.get('exit'), 0) and record.get('capture_errors') == [] and capture.get('contract') == identity and \
-            capture.get('terminal') == 'runner_reply' and get(capture, 'submission', 'state') == 'invoked' and \
-            isinstance(record.get('reply'), dict) and get(record.get('reply'), 'producer', 'contract') == identity
+        received = client_received(record, identity)
         r.check(name + '.capture', received, 'an admitted client capture carrying one host reply')
         reply = mapping(record.get('reply'))
         if refusal is None:
@@ -413,6 +437,32 @@ def evaluate(state):
         else:
             r.check(name + '.refusal', refused_before_launch(record.get('reply'), refusal) and unchanged(record, target, payload),
                     'host refusal at the block or the control, before any worker', available=received)
+
+    # A control in an ordinary request's block: refused at its member through plain `run` and through
+    # the runner client's ordinary call, before any worker, with a value that would act and with an inert one.
+    def ordinary_rows(label, block, key, *, client=False):
+        record = mapping(scenarios.get(label))
+        refusal, wanted = ordinary_refusal(key), request_for(key, identity, target, block)
+        argv = record.get('argv') if isinstance(record.get('argv'), list) else []
+        ordinary = argv[1:2] == ['run'] and '--experimental-controls' not in argv and record.get('delivered_document') == wanted
+        if client:
+            received = client_received(record, identity)
+            r.check(label + '.capture', received, 'an admitted client capture carrying one host reply')
+            r.check(label + '.refusal', ordinary and refused_before_launch(record.get('reply'), refusal) and
+                    unchanged(record, target, payload),
+                    'the ordinary call refuses the block at the control, before any worker', available=received)
+        else:
+            admitted = envelope_rows(r, label, record, identity, 1, 'bad_request')
+            r.check(label + '.refusal', ordinary and refused_before_launch(record.get('reply'), refusal) and
+                    get(record.get('envelope'), 'data', 'request_failure') == refusal and unchanged(record, target, payload),
+                    'plain run delivers the block and the host refuses it at the control, before any worker', available=admitted)
+
+    for key in FLAGS:
+        ordinary_rows('ordinary.' + key + '.cli', ordinary_block(key, state), key)
+        ordinary_rows('ordinary.' + key + '.inert', ordinary_block(key, state, inert=True), key)
+        ordinary_rows('ordinary.' + key + '.client', ordinary_block(key, state), key, client=True)
+    for name, (block, key) in ORDINARY_BLOCKS.items():
+        ordinary_rows('ordinary.' + name, block, key)
 
     # The two substitutions an ordinary request's block still carries, through plain `run`.
     record = mapping(scenarios.get('unselected.worker'))

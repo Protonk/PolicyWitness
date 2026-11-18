@@ -458,7 +458,8 @@ impl Binaries {
     }
 
     /// Observe the selected service and helper binaries against the manifest.
-    /// The worker and validator overrides are the request's own keys.
+    /// The worker override is the request's own key. `run` has no validator
+    /// override: the host refuses the request key, and it is not read here.
     pub fn observe(
         app_root: &Path,
         target: &RunnerTarget,
@@ -469,13 +470,13 @@ impl Binaries {
             app_root,
             target,
             Selection::request_key(request, "worker_executable_path"),
-            Selection::request_key(request, "validator_executable_path"),
+            Selection::none(),
             manifest,
         )
     }
 
     /// The same observation for `test-input run`: the validator override is
-    /// the validator control and the request's validator key is not read.
+    /// the validator control.
     pub fn observe_with_validator_control(
         app_root: &Path,
         target: &RunnerTarget,
@@ -1286,8 +1287,13 @@ mod tests {
             }
         }
         if !running_as_root() {
-            let request = json!({"_test_overrides": {"validator_executable_path": unreadable.to_str().unwrap()}});
-            let binaries = Binaries::observe(&root, &target, &request, Ok(&manifest));
+            let binaries = Binaries::observe_with_validator_control(
+                &root,
+                &target,
+                &json!({}),
+                unreadable.to_str(),
+                Ok(&manifest),
+            );
             let validator = record(&binaries, "validator");
             assert!(binaries.worker.is_none());
             assert_eq!(validator.path.as_deref(), unreadable.to_str());
@@ -1315,22 +1321,19 @@ mod tests {
                 unentitled_worker: None
             }
         );
-        // A malformed container affects override-capable roles; packaged roles stay unchanged.
+        // A malformed container affects the worker, the one role a request
+        // can override; the other roles stay packaged.
         for container in [json!(5), json!("x"), json!([])] {
             let request = json!({"_test_overrides": container});
             let binaries = Binaries::observe(&root, &target, &request, Ok(&manifest));
             assert!(binaries.service.is_none());
+            assert!(binaries.validator.is_none());
             assert!(binaries.unentitled_worker.is_none());
-            for role in ["worker", "validator"] {
-                let record = record(&binaries, role);
-                assert!(record.path.is_none() && record.actual_sha256.is_none());
-                assert_eq!(record.verification, "unavailable");
-                assert!(record.reason.as_deref().unwrap().contains("not an object"));
-                assert!(
-                    record.baseline_sha256.is_some(),
-                    "{role}: the baseline is retained"
-                );
-            }
+            let record = record(&binaries, "worker");
+            assert!(record.path.is_none() && record.actual_sha256.is_none());
+            assert_eq!(record.verification, "unavailable");
+            assert!(record.reason.as_deref().unwrap().contains("not an object"));
+            assert!(record.baseline_sha256.is_some(), "baseline retained");
         }
         // An override under an unavailable manifest still hashes the selected file.
         let missing = "failed to read manifest /x/manifest.json: No such file".to_string();
@@ -1353,7 +1356,7 @@ mod tests {
     }
 
     #[test]
-    fn validator_control_follows_the_request_key_rules_and_names_the_flag() {
+    fn validator_control_follows_the_worker_key_rules_and_names_the_flag() {
         let root = synthetic_app("validator-control");
         let manifest = manifest_for(&root);
         let target = builtin(&root, &manifest);
@@ -1410,8 +1413,8 @@ mod tests {
                 "differ from the manifest baseline",
             ),
         ];
-        // The request's own validator key is not read with the control: an
-        // absent control selects the packaged validator whatever the key says.
+        // A request's validator key is never read: an absent control selects
+        // the packaged validator whatever the key says.
         let request =
             json!({"_test_overrides": {"validator_executable_path": different.to_str().unwrap()}});
         for (value, path, hashed, verification, reason) in cases {
@@ -1462,13 +1465,12 @@ mod tests {
                 packaged
             );
         }
-        // The same request through `run` selects the validator its key names.
-        let ordinary = Binaries::observe(&root, &target, &request, Ok(&manifest));
+        // The same request through `run` selects the packaged validator too.
         assert_eq!(
-            record(&ordinary, "validator").path.as_deref(),
-            different.to_str()
+            Binaries::observe(&root, &target, &request, Ok(&manifest)),
+            packaged
         );
-        // The worker key stays the request's on both routes.
+        // The worker key stays the request's on both commands.
         let request =
             json!({"_test_overrides": {"worker_executable_path": different.to_str().unwrap()}});
         let binaries =

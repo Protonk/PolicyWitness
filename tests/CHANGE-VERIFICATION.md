@@ -1072,7 +1072,8 @@ For `test-input` publication, positional target binding or its independent
 observer, select `witness_contract/test_input_controls` and
 `witness_contract/test_input` with `unit`, `integration` and `source_drift`.
 For `test-input run`, its control flags, the client's
-`--experimental-controls` argument or the host's experimental admission, select
+`--experimental-controls` argument, the host's experimental admission or its
+refusal of a control in an ordinary request's block, select
 the same cases with `runner_unit`, `failure_boundaries` and
 `run_capture/controls`; inspect the submission, echo and intervention rows
 separately.

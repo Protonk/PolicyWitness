@@ -117,17 +117,21 @@ nested `builddir`, hidden paths, the scope differences, each symlink kind, an
 unreadable selected input and large excluded subtrees; an independent
 instrument on directory enumeration shows that the excluded subtrees are never
 entered and that the tree's own account agrees with it.
-They also lock the `_test_overrides` key table in `runner/README.md` to the
-stored properties of `PWRunnerTestOverrides`, since that table is the only
-documented key list. Property/table agreement does not verify request admission
-or decoding; integrated override cases exercise those boundaries.
+They also lock the two test-seam tables in `runner/README.md` to
+`PWRunnerTestOverrides`, since those tables are the only documented key lists:
+every stored property has a row, the request-block table holds the properties
+outside `experimentalControls` and the controls table holds that list.
+Property/table agreement does not verify request admission or decoding;
+integrated cases exercise those boundaries.
 Public-command controls separately verify selection and actual execution.
 
 Dedicated rule controls remove a normalized-matrix row for an existing
 `runner_outcome_*` suite, add a normalized-matrix row naming no constant, remove
 and add attempt-matrix rows, add an attempt kind on either side, rename a Swift
 case for a shared value, leave a numeric gap in the C enum, malform the C enum
-(a precondition failure, status 2), add a test-seam row naming no property, add
+(a precondition failure, status 2), add a test-seam row naming no property, move
+an experimental control's row among the request block members, drop a control
+from the Swift list so its row stands among the controls unsupported, add
 a document-only prediction-unavailable pair and add an unknown landing path;
 each is named, and every restoration passes.
 

@@ -193,12 +193,12 @@ func runValidatorSelectionTests(_ tk: TestKit) {
                 }
             }
         }
-        tk.run("service uses its actual bundle default unless an explicit override is supplied") {
+        tk.run("service uses its actual bundle default unless the validator control is supplied") {
             let expectedDefault = Bundle.main.bundleURL.path + "/Contents/MacOS/sb_api_validator"
             for override: String? in [nil, "/nonexistent/explicit-validator", ""] {
                 let parsed = PWRunnerRunSpec(specimen_id: "validator-selection",
                     policy: PWRunnerPolicySpec(format: "sbpl", sbpl_source: "(version 1)(allow default)"),
-                    probe_plan: [], _test_overrides: override.map { PWRunnerTestOverrides(validator_executable_path: $0) })
+                    probe_plan: [])
                 var selected = [String](), replies = [PWRunnerRunResult](), exits = 0
                 let service = PWRunnerService(admission: PWRunnerAdmission(), scheduleExit: { exits += 1 },
                     report: { replies.append($0); return pwRunnerPorcelainReplyData($0) }, orchestrate: { request, hash, bundle, _, validator in
@@ -207,8 +207,15 @@ func runValidatorSelectionTests(_ tk: TestKit) {
                             workerExecutablePath: "/nonexistent/validator-selection-worker", validatorExecutablePath: validator)
                     })
                 let grant = reserveService(service)
-                service.runReservedSpecimen(try pwRunnerEncodeJSON(parsed), reservation: grant.reservation_id!,
-                    withReply: { _, _ in })
+                // The validator path is a control of the experimental call; the ordinary call carries none.
+                if let override {
+                    let controls = try JSONSerialization.data(withJSONObject: ["validator_executable_path": override])
+                    service.runReservedExperiment(try pwRunnerEncodeJSON(parsed), controls: controls,
+                        reservation: grant.reservation_id!, withReply: { _, _ in })
+                } else {
+                    service.runReservedSpecimen(try pwRunnerEncodeJSON(parsed), reservation: grant.reservation_id!,
+                        withReply: { _, _ in })
+                }
                 try expectEqual(selected, [override ?? expectedDefault])
                 try expectEqual(replies.count, 1)
                 try expectEqual(exits, 1)

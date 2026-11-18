@@ -611,7 +611,11 @@ def rule_gap_scenarios(repo):
     c_close = '    PW_ATTEMPT_EXTENSION_TRANSFER = 15,\n} pw_attempt_kind_t;'
     assert source[swift].count(swift_close) == 1 and source[header].count(c_close) == 1, 'fixture requires the current attempt kinds'
     assert source[swift].count('    case sysctlRead     = 7\n') == 1
-    seam_first = rows_under(runner_readme, '## Test seam: `_test_overrides`')[0]
+    seam_rows = rows_under(runner_readme, '## Test seam: `_test_overrides`')
+    seam_first, seam_control = seam_rows[0], row_named(seam_rows, 'worker_timeout_ms')
+    assert seam_first.startswith('| `worker_executable_path` |'), 'fixture requires the request block table first'
+    control_list = '        .worker_timeout_ms, .worker_pre_ready_hang_ms, .worker_post_apply_hang_ms,\n'
+    assert source[request].count(control_list) == 1, 'fixture requires the current experimental controls list'
     pair_line = next(line for line in source[guide].split('\n') if line.startswith('- `(iokit-open-service, iokit_registry_entry_class)`'))
     prediction_row = next(line for line in source[architecture].split('\n') if line.startswith('| Prediction |'))
     assert '`steps[].sandbox_check`' in prediction_row
@@ -650,6 +654,15 @@ def rule_gap_scenarios(repo):
                  {runner_readme: with_after(runner_readme, seam_first, renamed(seam_first, 'worker_executable_path', 'bogus_override'))},
                  {OVERRIDES: ['test_overrides.unknown_row']},
                  "runner/README.md's test-seam table lists 'bogus_override' but PWRunnerTestOverrides has no such property"),
+        Scenario('rule-test-overrides-control-among-members',
+                 {runner_readme: without(runner_readme, seam_control).replace(seam_first + '\n', seam_first + '\n' + seam_control + '\n', 1)},
+                 {OVERRIDES: ['test_overrides.wrong_table']},
+                 "runner/README.md lists the experimental control 'worker_timeout_ms' among the request block members"),
+        Scenario('rule-test-overrides-member-among-controls',
+                 {runner_readme: source[runner_readme],
+                  request: source[request].replace(control_list, control_list.replace('.worker_timeout_ms, ', ''), 1)},
+                 {OVERRIDES: ['test_overrides.wrong_table']},
+                 "runner/README.md lists the request block member 'worker_timeout_ms' among the experimental controls"),
         Scenario('rule-test-overrides-missing-definition',
                  {request: source[request].replace('struct PWRunnerTestOverrides: Codable {', 'struct AbsentOverrides: Codable {', 1)},
                  {OVERRIDES: ['struct.missing']},
