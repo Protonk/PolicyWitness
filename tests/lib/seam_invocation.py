@@ -2,11 +2,22 @@
 
 A caller gives the ordinary request without the selected controls, the controls
 as their own mapping and the remaining `run` arguments. The adapter delivers
-them on its one route, `legacy_request_block`: the controls become the
-delivered request's `_test_overrides` block, submitted with `policy-witness run`
-or `pw-runner-client run`. A request that already carries `_test_overrides`, an
-empty mapping and a key outside SELECTED_CONTROLS are refused before anything
-is written.
+them on the route the call names.
+
+On `LEGACY`, the default, the controls become the delivered request's
+`_test_overrides` block, submitted with `policy-witness run` or
+`pw-runner-client run`; the record's route is `legacy_request_block`. A request
+that already carries `_test_overrides` and an empty mapping are refused before
+anything is written.
+
+On `EXPERIMENTAL` the request is delivered as given and the controls travel
+beside it: as one flag each after `policy-witness test-input run`
+(`experimental_cli`), or as the one JSON object after
+`pw-runner-client run --experimental-controls` (`experimental_client`). The
+mapping may be empty, and the request may carry its own `_test_overrides`
+block: what the product does with either is the caller's experiment.
+
+A key outside SELECTED_CONTROLS is refused on every route.
 
 Each invocation owns `seam-invocations/<scenario>/` under the case's artifacts.
 `invocation.json` is written before launch and completed when the exit is
@@ -21,7 +32,7 @@ independent effects and cleanup stay with the caller.
 
 Shell cases use the command form, started as the other file helpers are:
 
-    seam_invocation.py --scenario NAME --request FILE --controls JSON
+    seam_invocation.py --scenario NAME --request FILE --controls JSON [--route ROUTE]
         --delivered FILE --stdout FILE --stderr FILE -- EXECUTABLE [RUN_ARG...]
 
 It exits with the submission's exit status, 128 plus the signal number after a
@@ -44,7 +55,10 @@ SELECTED_CONTROLS = (
     'worker_timeout_ms', 'worker_pre_ready_hang_ms', 'worker_post_apply_hang_ms',
     'worker_post_apply_kill_signal', 'worker_kill_before_publish_slot',
     'validator_executable_path', 'validator_io_timeout_ms', 'validator_total_timeout_ms')
-ROUTE = 'legacy_request_block'
+LEGACY = 'legacy_request_block'
+EXPERIMENTAL = 'experimental'
+EXPERIMENTAL_ROUTES = {'cli': 'experimental_cli', 'client': 'experimental_client'}
+CLIENT_CONTROLS = '--experimental-controls'
 SCHEMA = 'pw-seam-invocation-1'
 DIRECTORY = 'seam-invocations'
 ENTRIES = {'policy-witness': 'cli', 'pw-runner-client': 'client'}
@@ -58,6 +72,11 @@ _identities = {}
 def encode(document):
     """The bytes RunCapture writes for a request."""
     return (json.dumps(document, indent=2) + '\n').encode()
+
+
+def control_flags(controls):
+    """The `test-input run` arguments for a mapping: one flag and one value per control, in the mapping's order."""
+    return [item for key, value in controls.items() for item in ('--' + key.replace('_', '-'), str(value))]
 
 
 def case_artifacts():
@@ -108,24 +127,30 @@ def _blob(path):
 class _Record:
     """The evidence directory of one invocation; no reading of its outcome."""
 
-    def __init__(self, executable, scenario, ordinary, request, controls):
+    def __init__(self, executable, scenario, ordinary, request, controls, route):
         if not isinstance(scenario, str) or not _SCENARIO.fullmatch(scenario):
             raise ValueError(f'invalid seam scenario identity: {scenario!r}')
+        if route not in (LEGACY, EXPERIMENTAL):
+            raise ValueError(f'unknown seam route: {route!r}')
         if not isinstance(request, dict):
             raise ValueError('the ordinary request must be a JSON object')
-        if '_test_overrides' in request:
+        if route == LEGACY and '_test_overrides' in request:
             raise ValueError('the ordinary request already carries _test_overrides; selected controls travel '
                              'separately and other overrides use an ordinary submission')
         if not isinstance(controls, dict):
             raise ValueError('seam controls must be a mapping')
         controls = dict(controls)
         unselected = sorted(set(controls) - set(SELECTED_CONTROLS))
-        if not controls or unselected:
-            raise ValueError(f'seam controls must be a nonempty mapping of selected controls; unselected: {unselected}')
+        if unselected or (route == LEGACY and not controls):
+            raise ValueError(f'seam controls must be a mapping of selected controls, nonempty on the legacy route; '
+                             f'unselected: {unselected}')
         entry = ENTRIES.get(Path(executable).name)
         if entry is None:
             raise ValueError(f'neither the controller nor the runner client: {executable}')
-        self.delivered = dict(request, _test_overrides=controls)
+        self.experimental = route == EXPERIMENTAL
+        self.entry = entry
+        self.controls = controls
+        self.delivered = dict(request) if self.experimental else dict(request, _test_overrides=controls)
         self.directory = case_artifacts() / DIRECTORY / scenario
         identity = app_identity(executable)
         try:
@@ -138,7 +163,8 @@ class _Record:
             schema=SCHEMA, scenario=scenario, limits=LIMITS,
             case=dict(suite=os.environ.get('PW_TEST_SUITE'), test_id=os.environ.get('PW_TEST_ID'),
                       run_id=os.environ.get('PW_TEST_RUN_ID')),
-            requested_route=ROUTE, entry=entry, requested_controls=controls,
+            requested_route=EXPERIMENTAL_ROUTES[entry] if self.experimental else LEGACY, entry=entry,
+            requested_controls=controls,
             app=identity, executable=str(executable), argv=None,
             ordinary_request=dict(file='ordinary-request.json', **_blob(self.directory / 'ordinary-request.json')),
             delivered_request=None, state='prepared', pid=None, launch_error=None,
@@ -196,10 +222,17 @@ class SeamCapture(RunCapture):
     `specimen.json` there is the delivered request. `seam` is the evidence
     directory."""
 
-    def __init__(self, pw, out, request, *, controls, scenario, cli_args=()):
-        self._seam = _Record(pw, scenario, encode(request), request, controls)
+    def __init__(self, pw, out, request, *, controls, scenario, cli_args=(), route=LEGACY):
+        if route == EXPERIMENTAL and ENTRIES.get(Path(pw).name) == 'client':
+            raise ValueError(f'a capture submits through the controller; use Submission for the client: {pw}')
+        self._seam = _Record(pw, scenario, encode(request), request, controls, route)
         self.seam = self._seam.directory
         super().__init__(pw, out, self._seam.delivered, cli_args=cli_args)
+        if self._seam.experimental:
+            self.argv = [str(pw), 'test-input', 'run', str(self.request_path),
+                         *control_flags(self._seam.controls), *map(str, cli_args)]
+            self._metadata['argv'] = self.argv
+            self._record()
         self._seam.intend(self.argv, self.request_path.read_bytes(), channel='path', path=self.request_path,
                           companion=dict(kind='run_capture', directory=str(self.out)))
 
@@ -226,19 +259,28 @@ class Submission:
     """One submission as a process the caller starts, polls and waits for.
 
     `run_args` is everything after `run`, in the caller's order, including
-    the request path or `-`. The adapter writes the delivered request to
-    `request_path`, or to the process's standard input when no path is given.
-    `delivered` is the document the process receives; `ordinary_bytes` are the
-    request's own bytes when it came from a file."""
+    the request path or `-`. On the experimental route the controls precede
+    them: the controller's flags, or the client's one controls object. The
+    adapter writes the delivered request to `request_path`, or to the
+    process's standard input when no path is given. `delivered` is the
+    document the process receives; `ordinary_bytes` are the request's own
+    bytes when it came from a file, and on the experimental route they are
+    delivered unchanged."""
 
     def __init__(self, executable, scenario, request, controls, *, run_args=(), request_path=None,
-                 encode=encode, ordinary_bytes=None):
+                 encode=encode, ordinary_bytes=None, route=LEGACY):
         self._seam = _Record(executable, scenario, encode(request) if ordinary_bytes is None else ordinary_bytes,
-                             request, controls)
+                             request, controls, route)
         self.seam = self._seam.directory
         self.delivered = self._seam.delivered
-        self.delivered_bytes = encode(self.delivered)
-        self.argv = [str(executable), 'run', *map(str, run_args)]
+        if not self._seam.experimental:
+            self.delivered_bytes = encode(self.delivered)
+            command = ['run']
+        else:
+            self.delivered_bytes = encode(request) if ordinary_bytes is None else ordinary_bytes
+            command = (['test-input', 'run', *control_flags(self._seam.controls)] if self._seam.entry == 'cli'
+                       else ['run', CLIENT_CONTROLS, json.dumps(self._seam.controls)])
+        self.argv = [str(executable), *command, *map(str, run_args)]
         self._stdin = request_path is None
         if request_path is not None:
             Path(request_path).write_bytes(self.delivered_bytes)
@@ -301,6 +343,8 @@ def main(argv=None):
     parser.add_argument('--scenario', required=True, help='identity of this invocation, unique within the case')
     parser.add_argument('--request', required=True, type=Path, help='the ordinary request, without the selected controls')
     parser.add_argument('--controls', required=True, help='JSON object of selected controls')
+    parser.add_argument('--route', choices=(LEGACY, EXPERIMENTAL), default=LEGACY,
+                        help='how the controls are delivered (default: the request block)')
     parser.add_argument('--delivered', required=True, type=Path, help='where to write the delivered request')
     parser.add_argument('--stdout', required=True, type=Path)
     parser.add_argument('--stderr', required=True, type=Path)
@@ -314,7 +358,8 @@ def main(argv=None):
     try:
         ordinary = args.request.read_bytes()
         submission = Submission(command[0], args.scenario, json.loads(ordinary), json.loads(args.controls),
-                                run_args=command[1:], request_path=args.delivered, ordinary_bytes=ordinary)
+                                run_args=command[1:], request_path=args.delivered, ordinary_bytes=ordinary,
+                                route=args.route)
         rc = submission.start(stdout=args.stdout, stderr=args.stderr).wait()
     except (OSError, ValueError, RuntimeError) as exc:
         print(f'seam_invocation: {type(exc).__name__}: {exc}', file=sys.stderr)

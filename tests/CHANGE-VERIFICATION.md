@@ -1071,6 +1071,11 @@ Use the existing constructed reader controls for result-interpretation examples.
 For `test-input` publication, positional target binding or its independent
 observer, select `witness_contract/test_input_controls` and
 `witness_contract/test_input` with `unit`, `integration` and `source_drift`.
+For `test-input run`, its control flags, the client's
+`--experimental-controls` argument or the host's experimental admission, select
+the same cases with `runner_unit`, `failure_boundaries` and
+`run_capture/controls`; inspect the submission, echo and intervention rows
+separately.
 For harness-only passage, checker or control changes, the two test-input cases
 and `source_drift` suffice; inspect their exact diagnostics, distinction table,
 command accounting, the crossed-to-returning gate and each actor's cleanup

@@ -13,6 +13,9 @@ private final class ControlledConnection: PWRunnerClientConnection {
     var reservedReply: ((Data) -> Void)?
     var submissionReply: ((Bool, Data) -> Void)?
     var submissions = 0
+    /// What each ordinary call and each experimental call carried.
+    var ordinary: [Data] = []
+    var experiments: [(request: Data, controls: Data)] = []
     var invalidations = 0
     init(_ failure: @escaping (PWRunnerConnectionFailure) -> Void) { self.failure = failure }
     func reserve(_ data: Data, reply: @escaping (Data) -> Void) {
@@ -20,7 +23,10 @@ private final class ControlledConnection: PWRunnerClientConnection {
         reservedReply = reply; onReserve?(self)
     }
     func submit(_ data: Data, reservation: String, reply: @escaping (Bool, Data) -> Void) {
-        submissions += 1; submissionReply = reply; onSubmit?(self)
+        submissions += 1; ordinary.append(data); submissionReply = reply; onSubmit?(self)
+    }
+    func submitExperiment(_ data: Data, controls: Data, reservation: String, reply: @escaping (Bool, Data) -> Void) {
+        submissions += 1; experiments.append((data, controls)); submissionReply = reply; onSubmit?(self)
     }
     func invalidate() { invalidations += 1 }
     func respond(_ status: String, paddedTo: Int? = nil) {
@@ -48,8 +54,8 @@ private final class SessionFixture {
     var session: PWRunnerClientSession?
     var onReserve: ((ControlledConnection) -> Void)?
     var connectionTimes: [UInt64] = []
-    func start(timeout: UInt64 = 30_000, deadline: UInt64? = nil) {
-        session = PWRunnerClientSession(request: Data("specimen bytes".utf8), timeoutMs: timeout, deadlineNs: deadline,
+    func start(timeout: UInt64 = 30_000, deadline: UInt64? = nil, controls: Data? = nil) {
+        session = PWRunnerClientSession(request: Data("specimen bytes".utf8), controls: controls, timeoutMs: timeout, deadlineNs: deadline,
             clock: { self.clockReads.isEmpty ? self.now : self.clockReads.removeFirst() }, enqueue: { $0() },
             schedule: { delay, body in
                 self.serial += 1; self.jobs.append((self.now + UInt64(delay) * 1_000_000, self.serial, body))
@@ -95,6 +101,23 @@ func runClientSessionControls() throws -> Int {
         try check(f.frame.runner_reply!.data == bytes, "exact original host bytes")
         current.fail(); old.fail(); f.advance(30_000)
         try check(f.frames.count == 1 && f.connections.count == 2, "no later replay")
+    }
+    try test("controls select the experimental call, which carries the request unchanged") {
+        let request = Data("specimen bytes".utf8)
+        // Delivered as given, whatever the bytes are: the host admits or refuses them.
+        for controls in [Data("{}".utf8), Data(#"{"worker_timeout_ms": 7000}"#.utf8), Data("not json \u{0}".utf8), Data()] {
+            let f = SessionFixture(); f.start(controls: controls)
+            let c = f.connections[0]; c.respond("granted")
+            try check(c.submissions == 1 && c.ordinary.isEmpty && c.experiments.count == 1, "one experimental call and no ordinary call")
+            try check(c.experiments[0].request == request && c.experiments[0].controls == controls, "request and controls unchanged")
+            try check(f.frames.isEmpty, "no capture before the reply")
+            c.submissionReply?(true, Data([1, 2])); c.fail(); f.advance(30_000)
+            try check(f.frame.terminal == "runner_reply" && f.frame.submission.state == "invoked", "invocation recorded")
+            try check(c.submissions == 1 && f.connections.count == 1 && f.frames.count == 1, "no replay on either call")
+        }
+        let f = SessionFixture(); f.start()
+        f.connections[0].respond("granted")
+        try check(f.connections[0].ordinary == [request] && f.connections[0].experiments.isEmpty, "no controls, ordinary call")
     }
     try test("reservation RPC timeout abandons only acquisition") {
         let f = SessionFixture(); f.start()

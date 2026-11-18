@@ -233,6 +233,17 @@
       ],
       "test_owned_inputs": false
     },
+    "run.control_flag": {
+      "ambiguous_rows": [],
+      "declared": [],
+      "entries": [
+        "command.run",
+        "run.unknown_flag",
+        "result.tool_failure",
+        "result.fields"
+      ],
+      "test_owned_inputs": false
+    },
     "run.h_flag": {
       "ambiguous_rows": [],
       "declared": [],
@@ -730,7 +741,7 @@
       "declared": [],
       "entries": [
         "command.test_input",
-        "tail.test_input"
+        "test_input.unknown_form"
       ],
       "test_owned_inputs": false
     },
@@ -739,7 +750,7 @@
       "declared": [],
       "entries": [
         "command.test_input",
-        "tail.test_input"
+        "test_input.unknown_form"
       ],
       "test_owned_inputs": false
     },
@@ -748,7 +759,7 @@
       "declared": [],
       "entries": [
         "command.test_input",
-        "tail.test_input"
+        "test_input.unknown_form"
       ],
       "test_owned_inputs": false
     },
@@ -757,7 +768,26 @@
       "declared": [],
       "entries": [
         "command.test_input",
-        "tail.test_input"
+        "test_input.form.read",
+        "tail.test_input.read"
+      ],
+      "test_owned_inputs": false
+    },
+    "test_input.publish_and_run": {
+      "ambiguous_rows": [],
+      "declared": [],
+      "entries": [
+        "command.test_input",
+        "test_input.form.read",
+        "tail.test_input.read",
+        "test_input.form.run",
+        "run.control.worker_timeout_ms",
+        "run.request_path",
+        "result.admitted_finished",
+        "result.fields",
+        "run.control.validator_executable_path",
+        "result.admitted_other",
+        "command.run"
       ],
       "test_owned_inputs": false
     },
@@ -766,7 +796,8 @@
       "declared": [],
       "entries": [
         "command.test_input",
-        "tail.test_input"
+        "test_input.form.read",
+        "tail.test_input.read"
       ],
       "test_owned_inputs": false
     },
@@ -775,7 +806,445 @@
       "declared": [],
       "entries": [
         "command.test_input",
-        "tail.test_input"
+        "test_input.form.read",
+        "tail.test_input.read"
+      ],
+      "test_owned_inputs": false
+    },
+    "test_input.run.control.validator_executable_path": {
+      "ambiguous_rows": [],
+      "declared": [],
+      "entries": [
+        "command.test_input",
+        "test_input.form.run",
+        "run.control.validator_executable_path",
+        "result.tool_failure",
+        "result.fields"
+      ],
+      "test_owned_inputs": false
+    },
+    "test_input.run.control.validator_executable_path_takes_flag": {
+      "ambiguous_rows": [],
+      "declared": [],
+      "entries": [
+        "command.test_input",
+        "test_input.form.run",
+        "run.control.validator_executable_path",
+        "result.tool_failure",
+        "result.fields"
+      ],
+      "test_owned_inputs": false
+    },
+    "test_input.run.control.validator_io_timeout_ms": {
+      "ambiguous_rows": [],
+      "declared": [],
+      "entries": [
+        "command.test_input",
+        "test_input.form.run",
+        "run.control.validator_io_timeout_ms",
+        "result.tool_failure",
+        "result.fields"
+      ],
+      "test_owned_inputs": false
+    },
+    "test_input.run.control.validator_total_timeout_ms": {
+      "ambiguous_rows": [],
+      "declared": [],
+      "entries": [
+        "command.test_input",
+        "test_input.form.run",
+        "run.control.validator_total_timeout_ms",
+        "result.tool_failure",
+        "result.fields"
+      ],
+      "test_owned_inputs": false
+    },
+    "test_input.run.control.worker_kill_before_publish_slot": {
+      "ambiguous_rows": [],
+      "declared": [],
+      "entries": [
+        "command.test_input",
+        "test_input.form.run",
+        "run.control.worker_kill_before_publish_slot",
+        "result.tool_failure",
+        "result.fields"
+      ],
+      "test_owned_inputs": false
+    },
+    "test_input.run.control.worker_post_apply_hang_ms": {
+      "ambiguous_rows": [],
+      "declared": [],
+      "entries": [
+        "command.test_input",
+        "test_input.form.run",
+        "run.control.worker_post_apply_hang_ms",
+        "result.tool_failure",
+        "result.fields"
+      ],
+      "test_owned_inputs": false
+    },
+    "test_input.run.control.worker_post_apply_kill_signal": {
+      "ambiguous_rows": [],
+      "declared": [],
+      "entries": [
+        "command.test_input",
+        "test_input.form.run",
+        "run.control.worker_post_apply_kill_signal",
+        "result.tool_failure",
+        "result.fields"
+      ],
+      "test_owned_inputs": false
+    },
+    "test_input.run.control.worker_pre_ready_hang_ms": {
+      "ambiguous_rows": [],
+      "declared": [],
+      "entries": [
+        "command.test_input",
+        "test_input.form.run",
+        "run.control.worker_pre_ready_hang_ms",
+        "result.tool_failure",
+        "result.fields"
+      ],
+      "test_owned_inputs": false
+    },
+    "test_input.run.control.worker_timeout_ms": {
+      "ambiguous_rows": [],
+      "declared": [],
+      "entries": [
+        "command.test_input",
+        "test_input.form.run",
+        "run.control.worker_timeout_ms",
+        "result.tool_failure",
+        "result.fields"
+      ],
+      "test_owned_inputs": false
+    },
+    "test_input.run.control_beyond_64_bits": {
+      "ambiguous_rows": [],
+      "declared": [],
+      "entries": [
+        "command.test_input",
+        "test_input.form.run",
+        "run.control.worker_timeout_ms",
+        "result.tool_failure",
+        "result.fields"
+      ],
+      "test_owned_inputs": false
+    },
+    "test_input.run.control_duplicate": {
+      "ambiguous_rows": [],
+      "declared": [],
+      "entries": [
+        "command.test_input",
+        "test_input.form.run",
+        "run.control.worker_timeout_ms",
+        "result.tool_failure",
+        "result.fields"
+      ],
+      "test_owned_inputs": false
+    },
+    "test_input.run.control_equals": {
+      "ambiguous_rows": [],
+      "declared": [],
+      "entries": [
+        "command.test_input",
+        "test_input.form.run",
+        "run.unknown_flag",
+        "result.tool_failure",
+        "result.fields"
+      ],
+      "test_owned_inputs": false
+    },
+    "test_input.run.control_fraction": {
+      "ambiguous_rows": [],
+      "declared": [],
+      "entries": [
+        "command.test_input",
+        "test_input.form.run",
+        "run.control.worker_timeout_ms",
+        "result.tool_failure",
+        "result.fields"
+      ],
+      "test_owned_inputs": false
+    },
+    "test_input.run.control_missing_value": {
+      "ambiguous_rows": [],
+      "declared": [],
+      "entries": [
+        "command.test_input",
+        "test_input.form.run",
+        "run.control.validator_io_timeout_ms",
+        "result.tool_failure",
+        "result.fields"
+      ],
+      "test_owned_inputs": false
+    },
+    "test_input.run.control_non_utf8_path": {
+      "ambiguous_rows": [],
+      "declared": [],
+      "entries": [
+        "command.test_input",
+        "test_input.form.run",
+        "run.control.validator_executable_path",
+        "result.tool_failure",
+        "result.fields"
+      ],
+      "test_owned_inputs": false
+    },
+    "test_input.run.control_not_an_integer": {
+      "ambiguous_rows": [],
+      "declared": [],
+      "entries": [
+        "command.test_input",
+        "test_input.form.run",
+        "run.control.worker_timeout_ms",
+        "result.tool_failure",
+        "result.fields"
+      ],
+      "test_owned_inputs": false
+    },
+    "test_input.run.control_not_an_integer.validator_io_timeout_ms": {
+      "ambiguous_rows": [],
+      "declared": [],
+      "entries": [
+        "command.test_input",
+        "test_input.form.run",
+        "run.control.validator_io_timeout_ms",
+        "result.tool_failure",
+        "result.fields"
+      ],
+      "test_owned_inputs": false
+    },
+    "test_input.run.control_not_an_integer.validator_total_timeout_ms": {
+      "ambiguous_rows": [],
+      "declared": [],
+      "entries": [
+        "command.test_input",
+        "test_input.form.run",
+        "run.control.validator_total_timeout_ms",
+        "result.tool_failure",
+        "result.fields"
+      ],
+      "test_owned_inputs": false
+    },
+    "test_input.run.control_not_an_integer.worker_kill_before_publish_slot": {
+      "ambiguous_rows": [],
+      "declared": [],
+      "entries": [
+        "command.test_input",
+        "test_input.form.run",
+        "run.control.worker_kill_before_publish_slot",
+        "result.tool_failure",
+        "result.fields"
+      ],
+      "test_owned_inputs": false
+    },
+    "test_input.run.control_not_an_integer.worker_post_apply_hang_ms": {
+      "ambiguous_rows": [],
+      "declared": [],
+      "entries": [
+        "command.test_input",
+        "test_input.form.run",
+        "run.control.worker_post_apply_hang_ms",
+        "result.tool_failure",
+        "result.fields"
+      ],
+      "test_owned_inputs": false
+    },
+    "test_input.run.control_not_an_integer.worker_post_apply_kill_signal": {
+      "ambiguous_rows": [],
+      "declared": [],
+      "entries": [
+        "command.test_input",
+        "test_input.form.run",
+        "run.control.worker_post_apply_kill_signal",
+        "result.tool_failure",
+        "result.fields"
+      ],
+      "test_owned_inputs": false
+    },
+    "test_input.run.control_not_an_integer.worker_pre_ready_hang_ms": {
+      "ambiguous_rows": [],
+      "declared": [],
+      "entries": [
+        "command.test_input",
+        "test_input.form.run",
+        "run.control.worker_pre_ready_hang_ms",
+        "result.tool_failure",
+        "result.fields"
+      ],
+      "test_owned_inputs": false
+    },
+    "test_input.run.control_path_missing_value": {
+      "ambiguous_rows": [],
+      "declared": [],
+      "entries": [
+        "command.test_input",
+        "test_input.form.run",
+        "run.request_path",
+        "run.control.validator_executable_path",
+        "result.tool_failure",
+        "result.fields"
+      ],
+      "test_owned_inputs": false
+    },
+    "test_input.run.control_takes_help_flag": {
+      "ambiguous_rows": [],
+      "declared": [],
+      "entries": [
+        "command.test_input",
+        "test_input.form.run",
+        "run.control.worker_timeout_ms",
+        "result.tool_failure",
+        "result.fields"
+      ],
+      "test_owned_inputs": false
+    },
+    "test_input.run.h_flag": {
+      "ambiguous_rows": [],
+      "declared": [],
+      "entries": [
+        "command.test_input",
+        "test_input.form.run",
+        "run.unknown_flag",
+        "result.tool_failure",
+        "result.fields"
+      ],
+      "test_owned_inputs": false
+    },
+    "test_input.run.help_flag": {
+      "ambiguous_rows": [],
+      "declared": [],
+      "entries": [
+        "command.test_input",
+        "test_input.form.run",
+        "run.unknown_flag",
+        "result.tool_failure",
+        "result.fields"
+      ],
+      "test_owned_inputs": false
+    },
+    "test_input.run.help_word": {
+      "ambiguous_rows": [],
+      "declared": [],
+      "entries": [
+        "command.test_input",
+        "test_input.form.run",
+        "run.request_path",
+        "result.tool_failure",
+        "result.fields"
+      ],
+      "test_owned_inputs": false
+    },
+    "test_input.run.no_arguments": {
+      "ambiguous_rows": [],
+      "declared": [],
+      "entries": [
+        "command.test_input",
+        "test_input.form.run",
+        "result.tool_failure",
+        "result.fields"
+      ],
+      "test_owned_inputs": false
+    },
+    "test_input.run.repeated_path": {
+      "ambiguous_rows": [],
+      "declared": [],
+      "entries": [
+        "command.test_input",
+        "test_input.form.run",
+        "run.request_path",
+        "result.tool_failure",
+        "result.fields"
+      ],
+      "test_owned_inputs": false
+    },
+    "test_input.run.request_mode_machme": {
+      "ambiguous_rows": [
+        [
+          "result.local_request_refusal",
+          "result.admitted_other"
+        ]
+      ],
+      "declared": [],
+      "entries": [
+        "command.test_input",
+        "test_input.form.run",
+        "run.control.worker_timeout_ms",
+        "run.request_path"
+      ],
+      "test_owned_inputs": true
+    },
+    "test_input.run.runner_mode_byoxpc": {
+      "ambiguous_rows": [],
+      "declared": [],
+      "entries": [
+        "command.test_input",
+        "test_input.form.run",
+        "run.option.runner_mode",
+        "runner_kind.byoxpc@run_option",
+        "result.tool_failure",
+        "result.fields"
+      ],
+      "test_owned_inputs": false
+    },
+    "test_input.run.runner_mode_invalid": {
+      "ambiguous_rows": [],
+      "declared": [],
+      "entries": [
+        "command.test_input",
+        "test_input.form.run",
+        "run.option.runner_mode",
+        "result.tool_failure",
+        "result.fields"
+      ],
+      "test_owned_inputs": false
+    },
+    "test_input.run.terminator": {
+      "ambiguous_rows": [],
+      "declared": [],
+      "entries": [
+        "command.test_input",
+        "test_input.form.run",
+        "run.terminator",
+        "result.tool_failure",
+        "result.fields"
+      ],
+      "test_owned_inputs": false
+    },
+    "test_input.run.timeout_zero": {
+      "ambiguous_rows": [],
+      "declared": [],
+      "entries": [
+        "command.test_input",
+        "test_input.form.run",
+        "run.option.timeout_ms",
+        "result.tool_failure",
+        "result.fields"
+      ],
+      "test_owned_inputs": false
+    },
+    "test_input.run.unknown_flag": {
+      "ambiguous_rows": [],
+      "declared": [],
+      "entries": [
+        "command.test_input",
+        "test_input.form.run",
+        "run.unknown_flag",
+        "result.tool_failure",
+        "result.fields"
+      ],
+      "test_owned_inputs": false
+    },
+    "test_input.run.unselected_override": {
+      "ambiguous_rows": [],
+      "declared": [],
+      "entries": [
+        "command.test_input",
+        "test_input.form.run",
+        "run.unknown_flag",
+        "result.tool_failure",
+        "result.fields"
       ],
       "test_owned_inputs": false
     },
@@ -879,7 +1348,6 @@
   },
   "entries_no_case_reaches": [
     "result.admission_refusal",
-    "result.admitted_other",
     "result.admitted_unavailable",
     "runner_kind.byoxpc@registry",
     "runner_kind.debuggable@registry",
@@ -896,6 +1364,12 @@
     "result.admitted_unavailable",
     "result.fields",
     "result.local_request_refusal",
+    "run.control.validator_executable_path",
+    "run.control.validator_io_timeout_ms",
+    "run.control.validator_total_timeout_ms",
+    "run.control.worker_kill_before_publish_slot",
+    "run.control.worker_post_apply_kill_signal",
+    "run.control.worker_pre_ready_hang_ms",
     "run.request_path",
     "run.terminator",
     "runner_kind.byoxpc@install_option",
@@ -909,7 +1383,7 @@
     "runner_kind.standard@run_option",
     "tail.help",
     "tail.runner",
-    "tail.test_input",
+    "tail.test_input.read",
     "tail.version_flag",
     "topic.example",
     "topic.run"
@@ -1156,6 +1630,63 @@
         "cases"
       ],
       "only_cases_moved": false
+    },
+    {
+      "card": "unchanged",
+      "cases": "failed",
+      "contract": "unchanged",
+      "entry": "run.control.worker_timeout_ms",
+      "id": "rename_control",
+      "not_run": [],
+      "only_cases_moved": true
+    },
+    {
+      "card": "unchanged",
+      "cases": "failed",
+      "contract": "unchanged",
+      "entry": "test_input.form.run",
+      "id": "rename_form",
+      "not_run": [],
+      "only_cases_moved": true
+    },
+    {
+      "card": "not_run",
+      "cases": "not_run",
+      "contract": "unchanged",
+      "entry": "run.control.worker_timeout_ms",
+      "id": "control_admitted_by_run",
+      "not_run": [
+        "card",
+        "cases"
+      ],
+      "only_cases_moved": false
+    },
+    {
+      "card": "unchanged",
+      "cases": "unchanged",
+      "contract": "unchanged",
+      "entry": "test_input.unknown_form",
+      "id": "literal_beside_form_table",
+      "not_run": [],
+      "only_cases_moved": false
+    },
+    {
+      "card": "unchanged",
+      "cases": "failed",
+      "contract": "unchanged",
+      "entry": "run.control.worker_post_apply_hang_ms",
+      "id": "control_value_rule",
+      "not_run": [],
+      "only_cases_moved": true
+    },
+    {
+      "card": "unchanged",
+      "cases": "failed",
+      "contract": "unchanged",
+      "entry": "test_input.form.read",
+      "id": "form_tail_rule",
+      "not_run": [],
+      "only_cases_moved": true
     }
   ]
 }

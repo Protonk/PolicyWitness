@@ -164,7 +164,12 @@ attempt and operation observations, including a returning two-actor form with
 distinct visit numbers and global phase ordinals. Policy variants pin query answers separately
 from native attempt outcomes. `test_input_controls` checks exact diagnostics,
 coherent wrong-file/stale-content/whole-capture substitutions, completion gaps
-and actual publication preflight. See the [owning account](suites/witness_contract/README.md#controlled-read-input)
+and actual publication preflight. The same case submits the published input
+through `test-input run`: one submission per test control with its echo read
+apart from the host's or worker's own observation, an uncontrolled submission
+beside its ordinary neighbour, malformed command lines, a worker argument
+refusal, and a request block refused on that route through the controller and
+the runner client. See the [owning account](suites/witness_contract/README.md#controlled-read-input)
 for scope and blind spots.
 
 The default `witness_contract/example_round_trip` executes the app's emitted

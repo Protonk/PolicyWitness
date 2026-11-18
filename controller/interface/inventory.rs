@@ -10,12 +10,13 @@ use std::fmt::Debug;
 use serde_json::{Value, json};
 
 use crate::cards::{self, RESULT_FIELDS, Reference, Rendered};
-use crate::interface::commands::{Address, Command, Tail, Topic};
+use crate::interface::commands::{Address, Command, Tail, TestInputForm, Topic};
 use crate::interface::result::{
     Class, Disposition, Host, Label, Outcome, Refusal, Row, Selection, select,
 };
 use crate::interface::run_args::{
-    FLAG_PREFIX, RunOption, TERMINATOR, Token, Value as OptionValue, classify,
+    Control, ControlValue, FLAG_PREFIX, Form, RunOption, TERMINATOR, Token, Value as OptionValue,
+    classify,
 };
 use crate::interface::runner_kind::{Reader, Rule, Word};
 
@@ -42,8 +43,14 @@ impl Identified for Command {
 impl Identified for Topic {
     const TABLE: &'static str = "topic";
 }
+impl Identified for TestInputForm {
+    const TABLE: &'static str = "test_input.form";
+}
 impl Identified for RunOption {
     const TABLE: &'static str = "run.option";
+}
+impl Identified for Control {
+    const TABLE: &'static str = "run.control";
 }
 impl Identified for Word {
     const TABLE: &'static str = "runner_kind";
@@ -91,6 +98,12 @@ fn dispatch() -> Value {
 fn help() -> Value {
     reader("controller/src/interface/commands.rs", "pub fn select")
 }
+fn form_selection() -> Value {
+    reader("controller/src/interface/commands.rs", "pub fn select_form")
+}
+fn test_input_dispatch() -> Value {
+    reader("controller/src/test_input.rs", "pub fn cmd_test_input")
+}
 fn run_parser() -> Value {
     reader("controller/src/run_flow.rs", "fn parse_arguments")
 }
@@ -137,6 +150,10 @@ fn command_entries() -> Vec<Value> {
         // What dispatch does with the arguments after the command.
         let (kind, relationships) = match def.tail {
             Tail::RunArguments => continue,
+            Tail::Form => {
+                entries.extend(test_input_entries(command));
+                continue;
+            }
             Tail::Topic => (
                 DISCARDS,
                 json!({"except_first_argument": Topic::ALL.iter().map(id).collect::<Vec<_>>()}),
@@ -171,6 +188,44 @@ fn command_entries() -> Vec<Value> {
     entries
 }
 
+/// The forms of `test-input`: each form, what the command does with any
+/// other first argument, and a form's tail where its own parser holds the
+/// definitions.
+fn test_input_entries(command: Command) -> Vec<Value> {
+    assert_eq!(command, Command::TestInput, "one command has forms");
+    let name = snake(&command);
+    let mut entries = Vec::new();
+    for form in TestInputForm::ALL.iter().copied() {
+        let def = form.def();
+        entries.push(entry(
+            id(&form),
+            ADMITS,
+            form_selection(),
+            &[def.spelling],
+            json!({"command": id(&command), "tail": snake(&def.tail)}),
+        ));
+        match def.tail {
+            Tail::RunArguments => {}
+            Tail::Unenumerated => entries.push(entry(
+                format!("tail.{name}.{}", snake(&form)),
+                UNENUMERATED,
+                test_input_dispatch(),
+                &[],
+                json!({"form": id(&form), "rule": snake(&def.tail)}),
+            )),
+            other => panic!("{form:?} has the tail rule {other:?}, which no form uses"),
+        }
+    }
+    entries.push(entry(
+        format!("{name}.unknown_form"),
+        REFUSES_ALWAYS,
+        test_input_dispatch(),
+        &[],
+        json!({"command": id(&command), "rule": snake(&command.def().tail)}),
+    ));
+    entries
+}
+
 fn run_entries() -> Vec<Value> {
     let run = id(&Command::Run);
     let prefix = FLAG_PREFIX.to_string();
@@ -183,8 +238,8 @@ fn run_entries() -> Vec<Value> {
         ("run.terminator", TERMINATOR.to_string(), vec![TERMINATOR]),
         ("run.unknown_flag", unlisted_flag, Vec::new()),
     ] {
-        let kind = match classify(&sample) {
-            Token::RequestPath | Token::Option(_) => ADMITS,
+        let kind = match classify(&sample, Form::Run) {
+            Token::RequestPath | Token::Option(_) | Token::Control(_) => ADMITS,
             Token::Terminator => DISCARDS,
             Token::UnknownFlag => REFUSES_ALWAYS,
         };
@@ -193,7 +248,7 @@ fn run_entries() -> Vec<Value> {
             kind,
             run_parser(),
             &spellings,
-            json!({"command": run, "flag_prefix": prefix, "classified_as": snake(&classify(&sample))}),
+            json!({"command": run, "flag_prefix": prefix, "classified_as": snake(&classify(&sample, Form::Run))}),
         ));
     }
     for option in RunOption::ALL.iter().copied() {
@@ -202,7 +257,7 @@ fn run_entries() -> Vec<Value> {
             OptionValue::Milliseconds { min } => json!({"milliseconds": {"min": min}}),
             OptionValue::Kind(reader_id) => json!({"runner_kind_reader": snake(&reader_id)}),
         };
-        let kind = match classify(def.spelling) {
+        let kind = match classify(def.spelling, Form::Run) {
             Token::Option(found) if found == option => ADMITS,
             other => panic!("{option:?} is classified as {other:?}"),
         };
@@ -212,6 +267,30 @@ fn run_entries() -> Vec<Value> {
             run_parser(),
             &[def.spelling],
             json!({"command": run, "value": value}),
+        ));
+    }
+    // A control is an argument of the one form whose rule is `run`'s with
+    // the controls; under `run` itself its spelling is an unknown flag.
+    let form = id(&TestInputForm::Run);
+    for control in Control::ALL.iter().copied() {
+        let def = control.def();
+        let value = match def.value {
+            ControlValue::Integer => json!({"integer": "i64"}),
+            ControlValue::Text => json!({"text": "utf8"}),
+        };
+        let kind = match (
+            classify(def.spelling, Form::TestInputRun),
+            classify(def.spelling, Form::Run),
+        ) {
+            (Token::Control(found), Token::UnknownFlag) if found == control => ADMITS,
+            other => panic!("{control:?} is classified as {other:?}"),
+        };
+        entries.push(entry(
+            id(&control),
+            kind,
+            run_parser(),
+            &[def.spelling],
+            json!({"form": form, "key": def.key, "value": value, "repeated": "refused"}),
         ));
     }
     entries

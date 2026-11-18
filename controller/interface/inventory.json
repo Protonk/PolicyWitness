@@ -129,7 +129,7 @@
         "symbol": "pub fn run"
       },
       "relationships": {
-        "tail": "unenumerated"
+        "tail": "form"
       },
       "spellings": [
         "test-input"
@@ -137,15 +137,61 @@
     },
     {
       "cards": [],
-      "id": "tail.test_input",
-      "kind": "unenumerated",
+      "id": "test_input.form.read",
+      "kind": "admits",
       "reader": {
-        "path": "controller/src/cli.rs",
-        "symbol": "pub fn run"
+        "path": "controller/src/interface/commands.rs",
+        "symbol": "pub fn select_form"
       },
       "relationships": {
         "command": "command.test_input",
+        "tail": "unenumerated"
+      },
+      "spellings": [
+        "read"
+      ]
+    },
+    {
+      "cards": [],
+      "id": "tail.test_input.read",
+      "kind": "unenumerated",
+      "reader": {
+        "path": "controller/src/test_input.rs",
+        "symbol": "pub fn cmd_test_input"
+      },
+      "relationships": {
+        "form": "test_input.form.read",
         "rule": "unenumerated"
+      },
+      "spellings": []
+    },
+    {
+      "cards": [],
+      "id": "test_input.form.run",
+      "kind": "admits",
+      "reader": {
+        "path": "controller/src/interface/commands.rs",
+        "symbol": "pub fn select_form"
+      },
+      "relationships": {
+        "command": "command.test_input",
+        "tail": "run_arguments"
+      },
+      "spellings": [
+        "run"
+      ]
+    },
+    {
+      "cards": [],
+      "id": "test_input.unknown_form",
+      "kind": "refuses_always",
+      "reader": {
+        "path": "controller/src/test_input.rs",
+        "symbol": "pub fn cmd_test_input"
+      },
+      "relationships": {
+        "command": "command.test_input",
+        "rule": "form"
       },
       "spellings": []
     },
@@ -373,6 +419,166 @@
       },
       "spellings": [
         "--runner-mode"
+      ]
+    },
+    {
+      "cards": [],
+      "id": "run.control.worker_timeout_ms",
+      "kind": "admits",
+      "reader": {
+        "path": "controller/src/run_flow.rs",
+        "symbol": "fn parse_arguments"
+      },
+      "relationships": {
+        "form": "test_input.form.run",
+        "key": "worker_timeout_ms",
+        "repeated": "refused",
+        "value": {
+          "integer": "i64"
+        }
+      },
+      "spellings": [
+        "--worker-timeout-ms"
+      ]
+    },
+    {
+      "cards": [],
+      "id": "run.control.worker_pre_ready_hang_ms",
+      "kind": "admits",
+      "reader": {
+        "path": "controller/src/run_flow.rs",
+        "symbol": "fn parse_arguments"
+      },
+      "relationships": {
+        "form": "test_input.form.run",
+        "key": "worker_pre_ready_hang_ms",
+        "repeated": "refused",
+        "value": {
+          "integer": "i64"
+        }
+      },
+      "spellings": [
+        "--worker-pre-ready-hang-ms"
+      ]
+    },
+    {
+      "cards": [],
+      "id": "run.control.worker_post_apply_hang_ms",
+      "kind": "admits",
+      "reader": {
+        "path": "controller/src/run_flow.rs",
+        "symbol": "fn parse_arguments"
+      },
+      "relationships": {
+        "form": "test_input.form.run",
+        "key": "worker_post_apply_hang_ms",
+        "repeated": "refused",
+        "value": {
+          "integer": "i64"
+        }
+      },
+      "spellings": [
+        "--worker-post-apply-hang-ms"
+      ]
+    },
+    {
+      "cards": [],
+      "id": "run.control.worker_post_apply_kill_signal",
+      "kind": "admits",
+      "reader": {
+        "path": "controller/src/run_flow.rs",
+        "symbol": "fn parse_arguments"
+      },
+      "relationships": {
+        "form": "test_input.form.run",
+        "key": "worker_post_apply_kill_signal",
+        "repeated": "refused",
+        "value": {
+          "integer": "i64"
+        }
+      },
+      "spellings": [
+        "--worker-post-apply-kill-signal"
+      ]
+    },
+    {
+      "cards": [],
+      "id": "run.control.worker_kill_before_publish_slot",
+      "kind": "admits",
+      "reader": {
+        "path": "controller/src/run_flow.rs",
+        "symbol": "fn parse_arguments"
+      },
+      "relationships": {
+        "form": "test_input.form.run",
+        "key": "worker_kill_before_publish_slot",
+        "repeated": "refused",
+        "value": {
+          "integer": "i64"
+        }
+      },
+      "spellings": [
+        "--worker-kill-before-publish-slot"
+      ]
+    },
+    {
+      "cards": [],
+      "id": "run.control.validator_executable_path",
+      "kind": "admits",
+      "reader": {
+        "path": "controller/src/run_flow.rs",
+        "symbol": "fn parse_arguments"
+      },
+      "relationships": {
+        "form": "test_input.form.run",
+        "key": "validator_executable_path",
+        "repeated": "refused",
+        "value": {
+          "text": "utf8"
+        }
+      },
+      "spellings": [
+        "--validator-executable-path"
+      ]
+    },
+    {
+      "cards": [],
+      "id": "run.control.validator_io_timeout_ms",
+      "kind": "admits",
+      "reader": {
+        "path": "controller/src/run_flow.rs",
+        "symbol": "fn parse_arguments"
+      },
+      "relationships": {
+        "form": "test_input.form.run",
+        "key": "validator_io_timeout_ms",
+        "repeated": "refused",
+        "value": {
+          "integer": "i64"
+        }
+      },
+      "spellings": [
+        "--validator-io-timeout-ms"
+      ]
+    },
+    {
+      "cards": [],
+      "id": "run.control.validator_total_timeout_ms",
+      "kind": "admits",
+      "reader": {
+        "path": "controller/src/run_flow.rs",
+        "symbol": "fn parse_arguments"
+      },
+      "relationships": {
+        "form": "test_input.form.run",
+        "key": "validator_total_timeout_ms",
+        "repeated": "refused",
+        "value": {
+          "integer": "i64"
+        }
+      },
+      "spellings": [
+        "--validator-total-timeout-ms"
       ]
     },
     {

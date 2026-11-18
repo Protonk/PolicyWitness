@@ -848,20 +848,36 @@ fn client_argv(
     Ok(argv)
 }
 
+/// The arguments after the connection options: the experimental
+/// submission's controls object when there is one, then the request on
+/// standard input and the service.
+fn submission_arguments(service_name: &str, controls: Option<&str>) -> Vec<OsString> {
+    let mut argv: Vec<OsString> = Vec::new();
+    if let Some(controls) = controls {
+        argv.push("--experimental-controls".into());
+        argv.push(controls.into());
+    }
+    argv.push("--request".into());
+    argv.push("-".into());
+    argv.push(service_name.into());
+    argv
+}
+
 /// The deadline starts before resolution/spawn/stdin delivery, not when the
 /// helper finally begins acquiring a connection. There is one invocation.
+/// `controls` makes it the experimental submission; the request bytes are
+/// the same either way.
 pub fn run_pw_runner_client(
     service_name: &str,
     request: &str,
     timeout_ms: u64,
     connection: &RunnerConnectionKind,
+    controls: Option<&str>,
 ) -> Result<(RunnerClientRun, Option<PWRunnerRunResult>), String> {
     let timeout_ms = timeout_ms.max(1);
     let deadline = continuous_deadline(timeout_ms)?;
     let mut argv = client_argv(timeout_ms, deadline, connection)?;
-    argv.push("--request".into());
-    argv.push("-".into());
-    argv.push(service_name.into());
+    argv.extend(submission_arguments(service_name, controls));
     run_client_stdin(&argv, request.as_bytes().to_vec())
 }
 fn run_client_stdin(
@@ -1020,6 +1036,29 @@ mod tests {
                 REPLY_CAPTURE_BYTES as u64
             )])
         );
+    }
+    #[test]
+    fn only_an_experimental_submission_names_a_controls_object() {
+        let words = |controls: Option<&str>| -> Vec<String> {
+            submission_arguments("controlled.service", controls)
+                .iter()
+                .map(|word| word.to_string_lossy().into_owned())
+                .collect()
+        };
+        assert_eq!(words(None), ["--request", "-", "controlled.service"]);
+        // An empty object is still the experimental submission.
+        for controls in ["{}", r#"{"worker_timeout_ms":-3}"#] {
+            assert_eq!(
+                words(Some(controls)),
+                [
+                    "--experimental-controls",
+                    controls,
+                    "--request",
+                    "-",
+                    "controlled.service"
+                ]
+            );
+        }
     }
     #[test]
     fn strict_base64_rejects_noncanonical_or_ignored_bytes() {

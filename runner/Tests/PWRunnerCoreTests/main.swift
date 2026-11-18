@@ -40,6 +40,8 @@ runServiceAdmissionTests(tk)
 runReservationAdmissionTests(tk)
 // Bundle-local default selection and explicit validator override precedence.
 runValidatorSelectionTests(tk)
+// The experimental call: its controls object, the refused request block, and the record both calls give orchestration.
+runExperimentalSubmissionTests(tk)
 // Production host classifier fed constructed worker/validator results; the
 // evidence → normalized_outcome table. Real driver controls live below.
 runHostOutcomeClassifierTests(tk)

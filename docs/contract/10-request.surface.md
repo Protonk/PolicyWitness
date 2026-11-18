@@ -57,7 +57,7 @@ A non-null actor array selects the actor form; an empty array is refused. Each d
 
 ### _test_overrides {_test_overrides: field}
 
-Optional execution controls accepted by the host request decoder. Each declared control retains its stated scope and meaning; unknown override fields are refused.
+Optional execution controls accepted by the host request decoder. Each declared control retains its stated scope and meaning; unknown override fields are refused. In an [experimental submission](#contract-request-overrides-experimental) the block must be absent, null or empty: the controls travel beside the request.
 
 ### Hold and deliver the selected request {hold: acts}
 
@@ -543,7 +543,7 @@ record: "PWRunnerTestOverrides"
 as: "overrides"
 ```
 
-These controls are admitted as request data in the current implementation, including packaged hosts. Their names identify test use; the parser applies the documented grammar and capacities. Host admission of a positive fixture value can be followed by worker argument refusal before application.
+These controls are admitted as request data in the current implementation, including packaged hosts. Their names identify test use; the parser applies the documented grammar and capacities. Host admission of a positive fixture value can be followed by worker argument refusal before application. Eight of them can also be supplied outside the request, through an [experimental submission](#contract-request-overrides-experimental).
 
 ### worker_executable_path {worker_executable_path: field}
 
@@ -615,6 +615,81 @@ uses: ["equipment.binding"]
 ```
 
 A caller whose connection passes host authorization can supply these controls. Actor equipment preparation checks the packaged inventory and both packaged role bindings before considering fixture override bindings. It retains the packaged and test_override rows with their respective implementation identities.
+
+### Experimental submission {experimental: acts}
+
+```contract
+uses: ["refusals.request.consequence", "request.specimen.admission"]
+who: ["identity.definitions.host"]
+where: "experimental submission decode and admission"
+entry: ["xpc_execute"]
+recipient: ["caller", "report_reader"]
+report: ["runner_reply"]
+```
+
+An experimental submission is a separate host call. It carries the request and, beside it, one JSON object of controls. Which call arrived decides the form; no request field selects it.
+
+The controls object admits eight members: `worker_timeout_ms`, `worker_pre_ready_hang_ms`, `worker_post_apply_hang_ms`, `worker_post_apply_kill_signal`, `worker_kill_before_publish_slot`, `validator_executable_path`, `validator_io_timeout_ms` and `validator_total_timeout_ms`. Each has the type, scope and meaning of the field of the same name in this record, and a controls object yields the record that the same members yield in an ordinary request's block.
+
+The host decodes the request first, its contract before any other field. In that request, a `_test_overrides` block holding any member is refused with `inapplicable_field` at `_test_overrides`; a member whose value is null is a member. An absent, null or empty block is admitted. The host then decodes the controls object. An unknown member is refused with `unknown_field`; `worker_executable_path` and `actor_equipment_executable_paths` with `inapplicable_field`; a value of another type, or an integer outside the signed 64-bit range, with `type_mismatch`. Bytes that are not JSON are refused with `invalid_json`, a null with `missing_value` and any other value that is not an object with `type_mismatch`. A member whose value is null is absent. A refused control is located where the controls stand in the host's request: `_test_overrides` followed by the member name, or `_test_overrides` alone for the whole object.
+
+The decoded controls take the block's place, and the request then passes the ordinary capacity and meaning admission. The validator path keeps its <!-- span limits.test_override_path.value_unit -->1,023 UTF-8 bytes<!-- /span --> bound, its embedded-NUL refusal and the withheld echo of a refused string, reported as `_test_overrides.validator_executable_path`. The reply's `test_overrides` mirrors the admitted controls object; with no member supplied it is an empty object, where an ordinary submission without a block has none.
+
+#### Refusal consequence {failure: effect}
+
+```contract
+on: "failure"
+effects: perform(ref("refusals.request.consequence"), request)
+```
+
+#### Experimental admission support {support: owner}
+
+```contract
+grade: "check_read"
+source: [{"path": "runner/Sources/PWRunnerCore/PWRunnerAPI.swift", "symbol": "runReservedExperiment"}, {"path": "runner/Sources/PWRunnerCore/PWRunnerService.swift", "symbol": "decodeExperimentalSubmission"}, {"path": "runner/Sources/PWRunnerCore/PWRunnerService.swift", "symbol": "runSubmission"}, {"path": "runner/Sources/PWRunnerCore/PWRunnerRequest.swift", "symbol": "PWRunnerOverrideSource"}, {"path": "runner/Sources/PWRunnerCore/CWorkerRequestPlanning.swift", "symbol": "overridePathAdmissions"}, {"path": "runner/Clients/PWRunnerClient/PWRunnerClientSession.swift", "symbol": "submitExperiment"}]
+check: [{"path": "runner/Tests/PWRunnerCoreTests/ExperimentalSubmissionTests.swift", "symbol": "runExperimentalSubmissionTests", "form": "test"}, {"path": "runner/Tests/PWRunnerClientSessionTests/main.swift", "symbol": "runClientSessionControls", "form": "test"}, {"path": "tests/suites/witness_contract/check_test_input_seam.py", "symbol": "evaluate", "form": "test"}]
+pins: "Constructed submissions compare the decoded request, member by member and as a whole, with the ordinary request that carries the same block; refuse each listed member, type and container fault at its stated code and location; refuse a block with a value, a null member or an unselected member while the ordinary call still decodes it; decode the contract and request before the controls; and, through the service, show one admission, the controls in the reply echo, an empty echo for an empty object, a consumed host on each refusal, and the path bound, NUL refusal and withheld echo for the validator control. The client session makes the experimental call once, with the request and controls bytes unchanged, only when controls were given. The selected-app case reads one refused request block through the controller and one through the runner client, an admitted empty block, and a controls object delivered by the client."
+context: "Read the two submission calls, the decoder's three inputs, the shared capacity rule, the service unit tests, the client session controls and the selected-app checker."
+limits: "Check read; no execution is credited. Unit submissions call the service object without XPC and observe orchestration through a substituted closure. The selected-app case does not submit a malformed controls object, an unselected member or an overlong validator path through the client. Development runs of these checks exist and are disposable; release credit awaits an archived acceptance."
+```
+
+### Run with test controls {test_input_run: acts}
+
+```contract
+interface: ["command.test_input", "test_input.form.run", "run.control.worker_timeout_ms", "run.control.worker_pre_ready_hang_ms", "run.control.worker_post_apply_hang_ms", "run.control.worker_post_apply_kill_signal", "run.control.worker_kill_before_publish_slot", "run.control.validator_executable_path", "run.control.validator_io_timeout_ms", "run.control.validator_total_timeout_ms"]
+uses: ["request.specimen.hold", "request.overrides.experimental", "refusals.controller.consequence"]
+who: ["identity.definitions.controller"]
+where: "CLI test-input run dispatch"
+entry: ["cli_test_input_run"]
+recipient: ["caller", "report_reader"]
+report: ["run_envelope"]
+```
+
+`policy-witness test-input run [--timeout-ms N] [--runner-mode KIND] [CONTROL VALUE]... REQUEST` performs the `run` command's preparation, delivery, reply admission and result selection, and prints the same `kind: "run"` envelope with the same exit statuses. Every rule stated for the `cli run` entry applies to it. It differs in two respects.
+
+It makes the experimental submission. The client receives the held request unchanged and a controls object with one member for each control given, and no member when none was given. The controller does not read the request's `_test_overrides` block for this purpose and refuses none: the host owns that refusal.
+
+The dossier's validator record observes the file `--validator-executable-path` names, under the [rules of the request key](#contract-dossier-collection): a value beyond <!-- span limits.test_override_path.value_unit -->1,023 UTF-8 bytes<!-- /span --> is neither echoed nor opened, an empty or relative value is recorded without a hash, and the packaged validator's own path needs no comparison. The request's validator key is not read on this command.
+
+A control is spelled `--` and its member name with hyphens: `--worker-timeout-ms`, `--worker-pre-ready-hang-ms`, `--worker-post-apply-hang-ms`, `--worker-post-apply-kill-signal`, `--worker-kill-before-publish-slot`, `--validator-executable-path`, `--validator-io-timeout-ms` and `--validator-total-timeout-ms`. An integer control takes one signed 64-bit decimal and is delivered as written. The controller applies no control's range, so a value the host floors or the worker's argument grammar refuses is submitted and judged there. `--validator-executable-path` takes the next argument as UTF-8 text, whatever it is. A control without a value, a value of another form, a repeated control and any other flag are refused before the request is read, with no client invocation. `run` admits none of these flags.
+
+#### Refused arguments {usage: effect}
+
+```contract
+on: "failure"
+effects: perform(ref("refusals.controller.consequence"), envelope)
+```
+
+#### Command support {support: owner}
+
+```contract
+grade: "check_read"
+source: [{"path": "controller/src/interface/run_args.rs", "symbol": "pub fn classify"}, {"path": "controller/src/interface/commands.rs", "symbol": "pub fn select_form"}, {"path": "controller/src/test_input.rs", "symbol": "pub fn cmd_test_input"}, {"path": "controller/src/run_flow.rs", "symbol": "fn parse_arguments"}, {"path": "controller/src/run_flow.rs", "symbol": "fn controls_object"}, {"path": "controller/src/runner_client.rs", "symbol": "fn submission_arguments"}, {"path": "controller/src/dossier.rs", "symbol": "pub fn observe_with_validator_control"}]
+check: [{"path": "controller/src/run_flow.rs", "symbol": "control_spellings_are_their_keys_and_only_test_input_run_admits_them", "form": "test"}, {"path": "controller/src/run_flow.rs", "symbol": "integer_controls_pass_every_signed_64_bit_decimal_through_unchanged", "form": "test"}, {"path": "controller/src/run_flow.rs", "symbol": "malformed_control_syntax_is_refused_before_any_run_work", "form": "test"}, {"path": "controller/src/run_flow.rs", "symbol": "test_input_run_delivers_the_held_request_unchanged_and_the_controls_beside_it", "form": "test"}, {"path": "controller/src/run_flow.rs", "symbol": "test_input_run_usage_refusals_invoke_no_client_and_read_no_app_root", "form": "test"}, {"path": "controller/src/runner_client.rs", "symbol": "only_an_experimental_submission_names_a_controls_object", "form": "test"}, {"path": "controller/src/dossier.rs", "symbol": "validator_control_follows_the_request_key_rules_and_names_the_flag", "form": "test"}, {"path": "controller/integration/cli_contract.rs", "symbol": "interface_cases_hold_on_the_signed_controller", "form": "test"}, {"path": "tests/suites/witness_contract/check_test_input_seam.py", "symbol": "evaluate", "form": "test"}]
+pins: "Each control is admitted only by this command and carries its member name; every signed 64-bit decimal, including values beyond each control's own range, reaches the controls object as written; values of another form, missing values, repeated controls and other flags are refused with the stated diagnostics before the app root is read and with no client call. Controlled orchestration delivers the same held request as `run` with the controls beside it, an empty object when none is given, and a request block as written; the validator record follows the control and not the request key. The case corpus holds the refusals and one admitted submission on the selected app. The selected-app case submits each control, compares the recorded command and delivered request with what it planned, and reads the echo apart from the host's or worker's own observation of the control."
+context: "Read the definitions, the form dispatch, the argument parser, the controls encoder, the client argument, the dossier selection, their unit tests, the case corpus and the selected-app checker."
+limits: "Check read; no execution is credited. Controlled orchestration replaces the client with a recording closure. The selected-app case observes one value per control; it does not vary the actor form, external runners or every refusal through a submission. No check observes that usage refusals start no process other than through the envelope's null client capture. Development runs of these checks exist and are disposable; release credit awaits an archived acceptance."
+```
 
 ### Fixture-value support {disposition_support: owner}
 

@@ -227,6 +227,70 @@ def argument_text(argument, errors='strict'):
         return None
 
 
+def run_arguments(tail, entries, form=None):
+    """The entries `run`'s argument rule reaches in `tail`; `form` names the form whose controls are admitted too."""
+    options = {entry['spellings'][0]: entry for entry in entries.values() if entry['id'].startswith('run.option.')}
+    controls = {entry['spellings'][0]: entry for entry in entries.values()
+                if entry['id'].startswith('run.control.') and entry['relationships']['form'] == form}
+    prefix = entries['run.unknown_flag']['relationships']['flag_prefix']
+    terminator = entries['run.terminator']['spellings'][0]
+    reached, seen = [], set()
+    index = 0
+    has_path = False
+    while index < len(tail):
+        argument = argument_text(tail[index], errors='replace')
+        if argument == terminator:
+            reached.append('run.terminator')
+            break
+        if not argument.startswith(prefix):
+            reached.append('run.request_path')
+            if has_path:
+                break
+            has_path = True
+            index += 1
+            continue
+        value = argument_text(tail[index + 1]) if index + 1 < len(tail) else None
+        if argument in controls:
+            reached.append(controls[argument]['id'])
+            rule = controls[argument]['relationships']['value']
+            if argument in seen or not isinstance(value, str):
+                break
+            seen.add(argument)
+            if 'integer' in rule:
+                # Rust's i64 parser accepts ASCII decimal digits and one optional sign.
+                if (rule['integer'] != 'i64' or not re.fullmatch(r'[+-]?[0-9]+', value)
+                        or len(value.lstrip('+-0')) > 19 or not -2**63 <= int(value) <= 2**63 - 1):
+                    break
+            elif 'text' not in rule:
+                raise ValueError(f'no case derivation for control value rule: {rule}')
+            index += 2
+            continue
+        if argument not in options:
+            reached.append('run.unknown_flag')
+            break
+        reached.append(options[argument]['id'])
+        rule = options[argument]['relationships']['value']
+        reader = rule.get('runner_kind_reader')
+        word = next((entry for entry in entries.values() if reader and isinstance(value, str)
+                     and entry['id'].startswith('runner_kind.') and entry['id'].endswith('@' + reader)
+                     and entry['spellings'] == [value]), None)
+        if word:
+            reached.append(word['id'])
+        if reader:
+            if not word or word['kind'] not in ('admits', 'alias'):
+                break
+        elif 'milliseconds' in rule:
+            # Rust's u64 parser accepts ASCII decimal digits and an optional +.
+            if (not isinstance(value, str) or not re.fullmatch(r'\+?[0-9]+', value)
+                    or len(value.lstrip('+0')) > 20
+                    or not rule['milliseconds']['min'] <= int(value.lstrip('+0') or '0') <= 2**64 - 1):
+                break
+        else:
+            raise ValueError(f'no case derivation for option value rule: {rule}')
+        index += 2
+    return reached
+
+
 def exercised(arguments, inventory):
     """The entries one argument vector reaches, derived from the spellings and rules the inventory records."""
     entries = {entry['id']: entry for entry in inventory['entries']}
@@ -247,47 +311,18 @@ def exercised(arguments, inventory):
         if tail:
             reached.append('tail.' + name)
     elif rule == 'run_arguments':
-        options = {entry['spellings'][0]: entry for entry in entries.values() if entry['id'].startswith('run.option.')}
-        prefix = entries['run.unknown_flag']['relationships']['flag_prefix']
-        terminator = entries['run.terminator']['spellings'][0]
-        index = 0
-        has_path = False
-        while index < len(tail):
-            argument = argument_text(tail[index], errors='replace')
-            if argument == terminator:
-                reached.append('run.terminator')
-                break
-            if not argument.startswith(prefix):
-                reached.append('run.request_path')
-                if has_path:
-                    break
-                has_path = True
-                index += 1
-                continue
-            if argument not in options:
-                reached.append('run.unknown_flag')
-                break
-            reached.append(options[argument]['id'])
-            rule = options[argument]['relationships']['value']
-            reader = rule.get('runner_kind_reader')
-            value = argument_text(tail[index + 1]) if index + 1 < len(tail) else None
-            word = next((entry for entry in entries.values() if reader and isinstance(value, str)
-                         and entry['id'].startswith('runner_kind.') and entry['id'].endswith('@' + reader)
-                         and entry['spellings'] == [value]), None)
-            if word:
-                reached.append(word['id'])
-            if reader:
-                if not word or word['kind'] not in ('admits', 'alias'):
-                    break
-            elif 'milliseconds' in rule:
-                # Rust's u64 parser accepts ASCII decimal digits and an optional +.
-                if (not isinstance(value, str) or not re.fullmatch(r'\+?[0-9]+', value)
-                        or len(value.lstrip('+0')) > 20
-                        or not rule['milliseconds']['min'] <= int(value.lstrip('+0') or '0') <= 2**64 - 1):
-                    break
-            else:
-                raise ValueError(f'no case derivation for option value rule: {rule}')
-            index += 2
+        reached += run_arguments(tail, entries)
+    elif rule == 'form':
+        forms = {entry['spellings'][0]: entry for entry in entries.values() if entry['id'].startswith(name + '.form.')}
+        form = forms.get(argument_text(tail[0]) if tail else None)
+        if form is None:
+            reached.append(name + '.unknown_form')
+        else:
+            reached.append(form['id'])
+            if form['relationships']['tail'] == 'run_arguments':
+                reached += run_arguments(tail[1:], entries, form['id'])
+            elif form['relationships']['tail'] == 'unenumerated' or tail[1:]:
+                reached.append(f'tail.{name}.' + form['id'].rsplit('.', 1)[1])
     elif rule == 'unenumerated' or tail:
         reached.append('tail.' + name)
     return list(dict.fromkeys(reached))

@@ -31,6 +31,12 @@
             "run.unknown_flag"
           ]
         },
+        "pub fn cmd_test_input": {
+          "count": 1,
+          "members": [
+            "test_input.unknown_form"
+          ]
+        },
         "pub fn run": {
           "count": 3,
           "members": [
@@ -41,11 +47,16 @@
         }
       },
       "unenumerated": {
-        "pub fn run": {
-          "count": 2,
+        "pub fn cmd_test_input": {
+          "count": 1,
           "members": [
-            "tail.runner",
-            "tail.test_input"
+            "tail.test_input.read"
+          ]
+        },
+        "pub fn run": {
+          "count": 1,
+          "members": [
+            "tail.runner"
           ]
         }
       }
@@ -59,7 +70,7 @@
       ]
     },
     "referenced_by_no_card": {
-      "count": 24,
+      "count": 35,
       "members": [
         "command.help",
         "command.runner",
@@ -67,6 +78,14 @@
         "command.version",
         "command.version_flag",
         "result.admitted_other",
+        "run.control.validator_executable_path",
+        "run.control.validator_io_timeout_ms",
+        "run.control.validator_total_timeout_ms",
+        "run.control.worker_kill_before_publish_slot",
+        "run.control.worker_post_apply_hang_ms",
+        "run.control.worker_post_apply_kill_signal",
+        "run.control.worker_pre_ready_hang_ms",
+        "run.control.worker_timeout_ms",
         "run.option.timeout_ms",
         "run.request_path",
         "run.terminator",
@@ -82,9 +101,12 @@
         "tail.example",
         "tail.help",
         "tail.runner",
-        "tail.test_input",
+        "tail.test_input.read",
         "tail.version",
-        "tail.version_flag"
+        "tail.version_flag",
+        "test_input.form.read",
+        "test_input.form.run",
+        "test_input.unknown_form"
       ]
     },
     "token_exceptions": {
@@ -92,7 +114,16 @@
       "members": []
     }
   },
-  "expansions": [],
+  "expansions": [
+    {
+      "exposed": [
+        "tail.test_input.read",
+        "test_input.form.read",
+        "test_input.unknown_form"
+      ],
+      "replaced": "tail.test_input"
+    }
+  ],
   "identifiers": [
     "command.example",
     "command.help",
@@ -109,6 +140,14 @@
     "result.fields",
     "result.local_request_refusal",
     "result.tool_failure",
+    "run.control.validator_executable_path",
+    "run.control.validator_io_timeout_ms",
+    "run.control.validator_total_timeout_ms",
+    "run.control.worker_kill_before_publish_slot",
+    "run.control.worker_post_apply_hang_ms",
+    "run.control.worker_post_apply_kill_signal",
+    "run.control.worker_pre_ready_hang_ms",
+    "run.control.worker_timeout_ms",
     "run.option.runner_mode",
     "run.option.timeout_ms",
     "run.request_path",
@@ -127,9 +166,12 @@
     "tail.example",
     "tail.help",
     "tail.runner",
-    "tail.test_input",
+    "tail.test_input.read",
     "tail.version",
     "tail.version_flag",
+    "test_input.form.read",
+    "test_input.form.run",
+    "test_input.unknown_form",
     "topic.example",
     "topic.result",
     "topic.run"

@@ -609,7 +609,7 @@ fn cmd_runner_verify(args: &[OsString]) -> Result<i32, String> {
     };
     runner_manager::require_current_contract(&record.contract)?;
     let (client, runner_result) =
-        run_pw_runner_client(&record.service_name, &held, timeout_ms, &connection)?;
+        run_pw_runner_client(&record.service_name, &held, timeout_ms, &connection, None)?;
     let (runner_pid, outcome, exit_code, error) =
         match crate::run_flow::admit_reply(&client, runner_result.as_ref()) {
             crate::run_flow::ReplyAdmission::DeliveryFailed(error) => {
@@ -957,6 +957,7 @@ mod verify_tests {
             "{}",
             1,
             &RunnerConnectionKind::XpcService,
+            None,
         ) {
             Ok(_) => panic!("a missing client cannot be invoked"),
             Err(error) => error,

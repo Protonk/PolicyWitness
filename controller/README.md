@@ -21,8 +21,8 @@ See [AGENTS.md](AGENTS.md) for working guidance and the
 | Area | Sources and responsibility |
 | --- | --- |
 | CLI and orchestration | [main.rs](src/main.rs), [cli.rs](src/cli.rs), [run_flow.rs](src/run_flow.rs): dispatch, run preparation and envelope assembly; [help.rs](src/help.rs): the stored help cards. |
-| Interface definitions | [src/interface/](src/interface/): the command, topic, `run` option, runner-kind and result tables that dispatch, parsing, every kind reader and result selection read; [run_result.rs](src/run_result.rs): the result a selection determines; [build.rs](build.rs) with [interface/](interface/README.md): the build-time card renderer, the committed inventory, its joins and residue baseline. |
-| Requests | [request_patch.rs](src/request_patch.rs): parsing, contract admission and structured refusals; [example.rs](src/example.rs) and [example_document.rs](src/example_document.rs): the build's example specimen and its emitter; [test_input.rs](src/test_input.rs) and [test_inputs/](src/test_inputs/): embedded developer input and target materialization; [runner_select.rs](src/runner_select.rs): selector validation and runner resolution; [augments.rs](src/augments.rs): named policy augmentation. |
+| Interface definitions | [src/interface/](src/interface/): the command, topic, `test-input` form, `run` option, test-control, runner-kind and result tables that dispatch, parsing, every kind reader and result selection read; [run_result.rs](src/run_result.rs): the result a selection determines; [build.rs](build.rs) with [interface/](interface/README.md): the build-time card renderer, the committed inventory, its joins and residue baseline. |
+| Requests | [request_patch.rs](src/request_patch.rs): parsing, contract admission and structured refusals; [example.rs](src/example.rs) and [example_document.rs](src/example_document.rs): the build's example specimen and its emitter; [test_input.rs](src/test_input.rs) and [test_inputs/](src/test_inputs/): `test-input` form dispatch, embedded developer input and target materialization; [runner_select.rs](src/runner_select.rs): selector validation and runner resolution; [augments.rs](src/augments.rs): named policy augmentation. |
 | Reply transport and interpretation | [runner_client.rs](src/runner_client.rs): one Swift-client invocation and separate client/host capture admission; [porcelain_admission.rs](src/porcelain_admission.rs): typed worker/actor admission and projection; [json_contract.rs](src/json_contract.rs): envelope rendering. |
 | Provenance | [dossier.rs](src/dossier.rs), [evidence.rs](src/evidence.rs), [digest.rs](src/digest.rs), [host_facts.rs](src/host_facts.rs): specimen records, manifest lookup, hashes and host facts. |
 | Policy inspection | [policy_check.rs](src/policy_check.rs): independent compile-check capture; [sbpl_imports.rs](src/sbpl_imports.rs) and [sbpl_lex.rs](src/sbpl_lex.rs): bounded import scan and lexer, shared with `sbpl-check`. |
@@ -102,6 +102,10 @@ when it is writable and never changes the status. The
 [example rule](../docs/REQUEST.md#contract-request-specimen-emit_example)
 states the public promise.
 
+`test-input` takes one of two forms, selected by the whole next argument:
+`read` or `run`. Any other argument there, or none, is exit 2 with one line on
+stderr and an empty stdout.
+
 `test-input read` publishes one build-bound developer read input with this
 binary's contract and the supplied absolute UTF-8 target. It checks the
 positions it assigns in the embedded body before inserting the target into its
@@ -114,6 +118,27 @@ stderr when available. The [publication rule](../docs/REQUEST.md#contract-reques
 defines these promises. Ordinary `run` owns admission and execution; fixture
 preparation, expected results and independent observations belong to the harness.
 
+`test-input run` takes `run`'s arguments and, beside them, eight test controls:
+`--worker-timeout-ms`, `--worker-pre-ready-hang-ms`,
+`--worker-post-apply-hang-ms`, `--worker-post-apply-kill-signal`,
+`--worker-kill-before-publish-slot`, `--validator-executable-path`,
+`--validator-io-timeout-ms` and `--validator-total-timeout-ms`. It is
+[`run`](#run) with one difference in delivery: the client is invoked with
+`--experimental-controls` and a JSON object holding one member for each control
+given, so the host receives the experimental submission and the held request
+carries no control. With no control the object is empty. An integer control
+takes one signed 64-bit decimal and is delivered as written; each control's own
+range is applied by the host or the worker. `--validator-executable-path` takes
+the next argument as UTF-8 text. A control without a value, a value of another
+form, a repeated control and an unknown flag are refused as `run`'s argument
+errors are, with a `tool_error` envelope and no client invocation. `run` admits
+none of the controls. The dossier's validator record reads
+`--validator-executable-path` where `run` reads the request's
+`_test_overrides.validator_executable_path`. The
+[command rule](../docs/REQUEST.md#contract-request-overrides-test_input_run)
+and the host's [admission rule](../docs/REQUEST.md#contract-request-overrides-experimental)
+state both sides.
+
 `--timeout-ms` sets the runner client's wait budget. `PW_VERIFY_EVIDENCE=1` adds manifest hash verification under
 `data.specimen.app_provenance.evidence_verify`.
 
@@ -123,7 +148,8 @@ preparation, expected results and independent observations belong to the harness
    named augments, and collect the specimen dossier from the selected source.
 2. Remove controller-owned selection fields and serialize the resolved request
    once. Deliver those held bytes to `pw-runner-client run --request -` on stdin;
-   no temporary request file is written.
+   no temporary request file is written. `test-input run` adds
+   `--experimental-controls` and its controls object to that one invocation.
 3. Invoke one client with the original absolute deadline. It acquires an
    effect-free reservation, then invokes execution once on the same connection.
    Acquisition can reconnect before submission; invocation permanently ends
@@ -164,7 +190,10 @@ advertised execution protocol. Neither reads an
 `Info.plist`: service names come from the manifest or registry.
 
 The controller launches `pw-runner-client` for the selected run, `sbpl-check`
-only after an admitted client terminal `xpc_error`. PlistBuddy, codesign, plutil, id and launchctl
+only after an admitted client terminal `xpc_error`. `test-input run` reads and
+launches the same things: its controls reach the client as one argument, and
+its validator record hashes the file its validator control names, as `run`
+hashes the file the request key names. PlistBuddy, codesign, plutil, id and launchctl
 belong to the separately dispatched `runner` commands; `bundle::read_bundle_info`
 is used only by install.
 

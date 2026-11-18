@@ -88,6 +88,8 @@ creates no validator spawn failure.
    lifecycle despite client loss. Every callback checks the shared state before
    scheduling exit. The client retries only acquisition; it never replays after
    invoking execution. Reservation credentials remain inside the connection.
+   Execution is one of two calls: `runReservedSpecimen` with the request, or
+   `runReservedExperiment` with the request and a controls object beside it.
 2. The service decodes and admits the request and validates meaning before
    creating children. `probe_plan` becomes one phase named `main`; explicit
    phases share one total action capacity. The worker receives policy bytes on
@@ -297,6 +299,28 @@ their upper bounds. A rejected native argument can stop the child before the
 intended seam. Failed signal delivery or a nonfatal/ignored signal can return
 and allow `done` publication; requesting a signal proves neither termination
 nor policy cause.
+
+Eight of the controls can also be supplied outside the request:
+`worker_timeout_ms`, `worker_pre_ready_hang_ms`, `worker_post_apply_hang_ms`,
+`worker_post_apply_kill_signal`, `worker_kill_before_publish_slot`,
+`validator_executable_path`, `validator_io_timeout_ms` and
+`validator_total_timeout_ms`. `pw-runner-client run --experimental-controls
+<JSON object>` delivers the object beside the unchanged request through
+`runReservedExperiment`, and `policy-witness test-input run` builds that object
+from its control flags.
+[`decodeExperimentalSubmission`](Sources/PWRunnerCore/PWRunnerService.swift)
+decodes the request, then the controls with the block's own decoder restricted
+to those eight members, and puts the result where the block would be.
+Admission, the orchestrators, the echo and refusal sanitization then read one
+record whichever call supplied it. The request of an experimental submission
+may carry an absent, null or empty block; a block with any member, a null
+member included, is refused with `inapplicable_field` at `_test_overrides`. A
+refused controls member is located under `_test_overrides` too, and a member of
+the block that is not one of the eight is `inapplicable_field` there. With no
+member the echo is an empty object. Both calls carry the eight controls: a
+request block submitted through `runReservedSpecimen` still admits every key
+in the table. The [admission rule](../docs/REQUEST.md#contract-request-overrides-experimental)
+is the public statement.
 
 This is the single override-key reference. The
 [drift check](../tests/suites/source_drift/README.md) compares its keys with

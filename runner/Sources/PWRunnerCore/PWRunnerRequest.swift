@@ -220,6 +220,10 @@ struct PWRunnerPhase: Codable {
 // runner/README.md's "Test seam: `_test_overrides`" is the key/boundary
 // reference, including host resolution and native argument admission. The
 // adjacent AGENTS.md gives the assertion recipe and rules for new controls.
+//
+// The same record is decoded from three inputs. An ordinary submission's
+// request block is the default. `PWRunnerOverrideSource` names the two inputs
+// of an experimental submission, whose rules are stated at its cases.
 struct PWRunnerTestOverrides: Codable {
     // BEGIN GENERATED PORCELAIN PWRunnerTestOverrides
     var worker_executable_path: String?
@@ -266,6 +270,18 @@ struct PWRunnerTestOverrides: Codable {
     init(from decoder: Decoder) throws {
         let c = try decoder.container(keyedBy: CodingKeys.self)
         try rejectUnknownRequestKeys(CodingKeys.self, from: decoder)
+        // Presence is read from the submitted object, so a member whose value
+        // is null is present.
+        let location = decoder.codingPath.map { $0.stringValue }
+        switch decoder.userInfo[.overrideSource] as? PWRunnerOverrideSource {
+        case .experimentalRequestBlock:
+            if !c.allKeys.isEmpty { throw PWRunnerRequestFailure(code: "inapplicable_field", path: location) }
+        case .experimentalControls:
+            if let key = CodingKeys.allCases.first(where: { c.contains($0) && !Self.experimentalControls.contains($0) }) {
+                throw PWRunnerRequestFailure(code: "inapplicable_field", path: location + [key.stringValue])
+            }
+        case nil: break
+        }
         func optionalInteger(_ key: CodingKeys) throws -> Int? {
             do { return try c.decodeIfPresent(Int.self, forKey: key) }
             catch {
@@ -295,6 +311,26 @@ struct PWRunnerTestOverrides: Codable {
         worker_kill_before_publish_slot = try optionalInteger(.worker_kill_before_publish_slot)
     }
 
+}
+
+/// The input of an experimental submission a `PWRunnerTestOverrides` value is
+/// decoded from. An ordinary submission's request block has no source value.
+enum PWRunnerOverrideSource {
+    /// The request's own `_test_overrides` block. Any member refuses the
+    /// request; an empty block is admitted.
+    case experimentalRequestBlock
+    /// The controls object. Its members are `experimentalControls`; another
+    /// member of the record is inapplicable there.
+    case experimentalControls
+}
+
+extension PWRunnerTestOverrides {
+    /// The members an experimental submission's controls object may carry.
+    static let experimentalControls: [CodingKeys] = [
+        .worker_timeout_ms, .worker_pre_ready_hang_ms, .worker_post_apply_hang_ms,
+        .worker_post_apply_kill_signal, .worker_kill_before_publish_slot,
+        .validator_executable_path, .validator_io_timeout_ms, .validator_total_timeout_ms,
+    ]
 }
 
 struct PWRunnerPolicySpec: Codable {

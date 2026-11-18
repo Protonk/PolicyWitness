@@ -118,7 +118,7 @@ test: implies(control.status == "reservation_refused", absent(control.attempt_id
 ```contract
 effects: set_value(capture.submission.state, "invoked")
 who: ["identity.definitions.client"]
-where: "runReservedSpecimen invocation on the granting connection"
+where: "runReservedSpecimen or runReservedExperiment invocation on the granting connection"
 entry: ["cli_run", "runner_verify"]
 recipient: ["runner_host"]
 report: ["client_capture"]
@@ -127,7 +127,7 @@ free.effect: Record the sampled invocation elapsed time before acquiring/calling
 retained_free: {"condition": {"kind": "native_protocol", "reason": "Invocation eligibility uses a fresh continuous-clock sample after an admitted grant, not the final reported elapsed time."}, "effect": {"kind": "native_protocol", "reason": "The sampled elapsed time, publication-before-proxy ordering and once-only invocation are live session events. The invoked field records this client call boundary."}}
 ```
 
-The host checks the connection-bound credential before interpreting the specimen. A transport error after invocation leaves receipt and execution uncertain until independent observations resolve them.
+The host checks the connection-bound credential before interpreting the specimen. A session invoked with a controls object makes the [experimental submission](#contract-request-overrides-experimental) through `runReservedExperiment`, with the request bytes unchanged and the controls bytes as given; any other session calls `runReservedSpecimen`. It makes one of the two calls, once. A transport error after invocation leaves receipt and execution uncertain until independent observations resolve them.
 
 ### Apply the original allowance {deadline: acts}
 

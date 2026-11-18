@@ -10,8 +10,8 @@ private func die(_ message: String, code: Int32) -> Never {
 private func usage() -> String {
     """
     usage:
-      pw-runner-client run [--timeout-ms <n>] [--deadline-ticks <n>] [--mach-service] [--privileged] <xpc-service-name> <request.json>
-      pw-runner-client run [--timeout-ms <n>] [--deadline-ticks <n>] [--mach-service] [--privileged] --request - <xpc-service-name>
+      pw-runner-client run [--timeout-ms <n>] [--deadline-ticks <n>] [--mach-service] [--privileged] [--experimental-controls <json-object>] <xpc-service-name> <request.json>
+      pw-runner-client run [--timeout-ms <n>] [--deadline-ticks <n>] [--mach-service] [--privileged] [--experimental-controls <json-object>] --request - <xpc-service-name>
 
     notes:
       - the first form reads the request from the named file; the second reads it from stdin to EOF.
@@ -20,6 +20,8 @@ private func usage() -> String {
       - acquisition may retry within the allowance; submission is never replayed.
       - --deadline-ticks is an absolute mach_continuous_time deadline from the caller.
       - use --mach-service for Mach services; add --privileged for system scope.
+      - --experimental-controls makes the experimental submission: the object's test controls
+        are delivered beside the unchanged request, and the host admits or refuses them.
     """
 }
 
@@ -53,6 +55,7 @@ private func run(args: [String]) -> Never {
     var useMachService = false
     var privileged = false
     var requestFromStdin = false
+    var experimentalControls: Data?
 
     var idx = 0
     while idx < args.count {
@@ -83,6 +86,12 @@ private func run(args: [String]) -> Never {
         case "--privileged":
             privileged = true
             idx += 1
+        case "--experimental-controls":
+            // Delivered as given: the host decodes and admits the object.
+            guard idx + 1 < args.count else { die("missing value for --experimental-controls", code: 2) }
+            guard experimentalControls == nil else { die("duplicate --experimental-controls", code: 2) }
+            experimentalControls = Data(args[idx + 1].utf8)
+            idx += 2
         case "--request":
             // Only `-` is accepted here: the positional request argument remains
             // the literal file path form, and the two forms never mix.
@@ -121,7 +130,7 @@ private func run(args: [String]) -> Never {
     let queue = DispatchQueue(label: "PolicyWitness.runner-client-session")
     let finished = DispatchSemaphore(value: 0)
     var result: PWRunnerClientCapture?
-    let session = PWRunnerClientSession(request: requestBytes, timeoutMs: UInt64(timeoutMs),
+    let session = PWRunnerClientSession(request: requestBytes, controls: experimentalControls, timeoutMs: UInt64(timeoutMs),
         deadlineNs: deadlineTicks.map(PWContinuousClock.nanoseconds),
         enqueue: { work in queue.async(execute: work) },
         schedule: { milliseconds, work in queue.asyncAfter(deadline: .now() + .milliseconds(milliseconds), execute: work) },

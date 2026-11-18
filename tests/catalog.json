@@ -1635,7 +1635,7 @@
         },
         {
           "id": "test_input",
-          "description": "Build-owned read publication with exact target binding, thirteen controlled passages, replacement generations, content boundaries, crossed operands, returning actors and independent distinction table",
+          "description": "Build-owned read publication with exact target binding, thirteen controlled passages, replacement generations, content boundaries, crossed operands, returning actors and independent distinction table; then test-input run submissions of that input with each test control, its neighbours and its refusals",
           "command": [
             "bash",
             "tests/suites/witness_contract/test_input.sh"
@@ -1647,7 +1647,7 @@
         },
         {
           "id": "test_input_controls",
-          "description": "Offline ordinary and two-actor captures, accepted distinctions, exact diagnostics, preparation and cleanup controls for the read input",
+          "description": "Offline ordinary and two-actor captures, accepted distinctions, exact diagnostics, preparation and cleanup controls for the read input, and constructed records for the test-input run checker",
           "command": [
             "bash",
             "tests/suites/witness_contract/test_input_controls.sh"

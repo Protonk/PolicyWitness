@@ -4,9 +4,10 @@ The interface inventory: a committed, machine-readable record of every
 definition that governs the controller's command line and `run` result,
 together with the build-time code that renders it and the help cards.
 The definitions themselves are Rust tables in
-[../src/interface/](../src/interface/); dispatch, help selection, `run`'s
-argument parser, every reader of the runner-kind vocabulary and result
-selection read them. The [controller README](../README.md#cli-surface-contract)
+[../src/interface/](../src/interface/); dispatch, help selection, the
+`test-input` form selection, the argument parser `run` and `test-input run`
+share, every reader of the runner-kind vocabulary and result selection read
+them. The [controller README](../README.md#cli-surface-contract)
 describes the command line they produce.
 
 | File | Owner | Content |
@@ -56,7 +57,8 @@ Each entry of `entries` records:
 - `spellings`: what the reader compares an argument or value with; empty for
   a rule that has no spelling of its own, such as the request path.
 - `relationships`: the command an option belongs to, an option's value rule,
-  a command's tail rule, the kind a word resolves to.
+  a command's or a form's tail rule, the form a test control belongs to with
+  its member name and value rule, the kind a word resolves to.
 - `reader`: the path and symbol of the code whose behavior the entry
   describes, and for a runner-kind word the reader it is qualified by.
 - `kind`: the admission kind, taken from the value dispatch or parsing acts
@@ -66,9 +68,13 @@ Each entry of `entries` records:
   arguments go to a parser whose definitions are not in the tables.
 - `cards`: the cards that reference the entry, possibly none.
 
-Enumeration covers top-level dispatch, help selection, all of `run`'s
-argument handling and the runner-kind vocabulary for its four readers. The
-`runner` and `test-input` tails are one `unenumerated` entry each.
+Enumeration covers top-level dispatch, help selection, the forms of
+`test-input`, all of the argument handling of `run` and `test-input run`, and
+the runner-kind vocabulary for its four readers. A `run.control` entry is an
+argument of `test-input run` alone: under `run` its spelling is an unknown
+flag, and the inventory writer refuses a definition that classifies otherwise.
+The `runner` tail and the tail of `test-input read` are one `unenumerated`
+entry each. No card references a form or a control.
 
 `result` holds the relation that selects `result.normalized_outcome`,
 `result.ok` and the one exit status that is both `result.exit_code` and the
@@ -118,7 +124,9 @@ applicability and free conditions that the join leaves uncompared.
 [case corpus](../integration/interface_cases.json) with the entries it
 reaches. The association is derived from the case's argument vector, a
 successful `example` and, for a `run` envelope, the three required result
-fields. Argument derivation stops at the first refusal or terminator.
+fields. Argument derivation stops at the first refusal or terminator; for a
+control that is a missing value, a value its rule does not admit or a second
+occurrence.
 Where two rows select the same fields, or a word is read beyond the
 enumerated CLI, `mutations.json` holds a declared association with its
 reason. Request-file staging alone establishes no reader reach: request

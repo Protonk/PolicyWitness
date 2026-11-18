@@ -80,6 +80,18 @@ program write and launch nothing; that a delivered request rewritten after its
 intent is not launched; and that the command form returns the submission's
 status, 128 plus a signal number, and 70 for its own refusal.
 
+On the experimental route the controls check that a capture's command is
+`test-input run`, the request path, one flag and value per control and the
+caller's arguments, in `invocation.json` and in `capture.json`; that the
+delivered request is the ordinary request byte for byte, with no control in
+it; that no controls and a request carrying its own `_test_overrides` block
+are submitted as given; that the client receives the controls as one
+`--experimental-controls` object and the controller as flags, on standard
+input and from a path; that the record names `experimental_cli` or
+`experimental_client`; that an unselected key, a capture through the client
+and an unknown route write and launch nothing; and that the command form
+takes `--route experimental`.
+
 Artifacts add `seam/`, `seam-invocations/`, `seam-assertions.log` and
 `seam/seam-controls.json`.
 

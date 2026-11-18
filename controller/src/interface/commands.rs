@@ -24,6 +24,9 @@ pub enum Tail {
     RunArguments,
     /// Any argument is refused.
     RefusesAny,
+    /// The first argument selects one of the command's forms; the form's
+    /// own rule governs the arguments after it.
+    Form,
     /// The command's own parser receives the arguments; its definitions are
     /// not enumerated here.
     Unenumerated,
@@ -40,7 +43,7 @@ impl Command {
             Command::Help => ("help", Tail::Topic),
             Command::Run => ("run", Tail::RunArguments),
             Command::Example => ("example", Tail::RefusesAny),
-            Command::TestInput => ("test-input", Tail::Unenumerated),
+            Command::TestInput => ("test-input", Tail::Form),
             Command::Runner => ("runner", Tail::Unenumerated),
             Command::VersionFlag => ("--version", Tail::RefusesAny),
             Command::Version => ("version", Tail::RefusesAny),
@@ -66,10 +69,44 @@ impl Tail {
     /// The arguments the command's handler receives.
     pub fn admit(self, arguments: &[OsString]) -> Result<&[OsString], TailRefused> {
         match self {
-            Tail::Topic | Tail::RunArguments | Tail::Unenumerated => Ok(arguments),
+            Tail::Topic | Tail::RunArguments | Tail::Form | Tail::Unenumerated => Ok(arguments),
             Tail::RefusesAny if arguments.is_empty() => Ok(arguments),
             Tail::RefusesAny => Err(TailRefused),
         }
+    }
+}
+
+enumerated!(
+    /// A form of `test-input`, selected by the argument after the command.
+    TestInputForm {
+        Read,
+        Run,
+    }
+);
+
+pub struct FormDef {
+    pub spelling: &'static str,
+    /// The rule for the arguments after the form.
+    pub tail: Tail,
+}
+
+impl TestInputForm {
+    pub const fn def(self) -> FormDef {
+        let (spelling, tail) = match self {
+            TestInputForm::Read => ("read", Tail::Unenumerated),
+            TestInputForm::Run => ("run", Tail::RunArguments),
+        };
+        FormDef { spelling, tail }
+    }
+
+    /// The form the argument after `test-input` selects. Only that argument
+    /// is read; an absent, unregistered or non-UTF-8 one selects no form.
+    pub fn select_form(tail: &[OsString]) -> Option<TestInputForm> {
+        let argument = tail.first()?;
+        TestInputForm::ALL
+            .iter()
+            .copied()
+            .find(|form| argument.as_os_str() == OsStr::new(form.def().spelling))
     }
 }
 

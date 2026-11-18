@@ -24,7 +24,9 @@ func pwRunnerEncodeJSON<T: Encodable>(_ value: T) throws -> Data {
     return try enc.encode(value)
 }
 
-func pwRunnerDecodeJSON<T: Decodable>(_ type: T.Type, from data: Data) throws -> T {
+func pwRunnerDecodeJSON<T: Decodable>(_ type: T.Type, from data: Data,
+                                      overrideSource: PWRunnerOverrideSource? = nil) throws -> T {
     let dec = JSONDecoder()
+    if let overrideSource { dec.userInfo[.overrideSource] = overrideSource }
     return try dec.decode(type, from: data)
 }

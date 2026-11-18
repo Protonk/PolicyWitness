@@ -566,6 +566,316 @@
           "docs/contract/interface_join.py": "f0d7dd7566cf96d62bd8817d2ee7cad355e065be31bed0e693f99d7733f96d26"
         }
       }
+    },
+    {
+      "id": "rename_control",
+      "entry": "run.control.worker_timeout_ms",
+      "mutation": "Rename the governing spelling --worker-timeout-ms to --worker-deadline-ms; its member name and no help input edited.",
+      "patch": "--- a/controller/src/interface/run_args.rs\n+++ b/controller/src/interface/run_args.rs\n@@ -69,7 +69,7 @@\n     pub const fn def(self) -> ControlDef {\n         use ControlValue::{Integer, Text};\n         let (spelling, key, value) = match self {\n-            Control::WorkerTimeoutMs => (\"--worker-timeout-ms\", \"worker_timeout_ms\", Integer),\n+            Control::WorkerTimeoutMs => (\"--worker-deadline-ms\", \"worker_timeout_ms\", Integer),\n             Control::WorkerPreReadyHangMs => (\n                 \"--worker-pre-ready-hang-ms\",\n                 \"worker_pre_ready_hang_ms\",\n",
+      "checks": {
+        "card": "unchanged",
+        "contract": "unchanged",
+        "cases": "failed"
+      },
+      "first_build": "stale_inventory",
+      "first_build_message": "controller/interface/inventory.json is stale",
+      "literal_rule": "unchanged",
+      "residue_without_refresh": "ok",
+      "cards_changed": [],
+      "cases_newly_failing": [
+        "test_input.run.control.worker_timeout_ms",
+        "test_input.run.control_beyond_64_bits",
+        "test_input.run.control_duplicate",
+        "test_input.run.control_fraction",
+        "test_input.run.control_not_an_integer",
+        "test_input.run.control_takes_help_flag",
+        "test_input.run.request_mode_machme"
+      ],
+      "card_execution_agreement": "ok",
+      "unit_tests_newly_failing": [
+        "run_flow::tests::control_spellings_are_their_keys_and_only_test_input_run_admits_them",
+        "run_flow::tests::integer_controls_pass_every_signed_64_bit_decimal_through_unchanged",
+        "run_flow::tests::malformed_control_syntax_is_refused_before_any_run_work",
+        "run_flow::tests::orchestration::test_input_run_delivers_the_held_request_unchanged_and_the_controls_beside_it",
+        "run_flow::tests::orchestration::test_input_run_usage_refusals_invoke_no_client_and_read_no_app_root"
+      ],
+      "observed_on": {
+        "tree": "working tree based on eb498137 that adds test-input run; source hashes identify the exercised inputs",
+        "build": "unsigned debug build of a worktree copy, built with PW_BUILD_CONTRACT=test:mutation-record and placed in a scratch app directory; each corpus case run against it with the corpus's own expectations; cargo test --bins in the same copy",
+        "source_sha256": {
+          "controller/src/interface/commands.rs": "16834ca41da87352dbf8033c1114354083a66d06528e926157bb02b0e7bf516d",
+          "controller/src/interface/run_args.rs": "421c2362065a4e3fa889192ca1730279e792553220fa125ba8bab3ccb3e0cf4f",
+          "controller/src/test_input.rs": "d0269ff18ee752fe5284495415e4f21a3a677551f5fd92d162d34803db1620b8",
+          "controller/src/run_flow.rs": "3ac87b638138573fb79afae77c27b2df85c2916fb7d915bab5c2ab5d9cea8b7b",
+          "controller/interface/cards.rs": "9a68c368ad2593729614385917af1f96b5fdcb2e9b19d66b88462d8da3cdf50a",
+          "controller/interface/inventory.rs": "899c4ad7b24c0be8b584ada0935471682dc0f93c3d4b1aeff689acee390fbf19",
+          "controller/build.rs": "7accd440f45b50be61c92bea5c958b724f7d7124240756ccccca356fb3f9ef5e",
+          "controller/integration/interface_cases.json": "3605107676fe90b4806a3db9d28b1b0b264d1bf2bd9b888769cc0e4edb2302d2",
+          "docs/generate_interface.py": "87d68789706fbba1d6517c5f7a5c0b7bc8d58687f0ca122a39304a9a84627b67",
+          "docs/contract/interface_join.py": "f0d7dd7566cf96d62bd8817d2ee7cad355e065be31bed0e693f99d7733f96d26",
+          "tests/suites/source_drift/interface_literals.py": "beb900d66ccf36fa476e6b84276c80c13e4c951cee125f703dd254e115cb06e0"
+        },
+        "baseline_cases_failing": [
+          "example.save_and_run",
+          "test_input.publish_and_run"
+        ],
+        "baseline_note": "both need a runner, which the scratch app directory lacks"
+      }
+    },
+    {
+      "id": "rename_form",
+      "entry": "test_input.form.run",
+      "mutation": "Rename the run form of test-input from run to submit; no help input edited.",
+      "patch": "--- a/controller/src/interface/commands.rs\n+++ b/controller/src/interface/commands.rs\n@@ -94,7 +94,7 @@\n     pub const fn def(self) -> FormDef {\n         let (spelling, tail) = match self {\n             TestInputForm::Read => (\"read\", Tail::Unenumerated),\n-            TestInputForm::Run => (\"run\", Tail::RunArguments),\n+            TestInputForm::Run => (\"submit\", Tail::RunArguments),\n         };\n         FormDef { spelling, tail }\n     }\n",
+      "checks": {
+        "card": "unchanged",
+        "contract": "unchanged",
+        "cases": "failed"
+      },
+      "first_build": "stale_inventory",
+      "first_build_message": "controller/interface/inventory.json is stale",
+      "literal_rule": "unchanged",
+      "residue_without_refresh": "ok",
+      "cards_changed": [],
+      "cases_newly_failing": [
+        "test_input.h_flag",
+        "test_input.help_flag",
+        "test_input.help_word",
+        "test_input.read.h_flag",
+        "test_input.read.help_flag",
+        "test_input.run.control.validator_executable_path",
+        "test_input.run.control.validator_executable_path_takes_flag",
+        "test_input.run.control.validator_io_timeout_ms",
+        "test_input.run.control.validator_total_timeout_ms",
+        "test_input.run.control.worker_kill_before_publish_slot",
+        "test_input.run.control.worker_post_apply_hang_ms",
+        "test_input.run.control.worker_post_apply_kill_signal",
+        "test_input.run.control.worker_pre_ready_hang_ms",
+        "test_input.run.control.worker_timeout_ms",
+        "test_input.run.control_beyond_64_bits",
+        "test_input.run.control_duplicate",
+        "test_input.run.control_equals",
+        "test_input.run.control_fraction",
+        "test_input.run.control_missing_value",
+        "test_input.run.control_non_utf8_path",
+        "test_input.run.control_not_an_integer",
+        "test_input.run.control_not_an_integer.validator_io_timeout_ms",
+        "test_input.run.control_not_an_integer.validator_total_timeout_ms",
+        "test_input.run.control_not_an_integer.worker_kill_before_publish_slot",
+        "test_input.run.control_not_an_integer.worker_post_apply_hang_ms",
+        "test_input.run.control_not_an_integer.worker_post_apply_kill_signal",
+        "test_input.run.control_not_an_integer.worker_pre_ready_hang_ms",
+        "test_input.run.control_path_missing_value",
+        "test_input.run.control_takes_help_flag",
+        "test_input.run.h_flag",
+        "test_input.run.help_flag",
+        "test_input.run.help_word",
+        "test_input.run.no_arguments",
+        "test_input.run.repeated_path",
+        "test_input.run.request_mode_machme",
+        "test_input.run.runner_mode_byoxpc",
+        "test_input.run.runner_mode_invalid",
+        "test_input.run.terminator",
+        "test_input.run.timeout_zero",
+        "test_input.run.unknown_flag",
+        "test_input.run.unselected_override"
+      ],
+      "card_execution_agreement": "ok",
+      "unit_tests_newly_failing": [
+        "test_input::tests::the_first_argument_selects_a_form_and_only_read_publishes"
+      ],
+      "observed_on": {
+        "tree": "working tree based on eb498137 that adds test-input run; source hashes identify the exercised inputs",
+        "build": "unsigned debug build of a worktree copy, built with PW_BUILD_CONTRACT=test:mutation-record and placed in a scratch app directory; each corpus case run against it with the corpus's own expectations; cargo test --bins in the same copy",
+        "source_sha256": {
+          "controller/src/interface/commands.rs": "16834ca41da87352dbf8033c1114354083a66d06528e926157bb02b0e7bf516d",
+          "controller/src/interface/run_args.rs": "421c2362065a4e3fa889192ca1730279e792553220fa125ba8bab3ccb3e0cf4f",
+          "controller/src/test_input.rs": "d0269ff18ee752fe5284495415e4f21a3a677551f5fd92d162d34803db1620b8",
+          "controller/src/run_flow.rs": "3ac87b638138573fb79afae77c27b2df85c2916fb7d915bab5c2ab5d9cea8b7b",
+          "controller/interface/cards.rs": "9a68c368ad2593729614385917af1f96b5fdcb2e9b19d66b88462d8da3cdf50a",
+          "controller/interface/inventory.rs": "899c4ad7b24c0be8b584ada0935471682dc0f93c3d4b1aeff689acee390fbf19",
+          "controller/build.rs": "7accd440f45b50be61c92bea5c958b724f7d7124240756ccccca356fb3f9ef5e",
+          "controller/integration/interface_cases.json": "3605107676fe90b4806a3db9d28b1b0b264d1bf2bd9b888769cc0e4edb2302d2",
+          "docs/generate_interface.py": "87d68789706fbba1d6517c5f7a5c0b7bc8d58687f0ca122a39304a9a84627b67",
+          "docs/contract/interface_join.py": "f0d7dd7566cf96d62bd8817d2ee7cad355e065be31bed0e693f99d7733f96d26",
+          "tests/suites/source_drift/interface_literals.py": "beb900d66ccf36fa476e6b84276c80c13e4c951cee125f703dd254e115cb06e0"
+        },
+        "baseline_cases_failing": [
+          "example.save_and_run",
+          "test_input.publish_and_run"
+        ],
+        "baseline_note": "both need a runner, which the scratch app directory lacks"
+      }
+    },
+    {
+      "id": "control_admitted_by_run",
+      "entry": "run.control.worker_timeout_ms",
+      "mutation": "Classify the controls under run as under test-input run.",
+      "patch": "--- a/controller/src/interface/run_args.rs\n+++ b/controller/src/interface/run_args.rs\n@@ -155,7 +155,7 @@\n         return Token::Option(option);\n     }\n     let controls: &[Control] = match form {\n-        Form::Run => &[],\n+        Form::Run => Control::ALL,\n         Form::TestInputRun => Control::ALL,\n     };\n     controls\n",
+      "checks": {
+        "card": "not_run",
+        "contract": "unchanged",
+        "cases": "not_run"
+      },
+      "first_build": "inventory_validation",
+      "first_build_message": "  WorkerTimeoutMs is classified as (Control(WorkerTimeoutMs), Control(WorkerTimeoutMs))",
+      "literal_rule": "unchanged",
+      "observed_on": {
+        "tree": "working tree based on eb498137 that adds test-input run; source hashes identify the exercised inputs",
+        "build": "unsigned debug build of a worktree copy, built with PW_BUILD_CONTRACT=test:mutation-record and placed in a scratch app directory; each corpus case run against it with the corpus's own expectations; cargo test --bins in the same copy",
+        "source_sha256": {
+          "controller/src/interface/commands.rs": "16834ca41da87352dbf8033c1114354083a66d06528e926157bb02b0e7bf516d",
+          "controller/src/interface/run_args.rs": "421c2362065a4e3fa889192ca1730279e792553220fa125ba8bab3ccb3e0cf4f",
+          "controller/src/test_input.rs": "d0269ff18ee752fe5284495415e4f21a3a677551f5fd92d162d34803db1620b8",
+          "controller/src/run_flow.rs": "3ac87b638138573fb79afae77c27b2df85c2916fb7d915bab5c2ab5d9cea8b7b",
+          "controller/interface/cards.rs": "9a68c368ad2593729614385917af1f96b5fdcb2e9b19d66b88462d8da3cdf50a",
+          "controller/interface/inventory.rs": "899c4ad7b24c0be8b584ada0935471682dc0f93c3d4b1aeff689acee390fbf19",
+          "controller/build.rs": "7accd440f45b50be61c92bea5c958b724f7d7124240756ccccca356fb3f9ef5e",
+          "controller/integration/interface_cases.json": "3605107676fe90b4806a3db9d28b1b0b264d1bf2bd9b888769cc0e4edb2302d2",
+          "docs/generate_interface.py": "87d68789706fbba1d6517c5f7a5c0b7bc8d58687f0ca122a39304a9a84627b67",
+          "docs/contract/interface_join.py": "f0d7dd7566cf96d62bd8817d2ee7cad355e065be31bed0e693f99d7733f96d26",
+          "tests/suites/source_drift/interface_literals.py": "beb900d66ccf36fa476e6b84276c80c13e4c951cee125f703dd254e115cb06e0"
+        },
+        "baseline_cases_failing": [
+          "example.save_and_run",
+          "test_input.publish_and_run"
+        ],
+        "baseline_note": "both need a runner, which the scratch app directory lacks"
+      }
+    },
+    {
+      "id": "literal_beside_form_table",
+      "entry": "test_input.unknown_form",
+      "mutation": "Admit the word submit as the run form by comparing the first argument with a literal inside cmd_test_input, beside the form table.",
+      "patch": "--- a/controller/src/test_input.rs\n+++ b/controller/src/test_input.rs\n@@ -87,6 +87,9 @@\n /// refusal. The form's tail rule decides what reads the rest: `run`'s\n /// orchestration, which reports every refusal itself, or the publisher.\n pub fn cmd_test_input(args: &[OsString]) -> i32 {\n+    if args.first().is_some_and(|first| first == \"submit\") {\n+        return run_flow::cmd_test_input_run(&args[1..]).unwrap_or(2);\n+    }\n     let published = match TestInputForm::select_form(args).map(|form| form.def().tail) {\n         Some(Tail::RunArguments) => {\n             return match run_flow::cmd_test_input_run(&args[1..]) {\n",
+      "checks": {
+        "card": "unchanged",
+        "contract": "unchanged",
+        "cases": "unchanged"
+      },
+      "first_build": "built",
+      "first_build_message": "",
+      "literal_rule": "failed",
+      "literal_findings": [
+        "controller/src/test_input.rs:90: pub fn cmd_test_input: compared with a literal: \"submit\"; define the spelling in controller/src/interface/"
+      ],
+      "cards_changed": [],
+      "cases_newly_failing": [],
+      "card_execution_agreement": "ok",
+      "unit_tests_newly_failing": [],
+      "observed_on": {
+        "tree": "working tree based on eb498137 that adds test-input run; source hashes identify the exercised inputs",
+        "build": "unsigned debug build of a worktree copy, built with PW_BUILD_CONTRACT=test:mutation-record and placed in a scratch app directory; each corpus case run against it with the corpus's own expectations; cargo test --bins in the same copy",
+        "source_sha256": {
+          "controller/src/interface/commands.rs": "16834ca41da87352dbf8033c1114354083a66d06528e926157bb02b0e7bf516d",
+          "controller/src/interface/run_args.rs": "421c2362065a4e3fa889192ca1730279e792553220fa125ba8bab3ccb3e0cf4f",
+          "controller/src/test_input.rs": "d0269ff18ee752fe5284495415e4f21a3a677551f5fd92d162d34803db1620b8",
+          "controller/src/run_flow.rs": "3ac87b638138573fb79afae77c27b2df85c2916fb7d915bab5c2ab5d9cea8b7b",
+          "controller/interface/cards.rs": "9a68c368ad2593729614385917af1f96b5fdcb2e9b19d66b88462d8da3cdf50a",
+          "controller/interface/inventory.rs": "899c4ad7b24c0be8b584ada0935471682dc0f93c3d4b1aeff689acee390fbf19",
+          "controller/build.rs": "7accd440f45b50be61c92bea5c958b724f7d7124240756ccccca356fb3f9ef5e",
+          "controller/integration/interface_cases.json": "3605107676fe90b4806a3db9d28b1b0b264d1bf2bd9b888769cc0e4edb2302d2",
+          "docs/generate_interface.py": "87d68789706fbba1d6517c5f7a5c0b7bc8d58687f0ca122a39304a9a84627b67",
+          "docs/contract/interface_join.py": "f0d7dd7566cf96d62bd8817d2ee7cad355e065be31bed0e693f99d7733f96d26",
+          "tests/suites/source_drift/interface_literals.py": "beb900d66ccf36fa476e6b84276c80c13e4c951cee125f703dd254e115cb06e0"
+        },
+        "baseline_cases_failing": [
+          "example.save_and_run",
+          "test_input.publish_and_run"
+        ],
+        "baseline_note": "both need a runner, which the scratch app directory lacks"
+      }
+    },
+    {
+      "id": "control_value_rule",
+      "entry": "run.control.worker_post_apply_hang_ms",
+      "mutation": "Change the value rule of --worker-post-apply-hang-ms from a signed 64-bit integer to text.",
+      "patch": "--- a/controller/src/interface/run_args.rs\n+++ b/controller/src/interface/run_args.rs\n@@ -78,7 +78,7 @@\n             Control::WorkerPostApplyHangMs => (\n                 \"--worker-post-apply-hang-ms\",\n                 \"worker_post_apply_hang_ms\",\n-                Integer,\n+                Text,\n             ),\n             Control::WorkerPostApplyKillSignal => (\n                 \"--worker-post-apply-kill-signal\",\n",
+      "checks": {
+        "card": "unchanged",
+        "contract": "unchanged",
+        "cases": "failed"
+      },
+      "first_build": "stale_inventory",
+      "first_build_message": "controller/interface/inventory.json is stale",
+      "literal_rule": "unchanged",
+      "residue_without_refresh": "ok",
+      "cards_changed": [],
+      "cases_newly_failing": [
+        "test_input.run.control_not_an_integer.worker_post_apply_hang_ms"
+      ],
+      "card_execution_agreement": "ok",
+      "unit_tests_newly_failing": [
+        "run_flow::tests::integer_controls_pass_every_signed_64_bit_decimal_through_unchanged",
+        "run_flow::tests::orchestration::test_input_run_delivers_the_held_request_unchanged_and_the_controls_beside_it"
+      ],
+      "observed_on": {
+        "tree": "working tree based on eb498137 that adds test-input run; source hashes identify the exercised inputs",
+        "build": "unsigned debug build of a worktree copy, built with PW_BUILD_CONTRACT=test:mutation-record and placed in a scratch app directory; each corpus case run against it with the corpus's own expectations; cargo test --bins in the same copy",
+        "source_sha256": {
+          "controller/src/interface/commands.rs": "16834ca41da87352dbf8033c1114354083a66d06528e926157bb02b0e7bf516d",
+          "controller/src/interface/run_args.rs": "421c2362065a4e3fa889192ca1730279e792553220fa125ba8bab3ccb3e0cf4f",
+          "controller/src/test_input.rs": "d0269ff18ee752fe5284495415e4f21a3a677551f5fd92d162d34803db1620b8",
+          "controller/src/run_flow.rs": "3ac87b638138573fb79afae77c27b2df85c2916fb7d915bab5c2ab5d9cea8b7b",
+          "controller/interface/cards.rs": "9a68c368ad2593729614385917af1f96b5fdcb2e9b19d66b88462d8da3cdf50a",
+          "controller/interface/inventory.rs": "899c4ad7b24c0be8b584ada0935471682dc0f93c3d4b1aeff689acee390fbf19",
+          "controller/build.rs": "7accd440f45b50be61c92bea5c958b724f7d7124240756ccccca356fb3f9ef5e",
+          "controller/integration/interface_cases.json": "3605107676fe90b4806a3db9d28b1b0b264d1bf2bd9b888769cc0e4edb2302d2",
+          "docs/generate_interface.py": "87d68789706fbba1d6517c5f7a5c0b7bc8d58687f0ca122a39304a9a84627b67",
+          "docs/contract/interface_join.py": "f0d7dd7566cf96d62bd8817d2ee7cad355e065be31bed0e693f99d7733f96d26",
+          "tests/suites/source_drift/interface_literals.py": "beb900d66ccf36fa476e6b84276c80c13e4c951cee125f703dd254e115cb06e0"
+        },
+        "baseline_cases_failing": [
+          "example.save_and_run",
+          "test_input.publish_and_run"
+        ],
+        "baseline_note": "both need a runner, which the scratch app directory lacks"
+      }
+    },
+    {
+      "id": "form_tail_rule",
+      "entry": "test_input.form.read",
+      "mutation": "Change the read form's tail rule from Unenumerated to RunArguments; its dispatch not edited.",
+      "patch": "--- a/controller/src/interface/commands.rs\n+++ b/controller/src/interface/commands.rs\n@@ -93,7 +93,7 @@\n impl TestInputForm {\n     pub const fn def(self) -> FormDef {\n         let (spelling, tail) = match self {\n-            TestInputForm::Read => (\"read\", Tail::Unenumerated),\n+            TestInputForm::Read => (\"read\", Tail::RunArguments),\n             TestInputForm::Run => (\"run\", Tail::RunArguments),\n         };\n         FormDef { spelling, tail }\n",
+      "checks": {
+        "card": "unchanged",
+        "contract": "unchanged",
+        "cases": "failed"
+      },
+      "first_build": "stale_inventory",
+      "first_build_message": "controller/interface/inventory.json is stale",
+      "literal_rule": "unchanged",
+      "residue_without_refresh": "ok",
+      "cards_changed": [],
+      "cases_newly_failing": [
+        "test_input.publish",
+        "test_input.read.h_flag",
+        "test_input.read.help_flag"
+      ],
+      "card_execution_agreement": "ok",
+      "unit_tests_newly_failing": [],
+      "observed_on": {
+        "tree": "working tree based on eb498137 that adds test-input run; source hashes identify the exercised inputs",
+        "build": "unsigned debug build of a worktree copy, built with PW_BUILD_CONTRACT=test:mutation-record and placed in a scratch app directory; each corpus case run against it with the corpus's own expectations; cargo test --bins in the same copy",
+        "source_sha256": {
+          "controller/src/interface/commands.rs": "16834ca41da87352dbf8033c1114354083a66d06528e926157bb02b0e7bf516d",
+          "controller/src/interface/run_args.rs": "421c2362065a4e3fa889192ca1730279e792553220fa125ba8bab3ccb3e0cf4f",
+          "controller/src/test_input.rs": "d0269ff18ee752fe5284495415e4f21a3a677551f5fd92d162d34803db1620b8",
+          "controller/src/run_flow.rs": "3ac87b638138573fb79afae77c27b2df85c2916fb7d915bab5c2ab5d9cea8b7b",
+          "controller/interface/cards.rs": "9a68c368ad2593729614385917af1f96b5fdcb2e9b19d66b88462d8da3cdf50a",
+          "controller/interface/inventory.rs": "899c4ad7b24c0be8b584ada0935471682dc0f93c3d4b1aeff689acee390fbf19",
+          "controller/build.rs": "7accd440f45b50be61c92bea5c958b724f7d7124240756ccccca356fb3f9ef5e",
+          "controller/integration/interface_cases.json": "3605107676fe90b4806a3db9d28b1b0b264d1bf2bd9b888769cc0e4edb2302d2",
+          "docs/generate_interface.py": "87d68789706fbba1d6517c5f7a5c0b7bc8d58687f0ca122a39304a9a84627b67",
+          "docs/contract/interface_join.py": "f0d7dd7566cf96d62bd8817d2ee7cad355e065be31bed0e693f99d7733f96d26",
+          "tests/suites/source_drift/interface_literals.py": "beb900d66ccf36fa476e6b84276c80c13e4c951cee125f703dd254e115cb06e0"
+        },
+        "baseline_cases_failing": [
+          "example.save_and_run",
+          "test_input.publish_and_run"
+        ],
+        "baseline_note": "both need a runner, which the scratch app directory lacks"
+      }
     }
   ],
   "declared_associations": [

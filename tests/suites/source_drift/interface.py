@@ -191,12 +191,18 @@ class InterfaceInventoryTests(receipts.TestCase):
         self.assertNotIn('runner_kind.machme@registry', residue['identifiers'])
 
     def test_expanded_enumeration_is_recorded_through_the_refresh(self):
+        # The committed baseline already records one expansion; this one replaces the read form's tail.
+        recorded = json.loads((ROOT / generator.RESIDUE).read_text())['expansions']
+        self.assertEqual(recorded, [{'replaced': 'tail.test_input',
+                                     'exposed': ['tail.test_input.read', 'test_input.form.read', 'test_input.unknown_form']}])
+
         def expand(data):
-            data['entries'] = [entry for entry in data['entries'] if entry['id'] != 'tail.test_input']
-            self.entry(data, 'command.test_input')['relationships']['tail'] = 'test_input_arguments'
+            data['entries'] = [entry for entry in data['entries'] if entry['id'] != 'tail.test_input.read']
+            self.entry(data, 'test_input.form.read')['relationships']['tail'] = 'read_arguments'
             template = self.entry(data, 'run.option.timeout_ms')
-            for identifier, spelling in (('test_input.read', 'read'), ('test_input.option.target', '--target')):
-                data['entries'].append({**copy.deepcopy(template), 'id': identifier, 'spellings': [spelling], 'cards': []})
+            for identifier, spelling in (('test_input.read.shape', None), ('test_input.read.option.target', '--target')):
+                data['entries'].append({**copy.deepcopy(template), 'id': identifier,
+                                        'spellings': [spelling] if spelling else [], 'cards': []})
         root = self.with_inventory(expand)
         self.refused(root, 'new residue members need --refresh-residue')
         before = fixture_inputs.snapshot(root)
@@ -206,14 +212,14 @@ class InterfaceInventoryTests(receipts.TestCase):
             self.assertNotEqual(result.returncode, 0)
             self.assertIn(expected, result.stderr)
             self.assertEqual(fixture_inputs.snapshot(root), before)
-        result = self.command(root, '--expand', 'tail.test_input')
+        result = self.command(root, '--expand', 'tail.test_input.read')
         self.assertIn('--expand records an expansion during --refresh-residue', result.stderr)
-        result = self.command(root, '--refresh-residue', '--expand', 'tail.test_input')
+        result = self.command(root, '--refresh-residue', '--expand', 'tail.test_input.read')
         self.assertEqual(result.returncode, 0, result.stderr)
         residue = json.loads((root / generator.RESIDUE).read_text())
-        self.assertEqual(residue['expansions'], [{'replaced': 'tail.test_input',
-                                                  'exposed': ['test_input.option.target', 'test_input.read']}])
-        self.assertNotIn('tail.test_input', residue['classes']['non_admits']['unenumerated']['pub fn run']['members'])
+        self.assertEqual(residue['expansions'], recorded + [{
+            'replaced': 'tail.test_input.read', 'exposed': ['test_input.read.option.target', 'test_input.read.shape']}])
+        self.assertNotIn('pub fn cmd_test_input', residue['classes']['non_admits']['unenumerated'])
         # The record persists across ordinary runs while an exposed entry remains.
         self.assertEqual(self.command(root).returncode, 0)
         self.assertEqual(json.loads((root / generator.RESIDUE).read_text())['expansions'], residue['expansions'])
@@ -248,6 +254,38 @@ class InterfaceInventoryTests(receipts.TestCase):
         self.assertEqual(reached('version'), ['command.version'])
         self.assertEqual(reached('--version', 'x'), ['command.version_flag', 'tail.version_flag'])
         self.assertEqual(reached('runner', 'list'), ['command.runner', 'tail.runner'])
+        # A command with forms: the first argument selects one, and the form's own rule reads the rest.
+        form = lambda name, *more: ['command.test_input', 'test_input.form.' + name, *more]
+        for arguments in ((), ('future', 'run'), ('--run',), ('Run',), ({'hex': 'ff'},)):
+            with self.subTest(no_form=arguments):
+                self.assertEqual(reached('test-input', *arguments), ['command.test_input', 'test_input.unknown_form'])
+        self.assertEqual(reached('test-input', 'read'), form('read', 'tail.test_input.read'))
+        self.assertEqual(reached('test-input', 'read', '--target', '/x'), form('read', 'tail.test_input.read'))
+        self.assertEqual(reached('test-input', 'run'), form('run'))
+        timeout, path = 'run.control.worker_timeout_ms', 'run.control.validator_executable_path'
+        self.assertEqual(reached('test-input', 'run', '--worker-timeout-ms', '5', '/r.json'), form('run', timeout, 'run.request_path'))
+        for value in ('-9223372036854775808', '+7', '0', '60001', '9223372036854775807'):
+            with self.subTest(integer=value):
+                self.assertEqual(reached('test-input', 'run', '--worker-timeout-ms', value, '/r.json'),
+                                 form('run', timeout, 'run.request_path'))
+        for value in ('soon', '1.5', '1e3', ' 5', '', '-', '9223372036854775808', '-9223372036854775809', {'hex': 'ff'}):
+            with self.subTest(not_an_integer=value):
+                self.assertEqual(reached('test-input', 'run', '--worker-timeout-ms', value, '/r.json'), form('run', timeout))
+        self.assertEqual(reached('test-input', 'run', '--validator-io-timeout-ms'), form('run', 'run.control.validator_io_timeout_ms'))
+        self.assertEqual(reached('test-input', 'run', '--worker-timeout-ms', '5', '--worker-timeout-ms', '6', '/r.json'),
+                         form('run', timeout))
+        # A text control takes the next argument as written, flag-shaped or empty.
+        for value in ('--worker-timeout-ms', '', 'relative'):
+            with self.subTest(text=value):
+                self.assertEqual(reached('test-input', 'run', '--validator-executable-path', value, '/r.json'),
+                                 form('run', path, 'run.request_path'))
+        self.assertEqual(reached('test-input', 'run', '--validator-executable-path', {'hex': '2fff'}, '/r.json'), form('run', path))
+        self.assertEqual(reached('test-input', 'run', '--runner-mode', 'byoxpc', '--worker-timeout-ms', '5', '--timeout-ms', '5', '--bogus'),
+                         form('run', 'run.option.runner_mode', 'runner_kind.byoxpc@run_option', timeout,
+                              'run.option.timeout_ms', 'run.unknown_flag'))
+        self.assertEqual(reached('test-input', 'run', '--worker-executable-path', '/x'), form('run', 'run.unknown_flag'))
+        # Under `run` a control's spelling is an unknown flag.
+        self.assertEqual(reached('run', '--worker-timeout-ms', '5', '/r.json'), ['command.run', 'run.unknown_flag'])
         self.assertEqual(reached('example'), ['command.example'])
         self.assertEqual(reached('bogus'), [])
         self.assertEqual(reached(), [])
@@ -317,6 +355,7 @@ class InterfaceInventoryTests(receipts.TestCase):
         self.assertEqual(problems, [])
         compared = {item['node']: len(item['compared']) for item in report}
         self.assertEqual(compared, {'request.specimen.emit_example': 0, 'request.options.precedence': 0,
+                                    'request.overrides.test_input_run': 0,
                                     'refusals.controller.consequence.request_refusal': 3,
                                     'refusals.controller.consequence.tool_failure': 3,
                                     'envelope.data.select.finished': 4, 'envelope.data.select.other': 5})
@@ -420,8 +459,12 @@ class InterfaceInventoryTests(receipts.TestCase):
         edited('controller/src/runner_commands.rs', '    Reader::InstallOption\n',
                '    let _hint = "use byoxpc, not machme";\n    Reader::InstallOption\n',
                'a literal spells a word the runner-kind table aliases: "use byoxpc, not machme"')
-        edited('controller/src/run_flow.rs', 'fn parse_arguments(args: &[OsString]) -> Arguments {',
-               'fn parse_argument_vector(args: &[OsString]) -> Arguments {',
+        edited('controller/src/test_input.rs', 'pub fn cmd_test_input(args: &[OsString]) -> i32 {\n',
+               'pub fn cmd_test_input(args: &[OsString]) -> i32 {\n'
+               '    if args.first().is_some_and(|first| first == "submit") {\n        return 2;\n    }\n',
+               'pub fn cmd_test_input: compared with a literal: "submit"')
+        edited('controller/src/run_flow.rs', 'fn parse_arguments(args: &[OsString], form: Form) -> Arguments {',
+               'fn parse_argument_vector(args: &[OsString], form: Form) -> Arguments {',
                "cannot read the governed block 'fn parse_arguments'")
         # A diagnostic, a field name passed as an argument and test code are not comparisons.
         self.assertEqual(interface_literals.findings(root, self.inventory), [])

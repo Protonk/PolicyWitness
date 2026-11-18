@@ -9,6 +9,8 @@ struct PWRunnerConnectionFailure {
 protocol PWRunnerClientConnection: AnyObject {
     func reserve(_ request: Data, reply: @escaping (Data) -> Void)
     func submit(_ request: Data, reservation: String, reply: @escaping (Bool, Data) -> Void)
+    /// The experimental submission: the same request with a controls object beside it.
+    func submitExperiment(_ request: Data, controls: Data, reservation: String, reply: @escaping (Bool, Data) -> Void)
     func invalidate()
 }
 
@@ -41,6 +43,9 @@ final class PWRunnerXPCConnection: PWRunnerClientConnection {
     func submit(_ request: Data, reservation: String, reply: @escaping (Bool, Data) -> Void) {
         proxy()?.runReservedSpecimen(request, reservation: reservation, withReply: reply)
     }
+    func submitExperiment(_ request: Data, controls: Data, reservation: String, reply: @escaping (Bool, Data) -> Void) {
+        proxy()?.runReservedExperiment(request, controls: controls, reservation: reservation, withReply: reply)
+    }
     func invalidate() { connection.invalidate() }
 }
 
@@ -53,6 +58,8 @@ final class PWRunnerClientSession {
     private enum Phase { case initial, acquiring, waiting, reserved, submitted, done }
     private var phase = Phase.initial
     private let request: Data
+    /// Non-nil makes the one submission the experimental call.
+    private let controls: Data?
     private let clock: () -> UInt64
     private let enqueue: Enqueue
     private let schedule: Schedule
@@ -64,10 +71,11 @@ final class PWRunnerClientSession {
     private var lastNow: UInt64?
     private let deadline: UInt64?
 
-    init(request: Data, timeoutMs: UInt64, deadlineNs: UInt64?, clock: @escaping () -> UInt64 = PWContinuousClock.now,
+    init(request: Data, controls: Data? = nil, timeoutMs: UInt64, deadlineNs: UInt64?,
+         clock: @escaping () -> UInt64 = PWContinuousClock.now,
          enqueue: @escaping Enqueue, schedule: @escaping Schedule, connect: @escaping Connect,
          finish: @escaping (PWRunnerClientCapture) -> Void) {
-        self.request = request; self.clock = clock; self.enqueue = enqueue
+        self.request = request; self.controls = controls; self.clock = clock; self.enqueue = enqueue
         self.schedule = schedule; self.connect = connect; self.finish = finish
         let now = clock()
         let validNow = now == UInt64.max ? nil : now
@@ -249,8 +257,13 @@ final class PWRunnerClientSession {
         guard at < deadline! else { overallTimeout(); return }
         phase = .submitted
         capture.submission = PWRunnerSubmission(state: "invoked", invoked_elapsed_ms: elapsed(at))
-        connection?.submit(request, reservation: reply.reservation_id!) { isResult, bytes in
+        let submitted: (Bool, Data) -> Void = { isResult, bytes in
             self.enqueue { self.submissionReply(id, isResult: isResult, data: bytes) }
+        }
+        if let controls {
+            connection?.submitExperiment(request, controls: controls, reservation: reply.reservation_id!, reply: submitted)
+        } else {
+            connection?.submit(request, reservation: reply.reservation_id!, reply: submitted)
         }
         _ = now // The receipt's end sample was taken before control admission.
     }

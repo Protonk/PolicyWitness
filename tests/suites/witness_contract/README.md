@@ -220,6 +220,69 @@ The real acquisition path is exercised with recorded stand-in executables;
 wrong-target output fails before the observer, and deliberately ignoring the
 supplied emitter is detected by that scenario's oracle.
 
+### Submissions with `test-input run`
+
+After the thirteen passages and their accounting, the same case submits the
+published read input through `test-input run`, in the same owned directory
+and under the same cleanup record. [test_input_seam.py](test_input_seam.py)
+launches and records; [check_test_input_seam.py](check_test_input_seam.py)
+owns the plan and every expectation. Each submission that carries controls
+goes through the [seam invocation adapter](../../README.md#seam-invocations)
+on its experimental route, so its command, controls and delivered request are
+on disk before launch.
+
+Each of the eight controls has one submission and three separate rows. The
+submission row reads the adapter's record: the route, the flags and a
+delivered request equal to the ordinary one. The echo row reads the reply's
+`test_overrides`. The intervention row reads only what the host or worker
+observed of itself and never the echo:
+
+| Control | Submitted | Observation credited |
+| --- | --- | --- |
+| `worker_timeout_ms` | 7000 | the host's sentinel wait budget is 7000 |
+| `worker_post_apply_hang_ms` | 2000 | the sentinel wait lasted at least 1900 ms and ended at `done`, after the read completed |
+| `worker_pre_ready_hang_ms` | 400 | the ready wait lasted at least 380 ms and ended at the ready byte |
+| `worker_post_apply_kill_signal` | 9 | the worker was reaped with signal 9 after its completed read, with no host termination request |
+| `worker_kill_before_publish_slot` | 0 | the worker was reaped with signal 9, its last progress the started attempt, and the read has no completed result |
+| `validator_executable_path` | a path that does not exist | the phase's spawn failure names that path, and no validator ran |
+| `validator_io_timeout_ms` | 500, with the transcript validator substituted | collection stopped at a 500 ms deadline; the fixture's own receipt names the worker PID and both probes |
+| `validator_total_timeout_ms` | 1 | the phase's collection is `budget_exhausted` and no validator was spawned, while the read completed |
+
+The validator path's submission has a fourth row: the dossier's validator
+record names the substituted path, and the neighbour's is null.
+
+Beside them the case runs an ordinary `run` of the same input as the
+neighbour; `test-input run` with no control, which must show the neighbour's
+allowances, collection and read, and echoes an empty object; six malformed
+command lines and one control flag after plain `run`, each refused with exit
+2, a `tool_error` envelope and a null client capture; one value above the
+worker's argument range, submitted and refused by the launched worker with
+exit code 2 and no request refusal; a request carrying its own
+`_test_overrides` block with a value and with a null member, each refused by
+the host at `_test_overrides` before any worker, and with an empty block,
+admitted; and two submissions through `pw-runner-client` itself, one with a
+controls object the host applied and one with a request block the host
+refused. `test-input read` is published before and after these submissions
+with equal bytes, and once under `sandbox-exec` with a profile that denies
+`process-fork`: publication is unchanged there, while `test-input run` under
+the same profile cannot launch its client.
+
+These rows establish the route for the values submitted. They do not vary the
+actor form, an external runner, the host's floors or every refusal at the
+client. A lower bound on a wait duration shows the delay occurred; the two
+duration thresholds for the neighbour are test choices, not product limits.
+The fork-denying profile shows that publication needs no new process; it does
+not observe file reads.
+
+`test_input_controls` runs [test_input_seam_controls.py](test_input_seam_controls.py)
+over hand-written records: each submission with another route or a control
+moved into its request, another exit, another build, a refused consumer
+reading, a missing echo, the echo beside an ordinary reply, and a target
+changed during the submission; each control's observation at and just inside
+its bound or with the neighbouring cause; each refusal reported at another
+boundary; and each `read` row. Every row the checker reports must be failed
+by some control.
+
 `tests/lib/file_observation.py` shares only the same-descriptor sampler, sample
 change checks, fresh-read comparisons and explicit-byte/identity control record
 construction with example. Workloads, fixtures and expectations remain separate.

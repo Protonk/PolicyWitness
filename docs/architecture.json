@@ -638,12 +638,16 @@
           "from": "controller",
           "to": "client",
           "kind": "spawn",
-          "label": "spawn once; held request JSON on stdin to EOF; binary typed client capture on stdout",
+          "label": "spawn once; held request JSON on stdin to EOF, and for test-input run a controls object in the --experimental-controls argument; binary typed client capture on stdout",
           "short": "request JSON; binary capture",
           "sources": [
             {
               "path": "controller/src/runner_client.rs",
               "symbol": "run_pw_runner_client"
+            },
+            {
+              "path": "controller/src/runner_client.rs",
+              "symbol": "fn submission_arguments"
             },
             {
               "path": "runner/Clients/PWRunnerClient/main.swift",
@@ -664,6 +668,11 @@
               "path": "tests/suites/blackbox_e2e/checker_controls.py",
               "symbol": "client_output_control",
               "form": "test"
+            },
+            {
+              "path": "controller/src/runner_client.rs",
+              "symbol": "only_an_experimental_submission_names_a_controls_object",
+              "form": "test"
             }
           ]
         },
@@ -672,7 +681,7 @@
           "from": "client",
           "to": "host",
           "kind": "channel",
-          "label": "effect-free reservation, then one runReservedSpecimen call; request JSON and binary typed host reply",
+          "label": "effect-free reservation, then one runReservedSpecimen call, or one runReservedExperiment call with a controls object beside the request; request JSON and binary typed host reply",
           "short": "reserve; invoke; binary reply",
           "sources": [
             {
@@ -682,6 +691,14 @@
             {
               "path": "runner/Sources/PWRunnerCore/PWRunnerService.swift",
               "symbol": "runReservedSpecimen"
+            },
+            {
+              "path": "runner/Sources/PWRunnerCore/PWRunnerAPI.swift",
+              "symbol": "runReservedExperiment"
+            },
+            {
+              "path": "runner/Clients/PWRunnerClient/PWRunnerClientSession.swift",
+              "symbol": "submitExperiment"
             },
             {
               "path": "runner/Sources/PWRunnerCore/PWRunnerService.swift",
@@ -701,6 +718,21 @@
             {
               "path": "tests/suites/runner_outcome_bad_request/run.sh",
               "symbol": "accepted_input_contract",
+              "form": "test"
+            },
+            {
+              "path": "runner/Tests/PWRunnerClientSessionTests/main.swift",
+              "symbol": "runClientSessionControls",
+              "form": "test"
+            },
+            {
+              "path": "runner/Tests/PWRunnerCoreTests/ExperimentalSubmissionTests.swift",
+              "symbol": "runExperimentalSubmissionTests",
+              "form": "test"
+            },
+            {
+              "path": "tests/suites/witness_contract/test_input.sh",
+              "symbol": "test_input",
               "form": "test"
             }
           ]
@@ -824,7 +856,7 @@
             },
             {
               "path": "runner/Sources/PWRunnerCore/PWRunnerService.swift",
-              "symbol": "runReservedSpecimen"
+              "symbol": "runSubmission"
             }
           ],
           "checks": [
@@ -7342,7 +7374,7 @@
             },
             {
               "path": "runner/Sources/PWRunnerCore/PWRunnerService.swift",
-              "symbol": "runReservedSpecimen"
+              "symbol": "runSubmission"
             }
           ],
           "checks": [

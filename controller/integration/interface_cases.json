@@ -761,7 +761,7 @@
       ],
       "status": 2,
       "stdout": "",
-      "stderr": "policy-witness test-input: expected test-input read --target PATH\n"
+      "stderr": "policy-witness test-input: expected test-input read --target PATH or test-input run [OPTIONS] REQUEST\n"
     },
     {
       "id": "test_input.help_word",
@@ -771,7 +771,7 @@
       ],
       "status": 2,
       "stdout": "",
-      "stderr": "policy-witness test-input: expected test-input read --target PATH\n"
+      "stderr": "policy-witness test-input: expected test-input read --target PATH or test-input run [OPTIONS] REQUEST\n"
     },
     {
       "id": "test_input.h_flag",
@@ -781,7 +781,7 @@
       ],
       "status": 2,
       "stdout": "",
-      "stderr": "policy-witness test-input: expected test-input read --target PATH\n"
+      "stderr": "policy-witness test-input: expected test-input read --target PATH or test-input run [OPTIONS] REQUEST\n"
     },
     {
       "id": "test_input.read.help_flag",
@@ -792,7 +792,7 @@
       ],
       "status": 2,
       "stdout": "",
-      "stderr": "policy-witness test-input: expected test-input read --target PATH\n"
+      "stderr": "policy-witness test-input: expected test-input read --target PATH or test-input run [OPTIONS] REQUEST\n"
     },
     {
       "id": "test_input.read.h_flag",
@@ -803,7 +803,7 @@
       ],
       "status": 2,
       "stdout": "",
-      "stderr": "policy-witness test-input: expected test-input read --target PATH\n"
+      "stderr": "policy-witness test-input: expected test-input read --target PATH or test-input run [OPTIONS] REQUEST\n"
     },
     {
       "id": "version.h_flag",
@@ -1038,6 +1038,654 @@
       "stderr": ""
     },
     {
+      "id": "test_input.run.help_flag",
+      "args": [
+        "test-input",
+        "run",
+        "--help"
+      ],
+      "status": 2,
+      "stdout_json": {
+        "/kind": "run",
+        "/result/normalized_outcome": "tool_error",
+        "/result/ok": false,
+        "/result/exit_code": 2,
+        "/result/error": "unknown argument: --help"
+      },
+      "stderr": ""
+    },
+    {
+      "id": "test_input.run.h_flag",
+      "args": [
+        "test-input",
+        "run",
+        "-h"
+      ],
+      "status": 2,
+      "stdout_json": {
+        "/kind": "run",
+        "/result/normalized_outcome": "tool_error",
+        "/result/ok": false,
+        "/result/exit_code": 2,
+        "/result/error": "unknown argument: -h"
+      },
+      "stderr": ""
+    },
+    {
+      "id": "test_input.run.help_word",
+      "args": [
+        "test-input",
+        "run",
+        "help"
+      ],
+      "status": 2,
+      "stdout_json": {
+        "/kind": "run",
+        "/result/normalized_outcome": "tool_error",
+        "/result/ok": false,
+        "/result/exit_code": 2,
+        "/result/error": "request.json not found: help",
+        "/data/specimen/request_path": "help"
+      },
+      "stderr": ""
+    },
+    {
+      "id": "test_input.run.no_arguments",
+      "args": [
+        "test-input",
+        "run"
+      ],
+      "status": 2,
+      "stdout_json": {
+        "/kind": "run",
+        "/result/normalized_outcome": "tool_error",
+        "/result/ok": false,
+        "/result/exit_code": 2,
+        "/result/error": "missing <request.json>",
+        "/data/timeout_ms": 240000
+      },
+      "stderr": ""
+    },
+    {
+      "id": "test_input.run.terminator",
+      "args": [
+        "test-input",
+        "run",
+        "--",
+        "x"
+      ],
+      "status": 2,
+      "stdout_json": {
+        "/kind": "run",
+        "/result/normalized_outcome": "tool_error",
+        "/result/ok": false,
+        "/result/exit_code": 2,
+        "/result/error": "missing <request.json>"
+      },
+      "stderr": ""
+    },
+    {
+      "id": "test_input.run.repeated_path",
+      "args": [
+        "test-input",
+        "run",
+        "a",
+        "b"
+      ],
+      "status": 2,
+      "stdout_json": {
+        "/kind": "run",
+        "/result/normalized_outcome": "tool_error",
+        "/result/ok": false,
+        "/result/exit_code": 2,
+        "/result/error": "unexpected argument: b",
+        "/data/specimen/request_path": "a"
+      },
+      "stderr": ""
+    },
+    {
+      "id": "test_input.run.timeout_zero",
+      "args": [
+        "test-input",
+        "run",
+        "--timeout-ms",
+        "0"
+      ],
+      "status": 2,
+      "stdout_json": {
+        "/kind": "run",
+        "/result/normalized_outcome": "tool_error",
+        "/result/ok": false,
+        "/result/exit_code": 2,
+        "/result/error": "invalid value for --timeout-ms"
+      },
+      "stderr": ""
+    },
+    {
+      "id": "test_input.run.runner_mode_invalid",
+      "args": [
+        "test-input",
+        "run",
+        "--runner-mode",
+        "fast"
+      ],
+      "status": 2,
+      "stdout_json": {
+        "/kind": "run",
+        "/result/normalized_outcome": "tool_error",
+        "/result/ok": false,
+        "/result/exit_code": 2,
+        "/result/error": "invalid value for --runner-mode: fast"
+      },
+      "stderr": ""
+    },
+    {
+      "id": "test_input.run.runner_mode_byoxpc",
+      "args": [
+        "test-input",
+        "run",
+        "--runner-mode",
+        "byoxpc"
+      ],
+      "status": 2,
+      "stdout_json": {
+        "/kind": "run",
+        "/result/normalized_outcome": "tool_error",
+        "/result/ok": false,
+        "/result/exit_code": 2,
+        "/result/error": "missing <request.json>"
+      },
+      "stderr": ""
+    },
+    {
+      "id": "test_input.run.unknown_flag",
+      "args": [
+        "test-input",
+        "run",
+        "--worker-timeout",
+        "5"
+      ],
+      "status": 2,
+      "stdout_json": {
+        "/kind": "run",
+        "/result/normalized_outcome": "tool_error",
+        "/result/ok": false,
+        "/result/exit_code": 2,
+        "/result/error": "unknown argument: --worker-timeout"
+      },
+      "stderr": ""
+    },
+    {
+      "id": "test_input.run.control_equals",
+      "args": [
+        "test-input",
+        "run",
+        "--worker-timeout-ms=5"
+      ],
+      "status": 2,
+      "stdout_json": {
+        "/kind": "run",
+        "/result/normalized_outcome": "tool_error",
+        "/result/ok": false,
+        "/result/exit_code": 2,
+        "/result/error": "unknown argument: --worker-timeout-ms=5"
+      },
+      "stderr": ""
+    },
+    {
+      "id": "test_input.run.unselected_override",
+      "args": [
+        "test-input",
+        "run",
+        "--worker-executable-path",
+        "/x"
+      ],
+      "status": 2,
+      "stdout_json": {
+        "/kind": "run",
+        "/result/normalized_outcome": "tool_error",
+        "/result/ok": false,
+        "/result/exit_code": 2,
+        "/result/error": "unknown argument: --worker-executable-path"
+      },
+      "stderr": ""
+    },
+    {
+      "id": "test_input.run.control_missing_value",
+      "args": [
+        "test-input",
+        "run",
+        "--validator-io-timeout-ms"
+      ],
+      "status": 2,
+      "stdout_json": {
+        "/kind": "run",
+        "/result/normalized_outcome": "tool_error",
+        "/result/ok": false,
+        "/result/exit_code": 2,
+        "/result/error": "missing value for --validator-io-timeout-ms"
+      },
+      "stderr": ""
+    },
+    {
+      "id": "test_input.run.control_path_missing_value",
+      "args": [
+        "test-input",
+        "run",
+        "x",
+        "--validator-executable-path"
+      ],
+      "status": 2,
+      "stdout_json": {
+        "/kind": "run",
+        "/result/normalized_outcome": "tool_error",
+        "/result/ok": false,
+        "/result/exit_code": 2,
+        "/result/error": "missing value for --validator-executable-path",
+        "/data/specimen/request_path": "x"
+      },
+      "stderr": ""
+    },
+    {
+      "id": "test_input.run.control_not_an_integer",
+      "args": [
+        "test-input",
+        "run",
+        "--worker-timeout-ms",
+        "soon"
+      ],
+      "status": 2,
+      "stdout_json": {
+        "/kind": "run",
+        "/result/normalized_outcome": "tool_error",
+        "/result/ok": false,
+        "/result/exit_code": 2,
+        "/result/error": "invalid value for --worker-timeout-ms"
+      },
+      "stderr": ""
+    },
+    {
+      "id": "test_input.run.control_not_an_integer.worker_pre_ready_hang_ms",
+      "args": [
+        "test-input",
+        "run",
+        "--worker-pre-ready-hang-ms",
+        "soon"
+      ],
+      "status": 2,
+      "stdout_json": {
+        "/kind": "run",
+        "/result/normalized_outcome": "tool_error",
+        "/result/ok": false,
+        "/result/exit_code": 2,
+        "/result/error": "invalid value for --worker-pre-ready-hang-ms"
+      },
+      "stderr": ""
+    },
+    {
+      "id": "test_input.run.control_not_an_integer.worker_post_apply_hang_ms",
+      "args": [
+        "test-input",
+        "run",
+        "--worker-post-apply-hang-ms",
+        "soon"
+      ],
+      "status": 2,
+      "stdout_json": {
+        "/kind": "run",
+        "/result/normalized_outcome": "tool_error",
+        "/result/ok": false,
+        "/result/exit_code": 2,
+        "/result/error": "invalid value for --worker-post-apply-hang-ms"
+      },
+      "stderr": ""
+    },
+    {
+      "id": "test_input.run.control_not_an_integer.worker_post_apply_kill_signal",
+      "args": [
+        "test-input",
+        "run",
+        "--worker-post-apply-kill-signal",
+        "soon"
+      ],
+      "status": 2,
+      "stdout_json": {
+        "/kind": "run",
+        "/result/normalized_outcome": "tool_error",
+        "/result/ok": false,
+        "/result/exit_code": 2,
+        "/result/error": "invalid value for --worker-post-apply-kill-signal"
+      },
+      "stderr": ""
+    },
+    {
+      "id": "test_input.run.control_not_an_integer.worker_kill_before_publish_slot",
+      "args": [
+        "test-input",
+        "run",
+        "--worker-kill-before-publish-slot",
+        "soon"
+      ],
+      "status": 2,
+      "stdout_json": {
+        "/kind": "run",
+        "/result/normalized_outcome": "tool_error",
+        "/result/ok": false,
+        "/result/exit_code": 2,
+        "/result/error": "invalid value for --worker-kill-before-publish-slot"
+      },
+      "stderr": ""
+    },
+    {
+      "id": "test_input.run.control_not_an_integer.validator_io_timeout_ms",
+      "args": [
+        "test-input",
+        "run",
+        "--validator-io-timeout-ms",
+        "soon"
+      ],
+      "status": 2,
+      "stdout_json": {
+        "/kind": "run",
+        "/result/normalized_outcome": "tool_error",
+        "/result/ok": false,
+        "/result/exit_code": 2,
+        "/result/error": "invalid value for --validator-io-timeout-ms"
+      },
+      "stderr": ""
+    },
+    {
+      "id": "test_input.run.control_not_an_integer.validator_total_timeout_ms",
+      "args": [
+        "test-input",
+        "run",
+        "--validator-total-timeout-ms",
+        "soon"
+      ],
+      "status": 2,
+      "stdout_json": {
+        "/kind": "run",
+        "/result/normalized_outcome": "tool_error",
+        "/result/ok": false,
+        "/result/exit_code": 2,
+        "/result/error": "invalid value for --validator-total-timeout-ms"
+      },
+      "stderr": ""
+    },
+    {
+      "id": "test_input.run.control_fraction",
+      "args": [
+        "test-input",
+        "run",
+        "--worker-timeout-ms",
+        "1.5"
+      ],
+      "status": 2,
+      "stdout_json": {
+        "/kind": "run",
+        "/result/normalized_outcome": "tool_error",
+        "/result/ok": false,
+        "/result/exit_code": 2,
+        "/result/error": "invalid value for --worker-timeout-ms"
+      },
+      "stderr": ""
+    },
+    {
+      "id": "test_input.run.control_takes_help_flag",
+      "args": [
+        "test-input",
+        "run",
+        "--worker-timeout-ms",
+        "--help"
+      ],
+      "status": 2,
+      "stdout_json": {
+        "/kind": "run",
+        "/result/normalized_outcome": "tool_error",
+        "/result/ok": false,
+        "/result/exit_code": 2,
+        "/result/error": "invalid value for --worker-timeout-ms"
+      },
+      "stderr": ""
+    },
+    {
+      "id": "test_input.run.control_beyond_64_bits",
+      "args": [
+        "test-input",
+        "run",
+        "--worker-timeout-ms",
+        "9223372036854775808"
+      ],
+      "status": 2,
+      "stdout_json": {
+        "/kind": "run",
+        "/result/normalized_outcome": "tool_error",
+        "/result/ok": false,
+        "/result/exit_code": 2,
+        "/result/error": "invalid value for --worker-timeout-ms"
+      },
+      "stderr": ""
+    },
+    {
+      "id": "test_input.run.control_non_utf8_path",
+      "args": [
+        "test-input",
+        "run",
+        "--validator-executable-path",
+        {
+          "hex": "2f6e6fff"
+        }
+      ],
+      "status": 2,
+      "stdout_json": {
+        "/kind": "run",
+        "/result/normalized_outcome": "tool_error",
+        "/result/ok": false,
+        "/result/exit_code": 2,
+        "/result/error": "invalid value for --validator-executable-path"
+      },
+      "stderr": ""
+    },
+    {
+      "id": "test_input.run.control_duplicate",
+      "args": [
+        "test-input",
+        "run",
+        "--worker-timeout-ms",
+        "5",
+        "--worker-timeout-ms",
+        "5"
+      ],
+      "status": 2,
+      "stdout_json": {
+        "/kind": "run",
+        "/result/normalized_outcome": "tool_error",
+        "/result/ok": false,
+        "/result/exit_code": 2,
+        "/result/error": "duplicate argument: --worker-timeout-ms"
+      },
+      "stderr": ""
+    },
+    {
+      "id": "test_input.run.control.worker_timeout_ms",
+      "args": [
+        "test-input",
+        "run",
+        "--worker-timeout-ms",
+        "-9223372036854775808"
+      ],
+      "status": 2,
+      "stdout_json": {
+        "/kind": "run",
+        "/result/normalized_outcome": "tool_error",
+        "/result/ok": false,
+        "/result/exit_code": 2,
+        "/result/error": "missing <request.json>"
+      },
+      "stderr": ""
+    },
+    {
+      "id": "test_input.run.control.worker_pre_ready_hang_ms",
+      "args": [
+        "test-input",
+        "run",
+        "--worker-pre-ready-hang-ms",
+        "60001"
+      ],
+      "status": 2,
+      "stdout_json": {
+        "/kind": "run",
+        "/result/normalized_outcome": "tool_error",
+        "/result/ok": false,
+        "/result/exit_code": 2,
+        "/result/error": "missing <request.json>"
+      },
+      "stderr": ""
+    },
+    {
+      "id": "test_input.run.control.worker_post_apply_hang_ms",
+      "args": [
+        "test-input",
+        "run",
+        "--worker-post-apply-hang-ms",
+        "60001"
+      ],
+      "status": 2,
+      "stdout_json": {
+        "/kind": "run",
+        "/result/normalized_outcome": "tool_error",
+        "/result/ok": false,
+        "/result/exit_code": 2,
+        "/result/error": "missing <request.json>"
+      },
+      "stderr": ""
+    },
+    {
+      "id": "test_input.run.control.worker_post_apply_kill_signal",
+      "args": [
+        "test-input",
+        "run",
+        "--worker-post-apply-kill-signal",
+        "32"
+      ],
+      "status": 2,
+      "stdout_json": {
+        "/kind": "run",
+        "/result/normalized_outcome": "tool_error",
+        "/result/ok": false,
+        "/result/exit_code": 2,
+        "/result/error": "missing <request.json>"
+      },
+      "stderr": ""
+    },
+    {
+      "id": "test_input.run.control.worker_kill_before_publish_slot",
+      "args": [
+        "test-input",
+        "run",
+        "--worker-kill-before-publish-slot",
+        "256"
+      ],
+      "status": 2,
+      "stdout_json": {
+        "/kind": "run",
+        "/result/normalized_outcome": "tool_error",
+        "/result/ok": false,
+        "/result/exit_code": 2,
+        "/result/error": "missing <request.json>"
+      },
+      "stderr": ""
+    },
+    {
+      "id": "test_input.run.control.validator_executable_path",
+      "args": [
+        "test-input",
+        "run",
+        "--validator-executable-path",
+        "relative"
+      ],
+      "status": 2,
+      "stdout_json": {
+        "/kind": "run",
+        "/result/normalized_outcome": "tool_error",
+        "/result/ok": false,
+        "/result/exit_code": 2,
+        "/result/error": "missing <request.json>"
+      },
+      "stderr": ""
+    },
+    {
+      "id": "test_input.run.control.validator_executable_path_takes_flag",
+      "args": [
+        "test-input",
+        "run",
+        "--validator-executable-path",
+        "--worker-timeout-ms"
+      ],
+      "status": 2,
+      "stdout_json": {
+        "/kind": "run",
+        "/result/normalized_outcome": "tool_error",
+        "/result/ok": false,
+        "/result/exit_code": 2,
+        "/result/error": "missing <request.json>"
+      },
+      "stderr": ""
+    },
+    {
+      "id": "test_input.run.control.validator_io_timeout_ms",
+      "args": [
+        "test-input",
+        "run",
+        "--validator-io-timeout-ms",
+        "0"
+      ],
+      "status": 2,
+      "stdout_json": {
+        "/kind": "run",
+        "/result/normalized_outcome": "tool_error",
+        "/result/ok": false,
+        "/result/exit_code": 2,
+        "/result/error": "missing <request.json>"
+      },
+      "stderr": ""
+    },
+    {
+      "id": "test_input.run.control.validator_total_timeout_ms",
+      "args": [
+        "test-input",
+        "run",
+        "--validator-total-timeout-ms",
+        "+9223372036854775807"
+      ],
+      "status": 2,
+      "stdout_json": {
+        "/kind": "run",
+        "/result/normalized_outcome": "tool_error",
+        "/result/ok": false,
+        "/result/exit_code": 2,
+        "/result/error": "missing <request.json>"
+      },
+      "stderr": ""
+    },
+    {
+      "id": "run.control_flag",
+      "args": [
+        "run",
+        "--worker-timeout-ms",
+        "5"
+      ],
+      "status": 2,
+      "stdout_json": {
+        "/kind": "run",
+        "/result/normalized_outcome": "tool_error",
+        "/result/ok": false,
+        "/result/exit_code": 2,
+        "/result/error": "unknown argument: --worker-timeout-ms"
+      },
+      "stderr": ""
+    },
+    {
       "id": "help.stdout_without_reader",
       "args": [
         "help"
@@ -1135,6 +1783,123 @@
       "files": {
         "request.json": "{\"contract\": \"{contract}\", \"specimen_id\": \"selector\", \"policy\": {\"format\": \"sbpl\", \"sbpl_source\": \"(version 1)\\n(allow default)\\n\"}, \"probe_plan\": [], \"runner\": {\"mode\": \"byoxpc\"}}"
       }
+    },
+    {
+      "id": "test_input.run.request_mode_machme",
+      "args": [
+        "test-input",
+        "run",
+        "--worker-timeout-ms",
+        "5",
+        "{scratch}/request.json"
+      ],
+      "status": 1,
+      "stdout_json": {
+        "/kind": "run",
+        "/result/normalized_outcome": "bad_request",
+        "/result/ok": false,
+        "/result/exit_code": 1,
+        "/data/request_failure/code": "invalid_value",
+        "/data/request_failure/path": [
+          "runner",
+          "mode"
+        ],
+        "/data/runner_client": null
+      },
+      "stderr": "",
+      "files": {
+        "request.json": "{\"contract\": \"{contract}\", \"specimen_id\": \"selector\", \"policy\": {\"format\": \"sbpl\", \"sbpl_source\": \"(version 1)\\n(allow default)\\n\"}, \"probe_plan\": [], \"runner\": {\"mode\": \"machme\"}}"
+      }
+    },
+    {
+      "id": "test_input.publish_and_run",
+      "steps": [
+        {
+          "args": [
+            "test-input",
+            "read",
+            "--target",
+            "/etc/hosts"
+          ],
+          "status": 0,
+          "save_stdout": "request.json",
+          "stderr": ""
+        },
+        {
+          "args": [
+            "test-input",
+            "run",
+            "--worker-timeout-ms",
+            "7000",
+            "{scratch}/request.json"
+          ],
+          "status": 0,
+          "stdout_json": {
+            "/kind": "run",
+            "/result/normalized_outcome": "finished",
+            "/result/ok": true,
+            "/result/exit_code": 0,
+            "/data/runner_result/test_overrides": {
+              "worker_timeout_ms": 7000
+            },
+            "/data/runner_result/runner_subprocess/sentinel_wait/budget_ms": 7000
+          },
+          "stderr": ""
+        },
+        {
+          "args": [
+            "test-input",
+            "run",
+            "{scratch}/request.json"
+          ],
+          "status": 0,
+          "stdout_json": {
+            "/kind": "run",
+            "/result/normalized_outcome": "finished",
+            "/result/ok": true,
+            "/result/exit_code": 0,
+            "/data/runner_result/test_overrides": {}
+          },
+          "stderr": ""
+        },
+        {
+          "args": [
+            "test-input",
+            "run",
+            "--validator-executable-path",
+            "/nonexistent/pw-interface-validator",
+            "{scratch}/request.json"
+          ],
+          "status": 1,
+          "stdout_json": {
+            "/kind": "run",
+            "/result/normalized_outcome": "validator_spawn_failed",
+            "/result/ok": false,
+            "/result/exit_code": 1,
+            "/data/specimen/binaries/validator/path": "/nonexistent/pw-interface-validator",
+            "/data/specimen/binaries/validator/verification": "unavailable",
+            "/data/runner_result/phases/0/validator_spawn_failure/executable_path": "/nonexistent/pw-interface-validator",
+            "/data/runner_result/test_overrides": {
+              "validator_executable_path": "/nonexistent/pw-interface-validator"
+            }
+          },
+          "stderr": ""
+        },
+        {
+          "args": [
+            "run",
+            "{scratch}/request.json"
+          ],
+          "status": 0,
+          "stdout_json": {
+            "/kind": "run",
+            "/result/normalized_outcome": "finished",
+            "/result/ok": true,
+            "/result/exit_code": 0
+          },
+          "stderr": ""
+        }
+      ]
     }
   ]
 }

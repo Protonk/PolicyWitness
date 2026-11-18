@@ -12,6 +12,11 @@ import Darwin
     func reserveRunner(_ request: Data, withReply reply: @escaping (Data) -> Void)
     func runReservedSpecimen(_ request: Data, reservation: String,
         withReply reply: @escaping (Bool, Data) -> Void)
+    // The experimental submission: the same request bytes and, apart from
+    // them, one JSON object of test controls. It is a different call, not a
+    // different request, so no request can select it.
+    func runReservedExperiment(_ request: Data, controls: Data, reservation: String,
+        withReply reply: @escaping (Bool, Data) -> Void)
 }
 
 // Wire string constants used across runner/client code. Keep these stable.
@@ -179,4 +184,5 @@ struct PWProducer {
 
 extension CodingUserInfoKey {
     static let expectedContract = CodingUserInfoKey(rawValue: "PolicyWitness.expectedContract")!
+    static let overrideSource = CodingUserInfoKey(rawValue: "PolicyWitness.overrideSource")!
 }

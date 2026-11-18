@@ -247,6 +247,20 @@ the subprocess builder and binary writer. The CLI
 transport witness separately exercises C publication and client/controller
 forwarding; these unit inputs do not establish native failure attribution.
 
+`ExperimentalSubmissionTests` decodes experimental submissions and sends them
+through the service object with orchestration observed, not run. A controls
+object must give the request the ordinary call decodes from the same block,
+for each control, for 64-bit extremes and for null and empty members; each
+unknown, unselected or mistyped member and each container fault must be
+refused at its stated code under `_test_overrides`; a request block with any
+member must be refused while the ordinary call still decodes it; the contract
+and request must be decoded first. Through the service, the experimental call
+must admit once and echo its controls, an empty object must echo as empty, a
+refusal must consume the host with no orchestration, and the validator
+control must keep the path bound, the NUL refusal and the withheld echo that
+the request block has. The client session controls show that controls select
+the experimental call, once, with both byte strings unchanged.
+
 `ServiceAdmissionTests` checks host-wide reservation admission and owner-only
 retirement. `service_admission_controls` introduces per-connection slots and
 nonowner refusal exits separately in a disposable source copy; each must cause

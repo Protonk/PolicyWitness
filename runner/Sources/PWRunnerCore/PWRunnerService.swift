@@ -245,6 +245,25 @@ func requestDecodeDiagnostic(_ error: Error) -> String {
     return "request decode failed: \(kind) at \(parts.isEmpty ? "<root>" : parts.joined(separator: "."))"
 }
 
+/// An experimental submission decoded into the request the orchestrators
+/// read: the request with its own block empty or absent, and the controls
+/// object in that block's place. A controls refusal is therefore located
+/// under `_test_overrides`. The contract and the request's own fields are
+/// decoded first.
+func decodeExperimentalSubmission(_ request: Data, controls: Data) throws -> PWRunnerRunSpec {
+    var parsed = try pwRunnerDecodeJSON(PWRunnerRunSpec.self, from: request,
+                                        overrideSource: .experimentalRequestBlock)
+    do {
+        parsed._test_overrides = try pwRunnerDecodeJSON(PWRunnerTestOverrides.self, from: controls,
+                                                        overrideSource: .experimentalControls)
+    } catch {
+        let failure = requestDecodeFailure(error)
+        throw PWRunnerRequestFailure(code: failure.code,
+            path: failure.path.map { [PWRunnerRunSpec.CodingKeys._test_overrides.stringValue] + $0 })
+    }
+    return parsed
+}
+
 final class PWRunnerService: NSObject, PWRunnerProtocol {
     private let admission: PWRunnerAdmission
     private let connectionID = PWRunnerAdmission.Connection()
@@ -327,6 +346,19 @@ final class PWRunnerService: NSObject, PWRunnerProtocol {
 
     func runReservedSpecimen(_ request: Data, reservation: String,
                              withReply reply: @escaping (Bool, Data) -> Void) {
+        runSubmission(request, controls: nil, reservation: reservation, reply: reply)
+    }
+
+    func runReservedExperiment(_ request: Data, controls: Data, reservation: String,
+                               withReply reply: @escaping (Bool, Data) -> Void) {
+        runSubmission(request, controls: controls, reservation: reservation, reply: reply)
+    }
+
+    /// One submission. `controls` is non-nil for the experimental call alone;
+    /// which call arrived, and nothing in the request, decides how the
+    /// request's override block and the controls are admitted.
+    private func runSubmission(_ request: Data, controls: Data?, reservation: String,
+                               reply: @escaping (Bool, Data) -> Void) {
         let decision = admission.submit(owner: connectionID, token: reservation)
         guard decision.accepted else {
             reply(false, control("reservation_refused", reason: decision.reason))
@@ -343,7 +375,8 @@ final class PWRunnerService: NSObject, PWRunnerProtocol {
 
         let parsed: PWRunnerRunSpec
         do {
-            parsed = try pwRunnerDecodeJSON(PWRunnerRunSpec.self, from: request)
+            if let controls { parsed = try decodeExperimentalSubmission(request, controls: controls) }
+            else { parsed = try pwRunnerDecodeJSON(PWRunnerRunSpec.self, from: request) }
         } catch {
             let resp = PWRunnerRunResult(
                 specimen_id: "<decode_failed>",

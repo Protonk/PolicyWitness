@@ -231,19 +231,23 @@ whose cards disagree with the references, and a card with a second trailing
 newline. For the residue baseline, a member moved between classes at
 unchanged totals is refused until `--refresh-residue`, a removed member is
 recorded by a default run, and an expansion is recorded only with `--expand`
-naming a baseline `unenumerated` entry that is gone. Malformed mutation
+naming a baseline `unenumerated` entry that is gone; the control expands the
+tail of `test-input read` beside the expansion the baseline already records. Malformed mutation
 records and declared associations that name no entry or case are refused.
 
 Case association is checked against independently written expectations for
 argument vectors, required result fields and a submitted request file,
-including the result whose fields two rows select. The contract join is run
-over the authored tree: it reports the six citing nodes with what was
+including the result whose fields two rows select, the forms of `test-input`,
+and a test control's admitted values, missing value and repetition under
+`test-input run` beside its refusal under `run`. The contract join is run
+over the authored tree: it reports the seven citing nodes with what was
 compared, and ten changed inventory facts are each refused with the node, the
 fact and the entry named. The literal rule passes on a copy of its declared
-inputs and reports each of seven edits: a comparison in `parse_arguments`, a
+inputs and reports each of eight edits: a comparison in `parse_arguments`, a
 match arm in `cli::run`, a search in the help function, a `matches!` pattern in
 the request selector reader, a card element in the renderer, an aliased word
-in a diagnostic, and a renamed governed function.
+in a diagnostic, a comparison in the `test-input` form dispatch, and a renamed
+governed function.
 
 These controls establish the checks' own behavior on constructed inputs. That
 the inventory matches the definitions is established by the controller's

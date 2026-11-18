@@ -29,8 +29,8 @@ import Foundation
  *        - normalized_outcome from C-worker disposition +
  *          validator disposition + per-slot completed/done state
  *
- * Validation and policy-hash computation are PWRunnerService.runReservedSpecimen's
- * responsibility.
+ * Validation and policy-hash computation are the responsibility of
+ * PWRunnerService's submission calls.
  * The orchestrator only sees a request that has already passed
  * those gates.
  */

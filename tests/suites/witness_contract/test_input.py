@@ -300,6 +300,10 @@ def run_case(directory, pw, app, snapshot):
                                                     'publication_commands', 'version_commands')}
         assert counted == dict(submissions=13, execution_passages=12, refusals=1, publication_commands=4,
                                version_commands=1) and len(commands) == 18, accounting
+        # The same owned staging and cleanup record carry the `test-input run` submissions.
+        import test_input_seam
+        test_input_seam.run_seam(directory / 'seam', pw, app, work, publication['identity'],
+                                 ownership['attempts'], persist_owner)
     finally:
         cleanup_safe = all(entry['worker_exit_witnessed'] for entry in ownership['attempts'])
         try:

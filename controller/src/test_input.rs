@@ -1,12 +1,15 @@
-//! Build-bound developer input. Publication and independent `run` admission differ.
+//! `test-input`: its form dispatch and the build-bound developer input.
+//! Publication and independent `run` admission differ.
 use std::ffi::OsString;
 use std::io::Write;
 use std::path::Path;
 
 use serde_json::Value;
 
+use crate::interface::commands::{Command, Tail, TestInputForm};
 use crate::json_contract::BUILD_CONTRACT;
 use crate::request_patch::{parse_request, validate_contract};
+use crate::run_flow;
 
 const READ: &str = include_str!("test_inputs/read.json");
 /// What the embedded body holds at each position that receives the target.
@@ -26,7 +29,8 @@ enum Refusal {
 }
 
 fn render_template(args: &[OsString], identity: &str, document: &str) -> Result<String, Refusal> {
-    if args.len() != 3 || args[0] != "read" || args[1] != "--target" {
+    let read = TestInputForm::select_form(args) == Some(TestInputForm::Read);
+    if args.len() != 3 || !read || args[1] != "--target" {
         return Err(Refusal::Usage);
     }
     let target = args[2].to_str().ok_or(Refusal::Target)?;
@@ -79,18 +83,36 @@ fn emit(args: &[OsString], identity: &str, out: &mut dyn Write) -> Result<(), Re
     emit_template(args, identity, READ, out)
 }
 
+/// Dispatches on the form the first argument selects. No form is a usage
+/// refusal. The form's tail rule decides what reads the rest: `run`'s
+/// orchestration, which reports every refusal itself, or the publisher.
 pub fn cmd_test_input(args: &[OsString]) -> i32 {
-    match emit(args, BUILD_CONTRACT, &mut std::io::stdout().lock()) {
+    let published = match TestInputForm::select_form(args).map(|form| form.def().tail) {
+        Some(Tail::RunArguments) => {
+            return match run_flow::cmd_test_input_run(&args[1..]) {
+                Ok(code) => code,
+                Err(error) => run_flow::print_escaped_tool_error(error),
+            };
+        }
+        Some(Tail::Unenumerated) => emit(args, BUILD_CONTRACT, &mut std::io::stdout().lock()),
+        Some(Tail::Topic | Tail::RefusesAny | Tail::Form) | None => Err(Refusal::Usage),
+    };
+    match published {
         Ok(()) => 0,
         Err(refusal) => {
+            let command = Command::TestInput.def().spelling;
             let reason = match refusal {
-                Refusal::Usage => "expected test-input read --target PATH",
-                Refusal::Target => "target must be an absolute UTF-8 path without NUL",
-                Refusal::NoPublicIdentity => "this build has no public identity",
-                Refusal::Render => "could not render the developer input",
-                Refusal::Write => "failed to write stdout",
+                Refusal::Usage => format!(
+                    "expected {command} {} --target PATH or {command} {} [OPTIONS] REQUEST",
+                    TestInputForm::Read.def().spelling,
+                    TestInputForm::Run.def().spelling
+                ),
+                Refusal::Target => "target must be an absolute UTF-8 path without NUL".into(),
+                Refusal::NoPublicIdentity => "this build has no public identity".into(),
+                Refusal::Render => "could not render the developer input".into(),
+                Refusal::Write => "failed to write stdout".into(),
             };
-            let _ = writeln!(std::io::stderr(), "policy-witness test-input: {reason}");
+            let _ = writeln!(std::io::stderr(), "policy-witness {command}: {reason}");
             2
         }
     }
@@ -177,6 +199,41 @@ mod tests {
         body["probe_plan"][0]["sandbox_check"]["filter"]["value"] = "/x".into();
         body["probe_plan"][0]["attempt"]["target"] = "/x".into();
         assert_eq!(serde_json::from_str::<Value>(&text).unwrap(), body);
+    }
+
+    #[test]
+    fn the_first_argument_selects_a_form_and_only_read_publishes() {
+        let select = |words: &[&str]| {
+            let words: Vec<OsString> = words.iter().map(OsString::from).collect();
+            TestInputForm::select_form(&words)
+        };
+        assert_eq!(
+            select(&["read", "--target", "/x"]),
+            Some(TestInputForm::Read)
+        );
+        assert_eq!(select(&["run"]), Some(TestInputForm::Run));
+        assert_eq!(select(&["run", "/r.json"]), Some(TestInputForm::Run));
+        for words in [
+            &[][..],
+            &["Run"],
+            &["--run"],
+            &["future", "run"],
+            &["read-all"],
+            &["help"],
+        ] {
+            assert_eq!(select(words), None, "{words:?}");
+        }
+        // The publisher refuses the run form's arguments: it publishes nothing.
+        let mut output = Vec::new();
+        let arguments: Vec<OsString> = ["run", "--target", "/x"]
+            .iter()
+            .map(OsString::from)
+            .collect();
+        assert_eq!(
+            emit(&arguments, BUILD_CONTRACT, &mut output),
+            Err(Refusal::Usage)
+        );
+        assert!(output.is_empty());
     }
 
     #[test]

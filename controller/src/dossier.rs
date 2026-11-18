@@ -18,6 +18,7 @@ use crate::app_layout::{
 use crate::augments::PolicyAugmentation;
 use crate::evidence::{self, EvidenceManifest};
 use crate::host_facts;
+use crate::interface::run_args::Control;
 use crate::runner_select::{RunnerProvenance, RunnerTarget};
 use crate::sbpl_imports::{self, ImportRecord, MAX_SBPL_SOURCE_BYTES};
 
@@ -309,28 +310,54 @@ fn compare(
     }
 }
 
-/// The override value for one helper role, read from the parsed request.
+/// The override value for one helper role.
 enum Override {
     Absent,
     Malformed(String),
     Path(String),
 }
 
-fn override_for(request: &Value, key: &str) -> Override {
-    match request.get("_test_overrides") {
-        None | Some(Value::Null) => Override::Absent,
-        Some(Value::Object(map)) => match map.get(key) {
+/// A helper role's override and the name its diagnostics give the input it
+/// came from: a request key or a `test-input run` control.
+struct Selection {
+    value: Override,
+    source: String,
+}
+
+impl Selection {
+    fn none() -> Self {
+        Selection {
+            value: Override::Absent,
+            source: String::new(),
+        }
+    }
+
+    /// The parsed request's `_test_overrides` member for the role.
+    fn request_key(request: &Value, key: &str) -> Self {
+        let source = format!("_test_overrides.{key}");
+        let value = match request.get("_test_overrides") {
             None | Some(Value::Null) => Override::Absent,
-            Some(Value::String(text)) => Override::Path(text.clone()),
+            Some(Value::Object(map)) => match map.get(key) {
+                None | Some(Value::Null) => Override::Absent,
+                Some(Value::String(text)) => Override::Path(text.clone()),
+                Some(other) => {
+                    Override::Malformed(format!("{source} is {}, not a string", json_type(other)))
+                }
+            },
             Some(other) => Override::Malformed(format!(
-                "_test_overrides.{key} is {}, not a string",
+                "_test_overrides is {}, not an object",
                 json_type(other)
             )),
-        },
-        Some(other) => Override::Malformed(format!(
-            "_test_overrides is {}, not an object",
-            json_type(other)
-        )),
+        };
+        Selection { value, source }
+    }
+
+    /// The value given for a `test-input run` control, if it was given.
+    fn control(control: Control, value: Option<&str>) -> Self {
+        Selection {
+            value: value.map_or(Override::Absent, |text| Override::Path(text.to_string())),
+            source: control.def().spelling.to_string(),
+        }
     }
 }
 
@@ -347,14 +374,14 @@ fn json_type(value: &Value) -> &'static str {
 
 /// The record for a helper role under the override rules.
 fn helper_record(
-    request: &Value,
-    key: Option<&str>,
+    selection: Selection,
     bundle_helper: Option<&Path>,
     manifest_selected_path: Option<&Path>,
     manifest: Result<&EvidenceManifest, &String>,
     role: &ShippedBinary,
 ) -> Option<BinaryRecord> {
-    match key.map_or(Override::Absent, |key| override_for(request, key)) {
+    let source = selection.source;
+    match selection.value {
         Override::Malformed(reason) => Some(unavailable(
             None,
             None,
@@ -372,13 +399,12 @@ fn helper_record(
             )),
         },
         Override::Path(text) => {
-            let key = key.expect("override path has an owning key");
             if text.contains('\0') {
                 return Some(unavailable(
                     None,
                     None,
                     baseline(manifest, role).ok().flatten(),
-                    format!("_test_overrides.{key} contains a NUL byte"),
+                    format!("{source} contains a NUL byte"),
                 ));
             }
             if text.len() > OVERRIDE_PATH_ECHO_BYTES {
@@ -387,7 +413,7 @@ fn helper_record(
                     None,
                     baseline(manifest, role).ok().flatten(),
                     format!(
-                        "_test_overrides.{key} is {} bytes, beyond the {OVERRIDE_PATH_ECHO_BYTES}-byte echo bound",
+                        "{source} is {} bytes, beyond the {OVERRIDE_PATH_ECHO_BYTES}-byte echo bound",
                         text.len()
                     ),
                 ));
@@ -397,7 +423,7 @@ fn helper_record(
                     Some(text),
                     None,
                     baseline(manifest, role).ok().flatten(),
-                    format!("_test_overrides.{key} is empty"),
+                    format!("{source} is empty"),
                 ));
             }
             if !text.starts_with('/') {
@@ -406,7 +432,7 @@ fn helper_record(
                     None,
                     baseline(manifest, role).ok().flatten(),
                     format!(
-                        "_test_overrides.{key} is relative; the runner's working directory is unknown to the controller"
+                        "{source} is relative; the runner's working directory is unknown to the controller"
                     ),
                 ));
             }
@@ -432,10 +458,45 @@ impl Binaries {
     }
 
     /// Observe the selected service and helper binaries against the manifest.
+    /// The worker and validator overrides are the request's own keys.
     pub fn observe(
         app_root: &Path,
         target: &RunnerTarget,
         request: &Value,
+        manifest: Result<&EvidenceManifest, &String>,
+    ) -> Self {
+        Self::observe_selected(
+            app_root,
+            target,
+            Selection::request_key(request, "worker_executable_path"),
+            Selection::request_key(request, "validator_executable_path"),
+            manifest,
+        )
+    }
+
+    /// The same observation for `test-input run`: the validator override is
+    /// the validator control and the request's validator key is not read.
+    pub fn observe_with_validator_control(
+        app_root: &Path,
+        target: &RunnerTarget,
+        request: &Value,
+        validator: Option<&str>,
+        manifest: Result<&EvidenceManifest, &String>,
+    ) -> Self {
+        Self::observe_selected(
+            app_root,
+            target,
+            Selection::request_key(request, "worker_executable_path"),
+            Selection::control(Control::ValidatorExecutablePath, validator),
+            manifest,
+        )
+    }
+
+    fn observe_selected(
+        app_root: &Path,
+        target: &RunnerTarget,
+        worker: Selection,
+        validator: Selection,
         manifest: Result<&EvidenceManifest, &String>,
     ) -> Self {
         let service_selected = target.executable_path.as_deref();
@@ -467,24 +528,21 @@ impl Binaries {
         Binaries {
             service,
             worker: helper_record(
-                request,
-                Some("worker_executable_path"),
+                worker,
                 worker_bundle.as_deref(),
                 worker_selected.as_deref(),
                 manifest,
                 &SHIPPED_WORKER,
             ),
             validator: helper_record(
-                request,
-                Some("validator_executable_path"),
+                validator,
                 validator_bundle.as_deref(),
                 validator_selected.as_deref(),
                 manifest,
                 &SHIPPED_VALIDATOR,
             ),
             unentitled_worker: helper_record(
-                request,
-                None,
+                Selection::none(),
                 unentitled_bundle.as_deref(),
                 unentitled_selected.as_deref(),
                 manifest,
@@ -1290,6 +1348,136 @@ mod tests {
                 .contains("manifest unavailable")
         );
         fs::set_permissions(&unreadable, fs::Permissions::from_mode(0o644)).unwrap();
+        fs::remove_dir_all(&root).unwrap();
+        fs::remove_dir_all(&scratch).unwrap();
+    }
+
+    #[test]
+    fn validator_control_follows_the_request_key_rules_and_names_the_flag() {
+        let root = synthetic_app("validator-control");
+        let manifest = manifest_for(&root);
+        let target = builtin(&root, &manifest);
+        let baseline = hash_of(&root, &SHIPPED_VALIDATOR);
+        let scratch = temp_root("validator-control-files");
+        let same = scratch.join("same-validator");
+        write(
+            &same,
+            &fs::read(root.join(SHIPPED_VALIDATOR.rel_path)).unwrap(),
+        );
+        let different = scratch.join("other-validator");
+        write(&different, b"not the shipped validator");
+        let shipped = root.join(SHIPPED_VALIDATOR.rel_path).display().to_string();
+        let overlong = format!("/{}", "x".repeat(OVERRIDE_PATH_ECHO_BYTES));
+        let longest = format!("/{}", "x".repeat(OVERRIDE_PATH_ECHO_BYTES - 1));
+        // The value, the echoed path, whether bytes were hashed, the verification and the reason.
+        let cases: [(&str, Option<&str>, bool, &str, &str); 8] = [
+            (
+                "/tmp/v\u{0}x",
+                None,
+                false,
+                "unavailable",
+                "contains a NUL byte",
+            ),
+            (&overlong, None, false, "unavailable", "echo bound"),
+            ("", Some(""), false, "unavailable", "is empty"),
+            (
+                "relative/validator",
+                Some("relative/validator"),
+                false,
+                "unavailable",
+                "is relative",
+            ),
+            (
+                "/nonexistent/pw-validator",
+                Some("/nonexistent/pw-validator"),
+                false,
+                "unavailable",
+                "cannot stat",
+            ),
+            (
+                &longest,
+                Some(&longest),
+                false,
+                "unavailable",
+                "cannot stat",
+            ),
+            (same.to_str().unwrap(), same.to_str(), true, "match", ""),
+            (
+                different.to_str().unwrap(),
+                different.to_str(),
+                true,
+                "mismatch",
+                "differ from the manifest baseline",
+            ),
+        ];
+        // The request's own validator key is not read with the control: an
+        // absent control selects the packaged validator whatever the key says.
+        let request =
+            json!({"_test_overrides": {"validator_executable_path": different.to_str().unwrap()}});
+        for (value, path, hashed, verification, reason) in cases {
+            let binaries = Binaries::observe_with_validator_control(
+                &root,
+                &target,
+                &request,
+                Some(value),
+                Ok(&manifest),
+            );
+            assert!(
+                binaries.service.is_none() && binaries.worker.is_none(),
+                "{value:?}"
+            );
+            let validator = record(&binaries, "validator");
+            assert_eq!(validator.path.as_deref(), path, "{value:?}");
+            assert_eq!(validator.actual_sha256.is_some(), hashed, "{value:?}");
+            assert_eq!(validator.verification, verification, "{value:?}");
+            assert_eq!(
+                validator.baseline_sha256.as_deref(),
+                Some(baseline.as_str())
+            );
+            let found = validator.reason.as_deref().unwrap_or("");
+            assert!(found.contains(reason), "{value:?}: {found}");
+            // The diagnostic names the control, not a request key, and
+            // never repeats a value the record withholds.
+            if verification == "unavailable" && !reason.contains("cannot stat") {
+                assert!(found.starts_with("--validator-executable-path "), "{found}");
+            }
+            assert!(!found.contains("_test_overrides"), "{found}");
+            assert!(path.is_some() || !found.contains(value), "{found}");
+        }
+        let packaged = Binaries {
+            service: None,
+            worker: None,
+            validator: None,
+            unentitled_worker: None,
+        };
+        for control in [None, Some(shipped.as_str())] {
+            assert_eq!(
+                Binaries::observe_with_validator_control(
+                    &root,
+                    &target,
+                    &request,
+                    control,
+                    Ok(&manifest)
+                ),
+                packaged
+            );
+        }
+        // The same request through `run` selects the validator its key names.
+        let ordinary = Binaries::observe(&root, &target, &request, Ok(&manifest));
+        assert_eq!(
+            record(&ordinary, "validator").path.as_deref(),
+            different.to_str()
+        );
+        // The worker key stays the request's on both routes.
+        let request =
+            json!({"_test_overrides": {"worker_executable_path": different.to_str().unwrap()}});
+        let binaries =
+            Binaries::observe_with_validator_control(&root, &target, &request, None, Ok(&manifest));
+        assert_eq!(
+            record(&binaries, "worker").path.as_deref(),
+            different.to_str()
+        );
+        assert!(binaries.validator.is_none());
         fs::remove_dir_all(&root).unwrap();
         fs::remove_dir_all(&scratch).unwrap();
     }

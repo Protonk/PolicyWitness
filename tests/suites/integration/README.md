@@ -22,7 +22,14 @@ Rust integration tests that exercise the CLI contract against a built app.
   and after every command, `run`'s argument refusals, runner-kind words through
   the option, a request file and `runner install`, both publishers, a help
   card written to a stdout without a reader, and `example` saved and submitted
-  to `run`. Its executor rejects a wrong status and output on the wrong
+  to `run`. For `test-input run` it covers each test control admitted with a
+  value outside the control's own range, the refusals of a missing value, a
+  value of another form, a repeated control and an unknown flag, `run`'s own
+  options and refusals under that form, a control flag refused by `run`, a
+  request refused by its selector before any client call, and the published
+  read input submitted with a control, with none, with a validator path that
+  does not exist, whose dossier record and spawn failure name it, and through
+  `run`. Its executor rejects a wrong status and output on the wrong
   stream, and refuses a step that states no stderr expectation.
 - What each help card shows is what the same binary does: every base-card line
   addresses a card headed by that line, every option and word on the `run`

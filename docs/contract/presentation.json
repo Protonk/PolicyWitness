@@ -363,6 +363,7 @@
       "nodes": [
         "request.specimen.emit_example",
         "request.specimen.emit_test_input",
+        "request.overrides.test_input_run",
         "request.options.precedence",
         "policy.augments.resolve",
         "dossier.collection"

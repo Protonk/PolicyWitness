@@ -47,9 +47,9 @@ findings and experiment completion answer different questions. The
 that make the mapping applicable; a decoded `finished` label beside an admission
 refusal does not satisfy them.
 
-Publication is an earlier event. Successful `example` or `test-input` prints a
+Publication is an earlier event. Successful `example` or `test-input read` prints a
 request document, not this envelope. Their exit 0 means complete publication;
-`example` additionally carries its build's admission promise, while `test-input`
+`example` additionally carries its build's admission promise, while `test-input read`
 does not. A later `run` supplies its own refusal, execution and collection
 account. The [publication comparison](REQUEST.md) explains these entry points.
 

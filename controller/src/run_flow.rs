@@ -4,6 +4,8 @@
 //! selects a runner, collects the specimen dossier, delivers the held request
 //! string to the Swift client on stdin, gates the reply on its response
 //! version, and records independent fallback compilation on `xpc_error`.
+//! `test-input run` is the same run with test controls delivered to the
+//! client beside the request.
 //!
 //! Published worker preparation/application failures are runner_failed. The
 //! fallback sbpl-check reports only its own compilation, not missing worker
@@ -21,7 +23,9 @@ use crate::dossier::{
 };
 use crate::evidence::{self, EvidenceManifest};
 use crate::interface::result::{Disposition, Label, Refusal, Selection, select};
-use crate::interface::run_args::{self, RunOption, Token, Value as OptionValue};
+use crate::interface::run_args::{
+    self, Control, ControlValue, Form, RunOption, Token, Value as OptionValue,
+};
 use crate::interface::runner_kind::Reader;
 use crate::json_contract;
 use crate::policy_check::{PolicyCheckCapture, run_policy_check};
@@ -204,11 +208,14 @@ struct RunDependencies<'a> {
     /// `None` resolves the registry from `PW_RUNNER_REGISTRY` or `$HOME`.
     pub registry_path: Option<&'a Path>,
     pub policy_check: &'a dyn Fn(&str) -> Result<PolicyCheckCapture, String>,
+    /// The service, the held request, the timeout, the connection and, for
+    /// an experimental submission, its controls object.
     pub client: &'a dyn Fn(
         &str,
         &str,
         u64,
         &RunnerConnectionKind,
+        Option<&str>,
     ) -> Result<(RunnerClientRun, Option<PWRunnerRunResult>), String>,
 }
 
@@ -397,6 +404,8 @@ struct Parsed {
     request_path: Option<PathBuf>,
     timeout_ms: u64,
     runner_mode_arg: Option<String>,
+    /// The controls given, in argument order; only `test-input run` admits any.
+    controls: Vec<(Control, Value)>,
 }
 
 enum Arguments {
@@ -405,16 +414,17 @@ enum Arguments {
     Error(Option<PathBuf>, String),
 }
 
-fn parse_arguments(args: &[OsString]) -> Arguments {
+fn parse_arguments(args: &[OsString], form: Form) -> Arguments {
     let mut parsed = Parsed {
         request_path: None,
         timeout_ms: DEFAULT_TIMEOUT_MS,
         runner_mode_arg: None,
+        controls: Vec::new(),
     };
     let mut idx = 0usize;
     while idx < args.len() {
         let arg = args[idx].to_string_lossy();
-        let option = match run_args::classify(&arg) {
+        let option = match run_args::classify(&arg, form) {
             Token::Terminator => break,
             Token::RequestPath if parsed.request_path.is_some() => {
                 return Arguments::Error(
@@ -429,6 +439,40 @@ fn parse_arguments(args: &[OsString]) -> Arguments {
             }
             Token::UnknownFlag => {
                 return Arguments::Error(parsed.request_path, format!("unknown argument: {arg}"));
+            }
+            Token::Control(control) => {
+                let spelling = control.def().spelling;
+                if parsed.controls.iter().any(|(given, _)| *given == control) {
+                    return Arguments::Error(
+                        parsed.request_path,
+                        format!("duplicate argument: {spelling}"),
+                    );
+                }
+                let Some(text) = args.get(idx + 1) else {
+                    return Arguments::Error(
+                        parsed.request_path,
+                        format!("missing value for {spelling}"),
+                    );
+                };
+                // Only the form of the value is decided here. An integer
+                // outside a control's range is delivered: the runner and
+                // its worker refuse it at their own boundaries.
+                let value = match (control.def().value, text.to_str()) {
+                    (ControlValue::Integer, Some(text)) => {
+                        text.parse::<i64>().ok().map(Value::from)
+                    }
+                    (ControlValue::Text, Some(text)) => Some(Value::from(text)),
+                    (_, None) => None,
+                };
+                let Some(value) = value else {
+                    return Arguments::Error(
+                        parsed.request_path,
+                        format!("invalid value for {spelling}"),
+                    );
+                };
+                parsed.controls.push((control, value));
+                idx += 2;
+                continue;
             }
             Token::Option(option) => option,
         };
@@ -509,18 +553,39 @@ fn inject_runner_mode(request_value: &mut Value, mode: &str) -> Result<(), Reque
     Ok(())
 }
 
-pub fn cmd_run(args: &[OsString]) -> Result<i32, String> {
-    let output = run(args, &RunDependencies::production())?;
+/// The controls object an experimental submission carries: one member per
+/// control given, and no member when none was.
+fn controls_object(controls: &[(Control, Value)]) -> String {
+    let members: serde_json::Map<String, Value> = controls
+        .iter()
+        .map(|(control, value)| (control.def().key.to_string(), value.clone()))
+        .collect();
+    Value::Object(members).to_string()
+}
+
+fn print_run(args: &[OsString], form: Form) -> Result<i32, String> {
+    let output = run(args, form, &RunDependencies::production())?;
     println!("{}", output.text);
     Ok(output.exit_code)
+}
+
+pub fn cmd_run(args: &[OsString]) -> Result<i32, String> {
+    print_run(args, Form::Run)
+}
+
+/// `test-input run`: the arguments after the form.
+pub fn cmd_test_input_run(args: &[OsString]) -> Result<i32, String> {
+    print_run(args, Form::TestInputRun)
 }
 
 /// One run through production orchestration: argument admission, one manifest
 /// load, runner selection, the dossier, the held request's delivery and the
 /// reply's admission. Every exit renders the uniform `kind: "run"` envelope.
-fn run(args: &[OsString], deps: &RunDependencies) -> Result<RunOutput, String> {
+/// `test-input run` differs in two places: the client receives a controls
+/// object, and the validator's dossier record reads the validator control.
+fn run(args: &[OsString], form: Form, deps: &RunDependencies) -> Result<RunOutput, String> {
     let host = HostFacts::collect();
-    let parsed = match parse_arguments(args) {
+    let parsed = match parse_arguments(args, form) {
         Arguments::Error(path, error) => {
             let specimen = Specimen::unavailable(
                 path.map(|p| p.to_string_lossy().to_string()),
@@ -536,6 +601,17 @@ fn run(args: &[OsString], deps: &RunDependencies) -> Result<RunOutput, String> {
         .request_path
         .as_ref()
         .map(|p| p.to_string_lossy().to_string());
+    // An experimental submission always carries its controls object, with
+    // no member when no control was given.
+    let controls = match form {
+        Form::Run => None,
+        Form::TestInputRun => Some(controls_object(&parsed.controls)),
+    };
+    let validator_control = parsed
+        .controls
+        .iter()
+        .find(|(control, _)| *control == Control::ValidatorExecutablePath)
+        .and_then(|(_, value)| value.as_str());
 
     let app_root = (deps.app_root)()?;
     // One manifest load per run; selection, provenance and the binary records
@@ -644,7 +720,18 @@ fn run(args: &[OsString], deps: &RunDependencies) -> Result<RunOutput, String> {
 
     let (runner_target, binaries, runner_provenance, selection_error) = match selection {
         Ok(target) => {
-            let binaries = Binaries::observe(&app_root, &target, &request_value, manifest.as_ref());
+            let binaries = match form {
+                Form::Run => {
+                    Binaries::observe(&app_root, &target, &request_value, manifest.as_ref())
+                }
+                Form::TestInputRun => Binaries::observe_with_validator_control(
+                    &app_root,
+                    &target,
+                    &request_value,
+                    validator_control,
+                    manifest.as_ref(),
+                ),
+            };
             let provenance = runner_provenance_from_target(&target);
             (Some(target), binaries, Some(provenance), None)
         }
@@ -683,6 +770,7 @@ fn run(args: &[OsString], deps: &RunDependencies) -> Result<RunOutput, String> {
         &held,
         parsed.timeout_ms,
         &runner_target.connection,
+        controls.as_deref(),
     ) {
         Ok(value) => value,
         Err(error) => return tool_error(specimen, timeout_ms, error),
@@ -1836,7 +1924,7 @@ else:
         for (flag, value) in [("--timeout-ms", "invalid"), ("--runner-mode", "invalid")] {
             assert!(
                 matches!(
-                    parse_arguments(&["/r.json".into(), flag.into(), value.into()]),
+                    parse_arguments(&["/r.json".into(), flag.into(), value.into()], Form::Run),
                     Arguments::Error(None, _)
                 ),
                 "{flag}: invalid flag values carry no request path"
@@ -1844,22 +1932,25 @@ else:
         }
         // Zero is below the timeout's minimum, and a second path is not taken.
         assert!(matches!(
-            parse_arguments(&["/r.json".into(), "--timeout-ms".into(), "0".into()]),
+            parse_arguments(&["/r.json".into(), "--timeout-ms".into(), "0".into()], Form::Run),
             Arguments::Error(None, error) if error == "invalid value for --timeout-ms"
         ));
-        match parse_arguments(&["/r.json".into(), "/other.json".into()]) {
+        match parse_arguments(&["/r.json".into(), "/other.json".into()], Form::Run) {
             Arguments::Error(Some(path), error) => {
                 assert_eq!(path, PathBuf::from("/r.json"));
                 assert_eq!(error, "unexpected argument: /other.json");
             }
             _ => panic!("a second request path accepted"),
         }
-        match parse_arguments(&[
-            "--timeout-ms".into(),
-            "1".into(),
-            "--".into(),
-            "/r.json".into(),
-        ]) {
+        match parse_arguments(
+            &[
+                "--timeout-ms".into(),
+                "1".into(),
+                "--".into(),
+                "/r.json".into(),
+            ],
+            Form::Run,
+        ) {
             Arguments::Run(parsed) => {
                 assert_eq!(parsed.timeout_ms, 1);
                 assert_eq!(parsed.request_path, None, "nothing after -- is read");
@@ -1867,7 +1958,7 @@ else:
             Arguments::Error(..) => panic!("the minimum timeout refused"),
         }
         // The path seen so far is retained for the dossier of the refusal.
-        match parse_arguments(&["/r.json".into(), "--bogus".into()]) {
+        match parse_arguments(&["/r.json".into(), "--bogus".into()], Form::Run) {
             Arguments::Error(Some(path), error) => {
                 assert_eq!(path, PathBuf::from("/r.json"));
                 assert!(error.contains("unknown argument"));
@@ -1876,13 +1967,224 @@ else:
         }
         // A help flag is an unknown argument like any other.
         for flag in ["-h", "--help"] {
-            match parse_arguments(&["/r.json".into(), flag.into()]) {
+            match parse_arguments(&["/r.json".into(), flag.into()], Form::Run) {
                 Arguments::Error(Some(path), error) => {
                     assert_eq!(path, PathBuf::from("/r.json"));
                     assert_eq!(error, format!("unknown argument: {flag}"));
                 }
                 _ => panic!("{flag} accepted"),
             }
+        }
+    }
+
+    fn controls_of(arguments: &[&str]) -> Result<Vec<(Control, Value)>, String> {
+        let arguments: Vec<OsString> = arguments.iter().map(OsString::from).collect();
+        match parse_arguments(&arguments, Form::TestInputRun) {
+            Arguments::Run(parsed) => Ok(parsed.controls),
+            Arguments::Error(_, error) => Err(error),
+        }
+    }
+
+    #[test]
+    fn control_spellings_are_their_keys_and_only_test_input_run_admits_them() {
+        assert_eq!(Control::ALL.len(), 8);
+        for control in Control::ALL.iter().copied() {
+            let def = control.def();
+            assert_eq!(def.spelling, format!("--{}", def.key.replace('_', "-")));
+            let value = match def.value {
+                ControlValue::Integer => "7",
+                ControlValue::Text => "/x",
+            };
+            let arguments = [OsString::from(def.spelling), value.into(), "/r.json".into()];
+            match parse_arguments(&arguments, Form::TestInputRun) {
+                Arguments::Run(parsed) => {
+                    assert_eq!(parsed.request_path, Some(PathBuf::from("/r.json")));
+                    assert_eq!(parsed.controls.len(), 1);
+                    assert_eq!(parsed.controls[0].0, control);
+                }
+                Arguments::Error(_, error) => panic!("{}: {error}", def.spelling),
+            }
+            // Under `run` the same spelling is an unknown argument.
+            assert!(matches!(
+                parse_arguments(&arguments, Form::Run),
+                Arguments::Error(None, error) if error == format!("unknown argument: {}", def.spelling)
+            ));
+        }
+        // `run`'s own options keep their rules beside the controls.
+        let arguments: Vec<OsString> = ["--timeout-ms", "5", "--worker-timeout-ms", "9", "/r.json"]
+            .iter()
+            .map(OsString::from)
+            .collect();
+        match parse_arguments(&arguments, Form::TestInputRun) {
+            Arguments::Run(parsed) => {
+                assert_eq!(parsed.timeout_ms, 5);
+                assert_eq!(parsed.controls, vec![(Control::WorkerTimeoutMs, json!(9))]);
+            }
+            Arguments::Error(_, error) => panic!("{error}"),
+        }
+        assert!(matches!(
+            parse_arguments(&["/r.json".into()], Form::TestInputRun),
+            Arguments::Run(parsed) if parsed.controls.is_empty()
+        ));
+    }
+
+    #[test]
+    fn integer_controls_pass_every_signed_64_bit_decimal_through_unchanged() {
+        // No control's own range is applied here: values the worker's argument
+        // grammar or the host's floors would change are delivered as written.
+        // Stated here, not read from the table: the seven integer controls.
+        let integers = [
+            ("--worker-timeout-ms", Control::WorkerTimeoutMs),
+            ("--worker-pre-ready-hang-ms", Control::WorkerPreReadyHangMs),
+            (
+                "--worker-post-apply-hang-ms",
+                Control::WorkerPostApplyHangMs,
+            ),
+            (
+                "--worker-post-apply-kill-signal",
+                Control::WorkerPostApplyKillSignal,
+            ),
+            (
+                "--worker-kill-before-publish-slot",
+                Control::WorkerKillBeforePublishSlot,
+            ),
+            ("--validator-io-timeout-ms", Control::ValidatorIoTimeoutMs),
+            (
+                "--validator-total-timeout-ms",
+                Control::ValidatorTotalTimeoutMs,
+            ),
+        ];
+        for (text, value) in [
+            ("0", 0i64),
+            ("-1", -1),
+            ("+5", 5),
+            ("60001", 60_001),
+            ("256", 256),
+            ("9223372036854775807", i64::MAX),
+            ("-9223372036854775808", i64::MIN),
+        ] {
+            for (spelling, control) in integers {
+                assert_eq!(
+                    controls_of(&[spelling, text]),
+                    Ok(vec![(control, json!(value))]),
+                    "{spelling} {text}"
+                );
+            }
+        }
+        for (spelling, _) in integers {
+            assert_eq!(
+                controls_of(&[spelling, "soon"]),
+                Err(format!("invalid value for {spelling}"))
+            );
+        }
+        assert_eq!(
+            controls_object(&[
+                (Control::WorkerPostApplyHangMs, json!(60_001)),
+                (Control::WorkerTimeoutMs, json!(i64::MIN)),
+                (Control::ValidatorExecutablePath, json!("relative \"path\"")),
+            ]),
+            r#"{"validator_executable_path":"relative \"path\"","worker_post_apply_hang_ms":60001,"worker_timeout_ms":-9223372036854775808}"#
+        );
+        assert_eq!(controls_object(&[]), "{}");
+        // Text is delivered as written, empty and flag-shaped values included.
+        for text in [
+            "",
+            "relative/validator",
+            "--worker-timeout-ms",
+            "/nonexistent",
+        ] {
+            assert_eq!(
+                controls_of(&["--validator-executable-path", text]),
+                Ok(vec![(Control::ValidatorExecutablePath, json!(text))])
+            );
+        }
+    }
+
+    #[test]
+    fn malformed_control_syntax_is_refused_before_any_run_work() {
+        for (arguments, error) in [
+            (
+                vec!["--worker-timeout-ms", "soon"],
+                "invalid value for --worker-timeout-ms",
+            ),
+            (
+                vec!["--worker-timeout-ms", "1.5"],
+                "invalid value for --worker-timeout-ms",
+            ),
+            (
+                vec!["--worker-timeout-ms", "1e3"],
+                "invalid value for --worker-timeout-ms",
+            ),
+            (
+                vec!["--worker-timeout-ms", " 5"],
+                "invalid value for --worker-timeout-ms",
+            ),
+            (
+                vec!["--worker-timeout-ms", ""],
+                "invalid value for --worker-timeout-ms",
+            ),
+            (
+                vec!["--worker-timeout-ms", "9223372036854775808"],
+                "invalid value for --worker-timeout-ms",
+            ),
+            (
+                vec!["--worker-kill-before-publish-slot", "-9223372036854775809"],
+                "invalid value for --worker-kill-before-publish-slot",
+            ),
+            (
+                vec!["--validator-io-timeout-ms"],
+                "missing value for --validator-io-timeout-ms",
+            ),
+            (
+                vec!["--validator-executable-path"],
+                "missing value for --validator-executable-path",
+            ),
+            (
+                vec!["--worker-timeout-ms", "5", "--worker-timeout-ms", "5"],
+                "duplicate argument: --worker-timeout-ms",
+            ),
+            (
+                vec![
+                    "--validator-executable-path",
+                    "/a",
+                    "--validator-executable-path",
+                    "/b",
+                ],
+                "duplicate argument: --validator-executable-path",
+            ),
+            (
+                vec!["--worker-timeout", "5"],
+                "unknown argument: --worker-timeout",
+            ),
+            (
+                vec!["--worker-timeout-ms=5"],
+                "unknown argument: --worker-timeout-ms=5",
+            ),
+            (
+                vec!["--worker-executable-path", "/x"],
+                "unknown argument: --worker-executable-path",
+            ),
+            (vec!["--help"], "unknown argument: --help"),
+        ] {
+            assert_eq!(
+                controls_of(&arguments),
+                Err(error.to_string()),
+                "{arguments:?}"
+            );
+        }
+        // A value that is not UTF-8 cannot be a member of the controls object.
+        use std::os::unix::ffi::OsStringExt;
+        let arguments = [
+            OsString::from("/r.json"),
+            "--validator-executable-path".into(),
+            OsString::from_vec(vec![b'/', 0xff]),
+        ];
+        match parse_arguments(&arguments, Form::TestInputRun) {
+            Arguments::Error(Some(path), error) => {
+                assert_eq!(path, PathBuf::from("/r.json"));
+                assert_eq!(error, "invalid value for --validator-executable-path");
+            }
+            _ => panic!("a non-UTF-8 control value accepted"),
         }
     }
 
@@ -2437,6 +2739,7 @@ else:
             request: String,
             timeout_ms: u64,
             connection: RunnerConnectionKind,
+            controls: Option<String>,
         }
 
         struct Observed {
@@ -2686,6 +2989,27 @@ else:
             args: &[&str],
             capture: &dyn Fn() -> (RunnerClientRun, Option<PWRunnerRunResult>),
         ) -> Observed {
+            observe_form(app, registry, Form::Run, args, capture)
+        }
+
+        /// `test-input run` with the controlled client answering as `observe` does.
+        fn observe_test_input_run(app: &Path, args: &[&str]) -> Observed {
+            let reply = controlled_reply();
+            observe_form(app, None, Form::TestInputRun, args, &|| {
+                (
+                    client_run(Some(&reply)),
+                    Some(serde_json::from_value(reply.clone()).unwrap()),
+                )
+            })
+        }
+
+        fn observe_form(
+            app: &Path,
+            registry: Option<&Path>,
+            form: Form,
+            args: &[&str],
+            capture: &dyn Fn() -> (RunnerClientRun, Option<PWRunnerRunResult>),
+        ) -> Observed {
             let loads = RefCell::new(Vec::new());
             let calls = RefCell::new(Vec::new());
             let load_manifest = |path: &Path| {
@@ -2695,12 +3019,14 @@ else:
             let client = |service_name: &str,
                           request: &str,
                           timeout_ms: u64,
-                          connection: &RunnerConnectionKind| {
+                          connection: &RunnerConnectionKind,
+                          controls: Option<&str>| {
                 calls.borrow_mut().push(ClientCall {
                     service_name: service_name.to_string(),
                     request: request.to_string(),
                     timeout_ms,
                     connection: *connection,
+                    controls: controls.map(str::to_string),
                 });
                 Ok(capture())
             };
@@ -2713,12 +3039,150 @@ else:
                 policy_check: &run_policy_check,
             };
             let args: Vec<OsString> = args.iter().map(OsString::from).collect();
-            let output = run(&args, &deps).expect("run completes");
+            let output = run(&args, form, &deps).expect("run completes");
             Observed {
                 loads: loads.into_inner(),
                 calls: calls.into_inner(),
                 output,
             }
+        }
+
+        #[test]
+        fn test_input_run_delivers_the_held_request_unchanged_and_the_controls_beside_it() {
+            let root = scratch("test-input-run");
+            let app = synthetic_app(&root);
+            install_manifest(&app, ManifestState::Valid);
+            let request = request_file(&root, None);
+            let path = request.to_str().unwrap();
+            let ordinary = observe(&app, None, &[path]);
+            assert_eq!(ordinary.calls[0].controls, None);
+            let (ordinary_wire, _) = envelope_of(&ordinary.output);
+            assert!(ordinary_wire["data"]["specimen"]["binaries"]["validator"].is_null());
+
+            // No control: still the experimental submission, with an empty object.
+            let plain = observe_test_input_run(&app, &[path]);
+            assert_eq!(plain.calls.len(), 1);
+            assert_eq!(plain.calls[0].controls.as_deref(), Some("{}"));
+            assert_eq!(plain.calls[0].request, ordinary.calls[0].request);
+            let (wire, code) = envelope_of(&plain.output);
+            assert_eq!((wire["kind"].as_str(), code), (Some("run"), 0));
+            assert_eq!(wire["result"], ordinary_wire["result"]);
+            assert!(wire["data"]["specimen"]["binaries"]["validator"].is_null());
+
+            let validator = root.join("substituted-validator");
+            write(&validator, b"a different validator");
+            let observed = observe_test_input_run(
+                &app,
+                &[
+                    "--worker-post-apply-hang-ms",
+                    "60001",
+                    path,
+                    "--timeout-ms",
+                    "9",
+                    "--validator-executable-path",
+                    validator.to_str().unwrap(),
+                    "--worker-timeout-ms",
+                    "-3",
+                ],
+            );
+            let call = &observed.calls[0];
+            assert_eq!(call.timeout_ms, 9);
+            assert_eq!(
+                call.request, ordinary.calls[0].request,
+                "the held request carries no control"
+            );
+            assert!(!call.request.contains("_test_overrides"));
+            assert_eq!(
+                serde_json::from_str::<Value>(call.controls.as_deref().unwrap()).unwrap(),
+                json!({
+                    "worker_post_apply_hang_ms": 60001, "worker_timeout_ms": -3,
+                    "validator_executable_path": validator.to_str().unwrap(),
+                })
+            );
+            // The dossier's validator record is the control's file.
+            let (wire, _) = envelope_of(&observed.output);
+            let record = &wire["data"]["specimen"]["binaries"]["validator"];
+            assert_eq!(record["path"], validator.to_str().unwrap());
+            assert_eq!(record["verification"], "mismatch");
+            assert_eq!(
+                record["actual_sha256"],
+                evidence::sha256_hex(&validator).unwrap()
+            );
+            assert!(wire["data"]["specimen"]["binaries"]["worker"].is_null());
+
+            // A request that carries its own block is delivered as written: the
+            // host owns that refusal. Its validator key is not this route's
+            // validator selection.
+            let mut blocked: Value = serde_json::from_slice(&fs::read(&request).unwrap()).unwrap();
+            blocked["_test_overrides"] =
+                json!({"validator_executable_path": validator.to_str().unwrap()});
+            fs::write(&request, serde_json::to_vec(&blocked).unwrap()).unwrap();
+            let observed = observe_test_input_run(&app, &[path]);
+            assert_eq!(
+                serde_json::from_str::<Value>(&observed.calls[0].request).unwrap(),
+                blocked
+            );
+            let (wire, _) = envelope_of(&observed.output);
+            assert!(wire["data"]["specimen"]["binaries"]["validator"].is_null());
+            let ordinary = observe(&app, None, &[path]);
+            let (wire, _) = envelope_of(&ordinary.output);
+            assert_eq!(
+                wire["data"]["specimen"]["binaries"]["validator"]["path"],
+                validator.to_str().unwrap()
+            );
+            fs::remove_dir_all(root).unwrap();
+        }
+
+        #[test]
+        fn test_input_run_usage_refusals_invoke_no_client_and_read_no_app_root() {
+            let calls = RefCell::new(0usize);
+            let roots = RefCell::new(0usize);
+            let client = |_: &str, _: &str, _: u64, _: &RunnerConnectionKind, _: Option<&str>| {
+                *calls.borrow_mut() += 1;
+                Err("controlled client must not run".to_string())
+            };
+            let deps = RunDependencies {
+                app_root: &|| {
+                    *roots.borrow_mut() += 1;
+                    Err("controlled app root must not be read".to_string())
+                },
+                load_manifest: &evidence::load_manifest,
+                registry_path: None,
+                client: &client,
+                policy_check: &run_policy_check,
+            };
+            for (arguments, error) in [
+                (
+                    vec!["/r.json", "--worker-timeout-ms", "soon"],
+                    "invalid value for --worker-timeout-ms",
+                ),
+                (
+                    vec!["/r.json", "--worker-timeout-ms"],
+                    "missing value for --worker-timeout-ms",
+                ),
+                (
+                    vec![
+                        "--worker-timeout-ms",
+                        "1",
+                        "--worker-timeout-ms",
+                        "2",
+                        "/r.json",
+                    ],
+                    "duplicate argument: --worker-timeout-ms",
+                ),
+                (vec!["/r.json", "--bogus"], "unknown argument: --bogus"),
+            ] {
+                let arguments: Vec<OsString> = arguments.iter().map(OsString::from).collect();
+                let output = run(&arguments, Form::TestInputRun, &deps).unwrap();
+                let (wire, code) = envelope_of(&output);
+                assert_eq!(code, 2, "{error}");
+                assert_eq!(wire["kind"], "run");
+                assert_eq!(wire["result"]["normalized_outcome"], "tool_error");
+                assert_eq!(wire["result"]["error"], error);
+                assert!(wire["data"]["runner_client"].is_null());
+                assert!(wire["data"]["runner_result"].is_null());
+            }
+            assert_eq!((*calls.borrow(), *roots.borrow()), (0, 0));
         }
 
         fn envelope_of(output: &RunOutput) -> (Value, i32) {
@@ -3164,11 +3628,12 @@ else:
                     let pending = RefCell::new(Some((capture, reply.clone().map(fixture_reply))));
                     let client_inputs = RefCell::new(Vec::new());
                     let helper_inputs = RefCell::new(Vec::new());
-                    let client = |_: &str, held: &str, _: u64, _: &RunnerConnectionKind| {
-                        client_inputs.borrow_mut().push(held.to_owned());
-                        write(&path, b"changed after the request was held");
-                        Ok(pending.borrow_mut().take().unwrap())
-                    };
+                    let client =
+                        |_: &str, held: &str, _: u64, _: &RunnerConnectionKind, _: Option<&str>| {
+                            client_inputs.borrow_mut().push(held.to_owned());
+                            write(&path, b"changed after the request was held");
+                            Ok(pending.borrow_mut().take().unwrap())
+                        };
                     let helper = |held: &str| {
                         helper_inputs.borrow_mut().push(held.to_owned());
                         Err("controlled compiler unavailable".to_owned())
@@ -3180,7 +3645,7 @@ else:
                         client: &client,
                         policy_check: &helper,
                     };
-                    let output = run(&[path.as_os_str().to_owned()], &deps).unwrap();
+                    let output = run(&[path.as_os_str().to_owned()], Form::Run, &deps).unwrap();
                     let (wire, exit_code) = envelope_of(&output);
                     let inputs = client_inputs.borrow();
                     assert_eq!(inputs.len(), 1, "one client invocation");
@@ -3304,13 +3769,14 @@ else:
                 let client_inputs = RefCell::new(Vec::new());
                 let helper_inputs = RefCell::new(Vec::new());
                 let helper_outputs = RefCell::new(Vec::new());
-                let client = |_: &str, held: &str, _: u64, _: &RunnerConnectionKind| {
-                    client_inputs.borrow_mut().push(held.to_owned());
-                    // A changed on-disk request must not replace either the
-                    // held whole request or the resolved actor policies.
-                    write(&path, b"request replaced after client invocation");
-                    Ok(pending.borrow_mut().take().unwrap())
-                };
+                let client =
+                    |_: &str, held: &str, _: u64, _: &RunnerConnectionKind, _: Option<&str>| {
+                        client_inputs.borrow_mut().push(held.to_owned());
+                        // A changed on-disk request must not replace either the
+                        // held whole request or the resolved actor policies.
+                        write(&path, b"request replaced after client invocation");
+                        Ok(pending.borrow_mut().take().unwrap())
+                    };
                 let helper = |held: &str| {
                     let index = helper_inputs.borrow().len();
                     helper_inputs.borrow_mut().push(held.to_owned());
@@ -3350,7 +3816,7 @@ else:
                     client: &client,
                     policy_check: &helper,
                 };
-                let output = run(&[path.as_os_str().to_owned()], &deps).unwrap();
+                let output = run(&[path.as_os_str().to_owned()], Form::Run, &deps).unwrap();
                 let (wire, exit_code) = envelope_of(&output);
                 let inputs = client_inputs.borrow();
                 assert_eq!(inputs.len(), 1, "{label}: no resubmission");

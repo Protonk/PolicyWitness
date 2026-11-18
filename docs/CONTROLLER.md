@@ -65,7 +65,7 @@ Commitments explained here:
 
 ## Originating and preparing work
 
-`example` and `test-input` originate requests the build defines. In
+`example` and `test-input read` originate requests the build defines. In
 [example.rs](../controller/src/example.rs), `render` inserts the compiled
 identity, uses the request parser and identity gate, serializes the whole
 object and appends one newline. `emit` writes only after rendering and requires
@@ -89,12 +89,18 @@ admission, not the success of an attempted operation. The
 extracted example preserve that separation. The documentation extractor reads
 the source constant; documentation does not supply runtime example content.
 
-`test-input` carries no admission guarantee. Its stamped developer
+`test-input read` carries no admission guarantee. Its stamped developer
 [rule](REQUEST.md#contract-request-specimen-emit_test_input) establishes
 build-bound publication with positional target binding. Host capacity admission
 still judges the supplied target. The publisher prepares no fixtures and
 promises neither a query answer nor an effect. `run` prepares and delivers the
 saved input through the ordinary path.
+
+`test-input run` is not a publisher. It is `run` with test controls: the same
+preparation and envelope, with the controls given as flags delivered to the
+client beside the held request. [run_args.rs](../controller/src/interface/run_args.rs)
+defines the controls, and the [command rule](REQUEST.md#contract-request-overrides-test_input_run)
+states what the controller decides and what it leaves to the host.
 
 For saved specimens, [run_flow.rs](../controller/src/run_flow.rs) holds the
 request text and parsed value. Its identity gate precedes interpretation of
@@ -146,6 +152,7 @@ Commitments explained here:
 
 - [Emit the example specimen](REQUEST.md#contract-request-specimen-emit_example) (`request.specimen.emit_example`).
 - [Publish a developer read input](REQUEST.md#contract-request-specimen-emit_test_input) (`request.specimen.emit_test_input`).
+- [Run with test controls](REQUEST.md#contract-request-overrides-test_input_run) (`request.overrides.test_input_run`).
 - [Selector precedence](REQUEST.md#contract-request-options-precedence) (`request.options.precedence`).
 - [Resolve and append](REQUEST.md#contract-policy-augments-resolve) (`policy.augments.resolve`).
 - [Collection boundaries](RESPONSE.md#contract-dossier-collection) (`dossier.collection`).
@@ -344,7 +351,7 @@ universal equivalence is promised.
 General envelopes are rendered before `println!` in
 [json_contract.rs](../controller/src/json_contract.rs) and run dispatch; these
 paths do not implement the explicit fallible write/flush protocol that
-`example` and `test-input` each implement. For those two commands, complete-looking
+`example` and `test-input read` each implement. For those two commands, complete-looking
 JSON is unusable on exit 2, including a late flush failure.
 `only_complete_output_with_a_successful_flush_succeeds` in `example.rs` and
 `complete_publication_requires_all_writes_and_flush` in `test_input.rs` test that
