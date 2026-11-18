@@ -755,3 +755,99 @@ the route change: `check_extension_provenance.py` derives its expected
 validator from the delivered request and must read the controls instead, and
 `HeldWorkload` scenario identities derive from their artifact directory path.
 
+
+## Seam migration, second stage: the experimental route beside the request block — 2026-11-17
+
+Status: `72617789` adds the new route for the eight selected controls. The
+request block still carries all ten keys, so every existing caller passes
+unchanged; the ordinary refusal of the selected keys, the caller flip and the
+old/new comparison belong to the third stage. The signed app is rebuilt:
+build contract `development:fe9694b1…a6d14302` (before:
+`development:b55acb20…744719e`), publication withheld, guide bytes unchanged.
+
+What exists now:
+
+- `policy-witness test-input run [--timeout-ms N] [--runner-mode KIND]
+  [CONTROL VALUE]... REQUEST` reuses `run`'s orchestration, envelope and exit
+  statuses. The controls are `--worker-timeout-ms`,
+  `--worker-pre-ready-hang-ms`, `--worker-post-apply-hang-ms`,
+  `--worker-post-apply-kill-signal`, `--worker-kill-before-publish-slot`,
+  `--validator-executable-path`, `--validator-io-timeout-ms` and
+  `--validator-total-timeout-ms`. An integer control takes any signed 64-bit
+  decimal and is delivered as written. A missing value, a value of another
+  form, a repeated control and an unknown flag are `tool_error` refusals with
+  exit 2 and no client invocation. `run` admits no control.
+- `pw-runner-client run --experimental-controls <JSON object>` calls the XPC
+  entry point `runReservedExperiment(_:controls:reservation:withReply:)`;
+  without the argument the client calls `runReservedSpecimen` as before.
+  `test-input run` always passes the argument (an empty object when no
+  control is given).
+- The host owns the experimental admission. A request `_test_overrides` block
+  holding any member, a null member included, is refused with
+  `inapplicable_field` at `["_test_overrides"]`; an absent, null or empty
+  block is admitted. The controls object is decoded by the block's decoder
+  restricted to the eight members: `unknown_field`, `inapplicable_field` for
+  the two unselected keys, `type_mismatch`, `invalid_json` and `missing_value`
+  are located under `_test_overrides`. Validator-path capacity remains
+  `admission_refused`. Both entry points reach one private submission
+  function; capacity admission, the orchestrators, the echo and refusal
+  sanitization read the one record either call supplies.
+- No wire, layout, porcelain or reply-schema change and no shared-reader
+  change. The worker identity is regenerated because runner sources changed.
+- The dossier's validator record reads the validator control under the
+  request key's rules; its reason names the flag.
+- The adapter takes a route per call (`experimental_cli`,
+  `experimental_client`); existing callers stay on `legacy_request_block`.
+
+Differences from the design supplied to the stage, as implemented:
+
+- No help card references a form or a control, so the cards are unchanged;
+  the interface residue records the forms and controls as referenced by no
+  card. The `test-input` usage line names both forms.
+- The client capture does not record which XPC call was made; recording it
+  would need a porcelain change, which the stage was told not to make. The
+  call is identifiable from `--experimental-controls` in
+  `data.runner_client.argv` and from the reply's echo, which is a non-null
+  object for an experimental submission (empty when no control is given) and
+  absent for the ordinary neighbour.
+
+Runs, all local managed development runs under `tests/out/runs/`, none
+overlapping system sleep:
+
+| Directory / run ID | Cases | Result |
+| --- | --- | --- |
+| `trace-seam-b-pre` / `20261118T051021Z_5581a90d` | 3 | The new `witness_contract/test_input` rows against the `2f4d76e4` app: 22 pass, 49 fail, 24 unevaluated, because the command and the client argument did not exist. Intended; the other two cases pass. |
+| `trace-seam-b-live` / `20261118T053824Z_472b3a5f` | 2 | pass |
+| `trace-seam-b-suites` / `20261118T053900Z_56553011` | 44 | 2 fail |
+| `trace-seam-b-suites-2` / `20261118T055500Z_3fd318a7` | 44 | pass |
+| `trace-seam-b-bad-request` / `20261118T061025Z_cac6a073` | 4 | pass |
+| `trace-seam-b-preflight` / `20261118T061213Z_a8951b45` | 2 | pass |
+| `trace-seam-b-old-route` / `20261118T061232Z_567f594e` | 3 | pass: three callers left on the request block |
+| `trace-seam-b-reservation` / `20261118T061301Z_693c1da2` | 1 | pass: the opt-in controls that compile the changed protocol |
+| `trace-seam-b-live-2` / `20261118T061445Z_f15d39a5` | 2 | pass, final tree |
+
+The two failures in `trace-seam-b-suites` were implementation defects in the
+stage's own test material and stay failures: a mutation record in
+`source_drift/interface_inventory` named an inventory entry that the
+expansion control's fixture removes, and a new
+`runner_unit/client_session_controls` control read a capture before the reply
+that publishes it. Neither correction changed a build input.
+`witness_contract/test_input` now holds 95 live rows and
+`witness_contract/test_input_controls` 181 offline controls, one rejecting
+control per row of the live checker. Six interface mutation records were
+added; they were observed on an unsigned debug build in a disposable
+worktree. The ten BYOXPC sessions of the reservation controls each record
+removal, their staging is absent, and `runner list` and `runner reconcile`
+were empty before and after.
+
+Facts for the validator-substitution trace: the `Control` table in
+`controller/src/interface/run_args.rs` decides flag, JSON key and value rule,
+and the host's `PWRunnerTestOverrides.experimentalControls` decides membership
+of the controls object. The controller's controls object and submission
+arguments, the client's experimental submission and the host's submission
+decoding only transmit. Added: the flags, the adapter route, the dossier's
+control selection and the contract rules `request.overrides.experimental` and
+`request.overrides.test_input_run`.
+
+`test-input run` and its usage line are public and absent from the frozen
+guide; this is a user duty for the guide rewrite.

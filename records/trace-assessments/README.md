@@ -6,7 +6,7 @@ every claim in `records/DOCUMENTATION-TRACE-REVIEW.md`: DT-01–135, their
 subfindings and qualifications, the thirteen DT-44 leads and both unnumbered
 import/receipt investigations.
 
-Twelve read-only passes wrote these on 2026-11-17 against `837296af`, one file
+Thirteen read-only passes wrote these on 2026-11-17 against `837296af`, one file
 per group of shared subjects. No pass modified a tracked file, built, or ran a
 registered case. Each file states what it re-read, what it executed on the
 signed `2f4d76e4` app or on retained local runs, and which of the review's

@@ -761,7 +761,7 @@ pruning has been applied in the primary checkout and no pin was added.
 
 ### Assessment method
 
-Twelve read-only passes at `837296af` assessed every claim in the review, one
+Thirteen read-only passes at `837296af` assessed every claim in the review, one
 pass per group of shared subjects: 1,036 claim rows, counting each DT entry,
 lettered subfinding, qualification, DT-44 lead and the two unnumbered
 import/receipt investigations. Each pass re-read current source, recorded what

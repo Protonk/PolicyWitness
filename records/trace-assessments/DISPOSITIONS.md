@@ -5,7 +5,7 @@ Disposition record for `records/TRACE-MANAGEMENT-PLAN.md`, written on
 coverage-map row, the thirteen DT-44 leads and both unnumbered import/receipt
 investigations: 1,036 claims, counting each DT entry, lettered subfinding and
 qualification. The management plan holds the decisions and an index of these
-rows; the twelve assessment files beside this one hold the per-claim tables,
+rows; the thirteen assessment files beside this one hold the per-claim tables,
 comparisons and worklists. Product source under `controller/`, `runner/` and
 `docs/` equals `3d3f8e65` apart from generated worker-identity lines and the
 publication support of `bba8bca3`–`2f4d76e4`; the signed app assessed is the
@@ -2895,7 +2895,7 @@ placed with the row shown.
 | DT-95–104/134 | I | 85 (including RC.a–d, CL rows) | yes |
 | DT-105–112 | J | 58 (including CONV.a–d, COV.a–d) | yes |
 | Both unnumbered investigations | G and I | 134 (70 import side, 64 receipt side) | yes |
-| Total | twelve passes | 1,036 | yes |
+| Total | thirteen passes | 1,036 | yes |
 
 Every DT identifier from DT-01 to DT-135 appears in a row; DT-08 appears
 in two (its statement in DT-05–08, its executed counterpart in DT-88–94). The
