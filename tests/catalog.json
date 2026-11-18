@@ -1281,9 +1281,7 @@
           ],
           "depends_on": [
             "witness_contract/footprint_observer_controls",
-            "run_effects/checker_controls",
-            "runner_exec_lifecycle/closed_streams_leader_exit",
-            "runner_exec_lifecycle/worker_dies_during_exec"
+            "run_effects/checker_controls"
           ]
         }
       ]
@@ -1316,7 +1314,7 @@
         },
         {
           "id": "closed_streams_leader_exit",
-          "description": "Observe a same-group descendant surviving normal leader and stream completion, then independently release and confirm fixture cleanup",
+          "description": "Record without a verdict whether a same-group descendant is alive or has exited after normal leader and stream completion; judge the reply's account of the product's own calls and the later file effect, and confirm fixture cleanup",
           "command": [
             "bash",
             "tests/suites/runner_exec_lifecycle/closed_streams_leader_exit.sh"
@@ -1325,7 +1323,42 @@
             "app",
             "clang"
           ],
-          "default": false
+          "default": true,
+          "outcome_contract": {
+            "schema_version": 1,
+            "observations": [
+              {
+                "id": "descendant_lifetime",
+                "promise": "Classify the same-group descendant after CLI completion, from exit events registered before completion is triggered, as its original generation alive with an acknowledged ping or as that generation's observed exit before cleanup. Retain generation and group identity, stream-closure acknowledgments, exit events timed against CLI completion, the classifier's constructed controls and the cleanup account."
+              },
+              {
+                "id": "exec_reply",
+                "promise": "Retain the request, the raw CLI output and status, and the reply's worker subprocess, exec attempt and later step."
+              },
+              {
+                "id": "later_file_effect",
+                "promise": "Retain the later step's target bytes before the run and after CLI completion."
+              }
+            ],
+            "judgments": [
+              {
+                "id": "truthful_exec_account",
+                "authority": "enforced",
+                "proposition": "The reply is a valid finished envelope whose worker was reaped after a clean exit, whose exec attempt stopped at leader_exit_and_eof with both streams at EOF, no cleanup request and the leader's exit status zero, and whose later step completed.",
+                "observations": [
+                  "exec_reply"
+                ]
+              },
+              {
+                "id": "later_step_effect",
+                "authority": "enforced",
+                "proposition": "After CLI completion the later step's target holds the one byte that step writes instead of its seed.",
+                "observations": [
+                  "later_file_effect"
+                ]
+              }
+            ]
+          }
         }
       ]
     },
@@ -2475,7 +2508,6 @@
         "runner_unit/reaped_ack_mutation",
         "runner_unit/exec_reader_mutations",
         "runner_unit/actor_handoff_mutations",
-        "runner_exec_lifecycle/closed_streams_leader_exit",
         "runner_exec_inheritance/closed_worker_stderr",
         "dispatcher/pytest_controls",
         "witness_contract/worker_wait_pilot",

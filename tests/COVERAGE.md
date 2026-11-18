@@ -321,11 +321,15 @@ controlled error codes do not attribute historical failures.
 
 ## Worker resource challenge observations
 
-The opt-in `runner_exec_lifecycle/closed_streams_leader_exit` case, which the
-default battery also selects as a dependency of `run_effects/aftermath_footprint`, combines
-leader exit with closed output streams and checks whether a same-group
-child remains responsive after the completed reply. Independent fixture
-cleanup follows the survival observation. `runner_exec_inheritance/closed_worker_stderr`
+The default `runner_exec_lifecycle/closed_streams_leader_exit` case combines
+leader exit with closed output streams and records, without a verdict, whether
+the same-group child is alive with an acknowledged ping or has exited after the
+completed reply, from exit events registered before completion. Neither
+history is required; a sample those events cannot settle, a changed identity
+or unsettled cleanup fails the case. It enforces the reply's account of the
+product's own calls (`leader_exit_and_eof` with cleanup `not_requested`, the
+leader's status and the later step) and the later file effect. Independent fixture
+cleanup follows the lifetime sample. Opt-in `runner_exec_inheritance/closed_worker_stderr`
 compares an ordinary direct-worker launch with worker fd 2 closed and observes
 child stderr usability. These characterize exercised starting states and lifetime
 limits; neither establishes ordinary XPC-host descriptor arrangements.

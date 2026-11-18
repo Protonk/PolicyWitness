@@ -57,7 +57,7 @@ collection stop/leader/EOF facts, a separate group request or no-request state,
 and the leader's actual final wait/status. A deadline snapshot remains open
 streams/leader-not-observed even after cleanup has reaped it; the exited-leader
 case retains the observed exit with open streams. Normal completion reports no
-request, including the survivor case below. The killed worker's unpublished slot
+request, including the descendant-lifetime case below. The killed worker's unpublished slot
 exposes no object. File attempts also omit it. The deadline checker accepts the
 live result and rejects six independently altered documents promoting cleanup,
 EOF or pending waits into stronger facts; their rejection receipt is retained.
@@ -65,26 +65,59 @@ All process/effect observations precede JSON interpretation.
 
 ## Same-group descendant after normal completion
 
-The opt-in `closed_streams_leader_exit` case characterizes a current observation
-limit. The default battery also selects it, as a declared dependency of
-`run_effects/aftermath_footprint`. It closes both helper processes' captured streams, asks the leader to
-exit without waiting for its child, and waits for the public CLI to finish.
-Before reading PW's JSON or releasing the fixture, the test requires the child
-to answer a ping with its original process identity and process group. It also
-observes the following file write. The reply must retain a cleanly completed
-exec attempt, the leader's zero exit status, and the successful later step.
-These facts do not establish that the process group is empty.
+The default `closed_streams_leader_exit` case closes both helper processes'
+captured streams, asks the leader to exit without waiting for its child, and
+waits for the public CLI to finish. It declares its observations and judgments
+in the catalog (`outcome_contract`) and ends with `complete`, not `pass`.
 
-The fixture then releases the surviving child and requires its kernel exit
-event. The same survivor check must reject that exited child. The test watches
-the independently identified worker as well, and removes staging only after
-helper/worker exits and CLI cleanup are confirmed. An incomplete rendezvous or
-unknown cleanup retains staging and a `cleanup.json` account; cleanup failures
-do not replace the original assertion or exception. `observations.json`, raw
-capture artifacts and before/after bytes keep the characterization distinct
-from the later cleanup intervention.
+**Recorded without a verdict: the descendant's lifetime.** Whether the
+same-group descendant is alive after ordinary completion is an informational
+observation: PolicyWitness makes no commitment to it, so neither history is
+expected and neither fails. Exit watches for the CLI, the leader and the
+descendant are registered on one queue before any stream closes. After the
+CLI's exit event the checker reads that queue. An exit event for the
+descendant classifies `exited_before_cleanup`, with its observation time
+relative to the CLI's. Without one, the checker pings the descendant and reads
+its process identity and group: an acknowledged ping from the original
+generation in the original group classifies `alive_acknowledged`. An
+unacknowledged ping or a missing PID is never read as an exit: the checker
+then waits a bounded time for the registered event, and a sample no event
+settles leaves the observation incomplete, which fails the case. A changed
+identity or group, or a watch registered after completion was triggered, also
+fails it. Each exit stamp is when the event was observed; it carries no status
+for a process that is not the checker's child, so an exit alone does not
+identify its cause. `classifier-controls.json` retains constructed samples for
+both histories and for each refusal, run through the same classifier before
+any launch.
 
-This is characterization of current behavior, not a desired process-tree
-containment rule. Pair it with `closed_streams_continue` and
-`leader_exit_descendant`: those neighboring cases exercise stream closure and
-leader exit separately.
+**Enforced: the reply's account of the product's own calls.** Two enforced
+judgments are evaluated after the process and effect observations and before
+cleanup. `truthful_exec_account` requires a valid `finished` envelope, the
+independently identified worker reaped after a clean exit, an exec attempt
+that stopped at `leader_exit_and_eof` with both streams at EOF, cleanup
+`not_requested` and the leader's zero exit status, and a completed later step.
+`later_step_effect` requires the later step's target to hold the byte that
+step writes. These facts do not establish that the process group is empty.
+The worker requests group termination only after a deadline, an observation
+error or a local fault, and controller admission, the host's evidence reader
+and the test consumer accept `leader_exit_and_eof` only with `not_requested`.
+While that relation stands, a product that ended the descendant at ordinary
+completion and reported the request would be refused at controller admission;
+this case's `exited_before_cleanup` history covers a descendant that exits
+without such a request.
+
+**Required in either history: evidence and cleanup.** The fixture then
+releases the helpers and requires kernel exit events for both, whether the
+descendant was alive or had already exited. When it was alive, the same
+sampler and classifier must report its exit after the release. The test
+watches the independently identified worker as well, and removes staging only
+after helper/worker exits and CLI cleanup are confirmed. An incomplete
+rendezvous or unknown cleanup retains staging and a `cleanup.json` account and
+fails the case; cleanup failures do not replace the original exception. A
+checker failure, an unsettled cleanup or an unfavorable enforced judgment ends
+the case as `fail`. `account.json` holds the published facts and judgments;
+`observations.json`, raw capture artifacts and before/after bytes keep the
+lifetime sample distinct from the later release.
+
+Pair it with `closed_streams_continue` and `leader_exit_descendant`: those
+neighboring cases exercise stream closure and leader exit separately.

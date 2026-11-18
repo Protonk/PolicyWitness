@@ -100,6 +100,6 @@ public command, or the explicit `PW_TEST_OUT_DIR`.
 ./tests/run.sh --suite run_effects
 ```
 
-Every case is in the default battery. `aftermath_footprint` signs a disposable actor host, so it also needs Swift, Meson and a Developer ID identity matching the app's team, and it declares `runner_exec_lifecycle/closed_streams_leader_exit` as a dependency. The live cases need the built app and XPC;
+Every case is in the default battery. `aftermath_footprint` signs a disposable actor host, so it also needs Swift, Meson and a Developer ID identity matching the app's team. It depends only on its observer and checker controls, `witness_contract/footprint_observer_controls` and `run_effects/checker_controls`: it builds its own fixtures, registers its own exit watches and writes its own receipts. The live cases need the built app and XPC;
 the exec case also needs the macOS C toolchain; the controls need only
 Python 3.

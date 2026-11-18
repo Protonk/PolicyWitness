@@ -157,13 +157,17 @@ public command, or the explicit `PW_TEST_OUT_DIR`.
 
 ### Worker resource challenge probes
 
-- **Cases:** `runner_unit/host_setup_oracle_sensitivity`,
-  `runner_exec_lifecycle/closed_streams_leader_exit`, and
-  `runner_exec_inheritance/closed_worker_stderr`.
+- **Cases:** opt-in `runner_unit/host_setup_oracle_sensitivity` and
+  `runner_exec_inheritance/closed_worker_stderr`, and default
+  `runner_exec_lifecycle/closed_streams_leader_exit`.
 - **Purpose:** Characterize setup-checker sensitivity to deliberately wrong
-  disposable host copies, same-group descendant survival after normal exec
-  completion, and child stderr delivery with worker fd 2 closed. Passing means
-  the stated counterexample was observed; it is not a safety guarantee.
+  disposable host copies and child stderr delivery with worker fd 2 closed;
+  passing those two means the stated counterexample was observed, not a safety
+  guarantee. The lifecycle case records whether a same-group descendant is
+  alive or has exited after normal exec completion as an informational
+  observation with no expected value, and enforces the reply's
+  `leader_exit_and_eof`/`not_requested` account and the later file effect; it
+  ends `complete`, and either lifetime history is a valid completion.
 - **Execution considerations:** Exploratory native resource/failure observations and
   multiple disposable Swift builds. Run outside the automation sandbox.
 - **Equipment:** Swift/clang for setup controls; signed app/clang for lifecycle;

@@ -454,7 +454,7 @@
             "Started by": "the worker",
             "Sandboxed": "inherit the worker's sandbox",
             "Native sandbox API": "none of PolicyWitness's",
-            "Lifetime": "the worker bounds collection and leader reap; ordinary completion and worker death can leave same-group descendants alive; escaped descendants are not contained"
+            "Lifetime": "the worker bounds collection and leader reap; ordinary completion requests no group termination, so a same-group descendant may be alive or already exited afterwards; worker death can leave descendants alive; escaped descendants are not contained"
           },
           "sources": [
             {
@@ -9250,7 +9250,7 @@
               "path": "tests/suites/runner_exec_lifecycle/closed_streams_leader_exit.sh",
               "symbol": "closed_streams_leader_exit",
               "form": "test",
-              "scope": "Independent peer identity/group observations establish same-group survival after ordinary completion, then fixture cleanup."
+              "scope": "Registered exit events and an acknowledged ping record whether the same-group descendant is alive or has exited after ordinary completion, requiring neither; the reply's leader_exit_and_eof stop with no cleanup request is enforced, then fixture cleanup."
             },
             {
               "path": "tests/suites/runner_exec_lifecycle/run.sh",
@@ -9295,7 +9295,7 @@
               "path": "tests/suites/runner_exec_lifecycle/closed_streams_leader_exit.sh",
               "symbol": "closed_streams_leader_exit",
               "form": "test",
-              "scope": "Independent peer identity/group observations establish same-group survival after ordinary completion, then fixture cleanup."
+              "scope": "Registered exit events and an acknowledged ping record whether the same-group descendant is alive or has exited after ordinary completion, requiring neither; the reply's leader_exit_and_eof stop with no cleanup request is enforced, then fixture cleanup."
             },
             {
               "path": "tests/suites/runner_exec_lifecycle/run.sh",
@@ -10359,7 +10359,7 @@
               "path": "tests/suites/runner_exec_lifecycle/closed_streams_leader_exit.sh",
               "symbol": "closed_streams_leader_exit",
               "form": "test",
-              "scope": "Independent peer identity/group observations establish same-group survival after ordinary leader-plus-EOF completion, then fixture cleanup."
+              "scope": "Kernel peer credentials place the leader and its descendant in one group led by the exec child before completion; the descendant's lifetime after ordinary leader-plus-EOF completion is recorded without a verdict, then fixture cleanup."
             }
           ]
         },
