@@ -231,6 +231,8 @@ def assert_composition(envelope, runner, spec, resources, prefix, failed_actor=N
 
 
 def gate_specimen(target, unavailable_dependent):
+    """The request and, for the cancelling schedule, its selected seam controls."""
+    controls = None
     spec = dict(contract=build_context.candidate_contract(),
         specimen_id='gate_unreached' if unavailable_dependent else 'gate_cancels_schedule',
         actors=[actors.apply_actor(name, actors.CALIBRATION_POLICY)
@@ -248,8 +250,8 @@ def gate_specimen(target, unavailable_dependent):
         # Only source reaches that sleep: the other actors remain unactivated.
         # Keep normal host allowances so an overall deadline cannot stand in
         # for the failed gate's cancellation of later unrelated work.
-        spec['_test_overrides'] = dict(worker_post_apply_hang_ms=10000)
-    return spec
+        controls = dict(worker_post_apply_hang_ms=10000)
+    return spec, controls
 
 
 def assert_unactivated(phase, step):
@@ -352,21 +354,21 @@ def timeout_applicability_specimens(target):
     ordinary = dict(contract=build_context.candidate_contract(),
         specimen_id='ordinary_worker_timeout',
         policy=dict(format='sbpl', sbpl_source=actors.CALIBRATION_POLICY),
-        probe_plan=[], _test_overrides=dict(overrides))
+        probe_plan=[])
     actor = dict(contract=build_context.candidate_contract(),
         specimen_id='actor_ignores_worker_timeout',
         actors=[actors.apply_actor(name, actors.CALIBRATION_POLICY) for name in ('source', 'reader')],
         phases=[dict(phase_id='source_final', actor_id='source', actions=[]),
             dict(phase_id='read_after_source', actor_id='reader',
                 after_termination=dict(actor_id='source'),
-                actions=[actors.read_probe('read_after_source', target)])],
-        _test_overrides=dict(overrides))
-    return [('ordinary_worker_timeout', ordinary, False), ('actor_ignores_worker_timeout', actor, True)]
+                actions=[actors.read_probe('read_after_source', target)])])
+    return [('ordinary_worker_timeout', ordinary, dict(overrides), False),
+            ('actor_ignores_worker_timeout', actor, dict(overrides), True)]
 
 
-def assert_timeout_applicability(runner, spec, target, actor_form):
+def assert_timeout_applicability(runner, spec, controls, target, actor_form):
     assert runner['specimen_id'] == spec['specimen_id']
-    assert runner['test_overrides'] == spec['_test_overrides']
+    assert runner['test_overrides'] == controls
     assert runner.get('request_failure') is None
     if not actor_form:
         assert runner['normalized_outcome'] == 'runner_timeout' and runner['rc'] == 1
@@ -502,18 +504,20 @@ def main(pw, out):
                 (out / 'capture-context-control.json').write_text(json.dumps(dict(
                     mutation='actor B compiled_profile.producer = host', errors=errors), indent=2) + '\n')
         for name, unavailable in [('gate_cancels_schedule', False), ('gate_unreached', True)]:
-            request = gate_specimen(resources['x']['path'], unavailable)
-            envelope, runner = capture(pw, out, name, request, expected_rc=1)
+            request, controls = gate_specimen(resources['x']['path'], unavailable)
+            envelope, runner = capture(pw, out, name, request, expected_rc=1, controls=controls,
+                                       scenario='actor_compositions.' + name)
             assert worker_exit_witness(envelope)[0], worker_exit_witness(envelope)
             ownership['reaped_captures'].append(name)
             receipt()
             report[name] = assert_gate_schedule(runner, request, resources['x'], unavailable)
-        for name, request, actor_form in timeout_applicability_specimens(resources['x']['path']):
-            envelope, runner = capture(pw, out, name, request, expected_rc=0 if actor_form else 1)
+        for name, request, controls, actor_form in timeout_applicability_specimens(resources['x']['path']):
+            envelope, runner = capture(pw, out, name, request, expected_rc=0 if actor_form else 1,
+                                       controls=controls, scenario='actor_compositions.' + name)
             assert worker_exit_witness(envelope)[0], worker_exit_witness(envelope)
             ownership['reaped_captures'].append(name)
             receipt()
-            report[name] = assert_timeout_applicability(runner, request, resources['x'], actor_form)
+            report[name] = assert_timeout_applicability(runner, request, controls, resources['x'], actor_form)
         for target in resources.values():
             assert target['path'].read_bytes() == target['contents']
     except BaseException:

@@ -14,6 +14,7 @@ ROOT = Path(__file__).resolve().parents[3]
 sys.path.insert(0, str(ROOT / 'tests/lib'))
 import build_context
 from run_capture import RunCapture
+from seam_invocation import SeamCapture
 from request_examples import CORPUS, examples, materialize
 from porcelain import decode as decode_porcelain
 from runner_client_capture import host_reply
@@ -499,8 +500,9 @@ def main():
         # worker completion makes the earlier compiler capture unavailable.
         interrupted = copy.deepcopy(base)
         interrupted['policy'].update(capture_compiled_profile=True, capture_nonce=secrets.token_hex(16))
-        interrupted['_test_overrides'] = {'worker_post_apply_kill_signal': 9}
-        with RunCapture(pw, out / 'capture_worker_death', interrupted, cli_args=[]) as run:
+        with SeamCapture(pw, out / 'capture_worker_death', interrupted,
+                         controls={'worker_post_apply_kill_signal': 9},
+                         scenario='bad_request.capture_worker_death', cli_args=[]) as run:
             assert run.wait(timeout=30) != 0
             reply = run.load_json()['data']['runner_result']
         assert reply['sandboxed_after_apply'] is True, reply

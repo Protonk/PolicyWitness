@@ -12,6 +12,12 @@ import tempfile
 sys.path.insert(0, str(Path(__file__).resolve().parents[2] / 'lib'))
 import build_context
 from run_capture import RunCapture
+from seam_invocation import SeamCapture
+
+# The one selected test-seam control this case supplies. It travels beside the
+# request through the invocation adapter; every other field, including the
+# worker and actor-equipment substitutions, stays in an ordinary submission.
+SEAM_FIELD = '_test_overrides.validator_executable_path'
 
 
 def specimen():
@@ -22,8 +28,9 @@ def specimen():
                 'attempt': {'kind': 'file', 'action': 'open_read', 'target': '/etc/hosts'}}]}
 
 
-def run(pw, out, request):
-    with RunCapture(pw, out, request, cli_args=[]) as capture:
+def run(pw, out, request, controls=None, scenario=None):
+    with (RunCapture(pw, out, request, cli_args=[]) if controls is None else
+          SeamCapture(pw, out, request, controls=controls, scenario=scenario, cli_args=[])) as capture:
         rc = capture.wait(timeout=40)
         envelope = capture.load_json()
     assert envelope['data']['runner_result'] is not None, envelope
@@ -88,6 +95,7 @@ def admission(pw, out):
             unit = 'items' if is_count else 'utf8_bytes'
             text = ('é' * (actual // 2) + 'x' * (actual % 2)) if variant.startswith('unicode') else 'x' * actual
             request = specimen()
+            controls = None
             step = request['probe_plan'][0]
             if field == 'policy.sbpl_source':
                 prefix = '(version 1)(allow default);'
@@ -111,7 +119,10 @@ def admission(pw, out):
             elif field == 'sandbox_check.filter.value' or field.startswith('_test_overrides.'):
                 remaining = actual - 1
                 tail = ('é' * (remaining // 2) + 'x' * (remaining % 2)) if variant.startswith('unicode') else 'x' * remaining
-                if field.startswith('_test_overrides.'):
+                if field == SEAM_FIELD:
+                    controls = {field.split('.')[1]: '/' + tail}
+                    assert len(('/' + tail).encode()) == actual
+                elif field.startswith('_test_overrides.'):
                     set_field(request, field, '/' + tail)
                     if '.actor_equipment_executable_paths.' in field:
                         request['actors'] = [{'actor_id': 'subject', 'equipment': field.rsplit('.', 1)[1],
@@ -127,7 +138,7 @@ def admission(pw, out):
             else:
                 step['attempt'] = {'kind': 'exec', 'action': 'spawn', 'target': '/usr/bin/true',
                                    'args': ['x'] * actual if field == 'args_count' else [text]}
-            rc, runner = run(pw, out / f'{field}-{variant}', request)
+            rc, runner = run(pw, out / f'{field}-{variant}', request, controls, f'admission.{field}-{variant}')
             if actual > maximum:
                 assert rc == 1 and runner['normalized_outcome'] == 'bad_request', runner
                 failure = runner['admission_failure']
@@ -171,7 +182,8 @@ def admission(pw, out):
                     assert runner['preparation_failure']['code'] == 'equipment_binding_refused', runner
                     assert all(a.get('launch') is None for a in runner['actors']), runner
                 if field.startswith('_test_overrides.'):
-                    assert runner['test_overrides'][field.split('.')[1]] == request['_test_overrides'][field.split('.')[1]], runner
+                    supplied = controls if controls is not None else request['_test_overrides']
+                    assert runner['test_overrides'][field.split('.')[1]] == supplied[field.split('.')[1]], runner
             else:
                 assert runner.get('admission_failure') is None, runner
                 assert runner['normalized_outcome'] == 'finished' and rc == 0, runner
@@ -204,8 +216,14 @@ def admission(pw, out):
             request = specimen()
             request['probe_plan'][0]['attempt'].update(action='open_write', target=str(target))
             rejected = 'é' * 32768
-            for field in [first, second]: set_field(request, field, rejected)
-            rc, runner = run(pw, out / f'combined-{i}', request)
+            # One pair names the worker substitution with the selected validator
+            # control. It has no separate-controls form and stays one request block.
+            mixed = SEAM_FIELD in (first, second) and '_test_overrides.worker_executable_path' in (first, second)
+            controls = None
+            for field in [first, second]:
+                if field == SEAM_FIELD and not mixed: controls = {field.split('.')[1]: rejected}
+                else: set_field(request, field, rejected)
+            rc, runner = run(pw, out / f'combined-{i}', request, controls, f'admission.combined-{i}')
             assert rc == 1 and runner['normalized_outcome'] == 'bad_request', runner
             assert runner['admission_failure']['field'] == first, runner
             assert not echoes(runner, rejected), 'secondary oversized field escaped refusal projection'
@@ -230,8 +248,9 @@ def admission(pw, out):
             elif field == 'args': bad['attempt'] = dict(kind='exec', action='spawn', target='/usr/bin/true', args=[text])
             elif field in ('key', 'value'): request['policy']['params'] = {text: 'v'} if field == 'key' else {'K': text}
             elif field.startswith('sandbox_check.'): set_field(bad, field, text)
-            else: set_field(request, field, text)
-            rc, runner = run(pw, out / f'nul-{i}', request)
+            elif field != SEAM_FIELD: set_field(request, field, text)
+            controls = {field.split('.')[1]: text} if field == SEAM_FIELD else None
+            rc, runner = run(pw, out / f'nul-{i}', request, controls, f'admission.nul-{i}')
             assert rc == 1 and runner['normalized_outcome'] == 'bad_request', runner
             failure = runner['admission_failure']
             assert (failure['field'], failure['unit'], failure['actual'], failure['maximum']) == (field, 'nul_bytes', 1, 0), failure
@@ -256,6 +275,7 @@ def validator(pw, out, mode):
             paths = [Path(temp) / name for name in names]
             for path in paths: path.write_bytes(b'before')
             request = specimen()
+            controls = None
             request['probe_plan'] = [{'step_id': name, 'sandbox_check': {'operation': 'file-write-data',
                 'filter': {'kind': 'path', 'value': str(path)}},
                 'attempt': {'kind': 'file', 'action': 'open_write', 'target': str(path)}}
@@ -279,9 +299,9 @@ def validator(pw, out, mode):
                 executable = case_out / 'validator.py'
                 shutil.copyfile(fixture / 'validator.py', executable); executable.chmod(0o755)
                 shutil.copyfile(fixture / f'{case}.json', executable.with_suffix('.case.json'))
-                request['_test_overrides'] = {'validator_executable_path': str(executable.resolve())}
-            rc, runner = run(pw, case_out, request)
-            assert runner.get('test_overrides') == request.get('_test_overrides'), runner
+                controls = {'validator_executable_path': str(executable.resolve())}
+            rc, runner = run(pw, case_out, request, controls, f'{mode}.{case}')
+            assert runner.get('test_overrides') == controls, runner
             if case == 'real_control':
                 assert rc == 0 and runner['normalized_outcome'] == 'finished', runner
                 assert all(path.read_bytes() != b'before' for path in paths), 'completed file effects absent'

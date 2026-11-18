@@ -9,6 +9,7 @@ import tempfile
 sys.path.insert(0, str(Path(__file__).resolve().parents[2] / 'lib'))
 import build_context
 from run_capture import RunCapture
+from seam_invocation import SeamCapture
 import consumer
 
 def main():
@@ -41,10 +42,12 @@ def main():
                 specimen['phases'] = [
                     {'phase_id': f'phase{i}', 'actions': [entry]}
                     for i, entry in enumerate(specimen.pop('probe_plan'))]
-            if signaled:
-                specimen['_test_overrides'] = overrides
             args = ['--timeout-ms', '20000']
-            run = RunCapture(pw, out / name, specimen, cli_args=args)
+            if signaled:
+                run = SeamCapture(pw, out / name, specimen, controls=overrides,
+                                  scenario='worker_termination.' + name, cli_args=args)
+            else:
+                run = RunCapture(pw, out / name, specimen, cli_args=args)
             (run.out / 'file.before').write_bytes(target.read_bytes())
             with run:
                 rc = run.wait(timeout=60)

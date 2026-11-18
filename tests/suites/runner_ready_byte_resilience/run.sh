@@ -36,8 +36,14 @@ fi
 #     inventing an apply result. This case keeps enough sentinel budget;
 #     the separate pre-apply witness deliberately expires that budget.
 
+# The hang is a selected seam control. The request is written without it and
+# the invocation adapter delivers it: SPECIMEN_PATH holds the delivered request.
+ORDINARY_PATH="${PW_TEST_ARTIFACTS}/specimen.ordinary.json"
 SPECIMEN_PATH="${PW_TEST_ARTIFACTS}/specimen.json"
-"${PW_PYTHON}" -B -S -P - "${SPECIMEN_PATH}" <<'PY'
+# 2000ms > the host's default 1000ms readyByteTimeout, so the host closes
+# --ready-fd before the worker writes its ready byte.
+SEAM_CONTROLS='{"worker_pre_ready_hang_ms": 2000}'
+"${PW_PYTHON}" -B -S -P - "${ORDINARY_PATH}" <<'PY'
 import os, sys
 sys.path.insert(0, os.environ['PW_CONTRACT_TEST_LIB'])
 import build_context
@@ -62,11 +68,6 @@ specimen = {
             "attempt": {"kind": "file", "action": "open_read", "target": "/etc/hosts"},
         }
     ],
-    "_test_overrides": {
-        # 2000ms > the host's default 1000ms readyByteTimeout, so the host
-        # closes --ready-fd before the worker writes its ready byte.
-        "worker_pre_ready_hang_ms": 2000,
-    },
 }
 Path(sys.argv[1]).write_text(json.dumps(specimen, indent=2, sort_keys=True) + "\n", encoding="utf-8")
 PY
@@ -75,10 +76,17 @@ RUN_STDOUT="${PW_TEST_ARTIFACTS}/policy_witness.run.stdout.json"
 RUN_STDERR="${PW_TEST_ARTIFACTS}/policy_witness.run.stderr.txt"
 
 set +e
-"${PW_BIN}" run "${SPECIMEN_PATH}" >"${RUN_STDOUT}" 2>"${RUN_STDERR}"
+"${PW_PYTHON}" -B -S "${PW_CONTRACT_TEST_LIB}/seam_invocation.py" \
+  --scenario ready_byte.pre_ready_hang --request "${ORDINARY_PATH}" --controls "${SEAM_CONTROLS}" \
+  --delivered "${SPECIMEN_PATH}" --stdout "${RUN_STDOUT}" --stderr "${RUN_STDERR}" \
+  -- "${PW_BIN}" "${SPECIMEN_PATH}"
 RC=$?
 set -e
 
+if [[ "${RC}" -eq 70 ]]; then
+  test_fail "seam invocation adapter refused or failed (its status 70); see seam-invocations/ready_byte.pre_ready_hang" \
+    "{\"stdout\":\"${RUN_STDOUT}\",\"stderr\":\"${RUN_STDERR}\"}"
+fi
 if [[ "${RC}" -ne 0 ]]; then
   test_fail "expected exit 0 (worker should survive the closed ready pipe and apply), rc=${RC}" \
     "{\"stdout\":\"${RUN_STDOUT}\",\"stderr\":\"${RUN_STDERR}\"}"

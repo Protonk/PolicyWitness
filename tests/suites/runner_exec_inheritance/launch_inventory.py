@@ -12,7 +12,7 @@ import time
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[2] / 'lib'))
 import build_context
-from run_capture import RunCapture
+from seam_invocation import SeamCapture
 
 
 def command(out, name, argv, timeout=5):
@@ -55,9 +55,9 @@ def observe(pw, out, boundary):
     # only difference; no wrapper replaces or instruments the signed worker.
     specimen = dict(contract=build_context.candidate_contract(), specimen_id='launch_inventory_' + boundary,
                     policy=dict(format='sbpl', sbpl_source='(version 1)(allow default)'),
-                    probe_plan=[], _test_overrides={key: 20000})
-    run = RunCapture(pw, out, specimen,
-                     cli_args=['--timeout-ms', '45000'])
+                    probe_plan=[])
+    run = SeamCapture(pw, out, specimen, controls={key: 20000}, scenario='launch_inventory.' + boundary,
+                      cli_args=['--timeout-ms', '45000'])
     initial = processes()
     (out / 'processes-before.txt').write_text(initial)
     existing = {pid for pid, _ in candidates(initial, flag)}

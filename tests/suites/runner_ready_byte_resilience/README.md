@@ -37,14 +37,17 @@ scores a one-step probe plan.
 
 ## Fixtures
 
-- Specimen generated inline by `run.sh`.
+- `run.sh` writes the request without the override as `specimen.ordinary.json`
+  and submits it through the [seam invocation adapter](../../README.md#seam-invocations)
+  with the delay as its one control. `specimen.json` is the delivered request.
 
 ## Artifacts
 
 `<run>` is the selected output directory: `tests/out/runs/default` for the
 public command, or the explicit `PW_TEST_OUT_DIR`.
 
-- `<run>/suites/runner_ready_byte_resilience/<test_id>/artifacts/*`
+- `<run>/suites/runner_ready_byte_resilience/<test_id>/artifacts/*`, including
+  the adapter's record under `seam-invocations/ready_byte.pre_ready_hang/`.
 
 ## Run
 

@@ -10,29 +10,36 @@ sys.path.insert(0, str(Path(__file__).resolve().parents[2] / 'lib'))
 import consumer
 import build_context
 from run_capture import RunCapture
+from seam_invocation import SeamCapture
 
 ROOT = Path(__file__).resolve().parents[3]
 INPUTS = json.loads((ROOT / 'tests/fixtures/diagnostic_transport/cases.json').read_text())
 
 
-def run(pw, output, request):
-    with RunCapture(pw, output, request, cli_args=[]) as capture:
+def run(pw, output, request, controls=None):
+    # The validator substitution is a selected seam control and travels beside
+    # the request; the worker substitution stays in the request.
+    with (RunCapture(pw, output, request, cli_args=[]) if controls is None else
+          SeamCapture(pw, output, request, controls=controls,
+                      scenario='diagnostic_transport.' + output.name, cli_args=[])) as capture:
         rc = capture.wait(timeout=30)
         envelope = capture.load_json()
     assert not consumer.validate(envelope, build_context.candidate_contract()), consumer.validate(envelope, build_context.candidate_contract())
     runner = envelope['data']['runner_result']
     assert runner['producer']['contract'] == build_context.candidate_contract(), runner
-    assert runner.get('test_overrides') == request['_test_overrides'], runner
+    assert runner.get('test_overrides') == (request['_test_overrides'] if controls is None else controls), runner
     return rc, runner
 
 
-def specimen(source, target, overrides):
-    return {'contract': build_context.candidate_contract(), 'specimen_id': 'unfamiliar-transport',
-            'policy': {'format': 'sbpl', 'sbpl_source': source},
-            'probe_plan': [{'step_id': 's', 'sandbox_check': {'operation': 'file-write-data',
-                'filter': {'kind': 'path', 'value': str(target)}},
-                'attempt': {'kind': 'file', 'action': 'open_write', 'target': str(target)}}],
-            '_test_overrides': overrides}
+def specimen(source, target, overrides=None):
+    request = {'contract': build_context.candidate_contract(), 'specimen_id': 'unfamiliar-transport',
+               'policy': {'format': 'sbpl', 'sbpl_source': source},
+               'probe_plan': [{'step_id': 's', 'sandbox_check': {'operation': 'file-write-data',
+                   'filter': {'kind': 'path', 'value': str(target)}},
+                   'attempt': {'kind': 'file', 'action': 'open_write', 'target': str(target)}}]}
+    if overrides is not None:
+        request['_test_overrides'] = overrides
+    return request
 
 
 def check_worker(pw, output, fixture, mode):
@@ -116,9 +123,9 @@ def check_validator(pw, output, bad_tail):
         target = Path(temp) / 'effect'
         target.write_bytes(b'before')
         (output/'before.bin').write_bytes(b'before')
-        request = specimen('(version 1)(allow default)', target, {'validator_executable_path': str(executable.resolve())})
+        request = specimen('(version 1)(allow default)', target)
         request['probe_plan'] = [dict(request['probe_plan'][0], step_id='s'+str(i)) for i in range(3)]
-        rc, runner = run(pw, output, request)
+        rc, runner = run(pw, output, request, {'validator_executable_path': str(executable.resolve())})
         after = target.read_bytes()
         (output/'after.bin').write_bytes(after)
     assert after != b'before', 'actual worker effects were lost'

@@ -25,9 +25,9 @@ def run(pw, out, name, actions, overrides=None, expected_rc=0, session_state=Non
     spec = {'contract': build_context.candidate_contract(), 'specimen_id': name,
             'policy': {'format': 'sbpl', 'sbpl_source': '(version 1)(allow default)'},
             'phases': [{'phase_id': f'p{i}', 'actions': a if isinstance(a, list) else [a]} for i, a in enumerate(actions)]}
-    if overrides is not None:
-        spec['_test_overrides'] = overrides
-    envelope, reply = capture(pw, out, name, spec, expected_rc=expected_rc, session_state=session_state)
+    # Every override this case supplies is a selected seam control.
+    envelope, reply = capture(pw, out, name, spec, expected_rc=expected_rc, session_state=session_state,
+                              controls=overrides, scenario='phases.' + name)
     assert reply.get('test_overrides') == overrides
     phases = reply['phases']
     assert [p['ordinal'] for p in phases] == list(range(1, len(actions) + 1))

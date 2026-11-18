@@ -2,8 +2,10 @@
 
 Direct controls for `tests/lib/run_capture.py`, used by the validator-failure,
 exec-lifecycle, specimen-isolation, execute-permission, live-worker-identity,
-and allow/deny consistency suites. Requires macOS and Python 3; no
-built PolicyWitness app or C compilation. This suite is in the default battery.
+and allow/deny consistency suites, and for `tests/lib/seam_invocation.py`, which
+submits requests carrying selected test-seam controls. Requires macOS and
+Python 3; no built PolicyWitness app or C compilation. This suite is in the
+default battery.
 Run outside an automation sandbox so Unix sockets and OS exit observation work:
 
 ```sh
@@ -55,6 +57,31 @@ its child. B must complete while A still answers, without changing A's artifacts
 
 Artifacts retain every specimen, raw output, capture metadata, the fixture's
 argument receipt, `controls.json`, and `assertions.log`.
+
+## Seam invocation controls
+
+`check_seam_invocation.py` runs the [seam invocation adapter](../../README.md#seam-invocations)
+against a stand-in controller and runner client that it writes under
+`artifacts/seam/StandIn.app`. The stand-in answers `--version` with a constructed
+build, records the arguments and request bytes it received and emits bytes the
+control chose. It applies no control and launches nothing; these controls
+establish the adapter's record, not any PolicyWitness behavior.
+
+Controls check that `SeamCapture` leaves RunCapture's files unchanged in kind
+with the delivered request in `specimen.json`; that the ordinary request,
+controls, delivered bytes, argv, route, app identity, status, monotonic times
+and raw output are retained under `seam-invocations/<scenario>/`; that the
+record exists before launch and survives a refusal that never reads the
+request, a failed launch, a signal and RunCapture's cleanup kill; that
+`Submission` delivers on standard input in the caller's encoding and from a
+path; that an empty mapping, an unselected or mixed key, a request already
+carrying `_test_overrides`, a reused or path-like scenario and an unrecognized
+program write and launch nothing; that a delivered request rewritten after its
+intent is not launched; and that the command form returns the submission's
+status, 128 plus a signal number, and 70 for its own refusal.
+
+Artifacts add `seam/`, `seam-invocations/`, `seam-assertions.log` and
+`seam/seam-controls.json`.
 
 The shell entry point uses `tests/lib/case.sh` for setup and logged checks.
 Case IDs, checker arguments, and artifact paths remain defined by this suite.

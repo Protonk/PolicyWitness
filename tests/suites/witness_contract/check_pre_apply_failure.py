@@ -17,6 +17,7 @@ sys.path.insert(0, str(Path(__file__).resolve().parents[2] / 'lib'))
 import build_context
 from blackbox import validate_step
 from run_capture import RunCapture
+from seam_invocation import SeamCapture
 from lifecycle_contract import CAUSE_LABELS
 import consumer
 
@@ -79,7 +80,7 @@ def no_cause_claim(envelope):
         )), diagnostics
 
 
-def common_evidence(envelope, rc, specimen, failure):
+def common_evidence(envelope, rc, specimen, failure, controls):
     assert not consumer.validate(envelope, build_context.candidate_contract()), consumer.validate(envelope, build_context.candidate_contract())
     rows = consumer.steps(envelope, build_context.candidate_contract())
     ids = [s['step_id'] for s in specimen['probe_plan']]
@@ -110,7 +111,7 @@ def common_evidence(envelope, rc, specimen, failure):
     assert envelope['result']['normalized_outcome'] == runner['normalized_outcome'], envelope['result']
     assert type(runner['rc']) is int and runner['rc'] == (1 if failure else 0), runner
     assert runner['specimen_id'] == specimen['specimen_id'], runner
-    assert runner.get('test_overrides') == specimen.get('_test_overrides'), runner
+    assert runner.get('test_overrides') == controls, runner
     worker = runner['runner_subprocess']
     assert type(worker['pid']) is int and worker['pid'] > 0, worker
     assert runner['pid'] == worker['pid'], runner
@@ -219,13 +220,17 @@ def main():
         }
         for failure, name in ((True, 'pre_apply'), (False, 'positive_control')):
             request = dict(specimen)
+            # 10s exceeds readiness (1s), sentinel (200ms) and exit grace
+            # (1s) by a wide margin. The seam is after compilation, before
+            # readiness/application; it is not a compiler-failure seam.
+            controls = OVERRIDES if failure else None
             if failure:
-                # 10s exceeds readiness (1s), sentinel (200ms) and exit grace
-                # (1s) by a wide margin. The seam is after compilation, before
-                # readiness/application; it is not a compiler-failure seam.
-                request['_test_overrides'] = OVERRIDES
-            capture = RunCapture(pw, out / name, request,
-                                 cli_args=['--timeout-ms', '20000'])
+                capture = SeamCapture(pw, out / name, request, controls=controls,
+                                      scenario='pre_apply.pre_ready_timeout',
+                                      cli_args=['--timeout-ms', '20000'])
+            else:
+                capture = RunCapture(pw, out / name, request,
+                                     cli_args=['--timeout-ms', '20000'])
             # Both runs use the same files, seeds, policy and plan. Seed them
             # before entering RunCapture (which starts the CLI on entry).
             for i, (path, seed) in enumerate(zip(paths, seeds)):
@@ -249,7 +254,7 @@ def main():
                     assert after[1] == seeds[1], 'denied control write changed seed bytes'
 
             check(f'{name}.file_effects', effects)
-            check(f'{name}.evidence', lambda: common_evidence(envelope, rc, request, failure))
+            check(f'{name}.evidence', lambda: common_evidence(envelope, rc, request, failure, controls))
             check(f'{name}.lifecycle_observations', lambda: lifecycle_observations(envelope, failure))
             check(f'{name}.no_policy_cause', lambda: no_cause_claim(envelope))
             if failure:
@@ -301,8 +306,8 @@ def main():
             ('worker_post_apply_kill_signal', 32, '--post-apply-kill-signal'),
             ('worker_kill_before_publish_slot', 256, '--kill-before-publish-slot'),
         ]:
-            request = dict(specimen, _test_overrides={field: value})
-            capture = RunCapture(pw, out / ('argv-refusal-' + field), request, cli_args=[])
+            capture = SeamCapture(pw, out / ('argv-refusal-' + field), dict(specimen), controls={field: value},
+                                  scenario='pre_apply.argv_refusal.' + field, cli_args=[])
             argv = [str(worker_path), '--shm-fd', '3', '--ready-fd', '4', '--step-count', '2', flag, str(value)]
             native = subprocess.run(argv, capture_output=True, timeout=10)
             (capture.out / 'native.stdout').write_bytes(native.stdout)

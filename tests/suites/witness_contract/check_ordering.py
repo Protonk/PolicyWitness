@@ -13,6 +13,7 @@ sys.path.insert(0, str(ROOT / 'tests/lib'))
 sys.path.insert(0, str(ROOT / 'tests/fixtures/validator'))
 import build_context
 from run_capture import RunCapture
+from seam_invocation import SeamCapture, scenario_for
 import consumer
 from gate import Gate, install_bridge
 from control import TreeControl, process_snapshot, ExitObserver
@@ -29,11 +30,9 @@ def step(path, action, name):
                 attempt=dict(kind='file', action=action, target=str(path)))
 
 
-def specimen(plan, policy='(version 1)(allow default)', overrides=None):
-    result = dict(contract=build_context.candidate_contract(), specimen_id=secrets.token_hex(12),
-                  policy=dict(format='sbpl', sbpl_source=policy), probe_plan=plan)
-    if overrides: result['_test_overrides'] = overrides
-    return result
+def specimen(plan, policy='(version 1)(allow default)'):
+    return dict(contract=build_context.candidate_contract(), specimen_id=secrets.token_hex(12),
+                policy=dict(format='sbpl', sbpl_source=policy), probe_plan=plan)
 
 
 def ordering(runner, disposition='reaped'):
@@ -42,12 +41,12 @@ def ordering(runner, disposition='reaped'):
         validator_disposition=disposition, protocol_violations=[], worker_lifetime_established=True), runner['phases'][0]['ordering']
 
 
-def envelope(run, rc, spec, outcome='finished'):
+def envelope(run, rc, spec, outcome='finished', controls=None):
     value = run.load_json()
     assert rc == (0 if outcome == 'finished' else 1), value
     runner = value['data']['runner_result']
     assert runner['normalized_outcome'] == outcome, runner
-    assert runner.get('test_overrides') == spec.get('_test_overrides'), runner
+    assert runner.get('test_overrides') == controls, runner
     assert runner['runner_subprocess']['exit_code'] == 0, runner
     errors = consumer.validate(value, build_context.candidate_contract())
     assert not errors, errors
@@ -90,8 +89,11 @@ def held_effects(pw, out, bridge, helper, collection_started=None):
         plan = [step(target, 'unlink', 'unlink'), dict(step_id='exec',
                 sandbox_check=dict(operation='process-exec*', filter=dict(kind='path', value=str(helper))),
                 attempt=dict(kind='exec', action='spawn', target=str(helper), args=['--tree', tree.path]))]
-        spec = specimen(plan, overrides={'validator_executable_path': str(validator)})
-        run = RunCapture(pw, out / 'run', spec, cli_args=[])
+        spec = specimen(plan)
+        controls = {'validator_executable_path': str(validator)}
+        # The barrier mutations call this once per candidate; the capture directory tells them apart.
+        run = SeamCapture(pw, out / 'run', spec, controls=controls,
+                          scenario='ordering.held_effects.' + scenario_for(out / 'run'), cli_args=[])
         try:
             run.start(); ready = gate.accept()
             if collection_started is not None: collection_started()
@@ -137,7 +139,7 @@ def held_effects(pw, out, bridge, helper, collection_started=None):
             assert not any(s['exec_connected'] for s in observed['held_samples']), 'early exec connection while collection held'
             assert observed['absent_after_release'], observed
             assert query_count == len(plan), ready
-            runner = envelope(run, rc, spec)
+            runner = envelope(run, rc, spec, controls=controls)
             ordering(runner); native_rows(runner, records)
             assert runner['pid'] == worker['pid'], runner
             assert all(s['attempt']['outcome'] == 'ok' for s in runner['steps']), runner
@@ -201,11 +203,12 @@ def mutation_interval(pw, out, bridge, between_queries):
         work = Path(work_arg); target = work / 'target'; target.write_bytes(secrets.token_bytes(64))
         gate = Gate(work / 'gate')
         validator = install_bridge(bridge, out / 'bridge', gate.path)
-        spec = specimen([step(target, 'open_read', str(i)) for i in range(2 if between_queries else 1)],
-                        overrides={'validator_executable_path': str(validator)})
+        spec = specimen([step(target, 'open_read', str(i)) for i in range(2 if between_queries else 1)])
+        controls = {'validator_executable_path': str(validator)}
         observations = []
         try:
-            with RunCapture(pw, out / 'run', spec, cli_args=[]) as run:
+            with SeamCapture(pw, out / 'run', spec, controls=controls,
+                             scenario='ordering.mutation_interval', cli_args=[]) as run:
                 # __enter__ starts CLI; the acknowledged query precedes mutation.
                 gate_ready = gate.accept()
                 records = [gate.query()]; gate.emit()
@@ -220,7 +223,7 @@ def mutation_interval(pw, out, bridge, between_queries):
                 rc = run.wait(timeout=15)
                 save(out / 'external-state.json', observations)
                 assert not target.exists()
-                runner = envelope(run, rc, spec)
+                runner = envelope(run, rc, spec, controls=controls)
                 ordering(runner); native_rows(runner, records)
                 for row in runner['steps']:
                     assert row['attempt']['outcome'] == 'open_failed' and row['attempt']['errno'] == errno.ENOENT, row
@@ -264,12 +267,14 @@ def ordinary(pw, out, maximum):
 def spawn_failed(pw, out):
     target = out / 'target'; seed = secrets.token_bytes(64); target.write_bytes(seed)
     hostile = '/nonexistent/pw-validator-not-real'
-    spec = specimen([step(target, 'open_write', 'write')], overrides={'validator_executable_path': hostile})
-    with RunCapture(pw, out / 'run', spec, cli_args=[]) as run:
+    spec = specimen([step(target, 'open_write', 'write')])
+    controls = {'validator_executable_path': hostile}
+    with SeamCapture(pw, out / 'run', spec, controls=controls,
+                     scenario='ordering.validator_spawn_failed', cli_args=[]) as run:
         rc = run.wait(timeout=20)
         after = target.read_bytes(); save(out / 'effects.json', dict(before_hex=seed.hex(), after_hex=after.hex()))
         assert after and after != seed
-        runner = envelope(run, rc, spec, 'validator_spawn_failed')
+        runner = envelope(run, rc, spec, 'validator_spawn_failed', controls)
     ordering(runner, 'not_spawned')
     assert (runner.get('phases') or [{}])[0].get('validator_subprocess') is None, runner
     failure = runner['phases'][0]['validator_spawn_failure']

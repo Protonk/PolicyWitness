@@ -21,6 +21,7 @@ import consumer
 import contract
 import build_context
 from run_capture import RunCapture
+from seam_invocation import SeamCapture
 
 SERVICE_REL = 'Contents/XPCServices/PWRunner.xpc/Contents/MacOS/PWRunner'
 WORKER_REL = 'Contents/XPCServices/PWRunner.xpc/Contents/MacOS/pw-probe-runner'
@@ -93,7 +94,7 @@ class Witness:
             request['_test_overrides'] = overrides
         return request
 
-    def run(self, name, request, *, cli_args=(), timeout=60, raw=None):
+    def run(self, name, request, *, cli_args=(), timeout=60, raw=None, controls=None):
         directory = self.out / name
         if raw is not None:
             directory.mkdir(parents=True, exist_ok=True)
@@ -103,7 +104,9 @@ class Witness:
             (directory / 'stdout').write_bytes(result.stdout)
             (directory / 'stderr').write_bytes(result.stderr)
             return result.returncode, json.loads(result.stdout), str(path)
-        with RunCapture(self.pw, directory, request, cli_args=list(cli_args)) as capture:
+        with (RunCapture(self.pw, directory, request, cli_args=list(cli_args)) if controls is None else
+              SeamCapture(self.pw, directory, request, controls=controls, scenario='dossier.' + name,
+                          cli_args=list(cli_args))) as capture:
             rc = capture.wait(timeout=timeout)
             envelope = capture.load_json()
         return rc, envelope, str(capture.request_path) if hasattr(capture, 'request_path') else None
@@ -346,8 +349,9 @@ class Witness:
             assert record['verification'] == 'unavailable' and 'cannot stat' in record['reason'], record
             assert envelope['data']['runner_result']['normalized_outcome'] == 'worker_spawn_failed', envelope['data']['runner_result']
             # The manifest's own path needs no comparison.
-            request = self.specimen('override-manifest', overrides={'validator_executable_path': str(self.app / VALIDATOR_REL)})
-            rc, envelope, _ = self.run('override_manifest', request)
+            request = self.specimen('override-manifest')
+            rc, envelope, _ = self.run('override_manifest', request,
+                                       controls={'validator_executable_path': str(self.app / VALIDATOR_REL)})
             specimen = self.common(envelope, 'override_manifest')
             assert specimen['binaries'] == {'service': None, 'worker': None, 'validator': None, 'unentitled_worker': None}, specimen['binaries']
             self.record('executable_overrides', baseline=baseline)

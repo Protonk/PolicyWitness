@@ -13,6 +13,7 @@ import consumer
 import build_context
 from lifecycle_oracle import check_record
 from run_capture import RunCapture
+from seam_invocation import SeamCapture
 from worker_exit_witness import worker_exit_witness
 from check_extensions import specimen, assert_issuance, lifecycle_events
 
@@ -79,7 +80,7 @@ def assert_external(record, content):
         assert record['content_hex'] == content.hex(), record
 
 
-def execute(pw, out, root, ownership, name, request, paths, session, *, expected_rc=0):
+def execute(pw, out, root, ownership, name, request, paths, session, *, expected_rc=0, controls=None):
     folder = out / name
     if session:
         request['runner'] = dict(mode='byoxpc', service=session['service_name'])
@@ -88,7 +89,9 @@ def execute(pw, out, root, ownership, name, request, paths, session, *, expected
     save(root / 'ownership.json', ownership); save(out / 'ownership.json', ownership)
     envelope = None
     try:
-        with RunCapture(pw, folder, request, cli_args=['--timeout-ms', '20000']) as capture:
+        with (RunCapture(pw, folder, request, cli_args=['--timeout-ms', '20000']) if controls is None else
+              SeamCapture(pw, folder, request, controls=controls, scenario='extension_directory.' + name,
+                          cli_args=['--timeout-ms', '20000'])) as capture:
             rc = capture.wait(timeout=40)
             # Inspect effects before looking at the producer's interpretation.
             effects = [observe(path) for path in paths]
@@ -211,9 +214,9 @@ def run(pw, out, session=None):
         target = root / 'unpublished'; target.write_bytes(CONTENTS)
         request = dict(contract=build_context.candidate_contract(), specimen_id='directory-unpublished',
             policy=dict(format='sbpl', sbpl_source='(version 1)(allow default)'),
-            probe_plan=[probe('write', 'write_fresh', target), probe('after', 'read_fresh', target)],
-            _test_overrides=dict(worker_kill_before_publish_slot=0))
-        envelope, final = execute(pw, out, root, ownership, 'unpublished', request, [target], session, expected_rc=1)
+            probe_plan=[probe('write', 'write_fresh', target), probe('after', 'read_fresh', target)])
+        envelope, final = execute(pw, out, root, ownership, 'unpublished', request, [target], session, expected_rc=1,
+                                  controls=dict(worker_kill_before_publish_slot=0))
         assert_external(final[str(target)], b'x')
         runner = envelope['data']['runner_result']
         assert runner['runner_subprocess']['reaped'] and runner['runner_subprocess']['term_signal'] == 9

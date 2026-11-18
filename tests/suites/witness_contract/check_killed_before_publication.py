@@ -31,7 +31,7 @@ import build_context
 import consumer
 import lifecycle_oracle
 from lifecycle_adapter import read_lifecycle, summaries
-from run_capture import RunCapture
+from seam_invocation import SeamCapture
 from worker_exit_witness import worker_exit_witness
 
 CLI_ARGS = ['--timeout-ms', '20000']
@@ -70,8 +70,7 @@ def create_step(step_id, target):
 def specimen(target):
     return {'contract': build_context.candidate_contract(), 'specimen_id': 'killed_before_publication', 'policy': dict(POLICY),
             'probe_plan': [read_step('prefix', '/etc/hosts'), create_step('created', target),
-                           read_step('after', '/etc/hosts')],
-            '_test_overrides': dict(OVERRIDES)}
+                           read_step('after', '/etc/hosts')]}
 
 
 def witnesses(envelope):
@@ -124,10 +123,10 @@ def step(envelope, step_id):
     return next(s for s in envelope['data']['runner_result']['steps'] if s['step_id'] == step_id)
 
 
-def check_setup(rc, seen, spec):
+def check_setup(rc, seen, controls):
     """The boundary was reached: the worker died by signal with slot 1 started and unpublished."""
     assert rc == 1, f'setup: expected CLI failure exit 1, got {rc}'
-    assert seen['test_overrides'] == spec['_test_overrides'], f'setup: override not echoed: {seen}'
+    assert seen['test_overrides'] == controls, f'setup: override not echoed: {seen}'
     assert seen['poll_stop_reason'] == 'child_reaped', f'setup: the host did not reap a dead worker: {seen}'
     assert seen['term_signal'] == 9 and seen['exit_code'] is None and seen['reaped'] is True, f'setup: {seen}'
     assert seen['done_observed'] is False and seen['partial_steps'] is True, f'setup: {seen}'
@@ -183,7 +182,8 @@ def main():
     spec = specimen(target)
     envelope, rc, primary = None, None, None
     try:
-        with RunCapture(pw, artifacts, spec, cli_args=CLI_ARGS) as run:
+        with SeamCapture(pw, artifacts, spec, controls=dict(OVERRIDES),
+                         scenario='killed_before_publication.created', cli_args=CLI_ARGS) as run:
             rc = run.wait(timeout=HARNESS_WAIT_SECONDS)
             # Independent observation first: the native effect is read from the
             # file system, not from the reply.
@@ -211,7 +211,7 @@ def main():
         f'the native create did not happen as expected: {after}'
     print('independent: the worker created the file', flush=True)
 
-    check_setup(rc, seen, spec)
+    check_setup(rc, seen, OVERRIDES)
     print('setup: worker reaped with SIGKILL after slot 1 started and before it published', flush=True)
 
     problems = consumer.validate(envelope, build_context.candidate_contract())

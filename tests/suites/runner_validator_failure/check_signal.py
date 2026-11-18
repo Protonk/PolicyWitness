@@ -6,7 +6,7 @@ import sys
 
 from check import install_fixture, assert_transcript
 sys.path.insert(0, str(Path(__file__).resolve().parents[1] / 'witness_contract'))
-from check_ordering import RunCapture, envelope, ordering, specimen, step, save
+from check_ordering import SeamCapture, envelope, ordering, specimen, step, save
 
 pw, out_arg = sys.argv[1:]
 out = Path(out_arg).resolve()
@@ -14,14 +14,15 @@ validator = install_fixture(out / 'validator', 'signal_after_one')
 paths = [out / ('file-' + secrets.token_hex(8)) for _ in range(3)]
 seeds = [secrets.token_bytes(64) for _ in paths]
 for path, seed in zip(paths, seeds): path.write_bytes(seed)
-spec = specimen([step(p, 'open_write', str(i)) for i, p in enumerate(paths)],
-                overrides={'validator_executable_path': str(validator)})
-with RunCapture(pw, out / 'run', spec, cli_args=[]) as run:
+spec = specimen([step(p, 'open_write', str(i)) for i, p in enumerate(paths)])
+controls = {'validator_executable_path': str(validator)}
+with SeamCapture(pw, out / 'run', spec, controls=controls,
+                 scenario='validator_failure.signal_after_one', cli_args=[]) as run:
     rc = run.wait(timeout=20)
     after = [p.read_bytes() for p in paths]
     save(out / 'effects.json', [dict(before_hex=b.hex(), after_hex=a.hex()) for b, a in zip(seeds, after)])
     assert all(a and a != b for b, a in zip(seeds, after)), 'all writes must independently change bytes'
-    runner = envelope(run, rc, spec, 'validator_unavailable')
+    runner = envelope(run, rc, spec, 'validator_unavailable', controls)
 ordering(runner)
 status = runner['phases'][0]['validator_subprocess']
 assert status['term_signal'] == 9 and status.get('exit_code') is None and status['reaped'] is True, status

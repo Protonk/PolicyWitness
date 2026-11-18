@@ -12,7 +12,7 @@ sys.path.insert(0, str(ROOT / 'tests/lib'))
 import build_context
 import consumer
 import contract
-from run_capture import RunCapture
+from seam_invocation import SeamCapture
 
 
 def main():
@@ -33,10 +33,13 @@ def main():
                     attempt=dict(kind='file', action='open_write', target=str(path)))
                 for i, path in enumerate(paths)]
         spec = dict(contract=build_context.candidate_contract(), specimen_id='validator-io-deadline',
-                    policy=dict(format='sbpl', sbpl_source='(version 1)(allow default)'), probe_plan=plan,
-                    _test_overrides=dict(validator_executable_path=str(validator), validator_io_timeout_ms=500))
+                    policy=dict(format='sbpl', sbpl_source='(version 1)(allow default)'), probe_plan=plan)
+        controls = dict(validator_executable_path=str(validator), validator_io_timeout_ms=500)
+        # Prepared before the clock starts: the elapsed time below is the CLI's.
+        capture = SeamCapture(pw, out / 'run', spec, controls=controls,
+                              scenario='validator_no_reply.io_deadline', cli_args=['--timeout-ms', '15000'])
         started = time.monotonic()
-        with RunCapture(pw, out / 'run', spec, cli_args=['--timeout-ms', '15000']) as run:
+        with capture as run:
             rc = run.wait(timeout=20)
             after = [p.read_bytes() for p in paths]
             for i, data in enumerate(after):
@@ -48,7 +51,7 @@ def main():
     assert rc == 1 and envelope['result']['ok'] is False, envelope['result']
     assert runner['normalized_outcome'] == 'validator_no_reply', runner
     assert '500 ms I/O deadline' in runner['error'], runner['error']
-    assert runner['test_overrides'] == spec['_test_overrides'], runner
+    assert runner['test_overrides'] == controls, runner
     worker, v = runner['runner_subprocess'], runner['phases'][0]['validator_subprocess']
     assert worker['exit_code'] == 0 and worker['done_observed'] and not worker['partial_steps'], worker
     assert worker['worker_evidence']['failure_state'] == 'absent', worker

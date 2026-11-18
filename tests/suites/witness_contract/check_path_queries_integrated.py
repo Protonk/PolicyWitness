@@ -12,6 +12,7 @@ from check_path_queries import ROOT, CONTENTS, path_state, save
 sys.path.insert(0, str(ROOT / 'tests/lib'))
 import build_context
 import consumer
+from seam_invocation import Submission
 
 
 def probe(step, target, action='open_read', operation='file-read-data'):
@@ -62,13 +63,16 @@ def main():
             before = {n:path_state(p) for n,p in [('blocked',blocked),('sibling',sibling)]}
             spec = dict(contract=build_context.candidate_contract(), specimen_id='path_query_' + kind,
                         policy=dict(format='sbpl',sbpl_source='(version 1) (allow default) (deny ' + denied_op + ' (literal ' + json.dumps(str(blocked)) + '))'),
-                        phases=[dict(phase_id='p'+str(i),actions=actions) for i,actions in enumerate(phases)],
-                        _test_overrides=dict(validator_executable_path=str(wrapper)))
-            request = targets / 'request.json'; save(request,spec); save(case/'specimen.json',spec)
+                        phases=[dict(phase_id='p'+str(i),actions=actions) for i,actions in enumerate(phases)])
+            # The observing wrapper is a selected seam control; the adapter writes the delivered request.
+            request = targets / 'request.json'
+            submission = Submission(pw, 'path_query.' + kind, spec, dict(validator_executable_path=str(wrapper)),
+                                    run_args=[request], request_path=request)
+            save(case/'specimen.json',submission.delivered)
             owner['children_confirmed'] = False
             save(workspace/'owner.json',owner); save(out/'workspace-owner.json',owner)
-            command = [str(pw),'run',str(request)]
-            result = subprocess.run(command,capture_output=True,timeout=40)
+            command = submission.argv
+            result = submission.run(timeout=40)
             (case/'stdout.json').write_bytes(result.stdout); (case/'stderr.txt').write_bytes(result.stderr)
             save(case/'capture.json',dict(argv=command,returncode=result.returncode))
             envelope = json.loads(result.stdout)

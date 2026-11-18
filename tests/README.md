@@ -425,6 +425,48 @@ all outcome assertions and independent observations. Cleanup runs after those
 observations. [run_capture](suites/run_capture/README.md) documents the API,
 artifact contract and independent controls.
 
+### Seam invocations
+
+`tests/lib/seam_invocation.py` submits the live requests that supply any of
+the eight selected test-seam controls: `worker_timeout_ms`,
+`worker_pre_ready_hang_ms`, `worker_post_apply_hang_ms`,
+`worker_post_apply_kill_signal`, `worker_kill_before_publish_slot`,
+`validator_executable_path`, `validator_io_timeout_ms` and
+`validator_total_timeout_ms`. The caller supplies the ordinary request without
+those controls, the controls as a separate mapping, a scenario identity unique
+within its case and the remaining `run` arguments. The adapter delivers the
+controls as the request's `_test_overrides` block through `policy-witness run`
+or `pw-runner-client run`. `SeamCapture` is a `RunCapture` with the same files,
+waits and cleanup; `Submission` is a process the caller starts and waits for,
+or runs to completion; shell cases use the file's command form, which exits
+with the submission's status. `witness_capture.capture` and `HeldWorkload`
+pass their callers' controls through it.
+
+A request that uses only `worker_executable_path` or
+`actor_equipment_executable_paths` is an ordinary submission with its own
+`_test_overrides` block. The adapter refuses a request that already carries
+that block, an empty control mapping, an unselected key and a reused scenario
+before writing or launching anything. Two submissions carry a selected key
+outside the adapter, each as one request block: the `failure_boundaries/admission`
+pair that names `worker_executable_path` and `validator_executable_path`
+together, and the request corpus's `fractional_override` example, whose
+`worker_timeout_ms` is a type refusal submitted by
+`runner_outcome_bad_request/accepted_input_contract` with the rest of the corpus.
+
+Each invocation keeps `artifacts/seam-invocations/<scenario>/` with
+`invocation.json`, `ordinary-request.json`, `controls.json`,
+`delivered-request.json`, `stdout` and `stderr`. The record is written before
+launch: scenario, requested route (`legacy_request_block`), requested controls,
+exact argv, the app path and the build its controller's `--version` reports.
+Launch adds the PID and start times; the first observation of exit adds the
+status, the monotonic end time and the raw output. An early refusal or a failed
+launch leaves that intent on disk. The record establishes what was requested
+and what the process wrote. Each case's own observations establish whether a
+control took effect; the reply's `test_overrides` echo does not. The adapter
+asserts nothing about the outcome, and expectations, independent effects and
+cleanup stay with the caller. Its controls are in
+[run_capture](suites/run_capture/README.md#seam-invocation-controls).
+
 ### File observation
 
 `tests/lib/file_observation.py` supplies descriptor-bound samples and small

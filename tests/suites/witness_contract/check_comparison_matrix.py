@@ -9,7 +9,9 @@ mach names, and file bytes compared before and after each run. Nothing here
 derives an expectation from the reply.
 
 Specimen B is steered through `_test_overrides.validator_executable_path`
-(stub_validator.py beside the fixture) and ends in validator_no_reply; its
+(stub_validator.py beside the fixture), which the fixture's `test_overrides`
+supplies as selected controls to the seam invocation adapter, and ends in
+validator_no_reply; its
 expectations come from the submitted scopes and the file controls, never from
 the stub's transcript. B unlinks the files it queries, so every file is
 recreated before each run, including after a failed one.
@@ -29,6 +31,7 @@ sys.path.insert(0, str(Path(__file__).resolve().parents[2] / 'lib'))
 import build_context
 import consumer
 from run_capture import RunCapture
+from seam_invocation import SeamCapture
 
 FIXTURE_DIR = Path(__file__).resolve().parents[2] / 'fixtures/comparison'
 FIXTURE = json.loads((FIXTURE_DIR / 'matrix.json').read_text())
@@ -195,9 +198,10 @@ def run_specimen(pw, out, name, root):
     request = {'contract': build_context.candidate_contract(), 'specimen_id': spec['specimen_id'],
                'policy': {'format': 'sbpl', 'sbpl_source': expand(spec['policy'], root)},
                'probe_plan': expand(spec['probe_plan'], root)}
-    if spec.get('test_overrides'):
-        request['_test_overrides'] = expand(spec['test_overrides'], root)
-    with RunCapture(pw, out / name, request, cli_args=CLI_ARGS) as run:
+    controls = expand(spec['test_overrides'], root) if spec.get('test_overrides') else None
+    with (RunCapture(pw, out / name, request, cli_args=CLI_ARGS) if controls is None else
+          SeamCapture(pw, out / name, request, controls=controls, scenario='comparison_matrix.' + name,
+                      cli_args=CLI_ARGS)) as run:
         rc = run.wait(timeout=90)
         envelope = run.load_json()
     return rc, envelope

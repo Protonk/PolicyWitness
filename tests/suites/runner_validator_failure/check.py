@@ -11,7 +11,7 @@ import tempfile
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[2] / 'lib'))
 import build_context
-from run_capture import RunCapture
+from seam_invocation import SeamCapture
 import consumer
 
 FIXTURE = Path(__file__).resolve().parents[2] / 'fixtures' / 'validator'
@@ -91,10 +91,10 @@ def check_cli(case, out, pw):
                        '(deny file-read-data (literal (param "NO_READ")))',
                        'params': {'NO_WRITE': str(paths[1]), 'NO_READ': str(paths[2])}},
             'probe_plan': plan,
-            '_test_overrides': {'validator_executable_path': str(validator)},
         }
-        with RunCapture(pw, out, specimen,
-                        cli_args=['--timeout-ms', '15000']) as run:
+        controls = {'validator_executable_path': str(validator)}
+        with SeamCapture(pw, out, specimen, controls=controls, scenario='validator_failure.' + case,
+                         cli_args=['--timeout-ms', '15000']) as run:
             rc = run.wait(timeout=20)
             # Check real effects before relying on the envelope's attempt claims.
             after = [path.read_bytes() for path in paths]
@@ -123,7 +123,7 @@ def check_cli(case, out, pw):
             assert rc == 1 and envelope['result']['ok'] is False, envelope
             expected = 'validator_unavailable' if case == 'eof' else 'validator_decode_failure'
             assert runner['normalized_outcome'] == expected and runner['rc'] == 1, runner
-            assert runner['test_overrides'] == specimen['_test_overrides'], runner
+            assert runner['test_overrides'] == controls, runner
             worker = runner['runner_subprocess']
             assert worker['exit_code'] == 0 and worker.get('term_signal') is None, worker
             assert worker['partial_steps'] is False and worker['pid'] == runner['pid'], worker

@@ -72,7 +72,7 @@ def capture_controls(out):
 
         caught = None
         with ExitStack() as patches, redirect_stderr(stderr):
-            patches.enter_context(patch.object(target, 'RunCapture', Capture))
+            patches.enter_context(patch.object(target, 'SeamCapture', Capture))
             if mode == 'fifo_setup':
                 patches.enter_context(patch.object(target.os, 'mkfifo', side_effect=setup_error))
             if mode == 'removal_error':
@@ -80,7 +80,7 @@ def capture_controls(out):
             if mode == 'metadata_error':
                 patches.enter_context(patch.object(Path, 'write_text', fail_metadata))
             try:
-                target.execute('unused', out, mode, lambda fifo: {'fifo': str(fifo)}, fifo=True)
+                target.execute('unused', out, mode, lambda fifo: {'fifo': str(fifo)}, {}, fifo=True)
             except Exception as exc:
                 caught = exc
         work = out / mode
@@ -120,7 +120,7 @@ def capture_controls(out):
     receipt.write_text('preserve prior evidence\n')
     with patch.object(target.tempfile, 'mkdtemp') as create:
         try:
-            target.execute('unused', out, 'occupied', lambda fifo: {}, fifo=True)
+            target.execute('unused', out, 'occupied', lambda fifo: {}, {}, fifo=True)
         except FileExistsError:
             pass
         else:

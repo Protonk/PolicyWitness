@@ -16,6 +16,7 @@ import build_context
 from consumer import validate
 from porcelain import decode as decode_porcelain
 from runner_client_capture import validate_capture
+from seam_invocation import Submission
 sys.path.insert(0, str(ROOT / "tests/fixtures/byoxpc"))
 from neighbor_lab import process_identity, generation, generation_state
 
@@ -40,13 +41,20 @@ def launch(name, hang=0, direct=False, timeout=30000):
         probe_plan=[dict(step_id='create', sandbox_check=dict(operation='process-exec*',
             filter=dict(kind='path', value='/bin/sh')), attempt=dict(kind='exec', action='spawn', target='/bin/sh', args=['-c', 'printf x >> "$1"', 'effect', str(effect)]))])
     if direct: spec.pop('runner')
-    if hang: spec['_test_overrides'] = dict(worker_post_apply_hang_ms=hang)
-    path = out / (name + '.specimen.json'); path.write_text(json.dumps(spec, indent=2)+'\n')
+    path = out / (name + '.specimen.json')
+    argv = [str(Path(pw).parent / 'pw-runner-client'), 'run', '--timeout-ms', str(timeout), '--mach-service', service, str(path)] if direct else [pw, 'run', str(path), '--timeout-ms', str(timeout)]
     # The controller prints a JSON envelope; the client prints a binary capture.
-    with (out/(name+('.pwp' if direct else '.json'))).open('wb') as stdout, (out/(name+'.stderr')).open('w') as stderr:
-        argv = [str(Path(pw).parent / 'pw-runner-client'), 'run', '--timeout-ms', str(timeout), '--mach-service', service, str(path)] if direct else [pw, 'run', str(path), '--timeout-ms', str(timeout)]
-        process = subprocess.Popen(argv,
-            stdout=stdout, stderr=stderr, start_new_session=True)
+    captured = out/(name+('.pwp' if direct else '.json')), out/(name+'.stderr')
+    if hang:
+        # The hold is a selected seam control: the adapter writes the delivered request and launches.
+        process = Submission(argv[0], 'single_use.' + name, spec, dict(worker_post_apply_hang_ms=hang),
+                             run_args=argv[2:], request_path=path)
+        process.start(stdout=captured[0], stderr=captured[1], start_new_session=True)
+    else:
+        path.write_text(json.dumps(spec, indent=2)+'\n')
+        with captured[0].open('wb') as stdout, captured[1].open('w') as stderr:
+            process = subprocess.Popen(argv,
+                stdout=stdout, stderr=stderr, start_new_session=True)
     processes.append(process)
     return process, effect
 

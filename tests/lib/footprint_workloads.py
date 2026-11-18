@@ -1,4 +1,7 @@
-"""Public CLI held workloads shared by Waiting and Aftermath. Cleanup is explicit."""
+"""Public CLI held workloads shared by Waiting and Aftermath. Cleanup is explicit.
+
+The bridge validator is a selected test-seam control: each workload submits
+through the invocation adapter, identified by its artifact directory."""
 import json
 from pathlib import Path
 import secrets
@@ -13,7 +16,7 @@ for path in ('tests/suites/witness_contract', 'tests/fixtures/validator', 'tests
     sys.path.insert(0, str(ROOT / path))
 from check_ordering import step, specimen, save
 from check_extensions import probe
-from run_capture import RunCapture
+from seam_invocation import SeamCapture, scenario_for
 from gate import Gate, install_bridge
 from control import TreeControl, process_snapshot
 from footprint_observer import require_sample, generation, GenerationExitObserver, sha256
@@ -205,11 +208,12 @@ class HeldWorkload:
         validator=install_bridge(bridge,self.out/'bridge',self.gate.path)
         if actor_host:
             spec,self.phase=actor_specimen(self.target,self.marker,None if lifecycle else actor_count)
-            spec['_test_overrides']=dict(validator_executable_path=str(validator)); pw=actor_host.pw
+            pw=actor_host.pw
         else:
             self.phase=0
-            spec=specimen([probe('knownread',self.target),step(self.marker,'open_write','marker')] if ordinary_small else [step(self.target,'unlink','unlink'),dict(step_id='exec',sandbox_check=dict(operation='process-exec*',filter=dict(kind='path',value=str(helper))),attempt=dict(kind='exec',action='spawn',target=str(helper),args=['--tree',self.tree.path]))],overrides=dict(validator_executable_path=str(validator)))
-        self.spec=spec; self.run=RunCapture(pw,self.out/'run',spec,cli_args=['--timeout-ms',timeout_ms]); self.snapshot=None
+            spec=specimen([probe('knownread',self.target),step(self.marker,'open_write','marker')] if ordinary_small else [step(self.target,'unlink','unlink'),dict(step_id='exec',sandbox_check=dict(operation='process-exec*',filter=dict(kind='path',value=str(helper))),attempt=dict(kind='exec',action='spawn',target=str(helper),args=['--tree',self.tree.path]))])
+        self.spec=spec; self.controls=dict(validator_executable_path=str(validator))
+        self.run=SeamCapture(pw,self.out/'run',spec,controls=self.controls,scenario='held_workload.'+scenario_for(self.out),cli_args=['--timeout-ms',timeout_ms]); self.snapshot=None
         self.exits=GenerationExitObserver(observer); self.cleanup_confirmed=False; self.setup_complete=False; self.discovered_pids=set(); self.tree_expected=False
         self.records=[]; self.interventions=[]; self.workers=[]; self.host=None; self.released=False
         save(self.out/'ownership.json',dict(staging=str(self.work),cleanup_retained=True,scope='test owned exclusive temporary directory; process cleanup requires acquired generation'))

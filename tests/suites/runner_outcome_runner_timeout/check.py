@@ -14,7 +14,7 @@ import tempfile
 sys.path.insert(0, str(Path(__file__).resolve().parents[2] / 'lib'))
 import build_context
 from blackbox import validate_step
-from run_capture import RunCapture
+from seam_invocation import SeamCapture
 
 
 def check_file_effects(before, after):
@@ -25,7 +25,7 @@ def check_file_effects(before, after):
         assert after[1:] == before[1:], 'denied write changed seed bytes'
 
 
-def check_envelope(envelope, rc, specimen, expected):
+def check_envelope(envelope, rc, specimen, expected, controls):
     assert rc == 1, f'expected CLI failure exit 1, got {rc}'
     assert envelope['kind'] == 'run', envelope
     assert envelope['result']['ok'] is False, envelope['result']
@@ -34,7 +34,7 @@ def check_envelope(envelope, rc, specimen, expected):
     assert type(runner['rc']) is int and runner['rc'] == 1, runner
     assert runner['specimen_id'] == specimen['specimen_id'], runner
     assert runner['sandboxed_after_apply'] is True, runner
-    assert runner['test_overrides'] == specimen['_test_overrides'], runner
+    assert runner['test_overrides'] == controls, runner
     error = runner['error']
     assert all(text in error for text in ('pw-probe-runner', 'sentinel deadline', 'host requested SIGKILL')), error
 
@@ -115,21 +115,21 @@ def check_cli(variant, pw, out):
         specimen = {
             'contract': build_context.candidate_contract(), 'specimen_id': secrets.token_hex(12),
             'policy': policy, 'probe_plan': plan,
-            # The hang starts after every slot is durable, before done. Leave
-            # ample room beyond the worker deadline and its 1-second reap grace
-            # so this case selects the host-kill path, not clean exit in grace.
-            '_test_overrides': {'worker_timeout_ms': 2000, 'worker_post_apply_hang_ms': 8000},
         }
+        # The hang starts after every slot is durable, before done. Leave
+        # ample room beyond the worker deadline and its 1-second reap grace
+        # so this case selects the host-kill path, not clean exit in grace.
+        controls = {'worker_timeout_ms': 2000, 'worker_post_apply_hang_ms': 8000}
         (out / 'expectations.json').write_text(json.dumps(expected, indent=2) + '\n')
-        with RunCapture(pw, out, specimen,
-                        cli_args=['--timeout-ms', '20000']) as run:
+        with SeamCapture(pw, out, specimen, controls=controls, scenario='runner_timeout.' + variant,
+                         cli_args=['--timeout-ms', '20000']) as run:
             rc = run.wait(timeout=25)
             after = [path.read_bytes() for path in paths]
             for i, data in enumerate(after):
                 (out / f'file{i}.after').write_bytes(data)
             check_file_effects(seeds, after)
             print(f'{variant}: independent file effects passed ({count} files)', flush=True)
-            check_envelope(run.load_json(), rc, specimen, expected)
+            check_envelope(run.load_json(), rc, specimen, expected, controls)
         print(f'{variant}: host timeout, honored overrides, and all {count} completed steps verified')
 
 

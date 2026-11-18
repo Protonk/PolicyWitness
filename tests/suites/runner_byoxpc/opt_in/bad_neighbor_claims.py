@@ -22,6 +22,7 @@ import build_context
 from consumer import validate
 from porcelain import decode as decode_porcelain
 from runner_client_capture import validate_capture, host_reply
+from seam_invocation import Submission
 from neighbor_lab import ProcessWatch, generation, generation_state, process_label, save, wait_for
 
 pw, directory = sys.argv[1:3]
@@ -98,15 +99,13 @@ def checker_controls():
     assert served_host(dict(worker_pid=20, start_ns=105, end_ns=190), hosts, workers) == ('10@2.000000', 'worker_parent')
 
 
-def specimen(name, effect, hang, runner):
+def specimen(name, effect, runner):
     spec = dict(contract=build_context.candidate_contract(), specimen_id=name,
         policy=dict(format='sbpl', sbpl_source='(version 1)(allow default)'),
         probe_plan=[dict(step_id='create', sandbox_check=dict(operation='process-exec*',
             filter=dict(kind='path', value='/bin/sh')), attempt=dict(kind='exec', action='spawn', target='/bin/sh', args=['-c', 'printf x >> "$1"', 'effect', str(effect)]))])
     if runner:
         spec['runner'] = dict(mode='byoxpc', service=service)
-    if hang:
-        spec['_test_overrides'] = dict(worker_post_apply_hang_ms=hang)
     return spec
 
 
@@ -115,22 +114,35 @@ def launch(name, actor, *, hang=0, direct=False, timeout=30000):
     folder = work / f'{len(requests):02d}-{name}'
     folder.mkdir()
     effect = effects / name
-    spec = specimen(name, effect, hang, runner=not direct)
-    (folder / 'specimen.json').write_text(json.dumps(spec, indent=2) + '\n')
+    spec = specimen(name, effect, runner=not direct)
     if direct:
         argv = [str(client), 'run', '--timeout-ms', str(timeout), '--mach-service', '--request', '-', service]
     else:
         argv = [pw, 'run', str(folder / 'specimen.json'), '--timeout-ms', str(timeout)]
+    submission = None
+    if hang:
+        # The hold is a selected seam control: the adapter delivers the request and launches.
+        submission = Submission(argv[0], 'bad_neighbor.' + name, spec, dict(worker_post_apply_hang_ms=hang),
+                                run_args=argv[2:], **(dict(encode=lambda document: json.dumps(document).encode())
+                                                      if direct else dict(request_path=folder / 'specimen.json')))
+        spec, argv = submission.delivered, submission.argv
+    if submission is None or direct:
+        (folder / 'specimen.json').write_text(json.dumps(spec, indent=2) + '\n')
     record = dict(name=name, actor=actor, direct=direct, argv=argv, folder=str(folder), effect=str(effect),
                   host_states_at_start={h['generation']: generation_state(h['generation'])
                                         for h in watch.snapshot('host') if h['unseen_after_ns'] is None})
-    with (folder / 'stdout').open('w') as stdout, (folder / 'stderr').open('w') as stderr:
+    if submission is not None:
         record['start_ns'] = time.monotonic_ns()
-        process = subprocess.Popen(argv, stdin=subprocess.PIPE if direct else subprocess.DEVNULL,
-                                   stdout=stdout, stderr=stderr, start_new_session=True)
-    if direct:
-        process.stdin.write(json.dumps(spec).encode())
-        process.stdin.close()
+        process = submission.start(stdout=folder / 'stdout', stderr=folder / 'stderr', start_new_session=True,
+                                   **({} if direct else dict(stdin=subprocess.DEVNULL)))
+    else:
+        with (folder / 'stdout').open('w') as stdout, (folder / 'stderr').open('w') as stderr:
+            record['start_ns'] = time.monotonic_ns()
+            process = subprocess.Popen(argv, stdin=subprocess.PIPE if direct else subprocess.DEVNULL,
+                                       stdout=stdout, stderr=stderr, start_new_session=True)
+        if direct:
+            process.stdin.write(json.dumps(spec).encode())
+            process.stdin.close()
     children.append(process)
     requests.append(record)
     return process, record

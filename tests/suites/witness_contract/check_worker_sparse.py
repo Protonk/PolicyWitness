@@ -8,6 +8,7 @@ sys.path.insert(0, str(Path(__file__).resolve().parents[2] / 'lib'))
 import build_context
 import consumer
 from run_capture import RunCapture
+from seam_invocation import SeamCapture
 
 pw, output, fixture = sys.argv[1:]
 out = Path(output)
@@ -27,9 +28,15 @@ with tempfile.TemporaryDirectory(prefix='pw-sparse-', dir='/private/tmp') as tem
                    'probe_plan': [{'step_id': 'write',
                        'sandbox_check': {'operation': 'file-write-data', 'filter': {'kind': 'path', 'value': str(target)}},
                        'attempt': {'kind': 'file', 'action': 'open_write', 'target': str(target)}}]}
-        if overrides:
-            request['_test_overrides'] = overrides
-        with RunCapture(pw, out / mode, request, cli_args=[]) as capture:
+        if mode == 'after_probes':
+            # Selected controls travel beside the request; the worker substitutions stay in it.
+            capture = SeamCapture(pw, out / mode, request, controls=overrides,
+                                  scenario='worker_sparse.' + mode, cli_args=[])
+        else:
+            if overrides:
+                request['_test_overrides'] = overrides
+            capture = RunCapture(pw, out / mode, request, cli_args=[])
+        with capture:
             rc = capture.wait(timeout=30)
             envelope = capture.load_json()
         assert not consumer.validate(envelope, build_context.candidate_contract()), consumer.validate(envelope, build_context.candidate_contract())

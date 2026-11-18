@@ -1,6 +1,7 @@
 """Area A of the disposition record plan: live loss of known facts.
 
-Three specimens run through RunCapture with, all under
+Three specimens run through the seam invocation adapter, their overrides
+supplied as selected controls beside the request, all under
 (version 1) (allow default):
 
 - a1: a FIFO with no writer, then /etc/hosts, with worker_timeout_ms 2000.
@@ -44,7 +45,7 @@ import lifecycle_contract as C
 from lifecycle_contract import HOST_SENTINEL_DEADLINE
 import lifecycle_oracle
 from lifecycle_adapter import read_lifecycle, summaries
-from run_capture import RunCapture
+from seam_invocation import SeamCapture
 from worker_exit_witness import worker_exit_witness
 
 CLI_ARGS = ['--timeout-ms', '20000']
@@ -80,9 +81,9 @@ def read_step(step_id, target):
             'attempt': {'kind': 'file', 'action': 'open_read', 'target': str(target)}}
 
 
-def specimen(specimen_id, plan, overrides):
+def specimen(specimen_id, plan):
     return {'contract': build_context.candidate_contract(), 'specimen_id': specimen_id, 'policy': dict(POLICY),
-            'probe_plan': plan, '_test_overrides': dict(overrides)}
+            'probe_plan': plan}
 
 
 def witnesses(envelope):
@@ -148,7 +149,7 @@ def cleanup_staging(staging, envelope, artifacts, *, launch_attempted):
     return record['error']
 
 
-def execute(pw, out, name, make_spec, *, fifo=False):
+def execute(pw, out, name, make_spec, controls, *, fifo=False):
     """Own staging from setup through capture; retain it when worker exit is unknown."""
     artifacts = out / name
     # Refuse reuse before creating staging or overwriting any prior evidence.
@@ -166,7 +167,8 @@ def execute(pw, out, name, make_spec, *, fifo=False):
             os.mkfifo(target, 0o600)
             assert stat.S_ISFIFO(target.lstat().st_mode), f'setup: {target} is not a FIFO'
         spec = make_spec(target)
-        capture = RunCapture(pw, artifacts, spec, cli_args=CLI_ARGS)
+        capture = SeamCapture(pw, artifacts, spec, controls=controls,
+                              scenario='attempt_in_flight.' + name, cli_args=CLI_ARGS)
         launch_attempted = True
         with capture as run:
             rc = run.wait(timeout=HARNESS_WAIT_SECONDS)
@@ -187,7 +189,7 @@ def execute(pw, out, name, make_spec, *, fifo=False):
         raise primary
     if note:
         raise AssertionError(f'{name}: {note}')
-    return rc, envelope, artifacts, spec
+    return rc, envelope, artifacts
 
 
 def record(artifacts, envelope):
@@ -203,10 +205,10 @@ def step(envelope, step_id):
     return next(s for s in envelope['data']['runner_result']['steps'] if s['step_id'] == step_id)
 
 
-def check_kill_after_deadline(name, rc, seen, spec, progress):
+def check_kill_after_deadline(name, rc, seen, controls, progress):
     """Setup for the FIFO specimens: the boundary was reached and the host recorded its cleanup."""
     assert rc == 1, f'{name} setup: expected CLI failure exit 1, got {rc}'
-    assert seen['test_overrides'] == spec['_test_overrides'], f'{name} setup: override not echoed: {seen}'
+    assert seen['test_overrides'] == controls, f'{name} setup: override not echoed: {seen}'
     assert seen['normalized_outcome'] == 'runner_timeout', f'{name} setup: {seen}'
     assert seen['poll_stop_reason'] == 'sentinel_deadline', f'{name} setup: {seen}'
     assert seen['exit_requested'] is True, f'{name} setup: {seen}'
@@ -215,7 +217,7 @@ def check_kill_after_deadline(name, rc, seen, spec, progress):
         f'{name} setup: {seen}'
     assert seen['done_observed'] is False and seen['partial_steps'] is True, f'{name} setup: {seen}'
     assert seen['progress'] == progress, f'{name} setup: last progress is not {progress}: {seen}'
-    check_sentinel_budget(name, seen, spec['_test_overrides']['worker_timeout_ms'])
+    check_sentinel_budget(name, seen, controls['worker_timeout_ms'])
 
 
 def check_deadline_preserved(name, seen, diagnostics):
@@ -235,10 +237,10 @@ def check_completed(name, completed):
     assert not any(l.startswith('attempt') for l in comparison.get('limitations', [])), (name, comparison)
 
 
-def check_grace_exit(rc, seen, spec, diagnostics, envelope):
+def check_grace_exit(rc, seen, controls, diagnostics, envelope):
     """A4: the deadline fired and the worker exited 0 during grace; everything survives."""
     assert rc == 1, f'a4 setup: expected CLI failure exit 1, got {rc}'
-    assert seen['test_overrides'] == spec['_test_overrides'], f'a4 setup: override not echoed: {seen}'
+    assert seen['test_overrides'] == controls, f'a4 setup: override not echoed: {seen}'
     assert seen['normalized_outcome'] == 'runner_timeout', f'a4 setup: {seen}'
     assert seen['poll_stop_reason'] == 'sentinel_deadline' and seen['exit_requested'] is True, \
         f'a4 setup: {seen}'
@@ -250,7 +252,7 @@ def check_grace_exit(rc, seen, spec, diagnostics, envelope):
     assert 'sentinel deadline' in error and 'no termination requested' in error, ('a4', seen)
     assert 'SIGKILL' not in error, ('a4', seen)
     assert seen['partial_steps'] is False and seen['progress'] == FINISHED_RETURNED, ('a4', seen)
-    check_sentinel_budget('a4', seen, spec['_test_overrides']['worker_timeout_ms'])
+    check_sentinel_budget('a4', seen, controls['worker_timeout_ms'])
     check_completed('a4', step(envelope, 'hosts'))
     assert diagnostics['process_disposition'] == 'clean_exit', ('a4', diagnostics)
     assert diagnostics.get('termination_cause') is None, ('a4', diagnostics)
@@ -291,31 +293,31 @@ def main():
     pw, directory = sys.argv[1:]
     out = Path(directory).resolve()
 
-    rc, envelope_a1, artifacts, spec_a1 = execute(pw, out, 'a1', lambda fifo: specimen(
-        'a1_fifo_then_file', [read_step('fifo', fifo), read_step('hosts', '/etc/hosts')],
-        FIFO_OVERRIDES), fifo=True)
+    rc, envelope_a1, artifacts = execute(pw, out, 'a1', lambda fifo: specimen(
+        'a1_fifo_then_file', [read_step('fifo', fifo), read_step('hosts', '/etc/hosts')]),
+        FIFO_OVERRIDES, fifo=True)
     envelope = envelope_a1
     seen_a1, diagnostics_a1 = record(artifacts, envelope)
-    check_kill_after_deadline('a1', rc, seen_a1, spec_a1, started_attempt(0))
+    check_kill_after_deadline('a1', rc, seen_a1, FIFO_OVERRIDES, started_attempt(0))
     check_deadline_preserved('a1', seen_a1, diagnostics_a1)
     print('a1: FIFO boundary reached; deadline, SIGKILL request and reap witnessed; summary preserved', flush=True)
 
-    rc, envelope_a3, artifacts, spec_a3 = execute(pw, out, 'a3', lambda fifo: specimen(
+    rc, envelope_a3, artifacts = execute(pw, out, 'a3', lambda fifo: specimen(
         'a3_completed_prefix_then_fifo',
-        [read_step('first', '/etc/hosts'), read_step('fifo', fifo), read_step('after', '/etc/hosts')],
-        FIFO_OVERRIDES), fifo=True)
+        [read_step('first', '/etc/hosts'), read_step('fifo', fifo), read_step('after', '/etc/hosts')]),
+        FIFO_OVERRIDES, fifo=True)
     envelope = envelope_a3
     seen_a3, diagnostics_a3 = record(artifacts, envelope)
-    check_kill_after_deadline('a3', rc, seen_a3, spec_a3, started_attempt(1))
+    check_kill_after_deadline('a3', rc, seen_a3, FIFO_OVERRIDES, started_attempt(1))
     check_deadline_preserved('a3', seen_a3, diagnostics_a3)
     check_completed('a3', step(envelope, 'first'))
     print('a3: completed prefix survives termination with an attempt in flight', flush=True)
 
-    rc, envelope_a4, artifacts, spec_a4 = execute(pw, out, 'a4', lambda _: specimen(
-        'a4_deadline_then_voluntary_exit', [read_step('hosts', '/etc/hosts')], GRACE_OVERRIDES))
+    rc, envelope_a4, artifacts = execute(pw, out, 'a4', lambda _: specimen(
+        'a4_deadline_then_voluntary_exit', [read_step('hosts', '/etc/hosts')]), GRACE_OVERRIDES)
     envelope = envelope_a4
     seen_a4, diagnostics_a4 = record(artifacts, envelope)
-    check_grace_exit(rc, seen_a4, spec_a4, diagnostics_a4, envelope)
+    check_grace_exit(rc, seen_a4, GRACE_OVERRIDES, diagnostics_a4, envelope)
     print('a4: deadline and voluntary clean exit coexist; completed result survives; no kill invented', flush=True)
 
     check_cause(seen_a1, diagnostics_a1)
