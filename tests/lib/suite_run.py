@@ -15,6 +15,7 @@ import sys
 import time
 import artifact
 import outcomes
+from execution_contract import LEGACY_PROFILE, PROFILE
 from pytest_support import value_digest
 
 # Blocks idle sleep until the dispatcher exits; lid close and requested sleep
@@ -40,8 +41,16 @@ def identity(suite, case):
                                 and '/' not in part for part in (suite, case)) else None
 
 
-def reconcile(invocation, out, run_id, previous_events, previous_reports, seen_cases, interpreter=None):
-    """Read this invocation's evidence without aborting on malformed input."""
+def reconcile(invocation, out, run_id, previous_events, previous_reports, seen_cases, interpreter=None, *, producer_profile=LEGACY_PROFILE):
+    """Read this invocation's evidence under its independently fixed producing contract."""
+    if producer_profile not in (LEGACY_PROFILE, PROFILE):
+        raise ValueError('unknown producer evidence contract')
+    selected_specs = {}
+    if producer_profile == PROFILE:
+        for case in invocation['cases']:
+            key = (case['report_suite'], case['test_id'])
+            if 'outcome_contract' in case and sum((c['report_suite'], c['test_id']) == key for c in invocation['cases']) == 1:
+                selected_specs[key] = case['outcome_contract']
     event_path = out / 'events.jsonl'
     try:
         current_events = event_path.read_bytes() if event_path.exists() else b''
@@ -62,7 +71,7 @@ def reconcile(invocation, out, run_id, previous_events, previous_reports, seen_c
             key = identity(event.get('suite'), event.get('test_id'))
             if key is None:
                 raise ValueError('invalid case identity')
-            if any('outcome_contract' in c and (c['report_suite'], c['test_id']) == key for c in invocation['cases']):
+            if key in selected_specs:
                 event = outcomes.decode(line)
             step = event.get('step')
             if step == 'test_start':
@@ -70,7 +79,7 @@ def reconcile(invocation, out, run_id, previous_events, previous_reports, seen_c
                     raise ValueError('invalid start status')
                 starts[key] = starts.get(key, 0) + 1
             elif step == 'test_end':
-                if event.get('status') not in ('pass', 'fail', 'skip', 'complete'):
+                if event.get('status') not in (('pass', 'fail', 'skip', 'complete') if key in selected_specs else ('pass', 'fail', 'skip')):
                     raise ValueError('invalid terminal status')
                 if starts.get(key, 0) != 1:
                     problem(invocation, 'case_order', f'{key}: test_end without one preceding test_start')
@@ -118,13 +127,13 @@ def reconcile(invocation, out, run_id, previous_events, previous_reports, seen_c
             continue
         try:
             report = json.loads(raw)
-            if any('outcome_contract' in c and (c['report_suite'], c['test_id']) == key for c in invocation['cases']):
+            if key in selected_specs:
                 report = outcomes.decode(raw)
             if not isinstance(report, dict):
                 raise ValueError('report is not an object')
             if identity(report.get('suite'), report.get('test_id')) != key:
                 raise ValueError('report identity disagrees with its path')
-            if report.get('status') not in ('pass', 'fail', 'skip', 'complete'):
+            if report.get('status') not in (('pass', 'fail', 'skip', 'complete') if key in selected_specs else ('pass', 'fail', 'skip')):
                 raise ValueError('invalid report status')
         except ValueError as exc:
             problem(invocation, 'invalid_report', f'invalid {relative}: {exc}', **details)
@@ -138,8 +147,7 @@ def reconcile(invocation, out, run_id, previous_events, previous_reports, seen_c
             problem(invocation, 'interpreter_mismatch',
                     f'{relative}: report declares interpreter {declared!r}; this run resolved {interpreter!r}', **details)
         case_dir = out / Path(relative).parent
-        selected = [c for c in invocation['cases'] if (c['report_suite'], c['test_id']) == key]
-        spec = selected[0].get('outcome_contract') if len(selected) == 1 else None
+        spec = selected_specs.get(key)
         if spec is not None:
             from outcomes_shell import verify
             assessment = verify(case_dir, spec, report.get('outcome_account'))
@@ -153,9 +161,8 @@ def reconcile(invocation, out, run_id, previous_events, previous_reports, seen_c
                 problem(invocation, 'outcome_terminal', f'{relative}: terminal event contradicts observation account', **details)
             if not assessment['valid']:
                 problem(invocation, 'invalid_observation', f'{relative}: ' + '; '.join(assessment['errors']), **details)
-        elif report['status'] == 'complete' or report.get('schema_version') == 2 or 'outcome_account' in report or 'assessment' in report:
-            problem(invocation, 'unexpected_observation', f'{relative}: observation authority was not selected', **details)
-            continue
+        # Unselected report extensions retain their producing legacy meaning:
+        # they are opaque evidence, never an opt-in to observation authority.
         invocation['reports'].append(report)
         # Inspect directory entries without traversing symlinks, including a
         # symlink at the case root. Scratch itself must be absent after finish.
@@ -241,9 +248,14 @@ def counts(reports):
 
 def finish(out, run_id, started, invocations, plan, integrity=None, idle_sleep_assertion=None):
     all_reports = [report for item in invocations for report in item['reports']]
-    observation_keys = {(c['report_suite'], c['test_id']) for c in plan['cases'] if 'outcome_contract' in c}
+    producer_profile = (plan.get('execution_contract') or {}).get('profile', LEGACY_PROFILE)
+    observation_keys = {(c['report_suite'], c['test_id']) for c in plan['cases']
+                        if producer_profile == PROFILE and 'outcome_contract' in c}
     observation_reports = [r for r in all_reports if (r['suite'], r['test_id']) in observation_keys]
     reports = [r for r in all_reports if (r['suite'], r['test_id']) not in observation_keys]
+    explicit_completions = {c['id'] for c in plan['cases'] if producer_profile == PROFILE and (
+        'outcome_contract' in c or ((c.get('items') or {}).get('schema_version') == 2
+                                  and any('outcome_contract' in item for item in (c.get('items') or {}).get('items', []))))}
     errors = [error for item in invocations for error in item['harness_errors']]
     if integrity:
         errors.extend(integrity['harness_errors'])
@@ -270,7 +282,7 @@ def finish(out, run_id, started, invocations, plan, integrity=None, idle_sleep_a
     run = {
         'schema_version': 1, 'terminal': True, 'run_id': run_id, 'started_at_unix_ms': started,
         'finished_at_unix_ms': finished, 'duration_ms': finished - started,
-        'ok': not errors and totals['fail'] == 0 and all(c['status'] in ('pass', 'skip', 'complete') for c in case_results),
+        'ok': not errors and totals['fail'] == 0 and all(c['status'] in ('pass', 'skip') or (c['status'] == 'complete' and c['id'] in explicit_completions) for c in case_results),
         'execution_contract': plan.get('execution_contract'),
         'counts_scope': 'legacy reports only',
         'case_outcome_counts': dict(Counter(c['status'] or c['state'] for c in case_results)),
@@ -283,10 +295,9 @@ def finish(out, run_id, started, invocations, plan, integrity=None, idle_sleep_a
         'artifact_integrity': integrity,
         'idle_sleep_assertion': idle_sleep_assertion,
     }
-    from execution_contract import PROFILE
-    if (plan.get('execution_contract') or {}).get('profile') == PROFILE:
+    if producer_profile == PROFILE:
         run['observation_reports'] = observation_reports
-        run['outcomes'] = outcome_summary(case_results, invocations)
+        run['outcomes'] = outcome_summary(case_results, invocations, producer_profile=producer_profile)
     run['completion'] = {state: sum(c['state'] == state for c in run['case_results'])
                          for state in ('completed', 'skipped', 'unrun')}
     run['completion']['selected'] = len(plan['cases'])
@@ -305,7 +316,7 @@ def finish(out, run_id, started, invocations, plan, integrity=None, idle_sleep_a
                   file=sys.stderr)
         elif item.get('system_sleep_error'):
             print(f"SLEEP: [{item['requested_suite']}] system sleep unknown: {item['system_sleep_error']}", file=sys.stderr)
-    display_outcomes(out, case_results, invocations)
+    display_outcomes(out, case_results, invocations, producer_profile=producer_profile)
     print(f'Test run summary: {out / "run.json"}', flush=True)
     return 0 if run['ok'] else 1
 
@@ -371,13 +382,15 @@ def requirements(case, config, env, root, cache, probes=None):
     return missing
 
 
-def account(item):
+def account(item, *, producer_profile=LEGACY_PROFILE):
+    if producer_profile not in (LEGACY_PROFILE, PROFILE):
+        raise ValueError('unknown producer evidence contract')
     if item['cases'][0].get('engine') == 'pytest':
         case = item['cases'][0]
         family = item.get('family')
         complete = bool(family and family['accounting_state'] == 'complete')
         item['case_results'] = [dict(id=case['id'], context=case['context'], engine='pytest',
-            state='completed' if complete else 'unrun', status=(('complete' if any('outcome_contract' in i for i in family['items']) else 'pass') if family['ok'] else 'fail') if complete else None,
+            state='completed' if complete else 'unrun', status=(('complete' if producer_profile == PROFILE and family.get('explicit') is True else 'pass') if family['ok'] else 'fail') if complete else None,
             execution_state=family['execution_state'] if family else 'not_started',
             accounting_state=family['accounting_state'] if family else 'unavailable',
             family_report='suites/' + case['id'] + '/family.json' if family else None,
@@ -417,7 +430,7 @@ def account(item):
         item['case_results'].append({'id': case['id'], 'context': case['context'],
                                      'state': state, 'status': status, 'reason': reason,
                                      'system_sleep_ms': item.get('system_sleep_ms'),
-                                     **({'assessment': report['assessment']} if report and 'outcome_contract' in case and 'assessment' in report else {})})
+                                     **({'assessment': report['assessment']} if producer_profile == PROFILE and report and 'outcome_contract' in case and 'assessment' in report else {})})
 
 
 def run_standard_command(command, root, env, scope):
@@ -449,6 +462,7 @@ def run_standard_command(command, root, env, scope):
 
 def execute(root, out, run_id, started, plan, config, scope, collectors=None):
     collectors = collectors or {}
+    producer_profile = (plan.get('execution_contract') or {}).get('profile', LEGACY_PROFILE)
     # Most cases get their own process, so a failure cannot suppress a sibling.
     # BYOXPC shares installation and cleanup across its explicitly selected leaves.
     groups = []
@@ -536,12 +550,13 @@ def execute(root, out, run_id, started, plan, config, scope, collectors=None):
                 save(journal, {'run_id': run_id, 'invocations': invocations})
                 child_env = {**env, 'PW_TEST_CASES': '\n'.join(c['test_id'] for c in group),
                     'PW_TEST_OUTCOME_CONTRACTS': json.dumps({c['report_suite'] + '/' + c['test_id']: c['outcome_contract']
-                        for c in group if 'outcome_contract' in c})}
+                        for c in group if producer_profile == PROFILE and 'outcome_contract' in c})}
                 command = group[0].get('command')
                 clocks_before = sleep_clocks()
                 try:
                     if group[0].get('engine') == 'pytest':
-                        item['family'], was_interrupted = collectors[group[0]['id']].execute(out, run_id, scope)
+                        collector = collectors[group[0]['id']]
+                        item['family'], was_interrupted = collector.execute(out, run_id, scope, producer_profile=producer_profile)
                         interrupted |= was_interrupted
                         returncode = 0 if item['family']['ok'] else 1
                     elif group[0]['context'] == 'standard':
@@ -571,8 +586,9 @@ def execute(root, out, run_id, started, plan, config, scope, collectors=None):
                 item['system_sleep_ms'], item['system_sleep_error'] = system_sleep(clocks_before, sleep_clocks())
                 if group[0].get('engine') != 'pytest':
                     previous_events, previous_reports = reconcile(item, out, run_id, previous_events,
-                                                                  previous_reports, seen_cases, config['python']['realpath'])
-            account(item)
+                                                                  previous_reports, seen_cases, config['python']['realpath'],
+                                                                  producer_profile=producer_profile)
+            account(item, producer_profile=producer_profile)
             for case in item['case_results']:
                 outcomes[case['id']] = case['status'] if not item['harness_errors'] else 'fail'
             save(journal, {'run_id': run_id, 'invocations': invocations})
@@ -582,7 +598,7 @@ def execute(root, out, run_id, started, plan, config, scope, collectors=None):
             if not item['case_results']:
                 item.update(state='blocked', blocked_reason='interrupted')
                 problem(item, 'interrupted', 'test execution interrupted')
-                account(item)
+                account(item, producer_profile=producer_profile)
         save(journal, {'run_id': run_id, 'invocations': invocations})
     finally:
         if integrity:
@@ -618,23 +634,28 @@ def integrity_error(integrity, code, message, **details):
 
 
 
-def assessments(case_results, invocations):
+def assessments(case_results, invocations, *, producer_profile=LEGACY_PROFILE):
+    if producer_profile != PROFILE:
+        return
     for case in case_results:
         if 'assessment' in case:
             yield 'parent', case['id'], case['assessment']
     for invocation in invocations:
-        for item in (invocation.get('family') or {}).get('items', []):
-            if 'assessment' in item:
+        family = invocation.get('family') or {}
+        if family.get('explicit') is not True:
+            continue
+        for item in family.get('items', []):
+            if 'outcome_contract' in item and 'assessment' in item:
                 yield 'nested', item['id'], item['assessment']
 
 
-def outcome_summary(case_results, invocations):
+def outcome_summary(case_results, invocations, *, producer_profile=LEGACY_PROFILE):
     # Never sum parents and nested items or manufacture legacy assertion counts.
-    return outcomes.summarize(assessments(case_results, invocations))
+    return outcomes.summarize(assessments(case_results, invocations, producer_profile=producer_profile))
 
 
-def display_outcomes(out, case_results, invocations):
-    for scope, name, assessment in assessments(case_results, invocations):
+def display_outcomes(out, case_results, invocations, *, producer_profile=LEGACY_PROFILE):
+    for scope, name, assessment in assessments(case_results, invocations, producer_profile=producer_profile):
         owner = name.split('::', 1)[0]
         evidence = out / 'suites' / owner
         for judgment in assessment['advisory_judgments']:

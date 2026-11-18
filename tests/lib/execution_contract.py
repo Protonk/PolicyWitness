@@ -60,8 +60,8 @@ def validate_contract(contract):
         raise ValueError('execution contract identity mismatch')
     if contract['required_families'] != [c['id'] for c in contract['selected'] if c['engine'] == 'pytest']:
         raise ValueError('required family declaration differs from independently selected engines')
-    if contract['profile'] == LEGACY_PROFILE and ('family_selections' in contract or any('outcome_contract' in row for row in contract['selected'])):
-        raise ValueError('legacy producer contract cannot introduce observation authority')
+    # Version 1 ignored extension fields; only the producer profile opts into
+    # their newer meanings. A nested field cannot upgrade historical authority.
     if contract['profile'] == PROFILE:
         if set(contract.get('family_selections', {})) != set(contract['required_families']):
             raise ValueError('missing independent family collection')
@@ -79,15 +79,15 @@ def validate_contract(contract):
             if not ids or len(set(ids)) != len(ids):
                 raise ValueError('invalid independently collected item population')
             for row in selection['items']:
-                if 'command_scope' in row and row['command_scope'] not in ('none', 'recorded'):
+                if selection['schema_version'] == 2 and 'command_scope' in row and row['command_scope'] not in ('none', 'recorded'):
                     raise ValueError('invalid independently collected command scope')
-                if 'outcome_contract' in row:
+                if selection['schema_version'] == 2 and 'outcome_contract' in row:
                     outcomes.validate_spec(row['outcome_contract'])
                     if row['outcome_contract'].get('commands') not in ('none', 'recorded'):
                         raise ValueError('explicit pytest item has no command declaration')
 
 
-def validate_family(family, ownership, selection, load_bytes=None):
+def validate_family(family, ownership, selection, load_bytes=None, *, producer_profile=LEGACY_PROFILE):
     """Validate schema 1 under its old native-item contract; schema 2 is explicit."""
     errors = []
     if not all(isinstance(value, dict) for value in (family, ownership, selection)):
@@ -100,14 +100,15 @@ def validate_family(family, ownership, selection, load_bytes=None):
         return ['missing or malformed family item account']
     if [r.get('id') for r in items] != expected or len(set(expected)) != len(expected) or not expected:
         errors.append('incomplete family item account')
-    explicit = selection.get('schema_version', 1) == 2
-    if selection.get('schema_version', 1) not in (1, 2):
+    if producer_profile not in (LEGACY_PROFILE, PROFILE):
+        raise ValueError('unknown producer evidence contract')
+    current = producer_profile == PROFILE
+    explicit = current and selection.get('schema_version', 1) == 2
+    if current and selection.get('schema_version', 1) not in (1, 2):
         errors.append('unsupported family selection schema')
     if (family.get('accounting_state') != 'complete' or family.get('ok') is not True or
             any(i.get('outcome') not in (('passed', 'completed') if explicit else ('passed',)) for i in items)):
         errors.append('family did not complete successfully')
-    if not explicit and family.get('schema_version', 1) != 1:
-        errors.append('legacy selection cannot accept a newer family schema')
     expected_explicit = any('outcome_contract' in row for row in selection['items'])
     if explicit and (family.get('schema_version') != 2 or family.get('explicit') is not expected_explicit):
         errors.append('explicit family projection missing')
@@ -128,7 +129,7 @@ def validate_family(family, ownership, selection, load_bytes=None):
             errors.append('item phases lack explicit distinct command reference lists')
             continue
         item_operations = {op for phase in phases.values() for op in phase.get('operations', [])}
-        declaration = by_id.get(item.get('id'), {})
+        declaration = by_id.get(item.get('id'), {}) if explicit else {}
         specification = declaration.get('outcome_contract')
         if specification is not None:
             if not explicit or item.get('outcome_contract') != specification:
@@ -143,18 +144,18 @@ def validate_family(family, ownership, selection, load_bytes=None):
                 errors.extend('enforced judgment unfavorable: ' + row['id'] for row in assessment['blocking_judgments'])
             if bool(item_operations) != (specification.get('commands') == 'recorded'):
                 errors.append('item commands differ from its none/recorded declaration')
-        elif 'outcome_contract' in item or 'outcome_account' in item:
+        elif explicit and ('outcome_contract' in item or 'outcome_account' in item):
             errors.append('undeclared outcome authority')
         elif 'command_scope' in declaration:
             if not explicit or item.get('command_scope') != declaration['command_scope']:
                 errors.append('item command scope differs from independently collected declaration')
             if bool(item_operations) != (declaration['command_scope'] == 'recorded'):
                 errors.append('item command set differs from declared none/recorded scope')
-        elif 'command_scope' in item:
+        elif explicit and 'command_scope' in item:
             errors.append('undeclared command scope')
         elif not item_operations:
             errors.append('native item has no command observation')
-        if specification is None and item.get('outcome') != 'passed':
+        if explicit and specification is None and item.get('outcome') != 'passed':
             errors.append('ordinary enforced item did not pass')
         if specification is not None or 'command_scope' in declaration:
             for phase in phases.values():
@@ -169,9 +170,10 @@ def validate_family(family, ownership, selection, load_bytes=None):
     if ownership.get('closed') is not True or ownership.get('problems'):
         errors.append('ownership not closed')
     commands = ownership.get('commands')
-    if (not isinstance(commands, list) or any(not isinstance(row, dict)
-            or not isinstance(row.get('settlement'), dict) for row in commands)):
-        errors.append('ownership operation set missing or malformed')
+    if not isinstance(commands, list):
+        errors.append('ownership operation set missing')
+    elif any(not isinstance(row, dict) or not isinstance(row.get('settlement'), dict) for row in commands):
+        errors.append('ownership operation set malformed')
     else:
         from pytest_resources import disposition
         if any(disposition(r) != 'closed' for r in commands):
@@ -239,7 +241,8 @@ def _family_raw(family, ownership, selection, load_bytes):
         for name in names[1:]:
             if not isinstance(load_bytes(name), bytes):
                 raise ValueError('raw command output is unavailable')
-    replayed = account(selection, events, family['engine_returncode'], ownership, list(registered), load_bytes)
+    replayed = account(selection, events, family['engine_returncode'], ownership, list(registered), load_bytes,
+                       producer_profile=PROFILE)
     if family != replayed:
         raise ValueError('terminal family account differs from raw execution evidence')
 
@@ -359,13 +362,14 @@ def problems(run, expected, load, load_bytes=None):
                 raise ValueError('family authority or membership differs from independently collected expectation')
             family_result, ownership = read_object(reference), read_object(base + '/ownership.json')
             byte_reader = (lambda name:load_bytes(base + '/' + name)) if load_bytes is not None else None
-            errors += [family + ': ' + e for e in validate_family(family_result, ownership, selection, byte_reader)]
+            errors += [family + ': ' + e for e in validate_family(family_result, ownership, selection, byte_reader, producer_profile=expected['profile'])]
             if current:
                 if byte_reader is None:
                     raise ValueError('current family has no raw evidence byte reader')
                 _family_raw(family_result, ownership, selection, byte_reader)
                 for item in family_result['items']:
-                    if 'outcome_contract' in item:
+                    if (selection.get('schema_version') == 2 and family_result.get('explicit') is True
+                            and 'outcome_contract' in item):
                         assessments.append(('nested', item['id'], outcomes.assess(item['outcome_contract'], item['outcome_account'], byte_reader)))
                 status = ('complete' if family_result.get('explicit') else 'pass') if family_result['ok'] else 'fail'
                 if parent.get('status') != status or parent.get('state') != 'completed':

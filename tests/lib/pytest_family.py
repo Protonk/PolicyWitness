@@ -13,6 +13,7 @@ import time
 
 import pytest_packages
 import outcomes
+from execution_contract import LEGACY_PROFILE, PROFILE
 from pytest_resources import Command, snapshot
 from pytest_support import append, contained, read, rows, value_digest, write
 from pytest_wire import send, receive
@@ -38,22 +39,27 @@ def validate_inputs(phase, selection, load_bytes):
             raise ValueError('captured source bytes differ from collection: ' + name)
 
 
-def account(manifest, stream, returncode, ownership, operations, load_bytes=None):
-    """Interpret raw engine events under the collected declarations, retaining prefixes."""
+def account(manifest, stream, returncode, ownership, operations, load_bytes=None, *, producer_profile=LEGACY_PROFILE):
+    """Interpret raw events under collected declarations and their producing contract.
+
+    Callers supply the captured outer producer profile. Absent newer authority,
+    legacy semantics apply; nested metadata cannot upgrade them.
+    """
     items = {r['id']:dict(**r, phases={}, outcome='incomplete', started=False, finished=False) for r in manifest['items']}
-    explicit = manifest.get('schema_version', 1) == 2
+    if producer_profile not in (LEGACY_PROFILE, PROFILE):
+        raise ValueError('unknown producer evidence contract')
+    current = producer_profile == PROFILE
+    explicit = current and manifest.get('schema_version', 1) == 2
     errors, opened, session, finish, source_integrity = [], None, False, False, False
     if load_bytes is None and isinstance(stream, Path):
         load_bytes = lambda name: contained(stream.parent, stream.parent / name).read_bytes()
     for item in items.values():
-        if 'outcome_contract' in item:
+        if explicit and 'outcome_contract' in item:
             outcomes.validate_spec(item['outcome_contract'])
             item['outcome_account'] = outcomes.empty_account()
     try:
-        if manifest.get('schema_version', 1) not in (1, 2):
+        if current and manifest.get('schema_version', 1) not in (1, 2):
             raise ValueError('unsupported family selection schema')
-        if not explicit and any('outcome_contract' in item or 'command_scope' in item for item in items.values()):
-            raise ValueError('legacy family cannot introduce outcome authority')
         if isinstance(stream, Path):
             events = (outcomes.decode(line) for line in stream.read_bytes().splitlines()) if explicit else rows(stream)
         else:
@@ -64,7 +70,7 @@ def account(manifest, stream, returncode, ownership, operations, load_bytes=None
                 if session or row['items'] != list(items):
                     raise ValueError('invalid session start')
                 session = True
-            elif kind == 'source_integrity':
+            elif kind == 'source_integrity' and explicit:
                 if not explicit or not session or finish or opened or source_integrity or not all(i['finished'] for i in items.values()):
                     raise ValueError('unexpected source integrity observation')
                 source_integrity = True
@@ -82,7 +88,7 @@ def account(manifest, stream, returncode, ownership, operations, load_bytes=None
                     if opened or item['started']:
                         raise ValueError('duplicate or overlapping item')
                     opened = row['id']; item['started'] = True
-                elif kind == 'outcome':
+                elif kind == 'outcome' and explicit:
                     if opened != row['id'] or 'teardown' in item['phases'] or 'outcome_contract' not in item or row['role'] not in ('observations', 'judgments', 'failures'):
                         raise ValueError('outcome outside its declared experiment')
                     item['outcome_account'][row['role']].append(row['record'])
@@ -100,12 +106,12 @@ def account(manifest, stream, returncode, ownership, operations, load_bytes=None
                             or any(not isinstance(value, str) or not value for value in row['operations'])
                             or len(set(row['operations'])) != len(row['operations'])):
                         raise ValueError('phase requires an explicit distinct command reference list, including an empty list for pure items')
-                    if 'outcome_contract' in item:
+                    if explicit and 'outcome_contract' in item:
                         if row.get('outcome_account') != item['outcome_account']:
                             raise ValueError('phase outcome projection differs from its journal')
-                    elif 'outcome_account' in row:
+                    elif explicit and 'outcome_account' in row:
                         raise ValueError('undeclared phase outcome account')
-                    if 'outcome_contract' in item or 'command_scope' in item:
+                    if explicit and ('outcome_contract' in item or 'command_scope' in item):
                         validate_inputs(row, manifest, load_bytes)
                     item['phases'][phase] = row
                 elif kind == 'item_finish':
@@ -129,6 +135,8 @@ def account(manifest, stream, returncode, ownership, operations, load_bytes=None
     if declared != set(operations):
         errors.append('command receipts and phase operation references differ')
     for item in items.values():
+        if not explicit:
+            continue
         specification = item.get('outcome_contract')
         scope = specification.get('commands') if specification is not None else item.get('command_scope')
         observed_commands = {op for p in item['phases'].values() for op in p.get('operations', [])}
@@ -150,7 +158,7 @@ def account(manifest, stream, returncode, ownership, operations, load_bytes=None
     complete = finish and all(i['finished'] for i in items.values()) and not errors
     result = dict(schema_version=2 if explicit else 1, family=manifest['family'], manifest_digest=value_digest(manifest),
         execution_state='started' if session else 'unknown', accounting_state='complete' if complete else 'incomplete',
-        ok=complete and returncode == 0 and all(i['outcome'] in ('passed', 'completed') for i in items.values()),
+        ok=complete and returncode == 0 and all(i['outcome'] in (('passed', 'completed') if explicit else ('passed',)) for i in items.values()),
         items=list(items.values()), operations=operations, errors=errors, engine_returncode=returncode)
     if explicit:
         result['explicit'] = any('outcome_contract' in item for item in items.values())
@@ -207,7 +215,7 @@ class Collector:
                                   (directory / name).read_bytes()) for name in names]
         return result
 
-    def execute(self, out, run_id, scope):
+    def execute(self, out, run_id, scope, *, producer_profile=LEGACY_PROFILE):
         family_out = out / 'suites' / self.case['id']
         family_out.mkdir(parents=True)
         write(family_out / 'selection.json', self.manifest)
@@ -279,7 +287,8 @@ class Collector:
                 if self.manifest.get('schema_version') != 2:
                     ownership.pop('family')
                 write(family_out / 'ownership.json', ownership)
-                family = account(self.manifest, family_out / 'phases.jsonl', self.process.returncode, ownership, operations)
+                family = account(self.manifest, family_out / 'phases.jsonl', self.process.returncode, ownership, operations,
+                                 producer_profile=producer_profile)
                 if started:
                     family['execution_state'] = 'started'
                 family['errors'].extend(errors)

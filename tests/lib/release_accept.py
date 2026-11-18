@@ -68,7 +68,8 @@ def battery_problems(run, app, *, expected=None, evidence=None):
     if expected and expected.get('profile') == execution_contract.PROFILE:
         completed_cases = {row['id'] for row in expected['selected'] if 'outcome_contract' in row}
         completed_cases.update(name for name, selection in expected['family_selections'].items()
-                               if selection and any('outcome_contract' in item for item in selection['items']))
+                               if selection and selection.get('schema_version') == 2
+                               and any('outcome_contract' in item for item in selection['items']))
     if any(c.get('status') != 'pass' and not (c.get('status') == 'complete' and c.get('id') in completed_cases)
            for c in run.get('case_results') or []):
         problems.append('a case that did not pass')

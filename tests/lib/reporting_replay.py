@@ -11,6 +11,7 @@ from __future__ import annotations
 import argparse
 from contextlib import redirect_stderr, redirect_stdout
 import hashlib
+import inspect
 import json
 from pathlib import Path
 import shutil
@@ -142,6 +143,12 @@ def differences(left, right):
             if key not in left or key not in right or left[key] != right[key]]
 
 
+def producer_context(function, plan):
+    """Supply captured authority only to readers with an explicit context API."""
+    return ({'producer_profile':plan['execution_contract']['profile']}
+            if 'producer_profile' in inspect.signature(function).parameters else {})
+
+
 def replay(reader, evidence, destination):
     if destination.exists():
         raise ValueError('replay output must be fresh')
@@ -218,8 +225,13 @@ def replay(reader, evidence, destination):
                         event = json.loads(line)
                         if event['kind'] == 'registered':
                             operations.append(event['operation_id'])
+                    # New readers receive the original outer producer context.
+                    # Older readers predate this argument and inherently apply
+                    # their original interpretation. Never infer authority from
+                    # result metadata or replace the captured producer profile.
                     family = pytest_family.account(selection, base / 'phases.jsonl', engine_returncode,
-                                                   read(source / 'ownership.json'), operations)
+                                                   read(source / 'ownership.json'), operations,
+                                                   **producer_context(pytest_family.account, plan))
                     item['family'] = family
                     item['returncode'] = 0 if family['ok'] else 1
                     if (base / 'family.json').is_symlink():
@@ -231,10 +243,11 @@ def replay(reader, evidence, destination):
                     if item['returncode'] != 0:
                         suite_run.problem(item, 'suite_exit', f"case command exited with status {item['returncode']}")
                     previous_events, previous_reports = suite_run.reconcile(item, destination, owner['run_id'],
-                        previous_events, previous_reports, seen, plan['configuration']['python']['realpath'])
+                        previous_events, previous_reports, seen, plan['configuration']['python']['realpath'],
+                        **producer_context(suite_run.reconcile, plan))
                 if group[0].get('engine') == 'pytest' and item['returncode'] != 0:
                     suite_run.problem(item, 'suite_exit', f"case command exited with status {item['returncode']}")
-                suite_run.account(item)
+                suite_run.account(item, **producer_context(suite_run.account, plan))
                 invocations.append(item)
             integrity = None
             if any({'app','worker'} & set(c['requires']) for c in plan['cases']):

@@ -655,9 +655,12 @@ Pytest attaches the same account to setup/call/teardown records. Neither path
 converts arbitrary exceptions or `AssertionError` into a product judgment.
 
 A valid explicit completion has parent status `complete`; an enforced
-unfavorable judgment or invalid experiment has status `fail`. Dependencies
-admit `pass` and valid `complete`, including informational and unfavorable
-advisory predecessors. Harness errors still prevent dependency execution.
+unfavorable judgment has status `fail`. A shell case publishing an invalid
+account also reports `fail`. Missing terminal evidence or incomplete pytest
+accounting remains `unrun`; a completed pytest experiment with failed phases
+fails. Dependencies admit `pass` and valid `complete`, including informational
+and unfavorable advisory predecessors. Harness errors still prevent dependency
+execution.
 Quiet output names unfavorable advisory judgments, blocking judgments and
 observation failures with evidence paths.
 
@@ -667,14 +670,24 @@ the raw journals, phases, operation references, input blobs and ownership,
 then recompute the account and compare terminal projections. Missing,
 relabelled or contradictory authority refuses acceptance. The producing
 `pw-family-evidence-1` contract retains its original all-pass native-item
-interpretation; unsupported contracts are refused.
+interpretation; unsupported producer contracts are refused. Legacy report and
+family extension fields remain opaque where their producing reader ignored
+them. They cannot activate observation authority or alter counts. An outer
+version-2 contract and independently selected declarations are required for
+new meanings; an unselected shell report still uses `pass`/`fail`/`skip`, even
+beside explicit experiments.
 
 For version 2, `run.json.observation_reports` holds explicit shell reports;
 legacy `reports` and `counts` exclude them and pytest families.
 `case_outcome_counts` covers all parents, while `outcomes` keeps parent and
 nested observation/judgment counts separate. Informational completion adds
-no passing judgment. `invalid_accounts` counts invalid observation accounts;
-phase, command, cleanup and harness failures also remain in their own reports.
+no passing judgment. Readable judgment records may remain after an independent
+validity, execution or cleanup failure. Their presence or counts do not establish
+eligible completion. The account's `valid` and `accepted` fields concern its
+required observations and judgments; phase results, source integrity, command
+settlement, ownership and harness checks remain separate requirements.
+`invalid_accounts` counts invalid observation accounts, while phase, command,
+cleanup and harness failures remain in their own reports.
 `completion.completed` includes completed failures, not just favorable results.
 Version 1 runs omit these new projections. Retained runs are interpreted under
 their producing contract; later authority decisions do not rewrite them.

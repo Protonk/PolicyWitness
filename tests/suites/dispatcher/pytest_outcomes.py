@@ -85,7 +85,7 @@ def require(value, message):
         raise AssertionError(message)
 
 
-def fixture(control, name, source=SOURCE, *, second_family=False):
+def fixture(control, name, source=SOURCE, *, second_family=False, legacy_extras=False):
     root = control.out / ('outcomes-' + name) / 'repo'
     cases = {'observations':dict(cases=[dict(id='controlled', engine='pytest', module=MODULE, requires=[])]),
              'sentinel':dict(command=['bash','tests/suites/sentinel/run.sh'], cases=['later'])}
@@ -113,6 +113,16 @@ def test_pure(pw_equipment, pw_inputs):
     sentinel = root / 'tests/suites/sentinel/run.sh'
     sentinel.parent.mkdir(parents=True)
     sentinel.write_text('#!/bin/bash\nset -euo pipefail\nsource tests/lib/case.sh\ntest_begin sentinel later\nprintf observed > "$PW_TEST_ARTIFACTS/external-start"\ntest_pass "independent later case completed"\n')
+    if legacy_extras:
+        sentinel.write_text(sentinel.read_text() + '''"${PW_PYTHON}" -B -S -P - "$PW_TEST_REPORT" <<'PY'
+import json, pathlib, sys
+path = pathlib.Path(sys.argv[1])
+report = json.loads(path.read_text())
+report.update(schema_version=2, assessment='opaque legacy diagnostic',
+              outcome_account=['opaque legacy diagnostic'])
+path.write_text(json.dumps(report))
+PY
+''')
     sentinel.chmod(0o755)
     return root
 
@@ -124,8 +134,8 @@ def neighbor(result, out, name):
             name + ': independent neighbor marker absent or changed')
 
 
-def run(control, integration, name, source=SOURCE, expected=0, *, second_family=False):
-    root = fixture(control, name, source, second_family=second_family)
+def run(control, integration, name, source=SOURCE, expected=0, *, second_family=False, legacy_extras=False):
+    root = fixture(control, name, source, second_family=second_family, legacy_extras=legacy_extras)
     independently_expected = execution_contract.defaults(root)
     write(root.parent / 'expected-producer.json', independently_expected)
     out, result = integration.run(root, expected=expected, environment={'PW_TEST_QUIET':'1'})
@@ -137,6 +147,61 @@ def run(control, integration, name, source=SOURCE, expected=0, *, second_family=
 
 def problems(result, expected, out):
     return execution_contract.problems(result, expected, lambda name:read(out / name), lambda name:(out / name).read_bytes())
+
+
+def mixed_legacy_family(control, integration, root, out, result, expected):
+    """Construct a reread from two retained controls; this claims no joint execution."""
+    _, native_out, native_run, native_family = integration.normal
+    native_case = copy.deepcopy(native_run['plan']['cases'][0])
+    family_id = native_case['id']
+    prefix = 'suites/' + family_id + '/'
+    selection = copy.deepcopy(native_case['items'])
+    metadata = dict(outcome_contract={'opaque':'legacy metadata'}, command_scope='legacy diagnostic',
+                    assessment='not an assessment', outcome_account=['not an account'])
+    for item in selection['items']:
+        item.update(copy.deepcopy(metadata))
+    native_case['items'] = selection
+    projected = copy.deepcopy(native_family)
+    projected['manifest_digest'] = value_digest(selection)
+    for item in projected['items']:
+        item.update(copy.deepcopy(metadata))
+        for phase in item['phases'].values():
+            phase['outcome_account'] = ['opaque phase metadata']
+    phases = [json.loads(line) for line in (native_out / (prefix + 'phases.jsonl')).read_bytes().splitlines()]
+    for phase in phases:
+        if phase['kind'] == 'phase':
+            phase['outcome_account'] = ['opaque phase metadata']
+    files = {prefix + 'selection.json':json.dumps(selection).encode(),
+             prefix + 'family.json':json.dumps(projected).encode(),
+             prefix + 'phases.jsonl':b''.join(json.dumps(phase).encode() + b'\n' for phase in phases)}
+    required = copy.deepcopy(expected)
+    required['source'] = dict(fixture='independently specified mixed legacy-family reread',
+                              inputs=[str(out), str(native_out)])
+    required['selected'].append(dict(id=family_id, engine='pytest'))
+    required['required_families'].append(family_id)
+    required['family_selections'][family_id] = selection
+    required.pop('identity')
+    required['identity'] = value_digest(required)
+    combined = copy.deepcopy(result)
+    combined['execution_contract'] = required
+    combined['plan']['execution_contract'] = required
+    combined['plan']['cases'].append(native_case)
+    combined['case_results'].append(copy.deepcopy(native_run['case_results'][0]))
+    def load_bytes(name):
+        if name in files:
+            return files[name]
+        return ((native_out if name.startswith(prefix) else out) / name).read_bytes()
+    errors = execution_contract.problems(combined, required, lambda name:json.loads(load_bytes(name)), load_bytes)
+    require(not errors, 'mixed legacy family metadata acquired new authority: ' + repr(errors))
+    retained = root.parent / 'mixed-legacy-family-reread'
+    retained.mkdir()
+    for name, data in files.items():
+        path = retained / name
+        path.parent.mkdir(parents=True, exist_ok=True)
+        path.write_bytes(data)
+    write(retained / 'context.json', dict(expected=required, metadata=metadata,
+          outcomes=combined['outcomes'], errors=errors, scope='constructed reread, no joint execution claim'))
+    control.note('outer version 2 preserves legacy-family item and phase metadata without counting judgments', output=str(retained))
 
 
 def mechanism_comparison(control):
@@ -232,6 +297,33 @@ def exercise(control, integration):
     require(ownership['commands'][0]['context']['test_environment'] == {'PYTHONPATH':'controlled import path'},
             'explicit controlled test environment was not retained')
     control.note('pure enforced, unfavorable advisory, informational and commanded items retain exact counts and controlled context', output=str(out))
+
+    # The producer contract, not a mutable nested schema label, determines which
+    # item outcomes are eligible. Version 1 requires passed native items.
+    legacy_expected = {key:value for key,value in copy.deepcopy(expected).items()
+                       if key not in ('identity', 'family_selections')}
+    legacy_expected['profile'] = execution_contract.LEGACY_PROFILE
+    legacy_expected['identity'] = value_digest(legacy_expected)
+    legacy_result = copy.deepcopy(result)
+    legacy_result['execution_contract'] = legacy_expected
+    legacy_result['plan']['execution_contract'] = legacy_expected
+    legacy_result['case_results'][0]['status'] = 'pass'
+    errors = problems(legacy_result, legacy_expected, out)
+    require(any('family did not complete successfully' in error for error in errors)
+            and any('native item has no command observation' in error for error in errors),
+            'nested schema upgraded legacy passed/native-item authority: ' + repr(errors))
+    write(root.parent / 'rejected-legacy-outer.json', dict(expected=legacy_expected, errors=errors))
+    control.note('a legacy outer contract cannot credit nested completed/pure observation authority', output=str(out))
+    mixed_legacy_family(control, integration, root, out, result, expected)
+
+    _, extras_out, extras_result, _, extras_expected = run(control, integration, 'mixed-legacy-extras', legacy_extras=True)
+    errors = problems(extras_result, extras_expected, extras_out)
+    require(not errors, 'opaque legacy extensions in mixed producer-v2 run were reinterpreted: ' + repr(errors))
+    require(extras_result['outcomes'] == result['outcomes'], 'opaque legacy extensions changed observation counts')
+    require(len(extras_result['reports']) == 1 and extras_result['reports'][0]['assessment'] == 'opaque legacy diagnostic'
+            and 'assessment' not in extras_result['case_results'][-1],
+            'opaque legacy extensions disappeared or acquired parent authority')
+    control.note('mixed producer-v2 runs retain legacy report extensions without authority or count changes', output=str(extras_out))
 
     # The battery validator is tested with independently constructed app admission
     # facts. This establishes reporting acceptance, not signature or live-app credit.
