@@ -38,6 +38,8 @@ printf '%s\\n' "$status" > "$PW_TEST_ARTIFACTS/returned"
 exit "$status"
 ''')
         message = 'literal "quote" \'apostrophe\' \\ λ $(touch CANARY)\nsecond line'
+        if name == 'advisory':
+            message = '--literal option-like detail: ' + message
         env = {k:v for k,v in os.environ.items() if not k.startswith('PW_TEST_')}
         env.update(PW_TEST_OUT_DIR=str(output), PW_TEST_EVENTS=str(output/'events.jsonl'),
                    PW_TEST_CASES='observation', PW_TEST_RUN_ID='finalizer_' + name,

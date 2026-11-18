@@ -485,7 +485,9 @@ PY
 # These helpers publish facts and explicit judgments. They never turn a shell
 # failure or an arbitrary checker exception into a product judgment.
 _test_outcome() {
-  "${PW_PYTHON}" -B -S -P "${PW_CONTRACT_TEST_LIB}/outcomes_shell.py" "$@"
+  local action="$1"
+  shift
+  "${PW_PYTHON}" -B -S -P "${PW_CONTRACT_TEST_LIB}/outcomes_shell.py" "$action" -- "$@"
 }
 
 test_observe() { _test_outcome observe "$@"; }
