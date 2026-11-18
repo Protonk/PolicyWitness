@@ -928,3 +928,60 @@ retention with the limit stated in the named owner.
 | DT-105–112 | 58 | R8. Accounts: the fingerprint is not a compatibility test; compaction applies to public JSON only. Repair: presentation mutations in the fingerprint test, an exact normal-fixture comparison, an identifier requirement in the Python actor reader. |
 | Both unnumbered investigations | 134 | Both the first synthesis and the follow-up narrowing are kept: source association holds by construction; file association is unobserved; divergence is observed only by selected contrasts; effects, file opens and applied bytes are different claims. One linked limit sentence in the policy and profile surfaces serves both sides, without restricting it to `import` forms. |
 
+
+### Progress and interruptions
+
+This subsection is the stage's running account; thread results are added as
+they land. Seam and cohort detail is in the overhaul plan.
+
+**Seam migration.** Complete in three stages (`b4e6fee1`, `72617789`,
+`1cc5f2fa`, `eeb76c1b`). The eight controls are submitted with
+`policy-witness test-input run` flags or the client's controls object; an
+ordinary request refuses them in its block; the two worker substitutions
+remain request keys. Old and new routes compared on 104 scenarios: 103 equal,
+one changed route because a NUL cannot be a command-line argument.
+
+**First owner divergence from the frozen guide.** Correcting the limits rows
+that named a control as `_test_overrides.<key>` was the first authorized owner
+change whose text is copied into the guide. The generator's development check
+accepted it; four controls refused it because each copied the checkout into a
+constructed release source and presumed the copy was publication-fresh
+(`generator_contract` staging and release-baseline controls, the release
+entrypoint control, and the repository builder behind the publish and
+rotation controls). Under the rule for a guard that blocks an authorized
+change, `11e93191` gives each of those fixtures its own regenerated guide
+regions through one helper that refuses the checkout as a target, and adds
+the refused neighbours: strict staging of a diverged fixture, tagged-source
+freshness of a diverged fixture with its own publication permission, and the
+checkout's strict check while its owner differs from the frozen guide. Strict
+staging and publication checking of the checkout still refuse. `bd8144ea`
+then corrects the texts. Four rows whose value a `test-input run` flag changes
+(`worker_sentinel_wait`, `validator_io_wait`, `phase_collection_wait`,
+`actor_collection_allowance`) are reclassified from "Fixed" to "Flag", each
+naming the flag as a test control and stating that `run` has no flag for the
+value: the Control column's reading rule defines "Fixed" as no
+`policy-witness` flag changing the value, and the rule was left as written.
+`428a2049` adds the actor-form refusal row the seam stage lacked; the actor
+form refuses a control in its block exactly as the ordinary form does. None
+of the three commits changes a build input; the app is unchanged at
+`development:081353c9…948ab695`. Guide, distributed copy and both publication
+records are byte-unchanged. Runs of record, all without recorded sleep:
+`trace-limits-controls-drift-2` (`20261118T143306Z_4ae3e54d`, 11),
+`trace-limits-controls-preflight` (`20261118T144405Z_85b74091`, 5),
+`trace-limits-text-drift` (`20261118T145136Z_369f241f`, 11),
+`trace-limits-text-preflight` (`20261118T150615Z_ec8bcc6a`, 5),
+`trace-limits-text-harness` (`20261118T151334Z_29909577`, 15),
+`trace-limits-actor-seam` (`20261118T151845Z_d72920c4`, 2) and
+`trace-limits-actor-drift` (`20261118T151932Z_85edf143`, 11), all passing.
+`make notarize` reaches its build on a diverged constructed source where
+`make release` refuses: the Makefile runs the preflight in report mode for
+notarization and the signing guide describes that as a rehearsal. Nothing was
+changed there; it is listed for the maintainer.
+
+**Environmental interruption, 2026-11-18.** With the lid closed on battery the
+machine slept in cycles of about sixteen minutes from about 01:04 to 06:30
+local time. The thread then running stopped itself without committing. Its
+interrupted run `trace-limits-controls-drift` (`20261118T081036Z_ee6e56a3`,
+9 of 11 cases unrun) and a probe run that overlapped sleep are environmental
+and are not runs of record; the selections were repeated. No product or test
+defect is attributed to the interruption.
