@@ -851,3 +851,152 @@ control selection and the contract rules `request.overrides.experimental` and
 
 `test-input run` and its usage line are public and absent from the frozen
 guide; this is a user duty for the guide rewrite.
+
+## Seam migration, third stage: callers on the new route, old route retired — 2026-11-17
+
+Status: the seam migration is implemented. `1cc5f2fa` (test-only) moves every
+caller to `test-input run` or the client's controls object and removes the
+legacy route from the adapter; it passed against the second stage's app before
+any product edit. `eeb76c1b` makes the host refuse the eight controls in an
+ordinary request's block, with lower-level tests, refusal controls, accounts
+and regenerated files. The signed app is rebuilt with build contract
+`development:081353c9…948ab695`; it was built from the working tree before the
+commit, so its recorded commit is `1cc5f2fa` with a dirty mark, and the
+committed tree derives the same contract. Publication withheld; guide bytes
+unchanged. One account change is not applied: the `docs/limits.json` texts
+(below).
+
+Refusals as implemented:
+
+- Ordinary submission: `inapplicable_field` at
+  `["_test_overrides", "<control>"]`, decided in
+  `PWRunnerTestOverrides.init(from:)` from membership of the raw container,
+  after unknown request keys are rejected and before any member is decoded.
+  Null, zero, negative and mistyped values are refused. With several controls
+  present the first in the host's control order is named; an unknown member,
+  the contract and earlier request fields are reported first. The reply is the
+  existing decode-failure reply: `bad_request`, no worker or validator, no
+  echo.
+- Experimental submission with a block holding any member:
+  `inapplicable_field` at `["_test_overrides"]`.
+- A fractional value: a usage refusal with exit 2 and no client for the flag;
+  `type_mismatch` at the member for the client's controls object; the corpus
+  example `fractional_override`, an ordinary submission through the CLI and
+  the client, is now `inapplicable_field` at the member.
+- No new refusal code and no wire, layout, porcelain or reply-schema change.
+
+What rejects the old behavior: 26 hand-written `ordinary.*` blocks in
+`witness_contract/test_input` (each control through plain `run` with an acting
+and an inert value and through the client's ordinary call, a control beside
+`worker_executable_path`, and two controls together); the Swift
+`ExperimentalSubmissionTests` group; the corpus example through
+`accepted_input_contract` and `RequestContractTests`; `run_capture/controls`,
+where the adapter refuses a route argument; and the drift rule that compares
+the two key tables of `runner/README.md` with the host record's unselected
+members and its control list.
+
+Where source differed from the stage's brief:
+
+- A validator path holding a NUL cannot be a command-line argument. The
+  adapter refuses a NUL for the controller, and that one scenario
+  (`failure_boundaries/admission`, `admission.nul-9`) goes through the
+  client's controls object.
+- The controller's `run` also read the request's validator key for the
+  dossier. That reading is retired: only `test-input run` selects a validator
+  record.
+- `ServiceAdmissionTests` submitted an encoded validator override through the
+  ordinary call; it now uses the experimental call.
+
+Runs, all local managed development runs under `tests/out/runs/`, none
+overlapping system sleep:
+
+| Directory / run ID | App | Cases | Result |
+| --- | --- | --- | --- |
+| `trace-seam-c-dev-1` / `20261118T062641Z_32c2e84b` | `fe9694b1` | 4 | pass |
+| `trace-seam-c-dev-2` / `20261118T063206Z_cef093b0` | `fe9694b1` | 3 | pass |
+| `trace-seam-c-flip-default` / `20261118T063431Z_b21261d6` | `fe9694b1` | 48 | pass |
+| `trace-seam-c-flip-optin` / `20261118T063852Z_f37ed4eb` | `fe9694b1` | 3 | pass |
+| `trace-seam-c-flip-mutations` / `20261118T063937Z_2c328ebf` | `fe9694b1` | 1 | pass |
+| `trace-seam-c-flip-byoxpc` / `20261118T064031Z_101b68ac` | `fe9694b1` | 4 | pass |
+| `trace-seam-c-flip-waitcost` / `20261118T064309Z_220b09bf` | `fe9694b1` | 2 | pass |
+| `trace-seam-c-flip-drift` / `20261118T064322Z_686fbe16` | `fe9694b1` | 19 | pass |
+| `trace-seam-c-pre` / `20261118T065511Z_e69c3ad3` | `fe9694b1` | 3 | 2 fail, intended: 44 of 237 `test_input` rows, all `ordinary.*` refusal rows, because every block was still admitted and echoed; `accepted_input_contract` at the corpus example with `type_mismatch` |
+| `trace-seam-new-default` / `20261118T065749Z_40eff132` | `081353c9` | 48 | pass |
+| `trace-seam-new-optin` / `20261118T070128Z_91f503f5` | `081353c9` | 3 | pass |
+| `trace-seam-new-mutations` / `20261118T070213Z_7baeb9b8` | `081353c9` | 1 (`witness_contract/order_barrier_mutations`) | pass |
+| `trace-seam-new-byoxpc` / `20261118T070309Z_7276be62` | `081353c9` | 4 | pass |
+| `trace-seam-new-waitcost` / `20261118T070549Z_3c01b3c0` | `081353c9` | 2 | pass |
+| `trace-seam-new-drift` / `20261118T070602Z_eb457db7` | `081353c9` | 19 | 1 fail |
+| `trace-seam-new-controls` / `20261118T071628Z_bc1fc28d` | `081353c9` | 2 | pass |
+| `trace-seam-c-suites` / `20261118T071645Z_a03f77ee` | `081353c9` | 88 | pass; not a run of record |
+| `trace-seam-new-drift-2` / `20261118T072413Z_322cefa6` | `081353c9` | 19 | pass |
+| `trace-seam-c-suites-2` / `20261118T073509Z_9127bbf2` | `081353c9` | 88 | pass |
+
+- `trace-seam-new-drift` stays a failure. `source_drift/generator_contract`
+  failed for two reasons, both in the stage's account edits: a backticked
+  symbol beside a file link in `runner/AGENTS.md` (an implementation defect,
+  corrected), and the limits text edit (below).
+- `trace-seam-c-suites` is not a run of record: three documentation files
+  were edited while one of its cases was running. It passed and was repeated
+  on the quiescent tree as `trace-seam-c-suites-2`.
+- Reviewed exception: the six passing `trace-seam-new-*` runs preceded those
+  documentation corrections. The delta is one sentence of `runner/AGENTS.md`,
+  with `docs/limits.json` and `docs/LIMITS.md` restored to committed bytes;
+  the limits readers among those cases read only `id`, `value` and `checks`.
+  This is an applicability judgment, not a mechanical fact.
+- `trace-seam-c-suites-2` covers `unit`, `integration`, `runner_unit`,
+  `runner_abi_layout`, `failure_boundaries` and `runner_outcome_bad_request`
+  by suite selector, `run_capture/controls` and the 59 default
+  `runner_c_worker_harness` cases. Not run in this stage: the default
+  battery, and the opt-in harness members `native_clock`, `native_pause` and
+  `arm_wait`.
+
+Old/new comparison, retained at
+`trace-seam-new-controls/investigations/seam-equivalence/` with the first
+stage's attachment and indexing scripts unchanged; it credits no case. The new
+index holds 128 invocations in 37 cases over six runs (echo equal in 114,
+empty in 6, absent in 6, no host reply in 2). All 104 scenarios of the old
+index are in the new one. 103 are equal in component execution, intervention
+observed, independent effects, fault rejection, identity, command accounting
+and cleanup. One differs: `admission.nul-9` changed route as described above,
+and its host reply is the same in the fields read. The 24 scenarios only in
+the new index are all `test_input.*`. Outside the indexes: the retired
+combined pair is old-only; `fractional_override` is on both sides with the
+changed refusal code; 26 ordinary refusals and 2 unselected-substitution
+submissions are new-only. Delivery differs by design: the 104 old records
+carry the controls in the request block; 120 new records carry flags and 8
+the controls object, each with delivered bytes equal to the ordinary request.
+
+BYOXPC: eight sessions, each recording removal with `cleanup_retained: false`;
+each service is absent from `gui/501` and its plist, staging, bundle, durable
+state and private registry are absent; `runner list` and `runner reconcile`
+were empty before, between and after.
+
+Retained limits of the stage:
+
+- The retired combined oversize pair (`worker_executable_path` with
+  `validator_executable_path`) has no CLI/XPC coverage; its bounded,
+  sanitized refusal is checked only by the direct-orchestrator pairs in
+  `QueryAdmissionTests`.
+- No live row puts a control in an actor-form request's block;
+  `witness_contract/actor_compositions` still owns the contrast between the
+  ordinary worker-timeout floor and the actor execution allowance.
+
+Not applied: the eight `docs/limits.json` texts that still name a control as
+`_test_overrides.<key>` (`control` of `worker_sentinel_wait`,
+`validator_io_wait`, `phase_collection_wait` and `actor_collection_allowance`;
+`counting` of `worker_timeout_override_floor`, `validator_io_override_floor`,
+`worker_fixture_delay` and `test_override_path`). The generator's development
+check accepted the edit, and `source_drift/generator_contract` then refused
+it: two of its controls copy the checkout into a fixture and require strict
+staging or release preflight to succeed there, which holds only while the
+limits owner equals the frozen guide's copies. This is the first authorized
+owner change that diverges from the guide. The management plan's rule for a
+guard that blocks an authorized change applies: those controls are revised to
+construct their own publication-fresh fixture, with a refused diverged
+neighbour, before the limits texts are corrected.
+
+User duties noticed: the frozen guide documents the eight keys as request
+data, lacks `test-input run`, and names `_test_overrides.*` controls in its
+limit rows; release notes need the breaking change that `run` refuses those
+keys.
