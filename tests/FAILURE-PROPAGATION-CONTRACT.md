@@ -1469,8 +1469,8 @@ run copies a few rows into the guide's
 [recorded scenarios](../docs/PolicyWitness.md#recorded-scenarios). The query column is
 `sandbox_check.outcome` when `result_source` is `validator` and the outcome is
 `allow` or `deny`, otherwise `unavailable`. Specimen S runs the real
-validator; B steers it with `stub_validator.py` through
-`_test_overrides.validator_executable_path` (its records are stub output, so
+validator; B steers it with `stub_validator.py` through the
+`validator_executable_path` test control (its records are stub output, so
 its expectations come from submitted scopes and independent file and
 permission controls, never from native verdicts); C fails to compile; T is the
 FIFO deadline case. M01–M07 combine native issuance, delivery and lifecycle

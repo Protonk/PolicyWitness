@@ -1,9 +1,8 @@
 #!/usr/bin/env python3
 """Submit the published read input with `test-input run` and retain what each submission showed.
 
-Every submission that carries controls goes through the seam invocation adapter
-on its experimental route, so its command, controls and delivered request are
-recorded before launch. The checker in check_test_input_seam.py owns the plan
+Every submission that carries controls goes through the seam invocation adapter,
+so its command, controls and delivered request are recorded before launch. The checker in check_test_input_seam.py owns the plan
 and every expectation; this driver only prepares, launches, samples and records.
 """
 import json
@@ -19,7 +18,7 @@ from file_observation import observe_target
 from porcelain import decode as decode_porcelain
 from run_capture import RunCapture
 from runner_client_capture import host_reply, validate_capture
-from seam_invocation import EXPERIMENTAL, SeamCapture, Submission
+from seam_invocation import SeamCapture, Submission
 from worker_exit_witness import worker_exit_witness
 
 FIXTURES = Path(__file__).resolve().parents[2] / 'fixtures/validator'
@@ -46,6 +45,9 @@ def disposition(record):
             reply.get('steps') == [] and not reply.get('phases') and not reply.get('actors') and \
             isinstance(reply.get('request_failure'), dict):
         return True, 'host request refusal before worker or validator launch'
+    if reply.get('normalized_outcome') == 'worker_spawn_failed' and reply.get('runner_subprocess') is None and \
+            not reply.get('actors'):
+        return True, 'the host reports that its worker spawn failed; it has no worker to reap'
     return False, reason
 
 
@@ -110,7 +112,7 @@ def run_seam(directory, pw, app, work, identity, attempts, persist):
                 run = RunCapture(pw, directory / name, document, cli_args=CLI_ARGS)
             else:
                 run = SeamCapture(pw, directory / name, document, controls=controls, scenario='test_input.' + name,
-                                  cli_args=CLI_ARGS, route=EXPERIMENTAL)
+                                  cli_args=CLI_ARGS)
             with run:
                 record['exit'] = run.wait(timeout=WAIT_SECONDS)
             record.update(argv=run.argv, stderr=run.stderr_path.read_text(), stdout_bytes=run.stdout_path.stat().st_size,
@@ -129,8 +131,7 @@ def run_seam(directory, pw, app, work, identity, attempts, persist):
             dest.mkdir()
             request = dest / 'specimen.json'
             submission = Submission(client, 'test_input.' + name, document, controls,
-                                    run_args=['--timeout-ms', '20000', service, request], request_path=request,
-                                    route=EXPERIMENTAL)
+                                    run_args=['--timeout-ms', '20000', service, request], request_path=request)
             result = submission.run(timeout=WAIT_SECONDS)
             (dest / 'capture.pwp').write_bytes(result.stdout)
             record.update(argv=submission.argv, exit=result.returncode, stderr=result.stderr.decode('utf-8', 'replace'),
@@ -175,12 +176,21 @@ def run_seam(directory, pw, app, work, identity, attempts, persist):
     for name, (arguments, _) in checker.USAGE.items():
         usage(name, ['test-input', 'run'], arguments)
     usage('ordinary_run', ['run'], checker.ORDINARY_USAGE[0])
-    capture('native_range', document, checker.NATIVE_RANGE)
-    for name in ('cli', 'inert', 'empty'):
-        block = {} if name == 'empty' else checker.LEGACY_BLOCKS[name]
-        capture('legacy_block.' + name, checker.request_for(name, identity, target, block), {})
+    capture('combined', document, checker.COMBINED)
+    capture('unreached', document, checker.UNREACHED)
+    capture('floor', document, checker.FLOOR)
+    capture('early_refusal', checker.request_for('early_refusal', identity, target), checker.EARLY)
+    for key, value in checker.NATIVE_RANGE.items():
+        capture('native_range.' + key, document, {key: value})
+    for name in ('cli', 'inert', 'mixed', 'empty'):
+        block, controls = ({}, {}) if name == 'empty' else checker.LEGACY_BLOCKS[name]
+        capture('legacy_block.' + name, checker.request_for(name, identity, target, block), controls)
     direct('client.activation', document, checker.CLIENT_CONTROLS)
-    direct('legacy_block.client', checker.request_for('client', identity, target, checker.LEGACY_BLOCKS['client']), {})
+    direct('legacy_block.client', checker.request_for('client', identity, target, checker.LEGACY_BLOCKS['client'][0]), {})
+    direct('client.fractional', document, checker.CLIENT_FRACTIONAL)
+    # The two substitutions the request block keeps are ordinary submissions: no selected control, no adapter.
+    for name, block in checker.UNSELECTED.items():
+        capture('unselected.' + name, checker.request_for(name, identity, target, block))
 
     # The read publisher under a profile that denies fork, and a command that must launch under the same profile.
     denial = ['/usr/bin/sandbox-exec', '-p', checker.DENIAL, pw]

@@ -15,7 +15,7 @@ import sys
 TESTS = Path(__file__).resolve().parents[2]
 sys.path.insert(0, str(TESTS / 'lib'))
 import seam_invocation
-from seam_invocation import EXPERIMENTAL, SeamCapture, Submission
+from seam_invocation import SeamCapture, Submission
 
 STAND_IN = '''#!{python} -BS
 import json, os, signal, sys, time
@@ -24,7 +24,8 @@ receipts = Path(__file__).resolve().parents[3] / 'receipts'
 if sys.argv[1:] == ['--version']:
     print(json.dumps(dict(build=dict(contract='test:stand-in', commit='constructed'))))
     sys.exit(0)
-assert sys.argv[1] == 'run' or sys.argv[1:3] == ['test-input', 'run'], sys.argv
+assert (sys.argv[1:3] == ['test-input', 'run'] if Path(sys.argv[0]).name == 'policy-witness'
+        else sys.argv[1:3] == ['run', '--experimental-controls']), sys.argv
 if '--refuse' in sys.argv:
     sys.stderr.write('stand-in usage refusal before reading any request\\n')
     sys.exit(2)
@@ -74,35 +75,36 @@ def main():
     def request(specimen_id, **fields):
         return dict(specimen_id=specimen_id, stdout_hex=REPLY.hex(), **fields)
 
-    # RunCapture form: the capture directory is unchanged and the evidence stands beside it.
+    # RunCapture form: the request is delivered as given, the controls are flags and the evidence stands beside the capture.
     spec = request('capture', exit_code=3)
     controls = {'worker_timeout_ms': 200, 'validator_executable_path': '/nonexistent/validator'}
     ordinary = (json.dumps(spec, indent=2) + '\n').encode()
-    delivered = (json.dumps(dict(spec, _test_overrides=controls), indent=2) + '\n').encode()
     capture = SeamCapture(pw, root / 'capture', spec, controls=controls, scenario='control.capture',
                           cli_args=['--timeout-ms', '10'])
     intended = record('control.capture')
-    argv = [str(pw), 'run', str(root / 'capture/specimen.json'), '--timeout-ms', '10']
-    assert intended['state'] == 'intended' and intended['argv'] == argv and intended['pid'] is None
-    assert intended['requested_route'] == 'legacy_request_block' and intended['requested_controls'] == controls
+    argv = [str(pw), 'test-input', 'run', str(root / 'capture/specimen.json'), '--worker-timeout-ms', '200',
+            '--validator-executable-path', '/nonexistent/validator', '--timeout-ms', '10']
+    assert intended['state'] == 'intended' and intended['argv'] == argv == capture.argv and intended['pid'] is None
+    assert intended['requested_route'] == 'experimental_cli' and intended['requested_controls'] == controls
     assert intended['entry'] == 'cli' and intended['app']['build_contract'] == 'test:stand-in'
     assert intended['app']['app_path'] == str(root / 'StandIn.app') and intended['app']['version_exit_status'] == 0
+    assert json.loads((root / 'capture/capture.json').read_text())['argv'] == argv
     assert (evidence / 'control.capture/ordinary-request.json').read_bytes() == ordinary
-    assert (evidence / 'control.capture/delivered-request.json').read_bytes() == delivered
+    assert (evidence / 'control.capture/delivered-request.json').read_bytes() == ordinary
     assert json.loads((evidence / 'control.capture/controls.json').read_text()) == controls
     assert not (root / 'receipts/capture.json').exists(), 'intent recorded only after launch'
     with capture as run:
         assert run.wait(timeout=10) == 3
-    assert (root / 'capture/specimen.json').read_bytes() == delivered
+    assert (root / 'capture/specimen.json').read_bytes() == ordinary
     assert (root / 'capture/run.json').read_bytes() == REPLY
-    assert receipt('capture') == dict(program='policy-witness', argv=argv[1:], request_hex=delivered.hex())
+    assert receipt('capture') == dict(program='policy-witness', argv=argv[1:], request_hex=ordinary.hex())
     done = record('control.capture')
     assert sorted(path.name for path in (evidence / 'control.capture').iterdir()) == FILES
     assert (done['state'], done['returncode'], done['exit_code'], done['term_signal']) == ('exited', 3, 3, None)
     assert done['start_monotonic_ns'] <= done['exit_observed_monotonic_ns'] and done['pid'] > 0
     assert (evidence / 'control.capture/stdout').read_bytes() == REPLY
     assert done['stdout']['sha256'] == digest(REPLY) and done['stderr']['bytes'] == 20
-    assert done['ordinary_request']['sha256'] == digest(ordinary) and done['delivered_request']['sha256'] == digest(delivered)
+    assert done['ordinary_request']['sha256'] == done['delivered_request']['sha256'] == digest(ordinary)
     assert done['delivered_request']['channel'] == 'path' and 'took effect' in done['limits']
     passed('capture_keeps_request_controls_delivery_and_raw_output')
 
@@ -145,54 +147,85 @@ def main():
     assert json.loads((root / 'held/capture.json').read_text())['cleanup_kill_requested'] is True
     passed('signal_and_cleanup_kill_status_recorded')
 
-    # Process form: the client on standard input in the caller's encoding, the controller from a path.
+    # Process form: the client receives one controls object and the request on standard input in the
+    # caller's encoding; the controller receives one flag per control and the request's own bytes at a path.
     spec = request('stdin')
     compact = lambda document: json.dumps(document).encode()
     submission = Submission(client, 'control.stdin', spec, {'worker_post_apply_hang_ms': 5},
                             run_args=['--mach-service', '--request', '-', 'service.name'], encode=compact)
-    assert submission.argv == [str(client), 'run', '--mach-service', '--request', '-', 'service.name']
+    assert submission.argv == [str(client), 'run', '--experimental-controls', '{"worker_post_apply_hang_ms": 5}',
+                               '--mach-service', '--request', '-', 'service.name']
     process = submission.start(stdout=root / 'stdin.out', stderr=root / 'stdin.err', start_new_session=True)
     assert process.wait(timeout=10) == 0 and process.poll() == 0 and process.pid > 0
-    expected = compact(dict(spec, _test_overrides={'worker_post_apply_hang_ms': 5}))
-    assert receipt('stdin') == dict(program='pw-runner-client', argv=submission.argv[1:], request_hex=expected.hex())
+    assert receipt('stdin') == dict(program='pw-runner-client', argv=submission.argv[1:], request_hex=compact(spec).hex())
     piped = record('control.stdin')
-    assert piped['entry'] == 'client' and piped['delivered_request']['channel'] == 'stdin'
+    assert piped['entry'] == 'client' and piped['requested_route'] == 'experimental_client'
+    assert piped['delivered_request']['channel'] == 'stdin'
     assert piped['delivered_request']['path'] is None and piped['app']['controller'] == str(pw)
     assert (evidence / 'control.stdin/ordinary-request.json').read_bytes() == compact(spec)
-    assert (evidence / 'control.stdin/delivered-request.json').read_bytes() == expected
+    assert (evidence / 'control.stdin/delivered-request.json').read_bytes() == compact(spec)
     assert (root / 'stdin.out').read_bytes() == (evidence / 'control.stdin/stdout').read_bytes() == REPLY
     path = root / 'path-request.json'
-    submission = Submission(pw, 'control.path', request('path', exit_code=1), {'validator_io_timeout_ms': 500},
-                            run_args=[path, '--timeout-ms', 7], request_path=path)
-    assert json.loads(path.read_text()) == submission.delivered
+    raw = b'{"specimen_id": "path",\n "stdout_hex": "6f6b", "exit_code": 1}'
+    submission = Submission(pw, 'control.path', json.loads(raw), {'validator_io_timeout_ms': 500},
+                            run_args=[path, '--timeout-ms', 7], request_path=path, ordinary_bytes=raw)
+    assert submission.argv == [str(pw), 'test-input', 'run', '--validator-io-timeout-ms', '500', str(path), '--timeout-ms', '7']
+    assert path.read_bytes() == raw and submission.delivered == json.loads(raw)
     result = submission.run(timeout=10)
-    assert (result.returncode, result.stdout, result.stderr) == (1, REPLY, b'stand-in diagnostic\n')
-    assert receipt('path')['argv'] == ['run', str(path), '--timeout-ms', '7']
-    assert record('control.path')['state'] == 'exited'
+    assert (result.returncode, result.stdout, result.stderr) == (1, b'ok', b'stand-in diagnostic\n')
+    assert receipt('path') == dict(program='policy-witness', argv=submission.argv[1:], request_hex=raw.hex())
+    assert record('control.path')['state'] == 'exited' and record('control.path')['requested_route'] == 'experimental_cli'
+    # A NUL travels in the client's controls object, escaped; no command-line argument can hold one.
+    submission = Submission(client, 'control.client_nul', request('client-nul'), {'validator_executable_path': '/a\0b'},
+                            run_args=['--request', '-', 'service.name'], encode=compact)
+    assert submission.argv[2:4] == ['--experimental-controls', '{"validator_executable_path": "/a\\u0000b"}']
+    assert submission.run(timeout=10).returncode == 0
+    assert json.loads(receipt('client-nul')['argv'][2]) == {'validator_executable_path': '/a\0b'}
     passed('process_form_delivers_on_stdin_and_path')
 
-    # Refusals leave no evidence directory and launch nothing.
+    # No controls, and a request that carries its own block, are submissions the adapter makes:
+    # what the product does with either is the caller's experiment.
+    blocked = request('block', _test_overrides={'worker_executable_path': '/x', 'worker_timeout_ms': 5})
+    with SeamCapture(pw, root / 'block', blocked, controls={}, scenario='control.request_block') as run:
+        assert run.wait(timeout=10) == 0
+    assert run.argv == [str(pw), 'test-input', 'run', str(root / 'block/specimen.json')]
+    assert receipt('block') == dict(program='policy-witness', argv=run.argv[1:],
+                                    request_hex=(json.dumps(blocked, indent=2) + '\n').encode().hex())
+    assert record('control.request_block')['requested_controls'] == {}
+    assert json.loads((evidence / 'control.request_block/controls.json').read_text()) == {}
+    passed('empty_controls_and_a_request_block_are_delivered_as_given')
+
+    # Refusals leave no evidence directory and launch nothing. No argument selects another route.
     before = sorted(path.name for path in evidence.iterdir())
     for name, change, error in (
-            ('empty', dict(controls={}), ValueError),
             ('unselected', dict(controls={'worker_executable_path': '/x'}), ValueError),
             ('mixed', dict(controls={'worker_timeout_ms': 1, 'actor_equipment_executable_paths': {}}), ValueError),
             ('not_a_mapping', dict(controls=[('worker_timeout_ms', 1)]), ValueError),
-            ('request_block', dict(request=dict(request('block'), _test_overrides={})), ValueError),
+            ('nul_argument', dict(controls={'validator_executable_path': '/a\0b'}), ValueError),
+            ('client_capture', dict(pw=client), ValueError),
             ('scenario_reuse', dict(scenario='control.capture'), FileExistsError),
             ('scenario_path', dict(scenario='../outside'), ValueError),
-            ('unknown_program', dict(pw=macos / 'other-tool'), ValueError)):
+            ('unknown_program', dict(pw=macos / 'other-tool'), ValueError),
+            ('route_argument', dict(extra=dict(route='legacy_request_block')), TypeError)):
         arguments = dict(pw=pw, request=request('refusal-' + name), controls={'worker_timeout_ms': 1},
-                         scenario='control.refusal.' + name)
+                         scenario='control.refusal.' + name, extra={})
         arguments.update(change)
         try:
             SeamCapture(arguments['pw'], root / ('refusal-' + name), arguments['request'],
-                        controls=arguments['controls'], scenario=arguments['scenario'])
+                        controls=arguments['controls'], scenario=arguments['scenario'], **arguments['extra'])
         except error:
             pass
         else:
             raise AssertionError('accepted: ' + name)
         assert not (root / ('refusal-' + name)).exists(), name
+    try:
+        Submission(pw, 'control.refusal.submission_route', request('refusal-submission-route'), {'worker_timeout_ms': 1},
+                   route='legacy_request_block')
+    except TypeError:
+        pass
+    else:
+        raise AssertionError('accepted: a route argument')
+    assert not hasattr(seam_invocation, 'LEGACY') and set(seam_invocation.ROUTES.values()) == {'experimental_cli', 'experimental_client'}
     assert sorted(path.name for path in evidence.iterdir()) == before
     assert json.loads((evidence / 'control.capture/invocation.json').read_text()) == done
     changed = SeamCapture(pw, root / 'changed', request('changed'), controls={'worker_timeout_ms': 1},
@@ -218,94 +251,21 @@ def main():
     assert (result.returncode, result.stdout, result.stderr) == (7, b'', b''), result
     assert (root / 'command.out').read_bytes() == b'ok'
     assert (evidence / 'control.command/ordinary-request.json').read_bytes() == ordinary
-    assert json.loads((root / 'command-delivered.json').read_text()) == dict(
-        specimen_id='command', stdout_hex='6f6b', exit_code=7, _test_overrides={'worker_pre_ready_hang_ms': 2000})
-    assert receipt('command')['argv'] == ['run', str(root / 'command-delivered.json'), '--timeout-ms', '9']
-    assert record('control.command')['returncode'] == 7
+    assert (root / 'command-delivered.json').read_bytes() == ordinary
+    assert receipt('command') == dict(program='policy-witness', request_hex=ordinary.hex(), argv=[
+        'test-input', 'run', '--worker-pre-ready-hang-ms', '2000', str(root / 'command-delivered.json'), '--timeout-ms', '9'])
+    assert record('control.command')['returncode'] == 7 and record('control.command')['requested_route'] == 'experimental_cli'
     repeated = subprocess.run(command, capture_output=True, timeout=30)
     assert repeated.returncode == 70 and b'already recorded' in repeated.stderr, repeated
     usage = subprocess.run(command[:6], capture_output=True, timeout=30)
     assert usage.returncode == 70 and b'required' in usage.stderr, usage
+    routed = subprocess.run([*command[:4], '--scenario', 'control.command_route', '--route', 'legacy_request_block', *command[6:]],
+                            capture_output=True, timeout=30)
+    assert routed.returncode == 70 and not (evidence / 'control.command_route').exists(), routed
     (root / 'command-signal.json').write_text(json.dumps(request('command-signal', signal=signal.SIGKILL)))
     command[5:8] = ['control.command_signal', '--request', str(root / 'command-signal.json')]
     assert subprocess.run(command, capture_output=True, timeout=30).returncode == 128 + signal.SIGKILL
     passed('command_form_propagates_status')
-
-    # Experimental route: the request is delivered as given and the controls travel beside it.
-    spec = request('experimental', exit_code=4)
-    controls = {'worker_timeout_ms': 200, 'validator_executable_path': '/nonexistent/validator'}
-    ordinary = (json.dumps(spec, indent=2) + '\n').encode()
-    capture = SeamCapture(pw, root / 'experimental', spec, controls=controls, scenario='control.experimental',
-                          cli_args=['--timeout-ms', '10'], route=EXPERIMENTAL)
-    argv = [str(pw), 'test-input', 'run', str(root / 'experimental/specimen.json'), '--worker-timeout-ms', '200',
-            '--validator-executable-path', '/nonexistent/validator', '--timeout-ms', '10']
-    intended = record('control.experimental')
-    assert intended['state'] == 'intended' and intended['argv'] == argv == capture.argv
-    assert intended['requested_route'] == 'experimental_cli' and intended['requested_controls'] == controls
-    assert json.loads((root / 'experimental/capture.json').read_text())['argv'] == argv
-    assert (evidence / 'control.experimental/ordinary-request.json').read_bytes() == ordinary
-    assert (evidence / 'control.experimental/delivered-request.json').read_bytes() == ordinary
-    assert json.loads((evidence / 'control.experimental/controls.json').read_text()) == controls
-    with capture as run:
-        assert run.wait(timeout=10) == 4
-    assert (root / 'experimental/specimen.json').read_bytes() == ordinary
-    assert receipt('experimental') == dict(program='policy-witness', argv=argv[1:], request_hex=ordinary.hex())
-    assert record('control.experimental')['returncode'] == 4
-    # No controls, and a request that carries its own block, are submissions this route can make.
-    blocked = request('experimental-block', _test_overrides={'worker_executable_path': '/x'})
-    with SeamCapture(pw, root / 'experimental-block', blocked, controls={}, scenario='control.experimental_block',
-                     route=EXPERIMENTAL) as run:
-        assert run.wait(timeout=10) == 0
-    assert run.argv == [str(pw), 'test-input', 'run', str(root / 'experimental-block/specimen.json')]
-    assert receipt('experimental-block')['request_hex'] == (json.dumps(blocked, indent=2) + '\n').encode().hex()
-    assert record('control.experimental_block')['requested_controls'] == {}
-    # The client receives one controls object; the controller receives one flag per control.
-    spec = request('experimental-stdin')
-    submission = Submission(client, 'control.experimental_stdin', spec, {'worker_post_apply_hang_ms': 5},
-                            run_args=['--request', '-', 'service.name'], encode=compact, route=EXPERIMENTAL)
-    assert submission.argv == [str(client), 'run', '--experimental-controls', '{"worker_post_apply_hang_ms": 5}',
-                               '--request', '-', 'service.name']
-    assert submission.run(timeout=10).returncode == 0
-    assert receipt('experimental-stdin') == dict(program='pw-runner-client', argv=submission.argv[1:],
-                                                 request_hex=compact(spec).hex())
-    piped = record('control.experimental_stdin')
-    assert piped['requested_route'] == 'experimental_client' and piped['delivered_request']['channel'] == 'stdin'
-    assert (evidence / 'control.experimental_stdin/delivered-request.json').read_bytes() == compact(spec)
-    path = root / 'experimental-path.json'
-    raw = b'{"specimen_id": "experimental-path",\n "stdout_hex": "6f6b"}'
-    submission = Submission(pw, 'control.experimental_path', json.loads(raw), {'validator_io_timeout_ms': 500},
-                            run_args=[path, '--timeout-ms', 7], request_path=path, ordinary_bytes=raw, route=EXPERIMENTAL)
-    assert submission.argv == [str(pw), 'test-input', 'run', '--validator-io-timeout-ms', '500', str(path), '--timeout-ms', '7']
-    assert submission.run(timeout=10).stdout == b'ok' and path.read_bytes() == raw
-    assert receipt('experimental-path') == dict(program='policy-witness', argv=submission.argv[1:], request_hex=raw.hex())
-    assert record('control.experimental_path')['requested_route'] == 'experimental_cli'
-    before = sorted(path.name for path in evidence.iterdir())
-    for name, arguments in (
-            ('unselected', dict(pw=pw, controls={'worker_executable_path': '/x'}, route=EXPERIMENTAL)),
-            ('client_capture', dict(pw=client, controls={'worker_timeout_ms': 1}, route=EXPERIMENTAL)),
-            ('unknown_route', dict(pw=pw, controls={'worker_timeout_ms': 1}, route='experimental_cli'))):
-        try:
-            SeamCapture(arguments['pw'], root / ('experimental-refusal-' + name), request('experimental-refusal-' + name),
-                        controls=arguments['controls'], scenario='control.experimental_refusal.' + name,
-                        route=arguments['route'])
-        except ValueError:
-            pass
-        else:
-            raise AssertionError('accepted: ' + name)
-        assert not (root / ('experimental-refusal-' + name)).exists(), name
-    assert sorted(path.name for path in evidence.iterdir()) == before
-    (root / 'command-experimental.json').write_bytes(b'{"specimen_id": "command-experimental", "stdout_hex": "6f6b"}')
-    command = [sys.executable, '-B', '-S', str(TESTS / 'lib/seam_invocation.py'), '--scenario', 'control.command_experimental',
-               '--request', str(root / 'command-experimental.json'), '--controls', '{"worker_pre_ready_hang_ms": 2000}',
-               '--route', 'experimental', '--delivered', str(root / 'command-experimental-delivered.json'),
-               '--stdout', str(root / 'command-experimental.out'), '--stderr', str(root / 'command-experimental.err'),
-               '--', str(pw), str(root / 'command-experimental-delivered.json')]
-    assert subprocess.run(command, capture_output=True, timeout=30).returncode == 0
-    assert (root / 'command-experimental-delivered.json').read_bytes() == (root / 'command-experimental.json').read_bytes()
-    assert receipt('command-experimental')['argv'] == ['test-input', 'run', '--worker-pre-ready-hang-ms', '2000',
-                                                       str(root / 'command-experimental-delivered.json')]
-    assert record('control.command_experimental')['requested_route'] == 'experimental_cli'
-    passed('experimental_route_delivers_request_unchanged_and_controls_beside_it')
 
     assert seam_invocation.scenario_for(root / 'a' / 'b') == '.'.join((*root.relative_to(evidence.parent).parts, 'a', 'b'))
     (root / 'seam-controls.json').write_text(json.dumps(completed, indent=2) + '\n')

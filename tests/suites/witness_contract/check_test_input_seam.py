@@ -19,10 +19,13 @@ from file_observation import fresh_content, fresh_identity, fresh_syscalls, targ
 
 # Authored here from the documented allowances, not read from the limits manifest.
 SENTINEL_MS = 120000
+SENTINEL_FLOOR_MS = 50
 READY_BUDGET_MS = 1000
 QUICK_READY_MS = 300
 QUICK_SENTINEL_MS = 1000
 MISSING_VALIDATOR = '/nonexistent/pw-test-input-validator'
+MISSING_WORKER = '/nonexistent/pw-test-input-worker'
+MISSING_EQUIPMENT = '/nonexistent/pw-test-input-equipment'
 FLAGS = dict(
     worker_timeout_ms='--worker-timeout-ms', worker_pre_ready_hang_ms='--worker-pre-ready-hang-ms',
     worker_post_apply_hang_ms='--worker-post-apply-hang-ms', worker_post_apply_kill_signal='--worker-post-apply-kill-signal',
@@ -51,11 +54,27 @@ USAGE = dict(
     unknown_flag=(['--worker-timeout', '5000', None], 'unknown argument: --worker-timeout'))
 # The same flag after plain `run`, which has no such option.
 ORDINARY_USAGE = (['--worker-timeout-ms', '5000', None], 'unknown argument: --worker-timeout-ms')
-NATIVE_RANGE = dict(worker_post_apply_hang_ms=60001)
+# One value above each worker argument's own range, each its own submission.
+NATIVE_RANGE = dict(worker_post_apply_hang_ms=60001, worker_pre_ready_hang_ms=60001,
+                    worker_post_apply_kill_signal=32, worker_kill_before_publish_slot=256)
+# Two controls in one submission, a slot the one-step plan never reaches, an allowance below the
+# floor beside a delay that outlasts it, and a control beside a request the host refuses to decode.
+COMBINED = dict(worker_timeout_ms=7000, worker_pre_ready_hang_ms=400)
+UNREACHED = dict(worker_kill_before_publish_slot=5)
+FLOOR = dict(worker_timeout_ms=1, worker_post_apply_hang_ms=2000)
+EARLY = dict(worker_post_apply_kill_signal=9)
+EARLY_REFUSAL = dict(code='unknown_field', path=['misspelled_intent'])
 LEGACY_REFUSAL = dict(code='inapplicable_field', path=['_test_overrides'])
-LEGACY_BLOCKS = dict(cli=dict(worker_timeout_ms=5000), inert=dict(worker_executable_path=None),
-                     client=dict(worker_timeout_ms=5000))
+# A request block on an experimental submission, and the controls submitted beside it.
+LEGACY_BLOCKS = dict(cli=(dict(worker_timeout_ms=5000), {}), inert=(dict(worker_executable_path=None), {}),
+                     mixed=(dict(worker_executable_path=MISSING_WORKER), dict(worker_post_apply_kill_signal=9)),
+                     client=(dict(worker_timeout_ms=5000), {}))
 CLIENT_CONTROLS = dict(worker_timeout_ms=7000)
+CLIENT_FRACTIONAL = dict(worker_timeout_ms=1.5)
+CLIENT_FRACTIONAL_REFUSAL = dict(code='type_mismatch', path=['_test_overrides', 'worker_timeout_ms'])
+# The two substitutions an ordinary request's block keeps, each on its own request form.
+UNSELECTED = dict(worker=dict(worker_executable_path=MISSING_WORKER),
+                  actor_equipment=dict(actor_equipment_executable_paths=dict(selected=MISSING_EQUIPMENT)))
 DENIAL = '(version 1)(allow default)(deny process-fork)'
 
 
@@ -73,8 +92,21 @@ def two_reads(identity, target):
     return document
 
 
+def actor_form(document):
+    """The same policy and read as the one visit of one applied actor."""
+    document = dict(document)
+    policy, plan = document.pop('policy'), document.pop('probe_plan')
+    document['actors'] = [dict(actor_id='subject', equipment='selected', sandbox=dict(mode='apply', policy=policy))]
+    document['phases'] = [dict(phase_id='main', actor_id='subject', actions=plan)]
+    return document
+
+
 def request_for(name, identity, target, block=None):
     document = two_reads(identity, target) if name == 'validator_io_timeout_ms' else expected_document(identity, target)
+    if name == 'early_refusal':
+        document['misspelled_intent'] = True
+    if name == 'actor_equipment':
+        document = actor_form(document)
     if block is not None:
         document['_test_overrides'] = block
     return document
@@ -279,26 +311,76 @@ def evaluate(state):
                 isinstance(get(envelope, 'data'), dict) and get(envelope, 'data', 'runner_client') is None and
                 get(envelope, 'data', 'runner_result') is None, 'usage refusal with exit 2 and no client capture')
 
-    # A value the worker's own argument grammar refuses: submitted, and refused by the launched worker.
-    record = mapping(scenarios.get('native_range'))
-    r.check('native_range.submission', submitted(record, 'cli', document, NATIVE_RANGE), 'the out-of-range value travels as a flag')
-    admitted = envelope_rows(r, 'native_range', record, identity, 1, 'runner_failed')
+    # Two controls in one submission: each read from the host's own wait record.
+    record = mapping(scenarios.get('combined'))
+    r.check('combined.submission', submitted(record, 'cli', document, COMBINED), 'both controls travel as flags')
+    admitted = envelope_rows(r, 'combined', record, identity, 0, 'finished')
     reply = mapping(record.get('reply'))
     worker = mapping(reply.get('runner_subprocess'))
-    r.check('native_range.boundary', exact(worker.get('exit_code'), 2) and worker.get('term_signal') is None and
-            worker.get('reaped') is True and worker.get('ready_byte_received') is False and worker.get('done_observed') is False and
-            reply.get('sandboxed_after_apply') is not True and reply.get('request_failure') is None and
-            get(record.get('envelope'), 'data', 'request_failure') is None and reply.get('test_overrides') == NATIVE_RANGE and
-            get(record.get('envelope'), 'data', 'runner_client', 'submission') == 'invoked' and
-            get(reply, 'steps', 0, 'attempt', 'outcome') == 'no_completed_result' and unchanged(record, target, payload),
-            'the launched worker exits 2 before readiness; no request refusal', available=admitted)
+    delay = get(worker, 'ready_wait', 'elapsed_ms')
+    r.check('combined.echo', reply.get('test_overrides') == COMBINED, 'the reply mirrors both controls', available=admitted)
+    r.check('combined.intervention', unchanged(record, target, payload) and
+            exact(get(worker, 'sentinel_wait', 'budget_ms'), 7000) and get(worker, 'sentinel_wait', 'stop') == 'done' and
+            type(delay) is int and delay >= 380 and get(worker, 'ready_wait', 'stop') == 'received' and
+            read_completed(get(reply, 'steps', 0), record.get('before'), target),
+            'the allowance and the delay, each observed by the host', available=admitted)
 
-    # A request that carries its own block on the experimental route.
-    for name in ('cli', 'inert'):
+    # A control whose boundary no action reaches: echoed, with the ordinary neighbour's completion.
+    record = mapping(scenarios.get('unreached'))
+    r.check('unreached.submission', submitted(record, 'cli', document, UNREACHED), 'a slot beyond the one-step plan travels as a flag')
+    admitted = envelope_rows(r, 'unreached', record, identity, 0, 'finished')
+    reply = mapping(record.get('reply'))
+    r.check('unreached.echo', reply.get('test_overrides') == UNREACHED, 'the reply mirrors a control that was supplied', available=admitted)
+    r.check('unreached.no_intervention', baseline(reply, record.get('before'), target) and unchanged(record, target, payload),
+            'no action reached the slot: the neighbour\'s allowances, collection and completed read', available=admitted)
+
+    # The ordinary worker allowance has a floor: one millisecond is submitted and the host waits the floor.
+    record = mapping(scenarios.get('floor'))
+    r.check('floor.submission', submitted(record, 'cli', document, FLOOR), 'the allowance below the floor travels as written')
+    admitted = envelope_rows(r, 'floor', record, identity, 1, 'runner_timeout')
+    reply = mapping(record.get('reply'))
+    worker = mapping(reply.get('runner_subprocess'))
+    wait = mapping(worker.get('sentinel_wait'))
+    r.check('floor.echo', reply.get('test_overrides') == FLOOR, 'the reply mirrors the supplied value, not the floored one', available=admitted)
+    r.check('floor.intervention', exact(wait.get('budget_ms'), SENTINEL_FLOOR_MS) and wait.get('stop') == 'sentinel_deadline' and
+            type(wait.get('elapsed_ms')) is int and type(wait.get('excluded_ms')) is int and
+            wait['elapsed_ms'] - wait['excluded_ms'] >= SENTINEL_FLOOR_MS and exact(worker.get('term_signal'), 9) and
+            exact(get(worker, 'termination_request', 'signal'), 9) and worker.get('reaped') is True and
+            worker.get('done_observed') is False and unchanged(record, target, payload),
+            'the host waited the floor and ended the delayed worker at that deadline', available=admitted)
+
+    # A control beside a request the host refuses to decode: refused before the control could act.
+    record = mapping(scenarios.get('early_refusal'))
+    r.check('early_refusal.submission', submitted(record, 'cli', request_for('early_refusal', identity, target), EARLY),
+            'the control travels beside the request the host will refuse')
+    admitted = envelope_rows(r, 'early_refusal', record, identity, 1, 'bad_request')
+    r.check('early_refusal.refusal', refused_before_launch(record.get('reply'), EARLY_REFUSAL) and
+            get(record.get('envelope'), 'data', 'request_failure') == EARLY_REFUSAL and unchanged(record, target, payload),
+            'host refusal at the unknown request field, before any worker and with no echo', available=admitted)
+
+    # A value the worker's own argument grammar refuses: submitted, and refused by the launched worker.
+    for key, value in NATIVE_RANGE.items():
+        label, controls = 'native_range.' + key, {key: value}
+        record = mapping(scenarios.get(label))
+        r.check(label + '.submission', submitted(record, 'cli', document, controls), 'the out-of-range value travels as a flag')
+        admitted = envelope_rows(r, label, record, identity, 1, 'runner_failed')
+        reply = mapping(record.get('reply'))
+        worker = mapping(reply.get('runner_subprocess'))
+        r.check(label + '.boundary', exact(worker.get('exit_code'), 2) and worker.get('term_signal') is None and
+                worker.get('reaped') is True and worker.get('ready_byte_received') is False and worker.get('done_observed') is False and
+                reply.get('sandboxed_after_apply') is not True and reply.get('request_failure') is None and
+                get(record.get('envelope'), 'data', 'request_failure') is None and reply.get('test_overrides') == controls and
+                get(record.get('envelope'), 'data', 'runner_client', 'submission') == 'invoked' and
+                get(reply, 'steps', 0, 'attempt', 'outcome') == 'no_completed_result' and unchanged(record, target, payload),
+                'the launched worker exits 2 before readiness; no request refusal', available=admitted)
+
+    # A request that carries its own block on an experimental submission, alone or beside a control.
+    for name in ('cli', 'inert', 'mixed'):
+        block, controls = LEGACY_BLOCKS[name]
         record = mapping(scenarios.get('legacy_block.' + name))
         r.check('legacy_block.' + name + '.submission',
-                submitted(record, 'cli', request_for(name, identity, target, LEGACY_BLOCKS[name]), {}),
-                'the block is delivered as written, with no controls')
+                submitted(record, 'cli', request_for(name, identity, target, block), controls),
+                'the block is delivered as written, beside the controls given')
         admitted = envelope_rows(r, 'legacy_block.' + name, record, identity, 1, 'bad_request')
         r.check('legacy_block.' + name + '.refusal', refused_before_launch(record.get('reply'), LEGACY_REFUSAL) and
                 get(record.get('envelope'), 'data', 'request_failure') == LEGACY_REFUSAL and unchanged(record, target, payload),
@@ -311,7 +393,9 @@ def evaluate(state):
             mapping(record.get('reply')).get('test_overrides') == {}, 'an empty block is admitted', available=admitted)
 
     # The runner client's own experimental submission, without the controller.
-    for name, controls, block in (('client.activation', CLIENT_CONTROLS, None), ('legacy_block.client', {}, LEGACY_BLOCKS['client'])):
+    for name, controls, block, refusal in (('client.activation', CLIENT_CONTROLS, None, None),
+                                           ('legacy_block.client', {}, LEGACY_BLOCKS['client'][0], LEGACY_REFUSAL),
+                                           ('client.fractional', CLIENT_FRACTIONAL, None, CLIENT_FRACTIONAL_REFUSAL)):
         record = mapping(scenarios.get(name))
         r.check(name + '.submission', submitted(record, 'client', request_for(name, identity, target, block), controls),
                 'the client receives the request and one controls object')
@@ -321,12 +405,39 @@ def evaluate(state):
             isinstance(record.get('reply'), dict) and get(record.get('reply'), 'producer', 'contract') == identity
         r.check(name + '.capture', received, 'an admitted client capture carrying one host reply')
         reply = mapping(record.get('reply'))
-        if block is None:
+        if refusal is None:
             r.check(name + '.intervention', exact(get(reply, 'runner_subprocess', 'sentinel_wait', 'budget_ms'), 7000) and
                     reply.get('normalized_outcome') == 'finished' and reply.get('test_overrides') == controls and
                     read_completed(get(reply, 'steps', 0), record.get('before'), target) and unchanged(record, target, payload),
                     'the host used the allowance the controls object named', available=received)
         else:
-            r.check(name + '.refusal', refused_before_launch(record.get('reply'), LEGACY_REFUSAL) and unchanged(record, target, payload),
-                    'host refusal at the block, before any worker', available=received)
+            r.check(name + '.refusal', refused_before_launch(record.get('reply'), refusal) and unchanged(record, target, payload),
+                    'host refusal at the block or the control, before any worker', available=received)
+
+    # The two substitutions an ordinary request's block still carries, through plain `run`.
+    record = mapping(scenarios.get('unselected.worker'))
+    block = UNSELECTED['worker']
+    admitted = envelope_rows(r, 'unselected.worker', record, identity, 1, 'worker_spawn_failed')
+    reply = mapping(record.get('reply'))
+    provenance = mapping(get(record.get('envelope'), 'data', 'specimen', 'binaries', 'worker'))
+    r.check('unselected.worker.substitution', record.get('argv', [])[1:2] == ['run'] and
+            record.get('delivered_document') == request_for('worker', identity, target, block) and
+            reply.get('test_overrides') == block and reply.get('request_failure') is None and
+            reply.get('runner_subprocess') is None and 'posix_spawn' in str(reply.get('error')) and
+            get(reply, 'steps', 0, 'attempt', 'outcome') == 'no_completed_result' and
+            provenance.get('path') == MISSING_WORKER and provenance.get('verification') == 'unavailable' and
+            unchanged(record, target, payload),
+            'the host tried to spawn the worker the block names, and the dossier names it', available=admitted)
+    record = mapping(scenarios.get('unselected.actor_equipment'))
+    block = UNSELECTED['actor_equipment']
+    admitted = envelope_rows(r, 'unselected.actor_equipment', record, identity, 1, 'runner_failed')
+    reply = mapping(record.get('reply'))
+    r.check('unselected.actor_equipment.substitution', record.get('argv', [])[1:2] == ['run'] and
+            record.get('delivered_document') == request_for('actor_equipment', identity, target, block) and
+            reply.get('test_overrides') == block and reply.get('request_failure') is None and
+            get(reply, 'preparation_failure', 'code') == 'equipment_binding_refused' and
+            get(reply, 'preparation_failure', 'stage') == 'equipment' and
+            [(get(actor, 'actor_id'), get(actor, 'launch'), get(actor, 'subprocess')) for actor in reply.get('actors') or []] ==
+            [('subject', None, None)] and reply.get('steps') == [] and unchanged(record, target, payload),
+            'equipment preparation refused the binding the block names, before any actor launch', available=admitted)
     return r.report()

@@ -59,8 +59,8 @@ run, including after a failed one.
 
 ## Specimen B is steered
 
-Specimen B uses `_test_overrides.validator_executable_path` pointing at
-`stub_validator.py` and `validator_io_timeout_ms: 500`. The stub answers deny
+Specimen B is submitted with two test controls: `validator_executable_path`
+pointing at `stub_validator.py`, and `validator_io_timeout_ms: 500`. The stub answers deny
 for b1, allow for b6 and b7, a diagnostic error record for b4, omits b2, b3
 and b5, flushes, then holds stdout open until the host's validator I/O
 deadline expires. The host retains and associates the emitted records,

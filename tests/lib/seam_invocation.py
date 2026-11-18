@@ -1,23 +1,17 @@
 """Submit a request with selected test-seam controls and retain what was requested.
 
 A caller gives the ordinary request without the selected controls, the controls
-as their own mapping and the remaining `run` arguments. The adapter delivers
-them on the route the call names.
+as their own mapping and the remaining `run` arguments. The request is
+delivered as given and the controls travel beside it: as one flag each after
+`policy-witness test-input run` (the record's route is `experimental_cli`), or
+as the one JSON object after `pw-runner-client run --experimental-controls`
+(`experimental_client`). The executable decides which.
 
-On `LEGACY`, the default, the controls become the delivered request's
-`_test_overrides` block, submitted with `policy-witness run` or
-`pw-runner-client run`; the record's route is `legacy_request_block`. A request
-that already carries `_test_overrides` and an empty mapping are refused before
-anything is written.
-
-On `EXPERIMENTAL` the request is delivered as given and the controls travel
-beside it: as one flag each after `policy-witness test-input run`
-(`experimental_cli`), or as the one JSON object after
-`pw-runner-client run --experimental-controls` (`experimental_client`). The
-mapping may be empty, and the request may carry its own `_test_overrides`
-block: what the product does with either is the caller's experiment.
-
-A key outside SELECTED_CONTROLS is refused on every route.
+The mapping may be empty, and the request may carry its own `_test_overrides`
+block: what the product does with either is the caller's experiment. A key
+outside SELECTED_CONTROLS is refused before anything is written, and so is a
+value with a NUL for the controller, whose command line cannot carry one; the
+client's controls object can.
 
 Each invocation owns `seam-invocations/<scenario>/` under the case's artifacts.
 `invocation.json` is written before launch and completed when the exit is
@@ -32,7 +26,7 @@ independent effects and cleanup stay with the caller.
 
 Shell cases use the command form, started as the other file helpers are:
 
-    seam_invocation.py --scenario NAME --request FILE --controls JSON [--route ROUTE]
+    seam_invocation.py --scenario NAME --request FILE --controls JSON
         --delivered FILE --stdout FILE --stderr FILE -- EXECUTABLE [RUN_ARG...]
 
 It exits with the submission's exit status, 128 plus the signal number after a
@@ -55,9 +49,7 @@ SELECTED_CONTROLS = (
     'worker_timeout_ms', 'worker_pre_ready_hang_ms', 'worker_post_apply_hang_ms',
     'worker_post_apply_kill_signal', 'worker_kill_before_publish_slot',
     'validator_executable_path', 'validator_io_timeout_ms', 'validator_total_timeout_ms')
-LEGACY = 'legacy_request_block'
-EXPERIMENTAL = 'experimental'
-EXPERIMENTAL_ROUTES = {'cli': 'experimental_cli', 'client': 'experimental_client'}
+ROUTES = {'cli': 'experimental_cli', 'client': 'experimental_client'}
 CLIENT_CONTROLS = '--experimental-controls'
 SCHEMA = 'pw-seam-invocation-1'
 DIRECTORY = 'seam-invocations'
@@ -127,30 +119,25 @@ def _blob(path):
 class _Record:
     """The evidence directory of one invocation; no reading of its outcome."""
 
-    def __init__(self, executable, scenario, ordinary, request, controls, route):
+    def __init__(self, executable, scenario, ordinary, request, controls):
         if not isinstance(scenario, str) or not _SCENARIO.fullmatch(scenario):
             raise ValueError(f'invalid seam scenario identity: {scenario!r}')
-        if route not in (LEGACY, EXPERIMENTAL):
-            raise ValueError(f'unknown seam route: {route!r}')
         if not isinstance(request, dict):
             raise ValueError('the ordinary request must be a JSON object')
-        if route == LEGACY and '_test_overrides' in request:
-            raise ValueError('the ordinary request already carries _test_overrides; selected controls travel '
-                             'separately and other overrides use an ordinary submission')
         if not isinstance(controls, dict):
             raise ValueError('seam controls must be a mapping')
         controls = dict(controls)
         unselected = sorted(set(controls) - set(SELECTED_CONTROLS))
-        if unselected or (route == LEGACY and not controls):
-            raise ValueError(f'seam controls must be a mapping of selected controls, nonempty on the legacy route; '
-                             f'unselected: {unselected}')
+        if unselected:
+            raise ValueError(f'seam controls must be a mapping of selected controls; unselected: {unselected}')
         entry = ENTRIES.get(Path(executable).name)
         if entry is None:
             raise ValueError(f'neither the controller nor the runner client: {executable}')
-        self.experimental = route == EXPERIMENTAL
+        if entry == 'cli' and any('\0' in str(value) for value in controls.values()):
+            raise ValueError('a command-line argument cannot carry a NUL; submit this control through the runner client')
         self.entry = entry
         self.controls = controls
-        self.delivered = dict(request) if self.experimental else dict(request, _test_overrides=controls)
+        self.delivered = dict(request)
         self.directory = case_artifacts() / DIRECTORY / scenario
         identity = app_identity(executable)
         try:
@@ -163,7 +150,7 @@ class _Record:
             schema=SCHEMA, scenario=scenario, limits=LIMITS,
             case=dict(suite=os.environ.get('PW_TEST_SUITE'), test_id=os.environ.get('PW_TEST_ID'),
                       run_id=os.environ.get('PW_TEST_RUN_ID')),
-            requested_route=EXPERIMENTAL_ROUTES[entry] if self.experimental else LEGACY, entry=entry,
+            requested_route=ROUTES[entry], entry=entry,
             requested_controls=controls,
             app=identity, executable=str(executable), argv=None,
             ordinary_request=dict(file='ordinary-request.json', **_blob(self.directory / 'ordinary-request.json')),
@@ -222,17 +209,16 @@ class SeamCapture(RunCapture):
     `specimen.json` there is the delivered request. `seam` is the evidence
     directory."""
 
-    def __init__(self, pw, out, request, *, controls, scenario, cli_args=(), route=LEGACY):
-        if route == EXPERIMENTAL and ENTRIES.get(Path(pw).name) == 'client':
+    def __init__(self, pw, out, request, *, controls, scenario, cli_args=()):
+        if ENTRIES.get(Path(pw).name) == 'client':
             raise ValueError(f'a capture submits through the controller; use Submission for the client: {pw}')
-        self._seam = _Record(pw, scenario, encode(request), request, controls, route)
+        self._seam = _Record(pw, scenario, encode(request), request, controls)
         self.seam = self._seam.directory
         super().__init__(pw, out, self._seam.delivered, cli_args=cli_args)
-        if self._seam.experimental:
-            self.argv = [str(pw), 'test-input', 'run', str(self.request_path),
-                         *control_flags(self._seam.controls), *map(str, cli_args)]
-            self._metadata['argv'] = self.argv
-            self._record()
+        self.argv = [str(pw), 'test-input', 'run', str(self.request_path),
+                     *control_flags(self._seam.controls), *map(str, cli_args)]
+        self._metadata['argv'] = self.argv
+        self._record()
         self._seam.intend(self.argv, self.request_path.read_bytes(), channel='path', path=self.request_path,
                           companion=dict(kind='run_capture', directory=str(self.out)))
 
@@ -258,28 +244,23 @@ class SeamCapture(RunCapture):
 class Submission:
     """One submission as a process the caller starts, polls and waits for.
 
-    `run_args` is everything after `run`, in the caller's order, including
-    the request path or `-`. On the experimental route the controls precede
-    them: the controller's flags, or the client's one controls object. The
-    adapter writes the delivered request to `request_path`, or to the
-    process's standard input when no path is given. `delivered` is the
-    document the process receives; `ordinary_bytes` are the request's own
-    bytes when it came from a file, and on the experimental route they are
-    delivered unchanged."""
+    `run_args` is everything after the controls, in the caller's order,
+    including the request path or `-`. The controls precede them: the
+    controller's flags after `test-input run`, or the client's one controls
+    object after `run`. The adapter writes the delivered request to
+    `request_path`, or to the process's standard input when no path is given.
+    `delivered` is the document the process receives; `ordinary_bytes` are the
+    request's own bytes when it came from a file, and they are delivered
+    unchanged."""
 
     def __init__(self, executable, scenario, request, controls, *, run_args=(), request_path=None,
-                 encode=encode, ordinary_bytes=None, route=LEGACY):
-        self._seam = _Record(executable, scenario, encode(request) if ordinary_bytes is None else ordinary_bytes,
-                             request, controls, route)
+                 encode=encode, ordinary_bytes=None):
+        self.delivered_bytes = encode(request) if ordinary_bytes is None else ordinary_bytes
+        self._seam = _Record(executable, scenario, self.delivered_bytes, request, controls)
         self.seam = self._seam.directory
         self.delivered = self._seam.delivered
-        if not self._seam.experimental:
-            self.delivered_bytes = encode(self.delivered)
-            command = ['run']
-        else:
-            self.delivered_bytes = encode(request) if ordinary_bytes is None else ordinary_bytes
-            command = (['test-input', 'run', *control_flags(self._seam.controls)] if self._seam.entry == 'cli'
-                       else ['run', CLIENT_CONTROLS, json.dumps(self._seam.controls)])
+        command = (['test-input', 'run', *control_flags(self._seam.controls)] if self._seam.entry == 'cli'
+                   else ['run', CLIENT_CONTROLS, json.dumps(self._seam.controls)])
         self.argv = [str(executable), *command, *map(str, run_args)]
         self._stdin = request_path is None
         if request_path is not None:
@@ -343,13 +324,11 @@ def main(argv=None):
     parser.add_argument('--scenario', required=True, help='identity of this invocation, unique within the case')
     parser.add_argument('--request', required=True, type=Path, help='the ordinary request, without the selected controls')
     parser.add_argument('--controls', required=True, help='JSON object of selected controls')
-    parser.add_argument('--route', choices=(LEGACY, EXPERIMENTAL), default=LEGACY,
-                        help='how the controls are delivered (default: the request block)')
     parser.add_argument('--delivered', required=True, type=Path, help='where to write the delivered request')
     parser.add_argument('--stdout', required=True, type=Path)
     parser.add_argument('--stderr', required=True, type=Path)
     parser.add_argument('command', nargs=argparse.REMAINDER, metavar='-- EXECUTABLE [RUN_ARG...]',
-                        help='the controller or runner client, then the arguments after `run`, '
+                        help='the controller or runner client, then the arguments after the controls, '
                              'including the delivered request path')
     args = parser.parse_args(argv)
     command = args.command[1:] if args.command[:1] == ['--'] else args.command
@@ -358,8 +337,7 @@ def main(argv=None):
     try:
         ordinary = args.request.read_bytes()
         submission = Submission(command[0], args.scenario, json.loads(ordinary), json.loads(args.controls),
-                                run_args=command[1:], request_path=args.delivered, ordinary_bytes=ordinary,
-                                route=args.route)
+                                run_args=command[1:], request_path=args.delivered, ordinary_bytes=ordinary)
         rc = submission.start(stdout=args.stdout, stderr=args.stderr).wait()
     except (OSError, ValueError, RuntimeError) as exc:
         print(f'seam_invocation: {type(exc).__name__}: {exc}', file=sys.stderr)

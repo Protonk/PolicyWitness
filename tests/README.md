@@ -434,37 +434,34 @@ the eight selected test-seam controls: `worker_timeout_ms`,
 `validator_executable_path`, `validator_io_timeout_ms` and
 `validator_total_timeout_ms`. The caller supplies the ordinary request without
 those controls, the controls as a separate mapping, a scenario identity unique
-within its case and the remaining `run` arguments. The adapter has two routes,
-chosen per call. On the default, `LEGACY`, it delivers the controls as the
-request's `_test_overrides` block through `policy-witness run` or
-`pw-runner-client run`. On `EXPERIMENTAL` it delivers the request as given and
-the controls beside it: one flag each after `policy-witness test-input run`, or
-one object after `pw-runner-client run --experimental-controls`. Every caller
-but the `test-input run` passages of `witness_contract/test_input` uses the
-default. `SeamCapture` is a `RunCapture` with the same files,
-waits and cleanup; `Submission` is a process the caller starts and waits for,
-or runs to completion; shell cases use the file's command form, which exits
-with the submission's status. `witness_capture.capture` and `HeldWorkload`
-pass their callers' controls through it.
+within its case and the remaining `run` arguments. The adapter delivers the
+request as given and the controls beside it: one flag each after
+`policy-witness test-input run`, or one object after
+`pw-runner-client run --experimental-controls`. The executable decides which,
+and no argument selects another route. `SeamCapture` is a `RunCapture` with
+the same files, waits and cleanup; `Submission` is a process the caller starts
+and waits for, or runs to completion; shell cases use the file's command form,
+which exits with the submission's status. `witness_capture.capture` and
+`HeldWorkload` pass their callers' controls through it.
 
 A request that uses only `worker_executable_path` or
 `actor_equipment_executable_paths` is an ordinary submission with its own
-`_test_overrides` block. On the default route the adapter refuses a request
-that already carries that block and an empty control mapping; on the
-experimental route both are submissions it makes, because what the product
-does with them is the experiment. On either route it refuses an unselected
-key and a reused scenario. A refusal precedes any write or launch. Two submissions carry a selected key
-outside the adapter, each as one request block: the `failure_boundaries/admission`
-pair that names `worker_executable_path` and `validator_executable_path`
-together, and the request corpus's `fractional_override` example, whose
-`worker_timeout_ms` is a type refusal submitted by
-`runner_outcome_bad_request/accepted_input_contract` with the rest of the corpus.
+`_test_overrides` block, made without the adapter. The adapter submits an
+empty control mapping and a request that carries its own block as given,
+because what the product does with them is the caller's experiment. It refuses
+an unselected key, a reused scenario and, for the controller, a value holding
+a NUL, which no command-line argument can carry; the client's controls object
+can. A refusal precedes any write or launch. One submission carries a selected
+key outside the adapter, as a request block: the request corpus's
+`fractional_override` example, whose `worker_timeout_ms` is a type refusal
+submitted by `runner_outcome_bad_request/accepted_input_contract` with the
+rest of the corpus.
 
 Each invocation keeps `artifacts/seam-invocations/<scenario>/` with
 `invocation.json`, `ordinary-request.json`, `controls.json`,
 `delivered-request.json`, `stdout` and `stderr`. The record is written before
-launch: scenario, requested route (`legacy_request_block`, `experimental_cli`
-or `experimental_client`), requested controls,
+launch: scenario, requested route (`experimental_cli` or
+`experimental_client`), requested controls,
 exact argv, the app path and the build its controller's `--version` reports.
 Launch adds the PID and start times; the first observation of exit adds the
 status, the monotonic end time and the raw output. An early refusal or a failed

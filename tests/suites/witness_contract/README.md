@@ -227,9 +227,8 @@ published read input through `test-input run`, in the same owned directory
 and under the same cleanup record. [test_input_seam.py](test_input_seam.py)
 launches and records; [check_test_input_seam.py](check_test_input_seam.py)
 owns the plan and every expectation. Each submission that carries controls
-goes through the [seam invocation adapter](../../README.md#seam-invocations)
-on its experimental route, so its command, controls and delivered request are
-on disk before launch.
+goes through the [seam invocation adapter](../../README.md#seam-invocations),
+so its command, controls and delivered request are on disk before launch.
 
 Each of the eight controls has one submission and three separate rows. The
 submission row reads the adapter's record: the route, the flags and a
@@ -253,23 +252,48 @@ record names the substituted path, and the neighbour's is null.
 
 Beside them the case runs an ordinary `run` of the same input as the
 neighbour; `test-input run` with no control, which must show the neighbour's
-allowances, collection and read, and echoes an empty object; six malformed
+allowances, collection and read, and echoes an empty object; and six malformed
 command lines and one control flag after plain `run`, each refused with exit
-2, a `tool_error` envelope and a null client capture; one value above the
-worker's argument range, submitted and refused by the launched worker with
-exit code 2 and no request refusal; a request carrying its own
-`_test_overrides` block with a value and with a null member, each refused by
-the host at `_test_overrides` before any worker, and with an empty block,
-admitted; and two submissions through `pw-runner-client` itself, one with a
-controls object the host applied and one with a request block the host
-refused. `test-input read` is published before and after these submissions
+2, a `tool_error` envelope and a null client capture.
+
+Further submissions vary what a control meets:
+
+| Submission | Controls | Observation credited |
+| --- | --- | --- |
+| Two controls together | `worker_timeout_ms` 7000 and `worker_pre_ready_hang_ms` 400 | the sentinel wait budget is 7000 and the ready wait lasted at least 380 ms, each from the host's own wait record |
+| A boundary never reached | `worker_kill_before_publish_slot` 5 on the one-step plan | the echo names the control, and the reply shows the neighbour's allowances, collection and completed read |
+| The ordinary allowance floor | `worker_timeout_ms` 1 and `worker_post_apply_hang_ms` 2000 | the sentinel wait budget is 50, not 1; it ended at the deadline after at least 50 ms, and the host ended the delayed worker with signal 9 |
+| A request refused early | `worker_post_apply_kill_signal` 9 beside a request with an unknown field | `unknown_field` at that field, no worker and no echo |
+| Each worker argument range | 60001 for either delay, signal 32, slot 256, one submission each | the launched worker exits 2 before readiness, with no request refusal |
+
+A request carrying its own `_test_overrides` block is submitted with
+`test-input run` four ways: with a value, with a null member and with the
+worker substitution beside a control, each refused by the host at
+`_test_overrides` before any worker; and with an empty block, admitted. Three
+submissions go through `pw-runner-client` itself: a controls object the host
+applied, a request block the host refused, and a controls object whose
+`worker_timeout_ms` is 1.5, refused with `type_mismatch` at
+`_test_overrides.worker_timeout_ms`.
+
+The two substitutions that stay in a request's block are submitted with plain
+`run`, without the adapter. `worker_executable_path` naming an absent file
+ends in `worker_spawn_failed` with no worker record, a `posix_spawn`
+diagnostic and the dossier's worker record at that path. On the one-actor
+form of the same read, `actor_equipment_executable_paths` naming an absent
+file ends in `runner_failed` with `equipment_binding_refused` at the
+equipment stage and an actor that was never launched. Each reply echoes its
+block.
+
+`test-input read` is published before and after these submissions
 with equal bytes, and once under `sandbox-exec` with a profile that denies
 `process-fork`: publication is unchanged there, while `test-input run` under
 the same profile cannot launch its client.
 
-These rows establish the route for the values submitted. They do not vary the
-actor form, an external runner, the host's floors or every refusal at the
-client. A lower bound on a wait duration shows the delay occurred; the two
+These rows establish the route for the values submitted. They do not vary an
+external runner or every refusal at the client, and the actor form appears
+only in the equipment substitution: `actor_compositions` owns the contrast
+between the ordinary allowance and the actor execution allowance under the
+same controls. A lower bound on a wait duration shows the delay occurred; the two
 duration thresholds for the neighbour are test choices, not product limits.
 The fork-denying profile shows that publication needs no new process; it does
 not observe file reads.
@@ -1305,8 +1329,8 @@ requires no retained mutation experiment or acceptance output.
 `comparison_matrix` runs the three live specimens of
 [comparison matrix](../../fixtures/comparison/matrix.json)
 through the CLI: S (real validator, twenty-three rows),
-B (the validator steered by `stub_validator.py` through
-`_test_overrides.validator_executable_path` and the I/O deadline seam; its
+B (the validator steered by `stub_validator.py` through the
+`validator_executable_path` test control and the I/O deadline control; its
 records are stub output, so expectations come from submitted scopes and
 independent file and permission controls, never native verdicts) and C (a
 policy that fails to compile). Before any run it records direct controls:

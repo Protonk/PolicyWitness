@@ -68,29 +68,27 @@ control chose. It applies no control and launches nothing; these controls
 establish the adapter's record, not any PolicyWitness behavior.
 
 Controls check that `SeamCapture` leaves RunCapture's files unchanged in kind
-with the delivered request in `specimen.json`; that the ordinary request,
-controls, delivered bytes, argv, route, app identity, status, monotonic times
-and raw output are retained under `seam-invocations/<scenario>/`; that the
-record exists before launch and survives a refusal that never reads the
-request, a failed launch, a signal and RunCapture's cleanup kill; that
-`Submission` delivers on standard input in the caller's encoding and from a
-path; that an empty mapping, an unselected or mixed key, a request already
-carrying `_test_overrides`, a reused or path-like scenario and an unrecognized
-program write and launch nothing; that a delivered request rewritten after its
-intent is not launched; and that the command form returns the submission's
-status, 128 plus a signal number, and 70 for its own refusal.
-
-On the experimental route the controls check that a capture's command is
+with the delivered request in `specimen.json`; that a capture's command is
 `test-input run`, the request path, one flag and value per control and the
 caller's arguments, in `invocation.json` and in `capture.json`; that the
 delivered request is the ordinary request byte for byte, with no control in
-it; that no controls and a request carrying its own `_test_overrides` block
-are submitted as given; that the client receives the controls as one
-`--experimental-controls` object and the controller as flags, on standard
-input and from a path; that the record names `experimental_cli` or
-`experimental_client`; that an unselected key, a capture through the client
-and an unknown route write and launch nothing; and that the command form
-takes `--route experimental`.
+it; that the ordinary request, controls, delivered bytes, argv, route
+(`experimental_cli` or `experimental_client`), app identity, status, monotonic
+times and raw output are retained under `seam-invocations/<scenario>/`; that
+the record exists before launch and survives a refusal that never reads the
+request, a failed launch, a signal and RunCapture's cleanup kill; that
+`Submission` gives the client one `--experimental-controls` object and the
+request on standard input in the caller's encoding, and the controller one
+flag per control and the request's own bytes at a path; that the client's
+controls object carries a NUL escaped; and that no controls and a request
+carrying its own `_test_overrides` block are submitted as given.
+
+An unselected or mixed key, a mapping of another type, a NUL in a controller
+flag's value, a capture through the client, a reused or path-like scenario,
+an unrecognized program and a `route` argument write and launch nothing; a
+delivered request rewritten after its intent is not launched. The command
+form returns the submission's status, 128 plus a signal number, and 70 for
+its own refusal, which includes a `--route` argument.
 
 Artifacts add `seam/`, `seam-invocations/`, `seam-assertions.log` and
 `seam/seam-controls.json`.

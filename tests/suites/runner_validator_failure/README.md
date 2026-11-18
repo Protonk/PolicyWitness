@@ -17,8 +17,8 @@ automation sandbox. Missing prerequisites fail. It has four cases:
 - `validator_decode_failure_reports_degraded`: the same accepted replies followed
   by malformed JSON. Require `validator_decode_failure` naming that malformed line.
 
-The EOF and malformed CLI cases use `_test_overrides.validator_executable_path` and require that
-exact override to be mirrored. They run three distinguishable operations against
+The EOF and malformed CLI cases use the `validator_executable_path` test control and require that
+exact value to be mirrored. They run three distinguishable operations against
 freshly seeded files: an allowed write, a denied write, and a denied access check.
 The first file must change to nonempty content; the others must retain their
 bytes. The envelope must preserve `ok`, `open_failed`, and `access_failed`, with

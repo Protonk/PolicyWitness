@@ -1,8 +1,8 @@
 # runner_outcome_runner_timeout
 
-Drives `normalized_outcome = "runner_timeout"` end-to-end by combining
-`_test_overrides.worker_timeout_ms = 2000` with
-`_test_overrides.worker_post_apply_hang_ms = 8000`. The C worker
+Drives `normalized_outcome = "runner_timeout"` end-to-end by combining the
+test controls `worker_timeout_ms = 2000` and
+`worker_post_apply_hang_ms = 8000`, submitted with `test-input run`. The C worker
 survives sandbox apply but hangs in `pw-probe-runner`'s post-apply
 seam; the host's deadline and reap grace expire, and the host SIGKILLs it.
 

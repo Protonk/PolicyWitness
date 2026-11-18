@@ -4,6 +4,7 @@ import copy
 import itertools
 import json
 from pathlib import Path
+import plistlib
 import shutil
 import subprocess
 import sys
@@ -11,13 +12,17 @@ import tempfile
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[2] / 'lib'))
 import build_context
+from porcelain import decode as decode_porcelain
 from run_capture import RunCapture
-from seam_invocation import SeamCapture
+from runner_client_capture import host_reply, validate_capture
+from seam_invocation import SeamCapture, Submission
 
 # The one selected test-seam control this case supplies. It travels beside the
 # request through the invocation adapter; every other field, including the
 # worker and actor-equipment substitutions, stays in an ordinary submission.
+# The host names a refused control where the controls stand in its request.
 SEAM_FIELD = '_test_overrides.validator_executable_path'
+WORKER_FIELD = '_test_overrides.worker_executable_path'
 
 
 def specimen():
@@ -35,6 +40,26 @@ def run(pw, out, request, controls=None, scenario=None):
         envelope = capture.load_json()
     assert envelope['data']['runner_result'] is not None, envelope
     return rc, envelope['data']['runner_result']
+
+
+def run_client(pw, out, request, controls, scenario):
+    """The same submission through the runner client: the controls are one JSON object, which can carry a NUL."""
+    pw = Path(pw)
+    service = plistlib.loads((pw.parents[1] / 'XPCServices/PWRunner.xpc/Contents/Info.plist').read_bytes())['CFBundleIdentifier']
+    out.mkdir(parents=True)
+    path = out / 'specimen.json'
+    submission = Submission(pw.with_name('pw-runner-client'), scenario, request, controls,
+                            run_args=['--timeout-ms', '30000', service, path], request_path=path)
+    result = submission.run(timeout=40)
+    (out / 'capture.pwp').write_bytes(result.stdout)
+    (out / 'client.stderr').write_bytes(result.stderr)
+    capture = decode_porcelain(result.stdout, 'capture')
+    errors = validate_capture(capture, build_context.candidate_contract())
+    assert not errors, errors
+    assert capture['terminal'] == 'runner_reply' and capture['submission']['state'] == 'invoked', capture
+    runner = host_reply(capture, build_context.candidate_contract())
+    (out / 'reply.json').write_text(json.dumps(runner, indent=2) + '\n')
+    return result.returncode, runner
 
 
 def echoes(value, needle):
@@ -213,15 +238,18 @@ def admission(pw, out):
         target = Path(temp) / 'write-target'
         target.write_bytes(b'before')
         for i, (first, second) in enumerate(itertools.combinations(fields, 2)):
+            # No submission carries the worker substitution with the validator
+            # control: the request block admits only the first and the controls
+            # only the second. The other pairs keep their positions.
+            if {first, second} == {WORKER_FIELD, SEAM_FIELD}:
+                assert i == 9, i
+                continue
             request = specimen()
             request['probe_plan'][0]['attempt'].update(action='open_write', target=str(target))
             rejected = 'é' * 32768
-            # One pair names the worker substitution with the selected validator
-            # control. It has no separate-controls form and stays one request block.
-            mixed = SEAM_FIELD in (first, second) and '_test_overrides.worker_executable_path' in (first, second)
             controls = None
             for field in [first, second]:
-                if field == SEAM_FIELD and not mixed: controls = {field.split('.')[1]: rejected}
+                if field == SEAM_FIELD: controls = {field.split('.')[1]: rejected}
                 else: set_field(request, field, rejected)
             rc, runner = run(pw, out / f'combined-{i}', request, controls, f'admission.combined-{i}')
             assert rc == 1 and runner['normalized_outcome'] == 'bad_request', runner
@@ -234,8 +262,10 @@ def admission(pw, out):
         native = ['step_id', 'target', 'args', 'key', 'value', 'policy.sbpl_source',
                   'sandbox_check.operation', 'sandbox_check.filter.value'] + fields[3:]
         # The two helper overrides are the controller's observation inputs as
-        # well: a NUL in either is refused by the host and recorded by the
-        # dossier without reading the path.
+        # well: a NUL in the worker's is refused by the host and recorded by the
+        # dossier without reading the path. No command-line argument holds a
+        # NUL, so the validator control's travels in the runner client's
+        # controls object.
         for i, field in enumerate(native):
             request = specimen()
             good = request['probe_plan'][0]
@@ -249,9 +279,12 @@ def admission(pw, out):
             elif field in ('key', 'value'): request['policy']['params'] = {text: 'v'} if field == 'key' else {'K': text}
             elif field.startswith('sandbox_check.'): set_field(bad, field, text)
             elif field != SEAM_FIELD: set_field(request, field, text)
-            controls = {field.split('.')[1]: text} if field == SEAM_FIELD else None
-            rc, runner = run(pw, out / f'nul-{i}', request, controls, f'admission.nul-{i}')
-            assert rc == 1 and runner['normalized_outcome'] == 'bad_request', runner
+            if field == SEAM_FIELD:
+                rc, runner = run_client(pw, out / f'nul-{i}', request, {field.split('.')[1]: text}, f'admission.nul-{i}')
+                assert rc == 0 and runner['normalized_outcome'] == 'bad_request', runner
+            else:
+                rc, runner = run(pw, out / f'nul-{i}', request)
+                assert rc == 1 and runner['normalized_outcome'] == 'bad_request', runner
             failure = runner['admission_failure']
             assert (failure['field'], failure['unit'], failure['actual'], failure['maximum']) == (field, 'nul_bytes', 1, 0), failure
             assert not echoes(runner, text), runner

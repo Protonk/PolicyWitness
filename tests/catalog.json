@@ -2495,7 +2495,7 @@
       "cases": [
         {
           "id": "admission",
-          "description": "Every capacity limit (worker shared-memory, host-only query strings and labels, top-level and test-seam strings) reports capacity or native-NUL limits before semantic validation; simultaneous violations produce bounded refusals"
+          "description": "Every capacity limit (worker shared-memory, host-only query strings and labels, top-level and test-seam strings) reports capacity or native-NUL limits before semantic validation; the simultaneous violations one submission can carry produce bounded refusals"
         },
         {
           "id": "validator_frames",

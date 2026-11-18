@@ -10,6 +10,16 @@ state = json.loads((out / 'session.json').read_text())
 record = json.loads((out / 'readback/record.json').read_text())
 bundle = Path(state['bundle_path'])
 roles = {'worker': 'pw-probe-runner', 'unentitled_worker': 'pw-probe-runner-unentitled', 'validator': 'sb_api_validator'}
+# The validator a submission selected is a control supplied beside its request:
+# the adapter's record for the capture directory holds it. The worker
+# substitution is the request's own key.
+supplied = {}
+for path in (out / 'seam-invocations').glob('*/invocation.json'):
+    invocation = json.loads(path.read_text())
+    if (invocation.get('companion') or {}).get('kind') == 'run_capture':
+        directory = invocation['companion']['directory']
+        assert directory not in supplied, directory
+        supplied[directory] = json.loads((path.parent / 'controls.json').read_text())
 count = 0
 for directory in ('extensions', 'directory', 'phases', 'maximum', 'redelegation', 'equipment', 'actor-inherited-restriction'):
     for path in (out / directory).rglob('run.json'):
@@ -21,9 +31,12 @@ for directory in ('extensions', 'directory', 'phases', 'maximum', 'redelegation'
         assert provenance['runner_bundle_path'] == state['bundle_path']
         assert provenance['runner_unentitled_worker_entitlements']['granted'] == []
         request = json.loads((path.parent / 'specimen.json').read_text())
+        controls = supplied.get(str(path.parent.resolve()), {})
+        selected_paths = {'worker': request.get('_test_overrides', {}).get('worker_executable_path'),
+                          'validator': controls.get('validator_executable_path')}
         for role, filename in roles.items():
             binary = envelope['data']['specimen']['binaries'][role]
-            override = request.get('_test_overrides', {}).get(role + '_executable_path') if role in ('worker', 'validator') else None
+            override = selected_paths.get(role)
             selected = Path(override) if override else bundle / 'Contents/MacOS' / filename
             if selected.is_file():
                 assert Path(binary['path']).samefile(selected), (path, role, binary['path'], selected)

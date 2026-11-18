@@ -9,7 +9,7 @@ write — it must continue to `sandbox_apply` and report through the shm
 sentinels, so the run still scores normally.
 
 The suite delays readiness after compilation and optional capture with
-`_test_overrides.worker_pre_ready_hang_ms = 2000` (no 13s WebProcess
+the test control `worker_pre_ready_hang_ms = 2000` (no 13s WebProcess
 compile needed): `pw-probe-runner` `nanosleep`s 2000ms before the ready
 byte, so the host's 1000ms `readyByteTimeout` fires first and closes the
 read end. Under `(allow default)` the worker then applies cleanly and

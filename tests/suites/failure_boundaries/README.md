@@ -4,8 +4,11 @@
 nine worker shared-memory bounds, five host-only plan fields
 (`sandbox_check.operation`, `sandbox_check.filter.value`,
 `sandbox_check.filter.kind`, `attempt.kind` and `attempt.action`) and six
-top-level strings (`specimen_id`, `run_kind`, `policy.format` and the three
-`_test_overrides` executable paths), all refused with the same record.
+top-level strings (`specimen_id`, `run_kind`, `policy.format` and three
+executable paths: the request block's `worker_executable_path` and
+`actor_equipment_executable_paths`, and the `validator_executable_path` test
+control submitted with `test-input run`), all refused with the same record.
+The host names a refused control as `_test_overrides.validator_executable_path`.
 Every byte-limited field has exact, over, multibyte-exact and multibyte-over
 controls; counts have exact/over controls. Refusals assert the same structured
 host record, offending identity, units, absence of both children and an empty
@@ -51,11 +54,20 @@ multibyte pipe writes, malformed/empty replies and competing I/O/decode faults.
 These fixtures establish receiver handling, not claims about normal validator
 behavior or policy causes. See the failure routing inventory for acceptance.
 
-Admission also checks every pair of invalid top-level/override fields through
-the CLI, preserving a write target and requiring a refusal below 4 KiB. Tests
+Admission also checks pairs of invalid top-level, block and control fields
+through the CLI, preserving a write target and requiring a refusal below 4 KiB:
+nine of the ten pairs among `specimen_id`, `run_kind`, `policy.format`, the
+worker substitution and the validator control. The tenth, the worker
+substitution with the validator control, is not submitted: a request block
+admits only the first and the controls only the second, so no CLI or XPC
+submission carries both. The direct orchestrator controls in
+`QueryAdmissionTests` hold that pair's bounded, sanitized refusal on a
+constructed record; they are not CLI or XPC coverage of the combination. Tests
 inspect decoded string values so JSON escaping cannot hide a repeated value.
 Native-string NUL cases place a valid write before the invalid step and require
-no file effects, no children and `nul_bytes` against maximum zero. Direct Swift
+no file effects, no children and `nul_bytes` against maximum zero. The
+validator control's NUL is submitted through `pw-runner-client`, whose controls
+object can carry one; no command-line argument can. Direct Swift
 controls vary rejected input sizes and compare service/direct refusal encoding.
 The native validator corpus covers raw and escaped Unicode, malformed UTF-8,
 control bytes, surrogate pairs, raw NUL framing and recovery after each failure.

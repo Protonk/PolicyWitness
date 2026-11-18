@@ -21,10 +21,16 @@ PW = '/constructed/PolicyWitness.app/Contents/MacOS/policy-witness'
 CLIENT = '/constructed/PolicyWitness.app/Contents/MacOS/pw-runner-client'
 WORKER_PID = 4101
 # Rows that are not evaluated when a submission's envelope or capture is not admitted.
-DEPENDENT = dict(neighbour=('baseline',), zero_controls=('echo', 'neighbour'), native_range=('boundary',),
+DEPENDENT = dict(neighbour=('baseline',), zero_controls=('echo', 'neighbour'),
+                 combined=('echo', 'intervention'), unreached=('echo', 'no_intervention'), floor=('echo', 'intervention'),
+                 early_refusal=('refusal',),
+                 **{'native_range.' + key: ('boundary',) for key in checker.NATIVE_RANGE},
                  **{name: ('echo', 'intervention') for name in checker.ACTIVATIONS},
-                 **{'legacy_block.' + name: ('refusal',) for name in ('cli', 'inert', 'client')},
-                 **{'legacy_block.empty': ('admitted',), 'client.activation': ('intervention',)})
+                 **{'legacy_block.' + name: ('refusal',) for name in ('cli', 'inert', 'mixed', 'client')},
+                 **{'legacy_block.empty': ('admitted',), 'client.activation': ('intervention',),
+                    'client.fractional': ('refusal',)},
+                 **{'unselected.' + name: ('substitution',) for name in checker.UNSELECTED})
+NATIVE = ['native_range.' + key for key in checker.NATIVE_RANGE]
 
 
 def sample():
@@ -130,9 +136,16 @@ def submission(name, entry, document, controls, exit_code, outcome, host):
     return record
 
 
-def refusal_reply():
+def refusal_reply(failure=checker.LEGACY_REFUSAL):
     return dict(producer=dict(contract=IDENTITY), normalized_outcome='bad_request', steps=[], phases=[],
-                request_failure=dict(checker.LEGACY_REFUSAL))
+                request_failure=dict(failure))
+
+
+def ordinary(name, document, exit_code, outcome, host, **data):
+    """A record the driver would leave for one plain `run`."""
+    return dict(argv=[PW, 'run', '/constructed/' + name + '/specimen.json', '--timeout-ms', '20000'], exit=exit_code,
+                stderr='', delivered_document=document, envelope=envelope(exit_code, outcome, host, **data),
+                consumer_errors=[], reply=host, before=sample(), after=sample())
 
 
 def usage_record(name, command, arguments, error):
@@ -151,9 +164,7 @@ def build():
     state['read'] = dict(first=copy.deepcopy(emitted), last=copy.deepcopy(emitted),
                          denied=dict(emitted, argv=[*denial, 'test-input', 'read', '--target', TARGET]))
     scenarios = state['scenarios']
-    scenarios['neighbour'] = dict(argv=[PW, 'run', '/constructed/neighbour/specimen.json', '--timeout-ms', '20000'], exit=0,
-                                  stderr='', delivered_document=document, envelope=envelope(0, 'finished', reply()),
-                                  consumer_errors=[], reply=reply(), before=sample(), after=sample())
+    scenarios['neighbour'] = ordinary('neighbour', document, 0, 'finished', reply())
     scenarios['zero_controls'] = submission('zero_controls', 'cli', document, {}, 0, 'finished', reply(test_overrides={}))
     for name, (_, exit_code, outcome) in checker.ACTIVATIONS.items():
         controls = checker.controls_for(name, state)
@@ -167,14 +178,31 @@ def build():
     for name, (arguments, error) in checker.USAGE.items():
         scenarios['usage.' + name] = usage_record(name, ['test-input', 'run'], arguments, error)
     scenarios['usage.ordinary_run'] = usage_record('ordinary_run', ['run'], *checker.ORDINARY_USAGE)
-    refused = reply('runner_failed', sandboxed_after_apply=None, test_overrides=dict(checker.NATIVE_RANGE),
-                    steps=[step(completed=False)],
-                    runner_subprocess=worker(exit_code=2, done_observed=False, ready_byte_received=False, partial_steps=True,
-                                             poll_stop_reason='child_reaped'))
-    scenarios['native_range'] = submission('native_range', 'cli', document, checker.NATIVE_RANGE, 1, 'runner_failed', refused)
-    for name in ('cli', 'inert'):
-        record = submission('legacy_block.' + name, 'cli', checker.request_for(name, IDENTITY, TARGET, checker.LEGACY_BLOCKS[name]),
-                            {}, 1, 'bad_request', refusal_reply())
+    host = reply(test_overrides=dict(checker.COMBINED))
+    host['runner_subprocess']['sentinel_wait']['budget_ms'] = 7000
+    host['runner_subprocess']['ready_wait']['elapsed_ms'] = 411
+    scenarios['combined'] = submission('combined', 'cli', document, checker.COMBINED, 0, 'finished', host)
+    scenarios['unreached'] = submission('unreached', 'cli', document, checker.UNREACHED, 0, 'finished',
+                                        reply(test_overrides=dict(checker.UNREACHED)))
+    ended = worker(exit_code=None, term_signal=9, done_observed=False, poll_stop_reason='sentinel_deadline',
+                   termination_request=dict(signal=9, rc=0),
+                   sentinel_wait=dict(budget_ms=50, elapsed_ms=52, excluded_ms=1, stop='sentinel_deadline'))
+    scenarios['floor'] = submission('floor', 'cli', document, checker.FLOOR, 1, 'runner_timeout',
+                                    reply('runner_timeout', test_overrides=dict(checker.FLOOR), runner_subprocess=ended))
+    record = submission('early_refusal', 'cli', checker.request_for('early_refusal', IDENTITY, TARGET), checker.EARLY,
+                        1, 'bad_request', refusal_reply(checker.EARLY_REFUSAL))
+    record['envelope']['data']['request_failure'] = dict(checker.EARLY_REFUSAL)
+    scenarios['early_refusal'] = record
+    for key, value in checker.NATIVE_RANGE.items():
+        refused = reply('runner_failed', sandboxed_after_apply=None, test_overrides={key: value},
+                        steps=[step(completed=False)],
+                        runner_subprocess=worker(exit_code=2, done_observed=False, ready_byte_received=False, partial_steps=True,
+                                                 poll_stop_reason='child_reaped'))
+        scenarios['native_range.' + key] = submission('native_range.' + key, 'cli', document, {key: value}, 1, 'runner_failed', refused)
+    for name in ('cli', 'inert', 'mixed'):
+        block, supplied = checker.LEGACY_BLOCKS[name]
+        record = submission('legacy_block.' + name, 'cli', checker.request_for(name, IDENTITY, TARGET, block),
+                            supplied, 1, 'bad_request', refusal_reply())
         record['envelope']['data']['request_failure'] = dict(checker.LEGACY_REFUSAL)
         scenarios['legacy_block.' + name] = record
     scenarios['legacy_block.empty'] = submission('legacy_block.empty', 'cli', checker.request_for('empty', IDENTITY, TARGET, {}),
@@ -183,8 +211,27 @@ def build():
     host['runner_subprocess']['sentinel_wait']['budget_ms'] = 7000
     scenarios['client.activation'] = submission('client.activation', 'client', document, checker.CLIENT_CONTROLS, 0, 'finished', host)
     scenarios['legacy_block.client'] = submission(
-        'legacy_block.client', 'client', checker.request_for('client', IDENTITY, TARGET, checker.LEGACY_BLOCKS['client']),
+        'legacy_block.client', 'client', checker.request_for('client', IDENTITY, TARGET, checker.LEGACY_BLOCKS['client'][0]),
         {}, 0, 'bad_request', refusal_reply())
+    scenarios['client.fractional'] = submission('client.fractional', 'client', document, checker.CLIENT_FRACTIONAL, 0, 'bad_request',
+                                                refusal_reply(checker.CLIENT_FRACTIONAL_REFUSAL))
+    block = checker.UNSELECTED['worker']
+    host = reply('worker_spawn_failed', sandboxed_after_apply=None, error='posix_spawn: No such file or directory',
+                 test_overrides=dict(block), runner_subprocess=None, steps=[step(completed=False)],
+                 phases=[phase(collection_status='not_reached', validator_subprocess=None)])
+    scenarios['unselected.worker'] = ordinary(
+        'unselected.worker', checker.request_for('worker', IDENTITY, TARGET, block), 1, 'worker_spawn_failed', host,
+        specimen=dict(binaries=dict(validator=None, worker=dict(
+            path=checker.MISSING_WORKER, actual_sha256=None, baseline_sha256='0' * 64, verification='unavailable',
+            reason='cannot stat ' + checker.MISSING_WORKER))))
+    block = checker.UNSELECTED['actor_equipment']
+    host = dict(producer=dict(contract=IDENTITY), normalized_outcome='runner_failed', execution_form='actors',
+                error='actor preparation refused: equipment_binding_refused', test_overrides=json.loads(json.dumps(block)),
+                preparation_failure=dict(binding_ref=2, code='equipment_binding_refused', reason='missing', stage='equipment'),
+                actors=[dict(actor_id='subject', setup_status='launch_refused', launch=None, subprocess=None)],
+                steps=[], phases=[phase(collection_status='not_reached', validator_subprocess=None)])
+    scenarios['unselected.actor_equipment'] = ordinary(
+        'unselected.actor_equipment', checker.request_for('actor_equipment', IDENTITY, TARGET, block), 1, 'runner_failed', host)
     denied = envelope(2, 'tool_error', runner_client=None)
     denied['result']['error'] = 'failed to run pw-runner-client: failed to launch "' + CLIENT + '": Operation not permitted (os error 1)'
     scenarios['denied_run'] = dict(argv=[*denial, 'test-input', 'run', '/constructed/denied-run.json'], exit=2, stderr='',
@@ -204,15 +251,17 @@ def controls():
     """(name, change to the constructed state, exact non-passing rows)."""
     yield 'baseline', lambda s: None, set()
     scenario = lambda s, name: s['scenarios'][name]
-    cli = ['zero_controls', 'native_range', 'legacy_block.cli', 'legacy_block.inert', 'legacy_block.empty', *checker.ACTIVATIONS]
+    cli = ['zero_controls', 'combined', 'unreached', 'floor', 'early_refusal', *NATIVE, 'legacy_block.cli', 'legacy_block.inert',
+           'legacy_block.mixed', 'legacy_block.empty', *checker.ACTIVATIONS]
+    unselected = ['unselected.' + name for name in checker.UNSELECTED]
     # Rows every recorded submission has.
-    for label in cli + ['client.activation', 'legacy_block.client']:
+    for label in cli + ['client.activation', 'legacy_block.client', 'client.fractional']:
         yield label + ':legacy_route', lambda s, label=label: scenario(s, label)['invocation'].update(
             requested_route='legacy_request_block'), failed(label + '.submission')
         yield label + ':controls_in_request', lambda s, label=label: scenario(s, label).update(
             delivered=publication.encode(dict(json.loads(scenario(s, label)['delivered']),
                                               _test_overrides=dict(worker_timeout_ms=1)))), failed(label + '.submission')
-    for label in ['neighbour', *cli]:
+    for label in ['neighbour', *unselected, *cli]:
         yield label + ':observed_exit', lambda s, label=label: scenario(s, label).update(exit=3), failed(label + '.status')
         yield label + ':other_build', lambda s, label=label: scenario(s, label)['envelope']['build'].update(
             contract='development:' + '5' * 64), failed(label + '.build', label + '.consumer') | unread(label)
@@ -286,16 +335,41 @@ def controls():
         yield label + ':no_envelope', lambda s, label=label: scenario(s, label).update(
             envelope=None, stderr='policy-witness test-input: expected test-input read --target PATH\n'), failed(label)
 
-    # A native argument refusal is neither a usage refusal nor a request refusal.
-    yield 'native_range:usage_refusal', lambda s: scenario(s, 'native_range')['envelope']['data'].update(runner_client=None), \
-        failed('native_range.boundary')
-    yield 'native_range:request_refusal', lambda s: scenario(s, 'native_range')['reply'].update(
-        request_failure=dict(code='invalid_value', path=['_test_overrides', 'worker_post_apply_hang_ms'])), failed('native_range.boundary')
-    yield 'native_range:worker_ran', lambda s: scenario(s, 'native_range')['reply']['runner_subprocess'].update(
-        exit_code=0, ready_byte_received=True), failed('native_range.boundary')
+    # Two controls are two observations; a control supplied is not a control reached.
+    yield 'combined:no_echo', lambda s: scenario(s, 'combined')['reply'].pop('test_overrides'), failed('combined.echo')
+    yield 'combined:one_echoed', lambda s: scenario(s, 'combined')['reply'].update(
+        test_overrides=dict(worker_timeout_ms=7000)), failed('combined.echo')
+    yield 'combined:default_allowance', lambda s: observed(s, 'combined')['sentinel_wait'].update(budget_ms=120000), \
+        failed('combined.intervention')
+    yield 'combined:no_delay', lambda s: observed(s, 'combined')['ready_wait'].update(elapsed_ms=379), failed('combined.intervention')
+    yield 'unreached:no_echo', lambda s: scenario(s, 'unreached')['reply'].pop('test_overrides'), failed('unreached.echo')
+    yield 'unreached:worker_killed', lambda s: scenario(s, 'unreached')['reply'].update(
+        normalized_outcome='runner_failed', runner_subprocess=signaled(True), steps=[step(completed=False)]), \
+        failed('unreached.no_intervention')
+    yield 'floor:floored_echo', lambda s: scenario(s, 'floor')['reply']['test_overrides'].update(worker_timeout_ms=50), failed('floor.echo')
+    yield 'floor:supplied_allowance', lambda s: observed(s, 'floor')['sentinel_wait'].update(budget_ms=1), failed('floor.intervention')
+    yield 'floor:before_the_floor', lambda s: observed(s, 'floor')['sentinel_wait'].update(elapsed_ms=50), failed('floor.intervention')
+    yield 'floor:at_the_floor', lambda s: observed(s, 'floor')['sentinel_wait'].update(elapsed_ms=51), set()
+    yield 'floor:worker_finished', lambda s: observed(s, 'floor').update(
+        term_signal=None, exit_code=0, termination_request=None, done_observed=True), failed('floor.intervention')
+    yield 'early_refusal:other_location', lambda s: scenario(s, 'early_refusal')['reply']['request_failure'].update(
+        path=['_test_overrides']), failed('early_refusal.refusal')
+    yield 'early_refusal:worker_launched', lambda s: scenario(s, 'early_refusal')['reply'].update(
+        runner_subprocess=signaled(False)), failed('early_refusal.refusal')
+    yield 'early_refusal:control_echoed', lambda s: scenario(s, 'early_refusal')['reply'].update(
+        test_overrides=dict(checker.EARLY)), failed('early_refusal.refusal')
 
-    # The experimental route refuses a request block that holds any member.
-    for name in ('cli', 'inert', 'client'):
+    # A native argument refusal is neither a usage refusal nor a request refusal.
+    for label in NATIVE:
+        yield label + ':usage_refusal', lambda s, label=label: scenario(s, label)['envelope']['data'].update(runner_client=None), \
+            failed(label + '.boundary')
+        yield label + ':request_refusal', lambda s, label=label: scenario(s, label)['reply'].update(
+            request_failure=dict(code='invalid_value', path=['_test_overrides', label.split('.')[1]])), failed(label + '.boundary')
+        yield label + ':worker_ran', lambda s, label=label: scenario(s, label)['reply']['runner_subprocess'].update(
+            exit_code=0, ready_byte_received=True), failed(label + '.boundary')
+
+    # An experimental submission refuses a request block that holds any member.
+    for name in ('cli', 'inert', 'mixed', 'client'):
         label = 'legacy_block.' + name
         yield label + ':other_location', lambda s, label=label: scenario(s, label)['reply']['request_failure'].update(
             path=['_test_overrides', 'worker_timeout_ms']), failed(label + '.refusal')
@@ -311,7 +385,7 @@ def controls():
         failed('legacy_block.empty.admitted')
 
     # The client's own submission.
-    for label in ('client.activation', 'legacy_block.client'):
+    for label in ('client.activation', 'legacy_block.client', 'client.fractional'):
         yield label + ':no_reply', lambda s, label=label: scenario(s, label)['capture'].update(terminal='xpc_error'), \
             failed(label + '.capture') | unread(label)
         yield label + ':capture_refused', lambda s, label=label: scenario(s, label).update(
@@ -322,6 +396,27 @@ def controls():
         'sentinel_wait'].update(budget_ms=120000), failed('client.activation.intervention')
     yield 'client.activation:ordinary_argument', lambda s: scenario(s, 'client.activation')['invocation']['argv'].__setitem__(
         2, '--request'), failed('client.activation.submission')
+    yield 'client.fractional:admitted', lambda s: scenario(s, 'client.fractional').update(
+        reply=reply(test_overrides=dict(worker_timeout_ms=1))), failed('client.fractional.refusal')
+    yield 'client.fractional:whole_object', lambda s: scenario(s, 'client.fractional')['reply']['request_failure'].update(
+        path=['_test_overrides']), failed('client.fractional.refusal')
+
+    # The substitutions an ordinary block keeps: observed, not only echoed.
+    yield 'unselected.worker:packaged_worker_ran', lambda s: scenario(s, 'unselected.worker')['reply'].update(
+        runner_subprocess=worker()), failed('unselected.worker.substitution')
+    yield 'unselected.worker:refused', lambda s: scenario(s, 'unselected.worker')['reply'].update(
+        request_failure=dict(code='inapplicable_field', path=['_test_overrides', 'worker_executable_path'])), \
+        failed('unselected.worker.substitution')
+    yield 'unselected.worker:packaged_provenance', lambda s: scenario(s, 'unselected.worker')['envelope']['data']['specimen'][
+        'binaries'].update(worker=None), failed('unselected.worker.substitution')
+    yield 'unselected.worker:test_input_run', lambda s: scenario(s, 'unselected.worker')['argv'].__setitem__(
+        slice(1, 2), ['test-input', 'run']), failed('unselected.worker.substitution')
+    yield 'unselected.actor_equipment:actor_launched', lambda s: scenario(s, 'unselected.actor_equipment')['reply']['actors'][0].update(
+        launch=dict(pid=WORKER_PID)), failed('unselected.actor_equipment.substitution')
+    yield 'unselected.actor_equipment:no_echo', lambda s: scenario(s, 'unselected.actor_equipment')['reply'].pop('test_overrides'), \
+        failed('unselected.actor_equipment.substitution')
+    yield 'unselected.actor_equipment:other_stage', lambda s: scenario(s, 'unselected.actor_equipment')['reply'][
+        'preparation_failure'].update(stage='launch'), failed('unselected.actor_equipment.substitution')
 
     # The read publisher.
     yield 'read:changed_after', lambda s: s['read']['last'].update(stdout=s['read']['last']['stdout'].replace('read-target', 'read-other')), \
