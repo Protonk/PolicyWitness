@@ -1148,3 +1148,142 @@ User duties noticed: the frozen guide documents the eight keys as request
 data, lacks `test-input run`, and names `_test_overrides.*` controls in its
 limit rows; release notes need the breaking change that `run` refuses those
 keys.
+
+## Case conversions — 2026-11-18
+
+Status: the four selected conversions are landed and each was run when it
+landed. No product source changed and no build ran; the signed app reported
+`development:081353c9…` before and after. No run of record failed and none
+recorded system sleep. Local managed development runs are under
+`tests/out/runs/`, gitignored and subject to ordinary retention.
+
+| Commit | Conversion |
+| --- | --- |
+| `4cb2f91b` | Survivor: the same-group descendant's lifetime is recorded without a verdict; `run_effects/aftermath_footprint` loses both lifecycle dependencies. |
+| `47b455f1` | `runner_byoxpc/retirement_observations` completes as an informational observation. |
+| `9bcefb24` | `witness_contract/worker_wait_pilot` reports the matched-pair improvement as an advisory judgment. |
+| `79aa7dde` | Four inline assertion blocks report a failed envelope expectation as a case failure. |
+
+### Survivor
+
+`runner_exec_lifecycle/closed_streams_leader_exit` is default-selected and no
+longer listed in `opt_in.include`. Its declared contract: observations
+`descendant_lifetime` (informational), `exec_reply` and `later_file_effect`;
+enforced judgments `truthful_exec_account` (finished, the worker facts, the
+`leader_exit_and_eof` stop with cleanup `not_requested`, the leader's status,
+the later step, envelope validity) and `later_step_effect`. The relation
+between `leader_exit_and_eof` and `not_requested` stays enforced; the
+requirement that the descendant be alive and answer after CLI completion is
+gone.
+
+The thread changed test authority only, so the first exercise of the revised
+test against existing behavior is the converted case on the unchanged app:
+`conv-survivor-b-01` / `20261118T164523Z_b5042bb6`, `complete`, history
+`alive_acknowledged`.
+
+Both histories were replayed through the old assertion and the new
+observation as constructed inputs: the old assertion accepts the alive history
+and rejects the prior-exit history ("descendant already exited"); the new
+observation completes on both, as `alive_acknowledged` and
+`exited_before_cleanup`.
+
+A disposable control in a worktree made the checker end the descendant from
+outside the product after the leader-exit event. That run
+(`20261118T164629Z_a9581dea`) completed as `exited_before_cleanup`, with the
+exit event 14.8 ms before CLI completion, and the reply still reported
+`leader_exit_and_eof` with `not_requested`. This establishes the instrument's
+sensitivity to a prior exit. It is not acceptance of a product that ends the
+descendant itself: such a product, reporting it, is still refused at
+controller admission while the relation stands, and the suite account says so.
+
+The disappearance of the old obligation was followed on that control run
+through the checker (completed), the dependency gate (a dependent was
+admitted), the dispatcher (exit 0) and battery validation against an
+independently captured contract (no problems). On the same route these still
+reject, with the dependent blocked and battery problems reported: a stopped
+descendant (unresolved, "a missing ping is not an observed exit"), a lost
+cleanup observer (staging retained) and a wrong reply expectation
+(`truthful_exec_account` unfavorable). Changed identity or group and a late or
+missing watch reject in constructed classifier controls only, which each run
+retains as `classifier-controls.json`.
+
+`run_effects/aftermath_footprint` ran without either lifecycle predecessor
+(`conv-aftermath-alone-01` / `20261118T165030Z_500cd5cd`, 3 pass). Mixed
+selections: `conv-survivor-aftermath-01` / `20261118T165113Z_59a50b39` (4) and
+`conv-survivor-suite-01` / `20261118T165155Z_50b06139` (5).
+`runner_exec_lifecycle/worker_dies_during_exec` is unchanged.
+
+Accounts regenerated through their owners: `docs/FOOTPRINT.md`,
+`docs/ARCHITECTURE.md`, `docs/WORKER.md` and the topology files. The
+`exec_child` process row has no scope text, so its Lifetime fact was restated
+instead. Neither generator refused or touched the guide.
+
+### Retirement and pilot
+
+`runner_byoxpc/retirement_observations`: `conv-retirement-01` /
+`20261118T170530Z_b487d082`, `complete` with one informational completion; all
+48 requests `host_finished` and no client transport terminal. Runner list and
+reconcile were empty before and after; bundle, plist, registry entry and
+staging are absent. Only the `pass` credit disappeared, since no ratio was
+ever enforced; the outermost boundary is the dispatcher run because the case
+is opt-in.
+
+`witness_contract/worker_wait_pilot`: `conv-pilot-live-01` /
+`20261118T170914Z_5b935271` (4 cases with dependencies), `complete`: 168
+accepted trials, none excluded or skipped, calibration established, none
+overlapping sleep, on AC power with a one-minute load between 3.26 and 4.74
+and another user's virtual machine holding about one core throughout. The
+advisory judgment `candidate_improvement` is unfavorable with the detail
+"improvement not established: this run compared no candidate". This was also
+the first run through the migrated controls family as a dependency: the
+family ran (232 items) and the pilot was admitted. A dry run in comparison
+mode with the same app on both sides (`conv-pilot-dry-01` /
+`20261118T170755Z_c9d79d1f`) completed with 14 pairs, unfavorable, with no
+measurement credit. Matched pairs exist only in comparison mode; the
+cataloged pilot has none. No verdict was enforced before, so `pass` became
+`complete` and no obligation disappeared. Neither this nor the retirement
+conversion supplies the survivor's reduction in enforcement.
+
+### Bare assertions
+
+Repaired paths: `smoke/pw_specimen_smoke.sh`,
+`smoke/pw_specimen_smoke_standard.sh`, `runner_apply_isolation_v2/run.sh` and
+`witness_contract/happy_path_baseline.sh`. No shared reader changed. In a
+worktree with a constructed wrong expectation, the four cases were unrun
+before the repair and `fail` after it, naming the expectation and its
+`assertions.log`, with a neighbour case passing in each run; an unexpected
+exception still leaves the case unrun. In the checkout: `conv-bare-main-01` /
+`20261118T171334Z_14d81016` (4 pass) and `conv-bare-byoxpc-01` /
+`20261118T171347Z_48a7c0da` (2 pass).
+
+### Verification on the final tree
+
+| Directory / run ID | Scope and result |
+| --- | --- |
+| `conv-final-lifecycle-01` / `20261118T171422Z_c9808b2a` | `runner_exec_lifecycle`: 5, ok. |
+| `conv-final-run-effects-01` / `20261118T171448Z_2e7d6a06` | `run_effects`: 6, ok. |
+| `conv-final-dispatcher-01` / `20261118T171527Z_4d6d867a` | `dispatcher`, `shell_helpers` with `dispatcher/pytest_controls`: 15, ok. |
+| `conv-final-preflight-01` / `20261118T172141Z_7e6285e2` | The three release preflight controls: 3, ok. |
+| `conv-final-drift-01` / `20261118T172842Z_e51a6c94` | `source_drift`: 11, ok. |
+
+The default selection lists 233 cases including the survivor; `--all --list`
+shows aftermath depending only on its two controls. Reviewed exceptions: the
+retirement run predates the pilot's catalog entry and the pilot run predates
+the bare-assertion scripts; the sources each executed are byte-identical at
+`79aa7dde`.
+
+Observed consequences and open points:
+
+- The three converted cases report `complete` under `observation_reports` and
+  `case_outcome_counts`, not in the legacy `counts`.
+- A judgment has two values, so "not established" is recorded as unfavorable
+  with its detail, and every pilot run outside comparison mode prints an
+  advisory line. A third value would be a shared-reader change and is not
+  made.
+- Marginal value, without a redundancy claim: `leader_exit_and_eof` with
+  `not_requested` is rejected by controller admission, by the independent
+  consumer and by one assertion helper shared between the survivor and
+  `closed_streams_continue`, so the last two are not independent rejections.
+  The survivor's distinct observation is leader exit with a same-group
+  descendant. The dispatcher's `pilot_advisory` control and the live pilot
+  share the reader but not the conclusion code.

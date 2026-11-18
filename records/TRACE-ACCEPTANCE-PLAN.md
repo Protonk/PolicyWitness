@@ -363,3 +363,46 @@ availability in two declarations. It added a route-dependent value domain,
 an adapter, per-control refusal rows and three contract rules. Independent
 review is still needed for each control's native boundary and for every
 caller's own expectation. No saving is claimed beyond the decisions named.
+
+### Capture despite failed application, not selected
+
+Compared at `147fc10f`. The hypothesis was not selected: `captured` keeps its
+two host conditions, and no product source changed for this subject. The
+rehearsal therefore stays a hypothesis, and this subsection records one
+correction to its premise and what the decision leaves in place.
+
+Correction to the rehearsal, from the receipts assessment
+([I-receipts.md](trace-assessments/I-receipts.md), T2 and its first note
+outside the review). The rehearsal said the hypothetical needs the completion
+condition replaced as well as the application condition removed. By source
+and by an existing executed assertion on the production C main with a
+substituted application call, a returned application failure ends with `done`
+published and exit status 0. The completion condition already holds on that
+path; the application condition alone withholds a completed copy. The
+completion condition governs signal, deadline and unreaped paths, which are
+not failed application. What is still only source-read: no test requests
+capture on the application-failure companion, so the receipt a real run
+reports on that path has not been observed.
+
+What selecting the hypothesis would have touched, from that assessment: one
+host condition and two comments in build inputs; the receipt surface's
+application condition, reason values, status and stage; two architecture
+rows and their authored prose; one limits row and a sentence in a region the
+frozen guide copies; three Swift tests and three suite accounts. `captured`
+would no longer imply observed application, and a compile failure would
+change its reported reason. That list is a prediction; nothing was executed
+for it.
+
+Decisions retained by not selecting it: `captured` implies the host observed
+successful application and clean completion; an `unavailable` receipt does
+not say whether the worker copied the object. The receipt surface's Status
+statement carries that limit in one place. The comparison the rehearsal
+favored, one explicit eligibility statement with referenced consequences
+instead of a repeated "successful application" premise, is an editorial
+arrangement that does not depend on the product choice. This stage makes no
+separate editorial pass for it; the repeated premise stays where it is true.
+
+Review that continues: the reasons, their order and the withheld fields of an
+`unavailable` receipt are asserted only as far as the assertion repairs in
+the disposition record land; until then their owner states them as
+source-read.
