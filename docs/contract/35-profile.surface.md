@@ -331,7 +331,7 @@ test: implies(receipt.status == "unavailable", absent(receipt.producer) and abse
 ```contract
 entry: ["cli_run"]
 on: "failure"
-effects: [set_value(envelope.result.normalized_outcome, "malformed_runner_response"), set_value(envelope.result.ok, False), withhold(envelope.data.runner_sandbox_diagnostics), retain_records(reply)]
+effects: [set_value(envelope.result.normalized_outcome, "malformed_runner_response"), set_value(envelope.result.ok, False), set_value(envelope.result.exit_code, 1), set_value(envelope.data.runner_sandbox_diagnostics, None), retain_records(reply)]
 ```
 
 For `run`, the controller refuses admission of the containing report, reports a failed result and exits with status 1. The retained report remains the host's account.
@@ -341,13 +341,13 @@ For `run`, the controller refuses admission of the containing report, reports a 
 ```contract
 scope: "subtree"
 grade: "executed"
-run: "20261110T195016Z_0d197151"
-source_snapshot: "5e51300d620e2a3ead419380977212d2c3e41ba1"
+run: "20261119T062523Z_48db4d65; unit/rust.unit"
+source_snapshot: "controller/src/run_flow.rs sha256 8c8d42d7cc966d54d9aa60f162704dfdd872e6d367db94c545e303774c217c80; controller/src/porcelain_admission.rs sha256 19f071e85e9887240eff2a6bae7c6dabc671394c1ebca8c32677c40b830c230f; tests/fixtures/contract/compiled_profile.json sha256 7789f717f77ca8cd3c01f6351a385db205d9afd12e3e5757e03a8ade49e17867"
 source: {"path":"controller/src/porcelain_admission.rs","symbol":"admission_problem"}
-check: {"path":"controller/src/run_flow.rs","symbol":"compiled_profile_labels_determine_the_public_admission_outcome","form":"test"}
-pins: "The constructed check follows admission through the public outcome, exit status, result, retained decoded report and diagnostic presence."
-context: "Constructed typed replies carried through the run command admission and envelope path."
-limits: "The unit case passed against the source committed as 5e51300d; its development run is disposable. Constructed replies establish admission and retention, while native capture is a separate observation."
+check: {"path":"controller/src/run_flow.rs","symbol":"compiled_profile_status_and_labels_alone_decide_run_admission","form":"test"}
+pins: "The constructed check follows status and label admission through the public outcome, exit status, result and retained decoded report, and reads the diagnostics key as present with JSON null on every refused row."
+context: "Constructed typed replies carried through the run command admission and envelope path with a supplied client result; the named control passed in the completed unit/rust.unit case with zero recorded system sleep."
+limits: "The unit case passed on the named source bytes; its development run is disposable. Of the seventeen refused rows, nine are refused by reply admission with the decoded report retained. The other eight carry a non-string or absent status or label and are refused by the test's typed JSON reader, as host bytes that supply no typed record, before label admission. The admitted captured row's nonce, source and parameter fields do not correspond to the test request, which asks for no capture; admission here establishes nothing about request association. Constructed replies establish admission and retention, while native capture is a separate observation."
 ```
 
 #### A failed label check for runner verify {verify_failure: effect}

@@ -64,13 +64,19 @@ field sets, that the projected `runner_result` reads back as the same typed
 record, the client observations, exit status and execution diagnostics. Real Swift policy-transfer and worker-clock replies
 also cross this assembly boundary and independent consumers in `runner_unit`.
 
-`compiled_profile_labels_determine_the_public_admission_outcome` runs the
+`compiled_profile_status_and_labels_alone_decide_run_admission` runs the
 compiled-profile fixture corpus through production controller orchestration
-with a supplied client result. It checks `malformed_runner_response`, exit 1,
-retention of structurally decoded replies and absence of execution diagnostics
-and fallback compilation on receipt-label refusal. Accepted label controls
-retain `finished` and exit 0. These are constructed replies, with no worker
-capture or sandbox application.
+with a supplied client result: two admitted rows and seventeen refused. Nine
+refusals are status or label refusals by reply admission, with
+`malformed_runner_response`, exit 1, the admission diagnostic and the decoded
+reply retained. The other eight rows carry a non-string or absent status or
+label and are refused by the test's typed JSON reader, with a null
+`runner_result`. Every refused row has the diagnostics key present with null
+and no fallback compilation. The two accepted rows retain `finished` and exit
+0. The accepted captured row's nonce, source and parameter fields are
+unrelated to the request, which asks for no capture: the test establishes
+nothing about a receipt's association with a request. These are constructed
+replies, with no worker capture or sandbox application.
 
 ## Success criteria
 

@@ -261608,6 +261608,33 @@
                     {
                       "args": [
                         {
+                          "attr": "exit_code",
+                          "node": "Attribute",
+                          "value": {
+                            "attr": "result",
+                            "node": "Attribute",
+                            "value": {
+                              "id": "envelope",
+                              "node": "Name"
+                            }
+                          }
+                        },
+                        {
+                          "kind": null,
+                          "node": "Constant",
+                          "value": 1
+                        }
+                      ],
+                      "func": {
+                        "id": "set_value",
+                        "node": "Name"
+                      },
+                      "keywords": [],
+                      "node": "Call"
+                    },
+                    {
+                      "args": [
+                        {
                           "attr": "runner_sandbox_diagnostics",
                           "node": "Attribute",
                           "value": {
@@ -261618,10 +261645,15 @@
                               "node": "Name"
                             }
                           }
+                        },
+                        {
+                          "kind": null,
+                          "node": "Constant",
+                          "value": null
                         }
                       ],
                       "func": {
-                        "id": "withhold",
+                        "id": "set_value",
                         "node": "Name"
                       },
                       "keywords": [],
@@ -261675,6 +261707,13 @@
                 "optional": false,
                 "presence": "required",
                 "type": "rust.JsonResult"
+              },
+              "envelope.result.exit_code": {
+                "json_null": true,
+                "omission": null,
+                "optional": true,
+                "presence": "null when absent",
+                "type": "integer"
               },
               "envelope.result.normalized_outcome": {
                 "json_null": true,
@@ -345170,6 +345209,33 @@
                     {
                       "args": [
                         {
+                          "attr": "exit_code",
+                          "node": "Attribute",
+                          "value": {
+                            "attr": "result",
+                            "node": "Attribute",
+                            "value": {
+                              "id": "envelope",
+                              "node": "Name"
+                            }
+                          }
+                        },
+                        {
+                          "kind": null,
+                          "node": "Constant",
+                          "value": 1
+                        }
+                      ],
+                      "func": {
+                        "id": "set_value",
+                        "node": "Name"
+                      },
+                      "keywords": [],
+                      "node": "Call"
+                    },
+                    {
+                      "args": [
+                        {
                           "attr": "runner_sandbox_diagnostics",
                           "node": "Attribute",
                           "value": {
@@ -345180,10 +345246,15 @@
                               "node": "Name"
                             }
                           }
+                        },
+                        {
+                          "kind": null,
+                          "node": "Constant",
+                          "value": null
                         }
                       ],
                       "func": {
-                        "id": "withhold",
+                        "id": "set_value",
                         "node": "Name"
                       },
                       "keywords": [],
@@ -345237,6 +345308,13 @@
                 "optional": false,
                 "presence": "required",
                 "type": "rust.JsonResult"
+              },
+              "envelope.result.exit_code": {
+                "json_null": true,
+                "omission": null,
+                "optional": true,
+                "presence": "null when absent",
+                "type": "integer"
               },
               "envelope.result.normalized_outcome": {
                 "json_null": true,
@@ -356663,6 +356741,33 @@
                     {
                       "args": [
                         {
+                          "attr": "exit_code",
+                          "node": "Attribute",
+                          "value": {
+                            "attr": "result",
+                            "node": "Attribute",
+                            "value": {
+                              "id": "envelope",
+                              "node": "Name"
+                            }
+                          }
+                        },
+                        {
+                          "kind": null,
+                          "node": "Constant",
+                          "value": 1
+                        }
+                      ],
+                      "func": {
+                        "id": "set_value",
+                        "node": "Name"
+                      },
+                      "keywords": [],
+                      "node": "Call"
+                    },
+                    {
+                      "args": [
+                        {
                           "attr": "runner_sandbox_diagnostics",
                           "node": "Attribute",
                           "value": {
@@ -356673,10 +356778,15 @@
                               "node": "Name"
                             }
                           }
+                        },
+                        {
+                          "kind": null,
+                          "node": "Constant",
+                          "value": null
                         }
                       ],
                       "func": {
-                        "id": "withhold",
+                        "id": "set_value",
                         "node": "Name"
                       },
                       "keywords": [],
@@ -356730,6 +356840,13 @@
                 "optional": false,
                 "presence": "required",
                 "type": "rust.JsonResult"
+              },
+              "envelope.result.exit_code": {
+                "json_null": true,
+                "omission": null,
+                "optional": true,
+                "presence": "null when absent",
+                "type": "integer"
               },
               "envelope.result.normalized_outcome": {
                 "json_null": true,
@@ -456135,6 +456252,33 @@
                     {
                       "args": [
                         {
+                          "attr": "exit_code",
+                          "node": "Attribute",
+                          "value": {
+                            "attr": "result",
+                            "node": "Attribute",
+                            "value": {
+                              "id": "envelope",
+                              "node": "Name"
+                            }
+                          }
+                        },
+                        {
+                          "kind": null,
+                          "node": "Constant",
+                          "value": 1
+                        }
+                      ],
+                      "func": {
+                        "id": "set_value",
+                        "node": "Name"
+                      },
+                      "keywords": [],
+                      "node": "Call"
+                    },
+                    {
+                      "args": [
+                        {
                           "attr": "runner_sandbox_diagnostics",
                           "node": "Attribute",
                           "value": {
@@ -456145,10 +456289,15 @@
                               "node": "Name"
                             }
                           }
+                        },
+                        {
+                          "kind": null,
+                          "node": "Constant",
+                          "value": null
                         }
                       ],
                       "func": {
-                        "id": "withhold",
+                        "id": "set_value",
                         "node": "Name"
                       },
                       "keywords": [],
@@ -456202,6 +456351,13 @@
                 "optional": false,
                 "presence": "required",
                 "type": "rust.JsonResult"
+              },
+              "envelope.result.exit_code": {
+                "json_null": true,
+                "omission": null,
+                "optional": true,
+                "presence": "null when absent",
+                "type": "integer"
               },
               "envelope.result.normalized_outcome": {
                 "json_null": true,
@@ -587635,6 +587791,33 @@
                     {
                       "args": [
                         {
+                          "attr": "exit_code",
+                          "node": "Attribute",
+                          "value": {
+                            "attr": "result",
+                            "node": "Attribute",
+                            "value": {
+                              "id": "envelope",
+                              "node": "Name"
+                            }
+                          }
+                        },
+                        {
+                          "kind": null,
+                          "node": "Constant",
+                          "value": 1
+                        }
+                      ],
+                      "func": {
+                        "id": "set_value",
+                        "node": "Name"
+                      },
+                      "keywords": [],
+                      "node": "Call"
+                    },
+                    {
+                      "args": [
+                        {
                           "attr": "runner_sandbox_diagnostics",
                           "node": "Attribute",
                           "value": {
@@ -587645,10 +587828,15 @@
                               "node": "Name"
                             }
                           }
+                        },
+                        {
+                          "kind": null,
+                          "node": "Constant",
+                          "value": null
                         }
                       ],
                       "func": {
-                        "id": "withhold",
+                        "id": "set_value",
                         "node": "Name"
                       },
                       "keywords": [],
@@ -587702,6 +587890,13 @@
                 "optional": false,
                 "presence": "required",
                 "type": "rust.JsonResult"
+              },
+              "envelope.result.exit_code": {
+                "json_null": true,
+                "omission": null,
+                "optional": true,
+                "presence": "null when absent",
+                "type": "integer"
               },
               "envelope.result.normalized_outcome": {
                 "json_null": true,
