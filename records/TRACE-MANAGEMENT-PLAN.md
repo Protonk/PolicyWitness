@@ -1094,21 +1094,74 @@ what the contract check reads, and an authoring rule for removing regions
 when a document leaves the map. `preflight/build_refusal_controls`, which
 uses the changed helper, has not run since.
 
+**HOST thread, second half (R9, R13, comments).** `cb00a2bd`, `a887c986`
+and `c82a1dd6`, tests first, sharing the final build and routed verification;
+the R9 and R13 states were each built and ran their own checks.
+
+- R9 (DT-50/131, T3). Validator association, `query_first` eligibility and
+  the reported issue keys compare identifiers and query metadata as UTF-8
+  bytes, and unexpected identifiers are listed in byte order. A canonically
+  equivalent, byte-different record now gives a missing and an unexpected
+  identifier, or a query mismatch, then `validator_unavailable` with exit 1.
+  Before the edit (`host2-pre`, `20261118T233145Z_7e071f0b`) the host accepted
+  every new corpus row while the Rust reader and the consumer refused the four
+  byte-different ones; four new ordering rows failed (`host2-pre2`,
+  `20261118T233644Z_2d99a5cf`). The worker-slot identity join has a
+  child-supplied side: a completed slot's identifier is read back from the
+  shared mapping the worker can write. The byte rule was applied to that join
+  and its lookups. One reporting lookup in `dispositionIntegrityProblems` was
+  left on `String`; by source reading only, it degrades an actor-form reply
+  whose slot identifier was respelled. That is unresolved at this commit and
+  is the next thing done.
+- R13 (DT-121). `schedule_complete`, `ended_before_arrival` and
+  `ended_before_completion` map to `completion`; every other scheduler reason
+  passes through and keeps an `unknown` cause. `cleanup_trigger` has an open,
+  illustrative vocabulary block beside its derivation text. The oracle's
+  derivation check landed first and passed on the old app; the actor
+  exit-grace row failed there with `schedule_complete` and `unknown` beside a
+  complete kill record. Not in the assessment: a cancelled schedule's actors
+  are also assigned `schedule_complete`, so the existing gate row's killed
+  source now projects `host_exit_grace_exhausted`, and the row asserts it.
+- Comments: the five host-thread worklist entries and the two that named
+  `_test_overrides.worker_timeout_ms` are corrected, and the unread
+  `custodyNames` table is removed. Three gate comments in
+  `pw_probe_runner.c` still name `_test_overrides.*`; they go with the thread
+  that next edits that file.
+- Build contract: `development:378493f6…01542300` before;
+  `development:55116874…` at the R9 state and `development:e89ef618…` at the
+  R13 state; `development:185be8ec…27ce76c2` in `dist/` and at `c82a1dd6`.
+- Runs of record on the final build, none with recorded sleep:
+  `host2-post-routed` (`20261118T234830Z_80585e49`, 91),
+  `host2-post-witness` (`20261118T235317Z_5c2f524d`, 51),
+  `host2-post-order-barrier` (`20261119T000027Z_e2e3ce6e`, baseline accepted
+  and both bypasses rejected, no anchor moved), `host2-post-unit-mutations`
+  (`20261119T000154Z_ad6c6327`, 4) and `host2-post-source-drift-3`
+  (`20261119T011716Z_6453bb03`, 11). All pass.
+- Environmental, not runs of record: `host2-post-source-drift`
+  (`20261119T000515Z_6e4fbb5f`) was interrupted on the coordinator's pause
+  message with five of eleven cases done, and `host2-post-source-drift-2`
+  (`20261119T001618Z_004e7814`) was suspended across about 56 minutes of
+  system sleep and then interrupted. The writing session ended on a network
+  error during that sleep and was resumed afterwards; nothing unverified was
+  committed.
+- A frozen-guide divergence to carry to the guide rewrite: the guide still
+  calls `cleanup_trigger` a fact recorded where the host acts.
+
 ### Pause — 2026-11-18
 
 Work stopped at a quiet point at the maintainer's request. State: `main` at
 the commit that last changed this note, tree clean, nothing pushed, no extra
 worktree, no writer in the checkout; the signed app in `dist/` is
 `development:378493f6…01542300`. `tests/out/runs` holds only the nine
-`host1-*` and three `r14-*` directories. The guide, its copies and both publication records are
+`host1-*`, `host2-*` and `r14-*` directories. The guide, its copies and both publication records are
 byte-unchanged at the freeze. No release was made.
 
-Resumed the same day at `98d01611`: the second half of HOST is in progress
-with one writer, and the machine's user expects to put it to sleep during
-that work. If this note is read with uncommitted changes under
-`runner/Sources`, `docs/` or `tests/`, they are that thread's unverified
-work; its notes are in the scratch directory `host-2/`. Nothing unverified
-is committed, and a run that overlapped sleep is repeated, not credited.
+Resumed the same day. The second half of HOST has landed (`c82a1dd6`) and
+work continues one thread at a time on battery, with sleeps expected. If
+this note is read with uncommitted changes in the tree, they are the
+running thread's unverified work, with its notes in a scratch directory
+named for the thread. Nothing unverified is committed, and a run that
+overlapped sleep is repeated, not credited.
 
 Done in this stage: the Markdown and pilot cohorts; the seam migration; the
 limits texts under the freeze; the four conversions with their follow-ups;
@@ -1118,11 +1171,9 @@ written.
 Remaining, in this order, one writer at a time, each product thread
 tests-first with its own rebuild and routed verification:
 
-1. HOST, second half: R9, R13, the two Swift comments that name
-   `_test_overrides.worker_timeout_ms`, the five host-thread
-   comment-in-build-input worklist entries and the optional `custodyNames`
-   removal. `witness_contract/order_barrier_mutations` is required again, and
-   the four `runner_unit` opt-in mutation controls.
+1. HOST, second half: landed. One R9 follow-up remains: the reporting
+   lookup in `dispositionIntegrityProblems` that still compares a
+   child-supplied slot identifier as `String`.
 2. CONTROLLER-A (R2, R6, R7), CONTROLLER-B (R10, R11 and the selected
    `run_flow.rs` test corrections), CONTROLLER-C (R12), EXEC (R1), WIRE (R8,
    after EXEC), IDENT (R3).
