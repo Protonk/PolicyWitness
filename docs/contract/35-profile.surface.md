@@ -32,7 +32,7 @@ listed: "exhaustive"
 values: ["captured", "unavailable"]
 ```
 
-`captured` states that the host's capture checks passed. `unavailable` states that a capture condition failed.
+`captured` states that the host's capture checks passed. `unavailable` states that a capture condition failed. The host evaluates application and worker completion before it reads any capture record. An `unavailable` receipt therefore does not report whether the worker copied the object, and a completed copy is withheld when application was not observed to succeed or the worker did not complete cleanly.
 
 ### Reason {reason: field}
 
@@ -44,7 +44,7 @@ values: ["successful_application_unconfirmed", "worker_not_complete", "capture_n
 unknown: "retained as the host's reason string"
 ```
 
-The host names the first failing capture condition. The controller's label check accepts the carried reason string.
+The host names the first failing capture condition. The controller's label check accepts the carried reason string. `worker_capture_refused` covers every worker capture status other than captured: an unsupported type or reserved word, an empty or over-limit extent, a null byte pointer, an unreadable object, and malformed consumed input. The receipt does not say which. The host's extent and type condition repeats checks the worker makes before it records captured status.
 
 ### Worker process {worker_pid: field}
 
@@ -52,15 +52,15 @@ The process identifier of the worker whose output the host collected.
 
 ### Capture producer {producer: field}
 
-`worker` on a captured receipt identifies the component that captured the bytes.
+`worker` on a captured receipt names the component whose program copies the bytes. The host writes this value on every captured receipt; no worker publication carries it.
 
 ### Capture stage {capture_stage: field}
 
-`before_apply` on a captured receipt identifies when the worker captured the bytes.
+`before_apply` on a captured receipt names the position of the copy in the worker's program, between compilation and application. The host writes this value on every captured receipt; it is not a recorded observation of that order.
 
 ### Request nonce {request_nonce: field}
 
-The host returns the request's capture nonce after comparing it with the worker's recorded bytes. A comparison with a separately retained request nonce supplies a consumer's request association; the controller's carried-label check has no request-nonce operand.
+The host returns the request's capture nonce after comparing it with the worker's recorded bytes. A comparison with a separately retained request nonce supplies a consumer's request association; the controller's carried-label check has no request-nonce operand. The nonce enters no compiled byte and no digest; the comparison associates the receipt with the reply that carries it.
 
 ### Profile type {profile_type: field}
 
@@ -82,7 +82,7 @@ The host's SHA-256 digest of the captured bytes, presented as lowercase hexadeci
 
 ### Bytecode {bytecode_b64: field}
 
-The bytes copied from the compiler object passed to `sandbox_apply`, presented as base64.
+The bytes copied from the compiler object passed to `sandbox_apply`, presented as base64. The worker reads that object through a fixed four-member view (type, reserved word, byte pointer, length) of a private structure. The receipt establishes that the bytes read this way matched their recorded length and digest. It does not establish the structure's layout on the running system, or which bytes application submitted.
 
 #### Captured payload extent {extent: condition}
 
@@ -286,7 +286,7 @@ source: {"path":"runner/Sources/PWRunnerCore/CWorker.swift","symbol":"decodeProf
 check: {"path":"runner/Tests/PWRunnerCoreTests/CompiledProfileCaptureTests.swift","symbol":"runCompiledProfileCaptureTests","form":"test"}
 pins: "The read checks construct worker bytes, corrupt each capture input and assert unavailability and withheld bytecode."
 context: "Constructed shared-memory bytes and injected application/termination arguments."
-limits: "This owner credits source and check reading. The shared-memory fixture establishes host checks; the native same-pointer capture is source-supported here."
+limits: "This owner credits source and check reading. The shared-memory fixture establishes host checks; the native same-pointer capture is source-supported here. The corruption cases assert unavailability without a reason; reasons are asserted for the application guard with one input and for the extent guard. The first-failure order and the remaining withheld fields are source-read."
 ```
 
 #### Successful receipt {success: effect}
@@ -306,7 +306,7 @@ recipient: ["cli_caller"]
 when: present(receipt)
 ```
 
-After public producer admission and reply-capacity checks, the controller applies these conditions to every present receipt, including actor, preparation-failure and reporting-failure records. The retained nonce, bytecode, digests, lengths and counts remain the host's assertions; their production checks belong to the host capture rule.
+After public producer admission and reply-capacity checks, the controller applies these conditions to every present receipt, including actor, preparation-failure and reporting-failure records. The retained nonce, bytecode, digests, lengths and counts remain the host's assertions; their production checks belong to the host capture rule. The controller compares no receipt field with the request it delivered, with the reply's worker record or with the receipt's own bytes, and evaluates neither extent condition. A `finished` result beside a `captured` receipt reports the host's capture checks, not a controller comparison.
 
 #### Status vocabulary {status: condition}
 
@@ -343,7 +343,7 @@ scope: "subtree"
 grade: "executed"
 run: "20261119T062523Z_48db4d65; unit/rust.unit"
 source_snapshot: "controller/src/run_flow.rs sha256 8c8d42d7cc966d54d9aa60f162704dfdd872e6d367db94c545e303774c217c80; controller/src/porcelain_admission.rs sha256 19f071e85e9887240eff2a6bae7c6dabc671394c1ebca8c32677c40b830c230f; tests/fixtures/contract/compiled_profile.json sha256 7789f717f77ca8cd3c01f6351a385db205d9afd12e3e5757e03a8ade49e17867"
-source: {"path":"controller/src/porcelain_admission.rs","symbol":"admission_problem"}
+source: {"path":"controller/src/porcelain_admission.rs","symbol":"pub(crate) fn admission_problem"}
 check: {"path":"controller/src/run_flow.rs","symbol":"compiled_profile_status_and_labels_alone_decide_run_admission","form":"test"}
 pins: "The constructed check follows status and label admission through the public outcome, exit status, result and retained decoded report, and reads the diagnostics key as present with JSON null on every refused row."
 context: "Constructed typed replies carried through the run command admission and envelope path with a supplied client result; the named control passed in the completed unit/rust.unit case with zero recorded system sleep."
@@ -393,5 +393,5 @@ grade: "source_read"
 source: [{"path":"controller/tools/pw_probe_runner/pw_profile_capture.h","symbol":"pw_capture_profile"},{"path":"controller/tools/pw_probe_runner/pw_probe_runner.c","symbol":"pw_capture_profile"},{"path":"runner/Sources/PWRunnerCore/ActorSession.swift","symbol":"profileCapture: input.captureCompiledProfile"},{"path":"runner/Sources/PWRunnerCore/CWorker.swift","symbol":"decodeProfileCapture"}]
 pins: "Opt-in capture copies the same compiled object before apply; the collected worker output includes the optional host-checked receipt. The host compares the worker-recorded PID, nonce, source identity and parameter identity with its own values before emitting them; files the compiler reads are outside these identities. Shared-memory and public JSON projections are distinct."
 context: "Read C capture, compile/apply call site, Swift output construction and ordered receipt checks."
-limits: "Source reading establishes the branch account. Live capture behavior and platform private-layout compatibility require their native checks."
+limits: "Source reading establishes the branch account. Constructed-layout controls (tests/suites/runner_abi_layout/capture.c) and live captures (witness_contract/max_targets_reply_survives, runner_outcome_bad_request/accepted_input_contract) show that the reading yields captured status on the tested system, and the second live case checks that the bytes match their recorded length and digest. None decodes the bytes, compares them with a reference compilation or observes what application submitted."
 ```

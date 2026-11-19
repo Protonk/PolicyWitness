@@ -66,7 +66,7 @@ The host bundle's CFBundleIdentifier when available.
 
 ### Policy format {policy_format: field}
 
-The ordinary policy format when available; decode refusal uses `unknown`.
+The ordinary policy format when available; a decode refusal uses `unknown`, as does a capacity refusal of an ordinary request whose format exceeds its bound.
 Actor policies carry their formats in actor records.
 
 ### Policy source digest {policy_sha256: field}
@@ -203,7 +203,7 @@ All actor and collection records remain.
 | --- | --- |
 | `finished` | Execution and required collection completed under the classifier's conditions; each attempt retains its own result. |
 | `bad_request` | Reached decoding/admission refused the specimen before worker or validator execution. |
-| `bad_policy` | The host could not identify the ordinary source under its structural policy check. |
+| `bad_policy` | Defensive: the host's policy-hash step could not identify the ordinary source after admission. Admission refuses a missing source or another format as `bad_request` first, so no admitted request reaches it. |
 | `worker_spawn_failed` | The driver could not spawn the worker. |
 | `runner_timeout` | Host sentinel or policy-transfer deadline expired, subject to higher-precedence published worker failures. Expiry of the actor schedule's execution allowance is reported as `runner_failed`. |
 | `runner_failed` | Worker preparation/application/publication, host apparatus or supervision failed, or required observations are unusable. |
@@ -290,7 +290,7 @@ recipient's decoding failure.
 grade: "check_read"
 source: [{"path":"runner/Sources/PWRunnerCore/PWRunnerService.swift","symbol":"pwRunnerReportData"},{"path":"runner/Sources/PWRunnerCore/PWRunnerReply.swift","symbol":"func validateForReporting()"}]
 check: {"path":"runner/Tests/PWRunnerCoreTests/ReplyFailureTests.swift","symbol":"runReplyFailureTests","form":"test"}
-pins: "Constructed reporting defects trigger rich fallback, preserve other projected fields and remove comparisons; malformed fallback markers refuse. Independent minimal/empty paths are read in source."
+pins: "Constructed reporting defects trigger rich fallback, preserve other projected fields and remove comparisons; malformed fallback markers refuse. Repeated writer failures reach the independent minimal writer, whose frame equals a separately constructed minimal report, and a failing minimal writer returns empty bytes."
 context: "Read report validation, fallback writers and constructed binary reply controls."
 limits: "No new execution credit. Fallback validation establishes the degraded form, not ordinary association consistency in retained records."
 ```

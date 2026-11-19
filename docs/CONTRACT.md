@@ -936,18 +936,16 @@ Declarations own meaning; source and check citations supply the stated support. 
 | `controller/src/porcelain.rs: native_integer_width_and_boolean_values_are_not_coerced` | check support | [Response encoding](ARCHITECTURE.md#contract-wire) |
 | `controller/src/porcelain.rs: ordered_maps_require_unique_ascending_keys_in_actual_frames` | check support | [Frame grammar](ARCHITECTURE.md#contract-wire-frame) |
 | `controller/src/porcelain.rs: pub fn decode<T: WireRead>(data: &[u8])` | source support | [Frame grammar](ARCHITECTURE.md#contract-wire-frame) |
+| `controller/src/porcelain_actor.rs: fn gates` | source support | [Actor and phase evidence](RESPONSE.md#contract-actor_evidence) |
 | `controller/src/porcelain_actor.rs: fn gates` | source support | [Integrity finding](RESPONSE.md#contract-diagnostics-issue) |
 | `controller/src/porcelain_actor.rs: fn gates` | source support | [Finding association and effect](RESPONSE.md#contract-diagnostics-issue-subject) |
 | `controller/src/porcelain_actor.rs: fn identity` | source support | [Reader applicability](RESPONSE.md#contract-actor_evidence-actor-reader_scope) |
 | `controller/src/porcelain_actor.rs: fn require` | source support | [Integrity finding](RESPONSE.md#contract-diagnostics-issue) |
 | `controller/src/porcelain_actor.rs: gate_findings_locate_each_retained_assertion_by_position` | check support | [Finding association and effect](RESPONSE.md#contract-diagnostics-issue-subject) |
-| `controller/src/porcelain_actor.rs: gates` | source support | [Actor and phase evidence](RESPONSE.md#contract-actor_evidence) |
 | `controller/src/porcelain_actor.rs: preparation_failure_valid` | source support | [Reader applicability](RESPONSE.md#contract-actor_evidence-actor-reader_scope) |
 | `controller/src/porcelain_actor.rs: pub(super) fn validate` | source support | [Execution diagnostics](RESPONSE.md#contract-diagnostics-execution) |
 | `controller/src/porcelain_admission.rs: IntegrityIssue` | source support | [Integrity finding](RESPONSE.md#contract-diagnostics-issue) |
-| `controller/src/porcelain_admission.rs: admission_problem` | source support | [Reader applicability](RESPONSE.md#contract-actor_evidence-actor-reader_scope) |
 | `controller/src/porcelain_admission.rs: admission_problem` | source support | [Decoded response collection bounds](RESPONSE.md#contract-diagnostics-execution-geometry) |
-| `controller/src/porcelain_admission.rs: admission_problem` | source support | [A failed label check for run](RESPONSE.md#contract-profile-receipt-labels-failure) |
 | `controller/src/porcelain_admission.rs: admit_reply` | source support | [Execution diagnostics](RESPONSE.md#contract-diagnostics-execution) |
 | `controller/src/porcelain_admission.rs: check_claim` | source support | [One actor's diagnostics](RESPONSE.md#contract-diagnostics-actor) |
 | `controller/src/porcelain_admission.rs: claim_geometry` | source support | [Decoded response collection bounds](RESPONSE.md#contract-diagnostics-execution-geometry) |
@@ -959,7 +957,9 @@ Declarations own meaning; source and check citations supply the stated support. 
 | `controller/src/porcelain_admission.rs: lifecycle_geometry` | source support | [Decoded response collection bounds](RESPONSE.md#contract-diagnostics-execution-geometry) |
 | `controller/src/porcelain_admission.rs: project` | source support | [One actor's diagnostics](RESPONSE.md#contract-diagnostics-actor) |
 | `controller/src/porcelain_admission.rs: project` | source support | [Execution diagnostics](RESPONSE.md#contract-diagnostics-execution) |
+| `controller/src/porcelain_admission.rs: pub(crate) fn admission_problem` | source support | [Reader applicability](RESPONSE.md#contract-actor_evidence-actor-reader_scope) |
 | `controller/src/porcelain_admission.rs: pub(crate) fn admission_problem` | source support | [The controller checks carried labels](RESPONSE.md#contract-profile-receipt-labels) |
+| `controller/src/porcelain_admission.rs: pub(crate) fn admission_problem` | source support | [A failed label check for run](RESPONSE.md#contract-profile-receipt-labels-failure) |
 | `controller/src/porcelain_admission.rs: reply_geometry` | source support | [Decoded response collection bounds](RESPONSE.md#contract-diagnostics-execution-geometry) |
 | `controller/src/porcelain_admission.rs: scope_geometry` | source support | [Decoded response collection bounds](RESPONSE.md#contract-diagnostics-execution-geometry) |
 | `controller/src/porcelain_admission.rs: typed_degradation_never_certifies_surviving_comparison` | check support | [Execution diagnostics](RESPONSE.md#contract-diagnostics-execution) |
@@ -1610,6 +1610,7 @@ Declarations own meaning; source and check citations supply the stated support. 
 | `runner/Tests/PWRunnerCoreTests/ComparisonEvidenceTests.swift: runComparisonEvidenceTests` | check support | [Classify an observation](RESPONSE.md#contract-steps-assessment-observe) |
 | `runner/Tests/PWRunnerCoreTests/ComparisonEvidenceTests.swift: runComparisonEvidenceTests` | check support | [Submitted operation and target](RESPONSE.md#contract-steps-assessment-relations) |
 | `runner/Tests/PWRunnerCoreTests/CompiledProfileCaptureTests.swift: runCompiledProfileCaptureTests` | check support | [The host decides capture availability](RESPONSE.md#contract-profile-receipt-host) |
+| `runner/Tests/PWRunnerCoreTests/DispositionResolverTests.swift: runDispositionResolverTests` | check support | [Assemble the two channels](RESPONSE.md#contract-steps-assessment-assembly) |
 | `runner/Tests/PWRunnerCoreTests/ExperimentalSubmissionTests.swift: runExperimentalSubmissionTests` | check support | [Experimental submission](REQUEST.md#contract-request-overrides-experimental) |
 | `runner/Tests/PWRunnerCoreTests/ExperimentalSubmissionTests.swift: runExperimentalSubmissionTests` | check support | [Ordinary refusal of the experimental controls](REQUEST.md#contract-request-overrides-ordinary_refusal) |
 | `runner/Tests/PWRunnerCoreTests/FreshWriteEvidenceTests.swift: runFreshWriteEvidenceTests` | check support | [Observe fresh descriptors](RESPONSE.md#contract-steps-assessment-fresh) |
@@ -1628,6 +1629,7 @@ Declarations own meaning; source and check citations supply the stated support. 
 | `runner/Tests/PWRunnerCoreTests/RequestContractTests.swift: runRequestContractTests` | check support | [Specimen](REQUEST.md#contract-request-specimen) |
 | `runner/Tests/PWRunnerCoreTests/ReservationAdmissionTests.swift: runReservationAdmissionTests` | check support | [Delivery to the host](RESPONSE.md#contract-transport) |
 | `runner/Tests/PWRunnerCoreTests/ValidatorEvidenceTests.swift: runValidatorEvidenceTests` | check support | [Validator query and reply lines](ARCHITECTURE.md#contract-wire-validator) |
+| `runner/Tests/PWRunnerCoreTests/WorkerEvidenceTests.swift: runWorkerEvidenceTests` | check support | [Assemble the two channels](RESPONSE.md#contract-steps-assessment-assembly) |
 | `runner/augments/exec_baseline.sb: (allow process-exec*)` | source support | [Augment resolution](REQUEST.md#contract-policy-augments) |
 | `runner_kind.byoxpc@run_option` | interface association; see the partial join | [Selector precedence](REQUEST.md#contract-request-options-precedence) |
 | `runner_kind.standard@run_option` | interface association; see the partial join | [Selector precedence](REQUEST.md#contract-request-options-precedence) |
@@ -2492,7 +2494,7 @@ Source: [PWRunnerService.swift](../runner/Sources/PWRunnerCore/PWRunnerService.s
 
 [Local support](RESPONSE.md#contract-steps-assessment-assembly-support).
 
-Source: [CWorkerStepResults.swift](../runner/Sources/PWRunnerCore/CWorkerStepResults.swift): `buildStepResults`. Check: [AttemptOutcomeMappingTests.swift](../runner/Tests/PWRunnerCoreTests/AttemptOutcomeMappingTests.swift): `runAttemptOutcomeMappingTests`.
+Source: [CWorkerStepResults.swift](../runner/Sources/PWRunnerCore/CWorkerStepResults.swift): `buildStepResults`. Check: [AttemptOutcomeMappingTests.swift](../runner/Tests/PWRunnerCoreTests/AttemptOutcomeMappingTests.swift): `runAttemptOutcomeMappingTests`; [WorkerEvidenceTests.swift](../runner/Tests/PWRunnerCoreTests/WorkerEvidenceTests.swift): `runWorkerEvidenceTests`; [DispositionResolverTests.swift](../runner/Tests/PWRunnerCoreTests/DispositionResolverTests.swift): `runDispositionResolverTests`.
 
 <a id="contract-steps-assessment-order-source-details"></a>
 ### Establish query order — Order association source
@@ -2611,7 +2613,7 @@ Source: [PWRunnerLifecycleEvidence.swift](../runner/Sources/PWRunnerCore/PWRunne
 
 [Local support](RESPONSE.md#contract-actor_evidence-actor-reader_scope-support).
 
-Source: [ActorOrchestration.swift](../runner/Sources/PWRunnerCore/ActorOrchestration.swift): `actorPreparationRefusal`; [ActorPlan.swift](../runner/Sources/PWRunnerCore/ActorPlan.swift): `normalizeActorPlan`; [PWRunnerReply.swift](../runner/Sources/PWRunnerCore/PWRunnerReply.swift): `actorExtensionEvidenceProblem`, `validateForReporting`; [porcelain_admission.rs](../controller/src/porcelain_admission.rs): `admission_problem`; [porcelain_actor.rs](../controller/src/porcelain_actor.rs): `preparation_failure_valid`; [consumer.py](../tests/lib/consumer.py): `_validate_reply`; [lifecycle_oracle.py](../tests/lib/lifecycle_oracle.py): `check_actor_records`. Check: [ReaderCorpusTests.swift](../runner/Tests/PWRunnerCoreTests/ReaderCorpusTests.swift): `runReaderCorpusTests`; [run_flow.rs](../controller/src/run_flow.rs): `reader_definition_corpus_cross_readers`. Run: `20261111T162345Z_3d6c7242`. Source snapshot: `reviewed-inputs sha256:af396aadf41ba79a0d072b62d9c3f4ff1df5b5fa30d6c4ff267c53e8437dd51d (b6ce6d26 dirty; replay identity correction)`. Case: `runner_unit/pwrunner_core_unit_executable`.
+Source: [ActorOrchestration.swift](../runner/Sources/PWRunnerCore/ActorOrchestration.swift): `actorPreparationRefusal`; [ActorPlan.swift](../runner/Sources/PWRunnerCore/ActorPlan.swift): `normalizeActorPlan`; [PWRunnerReply.swift](../runner/Sources/PWRunnerCore/PWRunnerReply.swift): `actorExtensionEvidenceProblem`, `validateForReporting`; [porcelain_admission.rs](../controller/src/porcelain_admission.rs): `pub(crate) fn admission_problem`; [porcelain_actor.rs](../controller/src/porcelain_actor.rs): `preparation_failure_valid`; [consumer.py](../tests/lib/consumer.py): `_validate_reply`; [lifecycle_oracle.py](../tests/lib/lifecycle_oracle.py): `check_actor_records`. Check: [ReaderCorpusTests.swift](../runner/Tests/PWRunnerCoreTests/ReaderCorpusTests.swift): `runReaderCorpusTests`; [run_flow.rs](../controller/src/run_flow.rs): `reader_definition_corpus_cross_readers`. Run: `20261111T162345Z_3d6c7242`. Source snapshot: `reviewed-inputs sha256:af396aadf41ba79a0d072b62d9c3f4ff1df5b5fa30d6c4ff267c53e8437dd51d (b6ce6d26 dirty; replay identity correction)`. Case: `runner_unit/pwrunner_core_unit_executable`.
 
 <a id="contract-actor_evidence-actor-reader_scope-setup_support-details"></a>
 ### Reader applicability — Setup declaration check support
@@ -2646,7 +2648,7 @@ Source: [ActorScheduler.swift](../runner/Sources/PWRunnerCore/ActorScheduler.swi
 
 [Local support](RESPONSE.md#contract-actor_evidence-support).
 
-Source: [PWRunnerActors.swift](../runner/Sources/PWRunnerCore/PWRunnerActors.swift): `PWRunnerActorResult`; [PWRunnerAuthoritySetup.swift](../runner/Sources/PWRunnerCore/PWRunnerAuthoritySetup.swift): `actorApplicationAssessment`; [ActorScheduler.swift](../runner/Sources/PWRunnerCore/ActorScheduler.swift): `ActorScheduler`; [ActorOrchestration.swift](../runner/Sources/PWRunnerCore/ActorOrchestration.swift): `assembleActorReply`; [ActorPlan.swift](../runner/Sources/PWRunnerCore/ActorPlan.swift): `normalizeActorPlan`; [PWRunnerReply.swift](../runner/Sources/PWRunnerCore/PWRunnerReply.swift): `actorExtensionEvidenceProblem`; [porcelain_actor.rs](../controller/src/porcelain_actor.rs): `gates`; [porcelain_admission.rs](../controller/src/porcelain_admission.rs): `execution_diagnostics`; [actor_evidence.py](../tests/lib/actor_evidence.py): `validate_actor_evidence`; [lifecycle_oracle.py](../tests/lib/lifecycle_oracle.py): `check_actor_records`; [consumer.py](../tests/lib/consumer.py): `_validate_actors`.
+Source: [PWRunnerActors.swift](../runner/Sources/PWRunnerCore/PWRunnerActors.swift): `PWRunnerActorResult`; [PWRunnerAuthoritySetup.swift](../runner/Sources/PWRunnerCore/PWRunnerAuthoritySetup.swift): `actorApplicationAssessment`; [ActorScheduler.swift](../runner/Sources/PWRunnerCore/ActorScheduler.swift): `ActorScheduler`; [ActorOrchestration.swift](../runner/Sources/PWRunnerCore/ActorOrchestration.swift): `assembleActorReply`; [ActorPlan.swift](../runner/Sources/PWRunnerCore/ActorPlan.swift): `normalizeActorPlan`; [PWRunnerReply.swift](../runner/Sources/PWRunnerCore/PWRunnerReply.swift): `actorExtensionEvidenceProblem`; [porcelain_actor.rs](../controller/src/porcelain_actor.rs): `fn gates`; [porcelain_admission.rs](../controller/src/porcelain_admission.rs): `execution_diagnostics`; [actor_evidence.py](../tests/lib/actor_evidence.py): `validate_actor_evidence`; [lifecycle_oracle.py](../tests/lib/lifecycle_oracle.py): `check_actor_records`; [consumer.py](../tests/lib/consumer.py): `_validate_actors`.
 
 <a id="contract-equipment-binding-binding_evidence-details"></a>
 ### Static worker binding — Static binding evidence
@@ -2709,7 +2711,7 @@ Source: [CWorker.swift](../runner/Sources/PWRunnerCore/CWorker.swift): `decodePr
 
 [Local support](RESPONSE.md#contract-profile-receipt-labels-failure-support).
 
-Source: [porcelain_admission.rs](../controller/src/porcelain_admission.rs): `admission_problem`. Check: [run_flow.rs](../controller/src/run_flow.rs): `compiled_profile_status_and_labels_alone_decide_run_admission`. Run: `20261119T062523Z_48db4d65; unit/rust.unit`. Source snapshot: `controller/src/run_flow.rs sha256 8c8d42d7cc966d54d9aa60f162704dfdd872e6d367db94c545e303774c217c80; controller/src/porcelain_admission.rs sha256 19f071e85e9887240eff2a6bae7c6dabc671394c1ebca8c32677c40b830c230f; tests/fixtures/contract/compiled_profile.json sha256 7789f717f77ca8cd3c01f6351a385db205d9afd12e3e5757e03a8ade49e17867`.
+Source: [porcelain_admission.rs](../controller/src/porcelain_admission.rs): `pub(crate) fn admission_problem`. Check: [run_flow.rs](../controller/src/run_flow.rs): `compiled_profile_status_and_labels_alone_decide_run_admission`. Run: `20261119T062523Z_48db4d65; unit/rust.unit`. Source snapshot: `controller/src/run_flow.rs sha256 8c8d42d7cc966d54d9aa60f162704dfdd872e6d367db94c545e303774c217c80; controller/src/porcelain_admission.rs sha256 19f071e85e9887240eff2a6bae7c6dabc671394c1ebca8c32677c40b830c230f; tests/fixtures/contract/compiled_profile.json sha256 7789f717f77ca8cd3c01f6351a385db205d9afd12e3e5757e03a8ade49e17867`.
 
 <a id="contract-profile-receipt-labels-verify_failure-support-details"></a>
 ### A failed label check for runner verify — Verification refusal source

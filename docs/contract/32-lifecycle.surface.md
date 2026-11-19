@@ -73,7 +73,7 @@ Why host publication polling ended. Only sentinel_deadline names exhaustion of t
 
 ### exit_requested {exit_requested: field}
 
-Whether the host performed the release store asking the worker to exit. Worker receipt is a separate observation.
+Whether the host performed the release store asking the worker to exit. Worker receipt is a separate observation. The host also performs this store for a child it has already reaped; `grace_end: not_entered` and, for an actor, `owned_reap.departure_requested: false` then record that the ending preceded the request.
 
 ### termination_request {termination_request: field}
 
@@ -104,7 +104,7 @@ How the post-request grace stage ended: not_entered, reaped_during_grace, exhaus
 
 ### collection_basis {collection_basis: field}
 
-Whether final reads followed a confirmed reap: after_confirmed_reap, execution_may_continue or unavailable. This controls terminal absence claims.
+Whether final reads followed a confirmed reap: `after_confirmed_reap` or `execution_may_continue`; absent when the host recorded no basis. Readers also accept `unavailable`, which no producer assigns. This controls terminal absence claims.
 
 ### ready_wait {ready_wait: field}
 
@@ -294,7 +294,7 @@ Measured interval at stop. Absence records that the clock could not supply a val
 
 ### stop {stop: field}
 
-Owning operation's reason for ending this wait. clock_unavailable denotes failed or backward time with bounded sleep fallback; setup_failed denotes an unavailable nonblocking prerequisite.
+Owning operation's reason for ending this wait; each owning record defines its values and the set is open. clock_unavailable is the termination gate's stop when a time sample it required failed, moved backward or was absent. A wait that loses the clock elsewhere continues on bounded sleeps, keeps its own stop value and reports clock_fault. setup_failed denotes a prerequisite that could not be established before waiting: the nonblocking readiness reader, or actor authority-region and custody setup.
 
 ### excluded_ms {excluded_ms: field}
 
@@ -447,7 +447,7 @@ Terminal worker failure payload when its publication and layout guards allow dec
 
 ### readiness {readiness: field}
 
-Worker publication of the readiness-write native result, independent of the host's receipt of the byte.
+Worker publication of its readiness-write helper result, independent of the host's receipt of the byte.
 
 ### diagnostic {diagnostic: field}
 
@@ -494,7 +494,7 @@ Numeric boundary stage decoded from raw; 1 is entry and 2 is return for recogniz
 
 ### index {index: field}
 
-Zero-based item decoded from the low bits; attempts use the plan slot, parameter setup uses its parameter, and actor waits identify the next visit's first slot.
+Zero-based item decoded from the low bits; attempts use the plan slot, parameter setup uses its parameter, and activation and release waits identify their visit's first slot. Every phase of either request form has a release wait; activation waits occur only in the actor form.
 
 ## Terminal worker failure {failure: subject}
 
@@ -623,7 +623,7 @@ record: "PWWorkerPolicyRead"
 as: "lc_policy_read"
 ```
 
-At EOF the worker publishes both counts before comparing them. A header refusal, read failure or overflow leaves this receipt unavailable; both counts must fit the <!-- span limits.policy_source.value -->262,143<!-- /span -->-byte source capacity.
+At EOF the worker publishes the count it received before comparing it with the host-written expected count; the host reports both counts once it acquires that publication. A header refusal, read failure or overflow leaves this receipt unavailable; both counts must fit the <!-- span limits.policy_source.value -->262,143<!-- /span -->-byte source capacity.
 
 ### bytes_expected {bytes_expected: field}
 
@@ -663,7 +663,7 @@ where: "final worker output and plan join"
 entry: ["xpc_execute"]
 recipient: ["xpc_caller", "runner_client", "controller"]
 report: ["runner_reply"]
-free.condition: Resolve each question from the owning worker's acquired output, unique slot identities and submitted plan. A not_reached or unpublished conclusion requires terminal collection where specified below.
+free.condition: Resolve each question from the owning worker's acquired output and unique slot identities. The ordinary form joins them to the submitted plan; the actor form takes each actor's steps from that actor's collected slot list, in which every slot is a supported operation. A not_reached or unpublished conclusion requires terminal collection where specified below.
 free.effect: Resolve and publish the canonical account once. Retain competing observations as conflict issues, and derive each per-attempt summary from its canonical claims and attempt applicability.
 retained_free: {"condition": {"kind": "native_protocol", "reason": "Canonical lifecycle resolution uses acquired worker publication, slot identity and terminal collection; final labels cannot stand in for those raw inputs."}, "effect": {"kind": "native_protocol", "reason": "Acquired publication and progress ordering determine canonical claims and conflicts. Explicit projection rules own the first-ID association and copied boundary/result records; the summary classifier retains its existing source-defined vocabulary."}}
 ```
@@ -671,8 +671,8 @@ retained_free: {"condition": {"kind": "native_protocol", "reason": "Canonical li
 A completed supported slot establishes publication and
 can establish entry. Recognized progress at or after an attempt's entry also
 establishes entry. A final earlier progress position establishes `not_reached`
-only after confirmed reaping and with an incomplete slot; beside a completed
-slot it produces D5. Returned-or-later terminal progress beside an incomplete
+only after confirmed reaping and without a completed slot, whether that slot
+is incomplete or absent; beside a completed slot it produces D5. Returned-or-later terminal progress beside an incomplete
 supported slot produces D5 for result publication. Live collection leaves
 missing results unresolved. An unsupported attempt has inapplicable result
 publication and an `unsupported` lifecycle summary.
@@ -821,6 +821,8 @@ record: "PWDispositionValue"
 as: "lc_claim_value"
 ```
 
+JSON carries the chosen alternative's value directly: an integer for an exit code, signal or item index, or the termination-request object. The alternative labels are not JSON keys.
+
 
 
 ## Lifecycle conflict {issue: subject}
@@ -875,7 +877,7 @@ Host polling-stop observation, or unresolved when it was not recorded.
 
 ### cleanup_trigger {cleanup_trigger: field}
 
-Recorded reason for requesting exit; inapplicable when exit_requested is false.
+Reason for requesting exit, copied from the subprocess record's cleanup_trigger; inapplicable when exit_requested is false.
 
 ### grace_end {grace_end: field}
 
@@ -1111,11 +1113,11 @@ Failed waitpid observations from validator cleanup, including recovered interrup
 
 ### read_error {read_error: field}
 
-Host diagnostic for stdout-read failure, separate from accepted record contents.
+Host diagnostic for the condition that ended collection early: a stdout read failure, the retention limit, a poll or clock failure, or expiry of the I/O deadline; separate from accepted record contents.
 
 ### stdout_collection_stop {stdout_collection_stop: field}
 
-Host reason for stopping stdout collection: eof, clock_error, deadline, poll_error, byte_limit or read_error. This is fixed before the exit-grace stage.
+Host reason for stopping stdout collection: eof, clock_error, deadline, poll_error, byte_limit or read_error. This is fixed before the exit-grace stage. eof beside a deadline diagnostic records that stdout had already ended when the I/O deadline expired with request bytes still unwritten.
 
 ### stdout_bytes_received {stdout_bytes_received: field}
 
@@ -1554,5 +1556,6 @@ Raw terminal wait status present exactly when rc is the owned leader PID, agreei
 scope: "subtree"
 grade: "source_read"
 source: [{"path": "runner/Sources/PWRunnerCore/PWRunnerLifecycleEvidence.swift", "symbol": "PWRunnerSubprocess"}, {"path": "runner/Sources/PWRunnerCore/CWorker.swift", "symbol": "decodeWorkerEvidence"}, {"path": "runner/Sources/PWRunnerCore/CWorkerDisposition.swift", "symbol": "resolveDisposition"}, {"path": "runner/Sources/PWRunnerCore/PWRunnerDisposition.swift", "symbol": "lifecycleSummary"}, {"path": "runner/Sources/PWRunnerCore/PWRunnerPredictionEvidence.swift", "symbol": "validatorAssociationIssues"}, {"path": "runner/Sources/PWRunnerCore/ValidatorClient.swift", "symbol": "decodeValidatorFrames"}, {"path": "runner/Sources/PWRunnerCore/PWRunnerAttemptEvidence.swift", "symbol": "execObservationEvidenceProblem"}, {"path": "runner/Sources/PWRunnerCore/PWRunnerAuthoritySetup.swift", "symbol": "PWOwnedReapObservation"}, {"path": "controller/tools/pw_probe_runner/pw_probe_runner.c", "symbol": "write_ready_byte"}, {"path": "runner/Sources/PWRunnerCore/CWorker.swift", "symbol": "CWorkerInput"}, {"path": "runner/Sources/PWRunnerCore/ActorSession.swift", "symbol": "readyBudgetMs"}, {"path": "runner/Sources/PWRunnerCore/ValidatorClient.swift", "symbol": "runValidator"}, {"path": "controller/tools/pw_probe_runner/pw_probe_runner_abi.h", "symbol": "PW_SHM_DIAGNOSTIC_BYTES"}, {"path": "controller/tools/pw_probe_runner/pw_worker_timing.h", "symbol": "PW_EXEC_REAP_GRACE_MS"}]
-pins: "Imported public field definitions joined to producer/decoder/assessment meanings; explicit rule and evidence gaps preserve scope."
+pins: "Imported public field definitions joined to producer/decoder/assessment meanings."
+limits: "The host receiver assigns only the three decode_fault kinds; product recipients do not re-check the value."
 ```

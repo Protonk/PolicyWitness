@@ -56,11 +56,11 @@ as: "query"
 
 ### native_rc {native_rc: field}
 
-Native return carried by an associated allow, deny or error record. Synthetic results carry explicit null when result_source is present.
+Native return carried by an associated allow, deny or error record. Synthetic results carry explicit null when result_source is present. No reader checks this relation: a result marked `synthetic` that carries a native return is admitted and projected as received.
 
 ### missing_reason {missing_reason: field}
 
-`query_not_requested` for a planner exclusion, `validator_not_invoked` when collection never ran, or `validator_no_verdict` when it produced no associated record.
+`query_not_requested` for a planner exclusion; `validator_not_invoked` when no validator process supplied output for the phase, whether collection never ran or it ran and could not start one; `validator_no_verdict` when a validator ran and produced no uniquely associated record.
 
 ### rc {rc: field}
 
@@ -72,7 +72,7 @@ An associated record supplies its carried return, or -1 if that record omits the
 
 ### pid {pid: field}
 
-PID targeted by this phase's validator collection when worker output supplies it. The ordering assessment states whether the required live-worker interval was established.
+Worker PID recorded for this step when worker output exists, including for a query the planner excluded. Whether a collection addressed that PID is stated by the phase's `collection_status` and `validator_subprocess`. The ordering assessment states whether the required live-worker interval was established.
 
 ### operation {operation: field}
 
@@ -272,7 +272,7 @@ Supporting observation: `spawned_child`, `completed_worker_status`, `permission_
 uses: ["steps.assessment.relations"]
 ```
 
-`matched` means the query equals the action's mapped operation; `different` means those strings differ; `unresolved` means the mapping cannot assign a single operation.
+`matched` means the query equals the action's mapped operation; `different` means those strings differ; `unresolved` means the action has no single mapped operation, or the query is a wildcard spelling other than the matched `process-exec*`.
 
 ### target_relation {target_relation: field}
 
@@ -280,7 +280,7 @@ uses: ["steps.assessment.relations"]
 uses: ["steps.assessment.relations"]
 ```
 
-`same_submitted` or `different_submitted` compares submitted strings when the query filter matches the action's mapped filter and both strings exist; otherwise `unresolved`.
+`same_submitted` or `different_submitted` compares submitted strings under canonical Unicode equivalence when the query filter matches the action's mapped filter and both strings exist; otherwise `unresolved`.
 
 ### order {order: field}
 
@@ -564,10 +564,10 @@ the ordering assessment supplies its live-worker temporal meaning.
 ```contract
 grade: "check_read"
 source: {"path":"runner/Sources/PWRunnerCore/CWorkerStepResults.swift","symbol":"buildStepResults"}
-check: {"path":"runner/Tests/PWRunnerCoreTests/AttemptOutcomeMappingTests.swift","symbol":"runAttemptOutcomeMappingTests","form":"test"}
-pins: "Completed, incomplete, absent and unsupported slots map to distinct provenance and outcomes; action mapping preserves exec child observations."
+check: [{"path":"runner/Tests/PWRunnerCoreTests/AttemptOutcomeMappingTests.swift","symbol":"runAttemptOutcomeMappingTests","form":"test"},{"path":"runner/Tests/PWRunnerCoreTests/WorkerEvidenceTests.swift","symbol":"runWorkerEvidenceTests","form":"test"},{"path":"runner/Tests/PWRunnerCoreTests/DispositionResolverTests.swift","symbol":"runDispositionResolverTests","form":"test"}]
+pins: "The attempt builder maps completed, non-completed and unsupported slots to their outcomes and preserves an exec child PID; step-assembly controls assert synthetic query provenance and the slot_incomplete and slot_absent attempt reasons."
 context: "Read complete step assembly and constructed attempt-mapping controls."
-limits: "Check reading. Integrated query association has the validator collection's own support."
+limits: "Check reading. Integrated query association has the validator collection's own support. Incomplete and absent slots share one outcome and differ only in missing_reason. No cited control asserts attempt_not_supported provenance through the step builder."
 ```
 
 ### Establish query order {order: checks}
@@ -751,7 +751,8 @@ limits: "Constructed attempt results were read. Integrated matrix cases own the 
 
 `process-exec*` predicts target admission; spawn and child observations
 record the subsequent operation. Other wildcard query spellings have an
-unresolved operation relation. Target equality compares submitted strings;
+unresolved operation relation. Target equality is canonical Unicode equivalence
+of the two submitted strings, so equal targets can differ in UTF-8 bytes;
 runtime object identity requires its own observations.
 
 #### Unlink and later observations {unlink: example}
@@ -769,9 +770,9 @@ grade: "check_read"
 scope: "subtree"
 source: {"path":"runner/Sources/PWRunnerCore/CWorkerComparison.swift","symbol":"comparisonEvidence"}
 check: {"path":"runner/Tests/PWRunnerCoreTests/ComparisonEvidenceTests.swift","symbol":"runComparisonEvidenceTests","form":"test"}
-pins: "The scenario matrix checks mapped operations, submitted relations, order and limitation values, including spawn and unlink distinctions."
+pins: "The scenario matrix checks mapped operations, submitted relations and the producer's limitation values over constructed channel results, including spawn and unlink distinctions; the record's order equals the order supplied to the producer."
 context: "Read the producer, matrix adapter and shared reading rules with their scenario descriptions."
-limits: "Constructed controls were read. Corresponding integrated cases own live filesystem scenarios, without execution credit here."
+limits: "Constructed controls were read. Corresponding integrated cases own live filesystem scenarios, without execution credit here. Each row supplies its order, and the test adapter appends the lifecycle limitation."
 ```
 
 ### Observe fresh descriptors {fresh: acts}

@@ -24173,7 +24173,7 @@
             },
             "id": "equipment.error.operation",
             "kind": "field",
-            "prose": "Failing boundary: service_seal, inventory_read, inventory_decode, worker_path, worker_hash, worker_signature, worker_entitlements, guest_code, dynamic_validity, associated_static_code or signing_information.",
+            "prose": "Failing boundary. The host assigns seven names: signing_information, worker_signature, inventory_read, inventory_decode, worker_path, worker_hash and worker_entitlements. Product readers also accept service_seal, guest_code, dynamic_validity and associated_static_code, which no producer assigns to this field. After a failed service-seal inspection, `equipment_inventory.error` names the static inspection call, worker_signature or signing_information.",
             "title": "operation"
           },
           {
@@ -35136,7 +35136,7 @@
             },
             "id": "lifecycle.host_wait.stop",
             "kind": "field",
-            "prose": "Owning operation's reason for ending this wait. clock_unavailable denotes failed or backward time with bounded sleep fallback; setup_failed denotes an unavailable nonblocking prerequisite.",
+            "prose": "Owning operation's reason for ending this wait; each owning record defines its values and the set is open. clock_unavailable is the termination gate's stop when a time sample it required failed, moved backward or was absent. A wait that loses the clock elsewhere continues on bounded sleeps, keeps its own stop value and reports clock_fault. setup_failed denotes a prerequisite that could not be established before waiting: the nonblocking readiness reader, or actor authority-region and custody setup.",
             "title": "stop"
           },
           {
@@ -63929,7 +63929,7 @@
             },
             "id": "equipment.error.operation",
             "kind": "field",
-            "prose": "Failing boundary: service_seal, inventory_read, inventory_decode, worker_path, worker_hash, worker_signature, worker_entitlements, guest_code, dynamic_validity, associated_static_code or signing_information.",
+            "prose": "Failing boundary. The host assigns seven names: signing_information, worker_signature, inventory_read, inventory_decode, worker_path, worker_hash and worker_entitlements. Product readers also accept service_seal, guest_code, dynamic_validity and associated_static_code, which no producer assigns to this field. After a failed service-seal inspection, `equipment_inventory.error` names the static inspection call, worker_signature or signing_information.",
             "title": "operation"
           },
           {
@@ -74892,7 +74892,7 @@
             },
             "id": "lifecycle.host_wait.stop",
             "kind": "field",
-            "prose": "Owning operation's reason for ending this wait. clock_unavailable denotes failed or backward time with bounded sleep fallback; setup_failed denotes an unavailable nonblocking prerequisite.",
+            "prose": "Owning operation's reason for ending this wait; each owning record defines its values and the set is open. clock_unavailable is the termination gate's stop when a time sample it required failed, moved backward or was absent. A wait that loses the clock elsewhere continues on bounded sleeps, keeps its own stop value and reports clock_fault. setup_failed denotes a prerequisite that could not be established before waiting: the nonblocking readiness reader, or actor authority-region and custody setup.",
             "title": "stop"
           },
           {
@@ -99032,7 +99032,7 @@
             },
             "id": "equipment.error.operation",
             "kind": "field",
-            "prose": "Failing boundary: service_seal, inventory_read, inventory_decode, worker_path, worker_hash, worker_signature, worker_entitlements, guest_code, dynamic_validity, associated_static_code or signing_information.",
+            "prose": "Failing boundary. The host assigns seven names: signing_information, worker_signature, inventory_read, inventory_decode, worker_path, worker_hash and worker_entitlements. Product readers also accept service_seal, guest_code, dynamic_validity and associated_static_code, which no producer assigns to this field. After a failed service-seal inspection, `equipment_inventory.error` names the static inspection call, worker_signature or signing_information.",
             "title": "operation"
           },
           {
@@ -109995,7 +109995,7 @@
             },
             "id": "lifecycle.host_wait.stop",
             "kind": "field",
-            "prose": "Owning operation's reason for ending this wait. clock_unavailable denotes failed or backward time with bounded sleep fallback; setup_failed denotes an unavailable nonblocking prerequisite.",
+            "prose": "Owning operation's reason for ending this wait; each owning record defines its values and the set is open. clock_unavailable is the termination gate's stop when a time sample it required failed, moved backward or was absent. A wait that loses the clock elsewhere continues on bounded sleeps, keeps its own stop value and reports clock_fault. setup_failed denotes a prerequisite that could not be established before waiting: the nonblocking readiness reader, or actor authority-region and custody setup.",
             "title": "stop"
           },
           {
@@ -147991,7 +147991,7 @@
             },
             "id": "equipment.authority_operation.value",
             "kind": "field",
-            "prose": "Operation-specific unsigned native observation when the cell marks a value present, such as object/page size.",
+            "prose": "Operation-specific unsigned native observation when the cell marks a value present, such as object/page size or the bytes a clearing operation overwrote, which can be zero.",
             "title": "value"
           },
           {
@@ -148049,7 +148049,7 @@
                 "xpc_execute"
               ],
               "free.condition": "After worker-identity agreement, acquire-load the decision snapshot first, then independently acquire-load each published operation cell.",
-              "free.effect": "Retain independently valid operation cells even when the decision is absent. For an observed decision, validate its raw actor/required association before projecting the decision and its primary operation.",
+              "free.effect": "Retain independently valid operation cells even when the decision is absent. For an observed decision, compare its raw actor/required association with the session's and record `setup_association_mismatch` on a difference; the decision and its primary operation are still projected, under the session's own actor index and required flag.",
               "recipient": [
                 "xpc_caller",
                 "runner_client",
@@ -148086,7 +148086,7 @@
             },
             "id": "equipment.authority_scope.acquire",
             "kind": "reports",
-            "prose": "The decision's release orders prerequisite cells. Reading the decision first\nkeeps a newly observed decision joined to its earlier primary publication.\nEach cell still has its own publication flag and kind/state guards. A cleanup\ncell can therefore be retained before the terminal decision appears. Invalid\ncells contribute integrity errors while independently valid observations\nremain available.",
+            "prose": "The decision's release orders prerequisite cells. Reading the decision first\nkeeps a newly observed decision joined to its earlier primary publication.\nEach cell still has its own publication flag and kind/state guards. A cleanup\ncell can therefore be retained before the terminal decision appears. Invalid\ncells contribute integrity errors while independently valid observations\nremain available. A scope carrying integrity errors supports no readiness: the\nscheduler treats that actor's setup as failed, and the controller reports a\nready or not_required decision beside integrity errors as invalid.",
             "referenced_types": {
               "request.actors": {
                 "json_null": false,
@@ -148372,7 +148372,7 @@
             },
             "id": "equipment.authority_scope.acquire.decision",
             "kind": "condition",
-            "prose": "",
+            "prose": "The worker publishes ready only after its core-limit, descriptor, size, mapping, close and header-binding cells succeeded. The host decoder checks the decision against `required` and does not re-check those cells. Before a required actor's setup counts as usable the scheduler also requires the worker's private header status word to report the mapped region. That word is not a reply field; a refusal on it is reported as setup_failed and its value appears only in the run's error text. The controller relates an actor's application to a terminal scope only and does not re-derive ready from its cells.",
             "referenced_types": {
               "eq_authority_scope.disposition": {
                 "json_null": false,
@@ -148883,7 +148883,7 @@
             },
             "id": "equipment.authority_scope.ownership",
             "kind": "field",
-            "prose": "Named ownership states: object_name, descriptor and mapping use not_acquired, held, released or unresolved; shared_erasure/private_erasure use not_present, performed, withheld_not_quiescent or unobserved.",
+            "prose": "Named ownership states: object_name, descriptor and mapping use not_acquired, held, released or unresolved; shared_erasure/private_erasure use not_present, performed, withheld_not_quiescent or unobserved. Each value records the last operation published for that resource in its scope, not an inventory at reply time. Host region and custody values come from the host's own setup and teardown calls. A worker scope's values come from cells that worker published before it exited, so worker `mapping: held` records a successful setup mapping with no published unmap, including for a worker the same reply reports reaped. `performed` records that the scope's clearing operation ran over its assigned storage; it does not state that token bytes were present.",
             "title": "ownership"
           },
           {
@@ -150002,7 +150002,7 @@
             },
             "id": "equipment.error.operation",
             "kind": "field",
-            "prose": "Failing boundary: service_seal, inventory_read, inventory_decode, worker_path, worker_hash, worker_signature, worker_entitlements, guest_code, dynamic_validity, associated_static_code or signing_information.",
+            "prose": "Failing boundary. The host assigns seven names: signing_information, worker_signature, inventory_read, inventory_decode, worker_path, worker_hash and worker_entitlements. Product readers also accept service_seal, guest_code, dynamic_validity and associated_static_code, which no producer assigns to this field. After a failed service-seal inspection, `equipment_inventory.error` names the static inspection call, worker_signature or signing_information.",
             "title": "operation"
           },
           {
@@ -151103,7 +151103,7 @@
             },
             "id": "lifecycle.claim_value",
             "kind": "subject",
-            "prose": "",
+            "prose": "JSON carries the chosen alternative's value directly: an integer for an exit code, signal or item index, or the termination-request object. The alternative labels are not JSON keys.",
             "title": "Lifecycle answer value",
             "variants": {
               "Integer": "Int",
@@ -151202,7 +151202,7 @@
             },
             "id": "lifecycle.host_wait.stop",
             "kind": "field",
-            "prose": "Owning operation's reason for ending this wait. clock_unavailable denotes failed or backward time with bounded sleep fallback; setup_failed denotes an unavailable nonblocking prerequisite.",
+            "prose": "Owning operation's reason for ending this wait; each owning record defines its values and the set is open. clock_unavailable is the termination gate's stop when a time sample it required failed, moved backward or was absent. A wait that loses the clock elsewhere continues on bounded sleeps, keeps its own stop value and reports clock_fault. setup_failed denotes a prerequisite that could not be established before waiting: the nonblocking readiness reader, or actor authority-region and custody setup.",
             "title": "stop"
           },
           {
@@ -177723,7 +177723,7 @@
             },
             "id": "equipment.error.operation",
             "kind": "field",
-            "prose": "Failing boundary: service_seal, inventory_read, inventory_decode, worker_path, worker_hash, worker_signature, worker_entitlements, guest_code, dynamic_validity, associated_static_code or signing_information.",
+            "prose": "Failing boundary. The host assigns seven names: signing_information, worker_signature, inventory_read, inventory_decode, worker_path, worker_hash and worker_entitlements. Product readers also accept service_seal, guest_code, dynamic_validity and associated_static_code, which no producer assigns to this field. After a failed service-seal inspection, `equipment_inventory.error` names the static inspection call, worker_signature or signing_information.",
             "title": "operation"
           },
           {
@@ -188686,7 +188686,7 @@
             },
             "id": "lifecycle.host_wait.stop",
             "kind": "field",
-            "prose": "Owning operation's reason for ending this wait. clock_unavailable denotes failed or backward time with bounded sleep fallback; setup_failed denotes an unavailable nonblocking prerequisite.",
+            "prose": "Owning operation's reason for ending this wait; each owning record defines its values and the set is open. clock_unavailable is the termination gate's stop when a time sample it required failed, moved backward or was absent. A wait that loses the clock elsewhere continues on bounded sleeps, keeps its own stop value and reports clock_fault. setup_failed denotes a prerequisite that could not be established before waiting: the nonblocking readiness reader, or actor authority-region and custody setup.",
             "title": "stop"
           },
           {
@@ -198598,7 +198598,7 @@
             },
             "id": "lifecycle.host_wait.stop",
             "kind": "field",
-            "prose": "Owning operation's reason for ending this wait. clock_unavailable denotes failed or backward time with bounded sleep fallback; setup_failed denotes an unavailable nonblocking prerequisite.",
+            "prose": "Owning operation's reason for ending this wait; each owning record defines its values and the set is open. clock_unavailable is the termination gate's stop when a time sample it required failed, moved backward or was absent. A wait that loses the clock elsewhere continues on bounded sleeps, keeps its own stop value and reports clock_fault. setup_failed denotes a prerequisite that could not be established before waiting: the nonblocking readiness reader, or actor authority-region and custody setup.",
             "title": "stop"
           },
           {
@@ -201324,7 +201324,7 @@
             },
             "id": "lifecycle.validator.read_error",
             "kind": "field",
-            "prose": "Host diagnostic for stdout-read failure, separate from accepted record contents.",
+            "prose": "Host diagnostic for the condition that ended collection early: a stdout read failure, the retention limit, a poll or clock failure, or expiry of the I/O deadline; separate from accepted record contents.",
             "title": "read_error"
           },
           {
@@ -201380,7 +201380,7 @@
             },
             "id": "lifecycle.validator.stdout_collection_stop",
             "kind": "field",
-            "prose": "Host reason for stopping stdout collection: eof, clock_error, deadline, poll_error, byte_limit or read_error. This is fixed before the exit-grace stage.",
+            "prose": "Host reason for stopping stdout collection: eof, clock_error, deadline, poll_error, byte_limit or read_error. This is fixed before the exit-grace stage. eof beside a deadline diagnostic records that stdout had already ended when the I/O deadline expired with request bytes still unwritten.",
             "title": "stdout_collection_stop"
           },
           {
@@ -203354,7 +203354,7 @@
             "facts": {},
             "id": "reply.record.outcomes",
             "kind": "definition",
-            "prose": "| Value | Host commitment |\n| --- | --- |\n| `finished` | Execution and required collection completed under the classifier's conditions; each attempt retains its own result. |\n| `bad_request` | Reached decoding/admission refused the specimen before worker or validator execution. |\n| `bad_policy` | The host could not identify the ordinary source under its structural policy check. |\n| `worker_spawn_failed` | The driver could not spawn the worker. |\n| `runner_timeout` | Host sentinel or policy-transfer deadline expired, subject to higher-precedence published worker failures. Expiry of the actor schedule's execution allowance is reported as `runner_failed`. |\n| `runner_failed` | Worker preparation/application/publication, host apparatus or supervision failed, or required observations are unusable. |\n| `validator_spawn_failed` | Worker classification succeeded and validator spawn failed. |\n| `validator_no_reply` | Worker classification succeeded and validator query delivery or verdict reading failed. |\n| `validator_decode_failure` | Worker classification succeeded and validator parsing or typed decoding failed. |\n| `validator_unavailable` | Required collection was not invoked, its budget/clock failed, or validator supervision/association was unusable. |\n| `runner_reporting_failed` | The host failed to validate or encode its assembled report and entered reporting fallback. |",
+            "prose": "| Value | Host commitment |\n| --- | --- |\n| `finished` | Execution and required collection completed under the classifier's conditions; each attempt retains its own result. |\n| `bad_request` | Reached decoding/admission refused the specimen before worker or validator execution. |\n| `bad_policy` | Defensive: the host's policy-hash step could not identify the ordinary source after admission. Admission refuses a missing source or another format as `bad_request` first, so no admitted request reaches it. |\n| `worker_spawn_failed` | The driver could not spawn the worker. |\n| `runner_timeout` | Host sentinel or policy-transfer deadline expired, subject to higher-precedence published worker failures. Expiry of the actor schedule's execution allowance is reported as `runner_failed`. |\n| `runner_failed` | Worker preparation/application/publication, host apparatus or supervision failed, or required observations are unusable. |\n| `validator_spawn_failed` | Worker classification succeeded and validator spawn failed. |\n| `validator_no_reply` | Worker classification succeeded and validator query delivery or verdict reading failed. |\n| `validator_decode_failure` | Worker classification succeeded and validator parsing or typed decoding failed. |\n| `validator_unavailable` | Required collection was not invoked, its budget/clock failed, or validator supervision/association was unusable. |\n| `runner_reporting_failed` | The host failed to validate or encode its assembled report and entered reporting fallback. |",
             "title": "Host outcomes"
           },
           {
@@ -203441,7 +203441,7 @@
             },
             "id": "reply.record.policy_format",
             "kind": "field",
-            "prose": "The ordinary policy format when available; decode refusal uses `unknown`.\nActor policies carry their formats in actor records.",
+            "prose": "The ordinary policy format when available; a decode refusal uses `unknown`, as does a capacity refusal of an ordinary request whose format exceeds its bound.\nActor policies carry their formats in actor records.",
             "title": "Policy format"
           },
           {
@@ -204264,7 +204264,7 @@
             },
             "id": "actor_evidence.actor.setup_status",
             "kind": "field",
-            "prose": "Host setup classification: not_launched, launch_refused, transfer_failed, applied, unapplied_declared, setup_failed, authority_setup_failed, exited_before_setup or setup_timeout.",
+            "prose": "Host setup classification: not_launched, launch_refused, transfer_failed, applied, unapplied_declared, setup_failed, authority_setup_failed, exited_before_setup or setup_timeout. setup_timeout labels an actor whose setup publication did not arrive within the shared setup allowance, and also an actor whose launch was not attempted because less than one millisecond of that allowance remained; the second has no launch or subprocess record and application basis worker_not_launched.",
             "title": "setup_status"
           },
           {
@@ -217451,7 +217451,7 @@
             },
             "id": "actor_evidence.phase.arrival_observed",
             "kind": "field",
-            "prose": "Whether the host acquired the active worker's arrival publication for this visit.",
+            "prose": "Whether the host acquired the active worker's arrival publication for this visit. The ordinary form reports the final acquisition of the phase's publication after cleanup; the actor form reports what the scheduler observed while that visit was active.",
             "title": "arrival_observed"
           },
           {
@@ -217489,7 +217489,7 @@
             },
             "id": "actor_evidence.phase.completion_observed",
             "kind": "field",
-            "prose": "Whether the host acquired completion for this visit.",
+            "prose": "Whether the host acquired completion for this visit, at the same form-specific point; in the actor form a completion published after the visit's wait ended is not included.",
             "title": "completion_observed"
           },
           {
@@ -217612,7 +217612,7 @@
             },
             "id": "actor_evidence.schedule.cancelled",
             "kind": "field",
-            "prose": "Recorded schedule cancellation reason, such as preparation_refused, execution_allowance_exhausted, an equipment failure or termination_dependency followed by its outcome; absent when no cancellation was recorded.",
+            "prose": "Recorded schedule cancellation reason: preparation_refused, execution_allowance_exhausted, equipment_execution_ followed by the inspection failure, termination_dependency: followed by the gate outcome, unresolved_termination or actor_quiescence_unresolved when a stopped actor was not reaped, or ownership_lost after a failed wait on the active actor; absent when no cancellation was recorded. execution_allowance_exhausted is the scheduler's classification; `execution_wait.elapsed_ms` and `execution_wait.clock_fault` show whether exhaustion was measured.",
             "title": "cancelled"
           },
           {
@@ -224529,7 +224529,7 @@
             },
             "id": "equipment.authority_operation.value",
             "kind": "field",
-            "prose": "Operation-specific unsigned native observation when the cell marks a value present, such as object/page size.",
+            "prose": "Operation-specific unsigned native observation when the cell marks a value present, such as object/page size or the bytes a clearing operation overwrote, which can be zero.",
             "title": "value"
           },
           {
@@ -224587,7 +224587,7 @@
                 "xpc_execute"
               ],
               "free.condition": "After worker-identity agreement, acquire-load the decision snapshot first, then independently acquire-load each published operation cell.",
-              "free.effect": "Retain independently valid operation cells even when the decision is absent. For an observed decision, validate its raw actor/required association before projecting the decision and its primary operation.",
+              "free.effect": "Retain independently valid operation cells even when the decision is absent. For an observed decision, compare its raw actor/required association with the session's and record `setup_association_mismatch` on a difference; the decision and its primary operation are still projected, under the session's own actor index and required flag.",
               "recipient": [
                 "xpc_caller",
                 "runner_client",
@@ -224624,7 +224624,7 @@
             },
             "id": "equipment.authority_scope.acquire",
             "kind": "reports",
-            "prose": "The decision's release orders prerequisite cells. Reading the decision first\nkeeps a newly observed decision joined to its earlier primary publication.\nEach cell still has its own publication flag and kind/state guards. A cleanup\ncell can therefore be retained before the terminal decision appears. Invalid\ncells contribute integrity errors while independently valid observations\nremain available.",
+            "prose": "The decision's release orders prerequisite cells. Reading the decision first\nkeeps a newly observed decision joined to its earlier primary publication.\nEach cell still has its own publication flag and kind/state guards. A cleanup\ncell can therefore be retained before the terminal decision appears. Invalid\ncells contribute integrity errors while independently valid observations\nremain available. A scope carrying integrity errors supports no readiness: the\nscheduler treats that actor's setup as failed, and the controller reports a\nready or not_required decision beside integrity errors as invalid.",
             "referenced_types": {
               "request.actors": {
                 "json_null": false,
@@ -224910,7 +224910,7 @@
             },
             "id": "equipment.authority_scope.acquire.decision",
             "kind": "condition",
-            "prose": "",
+            "prose": "The worker publishes ready only after its core-limit, descriptor, size, mapping, close and header-binding cells succeeded. The host decoder checks the decision against `required` and does not re-check those cells. Before a required actor's setup counts as usable the scheduler also requires the worker's private header status word to report the mapped region. That word is not a reply field; a refusal on it is reported as setup_failed and its value appears only in the run's error text. The controller relates an actor's application to a terminal scope only and does not re-derive ready from its cells.",
             "referenced_types": {
               "eq_authority_scope.disposition": {
                 "json_null": false,
@@ -225421,7 +225421,7 @@
             },
             "id": "equipment.authority_scope.ownership",
             "kind": "field",
-            "prose": "Named ownership states: object_name, descriptor and mapping use not_acquired, held, released or unresolved; shared_erasure/private_erasure use not_present, performed, withheld_not_quiescent or unobserved.",
+            "prose": "Named ownership states: object_name, descriptor and mapping use not_acquired, held, released or unresolved; shared_erasure/private_erasure use not_present, performed, withheld_not_quiescent or unobserved. Each value records the last operation published for that resource in its scope, not an inventory at reply time. Host region and custody values come from the host's own setup and teardown calls. A worker scope's values come from cells that worker published before it exited, so worker `mapping: held` records a successful setup mapping with no published unmap, including for a worker the same reply reports reaped. `performed` records that the scope's clearing operation ran over its assigned storage; it does not state that token bytes were present.",
             "title": "ownership"
           },
           {
@@ -226649,7 +226649,7 @@
             },
             "id": "equipment.error.operation",
             "kind": "field",
-            "prose": "Failing boundary: service_seal, inventory_read, inventory_decode, worker_path, worker_hash, worker_signature, worker_entitlements, guest_code, dynamic_validity, associated_static_code or signing_information.",
+            "prose": "Failing boundary. The host assigns seven names: signing_information, worker_signature, inventory_read, inventory_decode, worker_path, worker_hash and worker_entitlements. Product readers also accept service_seal, guest_code, dynamic_validity and associated_static_code, which no producer assigns to this field. After a failed service-seal inspection, `equipment_inventory.error` names the static inspection call, worker_signature or signing_information.",
             "title": "operation"
           },
           {
@@ -244075,7 +244075,7 @@
             },
             "id": "lifecycle.claim_value",
             "kind": "subject",
-            "prose": "",
+            "prose": "JSON carries the chosen alternative's value directly: an integer for an exit code, signal or item index, or the termination-request object. The alternative labels are not JSON keys.",
             "title": "Lifecycle answer value",
             "variants": {
               "Integer": "Int",
@@ -248170,7 +248170,7 @@
               "entry": [
                 "xpc_execute"
               ],
-              "free.condition": "Resolve each question from the owning worker's acquired output, unique slot identities and submitted plan. A not_reached or unpublished conclusion requires terminal collection where specified below.",
+              "free.condition": "Resolve each question from the owning worker's acquired output and unique slot identities. The ordinary form joins them to the submitted plan; the actor form takes each actor's steps from that actor's collected slot list, in which every slot is a supported operation. A not_reached or unpublished conclusion requires terminal collection where specified below.",
               "free.effect": "Resolve and publish the canonical account once. Retain competing observations as conflict issues, and derive each per-attempt summary from its canonical claims and attempt applicability.",
               "recipient": [
                 "xpc_caller",
@@ -248194,7 +248194,7 @@
             },
             "id": "lifecycle.disposition.resolve",
             "kind": "reports",
-            "prose": "A completed supported slot establishes publication and\ncan establish entry. Recognized progress at or after an attempt's entry also\nestablishes entry. A final earlier progress position establishes `not_reached`\nonly after confirmed reaping and with an incomplete slot; beside a completed\nslot it produces D5. Returned-or-later terminal progress beside an incomplete\nsupported slot produces D5 for result publication. Live collection leaves\nmissing results unresolved. An unsupported attempt has inapplicable result\npublication and an `unsupported` lifecycle summary.",
+            "prose": "A completed supported slot establishes publication and\ncan establish entry. Recognized progress at or after an attempt's entry also\nestablishes entry. A final earlier progress position establishes `not_reached`\nonly after confirmed reaping and without a completed slot, whether that slot\nis incomplete or absent; beside a completed slot it produces D5. Returned-or-later terminal progress beside an incomplete\nsupported slot produces D5 for result publication. Live collection leaves\nmissing results unresolved. An unsupported attempt has inapplicable result\npublication and an `unsupported` lifecycle summary.",
             "title": "Resolving lifecycle claims"
           },
           {
@@ -248997,7 +248997,7 @@
             },
             "id": "lifecycle.host_wait.stop",
             "kind": "field",
-            "prose": "Owning operation's reason for ending this wait. clock_unavailable denotes failed or backward time with bounded sleep fallback; setup_failed denotes an unavailable nonblocking prerequisite.",
+            "prose": "Owning operation's reason for ending this wait; each owning record defines its values and the set is open. clock_unavailable is the termination gate's stop when a time sample it required failed, moved backward or was absent. A wait that loses the clock elsewhere continues on bounded sleeps, keeps its own stop value and reports clock_fault. setup_failed denotes a prerequisite that could not be established before waiting: the nonblocking readiness reader, or actor authority-region and custody setup.",
             "title": "stop"
           },
           {
@@ -249226,7 +249226,7 @@
             },
             "id": "lifecycle.policy_read",
             "kind": "subject",
-            "prose": "At EOF the worker publishes both counts before comparing them. A header refusal, read failure or overflow leaves this receipt unavailable; both counts must fit the <!-- span limits.policy_source.value -->262,143<!-- /span -->-byte source capacity.",
+            "prose": "At EOF the worker publishes the count it received before comparing it with the host-written expected count; the host reports both counts once it acquires that publication. A header refusal, read failure or overflow leaves this receipt unavailable; both counts must fit the <!-- span limits.policy_source.value -->262,143<!-- /span -->-byte source capacity.",
             "title": "Worker policy receipt"
           },
           {
@@ -249279,7 +249279,7 @@
             },
             "id": "lifecycle.progress.index",
             "kind": "field",
-            "prose": "Zero-based item decoded from the low bits; attempts use the plan slot, parameter setup uses its parameter, and actor waits identify the next visit's first slot.",
+            "prose": "Zero-based item decoded from the low bits; attempts use the plan slot, parameter setup uses its parameter, and activation and release waits identify their visit's first slot. Every phase of either request form has a release wait; activation waits occur only in the actor form.",
             "title": "index"
           },
           {
@@ -249437,7 +249437,7 @@
             },
             "id": "lifecycle.run_questions.cleanup_trigger",
             "kind": "field",
-            "prose": "Recorded reason for requesting exit; inapplicable when exit_requested is false.",
+            "prose": "Reason for requesting exit, copied from the subprocess record's cleanup_trigger; inapplicable when exit_requested is false.",
             "title": "cleanup_trigger"
           },
           {
@@ -252597,7 +252597,7 @@
             },
             "id": "lifecycle.validator.read_error",
             "kind": "field",
-            "prose": "Host diagnostic for stdout-read failure, separate from accepted record contents.",
+            "prose": "Host diagnostic for the condition that ended collection early: a stdout read failure, the retention limit, a poll or clock failure, or expiry of the I/O deadline; separate from accepted record contents.",
             "title": "read_error"
           },
           {
@@ -252653,7 +252653,7 @@
             },
             "id": "lifecycle.validator.stdout_collection_stop",
             "kind": "field",
-            "prose": "Host reason for stopping stdout collection: eof, clock_error, deadline, poll_error, byte_limit or read_error. This is fixed before the exit-grace stage.",
+            "prose": "Host reason for stopping stdout collection: eof, clock_error, deadline, poll_error, byte_limit or read_error. This is fixed before the exit-grace stage. eof beside a deadline diagnostic records that stdout had already ended when the I/O deadline expired with request bytes still unwritten.",
             "title": "stdout_collection_stop"
           },
           {
@@ -252808,7 +252808,7 @@
             },
             "id": "lifecycle.worker.collection_basis",
             "kind": "field",
-            "prose": "Whether final reads followed a confirmed reap: after_confirmed_reap, execution_may_continue or unavailable. This controls terminal absence claims.",
+            "prose": "Whether final reads followed a confirmed reap: `after_confirmed_reap` or `execution_may_continue`; absent when the host recorded no basis. Readers also accept `unavailable`, which no producer assigns. This controls terminal absence claims.",
             "title": "collection_basis"
           },
           {
@@ -253997,7 +253997,7 @@
             },
             "id": "lifecycle.worker.exit_requested",
             "kind": "field",
-            "prose": "Whether the host performed the release store asking the worker to exit. Worker receipt is a separate observation.",
+            "prose": "Whether the host performed the release store asking the worker to exit. Worker receipt is a separate observation. The host also performs this store for a child it has already reaped; `grace_end: not_entered` and, for an actor, `owned_reap.departure_requested: false` then record that the ending preceded the request.",
             "title": "exit_requested"
           },
           {
@@ -257716,7 +257716,7 @@
             },
             "id": "lifecycle.worker_evidence.readiness",
             "kind": "field",
-            "prose": "Worker publication of the readiness-write native result, independent of the host's receipt of the byte.",
+            "prose": "Worker publication of its readiness-write helper result, independent of the host's receipt of the byte.",
             "title": "readiness"
           },
           {
@@ -259419,7 +259419,7 @@
             },
             "id": "profile.receipt.bytecode_b64",
             "kind": "field",
-            "prose": "The bytes copied from the compiler object passed to `sandbox_apply`, presented as base64.",
+            "prose": "The bytes copied from the compiler object passed to `sandbox_apply`, presented as base64. The worker reads that object through a fixed four-member view (type, reserved word, byte pointer, length) of a private structure. The receipt establishes that the bytes read this way matched their recorded length and digest. It does not establish the structure's layout on the running system, or which bytes application submitted.",
             "title": "Bytecode"
           },
           {
@@ -259805,7 +259805,7 @@
             },
             "id": "profile.receipt.capture_stage",
             "kind": "field",
-            "prose": "`before_apply` on a captured receipt identifies when the worker captured the bytes.",
+            "prose": "`before_apply` on a captured receipt names the position of the copy in the worker's program, between compilation and application. The host writes this value on every captured receipt; it is not a recorded observation of that order.",
             "title": "Capture stage"
           },
           {
@@ -261391,7 +261391,7 @@
             },
             "id": "profile.receipt.labels",
             "kind": "checks",
-            "prose": "After public producer admission and reply-capacity checks, the controller applies these conditions to every present receipt, including actor, preparation-failure and reporting-failure records. The retained nonce, bytecode, digests, lengths and counts remain the host's assertions; their production checks belong to the host capture rule.",
+            "prose": "After public producer admission and reply-capacity checks, the controller applies these conditions to every present receipt, including actor, preparation-failure and reporting-failure records. The retained nonce, bytecode, digests, lengths and counts remain the host's assertions; their production checks belong to the host capture rule. The controller compares no receipt field with the request it delivered, with the reply's worker record or with the receipt's own bytes, and evaluates neither extent condition. A `finished` result beside a `captured` receipt reports the host's capture checks, not a controller comparison.",
             "title": "The controller checks carried labels"
           },
           {
@@ -262404,7 +262404,7 @@
             },
             "id": "profile.receipt.producer",
             "kind": "field",
-            "prose": "`worker` on a captured receipt identifies the component that captured the bytes.",
+            "prose": "`worker` on a captured receipt names the component whose program copies the bytes. The host writes this value on every captured receipt; no worker publication carries it.",
             "title": "Capture producer"
           },
           {
@@ -262471,7 +262471,7 @@
             },
             "id": "profile.receipt.reason",
             "kind": "field",
-            "prose": "The host names the first failing capture condition. The controller's label check accepts the carried reason string.",
+            "prose": "The host names the first failing capture condition. The controller's label check accepts the carried reason string. `worker_capture_refused` covers every worker capture status other than captured: an unsupported type or reserved word, an empty or over-limit extent, a null byte pointer, an unreadable object, and malformed consumed input. The receipt does not say which. The host's extent and type condition repeats checks the worker makes before it records captured status.",
             "title": "Reason"
           },
           {
@@ -262499,7 +262499,7 @@
             },
             "id": "profile.receipt.request_nonce",
             "kind": "field",
-            "prose": "The host returns the request's capture nonce after comparing it with the worker's recorded bytes. A comparison with a separately retained request nonce supplies a consumer's request association; the controller's carried-label check has no request-nonce operand.",
+            "prose": "The host returns the request's capture nonce after comparing it with the worker's recorded bytes. A comparison with a separately retained request nonce supplies a consumer's request association; the controller's carried-label check has no request-nonce operand. The nonce enters no compiled byte and no digest; the comparison associates the receipt with the reply that carries it.",
             "title": "Request nonce"
           },
           {
@@ -262591,7 +262591,7 @@
             },
             "id": "profile.receipt.status",
             "kind": "field",
-            "prose": "`captured` states that the host's capture checks passed. `unavailable` states that a capture condition failed.",
+            "prose": "`captured` states that the host's capture checks passed. `unavailable` states that a capture condition failed. The host evaluates application and worker completion before it reads any capture record. An `unavailable` receipt therefore does not report whether the worker copied the object, and a completed copy is withheld when application was not observed to succeed or the worker did not complete cleanly.",
             "title": "Status"
           },
           {
@@ -271622,7 +271622,7 @@
             "facts": {},
             "id": "steps.assessment.relations",
             "kind": "definition",
-            "prose": "| Attempt | Mapped operation | Mapped filter |\n| --- | --- | --- |\n| file/open_read, file/access, file/read_fresh | file-read-data | path |\n| file/open_write, file/write_fresh | file-write-data | path |\n| file/unlink | file-write-unlink | path |\n| mach_lookup/bootstrap_look_up | mach-lookup | global_name |\n| sysctl/read | sysctl-read | sysctl_name |\n| exec/spawn | process-exec* | path |\n| file/create, file/create_fresh | unresolved compound operation | path |\n\n`process-exec*` predicts target admission; spawn and child observations\nrecord the subsequent operation. Other wildcard query spellings have an\nunresolved operation relation. Target equality compares submitted strings;\nruntime object identity requires its own observations.",
+            "prose": "| Attempt | Mapped operation | Mapped filter |\n| --- | --- | --- |\n| file/open_read, file/access, file/read_fresh | file-read-data | path |\n| file/open_write, file/write_fresh | file-write-data | path |\n| file/unlink | file-write-unlink | path |\n| mach_lookup/bootstrap_look_up | mach-lookup | global_name |\n| sysctl/read | sysctl-read | sysctl_name |\n| exec/spawn | process-exec* | path |\n| file/create, file/create_fresh | unresolved compound operation | path |\n\n`process-exec*` predicts target admission; spawn and child observations\nrecord the subsequent operation. Other wildcard query spellings have an\nunresolved operation relation. Target equality is canonical Unicode equivalence\nof the two submitted strings, so equal targets can differ in UTF-8 bytes;\nruntime object identity requires its own observations.",
             "title": "Submitted operation and target"
           },
           {
@@ -272607,7 +272607,7 @@
             },
             "id": "steps.comparison.operation_relation",
             "kind": "field",
-            "prose": "`matched` means the query equals the action's mapped operation; `different` means those strings differ; `unresolved` means the mapping cannot assign a single operation.",
+            "prose": "`matched` means the query equals the action's mapped operation; `different` means those strings differ; `unresolved` means the action has no single mapped operation, or the query is a wildcard spelling other than the matched `process-exec*`.",
             "title": "operation_relation"
           },
           {
@@ -272673,7 +272673,7 @@
             },
             "id": "steps.comparison.target_relation",
             "kind": "field",
-            "prose": "`same_submitted` or `different_submitted` compares submitted strings when the query filter matches the action's mapped filter and both strings exist; otherwise `unresolved`.",
+            "prose": "`same_submitted` or `different_submitted` compares submitted strings under canonical Unicode equivalence when the query filter matches the action's mapped filter and both strings exist; otherwise `unresolved`.",
             "title": "target_relation"
           },
           {
@@ -273935,7 +273935,7 @@
             },
             "id": "steps.query.missing_reason",
             "kind": "field",
-            "prose": "`query_not_requested` for a planner exclusion, `validator_not_invoked` when collection never ran, or `validator_no_verdict` when it produced no associated record.",
+            "prose": "`query_not_requested` for a planner exclusion; `validator_not_invoked` when no validator process supplied output for the phase, whether collection never ran or it ran and could not start one; `validator_no_verdict` when a validator ran and produced no uniquely associated record.",
             "title": "missing_reason"
           },
           {
@@ -273966,7 +273966,7 @@
             },
             "id": "steps.query.native_rc",
             "kind": "field",
-            "prose": "Native return carried by an associated allow, deny or error record. Synthetic results carry explicit null when result_source is present.",
+            "prose": "Native return carried by an associated allow, deny or error record. Synthetic results carry explicit null when result_source is present. No reader checks this relation: a result marked `synthetic` that carries a native return is admitted and projected as received.",
             "title": "native_rc"
           },
           {
@@ -274082,7 +274082,7 @@
             },
             "id": "steps.query.pid",
             "kind": "field",
-            "prose": "PID targeted by this phase's validator collection when worker output supplies it. The ordering assessment states whether the required live-worker interval was established.",
+            "prose": "Worker PID recorded for this step when worker output exists, including for a query the planner excluded. Whether a collection addressed that PID is stated by the phase's `collection_status` and `validator_subprocess`. The ordering assessment states whether the required live-worker interval was established.",
             "title": "pid"
           },
           {
@@ -295279,7 +295279,7 @@
             "facts": {},
             "id": "steps.assessment.relations",
             "kind": "definition",
-            "prose": "| Attempt | Mapped operation | Mapped filter |\n| --- | --- | --- |\n| file/open_read, file/access, file/read_fresh | file-read-data | path |\n| file/open_write, file/write_fresh | file-write-data | path |\n| file/unlink | file-write-unlink | path |\n| mach_lookup/bootstrap_look_up | mach-lookup | global_name |\n| sysctl/read | sysctl-read | sysctl_name |\n| exec/spawn | process-exec* | path |\n| file/create, file/create_fresh | unresolved compound operation | path |\n\n`process-exec*` predicts target admission; spawn and child observations\nrecord the subsequent operation. Other wildcard query spellings have an\nunresolved operation relation. Target equality compares submitted strings;\nruntime object identity requires its own observations.",
+            "prose": "| Attempt | Mapped operation | Mapped filter |\n| --- | --- | --- |\n| file/open_read, file/access, file/read_fresh | file-read-data | path |\n| file/open_write, file/write_fresh | file-write-data | path |\n| file/unlink | file-write-unlink | path |\n| mach_lookup/bootstrap_look_up | mach-lookup | global_name |\n| sysctl/read | sysctl-read | sysctl_name |\n| exec/spawn | process-exec* | path |\n| file/create, file/create_fresh | unresolved compound operation | path |\n\n`process-exec*` predicts target admission; spawn and child observations\nrecord the subsequent operation. Other wildcard query spellings have an\nunresolved operation relation. Target equality is canonical Unicode equivalence\nof the two submitted strings, so equal targets can differ in UTF-8 bytes;\nruntime object identity requires its own observations.",
             "title": "Submitted operation and target"
           },
           {
@@ -296264,7 +296264,7 @@
             },
             "id": "steps.comparison.operation_relation",
             "kind": "field",
-            "prose": "`matched` means the query equals the action's mapped operation; `different` means those strings differ; `unresolved` means the mapping cannot assign a single operation.",
+            "prose": "`matched` means the query equals the action's mapped operation; `different` means those strings differ; `unresolved` means the action has no single mapped operation, or the query is a wildcard spelling other than the matched `process-exec*`.",
             "title": "operation_relation"
           },
           {
@@ -296330,7 +296330,7 @@
             },
             "id": "steps.comparison.target_relation",
             "kind": "field",
-            "prose": "`same_submitted` or `different_submitted` compares submitted strings when the query filter matches the action's mapped filter and both strings exist; otherwise `unresolved`.",
+            "prose": "`same_submitted` or `different_submitted` compares submitted strings under canonical Unicode equivalence when the query filter matches the action's mapped filter and both strings exist; otherwise `unresolved`.",
             "title": "target_relation"
           },
           {
@@ -297592,7 +297592,7 @@
             },
             "id": "steps.query.missing_reason",
             "kind": "field",
-            "prose": "`query_not_requested` for a planner exclusion, `validator_not_invoked` when collection never ran, or `validator_no_verdict` when it produced no associated record.",
+            "prose": "`query_not_requested` for a planner exclusion; `validator_not_invoked` when no validator process supplied output for the phase, whether collection never ran or it ran and could not start one; `validator_no_verdict` when a validator ran and produced no uniquely associated record.",
             "title": "missing_reason"
           },
           {
@@ -297623,7 +297623,7 @@
             },
             "id": "steps.query.native_rc",
             "kind": "field",
-            "prose": "Native return carried by an associated allow, deny or error record. Synthetic results carry explicit null when result_source is present.",
+            "prose": "Native return carried by an associated allow, deny or error record. Synthetic results carry explicit null when result_source is present. No reader checks this relation: a result marked `synthetic` that carries a native return is admitted and projected as received.",
             "title": "native_rc"
           },
           {
@@ -297739,7 +297739,7 @@
             },
             "id": "steps.query.pid",
             "kind": "field",
-            "prose": "PID targeted by this phase's validator collection when worker output supplies it. The ordering assessment states whether the required live-worker interval was established.",
+            "prose": "Worker PID recorded for this step when worker output exists, including for a query the planner excluded. Whether a collection addressed that PID is stated by the phase's `collection_status` and `validator_subprocess`. The ordering assessment states whether the required live-worker interval was established.",
             "title": "pid"
           },
           {
@@ -298897,7 +298897,7 @@
             },
             "id": "lifecycle.claim_value",
             "kind": "subject",
-            "prose": "",
+            "prose": "JSON carries the chosen alternative's value directly: an integer for an exit code, signal or item index, or the termination-request object. The alternative labels are not JSON keys.",
             "title": "Lifecycle answer value",
             "variants": {
               "Integer": "Int",
@@ -299791,7 +299791,7 @@
             },
             "id": "lifecycle.claim_value",
             "kind": "subject",
-            "prose": "",
+            "prose": "JSON carries the chosen alternative's value directly: an integer for an exit code, signal or item index, or the termination-request object. The alternative labels are not JSON keys.",
             "title": "Lifecycle answer value",
             "variants": {
               "Integer": "Int",
@@ -303886,7 +303886,7 @@
               "entry": [
                 "xpc_execute"
               ],
-              "free.condition": "Resolve each question from the owning worker's acquired output, unique slot identities and submitted plan. A not_reached or unpublished conclusion requires terminal collection where specified below.",
+              "free.condition": "Resolve each question from the owning worker's acquired output and unique slot identities. The ordinary form joins them to the submitted plan; the actor form takes each actor's steps from that actor's collected slot list, in which every slot is a supported operation. A not_reached or unpublished conclusion requires terminal collection where specified below.",
               "free.effect": "Resolve and publish the canonical account once. Retain competing observations as conflict issues, and derive each per-attempt summary from its canonical claims and attempt applicability.",
               "recipient": [
                 "xpc_caller",
@@ -303910,7 +303910,7 @@
             },
             "id": "lifecycle.disposition.resolve",
             "kind": "reports",
-            "prose": "A completed supported slot establishes publication and\ncan establish entry. Recognized progress at or after an attempt's entry also\nestablishes entry. A final earlier progress position establishes `not_reached`\nonly after confirmed reaping and with an incomplete slot; beside a completed\nslot it produces D5. Returned-or-later terminal progress beside an incomplete\nsupported slot produces D5 for result publication. Live collection leaves\nmissing results unresolved. An unsupported attempt has inapplicable result\npublication and an `unsupported` lifecycle summary.",
+            "prose": "A completed supported slot establishes publication and\ncan establish entry. Recognized progress at or after an attempt's entry also\nestablishes entry. A final earlier progress position establishes `not_reached`\nonly after confirmed reaping and without a completed slot, whether that slot\nis incomplete or absent; beside a completed slot it produces D5. Returned-or-later terminal progress beside an incomplete\nsupported slot produces D5 for result publication. Live collection leaves\nmissing results unresolved. An unsupported attempt has inapplicable result\npublication and an `unsupported` lifecycle summary.",
             "title": "Resolving lifecycle claims"
           },
           {
@@ -304713,7 +304713,7 @@
             },
             "id": "lifecycle.host_wait.stop",
             "kind": "field",
-            "prose": "Owning operation's reason for ending this wait. clock_unavailable denotes failed or backward time with bounded sleep fallback; setup_failed denotes an unavailable nonblocking prerequisite.",
+            "prose": "Owning operation's reason for ending this wait; each owning record defines its values and the set is open. clock_unavailable is the termination gate's stop when a time sample it required failed, moved backward or was absent. A wait that loses the clock elsewhere continues on bounded sleeps, keeps its own stop value and reports clock_fault. setup_failed denotes a prerequisite that could not be established before waiting: the nonblocking readiness reader, or actor authority-region and custody setup.",
             "title": "stop"
           },
           {
@@ -304942,7 +304942,7 @@
             },
             "id": "lifecycle.policy_read",
             "kind": "subject",
-            "prose": "At EOF the worker publishes both counts before comparing them. A header refusal, read failure or overflow leaves this receipt unavailable; both counts must fit the <!-- span limits.policy_source.value -->262,143<!-- /span -->-byte source capacity.",
+            "prose": "At EOF the worker publishes the count it received before comparing it with the host-written expected count; the host reports both counts once it acquires that publication. A header refusal, read failure or overflow leaves this receipt unavailable; both counts must fit the <!-- span limits.policy_source.value -->262,143<!-- /span -->-byte source capacity.",
             "title": "Worker policy receipt"
           },
           {
@@ -304995,7 +304995,7 @@
             },
             "id": "lifecycle.progress.index",
             "kind": "field",
-            "prose": "Zero-based item decoded from the low bits; attempts use the plan slot, parameter setup uses its parameter, and actor waits identify the next visit's first slot.",
+            "prose": "Zero-based item decoded from the low bits; attempts use the plan slot, parameter setup uses its parameter, and activation and release waits identify their visit's first slot. Every phase of either request form has a release wait; activation waits occur only in the actor form.",
             "title": "index"
           },
           {
@@ -305153,7 +305153,7 @@
             },
             "id": "lifecycle.run_questions.cleanup_trigger",
             "kind": "field",
-            "prose": "Recorded reason for requesting exit; inapplicable when exit_requested is false.",
+            "prose": "Reason for requesting exit, copied from the subprocess record's cleanup_trigger; inapplicable when exit_requested is false.",
             "title": "cleanup_trigger"
           },
           {
@@ -308313,7 +308313,7 @@
             },
             "id": "lifecycle.validator.read_error",
             "kind": "field",
-            "prose": "Host diagnostic for stdout-read failure, separate from accepted record contents.",
+            "prose": "Host diagnostic for the condition that ended collection early: a stdout read failure, the retention limit, a poll or clock failure, or expiry of the I/O deadline; separate from accepted record contents.",
             "title": "read_error"
           },
           {
@@ -308369,7 +308369,7 @@
             },
             "id": "lifecycle.validator.stdout_collection_stop",
             "kind": "field",
-            "prose": "Host reason for stopping stdout collection: eof, clock_error, deadline, poll_error, byte_limit or read_error. This is fixed before the exit-grace stage.",
+            "prose": "Host reason for stopping stdout collection: eof, clock_error, deadline, poll_error, byte_limit or read_error. This is fixed before the exit-grace stage. eof beside a deadline diagnostic records that stdout had already ended when the I/O deadline expired with request bytes still unwritten.",
             "title": "stdout_collection_stop"
           },
           {
@@ -308524,7 +308524,7 @@
             },
             "id": "lifecycle.worker.collection_basis",
             "kind": "field",
-            "prose": "Whether final reads followed a confirmed reap: after_confirmed_reap, execution_may_continue or unavailable. This controls terminal absence claims.",
+            "prose": "Whether final reads followed a confirmed reap: `after_confirmed_reap` or `execution_may_continue`; absent when the host recorded no basis. Readers also accept `unavailable`, which no producer assigns. This controls terminal absence claims.",
             "title": "collection_basis"
           },
           {
@@ -309713,7 +309713,7 @@
             },
             "id": "lifecycle.worker.exit_requested",
             "kind": "field",
-            "prose": "Whether the host performed the release store asking the worker to exit. Worker receipt is a separate observation.",
+            "prose": "Whether the host performed the release store asking the worker to exit. Worker receipt is a separate observation. The host also performs this store for a child it has already reaped; `grace_end: not_entered` and, for an actor, `owned_reap.departure_requested: false` then record that the ending preceded the request.",
             "title": "exit_requested"
           },
           {
@@ -313432,7 +313432,7 @@
             },
             "id": "lifecycle.worker_evidence.readiness",
             "kind": "field",
-            "prose": "Worker publication of the readiness-write native result, independent of the host's receipt of the byte.",
+            "prose": "Worker publication of its readiness-write helper result, independent of the host's receipt of the byte.",
             "title": "readiness"
           }
         ],
@@ -314295,7 +314295,7 @@
             },
             "id": "actor_evidence.actor.setup_status",
             "kind": "field",
-            "prose": "Host setup classification: not_launched, launch_refused, transfer_failed, applied, unapplied_declared, setup_failed, authority_setup_failed, exited_before_setup or setup_timeout.",
+            "prose": "Host setup classification: not_launched, launch_refused, transfer_failed, applied, unapplied_declared, setup_failed, authority_setup_failed, exited_before_setup or setup_timeout. setup_timeout labels an actor whose setup publication did not arrive within the shared setup allowance, and also an actor whose launch was not attempted because less than one millisecond of that allowance remained; the second has no launch or subprocess record and application basis worker_not_launched.",
             "title": "setup_status"
           },
           {
@@ -327500,7 +327500,7 @@
             },
             "id": "actor_evidence.phase.arrival_observed",
             "kind": "field",
-            "prose": "Whether the host acquired the active worker's arrival publication for this visit.",
+            "prose": "Whether the host acquired the active worker's arrival publication for this visit. The ordinary form reports the final acquisition of the phase's publication after cleanup; the actor form reports what the scheduler observed while that visit was active.",
             "title": "arrival_observed"
           },
           {
@@ -327538,7 +327538,7 @@
             },
             "id": "actor_evidence.phase.completion_observed",
             "kind": "field",
-            "prose": "Whether the host acquired completion for this visit.",
+            "prose": "Whether the host acquired completion for this visit, at the same form-specific point; in the actor form a completion published after the visit's wait ended is not included.",
             "title": "completion_observed"
           },
           {
@@ -327661,7 +327661,7 @@
             },
             "id": "actor_evidence.schedule.cancelled",
             "kind": "field",
-            "prose": "Recorded schedule cancellation reason, such as preparation_refused, execution_allowance_exhausted, an equipment failure or termination_dependency followed by its outcome; absent when no cancellation was recorded.",
+            "prose": "Recorded schedule cancellation reason: preparation_refused, execution_allowance_exhausted, equipment_execution_ followed by the inspection failure, termination_dependency: followed by the gate outcome, unresolved_termination or actor_quiescence_unresolved when a stopped actor was not reaped, or ownership_lost after a failed wait on the active actor; absent when no cancellation was recorded. execution_allowance_exhausted is the scheduler's classification; `execution_wait.elapsed_ms` and `execution_wait.clock_fault` show whether exhaustion was measured.",
             "title": "cancelled"
           },
           {
@@ -329914,7 +329914,7 @@
             },
             "id": "lifecycle.claim_value",
             "kind": "subject",
-            "prose": "",
+            "prose": "JSON carries the chosen alternative's value directly: an integer for an exit code, signal or item index, or the termination-request object. The alternative labels are not JSON keys.",
             "title": "Lifecycle answer value",
             "variants": {
               "Integer": "Int",
@@ -334009,7 +334009,7 @@
               "entry": [
                 "xpc_execute"
               ],
-              "free.condition": "Resolve each question from the owning worker's acquired output, unique slot identities and submitted plan. A not_reached or unpublished conclusion requires terminal collection where specified below.",
+              "free.condition": "Resolve each question from the owning worker's acquired output and unique slot identities. The ordinary form joins them to the submitted plan; the actor form takes each actor's steps from that actor's collected slot list, in which every slot is a supported operation. A not_reached or unpublished conclusion requires terminal collection where specified below.",
               "free.effect": "Resolve and publish the canonical account once. Retain competing observations as conflict issues, and derive each per-attempt summary from its canonical claims and attempt applicability.",
               "recipient": [
                 "xpc_caller",
@@ -334033,7 +334033,7 @@
             },
             "id": "lifecycle.disposition.resolve",
             "kind": "reports",
-            "prose": "A completed supported slot establishes publication and\ncan establish entry. Recognized progress at or after an attempt's entry also\nestablishes entry. A final earlier progress position establishes `not_reached`\nonly after confirmed reaping and with an incomplete slot; beside a completed\nslot it produces D5. Returned-or-later terminal progress beside an incomplete\nsupported slot produces D5 for result publication. Live collection leaves\nmissing results unresolved. An unsupported attempt has inapplicable result\npublication and an `unsupported` lifecycle summary.",
+            "prose": "A completed supported slot establishes publication and\ncan establish entry. Recognized progress at or after an attempt's entry also\nestablishes entry. A final earlier progress position establishes `not_reached`\nonly after confirmed reaping and without a completed slot, whether that slot\nis incomplete or absent; beside a completed slot it produces D5. Returned-or-later terminal progress beside an incomplete\nsupported slot produces D5 for result publication. Live collection leaves\nmissing results unresolved. An unsupported attempt has inapplicable result\npublication and an `unsupported` lifecycle summary.",
             "title": "Resolving lifecycle claims"
           },
           {
@@ -334287,7 +334287,7 @@
             },
             "id": "lifecycle.host_wait.stop",
             "kind": "field",
-            "prose": "Owning operation's reason for ending this wait. clock_unavailable denotes failed or backward time with bounded sleep fallback; setup_failed denotes an unavailable nonblocking prerequisite.",
+            "prose": "Owning operation's reason for ending this wait; each owning record defines its values and the set is open. clock_unavailable is the termination gate's stop when a time sample it required failed, moved backward or was absent. A wait that loses the clock elsewhere continues on bounded sleeps, keeps its own stop value and reports clock_fault. setup_failed denotes a prerequisite that could not be established before waiting: the nonblocking readiness reader, or actor authority-region and custody setup.",
             "title": "stop"
           },
           {
@@ -334516,7 +334516,7 @@
             },
             "id": "lifecycle.policy_read",
             "kind": "subject",
-            "prose": "At EOF the worker publishes both counts before comparing them. A header refusal, read failure or overflow leaves this receipt unavailable; both counts must fit the <!-- span limits.policy_source.value -->262,143<!-- /span -->-byte source capacity.",
+            "prose": "At EOF the worker publishes the count it received before comparing it with the host-written expected count; the host reports both counts once it acquires that publication. A header refusal, read failure or overflow leaves this receipt unavailable; both counts must fit the <!-- span limits.policy_source.value -->262,143<!-- /span -->-byte source capacity.",
             "title": "Worker policy receipt"
           },
           {
@@ -334569,7 +334569,7 @@
             },
             "id": "lifecycle.progress.index",
             "kind": "field",
-            "prose": "Zero-based item decoded from the low bits; attempts use the plan slot, parameter setup uses its parameter, and actor waits identify the next visit's first slot.",
+            "prose": "Zero-based item decoded from the low bits; attempts use the plan slot, parameter setup uses its parameter, and activation and release waits identify their visit's first slot. Every phase of either request form has a release wait; activation waits occur only in the actor form.",
             "title": "index"
           },
           {
@@ -334727,7 +334727,7 @@
             },
             "id": "lifecycle.run_questions.cleanup_trigger",
             "kind": "field",
-            "prose": "Recorded reason for requesting exit; inapplicable when exit_requested is false.",
+            "prose": "Reason for requesting exit, copied from the subprocess record's cleanup_trigger; inapplicable when exit_requested is false.",
             "title": "cleanup_trigger"
           },
           {
@@ -337887,7 +337887,7 @@
             },
             "id": "lifecycle.validator.read_error",
             "kind": "field",
-            "prose": "Host diagnostic for stdout-read failure, separate from accepted record contents.",
+            "prose": "Host diagnostic for the condition that ended collection early: a stdout read failure, the retention limit, a poll or clock failure, or expiry of the I/O deadline; separate from accepted record contents.",
             "title": "read_error"
           },
           {
@@ -337943,7 +337943,7 @@
             },
             "id": "lifecycle.validator.stdout_collection_stop",
             "kind": "field",
-            "prose": "Host reason for stopping stdout collection: eof, clock_error, deadline, poll_error, byte_limit or read_error. This is fixed before the exit-grace stage.",
+            "prose": "Host reason for stopping stdout collection: eof, clock_error, deadline, poll_error, byte_limit or read_error. This is fixed before the exit-grace stage. eof beside a deadline diagnostic records that stdout had already ended when the I/O deadline expired with request bytes still unwritten.",
             "title": "stdout_collection_stop"
           },
           {
@@ -338098,7 +338098,7 @@
             },
             "id": "lifecycle.worker.collection_basis",
             "kind": "field",
-            "prose": "Whether final reads followed a confirmed reap: after_confirmed_reap, execution_may_continue or unavailable. This controls terminal absence claims.",
+            "prose": "Whether final reads followed a confirmed reap: `after_confirmed_reap` or `execution_may_continue`; absent when the host recorded no basis. Readers also accept `unavailable`, which no producer assigns. This controls terminal absence claims.",
             "title": "collection_basis"
           },
           {
@@ -339287,7 +339287,7 @@
             },
             "id": "lifecycle.worker.exit_requested",
             "kind": "field",
-            "prose": "Whether the host performed the release store asking the worker to exit. Worker receipt is a separate observation.",
+            "prose": "Whether the host performed the release store asking the worker to exit. Worker receipt is a separate observation. The host also performs this store for a child it has already reaped; `grace_end: not_entered` and, for an actor, `owned_reap.departure_requested: false` then record that the ending preceded the request.",
             "title": "exit_requested"
           },
           {
@@ -343006,7 +343006,7 @@
             },
             "id": "lifecycle.worker_evidence.readiness",
             "kind": "field",
-            "prose": "Worker publication of the readiness-write native result, independent of the host's receipt of the byte.",
+            "prose": "Worker publication of its readiness-write helper result, independent of the host's receipt of the byte.",
             "title": "readiness"
           },
           {
@@ -343132,7 +343132,7 @@
             },
             "id": "profile.receipt.bytecode_b64",
             "kind": "field",
-            "prose": "The bytes copied from the compiler object passed to `sandbox_apply`, presented as base64.",
+            "prose": "The bytes copied from the compiler object passed to `sandbox_apply`, presented as base64. The worker reads that object through a fixed four-member view (type, reserved word, byte pointer, length) of a private structure. The receipt establishes that the bytes read this way matched their recorded length and digest. It does not establish the structure's layout on the running system, or which bytes application submitted.",
             "title": "Bytecode"
           },
           {
@@ -343518,7 +343518,7 @@
             },
             "id": "profile.receipt.capture_stage",
             "kind": "field",
-            "prose": "`before_apply` on a captured receipt identifies when the worker captured the bytes.",
+            "prose": "`before_apply` on a captured receipt names the position of the copy in the worker's program, between compilation and application. The host writes this value on every captured receipt; it is not a recorded observation of that order.",
             "title": "Capture stage"
           },
           {
@@ -345104,7 +345104,7 @@
             },
             "id": "profile.receipt.labels",
             "kind": "checks",
-            "prose": "After public producer admission and reply-capacity checks, the controller applies these conditions to every present receipt, including actor, preparation-failure and reporting-failure records. The retained nonce, bytecode, digests, lengths and counts remain the host's assertions; their production checks belong to the host capture rule.",
+            "prose": "After public producer admission and reply-capacity checks, the controller applies these conditions to every present receipt, including actor, preparation-failure and reporting-failure records. The retained nonce, bytecode, digests, lengths and counts remain the host's assertions; their production checks belong to the host capture rule. The controller compares no receipt field with the request it delivered, with the reply's worker record or with the receipt's own bytes, and evaluates neither extent condition. A `finished` result beside a `captured` receipt reports the host's capture checks, not a controller comparison.",
             "title": "The controller checks carried labels"
           },
           {
@@ -346117,7 +346117,7 @@
             },
             "id": "profile.receipt.producer",
             "kind": "field",
-            "prose": "`worker` on a captured receipt identifies the component that captured the bytes.",
+            "prose": "`worker` on a captured receipt names the component whose program copies the bytes. The host writes this value on every captured receipt; no worker publication carries it.",
             "title": "Capture producer"
           },
           {
@@ -346184,7 +346184,7 @@
             },
             "id": "profile.receipt.reason",
             "kind": "field",
-            "prose": "The host names the first failing capture condition. The controller's label check accepts the carried reason string.",
+            "prose": "The host names the first failing capture condition. The controller's label check accepts the carried reason string. `worker_capture_refused` covers every worker capture status other than captured: an unsupported type or reserved word, an empty or over-limit extent, a null byte pointer, an unreadable object, and malformed consumed input. The receipt does not say which. The host's extent and type condition repeats checks the worker makes before it records captured status.",
             "title": "Reason"
           },
           {
@@ -346212,7 +346212,7 @@
             },
             "id": "profile.receipt.request_nonce",
             "kind": "field",
-            "prose": "The host returns the request's capture nonce after comparing it with the worker's recorded bytes. A comparison with a separately retained request nonce supplies a consumer's request association; the controller's carried-label check has no request-nonce operand.",
+            "prose": "The host returns the request's capture nonce after comparing it with the worker's recorded bytes. A comparison with a separately retained request nonce supplies a consumer's request association; the controller's carried-label check has no request-nonce operand. The nonce enters no compiled byte and no digest; the comparison associates the receipt with the reply that carries it.",
             "title": "Request nonce"
           },
           {
@@ -346304,7 +346304,7 @@
             },
             "id": "profile.receipt.status",
             "kind": "field",
-            "prose": "`captured` states that the host's capture checks passed. `unavailable` states that a capture condition failed.",
+            "prose": "`captured` states that the host's capture checks passed. `unavailable` states that a capture condition failed. The host evaluates application and worker completion before it reads any capture record. An `unavailable` receipt therefore does not report whether the worker copied the object, and a completed copy is withheld when application was not observed to succeed or the worker did not complete cleanly.",
             "title": "Status"
           },
           {
@@ -348189,7 +348189,7 @@
             },
             "id": "equipment.authority_operation.value",
             "kind": "field",
-            "prose": "Operation-specific unsigned native observation when the cell marks a value present, such as object/page size.",
+            "prose": "Operation-specific unsigned native observation when the cell marks a value present, such as object/page size or the bytes a clearing operation overwrote, which can be zero.",
             "title": "value"
           },
           {
@@ -348247,7 +348247,7 @@
                 "xpc_execute"
               ],
               "free.condition": "After worker-identity agreement, acquire-load the decision snapshot first, then independently acquire-load each published operation cell.",
-              "free.effect": "Retain independently valid operation cells even when the decision is absent. For an observed decision, validate its raw actor/required association before projecting the decision and its primary operation.",
+              "free.effect": "Retain independently valid operation cells even when the decision is absent. For an observed decision, compare its raw actor/required association with the session's and record `setup_association_mismatch` on a difference; the decision and its primary operation are still projected, under the session's own actor index and required flag.",
               "recipient": [
                 "xpc_caller",
                 "runner_client",
@@ -348284,7 +348284,7 @@
             },
             "id": "equipment.authority_scope.acquire",
             "kind": "reports",
-            "prose": "The decision's release orders prerequisite cells. Reading the decision first\nkeeps a newly observed decision joined to its earlier primary publication.\nEach cell still has its own publication flag and kind/state guards. A cleanup\ncell can therefore be retained before the terminal decision appears. Invalid\ncells contribute integrity errors while independently valid observations\nremain available.",
+            "prose": "The decision's release orders prerequisite cells. Reading the decision first\nkeeps a newly observed decision joined to its earlier primary publication.\nEach cell still has its own publication flag and kind/state guards. A cleanup\ncell can therefore be retained before the terminal decision appears. Invalid\ncells contribute integrity errors while independently valid observations\nremain available. A scope carrying integrity errors supports no readiness: the\nscheduler treats that actor's setup as failed, and the controller reports a\nready or not_required decision beside integrity errors as invalid.",
             "referenced_types": {
               "request.actors": {
                 "json_null": false,
@@ -348570,7 +348570,7 @@
             },
             "id": "equipment.authority_scope.acquire.decision",
             "kind": "condition",
-            "prose": "",
+            "prose": "The worker publishes ready only after its core-limit, descriptor, size, mapping, close and header-binding cells succeeded. The host decoder checks the decision against `required` and does not re-check those cells. Before a required actor's setup counts as usable the scheduler also requires the worker's private header status word to report the mapped region. That word is not a reply field; a refusal on it is reported as setup_failed and its value appears only in the run's error text. The controller relates an actor's application to a terminal scope only and does not re-derive ready from its cells.",
             "referenced_types": {
               "eq_authority_scope.disposition": {
                 "json_null": false,
@@ -349081,7 +349081,7 @@
             },
             "id": "equipment.authority_scope.ownership",
             "kind": "field",
-            "prose": "Named ownership states: object_name, descriptor and mapping use not_acquired, held, released or unresolved; shared_erasure/private_erasure use not_present, performed, withheld_not_quiescent or unobserved.",
+            "prose": "Named ownership states: object_name, descriptor and mapping use not_acquired, held, released or unresolved; shared_erasure/private_erasure use not_present, performed, withheld_not_quiescent or unobserved. Each value records the last operation published for that resource in its scope, not an inventory at reply time. Host region and custody values come from the host's own setup and teardown calls. A worker scope's values come from cells that worker published before it exited, so worker `mapping: held` records a successful setup mapping with no published unmap, including for a worker the same reply reports reaped. `performed` records that the scope's clearing operation ran over its assigned storage; it does not state that token bytes were present.",
             "title": "ownership"
           },
           {
@@ -350309,7 +350309,7 @@
             },
             "id": "equipment.error.operation",
             "kind": "field",
-            "prose": "Failing boundary: service_seal, inventory_read, inventory_decode, worker_path, worker_hash, worker_signature, worker_entitlements, guest_code, dynamic_validity, associated_static_code or signing_information.",
+            "prose": "Failing boundary. The host assigns seven names: signing_information, worker_signature, inventory_read, inventory_decode, worker_path, worker_hash and worker_entitlements. Product readers also accept service_seal, guest_code, dynamic_validity and associated_static_code, which no producer assigns to this field. After a failed service-seal inspection, `equipment_inventory.error` names the static inspection call, worker_signature or signing_information.",
             "title": "operation"
           },
           {
@@ -351057,7 +351057,7 @@
             },
             "id": "equipment.manifest",
             "kind": "subject",
-            "prose": "The package places this JSON inventory inside each service seal after signing both worker roles. Its hashes use lowercase hexadecimal text.",
+            "prose": "The package places this JSON inventory inside each service seal after signing both worker roles. Its hashes use lowercase hexadecimal text. An absent key, a null or a value of another type in the inventory or a worker row refuses the inventory as `worker_identity_mismatch`, with error operation `inventory_decode`.",
             "title": "Sealed equipment inventory file"
           },
           {
@@ -351071,7 +351071,7 @@
             },
             "id": "equipment.manifest.contract",
             "kind": "field",
-            "prose": "Exact public build identity which must match the host's expected contract.",
+            "prose": "Required string: the exact public build identity, which must match the host's expected contract.",
             "title": "contract"
           },
           {
@@ -351085,7 +351085,7 @@
             },
             "id": "equipment.manifest.schema_version",
             "kind": "field",
-            "prose": "Inventory format version; the host accepts 1.",
+            "prose": "Required integer inventory format version; the host accepts 1.",
             "title": "schema_version"
           },
           {
@@ -351103,7 +351103,7 @@
             },
             "id": "equipment.manifest.unsigned_worker_sha256",
             "kind": "field",
-            "prose": "Lowercase hexadecimal common unsigned worker input digest.",
+            "prose": "Required lowercase hexadecimal common unsigned worker input digest.",
             "title": "unsigned_worker_sha256"
           },
           {
@@ -351121,7 +351121,7 @@
             },
             "id": "equipment.manifest.worker_identity",
             "kind": "field",
-            "prose": "Lowercase hexadecimal worker protocol identity expected by the host.",
+            "prose": "Required lowercase hexadecimal worker protocol identity expected by the host.",
             "title": "worker_identity"
           },
           {
@@ -351135,7 +351135,7 @@
             },
             "id": "equipment.manifest.workers",
             "kind": "field",
-            "prose": "Exactly two distinct role rows, selected and unentitled, providing expected signed file and entitlement identities.",
+            "prose": "Required array of exactly two distinct role rows, selected and unentitled, providing expected signed file and entitlement identities.",
             "title": "workers"
           },
           {
@@ -351164,7 +351164,7 @@
             },
             "id": "equipment.manifest_worker.cdhash",
             "kind": "field",
-            "prose": "Lowercase hexadecimal worker CodeDirectory hash.",
+            "prose": "Required lowercase hexadecimal worker CodeDirectory hash.",
             "title": "cdhash"
           },
           {
@@ -351178,7 +351178,7 @@
             },
             "id": "equipment.manifest_worker.entitlements_xml",
             "kind": "field",
-            "prose": "Entitlement dictionary serialized as an XML property list, at most <!-- span limits.equipment_entitlement_bytes.value_unit -->65,536 UTF-8 bytes<!-- /span -->; unentitled has an empty dictionary.",
+            "prose": "Required string: the entitlement dictionary serialized as an XML property list, at most <!-- span limits.equipment_entitlement_bytes.value_unit -->65,536 UTF-8 bytes<!-- /span -->; unentitled has an empty dictionary.",
             "title": "entitlements_xml"
           },
           {
@@ -351192,7 +351192,7 @@
             },
             "id": "equipment.manifest_worker.identifier",
             "kind": "field",
-            "prose": "Nonempty signing identifier expected from static code inspection, bounded to <!-- span limits.equipment_signing_text.value_unit -->255 UTF-8 bytes<!-- /span -->.",
+            "prose": "Required nonempty signing identifier expected from static code inspection, bounded to <!-- span limits.equipment_signing_text.value_unit -->255 UTF-8 bytes<!-- /span -->.",
             "title": "identifier"
           },
           {
@@ -351206,7 +351206,7 @@
             },
             "id": "equipment.manifest_worker.relative_path",
             "kind": "field",
-            "prose": "Contents/MacOS/pw-probe-runner for selected; Contents/MacOS/pw-probe-runner-unentitled for unentitled.",
+            "prose": "Required string: Contents/MacOS/pw-probe-runner for selected; Contents/MacOS/pw-probe-runner-unentitled for unentitled.",
             "title": "relative_path"
           },
           {
@@ -351227,7 +351227,7 @@
             },
             "id": "equipment.manifest_worker.role",
             "kind": "field",
-            "prose": "selected or unentitled, identifying the worker role.",
+            "prose": "Required string, selected or unentitled, identifying the worker role.",
             "title": "role"
           },
           {
@@ -351245,7 +351245,7 @@
             },
             "id": "equipment.manifest_worker.sha256",
             "kind": "field",
-            "prose": "Lowercase hexadecimal SHA-256 of the signed worker file.",
+            "prose": "Required lowercase hexadecimal SHA-256 of the signed worker file.",
             "title": "sha256"
           },
           {
@@ -354664,7 +354664,7 @@
             },
             "id": "profile.receipt.bytecode_b64",
             "kind": "field",
-            "prose": "The bytes copied from the compiler object passed to `sandbox_apply`, presented as base64.",
+            "prose": "The bytes copied from the compiler object passed to `sandbox_apply`, presented as base64. The worker reads that object through a fixed four-member view (type, reserved word, byte pointer, length) of a private structure. The receipt establishes that the bytes read this way matched their recorded length and digest. It does not establish the structure's layout on the running system, or which bytes application submitted.",
             "title": "Bytecode"
           },
           {
@@ -355050,7 +355050,7 @@
             },
             "id": "profile.receipt.capture_stage",
             "kind": "field",
-            "prose": "`before_apply` on a captured receipt identifies when the worker captured the bytes.",
+            "prose": "`before_apply` on a captured receipt names the position of the copy in the worker's program, between compilation and application. The host writes this value on every captured receipt; it is not a recorded observation of that order.",
             "title": "Capture stage"
           },
           {
@@ -356636,7 +356636,7 @@
             },
             "id": "profile.receipt.labels",
             "kind": "checks",
-            "prose": "After public producer admission and reply-capacity checks, the controller applies these conditions to every present receipt, including actor, preparation-failure and reporting-failure records. The retained nonce, bytecode, digests, lengths and counts remain the host's assertions; their production checks belong to the host capture rule.",
+            "prose": "After public producer admission and reply-capacity checks, the controller applies these conditions to every present receipt, including actor, preparation-failure and reporting-failure records. The retained nonce, bytecode, digests, lengths and counts remain the host's assertions; their production checks belong to the host capture rule. The controller compares no receipt field with the request it delivered, with the reply's worker record or with the receipt's own bytes, and evaluates neither extent condition. A `finished` result beside a `captured` receipt reports the host's capture checks, not a controller comparison.",
             "title": "The controller checks carried labels"
           },
           {
@@ -357649,7 +357649,7 @@
             },
             "id": "profile.receipt.producer",
             "kind": "field",
-            "prose": "`worker` on a captured receipt identifies the component that captured the bytes.",
+            "prose": "`worker` on a captured receipt names the component whose program copies the bytes. The host writes this value on every captured receipt; no worker publication carries it.",
             "title": "Capture producer"
           },
           {
@@ -357716,7 +357716,7 @@
             },
             "id": "profile.receipt.reason",
             "kind": "field",
-            "prose": "The host names the first failing capture condition. The controller's label check accepts the carried reason string.",
+            "prose": "The host names the first failing capture condition. The controller's label check accepts the carried reason string. `worker_capture_refused` covers every worker capture status other than captured: an unsupported type or reserved word, an empty or over-limit extent, a null byte pointer, an unreadable object, and malformed consumed input. The receipt does not say which. The host's extent and type condition repeats checks the worker makes before it records captured status.",
             "title": "Reason"
           },
           {
@@ -357744,7 +357744,7 @@
             },
             "id": "profile.receipt.request_nonce",
             "kind": "field",
-            "prose": "The host returns the request's capture nonce after comparing it with the worker's recorded bytes. A comparison with a separately retained request nonce supplies a consumer's request association; the controller's carried-label check has no request-nonce operand.",
+            "prose": "The host returns the request's capture nonce after comparing it with the worker's recorded bytes. A comparison with a separately retained request nonce supplies a consumer's request association; the controller's carried-label check has no request-nonce operand. The nonce enters no compiled byte and no digest; the comparison associates the receipt with the reply that carries it.",
             "title": "Request nonce"
           },
           {
@@ -357836,7 +357836,7 @@
             },
             "id": "profile.receipt.status",
             "kind": "field",
-            "prose": "`captured` states that the host's capture checks passed. `unavailable` states that a capture condition failed.",
+            "prose": "`captured` states that the host's capture checks passed. `unavailable` states that a capture condition failed. The host evaluates application and worker completion before it reads any capture record. An `unavailable` receipt therefore does not report whether the worker copied the object, and a completed copy is withheld when application was not observed to succeed or the worker did not complete cleanly.",
             "title": "Status"
           },
           {
@@ -359786,7 +359786,7 @@
             },
             "id": "actor_evidence.actor.setup_status",
             "kind": "field",
-            "prose": "Host setup classification: not_launched, launch_refused, transfer_failed, applied, unapplied_declared, setup_failed, authority_setup_failed, exited_before_setup or setup_timeout.",
+            "prose": "Host setup classification: not_launched, launch_refused, transfer_failed, applied, unapplied_declared, setup_failed, authority_setup_failed, exited_before_setup or setup_timeout. setup_timeout labels an actor whose setup publication did not arrive within the shared setup allowance, and also an actor whose launch was not attempted because less than one millisecond of that allowance remained; the second has no launch or subprocess record and application basis worker_not_launched.",
             "title": "setup_status"
           },
           {
@@ -372973,7 +372973,7 @@
             },
             "id": "actor_evidence.phase.arrival_observed",
             "kind": "field",
-            "prose": "Whether the host acquired the active worker's arrival publication for this visit.",
+            "prose": "Whether the host acquired the active worker's arrival publication for this visit. The ordinary form reports the final acquisition of the phase's publication after cleanup; the actor form reports what the scheduler observed while that visit was active.",
             "title": "arrival_observed"
           },
           {
@@ -373011,7 +373011,7 @@
             },
             "id": "actor_evidence.phase.completion_observed",
             "kind": "field",
-            "prose": "Whether the host acquired completion for this visit.",
+            "prose": "Whether the host acquired completion for this visit, at the same form-specific point; in the actor form a completion published after the visit's wait ended is not included.",
             "title": "completion_observed"
           },
           {
@@ -373134,7 +373134,7 @@
             },
             "id": "actor_evidence.schedule.cancelled",
             "kind": "field",
-            "prose": "Recorded schedule cancellation reason, such as preparation_refused, execution_allowance_exhausted, an equipment failure or termination_dependency followed by its outcome; absent when no cancellation was recorded.",
+            "prose": "Recorded schedule cancellation reason: preparation_refused, execution_allowance_exhausted, equipment_execution_ followed by the inspection failure, termination_dependency: followed by the gate outcome, unresolved_termination or actor_quiescence_unresolved when a stopped actor was not reaped, or ownership_lost after a failed wait on the active actor; absent when no cancellation was recorded. execution_allowance_exhausted is the scheduler's classification; `execution_wait.elapsed_ms` and `execution_wait.clock_fault` show whether exhaustion was measured.",
             "title": "cancelled"
           },
           {
@@ -416678,7 +416678,7 @@
             },
             "id": "equipment.authority_operation.value",
             "kind": "field",
-            "prose": "Operation-specific unsigned native observation when the cell marks a value present, such as object/page size.",
+            "prose": "Operation-specific unsigned native observation when the cell marks a value present, such as object/page size or the bytes a clearing operation overwrote, which can be zero.",
             "title": "value"
           },
           {
@@ -416736,7 +416736,7 @@
                 "xpc_execute"
               ],
               "free.condition": "After worker-identity agreement, acquire-load the decision snapshot first, then independently acquire-load each published operation cell.",
-              "free.effect": "Retain independently valid operation cells even when the decision is absent. For an observed decision, validate its raw actor/required association before projecting the decision and its primary operation.",
+              "free.effect": "Retain independently valid operation cells even when the decision is absent. For an observed decision, compare its raw actor/required association with the session's and record `setup_association_mismatch` on a difference; the decision and its primary operation are still projected, under the session's own actor index and required flag.",
               "recipient": [
                 "xpc_caller",
                 "runner_client",
@@ -416773,7 +416773,7 @@
             },
             "id": "equipment.authority_scope.acquire",
             "kind": "reports",
-            "prose": "The decision's release orders prerequisite cells. Reading the decision first\nkeeps a newly observed decision joined to its earlier primary publication.\nEach cell still has its own publication flag and kind/state guards. A cleanup\ncell can therefore be retained before the terminal decision appears. Invalid\ncells contribute integrity errors while independently valid observations\nremain available.",
+            "prose": "The decision's release orders prerequisite cells. Reading the decision first\nkeeps a newly observed decision joined to its earlier primary publication.\nEach cell still has its own publication flag and kind/state guards. A cleanup\ncell can therefore be retained before the terminal decision appears. Invalid\ncells contribute integrity errors while independently valid observations\nremain available. A scope carrying integrity errors supports no readiness: the\nscheduler treats that actor's setup as failed, and the controller reports a\nready or not_required decision beside integrity errors as invalid.",
             "referenced_types": {
               "request.actors": {
                 "json_null": false,
@@ -417059,7 +417059,7 @@
             },
             "id": "equipment.authority_scope.acquire.decision",
             "kind": "condition",
-            "prose": "",
+            "prose": "The worker publishes ready only after its core-limit, descriptor, size, mapping, close and header-binding cells succeeded. The host decoder checks the decision against `required` and does not re-check those cells. Before a required actor's setup counts as usable the scheduler also requires the worker's private header status word to report the mapped region. That word is not a reply field; a refusal on it is reported as setup_failed and its value appears only in the run's error text. The controller relates an actor's application to a terminal scope only and does not re-derive ready from its cells.",
             "referenced_types": {
               "eq_authority_scope.disposition": {
                 "json_null": false,
@@ -417570,7 +417570,7 @@
             },
             "id": "equipment.authority_scope.ownership",
             "kind": "field",
-            "prose": "Named ownership states: object_name, descriptor and mapping use not_acquired, held, released or unresolved; shared_erasure/private_erasure use not_present, performed, withheld_not_quiescent or unobserved.",
+            "prose": "Named ownership states: object_name, descriptor and mapping use not_acquired, held, released or unresolved; shared_erasure/private_erasure use not_present, performed, withheld_not_quiescent or unobserved. Each value records the last operation published for that resource in its scope, not an inventory at reply time. Host region and custody values come from the host's own setup and teardown calls. A worker scope's values come from cells that worker published before it exited, so worker `mapping: held` records a successful setup mapping with no published unmap, including for a worker the same reply reports reaped. `performed` records that the scope's clearing operation ran over its assigned storage; it does not state that token bytes were present.",
             "title": "ownership"
           },
           {
@@ -418798,7 +418798,7 @@
             },
             "id": "equipment.error.operation",
             "kind": "field",
-            "prose": "Failing boundary: service_seal, inventory_read, inventory_decode, worker_path, worker_hash, worker_signature, worker_entitlements, guest_code, dynamic_validity, associated_static_code or signing_information.",
+            "prose": "Failing boundary. The host assigns seven names: signing_information, worker_signature, inventory_read, inventory_decode, worker_path, worker_hash and worker_entitlements. Product readers also accept service_seal, guest_code, dynamic_validity and associated_static_code, which no producer assigns to this field. After a failed service-seal inspection, `equipment_inventory.error` names the static inspection call, worker_signature or signing_information.",
             "title": "operation"
           },
           {
@@ -436433,7 +436433,7 @@
             },
             "id": "lifecycle.claim_value",
             "kind": "subject",
-            "prose": "",
+            "prose": "JSON carries the chosen alternative's value directly: an integer for an exit code, signal or item index, or the termination-request object. The alternative labels are not JSON keys.",
             "title": "Lifecycle answer value",
             "variants": {
               "Integer": "Int",
@@ -440528,7 +440528,7 @@
               "entry": [
                 "xpc_execute"
               ],
-              "free.condition": "Resolve each question from the owning worker's acquired output, unique slot identities and submitted plan. A not_reached or unpublished conclusion requires terminal collection where specified below.",
+              "free.condition": "Resolve each question from the owning worker's acquired output and unique slot identities. The ordinary form joins them to the submitted plan; the actor form takes each actor's steps from that actor's collected slot list, in which every slot is a supported operation. A not_reached or unpublished conclusion requires terminal collection where specified below.",
               "free.effect": "Resolve and publish the canonical account once. Retain competing observations as conflict issues, and derive each per-attempt summary from its canonical claims and attempt applicability.",
               "recipient": [
                 "xpc_caller",
@@ -440552,7 +440552,7 @@
             },
             "id": "lifecycle.disposition.resolve",
             "kind": "reports",
-            "prose": "A completed supported slot establishes publication and\ncan establish entry. Recognized progress at or after an attempt's entry also\nestablishes entry. A final earlier progress position establishes `not_reached`\nonly after confirmed reaping and with an incomplete slot; beside a completed\nslot it produces D5. Returned-or-later terminal progress beside an incomplete\nsupported slot produces D5 for result publication. Live collection leaves\nmissing results unresolved. An unsupported attempt has inapplicable result\npublication and an `unsupported` lifecycle summary.",
+            "prose": "A completed supported slot establishes publication and\ncan establish entry. Recognized progress at or after an attempt's entry also\nestablishes entry. A final earlier progress position establishes `not_reached`\nonly after confirmed reaping and without a completed slot, whether that slot\nis incomplete or absent; beside a completed slot it produces D5. Returned-or-later terminal progress beside an incomplete\nsupported slot produces D5 for result publication. Live collection leaves\nmissing results unresolved. An unsupported attempt has inapplicable result\npublication and an `unsupported` lifecycle summary.",
             "title": "Resolving lifecycle claims"
           },
           {
@@ -441355,7 +441355,7 @@
             },
             "id": "lifecycle.host_wait.stop",
             "kind": "field",
-            "prose": "Owning operation's reason for ending this wait. clock_unavailable denotes failed or backward time with bounded sleep fallback; setup_failed denotes an unavailable nonblocking prerequisite.",
+            "prose": "Owning operation's reason for ending this wait; each owning record defines its values and the set is open. clock_unavailable is the termination gate's stop when a time sample it required failed, moved backward or was absent. A wait that loses the clock elsewhere continues on bounded sleeps, keeps its own stop value and reports clock_fault. setup_failed denotes a prerequisite that could not be established before waiting: the nonblocking readiness reader, or actor authority-region and custody setup.",
             "title": "stop"
           },
           {
@@ -441584,7 +441584,7 @@
             },
             "id": "lifecycle.policy_read",
             "kind": "subject",
-            "prose": "At EOF the worker publishes both counts before comparing them. A header refusal, read failure or overflow leaves this receipt unavailable; both counts must fit the <!-- span limits.policy_source.value -->262,143<!-- /span -->-byte source capacity.",
+            "prose": "At EOF the worker publishes the count it received before comparing it with the host-written expected count; the host reports both counts once it acquires that publication. A header refusal, read failure or overflow leaves this receipt unavailable; both counts must fit the <!-- span limits.policy_source.value -->262,143<!-- /span -->-byte source capacity.",
             "title": "Worker policy receipt"
           },
           {
@@ -441637,7 +441637,7 @@
             },
             "id": "lifecycle.progress.index",
             "kind": "field",
-            "prose": "Zero-based item decoded from the low bits; attempts use the plan slot, parameter setup uses its parameter, and actor waits identify the next visit's first slot.",
+            "prose": "Zero-based item decoded from the low bits; attempts use the plan slot, parameter setup uses its parameter, and activation and release waits identify their visit's first slot. Every phase of either request form has a release wait; activation waits occur only in the actor form.",
             "title": "index"
           },
           {
@@ -441795,7 +441795,7 @@
             },
             "id": "lifecycle.run_questions.cleanup_trigger",
             "kind": "field",
-            "prose": "Recorded reason for requesting exit; inapplicable when exit_requested is false.",
+            "prose": "Reason for requesting exit, copied from the subprocess record's cleanup_trigger; inapplicable when exit_requested is false.",
             "title": "cleanup_trigger"
           },
           {
@@ -444955,7 +444955,7 @@
             },
             "id": "lifecycle.validator.read_error",
             "kind": "field",
-            "prose": "Host diagnostic for stdout-read failure, separate from accepted record contents.",
+            "prose": "Host diagnostic for the condition that ended collection early: a stdout read failure, the retention limit, a poll or clock failure, or expiry of the I/O deadline; separate from accepted record contents.",
             "title": "read_error"
           },
           {
@@ -445011,7 +445011,7 @@
             },
             "id": "lifecycle.validator.stdout_collection_stop",
             "kind": "field",
-            "prose": "Host reason for stopping stdout collection: eof, clock_error, deadline, poll_error, byte_limit or read_error. This is fixed before the exit-grace stage.",
+            "prose": "Host reason for stopping stdout collection: eof, clock_error, deadline, poll_error, byte_limit or read_error. This is fixed before the exit-grace stage. eof beside a deadline diagnostic records that stdout had already ended when the I/O deadline expired with request bytes still unwritten.",
             "title": "stdout_collection_stop"
           },
           {
@@ -445166,7 +445166,7 @@
             },
             "id": "lifecycle.worker.collection_basis",
             "kind": "field",
-            "prose": "Whether final reads followed a confirmed reap: after_confirmed_reap, execution_may_continue or unavailable. This controls terminal absence claims.",
+            "prose": "Whether final reads followed a confirmed reap: `after_confirmed_reap` or `execution_may_continue`; absent when the host recorded no basis. Readers also accept `unavailable`, which no producer assigns. This controls terminal absence claims.",
             "title": "collection_basis"
           },
           {
@@ -446355,7 +446355,7 @@
             },
             "id": "lifecycle.worker.exit_requested",
             "kind": "field",
-            "prose": "Whether the host performed the release store asking the worker to exit. Worker receipt is a separate observation.",
+            "prose": "Whether the host performed the release store asking the worker to exit. Worker receipt is a separate observation. The host also performs this store for a child it has already reaped; `grace_end: not_entered` and, for an actor, `owned_reap.departure_requested: false` then record that the ending preceded the request.",
             "title": "exit_requested"
           },
           {
@@ -450074,7 +450074,7 @@
             },
             "id": "lifecycle.worker_evidence.readiness",
             "kind": "field",
-            "prose": "Worker publication of the readiness-write native result, independent of the host's receipt of the byte.",
+            "prose": "Worker publication of its readiness-write helper result, independent of the host's receipt of the byte.",
             "title": "readiness"
           },
           {
@@ -454246,7 +454246,7 @@
             },
             "id": "profile.receipt.bytecode_b64",
             "kind": "field",
-            "prose": "The bytes copied from the compiler object passed to `sandbox_apply`, presented as base64.",
+            "prose": "The bytes copied from the compiler object passed to `sandbox_apply`, presented as base64. The worker reads that object through a fixed four-member view (type, reserved word, byte pointer, length) of a private structure. The receipt establishes that the bytes read this way matched their recorded length and digest. It does not establish the structure's layout on the running system, or which bytes application submitted.",
             "title": "Bytecode"
           },
           {
@@ -454632,7 +454632,7 @@
             },
             "id": "profile.receipt.capture_stage",
             "kind": "field",
-            "prose": "`before_apply` on a captured receipt identifies when the worker captured the bytes.",
+            "prose": "`before_apply` on a captured receipt names the position of the copy in the worker's program, between compilation and application. The host writes this value on every captured receipt; it is not a recorded observation of that order.",
             "title": "Capture stage"
           },
           {
@@ -456218,7 +456218,7 @@
             },
             "id": "profile.receipt.labels",
             "kind": "checks",
-            "prose": "After public producer admission and reply-capacity checks, the controller applies these conditions to every present receipt, including actor, preparation-failure and reporting-failure records. The retained nonce, bytecode, digests, lengths and counts remain the host's assertions; their production checks belong to the host capture rule.",
+            "prose": "After public producer admission and reply-capacity checks, the controller applies these conditions to every present receipt, including actor, preparation-failure and reporting-failure records. The retained nonce, bytecode, digests, lengths and counts remain the host's assertions; their production checks belong to the host capture rule. The controller compares no receipt field with the request it delivered, with the reply's worker record or with the receipt's own bytes, and evaluates neither extent condition. A `finished` result beside a `captured` receipt reports the host's capture checks, not a controller comparison.",
             "title": "The controller checks carried labels"
           },
           {
@@ -457231,7 +457231,7 @@
             },
             "id": "profile.receipt.producer",
             "kind": "field",
-            "prose": "`worker` on a captured receipt identifies the component that captured the bytes.",
+            "prose": "`worker` on a captured receipt names the component whose program copies the bytes. The host writes this value on every captured receipt; no worker publication carries it.",
             "title": "Capture producer"
           },
           {
@@ -457298,7 +457298,7 @@
             },
             "id": "profile.receipt.reason",
             "kind": "field",
-            "prose": "The host names the first failing capture condition. The controller's label check accepts the carried reason string.",
+            "prose": "The host names the first failing capture condition. The controller's label check accepts the carried reason string. `worker_capture_refused` covers every worker capture status other than captured: an unsupported type or reserved word, an empty or over-limit extent, a null byte pointer, an unreadable object, and malformed consumed input. The receipt does not say which. The host's extent and type condition repeats checks the worker makes before it records captured status.",
             "title": "Reason"
           },
           {
@@ -457326,7 +457326,7 @@
             },
             "id": "profile.receipt.request_nonce",
             "kind": "field",
-            "prose": "The host returns the request's capture nonce after comparing it with the worker's recorded bytes. A comparison with a separately retained request nonce supplies a consumer's request association; the controller's carried-label check has no request-nonce operand.",
+            "prose": "The host returns the request's capture nonce after comparing it with the worker's recorded bytes. A comparison with a separately retained request nonce supplies a consumer's request association; the controller's carried-label check has no request-nonce operand. The nonce enters no compiled byte and no digest; the comparison associates the receipt with the reply that carries it.",
             "title": "Request nonce"
           },
           {
@@ -457418,7 +457418,7 @@
             },
             "id": "profile.receipt.status",
             "kind": "field",
-            "prose": "`captured` states that the host's capture checks passed. `unavailable` states that a capture condition failed.",
+            "prose": "`captured` states that the host's capture checks passed. `unavailable` states that a capture condition failed. The host evaluates application and worker completion before it reads any capture record. An `unavailable` receipt therefore does not report whether the worker copied the object, and a completed copy is withheld when application was not observed to succeed or the worker did not complete cleanly.",
             "title": "Status"
           },
           {
@@ -459977,7 +459977,7 @@
             "facts": {},
             "id": "reply.record.outcomes",
             "kind": "definition",
-            "prose": "| Value | Host commitment |\n| --- | --- |\n| `finished` | Execution and required collection completed under the classifier's conditions; each attempt retains its own result. |\n| `bad_request` | Reached decoding/admission refused the specimen before worker or validator execution. |\n| `bad_policy` | The host could not identify the ordinary source under its structural policy check. |\n| `worker_spawn_failed` | The driver could not spawn the worker. |\n| `runner_timeout` | Host sentinel or policy-transfer deadline expired, subject to higher-precedence published worker failures. Expiry of the actor schedule's execution allowance is reported as `runner_failed`. |\n| `runner_failed` | Worker preparation/application/publication, host apparatus or supervision failed, or required observations are unusable. |\n| `validator_spawn_failed` | Worker classification succeeded and validator spawn failed. |\n| `validator_no_reply` | Worker classification succeeded and validator query delivery or verdict reading failed. |\n| `validator_decode_failure` | Worker classification succeeded and validator parsing or typed decoding failed. |\n| `validator_unavailable` | Required collection was not invoked, its budget/clock failed, or validator supervision/association was unusable. |\n| `runner_reporting_failed` | The host failed to validate or encode its assembled report and entered reporting fallback. |",
+            "prose": "| Value | Host commitment |\n| --- | --- |\n| `finished` | Execution and required collection completed under the classifier's conditions; each attempt retains its own result. |\n| `bad_request` | Reached decoding/admission refused the specimen before worker or validator execution. |\n| `bad_policy` | Defensive: the host's policy-hash step could not identify the ordinary source after admission. Admission refuses a missing source or another format as `bad_request` first, so no admitted request reaches it. |\n| `worker_spawn_failed` | The driver could not spawn the worker. |\n| `runner_timeout` | Host sentinel or policy-transfer deadline expired, subject to higher-precedence published worker failures. Expiry of the actor schedule's execution allowance is reported as `runner_failed`. |\n| `runner_failed` | Worker preparation/application/publication, host apparatus or supervision failed, or required observations are unusable. |\n| `validator_spawn_failed` | Worker classification succeeded and validator spawn failed. |\n| `validator_no_reply` | Worker classification succeeded and validator query delivery or verdict reading failed. |\n| `validator_decode_failure` | Worker classification succeeded and validator parsing or typed decoding failed. |\n| `validator_unavailable` | Required collection was not invoked, its budget/clock failed, or validator supervision/association was unusable. |\n| `runner_reporting_failed` | The host failed to validate or encode its assembled report and entered reporting fallback. |",
             "title": "Host outcomes"
           },
           {
@@ -460064,7 +460064,7 @@
             },
             "id": "reply.record.policy_format",
             "kind": "field",
-            "prose": "The ordinary policy format when available; decode refusal uses `unknown`.\nActor policies carry their formats in actor records.",
+            "prose": "The ordinary policy format when available; a decode refusal uses `unknown`, as does a capacity refusal of an ordinary request whose format exceeds its bound.\nActor policies carry their formats in actor records.",
             "title": "Policy format"
           },
           {
@@ -468499,7 +468499,7 @@
             "facts": {},
             "id": "steps.assessment.relations",
             "kind": "definition",
-            "prose": "| Attempt | Mapped operation | Mapped filter |\n| --- | --- | --- |\n| file/open_read, file/access, file/read_fresh | file-read-data | path |\n| file/open_write, file/write_fresh | file-write-data | path |\n| file/unlink | file-write-unlink | path |\n| mach_lookup/bootstrap_look_up | mach-lookup | global_name |\n| sysctl/read | sysctl-read | sysctl_name |\n| exec/spawn | process-exec* | path |\n| file/create, file/create_fresh | unresolved compound operation | path |\n\n`process-exec*` predicts target admission; spawn and child observations\nrecord the subsequent operation. Other wildcard query spellings have an\nunresolved operation relation. Target equality compares submitted strings;\nruntime object identity requires its own observations.",
+            "prose": "| Attempt | Mapped operation | Mapped filter |\n| --- | --- | --- |\n| file/open_read, file/access, file/read_fresh | file-read-data | path |\n| file/open_write, file/write_fresh | file-write-data | path |\n| file/unlink | file-write-unlink | path |\n| mach_lookup/bootstrap_look_up | mach-lookup | global_name |\n| sysctl/read | sysctl-read | sysctl_name |\n| exec/spawn | process-exec* | path |\n| file/create, file/create_fresh | unresolved compound operation | path |\n\n`process-exec*` predicts target admission; spawn and child observations\nrecord the subsequent operation. Other wildcard query spellings have an\nunresolved operation relation. Target equality is canonical Unicode equivalence\nof the two submitted strings, so equal targets can differ in UTF-8 bytes;\nruntime object identity requires its own observations.",
             "title": "Submitted operation and target"
           },
           {
@@ -469484,7 +469484,7 @@
             },
             "id": "steps.comparison.operation_relation",
             "kind": "field",
-            "prose": "`matched` means the query equals the action's mapped operation; `different` means those strings differ; `unresolved` means the mapping cannot assign a single operation.",
+            "prose": "`matched` means the query equals the action's mapped operation; `different` means those strings differ; `unresolved` means the action has no single mapped operation, or the query is a wildcard spelling other than the matched `process-exec*`.",
             "title": "operation_relation"
           },
           {
@@ -469550,7 +469550,7 @@
             },
             "id": "steps.comparison.target_relation",
             "kind": "field",
-            "prose": "`same_submitted` or `different_submitted` compares submitted strings when the query filter matches the action's mapped filter and both strings exist; otherwise `unresolved`.",
+            "prose": "`same_submitted` or `different_submitted` compares submitted strings under canonical Unicode equivalence when the query filter matches the action's mapped filter and both strings exist; otherwise `unresolved`.",
             "title": "target_relation"
           },
           {
@@ -470812,7 +470812,7 @@
             },
             "id": "steps.query.missing_reason",
             "kind": "field",
-            "prose": "`query_not_requested` for a planner exclusion, `validator_not_invoked` when collection never ran, or `validator_no_verdict` when it produced no associated record.",
+            "prose": "`query_not_requested` for a planner exclusion; `validator_not_invoked` when no validator process supplied output for the phase, whether collection never ran or it ran and could not start one; `validator_no_verdict` when a validator ran and produced no uniquely associated record.",
             "title": "missing_reason"
           },
           {
@@ -470843,7 +470843,7 @@
             },
             "id": "steps.query.native_rc",
             "kind": "field",
-            "prose": "Native return carried by an associated allow, deny or error record. Synthetic results carry explicit null when result_source is present.",
+            "prose": "Native return carried by an associated allow, deny or error record. Synthetic results carry explicit null when result_source is present. No reader checks this relation: a result marked `synthetic` that carries a native return is admitted and projected as received.",
             "title": "native_rc"
           },
           {
@@ -470959,7 +470959,7 @@
             },
             "id": "steps.query.pid",
             "kind": "field",
-            "prose": "PID targeted by this phase's validator collection when worker output supplies it. The ordering assessment states whether the required live-worker interval was established.",
+            "prose": "Worker PID recorded for this step when worker output exists, including for a query the planner excluded. Whether a collection addressed that PID is stated by the phase's `collection_status` and `validator_subprocess`. The ordering assessment states whether the required live-worker interval was established.",
             "title": "pid"
           },
           {
@@ -518072,7 +518072,7 @@
             },
             "id": "actor_evidence.actor.setup_status",
             "kind": "field",
-            "prose": "Host setup classification: not_launched, launch_refused, transfer_failed, applied, unapplied_declared, setup_failed, authority_setup_failed, exited_before_setup or setup_timeout.",
+            "prose": "Host setup classification: not_launched, launch_refused, transfer_failed, applied, unapplied_declared, setup_failed, authority_setup_failed, exited_before_setup or setup_timeout. setup_timeout labels an actor whose setup publication did not arrive within the shared setup allowance, and also an actor whose launch was not attempted because less than one millisecond of that allowance remained; the second has no launch or subprocess record and application basis worker_not_launched.",
             "title": "setup_status"
           },
           {
@@ -531259,7 +531259,7 @@
             },
             "id": "actor_evidence.phase.arrival_observed",
             "kind": "field",
-            "prose": "Whether the host acquired the active worker's arrival publication for this visit.",
+            "prose": "Whether the host acquired the active worker's arrival publication for this visit. The ordinary form reports the final acquisition of the phase's publication after cleanup; the actor form reports what the scheduler observed while that visit was active.",
             "title": "arrival_observed"
           },
           {
@@ -531297,7 +531297,7 @@
             },
             "id": "actor_evidence.phase.completion_observed",
             "kind": "field",
-            "prose": "Whether the host acquired completion for this visit.",
+            "prose": "Whether the host acquired completion for this visit, at the same form-specific point; in the actor form a completion published after the visit's wait ended is not included.",
             "title": "completion_observed"
           },
           {
@@ -531420,7 +531420,7 @@
             },
             "id": "actor_evidence.schedule.cancelled",
             "kind": "field",
-            "prose": "Recorded schedule cancellation reason, such as preparation_refused, execution_allowance_exhausted, an equipment failure or termination_dependency followed by its outcome; absent when no cancellation was recorded.",
+            "prose": "Recorded schedule cancellation reason: preparation_refused, execution_allowance_exhausted, equipment_execution_ followed by the inspection failure, termination_dependency: followed by the gate outcome, unresolved_termination or actor_quiescence_unresolved when a stopped actor was not reaped, or ownership_lost after a failed wait on the active actor; absent when no cancellation was recorded. execution_allowance_exhausted is the scheduler's classification; `execution_wait.elapsed_ms` and `execution_wait.clock_fault` show whether exhaustion was measured.",
             "title": "cancelled"
           },
           {
@@ -550941,7 +550941,7 @@
             },
             "id": "equipment.authority_operation.value",
             "kind": "field",
-            "prose": "Operation-specific unsigned native observation when the cell marks a value present, such as object/page size.",
+            "prose": "Operation-specific unsigned native observation when the cell marks a value present, such as object/page size or the bytes a clearing operation overwrote, which can be zero.",
             "title": "value"
           },
           {
@@ -550999,7 +550999,7 @@
                 "xpc_execute"
               ],
               "free.condition": "After worker-identity agreement, acquire-load the decision snapshot first, then independently acquire-load each published operation cell.",
-              "free.effect": "Retain independently valid operation cells even when the decision is absent. For an observed decision, validate its raw actor/required association before projecting the decision and its primary operation.",
+              "free.effect": "Retain independently valid operation cells even when the decision is absent. For an observed decision, compare its raw actor/required association with the session's and record `setup_association_mismatch` on a difference; the decision and its primary operation are still projected, under the session's own actor index and required flag.",
               "recipient": [
                 "xpc_caller",
                 "runner_client",
@@ -551036,7 +551036,7 @@
             },
             "id": "equipment.authority_scope.acquire",
             "kind": "reports",
-            "prose": "The decision's release orders prerequisite cells. Reading the decision first\nkeeps a newly observed decision joined to its earlier primary publication.\nEach cell still has its own publication flag and kind/state guards. A cleanup\ncell can therefore be retained before the terminal decision appears. Invalid\ncells contribute integrity errors while independently valid observations\nremain available.",
+            "prose": "The decision's release orders prerequisite cells. Reading the decision first\nkeeps a newly observed decision joined to its earlier primary publication.\nEach cell still has its own publication flag and kind/state guards. A cleanup\ncell can therefore be retained before the terminal decision appears. Invalid\ncells contribute integrity errors while independently valid observations\nremain available. A scope carrying integrity errors supports no readiness: the\nscheduler treats that actor's setup as failed, and the controller reports a\nready or not_required decision beside integrity errors as invalid.",
             "referenced_types": {
               "request.actors": {
                 "json_null": false,
@@ -551322,7 +551322,7 @@
             },
             "id": "equipment.authority_scope.acquire.decision",
             "kind": "condition",
-            "prose": "",
+            "prose": "The worker publishes ready only after its core-limit, descriptor, size, mapping, close and header-binding cells succeeded. The host decoder checks the decision against `required` and does not re-check those cells. Before a required actor's setup counts as usable the scheduler also requires the worker's private header status word to report the mapped region. That word is not a reply field; a refusal on it is reported as setup_failed and its value appears only in the run's error text. The controller relates an actor's application to a terminal scope only and does not re-derive ready from its cells.",
             "referenced_types": {
               "eq_authority_scope.disposition": {
                 "json_null": false,
@@ -551833,7 +551833,7 @@
             },
             "id": "equipment.authority_scope.ownership",
             "kind": "field",
-            "prose": "Named ownership states: object_name, descriptor and mapping use not_acquired, held, released or unresolved; shared_erasure/private_erasure use not_present, performed, withheld_not_quiescent or unobserved.",
+            "prose": "Named ownership states: object_name, descriptor and mapping use not_acquired, held, released or unresolved; shared_erasure/private_erasure use not_present, performed, withheld_not_quiescent or unobserved. Each value records the last operation published for that resource in its scope, not an inventory at reply time. Host region and custody values come from the host's own setup and teardown calls. A worker scope's values come from cells that worker published before it exited, so worker `mapping: held` records a successful setup mapping with no published unmap, including for a worker the same reply reports reaped. `performed` records that the scope's clearing operation ran over its assigned storage; it does not state that token bytes were present.",
             "title": "ownership"
           },
           {
@@ -553061,7 +553061,7 @@
             },
             "id": "equipment.error.operation",
             "kind": "field",
-            "prose": "Failing boundary: service_seal, inventory_read, inventory_decode, worker_path, worker_hash, worker_signature, worker_entitlements, guest_code, dynamic_validity, associated_static_code or signing_information.",
+            "prose": "Failing boundary. The host assigns seven names: signing_information, worker_signature, inventory_read, inventory_decode, worker_path, worker_hash and worker_entitlements. Product readers also accept service_seal, guest_code, dynamic_validity and associated_static_code, which no producer assigns to this field. After a failed service-seal inspection, `equipment_inventory.error` names the static inspection call, worker_signature or signing_information.",
             "title": "operation"
           },
           {
@@ -570497,7 +570497,7 @@
             },
             "id": "lifecycle.claim_value",
             "kind": "subject",
-            "prose": "",
+            "prose": "JSON carries the chosen alternative's value directly: an integer for an exit code, signal or item index, or the termination-request object. The alternative labels are not JSON keys.",
             "title": "Lifecycle answer value",
             "variants": {
               "Integer": "Int",
@@ -574592,7 +574592,7 @@
               "entry": [
                 "xpc_execute"
               ],
-              "free.condition": "Resolve each question from the owning worker's acquired output, unique slot identities and submitted plan. A not_reached or unpublished conclusion requires terminal collection where specified below.",
+              "free.condition": "Resolve each question from the owning worker's acquired output and unique slot identities. The ordinary form joins them to the submitted plan; the actor form takes each actor's steps from that actor's collected slot list, in which every slot is a supported operation. A not_reached or unpublished conclusion requires terminal collection where specified below.",
               "free.effect": "Resolve and publish the canonical account once. Retain competing observations as conflict issues, and derive each per-attempt summary from its canonical claims and attempt applicability.",
               "recipient": [
                 "xpc_caller",
@@ -574616,7 +574616,7 @@
             },
             "id": "lifecycle.disposition.resolve",
             "kind": "reports",
-            "prose": "A completed supported slot establishes publication and\ncan establish entry. Recognized progress at or after an attempt's entry also\nestablishes entry. A final earlier progress position establishes `not_reached`\nonly after confirmed reaping and with an incomplete slot; beside a completed\nslot it produces D5. Returned-or-later terminal progress beside an incomplete\nsupported slot produces D5 for result publication. Live collection leaves\nmissing results unresolved. An unsupported attempt has inapplicable result\npublication and an `unsupported` lifecycle summary.",
+            "prose": "A completed supported slot establishes publication and\ncan establish entry. Recognized progress at or after an attempt's entry also\nestablishes entry. A final earlier progress position establishes `not_reached`\nonly after confirmed reaping and without a completed slot, whether that slot\nis incomplete or absent; beside a completed slot it produces D5. Returned-or-later terminal progress beside an incomplete\nsupported slot produces D5 for result publication. Live collection leaves\nmissing results unresolved. An unsupported attempt has inapplicable result\npublication and an `unsupported` lifecycle summary.",
             "title": "Resolving lifecycle claims"
           },
           {
@@ -575419,7 +575419,7 @@
             },
             "id": "lifecycle.host_wait.stop",
             "kind": "field",
-            "prose": "Owning operation's reason for ending this wait. clock_unavailable denotes failed or backward time with bounded sleep fallback; setup_failed denotes an unavailable nonblocking prerequisite.",
+            "prose": "Owning operation's reason for ending this wait; each owning record defines its values and the set is open. clock_unavailable is the termination gate's stop when a time sample it required failed, moved backward or was absent. A wait that loses the clock elsewhere continues on bounded sleeps, keeps its own stop value and reports clock_fault. setup_failed denotes a prerequisite that could not be established before waiting: the nonblocking readiness reader, or actor authority-region and custody setup.",
             "title": "stop"
           },
           {
@@ -575648,7 +575648,7 @@
             },
             "id": "lifecycle.policy_read",
             "kind": "subject",
-            "prose": "At EOF the worker publishes both counts before comparing them. A header refusal, read failure or overflow leaves this receipt unavailable; both counts must fit the <!-- span limits.policy_source.value -->262,143<!-- /span -->-byte source capacity.",
+            "prose": "At EOF the worker publishes the count it received before comparing it with the host-written expected count; the host reports both counts once it acquires that publication. A header refusal, read failure or overflow leaves this receipt unavailable; both counts must fit the <!-- span limits.policy_source.value -->262,143<!-- /span -->-byte source capacity.",
             "title": "Worker policy receipt"
           },
           {
@@ -575701,7 +575701,7 @@
             },
             "id": "lifecycle.progress.index",
             "kind": "field",
-            "prose": "Zero-based item decoded from the low bits; attempts use the plan slot, parameter setup uses its parameter, and actor waits identify the next visit's first slot.",
+            "prose": "Zero-based item decoded from the low bits; attempts use the plan slot, parameter setup uses its parameter, and activation and release waits identify their visit's first slot. Every phase of either request form has a release wait; activation waits occur only in the actor form.",
             "title": "index"
           },
           {
@@ -575859,7 +575859,7 @@
             },
             "id": "lifecycle.run_questions.cleanup_trigger",
             "kind": "field",
-            "prose": "Recorded reason for requesting exit; inapplicable when exit_requested is false.",
+            "prose": "Reason for requesting exit, copied from the subprocess record's cleanup_trigger; inapplicable when exit_requested is false.",
             "title": "cleanup_trigger"
           },
           {
@@ -579019,7 +579019,7 @@
             },
             "id": "lifecycle.validator.read_error",
             "kind": "field",
-            "prose": "Host diagnostic for stdout-read failure, separate from accepted record contents.",
+            "prose": "Host diagnostic for the condition that ended collection early: a stdout read failure, the retention limit, a poll or clock failure, or expiry of the I/O deadline; separate from accepted record contents.",
             "title": "read_error"
           },
           {
@@ -579075,7 +579075,7 @@
             },
             "id": "lifecycle.validator.stdout_collection_stop",
             "kind": "field",
-            "prose": "Host reason for stopping stdout collection: eof, clock_error, deadline, poll_error, byte_limit or read_error. This is fixed before the exit-grace stage.",
+            "prose": "Host reason for stopping stdout collection: eof, clock_error, deadline, poll_error, byte_limit or read_error. This is fixed before the exit-grace stage. eof beside a deadline diagnostic records that stdout had already ended when the I/O deadline expired with request bytes still unwritten.",
             "title": "stdout_collection_stop"
           },
           {
@@ -579230,7 +579230,7 @@
             },
             "id": "lifecycle.worker.collection_basis",
             "kind": "field",
-            "prose": "Whether final reads followed a confirmed reap: after_confirmed_reap, execution_may_continue or unavailable. This controls terminal absence claims.",
+            "prose": "Whether final reads followed a confirmed reap: `after_confirmed_reap` or `execution_may_continue`; absent when the host recorded no basis. Readers also accept `unavailable`, which no producer assigns. This controls terminal absence claims.",
             "title": "collection_basis"
           },
           {
@@ -580419,7 +580419,7 @@
             },
             "id": "lifecycle.worker.exit_requested",
             "kind": "field",
-            "prose": "Whether the host performed the release store asking the worker to exit. Worker receipt is a separate observation.",
+            "prose": "Whether the host performed the release store asking the worker to exit. Worker receipt is a separate observation. The host also performs this store for a child it has already reaped; `grace_end: not_entered` and, for an actor, `owned_reap.departure_requested: false` then record that the ending preceded the request.",
             "title": "exit_requested"
           },
           {
@@ -584138,7 +584138,7 @@
             },
             "id": "lifecycle.worker_evidence.readiness",
             "kind": "field",
-            "prose": "Worker publication of the readiness-write native result, independent of the host's receipt of the byte.",
+            "prose": "Worker publication of its readiness-write helper result, independent of the host's receipt of the byte.",
             "title": "readiness"
           },
           {
@@ -585841,7 +585841,7 @@
             },
             "id": "profile.receipt.bytecode_b64",
             "kind": "field",
-            "prose": "The bytes copied from the compiler object passed to `sandbox_apply`, presented as base64.",
+            "prose": "The bytes copied from the compiler object passed to `sandbox_apply`, presented as base64. The worker reads that object through a fixed four-member view (type, reserved word, byte pointer, length) of a private structure. The receipt establishes that the bytes read this way matched their recorded length and digest. It does not establish the structure's layout on the running system, or which bytes application submitted.",
             "title": "Bytecode"
           },
           {
@@ -586227,7 +586227,7 @@
             },
             "id": "profile.receipt.capture_stage",
             "kind": "field",
-            "prose": "`before_apply` on a captured receipt identifies when the worker captured the bytes.",
+            "prose": "`before_apply` on a captured receipt names the position of the copy in the worker's program, between compilation and application. The host writes this value on every captured receipt; it is not a recorded observation of that order.",
             "title": "Capture stage"
           },
           {
@@ -587813,7 +587813,7 @@
             },
             "id": "profile.receipt.labels",
             "kind": "checks",
-            "prose": "After public producer admission and reply-capacity checks, the controller applies these conditions to every present receipt, including actor, preparation-failure and reporting-failure records. The retained nonce, bytecode, digests, lengths and counts remain the host's assertions; their production checks belong to the host capture rule.",
+            "prose": "After public producer admission and reply-capacity checks, the controller applies these conditions to every present receipt, including actor, preparation-failure and reporting-failure records. The retained nonce, bytecode, digests, lengths and counts remain the host's assertions; their production checks belong to the host capture rule. The controller compares no receipt field with the request it delivered, with the reply's worker record or with the receipt's own bytes, and evaluates neither extent condition. A `finished` result beside a `captured` receipt reports the host's capture checks, not a controller comparison.",
             "title": "The controller checks carried labels"
           },
           {
@@ -588826,7 +588826,7 @@
             },
             "id": "profile.receipt.producer",
             "kind": "field",
-            "prose": "`worker` on a captured receipt identifies the component that captured the bytes.",
+            "prose": "`worker` on a captured receipt names the component whose program copies the bytes. The host writes this value on every captured receipt; no worker publication carries it.",
             "title": "Capture producer"
           },
           {
@@ -588893,7 +588893,7 @@
             },
             "id": "profile.receipt.reason",
             "kind": "field",
-            "prose": "The host names the first failing capture condition. The controller's label check accepts the carried reason string.",
+            "prose": "The host names the first failing capture condition. The controller's label check accepts the carried reason string. `worker_capture_refused` covers every worker capture status other than captured: an unsupported type or reserved word, an empty or over-limit extent, a null byte pointer, an unreadable object, and malformed consumed input. The receipt does not say which. The host's extent and type condition repeats checks the worker makes before it records captured status.",
             "title": "Reason"
           },
           {
@@ -588921,7 +588921,7 @@
             },
             "id": "profile.receipt.request_nonce",
             "kind": "field",
-            "prose": "The host returns the request's capture nonce after comparing it with the worker's recorded bytes. A comparison with a separately retained request nonce supplies a consumer's request association; the controller's carried-label check has no request-nonce operand.",
+            "prose": "The host returns the request's capture nonce after comparing it with the worker's recorded bytes. A comparison with a separately retained request nonce supplies a consumer's request association; the controller's carried-label check has no request-nonce operand. The nonce enters no compiled byte and no digest; the comparison associates the receipt with the reply that carries it.",
             "title": "Request nonce"
           },
           {
@@ -589013,7 +589013,7 @@
             },
             "id": "profile.receipt.status",
             "kind": "field",
-            "prose": "`captured` states that the host's capture checks passed. `unavailable` states that a capture condition failed.",
+            "prose": "`captured` states that the host's capture checks passed. `unavailable` states that a capture condition failed. The host evaluates application and worker completion before it reads any capture record. An `unavailable` receipt therefore does not report whether the worker copied the object, and a completed copy is withheld when application was not observed to succeed or the worker did not complete cleanly.",
             "title": "Status"
           },
           {
@@ -591537,7 +591537,7 @@
             "facts": {},
             "id": "reply.record.outcomes",
             "kind": "definition",
-            "prose": "| Value | Host commitment |\n| --- | --- |\n| `finished` | Execution and required collection completed under the classifier's conditions; each attempt retains its own result. |\n| `bad_request` | Reached decoding/admission refused the specimen before worker or validator execution. |\n| `bad_policy` | The host could not identify the ordinary source under its structural policy check. |\n| `worker_spawn_failed` | The driver could not spawn the worker. |\n| `runner_timeout` | Host sentinel or policy-transfer deadline expired, subject to higher-precedence published worker failures. Expiry of the actor schedule's execution allowance is reported as `runner_failed`. |\n| `runner_failed` | Worker preparation/application/publication, host apparatus or supervision failed, or required observations are unusable. |\n| `validator_spawn_failed` | Worker classification succeeded and validator spawn failed. |\n| `validator_no_reply` | Worker classification succeeded and validator query delivery or verdict reading failed. |\n| `validator_decode_failure` | Worker classification succeeded and validator parsing or typed decoding failed. |\n| `validator_unavailable` | Required collection was not invoked, its budget/clock failed, or validator supervision/association was unusable. |\n| `runner_reporting_failed` | The host failed to validate or encode its assembled report and entered reporting fallback. |",
+            "prose": "| Value | Host commitment |\n| --- | --- |\n| `finished` | Execution and required collection completed under the classifier's conditions; each attempt retains its own result. |\n| `bad_request` | Reached decoding/admission refused the specimen before worker or validator execution. |\n| `bad_policy` | Defensive: the host's policy-hash step could not identify the ordinary source after admission. Admission refuses a missing source or another format as `bad_request` first, so no admitted request reaches it. |\n| `worker_spawn_failed` | The driver could not spawn the worker. |\n| `runner_timeout` | Host sentinel or policy-transfer deadline expired, subject to higher-precedence published worker failures. Expiry of the actor schedule's execution allowance is reported as `runner_failed`. |\n| `runner_failed` | Worker preparation/application/publication, host apparatus or supervision failed, or required observations are unusable. |\n| `validator_spawn_failed` | Worker classification succeeded and validator spawn failed. |\n| `validator_no_reply` | Worker classification succeeded and validator query delivery or verdict reading failed. |\n| `validator_decode_failure` | Worker classification succeeded and validator parsing or typed decoding failed. |\n| `validator_unavailable` | Required collection was not invoked, its budget/clock failed, or validator supervision/association was unusable. |\n| `runner_reporting_failed` | The host failed to validate or encode its assembled report and entered reporting fallback. |",
             "title": "Host outcomes"
           },
           {
@@ -591624,7 +591624,7 @@
             },
             "id": "reply.record.policy_format",
             "kind": "field",
-            "prose": "The ordinary policy format when available; decode refusal uses `unknown`.\nActor policies carry their formats in actor records.",
+            "prose": "The ordinary policy format when available; a decode refusal uses `unknown`, as does a capacity refusal of an ordinary request whose format exceeds its bound.\nActor policies carry their formats in actor records.",
             "title": "Policy format"
           },
           {
@@ -600059,7 +600059,7 @@
             "facts": {},
             "id": "steps.assessment.relations",
             "kind": "definition",
-            "prose": "| Attempt | Mapped operation | Mapped filter |\n| --- | --- | --- |\n| file/open_read, file/access, file/read_fresh | file-read-data | path |\n| file/open_write, file/write_fresh | file-write-data | path |\n| file/unlink | file-write-unlink | path |\n| mach_lookup/bootstrap_look_up | mach-lookup | global_name |\n| sysctl/read | sysctl-read | sysctl_name |\n| exec/spawn | process-exec* | path |\n| file/create, file/create_fresh | unresolved compound operation | path |\n\n`process-exec*` predicts target admission; spawn and child observations\nrecord the subsequent operation. Other wildcard query spellings have an\nunresolved operation relation. Target equality compares submitted strings;\nruntime object identity requires its own observations.",
+            "prose": "| Attempt | Mapped operation | Mapped filter |\n| --- | --- | --- |\n| file/open_read, file/access, file/read_fresh | file-read-data | path |\n| file/open_write, file/write_fresh | file-write-data | path |\n| file/unlink | file-write-unlink | path |\n| mach_lookup/bootstrap_look_up | mach-lookup | global_name |\n| sysctl/read | sysctl-read | sysctl_name |\n| exec/spawn | process-exec* | path |\n| file/create, file/create_fresh | unresolved compound operation | path |\n\n`process-exec*` predicts target admission; spawn and child observations\nrecord the subsequent operation. Other wildcard query spellings have an\nunresolved operation relation. Target equality is canonical Unicode equivalence\nof the two submitted strings, so equal targets can differ in UTF-8 bytes;\nruntime object identity requires its own observations.",
             "title": "Submitted operation and target"
           },
           {
@@ -601044,7 +601044,7 @@
             },
             "id": "steps.comparison.operation_relation",
             "kind": "field",
-            "prose": "`matched` means the query equals the action's mapped operation; `different` means those strings differ; `unresolved` means the mapping cannot assign a single operation.",
+            "prose": "`matched` means the query equals the action's mapped operation; `different` means those strings differ; `unresolved` means the action has no single mapped operation, or the query is a wildcard spelling other than the matched `process-exec*`.",
             "title": "operation_relation"
           },
           {
@@ -601110,7 +601110,7 @@
             },
             "id": "steps.comparison.target_relation",
             "kind": "field",
-            "prose": "`same_submitted` or `different_submitted` compares submitted strings when the query filter matches the action's mapped filter and both strings exist; otherwise `unresolved`.",
+            "prose": "`same_submitted` or `different_submitted` compares submitted strings under canonical Unicode equivalence when the query filter matches the action's mapped filter and both strings exist; otherwise `unresolved`.",
             "title": "target_relation"
           },
           {
@@ -602372,7 +602372,7 @@
             },
             "id": "steps.query.missing_reason",
             "kind": "field",
-            "prose": "`query_not_requested` for a planner exclusion, `validator_not_invoked` when collection never ran, or `validator_no_verdict` when it produced no associated record.",
+            "prose": "`query_not_requested` for a planner exclusion; `validator_not_invoked` when no validator process supplied output for the phase, whether collection never ran or it ran and could not start one; `validator_no_verdict` when a validator ran and produced no uniquely associated record.",
             "title": "missing_reason"
           },
           {
@@ -602403,7 +602403,7 @@
             },
             "id": "steps.query.native_rc",
             "kind": "field",
-            "prose": "Native return carried by an associated allow, deny or error record. Synthetic results carry explicit null when result_source is present.",
+            "prose": "Native return carried by an associated allow, deny or error record. Synthetic results carry explicit null when result_source is present. No reader checks this relation: a result marked `synthetic` that carries a native return is admitted and projected as received.",
             "title": "native_rc"
           },
           {
@@ -602519,7 +602519,7 @@
             },
             "id": "steps.query.pid",
             "kind": "field",
-            "prose": "PID targeted by this phase's validator collection when worker output supplies it. The ordering assessment states whether the required live-worker interval was established.",
+            "prose": "Worker PID recorded for this step when worker output exists, including for a query the planner excluded. Whether a collection addressed that PID is stated by the phase's `collection_status` and `validator_subprocess`. The ordering assessment states whether the required live-worker interval was established.",
             "title": "pid"
           },
           {

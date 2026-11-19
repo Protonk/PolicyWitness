@@ -77,15 +77,15 @@ record: "ActorEquipmentManifest"
 as: "eq_manifest"
 ```
 
-The package places this JSON inventory inside each service seal after signing both worker roles. Its hashes use lowercase hexadecimal text.
+The package places this JSON inventory inside each service seal after signing both worker roles. Its hashes use lowercase hexadecimal text. An absent key, a null or a value of another type in the inventory or a worker row refuses the inventory as `worker_identity_mismatch`, with error operation `inventory_decode`.
 
 ### schema_version {schema_version: field}
 
-Inventory format version; the host accepts 1.
+Required integer inventory format version; the host accepts 1.
 
 ### contract {contract: field}
 
-Exact public build identity which must match the host's expected contract.
+Required string: the exact public build identity, which must match the host's expected contract.
 
 ### worker_identity {worker_identity: field}
 
@@ -93,7 +93,7 @@ Exact public build identity which must match the host's expected contract.
 uses: ["identity.other.sha256_hex"]
 ```
 
-Lowercase hexadecimal worker protocol identity expected by the host.
+Required lowercase hexadecimal worker protocol identity expected by the host.
 
 ### unsigned_worker_sha256 {unsigned_worker_sha256: field}
 
@@ -101,11 +101,11 @@ Lowercase hexadecimal worker protocol identity expected by the host.
 uses: ["identity.other.sha256_hex"]
 ```
 
-Lowercase hexadecimal common unsigned worker input digest.
+Required lowercase hexadecimal common unsigned worker input digest.
 
 ### workers {workers: field}
 
-Exactly two distinct role rows, selected and unentitled, providing expected signed file and entitlement identities.
+Required array of exactly two distinct role rows, selected and unentitled, providing expected signed file and entitlement identities.
 
 ## Inventory worker row {manifest_worker: subject}
 
@@ -124,11 +124,11 @@ listed: "exhaustive"
 values: ["selected", "unentitled"]
 ```
 
-selected or unentitled, identifying the worker role.
+Required string, selected or unentitled, identifying the worker role.
 
 ### relative_path {relative_path: field}
 
-Contents/MacOS/pw-probe-runner for selected; Contents/MacOS/pw-probe-runner-unentitled for unentitled.
+Required string: Contents/MacOS/pw-probe-runner for selected; Contents/MacOS/pw-probe-runner-unentitled for unentitled.
 
 ### sha256 {sha256: field}
 
@@ -136,7 +136,7 @@ Contents/MacOS/pw-probe-runner for selected; Contents/MacOS/pw-probe-runner-unen
 uses: ["identity.other.sha256_hex"]
 ```
 
-Lowercase hexadecimal SHA-256 of the signed worker file.
+Required lowercase hexadecimal SHA-256 of the signed worker file.
 
 ### cdhash {cdhash: field}
 
@@ -144,11 +144,11 @@ Lowercase hexadecimal SHA-256 of the signed worker file.
 uses: ["identity.other.cdhash_hex"]
 ```
 
-Lowercase hexadecimal worker CodeDirectory hash.
+Required lowercase hexadecimal worker CodeDirectory hash.
 
 ### identifier {identifier: field}
 
-Nonempty signing identifier expected from static code inspection, bounded to <!-- span limits.equipment_signing_text.value_unit -->255 UTF-8 bytes<!-- /span -->.
+Required nonempty signing identifier expected from static code inspection, bounded to <!-- span limits.equipment_signing_text.value_unit -->255 UTF-8 bytes<!-- /span -->.
 
 ### team_id {team_id: field}
 
@@ -156,7 +156,7 @@ Required key whose value is the expected signing team or null; a string is nonem
 
 ### entitlements_xml {entitlements_xml: field}
 
-Entitlement dictionary serialized as an XML property list, at most <!-- span limits.equipment_entitlement_bytes.value_unit -->65,536 UTF-8 bytes<!-- /span -->; unentitled has an empty dictionary.
+Required string: the entitlement dictionary serialized as an XML property list, at most <!-- span limits.equipment_entitlement_bytes.value_unit -->65,536 UTF-8 bytes<!-- /span -->; unentitled has an empty dictionary.
 
 ## Static worker binding {binding: subject}
 
@@ -397,7 +397,7 @@ Error metadata belongs to the named operation. Native errors carry their domain/
 
 ### operation {operation: field}
 
-Failing boundary: service_seal, inventory_read, inventory_decode, worker_path, worker_hash, worker_signature, worker_entitlements, guest_code, dynamic_validity, associated_static_code or signing_information.
+Failing boundary. The host assigns seven names: signing_information, worker_signature, inventory_read, inventory_decode, worker_path, worker_hash and worker_entitlements. Product readers also accept service_seal, guest_code, dynamic_validity and associated_static_code, which no producer assigns to this field. After a failed service-seal inspection, `equipment_inventory.error` names the static inspection call, worker_signature or signing_information.
 
 ### domain {domain: field}
 
@@ -867,7 +867,7 @@ Independently observed operation cells in slot order, including cleanup after a 
 
 ### ownership {ownership: field}
 
-Named ownership states: object_name, descriptor and mapping use not_acquired, held, released or unresolved; shared_erasure/private_erasure use not_present, performed, withheld_not_quiescent or unobserved.
+Named ownership states: object_name, descriptor and mapping use not_acquired, held, released or unresolved; shared_erasure/private_erasure use not_present, performed, withheld_not_quiescent or unobserved. Each value records the last operation published for that resource in its scope, not an inventory at reply time. Host region and custody values come from the host's own setup and teardown calls. A worker scope's values come from cells that worker published before it exited, so worker `mapping: held` records a successful setup mapping with no published unmap, including for a worker the same reply reports reaped. `performed` records that the scope's clearing operation ran over its assigned storage; it does not state that token bytes were present.
 
 ### cleanup_reference {cleanup_reference: field}
 
@@ -887,8 +887,8 @@ entry: ["xpc_execute"]
 recipient: ["xpc_caller", "runner_client", "controller"]
 report: ["runner_reply"]
 free.condition: After worker-identity agreement, acquire-load the decision snapshot first, then independently acquire-load each published operation cell.
-free.effect: Retain independently valid operation cells even when the decision is absent. For an observed decision, validate its raw actor/required association before projecting the decision and its primary operation.
-retained_free: {"condition":{"kind":"native_protocol","reason":"Worker identity precedes independent acquire loads whose ordering is an execution event."},"effect":{"kind":"native_protocol","reason":"Raw actor/required header values and invalid publication flags are checked before projection; the published primary-cell relation is stated separately."}}
+free.effect: Retain independently valid operation cells even when the decision is absent. For an observed decision, compare its raw actor/required association with the session's and record `setup_association_mismatch` on a difference; the decision and its primary operation are still projected, under the session's own actor index and required flag.
+retained_free: {"condition":{"kind":"native_protocol","reason":"Worker identity precedes independent acquire loads whose ordering is an execution event."},"effect":{"kind":"native_protocol","reason":"Raw actor/required header values and invalid publication flags are checked during projection; the published primary-cell relation is stated separately."}}
 ```
 
 The decision's release orders prerequisite cells. Reading the decision first
@@ -896,7 +896,9 @@ keeps a newly observed decision joined to its earlier primary publication.
 Each cell still has its own publication flag and kind/state guards. A cleanup
 cell can therefore be retained before the terminal decision appears. Invalid
 cells contribute integrity errors while independently valid observations
-remain available.
+remain available. A scope carrying integrity errors supports no readiness: the
+scheduler treats that actor's setup as failed, and the controller reports a
+ready or not_required decision beside integrity errors as invalid.
 
 #### Retained primary support {primary: condition}
 
@@ -915,6 +917,8 @@ A missing primary cell adds an integrity error alongside the decision and indepe
 when: eq_authority_scope.publication == "observed"
 test: implies(eq_authority_scope.disposition == "terminal_required_failure", eq_authority_scope.required and present(eq_authority_scope.primary_operation)) and implies(eq_authority_scope.disposition == "ready", eq_authority_scope.required) and implies(eq_authority_scope.disposition == "not_required", eq_authority_scope.required == False)
 ```
+
+The worker publishes ready only after its core-limit, descriptor, size, mapping, close and header-binding cells succeeded. The host decoder checks the decision against `required` and does not re-check those cells. Before a required actor's setup counts as usable the scheduler also requires the worker's private header status word to report the mapped region. That word is not a reply field; a refusal on it is reported as setup_failed and its value appears only in the run's error text. The controller relates an actor's application to a terminal scope only and does not re-derive ready from its cells.
 
 ### Publication evidence {publication_support: owner}
 
@@ -989,7 +993,7 @@ Operation-specific validation reason, including descriptor_missing or header mag
 
 ### value {value: field}
 
-Operation-specific unsigned native observation when the cell marks a value present, such as object/page size.
+Operation-specific unsigned native observation when the cell marks a value present, such as object/page size or the bytes a clearing operation overwrote, which can be zero.
 
 ### Registered operation slots {slots: definition}
 
@@ -1049,5 +1053,5 @@ unresolved_manual: recovery must establish current ownership before acting becau
 scope: "subtree"
 grade: "source_read"
 source: [{"path": "runner/Sources/PWRunnerCore/ActorEquipment.swift", "symbol": "ActorEquipmentPreparation"}, {"path": "runner/Sources/PWRunnerCore/PWRunnerEquipment.swift", "symbol": "pwRunnerEquipmentProblems"}, {"path": "runner/Sources/PWRunnerCore/AuthoritySetupRuntime.swift", "symbol": "decodeAuthoritySetup"}, {"path": "runner/Sources/PWRunnerCore/PWRunnerAuthoritySetup.swift", "symbol": "authoritySetupIntegrityErrors"}, {"path": "runner/Sources/PWRunnerCore/ActorOrchestration.swift", "symbol": "actorPreparationRefusal"}, {"path": "runner/Sources/PWRunnerCore/PWRunnerReply.swift", "symbol": "actorExtensionEvidenceProblem"}, {"path": "runner/Sources/PWRunnerCore/ActorScheduler.swift", "symbol": "didSetUp"}, {"path": "runner/Sources/PWRunnerCore/ActorOrchestration.swift", "symbol": "inspectionDeadline"}, {"path": "runner/Sources/PWRunnerCore/MonotonicDeadline.swift", "symbol": "static func now"}]
-pins: "Imported public field definitions joined to producer/decoder/assessment meanings; explicit rule and evidence gaps preserve scope."
+pins: "Imported public field definitions joined to producer/decoder/assessment meanings."
 ```

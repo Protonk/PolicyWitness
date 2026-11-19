@@ -56,7 +56,7 @@ listed: "exhaustive"
 values: ["not_launched", "launch_refused", "transfer_failed", "applied", "unapplied_declared", "setup_failed", "authority_setup_failed", "exited_before_setup", "setup_timeout"]
 ```
 
-Host setup classification: not_launched, launch_refused, transfer_failed, applied, unapplied_declared, setup_failed, authority_setup_failed, exited_before_setup or setup_timeout.
+Host setup classification: not_launched, launch_refused, transfer_failed, applied, unapplied_declared, setup_failed, authority_setup_failed, exited_before_setup or setup_timeout. setup_timeout labels an actor whose setup publication did not arrive within the shared setup allowance, and also an actor whose launch was not attempted because less than one millisecond of that allowance remained; the second has no launch or subprocess record and application basis worker_not_launched.
 
 ### applied {applied: field}
 
@@ -155,11 +155,11 @@ assessment describe the retained worker evidence.
 
 ```contract
 grade: "executed"
-source: [{"path":"runner/Sources/PWRunnerCore/ActorOrchestration.swift","symbol":"actorPreparationRefusal"},{"path":"runner/Sources/PWRunnerCore/ActorPlan.swift","symbol":"normalizeActorPlan"},{"path":"runner/Sources/PWRunnerCore/PWRunnerReply.swift","symbol":"actorExtensionEvidenceProblem"},{"path":"runner/Sources/PWRunnerCore/PWRunnerReply.swift","symbol":"validateForReporting"},{"path":"controller/src/porcelain_admission.rs","symbol":"admission_problem"},{"path":"controller/src/porcelain_actor.rs","symbol":"preparation_failure_valid"},{"path":"tests/lib/consumer.py","symbol":"_validate_reply"},{"path":"tests/lib/lifecycle_oracle.py","symbol":"check_actor_records"}]
+source: [{"path":"runner/Sources/PWRunnerCore/ActorOrchestration.swift","symbol":"actorPreparationRefusal"},{"path":"runner/Sources/PWRunnerCore/ActorPlan.swift","symbol":"normalizeActorPlan"},{"path":"runner/Sources/PWRunnerCore/PWRunnerReply.swift","symbol":"actorExtensionEvidenceProblem"},{"path":"runner/Sources/PWRunnerCore/PWRunnerReply.swift","symbol":"validateForReporting"},{"path":"controller/src/porcelain_admission.rs","symbol":"pub(crate) fn admission_problem"},{"path":"controller/src/porcelain_actor.rs","symbol":"preparation_failure_valid"},{"path":"tests/lib/consumer.py","symbol":"_validate_reply"},{"path":"tests/lib/lifecycle_oracle.py","symbol":"check_actor_records"}]
 check: [{"path":"runner/Tests/PWRunnerCoreTests/ReaderCorpusTests.swift","symbol":"runReaderCorpusTests","form":"test"},{"path":"controller/src/run_flow.rs","symbol":"reader_definition_corpus_cross_readers","form":"test"}]
 pins: "Constructed typed preparation, declaration and degradation neighbours retain separate host, controller, general-consumer and worker-lifecycle judgments."
 context: "Whole canonical runner-unit case passed with zero recorded system sleep. Swift judgments over 142 typed frames were retained before encoding; exact-one Rust replay carried 143 frames including the real writer-cap fallback through envelopes, then independent Python readers completed all rows and seven JSON-only controls."
-limits: "The corpus uses constructed records and independently expected interpretations. Eleven application-positive pairs, degradation admission, the exact contradictory-worker D1 finding and retained actor projections have separate assertions. JSON-only normalization has its own domain. Native occurrence of each constructed context has separate observation owners."
+limits: "The corpus uses constructed records and independently expected interpretations. Eleven application-positive pairs, degradation admission, the exact contradictory-worker D1 finding and retained actor projections have separate assertions. JSON-only normalization has its own domain. Native occurrence of each constructed context has separate observation owners. The reviewed-inputs digest names an input set and framing this tree does not record; it cannot be recomputed here."
 run: "20261111T162345Z_3d6c7242"
 case: "runner_unit/pwrunner_core_unit_executable"
 source_snapshot: "reviewed-inputs sha256:af396aadf41ba79a0d072b62d9c3f4ff1df5b5fa30d6c4ff267c53e8437dd51d (b6ce6d26 dirty; replay identity correction)"
@@ -426,11 +426,11 @@ Declared action identifiers in phase order, retained even when actions produce n
 
 ### arrival_observed {arrival_observed: field}
 
-Whether the host acquired the active worker's arrival publication for this visit.
+Whether the host acquired the active worker's arrival publication for this visit. The ordinary form reports the final acquisition of the phase's publication after cleanup; the actor form reports what the scheduler observed while that visit was active.
 
 ### completion_observed {completion_observed: field}
 
-Whether the host acquired completion for this visit.
+Whether the host acquired completion for this visit, at the same form-specific point; in the actor form a completion published after the visit's wait ended is not included.
 
 ### collection_status {collection_status: field}
 
@@ -543,7 +543,7 @@ Recorded production maximum for aggregate query collection across actor phases: 
 
 ### cancelled {cancelled: field}
 
-Recorded schedule cancellation reason, such as preparation_refused, execution_allowance_exhausted, an equipment failure or termination_dependency followed by its outcome; absent when no cancellation was recorded.
+Recorded schedule cancellation reason: preparation_refused, execution_allowance_exhausted, equipment_execution_ followed by the inspection failure, termination_dependency: followed by the gate outcome, unresolved_termination or actor_quiescence_unresolved when a stopped actor was not reaped, or ownership_lost after a failed wait on the active actor; absent when no cancellation was recorded. execution_allowance_exhausted is the scheduler's classification; `execution_wait.elapsed_ms` and `execution_wait.clock_fault` show whether exhaustion was measured.
 
 ## Termination dependency {gate: subject}
 
@@ -876,7 +876,7 @@ A `not_reached` gate consumes no gate-capture ordinal.
 ```contract
 scope: "subtree"
 grade: "source_read"
-source: [{"path": "runner/Sources/PWRunnerCore/PWRunnerActors.swift", "symbol": "PWRunnerActorResult"}, {"path": "runner/Sources/PWRunnerCore/PWRunnerAuthoritySetup.swift", "symbol": "actorApplicationAssessment"}, {"path": "runner/Sources/PWRunnerCore/ActorScheduler.swift", "symbol": "ActorScheduler"}, {"path": "runner/Sources/PWRunnerCore/ActorOrchestration.swift", "symbol": "assembleActorReply"}, {"path": "runner/Sources/PWRunnerCore/ActorPlan.swift", "symbol": "normalizeActorPlan"}, {"path": "runner/Sources/PWRunnerCore/PWRunnerReply.swift", "symbol": "actorExtensionEvidenceProblem"}, {"path": "controller/src/porcelain_actor.rs", "symbol": "gates"}, {"path": "controller/src/porcelain_admission.rs", "symbol": "execution_diagnostics"}, {"path": "tests/lib/actor_evidence.py", "symbol": "validate_actor_evidence"}, {"path": "tests/lib/lifecycle_oracle.py", "symbol": "check_actor_records"}, {"path": "tests/lib/consumer.py", "symbol": "_validate_actors"}]
+source: [{"path": "runner/Sources/PWRunnerCore/PWRunnerActors.swift", "symbol": "PWRunnerActorResult"}, {"path": "runner/Sources/PWRunnerCore/PWRunnerAuthoritySetup.swift", "symbol": "actorApplicationAssessment"}, {"path": "runner/Sources/PWRunnerCore/ActorScheduler.swift", "symbol": "ActorScheduler"}, {"path": "runner/Sources/PWRunnerCore/ActorOrchestration.swift", "symbol": "assembleActorReply"}, {"path": "runner/Sources/PWRunnerCore/ActorPlan.swift", "symbol": "normalizeActorPlan"}, {"path": "runner/Sources/PWRunnerCore/PWRunnerReply.swift", "symbol": "actorExtensionEvidenceProblem"}, {"path": "controller/src/porcelain_actor.rs", "symbol": "fn gates"}, {"path": "controller/src/porcelain_admission.rs", "symbol": "execution_diagnostics"}, {"path": "tests/lib/actor_evidence.py", "symbol": "validate_actor_evidence"}, {"path": "tests/lib/lifecycle_oracle.py", "symbol": "check_actor_records"}, {"path": "tests/lib/consumer.py", "symbol": "_validate_actors"}]
 pins: "Imported public field definitions joined to producer/decoder/assessment meanings; explicit rule and evidence gaps preserve scope."
 limits: "No execution credit is claimed by this owner."
 ```
