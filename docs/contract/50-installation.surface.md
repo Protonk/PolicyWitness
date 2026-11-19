@@ -205,9 +205,9 @@ Reconcile looks up a launchd service only for a record whose location resolved a
 grade: "check_read"
 source: {"path":"controller/src/runner_commands.rs","symbol":"cmd_runner_reconcile"}
 check: {"path":"tests/suites/runner_byoxpc/opt_in/registry_recovery.sh","symbol":"registry_recovery","form":"test"}
-pins: "The control reads record rows for an installed record and for pending_cleanup records, with recorded state, presences and both ownership classifications; an unregistered candidate with unowned ownership; an inspection error with unknown presence for an unreadable plist; and unchanged registry and plist bytes after reconcile, list and status under a held registry lock."
+pins: "The control reads record rows for an installed record and for pending_cleanup records, with recorded state, presences and both ownership classifications; an unregistered candidate with unowned ownership; an inspection error with unknown presence for an unreadable plist; and unchanged registry and plist bytes after list, status, reconcile and verify under a held registry lock, with validate, remove and install refused."
 context: "Read the reconcile producer and the named control's reconcile assertions."
-limits: "Check read without execution. The control is opt-in and needs a logged-in GUI session. Its no-change comparison covers reconcile together with list, status and refused modifying commands, not reconcile alone. No assertion reads candidates for a path that also has a record row."
+limits: "Check read without execution. The control is opt-in and needs a logged-in GUI session. Its no-change comparison covers reconcile together with list, status, verify and the refused modifying commands, not reconcile alone. No assertion reads candidates for a path that also has a record row."
 ```
 
 ### Remove an owned installation {remove: acts}
