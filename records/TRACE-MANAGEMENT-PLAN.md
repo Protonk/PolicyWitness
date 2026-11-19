@@ -1498,6 +1498,26 @@ The receipts, `reread.json` and `prune-preview.json`, are local gitignored
 files beside `reread.py` in `.tmp/trace-integration/product-checkpoint/`.
 The product checkpoint is complete.
 
+**Selective removal, 2026-11-19.** After the preview, the maintainer removed
+41 of the 61 development runs, about 20 GiB, with `/bin/rm -rf` run under
+`tests/lib/checkout_lock.sh`. Each removed run fell into one of three groups:
+
+- it was never a run of record;
+- it was a failure followed by a recorded passing rerun;
+- every one of its cases ran again on the final tree and app in
+  `product-group-default` or `ident-post`.
+
+Twenty runs remain:
+
+- `product-group-default` and `ident-post`;
+- the twelve pre-change runs;
+- six opt-in runs that no later build repeated: three order-barrier runs, the
+  BYOXPC install and recovery run, and two reservation runs.
+
+Where these plans name a removed run, the name now stands only as a written
+account. The removed runs' closed pytest owner records stay until the next
+`make prune APPLY=1` retires them.
+
 Before and after the battery, the external runner registry and its
 pending-cleanup list were empty. Reconciliation found no records,
 unregistered candidates or inspection errors.
@@ -1518,6 +1538,8 @@ files beneath `.tmp/trace-integration/product-checkpoint/`.
 2. Complete the three technical-account passes in order, working from
    [ACCOUNTS-WORKLIST.md](trace-assessments/ACCOUNTS-WORKLIST.md) and
    [ACCOUNTS-ADDENDA.md](trace-assessments/ACCOUNTS-ADDENDA.md).
+   [TRACE-ACCOUNTS-PLAN.md](TRACE-ACCOUNTS-PLAN.md) carries out this step.
+   It adds read-only reader probes and ends at a prune apply.
    - Part 1 covers contract statements, presentation and generators.
    - Part 2 covers failure evidence, limits and their supporting
      documentation.
