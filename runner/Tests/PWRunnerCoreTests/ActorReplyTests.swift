@@ -90,7 +90,7 @@ private func retainActorReply(_ reply: PWRunnerRunResult, _ name: String) throws
 /// One actor, one phase and one read through the scheduler with the shipped
 /// worker and an empty collection hook; each row supplies its own validator
 /// result at assembly.
-private func singleActorSchedule(mode: String, effect: String) throws
+private func singleActorSchedule(mode: String, effect: String, stepID: String = "read") throws
     -> (PWRunnerRunSpec, ActorPlan, ActorTranslation, ActorScheduleOutcome, ActorEquipmentPreparation) {
     let sandbox = mode == "apply"
         ? "{\"mode\": \"apply\", \"policy\": {\"format\": \"sbpl\", \"sbpl_source\": \"(version 1)(allow default)\"}}"
@@ -98,7 +98,7 @@ private func singleActorSchedule(mode: String, effect: String) throws
     let text = """
     {"contract": "\(testRequestContract)", "specimen_id": "actor-collection-\(mode)",
      "actors": [{"actor_id": "subject", "sandbox": \(sandbox)}],
-     "phases": [{"phase_id": "main", "actor_id": "subject", "actions": [{"step_id": "read", "sandbox_check": {"operation": "file-read-data", "filter": {"kind": "path", "value": "\(effect)"}}, "attempt": {"kind": "file", "action": "read_fresh", "target": "\(effect)"}}]}]}
+     "phases": [{"phase_id": "main", "actor_id": "subject", "actions": [{"step_id": "\(stepID)", "sandbox_check": {"operation": "file-read-data", "filter": {"kind": "path", "value": "\(effect)"}}, "attempt": {"kind": "file", "action": "read_fresh", "target": "\(effect)"}}]}]}
     """
     let parsed = try testDecodeJSON(PWRunnerRunSpec.self, from: Data(text.utf8))
     guard case .success(let plan) = normalizeActorPlan(parsed) else { throw TestFailure(message: "request refused") }
@@ -180,6 +180,47 @@ func runActorReplyTests(_ tk: TestKit) {
                         row.outcome == NormalizedOutcome.finished ? "query_first" : "unestablished")
                     _ = try admittedReplyData(reply)
                 }
+            }
+        }
+    }
+    tk.group("actor reply: a completed slot belongs to the step whose identifier bytes it carries") {
+        // The real worker leaves the submitted identifier in its slot. Each row
+        // then replaces the identifier in the collected output, as a worker that
+        // rewrote its slot would leave it for the host to read back. U+212A
+        // KELVIN SIGN is canonically equivalent to "K" and has other bytes.
+        func hex(_ text: String) -> String { text.utf8.map { String(format: "%02x", $0) }.joined() }
+        for (name, slotID) in [("byte-identical", "K-read"), ("unrelated", "other"), ("canonically equivalent", "\u{212A}-read")] {
+            tk.run("\(name) slot identifier: reporting validation reaches the association the assembler reported") {
+                guard workerPresent else { throw TestFailure(message: "required equipment: pw-probe-runner missing; run make build") }
+                let (parsed, plan, translation, collected, bound) = try singleActorSchedule(mode: "apply", effect: freshEffect(), stepID: "K-read")
+                var outcome = collected
+                try expectEqual(outcome.actors[0].output?.slots.map { hex($0.stepId) + ($0.completed ? " completed" : "") },
+                                [hex("K-read") + " completed"])
+                outcome.actors[0].output?.slots[0].stepId = slotID
+                let queryPlans = plan.phases.map { planValidatorQueries($0.actions.compactMap { $0.probe }) }
+                let clean = actorCollectionRows()[0]
+                var reply = assembleActorReply(parsed: parsed, plan: plan, translation: translation, outcome: outcome,
+                    queryPlans: queryPlans, validatorResults: [clean.result(queryPlans[0].compactMap { $0.probe })],
+                    collectionStatuses: [clean.status], bundleId: "test")
+                attachObservedEquipment(&reply, bound, outcome)
+                // The assembler: the slot is this step's result only when its
+                // bytes equal the submitted identifier. Any other identifier,
+                // equivalent or not, leaves the step without a slot. The record
+                // resolved from the slots carries the identifier as read.
+                let mine = hex(slotID) == hex("K-read")
+                guard let sub = reply.actors?[0].subprocess, let record = sub.disposition else { throw TestFailure(message: "no actor record") }
+                try expectEqual(reply.steps.map { $0.attempt.result_source }, [mine ? "worker" : "synthetic"])
+                try expectEqual(reply.steps.map { $0.attempt.missing_reason }, [mine ? nil : "slot_absent"])
+                try expectEqual(reply.steps.map { $0.attempt.lifecycle != nil }, [mine])
+                try expectEqual(record.steps.map { hex($0.step_id) + " " + $0.slot }, [hex(slotID) + " completed"])
+                try expectEqual(reply.normalized_outcome, NormalizedOutcome.finished, reply.error ?? "")
+                // Reporting validation reads the same record and steps and must
+                // associate them as the assembler did: a record step whose
+                // identifier bytes name no reply step describes none of them.
+                var verdict = dispositionIntegrityProblems(record, subprocess: sub, stepCount: 1, steps: reply.steps)
+                do { try reply.validateForReporting(); verdict.append("accepted") }
+                catch let error as PWRunnerReportingValidationError { verdict.append("refused: " + error.message) }
+                try expectEqual(verdict, ["accepted"])
             }
         }
     }

@@ -426,7 +426,9 @@ func dispositionIntegrityProblems(_ record: PWDispositionRecord, subprocess sub:
                 if !isConflict { problems.append("step \(i) \(name): conflict without incompatible observations") }
             }
         }
-        if let reply = replySteps?.first(where: { $0.step_id == step.step_id }) {
+        // In the actor form the record's identifier is the one read back from
+        // the slot; a reply step is its subject only when the bytes are equal.
+        if let reply = replySteps?.first(where: { sameUTF8($0.step_id, step.step_id) }) {
             let completed = step.slot == "completed" && step.attempt_support == "supported"
             let reason: String? = completed ? nil : step.attempt_support == "unsupported" ? "attempt_not_supported"
                 : step.slot == "absent" ? "slot_absent" : "slot_incomplete"

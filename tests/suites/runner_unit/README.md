@@ -59,6 +59,12 @@ canonically equivalent record with other bytes yields `missing_id` with
 identifier. The host, Rust and Python readers must each accept every row.
 `OrderingTests` holds the same rule on `eligibleOrderedStep`,
 `validatorAssociationIssues`, the reported issue keys and the worker slot join.
+Three `ActorReplyTests` rows run one actor with the shipped worker, replace the
+identifier in its collected slot and assemble the reply: a byte-identical
+identifier keeps the worker result; an unrelated one and a canonically
+equivalent one with other bytes each leave the step without a slot, and
+reporting validation must accept each reply as assembled. The replacement is
+constructed; no shipped worker rewrites its slot.
 
 ## Invariants
 
