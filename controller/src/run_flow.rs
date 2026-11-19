@@ -2749,12 +2749,16 @@ else:
         }
 
         fn scratch(tag: &str) -> PathBuf {
+            // Two tests pass the same tags, and the clock advances in
+            // microsecond steps; the serial keeps each call's own path.
+            static NEXT: std::sync::atomic::AtomicU64 = std::sync::atomic::AtomicU64::new(0);
             let stamp = std::time::SystemTime::now()
                 .duration_since(std::time::UNIX_EPOCH)
                 .unwrap()
                 .as_nanos();
+            let serial = NEXT.fetch_add(1, std::sync::atomic::Ordering::Relaxed);
             let root = std::env::temp_dir().join(format!(
-                "pw-orchestration-{tag}-{}-{stamp}",
+                "pw-orchestration-{tag}-{}-{stamp}-{serial}",
                 std::process::id()
             ));
             fs::create_dir_all(&root).unwrap();

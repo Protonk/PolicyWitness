@@ -587,11 +587,16 @@ mod tests {
     use std::time::{SystemTime, UNIX_EPOCH};
 
     fn temp_root(tag: &str) -> PathBuf {
+        static NEXT: std::sync::atomic::AtomicU64 = std::sync::atomic::AtomicU64::new(0);
         let stamp = SystemTime::now()
             .duration_since(UNIX_EPOCH)
             .unwrap()
             .as_nanos();
-        std::env::temp_dir().join(format!("pw-dossier-{tag}-{}-{stamp}", std::process::id()))
+        let serial = NEXT.fetch_add(1, std::sync::atomic::Ordering::Relaxed);
+        std::env::temp_dir().join(format!(
+            "pw-dossier-{tag}-{}-{stamp}-{serial}",
+            std::process::id()
+        ))
     }
 
     fn write(path: &Path, bytes: &[u8]) {

@@ -196,12 +196,19 @@ mod tests {
     use std::time::{SystemTime, UNIX_EPOCH};
 
     fn temp_dir() -> PathBuf {
+        // The clock advances in microsecond steps, so the time alone lets two
+        // parallel tests take one path; the serial keeps each test's own.
+        static NEXT: std::sync::atomic::AtomicU64 = std::sync::atomic::AtomicU64::new(0);
         let base = std::env::temp_dir();
         let stamp = SystemTime::now()
             .duration_since(UNIX_EPOCH)
             .unwrap()
             .as_nanos();
-        base.join(format!("pw-evidence-test-{}", stamp))
+        let serial = NEXT.fetch_add(1, std::sync::atomic::Ordering::Relaxed);
+        base.join(format!(
+            "pw-evidence-test-{}-{stamp}-{serial}",
+            std::process::id()
+        ))
     }
 
     #[test]
