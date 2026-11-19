@@ -1147,21 +1147,47 @@ the R9 and R13 states were each built and ran their own checks.
 - A frozen-guide divergence to carry to the guide rewrite: the guide still
   calls `cleanup_trigger` a fact recorded where the host acts.
 
+**R9 follow-up and a unit-test defect.** `43c2896d` applies the byte rule to
+the reply-step lookup in `dispositionIntegrityProblems`. The control came
+first and confirmed the disagreement as read: for a slot identifier respelled
+with U+212A the assembler reported `slot_absent` while reporting validation
+refused the reply for disagreeing projections (`host2-follow-pre2`,
+`20261119T014056Z_fcb10d66`, one new row failing of 641). Left as they are,
+with reasons: the identity term beside the changed lookup, now trivially
+false; the event lookup in `actorExtensionEvidenceProblem`, which by reading
+refuses under either equality; and the request-against-request checks in
+`validateForReporting`.
+
+`host2-follow-routed` (`20261119T014519Z_4bc647a7`) failed `unit/rust.unit`
+once. The cause is an implementation defect in test code, not the product and
+not this change: parallel `runner_select` tests shared one fixture path. It
+reproduced on a test binary built before the change in 6 of 600 repetitions
+and in none of 600 after `0be7d3df`, which gives each test its own path. That
+run stays a failure. Five other controller test modules name fixture files
+the same way and are untouched; the next controller thread repairs them.
+
+Build contract: `development:185be8ec…27ce76c2` before;
+`development:38636ec9…` with the follow-up alone; `development:a31e62f3…e9db53c`
+in `dist/` and by derivation at `0be7d3df`. Runs of record, each inspecting
+the final build and none with recorded sleep: `host2-follow-routed2`
+(`20261119T015253Z_30e3bf7d`, 29), `host2-follow-unit-mutations`
+(`20261119T015554Z_381c8d50`, 4), `host2-follow-witness`
+(`20261119T015824Z_c1c4ab8a`, 52), `host2-follow-order-barrier`
+(`20261119T020323Z_5ea3bed5`, 1) and `host2-follow-source-drift`
+(`20261119T020435Z_44451a26`, 11). All pass.
+
 ### Pause — 2026-11-18
 
-Work stopped at a quiet point at the maintainer's request. State: `main` at
-the commit that last changed this note, tree clean, nothing pushed, no extra
-worktree, no writer in the checkout; the signed app in `dist/` is
-`development:378493f6…01542300`. `tests/out/runs` holds only the nine
-`host1-*`, `host2-*` and `r14-*` directories. The guide, its copies and both publication records are
-byte-unchanged at the freeze. No release was made.
-
-Resumed the same day. The second half of HOST has landed (`c82a1dd6`) and
-work continues one thread at a time on battery, with sleeps expected. If
-this note is read with uncommitted changes in the tree, they are the
-running thread's unverified work, with its notes in a scratch directory
-named for the thread. Nothing unverified is committed, and a run that
-overlapped sleep is repeated, not credited.
+Work stopped at a quiet point at the maintainer's request, resumed the same
+day for three bounded pieces (R14, the second half of HOST and one R9
+follow-up) and stopped again with all three landed. State at this second
+stop: `main` at the commit that last changed this note, tree clean, nothing
+pushed, no extra worktree, no writer in the checkout. The signed app in
+`dist/` is `development:a31e62f3…e9db53c`, equal to the derivation at
+`0be7d3df`; it was built before the last commits, so its commit stamp is
+older than its contract. `tests/out/runs` holds only this stage's `host1-*`,
+`host2-*` and `r14-*` directories. The guide, its copies and both publication
+records are byte-unchanged at the freeze. No release was made.
 
 Done in this stage: the Markdown and pilot cohorts; the seam migration; the
 limits texts under the freeze; the four conversions with their follow-ups;
@@ -1171,12 +1197,12 @@ written.
 Remaining, in this order, one writer at a time, each product thread
 tests-first with its own rebuild and routed verification:
 
-1. HOST, second half: landed. One R9 follow-up remains: the reporting
-   lookup in `dispositionIntegrityProblems` that still compares a
-   child-supplied slot identifier as `String`.
-2. CONTROLLER-A (R2, R6, R7), CONTROLLER-B (R10, R11 and the selected
-   `run_flow.rs` test corrections), CONTROLLER-C (R12), EXEC (R1), WIRE (R8,
-   after EXEC), IDENT (R3).
+1. HOST is complete (R4, R5, R9 with its follow-up, R13, the host
+   comments).
+2. CONTROLLER-A (R2, R6, R7, and the shared fixture paths in five
+   controller test modules), CONTROLLER-B (R10, R11 and the selected
+   `run_flow.rs` test corrections), CONTROLLER-C (R12), EXEC (R1, and three
+   gate comments in `pw_probe_runner.c`), WIRE (R8, after EXEC), IDENT (R3).
 3. One default battery for the product group; reread it with the revised
    battery validator; a read-only prune preview. No apply.
 4. The accounts thread in three parts (R14 is done; its two owed account
