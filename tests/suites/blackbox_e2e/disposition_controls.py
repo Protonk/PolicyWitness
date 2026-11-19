@@ -320,6 +320,29 @@ def expected_fixture_controls(out):
         assert findings, f'{name}: accepted'
         assert any(f['rule'] == rule for f in findings), (name, rule, findings)
         records.append({'control': name, 'rejected': True, 'rule': rule, 'findings': findings})
+    # The trigger is the table image of the stop reason. Each row below keeps
+    # every claim equal to its own raw field and the cause the altered trigger
+    # selects, so the pair is the only thing that can be wrong with it.
+    def pair(stop, trigger, cause, projected_stop):
+        mutated = copy.deepcopy(expected)
+        sub = mutated['data']['runner_result']['runner_subprocess']
+        sub['poll_stop_reason'], sub['cleanup_trigger'] = stop, trigger
+        questions = sub[C.RECORD_KEY]['questions']
+        questions['stop_reason']['answer'], questions['cleanup_trigger']['answer'] = stop, trigger
+        mutated['data']['runner_sandbox_diagnostics'].update(termination_cause=cause, stop_reason=projected_stop)
+        return mutated
+
+    for name, stop, trigger, cause, projected_stop, rejected in (
+            ('trigger_completion_beside_deadline_stop', 'sentinel_deadline', 'completion',
+             'host_exit_grace_exhausted', 'sentinel_deadline', True),
+            ('unlisted_trigger_beside_another_unlisted_stop', 'future_stop', 'future_trigger', 'unknown', None, True),
+            ('unlisted_stop_carried_unchanged', 'future_stop', 'future_stop', 'unknown', None, False)):
+        mutated = pair(stop, trigger, cause, projected_stop)
+        (out / f'{name}.json').write_text(json.dumps(mutated, indent=2) + '\n')
+        findings = O.check_fixture_record(mutated)
+        wanted = [('D2', 'trigger_derivation', 'cleanup_trigger')] if rejected else []
+        assert [(f['rule'], f['kind'], f['question']) for f in findings] == wanted, (name, findings)
+        records.append({'control': name, 'rejected': rejected, 'findings': findings})
     # Ordinary admission allows one empty step ID, so the record's identifier is
     # any string. The first step is renamed everywhere it is carried; a value of
     # another type in the record stays a malformed record.

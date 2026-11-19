@@ -203336,7 +203336,7 @@
             "facts": {},
             "id": "reply.record.outcomes",
             "kind": "definition",
-            "prose": "| Value | Host commitment |\n| --- | --- |\n| `finished` | Execution and required collection completed under the classifier's conditions; each attempt retains its own result. |\n| `bad_request` | Reached decoding/admission refused the specimen before worker or validator execution. |\n| `bad_policy` | The host could not identify the ordinary source under its structural policy check. |\n| `worker_spawn_failed` | The driver could not spawn the worker. |\n| `runner_timeout` | Host sentinel or policy-transfer deadline expired, subject to higher-precedence published worker failures. |\n| `runner_failed` | Worker preparation/application/publication, host apparatus or supervision failed, or required observations are unusable. |\n| `validator_spawn_failed` | Worker classification succeeded and validator spawn failed. |\n| `validator_no_reply` | Worker classification succeeded and validator query delivery or verdict reading failed. |\n| `validator_decode_failure` | Worker classification succeeded and validator parsing or typed decoding failed. |\n| `validator_unavailable` | Required collection was not invoked, its budget/clock failed, or validator supervision/association was unusable. |\n| `runner_reporting_failed` | The host failed to validate or encode its assembled report and entered reporting fallback. |",
+            "prose": "| Value | Host commitment |\n| --- | --- |\n| `finished` | Execution and required collection completed under the classifier's conditions; each attempt retains its own result. |\n| `bad_request` | Reached decoding/admission refused the specimen before worker or validator execution. |\n| `bad_policy` | The host could not identify the ordinary source under its structural policy check. |\n| `worker_spawn_failed` | The driver could not spawn the worker. |\n| `runner_timeout` | Host sentinel or policy-transfer deadline expired, subject to higher-precedence published worker failures. Expiry of the actor schedule's execution allowance is reported as `runner_failed`. |\n| `runner_failed` | Worker preparation/application/publication, host apparatus or supervision failed, or required observations are unusable. |\n| `validator_spawn_failed` | Worker classification succeeded and validator spawn failed. |\n| `validator_no_reply` | Worker classification succeeded and validator query delivery or verdict reading failed. |\n| `validator_decode_failure` | Worker classification succeeded and validator parsing or typed decoding failed. |\n| `validator_unavailable` | Required collection was not invoked, its budget/clock failed, or validator supervision/association was unusable. |\n| `runner_reporting_failed` | The host failed to validate or encode its assembled report and entered reporting fallback. |",
             "title": "Host outcomes"
           },
           {
@@ -252699,7 +252699,19 @@
           },
           {
             "context": {},
-            "facts": {},
+            "facts": {
+              "listed": "illustrative",
+              "unknown": "The host string is retained; a value outside this list is a stop reason carried unchanged, and selects no termination cause label.",
+              "values": [
+                "deadline_expiry",
+                "completion",
+                "child_reaped",
+                "poll_wait_error",
+                "policy_transfer_error",
+                "policy_transfer_timeout"
+              ],
+              "vocabulary": "open"
+            },
             "field": {
               "json_null": false,
               "optional": true,
@@ -252708,7 +252720,7 @@
             },
             "id": "lifecycle.worker.cleanup_trigger",
             "kind": "field",
-            "prose": "Host fact recorded when it requests exit: deadline_expiry, completion, child_reaped, poll_wait_error, policy_transfer_error or policy_transfer_timeout.",
+            "prose": "Why the host requested exit, derived at final collection from the stop reason it held when it stored the request: sentinel_deadline gives deadline_expiry; done and, in the actor form, schedule_complete, ended_before_arrival and ended_before_completion give completion; child_reaped gives child_reaped; wait_error gives poll_wait_error; policy_write_error and policy_transfer_deadline give policy_transfer_error and policy_transfer_timeout. Any other stop reason is carried unchanged. The value restates poll_stop_reason and is not a second observation.",
             "title": "cleanup_trigger"
           },
           {
@@ -308252,7 +308264,19 @@
           },
           {
             "context": {},
-            "facts": {},
+            "facts": {
+              "listed": "illustrative",
+              "unknown": "The host string is retained; a value outside this list is a stop reason carried unchanged, and selects no termination cause label.",
+              "values": [
+                "deadline_expiry",
+                "completion",
+                "child_reaped",
+                "poll_wait_error",
+                "policy_transfer_error",
+                "policy_transfer_timeout"
+              ],
+              "vocabulary": "open"
+            },
             "field": {
               "json_null": false,
               "optional": true,
@@ -308261,7 +308285,7 @@
             },
             "id": "lifecycle.worker.cleanup_trigger",
             "kind": "field",
-            "prose": "Host fact recorded when it requests exit: deadline_expiry, completion, child_reaped, poll_wait_error, policy_transfer_error or policy_transfer_timeout.",
+            "prose": "Why the host requested exit, derived at final collection from the stop reason it held when it stored the request: sentinel_deadline gives deadline_expiry; done and, in the actor form, schedule_complete, ended_before_arrival and ended_before_completion give completion; child_reaped gives child_reaped; wait_error gives poll_wait_error; policy_write_error and policy_transfer_deadline give policy_transfer_error and policy_transfer_timeout. Any other stop reason is carried unchanged. The value restates poll_stop_reason and is not a second observation.",
             "title": "cleanup_trigger"
           },
           {
@@ -337814,7 +337838,19 @@
           },
           {
             "context": {},
-            "facts": {},
+            "facts": {
+              "listed": "illustrative",
+              "unknown": "The host string is retained; a value outside this list is a stop reason carried unchanged, and selects no termination cause label.",
+              "values": [
+                "deadline_expiry",
+                "completion",
+                "child_reaped",
+                "poll_wait_error",
+                "policy_transfer_error",
+                "policy_transfer_timeout"
+              ],
+              "vocabulary": "open"
+            },
             "field": {
               "json_null": false,
               "optional": true,
@@ -337823,7 +337859,7 @@
             },
             "id": "lifecycle.worker.cleanup_trigger",
             "kind": "field",
-            "prose": "Host fact recorded when it requests exit: deadline_expiry, completion, child_reaped, poll_wait_error, policy_transfer_error or policy_transfer_timeout.",
+            "prose": "Why the host requested exit, derived at final collection from the stop reason it held when it stored the request: sentinel_deadline gives deadline_expiry; done and, in the actor form, schedule_complete, ended_before_arrival and ended_before_completion give completion; child_reaped gives child_reaped; wait_error gives poll_wait_error; policy_write_error and policy_transfer_deadline give policy_transfer_error and policy_transfer_timeout. Any other stop reason is carried unchanged. The value restates poll_stop_reason and is not a second observation.",
             "title": "cleanup_trigger"
           },
           {
@@ -382060,7 +382096,7 @@
             },
             "id": "diagnostics.actor.projection.cause.unknown",
             "kind": "outcome",
-            "prose": "The request result, exhausted grace and owned final status are independent\nobservations in this chain. A successful signal request supplies its own\nrequest result; attribution requires the other carried claims and the\npreceding lifecycle validation.",
+            "prose": "The request result, exhausted grace and owned final status are independent\nobservations in this chain. A successful signal request supplies its own\nrequest result; attribution requires the other carried claims and the\npreceding lifecycle validation. The actor scheduler never records\n`sentinel_deadline`, so no actor reply selects the deadline case. An actor\nstopped for an arrival, completion or setup timeout, a protocol violation, a\nwithheld release or a failed setup keeps the scheduler's reason as its trigger.\nIts cause stays `unknown` even when the request result, exhausted grace and\nfinal status are all carried; read them in that actor's subprocess record.",
             "referenced_types": {
               "envelope.data": {
                 "json_null": false,
@@ -444736,7 +444772,19 @@
           },
           {
             "context": {},
-            "facts": {},
+            "facts": {
+              "listed": "illustrative",
+              "unknown": "The host string is retained; a value outside this list is a stop reason carried unchanged, and selects no termination cause label.",
+              "values": [
+                "deadline_expiry",
+                "completion",
+                "child_reaped",
+                "poll_wait_error",
+                "policy_transfer_error",
+                "policy_transfer_timeout"
+              ],
+              "vocabulary": "open"
+            },
             "field": {
               "json_null": false,
               "optional": true,
@@ -444745,7 +444793,7 @@
             },
             "id": "lifecycle.worker.cleanup_trigger",
             "kind": "field",
-            "prose": "Host fact recorded when it requests exit: deadline_expiry, completion, child_reaped, poll_wait_error, policy_transfer_error or policy_transfer_timeout.",
+            "prose": "Why the host requested exit, derived at final collection from the stop reason it held when it stored the request: sentinel_deadline gives deadline_expiry; done and, in the actor form, schedule_complete, ended_before_arrival and ended_before_completion give completion; child_reaped gives child_reaped; wait_error gives poll_wait_error; policy_write_error and policy_transfer_deadline give policy_transfer_error and policy_transfer_timeout. Any other stop reason is carried unchanged. The value restates poll_stop_reason and is not a second observation.",
             "title": "cleanup_trigger"
           },
           {
@@ -459516,7 +459564,7 @@
             "facts": {},
             "id": "reply.record.outcomes",
             "kind": "definition",
-            "prose": "| Value | Host commitment |\n| --- | --- |\n| `finished` | Execution and required collection completed under the classifier's conditions; each attempt retains its own result. |\n| `bad_request` | Reached decoding/admission refused the specimen before worker or validator execution. |\n| `bad_policy` | The host could not identify the ordinary source under its structural policy check. |\n| `worker_spawn_failed` | The driver could not spawn the worker. |\n| `runner_timeout` | Host sentinel or policy-transfer deadline expired, subject to higher-precedence published worker failures. |\n| `runner_failed` | Worker preparation/application/publication, host apparatus or supervision failed, or required observations are unusable. |\n| `validator_spawn_failed` | Worker classification succeeded and validator spawn failed. |\n| `validator_no_reply` | Worker classification succeeded and validator query delivery or verdict reading failed. |\n| `validator_decode_failure` | Worker classification succeeded and validator parsing or typed decoding failed. |\n| `validator_unavailable` | Required collection was not invoked, its budget/clock failed, or validator supervision/association was unusable. |\n| `runner_reporting_failed` | The host failed to validate or encode its assembled report and entered reporting fallback. |",
+            "prose": "| Value | Host commitment |\n| --- | --- |\n| `finished` | Execution and required collection completed under the classifier's conditions; each attempt retains its own result. |\n| `bad_request` | Reached decoding/admission refused the specimen before worker or validator execution. |\n| `bad_policy` | The host could not identify the ordinary source under its structural policy check. |\n| `worker_spawn_failed` | The driver could not spawn the worker. |\n| `runner_timeout` | Host sentinel or policy-transfer deadline expired, subject to higher-precedence published worker failures. Expiry of the actor schedule's execution allowance is reported as `runner_failed`. |\n| `runner_failed` | Worker preparation/application/publication, host apparatus or supervision failed, or required observations are unusable. |\n| `validator_spawn_failed` | Worker classification succeeded and validator spawn failed. |\n| `validator_no_reply` | Worker classification succeeded and validator query delivery or verdict reading failed. |\n| `validator_decode_failure` | Worker classification succeeded and validator parsing or typed decoding failed. |\n| `validator_unavailable` | Required collection was not invoked, its budget/clock failed, or validator supervision/association was unusable. |\n| `runner_reporting_failed` | The host failed to validate or encode its assembled report and entered reporting fallback. |",
             "title": "Host outcomes"
           },
           {
@@ -476449,7 +476497,7 @@
             },
             "id": "diagnostics.actor.projection.cause.unknown",
             "kind": "outcome",
-            "prose": "The request result, exhausted grace and owned final status are independent\nobservations in this chain. A successful signal request supplies its own\nrequest result; attribution requires the other carried claims and the\npreceding lifecycle validation.",
+            "prose": "The request result, exhausted grace and owned final status are independent\nobservations in this chain. A successful signal request supplies its own\nrequest result; attribution requires the other carried claims and the\npreceding lifecycle validation. The actor scheduler never records\n`sentinel_deadline`, so no actor reply selects the deadline case. An actor\nstopped for an arrival, completion or setup timeout, a protocol violation, a\nwithheld release or a failed setup keeps the scheduler's reason as its trigger.\nIts cause stays `unknown` even when the request result, exhausted grace and\nfinal status are all carried; read them in that actor's subprocess record.",
             "referenced_types": {
               "envelope.data": {
                 "json_null": false,
@@ -578678,7 +578726,19 @@
           },
           {
             "context": {},
-            "facts": {},
+            "facts": {
+              "listed": "illustrative",
+              "unknown": "The host string is retained; a value outside this list is a stop reason carried unchanged, and selects no termination cause label.",
+              "values": [
+                "deadline_expiry",
+                "completion",
+                "child_reaped",
+                "poll_wait_error",
+                "policy_transfer_error",
+                "policy_transfer_timeout"
+              ],
+              "vocabulary": "open"
+            },
             "field": {
               "json_null": false,
               "optional": true,
@@ -578687,7 +578747,7 @@
             },
             "id": "lifecycle.worker.cleanup_trigger",
             "kind": "field",
-            "prose": "Host fact recorded when it requests exit: deadline_expiry, completion, child_reaped, poll_wait_error, policy_transfer_error or policy_transfer_timeout.",
+            "prose": "Why the host requested exit, derived at final collection from the stop reason it held when it stored the request: sentinel_deadline gives deadline_expiry; done and, in the actor form, schedule_complete, ended_before_arrival and ended_before_completion give completion; child_reaped gives child_reaped; wait_error gives poll_wait_error; policy_write_error and policy_transfer_deadline give policy_transfer_error and policy_transfer_timeout. Any other stop reason is carried unchanged. The value restates poll_stop_reason and is not a second observation.",
             "title": "cleanup_trigger"
           },
           {
@@ -590969,7 +591029,7 @@
             "facts": {},
             "id": "reply.record.outcomes",
             "kind": "definition",
-            "prose": "| Value | Host commitment |\n| --- | --- |\n| `finished` | Execution and required collection completed under the classifier's conditions; each attempt retains its own result. |\n| `bad_request` | Reached decoding/admission refused the specimen before worker or validator execution. |\n| `bad_policy` | The host could not identify the ordinary source under its structural policy check. |\n| `worker_spawn_failed` | The driver could not spawn the worker. |\n| `runner_timeout` | Host sentinel or policy-transfer deadline expired, subject to higher-precedence published worker failures. |\n| `runner_failed` | Worker preparation/application/publication, host apparatus or supervision failed, or required observations are unusable. |\n| `validator_spawn_failed` | Worker classification succeeded and validator spawn failed. |\n| `validator_no_reply` | Worker classification succeeded and validator query delivery or verdict reading failed. |\n| `validator_decode_failure` | Worker classification succeeded and validator parsing or typed decoding failed. |\n| `validator_unavailable` | Required collection was not invoked, its budget/clock failed, or validator supervision/association was unusable. |\n| `runner_reporting_failed` | The host failed to validate or encode its assembled report and entered reporting fallback. |",
+            "prose": "| Value | Host commitment |\n| --- | --- |\n| `finished` | Execution and required collection completed under the classifier's conditions; each attempt retains its own result. |\n| `bad_request` | Reached decoding/admission refused the specimen before worker or validator execution. |\n| `bad_policy` | The host could not identify the ordinary source under its structural policy check. |\n| `worker_spawn_failed` | The driver could not spawn the worker. |\n| `runner_timeout` | Host sentinel or policy-transfer deadline expired, subject to higher-precedence published worker failures. Expiry of the actor schedule's execution allowance is reported as `runner_failed`. |\n| `runner_failed` | Worker preparation/application/publication, host apparatus or supervision failed, or required observations are unusable. |\n| `validator_spawn_failed` | Worker classification succeeded and validator spawn failed. |\n| `validator_no_reply` | Worker classification succeeded and validator query delivery or verdict reading failed. |\n| `validator_decode_failure` | Worker classification succeeded and validator parsing or typed decoding failed. |\n| `validator_unavailable` | Required collection was not invoked, its budget/clock failed, or validator supervision/association was unusable. |\n| `runner_reporting_failed` | The host failed to validate or encode its assembled report and entered reporting fallback. |",
             "title": "Host outcomes"
           },
           {

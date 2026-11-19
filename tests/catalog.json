@@ -2012,7 +2012,7 @@
         },
         {
           "id": "actor_compositions",
-          "description": "Public actor compositions preserve distinct resources across multiple issuers, fan-out, repeated handles, self-transfer, empty revisits and renamed actor declarations and failed-recipient isolation; failed evaluated termination gates cancel later unrelated work, while unreached gates permit it; ordinary worker-timeout overrides leave actor scheduling allowances intact",
+          "description": "Public actor compositions preserve distinct resources across multiple issuers, fan-out, repeated handles, self-transfer, empty revisits and renamed actor declarations and failed-recipient isolation; failed evaluated termination gates cancel later unrelated work, while unreached gates permit it; ordinary worker-timeout overrides leave actor scheduling allowances intact; an actor killed after its exit grace carries the completion trigger and the host cleanup cause, while one that ended on its own signal stays unknown",
           "command": [
             "bash",
             "tests/suites/witness_contract/actor_compositions.sh"

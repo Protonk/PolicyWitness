@@ -129,7 +129,7 @@ record. Internal `CWorkerOutput` carries the same facts to the assembler.
 | `partial_steps` | Existing host summary of missing completed slots; does not prove an attempt never started |
 | `ready_byte_received` | Host boolean: a byte was actually read; false supplies no compile/apply result |
 | `done_observed` | Host boolean from the final acquire snapshot after cleanup |
-| `poll_stop_reason` | Host string: `done`, `child_reaped`, `sentinel_deadline`, `wait_error`, `policy_write_error`, or `policy_transfer_deadline`; retains why polling stopped, regardless of subsequent publication/cleanup |
+| `poll_stop_reason` | Host string: `done`, `child_reaped`, `sentinel_deadline`, `wait_error`, `policy_write_error`, or `policy_transfer_deadline`; in the actor form the scheduler's reason for stopping that actor, such as `schedule_complete`, `ended_before_arrival`, `ended_before_completion`, `completion_timeout` or `setup_failed`; retains why polling stopped, regardless of subsequent publication/cleanup |
 | `exit_requested` | Host boolean: release-store to the exit-request flag occurred; not proof the worker acted on it |
 | `termination_request` | Optional host object with `signal` (integer), `rc` (signed syscall return), `errno` (integer only on failed kill, otherwise absent/null); absent/null means no request |
 | `reaped` | Host boolean: a wait call actually returned this PID; not inferred from kill success |
@@ -358,13 +358,15 @@ disposition tests check producer encoding and controller withholding separately.
 
 ### Raw host facts the record needs
 
-Three host observations join `runner_subprocess` beside the fields in
-[Host observations](#host-observations). They are facts, recorded where the host
-acts, not conclusions reconstructed from a final status.
+Three host values join `runner_subprocess` beside the fields in
+[Host observations](#host-observations). `grace_end` and `collection_basis` are
+recorded where the host acts. `cleanup_trigger` is derived from the stop reason
+the host held when it stored the exit request. None is reconstructed from a
+final status.
 
 | JSON location under `runner_subprocess` | Producer, type and validity |
 | --- | --- |
-| `cleanup_trigger` | Host string recorded at the exit-request store: `deadline_expiry`, `completion`, `child_reaped`, `poll_wait_error` `policy_transfer_error` or `policy_transfer_timeout`. It names why exit was requested; today it corresponds one-to-one with `poll_stop_reason`, and both are retained. |
+| `cleanup_trigger` | Host string derived at final collection from `poll_stop_reason` through a fixed table: `sentinel_deadline` gives `deadline_expiry`; `done` and, in the actor form, `schedule_complete`, `ended_before_arrival` and `ended_before_completion` give `completion`; `child_reaped` gives `child_reaped`; `wait_error` gives `poll_wait_error`; `policy_write_error` and `policy_transfer_deadline` give `policy_transfer_error` and `policy_transfer_timeout`. A reason outside the table is carried unchanged. It names why exit was requested and is not an observation independent of `poll_stop_reason`; both are retained. |
 | `grace_end` | Host string recorded when the exit-grace wait ends: `not_entered` (the poll loop already reaped the child), `reaped_during_grace`, `exhausted` (the host then requests termination) or `wait_error`. Never inferred from `done` plus a kill. |
 | `collection_basis` | Host string recorded at the final shared-memory reads: `after_confirmed_reap` (every relevant read followed a successful reap), `execution_may_continue` (the worker was not confirmed reaped when the reads happened, including after a failed kill) or `unavailable` (no usable mapping). A reap observed after the reads does not upgrade the basis. |
 
@@ -467,8 +469,8 @@ position at or after that step's `started` word.
 | --- | --- | --- | --- | --- |
 | Final status | exit code | successful reap with a valid exit-status representation and no signal representation | any | D1 |
 | | signal | successful reap with a valid signal representation and no exit-status representation | any | D1 |
-| Stop reason | `done`, `sentinel_deadline`, `child_reaped`, `wait_error`, `policy_write_error`, `policy_transfer_deadline` | the host's poll-loop observation | any | D2 |
-| Cleanup trigger | deadline expiry; completion; child reaped during polling; poll wait error; policy transfer error or timeout | direct host observation of why exit was requested | any | D2 |
+| Stop reason | `done`, `sentinel_deadline`, `child_reaped`, `wait_error`, `policy_write_error`, `policy_transfer_deadline`; in the actor form the scheduler's reason, carried as recorded | the host's poll-loop observation, or the actor scheduler's reason for stopping that actor | any | D2 |
+| Cleanup trigger | deadline expiry; completion; child reaped during polling; poll wait error; policy transfer error or timeout; a stop reason outside the table, unchanged | the stop reason the host held when it requested exit, through the fixed table | any | D2 |
 | Grace end | not entered; reap during grace; exhaustion; wait error | direct host observation of how the exit-grace wait ended | any | D2 |
 | Kill request and result | none; requested, with `rc` and `errno` | explicit host observation that no request was issued; or direct observation of the request and its return | any | D2 |
 | Collection basis | reads after confirmed reap; reads while execution may continue; unavailable | direct host observation at collection time | any | D2 |
@@ -511,17 +513,25 @@ is `not entered`. No termination request is implied.
 account witnesses end to end. A label requires all of: `cleanup_trigger`
 supported with the trigger in the table, `grace_end` supported as `exhausted`,
 `kill_request_and_result` supported as `requested` with `rc` 0, and
-`final_status` supported as `signal` equal to the requested signal. The label
-describes that witnessed host sequence. It is not exclusive signal-sender
+`final_status` supported as `signal` equal to the requested signal. The trigger
+selects the label and restates the stop reason. The independent observations
+are the request result, the exhausted grace and the owned final status. The
+label describes that witnessed host sequence. It is not exclusive signal-sender
 attribution and never a sandbox cause.
 
-| Witnessed trigger | Label |
+| Trigger | Label |
 | --- | --- |
 | `deadline_expiry` | `host_sentinel_deadline` |
 | `completion` | `host_exit_grace_exhausted` |
 | `poll_wait_error` | `host_cleanup_after_wait_error` |
 | `policy_transfer_error` | `host_cleanup_after_transfer_error` |
 | `policy_transfer_timeout` | `host_cleanup_after_transfer_timeout` |
+
+An actor stopped for an arrival, completion or setup timeout, a protocol
+violation, a withheld release or a failed setup keeps the scheduler's reason as
+its trigger. Its cause stays `unknown` even when the request result, exhausted
+grace and final status are all carried; read them in that actor's subprocess
+record.
 
 Otherwise the cause is null for a supported exit code 0, and `unknown` for a
 supported nonzero exit or signal without the full chain, an unresolved or

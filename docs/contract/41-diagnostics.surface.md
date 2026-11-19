@@ -1014,7 +1014,12 @@ effects: set_value(envelope.data.runner_sandbox_diagnostics.actors[d].terminatio
 The request result, exhausted grace and owned final status are independent
 observations in this chain. A successful signal request supplies its own
 request result; attribution requires the other carried claims and the
-preceding lifecycle validation.
+preceding lifecycle validation. The actor scheduler never records
+`sentinel_deadline`, so no actor reply selects the deadline case. An actor
+stopped for an arrival, completion or setup timeout, a protocol violation, a
+withheld release or a failed setup keeps the scheduler's reason as its trigger.
+Its cause stays `unknown` even when the request result, exhausted grace and
+final status are all carried; read them in that actor's subprocess record.
 
 #### Copy validated host conflicts {host_conflicts: reports}
 
@@ -1049,10 +1054,10 @@ effects: [set_value(envelope.data.runner_sandbox_diagnostics.actors[d].dispositi
 scope: "subtree"
 grade: "check_read"
 source: [{"path":"controller/src/porcelain_admission.rs","symbol":"project"},{"path":"controller/src/porcelain_admission.rs","symbol":"validate_lifecycle"},{"path":"controller/src/porcelain_admission.rs","symbol":"check_claim"}]
-check: [{"path":"controller/src/porcelain_admission.rs","symbol":"typed_host_cleanup_cause_requires_all_independent_observations","form":"test"},{"path":"controller/src/porcelain_admission.rs","symbol":"typed_invalid_actor_account_keeps_independent_actor_endings","form":"test"}]
-pins: "The mapping follows admitted final-status claims; named host causes require the supported cleanup/request/ending chain."
-context: "Full projection and lifecycle validation read; constructed cleanup and scope controls read."
-limits: "The read cleanup test covers completion, deadline, wait-error and future-trigger cases. Transfer-error and transfer-timeout causes were read in source; no execution is credited."
+check: [{"path":"controller/src/porcelain_admission.rs","symbol":"typed_host_cleanup_cause_requires_all_independent_observations","form":"test"},{"path":"controller/src/porcelain_admission.rs","symbol":"typed_invalid_actor_account_keeps_independent_actor_endings","form":"test"},{"path":"tests/suites/witness_contract/check_actor_compositions.py","symbol":"assert_actor_ending","form":"test"}]
+pins: "The mapping follows admitted final-status claims; named host causes require the supported cleanup/request/ending chain. An actor killed after its exhausted exit grace at schedule end carries the completion trigger and the completion cause; one that ended on its own signal projects unknown."
+context: "Full projection and lifecycle validation read; constructed cleanup and scope controls and the two live actor endings read."
+limits: "The read cleanup test covers completion, deadline, wait-error and future-trigger cases. The live actor rows cover the completion cause and a self-signalled ending under test-seam controls. Transfer-error and transfer-timeout causes were read in source; no execution is credited."
 ```
 
 ## Integrity finding {issue: subject}

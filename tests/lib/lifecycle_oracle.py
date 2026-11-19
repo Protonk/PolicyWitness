@@ -580,6 +580,14 @@ def check_record(envelope, expected_contract):
     obs = extract_observations(envelope, view)
     if obs['collection_basis'] == 'after_confirmed_reap' and obs['reaped'] is not True:
         findings.append(_finding('D4', 'invalid_collection_basis', 'terminal collection requires a confirmed reap'))
+    # The host derives the trigger from its stop reason through a fixed table
+    # and carries a reason outside the table unchanged.
+    stop, trigger = obs['poll_stop_reason'], obs['cleanup_trigger']
+    if isinstance(stop, str) and isinstance(trigger, str) and MISSING not in (stop, trigger) \
+            and trigger != C.TRIGGER_FOR_STOP.get(stop, stop):
+        findings.append(_finding('D2', 'trigger_derivation',
+                                 f'cleanup_trigger {trigger!r} is not the table image of poll_stop_reason {stop!r}',
+                                 'cleanup_trigger'))
     claims, steps, issues = expected_claims(obs)
     for name in C.RUN_QUESTIONS:
         _compare_claim(name, claims[name], view['questions'].get(name), findings, None, obs, None)

@@ -49,8 +49,8 @@ import CryptoKit
 /// rather than a runtime shm misalignment.
 enum PWShmLayout {
     // BEGIN GENERATED WORKER IDENTITY (docs/generate_worker_identity.py)
-    static let abiIdentityHex = "7939271ae922130fa2b4de8f75f40699d486b8b6f2bb53c16024df5165f0a8ac"
-    static let abiIdentity: [UInt8] = [0x79, 0x39, 0x27, 0x1a, 0xe9, 0x22, 0x13, 0x0f, 0xa2, 0xb4, 0xde, 0x8f, 0x75, 0xf4, 0x06, 0x99, 0xd4, 0x86, 0xb8, 0xb6, 0xf2, 0xbb, 0x53, 0xc1, 0x60, 0x24, 0xdf, 0x51, 0x65, 0xf0, 0xa8, 0xac]
+    static let abiIdentityHex = "90fdd87b301bfa5d8f06944e14d940b1249bc9e559312920e2959e226b055b96"
+    static let abiIdentity: [UInt8] = [0x90, 0xfd, 0xd8, 0x7b, 0x30, 0x1b, 0xfa, 0x5d, 0x8f, 0x06, 0x94, 0x4e, 0x14, 0xd9, 0x40, 0xb1, 0x24, 0x9b, 0xc9, 0xe5, 0x59, 0x31, 0x29, 0x20, 0xe2, 0x95, 0x9e, 0x22, 0x6b, 0x05, 0x5b, 0x96]
     // END GENERATED WORKER IDENTITY
 
     static let abiMagic: UInt32 = 0x50574944
@@ -556,10 +556,10 @@ struct CWorkerOutput {
     var proceedObserved: Bool = false
     var proceedOwnershipEstablished: Bool = false
     var orderingProtocolViolations: [String] = []
-    /// Direct host observations for the disposition record: why exit was
-    /// requested (recorded at the exit-request store), how the exit-grace wait
-    /// ended, and whether the final reads followed a confirmed reap. Nil only
-    /// for constructed test inputs.
+    /// Host values for the disposition record: why exit was requested
+    /// (derived at final collection from the stop reason), how the exit-grace
+    /// wait ended, and whether the final reads followed a confirmed reap. Nil
+    /// only for constructed test inputs.
     var cleanupTrigger: String? = nil
     var graceEnd: String? = nil
     var collectionBasis: String? = nil

@@ -1666,6 +1666,7 @@ Declarations own meaning; source and check citations supply the stated support. 
 | `tests/suites/validator_batch_mode/run.sh: batch_ndjson_roundtrip` | check support | [Direct and batch validator meanings](RESPONSE.md#contract-wire-standalone-meaning) |
 | `tests/suites/validator_batch_mode/run.sh: batch_ndjson_roundtrip` | check support | [Run one native query](RESPONSE.md#contract-wire-standalone-query) |
 | `tests/suites/validator_batch_mode/run.sh: batch_ndjson_roundtrip` | check support | [Repeated native query keys](ARCHITECTURE.md#contract-wire-validator-duplicate_keys) |
+| `tests/suites/witness_contract/check_actor_compositions.py: assert_actor_ending` | check support | [One actor's diagnostics](RESPONSE.md#contract-diagnostics-actor) |
 | `tests/suites/witness_contract/check_actor_compositions.py: assert_gate_schedule` | check support | [Termination cancellation reach](RESPONSE.md#contract-actor_evidence-gate-cancellation_evidence) |
 | `tests/suites/witness_contract/check_actor_compositions.py: assert_timeout_applicability` | check support | [worker_timeout_ms](REQUEST.md#contract-request-overrides-worker_timeout_ms) |
 | `tests/suites/witness_contract/check_example_round_trip.py: evaluate` | check support | [Emitted example](REQUEST.md#contract-request-specimen-example) |
@@ -2693,7 +2694,7 @@ Source: [porcelain_admission.rs](../controller/src/porcelain_admission.rs): `exe
 
 [Local support](RESPONSE.md#contract-diagnostics-actor-support).
 
-Source: [porcelain_admission.rs](../controller/src/porcelain_admission.rs): `project`, `validate_lifecycle`, `check_claim`. Check: [porcelain_admission.rs](../controller/src/porcelain_admission.rs): `typed_host_cleanup_cause_requires_all_independent_observations`, `typed_invalid_actor_account_keeps_independent_actor_endings`.
+Source: [porcelain_admission.rs](../controller/src/porcelain_admission.rs): `project`, `validate_lifecycle`, `check_claim`. Check: [porcelain_admission.rs](../controller/src/porcelain_admission.rs): `typed_host_cleanup_cause_requires_all_independent_observations`, `typed_invalid_actor_account_keeps_independent_actor_endings`; [check_actor_compositions.py](../tests/suites/witness_contract/check_actor_compositions.py): `assert_actor_ending`.
 
 <a id="contract-diagnostics-issue-subject-gate_execution-details"></a>
 ### Finding association and effect — Executed gate finding locations

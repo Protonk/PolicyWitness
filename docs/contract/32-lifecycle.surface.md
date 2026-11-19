@@ -89,7 +89,14 @@ Failed host waitpid calls, including recovered EINTR. Empty means none observed;
 
 ### cleanup_trigger {cleanup_trigger: field}
 
-Host fact recorded when it requests exit: deadline_expiry, completion, child_reaped, poll_wait_error, policy_transfer_error or policy_transfer_timeout.
+```contract
+vocabulary: "open"
+listed: "illustrative"
+values: ["deadline_expiry", "completion", "child_reaped", "poll_wait_error", "policy_transfer_error", "policy_transfer_timeout"]
+unknown: "The host string is retained; a value outside this list is a stop reason carried unchanged, and selects no termination cause label."
+```
+
+Why the host requested exit, derived at final collection from the stop reason it held when it stored the request: sentinel_deadline gives deadline_expiry; done and, in the actor form, schedule_complete, ended_before_arrival and ended_before_completion give completion; child_reaped gives child_reaped; wait_error gives poll_wait_error; policy_write_error and policy_transfer_deadline give policy_transfer_error and policy_transfer_timeout. Any other stop reason is carried unchanged. The value restates poll_stop_reason and is not a second observation.
 
 ### grace_end {grace_end: field}
 

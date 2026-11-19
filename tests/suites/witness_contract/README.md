@@ -927,6 +927,23 @@ association accompany that timing discriminator; the requested sleep alone
 establishes neither its reached boundary nor an elapsed duration. Both captures
 require confirmed worker reaps before the existing fixture cleanup. Final done
 and natural exit during grace accompany the earlier ordinary sentinel timeout.
+Both actors leave on request within the grace: each carries
+`cleanup_trigger: completion`, whether its stop reason is `done` or
+`schedule_complete`, and a null cause.
+
+Two single-actor requests distinguish how an actor ended. With
+`worker_kill_before_publish_slot: 0` the worker signals itself during its
+visit: the stop reason `died_before_completion` is carried unchanged as the
+trigger, `grace_end` is `not_entered`, no termination request exists,
+`owned_reap.departure_requested` is false and the cause is `unknown`. With
+`worker_post_apply_hang_ms: 3000` the worker sleeps past the 1,000 ms exit
+grace after its phase: the record carries `poll_stop_reason:
+schedule_complete`, an exhausted grace, a SIGKILL request with `rc` 0, a reaped
+signal 9 and `departure_requested: true`, and must carry `cleanup_trigger:
+completion` with `termination_cause: host_exit_grace_exhausted`. The
+cancelling gate request's source, which sleeps past the same grace, must carry
+the same trigger and cause. The requested sleep and signal are test-seam
+controls; the records are the production scheduler's.
 
 `extension_redelegation` runs the principal three-actor specimen through
 the public CLI against a test-owned file, then a positive calibration and four

@@ -205,7 +205,7 @@ All actor and collection records remain.
 | `bad_request` | Reached decoding/admission refused the specimen before worker or validator execution. |
 | `bad_policy` | The host could not identify the ordinary source under its structural policy check. |
 | `worker_spawn_failed` | The driver could not spawn the worker. |
-| `runner_timeout` | Host sentinel or policy-transfer deadline expired, subject to higher-precedence published worker failures. |
+| `runner_timeout` | Host sentinel or policy-transfer deadline expired, subject to higher-precedence published worker failures. Expiry of the actor schedule's execution allowance is reported as `runner_failed`. |
 | `runner_failed` | Worker preparation/application/publication, host apparatus or supervision failed, or required observations are unusable. |
 | `validator_spawn_failed` | Worker classification succeeded and validator spawn failed. |
 | `validator_no_reply` | Worker classification succeeded and validator query delivery or verdict reading failed. |

@@ -461,6 +461,58 @@ def assert_timeout_applicability(runner, spec, controls, target, actor_form):
         independent_file=dict(path=str(target['path']), content_hex=target['contents'].hex(),
                               device=identity[0], inode=identity[1]))
 
+
+def actor_diagnostics(envelope):
+    return {entry['actor_id']: entry for entry in envelope['data']['runner_sandbox_diagnostics']['actors']}
+
+
+def actor_ending_specimens(target):
+    """One actor and one read in each request. The first worker signals itself
+    before it publishes the slot. The second sleeps after its phase for longer
+    than the host's 1,000 ms exit grace, so the host's request goes unanswered."""
+    def spec(name):
+        return dict(contract=build_context.candidate_contract(), specimen_id=name,
+            actors=[actors.apply_actor('only', actors.CALIBRATION_POLICY)],
+            phases=[dict(phase_id='only_phase', actor_id='only', actions=[actors.read_probe('only_read', target)])])
+    return [('actor_ended_on_own_signal', spec('actor_ended_on_own_signal'), dict(worker_kill_before_publish_slot=0)),
+            ('actor_killed_after_exit_grace', spec('actor_killed_after_exit_grace'), dict(worker_post_apply_hang_ms=3000))]
+
+
+def assert_actor_ending(envelope, runner, name, controls):
+    assert runner['test_overrides'] == controls
+    assert runner['normalized_outcome'] == 'runner_failed' and runner['rc'] == 1
+    (actor,) = runner['actors']
+    diagnostics = actor_diagnostics(envelope)['only']
+    sub, reap = actor['subprocess'], actor['owned_reap']
+    assert sub['reaped'] is True and sub['term_signal'] == 9 and sub.get('exit_code') is None
+    assert sub['exit_requested'] is True and sub['done_observed'] is False
+    assert reap['pid'] == sub['pid'] and reap['raw_status'] == 9 and reap['ownership_unbroken'] is True
+    assert diagnostics['process_disposition'] == 'signaled' and diagnostics['disposition_integrity'] == 'valid'
+    # The scheduler's reasons are outside the six values this field projects.
+    assert diagnostics['stop_reason'] is None
+    observed = dict(poll_stop_reason=sub['poll_stop_reason'], cleanup_trigger=sub['cleanup_trigger'],
+        grace_end=sub['grace_end'], termination_request=sub.get('termination_request'),
+        departure_requested=reap['departure_requested'], termination_cause=diagnostics['termination_cause'])
+    if name == 'actor_ended_on_own_signal':
+        # No host kill: the ending preceded the exit request, and the
+        # scheduler's reason is carried unchanged as the trigger.
+        assert observed == dict(poll_stop_reason='died_before_completion', cleanup_trigger='died_before_completion',
+            grace_end='not_entered', termination_request=None, departure_requested=False,
+            termination_cause='unknown'), observed
+        assert sub.get('exit_grace_wait') is None
+    else:
+        # The host's own kill record first, then the trigger and the cause it selects.
+        assert sub['exit_grace_wait']['budget_ms'] == 1000 and sub['exit_grace_wait']['stop'] == 'exhausted'
+        assert reap['stage'] == 'after_termination'
+        assert {key: observed[key] for key in ('poll_stop_reason', 'grace_end', 'termination_request',
+                                               'departure_requested')} == dict(
+            poll_stop_reason='schedule_complete', grace_end='exhausted',
+            termination_request=dict(signal=9, rc=0), departure_requested=True), observed
+        assert (observed['cleanup_trigger'], observed['termination_cause']) == \
+            ('completion', 'host_exit_grace_exhausted'), observed
+    return observed
+
+
 def main(pw, out):
     out.mkdir(parents=True, exist_ok=True)
     report = {}
@@ -503,6 +555,13 @@ def main(pw, out):
                 assert 'B: compiled_profile requires worker/before_apply context' in errors, errors
                 (out / 'capture-context-control.json').write_text(json.dumps(dict(
                     mutation='actor B compiled_profile.producer = host', errors=errors), indent=2) + '\n')
+        for name, request, controls in actor_ending_specimens(resources['x']['path']):
+            envelope, runner = capture(pw, out, name, request, expected_rc=1, controls=controls,
+                                       scenario='actor_compositions.' + name)
+            assert worker_exit_witness(envelope)[0], worker_exit_witness(envelope)
+            ownership['reaped_captures'].append(name)
+            receipt()
+            report[name] = assert_actor_ending(envelope, runner, name, controls)
         for name, unavailable in [('gate_cancels_schedule', False), ('gate_unreached', True)]:
             request, controls = gate_specimen(resources['x']['path'], unavailable)
             envelope, runner = capture(pw, out, name, request, expected_rc=1, controls=controls,
@@ -511,6 +570,14 @@ def main(pw, out):
             ownership['reaped_captures'].append(name)
             receipt()
             report[name] = assert_gate_schedule(runner, request, resources['x'], unavailable)
+            if not unavailable:
+                # The source slept past the gate and past the exit grace: the
+                # same host kill record as the single actor above.
+                source = runner['actors'][0]['subprocess']
+                assert source['poll_stop_reason'] == 'schedule_complete' and source['grace_end'] == 'exhausted'
+                assert source['termination_request'] == dict(signal=9, rc=0) and source['term_signal'] == 9
+                assert (source['cleanup_trigger'], actor_diagnostics(envelope)['source']['termination_cause']) == \
+                    ('completion', 'host_exit_grace_exhausted'), source
         for name, request, controls, actor_form in timeout_applicability_specimens(resources['x']['path']):
             envelope, runner = capture(pw, out, name, request, expected_rc=0 if actor_form else 1,
                                        controls=controls, scenario='actor_compositions.' + name)
@@ -518,6 +585,15 @@ def main(pw, out):
             ownership['reaped_captures'].append(name)
             receipt()
             report[name] = assert_timeout_applicability(runner, request, controls, resources['x'], actor_form)
+            if actor_form:
+                # Both actors left on request within the grace: the trigger is
+                # completion whether or not done was stored first, and a clean
+                # exit has no cause.
+                for actual in runner['actors']:
+                    sub = actual['subprocess']
+                    assert sub['poll_stop_reason'] in ('done', 'schedule_complete'), sub['poll_stop_reason']
+                    assert sub['cleanup_trigger'] == 'completion', (sub['poll_stop_reason'], sub['cleanup_trigger'])
+                    assert actor_diagnostics(envelope)[actual['actor_id']]['termination_cause'] is None
         for target in resources.values():
             assert target['path'].read_bytes() == target['contents']
     except BaseException:
@@ -530,7 +606,7 @@ def main(pw, out):
     ownership['state'] = 'removed_after_host_reap'
     (out / 'ownership.json').write_text(json.dumps(ownership, indent=2) + '\n')
     (out / 'report.json').write_text(json.dumps(report, indent=2) + '\n')
-    print('public compositions preserve resources, profiles and gate scope; ordinary worker timeout leaves actor scheduling allowances intact')
+    print('public compositions preserve resources, profiles and gate scope; a host kill after the exit grace carries its cause; ordinary worker timeout leaves actor scheduling allowances intact')
 
 
 if __name__ == '__main__':

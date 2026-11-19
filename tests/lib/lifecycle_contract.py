@@ -102,11 +102,16 @@ COLLECTION_BASES = ('after_confirmed_reap', 'execution_may_continue', 'unavailab
 SLOT_STATES = ('completed', 'incomplete', 'absent')
 ATTEMPT_SUPPORT = ('supported', 'unsupported')
 
-# The stop reason that led to each cleanup trigger (the host records the
-# trigger at the exit-request store; this is the expected correspondence).
+# The actor scheduler's stop reasons for an actor whose scheduled work, or
+# whose worker, finished. They are not projected as diagnostics stop reasons.
+ACTOR_COMPLETION_STOPS = ('schedule_complete', 'ended_before_arrival', 'ended_before_completion')
+
+# The cleanup trigger the host derives from each stop reason at final
+# collection; a stop reason outside this table is carried unchanged.
 TRIGGER_FOR_STOP = {'sentinel_deadline': 'deadline_expiry', 'done': 'completion',
                     'child_reaped': 'child_reaped', 'wait_error': 'poll_wait_error',
-                    'policy_write_error': 'policy_transfer_error', 'policy_transfer_deadline': 'policy_transfer_timeout'}
+                    'policy_write_error': 'policy_transfer_error', 'policy_transfer_deadline': 'policy_transfer_timeout',
+                    **{stop: 'completion' for stop in ACTOR_COMPLETION_STOPS}}
 
 # Worker protocol positions (pw_probe_runner_abi.h). Temporal order is the
 # protocol's, not the numeric opcode's: clock setup (12) follows header
@@ -174,7 +179,7 @@ QUESTIONS = (
         ('runner_sandbox_diagnostics.stop_reason', 'error lifecycle clause')),
     Question(
         'cleanup_trigger', 'run',
-        tuple(_answer(trigger, HOST_OBSERVATION + ' of why exit was requested', rules=('D2',))
+        tuple(_answer(trigger, 'the stop reason the host held when it requested exit, through the fixed table', rules=('D2',))
               for trigger in CLEANUP_TRIGGERS),
         None,
         (Unresolved(NOT_RECORDED, 'the host recorded no trigger apart from the stop reason'),),
@@ -749,7 +754,10 @@ def self_check():
     assert tuple(a.value for a in question('cleanup_trigger').answers) == CLEANUP_TRIGGERS
     assert tuple(a.value for a in question('grace_end').answers) == GRACE_ENDS
     assert tuple(a.value for a in question('collection_basis').answers) == COLLECTION_BASES
-    assert set(TRIGGER_FOR_STOP) == set(POLL_STOP_REASONS) and set(TRIGGER_FOR_STOP.values()) == set(CLEANUP_TRIGGERS)
+    assert set(TRIGGER_FOR_STOP) == set(POLL_STOP_REASONS) | set(ACTOR_COMPLETION_STOPS)
+    assert not set(POLL_STOP_REASONS) & set(ACTOR_COMPLETION_STOPS)
+    assert {TRIGGER_FOR_STOP[stop] for stop in POLL_STOP_REASONS} == set(CLEANUP_TRIGGERS)
+    assert {TRIGGER_FOR_STOP[stop] for stop in ACTOR_COMPLETION_STOPS} == {'completion'}
     assert set(CAUSE_FOR_TRIGGER) == set(CLEANUP_TRIGGERS) - {'child_reaped'}
     assert HOST_SENTINEL_DEADLINE in CAUSE_LABELS and CAUSE_UNKNOWN not in CAUSE_LABELS
     assert set(PROTOCOL_ORDER) == set(OPERATIONS)

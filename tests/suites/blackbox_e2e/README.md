@@ -136,6 +136,12 @@ baseline (missing disposition record, request removed while the cause is kept,
 exit code beside signal without a conflict,
 supported cause replaced by unknown, identical unresolved or swapped step
 answers, with or without differing debug indices), each with its expected rule.
+The oracle also requires `cleanup_trigger` to be the table image of
+`poll_stop_reason`. Three rows keep every claim equal to its own raw field and
+change only that pair: `completion` beside `sentinel_deadline`, and an unlisted
+trigger beside another unlisted stop reason, are each the single D2
+`trigger_derivation` finding; an unlisted stop reason carried unchanged is
+accepted.
 The same model with its first step renamed to the empty string everywhere it is
 carried is accepted by the oracle and the consumer, because ordinary admission
 allows one empty step ID; a number, a null or an array as the record's

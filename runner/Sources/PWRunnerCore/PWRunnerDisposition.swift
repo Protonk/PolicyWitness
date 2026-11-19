@@ -20,7 +20,9 @@ enum PWDisposition {
     static let collectionBases = ["after_confirmed_reap", "execution_may_continue", "unavailable"]
     static let triggerForStop: [String: String] = [
         "sentinel_deadline": "deadline_expiry", "done": "completion", "child_reaped": "child_reaped",
-        "wait_error": "poll_wait_error", "policy_write_error": "policy_transfer_error", "policy_transfer_deadline": "policy_transfer_timeout"]
+        "wait_error": "poll_wait_error", "policy_write_error": "policy_transfer_error", "policy_transfer_deadline": "policy_transfer_timeout",
+        // The actor scheduler's reasons for an actor whose scheduled work, or whose worker, finished.
+        "schedule_complete": "completion", "ended_before_arrival": "completion", "ended_before_completion": "completion"]
     static let slotStates = ["completed", "incomplete", "absent"]
     static let attemptSupport = ["supported", "unsupported"]
     static let summaries = ["completed", "started_without_result", "not_reached", "unsupported",
