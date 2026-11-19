@@ -312,8 +312,8 @@ func assembleActorReply(parsed: PWRunnerRunSpec, plan: ActorPlan, translation: A
     let dispositions = outputs.map { $0.map { resolveDisposition($0, plan: nil) } }
     let actionNames = plan.phases.flatMap { $0.actions.map { $0.stepID } }
     func stepID(ofGlobalSlot slot: Int) -> String? { actionNames.indices.contains(slot) ? actionNames[slot] : nil }
-    func slotResult(actor: Int, step: String) -> CWorkerSlotResult? { outputs[actor]?.slots.first { $0.stepId == step } }
-    func dispositionStep(actor: Int, step: String) -> PWDispositionStep? { dispositions[actor]?.steps.first { $0.step_id == step } }
+    func slotResult(actor: Int, step: String) -> CWorkerSlotResult? { outputs[actor]?.slots.first { sameUTF8($0.stepId, step) } }
+    func dispositionStep(actor: Int, step: String) -> PWDispositionStep? { dispositions[actor]?.steps.first { sameUTF8($0.step_id, step) } }
 
     // ---- Aggregate outcome: actor failures in actor order, then validator
     // failures and collection exhaustion in schedule order, then cancellation.

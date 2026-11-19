@@ -911,7 +911,7 @@ listed: "exhaustive"
 values: ["completed", "incomplete", "absent"]
 ```
 
-completed, incomplete or absent according to the uniquely associated worker slot and its completion publication.
+completed, incomplete or absent according to the uniquely associated worker slot and its completion publication. A completed slot is associated through the identifier read back from it, which must equal the submitted step identifier in UTF-8 bytes.
 
 ### attempt_support {attempt_support: field}
 
@@ -1156,8 +1156,8 @@ entry: ["xpc_execute"]
 recipient: ["xpc_caller", "runner_client", "controller"]
 report: ["runner_reply"]
 effects: retain_records(lc_validator.records)
-free.condition: A unique expected-ID record enters the per-step join only when every supplied query metadata value agrees with the submitted query. Allow/deny records must supply the complete submitted query identity.
-free.effect: Publish association issues in expected-query order, then unexpected IDs in sorted order, then a null-ID issue when present. Withhold each failed per-step join while retaining accepted records.
+free.condition: A unique expected-ID record enters the per-step join only when every supplied query metadata value agrees with the submitted query. Allow/deny records must supply the complete submitted query identity. Identifier and query-metadata equality in this join is equality of UTF-8 bytes; canonically equivalent spellings with different bytes do not match.
+free.effect: Publish association issues in expected-query order, then unexpected IDs in UTF-8 byte order, then a null-ID issue when present. Withhold each failed per-step join while retaining accepted records.
 retained_free: {"condition": {"kind": "native_protocol", "reason": "Operation/filter comparison uses the separate submitted ValidatorQueryIdentity array. The collector retains its step IDs, while diagnostic records can omit individual query metadata fields."}, "effect": {"kind": "native_protocol", "reason": "The transient byStep map and submitted-query order govern projection and mismatch diagnostics. The adjacent cardinality rule counts accepted records and the issues produced for their groups."}}
 ```
 

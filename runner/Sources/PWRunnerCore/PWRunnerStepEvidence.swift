@@ -10,16 +10,18 @@ func eligibleOrderedPrediction(_ query: PWRunnerSandboxCheckResult) -> Bool {
 
 // Shared by construction and reporting validation: a native record must be uniquely
 // associated with this query and target the worker whose lifetime was observed.
+// The record's identifier and query metadata are compared as UTF-8 bytes.
 // NONE has no native filter value, even if the request supplies an unused value.
 func eligibleOrderedStep(stepId: String, query: PWRunnerSandboxCheckResult,
                          records: [ValidatorVerdict], ordering: PWRunnerOrdering?,
                          sandboxedAfterApply: Bool?, workerPid: Int?) -> Bool {
     guard ordering?.chainEstablished == true, sandboxedAfterApply == true,
           let workerPid, query.pid == workerPid, eligibleOrderedPrediction(query) else { return false }
-    let matches = records.filter { $0.stepId == stepId }
+    let matches = records.filter { sameUTF8($0.stepId, stepId) }
     guard matches.count == 1, let record = matches.first else { return false }
-    return record.operation == query.operation && record.filterType == query.filter_kind.uppercased()
-        && record.filterValue == (query.filter_kind == "none" ? nil : query.filter_value) && record.outcome == query.outcome
+    return sameUTF8(record.operation, query.operation) && sameUTF8(record.filterType, query.filter_kind.uppercased())
+        && sameUTF8(record.filterValue, query.filter_kind == "none" ? nil : query.filter_value)
+        && sameUTF8(record.outcome, query.outcome)
         && record.rc == query.native_rc && record.errnoVal == query.errno
 }
 

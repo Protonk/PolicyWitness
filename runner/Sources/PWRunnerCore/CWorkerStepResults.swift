@@ -37,7 +37,7 @@ func buildStepResults(
         )
         var attempt = buildAttemptResult(
             step: step,
-            slot: workerSlotsByStep[step.step_id]
+            slot: workerSlotsByStep[Array(step.step_id.utf8)]
         )
         // Excluded queries are synthesized even if an unexpected validator
         // record names their step. Do not attribute the synthesized result to it.
@@ -51,8 +51,8 @@ func buildStepResults(
             sandboxCheck.missing_reason = sandboxCheck.outcome == SandboxCheckOutcome.predictionUnavailable
                 ? "query_not_requested" : validatorOutput == nil ? "validator_not_invoked" : "validator_no_verdict"
         }
-        let slot = workerSlotsByStep[step.step_id]
-        let recordStep = account?.steps.first { $0.step_id == step.step_id }
+        let slot = workerSlotsByStep[Array(step.step_id.utf8)]
+        let recordStep = account?.steps.first { sameUTF8($0.step_id, step.step_id) }
         let supported = recordStep.map { $0.attempt_support == "supported" } ?? (mapAttemptKindOrNil(step.attempt) != nil)
         let slotState = recordStep?.slot ?? (slot == nil ? "absent" : slot!.completed ? "completed" : "incomplete")
         attempt.requested_kind = step.attempt.kind

@@ -2,9 +2,11 @@ import Darwin
 import Foundation
 
 // Shared association for step assembly and the worker disposition account.
+// A completed slot's identifier is read back from memory the worker can write,
+// so slots are keyed by its UTF-8 bytes and looked up by the submitted bytes.
 // A duplicate identifier cannot choose an arbitrary slot as its evidence.
-func uniquelyAssociatedWorkerSlots(_ slots: [CWorkerSlotResult]) -> [String: CWorkerSlotResult] {
-    Dictionary(grouping: slots, by: { $0.stepId }).compactMapValues { $0.count == 1 ? $0[0] : nil }
+func uniquelyAssociatedWorkerSlots(_ slots: [CWorkerSlotResult]) -> [[UInt8]: CWorkerSlotResult] {
+    Dictionary(grouping: slots, by: { Array($0.stepId.utf8) }).compactMapValues { $0.count == 1 ? $0[0] : nil }
 }
 
 // Internal for driver-to-reporting controls. Preserve the host's observations in the
@@ -77,8 +79,9 @@ private func anySlotNotCompleted(_ slots: [CWorkerSlotResult]) -> Bool {
 // the submitted plan (tests/FAILURE-PROPAGATION-CONTRACT.md, "Worker
 // disposition record"). Every lifecycle conclusion below projects from it.
 
-/// Resolve the account. Without a plan (constructed inputs) the steps come from
-/// the slots and every attempt counts as supported; production passes the plan.
+/// Resolve the account. Without a plan the steps come from the slots and every
+/// attempt counts as supported. The ordinary form passes the plan when every
+/// action is a probe; the actor form resolves from each actor's collected slots.
 func resolveDisposition(_ out: CWorkerOutput, plan: [PWRunnerProbeStep]?) -> PWDispositionRecord {
     var issues: [PWDispositionIssue] = []
     func supported(_ answer: String, value: PWDispositionValue? = nil, basis: [String]) -> PWDispositionClaim {
@@ -172,7 +175,7 @@ func resolveDisposition(_ out: CWorkerOutput, plan: [PWRunnerProbeStep]?) -> PWD
     let slotsById = uniquelyAssociatedWorkerSlots(out.slots)
     var steps: [PWDispositionStep] = []
     for (i, step) in planSteps.enumerated() {
-        let slot = slotsById[step.id]
+        let slot = slotsById[Array(step.id.utf8)]
         let slotState = slot == nil ? "absent" : (slot!.completed ? "completed" : "incomplete")
         let completed = slotState == "completed"
         let boundary = ProtocolPosition(order: attemptOrder, index: i, stage: 1)

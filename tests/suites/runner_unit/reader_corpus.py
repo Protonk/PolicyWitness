@@ -53,6 +53,25 @@ def replay(directory):
             row['application_expected'] = expected_pair
             check(subject['application'] == {key: expected_pair[key] for key in ('state', 'basis')},
                   identity + ': decoded assessment differs from eligible source')
+        if 'association_expected' in case:
+            # Authored in UTF-8 hex by the corpus; compared with the decoded
+            # reply in bytes, whatever any reader concludes below.
+            wanted = case['association_expected']
+            step, block = reply['steps'][0], reply['phases'][0]['validator_subprocess']
+            observed = {
+                'issues': sorted([issue['kind'], (issue.get('step_id') or '').encode().hex(), issue['count']]
+                                 for issue in block['association_issues']),
+                'result_source': step['sandbox_check']['result_source'],
+                'order': step['comparison']['order'],
+                'normalized_outcome': reply['normalized_outcome'],
+                'step_id_utf8': step['step_id'].encode().hex(),
+                'filter_value_utf8': step['sandbox_check']['filter_value'].encode().hex(),
+            }
+            row['association_expected'], row['association_observed'] = wanted, observed
+            check(observed == dict(wanted, issues=sorted(wanted['issues'])),
+                  f'{identity}: association {observed}, expected {wanted}')
+            check(case['exit_code'] == (0 if wanted['normalized_outcome'] == 'finished' else 1),
+                  f'{identity}: exit {case["exit_code"]} beside {wanted["normalized_outcome"]}')
         try:
             wire = (directory / case.get('raw_file', identity + '.pwp')).read_bytes()
             independent = porcelain.decode_bound(wire, 'reply', contract)

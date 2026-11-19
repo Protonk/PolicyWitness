@@ -198690,8 +198690,8 @@
               "entry": [
                 "xpc_execute"
               ],
-              "free.condition": "A unique expected-ID record enters the per-step join only when every supplied query metadata value agrees with the submitted query. Allow/deny records must supply the complete submitted query identity.",
-              "free.effect": "Publish association issues in expected-query order, then unexpected IDs in sorted order, then a null-ID issue when present. Withhold each failed per-step join while retaining accepted records.",
+              "free.condition": "A unique expected-ID record enters the per-step join only when every supplied query metadata value agrees with the submitted query. Allow/deny records must supply the complete submitted query identity. Identifier and query-metadata equality in this join is equality of UTF-8 bytes; canonically equivalent spellings with different bytes do not match.",
+              "free.effect": "Publish association issues in expected-query order, then unexpected IDs in UTF-8 byte order, then a null-ID issue when present. Withhold each failed per-step join while retaining accepted records.",
               "recipient": [
                 "xpc_caller",
                 "runner_client",
@@ -249610,7 +249610,7 @@
             },
             "id": "lifecycle.step.slot",
             "kind": "field",
-            "prose": "completed, incomplete or absent according to the uniquely associated worker slot and its completion publication.",
+            "prose": "completed, incomplete or absent according to the uniquely associated worker slot and its completion publication. A completed slot is associated through the identifier read back from it, which must equal the submitted step identifier in UTF-8 bytes.",
             "title": "slot"
           },
           {
@@ -249907,8 +249907,8 @@
               "entry": [
                 "xpc_execute"
               ],
-              "free.condition": "A unique expected-ID record enters the per-step join only when every supplied query metadata value agrees with the submitted query. Allow/deny records must supply the complete submitted query identity.",
-              "free.effect": "Publish association issues in expected-query order, then unexpected IDs in sorted order, then a null-ID issue when present. Withhold each failed per-step join while retaining accepted records.",
+              "free.condition": "A unique expected-ID record enters the per-step join only when every supplied query metadata value agrees with the submitted query. Allow/deny records must supply the complete submitted query identity. Identifier and query-metadata equality in this join is equality of UTF-8 bytes; canonically equivalent spellings with different bytes do not match.",
+              "free.effect": "Publish association issues in expected-query order, then unexpected IDs in UTF-8 byte order, then a null-ID issue when present. Withhold each failed per-step join while retaining accepted records.",
               "recipient": [
                 "xpc_caller",
                 "runner_client",
@@ -268600,7 +268600,7 @@
                 },
                 "node": "Expression"
               },
-              "free.condition": "The query targets the associated live worker PID. For a filter kind outside the known request vocabulary, the native filter type is the uppercase spelling of that kind.",
+              "free.condition": "The query targets the associated live worker PID. For a filter kind outside the known request vocabulary, the native filter type is the uppercase spelling of that kind. Identifier and query-metadata equality in this join is equality of UTF-8 bytes; canonically equivalent spellings with different bytes do not match.",
               "match.v": {
                 "body": {
                   "comparators": [
@@ -290776,7 +290776,7 @@
                 },
                 "node": "Expression"
               },
-              "free.condition": "The query targets the associated live worker PID. For a filter kind outside the known request vocabulary, the native filter type is the uppercase spelling of that kind.",
+              "free.condition": "The query targets the associated live worker PID. For a filter kind outside the known request vocabulary, the native filter type is the uppercase spelling of that kind. Identifier and query-metadata equality in this join is equality of UTF-8 bytes; canonically equivalent spellings with different bytes do not match.",
               "match.v": {
                 "body": {
                   "comparators": [
@@ -305163,7 +305163,7 @@
             },
             "id": "lifecycle.step.slot",
             "kind": "field",
-            "prose": "completed, incomplete or absent according to the uniquely associated worker slot and its completion publication.",
+            "prose": "completed, incomplete or absent according to the uniquely associated worker slot and its completion publication. A completed slot is associated through the identifier read back from it, which must equal the submitted step identifier in UTF-8 bytes.",
             "title": "slot"
           },
           {
@@ -305460,8 +305460,8 @@
               "entry": [
                 "xpc_execute"
               ],
-              "free.condition": "A unique expected-ID record enters the per-step join only when every supplied query metadata value agrees with the submitted query. Allow/deny records must supply the complete submitted query identity.",
-              "free.effect": "Publish association issues in expected-query order, then unexpected IDs in sorted order, then a null-ID issue when present. Withhold each failed per-step join while retaining accepted records.",
+              "free.condition": "A unique expected-ID record enters the per-step join only when every supplied query metadata value agrees with the submitted query. Allow/deny records must supply the complete submitted query identity. Identifier and query-metadata equality in this join is equality of UTF-8 bytes; canonically equivalent spellings with different bytes do not match.",
+              "free.effect": "Publish association issues in expected-query order, then unexpected IDs in UTF-8 byte order, then a null-ID issue when present. Withhold each failed per-step join while retaining accepted records.",
               "recipient": [
                 "xpc_caller",
                 "runner_client",
@@ -334725,7 +334725,7 @@
             },
             "id": "lifecycle.step.slot",
             "kind": "field",
-            "prose": "completed, incomplete or absent according to the uniquely associated worker slot and its completion publication.",
+            "prose": "completed, incomplete or absent according to the uniquely associated worker slot and its completion publication. A completed slot is associated through the identifier read back from it, which must equal the submitted step identifier in UTF-8 bytes.",
             "title": "slot"
           },
           {
@@ -335022,8 +335022,8 @@
               "entry": [
                 "xpc_execute"
               ],
-              "free.condition": "A unique expected-ID record enters the per-step join only when every supplied query metadata value agrees with the submitted query. Allow/deny records must supply the complete submitted query identity.",
-              "free.effect": "Publish association issues in expected-query order, then unexpected IDs in sorted order, then a null-ID issue when present. Withhold each failed per-step join while retaining accepted records.",
+              "free.condition": "A unique expected-ID record enters the per-step join only when every supplied query metadata value agrees with the submitted query. Allow/deny records must supply the complete submitted query identity. Identifier and query-metadata equality in this join is equality of UTF-8 bytes; canonically equivalent spellings with different bytes do not match.",
+              "free.effect": "Publish association issues in expected-query order, then unexpected IDs in UTF-8 byte order, then a null-ID issue when present. Withhold each failed per-step join while retaining accepted records.",
               "recipient": [
                 "xpc_caller",
                 "runner_client",
@@ -441647,7 +441647,7 @@
             },
             "id": "lifecycle.step.slot",
             "kind": "field",
-            "prose": "completed, incomplete or absent according to the uniquely associated worker slot and its completion publication.",
+            "prose": "completed, incomplete or absent according to the uniquely associated worker slot and its completion publication. A completed slot is associated through the identifier read back from it, which must equal the submitted step identifier in UTF-8 bytes.",
             "title": "slot"
           },
           {
@@ -441944,8 +441944,8 @@
               "entry": [
                 "xpc_execute"
               ],
-              "free.condition": "A unique expected-ID record enters the per-step join only when every supplied query metadata value agrees with the submitted query. Allow/deny records must supply the complete submitted query identity.",
-              "free.effect": "Publish association issues in expected-query order, then unexpected IDs in sorted order, then a null-ID issue when present. Withhold each failed per-step join while retaining accepted records.",
+              "free.condition": "A unique expected-ID record enters the per-step join only when every supplied query metadata value agrees with the submitted query. Allow/deny records must supply the complete submitted query identity. Identifier and query-metadata equality in this join is equality of UTF-8 bytes; canonically equivalent spellings with different bytes do not match.",
+              "free.effect": "Publish association issues in expected-query order, then unexpected IDs in UTF-8 byte order, then a null-ID issue when present. Withhold each failed per-step join while retaining accepted records.",
               "recipient": [
                 "xpc_caller",
                 "runner_client",
@@ -465141,7 +465141,7 @@
                 },
                 "node": "Expression"
               },
-              "free.condition": "The query targets the associated live worker PID. For a filter kind outside the known request vocabulary, the native filter type is the uppercase spelling of that kind.",
+              "free.condition": "The query targets the associated live worker PID. For a filter kind outside the known request vocabulary, the native filter type is the uppercase spelling of that kind. Identifier and query-metadata equality in this join is equality of UTF-8 bytes; canonically equivalent spellings with different bytes do not match.",
               "match.v": {
                 "body": {
                   "comparators": [
@@ -575589,7 +575589,7 @@
             },
             "id": "lifecycle.step.slot",
             "kind": "field",
-            "prose": "completed, incomplete or absent according to the uniquely associated worker slot and its completion publication.",
+            "prose": "completed, incomplete or absent according to the uniquely associated worker slot and its completion publication. A completed slot is associated through the identifier read back from it, which must equal the submitted step identifier in UTF-8 bytes.",
             "title": "slot"
           },
           {
@@ -575886,8 +575886,8 @@
               "entry": [
                 "xpc_execute"
               ],
-              "free.condition": "A unique expected-ID record enters the per-step join only when every supplied query metadata value agrees with the submitted query. Allow/deny records must supply the complete submitted query identity.",
-              "free.effect": "Publish association issues in expected-query order, then unexpected IDs in sorted order, then a null-ID issue when present. Withhold each failed per-step join while retaining accepted records.",
+              "free.condition": "A unique expected-ID record enters the per-step join only when every supplied query metadata value agrees with the submitted query. Allow/deny records must supply the complete submitted query identity. Identifier and query-metadata equality in this join is equality of UTF-8 bytes; canonically equivalent spellings with different bytes do not match.",
+              "free.effect": "Publish association issues in expected-query order, then unexpected IDs in UTF-8 byte order, then a null-ID issue when present. Withhold each failed per-step join while retaining accepted records.",
               "recipient": [
                 "xpc_caller",
                 "runner_client",
@@ -596594,7 +596594,7 @@
                 },
                 "node": "Expression"
               },
-              "free.condition": "The query targets the associated live worker PID. For a filter kind outside the known request vocabulary, the native filter type is the uppercase spelling of that kind.",
+              "free.condition": "The query targets the associated live worker PID. For a filter kind outside the known request vocabulary, the native filter type is the uppercase spelling of that kind. Identifier and query-metadata equality in this join is equality of UTF-8 bytes; canonically equivalent spellings with different bytes do not match.",
               "match.v": {
                 "body": {
                   "comparators": [

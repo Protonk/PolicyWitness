@@ -75,8 +75,11 @@ func validatorOwnershipProblem(phase: PWRunnerPhaseResult, steps: [PWRunnerStepR
         return "validator collection lacks records or association issues"
     }
     let recomputed = validatorAssociationIssues(records, expected: probes).issues
-    func key(_ issue: PWValidatorAssociationIssue) -> String { "\(issue.kind)|\(issue.step_id ?? "")|\(issue.count)" }
-    if issues.map(key).sorted() != recomputed.map(key).sorted() {
+    // An issue's identifier repeats a record's or a step's bytes; the lists are compared as bytes.
+    func keys(_ list: [PWValidatorAssociationIssue]) -> [[UInt8]] {
+        list.map { Array("\($0.kind)|\($0.step_id ?? "")|\($0.count)".utf8) }.sorted { $0.lexicographicallyPrecedes($1) }
+    }
+    if keys(issues) != keys(recomputed) {
         return "validator association issues disagree with its records"
     }
     return nil

@@ -456,7 +456,9 @@ index names the step; a parameter word's names the parameter. An attempt index
 that names no submitted step, including any attempt index for an empty plan,
 is `invalid`; a mismatch between the encoded word and its decoded fields, or
 an item index on a non-indexed operation, is also `invalid`. An ambiguous slot
-identity supplies no associated slot, rather than selecting one duplicate.
+identity supplies no associated slot, rather than selecting one duplicate. A
+completed slot's identity is read back from the slot and compared with the
+submitted step identifier as UTF-8 bytes.
 An unrecognized operation or stage code is `progress_unrecognized`
 and its raw word is retained. Progress at or beyond a step's boundary means a
 position at or after that step's `started` word.
@@ -618,9 +620,10 @@ phase's ordinary steps whose retained query decision is not
 so a block beside a phase without eligible queries carries an empty plan. Step
 order is the partition and step-order checks' question, not ownership's. Its
 `association_issues` must be the
-issues its retained `records` and that plan imply, recomputed by the reader. A
-block copied from another phase, or copied expected IDs, records or identity
-fields, therefore fails validation even when every phase queries the same
+issues its retained `records` and that plan imply, recomputed by the reader.
+Step identifiers and query metadata are compared as UTF-8 bytes in this
+recomputation. A block copied from another phase, or copied expected IDs,
+records or identity fields, therefore fails validation even when every phase queries the same
 path under different action IDs, and a block missing these fields withholds
 the dependent claims. Unexpected, duplicate and null-ID validator records remain
 intentional diagnostic evidence, retained with their association issues. Numeric

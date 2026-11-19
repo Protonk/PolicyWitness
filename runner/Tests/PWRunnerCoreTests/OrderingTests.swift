@@ -496,6 +496,85 @@ func runOrderingTests(_ tk: TestKit) {
                 try expectEqual(step.comparison?.limitations, [])
             }
         }
+        // A record's identifier and query metadata, and a completed slot's
+        // identifier, arrive from a child process. Each changed spelling below
+        // is canonically equivalent to the submitted one and differs in bytes:
+        // U+0065 U+0301 for U+00E9, and U+212A KELVIN SIGN for "K". The
+        // operation and filter type are constructed to contain a "K".
+        func hex(_ text: String?) -> String { text.map { $0.utf8.map { String(format: "%02x", $0) }.joined() } ?? "null" }
+        let spelled = ValidatorVerdict(stepId: "K-\u{E9}", operation: "K-lookup", filterType: "IOKIT_USER_CLIENT_CLASS",
+            filterTypeId: 3, filterValue: "Caf\u{E9}", rc: 0, errnoVal: 0, outcome: "allow", rawLine: "constructed control")
+        let respellings: [(String, (inout ValidatorVerdict) -> Void)] = [
+            ("NFD step_id", { $0.stepId = "K-e\u{301}" }), ("Kelvin step_id", { $0.stepId = "\u{212A}-\u{E9}" }),
+            ("Kelvin operation", { $0.operation = "\u{212A}-lookup" }),
+            ("Kelvin filter_type", { $0.filterType = "IO\u{212A}IT_USER_CLIENT_CLASS" }),
+            ("NFD filter_value", { $0.filterValue = "Cafe\u{301}" })]
+        tk.run("record eligibility compares the identifier and query metadata as UTF-8 bytes") {
+            var query = PWRunnerSandboxCheckResult(rc: 0, outcome: "allow", pid: 42, operation: "K-lookup",
+                filter_kind: "iokit_user_client_class", filter_value: "Caf\u{E9}", filter_type_id: 3, errno: 0)
+            query.result_source = "validator"; query.native_rc = 0
+            let ordering = buildOrdering(worker, validatorOutput: validator, hasQueries: true)
+            func eligible(_ record: ValidatorVerdict) -> Bool {
+                eligibleOrderedStep(stepId: "K-\u{E9}", query: query, records: [record], ordering: ordering,
+                                    sandboxedAfterApply: true, workerPid: 42)
+            }
+            try expectTrue(eligible(spelled), "byte-identical record")
+            for (member, change) in respellings {
+                var record = spelled; change(&record)
+                try expectFalse(eligible(record), member)
+            }
+        }
+        tk.run("association compares the identifier and query metadata as UTF-8 bytes") {
+            let submitted = [ValidatorQueryIdentity(stepId: "K-\u{E9}", operation: "K-lookup",
+                filterType: "IOKIT_USER_CLIENT_CLASS", filterValue: "Caf\u{E9}")]
+            func join(_ records: [ValidatorVerdict]) -> [String] {
+                let result = validatorAssociationIssues(records, expected: submitted)
+                return result.byStep.values.map { "joined \(hex($0.stepId))" }
+                    + result.issues.map { "\($0.kind) \(hex($0.step_id)) \($0.count)" }
+            }
+            let id = hex("K-\u{E9}")
+            try expectEqual(join([spelled]), ["joined " + id])
+            for (member, change) in respellings {
+                var record = spelled; change(&record)
+                try expectEqual(join([record]), member.hasSuffix("step_id")
+                    ? ["missing_id \(id) 0", "unexpected_id \(hex(record.stepId)) 1"] : ["query_mismatch \(id) 1"], member)
+            }
+            // The byte-identical record is the step's; its respelling is another identifier.
+            var other = spelled; other.stepId = "K-e\u{301}"
+            try expectEqual(join([other, spelled]), ["joined " + id, "unexpected_id \(hex(other.stepId)) 1"])
+        }
+        tk.run("unexpected identifiers are listed in UTF-8 byte order and reported issue keys are compared as bytes") {
+            // U+0065 U+0301 precedes "f" in bytes and follows it in canonical order.
+            var early = orderingVerdict(); early.stepId = "e\u{301}"
+            var late = orderingVerdict(); late.stepId = "f"
+            let submitted = plan.map { ValidatorQueryIdentity(stepId: $0.stepId, operation: $0.operation,
+                filterType: $0.filterType, filterValue: $0.filterValue) }
+            try expectEqual(validatorAssociationIssues([late, orderingVerdict(), early], expected: submitted).issues
+                .map { "\($0.kind) \(hex($0.step_id))" }, ["unexpected_id 65cc81", "unexpected_id 66"])
+            var envelope = orderingEnvelope(worker, ValidatorOutput(validatorPid: 7, verdicts: [orderingVerdict(), early],
+                reaped: true, expectedProbes: plan))
+            try expectNil(validatorOwnershipProblem(phase: envelope.phases[0], steps: envelope.steps))
+            // The reported issue is respelled in NFC, which no record carries.
+            envelope.phases[0].validator_subprocess?.association_issues?[0].step_id = "\u{E9}"
+            try expectEqual(envelope.phases[0].validator_subprocess?.association_issues?.map { $0.kind }, ["unexpected_id"])
+            try expectEqual(validatorOwnershipProblem(phase: envelope.phases[0], steps: envelope.steps),
+                            "validator association issues disagree with its records")
+        }
+        tk.run("a completed slot is a step's result only when its identifier bytes equal the submitted identifier") {
+            var step = orderingStep(); step.step_id = "K1"
+            for (slotId, state, source) in [("K1", "completed", "worker"), ("\u{212A}1", "absent", "synthetic")] {
+                var w = worker
+                w.slots = [CWorkerSlotResult(stepId: slotId, rc: 0, errnoVal: 0, completed: true)]
+                // The ordinary form resolves against the plan; the actor form from the slots.
+                try expectEqual(resolveDisposition(w, plan: [step]).steps.map { $0.slot }, [state], hex(slotId))
+                for record in [resolveDisposition(w, plan: [step]), resolveDisposition(w, plan: nil)] {
+                    let built = buildStepResults(probePlan: [step], queryPlan: planValidatorQueries([step]),
+                        workerOutput: w, validatorOutput: nil, disposition: record)[0]
+                    try expectEqual(built.attempt.result_source, source, hex(slotId))
+                    try expectEqual(built.attempt.missing_reason, source == "worker" ? nil : "slot_absent", hex(slotId))
+                }
+            }
+        }
         tk.run("reporting admission rejects an order or limitation string outside the vocabulary") {
             for change in ["order", "limitation", "removed_limitation"] {
                 var envelope = orderingEnvelope(worker, validator)

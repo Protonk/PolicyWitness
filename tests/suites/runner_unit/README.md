@@ -48,6 +48,17 @@ recipient's evidence limit. An applied actor with only its setup declaration
 changed to `unapplied_declared` must refuse ordinary reporting and retain that
 conflict without comparisons in rich degradation. General actor identity checks
 own this refusal; the extension subreader has an explicitly separate expectation.
+Seven association rows spell a request's step identifier and filter value and
+its validator records separately, in NFC, NFD and with U+212A for `K`. Each
+carries its expected issues, result source, order and outcome in UTF-8 hex, which
+the Python replay compares with the decoded reply. A byte-identical record is
+associated with `query_first`, including for a request spelled in NFD; a
+canonically equivalent record with other bytes yields `missing_id` with
+`unexpected_id`, or `query_mismatch`, an `unestablished` order and
+`validator_unavailable`; beside a byte-identical record it is an unexpected
+identifier. The host, Rust and Python readers must each accept every row.
+`OrderingTests` holds the same rule on `eligibleOrderedStep`,
+`validatorAssociationIssues`, the reported issue keys and the worker slot join.
 
 ## Invariants
 

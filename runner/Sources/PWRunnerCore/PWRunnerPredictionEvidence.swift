@@ -154,32 +154,46 @@ struct ValidatorQueryIdentity {
     var filterValue: String?
 }
 
-/// The host's step/record join, shared with every reader that recomputes it.
+/// Equality of UTF-8 bytes. Swift `String` equality is canonical equivalence;
+/// a string received from a child process is compared with the submitted
+/// request in bytes.
+func sameUTF8(_ received: String?, _ submitted: String?) -> Bool {
+    switch (received, submitted) {
+    case (nil, nil): return true
+    case let (received?, submitted?): return received.utf8.elementsEqual(submitted.utf8)
+    default: return false
+    }
+}
+
+/// The host's step/record join, shared by host association and reporting
+/// validation; the controller and the test readers implement the rule separately.
+/// Record identifiers and query metadata are compared with the submitted query
+/// as UTF-8 bytes; the submitted identifiers key the join.
 /// Duplicate IDs are ambiguous, so none of their records enters the step join.
 /// All accepted records remain at run scope, including unknown and null IDs.
 func validatorAssociationIssues(_ verdicts: [ValidatorVerdict], expected: [ValidatorQueryIdentity]) -> (byStep: [String: ValidatorVerdict], issues: [PWValidatorAssociationIssue]) {
-    let wanted = Set(expected.map { $0.stepId })
-    let groups = Dictionary(grouping: verdicts.compactMap { v in v.stepId.map { ($0, v) } }, by: { $0.0 })
+    let wanted = Set(expected.map { Array($0.stepId.utf8) })
+    let groups = Dictionary(grouping: verdicts.filter { $0.stepId != nil }, by: { Array($0.stepId!.utf8) })
     var byStep: [String: ValidatorVerdict] = [:]
     var issues: [PWValidatorAssociationIssue] = []
     for probe in expected {
         let id = probe.stepId
-        let matches = groups[id] ?? []
+        let matches = groups[Array(id.utf8)] ?? []
         if matches.count == 1 {
-            let v = matches[0].1
+            let v = matches[0]
             // Diagnostics may omit query metadata. Any supplied metadata must
             // agree; predictions must describe exactly the submitted query.
             let prediction = v.outcome == "allow" || v.outcome == "deny"
-            let mismatch = (prediction || v.operation != nil) && v.operation != probe.operation
-                || (prediction || v.filterType != nil) && v.filterType != probe.filterType
-                || (prediction || v.filterValue != nil) && v.filterValue != probe.filterValue
+            let mismatch = (prediction || v.operation != nil) && !sameUTF8(v.operation, probe.operation)
+                || (prediction || v.filterType != nil) && !sameUTF8(v.filterType, probe.filterType)
+                || (prediction || v.filterValue != nil) && !sameUTF8(v.filterValue, probe.filterValue)
             if mismatch { issues.append(PWValidatorAssociationIssue(kind: "query_mismatch", step_id: id, count: 1)) }
             else { byStep[id] = v }
         }
         else { issues.append(PWValidatorAssociationIssue(kind: matches.isEmpty ? "missing_id" : "duplicate_id", step_id: id, count: matches.count)) }
     }
-    for id in groups.keys.sorted() where !wanted.contains(id) {
-        issues.append(PWValidatorAssociationIssue(kind: "unexpected_id", step_id: id, count: groups[id]!.count))
+    for id in groups.keys.sorted(by: { $0.lexicographicallyPrecedes($1) }) where !wanted.contains(id) {
+        issues.append(PWValidatorAssociationIssue(kind: "unexpected_id", step_id: groups[id]![0].stepId, count: groups[id]!.count))
     }
     let unassociated = verdicts.filter { $0.stepId == nil }.count
     if unassociated > 0 { issues.append(PWValidatorAssociationIssue(kind: "unassociated", count: unassociated)) }

@@ -622,7 +622,7 @@ test: reply.steps[s].sandbox_check.result_source == "validator" and present(repl
 test: present(reply.phases[p].validator_subprocess) and present(reply.phases[p].validator_subprocess.records) and matches(v) == 1
 match.v: reply.phases[p].validator_subprocess.records[v].step_id == reply.steps[s].step_id
 bind.v: reply.phases[p].validator_subprocess.records
-free.condition: The query targets the associated live worker PID. For a filter kind outside the known request vocabulary, the native filter type is the uppercase spelling of that kind.
+free.condition: The query targets the associated live worker PID. For a filter kind outside the known request vocabulary, the native filter type is the uppercase spelling of that kind. Identifier and query-metadata equality in this join is equality of UTF-8 bytes; canonically equivalent spellings with different bytes do not match.
 retained_free: {"condition": {"kind": "native_protocol", "reason": "The constructor receives the owned worker PID from live CWorkerOutput; the general reader supplies its associated reported process PID. Future filter names use the source string uppercasing operation."}}
 ```
 
@@ -651,7 +651,7 @@ grade: "check_read"
 scope: "subtree"
 source: [{"path":"runner/Sources/PWRunnerCore/PWRunnerStepEvidence.swift","symbol":"eligibleOrderedStep"},{"path":"runner/Sources/PWRunnerCore/CWorkerComparison.swift","symbol":"buildOrdering"},{"path":"runner/Sources/PWRunnerCore/CWorkerStepResults.swift","symbol":"eligibleOrderedStep"}]
 check: {"path":"runner/Tests/PWRunnerCoreTests/OrderingTests.swift","symbol":"runOrderingTests","form":"test"}
-pins: "Native answer eligibility and the collection/release/acknowledgement chain are independently required; producer association is exact within the phase."
+pins: "Native answer eligibility and the collection/release/acknowledgement chain are independently required; producer association is exact within the phase and compares identifier and query-metadata bytes."
 context: "Read eligibility, ordering construction, phase adaptation and ordering controls."
 limits: "Source and check reading; no new execution or mutation-control run is credited."
 ```

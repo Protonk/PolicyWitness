@@ -115,6 +115,72 @@ func runReaderCorpusTests(_ tk: TestKit) {
             forcedOrder.phases[0].ordering?.protocol_violations = []
             try emit("ordering-erased-apply-status-conflict", forcedOrder, accepts: true,
                 rule: "synthetic erased-violation reply has no carried nonzero applyRC to disprove query_first")
+            // Validator association. The request and each record spell the step
+            // identifier and the filter value separately. U+00E9 (NFC) and
+            // U+0065 U+0301 (NFD) are one canonical string in two byte
+            // sequences, as are "K" and U+212A KELVIN SIGN. The expectation is
+            // authored here in UTF-8 hex and compared with the decoded reply by
+            // the Python replay; nothing below reads the producer's answer.
+            let nfc = "\u{E9}", nfd = "e\u{301}", kelvin = "\u{212A}"
+            func hex(_ text: String) -> String { text.utf8.map { String(format: "%02x", $0) }.joined() }
+            func association(_ id: String, request: (id: String, name: String), records: [(id: String, name: String)],
+                             issues: [[Any]], source: String, order: String, outcome: String, rule: String) throws {
+                let probe = PWRunnerProbeStep(step_id: request.id,
+                    sandbox_check: PWRunnerSandboxCheck(operation: "mach-lookup",
+                        filter: PWRunnerSandboxFilter(kind: "global_name", value: request.name)),
+                    attempt: PWRunnerAttempt(kind: "mach_lookup", action: "bootstrap_look_up", target: request.name))
+                let queryPlan = planValidatorQueries([probe])
+                let validator = ValidatorOutput(validatorPid: 7, verdicts: records.map {
+                    ValidatorVerdict(stepId: $0.id, operation: "mach-lookup", filterType: "GLOBAL_NAME", filterTypeId: 2,
+                        filterValue: $0.name, rc: 0, errnoVal: 0, outcome: "allow", rawLine: "constructed control")
+                }, exitCode: 0, reaped: true, waitErrors: [], expectedProbes: queryPlan.compactMap { $0.probe })
+                let worker = CWorkerOutput(workerPid: 42, readyByteReceived: true, applied: true, applyRC: 0,
+                    applyErrno: 0, done: true, exitCode: 0,
+                    slots: [CWorkerSlotResult(stepId: request.id, rc: 0, errnoVal: 0, completed: true)],
+                    pollStopReason: "done", reaped: true, waitErrors: [], hookInvoked: true,
+                    proceedSet: true, proceedObserved: true, proceedOwnershipEstablished: true,
+                    collectionBasis: "after_confirmed_reap")
+                let classified = classify(workerResult: .success(worker), validatorResult: .success(validator),
+                    expectedVerdictCount: 1)
+                let ordering = buildOrdering(worker, validatorOutput: validator, hasQueries: true)
+                let reply = PWRunnerRunResult(specimen_id: "association-reader-corpus", rc: classified.rc,
+                    normalized_outcome: classified.outcome, error: classified.error, pid: 42,
+                    policy_format: "sbpl", sandboxed_after_apply: worker.applied,
+                    steps: buildStepResults(probePlan: [probe], queryPlan: queryPlan, workerOutput: worker,
+                        validatorOutput: validator, ordering: ordering), runner_subprocess: buildWorkerSubprocess(worker),
+                    phases: [constructedPhase(worker, ids: [request.id], validator: validator)])
+                try emit(id, reply, accepts: true, rule: rule)
+                rows[rows.count - 1]["association_expected"] = ["issues": issues, "result_source": source,
+                    "order": order, "normalized_outcome": outcome,
+                    "step_id_utf8": hex(request.id), "filter_value_utf8": hex(request.name)]
+            }
+            let name = "com.example.caf"
+            try association("association-nfc-id", request: ("s-" + nfc, name), records: [("s-" + nfc, name)],
+                issues: [], source: "validator", order: "query_first", outcome: NormalizedOutcome.finished,
+                rule: "a record whose identifier bytes equal the request's is associated")
+            try association("association-nfc-value", request: ("s", name + nfc), records: [("s", name + nfc)],
+                issues: [], source: "validator", order: "query_first", outcome: NormalizedOutcome.finished,
+                rule: "a record whose filter value bytes equal the request's is associated")
+            try association("association-nfd-request", request: ("s-" + nfd, name + nfd), records: [("s-" + nfd, name + nfd)],
+                issues: [], source: "validator", order: "query_first", outcome: NormalizedOutcome.finished,
+                rule: "a request spelled in NFD is associated with the record that repeats its bytes")
+            try association("association-nfd-id", request: ("s-" + nfc, name), records: [("s-" + nfd, name)],
+                issues: [["missing_id", hex("s-" + nfc), 0], ["unexpected_id", hex("s-" + nfd), 1]],
+                source: "synthetic", order: "unestablished", outcome: NormalizedOutcome.validatorUnavailable,
+                rule: "a canonically equivalent identifier with other bytes names no submitted query")
+            try association("association-nfd-value", request: ("s", name + nfc), records: [("s", name + nfd)],
+                issues: [["query_mismatch", hex("s"), 1]],
+                source: "synthetic", order: "unestablished", outcome: NormalizedOutcome.validatorUnavailable,
+                rule: "a canonically equivalent filter value with other bytes describes another query")
+            try association("association-dup-nfc-nfd", request: ("s-" + nfc, name),
+                records: [("s-" + nfc, name), ("s-" + nfd, name)],
+                issues: [["unexpected_id", hex("s-" + nfd), 1]],
+                source: "validator", order: "query_first", outcome: NormalizedOutcome.validatorUnavailable,
+                rule: "the byte-identical record is associated and its canonical equivalent is an unexpected identifier")
+            try association("association-kelvin-id", request: ("K1", name), records: [(kelvin + "1", name)],
+                issues: [["missing_id", hex("K1"), 0], ["unexpected_id", hex(kelvin + "1"), 1]],
+                source: "synthetic", order: "unestablished", outcome: NormalizedOutcome.validatorUnavailable,
+                rule: "an ASCII identifier has a canonically equivalent spelling with other bytes")
             let documents = try actorShapeDocuments()
             let preparations = documents.filter { $0.preparation_failure != nil && $0.reporting_failure == nil }
             try expectTrue(!preparations.isEmpty, "preparation fixture family missing")
