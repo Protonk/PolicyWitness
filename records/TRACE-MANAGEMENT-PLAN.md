@@ -1326,6 +1326,35 @@ checks and statements together) and `b5a941e7` (evidence scope), tests first.
   list can accompany unfollowed forms; that a record error can accompany a
   hash.
 
+### EXEC — child output through the signed candidate, 2026-11-19
+
+`0cbdb557` implements R1 (DT-55/56). The worker counts bytes read and
+stored on each pipe. The host appends the truncation marker and uses the
+stored lookahead to distinguish a cut through a complete scalar from
+malformed UTF-8 at the same position. The retained text includes embedded
+NULs. The four new count and flag fields are required on each stream.
+
+- `exec-pre` (`20261119T074936Z_68a6776e`) completed 20 cases on the
+  previous app. Seven failed at the old behavior and 13 passed.
+- `exec-post-routed` (`20261119T145345Z_16015319`) completed all 57 cases,
+  with 56 passes and one informational completion. It covers the signed
+  command outputs, native publication, reader controls and reply sizes.
+  `exec-post-source-drift` (`20261119T150002Z_671662fb`) passed ten of
+  eleven cases. The direct-Python check found that the new script launcher
+  used the inline-only `-P` option. After removing it, `exec-post-launcher`
+  (`20261119T153327Z_10450791`) reran the direct-Python check and all 20 signed worker cases.
+  All 21 passed. All three post-change runs recorded zero system sleep.
+- On the signed candidate, 256 steps returning malformed UTF-8 used
+  4,090,407 of 96,468,992 host reply bytes and 4,091,069 of 285,212,672
+  client reply bytes. The ASCII control used 3,042,855 and 3,043,517.
+  These are measured replies for the specified workloads.
+- The public build contract moved from `development:81fac005…3bd09ccb`
+  to `development:9b0db1c3…3ceea1d8`. Worker identity moved from
+  `14d41d54…9c5c0ef5` to `217ad94a…a442252b` and the schema fingerprint from
+  `80013e5b…a064e224` to `520ca3be…0d3a180`. The first build exposed a reference
+  to a host-only layout type in shared validation. The packaged client now
+  checks the public retained-byte bound and the signed rebuild completed.
+
 ### Pause — 2026-11-18
 
 Work stopped at a quiet point at the maintainer's request, resumed the same
