@@ -48,7 +48,7 @@ entry: ["cli_run"]
 recipient: ["cli_caller"]
 report: ["specimen_dossier"]
 free.condition: The selected policy has string source within the <!-- span limits.helper_source.binary -->4 MiB<!-- /span --> source bound.
-free.effect: Scan literal import forms, resolve absolute names as given and relative names under /System/Library/Sandbox/Profiles then /usr/share/sandbox, and record observed reads within depth 8 and count 64. Mark unresolved names, nonliteral forms, cycles, decoding failures and bound hits as incomplete.
+free.effect: Scan literal import forms, resolve absolute names as given and relative names under /System/Library/Sandbox/Profiles then /usr/share/sandbox, and record observed reads within depth 8 and count 64. Mark unresolved names, import forms the scan did not follow, cycles, decoding failures and bound hits as incomplete.
 retained_free: {"condition":{"kind":"raw_admission","reason":"The dossier scans a raw selected policy JSON value, which can contain a missing or wrongly typed source before host request admission."},"effect":{"kind":"native_protocol","reason":"Literal import grammar, ordered filesystem search, recursion, deduplication and incomplete causes define an input-reading algorithm."}}
 ```
 
@@ -80,7 +80,7 @@ If a caller changes the input JSON after the controller has parsed it, the clien
 defines: "value"
 ```
 
-The controller resolves and serializes the request once, then delivers that held text to the selected client and applicable helper calls. The dossier scanner and selected-file hashes describe their own reads. Literal import completeness belongs to the scanner convention; actor live equipment supplies its separate process association. Ordinary selected-file hashes remain file observations at collection time.
+The controller resolves and serializes the request once, then delivers that held text to the selected client and applicable helper calls. The dossier scanner and selected-file hashes describe their own reads. Import-scan completeness describes the scanner's grammar and walk, not the compiler's inputs; actor live equipment supplies its separate process association. Ordinary selected-file hashes remain file observations at collection time.
 
 #### Disposition support {disposition_support: owner}
 
@@ -226,27 +226,27 @@ as: "imports"
 
 ### status {status: field}
 
-`complete` exhausted the literal closure without a reported problem; `incomplete` retained a partial/problematic scan; `failed` could not perform the scan; `not_applicable` skipped it because source preparation did not apply.
+`complete`: every import form the scan recognized was followed and the walk ended with no unresolved name, read or decoding error, cycle or bound. It describes the scan, not the compiler's inputs. `incomplete` retained a partial/problematic scan; `failed` could not perform the scan; `not_applicable` skipped it because source preparation did not apply.
 
 ### closure_sha256 {closure_sha256: field}
 
-Digest of the selected source plus successfully read import path/hash pairs using the defined framing.
+Digest of the selected source plus successfully read import path/hash pairs using the defined framing. It identifies the source and every file the scan hashed, including a file whose record carries an `error` beside its hash; it does not encode `cycle`, `exceeded`, record errors or an import form the scan did not follow, and it is not a digest of the compiler's inputs.
 
 ### records {records: field}
 
-Sorted observed import records, including unresolved and failed reads. Empty when there were no imports or no scan.
+Sorted observed import records, including unresolved and failed reads. Literal names are collected in every syntactic position, including forms the compiler does not evaluate. Empty when the scan followed no import form or did not run.
 
 ### cycle {cycle: field}
 
-First detected cycle as an ordered name chain; null when no cycle was observed.
+First cycle detected in the scanner's traversal, as an ordered name chain; null when no cycle was observed.
 
 ### exceeded {exceeded: field}
 
-First reached traversal bound, `depth` or `count`; null when neither was recorded.
+First bound reached in the scanner's traversal, `depth` or `count`; null when neither was recorded.
 
 ### failure {failure: field}
 
-First collection problem, scan setup failure or reason for a not-applicable scan; null when none was recorded.
+First collection problem in the scanner's traversal, scan setup failure or reason for a not-applicable scan; null when none was recorded. The traversal reports an import form the scan did not follow in the submitted source first, then visits imports depth-first in byte order of their names; it is not source order.
 
 ### Retained scan scope {scope: reports}
 
@@ -260,7 +260,7 @@ bind.r: imports.records
 match.r: present(imports.records[r].error)
 ```
 
-These are necessary conditions for complete. The scan also classifies nonliteral forms, an observation with no dedicated carried Boolean.
+These are necessary conditions for complete. An import form the scan did not follow also makes the scan incomplete. In the submitted source it is reported as `failure`, with no dedicated carried Boolean; in an imported file it is the `error` on that file's record.
 
 #### Produced field relationships {fields: condition}
 
@@ -272,9 +272,12 @@ test: implies(imports.status in ["complete", "incomplete"], present(imports.clos
 
 ```contract
 scope: "subtree"
-grade: "source_read"
-source: {"path":"controller/src/dossier.rs","symbol":"Imports"}
-pins: "Performed complete/incomplete scans retain a closure; skipped/failed scans have no records. Complete scans have no carried cycle, exceeded bound or record errors."
+grade: "check_read"
+source: [{"path":"controller/src/dossier.rs","symbol":"Imports"},{"path":"controller/src/sbpl_imports.rs","symbol":"resolve_imports"},{"path":"controller/src/sbpl_lex.rs","symbol":"import_scan"}]
+check: [{"path":"tests/suites/witness_contract/check_dossier.py","symbol":"import_forms","form":"test"},{"path":"tests/suites/witness_contract/check_dossier.py","symbol":"import_failure_order","form":"test"},{"path":"controller/src/dossier.rs","symbol":"import_scan_statuses_never_report_an_unscanned_closure_as_complete","form":"test"}]
+pins: "Performed complete/incomplete scans retain a closure; skipped/failed scans have no records. Complete scans have no carried cycle, exceeded bound or record errors. The live contrasts submit one policy per import spelling and compare status, records and failure with files hashed independently and with the worker compiler's own result for the same run."
+context: "Read the producer and the named checks. In the live contrasts an imported marker file holds an operation name the compiler does not know, so a reply whose compile diagnostic names that file shows that the worker's compiler evaluated its content."
+limits: "Constructed policies through the built-in runner on the tested system. A diagnostic shows evaluation of a file's content, not which files the compiler opened; the untaken-branch and renamed-import rows assert that a record does not imply evaluation and that evaluation can leave no record. Cycles and bounds are unit-level."
 ```
 
 ## One import observation {import_record: subject}
@@ -306,7 +309,7 @@ Opened file’s available modification time in Unix seconds; null on unavailable
 
 ### error {error: field}
 
-Resolution, regular-file, read, text-decoding or traversal diagnostic for this entry; null when the entry was collected without such a problem.
+Resolution, regular-file, read, text-decoding, unfollowed-form or traversal diagnostic for this entry; null when the entry was collected without such a problem. A value here does not mean the file was not read: a file that is not valid UTF-8, or that holds an import form the scan did not follow, keeps its hash beside the diagnostic.
 
 ## Controller host context {host: subject}
 

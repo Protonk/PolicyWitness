@@ -829,6 +829,8 @@ Declarations own meaning; source and check citations supply the stated support. 
 | `controller/integration/cli_contract.rs: registry_that_cannot_be_read_refuses_and_only_an_absent_path_is_empty` | check support | [Read and select records](RESPONSE.md#contract-installation-commands-read) |
 | `controller/integration/cli_contract.rs: runner_commands_report_ok_or_refuse_on_stderr_without_an_envelope` | check support | [Read and select records](RESPONSE.md#contract-installation-commands-read) |
 | `controller/integration/cli_contract.rs: runner_install_refuses_a_service_path_other_than_the_bundle_before_any_change` | check support | [Retain installation ownership](RESPONSE.md#contract-installation-commands-pending) |
+| `controller/integration/cli_contract.rs: sbpl_check_inventory_reports_each_import_form_beside_the_compiler_result` | check support | [Literal import inventory](RESPONSE.md#contract-policy-imports) |
+| `controller/integration/cli_contract.rs: sbpl_check_records_import_provenance_for_system_sb` | check support | [Literal import inventory](RESPONSE.md#contract-policy-imports) |
 | `controller/integration/cli_contract.rs: sbpl_check_verdicts_follow_the_native_compiler` | check support | [Parameter example observations](REQUEST.md#contract-policy-spec-parameter_evidence) |
 | `controller/integration/cli_contract.rs: supplied_direct_cargo_identity_is_embedded_without_release_provenance` | check support | [Direct compilation contexts](#contract-identity-public-direct) |
 | `controller/integration/cli_contract.rs: supplied_direct_cargo_identity_is_embedded_without_release_provenance` | check support | [Emit the example specimen](REQUEST.md#contract-request-specimen-emit_example) |
@@ -858,6 +860,7 @@ Declarations own meaning; source and check citations supply the stated support. 
 | `controller/src/bin/sbpl-check.rs: compile_with` | source support | [Last native compile stage](RESPONSE.md#contract-policy-compile) |
 | `controller/src/bin/sbpl-check.rs: compile_with` | source support | [Worker and helper compile classification](REQUEST.md#contract-policy-spec-compile_classification) |
 | `controller/src/bin/sbpl-check.rs: fn main` | source support | [Standalone compiler-helper request](REQUEST.md#contract-policy-helper_request) |
+| `controller/src/bin/sbpl-check.rs: inventory_findings_survive_in_their_group_and_never_change_the_verdict` | check support | [Literal import inventory](RESPONSE.md#contract-policy-imports) |
 | `controller/src/bin/sbpl-check.rs: verdict` | source support | [Select the helper verdict](RESPONSE.md#contract-policy-check_data-verdict) |
 | `controller/src/cli.rs: pub fn run` | source support | [Version command](RESPONSE.md#contract-identity-version-emit) |
 | `controller/src/cli.rs: pub fn run` | source support | [Read and select records](RESPONSE.md#contract-installation-commands-read) |
@@ -874,6 +877,7 @@ Declarations own meaning; source and check citations supply the stated support. 
 | `controller/src/dossier.rs: compare` | source support | [Classify the retained digest pair](RESPONSE.md#contract-dossier-binary-classify) |
 | `controller/src/dossier.rs: fn compare` | source support | [Held input and file observation scope](RESPONSE.md#contract-dossier-collection-native_gap) |
 | `controller/src/dossier.rs: import_scan_statuses_never_report_an_unscanned_closure_as_complete` | check support | [Specimen dossier](RESPONSE.md#contract-dossier) |
+| `controller/src/dossier.rs: import_scan_statuses_never_report_an_unscanned_closure_as_complete` | check support | [Retained scan scope](RESPONSE.md#contract-dossier-imports-scope) |
 | `controller/src/dossier.rs: pub fn observe(` | source support | [Ordinary refusal of the experimental controls](REQUEST.md#contract-request-overrides-ordinary_refusal) |
 | `controller/src/dossier.rs: pub fn observe_with_validator_control` | source support | [Run with test controls](REQUEST.md#contract-request-overrides-test_input_run) |
 | `controller/src/dossier.rs: validator_control_follows_the_worker_key_rules_and_names_the_flag` | check support | [Run with test controls](REQUEST.md#contract-request-overrides-test_input_run) |
@@ -1080,15 +1084,21 @@ Declarations own meaning; source and check citations supply the stated support. 
 | `controller/src/runner_select.rs: parse_runner_selector_value` | source support | [Controller selection options](REQUEST.md#contract-request-options) |
 | `controller/src/runner_select.rs: parse_runner_selector_value` | source support | [Nested runner selector](REQUEST.md#contract-request-selector) |
 | `controller/src/runner_select.rs: resolve_runner_target_with_registry` | source support | [Read and select records](RESPONSE.md#contract-installation-commands-read) |
+| `controller/src/sbpl_imports.rs: an_unfollowed_form_is_reported_for_the_source_or_on_the_record_of_its_file` | check support | [Literal import inventory](RESPONSE.md#contract-policy-imports) |
 | `controller/src/sbpl_imports.rs: closure_hash_excludes_unresolved_imports` | check support | [Specimen dossier](RESPONSE.md#contract-dossier) |
 | `controller/src/sbpl_imports.rs: closure_hash_is_order_invariant` | check support | [Specimen dossier](RESPONSE.md#contract-dossier) |
+| `controller/src/sbpl_imports.rs: closure_hash_is_the_stated_framing_and_counts_a_hashed_record_with_an_error` | check support | [Literal import inventory](RESPONSE.md#contract-policy-imports) |
 | `controller/src/sbpl_imports.rs: compute_closure_hash` | source support | [Specimen dossier](RESPONSE.md#contract-dossier) |
 | `controller/src/sbpl_imports.rs: compute_closure_hash` | source support | [Literal import inventory](RESPONSE.md#contract-policy-imports) |
 | `controller/src/sbpl_imports.rs: read_regular_file` | source support | [Literal import inventory](RESPONSE.md#contract-policy-imports) |
 | `controller/src/sbpl_imports.rs: resolve_import_path` | source support | [Held input and file observation scope](RESPONSE.md#contract-dossier-collection-native_gap) |
 | `controller/src/sbpl_imports.rs: resolve_import_path` | source support | [Literal import evidence scope](RESPONSE.md#contract-policy-imports-native_import_agreement) |
 | `controller/src/sbpl_imports.rs: resolve_imports` | source support | [Specimen dossier](RESPONSE.md#contract-dossier) |
+| `controller/src/sbpl_imports.rs: resolve_imports` | source support | [Retained scan scope](RESPONSE.md#contract-dossier-imports-scope) |
 | `controller/src/sbpl_imports.rs: resolve_imports` | source support | [Literal import inventory](RESPONSE.md#contract-policy-imports) |
+| `controller/src/sbpl_lex.rs: import_scan` | source support | [Retained scan scope](RESPONSE.md#contract-dossier-imports-scope) |
+| `controller/src/sbpl_lex.rs: import_scan` | source support | [Literal import inventory](RESPONSE.md#contract-policy-imports) |
+| `controller/src/sbpl_lex.rs: reports_every_other_form_headed_by_import` | check support | [Literal import inventory](RESPONSE.md#contract-policy-imports) |
 | `controller/src/test_input.rs: argument_target_and_identity_refusals_write_nothing` | check support | [Publish a developer read input](REQUEST.md#contract-request-specimen-emit_test_input) |
 | `controller/src/test_input.rs: complete_publication_requires_all_writes_and_flush` | check support | [Publish a developer read input](REQUEST.md#contract-request-specimen-emit_test_input) |
 | `controller/src/test_input.rs: fn emit_template` | source support | [Publish a developer read input](REQUEST.md#contract-request-specimen-emit_test_input) |
@@ -1694,6 +1704,8 @@ Declarations own meaning; source and check citations supply the stated support. 
 | `tests/suites/witness_contract/check_actor_compositions.py: assert_actor_ending` | check support | [One actor's diagnostics](RESPONSE.md#contract-diagnostics-actor) |
 | `tests/suites/witness_contract/check_actor_compositions.py: assert_gate_schedule` | check support | [Termination cancellation reach](RESPONSE.md#contract-actor_evidence-gate-cancellation_evidence) |
 | `tests/suites/witness_contract/check_actor_compositions.py: assert_timeout_applicability` | check support | [worker_timeout_ms](REQUEST.md#contract-request-overrides-worker_timeout_ms) |
+| `tests/suites/witness_contract/check_dossier.py: import_failure_order` | check support | [Retained scan scope](RESPONSE.md#contract-dossier-imports-scope) |
+| `tests/suites/witness_contract/check_dossier.py: import_forms` | check support | [Retained scan scope](RESPONSE.md#contract-dossier-imports-scope) |
 | `tests/suites/witness_contract/check_example_round_trip.py: evaluate` | check support | [Emitted example](REQUEST.md#contract-request-specimen-example) |
 | `tests/suites/witness_contract/check_extension_directory.py: run` | check support | [Extension experiments](REQUEST.md#contract-extensions-examples) |
 | `tests/suites/witness_contract/check_extension_redelegation.py: chain` | check support | [Extension experiments](REQUEST.md#contract-extensions-examples) |
@@ -2040,7 +2052,7 @@ Source: [sbpl_imports.rs](../controller/src/sbpl_imports.rs): `resolve_import_pa
 
 [Local support](RESPONSE.md#contract-policy-imports-support).
 
-Source: [sbpl_imports.rs](../controller/src/sbpl_imports.rs): `resolve_imports`, `read_regular_file`, `compute_closure_hash`; [sbpl-check.rs](../controller/src/bin/sbpl-check.rs): `ImportInventory`.
+Source: [sbpl_lex.rs](../controller/src/sbpl_lex.rs): `import_scan`; [sbpl_imports.rs](../controller/src/sbpl_imports.rs): `resolve_imports`, `read_regular_file`, `compute_closure_hash`; [sbpl-check.rs](../controller/src/bin/sbpl-check.rs): `ImportInventory`. Check: [cli_contract.rs](../controller/integration/cli_contract.rs): `sbpl_check_inventory_reports_each_import_form_beside_the_compiler_result`, `sbpl_check_records_import_provenance_for_system_sb`; [sbpl_lex.rs](../controller/src/sbpl_lex.rs): `reports_every_other_form_headed_by_import`; [sbpl_imports.rs](../controller/src/sbpl_imports.rs): `an_unfollowed_form_is_reported_for_the_source_or_on_the_record_of_its_file`, `closure_hash_is_the_stated_framing_and_counts_a_hashed_record_with_an_error`; [sbpl-check.rs](../controller/src/bin/sbpl-check.rs): `inventory_findings_survive_in_their_group_and_never_change_the_verdict`.
 
 <a id="contract-policy-fallback-support-details"></a>
 ### Fallback helper capture — Support
@@ -2768,7 +2780,7 @@ Source: [dossier.rs](../controller/src/dossier.rs): `Augmentation`.
 
 [Local support](RESPONSE.md#contract-dossier-imports-scope-support).
 
-Source: [dossier.rs](../controller/src/dossier.rs): `Imports`.
+Source: [dossier.rs](../controller/src/dossier.rs): `Imports`; [sbpl_imports.rs](../controller/src/sbpl_imports.rs): `resolve_imports`; [sbpl_lex.rs](../controller/src/sbpl_lex.rs): `import_scan`. Check: [check_dossier.py](../tests/suites/witness_contract/check_dossier.py): `import_forms`, `import_failure_order`; [dossier.rs](../controller/src/dossier.rs): `import_scan_statuses_never_report_an_unscanned_closure_as_complete`.
 
 <a id="contract-dossier-binary-classify-support-details"></a>
 ### Classify the retained digest pair — Source support

@@ -3,8 +3,8 @@
 //! Shared by the `sbpl-check` diagnostic helper and the controller: both walk
 //! the literal `(import "NAME")` closure of an SBPL source under the same
 //! search paths and bounds, and derive the same closure hash from the bytes
-//! they read. Neither identifies what the worker's compiler read; macro
-//! evaluation is outside this scan.
+//! they read. Neither identifies what the worker's compiler read; evaluation
+//! is outside this scan.
 
 use std::collections::BTreeSet;
 use std::path::{Path, PathBuf};
@@ -41,6 +41,12 @@ pub const MAX_SBPL_SOURCE_BYTES: usize = 4 * 1024 * 1024;
 // this once; do not change it without a deliberate hash-format bump.
 const CLOSURE_HASH_SEPARATOR: u8 = 0x1F;
 
+/// The first problem when the submitted source holds a form headed by
+/// `import` that the scan did not follow.
+const UNFOLLOWED_IN_SOURCE: &str = "the source contains an import form the scan did not follow";
+/// The record error for a scanned import that holds such a form.
+const UNFOLLOWED_IN_IMPORT: &str = "contains an import form the scan did not follow";
+
 #[derive(serde::Serialize, Clone, Debug)]
 pub struct ImportRecord {
     /// The literal name as written in the source (`(import "NAME")`).
@@ -52,8 +58,9 @@ pub struct ImportRecord {
     pub sha256: Option<String>,
     pub size_bytes: Option<u64>,
     pub mtime_unix: Option<i64>,
-    /// Resolution error (e.g. "not found in search path", "permission denied",
-    /// "depth limit exceeded"). Null on a clean resolution.
+    /// A resolution, read or bound problem, which leaves the hash null, or a
+    /// problem scanning the bytes that were hashed (not UTF-8, or an import
+    /// form the scan did not follow), which keeps it. Null when there was none.
     pub error: Option<String>,
 }
 
@@ -111,8 +118,8 @@ fn build_import_record(name: String, resolved: PathBuf) -> (ImportRecord, Option
 }
 
 /// Two binaries include this module by path and each reads a subset of these
-/// fields: sbpl-check reports `truncated`; the controller dossier reports
-/// `exceeded` and `nonliteral_imports`.
+/// fields: sbpl-check reports `truncated` and `unfollowed_imports`; the
+/// controller dossier reports `exceeded` and `failure`.
 #[allow(dead_code)]
 pub struct ResolvedImports {
     pub records: Vec<ImportRecord>,
@@ -120,9 +127,9 @@ pub struct ResolvedImports {
     pub truncated: bool,
     /// The first bound hit, `depth` or `count`, or None.
     pub exceeded: Option<String>,
-    /// True when some `(import ...)` form in the scanned sources carried a
-    /// nonliteral argument the scanner could not follow.
-    pub nonliteral_imports: bool,
+    /// True when the source or a scanned import holds a form headed by
+    /// `import` that the scanner did not follow.
+    pub unfollowed_imports: bool,
     /// First cycle detected during the walk, expressed as the chain of import
     /// names from the closest enclosing visit down to the back-edge that
     /// closed the cycle. None when no cycle was hit.
@@ -145,7 +152,7 @@ struct ResolverState {
     in_progress_names: Vec<String>,
     truncated: bool,
     exceeded: Option<String>,
-    nonliteral_imports: bool,
+    unfollowed_imports: bool,
     cycle: Option<Vec<String>>,
     failure: Option<String>,
     /// Unresolved names already recorded — second sighting is silent dedup.
@@ -257,11 +264,16 @@ fn dfs_visit_import(name: String, depth: usize, state: &mut ResolverState) {
             state.in_progress_names.push(name.clone());
 
             let scan = sbpl_lex::import_scan(&content);
-            if !scan.scan_complete {
-                state.nonliteral_imports = true;
-                state.failure.get_or_insert_with(|| {
-                    format!("import {name:?}: a nonliteral (import ...) form could not be followed")
-                });
+            if scan.unfollowed {
+                // The file was read and hashed; its record says the scan of
+                // it left a form unfollowed.
+                state.unfollowed_imports = true;
+                state
+                    .failure
+                    .get_or_insert_with(|| format!("import {name:?}: {UNFOLLOWED_IN_IMPORT}"));
+                if let Some(last) = state.records.last_mut() {
+                    last.error = Some(UNFOLLOWED_IN_IMPORT.to_string());
+                }
             }
             for child in scan.refs {
                 dfs_visit_import(child, depth + 1, state);
@@ -304,16 +316,16 @@ pub fn resolve_imports(source: &str) -> ResolvedImports {
         in_progress_names: Vec::new(),
         truncated: false,
         exceeded: None,
-        nonliteral_imports: false,
+        unfollowed_imports: false,
         cycle: None,
         failure: None,
         unresolved_seen: BTreeSet::new(),
     };
 
     let scan = sbpl_lex::import_scan(source);
-    state.nonliteral_imports = !scan.scan_complete;
-    if state.nonliteral_imports {
-        state.failure = Some("a nonliteral (import ...) form could not be followed".into());
+    state.unfollowed_imports = scan.unfollowed;
+    if state.unfollowed_imports {
+        state.failure = Some(UNFOLLOWED_IN_SOURCE.into());
     }
     for name in scan.refs {
         dfs_visit_import(name, 0, &mut state);
@@ -332,16 +344,17 @@ pub fn resolve_imports(source: &str) -> ResolvedImports {
         records: state.records,
         truncated: state.truncated,
         exceeded: state.exceeded,
-        nonliteral_imports: state.nonliteral_imports,
+        unfollowed_imports: state.unfollowed_imports,
         cycle: state.cycle,
         failure: state.failure,
     }
 }
 
-/// Hash combining the user's SBPL source with the resolved imports' content
-/// hashes. Reproducible iff every file we resolved is content-identical on
-/// the verifying host. Imports that didn't resolve are excluded — their
-/// absence is recorded in `imports[].error` for separate inspection.
+/// Hash combining the user's SBPL source with the content hashes of the
+/// imports the walk read. Reproducible iff every file we hashed is
+/// content-identical on the verifying host. A record contributes when it has
+/// both a path and a hash, whatever its `error`; imports that were not read
+/// contribute nothing and are recorded with their `error`.
 ///
 /// The separator byte is appended unconditionally, so this hash is never
 /// equal to `policy_sha256` even when the imports list is empty. That's
@@ -445,11 +458,23 @@ mod tests {
     }
 
     #[test]
-    fn closure_hash_differs_from_policy_sha_when_imports_resolved() {
+    fn closure_hash_is_the_stated_framing_and_counts_a_hashed_record_with_an_error() {
         let src = "(version 1)";
-        let policy_sha = crate::digest::sha256_hex(src);
-        let closure = compute_closure_hash(src, &[record("a.sb", "/p/a.sb", "111")]);
-        assert_ne!(policy_sha, closure);
+        let mut scanned_with_error = record("b.sb", "/p/b.sb", "222");
+        scanned_with_error.error = Some(UNFOLLOWED_IN_IMPORT.to_string());
+        let records = vec![
+            scanned_with_error,
+            record("a.sb", "/p/a.sb", "111"),
+            unresolved("missing.sb"),
+        ];
+        assert_eq!(
+            compute_closure_hash(src, &records),
+            crate::digest::sha256_hex(b"(version 1)\x1f/p/a.sb 111\n/p/b.sb 222")
+        );
+        assert_eq!(
+            compute_closure_hash(src, &[]),
+            crate::digest::sha256_hex(b"(version 1)\x1f")
+        );
     }
 
     #[test]
@@ -570,6 +595,67 @@ mod tests {
         assert_eq!(d_count, 1, "diamond visit should dedup d.sb");
 
         std::fs::remove_dir_all(&dir).ok();
+    }
+
+    #[test]
+    fn an_unfollowed_form_is_reported_for_the_source_or_on_the_record_of_its_file() {
+        let dir = tmp_dir("unfollowed");
+        let leaf = dir.join("leaf.sb");
+        let wrapper = dir.join("wrapper.sb");
+        std::fs::write(&leaf, "(allow default)\n").unwrap();
+        let wrapper_text = format!(
+            "(import \"{}\")\n(import (string-append \"le\" \"af.sb\"))\n",
+            leaf.display()
+        );
+        std::fs::write(&wrapper, &wrapper_text).unwrap();
+
+        // In an imported file: the flag, an error on that file's record with
+        // its hash kept, a failure naming the file, and its literal import
+        // still walked.
+        let resolved = resolve_imports(&format!("(import \"{}\")\n", wrapper.display()));
+        assert!(resolved.unfollowed_imports);
+        let names: Vec<&str> = resolved.records.iter().map(|r| r.name.as_str()).collect();
+        assert_eq!(names, [leaf.to_str().unwrap(), wrapper.to_str().unwrap()]);
+        assert!(resolved.records[0].error.is_none());
+        let record = &resolved.records[1];
+        assert_eq!(record.error.as_deref(), Some(UNFOLLOWED_IN_IMPORT));
+        assert_eq!(
+            record.sha256.as_deref(),
+            Some(crate::digest::sha256_hex(wrapper_text.as_bytes()).as_str())
+        );
+        assert_eq!(record.size_bytes, Some(wrapper_text.len() as u64));
+        assert_eq!(
+            resolved.failure,
+            Some(format!(
+                "import {:?}: {UNFOLLOWED_IN_IMPORT}",
+                wrapper.to_str().unwrap()
+            ))
+        );
+        assert!(!resolved.truncated && resolved.cycle.is_none());
+
+        // In the submitted source: the flag and the first problem, before any
+        // import is visited; the followed import keeps a clean record.
+        let source = format!(
+            "(import \"{}\")\n(import (param \"X\"))\n(import \"{}\")\n",
+            dir.join("absent.sb").display(),
+            leaf.display()
+        );
+        let resolved = resolve_imports(&source);
+        assert!(resolved.unfollowed_imports);
+        assert_eq!(resolved.failure.as_deref(), Some(UNFOLLOWED_IN_SOURCE));
+        assert_eq!(resolved.records.len(), 2);
+        assert_eq!(
+            resolved.records[0].error.as_deref(),
+            Some("not found in search path")
+        );
+        assert!(resolved.records[1].error.is_none());
+
+        // Every form followed: no flag and no problem.
+        let resolved = resolve_imports(&format!("(import \"{}\" ; note\n)\n", leaf.display()));
+        assert!(!resolved.unfollowed_imports && resolved.failure.is_none());
+        assert_eq!(resolved.records.len(), 1);
+        assert!(resolved.records[0].error.is_none());
+        std::fs::remove_dir_all(&dir).unwrap();
     }
 
     #[test]

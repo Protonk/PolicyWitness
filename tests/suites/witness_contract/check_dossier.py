@@ -192,6 +192,105 @@ class Witness:
         assert len(imports['closure_sha256']) == 64
         self.record('imports', status=imports['status'], records=len(imports['records']), run=envelope['result']['normalized_outcome'])
 
+    def import_forms(self):
+        """Import spellings through the dossier, beside what the worker's compiler did.
+
+        Evaluating `marker.sb` fails compilation with a diagnostic naming that
+        file, so each reply shows whether the worker's compiler evaluated it.
+        That is evaluation of the file's content on this system; it does not
+        show which files the compiler opened.
+        """
+        files = self.out / 'import_forms' / 'files'
+        files.mkdir(parents=True)
+        marker = files / 'marker.sb'
+        marker.write_bytes(b'(allow pw-trace-marker-operation)\n')
+        computed = '(import (string-append "%s" "/marker.sb"))' % files
+        wrapper = files / 'wrapper.sb'
+        wrapper.write_text(computed + '\n')
+        # name, source after the base, status, recorded file, evaluated by the worker's compiler
+        rows = [
+            ('no_import', '', 'complete', None, False),
+            ('literal', '(import "%s")' % marker, 'complete', marker, True),
+            ('newline_between', '(import\n"%s")' % marker, 'complete', marker, True),
+            ('comment_between', '(import ; note\n "%s")' % marker, 'complete', marker, True),
+            ('trailing_comment', '(import "%s" ; note\n)' % marker, 'complete', marker, True),
+            ('computed', computed, 'incomplete', None, True),
+            ('computed_without_space', computed.replace('(import (', '(import(', 1), 'incomplete', None, True),
+            ('nested_computed', '(import "%s")' % wrapper, 'incomplete', wrapper, True),
+            ('unevaluated', '(if #f (import "%s"))' % marker, 'complete', marker, False),
+            ('aliased', '(define pw-alias import)\n(pw-alias "%s")' % marker, 'complete', None, True),
+        ]
+        problems, observed = [], []
+        for name, form, status, recorded, evaluated in rows:
+            source = SOURCE + form + '\n'
+            request = self.specimen('import-' + name, policy={'format': 'sbpl', 'sbpl_source': source})
+            rc, envelope, _ = self.run('import_forms/' + name, request)
+            specimen = self.common(envelope, 'import_' + name)
+            imports = specimen['policy']['imports']
+            reply = envelope['data']['runner_result']
+            observed.append({'row': name, 'status': imports['status'], 'failure': imports['failure'],
+                             'records': [(r['name'], r['sha256'], r['error']) for r in imports['records']],
+                             'run': reply['normalized_outcome'], 'exit': rc})
+
+            def expect(condition, what):
+                if not condition:
+                    problems.append((name, what))
+            expect(specimen['policy']['augmentation']['applied_sha256'] == sha256_text(source), 'applied source digest')
+            expect(imports['status'] == status, 'status')
+            expect(imports['cycle'] is None and imports['exceeded'] is None, 'no cycle or bound')
+            # The compiler's witness: a diagnostic naming the marker file and the
+            # operation only that file contains, or a finished run.
+            if evaluated:
+                diagnostic = reply.get('error') or ''
+                expect(rc == 1 and reply['normalized_outcome'] != 'finished' and str(marker) in diagnostic
+                       and 'pw-trace-marker-operation' in diagnostic, 'worker compiler evaluated marker.sb')
+            else:
+                expect(rc == 0 and reply['normalized_outcome'] == 'finished', 'worker compiler did not evaluate marker.sb')
+            records = imports['records']
+            if recorded is None:
+                expect(records == [], 'no record')
+            else:
+                expect(len(records) == 1 and records[0]['name'] == str(recorded)
+                       and records[0]['resolved_path'] == str(recorded)
+                       and records[0]['sha256'] == sha256_file(recorded)
+                       and records[0]['size_bytes'] == recorded.stat().st_size, 'one hashed record')
+            # A form the scan did not follow is the first problem when it is in
+            # the submitted source, and an error on the record of the file that holds it.
+            record_errors = [r['error'] for r in records]
+            if name == 'nested_computed':
+                expect(len(record_errors) == 1 and 'did not follow' in (record_errors[0] or ''), 'record error')
+                expect(str(wrapper) in (imports['failure'] or '') and 'did not follow' in imports['failure'], 'failure names the file')
+            elif status == 'incomplete':
+                expect('did not follow' in (imports['failure'] or '') and 'source' in imports['failure'], 'failure names the source')
+            else:
+                expect(imports['failure'] is None and all(e is None for e in record_errors), 'no reported problem')
+        self.record('import_forms', rows=observed, problems=problems)
+        assert not problems, (problems, 'observed rows are in dossier-controls.json')
+
+    def import_failure_order(self):
+        """`failure` is the first problem in the scanner's traversal, not in source order."""
+        absent = self.out / 'import_forms' / 'absent'
+        first, second = str(absent / 'aa-absent.sb'), str(absent / 'zz-absent.sb')
+        # Written in reverse byte order: the traversal visits names in byte order.
+        source = SOURCE + '(import "%s")\n(import "%s")\n' % (second, first)
+        request = self.specimen('import-order', policy={'format': 'sbpl', 'sbpl_source': source})
+        rc, envelope, _ = self.run('import_forms/order', request)
+        imports = self.common(envelope, 'import_order')['policy']['imports']
+        assert imports['status'] == 'incomplete', imports
+        assert [(r['name'], r['error']) for r in imports['records']] == [
+            (first, 'not found in search path'), (second, 'not found in search path')], imports
+        assert first in imports['failure'] and second not in imports['failure'], imports
+        # A form the scan did not follow in the submitted source is reported
+        # before any import is visited, wherever it is written.
+        source = SOURCE + '(import "%s")\n(import (string-append "a" "b"))\n' % first
+        request = self.specimen('import-order-root', policy={'format': 'sbpl', 'sbpl_source': source})
+        rc, envelope, _ = self.run('import_forms/order_root', request)
+        root = self.common(envelope, 'import_order_root')['policy']['imports']
+        assert root['status'] == 'incomplete' and len(root['records']) == 1, root
+        assert root['records'][0]['error'] == 'not found in search path', root
+        assert root['failure'] and first not in root['failure'], root
+        self.record('import_failure_order', failure=imports['failure'], root_failure=root['failure'])
+
     def applied_augments(self):
         policy = {'format': 'sbpl', 'sbpl_source': '(version 1)\n(deny default)\n', 'augments': ['exec_baseline']}
         request = self.specimen('augmented', policy=policy)
@@ -402,11 +501,13 @@ def main():
         print('BYOXPC dossier: provenance and bundle-local binaries hashed against the shipped baselines')
         return
     witness.with_imports()
+    witness.import_failure_order()
     witness.applied_augments()
     witness.refused_augments()
     witness.missing_source()
     witness.controller_refusals()
     witness.executable_overrides()
+    witness.import_forms()
     print(f'{len(witness.records)} dossier examples agree with independently read facts')
 
 

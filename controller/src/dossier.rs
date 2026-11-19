@@ -113,9 +113,10 @@ impl Augmentation {
 }
 
 /// The import inventory of the source selected for invocation, under the
-/// helper's search paths and bounds. `complete` means the literal import
-/// closure was exhausted with nothing unresolved, no cycle, no nonliteral form,
-/// no decoding error and no bound hit; it does not mean compiler-complete.
+/// helper's search paths and bounds. `complete` means every import form the
+/// scan recognized was followed and the walk ended with nothing unresolved,
+/// no read or decoding error, no cycle and no bound hit; it describes the
+/// scan and does not mean compiler-complete.
 #[derive(Serialize, Clone)]
 pub struct Imports {
     pub status: String,
@@ -160,7 +161,7 @@ impl Imports {
         let resolved = sbpl_imports::resolve_imports(source);
         let incomplete = resolved.exceeded.is_some()
             || resolved.cycle.is_some()
-            || resolved.nonliteral_imports
+            || resolved.unfollowed_imports
             || resolved.records.iter().any(|r| r.error.is_some());
         let closure = sbpl_imports::compute_closure_hash(source, &resolved.records);
         Imports {
@@ -1626,16 +1627,49 @@ mod tests {
         assert!(
             complete.cycle.is_none() && complete.exceeded.is_none() && complete.failure.is_none()
         );
-        let nonliteral = Imports::scan("(define (m x) (import x))\n(m \"system.sb\")\n");
-        assert_eq!(nonliteral.status, "incomplete");
-        assert!(nonliteral.closure_sha256.is_some());
+        // A form headed by `import` that the scan did not follow, with and
+        // without a space after the head: never `complete`.
+        for source in [
+            "(define (m x) (import x))\n(m \"system.sb\")\n",
+            "(import(string-append \"system\" \".sb\"))\n",
+        ] {
+            let unfollowed = Imports::scan(source);
+            assert_eq!(unfollowed.status, "incomplete", "{source:?}");
+            assert!(unfollowed.closure_sha256.is_some() && unfollowed.records.is_empty());
+            assert_eq!(
+                unfollowed.failure.as_deref(),
+                Some("the source contains an import form the scan did not follow"),
+                "{source:?}"
+            );
+        }
+        // The same form inside an imported file: the file's record keeps its
+        // hash and carries the error. A literal import with a comment before
+        // its closing parenthesis is followed.
+        let root = temp_root("imports");
+        let leaf = root.join("leaf.sb");
+        let wrapper = root.join("wrapper.sb");
+        write(&leaf, b"(allow default)\n");
+        write(&wrapper, b"(import (param \"NAME\"))\n");
+        let nested = Imports::scan(&format!("(import \"{}\")\n", wrapper.display()));
+        assert_eq!(nested.status, "incomplete");
+        assert_eq!(nested.records.len(), 1);
+        assert!(nested.records[0].sha256.is_some());
+        assert_eq!(
+            nested.records[0].error.as_deref(),
+            Some("contains an import form the scan did not follow")
+        );
         assert!(
-            nonliteral
+            nested
                 .failure
                 .as_deref()
                 .unwrap()
-                .contains("nonliteral")
+                .starts_with(&format!("import {:?}: ", wrapper.to_str().unwrap()))
         );
+        let followed = Imports::scan(&format!("(import \"{}\" ; note\n)\n", leaf.display()));
+        assert_eq!(followed.status, "complete");
+        assert_eq!(followed.records.len(), 1);
+        assert!(followed.records[0].error.is_none() && followed.failure.is_none());
+        fs::remove_dir_all(&root).unwrap();
         let unresolved = Imports::scan("(import \"pw-no-such-profile-0000.sb\")\n");
         assert_eq!(unresolved.status, "incomplete");
         assert_eq!(unresolved.records.len(), 1);

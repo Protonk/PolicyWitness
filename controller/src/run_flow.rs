@@ -5001,6 +5001,7 @@ else:
                     "import_inventory": {
                         "records": [serde_json::to_value(import_record()).unwrap()],
                         "truncated": false, "cycle": ["a", "b"],
+                        "unfollowed_imports": false,
                         "policy_closure_sha256": "f".repeat(64),
                     },
                 }),

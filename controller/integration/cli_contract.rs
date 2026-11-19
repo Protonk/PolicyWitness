@@ -1523,10 +1523,8 @@ fn sbpl_check_records_import_provenance_for_system_sb() {
         .get("policy_closure_sha256")
         .and_then(|v| v.as_str())
         .expect("import_inventory.policy_closure_sha256 missing");
-    assert_ne!(
-        policy_sha, closure_sha,
-        "closure hash should differ from policy_sha256 when imports were resolved"
-    );
+    let source = "(version 1)\n(deny default)\n(import \"system.sb\")\n(allow file-read-data)\n";
+    assert_eq!(policy_sha, sha256_hex(source.as_bytes()));
 
     let build = data
         .get("macos_build_version")
@@ -1562,11 +1560,266 @@ fn sbpl_check_records_import_provenance_for_system_sb() {
         Some("/System/Library/Sandbox/Profiles/system.sb"),
         "system.sb should resolve from the Profiles directory"
     );
-    let sha = system_sb
-        .get("sha256")
-        .and_then(|v| v.as_str())
-        .unwrap_or("");
-    assert_eq!(sha.len(), 64, "sha256 should be a 64-char hex string");
+    // Each record's hash is the hash of the file at its resolved path, read
+    // here; the closure is recomputed from the source and those records; and
+    // the walk reached the file `system.sb` itself imports.
+    for record in imports {
+        let resolved = record["resolved_path"].as_str().expect("resolved path");
+        let bytes = std::fs::read(resolved).expect("read the recorded import");
+        assert_eq!(record["sha256"], sha256_hex(&bytes), "{record}");
+        assert_eq!(record["size_bytes"], bytes.len(), "{record}");
+        assert!(record["error"].is_null(), "{record}");
+    }
+    assert_eq!(closure_sha, recomputed_closure(source, imports));
+    assert!(
+        imports.iter().any(|imp| imp["name"] == "dyld-support.sb"),
+        "the transitive import of system.sb should be recorded: {imports:?}"
+    );
+    assert_eq!(inventory.get("unfollowed_imports"), Some(&false.into()));
+}
+
+/// SHA-256 as lowercase hexadecimal, computed by this test.
+fn sha256_hex(bytes: &[u8]) -> String {
+    use sha2::Digest;
+    format!("{:x}", sha2::Sha256::digest(bytes))
+}
+
+/// The closure digest from its public statement: the source, byte 0x1F, then
+/// the sorted `path sha` lines of every record carrying both, joined by LF.
+fn recomputed_closure(source: &str, records: &[serde_json::Value]) -> String {
+    let mut lines: Vec<String> = records
+        .iter()
+        .filter_map(|record| {
+            Some(format!(
+                "{} {}",
+                record["resolved_path"].as_str()?,
+                record["sha256"].as_str()?
+            ))
+        })
+        .collect();
+    lines.sort();
+    let mut payload = source.as_bytes().to_vec();
+    payload.push(0x1f);
+    payload.extend_from_slice(lines.join("\n").as_bytes());
+    sha256_hex(&payload)
+}
+
+/// What the helper's own compiler did with one source.
+enum Compiled {
+    /// `ok`: nothing the compiler evaluated failed.
+    Finished,
+    /// `compile_error` naming this file and the operation only the marker
+    /// files contain: the compiler evaluated that file's content.
+    Evaluated(PathBuf),
+    /// `compile_error` that does not come from a marker file's content. The
+    /// diagnostic names the given file when there is one.
+    Refused(Option<PathBuf>),
+}
+
+/// The helper inventory for each import spelling, beside what the helper's
+/// compiler did with the same source. A marker file holds one rule with an
+/// operation name the compiler does not know, so evaluating it fails
+/// compilation with a diagnostic naming the file. That shows the compiler
+/// evaluated the file's content on this system. It does not show which files
+/// the compiler opened, and it is the helper's compiler, not the worker's.
+#[test]
+fn sbpl_check_inventory_reports_each_import_form_beside_the_compiler_result() {
+    if !integration_enabled() {
+        return;
+    }
+    let bin = require_sbpl_check_bin();
+    let serial = SBPL_CHECK_REQUESTS.fetch_add(1, std::sync::atomic::Ordering::SeqCst);
+    let dir = std::env::temp_dir().join(format!(
+        "pw-sbpl-check-forms-{}-{serial}",
+        std::process::id()
+    ));
+    std::fs::create_dir(&dir).expect("create the fixture directory");
+    let dir = dir.canonicalize().expect("canonical fixture directory");
+    let d = dir.to_str().expect("fixture path utf8");
+    const MARKER: &str = "(allow pw-trace-marker-operation)\n";
+    let file = |name: &str, content: &[u8]| {
+        let path = dir.join(name);
+        std::fs::write(&path, content).expect("write an import fixture");
+        path
+    };
+    let marker = file("marker.sb", MARKER.as_bytes());
+    let quoted = file("q\"uote.sb", MARKER.as_bytes());
+    let slashed = file("b\\slash.sb", MARKER.as_bytes());
+    let computed = format!("(import (string-append \"{d}\" \"/marker.sb\"))");
+    let wrapper = file("wrapper.sb", format!("{computed}\n").as_bytes());
+    let invalid = file("invalid.sb", b"(version 1)\n(allow default)\n\xff\n");
+    let m = marker.to_str().unwrap();
+
+    // label, source after the base, compiler result, recorded files with the
+    // text each record's error must contain, unfollowed_imports.
+    type Records = Vec<(PathBuf, Option<&'static str>)>;
+    let followed = || -> Records { vec![(marker.clone(), None)] };
+    let evaluated = || Compiled::Evaluated(marker.clone());
+    #[rustfmt::skip]
+    let rows: Vec<(&str, String, Compiled, Records, bool)> = vec![
+        ("no import form", String::new(), Compiled::Finished, vec![], false),
+        // Literal spellings the compiler evaluates and the scan follows.
+        ("literal", format!("(import \"{m}\")"), evaluated(), followed(), false),
+        ("tab, CR and LF around the tokens", format!("(\timport\r\n\t\"{m}\"\r\n)"), evaluated(), followed(), false),
+        ("newline after the head", format!("(import\n\"{m}\")"), evaluated(), followed(), false),
+        ("vertical tab before the string", format!("(import\t\x0b\"{m}\")"), evaluated(), followed(), false),
+        ("comment before the string", format!("(import ; note\n \"{m}\")"), evaluated(), followed(), false),
+        ("comment ending the head", format!("(import;c\n\"{m}\")"), evaluated(), followed(), false),
+        ("comment after the string", format!("(import \"{m}\" ; note\n)"), evaluated(), followed(), false),
+        ("comment touching the string", format!("(import \"{m}\";c\n)"), evaluated(), followed(), false),
+        ("form feed before the close", format!("(import \"{m}\"\x0c)"), evaluated(), followed(), false),
+        ("vertical tab before the close", format!("(import \"{m}\"\x0b)"), evaluated(), followed(), false),
+        ("form feed before the head", format!("(\x0cimport \"{m}\")"), evaluated(), followed(), false),
+        ("comment before the head", format!("( ; c\n import \"{m}\")"), evaluated(), followed(), false),
+        ("square brackets", format!("[import \"{m}\"]"), evaluated(), followed(), false),
+        ("inside another form", format!("(let () (import \"{m}\"))"), evaluated(), followed(), false),
+        ("after a quote character literal", format!("(define pw-q #\\\")\n(import \"{m}\")"), evaluated(), followed(), false),
+        ("after a semicolon character literal", format!("(define pw-s #\\;) (import \"{m}\")"), evaluated(), followed(), false),
+        ("after a quote inside a symbol", format!("(define pw-y 'ab\"cd)\n(import \"{m}\")"), evaluated(), followed(), false),
+        ("after a #! comment holding a quote", format!("#! \"\n(import \"{m}\")"), evaluated(), followed(), false),
+        ("escaped quote in the name", format!("(import \"{d}/q\\\"uote.sb\")"), Compiled::Evaluated(quoted.clone()), vec![(quoted.clone(), None)], false),
+        ("escaped backslash in the name", format!("(import \"{d}/b\\\\slash.sb\")"), Compiled::Evaluated(slashed.clone()), vec![(slashed.clone(), None)], false),
+        // Literal forms the scan follows and the compiler does not evaluate:
+        // a record does not say the compiler evaluated the form.
+        ("untaken branch", format!("(if #f (import \"{m}\"))"), Compiled::Finished, followed(), false),
+        ("quoted datum", format!("(define pw-d '(import \"{m}\"))"), Compiled::Finished, followed(), false),
+        // Text that is no form: nothing recorded, nothing reported.
+        ("inside a #! comment", format!("#! (import \"{m}\")"), Compiled::Finished, vec![], false),
+        ("inside a ; comment", format!("; (import \"{m}\")"), Compiled::Finished, vec![], false),
+        // Forms headed by `import` that the scan does not follow.
+        ("computed argument", computed.clone(), evaluated(), vec![], true),
+        ("computed argument without a space", computed.replacen("(import (", "(import(", 1), evaluated(), vec![], true),
+        ("computed argument in brackets", format!("(import[string-append \"{d}\" \"/marker.sb\"])"), evaluated(), vec![], true),
+        ("identifier argument", format!("(define (pw-pull n) (import n))\n(pw-pull \"{m}\")"), evaluated(), vec![], true),
+        ("quoted string argument", format!("(import '\"{m}\")"), evaluated(), vec![], true),
+        ("dotted argument list", format!("(import . (\"{m}\"))"), evaluated(), vec![], true),
+        ("hexadecimal escape in the name", format!("(import \"{d}/mark\\x65r.sb\")"), evaluated(), vec![], true),
+        ("literal inside a computed argument", format!("(import (begin (import \"{m}\") \"bsd.sb\"))"), evaluated(), followed(), true),
+        ("computed argument inside an imported file", format!("(import \"{d}/wrapper.sb\")"), evaluated(), vec![(wrapper.clone(), Some("did not follow"))], true),
+        ("two arguments", format!("(import \"{m}\" \"{m}\")"), Compiled::Refused(None), vec![], true),
+        ("empty name", "(import \"\")".into(), Compiled::Refused(None), vec![], true),
+        ("no argument", "(import)".into(), Compiled::Refused(None), vec![], true),
+        ("bracket closing a parenthesis", format!("(import \"{m}\"]"), Compiled::Refused(None), vec![], true),
+        // Not `import` for the compiler either.
+        ("upper-case head", format!("(IMPORT \"{m}\")"), Compiled::Refused(None), vec![], false),
+        ("string touching the head", format!("(import\"{m}\")"), Compiled::Refused(None), vec![], false),
+        ("form feed touching the head", format!("(import\x0c\"{m}\")"), Compiled::Refused(None), vec![], false),
+        ("braces", format!("{{import \"{m}\"}}"), Compiled::Refused(None), vec![], false),
+        // The compiler evaluates the file and no form is headed by `import`:
+        // the scan cannot report these.
+        ("aliased import", format!("(define pw-alias import)\n(pw-alias \"{m}\")"), evaluated(), vec![], false),
+        ("applied import", format!("(apply import (list \"{m}\"))"), evaluated(), vec![], false),
+        ("eval of a constructed form", format!("(eval (list (quote import) \"{m}\"))"), evaluated(), vec![], false),
+        ("load", format!("(load \"{m}\")"), evaluated(), vec![], false),
+        // A file the scan hashed and could not read as text.
+        ("invalid UTF-8 import", format!("(import \"{d}/invalid.sb\")"), Compiled::Refused(Some(invalid.clone())), vec![(invalid.clone(), Some("not valid UTF-8"))], false),
+    ];
+
+    let mut failures: Vec<String> = Vec::new();
+    for (label, form, compiled, records, unfollowed) in &rows {
+        let source = format!("(version 1)\n(allow default)\n{form}\n");
+        let request = serde_json::json!({
+            "policy": {"format": "sbpl", "sbpl_source": source}, "probe_plan": []
+        })
+        .to_string();
+        let out = run_sbpl_check_request(&bin, &request, false);
+        let envelope: serde_json::Value = match serde_json::from_slice(&out.stdout) {
+            Ok(envelope) => envelope,
+            Err(error) => {
+                failures.push(format!("{label}: no envelope: {error}"));
+                continue;
+            }
+        };
+        let mut differs: Vec<&str> = Vec::new();
+        if !out.stderr.is_empty() {
+            differs.push("stderr is not empty");
+        }
+        let diagnostic = envelope["result"]["error"].as_str().unwrap_or("");
+        let from_marker = diagnostic.contains("pw-trace-marker-operation");
+        let outcome = envelope["result"]["normalized_outcome"].as_str();
+        let agrees = match compiled {
+            Compiled::Finished => out.status.code() == Some(0) && outcome == Some("ok"),
+            Compiled::Evaluated(file) => {
+                out.status.code() == Some(1)
+                    && outcome == Some("compile_error")
+                    && from_marker
+                    && diagnostic.contains(file.to_str().unwrap())
+            }
+            Compiled::Refused(file) => {
+                out.status.code() == Some(1)
+                    && outcome == Some("compile_error")
+                    && !from_marker
+                    && file
+                        .as_ref()
+                        .is_none_or(|file| diagnostic.contains(file.to_str().unwrap()))
+            }
+        };
+        if !agrees {
+            differs.push("the compiler result");
+        }
+        let data = &envelope["data"];
+        if data["policy_sha256"] != sha256_hex(source.as_bytes()) {
+            differs.push("policy_sha256 is not the source digest");
+        }
+        let inventory = &data["import_inventory"];
+        let mut keys: Vec<&str> = inventory
+            .as_object()
+            .map(|object| object.keys().map(String::as_str).collect())
+            .unwrap_or_default();
+        keys.sort();
+        if keys
+            != [
+                "cycle",
+                "policy_closure_sha256",
+                "records",
+                "truncated",
+                "unfollowed_imports",
+            ]
+        {
+            differs.push("the inventory's members");
+        }
+        if inventory["unfollowed_imports"] != *unfollowed {
+            differs.push("unfollowed_imports");
+        }
+        if inventory["truncated"] != false || !inventory["cycle"].is_null() {
+            differs.push("a bound or cycle was reported");
+        }
+        let empty = Vec::new();
+        let recorded = inventory["records"].as_array().unwrap_or(&empty);
+        let same_records = recorded.len() == records.len()
+            && recorded.iter().zip(records).all(|(record, (path, error))| {
+                let bytes = std::fs::read(path).expect("read the fixture");
+                record["name"] == path.to_str().unwrap()
+                    && record["resolved_path"] == path.to_str().unwrap()
+                    && record["sha256"] == sha256_hex(&bytes)
+                    && record["size_bytes"] == bytes.len()
+                    && match error {
+                        None => record["error"].is_null(),
+                        Some(text) => record["error"].as_str().is_some_and(|e| e.contains(text)),
+                    }
+            });
+        if !same_records {
+            differs.push("records");
+        }
+        if inventory["policy_closure_sha256"] != recomputed_closure(&source, recorded) {
+            differs.push("the closure is not the stated digest of the source and hashed records");
+        }
+        if !differs.is_empty() {
+            failures.push(format!(
+                "{label}: {}\n    outcome {outcome:?}, diagnostic {:?}\n    inventory {inventory}",
+                differs.join("; "),
+                diagnostic.lines().next().unwrap_or("")
+            ));
+        }
+    }
+    std::fs::remove_dir_all(&dir).expect("remove the fixture directory");
+    assert!(
+        failures.is_empty(),
+        "{} of {} rows differ:\n{}",
+        failures.len(),
+        rows.len(),
+        failures.join("\n")
+    );
 }
 
 #[test]

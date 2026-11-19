@@ -48,6 +48,7 @@ def policy_check_controls(run):
                  'params_present': False, 'params_count': 0,
                  'compile': {'stage': 'compile', 'ok': True, 'error': None},
                  'import_inventory': {'records': [], 'truncated': False, 'cycle': None,
+                                      'unfollowed_imports': False,
                                       'policy_closure_sha256': 'f' * 64}},
     }
 
@@ -131,6 +132,28 @@ def policy_check_controls(run):
             payload['result']['normalized_outcome'] = outcome
             change(payload)
             check('admitted_' + outcome + '_' + name, capture(payload, outcome), diagnostic)
+    # An admitted inventory states whether the scan left an import form
+    # unfollowed: either value is accepted; absence, null and another type are
+    # not. A refused input has no inventory and nothing to state.
+    inventory = 'envelope.data.policy_check.envelope.data.import_inventory'
+    for name, change, diagnostic in [
+        ('unfollowed_true', lambda i: i.update(unfollowed_imports=True), None),
+        ('unfollowed_absent', lambda i: i.pop('unfollowed_imports'),
+         inventory + '.unfollowed_imports must be present and not null'),
+        ('unfollowed_null', lambda i: i.update(unfollowed_imports=None),
+         inventory + '.unfollowed_imports must be present and not null'),
+        ('unfollowed_string', lambda i: i.update(unfollowed_imports='false'),
+         inventory + '.unfollowed_imports is string, not boolean'),
+        ('unfollowed_number', lambda i: i.update(unfollowed_imports=0),
+         inventory + '.unfollowed_imports is number, not boolean'),
+    ]:
+        payload = copy.deepcopy(helper)
+        change(payload['data']['import_inventory'])
+        check('inventory_' + name, capture(payload, 'ok'), diagnostic)
+    payload = copy.deepcopy(helper)
+    payload['data'].update(compile=None, import_inventory=None, policy_sha256=None)
+    payload['result'].update(normalized_outcome='bad_request', ok=False, exit_code=1)
+    check('inventory_null_for_refused_input', capture(payload, 'bad_request'))
     check('outcome_mismatch', capture(helper, 'compile_error'),
           'policy_check.status differs from the admitted helper outcome')
     check('admitted_marked_invalid', capture(helper, 'invalid_reply'),

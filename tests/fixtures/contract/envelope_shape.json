@@ -76,7 +76,8 @@
       "cycle": "array",
       "policy_closure_sha256": "string",
       "records": "array",
-      "truncated": "boolean"
+      "truncated": "boolean",
+      "unfollowed_imports": "boolean"
     },
     "envelope.data.actor_policy_checks[].policy_check.envelope.data.import_inventory.records[]": {
       "error": "string",
@@ -144,7 +145,8 @@
       "cycle": "array",
       "policy_closure_sha256": "string",
       "records": "array",
-      "truncated": "boolean"
+      "truncated": "boolean",
+      "unfollowed_imports": "boolean"
     },
     "envelope.data.policy_check.envelope.data.import_inventory.records[]": {
       "error": "string",

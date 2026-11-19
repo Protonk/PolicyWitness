@@ -1741,8 +1741,11 @@ unchanged rests on the dispatcher's inspection.
 the envelope: the request bytes the controller held, SHA-256 of the submitted
 and applied source, the literal import closure (a specimen with an
 `(import "system.sb")` and one with a refused augment), `sysctl` host facts,
-and the evidence manifest's entries. Seven examples: an ordinary run, a run
-with imports, an applied augment, a refused augment (`failed` with
+and the evidence manifest's entries. Nine examples: an ordinary run, a run
+with imports, the order of the first import problem (of two absent names
+written in reverse order `failure` names the one first in byte order, and an
+import form the scan did not follow in the submitted source is reported
+before an absent name written above it), an applied augment, a refused augment (`failed` with
 `augmentation_failed` imports and no client invocation), a policy without
 source (`not_applicable`, delivered and refused by the runner as
 `bad_request`), controller refusals (missing arguments and absent files produce
@@ -1752,7 +1755,19 @@ dossier collected so far without creating a temporary request file), and
 executable overrides (a byte-identical worker copy records
 `match`; different bytes record `mismatch`; a nonexistent, relative, NUL or
 overlong path records `unavailable` with its reason; both helper roles are
-independent). `request_delivery` must report the held byte count on every
+independent), and import forms. The last submits one policy per spelling and
+compares the dossier with files it hashes itself and with the worker
+compiler's own result: an imported marker file holds an operation name the
+compiler does not know, so a reply whose diagnostic names that file shows
+that the worker's compiler evaluated its content, and not which files it
+opened. A literal import, and one with a newline or a comment between or
+after its tokens, is `complete` with one hashed record. A computed argument,
+with or without a space after `import`, is `incomplete` with no record and a
+`failure` naming the source. A file holding a computed import is one record
+with its hash and an error, and `failure` names the file. An import in an
+untaken branch is `complete` with a record on a finished run, and a renamed
+`import` is `complete` with no record although the compiler evaluated the
+file: those two rows assert the scan's limits. `request_delivery` must report the held byte count on every
 invoked run. The opt-in `dossier_witness_byoxpc` repeats the ordinary example
 through an installed BYOXPC copy, where all three
 `binaries` records are objects.

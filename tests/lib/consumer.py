@@ -5,6 +5,7 @@ supported document is validated against the current contract: first its shape
 against the goldens under tests/fixtures/contract/ (the readers' allowlists:
 an unknown key at a recorded path is an error naming the path, a present key
 must carry the golden's type, absence is allowed), then the record rules below.
+A helper import inventory must carry `unfollowed_imports`.
 Rejected policy-check payloads remain opaque inside their validated capture
 wrappers; admitted helper envelopes are checked against the current shape.
 An envelope whose own evidence admits its runner reply must report that
@@ -67,6 +68,13 @@ ENVELOPE_SHAPE = json.loads((_CONTRACT_DIR / 'envelope_shape.json').read_text())
 REPLY_SHAPE = json.loads((_CONTRACT_DIR / 'response_shape.json').read_text())['shape']
 # Paths whose contents another golden records, with that golden and its root.
 _REROOTED = {'envelope.data.runner_result': (REPLY_SHAPE, 'reply')}
+# Keys an object at a path always carries with a value. The goldens allow
+# absence; a helper inventory that does not say whether the scan left an
+# import form unfollowed would read as "none seen".
+_REQUIRED = {
+    'envelope.data.policy_check.envelope.data.import_inventory': ('unfollowed_imports',),
+    'envelope.data.actor_policy_checks[].policy_check.envelope.data.import_inventory': ('unfollowed_imports',),
+}
 SPECIMEN_KEYS = ('request_path', 'policy', 'host', 'runner_provenance', 'app_provenance', 'binaries')
 AUGMENTATION_STATUSES = ('not_requested', 'applied', 'failed', 'not_applicable')
 IMPORT_STATUSES = ('complete', 'incomplete', 'failed', 'not_applicable')
@@ -327,13 +335,17 @@ def validate_shape(value, path, shape, errors, expected_contract=None):
 
     An unknown key is an error naming the path. A present, non-null key must
     carry the golden's type; a golden type of `null` constrains nothing. Absent
-    keys are allowed: the goldens are allowlists, not required sets. Objects at
-    a path another golden records (`_REROOTED`) continue under that golden.
+    keys are allowed: the goldens are allowlists, not required sets, except
+    for the keys `_REQUIRED` names, which must be present and not null. Objects
+    at a path another golden records (`_REROOTED`) continue under that golden.
     Policy-check admission precedes shape checks on its retained payload.
     """
     allowed = shape.get(path)
     if allowed is None or not isinstance(value, dict):
         return
+    for key in _REQUIRED.get(path, ()):
+        if value.get(key) is None:
+            errors.append(f'{path}.{key} must be present and not null')
     for key, child in value.items():
         if key not in allowed:
             errors.append(f'unknown key {path}.{key}')

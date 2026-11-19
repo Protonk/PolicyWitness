@@ -81,13 +81,15 @@ struct CompileRecord {
 }
 
 /// The literal import closure the helper walked before compiling, with the
-/// closure hash over the source and every resolved import. Resolution errors,
-/// truncation and cycles stay here; they never change the verdict.
+/// closure hash over the source and every import it hashed. Record errors,
+/// truncation, cycles and import forms the scan did not follow stay here;
+/// they never change the verdict.
 #[derive(Serialize)]
 struct ImportInventory {
     records: Vec<sbpl_imports::ImportRecord>,
     truncated: bool,
     cycle: Option<Vec<String>>,
+    unfollowed_imports: bool,
     policy_closure_sha256: String,
 }
 
@@ -352,6 +354,7 @@ fn check(
         records: resolved.records,
         truncated: resolved.truncated,
         cycle: resolved.cycle,
+        unfollowed_imports: resolved.unfollowed_imports,
     };
     let compile = compile_with(native, &admitted);
     let (outcome, exit_code, error) = verdict(&compile);
@@ -829,6 +832,7 @@ mod tests {
             assert_eq!(inventory["records"], json!([]), "{label}");
             assert_eq!(inventory["truncated"], false, "{label}");
             assert!(inventory["cycle"].is_null(), "{label}");
+            assert_eq!(inventory["unfollowed_imports"], false, "{label}");
             assert_eq!(
                 inventory["policy_closure_sha256"],
                 sbpl_imports::compute_closure_hash(source, &[]),
@@ -1010,7 +1014,7 @@ mod tests {
             records: vec![record("ok.sb", None)],
             truncated: false,
             exceeded: None,
-            nonliteral_imports: false,
+            unfollowed_imports: false,
             cycle: None,
             failure: None,
         };
@@ -1026,6 +1030,14 @@ mod tests {
                 resolved.exceeded = Some("depth".into());
             }
             "cycle" => resolved.cycle = Some(vec!["a.sb".into(), "b.sb".into(), "a.sb".into()]),
+            "unfollowed" => {
+                resolved.unfollowed_imports = true;
+                resolved.failure = Some("constructed first problem".into());
+            }
+            "unfollowed in an import" => {
+                resolved.unfollowed_imports = true;
+                resolved.records[0].error = Some("constructed scan problem".into());
+            }
             _ => {}
         }
         resolved
@@ -1044,7 +1056,14 @@ mod tests {
             ),
         ] {
             let mut baseline: Option<(Value, Value)> = None;
-            for label in ["clean", "errors", "truncated", "cycle"] {
+            for label in [
+                "clean",
+                "errors",
+                "truncated",
+                "cycle",
+                "unfollowed",
+                "unfollowed in an import",
+            ] {
                 let mut native = FakeNative::new(profile, diagnostic);
                 let mut walks = 0;
                 let wire = {
@@ -1080,6 +1099,16 @@ mod tests {
                 assert_eq!(inventory["truncated"], expected.truncated, "{label}");
                 assert_eq!(inventory["cycle"], json!(expected.cycle), "{label}");
                 assert_eq!(
+                    inventory["unfollowed_imports"],
+                    label.starts_with("unfollowed"),
+                    "{label}"
+                );
+                assert_eq!(
+                    inventory.as_object().unwrap().len(),
+                    5,
+                    "{label}: the first problem and the bound's name are not carried"
+                );
+                assert_eq!(
                     inventory["policy_closure_sha256"],
                     sbpl_imports::compute_closure_hash(source, &expected.records),
                     "{label}"
@@ -1087,6 +1116,11 @@ mod tests {
                 if label == "errors" {
                     assert!(inventory["records"][1]["sha256"].is_null());
                     assert_eq!(inventory["records"][1]["error"], "not found in search path");
+                }
+                if label == "unfollowed in an import" {
+                    // The record keeps its hash beside the error.
+                    assert_eq!(inventory["records"][0]["sha256"], "e".repeat(64));
+                    assert_eq!(inventory["records"][0]["error"], "constructed scan problem");
                 }
             }
         }
@@ -1119,6 +1153,7 @@ mod tests {
                 }],
                 truncated: false,
                 cycle: Some(vec!["a".into(), "b".into()]),
+                unfollowed_imports: false,
                 policy_closure_sha256: "f".repeat(64),
             }),
         };

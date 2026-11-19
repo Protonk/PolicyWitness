@@ -375,7 +375,7 @@ The last native stage attempted and its result. Null means the helper refused th
 
 ### import_inventory {import_inventory: field}
 
-The helper's literal-import walk performed before native compilation. Null means admission prevented the walk; an empty records list is a performed walk with no import records.
+The helper's literal-import walk performed before native compilation. Null means admission prevented the walk; an empty records list is a performed walk with no import records, and `unfollowed_imports` says whether that walk saw an import form it did not follow.
 
 ### Inventory, compile and report {run_compile: acts}
 
@@ -544,11 +544,11 @@ record: "rust.ImportInventory"
 as: "imports"
 ```
 
-Absolute import names are checked as supplied. Other names are sought first under `/System/Library/Sandbox/Profiles`, then `/usr/share/sandbox`, with the literal name unchanged. The resolver follows literal imports recursively; an unevaluable import argument, unreadable/nonregular file or invalid UTF-8 scan input records an incomplete inventory.
+Absolute import names are checked as supplied. Other names are sought first under `/System/Library/Sandbox/Profiles`, then `/usr/share/sandbox`, with the literal name unchanged. The walk scans the source, and each file it reads, for lists whose first token is `import`, and follows the literal ones recursively. An unresolved name, an unreadable or nonregular file and a file that is not valid UTF-8 each leave an `error` on their record; a bound sets `truncated`; a cycle sets `cycle`; an import form the scan did not follow sets `unfollowed_imports`. The helper inventory carries no first-problem text and does not name which bound was reached; each cause is read from its own field.
 
 ### records {records: field}
 
-Observed import records sorted by resolved path (empty for unresolved), then literal name. Each resolved file is opened once, checked as a regular file, and its held bytes are both hashed and scanned. Canonical resolved files and unresolved names are deduplicated.
+Observed import records sorted by resolved path (empty for unresolved), then literal name. Each resolved file is opened once, checked as a regular file, and its held bytes are hashed and then scanned for import forms. A form the scan did not follow in that file is reported by `unfollowed_imports` and by an `error` on the file's record, which keeps its hash. Literal names are collected in every syntactic position, including forms the compiler does not evaluate. Canonical resolved files and unresolved names are deduplicated.
 
 ### truncated {truncated: field}
 
@@ -558,9 +558,13 @@ True when the walk reached its <!-- span limits.helper_import_depth.value_unit -
 
 First cycle found by revisiting a canonical path already in the active traversal chain, reported in literal import-name order. Null means the walk found no cycle.
 
+### unfollowed_imports {unfollowed_imports: field}
+
+True when the submitted source, or a file the walk scanned, contains a list whose first token is `import` that the scan did not follow, so `records` may lack a file such a list names. The scan follows a list that holds the token `import` and one string, with whitespace or comments between the tokens, when the string is not empty and uses no escape other than `\"` and `\\`. It reports every other list headed by `import`, among them a computed argument, a second argument and a name written with another escape, and keeps scanning inside the reported list. False states that the scan met no such list. It does not state that the compiler read no other file: a renamed or applied `import`, `eval` and `load` reach files with no list headed by `import`, and the scan does not recognize them.
+
 ### policy_closure_sha256 {policy_closure_sha256: field}
 
-SHA-256 of source bytes, byte 0x1F, then newline-joined sorted strings of each successfully hashed resolved path, one space and its SHA-256. The separator is included for an empty inventory. Failed imports remain error records and contribute no path/hash line.
+SHA-256 of source bytes, byte 0x1F, then newline-joined sorted strings of each hashed resolved path, one space and its SHA-256. The separator is included for an empty inventory. A line is contributed by every record that carries both a resolved path and a hash, including one whose `error` reports that its text could not be scanned or held an import form the scan did not follow; a record without a hash (unresolved, unreadable, nonregular or depth-limited) contributes none. The digest identifies the source and every file the scan hashed. It does not encode `truncated`, `cycle`, record errors or `unfollowed_imports`, and it is not a digest of the compiler's inputs.
 
 ### Separate reads and their identities {holds: acts}
 
@@ -597,10 +601,12 @@ limits: "The source records that collision precedence was not established by the
 
 ```contract
 scope: "subtree"
-grade: "source_read"
-source: [{"path": "controller/src/sbpl_imports.rs", "symbol": "resolve_imports"}, {"path": "controller/src/sbpl_imports.rs", "symbol": "read_regular_file"}, {"path": "controller/src/sbpl_imports.rs", "symbol": "compute_closure_hash"}, {"path": "controller/src/bin/sbpl-check.rs", "symbol": "ImportInventory"}]
-pins: "The adjacent field meanings and operations follow the named implementation."
-limits: "Full inventory traversal and hashing implementation read. Native search-order observations are inherited from the source comments, not reproduced here."
+grade: "check_read"
+source: [{"path": "controller/src/sbpl_lex.rs", "symbol": "import_scan"}, {"path": "controller/src/sbpl_imports.rs", "symbol": "resolve_imports"}, {"path": "controller/src/sbpl_imports.rs", "symbol": "read_regular_file"}, {"path": "controller/src/sbpl_imports.rs", "symbol": "compute_closure_hash"}, {"path": "controller/src/bin/sbpl-check.rs", "symbol": "ImportInventory"}]
+check: [{"path": "controller/integration/cli_contract.rs", "symbol": "sbpl_check_inventory_reports_each_import_form_beside_the_compiler_result", "form": "test"}, {"path": "controller/integration/cli_contract.rs", "symbol": "sbpl_check_records_import_provenance_for_system_sb", "form": "test"}, {"path": "controller/src/sbpl_lex.rs", "symbol": "reports_every_other_form_headed_by_import", "form": "test"}, {"path": "controller/src/sbpl_imports.rs", "symbol": "an_unfollowed_form_is_reported_for_the_source_or_on_the_record_of_its_file", "form": "test"}, {"path": "controller/src/sbpl_imports.rs", "symbol": "closure_hash_is_the_stated_framing_and_counts_a_hashed_record_with_an_error", "form": "test"}, {"path": "controller/src/bin/sbpl-check.rs", "symbol": "inventory_findings_survive_in_their_group_and_never_change_the_verdict", "form": "test"}]
+pins: "The adjacent field meanings and operations follow the named implementation. The integration contrasts send constructed sources to the shipped helper and compare each inventory with what the helper's own compiler did with the same source: records with hashes read independently, the closure recomputed from its statement, and unfollowed_imports for followed, reported and unrecognized spellings."
+context: "Read the scanner, the walk and the named checks. In the integration contrasts an imported marker file holds an operation name the compiler does not know, so a diagnostic naming that file shows that the compiler evaluated its content."
+limits: "The contrasts use constructed inputs and the helper's host-side compiler; a diagnostic shows evaluation of a file's content, not which files the compiler opened. The set of spellings the scan follows was established against the system's reader on macOS 26.7.1 (25G241) only. The unevaluated-form and renamed-import rows assert the stated limits. Count and depth bounds, unreadable and FIFO imports are unit-level; native search-order observations are inherited from the source comments, not reproduced here."
 ```
 
 

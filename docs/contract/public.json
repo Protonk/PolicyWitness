@@ -37667,7 +37667,7 @@
             },
             "id": "policy.check_data.import_inventory",
             "kind": "field",
-            "prose": "The helper's literal-import walk performed before native compilation. Null means admission prevented the walk; an empty records list is a performed walk with no import records.",
+            "prose": "The helper's literal-import walk performed before native compilation. Null means admission prevented the walk; an empty records list is a performed walk with no import records, and `unfollowed_imports` says whether that walk saw an import form it did not follow.",
             "title": "import_inventory"
           },
           {
@@ -41718,7 +41718,7 @@
             },
             "id": "policy.imports",
             "kind": "subject",
-            "prose": "Absolute import names are checked as supplied. Other names are sought first under `/System/Library/Sandbox/Profiles`, then `/usr/share/sandbox`, with the literal name unchanged. The resolver follows literal imports recursively; an unevaluable import argument, unreadable/nonregular file or invalid UTF-8 scan input records an incomplete inventory.",
+            "prose": "Absolute import names are checked as supplied. Other names are sought first under `/System/Library/Sandbox/Profiles`, then `/usr/share/sandbox`, with the literal name unchanged. The walk scans the source, and each file it reads, for lists whose first token is `import`, and follows the literal ones recursively. An unresolved name, an unreadable or nonregular file and a file that is not valid UTF-8 each leave an `error` on their record; a bound sets `truncated`; a cycle sets `cycle`; an import form the scan did not follow sets `unfollowed_imports`. The helper inventory carries no first-problem text and does not name which bound was reached; each cause is read from its own field.",
             "title": "Literal import inventory"
           },
           {
@@ -41809,7 +41809,7 @@
             },
             "id": "policy.imports.policy_closure_sha256",
             "kind": "field",
-            "prose": "SHA-256 of source bytes, byte 0x1F, then newline-joined sorted strings of each successfully hashed resolved path, one space and its SHA-256. The separator is included for an empty inventory. Failed imports remain error records and contribute no path/hash line.",
+            "prose": "SHA-256 of source bytes, byte 0x1F, then newline-joined sorted strings of each hashed resolved path, one space and its SHA-256. The separator is included for an empty inventory. A line is contributed by every record that carries both a resolved path and a hash, including one whose `error` reports that its text could not be scanned or held an import form the scan did not follow; a record without a hash (unresolved, unreadable, nonregular or depth-limited) contributes none. The digest identifies the source and every file the scan hashed. It does not encode `truncated`, `cycle`, record errors or `unfollowed_imports`, and it is not a digest of the compiler's inputs.",
             "title": "policy_closure_sha256"
           },
           {
@@ -41824,7 +41824,7 @@
             },
             "id": "policy.imports.records",
             "kind": "field",
-            "prose": "Observed import records sorted by resolved path (empty for unresolved), then literal name. Each resolved file is opened once, checked as a regular file, and its held bytes are both hashed and scanned. Canonical resolved files and unresolved names are deduplicated.",
+            "prose": "Observed import records sorted by resolved path (empty for unresolved), then literal name. Each resolved file is opened once, checked as a regular file, and its held bytes are hashed and then scanned for import forms. A form the scan did not follow in that file is reported by `unfollowed_imports` and by an `error` on the file's record, which keeps its hash. Literal names are collected in every syntactic position, including forms the compiler does not evaluate. Canonical resolved files and unresolved names are deduplicated.",
             "title": "records"
           },
           {
@@ -41841,6 +41841,21 @@
             "kind": "field",
             "prose": "True when the walk reached its <!-- span limits.helper_import_depth.value_unit -->8 levels<!-- /span --> depth bound or <!-- span limits.helper_import_count.value_unit -->64 records<!-- /span --> record bound; retained records describe the partial walk.",
             "title": "truncated"
+          },
+          {
+            "context": {},
+            "facts": {},
+            "field": {
+              "json_null": false,
+              "omission": null,
+              "optional": false,
+              "presence": "required",
+              "type": "boolean"
+            },
+            "id": "policy.imports.unfollowed_imports",
+            "kind": "field",
+            "prose": "True when the submitted source, or a file the walk scanned, contains a list whose first token is `import` that the scan did not follow, so `records` may lack a file such a list names. The scan follows a list that holds the token `import` and one string, with whitespace or comments between the tokens, when the string is not empty and uses no escape other than `\\\"` and `\\\\`. It reports every other list headed by `import`, among them a computed argument, a second argument and a name written with another escape, and keeps scanning inside the reported list. False states that the scan met no such list. It does not state that the compiler read no other file: a renamed or applied `import`, `eval` and `load` reach files with no list headed by `import`, and the scan does not recognize them.",
+            "title": "unfollowed_imports"
           },
           {
             "context": {},
@@ -42110,7 +42125,7 @@
             },
             "id": "dossier.import_record.error",
             "kind": "field",
-            "prose": "Resolution, regular-file, read, text-decoding or traversal diagnostic for this entry; null when the entry was collected without such a problem.",
+            "prose": "Resolution, regular-file, read, text-decoding, unfollowed-form or traversal diagnostic for this entry; null when the entry was collected without such a problem. A value here does not mean the file was not read: a file that is not valid UTF-8, or that holds an import form the scan did not follow, keeps its hash beside the diagnostic.",
             "title": "error"
           },
           {
@@ -414858,7 +414873,7 @@
             },
             "id": "dossier.import_record.error",
             "kind": "field",
-            "prose": "Resolution, regular-file, read, text-decoding or traversal diagnostic for this entry; null when the entry was collected without such a problem.",
+            "prose": "Resolution, regular-file, read, text-decoding, unfollowed-form or traversal diagnostic for this entry; null when the entry was collected without such a problem. A value here does not mean the file was not read: a file that is not valid UTF-8, or that holds an import form the scan did not follow, keeps its hash beside the diagnostic.",
             "title": "error"
           },
           {
@@ -414959,7 +414974,7 @@
             },
             "id": "dossier.imports.closure_sha256",
             "kind": "field",
-            "prose": "Digest of the selected source plus successfully read import path/hash pairs using the defined framing.",
+            "prose": "Digest of the selected source plus successfully read import path/hash pairs using the defined framing. It identifies the source and every file the scan hashed, including a file whose record carries an `error` beside its hash; it does not encode `cycle`, `exceeded`, record errors or an import form the scan did not follow, and it is not a digest of the compiler's inputs.",
             "title": "closure_sha256"
           },
           {
@@ -414974,7 +414989,7 @@
             },
             "id": "dossier.imports.cycle",
             "kind": "field",
-            "prose": "First detected cycle as an ordered name chain; null when no cycle was observed.",
+            "prose": "First cycle detected in the scanner's traversal, as an ordered name chain; null when no cycle was observed.",
             "title": "cycle"
           },
           {
@@ -414989,7 +415004,7 @@
             },
             "id": "dossier.imports.exceeded",
             "kind": "field",
-            "prose": "First reached traversal bound, `depth` or `count`; null when neither was recorded.",
+            "prose": "First bound reached in the scanner's traversal, `depth` or `count`; null when neither was recorded.",
             "title": "exceeded"
           },
           {
@@ -415004,7 +415019,7 @@
             },
             "id": "dossier.imports.failure",
             "kind": "field",
-            "prose": "First collection problem, scan setup failure or reason for a not-applicable scan; null when none was recorded.",
+            "prose": "First collection problem in the scanner's traversal, scan setup failure or reason for a not-applicable scan; null when none was recorded. The traversal reports an import form the scan did not follow in the submitted source first, then visits imports depth-first in byte order of their names; it is not source order.",
             "title": "failure"
           },
           {
@@ -415019,7 +415034,7 @@
             },
             "id": "dossier.imports.records",
             "kind": "field",
-            "prose": "Sorted observed import records, including unresolved and failed reads. Empty when there were no imports or no scan.",
+            "prose": "Sorted observed import records, including unresolved and failed reads. Literal names are collected in every syntactic position, including forms the compiler does not evaluate. Empty when the scan followed no import form or did not run.",
             "title": "records"
           },
           {
@@ -415098,7 +415113,7 @@
             },
             "id": "dossier.imports.scope",
             "kind": "reports",
-            "prose": "These are necessary conditions for complete. The scan also classifies nonliteral forms, an observation with no dedicated carried Boolean.",
+            "prose": "These are necessary conditions for complete. An import form the scan did not follow also makes the scan incomplete. In the submitted source it is reported as `failure`, with no dedicated carried Boolean; in an imported file it is the `error` on that file's record.",
             "referenced_types": {
               "imports.records": {
                 "json_null": false,
@@ -415512,7 +415527,7 @@
             },
             "id": "dossier.imports.status",
             "kind": "field",
-            "prose": "`complete` exhausted the literal closure without a reported problem; `incomplete` retained a partial/problematic scan; `failed` could not perform the scan; `not_applicable` skipped it because source preparation did not apply.",
+            "prose": "`complete`: every import form the scan recognized was followed and the walk ended with no unresolved name, read or decoding error, cycle or bound. It describes the scan, not the compiler's inputs. `incomplete` retained a partial/problematic scan; `failed` could not perform the scan; `not_applicable` skipped it because source preparation did not apply.",
             "title": "status"
           },
           {
@@ -450045,7 +450060,7 @@
             },
             "id": "policy.check_data.import_inventory",
             "kind": "field",
-            "prose": "The helper's literal-import walk performed before native compilation. Null means admission prevented the walk; an empty records list is a performed walk with no import records.",
+            "prose": "The helper's literal-import walk performed before native compilation. Null means admission prevented the walk; an empty records list is a performed walk with no import records, and `unfollowed_imports` says whether that walk saw an import form it did not follow.",
             "title": "import_inventory"
           },
           {
@@ -452284,7 +452299,7 @@
             },
             "id": "policy.imports",
             "kind": "subject",
-            "prose": "Absolute import names are checked as supplied. Other names are sought first under `/System/Library/Sandbox/Profiles`, then `/usr/share/sandbox`, with the literal name unchanged. The resolver follows literal imports recursively; an unevaluable import argument, unreadable/nonregular file or invalid UTF-8 scan input records an incomplete inventory.",
+            "prose": "Absolute import names are checked as supplied. Other names are sought first under `/System/Library/Sandbox/Profiles`, then `/usr/share/sandbox`, with the literal name unchanged. The walk scans the source, and each file it reads, for lists whose first token is `import`, and follows the literal ones recursively. An unresolved name, an unreadable or nonregular file and a file that is not valid UTF-8 each leave an `error` on their record; a bound sets `truncated`; a cycle sets `cycle`; an import form the scan did not follow sets `unfollowed_imports`. The helper inventory carries no first-problem text and does not name which bound was reached; each cause is read from its own field.",
             "title": "Literal import inventory"
           },
           {
@@ -452375,7 +452390,7 @@
             },
             "id": "policy.imports.policy_closure_sha256",
             "kind": "field",
-            "prose": "SHA-256 of source bytes, byte 0x1F, then newline-joined sorted strings of each successfully hashed resolved path, one space and its SHA-256. The separator is included for an empty inventory. Failed imports remain error records and contribute no path/hash line.",
+            "prose": "SHA-256 of source bytes, byte 0x1F, then newline-joined sorted strings of each hashed resolved path, one space and its SHA-256. The separator is included for an empty inventory. A line is contributed by every record that carries both a resolved path and a hash, including one whose `error` reports that its text could not be scanned or held an import form the scan did not follow; a record without a hash (unresolved, unreadable, nonregular or depth-limited) contributes none. The digest identifies the source and every file the scan hashed. It does not encode `truncated`, `cycle`, record errors or `unfollowed_imports`, and it is not a digest of the compiler's inputs.",
             "title": "policy_closure_sha256"
           },
           {
@@ -452390,7 +452405,7 @@
             },
             "id": "policy.imports.records",
             "kind": "field",
-            "prose": "Observed import records sorted by resolved path (empty for unresolved), then literal name. Each resolved file is opened once, checked as a regular file, and its held bytes are both hashed and scanned. Canonical resolved files and unresolved names are deduplicated.",
+            "prose": "Observed import records sorted by resolved path (empty for unresolved), then literal name. Each resolved file is opened once, checked as a regular file, and its held bytes are hashed and then scanned for import forms. A form the scan did not follow in that file is reported by `unfollowed_imports` and by an `error` on the file's record, which keeps its hash. Literal names are collected in every syntactic position, including forms the compiler does not evaluate. Canonical resolved files and unresolved names are deduplicated.",
             "title": "records"
           },
           {
@@ -452407,6 +452422,21 @@
             "kind": "field",
             "prose": "True when the walk reached its <!-- span limits.helper_import_depth.value_unit -->8 levels<!-- /span --> depth bound or <!-- span limits.helper_import_count.value_unit -->64 records<!-- /span --> record bound; retained records describe the partial walk.",
             "title": "truncated"
+          },
+          {
+            "context": {},
+            "facts": {},
+            "field": {
+              "json_null": false,
+              "omission": null,
+              "optional": false,
+              "presence": "required",
+              "type": "boolean"
+            },
+            "id": "policy.imports.unfollowed_imports",
+            "kind": "field",
+            "prose": "True when the submitted source, or a file the walk scanned, contains a list whose first token is `import` that the scan did not follow, so `records` may lack a file such a list names. The scan follows a list that holds the token `import` and one string, with whitespace or comments between the tokens, when the string is not empty and uses no escape other than `\\\"` and `\\\\`. It reports every other list headed by `import`, among them a computed argument, a second argument and a name written with another escape, and keeps scanning inside the reported list. False states that the scan met no such list. It does not state that the compiler read no other file: a renamed or applied `import`, `eval` and `load` reach files with no list headed by `import`, and the scan does not recognize them.",
+            "title": "unfollowed_imports"
           },
           {
             "context": {},
@@ -511021,7 +511051,7 @@
             },
             "id": "dossier.collection.native_gap",
             "kind": "definition",
-            "prose": "The controller resolves and serializes the request once, then delivers that held text to the selected client and applicable helper calls. The dossier scanner and selected-file hashes describe their own reads. Literal import completeness belongs to the scanner convention; actor live equipment supplies its separate process association. Ordinary selected-file hashes remain file observations at collection time.",
+            "prose": "The controller resolves and serializes the request once, then delivers that held text to the selected client and applicable helper calls. The dossier scanner and selected-file hashes describe their own reads. Import-scan completeness describes the scanner's grammar and walk, not the compiler's inputs; actor live equipment supplies its separate process association. Ordinary selected-file hashes remain file observations at collection time.",
             "title": "Held input and file observation scope"
           },
           {
@@ -511045,7 +511075,7 @@
                 "cli_run"
               ],
               "free.condition": "The selected policy has string source within the <!-- span limits.helper_source.binary -->4 MiB<!-- /span --> source bound.",
-              "free.effect": "Scan literal import forms, resolve absolute names as given and relative names under /System/Library/Sandbox/Profiles then /usr/share/sandbox, and record observed reads within depth 8 and count 64. Mark unresolved names, nonliteral forms, cycles, decoding failures and bound hits as incomplete.",
+              "free.effect": "Scan literal import forms, resolve absolute names as given and relative names under /System/Library/Sandbox/Profiles then /usr/share/sandbox, and record observed reads within depth 8 and count 64. Mark unresolved names, import forms the scan did not follow, cycles, decoding failures and bound hits as incomplete.",
               "recipient": [
                 "cli_caller"
               ],
@@ -511156,7 +511186,7 @@
             },
             "id": "dossier.import_record.error",
             "kind": "field",
-            "prose": "Resolution, regular-file, read, text-decoding or traversal diagnostic for this entry; null when the entry was collected without such a problem.",
+            "prose": "Resolution, regular-file, read, text-decoding, unfollowed-form or traversal diagnostic for this entry; null when the entry was collected without such a problem. A value here does not mean the file was not read: a file that is not valid UTF-8, or that holds an import form the scan did not follow, keeps its hash beside the diagnostic.",
             "title": "error"
           },
           {
@@ -511257,7 +511287,7 @@
             },
             "id": "dossier.imports.closure_sha256",
             "kind": "field",
-            "prose": "Digest of the selected source plus successfully read import path/hash pairs using the defined framing.",
+            "prose": "Digest of the selected source plus successfully read import path/hash pairs using the defined framing. It identifies the source and every file the scan hashed, including a file whose record carries an `error` beside its hash; it does not encode `cycle`, `exceeded`, record errors or an import form the scan did not follow, and it is not a digest of the compiler's inputs.",
             "title": "closure_sha256"
           },
           {
@@ -511272,7 +511302,7 @@
             },
             "id": "dossier.imports.cycle",
             "kind": "field",
-            "prose": "First detected cycle as an ordered name chain; null when no cycle was observed.",
+            "prose": "First cycle detected in the scanner's traversal, as an ordered name chain; null when no cycle was observed.",
             "title": "cycle"
           },
           {
@@ -511287,7 +511317,7 @@
             },
             "id": "dossier.imports.exceeded",
             "kind": "field",
-            "prose": "First reached traversal bound, `depth` or `count`; null when neither was recorded.",
+            "prose": "First bound reached in the scanner's traversal, `depth` or `count`; null when neither was recorded.",
             "title": "exceeded"
           },
           {
@@ -511302,7 +511332,7 @@
             },
             "id": "dossier.imports.failure",
             "kind": "field",
-            "prose": "First collection problem, scan setup failure or reason for a not-applicable scan; null when none was recorded.",
+            "prose": "First collection problem in the scanner's traversal, scan setup failure or reason for a not-applicable scan; null when none was recorded. The traversal reports an import form the scan did not follow in the submitted source first, then visits imports depth-first in byte order of their names; it is not source order.",
             "title": "failure"
           },
           {
@@ -511317,7 +511347,7 @@
             },
             "id": "dossier.imports.records",
             "kind": "field",
-            "prose": "Sorted observed import records, including unresolved and failed reads. Empty when there were no imports or no scan.",
+            "prose": "Sorted observed import records, including unresolved and failed reads. Literal names are collected in every syntactic position, including forms the compiler does not evaluate. Empty when the scan followed no import form or did not run.",
             "title": "records"
           },
           {
@@ -511396,7 +511426,7 @@
             },
             "id": "dossier.imports.scope",
             "kind": "reports",
-            "prose": "These are necessary conditions for complete. The scan also classifies nonliteral forms, an observation with no dedicated carried Boolean.",
+            "prose": "These are necessary conditions for complete. An import form the scan did not follow also makes the scan incomplete. In the submitted source it is reported as `failure`, with no dedicated carried Boolean; in an imported file it is the `error` on that file's record.",
             "referenced_types": {
               "imports.records": {
                 "json_null": false,
@@ -511810,7 +511840,7 @@
             },
             "id": "dossier.imports.status",
             "kind": "field",
-            "prose": "`complete` exhausted the literal closure without a reported problem; `incomplete` retained a partial/problematic scan; `failed` could not perform the scan; `not_applicable` skipped it because source preparation did not apply.",
+            "prose": "`complete`: every import form the scan recognized was followed and the walk ended with no unresolved name, read or decoding error, cycle or bound. It describes the scan, not the compiler's inputs. `incomplete` retained a partial/problematic scan; `failed` could not perform the scan; `not_applicable` skipped it because source preparation did not apply.",
             "title": "status"
           },
           {

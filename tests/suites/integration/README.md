@@ -84,6 +84,30 @@ Rust integration tests that exercise the CLI contract against a built app.
   written under the supplied `HOME`. With the bundle path as the value and a
   service name that is not the bundle's identifier, the refusal is the later
   one for the name.
+- The shipped `sbpl-check`, given one constructed source per import spelling,
+  reports an inventory that is compared with what its own compiler did with
+  that source. An imported marker file holds an operation name the compiler
+  does not know, so a diagnostic naming the file shows that the compiler
+  evaluated its content; it does not show which files the compiler opened.
+  Literal forms written with comments, form feed or vertical tab, square
+  brackets, or after a character literal, a quote inside a symbol or a `#!`
+  comment are recorded with `unfollowed_imports` false. A computed, quoted or
+  dotted argument, a second argument, an empty name, a name with a hexadecimal
+  escape and a mismatched closer are reported with `unfollowed_imports` true
+  and no record for that form; a literal import inside a computed argument
+  is still recorded. A file holding a computed import has a record with its
+  hash and an error. Six rows assert the scan's limits as present behavior:
+  an import in an untaken branch or a quoted datum is recorded although the
+  compiler does not evaluate it, and a renamed or applied `import`, `eval`
+  and `load` are evaluated with no record and a false flag. In every row each
+  record's hash equals a hash of the file read by the test, and the closure
+  equals a digest the test computes from the source, byte 0x1F and the sorted
+  `path sha` lines, including the line of an invalid UTF-8 import whose record
+  carries an error. The compiler is the helper's own, on the system that runs
+  the case.
+- For a source importing `system.sb` the helper records `dyld-support.sb` as
+  well, each record's hash equals the hash of the file at its resolved path,
+  and the closure equals the same independent recomputation.
 - Test source lives at `controller/integration/cli_contract.rs`.
 
 ## Success criteria

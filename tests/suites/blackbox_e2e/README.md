@@ -237,7 +237,10 @@ Constructed policy-check captures cover the same current helper admission gate
 as the controller. Rejected parsed payloads remain unchanged and opaque under
 `invalid_reply`; wrapper fields still receive shape checks. Admitted helper
 envelopes receive current-shape checks and must agree with the capture's copied
-outcome, including unfamiliar outcomes. Foreign producer contracts and malformed replies
+outcome, including unfamiliar outcomes. An admitted import inventory must carry
+a boolean `unfollowed_imports`: true and false are accepted, and an absent,
+null, string or numeric value is rejected; the null inventory of a refused
+input is accepted. Foreign producer contracts and malformed replies
 are constructed inputs, without historical helper fixtures or schema readers.
 
 Lifecycle projections select only execution diagnostic fields.

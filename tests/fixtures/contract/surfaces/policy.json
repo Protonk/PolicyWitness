@@ -207,6 +207,13 @@
           "omission": null,
           "optional": false,
           "swift_type": "Bool"
+        },
+        "unfollowed_imports": {
+          "json_null": false,
+          "name": "unfollowed_imports",
+          "omission": null,
+          "optional": false,
+          "swift_type": "Bool"
         }
       },
       "input": false

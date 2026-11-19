@@ -57,6 +57,21 @@ Rust unit tests and formatting for the controller crate.
 - A typed reply with nine phases is refused on `run` as
   `malformed_runner_response` with exit 1, the decoded reply retained and a
   present, null diagnostics value.
+- The import scanner follows a list holding `import` and one string through
+  whitespace, comments and square brackets, and after a character literal, a
+  quote inside a symbol or a `#!` comment. It reports every other list headed
+  by `import`, including one with an escape other than `\"` or `\\`, an
+  unterminated one and a parameter list spelled `(import)`, and keeps scanning
+  inside it. A renamed or applied `import`, `eval` and `load` leave no form to
+  report. The spellings are text; no compiler runs in this suite.
+- The import walk gives a scanned file that holds an unfollowed form a record
+  error beside its hash and names that file in the first problem; such a form
+  in the submitted source is the first problem before any import is visited.
+  The closure digest equals a digest of literal bytes that include the line of
+  a hashed record carrying an error. The helper projects the flag for both
+  constructed values with the verdict unchanged, and the dossier reports
+  `incomplete` for an unfollowed form written with or without a space after
+  `import`.
 - No case requires a built `.app` bundle.
 
 `execution_envelopes_preserve_raw_evidence_and_emit_only_execution_fields`
