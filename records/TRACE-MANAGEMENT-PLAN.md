@@ -1,5 +1,9 @@
 # Trace review management plan
 
+**Handoff, November 19.** All fourteen selected remedies are on `main`. The
+[product-group checkpoint](#product-group-checkpoint) records the battery result and the remaining
+verification, beginning with its validator reread and the read-only prune preview.
+
 ## Scope and ownership
 
 Assess every claim in [DOCUMENTATION-TRACE-REVIEW.md](DOCUMENTATION-TRACE-REVIEW.md):
@@ -77,42 +81,32 @@ after establishing that cohort's migration equivalence.
 
 ### Development and publication checks
 
-Address the coupling in `build.sh`, `docs/generate_limits.py` and
-`docs/contract/runtime.py`: builds check generated copies and stage the guide;
-current limits/shared content and contract stamps propagate into it. Default
-`source_drift` cases repeat the comparison of the guide with its live owners.
-`docs/build_contract.py` distinguishes development and release identities but
-does not itself establish publication freshness: a clean annotated tag alone
-yields `release:<tag>`.
+Before the instrument checkpoint, development builds and source-drift checks
+compared the guide with the current technical owners. A change to a shared
+region or a contract stamp could therefore require changing the guide. The
+checkpoint established the following development and publication controls.
 
-Before the checkpoint baseline, implement the required development/build support:
+- Development generation checks current technical projections, owner regions,
+  interface inventory and identities. It checks the guide, including its shared
+  regions, limit spans and stamp table, against the bytes at `3d3f8e65`.
+  Each technical owner is checked against its current definition.
+- Development artifacts and verification receipts record publication withheld.
+  The build preserves the frozen guide. Build identity is derived separately
+  from the check that establishes publication freshness.
+- The checks refuse accidental drift, altered frozen bytes, stale technical
+  outputs, wrong identities and inconsistent boundary evidence. When a prose
+  guard blocks an authorized change, correct that rule with positive and
+  negative controls and retain its other checks.
+- Preflight, acceptance, archive and publication each check source freshness
+  at the tagged revision. A relabeled development candidate must still pass
+  that source check. Signing, source/app agreement, provenance, cleanup
+  and historical archive rules also apply. The instrument checkpoint exercised
+  the four entry points in constructed fixtures. The normally built candidate's
+  extracted-battery case belongs to final integrated verification.
 
-- Preserve frozen guide bytes while checking current machine definitions,
-  technical projections, owner regions, interface inventory and build identities
-  against the development product. Check the guide's region copies, limit spans
-  and stamp table against their `3d3f8e65` bytes, and each owner against its
-  current definition. Do not hand-edit generated copies or maintain a second
-  normative explanation.
-- Record publication withheld in development artifacts and verification receipts.
-  Do not stage the frozen guide as a freshly verified current manual. Use the
-  existing generation/build owners and a bounded revision/region distinction.
-- Reject accidental drift, changed frozen bytes, stale technical outputs, wrong
-  identities and missing or inconsistent boundary evidence. If a free-text or
-  prose guard blocks an authorized change, revise that specific development rule
-  with positive and negative controls; do not disable the guard generally.
-- Strict publication freshness is enforced today only by `make release`'s
-  preflight in `tests/lib/release_preflight.py`. Acceptance, archive and
-  publication check identity, tag and hashes but run no freshness check. Extend
-  strict freshness so no route from a tagged commit to an accepted, archived or
-  published release omits it. Refusal rests on freshness established from source
-  at the tagged commit, never on a recorded identity or the absence of a
-  publication-withheld record, so a tagged or relabeled development candidate
-  is refused. Preserve signing, source/app agreement, provenance, cleanup and
-  historical archive rules.
-
-Reporting-reader support lands in the overhaul's capability stage. Land routed
-controls exercising intentional divergence beside the listed faults with this
-support, before the first divergent change.
+Reporting-reader support and the routed controls for intentional divergence
+landed at the instrument checkpoint. The first divergent limits change
+subsequently passed with publication-fresh and diverged fixture sources.
 
 ## Assess and dispose of findings
 
@@ -441,8 +435,9 @@ no original report is rewritten. The app used by those investigations was the
 This map allocates every DT identifier for subsequent disposition. A row is a
 reading/decision boundary, not a claim that its entries have one defect or one
 remedy. Compound subfindings and each entry's qualifications remain separate
-obligations at their original anchors. Except for the bounded decisions below,
-product dispositions are pending; the instrument checkpoint does not close them.
+obligations at their original anchors. These were the open product questions at the preparation checkpoint.
+The [disposition index](#dispositions-by-coverage-map-row) records the later
+decisions for all 1,036 claims.
 
 | Original entries | Boundary to assess; qualifications to preserve |
 | --- | --- |
@@ -460,8 +455,8 @@ product dispositions are pending; the instrument checkpoint does not close them.
 | DT-31/32/42/113–119 | Transport reachability, error precedence, retained bytes, helper selection and held-input provenance; one fallback trace and rehearsal. Typed constructions are not evidence that the shipped caller reaches those states. |
 | DT-33–35 | Dossier first-problem/null cases and install ownership/signing/command result forms; do not merge installation evidence with transport fallback. |
 | DT-36/43 | Gate reap before ownership-loss classification and lifecycle rendering/resolution. |
-| DT-37–41 | Each smaller statement/source difference, support scope, prose account, index spelling and tour commitment list remains individually pending at its original subfinding. |
-| DT-44 | Thirteen unverified leads remain explicit below; confirmed statement existence does not verify the reported producer. |
+| DT-37–41 | Each smaller statement/source difference, support scope, prose account, index spelling and tour commitment list was assessed separately at its original subfinding. |
+| DT-44 | Thirteen leads were unverified at preparation; confirmed statement existence does not verify the reported producer. |
 | DT-45/47/49/52 | Status-word promise, pre-encoding versus encoded checks, diagnostic null native return and errno-key presence are distinct producer/reader obligations. |
 | DT-46/120/121/129 | Cleanup-trigger derivation/time and actor stop-reason mapping, with gate-reaped actor and transfer-phase qualifications. DT-120 narrows DT-46's history claim. |
 | DT-48/130 | Native label/return coherence versus order eligibility, and implication versus equivalence in order readers. A valid unfavorable operation is not invalid evidence. |
@@ -488,9 +483,9 @@ actor schedule versus worker allowance; `actor_unavailable` wording;
 capacity-refusal policy format; arrival/completion sampling points;
 validation metadata persistence; defensive unsupported vocabulary; adjacent
 readiness/count statements; and reporting-failure family applicability. All
-remain unverified leads at this preparation boundary. In particular, the EOF
-lead still needs its closing-stdout/held-stdin fixture if reachability affects
-the disposition; absence of that execution is not a failure of the checkpoint.
+thirteen were leads at this preparation boundary. The later disposition of
+the EOF case relied on the branch text. The potential closing-stdout/held-stdin
+fixture was unnecessary for that decision.
 
 ### Bounded shared assessments for capability design
 
@@ -502,7 +497,7 @@ after deadline, observation error or local fault; the lifecycle surface,
 the relation. The existing survivor checker additionally requires a live child
 with its original generation/group and ping, before interpreting JSON. That
 survival requirement may be withdrawn without withdrawing the truthful account
-of the product's calls. The future informational observation must classify
+of the product's calls. The subsequent survivor conversion classified
 either that live generation or its independently registered prior exit, retaining
 later file effects and separate settlement. A missing ping by itself is not
 an observed exit. A product that itself kills the descendant at ordinary
@@ -516,22 +511,21 @@ association and compiler-file-input association. `run_flow.rs` constructs the
 dossier from the resolved value and serializes it once for delivery;
 `decodeProfileCapture` checks the worker source/parameter digests against host
 inputs. An added dossier/receipt source-digest comparison would not establish
-which imported bytes the compiler read. The scanner defects, dropped helper
-signal and private capture-view limit remain separate pending product decisions.
+which imported bytes the compiler read. The later dispositions treated the scanner, dropped helper
+signal and private capture-view limit separately. R12 changed the scanner.
 No new compiler-file observer or authenticity claim is introduced by reporting.
 
 **Reader and erasure claims.** The reporting foundation must allow a checker
 to fail an enforced truth/validity obligation while carrying an unfavorable
 advisory comparison. It must not silently promote `consumer.validate` to the
-lifecycle oracle, or final `erased` flags to last-use observation. The selected
-assertion/account repairs remain after the checkpoint, with their existing
-independent reader/byte-observer contrasts. No additional observer is justified
+lifecycle oracle, or final `erased` flags to last-use observation. The dispositions assign the selected assertions and technical
+statements individually, with the independent reader/byte-observer contrasts. No additional observer is justified
 merely to make the reporting layer uniform.
 
-The acceptance rehearsals identify implementation/account dependencies without
-selecting their hypothetical product changes. Therefore actor fallback removal,
-capture after failed application and byte-exact Swift association remain pending
-product decisions. Their shared accounts have not been changed during preparation.
+The acceptance rehearsals identified dependencies before the product decisions.
+R9 selected byte-exact validator association. R10 removed whole-request
+fallback for actor requests and kept per-actor capture. The failed-application
+capture proposal was declined. The acceptance plan records all four comparisons.
 
 ## Instrument implementation and verification
 
@@ -671,7 +665,7 @@ compatibility run. Its references to earlier passing cases inside a failed run
 remain scoped to those cases and their revisions; the successful corrected default
 also executes the publication owners with the final implementation.
 
-### Cost, retained state and next work
+### Cost and retained state at the instrument checkpoint
 
 The successful live batteries took 1888317 and 1978348 ms; their recorded invocation
 intervals sum to 1883932 and 1970235 ms. Both record zero system sleep. The largest
@@ -717,25 +711,18 @@ The single disposable scratch root `/private/tmp/pw-trace-checkpoint` is removed
 after retaining the decisive apparatus, readers, expectations, transcripts and
 receipts in the owned runs. No managed evidence is manually removed.
 
-Work stops here. The selected product/test remedies, both pytest cohort migrations
-and executable seam migration remain pending. The prepared source maps and shared
-rehearsals identify their owners but establish no execution equivalence. Each
-cohort must compare its original and migrated paths; the seam still needs its old
-experiment captured before entry-point changes. Retain the named truthful
-`leader_exit_and_eof`/`not_requested` relation for the survivor conversion. Other
-product dispositions remain as allocated above. Reporting now supplies the required
-authority, phase/input and supervised-command support. The later integrated stage
-still owns the adapted live extracted-candidate/build-refusal control and signed-app
-verification after product/build-input changes. No additional broad verification
-is required merely to expand this pause report.
+Work paused here after the instrument checkpoint. The subsequent stages
+compared both migrated cohorts and the experimental control routes, converted
+the selected cases, and landed R1–R14. The survivor conversion retained the
+`leader_exit_and_eof`/`not_requested` obligation. The extracted development
+candidate and the final clean-stamped build remain on the
+[verification schedule](#product-group-checkpoint).
 
 ## Integrated implementation — 2026-11-17
 
-Status: in progress. This section records the stage after the instrument
-checkpoint: dispositions for every claim, the selected remedies, the two
-cohort migrations, the seam migration, final integrated verification and the
-outflows. Entries below are added as work lands; a subsection that says
-"pending" has no credited result.
+This section records what landed after the instrument checkpoint. The
+[current handoff](#product-group-checkpoint) identifies the remaining stages
+and the evidence for the product group.
 
 ### Starting state and environment
 
@@ -840,6 +827,9 @@ DT-45/47; and a suite README that credits a check that does not exist.
 
 ### Order of work and verification intent
 
+This was the original sequence. The November 19 handoff records the order
+actually completed and the work scheduled after the product-group stop.
+
 Implementation is serial in the one checkout: one writer at a time edits
 tracked files, builds or runs tests. Read-only passes ran beside it.
 `records/` is outside every drift scan (`docs/repository_tree.py` prunes it).
@@ -889,7 +879,10 @@ edited for more than one row and a completeness check: 1,036 claims, none
 unplaced. This table is the index and the decision at row level. "Accounts"
 means corrections in the owning technical statement; "repair" means an
 assertion, control or credited-claim correction; "retained" means reasoned
-retention with the limit stated in the named owner.
+retention with the limit stated in the named owner. These are dispositions.
+The progress entries and current handoff record which edits and checks landed;
+the three technical-account passes still own the outstanding statements and
+assertions.
 
 | Row | Claims | Decision |
 | --- | --- | --- |
@@ -1124,9 +1117,8 @@ the R9 and R13 states were each built and ran their own checks.
   source now projects `host_exit_grace_exhausted`, and the row asserts it.
 - Comments: the five host-thread worklist entries and the two that named
   `_test_overrides.worker_timeout_ms` are corrected, and the unread
-  `custodyNames` table is removed. Three gate comments in
-  `pw_probe_runner.c` still name `_test_overrides.*`; they go with the thread
-  that next edits that file.
+  `custodyNames` table is removed. EXEC corrected the remaining three
+  gate comments in `pw_probe_runner.c` in `0cbdb557`.
 - Build contract: `development:378493f6…01542300` before;
   `development:55116874…` at the R9 state and `development:e89ef618…` at the
   R13 state; `development:185be8ec…27ce76c2` in `dist/` and at `c82a1dd6`.
@@ -1163,8 +1155,8 @@ once. The cause is an implementation defect in test code, not the product and
 not this change: parallel `runner_select` tests shared one fixture path. It
 reproduced on a test binary built before the change in 6 of 600 repetitions
 and in none of 600 after `0be7d3df`, which gives each test its own path. That
-run stays a failure. Five other controller test modules name fixture files
-the same way and are untouched; the next controller thread repairs them.
+run stays a failure. CONTROLLER-A corrected four other modules in `91534b47`.
+Together with `runner_select`, five controller modules received per-test paths.
 
 Build contract: `development:185be8ec…27ce76c2` before;
 `development:38636ec9…` with the follow-up alone; `development:a31e62f3…e9db53c`
@@ -1276,7 +1268,7 @@ own unit run and generator checks.
   subprocess record is withheld, so the no-worker sentence gained "unless an
   integrity finding withholds it"; the parser retains rejected bytes on the
   delivery-failed row, and both rows now model that.
-- Not done: the optional DT-44.m control and the zero-length session control.
+- CONTROLLER-B left the optional DT-44.m and zero-length session controls outside its selection.
   Left for the accounts thread: DT-116.g, the helper-envelope row, the
   oversize limits row, `tool_exit_code` and `stderr`, eligibility and
   `actor_id` limits, transport limits, DT-119.a and four smaller entries.
@@ -1408,7 +1400,7 @@ compares. The build account includes the new propagated refusal.
   and the built worker agreed at signing. The build account, diagrams and
   public contract were regenerated, and the build checked all eight owners.
 
-### Pause — 2026-11-18
+### November 18 pause and resumption
 
 Work stopped at a quiet point at the maintainer's request, resumed the same
 day for three bounded pieces (R14, the second half of HOST and one R9
@@ -1423,39 +1415,12 @@ records are byte-unchanged at the freeze. No release was made.
 
 Resumed on 2026-11-18 at 20:34 local from `1fa886c7`, on the maintainer's
 instruction to carry the product threads through the grouped default
-battery, its reread and a prune preview, and then stop. While that runs
-there is one writer in the checkout: uncommitted changes in the tree are
-the running thread's unverified work, and its scratch directory, named for
-the thread, holds a `RESUME.md`.
+battery, its reread and a prune preview, and then stop. The
+completed product threads and the evidence for that stop are recorded in the
+[November 19 checkpoint](#product-group-checkpoint). The earlier pause
+preceded the controller threads, EXEC, WIRE and IDENT.
 
-Done in this stage: the Markdown and pilot cohorts; the seam migration; the
-limits texts under the freeze; the four conversions with their follow-ups;
-R4 and R5; R14, taken out of the accounts thread after the pause was first
-written.
-
-Remaining, in this order, one writer at a time, each product thread
-tests-first with its own rebuild and routed verification:
-
-1. HOST is complete (R4, R5, R9 with its follow-up, R13, the host
-   comments).
-2. CONTROLLER-A (R2, R6, R7, and the shared fixture paths in five
-   controller test modules), CONTROLLER-B (R10, R11 and the selected
-   `run_flow.rs` test corrections), CONTROLLER-C (R12), EXEC (R1, and three
-   gate comments in `pw_probe_runner.c`), WIRE (R8, after EXEC), IDENT (R3).
-3. One default battery for the product group; reread it with the revised
-   battery validator; a read-only prune preview. No apply.
-4. The accounts thread in three parts (R14 is done; its two owed account
-   corrections are in the scratch addenda), and the build-refusal case's
-   nested battery adapted to a development candidate.
-5. Final integrated verification: offline and drift controls, a rebuild so
-   the app's commit stamp is clean, the default battery with relevant
-   opt-ins, then `preflight/build_refusal_controls` once, crediting candidate
-   execution separately from publication refusal.
-6. The acceptance plan's remaining comparisons (fallback, association); the
-   user-responsibility and maintainer-judgment outflows and the release
-   account against final evidence; removal of disposable scratch.
-
-Working material for those steps is gitignored scratch under
+Working material for the later stages is gitignored scratch under
 `.tmp/trace-integration/`: the common and per-thread briefs, the rulings, the
 accounts worklist and addenda, the candidate-battery brief and the two
 outflow drafts. The assessments and the disposition record are tracked under
@@ -1463,3 +1428,61 @@ outflow drafts. The assessments and the disposition record are tracked under
 remedies" above and the disposition record are sufficient to rewrite the
 briefs. [PYTEST-EVIDENCE-PLAN.md](../tests/PYTEST-EVIDENCE-PLAN.md) is later
 work and is not part of the remaining order.
+
+## Product-group checkpoint
+
+On November 19 the maintainer moved the pause forward to the grouped default battery. The product and
+tooling remedies R1–R14 are on `a4d49249`.
+The outcome-reporting changes, the two pytest cohorts, the experimental
+control migration and the case conversions with their follow-ups preceded
+this group. All four acceptance comparisons are recorded. The final two,
+fallback and validator association, are in `8ca3e6db`.
+
+The grouped default battery, `product-group-default`
+(`20261119T171109Z_bdd0820d`), returned successfully after 44 minutes 48 seconds.
+All 242 selected cases completed. The dispatcher recorded 241 passes and one
+informational completion, `runner_exec_lifecycle/closed_streams_leader_exit`.
+It recorded zero skipped or unrun cases, zero harness errors and zero system
+sleep. The signed app passed its initial integrity check and its final inventory
+matched the initial inventory.
+
+The independent validator reread and the read-only prune preview are pending
+at this pause.
+
+Before and after the battery, the external runner registry and its
+pending-cleanup list were empty. Reconciliation found no records,
+unregistered candidates or inspection errors.
+
+The signed development app in `dist/` has the same selected-source identity
+as `a4d49249`. Its embedded Git description is
+`v0.3.7-253-ga02fb459-dirty` because the prescribed signed build preceded
+the implementation commit. Both publication records bind that candidate
+and withhold publication. The repository and distribution guide match
+`3d3f8e65` byte for byte. The run names in this handoff are local gitignored
+evidence beneath `tests/out/runs/`. The independent selection and runner inventories are local gitignored
+files beneath `.tmp/trace-integration/product-checkpoint/`.
+
+### Remaining checkpoint and later work
+
+1. Complete the product checkpoint. Reread the terminal default battery
+   through the revised battery validator with the independently saved
+   `independent-selection.json` and its raw evidence. Run `make prune`
+   in preview mode with no `APPLY`. Record both results.
+2. Complete the three technical-account passes in order. Part 1 covers contract
+   statements, presentation and generators. Part 2 covers failure evidence,
+   limits and their supporting documentation. Part 3 covers assertions and the
+   tests credited for those statements. Check each worklist entry against its
+   landed commit before editing. The accounts addenda supersede the original
+   Part 1 brief for R14. They identify its
+   remaining corrections to the build-input account and the authoring rule
+   for removing generated regions when a document leaves the presentation map.
+   R8 and R14 implementation and their generator controls are complete.
+3. Adapt the nested build-refusal battery to a development candidate.
+4. Run final integrated verification with offline and drift controls, a
+   clean-stamped signed build and a default battery with the relevant opt-ins.
+   Run `preflight/build_refusal_controls` once. Record the extracted candidate's
+   actual execution separately from the strict release-preflight and
+   release-acceptance refusals for that candidate.
+5. Complete the release account, user-responsibility report and
+   maintainer-judgment report against that evidence. Cleanup of disposable
+   scratch belongs to this later closeout.

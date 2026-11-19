@@ -1,5 +1,12 @@
 # Test outcome overhaul plan
 
+**Handoff, November 19.** The reporting capability, both pytest cohorts, the
+experimental control migration, and the four case conversions and their
+follow-ups have landed. The dated stages below preserve their original
+selections and evidence. The [management checkpoint](TRACE-MANAGEMENT-PLAN.md#product-group-checkpoint)
+owns the remaining technical statements, test-side assertion repairs and
+final verification.
+
 ## Scope and sequence
 
 Implement reporting/enforcement distinctions, the selected conversions and trace
@@ -393,9 +400,9 @@ The two cohort files are byte-identical to the planning snapshot. SHA-256:
 `markdown.py` is `3ca0606d53648f7f437d198bd316ab87aae9c485e1fc6990e225eb3d27673f6f`;
 `worker_wait_pilot_controls.py` is
 `85feaa1c661c0714ac5767c8811072f11c16872ffc88996cc39b59881b3b3c0e`.
-No migration equivalence is claimed by this inspection. At the pause both
-cohorts must still execute their original paths; the reporting capability must
-support their later migration without requiring another shared-reader change.
+This inspection preceded both migrations. The later cohort records below
+compare the old and new executions for the 66 Markdown reader items and
+232 worker-wait pilot control items.
 
 ### Cohort scenario and evidence map
 
@@ -452,7 +459,7 @@ intended pytest unit.
 
 The current pilot shell message says constructed reader sensitivity, and its
 `controls.json` explicitly disclaims live stamps/timings. Preserve this scope.
-The future pytest suite must split meaningful input groups and outcomes while
+The migrated pytest suite split meaningful input groups and outcomes while
 keeping the stager's real command boundaries and all named faults; collecting
 one `main` item would leave its internal completion opaque. No fixture path or
 resource lifetime is changed to consolidate storage during preparation.
@@ -498,11 +505,10 @@ rejection require distinct scenario identities. The ordinary worker timeout
 floor and actor execution allowance remain separate expectations. None of
 these requirements needs an executable seam migration before the checkpoint.
 
-Execution equivalence for the two cohorts and old/new seam experiments remains
-pending until their authorized post-checkpoint stage. These source maps select
-what must be retained; they do not invent old execution receipts. The existing
-native exec family and independent dispatcher/preflight controls establish
-generic capability without counting the unperformed migrations as complete.
+At preparation, these maps specified which evidence to retain. The native
+exec family and independent dispatcher/preflight controls established generic
+capability. The subsequent cohort and seam records give the execution
+comparisons and the one documented change of route.
 
 ## Reporting mechanism selected; instrument verification
 
@@ -570,9 +576,8 @@ module-declared source inputs, reusable input/blob recording, explicitly empty
 pure-item operation sets, supervised commands with controlled working directories
 and environments, and required raw-evidence rereading. Input-recorder finalization
 does not order other fixtures' cleanup; each migration must retain its own inputs
-before deletion. Selected case conversions, both pytest cohort migrations and
-executable test-seam migration remain unperformed. Their equivalence, authority
-reductions and product decisions still require the planned subsequent work.
+before deletion. The subsequent sections record
+the completed migrations, executable comparisons and case conversions.
 Private development-candidate and release readers share verified evidence machinery,
 while receipt kinds and known development markers prevent release credit. Their
 controls establish interpretation; no extracted live-candidate acceptance is
@@ -1016,8 +1021,8 @@ and regenerated files. The signed app is rebuilt with build contract
 `development:081353c9…948ab695`; it was built from the working tree before the
 commit, so its recorded commit is `1cc5f2fa` with a dirty mark, and the
 committed tree derives the same contract. Publication withheld; guide bytes
-unchanged. One account change is not applied: the `docs/limits.json` texts
-(below).
+unchanged at that revision. The eight limits texts were corrected later
+in `bd8144ea`, following the fixture correction in `11e93191`.
 
 Refusals as implemented:
 
@@ -1131,23 +1136,21 @@ Retained limits of the stage:
   `validator_executable_path`) has no CLI/XPC coverage; its bounded,
   sanitized refusal is checked only by the direct-orchestrator pairs in
   `QueryAdmissionTests`.
-- No live row puts a control in an actor-form request's block;
-  `witness_contract/actor_compositions` still owns the contrast between the
-  ordinary worker-timeout floor and the actor execution allowance.
+- A live actor-form request with a control in its ordinary block now has a
+  refusal check (`428a2049`). `witness_contract/actor_compositions` owns
+  the separate contrast between the ordinary worker-timeout floor and
+  the actor execution allowance.
 
-Not applied: the eight `docs/limits.json` texts that still name a control as
-`_test_overrides.<key>` (`control` of `worker_sentinel_wait`,
-`validator_io_wait`, `phase_collection_wait` and `actor_collection_allowance`;
-`counting` of `worker_timeout_override_floor`, `validator_io_override_floor`,
-`worker_fixture_delay` and `test_override_path`). The generator's development
-check accepted the edit, and `source_drift/generator_contract` then refused
-it: two of its controls copy the checkout into a fixture and require strict
-staging or release preflight to succeed there, which holds only while the
-limits owner equals the frozen guide's copies. This is the first authorized
-owner change that diverges from the guide. The management plan's rule for a
-guard that blocks an authorized change applies: those controls are revised to
-construct their own publication-fresh fixture, with a refused diverged
-neighbour, before the limits texts are corrected.
+The development generator check accepted the first limits edit. Two
+`source_drift/generator_contract` fixtures then refused it because they
+expected strict staging or release preflight to succeed with the frozen
+guide. `11e93191` supplied publication-fresh fixture sources and a diverged
+neighbour. `bd8144ea` corrected eight `docs/limits.json` texts. The `control`
+fields belong to `worker_sentinel_wait`, `validator_io_wait`,
+`phase_collection_wait` and `actor_collection_allowance`. The `counting`
+fields belong to `worker_timeout_override_floor`, `validator_io_override_floor`,
+`worker_fixture_delay` and `test_override_path`. The frozen guide retained
+its earlier wording.
 
 User duties noticed: the frozen guide documents the eight keys as request
 data, lacks `test-input run`, and names `_test_overrides.*` controls in its
@@ -1261,7 +1264,7 @@ exception still leaves the case unrun. In the checkout: `conv-bare-main-01` /
 `20261118T171334Z_14d81016` (4 pass) and `conv-bare-byoxpc-01` /
 `20261118T171347Z_48a7c0da` (2 pass).
 
-### Verification on the final tree
+### Verification on the case-conversion tree
 
 | Directory / run ID | Scope and result |
 | --- | --- |
@@ -1271,13 +1274,13 @@ exception still leaves the case unrun. In the checkout: `conv-bare-main-01` /
 | `conv-final-preflight-01` / `20261118T172141Z_7e6285e2` | The three release preflight controls: 3, ok. |
 | `conv-final-drift-01` / `20261118T172842Z_e51a6c94` | `source_drift`: 11, ok. |
 
-The default selection lists 233 cases including the survivor; `--all --list`
-shows aftermath depending only on its two controls. Reviewed exceptions: the
+At `79aa7dde` the default selection listed 233 cases including the survivor;
+`--all --list` showed aftermath depending only on its two controls. Reviewed exceptions: the
 retirement run predates the pilot's catalog entry and the pilot run predates
 the bare-assertion scripts; the sources each executed are byte-identical at
 `79aa7dde`.
 
-Observed consequences and open points:
+The conversions established the following limits on interpretation.
 
 - The three converted cases report `complete` under `observation_reports` and
   `case_outcome_counts`, not in the legacy `counts`.

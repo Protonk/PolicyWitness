@@ -1,5 +1,11 @@
 # Trace acceptance plan
 
+**Handoff, November 19.** All four rehearsals have an
+[implemented-arrangement comparison](#implemented-arrangements).
+The last two landed in `8ca3e6db`. The
+[management checkpoint](TRACE-MANAGEMENT-PLAN.md#product-group-checkpoint)
+owns the outstanding technical-account edits and final outflows.
+
 ## Scope and dependencies
 
 Assess whether the selected documentation arrangements require fewer independently
@@ -236,8 +242,10 @@ reconstructed equality rule. The Python/Rust independent assertions should
 remain independently authored; converting them to generated agreement would
 remove scrutiny. Repeated Swift validation still checks different inputs, so
 the repetition can detect misattachment even though it cannot independently
-reject the shared rule. Expected savings are bounded to choosing equality;
-membership, cardinality, metadata and reader-result effects still need review.
+reject the shared rule. The rehearsal bounded the expected saving to choosing equality.
+The implemented association comparison below records the retained cardinality
+and metadata decisions, the reader results and the additional lookup found
+during verification.
 
 ### One validator-substitution seam trace
 
@@ -272,14 +280,12 @@ distinction without becoming a second explanation of control meaning.
 The one worker/validator combined oversize pair cannot cross the new admission
 boundary. Its retained direct-orchestrator assertion is internal coverage, not
 CLI/XPC coverage. This exception is already management's decision, not a new
-retirement inferred from rehearsal. After executable migration, compare this
-source prediction with actual flags, adapter, receipts and retired paths;
-that implemented-arrangement comparison is intentionally pending at the pause.
+retirement inferred from rehearsal. The implemented seam comparison below follows
+the flags, adapter, receipts and retired paths on the executed routes.
 
-## Implemented arrangements — 2026-11-17
+## Implemented arrangements
 
-Status: comparisons of the preparation rehearsals with what the integrated
-stage implemented. Each subsection names its revision. Observed results are
+The comparisons began November 17 and were completed November 18. Each subsection names its revision. Observed results are
 separated from predictions; a rehearsal whose hypothesis was not selected
 stays a hypothesis.
 
@@ -402,10 +408,10 @@ instead of a repeated "successful application" premise, is an editorial
 arrangement that does not depend on the product choice. This stage makes no
 separate editorial pass for it; the repeated premise stays where it is true.
 
-Review that continues: the reasons, their order and the withheld fields of an
-`unavailable` receipt are asserted only as far as the assertion repairs in
-the disposition record land; until then their owner states them as
-source-read.
+The technical-account pass still owns the assertions for the reasons,
+first-failure order and withheld fields of an `unavailable` receipt. Its
+owner must distinguish the executed checks from source inspection. The
+separate Rust label-admission assertion was corrected in `560a5a35`.
 
 ### Actor fallback, as implemented
 
