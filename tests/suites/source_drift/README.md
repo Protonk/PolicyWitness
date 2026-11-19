@@ -709,7 +709,10 @@ not compare production constants: those checks belong to `runner_abi_layout`,
 [documentation guidance](../../../docs/AGENTS.md#editing-limits-and-shared-guide-content)
 and [limit-change verification guidance](../../AGENTS.md#verify-a-limit-change).
 
-The `build_contracts` case checks development source digests, clean annotated
+The `build_contracts` case checks the declared roots, files and suffixes against
+the public inputs statement. It derives a pinned digest for a literal tree,
+checks selection and framing on a tree built from the statement, and exercises
+directory-listing, entry-inspection and file-read refusals. It also checks clean annotated
 release identity against actual tagged bytes (including index-hidden edits), incidental-file exclusion, Swift context agreement, environment-override refusal and the pre-signing source guard.
 It exercises derived surface stamps in disposable tagged repositories: pending
 release rendering, tagged reproduction, golden and normative edits, unrelated

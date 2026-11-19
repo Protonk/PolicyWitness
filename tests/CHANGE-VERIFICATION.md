@@ -24,6 +24,7 @@ they do not exhaust the verification relevant to a change.
 | Change or investigative question | Verification account |
 | --- | --- |
 | Admission or validator receivers | [Integrated verification guidance](AGENTS.md#choose-the-most-integrated-test-that-can-establish-the-behavior), including the boundary and its readers. |
+| Identity input selection, traversal or digest framing | `source_drift/build_contracts` (statement agreement, literal digest and filesystem refusals), `preflight/build_entry_controls` and `preflight/native_source_controls`, followed by a signed rebuild and the affected identity readers. |
 | Porcelain schema or binary representation | [Independent structural controls](suites/source_drift/README.md#porcelain-structural-reader), `source_drift/generator_contract` and `preflight/build_entry_controls`; retain the applicable ordinary, ordering, actor and ending semantic controls. |
 | Limits | [Limit-change verification](AGENTS.md#verify-a-limit-change) and the [limits coverage account](../docs/LIMITS.md#grounding-and-coverage). |
 | Import scanner grammar, resolver flags or the helper inventory projection | `unit`, `integration` (the helper's inventory beside its own compiler's result, per spelling), `witness_contract/dossier_witness` (the same spellings through the worker's compiler), `blackbox_e2e/checker_controls` (the reader's required member) and `source_drift`. The integration and dossier rows re-establish, on the system that runs them, which spellings the system's reader accepts. |
@@ -283,7 +284,8 @@ does not decide among them.
   the native builder check under a nested sandbox profile, knob values, an
   unknown argument, an unexecutable interpreter, a malformed plist minimum, a
   build directory configured for another checkout or without a stamp, an
-  identity the keychain lacks in every class, stale identity, architecture,
+  identity the keychain lacks in every class, an unlistable directory beneath a
+  public or worker identity root, stale identity, architecture,
   build-document, contract, interface and guide copies, and the `make` header
   and build recipe. Assert the banners that did and did not print and that no output,
   build directory or lock was created.
@@ -291,7 +293,7 @@ does not decide among them.
   and keychain queries for an identity the keychain does not hold; no signed
   app, identity or toolchain. Runs in the default battery.
 - **When to run:** After changing `build.sh`'s early steps, their order, the
-  Makefile entry, or the generators' stale-copy refusals the script runs.
+  Makefile entry, identity input discovery, or the generators' stale-copy refusals the script runs.
 - **Artifacts:** `<run>/suites/preflight/build_entry_controls/artifacts/`
   holds the assertion log and `receipts.json` with each control's elapsed time.
 

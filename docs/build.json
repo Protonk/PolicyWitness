@@ -390,7 +390,8 @@
       "reads": "the identity inputs and the three generated copies; shipped sources and build inputs through docs/build_contract.py, exact annotated release tags and whole-tree cleanliness for the public build contract",
       "writes": "nothing",
       "refusals": [
-        "stale_identity"
+        "stale_identity",
+        "identity_source_unreadable"
       ],
       "sources": [
         {
@@ -1168,7 +1169,8 @@
         "provenance_probe_failed",
         "lock_claim_invalid",
         "cache_path_unsafe",
-        "public_contract_changed"
+        "public_contract_changed",
+        "identity_source_unreadable"
       ],
       "sources": [
         {
@@ -3456,6 +3458,48 @@
         {
           "path": "tests/suites/preflight/check_build_entry.py",
           "symbol": "test_build_refuses_a_stale_identity_copy_before_compiling_and_writes_nothing",
+          "form": "test",
+          "coverage": "behavioral"
+        }
+      ]
+    },
+    {
+      "id": "identity_source_unreadable",
+      "message": "unreadable identity source directory: <path>: <reason>, or uninspectable identity source: <path>: <reason>",
+      "kind": "propagated",
+      "steps": [
+        "check_identity",
+        "presign"
+      ],
+      "status": "1",
+      "variants": [
+        "full",
+        "partial"
+      ],
+      "sources": [
+        {
+          "path": "build.sh",
+          "symbol": "docs/build_contract.py"
+        },
+        {
+          "path": "docs/source_identity.py",
+          "symbol": "unreadable identity source directory"
+        },
+        {
+          "path": "docs/source_identity.py",
+          "symbol": "uninspectable identity source"
+        }
+      ],
+      "checks": [
+        {
+          "path": "tests/suites/source_drift/build_rules.py",
+          "symbol": "check_propagated_refusals",
+          "form": "rule",
+          "coverage": "textual"
+        },
+        {
+          "path": "tests/suites/preflight/check_build_entry.py",
+          "symbol": "test_build_refuses_unlistable_public_and_worker_identity_directories",
           "form": "test",
           "coverage": "behavioral"
         }

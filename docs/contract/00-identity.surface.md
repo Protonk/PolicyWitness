@@ -45,10 +45,10 @@ HEAD. The build derives this form when the checkout is clean, the tag matches
 equal that tag's blobs. More than one qualifying annotated tag on a clean
 HEAD refuses identity derivation as ambiguous.
 
-`development:<sha256>` identifies the selected source paths and bytes in
-other source trees. Its digest is SHA-256 with the domain prefix
-`PolicyWitness public build contract` followed by a NUL byte. For each sorted
-repository-relative path, the generator appends the UTF-8 path and file bytes,
+`development:<sha256>` identifies the selected paths and bytes present at derivation in
+other source trees. Several commits can have the same development identity. Its digest is SHA-256 with the domain prefix
+`PolicyWitness public build contract` followed by a NUL byte. For each
+repository-relative path in ascending Unicode code-point order, the generator appends the UTF-8 path and file bytes,
 each preceded by its unsigned eight-byte big-endian length. A dirty release
 checkout receives this development form. A documentation-only edit can change
 the form from release to development while leaving the selected-source digest
@@ -60,23 +60,45 @@ unchanged.
 defines: "value"
 ```
 
-The development digest includes `.rs`, `.c`, `.h`, `.swift`, `.sb`, `.plist`
-and `.ent` files discovered under `controller/src`, `controller/tools`,
-`runner/Sources`, `runner/Clients`, `runner/Services` and `runner/augments`.
-It also includes `build.sh`, `meson.build`, `meson.options`,
-`runner/Package.swift`, `controller/Cargo.toml`, `controller/Cargo.lock`,
-`controller/build.rs`, `controller/src/test_inputs/read.json`, `Info.plist`,
-`PolicyWitness.entitlements`,
-`docs/build_contract.py`, `docs/source_identity.py`,
-`tests/build_equipment.py`, `tests/build-evidence.py`, and the build helpers
-`tests/lib/build_provenance.py`, `signer_check.py`, `cargo_config.py`,
-`checkout_lock.py` and `output_target.py` in that same directory.
+The development digest includes regular files with a final suffix of `.rs`,
+`.c`, `.h`, `.swift`, `.sb`, `.plist` or `.ent` anywhere beneath
+`controller/src`, `controller/tools`, `controller/interface`, `runner/Sources`,
+`runner/Clients`, `runner/Services` and `runner/augments`. A file named
+only `.rs` has no final suffix.
 
-Discovery uses the same inventory in a checkout and a source copy. Missing
-declared inputs, symlinks under the selected roots and nonregular source
-objects refuse derivation. The digest's equality concerns those paths and
-bytes; build configuration, signing identity, SDK and observed runtime
-behavior are recorded and checked by their respective operations.
+It also includes `build.sh`, `meson.build`, `meson.options`, `runner/Package.swift`,
+`controller/Cargo.toml`, `controller/Cargo.lock`, `controller/build.rs`,
+`controller/src/test_inputs/read.json`, `Info.plist`, `PolicyWitness.entitlements`,
+`docs/build_contract.py`, `docs/source_identity.py`, `docs/publication.py`,
+`tests/build_equipment.py`, `tests/build-evidence.py`, `tests/lib/build_provenance.py`,
+`tests/lib/signer_check.py`, `tests/lib/cargo_config.py`, `tests/lib/checkout_lock.py`
+and `tests/lib/output_target.py`.
+
+Discovery uses these declarations and the directory entries on disk in both a
+checkout and a source copy. Hidden files, ignored files and untracked files
+qualify by the same rules. This selection includes test-only code and files
+that no compiler reads. No compiler dependency record enters the selection.
+
+Derivation refuses a missing declared input, a root without a selected file,
+a selected directory it cannot list, an entry it cannot inspect, or a selected
+file it cannot read. Inspection covers every entry beneath each root, including
+directories with no qualifying files. Symlinks and objects other than regular
+files and directories refuse regardless of suffix. An explicitly named input
+path containing a symlink also refuses. The generator hashes path spellings as the file system returns
+them, without Unicode normalization. File modes, timestamps and extended
+attributes are excluded from the digest. Build configuration, signing identity,
+SDK and runtime behavior have separate checks.
+
+#### Selection support {support: owner}
+
+```contract
+grade: "check_read"
+source: [{"path":"docs/build_contract.py","symbol":"DIRECTORIES"},{"path":"docs/source_identity.py","symbol":"source_paths"}]
+check: [{"path":"tests/suites/source_drift/build_contracts.py","symbol":"test_statement_selects_the_real_build_inventory_and_framing","form":"test"},{"path":"tests/suites/source_drift/build_contracts.py","symbol":"test_literal_inventory_and_framed_digest","form":"test"},{"path":"tests/suites/source_drift/build_contracts.py","symbol":"test_derivation_refuses_unreadable_directories_and_uninspectable_entries","form":"test"},{"path":"tests/suites/source_drift/build_contracts.py","symbol":"test_literal_tree_refuses_missing_symlink_special_and_empty_inputs","form":"test"}]
+pins: "Declared roots, suffixes and files agree with the statement. Literal inventories, digest values, metadata changes, ignored files and inspection refusals exercise the selection and framing."
+context: "Constructed trees with and without Git, including real filesystem permission changes."
+limits: "The checks compare selection with the stated rule. Compiler dependency records are outside their scope."
+```
 
 ### Build derivation {derive: acts}
 
@@ -94,7 +116,8 @@ retained_free: {"effect":{"kind":"native_protocol","reason":"Source selection, e
 The packaged build computes the identity itself and passes that value into
 its Rust and Swift producers. Swift context generation recomputes it and
 refuses a supplied `PW_BUILD_CONTRACT` that differs. The pre-sign comparison
-refuses a selected-source change during compilation.
+refuses when the identity derived at that point differs from the initial value.
+A change reverted between those observations goes undetected.
 
 #### Derivation support {support: owner}
 
@@ -102,7 +125,7 @@ refuses a selected-source change during compilation.
 grade: "check_read"
 source: [{"path":"docs/build_contract.py","symbol":"identity"},{"path":"docs/source_identity.py","symbol":"source_paths"},{"path":"build.sh","symbol":"CURRENT_BUILD_CONTRACT="}]
 check: [{"path":"tests/suites/source_drift/build_contracts.py","symbol":"test_build_identity_tracks_shipped_inputs_and_requires_an_annotated_clean_release","form":"test"},{"path":"tests/suites/source_drift/build_contracts.py","symbol":"test_source_copies_ignore_artifacts_and_release_checks_actual_bytes","form":"test"},{"path":"tests/suites/source_drift/build_contracts.py","symbol":"test_swift_context_refuses_a_different_compilation_identity","form":"test"},{"path":"tests/suites/source_drift/build_contracts.py","symbol":"test_presign_contract_guard_refuses_changed_sources","form":"test"}]
-pins: "Selected-source mutations change the digest; clean annotated release selection checks actual bytes; Swift context disagreement and the extracted pre-sign guard refuse."
+pins: "Mutations of the named sample files change the digest; clean annotated release selection checks actual bytes; Swift context disagreement and the extracted pre-sign guard refuse."
 context: "Read generator/source walker and build-stamp/pre-sign code; read tests using disposable source copies and Git repositories, including execution of the extracted shell guard."
 limits: "The guard control executes the pre-sign script fragment. The multiple-qualifying-tag branch has source support."
 ```

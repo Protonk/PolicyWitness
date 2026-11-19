@@ -105,6 +105,39 @@ class BuildEntryTests(receipts.TestCase):
                 self.assertFalse(destination.exists())
                 self.assertFalse((root / 'builddir').exists())
 
+    def test_build_refuses_unlistable_public_and_worker_identity_directories(self):
+        for branch, owner in [('runner/Clients', 'build contract'), ('runner/Sources', 'worker identity')]:
+            with self.subTest(root=branch):
+                root = self.build_checkout()
+                name = branch + '/unlistable'
+                path = root / name
+                path.mkdir()
+                (path / 'extra.swift').write_bytes(b'// selected source\n')
+                path.chmod(0)
+                try:
+                    with self.assertRaises(PermissionError):
+                        list(path.iterdir())
+                    result, output = self.build(root, {'IDENTITY': ''})
+                    self.assertEqual(result.returncode, 1, result.stdout + result.stderr)
+                    self.assertIn(f'{owner}: unreadable identity source directory: {name}', result.stderr)
+                    self.assertIn('Checking host/worker identity', result.stdout)
+                    self.assertNotIn('Build stamp', result.stdout)
+                    self.assertFalse(output.exists())
+                    self.assertFalse((root / 'builddir').exists())
+                    if owner == 'build contract':
+                        receipt = root / 'development-receipt.json'
+                        for tool, arguments, prefix in [
+                            ('build_contract.py', ['--swift-stdout'], 'build contract'),
+                            ('generate_limits.py', ['--stage-development', str(receipt)], 'limits'),
+                        ]:
+                            command = [sys.executable, '-B', '-S', str(root / 'docs' / tool), *arguments]
+                            refused = self.run_command(command, cwd=root, capture_output=True, text=True)
+                            self.assertEqual(refused.returncode, 1, refused.stdout + refused.stderr)
+                            self.assertIn(f'{prefix}: unreadable identity source directory: {name}', refused.stderr)
+                        self.assertFalse(receipt.exists())
+                finally:
+                    path.chmod(0o755)
+
     def test_build_refuses_a_stale_identity_copy_before_compiling_and_writes_nothing(self):
         """A committed stale copy is refused with the regenerating command; the build repairs nothing itself."""
         root = self.build_checkout()

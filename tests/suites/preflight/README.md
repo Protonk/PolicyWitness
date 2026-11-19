@@ -57,7 +57,8 @@ Offline release controls also exercise the release procedure's decision points.
   the real `sysctl`, knob values, an unknown argument, an unexecutable
   interpreter, a malformed plist minimum, a build directory configured for
   another checkout or without a toolchain stamp, an identity the keychain
-  lacks in every class, a stale identity, architecture, build-document,
+  lacks in every class, an unlistable public or worker identity input directory,
+  a stale identity, architecture, build-document,
   contract or guide copy, and the `make` entry with its header and build
   recipe; each asserts the banners that did and did not print and that no
   protected output or build directory was created (and no lock for refusals

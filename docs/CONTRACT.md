@@ -65,10 +65,10 @@ HEAD. The build derives this form when the checkout is clean, the tag matches
 equal that tag's blobs. More than one qualifying annotated tag on a clean
 HEAD refuses identity derivation as ambiguous.
 
-`development:<sha256>` identifies the selected source paths and bytes in
-other source trees. Its digest is SHA-256 with the domain prefix
-`PolicyWitness public build contract` followed by a NUL byte. For each sorted
-repository-relative path, the generator appends the UTF-8 path and file bytes,
+`development:<sha256>` identifies the selected paths and bytes present at derivation in
+other source trees. Several commits can have the same development identity. Its digest is SHA-256 with the domain prefix
+`PolicyWitness public build contract` followed by a NUL byte. For each
+repository-relative path in ascending Unicode code-point order, the generator appends the UTF-8 path and file bytes,
 each preceded by its unsigned eight-byte big-endian length. A dirty release
 checkout receives this development form. A documentation-only edit can change
 the form from release to development while leaving the selected-source digest
@@ -77,23 +77,37 @@ unchanged.
 <a id="contract-identity-public-inputs"></a>
 #### Selected build inputs
 
-The development digest includes `.rs`, `.c`, `.h`, `.swift`, `.sb`, `.plist`
-and `.ent` files discovered under `controller/src`, `controller/tools`,
-`runner/Sources`, `runner/Clients`, `runner/Services` and `runner/augments`.
-It also includes `build.sh`, `meson.build`, `meson.options`,
-`runner/Package.swift`, `controller/Cargo.toml`, `controller/Cargo.lock`,
-`controller/build.rs`, `controller/src/test_inputs/read.json`, `Info.plist`,
-`PolicyWitness.entitlements`,
-`docs/build_contract.py`, `docs/source_identity.py`,
-`tests/build_equipment.py`, `tests/build-evidence.py`, and the build helpers
-`tests/lib/build_provenance.py`, `signer_check.py`, `cargo_config.py`,
-`checkout_lock.py` and `output_target.py` in that same directory.
+The development digest includes regular files with a final suffix of `.rs`,
+`.c`, `.h`, `.swift`, `.sb`, `.plist` or `.ent` anywhere beneath
+`controller/src`, `controller/tools`, `controller/interface`, `runner/Sources`,
+`runner/Clients`, `runner/Services` and `runner/augments`. A file named
+only `.rs` has no final suffix.
 
-Discovery uses the same inventory in a checkout and a source copy. Missing
-declared inputs, symlinks under the selected roots and nonregular source
-objects refuse derivation. The digest's equality concerns those paths and
-bytes; build configuration, signing identity, SDK and observed runtime
-behavior are recorded and checked by their respective operations.
+It also includes `build.sh`, `meson.build`, `meson.options`, `runner/Package.swift`,
+`controller/Cargo.toml`, `controller/Cargo.lock`, `controller/build.rs`,
+`controller/src/test_inputs/read.json`, `Info.plist`, `PolicyWitness.entitlements`,
+`docs/build_contract.py`, `docs/source_identity.py`, `docs/publication.py`,
+`tests/build_equipment.py`, `tests/build-evidence.py`, `tests/lib/build_provenance.py`,
+`tests/lib/signer_check.py`, `tests/lib/cargo_config.py`, `tests/lib/checkout_lock.py`
+and `tests/lib/output_target.py`.
+
+Discovery uses these declarations and the directory entries on disk in both a
+checkout and a source copy. Hidden files, ignored files and untracked files
+qualify by the same rules. This selection includes test-only code and files
+that no compiler reads. No compiler dependency record enters the selection.
+
+Derivation refuses a missing declared input, a root without a selected file,
+a selected directory it cannot list, an entry it cannot inspect, or a selected
+file it cannot read. Inspection covers every entry beneath each root, including
+directories with no qualifying files. Symlinks and objects other than regular
+files and directories refuse regardless of suffix. An explicitly named input
+path containing a symlink also refuses. The generator hashes path spellings as the file system returns
+them, without Unicode normalization. File modes, timestamps and extended
+attributes are excluded from the digest. Build configuration, signing identity,
+SDK and runtime behavior have separate checks.
+
+<a id="contract-identity-public-inputs-support"></a>
+**Support: [check read](#contract-support-grades) for [Selected build inputs](#contract-identity-public-inputs).** Declared roots, suffixes and files agree with the statement. Literal inventories, digest values, metadata changes, ignored files and inspection refusals exercise the selection and framing. Context: Constructed trees with and without Git, including real filesystem permission changes. Evidence limit: The checks compare selection with the stated rule. Compiler dependency records are outside their scope. [Evidence details](#contract-identity-public-inputs-support-details).
 
 <a id="contract-identity-public-derive"></a>
 #### Build derivation
@@ -103,10 +117,11 @@ behavior are recorded and checked by their respective operations.
 The packaged build computes the identity itself and passes that value into
 its Rust and Swift producers. Swift context generation recomputes it and
 refuses a supplied `PW_BUILD_CONTRACT` that differs. The pre-sign comparison
-refuses a selected-source change during compilation.
+refuses when the identity derived at that point differs from the initial value.
+A change reverted between those observations goes undetected.
 
 <a id="contract-identity-public-derive-support"></a>
-**Support: [check read](#contract-support-grades) for [Build derivation](#contract-identity-public-derive).** Selected-source mutations change the digest; clean annotated release selection checks actual bytes; Swift context disagreement and the extracted pre-sign guard refuse. Context: Read generator/source walker and build-stamp/pre-sign code; read tests using disposable source copies and Git repositories, including execution of the extracted shell guard. Evidence limit: The guard control executes the pre-sign script fragment. The multiple-qualifying-tag branch has source support. [Evidence details](#contract-identity-public-derive-support-details).
+**Support: [check read](#contract-support-grades) for [Build derivation](#contract-identity-public-derive).** Mutations of the named sample files change the digest; clean annotated release selection checks actual bytes; Swift context disagreement and the extracted pre-sign guard refuse. Context: Read generator/source walker and build-stamp/pre-sign code; read tests using disposable source copies and Git repositories, including execution of the extracted shell guard. Evidence limit: The guard control executes the pre-sign script fragment. The multiple-qualifying-tag branch has source support. [Evidence details](#contract-identity-public-derive-support-details).
 
 <a id="contract-identity-public-direct"></a>
 #### Direct compilation contexts
@@ -1157,6 +1172,7 @@ Declarations own meaning; source and check citations supply the stated support. 
 | `controller/tools/sb_api_validator/sb_api_validator.c: resolve_filter_type_id` | source support | [Run one native query](RESPONSE.md#contract-wire-standalone-query) |
 | `controller/tools/sb_api_validator/sb_api_validator.c: run_batch` | source support | [Repeated native query keys](ARCHITECTURE.md#contract-wire-validator-duplicate_keys) |
 | `docs/build.json: sig_validator` | source support | [Direct validator commands](RESPONSE.md#contract-wire-standalone) |
+| `docs/build_contract.py: DIRECTORIES` | source support | [Selected build inputs](#contract-identity-public-inputs) |
 | `docs/build_contract.py: def identity` | source support | [Reviewing a development specimen](#contract-identity-surfaces-development_review) |
 | `docs/build_contract.py: identity` | source support | [Build derivation](#contract-identity-public-derive) |
 | `docs/build_contract.py: swift` | source support | [Host producer identification](RESPONSE.md#contract-identity-producer) |
@@ -1349,6 +1365,7 @@ Declarations own meaning; source and check citations supply the stated support. 
 | `docs/generate_porcelain.py: wire_identity` | source support | [Response encoding](ARCHITECTURE.md#contract-wire) |
 | `docs/generate_worker_identity.py: identity` | source support | [Other identities](#contract-identity-other) |
 | `docs/source_identity.py: source_paths` | source support | [Build derivation](#contract-identity-public-derive) |
+| `docs/source_identity.py: source_paths` | source support | [Selected build inputs](#contract-identity-public-inputs) |
 | `example.document` | interface association; see the partial join | [Emit the example specimen](REQUEST.md#contract-request-specimen-emit_example) |
 | `result.admitted_finished` | interface association; see the partial join | [Admitted finished outcome](RESPONSE.md#contract-envelope-data-select-finished) |
 | `result.admitted_other` | interface association; see the partial join | [Other admitted outcome](RESPONSE.md#contract-envelope-data-select-other) |
@@ -1690,10 +1707,14 @@ Declarations own meaning; source and check citations supply the stated support. 
 | `tests/suites/runner_unit/reader_corpus.py: replay` | check support | [Frame grammar](ARCHITECTURE.md#contract-wire-frame) |
 | `tests/suites/runner_validator_failure/check_actor.py: collection_row` | check support | [Execution record](RESPONSE.md#contract-reply-record) |
 | `tests/suites/source_drift/build_contracts.py: test_build_identity_tracks_shipped_inputs_and_requires_an_annotated_clean_release` | check support | [Build derivation](#contract-identity-public-derive) |
+| `tests/suites/source_drift/build_contracts.py: test_derivation_refuses_unreadable_directories_and_uninspectable_entries` | check support | [Selected build inputs](#contract-identity-public-inputs) |
+| `tests/suites/source_drift/build_contracts.py: test_literal_inventory_and_framed_digest` | check support | [Selected build inputs](#contract-identity-public-inputs) |
+| `tests/suites/source_drift/build_contracts.py: test_literal_tree_refuses_missing_symlink_special_and_empty_inputs` | check support | [Selected build inputs](#contract-identity-public-inputs) |
 | `tests/suites/source_drift/build_contracts.py: test_pending_release_reproduces_after_tagging_and_tracks_removal` | check support | [Deriving the history table](#contract-identity-surfaces-derive) |
 | `tests/suites/source_drift/build_contracts.py: test_presign_contract_guard_refuses_changed_sources` | check support | [Build derivation](#contract-identity-public-derive) |
 | `tests/suites/source_drift/build_contracts.py: test_source_copies_ignore_artifacts_and_release_checks_actual_bytes` | check support | [Build derivation](#contract-identity-public-derive) |
 | `tests/suites/source_drift/build_contracts.py: test_stamped_source_copy_and_no_tags_clone_validate_without_erasing_stamps` | check support | [Deriving the history table](#contract-identity-surfaces-derive) |
+| `tests/suites/source_drift/build_contracts.py: test_statement_selects_the_real_build_inventory_and_framing` | check support | [Selected build inputs](#contract-identity-public-inputs) |
 | `tests/suites/source_drift/build_contracts.py: test_swift_context_refuses_a_different_compilation_identity` | check support | [Build derivation](#contract-identity-public-derive) |
 | `tests/suites/source_drift/contract_tree_controls.py: test_example_document_is_extracted_from_its_cited_constant` | check support | [Emitted example](REQUEST.md#contract-request-specimen-example) |
 | `tests/suites/source_drift/contract_tree_controls.py: test_example_document_refusals_name_the_source` | check support | [Emitted example](REQUEST.md#contract-request-specimen-example) |
@@ -1781,6 +1802,13 @@ to other workers, recipients or entry points.
 
 <a id="contract-support-grades"></a>
 **Support grades.** **source read:** The named source was inspected for the stated assertions. **check read:** The named source and check assertions were inspected in the stated context. **executed:** The named run exercised the stated assertions with its identified source or build.
+
+<a id="contract-identity-public-inputs-support-details"></a>
+### Selected build inputs — Selection support
+
+[Local support](#contract-identity-public-inputs-support).
+
+Source: [build_contract.py](../docs/build_contract.py): `DIRECTORIES`; [source_identity.py](../docs/source_identity.py): `source_paths`. Check: [build_contracts.py](../tests/suites/source_drift/build_contracts.py): `test_statement_selects_the_real_build_inventory_and_framing`, `test_literal_inventory_and_framed_digest`, `test_derivation_refuses_unreadable_directories_and_uninspectable_entries`, `test_literal_tree_refuses_missing_symlink_special_and_empty_inputs`.
 
 <a id="contract-identity-public-derive-support-details"></a>
 ### Build derivation — Derivation support

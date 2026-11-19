@@ -24,7 +24,7 @@
         },
         {
           "id": "build_entry_controls",
-          "description": "The unchanged build script refuses each early fault before the step it protects, offline: builder, knobs, arguments, interpreter, plist minimum, build directory, identity, stale identity, architecture, build-document, contract and guide copies, and the make entry",
+          "description": "The unchanged build script refuses each early fault before the step it protects, offline: builder, knobs, arguments, interpreter, plist minimum, build directory, identity, unlistable identity source directories, stale identity, architecture, build-document, contract and guide copies, and the make entry",
           "default": true,
           "requires": []
         },

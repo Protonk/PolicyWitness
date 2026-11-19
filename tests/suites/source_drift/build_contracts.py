@@ -3,6 +3,7 @@ import copy
 import hashlib
 import importlib.util
 import json
+import os
 import plistlib
 import re
 import subprocess
@@ -177,6 +178,164 @@ class WorkerIdentityTests(receipts.TestCase):
         self.assertEqual(before, {name: (root / name).read_bytes() for name in before})
 
 
+class SourceSelectionTests(receipts.TestCase):
+    def tree(self):
+        return Path(self.enterContext(tempfile.TemporaryDirectory(prefix='pw-source-selection-')))
+
+    def literal_tree(self):
+        root = self.tree()
+        (root / 'sel/sub').mkdir(parents=True)
+        for name, data in [('sel/Upper.rs', b'U\n'), ('sel/a.rs', b'a\n'), ('sel/sub/b.rs', b'b\n'),
+                           ('top.cfg', b't\n'), ('sel/sub/note.md', b'ignored\n')]:
+            (root / name).write_bytes(data)
+        spec = importlib.util.spec_from_file_location('literal_build_contract', ROOT / 'docs/build_contract.py')
+        module = importlib.util.module_from_spec(spec)
+        spec.loader.exec_module(module)
+        module.DIRECTORIES, module.FILES, module.SUFFIXES = ('sel',), ('top.cfg',), ('.rs',)
+        self.track_inputs(root)
+        return root, module
+
+    def test_literal_inventory_and_framed_digest(self):
+        root, contract = self.literal_tree()
+        self.assertEqual(contract.inputs(root), ['sel/Upper.rs', 'sel/a.rs', 'sel/sub/b.rs', 'top.cfg'])
+        self.assertEqual(contract.identity(root),
+                         'development:89898dff6ed143459c8de8d18e81ed63a450b050fb0b33024bf5c83762619c79')
+        (root / 'sel/sub').rename(root / 'removed')
+        self.assertEqual(contract.inputs(root), ['sel/Upper.rs', 'sel/a.rs', 'top.cfg'])
+        self.assertEqual(contract.identity(root),
+                         'development:2f7232f8ef3a56b0d466d0351936427406ffbae75fe84e5e766d58a5462ee316')
+
+    def test_derivation_refuses_unreadable_directories_and_uninspectable_entries(self):
+        root, contract = self.literal_tree()
+        (root / 'sel/empty').mkdir()
+        contrasts = [
+            ('sel/sub', 0, 'unreadable identity source directory: sel/sub', b'b\n'),
+            ('sel/sub', 0, 'unreadable identity source directory: sel/sub', b'changed\n'),
+            ('sel/sub', 0o111, 'unreadable identity source directory: sel/sub', b'b\n'),
+            ('sel/sub', 0o444, 'uninspectable identity source: sel/sub/', b'b\n'),
+            ('sel', 0, 'unreadable identity source directory: sel', b'b\n'),
+            ('sel/empty', 0, 'unreadable identity source directory: sel/empty', b'b\n'),
+        ]
+        for derive in (contract.inputs, contract.identity):
+            for path, mode, message, data in contrasts:
+                with self.subTest(derive=derive.__name__, path=path, mode=oct(mode), data=data):
+                    (root / 'sel/sub/b.rs').write_bytes(data)
+                    target = root / path
+                    target.chmod(mode)
+                    try:
+                        with self.assertRaises(PermissionError):
+                            if mode == 0o444:
+                                (target / 'b.rs').lstat()
+                            else:
+                                list(target.iterdir())
+                        with self.assertRaisesRegex(ValueError, message):
+                            derive(root)
+                    finally:
+                        target.chmod(0o755)
+
+    def test_literal_tree_refuses_missing_symlink_special_and_empty_inputs(self):
+        root, contract = self.literal_tree()
+        explicit = root / 'top.cfg'
+        explicit.unlink()
+        with self.assertRaisesRegex(ValueError, 'missing identity source: top.cfg'):
+            contract.inputs(root)
+        explicit.symlink_to('missing')
+        with self.assertRaisesRegex(ValueError, 'symlink under identity sources: top.cfg'):
+            contract.inputs(root)
+        explicit.unlink()
+        explicit.touch()
+        extra = root / 'sel/unselected.md'
+        extra.symlink_to('missing')
+        with self.assertRaisesRegex(ValueError, 'symlink under identity sources: sel/unselected.md'):
+            contract.inputs(root)
+        extra.unlink()
+        os.mkfifo(extra)
+        try:
+            with self.assertRaisesRegex(ValueError, 'nonregular identity source: sel/unselected.md'):
+                contract.inputs(root)
+        finally:
+            extra.unlink()
+        (root / 'sel').rename(root / 'removed')
+        (root / 'sel').mkdir()
+        with self.assertRaisesRegex(ValueError, 'no selected identity source under: sel'):
+            contract.inputs(root)
+
+    def test_statement_selects_the_real_build_inventory_and_framing(self):
+        import build_contract
+        surface = (ROOT / 'docs/contract/00-identity.surface.md').read_text()
+        text = surface.split('### Selected build inputs {inputs: definition}\n', 1)[1].split('\n#', 1)[0]
+        names = set(re.findall(r'(?<!`)`([^`\n]+)`(?!`)', text))
+        suffixes = {n for n in names if n.startswith('.')}
+        files = {n for n in names - suffixes if Path(n).suffix}
+        roots = names - suffixes - files
+        for name, stated, declared in [('roots', roots, build_contract.DIRECTORIES),
+                                       ('files', files, build_contract.FILES),
+                                       ('suffixes', suffixes, build_contract.SUFFIXES)]:
+            with self.subTest(declaration=name):
+                self.assertSetEqual(stated, set(declared))
+
+        inventory = {name for name in files}
+        inventory.update(f'{directory}/.hidden/Upper{suffix}' for directory in roots for suffix in suffixes)
+        def populate(root):
+            for name in inventory:
+                path = root / name
+                path.parent.mkdir(parents=True, exist_ok=True)
+                path.write_bytes(('bytes of ' + name).encode())
+        def expected(root, selected):
+            framed = bytearray(b'PolicyWitness public build contract\x00')
+            for name in sorted(selected):
+                for part in (name.encode('utf-8'), (root / name).read_bytes()):
+                    framed.extend(len(part).to_bytes(8, 'big'))
+                    framed.extend(part)
+            return 'development:' + hashlib.sha256(framed).hexdigest()
+
+        root = self.tree()
+        populate(root)
+        self.track_inputs(root)
+        baseline = expected(root, inventory)
+        command = [sys.executable, '-B', str(ROOT / 'docs/build_contract.py'), '--root', str(root)]
+        result = self.run_command(command, capture_output=True, text=True)
+        self.assertEqual((result.returncode, result.stdout.strip()), (0, baseline), result.stderr)
+        for name in sorted(files | {r + '/.hidden/Upper.rs' for r in roots}):
+            with self.subTest(source=name):
+                path = root / name
+                saved = path.read_bytes()
+                path.write_bytes(saved + b'!')
+                self.assertEqual(build_contract.identity(root), expected(root, inventory))
+                self.assertNotEqual(expected(root, inventory), baseline)
+                path.write_bytes(saved)
+        other = self.tree()
+        populate(other)
+        self.assertEqual(build_contract.identity(other), baseline)
+        sample = root / 'controller/src/.hidden/Upper.rs'
+        sample.chmod(0o600)
+        os.utime(sample, (1000000, 1000000))
+        (sample.parent / 'unused.RS').touch()
+        (sample.parent / '.rs').touch()
+        self.assertEqual(build_contract.identity(root), baseline)
+        added = sample.with_name('ignored.rs')
+        added.write_bytes(b'ignored by git')
+        relative = added.relative_to(root).as_posix()
+        (root / '.gitignore').write_text('ignored.rs\n')
+        for args in (['init', '-q'], ['check-ignore', relative]):
+            self.assertEqual(self.run_command(['git', '-C', str(root), *args], capture_output=True).returncode, 0)
+        self.assertEqual(build_contract.identity(root), expected(root, inventory | {relative}))
+        renamed = added.with_name('moved.rs')
+        added.rename(renamed)
+        self.assertEqual(build_contract.identity(root), expected(root, inventory | {renamed.relative_to(root).as_posix()}))
+        renamed.unlink()
+        self.assertEqual(build_contract.identity(root), baseline)
+        # An eligible file can be discovered but unreadable. Exclude this mode
+        # change from the evidence recorder's own full-tree reads.
+        sample.chmod(0)
+        try:
+            result = subprocess.run(command, capture_output=True, text=True, timeout=10)
+            self.assertEqual((result.returncode, result.stdout), (1, ''))
+            self.assertIn(sample.relative_to(root).as_posix(), result.stderr)
+        finally:
+            sample.chmod(0o600)
+
+
 class PublicBuildContractTests(receipts.TestCase):
     def test_source_copies_ignore_artifacts_and_release_checks_actual_bytes(self):
         import build_contract as contract
@@ -243,11 +402,10 @@ class PublicBuildContractTests(receipts.TestCase):
         self.commit(root)
         self.assertEqual(contract.identity(root), loose, 'documentation-only commit does not change source digest')
         previous = loose
-        for name in ('controller/src/main.rs', 'runner/augments/mach-register.sb', 'PolicyWitness.entitlements',
+        for name in ('controller/src/main.rs', 'runner/augments/exec_baseline.sb', 'PolicyWitness.entitlements',
                      'controller/src/test_inputs/read.json',):
             path = root / name
-            if not path.exists():
-                path = next((root / 'runner/augments').glob('*.sb'))
+            self.assertTrue(path.is_file(), name)
             path.write_bytes(path.read_bytes() + b'\n')
             current = contract.identity(root)
             self.assertNotEqual(current, previous)
