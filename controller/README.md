@@ -319,7 +319,10 @@ policy-witness runner reconcile
 The [BYOXPC guide](../docs/PolicyWitness.md#external-runners-byoxpc) gives install
 and signing recipes. The bundle must have `CFBundlePackageType=XPC!`; its Mach
 service equals `CFBundleIdentifier`, and `CFBundleExecutable` selects the host.
-Entitlements require `--identity` or `--allow-adhoc`. Install signs worker with
+Entitlements require `--identity` or `--allow-adhoc`. `--env XPC_SERVICE_PATH`
+with any value but the canonical bundle path is refused before the registry
+lock is taken or anything is signed, because cleanup ownership compares that
+variable with the recorded bundle path. Install signs worker with
 entitlements, validator without them, then the enclosing bundle; verifies the
 tree recursively; and reads back each binary separately. Missing helpers refuse
 installation. The inherited signed-caller check requires a matching Team ID;

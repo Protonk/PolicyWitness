@@ -130,6 +130,23 @@ fn install_kind(raw: &str) -> Result<RunnerKind, String> {
         .ok_or_else(|| format!("invalid value for --kind: {raw}"))
 }
 
+/// Cleanup ownership requires the plist's `XPC_SERVICE_PATH` to equal the
+/// recorded bundle path, so an install given another value would write a
+/// plist that `runner remove` classifies unowned and leaves in place.
+fn require_bundle_service_path(
+    env: &BTreeMap<String, String>,
+    bundle_path: &Path,
+) -> Result<(), String> {
+    match env.get("XPC_SERVICE_PATH") {
+        Some(value) if *value != bundle_path.display().to_string() => Err(format!(
+            "--env XPC_SERVICE_PATH={value} differs from the bundle path {}; \
+             omit it or supply the bundle path",
+            bundle_path.display()
+        )),
+        _ => Ok(()),
+    }
+}
+
 fn cmd_runner_install(args: &[OsString]) -> Result<i32, String> {
     let mut bundle_path: Option<PathBuf> = None;
     let mut service_name: Option<String> = None;
@@ -214,6 +231,9 @@ fn cmd_runner_install(args: &[OsString]) -> Result<i32, String> {
     if !bundle_path.exists() {
         return Err(format!("bundle path not found: {}", bundle_path.display()));
     }
+    // Refused here, before the bundle is read further, the registry lock is
+    // taken or anything is signed.
+    require_bundle_service_path(&env, &bundle_path)?;
 
     // byoxpc is the only kind `runner install` accepts. The CLI parser above
     // already rejects standard; here we accept an explicit
@@ -902,6 +922,77 @@ pub fn cmd_runner(args: &[OsString]) -> Result<i32, String> {
             "unknown runner command: {sub}\n\n{}",
             runner_usage()
         )),
+    }
+}
+
+#[cfg(test)]
+mod install_tests {
+    use super::*;
+
+    /// The installer accepts exactly the service path its cleanup accepts:
+    /// the recorded bundle path, compared as text.
+    #[test]
+    fn install_accepts_only_the_bundle_path_as_the_service_path() {
+        let bundle = "/private/tmp/owned/PWRunner.xpc";
+        let record: RunnerRecord = serde_json::from_value(json!({
+            "id": "runner-owned", "service_name": "com.policywitness.test.owned",
+            "bundle_path": bundle,
+            "executable_path": format!("{bundle}/Contents/MacOS/PWRunner"),
+            "bundle_id": "com.policywitness.test.owned", "scope": "user",
+            "signature": {"valid": true, "adhoc": true},
+            "entitlements": {"keys": []}, "installed_at_unix_ms": 1, "kind": "byoxpc",
+        }))
+        .unwrap();
+        // The plist an install would write for this record with `value`, as
+        // removal later observes it.
+        let ownership = |value: &str| {
+            let observation = runner_manager::PlistObservation {
+                presence: runner_manager::Presence::Present,
+                regular: true,
+                owner_uid: None,
+                sha256: None,
+                error: None,
+                config: Some(json!({
+                    "Label": record.service_name,
+                    "ProgramArguments":
+                        [record.executable_path, "--mach-service", record.service_name],
+                    "MachServices": {&record.service_name: true},
+                    "EnvironmentVariables": {"XPC_SERVICE_PATH": value},
+                })),
+            };
+            runner_manager::plist_ownership(&record, &observation)
+        };
+        let supplied = |value: &str| {
+            let env = BTreeMap::from([
+                ("XPC_SERVICE_PATH".to_string(), value.to_string()),
+                ("OTHER".to_string(), "/private/tmp/elsewhere".to_string()),
+            ]);
+            require_bundle_service_path(&env, Path::new(bundle))
+        };
+
+        assert_eq!(supplied(bundle), Ok(()));
+        assert_eq!(ownership(bundle), runner_manager::Ownership::Owned);
+        for other in [
+            "/private/tmp/other/PWRunner.xpc",
+            "/private/tmp/owned/PWRunner.xpc/",
+            "/tmp/owned/PWRunner.xpc",
+            "",
+        ] {
+            assert_eq!(
+                supplied(other),
+                Err(format!(
+                    "--env XPC_SERVICE_PATH={other} differs from the bundle path {bundle}; \
+                     omit it or supply the bundle path"
+                )),
+            );
+            assert_eq!(ownership(other), runner_manager::Ownership::Unowned);
+        }
+        // No value supplied: the installer writes the bundle path itself.
+        let unrelated = BTreeMap::from([("OTHER".to_string(), bundle.to_string())]);
+        assert_eq!(
+            require_bundle_service_path(&unrelated, Path::new(bundle)),
+            Ok(())
+        );
     }
 }
 

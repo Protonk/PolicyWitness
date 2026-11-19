@@ -34,6 +34,9 @@ Rust unit tests and formatting for the controller crate.
 - The envelope writer writes the text and one newline and then flushes. A
   write that fails before the first byte, inside the text or at the newline,
   and a failed flush, are each an error; this is a constructed writer.
+- `runner install` accepts as `XPC_SERVICE_PATH` only the bundle path as text,
+  and each value it refuses is one for which the ownership classifier reports
+  the resulting plist `unowned`.
 - No case requires a built `.app` bundle.
 
 `execution_envelopes_preserve_raw_evidence_and_emit_only_execution_fields`

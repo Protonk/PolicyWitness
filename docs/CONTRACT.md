@@ -828,6 +828,7 @@ Declarations own meaning; source and check citations supply the stated support. 
 | `controller/integration/cli_contract.rs: plain_cargo_build_cannot_admit_public_requests` | check support | [Direct compilation contexts](#contract-identity-public-direct) |
 | `controller/integration/cli_contract.rs: registry_that_cannot_be_read_refuses_and_only_an_absent_path_is_empty` | check support | [Read and select records](RESPONSE.md#contract-installation-commands-read) |
 | `controller/integration/cli_contract.rs: runner_commands_report_ok_or_refuse_on_stderr_without_an_envelope` | check support | [Read and select records](RESPONSE.md#contract-installation-commands-read) |
+| `controller/integration/cli_contract.rs: runner_install_refuses_a_service_path_other_than_the_bundle_before_any_change` | check support | [Retain installation ownership](RESPONSE.md#contract-installation-commands-pending) |
 | `controller/integration/cli_contract.rs: sbpl_check_verdicts_follow_the_native_compiler` | check support | [Parameter example observations](REQUEST.md#contract-policy-spec-parameter_evidence) |
 | `controller/integration/cli_contract.rs: supplied_direct_cargo_identity_is_embedded_without_release_provenance` | check support | [Direct compilation contexts](#contract-identity-public-direct) |
 | `controller/integration/cli_contract.rs: supplied_direct_cargo_identity_is_embedded_without_release_provenance` | check support | [Emit the example specimen](REQUEST.md#contract-request-specimen-emit_example) |
@@ -1018,6 +1019,7 @@ Declarations own meaning; source and check citations supply the stated support. 
 | `controller/src/runner_client.rs: retention_loss_precedes_decode_and_keeps_exact_prefix` | check support | [Delivery to the host](RESPONSE.md#contract-transport) |
 | `controller/src/runner_client.rs: validate_capture` | source support | [Delivery to the host](RESPONSE.md#contract-transport) |
 | `controller/src/runner_commands.rs: cmd_runner_install` | source support | [Managing runners](RESPONSE.md#contract-installation) |
+| `controller/src/runner_commands.rs: cmd_runner_install` | source support | [Retain installation ownership](RESPONSE.md#contract-installation-commands-pending) |
 | `controller/src/runner_commands.rs: cmd_runner_install` | source support | [Published installation state](RESPONSE.md#contract-installation-install-state_copy) |
 | `controller/src/runner_commands.rs: cmd_runner_reconcile` | source support | [Managing runners](RESPONSE.md#contract-installation) |
 | `controller/src/runner_commands.rs: cmd_runner_validate` | source support | [Managing runners](RESPONSE.md#contract-installation) |
@@ -1029,6 +1031,8 @@ Declarations own meaning; source and check citations supply the stated support. 
 | `controller/src/runner_commands.rs: cmd_runner_verify` | source support | [Select the verification operation result](RESPONSE.md#contract-installation-verify-select) |
 | `controller/src/runner_commands.rs: cmd_runner_verify` | source support | [The controller checks carried labels](RESPONSE.md#contract-profile-receipt-labels) |
 | `controller/src/runner_commands.rs: cmd_runner_verify` | source support | [A failed label check for runner verify](RESPONSE.md#contract-profile-receipt-labels-verify_failure) |
+| `controller/src/runner_commands.rs: install_accepts_only_the_bundle_path_as_the_service_path` | check support | [Retain installation ownership](RESPONSE.md#contract-installation-commands-pending) |
+| `controller/src/runner_commands.rs: require_bundle_service_path` | source support | [Retain installation ownership](RESPONSE.md#contract-installation-commands-pending) |
 | `controller/src/runner_manager.rs: RunnerRegistry` | source support | [Managing runners](RESPONSE.md#contract-installation) |
 | `controller/src/runner_manager.rs: atomic_registry_replace_preserves_old_open_readers_and_failed_write` | check support | [Managing runners](RESPONSE.md#contract-installation) |
 | `controller/src/runner_manager.rs: bootout_waits_out_launchd_teardown_within_the_budget` | check support | [Managing runners](RESPONSE.md#contract-installation) |
@@ -1046,6 +1050,7 @@ Declarations own meaning; source and check citations supply the stated support. 
 | `controller/src/runner_manager.rs: plist_and_service_evidence_independently_gate_cleanup_retirement` | check support | [Classify cleanup ownership](RESPONSE.md#contract-installation-commands-ownership) |
 | `controller/src/runner_manager.rs: plist_ownership` | source support | [Managing runners](RESPONSE.md#contract-installation) |
 | `controller/src/runner_manager.rs: plist_ownership` | source support | [Classify cleanup ownership](RESPONSE.md#contract-installation-commands-ownership) |
+| `controller/src/runner_manager.rs: plist_ownership` | source support | [Retain installation ownership](RESPONSE.md#contract-installation-commands-pending) |
 | `controller/src/runner_manager.rs: read_back` | source support | [Managing runners](RESPONSE.md#contract-installation) |
 | `controller/src/runner_manager.rs: record_location` | source support | [Classify cleanup ownership](RESPONSE.md#contract-installation-commands-ownership) |
 | `controller/src/runner_manager.rs: registry_load_is_empty_only_where_inspection_finds_no_entry` | check support | [Read and select records](RESPONSE.md#contract-installation-commands-read) |
@@ -2779,6 +2784,13 @@ Source: [runner_commands.rs](../controller/src/runner_commands.rs): `cmd_runner_
 [Local support](RESPONSE.md#contract-installation-commands-read-support).
 
 Source: [runner_manager.rs](../controller/src/runner_manager.rs): `load_registry`; [runner_select.rs](../controller/src/runner_select.rs): `resolve_runner_target_with_registry`; [cli.rs](../controller/src/cli.rs): `pub fn run`. Check: [runner_manager.rs](../controller/src/runner_manager.rs): `registry_load_is_empty_only_where_inspection_finds_no_entry`; [runner_select.rs](../controller/src/runner_select.rs): `external_selection_refuses_a_registry_it_cannot_inspect`; [cli_contract.rs](../controller/integration/cli_contract.rs): `registry_that_cannot_be_read_refuses_and_only_an_absent_path_is_empty`, `runner_commands_report_ok_or_refuse_on_stderr_without_an_envelope`; [registry_recovery.sh](../tests/suites/runner_byoxpc/opt_in/registry_recovery.sh): `registry_recovery`.
+
+<a id="contract-installation-commands-pending-support-details"></a>
+### Retain installation ownership — Service path support
+
+[Local support](RESPONSE.md#contract-installation-commands-pending-support).
+
+Source: [runner_commands.rs](../controller/src/runner_commands.rs): `require_bundle_service_path`, `cmd_runner_install`; [runner_manager.rs](../controller/src/runner_manager.rs): `plist_ownership`. Check: [runner_commands.rs](../controller/src/runner_commands.rs): `install_accepts_only_the_bundle_path_as_the_service_path`; [cli_contract.rs](../controller/integration/cli_contract.rs): `runner_install_refuses_a_service_path_other_than_the_bundle_before_any_change`.
 
 <a id="contract-installation-commands-pending_verify-disposition_support-details"></a>
 ### Pending verification — Disposition support

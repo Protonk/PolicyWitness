@@ -77,6 +77,13 @@ Rust integration tests that exercise the CLI contract against a built app.
   status and write nothing to stderr: the process then holds a descriptor
   that discards what it is given. `sbpl-check` without arguments and with a
   stderr that cannot be written exits 2 with an empty stdout.
+- `runner install` on a copy of the resolved app's service bundle, with ad-hoc
+  signing requested, bootstrap skipped and `--env XPC_SERVICE_PATH` naming
+  another path, exits 2 with one stderr line naming both paths, an empty
+  stdout, the copy's bytes unchanged, no registry directory and nothing
+  written under the supplied `HOME`. With the bundle path as the value and a
+  service name that is not the bundle's identifier, the refusal is the later
+  one for the name.
 - Test source lives at `controller/integration/cli_contract.rs`.
 
 ## Success criteria

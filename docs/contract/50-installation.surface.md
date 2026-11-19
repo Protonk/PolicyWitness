@@ -93,7 +93,18 @@ free.effect: Save a pending runner with its plist path, launchd domain, owner UI
 retained_free: {"condition":{"kind":"native_protocol","reason":"Verification/signing/readback completion and prepared plist bytes are ordered preparation events before pending publication."},"effect":{"kind":"native_protocol","reason":"Pending registry persistence precedes external launchd effects; installed publication and retained pending recovery reflect their later outcomes."}}
 ```
 
-User scope writes HOME/Library/LaunchAgents and targets gui/<uid>, requiring access to that logged-in GUI domain. System scope writes /Library/LaunchDaemons and targets system, requiring the relevant privilege. The plist invokes the recorded executable with `--mach-service` and the service name, advertises that Mach service, sets RunAtLoad and a <!-- span limits.byoxpc_throttle_interval.value_unit -->1 second<!-- /span --> throttle, and defaults XPC_SERVICE_PATH to the bundle. `--env KEY=VALUE` requires a nonempty key; later occurrences replace earlier values. With `--skip-bootstrap`, successful plist creation completes installation; `loaded` remains a separate observation. Signing changes can precede the pending save.
+User scope writes HOME/Library/LaunchAgents and targets gui/<uid>, requiring access to that logged-in GUI domain. System scope writes /Library/LaunchDaemons and targets system, requiring the relevant privilege. The plist invokes the recorded executable with `--mach-service` and the service name, advertises that Mach service, sets RunAtLoad and a <!-- span limits.byoxpc_throttle_interval.value_unit -->1 second<!-- /span --> throttle, and defaults XPC_SERVICE_PATH to the bundle. `--env KEY=VALUE` requires a nonempty key; later occurrences replace earlier values. An `--env XPC_SERVICE_PATH` value other than the canonical bundle path is refused as soon as that path is resolved, before the bundle is read further, the registry lock is taken, anything is signed or any record or plist is written: cleanup ownership requires that variable to equal the recorded bundle path. With `--skip-bootstrap`, successful plist creation completes installation; `loaded` remains a separate observation. Signing changes can precede the pending save.
+
+#### Service path support {support: owner}
+
+```contract
+grade: "check_read"
+source: [{"path":"controller/src/runner_commands.rs","symbol":"require_bundle_service_path"},{"path":"controller/src/runner_commands.rs","symbol":"cmd_runner_install"},{"path":"controller/src/runner_manager.rs","symbol":"plist_ownership"}]
+check: [{"path":"controller/src/runner_commands.rs","symbol":"install_accepts_only_the_bundle_path_as_the_service_path","form":"test"},{"path":"controller/integration/cli_contract.rs","symbol":"runner_install_refuses_a_service_path_other_than_the_bundle_before_any_change","form":"test"}]
+pins: "The installer accepts as XPC_SERVICE_PATH exactly the text its cleanup classifier accepts for the record, the canonical bundle path. Another value is one line on standard error and exit 2 with the bundle bytes unchanged and no registry directory, lock or plist created; the bundle path itself passes on to the later checks."
+context: "Read the refusal, its place in the installer and the cited assertions. The integration control runs the selected controller on a copy of its own service bundle with signing requested, bootstrap skipped, and HOME and the registry location supplied to the child."
+limits: "Check read without execution. The unit control compares constructed observations. No control completes an installation that supplies the variable; launchd's use of the variable is unobserved."
+```
 
 ### Verify a selected service {verify: acts}
 

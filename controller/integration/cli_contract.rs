@@ -2765,3 +2765,170 @@ fn envelope_write_failures_exit_2_with_one_line_and_never_a_panic() {
     // No row created a registry: the runner rows read an absent one.
     assert!(std::fs::symlink_metadata(registry.parent().unwrap()).is_err());
 }
+
+/// A digest of every entry under `root`: relative path, kind, and a file's
+/// bytes or a link's target.
+fn tree_digest(root: &Path) -> String {
+    use sha2::Digest;
+    fn visit(root: &Path, directory: &Path, hasher: &mut sha2::Sha256) {
+        let mut entries: Vec<PathBuf> = std::fs::read_dir(directory)
+            .unwrap()
+            .map(|entry| entry.unwrap().path())
+            .collect();
+        entries.sort();
+        for path in entries {
+            let kind = std::fs::symlink_metadata(&path).unwrap().file_type();
+            hasher.update(
+                path.strip_prefix(root)
+                    .unwrap()
+                    .to_string_lossy()
+                    .as_bytes(),
+            );
+            if kind.is_symlink() {
+                hasher.update(b"\0link\0");
+                hasher.update(
+                    std::fs::read_link(&path)
+                        .unwrap()
+                        .to_string_lossy()
+                        .as_bytes(),
+                );
+            } else if kind.is_dir() {
+                hasher.update(b"\0directory\0");
+                visit(root, &path, hasher);
+            } else {
+                hasher.update(b"\0file\0");
+                hasher.update(std::fs::read(&path).unwrap());
+            }
+            hasher.update(b"\0");
+        }
+    }
+    let mut hasher = sha2::Sha256::new();
+    visit(root, root, &mut hasher);
+    format!("{:x}", hasher.finalize())
+}
+
+/// `runner install` with `--env XPC_SERVICE_PATH` set to anything but the
+/// bundle path refuses before it changes anything. The bundle is a copy of
+/// the selected app's own service, which passes every other check an install
+/// makes, and the command asks for signing: an install that went ahead would
+/// re-sign the copy, save a registry record and write a launchd plist whose
+/// service path its own cleanup does not accept. The bundle path itself as
+/// the value is not refused by this rule: beside a service name that is not
+/// the bundle's identifier, the refusal is the later one for the name.
+#[test]
+fn runner_install_refuses_a_service_path_other_than_the_bundle_before_any_change() {
+    if !integration_enabled() {
+        return;
+    }
+    let bin = require_pw_bin();
+    let scratch = Scratch::new("install-service-path");
+    let root = scratch.root.clone();
+    let home = root.join("home");
+    std::fs::create_dir(&home).unwrap();
+    let registry = root.join("registry").join("runners.json");
+    let bundle = root.join("PWRunner.xpc");
+    let copied = Command::new("/usr/bin/ditto")
+        .arg(app_path().join("Contents/XPCServices/PWRunner.xpc"))
+        .arg(&bundle)
+        .output()
+        .expect("copy the service bundle");
+    assert!(copied.status.success(), "{copied:?}");
+    let identifier = Command::new("/usr/bin/plutil")
+        .args(["-extract", "CFBundleIdentifier", "raw", "-o", "-"])
+        .arg(bundle.join("Contents/Info.plist"))
+        .output()
+        .expect("read the bundle identifier");
+    assert!(identifier.status.success(), "{identifier:?}");
+    let identifier = String::from_utf8(identifier.stdout).unwrap();
+    let identifier = identifier.trim_end();
+    let entitlements = root.join("entitlements.plist");
+    std::fs::write(
+        &entitlements,
+        "<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n<plist version=\"1.0\"><dict/></plist>\n",
+    )
+    .unwrap();
+    let before = tree_digest(&bundle);
+    let bundle_text = bundle.to_str().unwrap();
+    let install = |service_path: &Path, more: &[&str]| {
+        let supplied = format!("XPC_SERVICE_PATH={}", service_path.display());
+        let mut args = vec![
+            "runner",
+            "install",
+            "--bundle",
+            bundle_text,
+            "--allow-adhoc",
+            "--entitlements",
+            entitlements.to_str().unwrap(),
+            "--skip-bootstrap",
+            "--env",
+            &supplied,
+        ];
+        args.extend_from_slice(more);
+        run_with_registry(&bin, &args, &home, &registry)
+    };
+    // What a row left behind: a registry directory, anything under the home
+    // directory, a changed bundle.
+    let changes = |label: &str| {
+        let mut found = Vec::new();
+        if std::fs::symlink_metadata(registry.parent().unwrap()).is_ok() {
+            found.push(format!("{label}: a registry directory was created"));
+        }
+        if std::fs::read_dir(&home).unwrap().next().is_some() {
+            found.push(format!("{label}: the home directory was written"));
+        }
+        if tree_digest(&bundle) != before {
+            found.push(format!("{label}: the bundle was changed"));
+        }
+        found
+    };
+    let mut rows = Vec::new();
+    let mut problems = Vec::new();
+
+    let elsewhere = root.join("elsewhere").join("PWRunner.xpc");
+    let output = install(&elsewhere, &[]);
+    let stderr = String::from_utf8_lossy(&output.stderr).into_owned();
+    let refusal = format!(
+        "--env XPC_SERVICE_PATH={} differs from the bundle path {}; omit it or supply the bundle path\n",
+        elsewhere.display(),
+        bundle.display()
+    );
+    if output.status.code() != Some(2) || !output.stdout.is_empty() || stderr != refusal {
+        problems.push(format!(
+            "another path: status {:?}, {} stdout bytes, stderr {stderr:?}",
+            output.status.code(),
+            output.stdout.len()
+        ));
+    }
+    let changed = changes("another path");
+    // When an install went ahead, its own report of the plist it wrote.
+    let reconciled = std::fs::symlink_metadata(&registry).is_ok().then(|| {
+        let report = run_with_registry(&bin, &["runner", "reconcile"], &home, &registry);
+        serde_json::from_slice::<serde_json::Value>(&report.stdout)
+            .ok()
+            .and_then(|value| value.pointer("/data/records").cloned())
+    });
+    rows.push(serde_json::json!({
+        "row": "another path", "status": output.status.code(),
+        "stdout": String::from_utf8_lossy(&output.stdout), "stderr": stderr,
+        "changes": changed, "reconcile_records": reconciled,
+    }));
+    problems.extend(changed);
+
+    let output = install(&bundle, &["--service-name", "not.the.bundle.identifier"]);
+    let stderr = String::from_utf8_lossy(&output.stderr).into_owned();
+    let later = format!("byoxpc service name must match CFBundleIdentifier ({identifier})\n");
+    if output.status.code() != Some(2) || !output.stdout.is_empty() || stderr != later {
+        problems.push(format!(
+            "the bundle path: status {:?}, {} stdout bytes, stderr {stderr:?}",
+            output.status.code(),
+            output.stdout.len()
+        ));
+    }
+    rows.push(serde_json::json!({
+        "row": "the bundle path, beside another service name",
+        "status": output.status.code(), "stderr": stderr,
+    }));
+
+    save_rows("install-service-path", &rows);
+    assert!(problems.is_empty(), "{}", problems.join("\n"));
+}
