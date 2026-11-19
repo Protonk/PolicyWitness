@@ -406,3 +406,119 @@ Review that continues: the reasons, their order and the withheld fields of an
 `unavailable` receipt are asserted only as far as the assertion repairs in
 the disposition record land; until then their owner states them as
 source-read.
+
+### Actor fallback, as implemented
+
+Compared at `6d2d8ebd`. The hypothesis, removing both automatic compilations
+for actor requests, was not selected. What was selected is narrower: the
+whole-request helper call is no longer made for a request with an `actors`
+array, so `policy_check` is present and null there, and the two fallback
+calls on the admitted-reply branch are deleted. Per-actor compilation and
+`actor_policy_checks` stay.
+
+Observed, from the thread's runs and one by-hand probe on shipped binaries:
+with the new assertions on the unchanged product the three actor-form tests
+failed because the helper received the held request; with the host killed
+during an actor action the old envelope carried a helper `tool_error` for the
+missing top-level policy and the new one carries null, while the actor's own
+capture was `ok` both times. The probe's envelopes are scratch only.
+
+Against the rehearsal's table:
+
+- Fallback and helper subjects. The predicted narrowing of automatic
+  invocation happened for the whole-request call only. The helper's grammar,
+  limits and capture meaning did not change, as predicted.
+- Envelope. Present-null `policy_check` for actor requests is as rehearsed.
+  The rehearsed omission of `actor_policy_checks` did not happen. Result and
+  error precedence were restated as produced, a correction the rehearsal did
+  not predict because it assumed those statements were already true.
+- Dossier. Unchanged: the per-policy serialization and the helper's later
+  import walk remain, since per-actor compilation remains.
+- Mechanism accounts. One helper launch per actor request disappears from the
+  inventories, not all of them.
+- Tests. The prediction held and was the larger part of the work: the actor
+  fallback tests no longer let a call count stand for input provenance. They
+  assert membership from independently authored policy objects, attribution
+  and order from the envelope, and invocation separately. An ordinary-form
+  held-input control was added, which the rehearsal did not name.
+- Limits. The per-capture bounds stay true; the accumulation statement
+  changed by one capture.
+
+Decision removed: whether an actor request also gets a whole-request helper
+call whose only possible result was a decode failure. Removed with it: one
+statement that the fallback "does not depend on host admission", which was
+false, and the unreachable admitted-branch calls, whose deletion rests on a
+control over every combination of the members eligibility reads.
+
+Decisions retained, each still maintained in its own owner: the field
+presence rule; the held-serialization rule; per-actor compilation and its
+resource bound; fallback eligibility, which still establishes nothing about
+worker progress or the cause of a lost reply.
+
+Lost observation: none that carried information. The whole-request capture
+for an actor request was always a helper refusal. The observations the
+rehearsal said removal would lose, the independent per-actor captures and
+their import scans, are kept.
+
+Work displaced: a reader of an actor envelope with no policy-bearing actor
+now finds no fallback capture at all and reads eligibility from the client
+capture. The frozen guide's fallback paragraphs do not say `policy_check` is
+null for actor requests.
+
+Judgment. The implemented change removes one decision and two unreachable
+calls and corrects statements; it is a product simplification, not the
+editorial consolidation the rehearsal weighed. The rehearsal's proposed
+single applicability statement was not needed: applicability now differs
+between the whole-request and per-actor calls, which is one more reason the
+three rules stay separately stated.
+
+### Validator association equality, as implemented
+
+Compared at `43c2896d`. The hypothesis was selected (ruling R9) and is now
+behavior, so observed results replace the rehearsal's predictions.
+
+Observed. Before the change the host accepted every new corpus row while the
+Rust reader and the independent consumer refused the four byte-different
+ones; the three readers now agree on all of them. A canonically equivalent,
+byte-different record gives a missing and an unexpected identifier, or a
+query mismatch, then `validator_unavailable` and exit 1; byte-identical
+neighbours associate. The order-barrier mutation control passed with no
+anchor moved.
+
+What the rehearsal predicted and what was found:
+
+- It named two places where the equality was decided, association and order
+  eligibility, with reporting validation reusing the production predicates.
+  Found: reporting validation held its own `String` lookup of a reply step
+  by identifier. After the first change production and reporting disagreed
+  on a respelled slot identifier, and a second commit applied the rule
+  there. The predicted reuse was not complete.
+- It did not name the worker-slot identity join. Found: one side is
+  child-supplied, because a completed slot's identifier is read back from
+  the shared mapping the worker can write, so the rule applies there too.
+- It expected the rule to live in the step and lifecycle association
+  statements, with eligibility referring to it. That is how it is stated.
+  Request-name uniqueness and submitted-target equality remain canonical and
+  are stated as such; path-form compaction is untouched. No comparison
+  outside validator and slot association was changed.
+- It suggested a shared association helper could remove duplicate choices in
+  Swift. None was introduced: the lookups were changed where they stand, and
+  the independent Rust and Python readers were left independently authored.
+
+Decision removed: which equality joins a child-supplied identifier or query
+metadata value to the request. It had been made implicitly, and differently,
+by the Swift host and by the two independent readers.
+
+Decisions retained: cardinality; which metadata a record may omit; the
+composition of the query tuple; the two canonical comparisons named above.
+
+Review that continues: any new host lookup by identifier needs the question
+"is one side child-supplied?" asked again; nothing enforces it mechanically.
+Two lookups were left on `String` with reasons recorded in the management
+plan, one of them by source reading only.
+
+Judgment. The saving is the one the rehearsal bounded: a single stated
+equality in place of two implicit ones. The work it did not predict was
+finding every place the choice had been made; the second commit exists
+because source reading by the rehearsal and by the first implementation
+both missed one.
