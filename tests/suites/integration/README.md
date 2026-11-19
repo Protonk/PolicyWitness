@@ -69,6 +69,14 @@ Rust integration tests that exercise the CLI contract against a built app.
   exit 0; a usage or argument refusal of a runner command writes its reason
   to stderr, prints no envelope, exits 2 and creates no registry. Of the three
   completed commands only `validate` creates the registry directory and file.
+- `--version`, `version`, `run` and `test-input run` on a missing request,
+  `runner list`, `reconcile` and `status`, and `sbpl-check` with `--help` and
+  with a request on stdin, each given a stdout pipe with no reader, exit 2
+  with exactly one line on stderr, and exit 2 when stderr has no reader
+  either. With stdout closed at launch the same commands keep their own
+  status and write nothing to stderr: the process then holds a descriptor
+  that discards what it is given. `sbpl-check` without arguments and with a
+  stderr that cannot be written exits 2 with an empty stdout.
 - Test source lives at `controller/integration/cli_contract.rs`.
 
 ## Success criteria

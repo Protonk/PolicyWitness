@@ -91,7 +91,7 @@ pub fn cmd_test_input(args: &[OsString]) -> i32 {
         Some(Tail::RunArguments) => {
             return match run_flow::cmd_test_input_run(&args[1..]) {
                 Ok(code) => code,
-                Err(error) => run_flow::print_escaped_tool_error(error),
+                Err(error) => run_flow::print_escaped_tool_error(Command::TestInput, error),
             };
         }
         Some(Tail::Unenumerated) => emit(args, BUILD_CONTRACT, &mut std::io::stdout().lock()),

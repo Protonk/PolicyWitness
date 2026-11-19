@@ -821,6 +821,7 @@ Declarations own meaning; source and check citations supply the stated support. 
 | `command.test_input` | interface association; see the partial join | [Run with test controls](REQUEST.md#contract-request-overrides-test_input_run) |
 | `controller/build.rs: cargo:rerun-if-env-changed` | source support | [Direct compilation contexts](#contract-identity-public-direct) |
 | `controller/build.rs: fn main` | source support | [Direct compilation contexts](#contract-identity-public-direct) |
+| `controller/integration/cli_contract.rs: envelope_write_failures_exit_2_with_one_line_and_never_a_panic` | check support | [Version command](RESPONSE.md#contract-identity-version-emit) |
 | `controller/integration/cli_contract.rs: example_prints_one_request_and_refuses_every_argument` | check support | [Emit the example specimen](REQUEST.md#contract-request-specimen-emit_example) |
 | `controller/integration/cli_contract.rs: example_write_failures_exit_2_without_a_panic` | check support | [Emit the example specimen](REQUEST.md#contract-request-specimen-emit_example) |
 | `controller/integration/cli_contract.rs: interface_cases_hold_on_the_signed_controller` | check support | [Run with test controls](REQUEST.md#contract-request-overrides-test_input_run) |
@@ -895,6 +896,7 @@ Declarations own meaning; source and check citations supply the stated support. 
 | `controller/src/json_contract.rs: every_envelope_carries_a_complete_build_stamp` | check support | [Build identification](RESPONSE.md#contract-identity-build) |
 | `controller/src/json_contract.rs: impl JsonResult` | source support | [A failed label check for runner verify](RESPONSE.md#contract-profile-receipt-labels-verify_failure) |
 | `controller/src/json_contract.rs: now_unix_ms` | source support | [Version command](RESPONSE.md#contract-identity-version-emit) |
+| `controller/src/json_contract.rs: only_a_complete_document_with_a_successful_flush_is_published` | check support | [Version command](RESPONSE.md#contract-identity-version-emit) |
 | `controller/src/json_contract.rs: public_identity_is_in_the_build_frame` | check support | [Build identification](RESPONSE.md#contract-identity-build) |
 | `controller/src/json_contract.rs: render_envelope` | source support | [The controller envelope](RESPONSE.md#contract-envelope) |
 | `controller/src/json_contract.rs: renderer_borrows_nonclone_typed_payload_and_serializes_it_once` | check support | [The controller envelope](RESPONSE.md#contract-envelope) |
@@ -1824,7 +1826,7 @@ Source: [PWRunnerAPI.swift](../runner/Sources/PWRunnerCore/PWRunnerAPI.swift): `
 
 [Local support](RESPONSE.md#contract-identity-version-emit-support).
 
-Source: [cli.rs](../controller/src/cli.rs): `pub fn run`; [json_contract.rs](../controller/src/json_contract.rs): `JsonResult`, `now_unix_ms`. Check: [cli_contract.rs](../controller/integration/cli_contract.rs): `version_flag_reports_build_stamp_and_contract`.
+Source: [cli.rs](../controller/src/cli.rs): `pub fn run`; [json_contract.rs](../controller/src/json_contract.rs): `JsonResult`, `now_unix_ms`. Check: [cli_contract.rs](../controller/integration/cli_contract.rs): `version_flag_reports_build_stamp_and_contract`, `envelope_write_failures_exit_2_with_one_line_and_never_a_panic`; [json_contract.rs](../controller/src/json_contract.rs): `only_a_complete_document_with_a_successful_flush_is_published`.
 
 <a id="contract-identity-version-emit-disposition_support-details"></a>
 ### Version command — Disposition support

@@ -31,6 +31,9 @@ Rust unit tests and formatting for the controller crate.
   `XPC_SERVICE_PATH` are `unowned`, an unconverted file and unknown presence
   are `unknown`, absence is `ambiguous`. A listed service with two `program`
   lines is `ambiguous`. These are constructed observations.
+- The envelope writer writes the text and one newline and then flushes. A
+  write that fails before the first byte, inside the text or at the newline,
+  and a failed flush, are each an error; this is a constructed writer.
 - No case requires a built `.app` bundle.
 
 `execution_envelopes_preserve_raw_evidence_and_emit_only_execution_fields`

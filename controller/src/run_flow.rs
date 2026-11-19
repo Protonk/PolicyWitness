@@ -22,6 +22,7 @@ use crate::dossier::{
     AppProvenance, Augmentation, Binaries, HostFacts, Imports, PolicyDossier, Specimen,
 };
 use crate::evidence::{self, EvidenceManifest};
+use crate::interface::commands::Command;
 use crate::interface::result::{Disposition, Label, Refusal, Selection, select};
 use crate::interface::run_args::{
     self, Control, ControlValue, Form, RunOption, Token, Value as OptionValue,
@@ -181,19 +182,36 @@ fn bad_request(
     )
 }
 
+/// Writes a run's envelope to stdout and returns the process status. The
+/// envelope's own status is the process status only when the whole envelope
+/// was written and flushed; otherwise the status is the tool-failure
+/// selection's, with one line on stderr.
+fn publish(command: Command, output: &RunOutput) -> i32 {
+    match json_contract::publish(&output.text) {
+        Ok(()) => output.exit_code,
+        Err(error) => {
+            crate::cli::diagnose(&format!(
+                "policy-witness {}: {error}",
+                command.def().spelling
+            ));
+            select(&Disposition::ToolFailure).exit
+        }
+    }
+}
+
 /// Prints the envelope for an error that escaped `cmd_run` (the `cli.rs`
 /// catch-all) and returns the process status the tool-failure selection
 /// carries, printed or not.
-pub fn print_escaped_tool_error(error: String) -> i32 {
+pub fn print_escaped_tool_error(command: Command, error: String) -> i32 {
     let specimen = Specimen::unavailable(
         None,
         HostFacts::collect(),
         "the run failed before runner selection",
     );
-    if let Ok(output) = tool_error(specimen, None, error) {
-        println!("{}", output.text);
+    match tool_error(specimen, None, error) {
+        Ok(output) => publish(command, &output),
+        Err(_) => select(&Disposition::ToolFailure).exit,
     }
-    select(&Disposition::ToolFailure).exit
 }
 
 /// The dependencies a run acquires from its environment, named at the
@@ -565,8 +583,11 @@ fn controls_object(controls: &[(Control, Value)]) -> String {
 
 fn print_run(args: &[OsString], form: Form) -> Result<i32, String> {
     let output = run(args, form, &RunDependencies::production())?;
-    println!("{}", output.text);
-    Ok(output.exit_code)
+    let command = match form {
+        Form::Run => Command::Run,
+        Form::TestInputRun => Command::TestInput,
+    };
+    Ok(publish(command, &output))
 }
 
 pub fn cmd_run(args: &[OsString]) -> Result<i32, String> {

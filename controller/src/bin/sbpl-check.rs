@@ -373,10 +373,30 @@ notes:
         .to_string()
 }
 
+/// A refusal's reason, for a person. An unwritable stderr leaves the exit
+/// status as the whole report.
+fn diagnose(reason: &str) {
+    use std::io::Write;
+    let _ = writeln!(std::io::stderr(), "{reason}");
+}
+
+/// Ends the process after publishing `text` on stdout: with `status` when
+/// the whole text was written and flushed, otherwise with 2 and one line on
+/// stderr.
+fn publish_and_exit(text: &str, status: i32) -> ! {
+    match json_contract::publish(text) {
+        Ok(()) => std::process::exit(status),
+        Err(error) => {
+            diagnose(&error);
+            std::process::exit(2);
+        }
+    }
+}
+
 fn main() {
     let args: Vec<String> = std::env::args().skip(1).collect();
     if args.is_empty() {
-        eprintln!("{}", usage());
+        diagnose(&usage());
         std::process::exit(2);
     }
 
@@ -384,22 +404,18 @@ fn main() {
     let mut idx = 0usize;
     while idx < args.len() {
         match args[idx].as_str() {
-            "-h" | "--help" => {
-                println!("{}", usage());
-                return;
-            }
+            "-h" | "--help" => publish_and_exit(&usage(), 0),
             "--request" => {
                 if let Some(path) = args.get(idx + 1) {
                     request_path = Some(PathBuf::from(path));
                     idx += 2;
                 } else {
-                    eprintln!("missing value for --request");
-                    eprintln!("{}", usage());
+                    diagnose(&format!("missing value for --request\n{}", usage()));
                     std::process::exit(2);
                 }
             }
             other => {
-                eprintln!("unknown argument: {other}\n\n{}", usage());
+                diagnose(&format!("unknown argument: {other}\n\n{}", usage()));
                 std::process::exit(2);
             }
         }
@@ -408,7 +424,7 @@ fn main() {
     let request_path = match request_path {
         Some(path) => path,
         None => {
-            eprintln!("missing --request\n\n{}", usage());
+            diagnose(&format!("missing --request\n\n{}", usage()));
             std::process::exit(2);
         }
     };
@@ -416,7 +432,7 @@ fn main() {
     let text = if request_path.as_os_str() == "-" {
         let mut text = String::new();
         if let Err(err) = std::io::Read::read_to_string(&mut std::io::stdin().lock(), &mut text) {
-            eprintln!("failed to read request: {err}");
+            diagnose(&format!("failed to read request: {err}"));
             std::process::exit(2);
         }
         text
@@ -424,7 +440,7 @@ fn main() {
         match std::fs::read_to_string(&request_path) {
             Ok(text) => text,
             Err(err) => {
-                eprintln!("failed to read request: {err}");
+                diagnose(&format!("failed to read request: {err}"));
                 std::process::exit(2);
             }
         }
@@ -433,7 +449,7 @@ fn main() {
     let parsed: CheckRequest = match serde_json::from_str(&text) {
         Ok(req) => req,
         Err(err) => {
-            eprintln!("failed to parse request.json: {err}");
+            diagnose(&format!("failed to parse request.json: {err}"));
             std::process::exit(2);
         }
     };
@@ -441,8 +457,13 @@ fn main() {
     let mut walk = sbpl_imports::resolve_imports;
     let report = check(&parsed, &mut LibSandbox, &mut walk);
     let exit_code = report.result.exit_code.unwrap_or(1);
-    let _ = json_contract::print_envelope("sbpl_check", report.result, &report.data);
-    std::process::exit(exit_code);
+    match json_contract::render_envelope("sbpl_check", report.result, &report.data) {
+        Ok(text) => publish_and_exit(&text, exit_code),
+        Err(error) => {
+            diagnose(&error);
+            std::process::exit(2);
+        }
+    }
 }
 
 #[cfg(test)]

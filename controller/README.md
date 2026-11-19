@@ -84,7 +84,11 @@ root is read. [`run`](#run) describes the rest.
 
 `--version` (or `version`) prints a `kind="version"` envelope with the public
 identity in `data.contract` and `build.contract`. It takes no argument; one
-after it is exit 2 with a line on stderr. Every envelope also carries
+after it is exit 2 with a line on stderr. Every envelope is written to stdout
+with one newline and flushed; `version`, `run`, `test-input run`, the `runner`
+commands and `sbpl-check` exit 2 with one line on stderr when a write or the
+flush fails, whatever status the envelope held, and the line never changes the
+status. Every envelope also carries
 `version`, `number`, `describe` and `commit` as provenance. The app and service
 plists advertise the same identity as `PWContract`. A plain Cargo build is
 `unbound` and refuses public requests and packaged peers.
@@ -176,7 +180,7 @@ diagnostic, without inventing a validator subprocess or verdict.
 | --- | --- |
 | `0` | `result.ok=true`, `result.normalized_outcome="finished"`: execution and required evidence collection completed; individual attempts can fail. |
 | `1` | Runner-reported failure, `bad_request`, or unreadable/unsupported reply. Malformed request JSON, versions, selectors and augments are `bad_request`, including controller refusals before XPC. `data.request_failure` carries the structured refusal. |
-| `2` | Usage or tool failure: missing/unreadable request, unavailable runner, manifest failure or request-delivery failure. The run envelope retains the dossier collected so far and any client capture already obtained. |
+| `2` | Usage or tool failure: missing/unreadable request, unavailable runner, manifest failure or request-delivery failure. The run envelope retains the dossier collected so far and any client capture already obtained. Also the status of a run whose envelope could not be written to stdout: the run has ended, and stdout holds no delivered envelope. |
 
 ### What a run reads and launches
 
@@ -336,7 +340,10 @@ registry keys. A completed list, status, install, validate, remove or reconcile
 reports `result.normalized_outcome: "ok"`, true `ok` and exit 0, for remove also
 when `cleanup_retained` is true. A usage, argument, registry-load or operation
 refusal other than a lookup miss writes one reason to stderr, prints no
-envelope and exits 2. Validate checks the bundle recursively and each binary
+envelope and exits 2. After an envelope that could not be written, the changes
+an install, remove or validate made remain; `runner list` and
+`runner reconcile` report them. Validate checks the bundle recursively and
+each binary
 individually, refreshing signature/entitlement observations and reporting
 `data.invalid` and per-binary `data.failures`; it does not reconcile launchd.
 

@@ -233,8 +233,8 @@ where: "standalone argument, read and JSON boundary"
 entry: ["standalone_helper", "controller_helper_stdin"]
 recipient: ["caller", "report_reader"]
 report: ["helper_envelope", "stderr"]
-free.effect: Use the helper policy decoder. Usage errors, input-read errors and JSON/decode errors exit 2 and report on stderr. Successfully decoded requests proceed to helper admission and produce an envelope.
-retained_free: {"effect":{"kind":"raw_admission","reason":"Usage, byte-read and decode failures occur before the helper envelope and have separate stderr/process-exit paths."}}
+free.effect: Use the helper policy decoder. Usage errors, input-read errors and JSON/decode errors exit 2 and report on stderr. Successfully decoded requests proceed to helper admission and produce an envelope. An envelope, or the usage text that `--help` prints, that cannot be written to standard output and flushed is exit 2 with one line on stderr.
+retained_free: {"effect":{"kind":"raw_admission","reason":"Usage, byte-read and decode failures occur before the helper envelope and have separate stderr/process-exit paths; a failed write of the output ends on that path."}}
 ```
 
 

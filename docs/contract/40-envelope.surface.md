@@ -97,7 +97,11 @@ it null; native attempt returns remain in their nested records.
 
 Selected controller/helper exit status. For a run: zero for admitted
 `finished`, one for an execution/refusal outcome, two for tool or
-input-handling errors.
+input-handling errors. The process ends with this status once the whole
+envelope and its newline were written to standard output and flushed. When a
+write or the flush fails, it ends with status 2 instead, whatever this field
+held, with one line on standard error when that stream accepts it; what
+reached standard output is not a delivered envelope.
 
 ### Outcome {normalized_outcome: field}
 

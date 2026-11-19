@@ -2554,3 +2554,214 @@ fn runner_commands_report_ok_or_refuse_on_stderr_without_an_envelope() {
         serde_json::json!({"schema_version": 1, "runners": [], "pending_cleanup": []})
     );
 }
+
+/// One process with the given standard output and standard error. `input`,
+/// when given, is written to its standard input, which is then closed.
+fn launch(
+    program: &Path,
+    args: &[&str],
+    environment: &[(&str, &Path)],
+    input: Option<&str>,
+    stdout: std::process::Stdio,
+    stderr: std::process::Stdio,
+) -> Output {
+    use std::io::Write;
+    use std::process::Stdio;
+    let mut command = Command::new(program);
+    command.args(args).stdout(stdout).stderr(stderr);
+    for (name, value) in environment {
+        command.env(name, value);
+    }
+    command.stdin(if input.is_some() {
+        Stdio::piped()
+    } else {
+        Stdio::null()
+    });
+    let mut child = command.spawn().expect("spawn");
+    if let Some(input) = input {
+        // A child that ends before reading leaves a closed pipe; that write
+        // is not what a row observes.
+        let _ = child.stdin.take().unwrap().write_all(input.as_bytes());
+    }
+    child.wait_with_output().expect("wait")
+}
+
+/// The envelope publishers with a standard output that cannot be written:
+/// `--version`, `version`, `run`, `test-input run`, the runner commands and
+/// `sbpl-check` each exit 2 with one line on stderr, and exit 2 all the same
+/// when stderr cannot be written either. A standard output closed at launch
+/// is another state: the process holds a descriptor that discards what it is
+/// given, no write fails and the command's own status stands.
+#[test]
+fn envelope_write_failures_exit_2_with_one_line_and_never_a_panic() {
+    use std::process::Stdio;
+    if !integration_enabled() {
+        return;
+    }
+    let bin = require_pw_bin();
+    let helper = require_sbpl_check_bin();
+    let scratch = Scratch::new("envelope-write-failure");
+    let home = scratch.root.join("home");
+    std::fs::create_dir(&home).unwrap();
+    let registry = scratch.root.join("registry").join("runners.json");
+    let environment: [(&str, &Path); 2] = [("HOME", &home), ("PW_RUNNER_REGISTRY", &registry)];
+    let missing = scratch.root.join("missing-request.json");
+    let missing = missing.to_str().unwrap();
+    let allow_all = r#"{"policy": {"format": "sbpl", "sbpl_source": "(version 1)(allow default)"}, "probe_plan": []}"#;
+
+    // The program, its arguments and standard input, the line a failed write
+    // leaves on stderr, and the status the command has when its envelope is
+    // written.
+    let publishers: [(&Path, &[&str], Option<&str>, &str, i32); 9] = [
+        (
+            &bin,
+            &["--version"],
+            None,
+            "policy-witness --version: failed to write stdout\n",
+            0,
+        ),
+        (
+            &bin,
+            &["version"],
+            None,
+            "policy-witness version: failed to write stdout\n",
+            0,
+        ),
+        (
+            &bin,
+            &["run", missing],
+            None,
+            "policy-witness run: failed to write stdout\n",
+            2,
+        ),
+        (
+            &bin,
+            &["test-input", "run", missing],
+            None,
+            "policy-witness test-input: failed to write stdout\n",
+            2,
+        ),
+        (
+            &bin,
+            &["runner", "list"],
+            None,
+            "failed to write stdout\n",
+            0,
+        ),
+        (
+            &bin,
+            &["runner", "reconcile"],
+            None,
+            "failed to write stdout\n",
+            0,
+        ),
+        (
+            &bin,
+            &["runner", "status", "--service-name", "absent.service"],
+            None,
+            "failed to write stdout\n",
+            2,
+        ),
+        (&helper, &["--help"], None, "failed to write stdout\n", 0),
+        (
+            &helper,
+            &["--request", "-"],
+            Some(allow_all),
+            "failed to write stdout\n",
+            0,
+        ),
+    ];
+    let mut rows = Vec::new();
+    let mut problems = Vec::new();
+    for (program, args, input, line, own_status) in publishers {
+        let name = program.file_name().unwrap().to_string_lossy().into_owned();
+        let mut observe = |state: &str, output: Output, status: i32, stderr: Option<&str>| {
+            let text = String::from_utf8_lossy(&output.stderr).into_owned();
+            let mut found = Vec::new();
+            if output.status.code() != Some(status) {
+                found.push(format!(
+                    "status {:?}, expected {status}",
+                    output.status.code()
+                ));
+            }
+            if stderr.is_some_and(|expected| text != expected) {
+                found.push(format!("stderr {text:?}, expected {stderr:?}"));
+            }
+            problems.extend(
+                found
+                    .iter()
+                    .map(|problem| format!("{name} {args:?}: {state}: {problem}")),
+            );
+            rows.push(serde_json::json!({
+                "program": name, "args": args, "state": state,
+                "status": output.status.code(), "stdout_bytes": output.stdout.len(),
+                "stderr": text, "problems": found,
+            }));
+        };
+        observe(
+            "stdout without a reader",
+            launch(
+                program,
+                args,
+                &environment,
+                input,
+                unwritable(),
+                Stdio::piped(),
+            ),
+            2,
+            Some(line),
+        );
+        observe(
+            "stdout and stderr without a reader",
+            launch(
+                program,
+                args,
+                &environment,
+                input,
+                unwritable(),
+                unwritable(),
+            ),
+            2,
+            None,
+        );
+        let mut shell = vec!["-c", "exec \"$0\" \"$@\" >&-", program.to_str().unwrap()];
+        shell.extend_from_slice(args);
+        observe(
+            "stdout closed at launch",
+            launch(
+                Path::new("/bin/sh"),
+                &shell,
+                &environment,
+                input,
+                Stdio::piped(),
+                Stdio::piped(),
+            ),
+            own_status,
+            Some(""),
+        );
+    }
+    // A refusal whose reason cannot be written is still exit 2 with no output.
+    let output = launch(
+        &helper,
+        &[],
+        &environment,
+        None,
+        Stdio::piped(),
+        unwritable(),
+    );
+    if output.status.code() != Some(2) || !output.stdout.is_empty() {
+        problems.push(format!(
+            "sbpl-check without arguments, stderr without a reader: status {:?}, {} stdout bytes",
+            output.status.code(),
+            output.stdout.len()
+        ));
+    }
+    rows.push(serde_json::json!({
+        "program": "sbpl-check", "args": [], "state": "stderr without a reader",
+        "status": output.status.code(), "stdout_bytes": output.stdout.len(),
+    }));
+    save_rows("envelope-write-failure", &rows);
+    assert!(problems.is_empty(), "{}", problems.join("\n"));
+    // No row created a registry: the runner rows read an absent one.
+    assert!(std::fs::symlink_metadata(registry.parent().unwrap()).is_err());
+}

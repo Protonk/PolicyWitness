@@ -23,6 +23,7 @@ pub const BUILD_CONTRACT: &str = "test:policy-witness";
 
 #[cfg(test)]
 use serde_json::Value;
+use std::io::Write;
 use std::time::{SystemTime, UNIX_EPOCH};
 
 #[derive(Serialize, Clone)]
@@ -115,14 +116,29 @@ pub fn render_envelope<T: Serialize>(
     Ok(text)
 }
 
+/// The published bytes: the text, one framing newline, then a flush. The
+/// text is written as it is held, without a framed copy. A failed write
+/// leaves at least the newline undelivered.
+pub fn write_document(out: &mut dyn Write, text: &str) -> std::io::Result<()> {
+    out.write_all(text.as_bytes())?;
+    out.write_all(b"\n")?;
+    out.flush()
+}
+
+/// Publishes a rendered envelope or other document on standard output. Only
+/// complete output with a successful flush is success; the error is the line
+/// the caller reports beside exit status 2.
+pub fn publish(text: &str) -> Result<(), String> {
+    write_document(&mut std::io::stdout().lock(), text)
+        .map_err(|_| "failed to write stdout".to_string())
+}
+
 pub fn print_envelope<T: Serialize>(
     kind: &str,
     result: JsonResult,
     data: &T,
 ) -> Result<(), String> {
-    let text = render_envelope(kind, result, data)?;
-    println!("{text}");
-    Ok(())
+    publish(&render_envelope(kind, result, data)?)
 }
 
 #[cfg(test)]
@@ -206,6 +222,78 @@ mod tests {
 
         let parsed: serde_json::Value = serde_json::from_str(&text).expect("parse");
         assert_eq!(parsed["build"]["contract"], BUILD_CONTRACT);
+    }
+}
+
+#[cfg(test)]
+mod publication_tests {
+    use super::*;
+    use std::io;
+
+    /// Accepts `limit` bytes and fails the write that would pass it, or
+    /// accepts everything and fails its flush.
+    struct Failing {
+        accepted: Vec<u8>,
+        limit: Option<usize>,
+        flushed: bool,
+    }
+
+    impl Write for Failing {
+        fn write(&mut self, bytes: &[u8]) -> io::Result<usize> {
+            let room = self
+                .limit
+                .map_or(bytes.len(), |limit| limit - self.accepted.len());
+            if room == 0 {
+                return Err(io::Error::from(io::ErrorKind::BrokenPipe));
+            }
+            let count = bytes.len().min(room);
+            self.accepted.extend_from_slice(&bytes[..count]);
+            Ok(count)
+        }
+
+        fn flush(&mut self) -> io::Result<()> {
+            if self.limit.is_none() {
+                return Err(io::Error::other("controlled flush failure"));
+            }
+            self.flushed = true;
+            Ok(())
+        }
+    }
+
+    #[test]
+    fn only_a_complete_document_with_a_successful_flush_is_published() {
+        let text = "{\n  \"kind\": \"fixture\"\n}";
+        let complete = format!("{text}\n").into_bytes();
+
+        let mut whole = Failing {
+            accepted: Vec::new(),
+            limit: Some(complete.len()),
+            flushed: false,
+        };
+        assert!(write_document(&mut whole, text).is_ok());
+        assert_eq!(whole.accepted, complete);
+        assert!(whole.flushed);
+
+        // A write that fails before the first byte, inside the text and at
+        // the framing newline.
+        for limit in [0, 5, complete.len() - 1] {
+            let mut short = Failing {
+                accepted: Vec::new(),
+                limit: Some(limit),
+                flushed: false,
+            };
+            assert!(write_document(&mut short, text).is_err(), "{limit}");
+            assert_eq!(short.accepted, complete[..limit], "{limit}");
+            assert!(!short.flushed, "{limit}");
+        }
+
+        let mut unflushed = Failing {
+            accepted: Vec::new(),
+            limit: None,
+            flushed: false,
+        };
+        assert!(write_document(&mut unflushed, text).is_err());
+        assert_eq!(unflushed.accepted, complete);
     }
 }
 

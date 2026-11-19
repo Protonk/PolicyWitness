@@ -1310,7 +1310,7 @@ Record `helper_request`: `rust.CheckRequest`.
 <a id="contract-policy-helper_request-read"></a>
 #### Read helper input
 
-[Compiler helper](CONTRACT.md#contract-identity-definitions-helper) acts at standalone argument, read and JSON boundary. Entry: standalone helper, controller helper stdin. Recipient: caller, report reader. Reports: helper envelope, stderr. Use the helper policy decoder. Usage errors, input-read errors and JSON/decode errors exit 2 and report on stderr. Successfully decoded requests proceed to helper admission and produce an envelope.
+[Compiler helper](CONTRACT.md#contract-identity-definitions-helper) acts at standalone argument, read and JSON boundary. Entry: standalone helper, controller helper stdin. Recipient: caller, report reader. Reports: helper envelope, stderr. Use the helper policy decoder. Usage errors, input-read errors and JSON/decode errors exit 2 and report on stderr. Successfully decoded requests proceed to helper admission and produce an envelope. An envelope, or the usage text that `--help` prints, that cannot be written to standard output and flushed is exit 2 with one line on stderr.
 
 <a id="contract-policy-helper_request-support"></a>
 **Support: [source read](CONTRACT.md#contract-support-grades) for [Standalone compiler-helper request](#contract-policy-helper_request) and its descendants.** The adjacent field meanings and operations follow the named implementation. [Evidence details](CONTRACT.md#contract-policy-helper_request-support-details).

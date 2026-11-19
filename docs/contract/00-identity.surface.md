@@ -794,8 +794,8 @@ report: ["version"]
 uses: ["identity.definitions.envelope", "identity.build.contract"]
 free.condition: The first command argument is --version or version.
 effects: [set_value(version_data.contract, ref("identity.build.contract")), set_value(result.ok, True), set_value(result.exit_code, 0), set_value(result.rc, None), set_value(result.normalized_outcome, None), set_value(result.errno, None), set_value(result.error, None), set_value(result.stderr, None), set_value(result.stdout, None)]
-free.effect: Emit the version envelope with its version payload and current build context; return process exit 0 after successful rendering, or 2 when envelope rendering returns an error.
-retained_free: {"condition": {"kind": "raw_admission", "reason": "The first raw argv value has no imported operand; a version envelope cannot establish how dispatch was reached."}, "effect": {"kind": "native_protocol", "reason": "The version command serializes its VersionData and shared JsonResult in a version envelope. Rendering success or failure then governs the process exit."}}
+free.effect: Emit the version envelope with its version payload and current build context; return process exit 0 after the envelope was rendered, written to standard output and flushed, or 2, with one line on standard error when that stream accepts it, when rendering, a write or the flush fails.
+retained_free: {"condition": {"kind": "raw_admission", "reason": "The first raw argv value has no imported operand; a version envelope cannot establish how dispatch was reached."}, "effect": {"kind": "native_protocol", "reason": "The version command serializes its VersionData and shared JsonResult in a version envelope. Rendering and publication success or failure then govern the process exit."}}
 ```
 
 Version dispatch reports the compiled context without loading a specimen or
@@ -812,10 +812,10 @@ uses zero if its system time precedes that epoch.
 ```contract
 grade: "check_read"
 source: [{"path":"controller/src/cli.rs","symbol":"pub fn run"},{"path":"controller/src/json_contract.rs","symbol":"JsonResult"},{"path":"controller/src/json_contract.rs","symbol":"now_unix_ms"}]
-check: {"path":"controller/integration/cli_contract.rs","symbol":"version_flag_reports_build_stamp_and_contract","form":"test"}
-pins: "--version succeeds, emits kind version and result.ok true, supplies populated packaged build fields, and reports candidate-plist identity in data and build."
-context: "Read dispatch and serializer branches; read integration test invoking the selected controller binary and independently extracting its app plist identity."
-limits: "Check read without execution. Alias version, exact null result fields and rendering-error exit are source-established here; the cited check exercises --version success."
+check: [{"path":"controller/integration/cli_contract.rs","symbol":"version_flag_reports_build_stamp_and_contract","form":"test"},{"path":"controller/integration/cli_contract.rs","symbol":"envelope_write_failures_exit_2_with_one_line_and_never_a_panic","form":"test"},{"path":"controller/src/json_contract.rs","symbol":"only_a_complete_document_with_a_successful_flush_is_published","form":"test"}]
+pins: "--version succeeds, emits kind version and result.ok true, supplies populated packaged build fields, and reports candidate-plist identity in data and build. With a standard output that has no reader, both spellings exit 2 with one line on standard error, and exit 2 when standard error has no reader either."
+context: "Read dispatch and serializer branches; read integration tests invoking the selected controller binary, one independently extracting its app plist identity and one supplying pipes without a reader."
+limits: "Check read without execution. Alias version success, exact null result fields and rendering-error exit are source-established here; the cited checks exercise --version success and a failed write for both spellings. A failed flush is exercised on a constructed writer only."
 ```
 
 #### Disposition support {disposition_support: owner}

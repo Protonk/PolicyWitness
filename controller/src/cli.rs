@@ -52,13 +52,19 @@ pub fn run(argv: Vec<OsString>) -> i32 {
             let data = json!({"contract": json_contract::BUILD_CONTRACT});
             match json_contract::print_envelope("version", result, &data) {
                 Ok(()) => 0,
-                Err(_) => 2,
+                Err(error) => {
+                    diagnose(&format!(
+                        "policy-witness {}: {error}",
+                        command.def().spelling
+                    ));
+                    2
+                }
             }
         }
         (Command::Run, Ok(tail)) => match run_flow::cmd_run(tail) {
             Ok(code) => code,
             // Errors that escape cmd_run still use the uniform run envelope.
-            Err(err) => run_flow::print_escaped_tool_error(err),
+            Err(err) => run_flow::print_escaped_tool_error(command, err),
         },
         (Command::TestInput, Ok(tail)) => test_input::cmd_test_input(tail),
         (Command::Runner, Ok(tail)) => match runner_commands::cmd_runner(tail) {

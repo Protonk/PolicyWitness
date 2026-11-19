@@ -348,16 +348,21 @@ retain that vocabulary and separately authored semantic classifiers. Their
 agreement is checked within stated scopes; no generated shared classifier or
 universal equivalence is promised.
 
-General envelopes are rendered before `println!` in
-[json_contract.rs](../controller/src/json_contract.rs) and run dispatch; these
-paths do not implement the explicit fallible write/flush protocol that
-`example` and `test-input read` each implement. For those two commands, complete-looking
-JSON is unusable on exit 2, including a late flush failure.
-`only_complete_output_with_a_successful_flush_succeeds` in `example.rs` and
-`complete_publication_requires_all_writes_and_flush` in `test_input.rs` test that
-case with injected writers. No publication path establishes downstream receipt
-or durable storage. Interrupted output can follow effects; stderr is a human
-diagnostic, not a replacement protocol.
+Envelopes are rendered first and then published by
+[`publish`](../controller/src/json_contract.rs): the text, one newline, then a
+flush. `version`, `run`, `test-input run`, the `runner` commands and
+`sbpl-check` use it; `example` and `test-input read` implement the same
+protocol for their documents. A failed write or flush is exit 2 with one line
+on stderr, whatever status an envelope held, and what reached stdout is
+unusable, including after a late flush failure. For `run` and the `runner`
+commands exit 2 is also an envelope's own status; the stderr line
+`failed to write stdout` marks the failed publication.
+`only_complete_output_with_a_successful_flush_succeeds` in `example.rs`,
+`complete_publication_requires_all_writes_and_flush` in `test_input.rs` and
+`only_a_complete_document_with_a_successful_flush_is_published` in
+`json_contract.rs` test that case with injected writers. No publication path
+establishes downstream receipt or durable storage. Interrupted output can
+follow effects; stderr is a human diagnostic, not a replacement protocol.
 
 <!-- BEGIN GENERATED CONTRACT commitments_result -->
 Commitments explained here:
