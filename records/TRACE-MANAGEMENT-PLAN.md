@@ -1189,6 +1189,13 @@ older than its contract. `tests/out/runs` holds only this stage's `host1-*`,
 `host2-*` and `r14-*` directories. The guide, its copies and both publication
 records are byte-unchanged at the freeze. No release was made.
 
+Resumed on 2026-11-18 at 20:34 local from `1fa886c7`, on the maintainer's
+instruction to carry the product threads through the grouped default
+battery, its reread and a prune preview, and then stop. While that runs
+there is one writer in the checkout: uncommitted changes in the tree are
+the running thread's unverified work, and its scratch directory, named for
+the thread, holds a `RESUME.md`.
+
 Done in this stage: the Markdown and pilot cohorts; the seam migration; the
 limits texts under the freeze; the four conversions with their follow-ups;
 R4 and R5; R14, taken out of the accounts thread after the pause was first
