@@ -1376,6 +1376,38 @@ Swift writer, wire fingerprint and worker identity are unchanged.
 generated copies and the signed CLI. They exercise the malformed-reply
 route independently of the Swift writer.
 
+### IDENT — development and worker identity derivation, 2026-11-19
+
+`a4d49249` implements R3. Source discovery lists each directory and inspects
+each entry beneath the declared roots. It names the path when listing or
+inspection fails, including an empty unlistable directory. The inputs
+statement now names seven roots, twenty explicit files and the suffixes.
+It explains on-disk discovery and which two observations the pre-sign check
+compares. The build account includes the new propagated refusal.
+
+- `ident-pre` (`20261119T160501Z_78ce88f1`) completed both cases. The old
+  selector omitted unreadable subtrees or gave the wrong reason for refusal.
+  Both build fixtures continued to the signing-identity check. The statement
+  omitted `controller/interface` and `docs/publication.py`. The readable
+  control agreed with the independently pinned digest.
+- `ident-post` (`20261119T161611Z_db3c56bd`) completed 98 cases
+  with 96 passes and two failures, zero system sleep and an intact app.
+  All 24 cases in the thread brief and its native-source route passed.
+  Selecting the complete C harness also selected two optional wait
+  experiments. `native_pause` did not qualify the standalone one-millisecond
+  nanosleep under the deny-default and original-v2 fixtures. `arm_wait`
+  refused to start without its coordinator gate. The production wait was
+  outside R3. The retained run is a failure and gives no qualification for
+  either primitive. The controls exercise real directory permissions and the
+  build script, Swift context generator and development guide staging in
+  disposable source copies. The statement-derived inventory and the literal
+  framing check independently exercise the digest.
+- The signed candidate's public identity changed from `development:cc96e8ece83a2c1353da049b4dca4036f2077e264c7e4f6d621db622ba2b7a06`
+  to `development:0c8497126cab848b4faf781d891010a06f7510dea903d6bea546afb7d09b18b1`. The worker identity changed from
+  `217ad94adda003919638e5e7406a2fdb650d9ad17e839f64e87e9d64a442252b` to `3632de9cdadf7dd04e12e29db86dff1b80a30e96a07dff0815bbff8d9df412db`. All three generated copies
+  and the built worker agreed at signing. The build account, diagrams and
+  public contract were regenerated, and the build checked all eight owners.
+
 ### Pause — 2026-11-18
 
 Work stopped at a quiet point at the maintainer's request, resumed the same
