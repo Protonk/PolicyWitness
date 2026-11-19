@@ -325,7 +325,7 @@
         "full",
         "partial"
       ],
-      "reads": "docs/contract/*.surface.md, imported public record declarations, canonical shapes, docs/contract/presentation.json and trace-introduction.md, every routed statement and tour commitment region, the CONTRACT and guide stamp tables, the generated public snapshot and annotated release history; docs/architecture.json and their generated copies; docs/footprint.json and its generated document; docs/porcelain.json and its generated typed record declarations and codecs; controller/interface/inventory.json with the case corpus, the mutation record, the joins and the residue baseline",
+      "reads": "docs/contract/*.surface.md, imported public record declarations, canonical shapes, docs/contract/presentation.json and trace-introduction.md, every routed statement and tour commitment region, every other Markdown document directly under docs/ for contract region markers the map does not name, the CONTRACT and guide stamp tables, the generated public snapshot and annotated release history; docs/architecture.json and their generated copies; docs/footprint.json and its generated document; docs/porcelain.json and its generated typed record declarations and codecs; controller/interface/inventory.json with the case corpus, the mutation record, the joins and the residue baseline",
       "writes": "nothing",
       "refusals": [
         "stale_contract_stamps",

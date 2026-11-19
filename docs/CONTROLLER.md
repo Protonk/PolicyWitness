@@ -154,8 +154,12 @@ Commitments explained here:
 - [Emit the example specimen](REQUEST.md#contract-request-specimen-emit_example) (`request.specimen.emit_example`).
 - [Publish a developer read input](REQUEST.md#contract-request-specimen-emit_test_input) (`request.specimen.emit_test_input`).
 - [Run with test controls](REQUEST.md#contract-request-overrides-test_input_run) (`request.overrides.test_input_run`).
+- [Controller pre-invocation refusal](RESPONSE.md#contract-refusals-controller-consequence) (`refusals.controller.consequence`).
 - [Selector precedence](REQUEST.md#contract-request-options-precedence) (`request.options.precedence`).
 - [Resolve and append](REQUEST.md#contract-policy-augments-resolve) (`policy.augments.resolve`).
+- [Selection and augmentation failure order](REQUEST.md#contract-request-options-failure_order) (`request.options.failure_order`).
+- [Resolve actor policies in request order](REQUEST.md#contract-policy-augments-actors) (`policy.augments.actors`).
+- [Hold and deliver the selected request](REQUEST.md#contract-request-specimen-hold) (`request.specimen.hold`).
 - [Collection boundaries](RESPONSE.md#contract-dossier-collection) (`dossier.collection`).
 <!-- END GENERATED CONTRACT commitments_preparation -->
 
@@ -182,7 +186,7 @@ and performs compilation without running the specimen.
 Commitments explained here:
 
 - [Nested runner selector](REQUEST.md#contract-request-selector) (`request.selector`).
-- [Static worker binding](RESPONSE.md#contract-equipment-binding) (`equipment.binding`).
+- [Controller selection options](REQUEST.md#contract-request-options) (`request.options`).
 <!-- END GENERATED CONTRACT commitments_selection -->
 
 ## Invocation and uncertainty
@@ -299,10 +303,12 @@ Commitments explained here:
 
 - [Boundary precedence](RESPONSE.md#contract-envelope-data-admit) (`envelope.data.admit`).
 - [Exact structural admission](ARCHITECTURE.md#contract-wire-frame-admit) (`wire.frame.admit`).
-- [Observe fresh descriptors](RESPONSE.md#contract-steps-assessment-fresh) (`steps.assessment.fresh`).
+- [Execution diagnostics](RESPONSE.md#contract-diagnostics-execution) (`diagnostics.execution`).
+- [The controller checks carried labels](RESPONSE.md#contract-profile-receipt-labels) (`profile.receipt.labels`).
 - [Application assessment](RESPONSE.md#contract-actor_evidence-application) (`actor_evidence.application`).
 - [One actor's diagnostics](RESPONSE.md#contract-diagnostics-actor) (`diagnostics.actor`).
 - [Reporting failure](RESPONSE.md#contract-reply-failure) (`reply.failure`).
+- [Integrity finding](RESPONSE.md#contract-diagnostics-issue) (`diagnostics.issue`).
 <!-- END GENERATED CONTRACT commitments_admission -->
 
 ## Selecting a result and publishing it

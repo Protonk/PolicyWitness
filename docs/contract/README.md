@@ -79,7 +79,9 @@ whole subject directly beneath a surface. A subject's nested fields, rules,
 examples and owners travel together. The map is outside canonical public
 meaning; changing a destination alone changes no public payload. `goldens` names canonical shapes and `checks`
 names catalog suites. Strict validation requires populated contents, shapes
-and checks.
+and checks. A surface's `checks` list is validated only as catalog suite names;
+it is not compared with the checks its owners cite and selects no verification
+for a surface change.
 
 ## Presentation and regeneration
 
@@ -93,7 +95,10 @@ and support details in CONTRACT link back to their local statements.
 
 Within authored surfaces, a `#contract-…` link names a canonical node; the
 `CONTRACT.md#contract-…` and `./CONTRACT.md#contract-…` forms name the same
-node. Rendering resolves these links to the node's mapped document. The link
+node. Rendering resolves these links to the node's mapped document. Rebasing
+matches destination text within a paragraph that holds a link; show literal
+link syntax in a code span, not behind an escaped bracket. Write contract links
+with unencoded destinations. The link
 checker verifies that the rendered destination actually contains the anchor.
 Other document paths retain their literal destinations, including historical
 copies, and links in generated documents are checked independently of the map.
@@ -122,7 +127,9 @@ A map-only move must preserve canonical public payloads, shapes, counts and
 stamp contents. A subject split, renamed identity, changed title or public prose
 is a public change; review local and imported/shared payload differences rather
 than relying on an unchanged displayed stamp. Update inbound links to the complete
-statement's home. The [generator controls](../../tests/suites/source_drift/README.md#generator-contracts)
+statement's home. A document removed from the map must also lose its contract
+regions: generation refuses contract region markers in a Markdown document
+directly under `docs/` that the map does not name. The [generator controls](../../tests/suites/source_drift/README.md#generator-contracts)
 check coverage, region boundaries, links, history, freshness and representative
 scope preservation; they do not decide whether a statement is accurate or useful.
 

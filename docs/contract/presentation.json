@@ -364,8 +364,12 @@
         "request.specimen.emit_example",
         "request.specimen.emit_test_input",
         "request.overrides.test_input_run",
+        "refusals.controller.consequence",
         "request.options.precedence",
         "policy.augments.resolve",
+        "request.options.failure_order",
+        "policy.augments.actors",
+        "request.specimen.hold",
         "dossier.collection"
       ]
     },
@@ -374,7 +378,7 @@
       "region": "commitments_selection",
       "nodes": [
         "request.selector",
-        "equipment.binding"
+        "request.options"
       ]
     },
     {
@@ -391,10 +395,12 @@
       "nodes": [
         "envelope.data.admit",
         "wire.frame.admit",
-        "steps.assessment.fresh",
+        "diagnostics.execution",
+        "profile.receipt.labels",
         "actor_evidence.application",
         "diagnostics.actor",
-        "reply.failure"
+        "reply.failure",
+        "diagnostics.issue"
       ]
     },
     {
@@ -511,7 +517,6 @@
       "document": "docs/BUILD.md",
       "region": "commitments_identity",
       "nodes": [
-        "identity.public.derive",
         "identity.other"
       ]
     },
@@ -519,17 +524,14 @@
       "document": "docs/BUILD.md",
       "region": "commitments_signing",
       "nodes": [
-        "equipment.manifest",
-        "equipment.binding"
+        "equipment.manifest"
       ]
     },
     {
       "document": "docs/BUILD.md",
       "region": "commitments_evidence",
       "nodes": [
-        "identity.build",
-        "equipment.inventory",
-        "equipment.manifest"
+        "identity.build"
       ]
     },
     {

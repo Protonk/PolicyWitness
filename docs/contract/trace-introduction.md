@@ -19,10 +19,16 @@ that connect those statements to their support.
 
 The [authored surface tree](contract/README.md) owns public meaning. The separate
 presentation map places whole subjects; moving a statement alone changes no
-public payload. The commitment index covers every routing unit. Source and
-interface associations are partial: an absent association is an unknown, and a
-source citation is evidence with the stated scope, not a declaration of every
-behavior that source can affect.
+public payload. The commitment index has one row for each routed subject. A
+surface's own heading carries its introduction and surface-wide support, and
+the changed-item index names that heading where support is declared for the
+whole surface. Limit identifiers have no rows; a statement that embeds a limit
+shows its identifier, so a search of the statement documents for that
+identifier finds it. Source, check and interface associations are partial: an
+absent association is an unknown, and a source citation is evidence with the
+stated scope, not a declaration of every behavior that source can affect. The
+Known gaps view lists the tree's gap nodes; ARCHITECTURE, CONTROLLER, WORKER and
+BUILD each end with an index of their own gaps.
 
 The [interface account](../controller/interface/README.md) and the generator's
 `--interface-report` describe the selected structured facts compared by the
